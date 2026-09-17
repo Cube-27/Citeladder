@@ -270,6 +270,9 @@ export const implementationEventSchema = responseObject({
   opportunity_id: uuid(),
   opportunity_snapshot_id: uuid(),
   target_site_url_ids: z.array(uuid()),
+  // Populated instead of the owned ids for an earned action: the publisher
+  // page the placement was declared on. Never both.
+  target_external_url: z.string().nullable(),
   generation_id: uuid().nullable(),
   declared_implemented_at: z.string(),
   expected_checks: z.array(expectedCheckSchema),

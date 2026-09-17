@@ -117,6 +117,9 @@ class ImplementationEventView(_Model):
     opportunity_id: uuid.UUID
     opportunity_snapshot_id: uuid.UUID
     target_site_url_ids: list[uuid.UUID]
+    # Populated instead of ``target_site_url_ids`` for an earned action: the
+    # publisher page the placement was declared on. Never both.
+    target_external_url: str | None
     generation_id: uuid.UUID | None
     declared_implemented_at: datetime
     expected_checks: list[dict[str, Any]]

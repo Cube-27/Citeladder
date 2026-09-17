@@ -10,7 +10,7 @@ from app.analysis.opportunities.detectors import (
     PromptSnapshotEvidence,
 )
 from app.analysis.opportunities.source_patterns import by_domain
-from app.core.config.opportunities import (
+from app.core.config.earned_actions import (
     ACTION_PATH_EARNED,
     ACTION_PATH_OWNED,
     EARNED_COMPETITOR_FACTOR_MAX,

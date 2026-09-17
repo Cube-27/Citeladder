@@ -6,20 +6,12 @@ import type { visibilitySourcesSchema } from '@/lib/api/schemas/visibility-evide
 import type { Visibility } from '@/lib/api/types';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Stack } from '@/components/ui/layout';
 import { MetricGroup, MetricItem } from '@/components/ui/workspace';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
+import { SourceTable, type SourceFilters } from '@/components/visibility/source-rows';
 import { SOURCE_MODES } from '@/lib/config/visibility';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
@@ -35,10 +27,7 @@ import {
 import { formatRate } from '@/lib/visibility/dashboard';
 import { textRole } from '@/components/ui/typography';
 import { sourceCategoryLabels } from '@/lib/visibility/vocabulary';
-import type {
-  useVisibilityFilters,
-  useVisibilityQueries,
-} from '@/lib/visibility/use-visibility-dashboard';
+import type { useVisibilityQueries } from '@/lib/visibility/use-visibility-dashboard';
 
 const modeCodec = stringUrlCodec(
   SOURCE_MODES.map((item) => item.value),
@@ -50,9 +39,7 @@ function set<T>(value: T | null | undefined): T | undefined {
   return value ?? undefined;
 }
 
-type SourceRow = z.infer<typeof visibilitySourcesSchema>['items'][number];
 type SourceData = z.infer<typeof visibilitySourcesSchema>;
-type SourceFilters = ReturnType<typeof useVisibilityFilters>;
 type SourceQueries = ReturnType<typeof useVisibilityQueries>;
 
 export function VisibilitySources({
@@ -174,29 +161,12 @@ function SourcesPanel({
               <Alert tone="danger">Could not load cited sources.</Alert>
             ) : null}
             {sourceQuery.isLoading ? <p aria-busy="true">Loading sources…</p> : null}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{domain ? 'Page' : 'Domain'}</TableHead>
-                  <TableHead numeric>Answers</TableHead>
-                  <TableHead numeric>Share of answers</TableHead>
-                  <TableHead numeric className="hidden md:table-cell">
-                    Prompts
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <SourceTableRow
-                    key={row.key}
-                    row={row}
-                    domain={domain}
-                    filters={filters}
-                    activeRunId={queries.activeRunId}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+            <SourceTable
+              rows={rows}
+              domain={domain}
+              filters={filters}
+              activeRunId={queries.activeRunId}
+            />
             {data && rows.length === 0 ? (
               <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
                 {sourceType
@@ -441,43 +411,4 @@ function useSourceAnalysis(
     placeholderData: (data, query) => retainPreviousDataForScope(queries.projectId!, data, query),
   });
   return { params, sourceQuery };
-}
-
-function SourceTableRow({
-  row,
-  domain,
-  filters,
-  activeRunId,
-}: {
-  row: SourceRow;
-  domain: string | null;
-  filters: SourceFilters;
-  activeRunId: string | null;
-}) {
-  return (
-    <TableRow>
-      <TableCell>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() =>
-            domain
-              ? filters.openEvidence({ run: activeRunId, domain, url: row.key })
-              : setUrlParams({
-                  source_domain: row.key,
-                  source_offset: null,
-                  source_as_of: null,
-                })
-          }
-        >
-          {row.key || 'Domain unavailable'}
-        </Button>
-      </TableCell>
-      <TableCell numeric>{row.responses}</TableCell>
-      <TableCell numeric>{formatRate(row.response_rate)}</TableCell>
-      <TableCell numeric className="hidden md:table-cell">
-        {row.prompts}
-      </TableCell>
-    </TableRow>
-  );
 }

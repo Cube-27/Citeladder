@@ -10,6 +10,11 @@
 # Same inputs + same ``FORMULA_VERSION`` -> same score, always.
 from __future__ import annotations
 
+from app.core.config.earned_actions import (
+    EARNED_PAGE_COMPETITOR_FACTOR_MAX,
+    EARNED_PAGE_COMPETITOR_FACTOR_STEP,
+    EARNED_PAGE_USAGE_FACTOR_MAX,
+)
 from app.core.config.opportunities import (
     BUYER_STAGE_VALUE_WEIGHTS,
     GAP_COMPETITOR_CAP,
@@ -89,6 +94,39 @@ def gap_factor_visibility(
         GAP_COMPETITOR_WEIGHT * competitors * GAP_OWNED_CITATION_WEIGHT * owned_gap
     )
     return base * max(float(recommendation_strength), 1.0)
+
+
+def page_competitor_presence_factor(present_competitors: int) -> float:
+    """Competitor pressure ON THE PAGE, bounded and >= 1.0.
+
+    The only competitor input to a page-keyed rule's priority. Answer-level
+    co-occurrence is deliberately excluded: it attaches every competitor named
+    anywhere in an answer to every domain that answer cited, so a competitor
+    merely mentioned in prose used to raise the priority of an unrelated page.
+    It survives as descriptive evidence, labelled as such.
+
+    Counts only verdicts that required a snapshot and produced a quotable
+    passage; ``ambiguous`` and ``partial`` are not presence for this purpose.
+    """
+    counted = max(int(present_competitors), 0)
+    return min(
+        EARNED_PAGE_COMPETITOR_FACTOR_MAX,
+        1.0 + counted * EARNED_PAGE_COMPETITOR_FACTOR_STEP,
+    )
+
+
+def page_recurrence_factor(*, answer_count: int, eligible_answers: int) -> float:
+    """How much of the eligible answer set cited this page, bounded.
+
+    Recurrence across the ANSWERS that could have cited it, not the scheduling
+    counter on ``source_pages`` -- that one is project-wide and ranks
+    inspection candidates, and reading it as a measurement is how a scheduling
+    number ends up presented as a citation frequency.
+    """
+    if eligible_answers <= 0:
+        return 1.0
+    rate = max(answer_count, 0) / eligible_answers
+    return min(EARNED_PAGE_USAGE_FACTOR_MAX, 1.0 + rate)
 
 
 def priority_score(*, severity: str, value_factor: float, gap_factor: float) -> float:

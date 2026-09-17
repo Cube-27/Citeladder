@@ -77,6 +77,11 @@ from app.orchestration.executor_errors import TerminalExecutorError
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.drain import DrainableWorkerMixin
 from app.workers.source_pages.inspector import inspect_source_pages
+from app.workers.terminal_compensation import (
+    AnalyticsCompensator,
+    analytics_compensators,
+    compensate_analytics_tasks,
+)
 
 logger = logging.getLogger("app.workers.analytics_worker")
 
@@ -142,17 +147,30 @@ class AnalyticsWorker(DrainableWorkerMixin):
         session_factory: async_sessionmaker[AsyncSession] | None = None,
         owner: str | None = None,
         executors: dict[str, AnalyticsExecutor] | None = None,
+        compensators: dict[str, AnalyticsCompensator] | None = None,
     ) -> None:
         self._session_factory = session_factory or SessionLocal
         self._queue = PostgresTaskQueue(self._session_factory, ANALYTICS_QUEUE_SPEC)
         self._executors = executors if executors is not None else EXECUTORS
+        # Terminal compensation is shared with ``QueueSweeper`` rather than
+        # owned here: that process sweeps this queue too, and it is the likely
+        # winner in exactly the case compensation exists for -- a worker that
+        # died mid-run.
+        self._compensators = (
+            compensators if compensators is not None else analytics_compensators()
+        )
         self.owner = owner or f"analytics-worker-{uuid.uuid4().hex[:12]}"
 
     # --- Loop --------------------------------------------------------------
 
     async def run_once(self) -> int:
         """Sweep expired leases, claim one row, run it. Returns count run."""
-        await self._queue.release_expired()
+        sweep = await self._queue.release_expired_detailed()
+        await compensate_analytics_tasks(
+            self._session_factory,
+            list(sweep.failed_task_ids),
+            compensators=self._compensators,
+        )
         rows = await self._queue.claim(owner=self.owner, limit=1)
         for row in rows:
             await self._execute(row)
@@ -245,6 +263,12 @@ class AnalyticsWorker(DrainableWorkerMixin):
         terminal-failure fields together. A not-wired executor is a
         permanent-until-deploy condition: terminal failure WITHOUT consuming
         the retry budget on further attempts.
+
+        A terminal FAILURE runs the kind's compensation here, after the
+        commit: the terminal side effect belongs with the terminal write, and
+        every dispatch path reaches it through this one method. A retry does
+        not compensate -- handing off early would spend the work's idempotency
+        key before it has had its attempts.
         """
         now = _utcnow()
         async with self._session_factory() as session:
@@ -287,8 +311,17 @@ class AnalyticsWorker(DrainableWorkerMixin):
                 row.error_detail = str(error)[:2000]
             row.lease_owner = None
             row.lease_expires_at = None
+            failed = row.status == TASK_STATUS_FAILED
             await session.commit()
-            return True
+        if failed:
+            # Same path the sweep takes, by id: the row is expired after the
+            # commit, and re-reading it in its own session is both cheaper
+            # than holding the write transaction open and the only way the
+            # two terminal paths stay one behaviour.
+            await compensate_analytics_tasks(
+                self._session_factory, [task_id], compensators=self._compensators
+            )
+        return True
 
 
 def main() -> None:  # pragma: no cover - process entrypoint

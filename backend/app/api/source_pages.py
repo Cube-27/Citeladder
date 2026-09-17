@@ -22,7 +22,7 @@ from app.api.deps import WorkspaceContext, get_db, require_active_workspace
 from app.core.http_errors import raise_not_found
 from app.domain.analytics.enqueue import enqueue_source_page_inspection
 from app.domain.projects.service import ProjectNotFoundError, get_project
-from app.domain.source_pages.admission import current_budget
+from app.domain.source_pages.admission import current_budget, mark_inspection_requested
 from app.domain.source_pages.projection import SourcePageView, get_source_page
 from app.domain.source_pages.schemas import (
     SourcePageDetail,
@@ -95,12 +95,30 @@ async def inspect_source_page_endpoint(
     claim time.
     """
     await _resolve(session, ctx=ctx, project_id=project_id, url_hash=url_hash)
+    # Record the ask before anything can decline it. Asking is not spending:
+    # the request is remembered whether or not today's budget admits it, and
+    # a source somebody went looking for stays worth resolving either way.
+    await mark_inspection_requested(session, project_id=project_id, url_hash=url_hash)
+    outcome = await _admit(session, ctx=ctx, project_id=project_id, url_hash=url_hash)
+    # One commit, after the decision. A per-branch commit would mean the next
+    # decline reason someone adds silently discards the recorded request --
+    # the exact failure marking it up front was introduced to prevent.
+    await session.commit()
+    return outcome
+
+
+async def _admit(
+    session: AsyncSession,
+    *,
+    ctx: WorkspaceContext,
+    project_id: uuid.UUID,
+    url_hash: str,
+) -> SourcePageInspectionRequested:
+    """Queue the inspection, or say why it was declined. Never commits."""
     budget = await current_budget(session, project_id=project_id)
     if budget.remaining <= 0:
         return SourcePageInspectionRequested(
-            accepted=False,
-            reason="budget_exhausted",
-            budget_remaining=0,
+            accepted=False, reason="budget_exhausted", budget_remaining=0
         )
     audit_id = await session.scalar(
         select(Audit.id)
@@ -126,7 +144,6 @@ async def inspect_source_page_endpoint(
         project_id=project_id,
         audit_id=audit_id,
     )
-    await session.commit()
     return SourcePageInspectionRequested(
         accepted=True, reason=None, budget_remaining=budget.remaining
     )

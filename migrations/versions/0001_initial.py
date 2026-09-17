@@ -2430,6 +2430,7 @@ def upgrade() -> None:
             postgresql.JSONB(astext_type=Text()),
             nullable=False,
         ),
+        sa.Column("target_external_url", sa.Text(), nullable=True),
         sa.Column("generation_id", sa.UUID(), nullable=True),
         sa.Column(
             "declared_implemented_at", sa.DateTime(timezone=True), nullable=False
@@ -2458,6 +2459,11 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
+        sa.CheckConstraint(
+            "jsonb_array_length(target_site_url_ids) = 0"
+            " OR target_external_url IS NULL",
+            name="ck_opportunity_implementation_single_target",
+        ),
         sa.UniqueConstraint(
             "workspace_id",
             "idempotency_key",
@@ -6225,6 +6231,9 @@ def upgrade() -> None:
         sa.Column("content_hash", sa.String(length=64), nullable=True),
         sa.Column("last_inspected_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_cited_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "inspection_requested_at", sa.DateTime(timezone=True), nullable=True
+        ),
         sa.Column("recurrence_count", sa.Integer(), nullable=False),
         sa.Column("first_seen_audit_id", sa.UUID(), nullable=True),
         sa.Column("last_seen_audit_id", sa.UUID(), nullable=True),

@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config.earned_actions import RULE_EARNED_PAGE_ACQUIRE
 from app.domain.opportunities.verification import verify_implementation_events
 from app.models.analytics import AnalyticsTask
 from app.models.content import ContentGeneration
@@ -25,6 +26,7 @@ from tests.component.opportunity_helpers import Scenario, _seed_scenario
 pytestmark = pytest.mark.asyncio
 
 _EMAIL = "implementation-events@example.com"
+_PUBLISHER_URL = "https://review.example/best-crm-tools"
 
 
 async def _seed_and_recompute(
@@ -385,6 +387,143 @@ async def test_caller_supplied_expected_checks_are_rejected(
                     "expected_value": 0,
                 }
             ],
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "implementation_target_conflict"
+
+
+async def _seed_earned_page_opportunity(
+    session_factory: async_sessionmaker[AsyncSession], scenario: Scenario
+) -> Opportunity:
+    """One page-keyed earned Opportunity against the project's live snapshot."""
+    async with session_factory() as session:
+        snapshot = await session.scalar(
+            select(OpportunitySnapshot)
+            .where(OpportunitySnapshot.project_id == scenario.project_id)
+            .order_by(OpportunitySnapshot.created_at.desc())
+            .limit(1)
+        )
+        assert snapshot is not None
+        row = Opportunity(
+            workspace_id=scenario.workspace_id,
+            project_id=scenario.project_id,
+            rule_id=RULE_EARNED_PAGE_ACQUIRE,
+            opportunity_type="visibility",
+            severity="high",
+            priority_score=30.0,
+            title="Competitors listed on a cited page you are absent from",
+            remediation="Ask the publisher to include you.",
+            target_key=f"earned-page:{'a' * 64}",
+            target_url=_PUBLISHER_URL,
+            evidence={},
+            source_analysis_ids=[],
+            source_issue_ids=[],
+            source_metric_ids=[],
+            analyzer_version="opp-analyzer-2",
+            rule_version="opp-rules-2",
+            formula_version="opp-formula-2",
+        )
+        session.add(row)
+        await session.commit()
+        session.expunge(row)
+    return row
+
+
+async def test_an_external_placement_declares_against_the_publisher_page(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A third-party target never routes through the owned-page resolver.
+
+    ``resolve_owned_page`` would try to match a publisher URL against this
+    project's crawled inventory and raise, so the action would reach the user
+    as broken rather than as unsupported.
+    """
+    scenario, _opportunity, _site_url = await _seed_and_recompute(
+        client, session_factory
+    )
+    earned = await _seed_earned_page_opportunity(session_factory, scenario)
+
+    response = await client.post(
+        f"/api/v1/projects/{scenario.project_id}/opportunities/implementation-events",
+        headers={
+            "X-Workspace-Id": str(scenario.workspace_id),
+            "Idempotency-Key": "external-placement",
+        },
+        json={
+            "opportunity_id": str(earned.id),
+            "target_site_url_ids": [],
+            "declared_implemented_at": datetime.now(UTC).isoformat(),
+            "expected_checks": [],
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["target_external_url"] == _PUBLISHER_URL
+    assert body["target_site_url_ids"] == []
+    assert [check["kind"] for check in body["expected_checks"]] == ["visibility_metric"]
+
+
+async def test_the_database_refuses_a_row_claiming_both_target_kinds(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """An owned change and an external placement verify against different
+    evidence, so a row claiming both would report two outcomes as one."""
+    from sqlalchemy.exc import IntegrityError
+
+    scenario, opportunity, site_url = await _seed_and_recompute(client, session_factory)
+    async with session_factory() as session:
+        snapshot = await session.scalar(
+            select(OpportunitySnapshot)
+            .where(OpportunitySnapshot.project_id == scenario.project_id)
+            .order_by(OpportunitySnapshot.created_at.desc())
+            .limit(1)
+        )
+        assert snapshot is not None
+        session.add(
+            OpportunityImplementationEvent(
+                workspace_id=scenario.workspace_id,
+                project_id=scenario.project_id,
+                opportunity_id=opportunity.id,
+                opportunity_snapshot_id=snapshot.id,
+                target_site_url_ids=[str(site_url.id)],
+                target_external_url=_PUBLISHER_URL,
+                declared_implemented_at=datetime.now(UTC),
+                expected_checks=[],
+                actor_user_id=scenario.user_id,
+                idempotency_key="both-targets",
+                request_fingerprint="f" * 64,
+            )
+        )
+        with pytest.raises(IntegrityError):
+            await session.commit()
+
+
+async def test_an_external_placement_refuses_owned_page_targets(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Mixing the two would verify an owned change against an external one."""
+    scenario, _opportunity, site_url = await _seed_and_recompute(
+        client, session_factory
+    )
+    earned = await _seed_earned_page_opportunity(session_factory, scenario)
+
+    response = await client.post(
+        f"/api/v1/projects/{scenario.project_id}/opportunities/implementation-events",
+        headers={
+            "X-Workspace-Id": str(scenario.workspace_id),
+            "Idempotency-Key": "external-with-owned",
+        },
+        json={
+            "opportunity_id": str(earned.id),
+            "target_site_url_ids": [str(site_url.id)],
+            "declared_implemented_at": datetime.now(UTC).isoformat(),
+            "expected_checks": [],
         },
     )
 

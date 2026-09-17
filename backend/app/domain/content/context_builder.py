@@ -17,6 +17,7 @@ from app.core.config.content import (
     CONTENT_CONTEXT_STATUS_UNAVAILABLE,
     CONTENT_CONTEXT_VERSION,
 )
+from app.core.config.earned_actions import ACTION_PATH_EARNED
 from app.domain.content.website_context import (
     CrawlFragmentSelection,
     normalized_target_url,
@@ -457,6 +458,38 @@ def _render_page(page: dict, *, heading: str) -> str:
     return f"{heading}\n\n" + "\n".join(lines)
 
 
+def _page_evidence_lines(handoff: dict) -> list[tuple[str, object]]:
+    """What was READ on the third-party page, kept apart from what was said.
+
+    Only populated for an earned page action. Every positive claim here
+    resolves to a snapshot and a quoted passage; an absence carries the
+    extraction coverage instead, because no passage can demonstrate one.
+
+    Gated on the declared pathway rather than on a field being present: an
+    owned handoff that ever gained a ``url_hash`` would otherwise start
+    rendering earned-only labels with nothing behind them.
+    """
+    if handoff.get("pathway") != ACTION_PATH_EARNED:
+        return []
+    quoted = [
+        f"{row.get('entity_name')}: {passage}"
+        for row in handoff.get("page_entities") or []
+        if isinstance(row, dict)
+        for passage in (row.get("passages") or [])
+    ]
+    return [
+        ("Page format", handoff.get("page_format")),
+        ("Page title", handoff.get("page_title")),
+        ("Inspection state", handoff.get("inspection_state")),
+        ("Readable characters", handoff.get("extracted_chars")),
+        ("Competitors named only in answers", handoff.get("answer_competitors")),
+        ("Quoted from the page", quoted),
+        ("Identified discrepancies", handoff.get("discrepancies")),
+        ("Observed deterioration", handoff.get("deterioration")),
+        ("Unresolved", handoff.get("unmet_qualification")),
+    ]
+
+
 def _render_opportunity(opportunity: Opportunity | None) -> str:
     if opportunity is None:
         return ""
@@ -484,6 +517,7 @@ def _render_opportunity(opportunity: Opportunity | None) -> str:
             ("Affected themes", handoff.get("affected_themes")),
             ("Observed competitors", handoff.get("observed_competitors")),
             ("Representative cited pages", citations),
+            *_page_evidence_lines(handoff),
             ("Limitations", handoff.get("limitations")),
         ]
     )

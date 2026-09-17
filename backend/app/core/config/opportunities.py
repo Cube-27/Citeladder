@@ -20,20 +20,20 @@ from app.core.config.demand import (
     DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR,
     DEMAND_SIGNAL_STRIKING_DISTANCE,
 )
+from app.core.config.earned_actions import (
+    ACTION_PATH_EARNED,
+    ACTION_PATH_OWNED,
+    RULE_EARNED_PAGE_ACQUIRE,
+    RULE_EARNED_PAGE_CORRECT,
+    RULE_EARNED_PAGE_DEFEND,
+    RULE_EARNED_PAGE_RESEARCH,
+)
 from app.core.config.projects import (
     PROMPT_INTENT_COMPARISON,
     PROMPT_INTENT_DISCOVERY,
     PROMPT_INTENT_LOCAL,
     PROMPT_INTENT_PURCHASE,
     PROMPT_INTENT_SERVICE,
-)
-from app.core.config.source_patterns import (
-    SOURCE_CLASS_COMMUNITY,
-    SOURCE_CLASS_EDITORIAL_THIRD_PARTY,
-    SOURCE_CLASS_INSTITUTIONAL,
-    SOURCE_CLASS_REVIEW_MARKETPLACE,
-    SOURCE_CLASS_SOCIAL,
-    SOURCE_CLASS_VIDEO,
 )
 
 # =========================================================================
@@ -44,13 +44,12 @@ from app.core.config.source_patterns import (
 # catalog change, and ``FORMULA_VERSION`` on any scoring change so a derived
 # row is always traceable to the exact logic that produced it (mirrors
 # ``SCORING_RULE_VERSION`` in ``config/analysis.py``).
-ANALYZER_VERSION: Final = "opp-analyzer-1"
-RULE_VERSION: Final = "opp-rules-1"
+ANALYZER_VERSION: Final = "opp-analyzer-2"
+RULE_VERSION: Final = "opp-rules-2"
 RULE_PRODUCT_NOT_MENTIONED: Final = "product_not_mentioned"
 RULE_CITED_ALTERNATIVES: Final = "cited_alternatives_without_uploaded_presence"
 RULE_CATALOG_FIELDS_MISSING: Final = "catalog_fields_missing"
-RULE_EARNED_SOURCE_RECURS: Final = "earned_source_recurs_beside_gap"
-FORMULA_VERSION: Final = "opp-formula-1"
+FORMULA_VERSION: Final = "opp-formula-2"
 CONFIRMED_DECLINE_MIN_FACTOR: Final = 0.1
 CONFIRMED_DECLINE_GAP_NORMALIZER: Final = 10.0
 DEMAND_SIGNAL_GAP_FACTOR: Final = 2.0
@@ -137,32 +136,6 @@ IMPLEMENTATION_VERIFICATION_HISTORY_MAX: Final = 50
 # one delta serves either scope without rescaling anything.
 VISIBILITY_METRIC_PROJECT_SCORE: Final = "visibility_score"
 VISIBILITY_CHECK_MIN_DELTA: Final = 1.0
-SOURCE_ROLLUP_MAX_DOMAINS: Final = 100
-ACTION_PATH_OWNED: Final = "owned"
-ACTION_PATH_EARNED: Final = "earned"
-ACTION_PATHS: Final[frozenset[str]] = frozenset({ACTION_PATH_OWNED, ACTION_PATH_EARNED})
-SOURCE_ROLLUP_MAX_URLS: Final = 6
-SOURCE_ROLLUP_MAX_PROMPTS: Final = 12
-EARNED_SOURCE_MIN_ANSWERS: Final = 2
-EARNED_SOURCE_MIN_USAGE_RATE: Final = 0.1
-EARNED_USAGE_FACTOR_MAX: Final = 2.0
-EARNED_COMPETITOR_FACTOR_MAX: Final = 1.5
-EARNED_SUGGESTED_SKILL_BY_CLASS: Final[dict[str, str]] = {
-    SOURCE_CLASS_REVIEW_MARKETPLACE: "comparison",
-    SOURCE_CLASS_EDITORIAL_THIRD_PARTY: "article",
-    SOURCE_CLASS_COMMUNITY: "reddit",
-    SOURCE_CLASS_SOCIAL: "linkedin",
-    SOURCE_CLASS_INSTITUTIONAL: "article",
-    SOURCE_CLASS_VIDEO: "youtube",
-}
-EARNED_SUGGESTED_ROLE_BY_CLASS: Final[dict[str, str]] = {
-    SOURCE_CLASS_REVIEW_MARKETPLACE: "Marketing",
-    SOURCE_CLASS_EDITORIAL_THIRD_PARTY: "PR",
-    SOURCE_CLASS_COMMUNITY: "Founder",
-    SOURCE_CLASS_SOCIAL: "Marketing",
-    SOURCE_CLASS_INSTITUTIONAL: "PR",
-    SOURCE_CLASS_VIDEO: "Marketing",
-}
 
 # =========================================================================
 # Rule catalog
@@ -180,9 +153,17 @@ class OpportunityRule:
     snapshot semantics — a catalog relabel never rewrites history). A
     disabled rule (``enabled=False``) ships config-only: its shape is stable
     but no detector emits it.
+
+    ``action_path`` declares WHOSE page the action happens on. It is a
+    property of the rule rather than a hand-kept list of ids elsewhere,
+    because the two consumers -- the earned list filter and the external
+    implementation target -- both fail confusingly when a new rule is missing
+    from such a list: the action vanishes from the earned view AND its
+    declaration is routed through the owned-page resolver, which raises.
     """
 
     __slots__ = (
+        "action_path",
         "enabled",
         "opportunity_type",
         "remediation",
@@ -200,6 +181,7 @@ class OpportunityRule:
         title: str,
         remediation: str,
         enabled: bool = True,
+        action_path: str = ACTION_PATH_OWNED,
     ) -> None:
         self.rule_id = rule_id
         self.opportunity_type = opportunity_type
@@ -207,6 +189,7 @@ class OpportunityRule:
         self.title = title
         self.remediation = remediation
         self.enabled = enabled
+        self.action_path = action_path
 
 
 # The v2 catalog. The two visibility rules + the three site-sourced rules +
@@ -250,6 +233,14 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
             "request. This observation does not establish domain-wide absence or "
             "guarantee a later citation."
         ),
+        action_path=ACTION_PATH_EARNED,
+        # RETIRED. Keys on a registrable domain, leaves ``target_url``
+        # null, and scores on answer-level co-occurrence, so any
+        # reclassification superseded its row with no successor and
+        # discarded the human decision on it. Replaced by the four
+        # ``earned_page_*`` rules. Config-only so existing rows and
+        # their history stay readable and validate; nothing emits it.
+        enabled=False,
     ),
     OpportunityRule(
         rule_id="confirmed_prompt_decline",
@@ -499,12 +490,80 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
         # DEFERRED (delta 4): the Traffic surface is not implemented.
         enabled=False,
     ),
+    # Page-keyed earned actions. Four ids, not one rule with an action field:
+    # ``_score_hits`` consolidates on ``(rule_id, target_key)``, so one id
+    # would collapse acquiring a listing and correcting one into a single row
+    # with a single status, and those have different done-states.
+    OpportunityRule(
+        rule_id=RULE_EARNED_PAGE_ACQUIRE,
+        opportunity_type=OPPORTUNITY_TYPE_VISIBILITY,
+        severity=SEVERITY_HIGH,
+        title="Competitors listed on a cited page you are absent from",
+        remediation=(
+            "This page was read and your brand is not on it while a"
+            " competitor is. Approach the publisher with the facts this brief"
+            " carries and ask to be included, then declare the placement so"
+            " it can be checked."
+        ),
+        action_path=ACTION_PATH_EARNED,
+    ),
+    OpportunityRule(
+        rule_id=RULE_EARNED_PAGE_CORRECT,
+        opportunity_type=OPPORTUNITY_TYPE_VISIBILITY,
+        severity=SEVERITY_MEDIUM,
+        title="Cited page describes your brand incorrectly",
+        remediation=(
+            "Your brand appears on this page, and the quoted passage"
+            " disagrees with your reviewed facts. Send the publisher the"
+            " correction and the evidence for it, then declare the change so"
+            " the specific claim can be re-checked."
+        ),
+        action_path=ACTION_PATH_EARNED,
+    ),
+    OpportunityRule(
+        rule_id=RULE_EARNED_PAGE_DEFEND,
+        opportunity_type=OPPORTUNITY_TYPE_VISIBILITY,
+        severity=SEVERITY_LOW,
+        title="Your placement on a cited page has deteriorated",
+        remediation=(
+            "An earlier inspection of this page found your brand in a"
+            " position it no longer holds. Compare the two snapshots in the"
+            " brief, then ask the publisher to restore or update the entry."
+        ),
+        action_path=ACTION_PATH_EARNED,
+    ),
+    OpportunityRule(
+        rule_id=RULE_EARNED_PAGE_RESEARCH,
+        opportunity_type=OPPORTUNITY_TYPE_VISIBILITY,
+        severity=SEVERITY_LOW,
+        title="Recurring cited source needs a human look",
+        remediation=(
+            "Answer engines keep citing this page and CiteLadder could not"
+            " establish what kind of page it is or whether you can be listed"
+            " on it. Open it and decide; an unresolved source is the one kind"
+            " that never resolves itself."
+        ),
+        action_path=ACTION_PATH_EARNED,
+        # Deliberately ``low`` and not ``info``. With SEVERITY_WEIGHTS[info]
+        # at 0.5, a PRIORITY_SCALE of 10 and a MIN_PRIORITY_TO_SURFACE floor
+        # of 10.0, an info hit at base factors scores 5.0 and is dropped at
+        # write time. A research hit has base factors by definition, so
+        # ``info`` would silently discard exactly the rows this rule exists
+        # to surface.
+    ),
 )
 
 # Fast lookup by rule id.
 OPPORTUNITY_RULES_BY_ID: Final[dict[str, OpportunityRule]] = {
     rule.rule_id: rule for rule in OPPORTUNITY_RULES
 }
+
+# Every rule whose action happens on somebody else's page, derived from the
+# catalog rather than hand-listed beside it. Includes the retired domain-keyed
+# rule, so its historical rows stay in the earned view.
+EARNED_RULE_IDS: Final[frozenset[str]] = frozenset(
+    rule.rule_id for rule in OPPORTUNITY_RULES if rule.action_path == ACTION_PATH_EARNED
+)
 
 DEMAND_SIGNAL_RULE_IDS: Final[dict[str, str]] = {
     DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR: "search_demand_content_gap",

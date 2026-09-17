@@ -10,8 +10,9 @@ living in audit terminalization. Terminalization queues the Opportunity refresh
 the moment an audit commits; if inspection were queued from the same place, the
 refresh would always run before any page evidence existed and the page-aware
 detectors would see nothing. Because terminalization now queues inspection
-INSTEAD of the refresh, this worker owes that refresh even when it fails for the
-last time -- see ``inspect_source_pages``.
+INSTEAD of the refresh, that refresh is owed on EVERY terminal outcome,
+including this task's own failures -- see ``compensate_inspection_handoff``,
+which the queue fires rather than this module.
 
 Audit completion never depends on any of this. A publisher that blocks us is a
 fact about that publisher, not a failed measurement, and a queue outage must
@@ -400,15 +401,30 @@ async def _hand_off(
         await session.commit()
 
 
-def _is_final_attempt(task: AnalyticsTask) -> bool:
-    """Whether the attempt now running is the last one this task will get.
+async def compensate_inspection_handoff(
+    session_factory: async_sessionmaker[AsyncSession], task: AnalyticsTask
+) -> None:
+    """Hand off to Opportunities for an inspection that ended without doing it.
 
-    ``attempt_count`` on a claimed row is the number of attempts that already
-    FINISHED -- the worker bumps it in ``_finalize``, after the executor
-    returns. The attempt in progress is therefore ``attempt_count + 1``, and
-    comparing the stored value directly would mean this never fires.
+    Registered as this kind's TERMINAL COMPENSATION and fired by the queue,
+    not from here, because the two ways an inspection ends terminally are not
+    both visible to this module. A worker that exhausts its retries returns
+    through ``_finalize``; a worker killed mid-inspection is terminalized by
+    the lease sweeper, which runs no executor code at all. Compensating inside
+    the executor covers only the first and leaves a committed audit with
+    permanently stale opportunities on the second.
+
+    Idempotent by the enqueue's own key, so firing on a path that already
+    handed off costs nothing.
     """
-    return int(task.attempt_count or 0) + 1 >= int(task.max_attempts or 1)
+    if task.project_id is None:
+        return
+    await _hand_off(
+        session_factory,
+        workspace_id=task.workspace_id,
+        project_id=task.project_id,
+        audit_id=_audit_id(task),
+    )
 
 
 async def _run_inspection(
@@ -458,26 +474,16 @@ async def inspect_source_pages(
 ) -> None:
     """Inspect this audit's cited pages, then hand off to Opportunities.
 
-    The hand-off also runs when this task is about to fail for the last time.
-    Terminalization queues inspection INSTEAD of the Opportunity refresh, so a
-    silent terminal failure here would leave an audit committed with its
-    opportunities never recomputed. Recomputing without page evidence is merely
-    what the product did before this feature; not recomputing at all is worse.
+    Terminalization queues inspection INSTEAD of the Opportunity refresh, so
+    this hand-off is owed on every terminal outcome. The failing outcomes are
+    owed by ``compensate_inspection_handoff``, which the queue fires; a
+    retryable failure just raises, because waiting for its retries is right
+    and handing off early would spend the idempotency key before the evidence
+    exists.
     """
     if task.project_id is None:
         raise ValueError("Source page inspection requires project_id")
-    try:
-        scope = await _run_inspection(session_factory, task)
-    except Exception:
-        if _is_final_attempt(task):
-            with contextlib.suppress(ValueError):
-                await _hand_off(
-                    session_factory,
-                    workspace_id=task.workspace_id,
-                    project_id=task.project_id,
-                    audit_id=_audit_id(task),
-                )
-        raise
+    scope = await _run_inspection(session_factory, task)
     await _hand_off(
         session_factory,
         workspace_id=scope.workspace_id,

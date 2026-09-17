@@ -7,26 +7,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.opportunities.detectors import (
-    AnalysisEvidence,
     DetectorHit,
-    PromptSnapshotEvidence,
     SiteEvidence,
     SiteIssueEvidence,
     SiteUrlEvidence,
-    VisibilityEvidence,
     detect_brand_absent_high_value_prompt,
     detect_owned_page_not_cited,
     detect_site_issue_opportunities,
-)
-from app.analysis.opportunities.earned_detector import (
-    detect_earned_source_opportunities,
 )
 from app.analysis.opportunities.scoring import priority_score
 from app.analysis.opportunities.source_mix import (
     build_source_projection,
     empty_source_projection,
 )
-from app.analysis.opportunities.source_patterns import CitationEvidence
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
@@ -38,7 +31,6 @@ from app.core.config.opportunities import (
     FORMULA_VERSION,
     MIN_PRIORITY_TO_SURFACE,
     OPPORTUNITY_RULES_BY_ID,
-    RECOMPUTE_MAX_ANALYSES,
     RECOMPUTE_MAX_ISSUES,
     RULE_VERSION,
     STATUS_OPEN,
@@ -59,23 +51,19 @@ from app.domain.opportunities.common import (
     _utcnow,
 )
 from app.domain.opportunities.demand_hits import load_demand_hits
+from app.domain.opportunities.earned_page_hits import load_earned_page_hits
 from app.domain.opportunities.errors import (
     OpportunityNotFoundError,
 )
+from app.domain.opportunities.legacy_earned import LegacyBridge, bridge_legacy_earned
 from app.domain.opportunities.site_coverage import site_coverage
 from app.domain.opportunities.snapshot_build import build_snapshot
 from app.domain.opportunities.snapshot_projection import project_snapshot
+from app.domain.opportunities.visibility_evidence import load_visibility_evidence
 from app.domain.prompts.locks import acquire_project_lock
 from app.domain.prompts.normalization import prompt_text_hash
-from app.models.analysis import (
-    Citation,
-    CompetitorMention,
-    MetricSnapshot,
-    PromptMetricSnapshot,
-    ResponseAnalysis,
-)
-from app.models.audit import Audit, AuditPromptSnapshot
-from app.models.brand import OwnedDomain
+from app.models.analysis import PromptMetricSnapshot
+from app.models.audit import Audit
 from app.models.demand import DemandSnapshot
 from app.models.opportunity import (
     Opportunity,
@@ -133,161 +121,6 @@ async def _resolve_source[SourceT: Audit | SiteCrawl](
         .order_by(model.completed_at.desc().nullslast(), model.created_at.desc())
         .limit(1)
     )
-
-
-def _visibility_credits(
-    citations: list[Citation], mentions: list[CompetitorMention]
-) -> tuple[dict[uuid.UUID, int], dict[uuid.UUID, set[str]]]:
-    """Fold owned citations and competitor identities by analysis."""
-    owned_counts: dict[uuid.UUID, int] = {}
-    competitor_names: dict[uuid.UUID, set[str]] = {}
-    for citation in citations:
-        if citation.is_owned:
-            owned_counts[citation.analysis_id] = (
-                owned_counts.get(citation.analysis_id, 0) + 1
-            )
-        if citation.matched_competitor:
-            competitor_names.setdefault(citation.analysis_id, set()).add(
-                citation.matched_competitor
-            )
-    for mention in mentions:
-        if mention.competitor_name:
-            competitor_names.setdefault(mention.analysis_id, set()).add(
-                mention.competitor_name
-            )
-    return owned_counts, competitor_names
-
-
-def _citations_by_analysis(
-    citations: list[Citation],
-) -> dict[uuid.UUID, tuple[CitationEvidence, ...]]:
-    """Project persisted citations into detector evidence, keyed by analysis.
-
-    Carries the analyzer's OWN identity verdicts (``is_owned`` /
-    ``matched_competitor``) forward untouched — the source-pattern taxonomy
-    classifies only what the analyzer already left as third party. Input order
-    is the caller's query order (analysis, then ordinal), which is what makes
-    the summarized representative citation per domain deterministic.
-    """
-    grouped: dict[uuid.UUID, list[CitationEvidence]] = {}
-    for citation in citations:
-        grouped.setdefault(citation.analysis_id, []).append(
-            CitationEvidence(
-                domain=citation.domain or "",
-                url=citation.url or "",
-                title=citation.title or "",
-                is_owned=citation.is_owned,
-                matched_competitor=citation.matched_competitor,
-            )
-        )
-    return {analysis_id: tuple(rows) for analysis_id, rows in grouped.items()}
-
-
-async def _load_visibility_evidence(
-    session: AsyncSession, *, workspace_id: uuid.UUID, audit: Audit
-) -> tuple[VisibilityEvidence, MetricSnapshot | None]:
-    """Load analyses/citations/mentions/snapshots + the metric snapshot."""
-    analyses = list(
-        (
-            await session.scalars(
-                select(ResponseAnalysis)
-                .where(
-                    ResponseAnalysis.audit_id == audit.id,
-                    ResponseAnalysis.workspace_id == workspace_id,
-                )
-                .order_by(
-                    ResponseAnalysis.prompt_index.asc(),
-                    ResponseAnalysis.id.asc(),
-                )
-                .limit(RECOMPUTE_MAX_ANALYSES)
-            )
-        ).all()
-    )
-    analysis_ids = [a.id for a in analyses]
-
-    owned_counts: dict[uuid.UUID, int] = {}
-    competitor_names: dict[uuid.UUID, set[str]] = {}
-    citation_evidence: dict[uuid.UUID, tuple[CitationEvidence, ...]] = {}
-    if analysis_ids:
-        citations = list(
-            (
-                await session.scalars(
-                    select(Citation)
-                    .where(Citation.analysis_id.in_(analysis_ids))
-                    .order_by(Citation.analysis_id.asc(), Citation.ordinal.asc())
-                )
-            ).all()
-        )
-        mentions = list(
-            (
-                await session.scalars(
-                    select(CompetitorMention)
-                    .where(CompetitorMention.analysis_id.in_(analysis_ids))
-                    .order_by(
-                        CompetitorMention.created_at.asc(), CompetitorMention.id.asc()
-                    )
-                )
-            ).all()
-        )
-        owned_counts, competitor_names = _visibility_credits(citations, mentions)
-        citation_evidence = _citations_by_analysis(citations)
-
-    snapshots = list(
-        (
-            await session.scalars(
-                select(AuditPromptSnapshot)
-                .where(AuditPromptSnapshot.audit_id == audit.id)
-                .order_by(AuditPromptSnapshot.prompt_index.asc())
-            )
-        ).all()
-    )
-    owned_domains = list(
-        (
-            await session.scalars(
-                select(OwnedDomain.domain)
-                .where(OwnedDomain.project_id == audit.project_id)
-                .order_by(OwnedDomain.domain.asc())
-            )
-        ).all()
-    )
-    metric_snapshot = await session.scalar(
-        select(MetricSnapshot).where(
-            MetricSnapshot.audit_id == audit.id,
-            MetricSnapshot.workspace_id == workspace_id,
-        )
-    )
-    evidence = VisibilityEvidence(
-        audit_id=audit.id,
-        analyses=tuple(
-            AnalysisEvidence(
-                analysis_id=a.id,
-                prompt_index=a.prompt_index,
-                logical_engine=a.logical_engine or "",
-                owned_citation_count=owned_counts.get(a.id, 0),
-                brand_mentioned=bool(a.brand_mentioned),
-                competitor_names=tuple(sorted(competitor_names.get(a.id, ()))),
-                citations=citation_evidence.get(a.id, ()),
-                artifact_id=a.artifact_id,
-                entity_assessments=tuple(a.entity_assessments or []),
-            )
-            for a in analyses
-        ),
-        prompt_snapshots=tuple(
-            PromptSnapshotEvidence(
-                prompt_index=s.prompt_index,
-                prompt_id=s.prompt_id,
-                text=s.text or "",
-                theme=s.theme or "",
-                intent=s.intent or "",
-                buyer_stage=s.buyer_stage or "",
-                prompt_intent=s.prompt_intent or "",
-                snapshot_id=s.id,
-            )
-            for s in snapshots
-        ),
-        owned_domains=tuple(sorted(owned_domains)),
-    )
-    return evidence, metric_snapshot
 
 
 async def _latest_snapshot(
@@ -479,7 +312,7 @@ async def _audit_hits(
     audit: Audit,
     explicit_audit: bool,
 ) -> tuple[Audit | None, list[DetectorHit], tuple[dict, dict, list[dict]]]:
-    visibility, metric_snapshot = await _load_visibility_evidence(
+    visibility, metric_snapshot = await load_visibility_evidence(
         session, workspace_id=workspace_id, audit=audit
     )
     if metric_snapshot is None and not explicit_audit:
@@ -503,7 +336,19 @@ async def _audit_hits(
         gap_indices=gap_indices,
         projections=projections[:2],
     )
-    visibility_hits.extend(detect_earned_source_opportunities(projections[2]))
+    # Page-keyed, and over the FULL eligible answer set rather than the
+    # gap-prompt subset ``build_source_projection`` filters to. That filter is
+    # what makes a page where the brand is present but wrongly described, or
+    # present and losing ground, structurally invisible.
+    visibility_hits.extend(
+        await load_earned_page_hits(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            audit=audit,
+            visibility=visibility,
+        )
+    )
     if metric_snapshot is not None:
         metric_ids = (str(metric_snapshot.id),)
         visibility_hits = [
@@ -644,41 +489,28 @@ async def _write_recompute(
         ).all()
     )
     live_by_target = {(row.rule_id, row.target_key): row for row in live_rows}
+    live_ids = {row.id for row in live_rows}
+    # The domain-keyed earned rule is retired, so its key space no longer
+    # meets the page keys that replaced it. Without this the cutover would
+    # discard every human decision on a publisher in silence.
+    bridges = bridge_legacy_earned(live_rows=live_rows, scored=scored)
     successor_ids: dict[uuid.UUID, uuid.UUID] = {}
     new_rows: list[Opportunity] = []
     for hit, score in scored:
-        rule = OPPORTUNITY_RULES_BY_ID[hit.rule_id]
-        title, remediation = _opportunity_copy(hit, rule)
         live = live_by_target.get((hit.rule_id, hit.target_key))
-        new_id = uuid.uuid4()
-        new_rows.append(
-            Opportunity(
-                id=new_id,
-                workspace_id=workspace_id,
-                project_id=project_id,
-                rule_id=rule.rule_id,
-                opportunity_type=rule.opportunity_type,
-                severity=rule.severity,
-                priority_score=score,
-                title=title,
-                remediation=remediation,
-                target_key=hit.target_key,
-                target_prompt_id=hit.target_prompt_id,
-                target_url=hit.target_url,
-                target_theme=hit.target_theme,
-                evidence=hit.evidence,
-                source_analysis_ids=list(hit.source_analysis_ids),
-                source_issue_ids=list(hit.source_issue_ids),
-                source_metric_ids=list(hit.source_metric_ids),
-                source_traffic_ids=None,
-                analyzer_version=ANALYZER_VERSION,
-                rule_version=RULE_VERSION,
-                formula_version=FORMULA_VERSION,
-                status=live.status if live is not None else STATUS_OPEN,
-            )
+        bridge = bridges.get(hit.target_key) if live is None else None
+        row = _new_opportunity(
+            hit,
+            score=score,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            live=live,
+            bridge=bridge,
         )
-        if live is not None:
-            successor_ids[live.id] = new_id
+        new_rows.append(row)
+        predecessor = _predecessor_id(live, bridge, live_ids)
+        if predecessor is not None:
+            successor_ids[predecessor] = row.id
     now = _utcnow()
     for live in live_rows:
         live.superseded_at = now
@@ -704,6 +536,81 @@ async def _write_recompute(
     session.add(snapshot)
     await session.commit()
     return project_snapshot(snapshot)
+
+
+def _predecessor_id(
+    live: Opportunity | None,
+    bridge: LegacyBridge | None,
+    live_ids: set[uuid.UUID],
+) -> uuid.UUID | None:
+    """Which live row this one supersedes, if it supersedes a specific one.
+
+    A legacy row whose decision did NOT move keeps no successor pointer: it
+    is retired and readable, not rewritten into a page task.
+    """
+    if live is not None:
+        return live.id
+    if bridge is None or not bridge.carried:
+        return None
+    legacy_id = uuid.UUID(bridge.legacy_opportunity_id)
+    return legacy_id if legacy_id in live_ids else None
+
+
+def _new_opportunity(
+    hit: DetectorHit,
+    *,
+    score: float,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    live: Opportunity | None,
+    bridge: LegacyBridge | None,
+) -> Opportunity:
+    rule = OPPORTUNITY_RULES_BY_ID[hit.rule_id]
+    title, remediation = _opportunity_copy(hit, rule)
+    return Opportunity(
+        id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        project_id=project_id,
+        rule_id=rule.rule_id,
+        opportunity_type=rule.opportunity_type,
+        severity=rule.severity,
+        priority_score=score,
+        title=title,
+        remediation=remediation,
+        target_key=hit.target_key,
+        target_prompt_id=hit.target_prompt_id,
+        target_url=hit.target_url,
+        target_theme=hit.target_theme,
+        evidence=_evidence_with_legacy(hit, bridge),
+        source_analysis_ids=list(hit.source_analysis_ids),
+        source_issue_ids=list(hit.source_issue_ids),
+        source_metric_ids=list(hit.source_metric_ids),
+        source_traffic_ids=None,
+        analyzer_version=ANALYZER_VERSION,
+        rule_version=RULE_VERSION,
+        formula_version=FORMULA_VERSION,
+        status=_carried_status(live, bridge),
+    )
+
+
+def _carried_status(live: Opportunity | None, bridge: LegacyBridge | None) -> str:
+    """The human decision this row inherits, if it inherits one at all."""
+    if live is not None:
+        return live.status
+    if bridge is not None and bridge.carried:
+        return bridge.legacy_status
+    return STATUS_OPEN
+
+
+def _evidence_with_legacy(hit: DetectorHit, bridge: LegacyBridge | None) -> dict:
+    """Attach the retired domain decision as context, carried or not.
+
+    Present even when the status did NOT move, so a reader who dismissed a
+    publisher and now sees three page tasks can tell where they came from.
+    """
+    if bridge is None:
+        return hit.evidence
+    return {**hit.evidence, "legacy_source_decision": bridge.as_evidence()}
 
 
 def _opportunity_copy(hit: DetectorHit, rule: OpportunityRule) -> tuple[str, str]:

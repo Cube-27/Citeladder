@@ -19,6 +19,7 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -321,6 +322,16 @@ class OpportunityImplementationEvent(Base):
             "created_at",
             "id",
         ),
+        # Zero or one target representation, never both. An owned change and
+        # an external placement are verified against different evidence, so a
+        # row claiming both would report two outcomes as one. ``_resolve_targets``
+        # already refuses it; this is the constraint saying so where a future
+        # writer cannot miss it.
+        CheckConstraint(
+            "jsonb_array_length(target_site_url_ids) = 0"
+            " OR target_external_url IS NULL",
+            name="ck_opportunity_implementation_single_target",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -347,6 +358,12 @@ class OpportunityImplementationEvent(Base):
         index=True,
     )
     target_site_url_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    # The third-party page this declaration acted on, for the earned rules.
+    # Deliberately a URL and not a ``SiteUrl`` reference: that table is the
+    # crawled inventory of pages we own, and a publisher's page is neither
+    # ours nor crawlable on our terms. A declaration carries one or the
+    # other, never both -- see the check constraint above.
+    target_external_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     generation_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("content_generations.id", ondelete="SET NULL"),

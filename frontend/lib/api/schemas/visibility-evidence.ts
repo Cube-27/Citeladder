@@ -105,6 +105,13 @@ export const visibilitySourcesSchema = responseObject({
       taxonomy_versions: z.array(z.string()),
       category_unavailable: z.boolean(),
       response_delta: z.number().nullable(),
+      // Page rows only, and three distinct answers. `url_hash` is the page
+      // identity the citation resolved to; `inspection_state` is null until
+      // this project has a record of that page; `opportunity_id` is set once
+      // a qualified rule has acted on it. A domain row carries none of them.
+      url_hash: z.string().nullable(),
+      inspection_state: z.string().nullable(),
+      opportunity_id: uuid().nullable(),
     }),
   ),
 });
