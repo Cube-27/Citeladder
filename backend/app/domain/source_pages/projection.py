@@ -76,8 +76,14 @@ class SourcePageView:
     limitations: tuple[str, ...]
 
 
-def _page_limitations(page: SourcePage, snapshot: SourcePageSnapshot | None) -> tuple:
-    """Why this page's findings should be read with caution, if they should."""
+def page_limitations(page: SourcePage, snapshot: SourcePageSnapshot | None) -> tuple:
+    """Why this page's findings should be read with caution, if they should.
+
+    Public because the grouped competitor view answers the same question about
+    the same rows. A second copy of these sentences would drift the moment one
+    of them was reworded, and the two surfaces would then disagree about what
+    an unread page means.
+    """
     if page.inspection_state == INSPECTION_BLOCKED:
         return (
             "This publisher does not permit automated access, so nothing on the "
@@ -102,7 +108,7 @@ def _page_limitations(page: SourcePage, snapshot: SourcePageSnapshot | None) -> 
     return ()
 
 
-def _entity_limitations(row: SourcePageEntityPresence) -> tuple[str, ...]:
+def entity_limitations(row: SourcePageEntityPresence) -> tuple[str, ...]:
     """A non-detection carries its own caveat; a passage speaks for itself."""
     if row.presence == PRESENCE_PARTIAL:
         return ("Not enough of the page was readable to judge this.",)
@@ -127,8 +133,14 @@ def passage_texts(snapshot: SourcePageSnapshot | None, refs: list | None) -> tup
     return tuple(out)
 
 
-def _state(page: SourcePage, row: SourcePageEntityPresence | None) -> str:
+def entity_state(page: SourcePage, row: SourcePageEntityPresence | None) -> str:
     """One vocabulary for "what do we know", from page state and verdict.
+
+    THE resolver. Every surface that reports whether a brand or a competitor
+    is on a page goes through this function, because the answer depends on
+    facts held in two rows -- did anyone read the page, and what did they find
+    -- and any view that answers from one of them alone eventually reports an
+    unread page as an absence.
 
     A verdict is only meaningful if the page behind it was read recently
     enough. A stale or blocked page overrides whatever the last snapshot
@@ -200,11 +212,11 @@ async def get_source_page(
         EntityView(
             entity_kind=row.entity_kind,
             entity_name=row.entity_name,
-            state=_state(page, row),
+            state=entity_state(page, row),
             match_method=row.match_method,
             match_count=row.match_count,
             passages=passage_texts(snapshot, row.passage_refs),
-            limitations=_entity_limitations(row),
+            limitations=entity_limitations(row),
         )
         for row in rows
     )
@@ -223,5 +235,5 @@ async def get_source_page(
         title=str(((snapshot.page_facts or {}) if snapshot else {}).get("title") or ""),
         extracted_chars=snapshot.extracted_chars if snapshot else 0,
         entities=entities,
-        limitations=_page_limitations(page, snapshot),
+        limitations=page_limitations(page, snapshot),
     )
