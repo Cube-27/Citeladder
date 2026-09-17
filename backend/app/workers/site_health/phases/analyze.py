@@ -11,6 +11,7 @@ this remains in-process and does not own claiming or terminalization.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
@@ -479,7 +480,13 @@ async def _fetch_analyze(
     if status not in CLASSIFICATION_BODYLESS_STATUS_CODES:
         await _mark_classification_expected(ctx, task_id=task_id)
 
-    facts = extract_page_facts(
+    # Off the event loop: parsing a page is pure CPU, and the worker runs its
+    # slots as coroutines on one loop, so a bare call blocked every sibling's
+    # in-flight fetch for the duration of one lxml parse. ``extract_page_facts``
+    # touches no session and no shared state, and lxml releases the GIL while
+    # parsing, so this genuinely overlaps rather than just relocating the work.
+    facts = await asyncio.to_thread(
+        extract_page_facts,
         result.body,
         final_url=result.final_url or requested_url,
         content_type=result.content_type,
