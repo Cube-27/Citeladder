@@ -57,9 +57,6 @@ function quickRangeValue(selection: RangeSelection, comparing: boolean): QuickRa
 export function PerformanceToolbar({
   selection,
   selectedLabel,
-  latestDate,
-  hasConnections,
-  sync,
   onOpenRange,
   onOpenCompare,
   onSelectRange,
@@ -68,9 +65,6 @@ export function PerformanceToolbar({
 }: Readonly<{
   selection: RangeSelection;
   selectedLabel: string;
-  latestDate: string | null;
-  hasConnections: boolean;
-  sync: ReturnType<typeof usePerformanceSync>;
   onOpenRange: () => void;
   onOpenCompare: () => void;
   onSelectRange: (next: RangeSelection) => void;
@@ -82,7 +76,8 @@ export function PerformanceToolbar({
   const isMoreActive = isRangeBehindMore(selection, comparing);
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    // `contents`: the control band owns the row's height and its rule.
+    <div className="contents">
       {/* Day, Week and Month are the three choices; More opens the dialog that
           holds 3 months, 6 months, Last synced, Custom and Compare.
 
@@ -120,24 +115,42 @@ export function PerformanceToolbar({
           Reset filters
         </Button>
       ) : null}
-      <div className="ml-auto flex items-center gap-3">
-        <span className="text-muted text-xs">
-          {latestDate ? `Data through ${latestDate}` : 'No imported history'}
-        </span>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => sync.mutation.mutate()}
-          disabled={!hasConnections}
-          pending={sync.syncing || sync.mutation.isPending}
-          pendingLabel="Syncing…"
-          data-testid="sync-now-button"
-        >
-          <RefreshCw className="size-4" aria-hidden />
-          Sync now
-        </Button>
-      </div>
     </div>
+  );
+}
+
+/**
+ * Importing is an action on the project, not a narrowing of what is shown, so
+ * it rides the identity band with every other route action rather than the end
+ * of the filter row.
+ */
+export function PerformanceActions({
+  latestDate,
+  hasConnections,
+  sync,
+}: Readonly<{
+  latestDate: string | null;
+  hasConnections: boolean;
+  sync: ReturnType<typeof usePerformanceSync>;
+}>) {
+  return (
+    <>
+      <span className="text-muted text-xs">
+        {latestDate ? `Data through ${latestDate}` : 'No imported history'}
+      </span>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => sync.mutation.mutate()}
+        disabled={!hasConnections}
+        pending={sync.syncing || sync.mutation.isPending}
+        pendingLabel="Syncing…"
+        data-testid="sync-now-button"
+      >
+        <RefreshCw className="size-4" aria-hidden />
+        Sync now
+      </Button>
+    </>
   );
 }
 

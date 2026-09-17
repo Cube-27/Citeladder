@@ -23,8 +23,21 @@ vi.mock('@/lib/project/project-context', () => ({
 }));
 
 vi.mock('@/components/site-health/issues-catalog', () => ({
-  IssuesCatalog: ({ workspaceId, crawlId }: { workspaceId: string; crawlId: string }) => (
-    <div data-testid="issues-catalog">{`${workspaceId}:${crawlId}`}</div>
+  // The catalog now carries a refresh failure itself, so the stub has to render
+  // the notice it is handed — the screen no longer draws one beside it.
+  IssuesCatalog: ({
+    workspaceId,
+    crawlId,
+    notice,
+  }: {
+    workspaceId: string;
+    crawlId: string;
+    notice?: React.ReactNode;
+  }) => (
+    <div>
+      {notice}
+      <div data-testid="issues-catalog">{`${workspaceId}:${crawlId}`}</div>
+    </div>
   ),
 }));
 
@@ -32,7 +45,11 @@ import { IssuesScreen } from './issues-screen';
 
 const dashboard = {
   project_id: PROJECT,
-  crawl: makeSiteCrawl({ id: CRAWL, workspace_id: WORKSPACE, project_id: PROJECT }),
+  crawl: makeSiteCrawl({
+    id: CRAWL,
+    workspace_id: WORKSPACE,
+    project_id: PROJECT,
+  }),
   score_summary: null,
   phase: 'dashboard',
   snapshot_id: null,
@@ -86,7 +103,9 @@ describe('IssuesScreen read recovery', () => {
     expect(await screen.findByTestId('issues-catalog')).toHaveTextContent(`${WORKSPACE}:${CRAWL}`);
 
     available = false;
-    void queryClient.invalidateQueries({ queryKey: queryKeys.siteHealth.dashboard(PROJECT) });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.siteHealth.dashboard(PROJECT),
+    });
 
     expect(await screen.findByText('Refresh failed')).toBeVisible();
     expect(screen.getByTestId('issues-catalog')).toHaveTextContent(`${WORKSPACE}:${CRAWL}`);

@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
-import { pageToolbarClasses } from '@/components/ui/workspace';
 
 const ACTIVE_CLASS = 'bg-accent-soft text-accent-text';
 
@@ -43,7 +42,9 @@ export function AnalyticsToolbar<Range extends string, Granularity extends strin
   trailing?: React.ReactNode;
 }>) {
   return (
-    <div className={pageToolbarClasses} data-testid={testId}>
+    // `contents`: the control band this is handed to owns the row's height and
+    // its rule, so the toolbar contributes controls, not a box around them.
+    <div className="contents" data-testid={testId}>
       <Dropdown>
         <DropdownTrigger asChild>
           <Button

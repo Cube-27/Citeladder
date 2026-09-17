@@ -17,30 +17,24 @@ import type { EnabledFilter, PromptFilters } from '@/lib/prompts/filter';
 import { textRole } from '@/components/ui/typography';
 
 /**
- * Prompt library toolbar (F7): search box, an intent + enabled filter menu, a
- * CSV bulk-upload button, and the primary "Add prompt" action. Presentational —
- * state lives in the page.
+ * The prompt library's narrowing controls: a search box and the intent /
+ * enabled / branded filter menu. For `PageShell`'s control band.
+ *
+ * The bulk-upload, generate, add and done buttons used to sit on this same row.
+ * They are not filters — they act on the library rather than narrowing it — so
+ * they moved to the identity band with every other route action, and this is
+ * what was left. Presentational; state lives in the page.
  */
-export function PromptToolbar({
+export function PromptFilterControls({
   search,
   onSearchChange,
   filters,
   onFiltersChange,
-  onImport,
-  onAdd,
-  onGenerate,
-  onDoneManaging,
-  disabled,
 }: Readonly<{
   search: string;
   onSearchChange: (value: string) => void;
   filters: PromptFilters;
   onFiltersChange: (filters: PromptFilters) => void;
-  onImport: () => void;
-  onAdd: () => void;
-  onGenerate: () => void;
-  onDoneManaging?: () => void;
-  disabled?: boolean;
 }>) {
   const activeFilterCount =
     filters.intents.length +
@@ -61,8 +55,9 @@ export function PromptToolbar({
   const setBranded = (value: EnabledFilter) => onFiltersChange({ ...filters, branded: value });
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="relative min-w-55 flex-1">
+    // `contents`: the control band owns the row, its height and its rule.
+    <div className="contents">
+      <div className="relative max-w-sm min-w-55 flex-1">
         <Search
           className="text-muted pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2"
           aria-hidden
@@ -138,7 +133,26 @@ export function PromptToolbar({
           ))}
         </DropdownContent>
       </Dropdown>
+    </div>
+  );
+}
 
+/** The library's own actions, for `PageShell`'s identity band. */
+export function PromptActions({
+  onImport,
+  onAdd,
+  onGenerate,
+  onDoneManaging,
+  disabled,
+}: Readonly<{
+  onImport: () => void;
+  onAdd: () => void;
+  onGenerate: () => void;
+  onDoneManaging?: () => void;
+  disabled?: boolean;
+}>) {
+  return (
+    <>
       <Button variant="secondary" size="sm" onClick={onImport} disabled={disabled}>
         <Upload className="size-4" aria-hidden />
         Bulk upload
@@ -156,6 +170,6 @@ export function PromptToolbar({
           Done
         </Button>
       ) : null}
-    </div>
+    </>
   );
 }

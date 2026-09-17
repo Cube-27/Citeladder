@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuditSchedules } from '@/components/runs/audit-schedules';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { RunsTable } from '@/components/runs/runs-table';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { PageLoading } from '@/components/layout/page-loading';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { Stack } from '@/components/ui/layout';
-import { pageToolbarClasses } from '@/components/ui/workspace';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
@@ -30,11 +29,27 @@ const POLL_INTERVAL_MS = 3_000;
 
 type StatusFilter = 'all' | 'completed' | 'running' | 'failed';
 
-const STATUS_FILTERS: { id: StatusFilter; label: string; match: (audit: Audit) => boolean }[] = [
+const STATUS_FILTERS: {
+  id: StatusFilter;
+  label: string;
+  match: (audit: Audit) => boolean;
+}[] = [
   { id: 'all', label: 'All', match: () => true },
-  { id: 'completed', label: 'Completed', match: (audit) => audit.status === 'completed' },
-  { id: 'running', label: 'Running', match: (audit) => shouldPollAudit(audit.status) },
-  { id: 'failed', label: 'Failed', match: (audit) => audit.status === 'failed' },
+  {
+    id: 'completed',
+    label: 'Completed',
+    match: (audit) => audit.status === 'completed',
+  },
+  {
+    id: 'running',
+    label: 'Running',
+    match: (audit) => shouldPollAudit(audit.status),
+  },
+  {
+    id: 'failed',
+    label: 'Failed',
+    match: (audit) => audit.status === 'failed',
+  },
 ];
 
 /** Active-project run list, status filtering, launch, and schedule management. */
@@ -73,62 +88,59 @@ export function RunsScreen() {
   // so gating the whole screen on it would pin the page on a spinner forever.
   if (runsQuery.isLoading) {
     return (
-      <Stack gap="section">
-        <PageHeader />
+      <PageShell>
         <PageLoading label="Loading runs…" />
-      </Stack>
+      </PageShell>
     );
   }
 
   return (
-    <Stack gap="section">
-      <div className="grid gap-[var(--workspace-gap)]">
-        <PageHeader
-          actions={
-            <Button onClick={() => setLaunchOpen(true)} disabled={!projectId}>
-              Launch audit
-            </Button>
-          }
-        />
-        <fieldset aria-label="Filter by status">
-          <div className={pageToolbarClasses}>
-            {STATUS_FILTERS.map((filter) => (
-              <FilterChip
-                key={filter.id}
-                active={statusFilter === filter.id}
-                onClick={() => setStatusFilter(filter.id)}
-                count={audits.filter(filter.match).length}
-              >
-                {filter.label}
-              </FilterChip>
-            ))}
-          </div>
+    <PageShell
+      actions={
+        <Button size="sm" onClick={() => setLaunchOpen(true)} disabled={!projectId}>
+          Launch audit
+        </Button>
+      }
+      controls={
+        <fieldset className="contents" aria-label="Filter by status">
+          {STATUS_FILTERS.map((filter) => (
+            <FilterChip
+              key={filter.id}
+              active={statusFilter === filter.id}
+              onClick={() => setStatusFilter(filter.id)}
+              count={audits.filter(filter.match).length}
+            >
+              {filter.label}
+            </FilterChip>
+          ))}
         </fieldset>
-      </div>
-
-      <RunsContent
-        projectId={projectId}
-        isError={runsQuery.isError}
-        audits={audits}
-        filteredAudits={filteredAudits}
-        statusFilter={statusFilter}
-        anyActive={anyActive}
-        onLaunch={() => setLaunchOpen(true)}
-      />
-
-      {projectId && project ? (
-        <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
-      ) : null}
-
-      {projectId ? (
-        <LaunchDialog
-          open={launchOpen}
-          onOpenChange={setLaunchOpen}
+      }
+    >
+      <Stack gap="section">
+        <RunsContent
           projectId={projectId}
-          onLaunched={(audit) => router(projectHref(`/runs/${audit.id}`))}
+          isError={runsQuery.isError}
+          audits={audits}
+          filteredAudits={filteredAudits}
+          statusFilter={statusFilter}
+          anyActive={anyActive}
+          onLaunch={() => setLaunchOpen(true)}
         />
-      ) : null}
-    </Stack>
+
+        {projectId && project ? (
+          <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
+        ) : null}
+
+        {projectId ? (
+          <LaunchDialog
+            open={launchOpen}
+            onOpenChange={setLaunchOpen}
+            projectId={projectId}
+            onLaunched={(audit) => router(projectHref(`/runs/${audit.id}`))}
+          />
+        ) : null}
+      </Stack>
+    </PageShell>
   );
 }
 

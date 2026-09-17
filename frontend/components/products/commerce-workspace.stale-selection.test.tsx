@@ -5,7 +5,13 @@ import { renderWithProviders } from '@/test/render';
 
 const discover = vi.fn();
 
-vi.mock('./catalog-header', () => ({ CatalogHeader: () => <div>Catalog header</div> }));
+vi.mock('./catalog-header', () => ({
+  useCatalogHeader: () => ({
+    actions: null,
+    stats: <div>Catalog header</div>,
+    notices: null,
+  }),
+}));
 
 vi.mock('./catalog-list', () => ({
   catalogEntries: () => ({ categories: [], products: [] }),

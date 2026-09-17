@@ -2,10 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Download, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { PageLoading } from '@/components/layout/page-loading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -58,7 +58,11 @@ function OpportunitiesContent({
   workspaceId,
   projectId,
   projectLoading,
-}: Readonly<{ workspaceId: string | null; projectId: string | null; projectLoading: boolean }>) {
+}: Readonly<{
+  workspaceId: string | null;
+  projectId: string | null;
+  projectLoading: boolean;
+}>) {
   const summaryQuery = useQuery({
     ...opportunitiesQueries.summary(workspaceId ?? '', projectId ?? ''),
     enabled: Boolean(projectId && workspaceId),
@@ -73,16 +77,16 @@ function OpportunitiesContent({
     summary,
   );
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      <PageHeader
-        actions={
-          projectId && summary?.computed ? (
-            <SummaryActions workspaceId={workspaceId!} projectId={projectId} summary={summary} />
-          ) : undefined
-        }
-      />
-      <OpportunitiesScreenBody state={screen} projectId={projectId} summary={summary} />
-    </div>
+    <OpportunitiesScreenBody
+      state={screen}
+      projectId={projectId}
+      summary={summary}
+      actions={
+        projectId && summary?.computed ? (
+          <SummaryActions workspaceId={workspaceId!} projectId={projectId} summary={summary} />
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -103,7 +107,32 @@ function OpportunitiesScreenBody({
   state,
   projectId,
   summary,
-}: Readonly<{ state: string; projectId: string | null; summary: OpportunitySummary | null }>) {
+  actions,
+}: Readonly<{
+  state: string;
+  projectId: string | null;
+  summary: OpportunitySummary | null;
+  actions?: ReactNode;
+}>) {
+  // Only the ready state has filters, so only it draws a control band. Every
+  // other state is the same page with an empty content region and keeps its
+  // identity band rather than losing the heading and its rule.
+  if (state === 'ready' && projectId && summary)
+    return (
+      <OpportunitiesCatalog
+        projectId={projectId}
+        actions={actions}
+        summary={<SummaryStrip summary={summary} />}
+      />
+    );
+  return <PageShell actions={actions}>{opportunityFallback(state, projectId, summary)}</PageShell>;
+}
+
+function opportunityFallback(
+  state: string,
+  projectId: string | null,
+  summary: OpportunitySummary | null,
+) {
   if (state === 'missing-project')
     return <Alert tone="info">Select or create a project to view its opportunities.</Alert>;
   if (state === 'loading') return <PageLoading label="Loading opportunities…" />;
@@ -118,14 +147,7 @@ function OpportunitiesScreenBody({
         No recommendations yet. Run a visibility or website review and they will appear here.
       </Alert>
     );
-  if (state === 'preparing')
-    return <PreparingRecommendations projectId={projectId} summary={summary} />;
-  return (
-    <>
-      <SummaryStrip summary={summary} />
-      <OpportunitiesCatalog projectId={projectId} />
-    </>
-  );
+  return <PreparingRecommendations projectId={projectId} summary={summary} />;
 }
 
 /** Recompute mutation + invalidation shared by the strip and the empty state. */
@@ -137,7 +159,9 @@ function useRecompute() {
     onSuccess: async () => {
       // A recompute supersedes the whole live set — the entire namespace
       // (summary, every list page/filter, details) is stale.
-      await queryClient.invalidateQueries({ queryKey: queryKeys.opportunities.all });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.opportunities.all,
+      });
     },
   });
 }
@@ -227,7 +251,11 @@ function SummaryActions({
   workspaceId,
   projectId,
   summary,
-}: Readonly<{ workspaceId: string; projectId: string; summary: OpportunitySummary }>) {
+}: Readonly<{
+  workspaceId: string;
+  projectId: string;
+  summary: OpportunitySummary;
+}>) {
   const [exporting, setExporting] = useState<'csv' | 'md' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, CircleAlert } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
@@ -15,8 +15,31 @@ export type ActivityStep = {
   state: ActivityStepState;
 };
 
+/**
+ * The completion mark, drawn along its own stroke.
+ *
+ * Not lucide's `Check`: the draw needs `stroke-dasharray` on a path of known
+ * length, and the icon's own path length is not ours to depend on. Three
+ * points, 24 units long, matching the dash length `.activity-check` sets.
+ */
+function StepCheck() {
+  return (
+    <span className="activity-check text-success-text size-4">
+      <svg viewBox="0 0 16 16" className="size-4" fill="none" aria-hidden>
+        <path
+          d="M3.5 8.5 L6.5 11.5 L12.5 5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function StepIndicator({ state }: Readonly<{ state: ActivityStepState }>) {
-  if (state === 'complete') return <Check className="size-4" />;
+  if (state === 'complete') return <StepCheck />;
   if (state === 'attention') return <CircleAlert className="size-4" />;
   if (state === 'active') return <span className="activity-dot bg-accent size-2" />;
   return <span className="bg-border-subtle size-1.5 rounded-full" />;

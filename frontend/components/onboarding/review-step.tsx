@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 
 import { FlowGroup } from '@/components/auth/flow-shell';
-import { ChipRow, ToggleChip } from '@/components/onboarding/choice-controls';
+import { EntityRow } from '@/components/onboarding/choice-controls';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ function competitorUrl(competitor: ReviewCompetitor): string {
   return /^https?:\/\//i.test(domain) ? domain : `https://${domain}`;
 }
 
-function CompetitorChip({
+function CompetitorRow({
   competitor,
   disabled,
   onToggle,
@@ -40,7 +40,7 @@ function CompetitorChip({
   // The field is labelled, seeded, and placeheld as a DOMAIN, so it writes the
   // domain. It used to write `name` instead, which left `domains` holding the
   // value the user had just replaced — the submitted payload carried both, and
-  // the chip's link still pointed at the old host.
+  // the row's link still pointed at the old host.
   const save = () => {
     setIsEditing(false);
     const trimmed = draft.trim();
@@ -49,7 +49,7 @@ function CompetitorChip({
 
   if (isEditing) {
     return (
-      <span className="flex items-center gap-1.5">
+      <li className="flow-entity">
         <Input
           // oxlint-disable-next-line jsx-a11y/no-autofocus -- Edit is an explicit action and focus must enter the newly mounted inline editor.
           autoFocus
@@ -65,37 +65,36 @@ function CompetitorChip({
           }}
           placeholder="acme.com"
           aria-label={`Website for ${displayName}`}
-          className="w-44 shadow-2xs"
+          className="my-1.5"
         />
-      </span>
+      </li>
     );
   }
 
   const url = competitorUrl(competitor);
   return (
-    <span className="inline-flex max-w-full min-w-0 items-center">
-      <ToggleChip
-        label={displayName}
-        selected={competitor.selected}
-        disabled={disabled}
-        onToggle={onToggle}
-        leading={
-          <BrandLogo name={displayName} websiteUrl={primaryDomain} size="sm" className="-my-1" />
-        }
-        onEdit={() => {
-          setDraft(primaryDomain);
-          setIsEditing(true);
-        }}
-        editLabel={`Edit website for ${displayName}`}
-      />
-      {/* Kept for assistive tech and tests: the visible chip is a control, so
-          it cannot also be the link to the competitor's site. */}
-      {url ? (
-        <a href={url} target="_blank" rel="noreferrer" className="sr-only">
-          {url}
-        </a>
-      ) : null}
-    </span>
+    <EntityRow
+      name={displayName}
+      meta={primaryDomain}
+      selected={competitor.selected}
+      disabled={disabled}
+      onToggle={onToggle}
+      leading={<BrandLogo name={displayName} websiteUrl={primaryDomain} size="md" />}
+      onEdit={() => {
+        setDraft(primaryDomain);
+        setIsEditing(true);
+      }}
+      editLabel={`Edit website for ${displayName}`}
+      trailing={
+        // Kept for assistive tech and tests: the visible row is a control, so
+        // it cannot also be the link to the competitor's site.
+        url ? (
+          <a href={url} target="_blank" rel="noreferrer" className="sr-only">
+            {url}
+          </a>
+        ) : null
+      }
+    />
   );
 }
 
@@ -122,7 +121,7 @@ export function ReviewStep({
     maximumCompetitors === undefined || selectedCompetitors >= maximumCompetitors;
 
   return (
-    <div className="flow-groups">
+    <>
       <FlowGroup
         title="Your websites"
         meta={domains.length > 0 ? `${selectedDomains} of ${domains.length}` : undefined}
@@ -131,16 +130,16 @@ export function ReviewStep({
         {domains.length === 0 ? (
           <p className="flow-help">No websites were found.</p>
         ) : (
-          <ChipRow>
+          <ul className="flow-entity-list">
             {domains.map((entry, index) => (
-              <ToggleChip
+              <EntityRow
                 key={entry.domain}
-                label={entry.domain}
+                name={entry.domain}
                 selected={entry.selected}
                 onToggle={() => onToggleDomain(index)}
               />
             ))}
-          </ChipRow>
+          </ul>
         )}
       </FlowGroup>
 
@@ -165,9 +164,9 @@ export function ReviewStep({
             No competitors were confirmed. Add the companies you lose deals to.
           </p>
         ) : (
-          <ChipRow>
+          <ul className="flow-entity-list">
             {competitors.map((competitor, index) => (
-              <CompetitorChip
+              <CompetitorRow
                 key={competitor.id}
                 competitor={competitor}
                 disabled={competitorLimitReached}
@@ -175,9 +174,9 @@ export function ReviewStep({
                 onEditDomain={(domain) => onEditCompetitorDomain(index, domain)}
               />
             ))}
-          </ChipRow>
+          </ul>
         )}
       </FlowGroup>
-    </div>
+    </>
   );
 }

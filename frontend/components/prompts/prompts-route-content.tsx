@@ -3,8 +3,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Suspense, useState } from 'react';
 
-import { PageHeader } from '@/components/layout/page-header';
-
 import { PromptLibrary } from './prompt-library';
 import { YourPrompts } from './your-prompts';
 
@@ -21,21 +19,9 @@ function PromptsRouteSurface() {
     if (modeParam === 'manage') router('/prompts', { replace: true });
   };
 
-  if (managing) {
-    return (
-      <div className="grid gap-[var(--workspace-gap)]">
-        <PageHeader />
-        <PromptLibrary onDoneManaging={exitManage} />
-      </div>
-    );
-  }
+  if (managing) return <PromptLibrary onDoneManaging={exitManage} />;
 
-  return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      <PageHeader />
-      <YourPrompts />
-    </div>
-  );
+  return <YourPrompts />;
 }
 
 /** Shared /prompts route content, including its URL-backed manage mode. */

@@ -21,6 +21,14 @@ export const inputClasses =
   'focus-input h-[var(--field-height)] w-full rounded-[var(--radius-control)] shadow-smudge bg-input px-2.5 text-sm text-foreground leading-[calc(var(--field-height)_-_2px)] transition-[box-shadow] placeholder:text-muted hover:shadow-smudge-hover aria-invalid:shadow-smudge-danger disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
+ * The composer lift. For the one field that IS the page — a brief box, an
+ * agent prompt — where the reader is meant to type before doing anything else.
+ * It holds its deeper edge at rest and on hover, so it reads as the surface in
+ * front rather than as one more control in a row. Focus still owns the accent.
+ */
+const raisedClasses = 'shadow-raised hover:shadow-raised';
+
+/**
  * The roomier field used on the standalone auth and onboarding screens, where a
  * form is the whole page rather than one control in a dense table.
  *
@@ -37,11 +45,14 @@ export function Input({
   startContent,
   endContent,
   size = 'md',
+  raised = false,
   ref,
   ...props
 }: Readonly<
   Omit<ComponentPropsWithoutRef<'input'>, 'size'> & {
     size?: keyof typeof inputSizes;
+    /** The composer treatment — for a field that is the point of its screen. */
+    raised?: boolean;
     /** Leading content rendered inside the shared input frame. */
     startContent?: ReactNode;
     /** Trailing content rendered inside the shared input frame. */
@@ -52,7 +63,13 @@ export function Input({
   }
 >) {
   if (!startContent && !endContent) {
-    return <input ref={ref} className={cn(inputClasses, inputSizes[size], className)} {...props} />;
+    return (
+      <input
+        ref={ref}
+        className={cn(inputClasses, inputSizes[size], raised && raisedClasses, className)}
+        {...props}
+      />
+    );
   }
 
   return (
@@ -60,6 +77,7 @@ export function Input({
       className={cn(
         'focus-frame bg-input has-[[aria-invalid=true]]:shadow-smudge-danger flex h-[var(--field-height)] w-full items-center gap-2 rounded-[var(--radius-control)] px-2.5 shadow-smudge transition-[box-shadow] hover:shadow-smudge-hover',
         size === 'lg' && 'h-[var(--field-height-lg)] px-3',
+        raised && raisedClasses,
         props.disabled && 'cursor-not-allowed opacity-50',
         containerClassName,
       )}

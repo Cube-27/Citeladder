@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { buttonVariants } from '@/components/ui/button-variants';
-import { Card, CardContent } from '@/components/ui/card';
 import { CsvImportTrigger } from '@/components/ui/csv-import';
 import { menuPanelClasses } from '@/components/ui/menu-variants';
 import { Label, Metric, textRole } from '@/components/ui/typography';
@@ -79,7 +78,7 @@ function CatalogStats({
   projecting: string;
 }>) {
   return (
-    <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+    <div className="border-border-subtle flex flex-wrap items-center gap-x-[var(--page-section-gap)] gap-y-4 border-b pb-[var(--workspace-gap)]">
       <Stat label="Products" value={counts ? `${counts.products.length}` : PLACEHOLDER} />
       <Stat label="Categories" value={counts ? `${counts.categories.length}` : PLACEHOLDER} />
       <Stat label="Pages analyzed" value={analyzedLabel(crawl)} />
@@ -108,32 +107,44 @@ function CatalogStats({
 /**
  * Catalog-WIDE state and catalog-wide actions, and nothing target-scoped.
  *
- * ONE row: metrics left, actions right — the same toolbar shape every other
- * screen uses. It carries no title and no description. The screen already
- * names itself in the nav, and the two sentences that used to sit here
- * ("Site Health observations project automatically…") explained a mechanism
- * the numbers show directly, while pushing the actions down a line and
- * leaving the entire right half of the card empty.
+ * It used to be a `<Card>` holding both halves — the only toolbar in the app
+ * boxed in one, which is exactly the inconsistency the page grammar removes.
+ * The two halves now go where the grammar puts them: the actions are route
+ * actions and belong to the identity band, the counts are evidence and belong
+ * at the top of the content region. So this is a hook that owns the mutations
+ * once and hands back the pieces, rather than a component that has to render
+ * them side by side to keep them together.
  */
-export function CatalogHeader({
+export function useCatalogHeader({
   workspaceId,
   projectId,
   query,
-}: Readonly<{ workspaceId: string; projectId: string; query: CommerceQueries['catalog'] }>) {
+}: Readonly<{
+  workspaceId: string;
+  projectId: string;
+  query: CommerceQueries['catalog'];
+}>) {
   const client = useQueryClient();
   const [result, setResult] = useState('');
   const dashboard = useQuery({
     ...siteHealthQueries.dashboard(workspaceId, projectId),
+    // The workspace can still be resolving; this used to be gated by the
+    // caller mounting the component at all, and the hook has to gate itself.
+    enabled: Boolean(workspaceId && projectId),
     refetchInterval: (state) => {
       const crawl = state.state.data?.crawl;
       return crawl ? crawlPollInterval(crawl) : false;
     },
   });
   const invalidateCatalog = () =>
-    client.invalidateQueries({ queryKey: queryKeys.commerce.catalog(projectId) });
+    client.invalidateQueries({
+      queryKey: queryKeys.commerce.catalog(projectId),
+    });
   const importCatalog = useMutation({
     mutationFn: async (file: File) =>
-      commerceApi.importCatalog(projectId, await file.text(), file.name, { workspaceId }),
+      commerceApi.importCatalog(projectId, await file.text(), file.name, {
+        workspaceId,
+      }),
     onSuccess: async (data) => {
       setResult(
         `${data.created} created, ${data.updated} updated, ${data.unchanged} unchanged, ${data.rejected} rejected`,
@@ -150,56 +161,88 @@ export function CatalogHeader({
   const crawl = dashboard.data?.crawl ?? null;
   const counts = query.data;
   const projecting = projectionLabel(counts?.projection_tasks);
+  return {
+    actions: (
+      <CatalogActions
+        crawl={crawl}
+        importing={importCatalog.isPending}
+        onImport={(file) => importCatalog.mutate(file)}
+        refreshing={discover.isPending || dashboard.isPending}
+        onRefresh={() =>
+          crawl ? void Promise.all([dashboard.refetch(), query.refetch()]) : discover.mutate()
+        }
+      />
+    ),
+    stats: <CatalogStats counts={counts} crawl={crawl} projecting={projecting} />,
+    notices: (
+      <CatalogNotices
+        result={result}
+        importFailed={importCatalog.isError}
+        refreshFailed={discover.isError || dashboard.isError}
+      />
+    ),
+  };
+}
+
+/** The catalog's route actions, for the identity band. */
+function CatalogActions({
+  crawl,
+  importing,
+  onImport,
+  refreshing,
+  onRefresh,
+}: Readonly<{
+  crawl: SiteHealthCrawl;
+  importing: boolean;
+  onImport: (file: File) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
+}>) {
   return (
-    <Card>
-      <CardContent className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
-        <CatalogStats counts={counts} crawl={crawl} projecting={projecting} />
-        <div className="flex flex-wrap items-center gap-2">
-          <details className="relative">
-            <summary
-              className={cn(buttonVariants({ variant: 'secondary', size: 'md' }), 'list-none')}
-            >
-              More actions <ChevronDown className="size-4" aria-hidden />
-            </summary>
-            <div
-              className={cn(
-                menuPanelClasses,
-                'absolute top-[calc(100%+0.375rem)] right-0 grid min-w-48 gap-1',
-              )}
-            >
-              <CsvImportTrigger
-                accessibleLabel="Import catalog CSV"
-                pending={importCatalog.isPending}
-                onSelect={(file) => importCatalog.mutate(file)}
-              />
-              <Button asChild variant="ghost" className="justify-start">
-                <ProjectLink href="/site" target="_blank" rel="noreferrer">
-                  Open Site Health
-                </ProjectLink>
-              </Button>
-            </div>
-          </details>
-          <Button
-            disabled={discover.isPending || dashboard.isPending}
-            onClick={() =>
-              crawl ? void Promise.all([dashboard.refetch(), query.refetch()]) : discover.mutate()
-            }
-          >
-            {crawl ? 'Refresh from Site Health' : 'Run Site Health crawl'}
+    <>
+      <details className="relative">
+        <summary className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'list-none')}>
+          More actions <ChevronDown className="size-3.5" aria-hidden />
+        </summary>
+        <div
+          className={cn(
+            menuPanelClasses,
+            'absolute top-[calc(100%+0.375rem)] right-0 z-10 grid min-w-48 gap-1',
+          )}
+        >
+          <CsvImportTrigger
+            accessibleLabel="Import catalog CSV"
+            pending={importing}
+            onSelect={onImport}
+          />
+          <Button asChild variant="ghost" className="justify-start">
+            <ProjectLink href="/site" target="_blank" rel="noreferrer">
+              Open Site Health
+            </ProjectLink>
           </Button>
         </div>
-        {result ? <p className={textRole('body', 'w-full')}>{result}</p> : null}
-        {importCatalog.isError ? (
-          <Alert className="w-full" tone="danger">
-            The catalog import failed.
-          </Alert>
-        ) : null}
-        {discover.isError || dashboard.isError ? (
-          <Alert className="w-full" tone="danger">
-            Site Health progress could not be refreshed.
-          </Alert>
-        ) : null}
-      </CardContent>
-    </Card>
+      </details>
+      <Button size="sm" disabled={refreshing} onClick={onRefresh}>
+        {crawl ? 'Refresh from Site Health' : 'Run Site Health crawl'}
+      </Button>
+    </>
+  );
+}
+
+/** Whatever the last catalog-wide action has to report, above the counts. */
+function CatalogNotices({
+  result,
+  importFailed,
+  refreshFailed,
+}: Readonly<{ result: string; importFailed: boolean; refreshFailed: boolean }>) {
+  if (!result && !importFailed && !refreshFailed) return null;
+  return (
+    <div className="grid gap-[var(--compact-gap)]">
+      {result ? <p className={textRole('body')}>{result}</p> : null}
+      {importFailed ? <Alert tone="danger">The catalog import failed.</Alert> : null}
+      {refreshFailed ? (
+        <Alert tone="danger">Site Health progress could not be refreshed.</Alert>
+      ) : null}
+    </div>
   );
 }

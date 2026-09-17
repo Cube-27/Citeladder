@@ -140,7 +140,7 @@ export function EditorialSectionHeader({
       )}
     >
       <div className="grid gap-1">
-        <h2 id={headingId} className="text-foreground text-lg font-medium">
+        <h2 id={headingId} className={textRole('sectionTitle')}>
           {title}
         </h2>
         {description ? <p className="text-secondary max-w-[72ch] text-sm">{description}</p> : null}

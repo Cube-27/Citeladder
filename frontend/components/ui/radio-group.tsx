@@ -29,8 +29,32 @@ export function RadioGroup<T extends string>({
   options: readonly RadioOption<T>[];
   ariaLabel: string;
   className?: string;
-  variant?: 'standard' | 'chip';
+  /**
+   * `row` is the ruled-list answer: one full-width row per option, hung
+   * between hairlines. For questions whose options are sentences rather than
+   * words — a wrapping row of chips turns one long label into a two-line box
+   * beside a set of small ones, and the set stops reading as a set.
+   */
+  variant?: 'standard' | 'chip' | 'row';
 }>) {
+  if (variant === 'row') {
+    return (
+      <RadioGroupPrimitive.Root
+        value={value}
+        onValueChange={(next) => onValueChange(next as T)}
+        aria-label={ariaLabel}
+        data-radio-variant="row"
+        className={cn(
+          'border-border-subtle divide-border-subtle grid divide-y border-y',
+          className,
+        )}
+      >
+        {options.map((option) => (
+          <RadioRow key={option.value} option={option} />
+        ))}
+      </RadioGroupPrimitive.Root>
+    );
+  }
   return (
     <RadioGroupPrimitive.Root
       value={value}
@@ -61,6 +85,27 @@ export function RadioGroup<T extends string>({
         ))
       )}
     </RadioGroupPrimitive.Root>
+  );
+}
+
+/** One option of a `row` group: the label, and the mark that answers it. */
+function RadioRow<T extends string>({ option }: Readonly<{ option: RadioOption<T> }>) {
+  return (
+    <RadioGroupPrimitive.Item
+      value={option.value}
+      disabled={option.disabled}
+      className="group focus-ring hover:bg-background-alt data-[state=checked]:text-accent-text text-foreground flex min-h-9 w-full items-center justify-between gap-3 rounded-[var(--radius-control)] px-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <span className="min-w-0">{option.label}</span>
+      <span
+        aria-hidden
+        className="border-border-strong group-data-[state=checked]:border-accent grid size-4 shrink-0 place-items-center rounded-full border"
+      >
+        <RadioGroupPrimitive.Indicator>
+          <span className="bg-accent block size-2 rounded-full" />
+        </RadioGroupPrimitive.Indicator>
+      </span>
+    </RadioGroupPrimitive.Item>
   );
 }
 

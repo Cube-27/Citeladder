@@ -16,11 +16,12 @@ import {
 import { targetKey, useCommerceTarget } from '@/lib/products/use-commerce-target';
 import { useCommerceQueries } from '@/lib/products/use-products-screen';
 
-import { CatalogHeader } from './catalog-header';
+import { useCatalogHeader } from './catalog-header';
 import { CatalogList, catalogEntries } from './catalog-list';
 import { TargetDetail } from './target-detail';
 import { textRole } from '@/components/ui/typography';
 import { Stack } from '@/components/ui/layout';
+import { PageShell } from '@/components/layout/page-shell';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /** Selection-only bulk actions, including stale keys that still need a clear path. */
@@ -128,6 +129,11 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
   const discovery = useCompetitorDiscovery(projectId);
   const [checked, setChecked] = useState<string[]>([]);
   const pane = useResizablePane();
+  const header = useCatalogHeader({
+    workspaceId: workspaceId ?? '',
+    projectId,
+    query: queries.catalog,
+  });
   const { categories, products } = catalogEntries(queries.catalog);
   const entries = [...categories, ...products];
   const selectedKey = target ? targetKey(target) : undefined;
@@ -145,70 +151,71 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
       return [...next];
     });
   return (
-    <Stack gap="workspace">
-      {workspaceId && (
-        <CatalogHeader workspaceId={workspaceId} projectId={projectId} query={queries.catalog} />
-      )}
-      {checked.length ? (
-        <BulkActions
-          count={checkedTargets.length}
-          hasCheckedKeys
-          pending={discovery.discover.isPending}
-          onDiscover={() => discovery.discover.mutate(checkedTargets)}
-          onClear={() => setChecked([])}
-        />
-      ) : null}
-      {/* `min-w-0` on BOTH columns is load-bearing: a grid item defaults to
-          `min-width: auto`, so a long product name ("TempPro TP920 Bluetooth
-          Meat Thermometer + TP620 Instant-Read + TP358 Hygrometer — Bundle")
-          forces the track wider than its track sizing and the list overflows
-          its own card, on top of the detail pane.
+    <PageShell actions={header.actions}>
+      <Stack gap="workspace">
+        {header.stats}
+        {header.notices}
+        {checked.length ? (
+          <BulkActions
+            count={checkedTargets.length}
+            hasCheckedKeys
+            pending={discovery.discover.isPending}
+            onDiscover={() => discovery.discover.mutate(checkedTargets)}
+            onClear={() => setChecked([])}
+          />
+        ) : null}
+        {/* `min-w-0` on BOTH columns is load-bearing: a grid item defaults to
+            `min-width: auto`, so a long product name ("TempPro TP920 Bluetooth
+            Meat Thermometer + TP620 Instant-Read + TP358 Hygrometer — Bundle")
+            forces the track wider than its track sizing and the list overflows
+            its own card, on top of the detail pane.
 
-          The first track is the reader's to size (see `useResizablePane`); the
-          gap is halved because the separator now carries the space between the
-          panes itself. `select-none` while dragging stops the pointer from
-          painting a text selection across both panes. */}
-      <div
-        style={{ '--catalog-pane': `${pane.width}px` } as React.CSSProperties}
-        className={`grid items-start gap-2 lg:grid-cols-[var(--catalog-pane)_auto_minmax(0,1fr)] ${
-          pane.dragging ? 'cursor-col-resize select-none' : ''
-        }`}
-      >
-        <Card className="min-w-0 lg:sticky lg:top-[var(--workspace-gap)]">
-          <CardContent
-            flush
-            className="max-h-[calc(100dvh-var(--sticky-header-offset)-2*var(--workspace-gap))] overflow-y-auto"
-          >
-            <CatalogList
-              query={queries.catalog}
-              selectedKey={selectedKey}
-              checkedKeys={checkedSet}
-              onSelect={(next: CommerceTarget) => selectTarget(next)}
-              onToggle={toggle}
-            />
-          </CardContent>
-        </Card>
-        <PaneResizer pane={pane} />
-        <div className="min-w-0">
-          {target ? (
-            // Rendered as soon as a target exists, not once the catalog has
-            // loaded a label for it: a reload with `?target=` in the URL used
-            // to show "select a category" until the catalog landed.
-            <TargetDetail
-              projectId={projectId}
-              target={target}
-              label={label || `Selected ${target.kind}`}
-              queries={queries}
-              discovery={discovery}
-            />
-          ) : (
-            <Alert tone="info">
-              Select a category or product to see its shelf position, its competitors, and the
-              prompts that measure it.
-            </Alert>
-          )}
+            The first track is the reader's to size (see `useResizablePane`); the
+            gap is halved because the separator now carries the space between the
+            panes itself. `select-none` while dragging stops the pointer from
+            painting a text selection across both panes. */}
+        <div
+          style={{ '--catalog-pane': `${pane.width}px` } as React.CSSProperties}
+          className={`grid items-start gap-2 lg:grid-cols-[var(--catalog-pane)_auto_minmax(0,1fr)] ${
+            pane.dragging ? 'cursor-col-resize select-none' : ''
+          }`}
+        >
+          <Card className="min-w-0 lg:sticky lg:top-[var(--workspace-gap)]">
+            <CardContent
+              flush
+              className="max-h-[calc(100dvh-var(--sticky-header-offset)-2*var(--workspace-gap))] overflow-y-auto"
+            >
+              <CatalogList
+                query={queries.catalog}
+                selectedKey={selectedKey}
+                checkedKeys={checkedSet}
+                onSelect={(next: CommerceTarget) => selectTarget(next)}
+                onToggle={toggle}
+              />
+            </CardContent>
+          </Card>
+          <PaneResizer pane={pane} />
+          <div className="min-w-0">
+            {target ? (
+              // Rendered as soon as a target exists, not once the catalog has
+              // loaded a label for it: a reload with `?target=` in the URL used
+              // to show "select a category" until the catalog landed.
+              <TargetDetail
+                projectId={projectId}
+                target={target}
+                label={label || `Selected ${target.kind}`}
+                queries={queries}
+                discovery={discovery}
+              />
+            ) : (
+              <Alert tone="info">
+                Select a category or product to see its shelf position, its competitors, and the
+                prompts that measure it.
+              </Alert>
+            )}
+          </div>
         </div>
-      </div>
-    </Stack>
+      </Stack>
+    </PageShell>
   );
 }

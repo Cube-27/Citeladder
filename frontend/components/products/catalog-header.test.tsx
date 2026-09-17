@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { renderWithProviders } from '@/test/render';
 
-import { CatalogHeader } from './catalog-header';
+import { useCatalogHeader } from './catalog-header';
 
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const getDashboard = vi.fn();
@@ -53,6 +53,22 @@ const catalogQuery = (overrides: Record<string, unknown> = {}) =>
     ...overrides,
   }) as never;
 
+/**
+ * The header is a hook now — its two halves go to different bands of the page
+ * grammar — so the test mounts a host that renders both, exactly as a screen
+ * does, and keeps asserting on what the reader sees.
+ */
+function CatalogHeaderHost(props: Parameters<typeof useCatalogHeader>[0]) {
+  const header = useCatalogHeader(props);
+  return (
+    <>
+      {header.stats}
+      {header.actions}
+      {header.notices}
+    </>
+  );
+}
+
 describe('CatalogHeader', () => {
   beforeEach(() => {
     getDashboard.mockReset();
@@ -61,7 +77,11 @@ describe('CatalogHeader', () => {
 
   it('reads the catalog as metrics, not as prose', async () => {
     renderWithProviders(
-      <CatalogHeader workspaceId={WORKSPACE_ID} projectId={PROJECT_ID} query={catalogQuery()} />,
+      <CatalogHeaderHost
+        workspaceId={WORKSPACE_ID}
+        projectId={PROJECT_ID}
+        query={catalogQuery()}
+      />,
     );
 
     expect(screen.getByText('Products').nextSibling).toHaveTextContent('2');
@@ -78,7 +98,11 @@ describe('CatalogHeader', () => {
     // least that large, so the denominator can never fall below them.
     getDashboard.mockResolvedValue(crawl({ total_url_count: 1, visible_url_count: 1 }));
     renderWithProviders(
-      <CatalogHeader workspaceId={WORKSPACE_ID} projectId={PROJECT_ID} query={catalogQuery()} />,
+      <CatalogHeaderHost
+        workspaceId={WORKSPACE_ID}
+        projectId={PROJECT_ID}
+        query={catalogQuery()}
+      />,
     );
 
     await waitFor(() => expect(screen.getByText('49/49')).toBeInTheDocument());
@@ -88,7 +112,11 @@ describe('CatalogHeader', () => {
   it('offers the crawl as the primary action until one exists', async () => {
     getDashboard.mockResolvedValue({ crawl: null });
     renderWithProviders(
-      <CatalogHeader workspaceId={WORKSPACE_ID} projectId={PROJECT_ID} query={catalogQuery()} />,
+      <CatalogHeaderHost
+        workspaceId={WORKSPACE_ID}
+        projectId={PROJECT_ID}
+        query={catalogQuery()}
+      />,
     );
 
     await waitFor(() =>

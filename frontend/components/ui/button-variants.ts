@@ -11,8 +11,10 @@ import { cva } from 'class-variance-authority';
  * hierarchy without introducing another component family.
  *
  * Hover moves the fill one step along the action ramp rather than fading
- * opacity or changing the edge, so the label keeps its verified AA contrast
- * in every state and hover never draws a border.
+ * opacity, so the label keeps its verified AA contrast in every state. The one
+ * exception is `secondary`: it is a white control on white paper, so its edge
+ * IS its affordance and the fill has almost nowhere to move. That variant
+ * alone deepens the smudge on hover — still a fused ring, never a drawn border.
  *
  * Variants only name semantic roles; surfaces never introduce local color or
  * spacing overrides.
@@ -26,7 +28,8 @@ export const buttonVariants = cva(
           'bg-action text-action-fg shadow-smudge hover:bg-action-hover active:bg-action-active',
         accent:
           'bg-accent-soft text-accent-text shadow-smudge hover:bg-accent hover:text-accent-fg active:bg-accent-hover',
-        secondary: 'bg-panel text-foreground shadow-smudge hover:bg-background-alt active:bg-well',
+        secondary:
+          'bg-panel text-foreground shadow-smudge hover:bg-background-alt hover:shadow-smudge-hover active:bg-well',
         tonal:
           'bg-accent-subtle text-accent-text shadow-smudge hover:bg-accent-border active:bg-accent-border',
         neutral: 'bg-background-alt text-foreground shadow-none hover:bg-well active:bg-active',

@@ -24,7 +24,10 @@ import { Tabs } from '@/components/ui/tabs';
 import { PromptEmptyState } from './prompt-empty-state';
 import { PromptLibraryDialogs } from './prompt-library-dialogs';
 import { PromptTable, type PromptMeasurement } from './prompt-table';
-import { PromptToolbar } from './prompt-toolbar';
+import { PageShell } from '@/components/layout/page-shell';
+import { Stack } from '@/components/ui/layout';
+
+import { PromptActions, PromptFilterControls } from './prompt-toolbar';
 import { ResizablePromptWorkspace } from './resizable-prompt-workspace';
 import { TopicRail } from './topic-rail';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
@@ -89,11 +92,17 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
 
   const invalidate = async () => {
     if (projectId) {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.prompts.sets(projectId) });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.topics.list(projectId) });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.prompts.sets(projectId),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.topics.list(projectId),
+      });
     }
     if (promptSet)
-      await queryClient.invalidateQueries({ queryKey: queryKeys.prompts.set(promptSet.id) });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.prompts.set(promptSet.id),
+      });
     // The projects list embeds prompt_sets[].prompts, which the onboarding
     // "Getting Started" card reads to mark the "Add prompts" step done. Refresh
     // it so adding prompts (via generate, manual, or import) advances the flow.
@@ -229,145 +238,157 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
 
   if (!requestScope.enabled) {
     return (
-      <Alert tone="info">
-        Select or create a project first — prompts belong to a project&apos;s prompt set.
-      </Alert>
+      <PageShell>
+        <Alert tone="info">
+          Select or create a project first — prompts belong to a project&apos;s prompt set.
+        </Alert>
+      </PageShell>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="grid gap-3">
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
+      <PageShell>
+        <Stack gap="compact">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </Stack>
+      </PageShell>
     );
   }
 
   return (
-    <div className="grid gap-4">
-      {isError ? (
-        <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
-      ) : null}
+    <PageShell
+      actions={
+        <PromptActions
+          onImport={() => setImportOpen(true)}
+          onAdd={openAdd}
+          onGenerate={() => {
+            setGenerateResult(null);
+            generateMutation.reset();
+            setGenerateOpen(true);
+          }}
+          onDoneManaging={onDoneManaging}
+        />
+      }
+      controls={
+        <PromptFilterControls
+          search={search}
+          onSearchChange={setSearch}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
+      }
+    >
+      <Stack gap="workspace">
+        {isError ? (
+          <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
+        ) : null}
 
-      <PromptToolbar
-        search={search}
-        onSearchChange={setSearch}
-        filters={filters}
-        onFiltersChange={setFilters}
-        onImport={() => setImportOpen(true)}
-        onAdd={openAdd}
-        onGenerate={() => {
-          setGenerateResult(null);
-          generateMutation.reset();
-          setGenerateOpen(true);
-        }}
-        onDoneManaging={onDoneManaging}
-      />
-
-      <ResizablePromptWorkspace
-        railId="prompt-topic-rail"
-        rail={
-          <TopicRail
-            desktopId="prompt-topic-rail"
-            topics={topics}
-            selectedTopicId={selectedTopicId}
-            onSelect={setSelectedTopicId}
-            onCreate={async (name) => {
-              await createTopicMutation.mutateAsync(name);
-            }}
-            onDelete={(topic) => deleteTopicMutation.mutate(topic)}
-            isCreating={createTopicMutation.isPending}
-            loadError={topicsQuery.isError}
-            actionError={
-              createTopicMutation.isError
-                ? errorMessage(createTopicMutation.error)
-                : deleteTopicMutation.isError
-                  ? errorMessage(deleteTopicMutation.error)
-                  : null
-            }
-          />
-        }
-      >
-        <div className="grid min-w-0 content-start gap-3">
-          <Tabs
-            value={statusTab}
-            onValueChange={setStatusTab}
-            ariaLabel="Prompt status"
-            items={STATUS_TABS.map((tab) => ({
-              value: tab.id,
-              label: (
-                <>
-                  {tab.label}
-                  {statusCounts[tab.id] > 0 ? (
-                    <span className="mono text-muted ml-1.5 text-xs">{statusCounts[tab.id]}</span>
-                  ) : null}
-                </>
-              ),
-            }))}
-          />
-
-          {!hasPrompts ? (
-            <PromptEmptyState onAdd={openAdd} onImport={() => setImportOpen(true)} />
-          ) : visible.length === 0 ? (
-            <p
-              className={textRole(
-                'body',
-                'px-[var(--card-padding)] py-[var(--empty-state-padding)]',
-              )}
-            >
-              No prompts match your search or filters.
-            </p>
-          ) : (
-            <PromptTable
-              prompts={visible}
-              onEdit={openEdit}
-              onDelete={(prompt) => {
-                setBusyId(prompt.id);
-                deleteMutation.mutate(prompt.id);
+        <ResizablePromptWorkspace
+          railId="prompt-topic-rail"
+          rail={
+            <TopicRail
+              desktopId="prompt-topic-rail"
+              topics={topics}
+              selectedTopicId={selectedTopicId}
+              onSelect={setSelectedTopicId}
+              onCreate={async (name) => {
+                await createTopicMutation.mutateAsync(name);
               }}
-              onToggleEnabled={(prompt) => {
-                setBusyId(prompt.id);
-                toggleMutation.mutate(prompt);
-              }}
-              onSetStatus={(prompt, status) => {
-                setBusyId(prompt.id);
-                statusMutation.mutate({ prompt, status });
-              }}
-              busyId={busyId}
-              measurements={measurements}
+              onDelete={(topic) => deleteTopicMutation.mutate(topic)}
+              isCreating={createTopicMutation.isPending}
+              loadError={topicsQuery.isError}
+              actionError={
+                createTopicMutation.isError
+                  ? errorMessage(createTopicMutation.error)
+                  : deleteTopicMutation.isError
+                    ? errorMessage(deleteTopicMutation.error)
+                    : null
+              }
             />
-          )}
-        </div>
-      </ResizablePromptWorkspace>
+          }
+        >
+          <div className="grid min-w-0 content-start gap-3">
+            <Tabs
+              value={statusTab}
+              onValueChange={setStatusTab}
+              ariaLabel="Prompt status"
+              items={STATUS_TABS.map((tab) => ({
+                value: tab.id,
+                label: (
+                  <>
+                    {tab.label}
+                    {statusCounts[tab.id] > 0 ? (
+                      <span className="mono text-muted ml-1.5 text-xs">{statusCounts[tab.id]}</span>
+                    ) : null}
+                  </>
+                ),
+              }))}
+            />
 
-      <PromptLibraryDialogs
-        formOpen={formOpen}
-        setFormOpen={setFormOpen}
-        editing={editing}
-        setEditing={setEditing}
-        submitForm={submitForm}
-        isSaving={createMutation.isPending || updateMutation.isPending}
-        formError={mutationErrorMessage(createMutation, updateMutation)}
-        importOpen={importOpen}
-        setImportOpen={setImportOpen}
-        importPrompts={async (rows) => {
-          await importMutation.mutateAsync(rows).catch(() => undefined);
-        }}
-        isImporting={importMutation.isPending}
-        importError={importMutation.isError ? errorMessage(importMutation.error) : undefined}
-        generateOpen={generateOpen}
-        setGenerateOpen={setGenerateOpen}
-        topics={topics}
-        selectedTopicId={selectedTopicId}
-        generatePrompts={async (input) => {
-          await generateMutation.mutateAsync(input).catch(() => undefined);
-        }}
-        isGenerating={generateMutation.isPending}
-        generateError={generateMutation.isError ? generateMutation.error : undefined}
-        generateResult={generateResult}
-      />
-    </div>
+            {!hasPrompts ? (
+              <PromptEmptyState onAdd={openAdd} onImport={() => setImportOpen(true)} />
+            ) : visible.length === 0 ? (
+              <p
+                className={textRole(
+                  'body',
+                  'px-[var(--card-padding)] py-[var(--empty-state-padding)]',
+                )}
+              >
+                No prompts match your search or filters.
+              </p>
+            ) : (
+              <PromptTable
+                prompts={visible}
+                onEdit={openEdit}
+                onDelete={(prompt) => {
+                  setBusyId(prompt.id);
+                  deleteMutation.mutate(prompt.id);
+                }}
+                onToggleEnabled={(prompt) => {
+                  setBusyId(prompt.id);
+                  toggleMutation.mutate(prompt);
+                }}
+                onSetStatus={(prompt, status) => {
+                  setBusyId(prompt.id);
+                  statusMutation.mutate({ prompt, status });
+                }}
+                busyId={busyId}
+                measurements={measurements}
+              />
+            )}
+          </div>
+        </ResizablePromptWorkspace>
+
+        <PromptLibraryDialogs
+          formOpen={formOpen}
+          setFormOpen={setFormOpen}
+          editing={editing}
+          setEditing={setEditing}
+          submitForm={submitForm}
+          isSaving={createMutation.isPending || updateMutation.isPending}
+          formError={mutationErrorMessage(createMutation, updateMutation)}
+          importOpen={importOpen}
+          setImportOpen={setImportOpen}
+          importPrompts={async (rows) => {
+            await importMutation.mutateAsync(rows).catch(() => undefined);
+          }}
+          isImporting={importMutation.isPending}
+          importError={importMutation.isError ? errorMessage(importMutation.error) : undefined}
+          generateOpen={generateOpen}
+          setGenerateOpen={setGenerateOpen}
+          topics={topics}
+          selectedTopicId={selectedTopicId}
+          generatePrompts={async (input) => {
+            await generateMutation.mutateAsync(input).catch(() => undefined);
+          }}
+          isGenerating={generateMutation.isPending}
+          generateError={generateMutation.isError ? generateMutation.error : undefined}
+          generateResult={generateResult}
+        />
+      </Stack>
+    </PageShell>
   );
 }
 
@@ -383,7 +404,10 @@ function useLatestPromptMeasurements(scope: ProjectRequestScope) {
   const result = useQuery({
     queryKey: queryKeys.visibility.prompts(projectId),
     queryFn: ({ signal }) =>
-      visibilityApi.getPromptMetrics(projectId, undefined, { signal, workspaceId }),
+      visibilityApi.getPromptMetrics(projectId, undefined, {
+        signal,
+        workspaceId,
+      }),
     enabled: scope.enabled,
   });
   return useMemo(() => {

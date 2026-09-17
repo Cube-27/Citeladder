@@ -68,13 +68,19 @@ function categoryChoices(profile: DiscoveryProfile): string[] {
   return choices;
 }
 
-export function IcpConfirmation({
-  profile,
-  onChange,
-}: Readonly<{
+type IcpPart = Readonly<{
   profile: DiscoveryProfile;
   onChange: (profile: DiscoveryProfile) => void;
-}>) {
+}>;
+
+/**
+ * What you sell — the field every other answer on this screen is derived from,
+ * so it leads the step at full width rather than sharing a column with the two
+ * questions it governs. Its options are sentences, not words, which is also the
+ * reason they are a ruled list: as chips, the long one became a two-line box
+ * beside a set of small ones and the set stopped reading as a set.
+ */
+export function IcpCategory({ profile, onChange }: IcpPart) {
   const update = <K extends keyof DiscoveryProfile>(key: K, value: DiscoveryProfile[K]) =>
     onChange({ ...profile, [key]: value });
 
@@ -83,21 +89,27 @@ export function IcpConfirmation({
   const [isOther, setIsOther] = useState(() => !choices.includes(profile.category));
 
   return (
-    <div className="flow-groups">
+    <>
       <FlowGroup
         title="What you sell"
         help="Your competitors and tracked questions are built from this."
       >
         <RadioGroup
-          variant="chip"
+          variant="row"
           ariaLabel="What you sell"
           value={isOther ? OTHER_CATEGORY : profile.category}
           options={[
             // The value stays exactly as discovery supplied it — this is only
             // the label. `brand_audit_services` was the first thing a new
             // customer read on this screen.
-            ...choices.map((option) => ({ value: option, label: titleCaseStatus(option) })),
-            { value: OTHER_CATEGORY, label: choices.length > 0 ? 'None of these' : 'Other' },
+            ...choices.map((option) => ({
+              value: option,
+              label: titleCaseStatus(option),
+            })),
+            {
+              value: OTHER_CATEGORY,
+              label: choices.length > 0 ? 'None of these' : 'Other',
+            },
           ]}
           onValueChange={(value) => {
             if (value === OTHER_CATEGORY) {
@@ -124,28 +136,36 @@ export function IcpConfirmation({
           </div>
         ) : null}
       </FlowGroup>
+    </>
+  );
+}
 
-      <div className="flow-pair">
-        <FlowGroup title="Who buys it">
-          <RadioGroup
-            variant="chip"
-            ariaLabel="Who buys it"
-            value={profile.business_type}
-            options={BUYER_TYPE_CHOICES}
-            onValueChange={(value) => update('business_type', value)}
-          />
-        </FlowGroup>
+/** Who the buyer is and where they are — the two short questions. */
+export function IcpAudience({ profile, onChange }: IcpPart) {
+  const update = <K extends keyof DiscoveryProfile>(key: K, value: DiscoveryProfile[K]) =>
+    onChange({ ...profile, [key]: value });
 
-        <FlowGroup title="Where they buy it">
-          <RadioGroup
-            variant="chip"
-            ariaLabel="Where they buy it"
-            value={profile.market_scope === 'local' ? 'regional' : profile.market_scope}
-            options={MARKET_SCOPE_CHOICES}
-            onValueChange={(value) => update('market_scope', value)}
-          />
-        </FlowGroup>
-      </div>
-    </div>
+  return (
+    <>
+      <FlowGroup title="Who buys it">
+        <RadioGroup
+          variant="row"
+          ariaLabel="Who buys it"
+          value={profile.business_type}
+          options={BUYER_TYPE_CHOICES}
+          onValueChange={(value) => update('business_type', value)}
+        />
+      </FlowGroup>
+
+      <FlowGroup title="Where they buy it">
+        <RadioGroup
+          variant="row"
+          ariaLabel="Where they buy it"
+          value={profile.market_scope === 'local' ? 'regional' : profile.market_scope}
+          options={MARKET_SCOPE_CHOICES}
+          onValueChange={(value) => update('market_scope', value)}
+        />
+      </FlowGroup>
+    </>
   );
 }

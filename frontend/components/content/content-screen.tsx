@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
+import { Stack } from '@/components/ui/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   type ContentContextPreviewInput,
@@ -102,8 +103,7 @@ export function ContentScreen({
 
 function NoProjectState() {
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      <PageHeader />
+    <PageShell>
       <Card>
         <CardContent className="flex flex-col items-start gap-3 py-[var(--empty-state-padding)]">
           <p className={textRole('body')}>
@@ -117,7 +117,7 @@ function NoProjectState() {
           </ProjectLink>
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }
 
@@ -292,52 +292,53 @@ function ContentWorkspace({
     );
   }
   return (
-    <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">
-      <PageHeader
-        actions={
-          <Button variant="secondary" size="md" onClick={() => setHistoryOpen(true)}>
-            <History className="size-4" aria-hidden />
-            History
-          </Button>
-        }
-      />
-      {siteHealthAlert}
-      <ContentComposer
-        instruction={instruction}
-        instructionRef={instructionRef}
-        opportunity={opportunity}
-        contextPreview={contextPreview}
-        contextLoading={contextLoading}
-        target={target}
-        targetUrl={targetUrl}
-        targetPages={targetPages}
-        onTargetChange={setTarget}
-        onTargetSearchChange={setTargetSearch}
-        onTargetUrlChange={setTargetUrl}
-        generating={generating}
-        skillId={skillId}
-        skills={skills}
-        skillsLoading={skillsLoading}
-        canGenerate={canGenerate}
-        onInstructionChange={setInstruction}
-        onSkillChange={setChosenSkillId}
-        onGenerate={onGenerate}
-      />
-      <GenerationStatePanels
-        generating={generating}
-        generation={generation}
-        mutationError={mutationError}
-        failed={failed}
-        detail={detail}
-        reasonOpen={reasonOpen}
-        setReasonOpen={setReasonOpen}
-      />
-      <GenerationHistoryWorkspace
-        open={historyOpen}
-        onOpenChange={setHistoryOpen}
-        generation={generation}
-      />
-    </div>
+    <PageShell
+      actions={
+        <Button variant="secondary" size="sm" onClick={() => setHistoryOpen(true)}>
+          <History className="size-4" aria-hidden />
+          History
+        </Button>
+      }
+    >
+      <Stack gap="workspace" className="min-w-0">
+        {siteHealthAlert}
+        <ContentComposer
+          instruction={instruction}
+          instructionRef={instructionRef}
+          opportunity={opportunity}
+          contextPreview={contextPreview}
+          contextLoading={contextLoading}
+          target={target}
+          targetUrl={targetUrl}
+          targetPages={targetPages}
+          onTargetChange={setTarget}
+          onTargetSearchChange={setTargetSearch}
+          onTargetUrlChange={setTargetUrl}
+          generating={generating}
+          skillId={skillId}
+          skills={skills}
+          skillsLoading={skillsLoading}
+          canGenerate={canGenerate}
+          onInstructionChange={setInstruction}
+          onSkillChange={setChosenSkillId}
+          onGenerate={onGenerate}
+        />
+        <GenerationStatePanels
+          generating={generating}
+          generation={generation}
+          mutationError={mutationError}
+          failed={failed}
+          detail={detail}
+          reasonOpen={reasonOpen}
+          setReasonOpen={setReasonOpen}
+        />
+        <GenerationHistoryWorkspace
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          generation={generation}
+        />
+      </Stack>
+    </PageShell>
   );
 }
 
