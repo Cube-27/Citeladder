@@ -329,12 +329,12 @@ class CrawlLifecycle(CrawlFinalizeMixin):
         due = (page_interval > 0 and pending >= page_interval) or (
             min_interval > 0 and now - last_at >= min_interval
         )
-        if not due:
-            self._score_refresh_marks[crawl_id] = (last_at, pending)
-            return False
-        self._score_refresh_marks[crawl_id] = (now, 0)
+        self._score_refresh_marks[crawl_id] = (now, 0) if due else (last_at, pending)
+        # Prune on both paths. With the elapsed trigger disabled a crawl's
+        # first analysis is not due, so an unseen crawl can enter the table
+        # here without ever passing through the admitted branch.
         self._prune_score_refresh_marks()
-        return True
+        return due
 
     def _prune_score_refresh_marks(self) -> None:
         """Bound the mark table so a long-lived worker cannot accumulate rows.

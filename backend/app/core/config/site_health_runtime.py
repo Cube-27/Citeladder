@@ -369,6 +369,13 @@ class SiteHealthSettings(BaseSettings):
             ("acquisition_policy_version", "curl_cffi_impersonation_profile"),
         )
         _require_positive(self, ("rate_limit_cooldown_seconds",))
+        _require_non_negative(
+            self,
+            (
+                "curl_session_pool_idle_seconds",
+                "curl_session_pool_max_entries",
+            ),
+        )
         return self
 
     @model_validator(mode="after")

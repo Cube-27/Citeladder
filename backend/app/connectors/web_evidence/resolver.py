@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import time
+
+from app.core.config.site_health_runtime import site_health_settings
 
 
 class SystemDnsResolver:
@@ -19,10 +22,19 @@ class SystemDnsResolver:
     mixing public and private ranges. A remembered address is only ever moved
     to the front when it is still present in the fresh answer, so a host that
     genuinely moves is followed on its next resolution.
+
+    A preference expires with the pooled session it exists to serve. That
+    bound is doing two jobs. It keeps the table from growing one entry per
+    authority for the life of the worker, and -- more importantly -- it is how
+    a dead address is escaped. The resolver sees only DNS, never whether a
+    connection succeeded, so an address that stops accepting connections while
+    still being advertised would otherwise be preferred forever, where the
+    round-robin order it replaced would have moved off it on the next attempt.
+    Expiry restores that recovery, bounded to one idle window.
     """
 
     def __init__(self) -> None:
-        self._preferred: dict[tuple[str, int], str] = {}
+        self._preferred: dict[tuple[str, int], tuple[str, float]] = {}
 
     async def resolve(self, host: str, port: int) -> list[str]:
         loop = asyncio.get_running_loop()
@@ -34,10 +46,32 @@ class SystemDnsResolver:
                 seen.append(ip)
         if not seen:
             return seen
-        preferred = self._preferred.get((host, port))
-        if preferred is not None and preferred in seen:
+        self._expire()
+        remembered = self._preferred.get((host, port))
+        if remembered is not None and remembered[0] in seen:
+            preferred = remembered[0]
             seen.remove(preferred)
             seen.insert(0, preferred)
-        else:
-            self._preferred[(host, port)] = seen[0]
+            return seen
+        # New, expired, or no longer advertised: take whatever DNS ordered
+        # first this time. The stamp is NOT refreshed on a hit, so a preference
+        # lives one window from when it was set rather than for as long as the
+        # host stays busy -- which is what lets a steadily crawled host move
+        # off an address that has stopped accepting connections.
+        self._preferred[(host, port)] = (seen[0], time.monotonic())
         return seen
+
+    def _expire(self) -> None:
+        """Drop preferences past the pool's idle window, then enforce the cap."""
+        ttl = site_health_settings.curl_session_pool_idle_seconds
+        if ttl > 0:
+            now = time.monotonic()
+            for authority, (_ip, stamp) in list(self._preferred.items()):
+                if now - stamp >= ttl:
+                    self._preferred.pop(authority, None)
+        cap = site_health_settings.curl_session_pool_max_entries
+        if cap <= 0 or len(self._preferred) <= cap:
+            return
+        oldest = sorted(self._preferred.items(), key=lambda item: item[1][1])
+        for authority, _mark in oldest[: len(self._preferred) - cap]:
+            self._preferred.pop(authority, None)
