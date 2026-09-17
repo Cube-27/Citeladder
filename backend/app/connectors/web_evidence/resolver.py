@@ -59,6 +59,11 @@ class SystemDnsResolver:
         # host stays busy -- which is what lets a steadily crawled host move
         # off an address that has stopped accepting connections.
         self._preferred[(host, port)] = (seen[0], time.monotonic())
+        # Again after the insert, so the table never sits above the cap. The
+        # sweep before the lookup is the one that matters for correctness --
+        # it retires a stale preference before it can be used -- but on its
+        # own it enforced the ceiling only until the next new authority.
+        self._expire()
         return seen
 
     def _expire(self) -> None:
