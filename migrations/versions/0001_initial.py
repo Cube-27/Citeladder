@@ -261,7 +261,9 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("billing_country", sa.String(length=2), nullable=False),
         sa.Column("country_verification", sa.String(length=16), nullable=False),
-        sa.Column("billing_profile", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "billing_profile", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
         sa.Column(
             "entitlement_lifecycle_version",
             sa.Integer(),
@@ -314,9 +316,15 @@ def upgrade() -> None:
         sa.Column("reason", sa.String(length=255), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint("redemption_limit > 0", name="ck_intro_code_limit_positive"),
-        sa.CheckConstraint("redemption_count >= 0", name="ck_intro_code_count_nonnegative"),
-        sa.ForeignKeyConstraint(["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["created_by_user_id"], ["users.id"], ondelete="RESTRICT"),
+        sa.CheckConstraint(
+            "redemption_count >= 0", name="ck_intro_code_count_nonnegative"
+        ),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["created_by_user_id"], ["users.id"], ondelete="RESTRICT"
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("code_sha256"),
     )
@@ -1032,7 +1040,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["connection_id"], ["provider_connections.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
@@ -1487,7 +1497,9 @@ def upgrade() -> None:
         sa.Column("is_current", sa.Boolean(), nullable=False),
         sa.Column("reconciliation_next_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("reconciliation_lease_token", sa.UUID(), nullable=True),
-        sa.Column("reconciliation_lease_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "reconciliation_lease_expires_at", sa.DateTime(timezone=True), nullable=True
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
@@ -1613,15 +1625,21 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["content_generation_id"], [_CONTENT_GENERATION_FK], ondelete="RESTRICT"
         ),
-        sa.ForeignKeyConstraint(["route_id"], ["provider_app_routes.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["connection_id"], ["provider_connections.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["route_id"], ["provider_app_routes.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "content_generation_id",
             "attempt_number",
             name="uq_content_generation_attempt_number",
         ),
-        sa.UniqueConstraint("dispatch_id", name="uq_content_generation_attempt_dispatch"),
+        sa.UniqueConstraint(
+            "dispatch_id", name="uq_content_generation_attempt_dispatch"
+        ),
     )
     op.create_index(
         op.f("ix_content_generation_attempts_content_generation_id"),
@@ -4061,6 +4079,11 @@ def upgrade() -> None:
         sa.Column("is_owned", sa.Boolean(), nullable=False),
         sa.Column("is_unintended", sa.Boolean(), nullable=False),
         sa.Column("matched_competitor", sa.String(length=255), nullable=True),
+        sa.Column("resolved_url", sa.Text(), nullable=True),
+        sa.Column("canonical_url", sa.Text(), nullable=True),
+        sa.Column("url_hash", sa.String(length=64), nullable=True),
+        sa.Column("url_identity_method", sa.String(length=24), nullable=True),
+        sa.Column("url_identity_version", sa.String(length=32), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
             ["analysis_id"], ["response_analyses.id"], ondelete="CASCADE"
@@ -4416,10 +4439,19 @@ def upgrade() -> None:
         sa.Column("billing_account_id", sa.UUID(), nullable=False),
         sa.Column("source_kind", sa.String(length=16), nullable=False),
         sa.Column("source_ref", sa.String(length=255), nullable=False),
-        sa.Column("bundle_role", sa.String(length=16), server_default="supplement", nullable=False),
-        sa.Column("profile_key", sa.String(length=64), server_default="", nullable=False),
+        sa.Column(
+            "bundle_role",
+            sa.String(length=16),
+            server_default="supplement",
+            nullable=False,
+        ),
+        sa.Column(
+            "profile_key", sa.String(length=64), server_default="", nullable=False
+        ),
         sa.Column("profile_priority", sa.Integer(), server_default="0", nullable=False),
-        sa.Column("bundle_id", sa.String(length=255), server_default="", nullable=False),
+        sa.Column(
+            "bundle_id", sa.String(length=255), server_default="", nullable=False
+        ),
         sa.Column("key", sa.String(length=64), nullable=False),
         sa.Column("value", sa.Integer(), nullable=False),
         sa.Column("period_start", sa.DateTime(timezone=True), nullable=True),
@@ -4438,8 +4470,14 @@ def upgrade() -> None:
             name="ck_account_grant_valid_ordered",
         ),
         sa.CheckConstraint("value >= 0", name="ck_account_grant_value_nonneg"),
-        sa.CheckConstraint("bundle_role IN ('primary', 'supplement')", name="ck_account_grant_bundle_role"),
-        sa.CheckConstraint("bundle_role <> 'primary' OR bundle_id <> ''", name="ck_account_grant_primary_bundle_identity"),
+        sa.CheckConstraint(
+            "bundle_role IN ('primary', 'supplement')",
+            name="ck_account_grant_bundle_role",
+        ),
+        sa.CheckConstraint(
+            "bundle_role <> 'primary' OR bundle_id <> ''",
+            name="ck_account_grant_primary_bundle_identity",
+        ),
         sa.ForeignKeyConstraint(
             ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
         ),
@@ -4488,14 +4526,31 @@ def upgrade() -> None:
         sa.Column("ended_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("ended_by_user_id", sa.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["billing_account_id"], ["billing_accounts.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["primary_grant_id"], ["account_grants.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["consented_by_user_id"], ["users.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["operator_code_id"], ["introductory_operator_codes.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["ended_by_user_id"], ["users.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["primary_grant_id"], ["account_grants.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["consented_by_user_id"], ["users.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["operator_code_id"],
+            ["introductory_operator_codes.id"],
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["ended_by_user_id"], ["users.id"], ondelete="RESTRICT"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_introductory_claims_billing_account_id"), "introductory_claims", ["billing_account_id"], unique=True)
+    op.create_index(
+        op.f("ix_introductory_claims_billing_account_id"),
+        "introductory_claims",
+        ["billing_account_id"],
+        unique=True,
+    )
     op.create_table(
         "idempotency_records",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -4558,10 +4613,14 @@ def upgrade() -> None:
         sa.Column("activated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("failed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("failure_code", sa.String(length=64), nullable=True),
-        sa.Column("reconciliation_attempts", sa.Integer(), server_default="0", nullable=False),
+        sa.Column(
+            "reconciliation_attempts", sa.Integer(), server_default="0", nullable=False
+        ),
         sa.Column("reconciliation_next_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("reconciliation_lease_token", sa.UUID(), nullable=True),
-        sa.Column("reconciliation_lease_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "reconciliation_lease_expires_at", sa.DateTime(timezone=True), nullable=True
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint(
@@ -4637,17 +4696,49 @@ def upgrade() -> None:
         sa.Column("period_end", sa.DateTime(timezone=True), nullable=True),
         sa.Column("receipt_sha256", sa.String(length=64), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.CheckConstraint("amount_minor >= 0", name="ck_billing_payment_amount_nonneg"),
-        sa.ForeignKeyConstraint(["billing_account_id"], ["billing_accounts.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["pending_activation_id"], ["pending_activations.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["subscription_id"], ["billing_subscriptions.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["parent_payment_id"], ["billing_payments.id"], ondelete="RESTRICT"),
+        sa.CheckConstraint(
+            "amount_minor >= 0", name="ck_billing_payment_amount_nonneg"
+        ),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["pending_activation_id"], ["pending_activations.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["subscription_id"], ["billing_subscriptions.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["parent_payment_id"], ["billing_payments.id"], ondelete="RESTRICT"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_billing_payments_billing_account_id"), "billing_payments", ["billing_account_id"], unique=False)
-    op.create_index("ix_billing_payment_account_paid", "billing_payments", ["billing_account_id", "paid_at"], unique=False)
-    op.create_index("uq_billing_payment_external", "billing_payments", ["provider", "provider_mode", "external_payment_id"], unique=True, postgresql_where=sa.text("receipt_kind = 'payment'"))
-    op.create_index("uq_billing_refund_external", "billing_payments", ["provider", "provider_mode", "external_refund_id"], unique=True, postgresql_where=sa.text("external_refund_id IS NOT NULL"))
+    op.create_index(
+        op.f("ix_billing_payments_billing_account_id"),
+        "billing_payments",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_billing_payment_account_paid",
+        "billing_payments",
+        ["billing_account_id", "paid_at"],
+        unique=False,
+    )
+    op.create_index(
+        "uq_billing_payment_external",
+        "billing_payments",
+        ["provider", "provider_mode", "external_payment_id"],
+        unique=True,
+        postgresql_where=sa.text("receipt_kind = 'payment'"),
+    )
+    op.create_index(
+        "uq_billing_refund_external",
+        "billing_payments",
+        ["provider", "provider_mode", "external_refund_id"],
+        unique=True,
+        postgresql_where=sa.text("external_refund_id IS NOT NULL"),
+    )
     op.create_table(
         "billing_invoice_counters",
         sa.Column("financial_year", sa.String(length=7), nullable=False),
@@ -4728,25 +4819,78 @@ def upgrade() -> None:
         sa.Column("idempotency_key", sa.String(length=255), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint("units > 0", name="ck_consumable_ledger_units_positive"),
-        sa.CheckConstraint("entry_kind IN ('reservation', 'debit', 'release', 'refund')", name="ck_consumable_ledger_entry_kind"),
-        sa.CheckConstraint("(entry_kind IN ('debit', 'refund') AND attempt IS NOT NULL AND attempt > 0) OR (entry_kind NOT IN ('debit', 'refund') AND attempt IS NULL)", name="ck_consumable_ledger_attempt_shape"),
-        sa.CheckConstraint("(entry_kind = 'refund') = (refund_of_id IS NOT NULL)", name="ck_consumable_ledger_refund_shape"),
-        sa.CheckConstraint("(subject_kind = 'audit' AND audit_id IS NOT NULL AND task_id IS NOT NULL AND content_generation_id IS NULL AND agent_task_run_id IS NULL) OR (subject_kind = 'content' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NOT NULL AND agent_task_run_id IS NULL) OR (subject_kind = 'agent' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NULL AND agent_task_run_id IS NOT NULL)", name="ck_consumable_ledger_typed_subject"),
+        sa.CheckConstraint(
+            "entry_kind IN ('reservation', 'debit', 'release', 'refund')",
+            name="ck_consumable_ledger_entry_kind",
+        ),
+        sa.CheckConstraint(
+            "(entry_kind IN ('debit', 'refund') AND attempt IS NOT NULL AND attempt > 0) OR (entry_kind NOT IN ('debit', 'refund') AND attempt IS NULL)",
+            name="ck_consumable_ledger_attempt_shape",
+        ),
+        sa.CheckConstraint(
+            "(entry_kind = 'refund') = (refund_of_id IS NOT NULL)",
+            name="ck_consumable_ledger_refund_shape",
+        ),
+        sa.CheckConstraint(
+            "(subject_kind = 'audit' AND audit_id IS NOT NULL AND task_id IS NOT NULL AND content_generation_id IS NULL AND agent_task_run_id IS NULL) OR (subject_kind = 'content' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NOT NULL AND agent_task_run_id IS NULL) OR (subject_kind = 'agent' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NULL AND agent_task_run_id IS NOT NULL)",
+            name="ck_consumable_ledger_typed_subject",
+        ),
         sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["content_generation_id"], ["content_generations.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["grant_id"], ["account_grants.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["refund_of_id"], ["consumable_ledger.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["content_generation_id"], ["content_generations.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["grant_id"], ["account_grants.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["refund_of_id"], ["consumable_ledger.id"], ondelete="RESTRICT"
+        ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("billing_account_id", "idempotency_key", name="uq_consumable_ledger_idempotency"),
+        sa.UniqueConstraint(
+            "billing_account_id",
+            "idempotency_key",
+            name="uq_consumable_ledger_idempotency",
+        ),
     )
-    op.create_index(op.f("ix_consumable_ledger_billing_account_id"), "consumable_ledger", ["billing_account_id"], unique=False)
-    op.create_index("ix_consumable_ledger_grant_key_created", "consumable_ledger", ["grant_id", "capability_key", "created_at"], unique=False)
-    op.create_index("ix_consumable_ledger_reservation_kind", "consumable_ledger", ["reservation_id", "entry_kind"], unique=False)
-    op.create_index("uq_consumable_ledger_task_attempt", "consumable_ledger", ["task_id", "attempt", "grant_id"], unique=True, postgresql_where=sa.text("entry_kind = 'debit'"))
-    op.create_index("uq_consumable_ledger_subject_dispatch_allocation_debit", "consumable_ledger", ["subject_kind", "subject_id", "dispatch_key", "grant_id"], unique=True, postgresql_where=sa.text("entry_kind = 'debit'"))
+    op.create_index(
+        op.f("ix_consumable_ledger_billing_account_id"),
+        "consumable_ledger",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_consumable_ledger_grant_key_created",
+        "consumable_ledger",
+        ["grant_id", "capability_key", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_consumable_ledger_reservation_kind",
+        "consumable_ledger",
+        ["reservation_id", "entry_kind"],
+        unique=False,
+    )
+    op.create_index(
+        "uq_consumable_ledger_task_attempt",
+        "consumable_ledger",
+        ["task_id", "attempt", "grant_id"],
+        unique=True,
+        postgresql_where=sa.text("entry_kind = 'debit'"),
+    )
+    op.create_index(
+        "uq_consumable_ledger_subject_dispatch_allocation_debit",
+        "consumable_ledger",
+        ["subject_kind", "subject_id", "dispatch_key", "grant_id"],
+        unique=True,
+        postgresql_where=sa.text("entry_kind = 'debit'"),
+    )
     op.create_table(
         "grant_revocations",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -5375,14 +5519,24 @@ def upgrade() -> None:
         sa.Column("settled_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("late_receipt", sa.Boolean(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["task_run_id"], [_AGENT_TASK_RUN_FK], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["provider_connection_id"], ["provider_connections.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["provider_route_id"], ["provider_app_routes.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["task_run_id"], [_AGENT_TASK_RUN_FK], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["provider_connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["provider_route_id"], ["provider_app_routes.id"], ondelete="RESTRICT"
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("dispatch_id", name="uq_agent_model_attempt_dispatch"),
-        sa.UniqueConstraint("task_run_id", "run_attempt", "ordinal", name="uq_agent_model_attempt_slot"),
+        sa.UniqueConstraint(
+            "task_run_id", "run_attempt", "ordinal", name="uq_agent_model_attempt_slot"
+        ),
     )
     op.create_index(
         "ix_agent_model_attempts_run_created",
@@ -6051,6 +6205,252 @@ def upgrade() -> None:
         unique=False,
     )
 
+    op.create_table(
+        "source_pages",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("url_hash", sa.String(length=64), nullable=False),
+        sa.Column("canonical_url", sa.Text(), nullable=False),
+        sa.Column("registrable_domain", sa.String(length=255), nullable=False),
+        sa.Column("source_class", sa.String(length=48), nullable=True),
+        sa.Column("source_taxonomy_version", sa.String(length=32), nullable=True),
+        sa.Column("page_format", sa.String(length=32), nullable=False),
+        sa.Column("page_format_method", sa.String(length=24), nullable=True),
+        sa.Column("page_format_version", sa.String(length=32), nullable=True),
+        sa.Column("inspection_state", sa.String(length=24), nullable=False),
+        sa.Column("inspection_reason", sa.String(length=48), nullable=True),
+        sa.Column("claim_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("latest_snapshot_id", sa.UUID(), nullable=True),
+        sa.Column("content_hash", sa.String(length=64), nullable=True),
+        sa.Column("last_inspected_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("last_cited_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("recurrence_count", sa.Integer(), nullable=False),
+        sa.Column("first_seen_audit_id", sa.UUID(), nullable=True),
+        sa.Column("last_seen_audit_id", sa.UUID(), nullable=True),
+        sa.Column("inspector_version", sa.String(length=32), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["first_seen_audit_id"], ["audits.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["last_seen_audit_id"], ["audits.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_id", "url_hash", name="uq_source_page_project_url"
+        ),
+    )
+    op.create_index(
+        "ix_source_pages_project_domain",
+        "source_pages",
+        ["project_id", "registrable_domain"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_source_pages_project_state",
+        "source_pages",
+        ["project_id", "inspection_state"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_pages_project_id"),
+        "source_pages",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_pages_workspace_id"),
+        "source_pages",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "source_page_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("source_page_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=True),
+        sa.Column("requested_url", sa.Text(), nullable=False),
+        sa.Column("final_url", sa.Text(), nullable=False),
+        sa.Column(
+            "redirect_chain", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("status_code", sa.Integer(), nullable=True),
+        sa.Column("content_type", sa.String(length=128), nullable=True),
+        sa.Column("charset", sa.String(length=32), nullable=True),
+        sa.Column("body_bytes", sa.Integer(), nullable=False),
+        sa.Column("content_hash", sa.String(length=64), nullable=True),
+        sa.Column(
+            "redacted_headers", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("page_facts", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "evidence_passages", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("extracted_chars", sa.Integer(), nullable=False),
+        sa.Column("robots_state", sa.String(length=16), nullable=True),
+        sa.Column("outcome", sa.String(length=24), nullable=False),
+        sa.Column("outcome_reason", sa.String(length=48), nullable=True),
+        sa.Column("extractor_version", sa.String(length=32), nullable=True),
+        sa.Column("inspector_version", sa.String(length=32), nullable=True),
+        sa.Column("fetched_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["source_page_id"], ["source_pages.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        "ix_source_page_snapshots_page_time",
+        "source_page_snapshots",
+        ["source_page_id", "fetched_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_page_snapshots_project_id"),
+        "source_page_snapshots",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_page_snapshots_source_page_id"),
+        "source_page_snapshots",
+        ["source_page_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_page_snapshots_workspace_id"),
+        "source_page_snapshots",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "source_page_entity_presences",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("source_page_id", sa.UUID(), nullable=False),
+        sa.Column("snapshot_id", sa.UUID(), nullable=False),
+        sa.Column("entity_kind", sa.String(length=16), nullable=False),
+        sa.Column("entity_name", sa.String(length=255), nullable=False),
+        sa.Column("presence", sa.String(length=24), nullable=False),
+        sa.Column("match_method", sa.String(length=24), nullable=False),
+        sa.Column("match_count", sa.Integer(), nullable=False),
+        sa.Column("first_offset", sa.Integer(), nullable=True),
+        sa.Column("passage_refs", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("roster_version", sa.String(length=64), nullable=False),
+        sa.Column("detector_version", sa.String(length=32), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["snapshot_id"], ["source_page_snapshots.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["source_page_id"], ["source_pages.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "snapshot_id",
+            "entity_kind",
+            "entity_name",
+            name="uq_source_page_presence_entity",
+        ),
+    )
+    op.create_index(
+        "ix_source_page_presences_page_entity",
+        "source_page_entity_presences",
+        ["source_page_id", "entity_kind", "presence"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_page_entity_presences_project_id"),
+        "source_page_entity_presences",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_page_entity_presences_snapshot_id"),
+        "source_page_entity_presences",
+        ["snapshot_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_page_entity_presences_source_page_id"),
+        "source_page_entity_presences",
+        ["source_page_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_page_entity_presences_workspace_id"),
+        "source_page_entity_presences",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "source_page_inspection_spend",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("source_page_id", sa.UUID(), nullable=True),
+        sa.Column("spend_kind", sa.String(length=16), nullable=False),
+        sa.Column("units", sa.Float(), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=200), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["source_page_id"], ["source_pages.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("idempotency_key", name="uq_source_page_spend_key"),
+    )
+    op.create_index(
+        "ix_source_page_spend_project_time",
+        "source_page_inspection_spend",
+        ["project_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_page_inspection_spend_project_id"),
+        "source_page_inspection_spend",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_source_page_inspection_spend_workspace_id"),
+        "source_page_inspection_spend",
+        ["workspace_id"],
+        unique=False,
+    )
+    # Added after both tables exist: a page points at its latest snapshot and
+    # every snapshot points back at its page, so neither can carry the other's
+    # constraint inline.
+    op.create_foreign_key(
+        "fk_source_pages_latest_snapshot",
+        "source_pages",
+        "source_page_snapshots",
+        ["latest_snapshot_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
+
 
 def downgrade() -> None:
     # This is the repository's sole greenfield revision. The Commerce rebuild
@@ -6179,6 +6579,10 @@ def downgrade() -> None:
         "user_identities",
         "users",
         "usage_windows",
+        "source_page_inspection_spend",
+        "source_page_entity_presences",
+        "source_page_snapshots",
+        "source_pages",
         "site_fetch_artifacts",
         "site_crawl_tasks",
         "raw_response_artifacts",

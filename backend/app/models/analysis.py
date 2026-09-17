@@ -236,6 +236,19 @@ class Citation(DerivedRowProvenanceMixin, Base):
     is_owned: Mapped[bool] = mapped_column(Boolean, default=False)
     is_unintended: Mapped[bool] = mapped_column(Boolean, default=False)
     matched_competitor: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Stable page identity. ``url`` above is what the provider said and is
+    # never overwritten; these record what it resolves to.
+    #
+    # Some providers cite through a redirect rather than the publisher (Gemini
+    # returns a grounding-redirect token), so the raw URL is not a page
+    # identity. A NULL ``url_hash`` is the distinct state "identity was not
+    # established", never "this page is unique" -- counting unresolved tokens
+    # as distinct pages is how one publisher looks like many.
+    resolved_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    canonical_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    url_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    url_identity_method: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    url_identity_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

@@ -141,6 +141,12 @@ from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.runtime import SiteHealthProfile, WorkspaceSiteHealthRuntime
 from app.models.site_health.snapshot import SiteHealthSnapshot
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
+from app.models.source_pages import (
+    SourcePage,
+    SourcePageEntityPresence,
+    SourcePageInspectionSpend,
+    SourcePageSnapshot,
+)
 from app.models.traffic import (
     PerformanceDimensionStat,
     TrafficPageStat,
@@ -268,6 +274,10 @@ __all__ = [
     "SiteRuleEvaluation",
     "SiteUrl",
     "SiteUrlObservation",
+    "SourcePage",
+    "SourcePageEntityPresence",
+    "SourcePageInspectionSpend",
+    "SourcePageSnapshot",
     "Topic",
     "TrafficPageStat",
     "TrafficQueryStat",
