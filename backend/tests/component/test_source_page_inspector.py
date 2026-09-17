@@ -37,7 +37,10 @@ from app.models.source_pages import (
     SourcePageSnapshot,
 )
 from app.workers.source_pages import inspector as inspector_module
-from app.workers.source_pages.inspector import inspect_source_pages
+from app.workers.source_pages.inspector import (
+    compensate_inspection_handoff,
+    inspect_source_pages,
+)
 from tests.component.opportunity_helpers import _seed_scenario
 
 pytestmark = pytest.mark.asyncio
@@ -516,15 +519,20 @@ async def test_reinspecting_the_same_audit_does_not_inflate_recurrence(
         assert page.recurrence_count == 1
 
 
-async def test_a_terminal_failure_still_hands_off_to_opportunities(
+async def test_a_failing_inspection_hands_off_nothing_itself(
     session_factory: async_sessionmaker[AsyncSession],
     stub_inspection,
 ) -> None:
-    """Terminalization queues this INSTEAD of the refresh, so it owes one.
+    """The executor owes the hand-off but is not where it fires.
 
-    Recomputing without page evidence is what the product did before this
-    feature; not recomputing at all would leave the audit's opportunities
-    permanently stale.
+    An inspection can end terminally in two ways and only one of them comes
+    back through this function: exhausted retries return here, while a worker
+    killed mid-run is terminalized by the lease sweeper, which runs no
+    executor code. The obligation therefore sits on the queue, as
+    ``compensate_inspection_handoff`` -- see
+    ``test_analytics_terminal_compensation``. Handing off from here as well
+    would also spend the refresh's idempotency key on a retryable failure,
+    before any evidence exists.
     """
     async with session_factory() as session:
         scenario = await _seed_scenario(session)
@@ -543,43 +551,41 @@ async def test_a_terminal_failure_still_hands_off_to_opportunities(
     with pytest.raises(ValueError, match="audit is unavailable"):
         await inspect_source_pages(session_factory, task)
 
-    async with session_factory() as session:
-        queued = list(
-            (
-                await session.scalars(
-                    select(AnalyticsTask.task_kind).where(
-                        AnalyticsTask.project_id == scenario.project_id
-                    )
-                )
-            ).all()
-        )
-        assert ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH in queued
+    assert await _queued_kinds(session_factory, scenario) == []
 
 
-async def test_a_retryable_failure_waits_rather_than_handing_off_early(
+async def test_the_compensator_queues_the_refresh_the_audit_is_owed(
     session_factory: async_sessionmaker[AsyncSession],
-    stub_inspection,
 ) -> None:
-    """Handing off on attempt one would spend the idempotency key too soon."""
+    """Terminalization queued inspection INSTEAD of the refresh.
+
+    Recomputing without page evidence is what the product did before this
+    feature; not recomputing at all leaves a committed audit with permanently
+    stale opportunities.
+    """
     async with session_factory() as session:
         scenario = await _seed_scenario(session)
         await session.commit()
-    stub_inspection({})
     task = AnalyticsTask(
         workspace_id=scenario.workspace_id,
         project_id=scenario.project_id,
         task_kind=ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
-        payload={"audit_id": str(uuid.uuid4())},
+        payload={"audit_id": str(scenario.audit_id)},
         idempotency_key=f"inspect:{uuid.uuid4()}",
-        attempt_count=1,
-        max_attempts=3,
     )
 
-    with pytest.raises(ValueError):
-        await inspect_source_pages(session_factory, task)
+    await compensate_inspection_handoff(session_factory, task)
 
+    assert ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH in await _queued_kinds(
+        session_factory, scenario
+    )
+
+
+async def _queued_kinds(
+    session_factory: async_sessionmaker[AsyncSession], scenario
+) -> list[str]:
     async with session_factory() as session:
-        queued = list(
+        return list(
             (
                 await session.scalars(
                     select(AnalyticsTask.task_kind).where(
@@ -588,4 +594,3 @@ async def test_a_retryable_failure_waits_rather_than_handing_off_early(
                 )
             ).all()
         )
-        assert ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH not in queued

@@ -76,7 +76,10 @@ from app.models.analytics import AnalyticsTask
 from app.orchestration.executor_errors import TerminalExecutorError
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.drain import DrainableWorkerMixin
-from app.workers.source_pages.inspector import inspect_source_pages
+from app.workers.source_pages.inspector import (
+    compensate_inspection_handoff,
+    inspect_source_pages,
+)
 
 logger = logging.getLogger("app.workers.analytics_worker")
 
@@ -129,6 +132,32 @@ EXECUTORS: dict[str, AnalyticsExecutor] = {
 }
 
 
+# Terminal compensation: work a task OWES even when it never succeeds.
+#
+# Queue-level rather than executor-level because the two ways a task ends
+# terminally are not both visible to the executor. Exhausted retries return
+# through ``_finalize``; a worker killed mid-run is terminalized by the lease
+# sweeper, which runs no executor code at all. An executor that compensates
+# itself covers only the first, and the second is the ordinary outcome of a
+# container stop.
+#
+# A compensator is best-effort and idempotent: it runs after the terminal
+# write has committed and its failure is logged, never raised. Terminal
+# accounting must not depend on it.
+type TerminalCompensator = Callable[
+    [async_sessionmaker[AsyncSession], AnalyticsTask], Awaitable[None]
+]
+
+TERMINAL_COMPENSATORS: dict[str, TerminalCompensator] = {
+    # Audit terminalization enqueues inspection INSTEAD of the Opportunity
+    # refresh, so an inspection that never finishes still owes that refresh.
+    # Recomputing without page evidence is what the product did before this
+    # feature; not recomputing at all leaves a committed audit with
+    # permanently stale opportunities.
+    ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION: compensate_inspection_handoff,
+}
+
+
 class AnalyticsWorker(DrainableWorkerMixin):
     """Claim/lease loop for ``AnalyticsTask`` rows.
 
@@ -142,17 +171,22 @@ class AnalyticsWorker(DrainableWorkerMixin):
         session_factory: async_sessionmaker[AsyncSession] | None = None,
         owner: str | None = None,
         executors: dict[str, AnalyticsExecutor] | None = None,
+        compensators: dict[str, TerminalCompensator] | None = None,
     ) -> None:
         self._session_factory = session_factory or SessionLocal
         self._queue = PostgresTaskQueue(self._session_factory, ANALYTICS_QUEUE_SPEC)
         self._executors = executors if executors is not None else EXECUTORS
+        self._compensators = (
+            compensators if compensators is not None else TERMINAL_COMPENSATORS
+        )
         self.owner = owner or f"analytics-worker-{uuid.uuid4().hex[:12]}"
 
     # --- Loop --------------------------------------------------------------
 
     async def run_once(self) -> int:
         """Sweep expired leases, claim one row, run it. Returns count run."""
-        await self._queue.release_expired()
+        sweep = await self._queue.release_expired_detailed()
+        await self._compensate_swept(sweep.failed_task_ids)
         rows = await self._queue.claim(owner=self.owner, limit=1)
         for row in rows:
             await self._execute(row)
@@ -168,6 +202,34 @@ class AnalyticsWorker(DrainableWorkerMixin):
                 ran = 0
             if ran == 0:
                 await asyncio.sleep(max(0.05, analytics_settings.poll_interval_seconds))
+
+    # --- Terminal compensation ------------------------------------------------
+
+    async def _compensate_swept(self, failed_task_ids: tuple[uuid.UUID, ...]) -> None:
+        """Run the compensation a sweeper-terminalized task never got to run.
+
+        The sweeper fails a task at max attempts without executing anything,
+        so nothing else observes these rows. Every other analytics queue
+        already consumes ``failed_task_ids``; this one discarded them.
+        """
+        for task_id in failed_task_ids:
+            async with self._session_factory() as session:
+                row = await session.get(AnalyticsTask, task_id)
+            if row is not None:
+                await self._compensate(row)
+
+    async def _compensate(self, task: AnalyticsTask) -> None:
+        """Best-effort, after the terminal write. Never raises."""
+        compensator = self._compensators.get(task.task_kind)
+        if compensator is None:
+            return
+        try:
+            await compensator(self._session_factory, task)
+        except Exception:
+            logger.exception(
+                "terminal compensation failed",
+                extra={"task_id": str(task.id), "task_kind": task.task_kind},
+            )
 
     # --- One claimed row -----------------------------------------------------
 
@@ -192,7 +254,11 @@ class AnalyticsWorker(DrainableWorkerMixin):
                 extra={"task_id": str(task_id)},
             )
             with contextlib.suppress(Exception):
-                await self._finalize(task_id=task_id, owner=self.owner, error=exc)
+                written = await self._finalize(
+                    task_id=task_id, owner=self.owner, error=exc
+                )
+                if written == TASK_STATUS_FAILED:
+                    await self._compensate(claimed)
 
     async def _run_executor(self, claimed: AnalyticsTask) -> None:
         executor = self._executors.get(claimed.task_kind)
@@ -213,7 +279,11 @@ class AnalyticsWorker(DrainableWorkerMixin):
             heartbeat.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await heartbeat
-        await self._finalize(task_id=claimed.id, owner=self.owner, error=error)
+        written = await self._finalize(
+            task_id=claimed.id, owner=self.owner, error=error
+        )
+        if written == TASK_STATUS_FAILED:
+            await self._compensate(claimed)
 
     async def _heartbeat_loop(self, task_id: uuid.UUID) -> None:
         interval = max(1.0, analytics_settings.heartbeat_interval_seconds)
@@ -236,7 +306,7 @@ class AnalyticsWorker(DrainableWorkerMixin):
 
     async def _finalize(
         self, *, task_id: uuid.UUID, owner: str, error: Exception | None
-    ) -> bool:
+    ) -> str | None:
         """ONE locked transaction per dispatch (the only terminal writer).
 
         Locks the row ``FOR UPDATE``, re-checks owner + status (a lost lease
@@ -245,16 +315,21 @@ class AnalyticsWorker(DrainableWorkerMixin):
         terminal-failure fields together. A not-wired executor is a
         permanent-until-deploy condition: terminal failure WITHOUT consuming
         the retry budget on further attempts.
+
+        Returns the status it wrote, or ``None`` when it wrote nothing. The
+        caller needs that to tell a terminal failure (which owes its
+        compensation) from a retry (which does not -- handing off early would
+        spend the idempotency key before the work has had its attempts).
         """
         now = _utcnow()
         async with self._session_factory() as session:
             row = await session.get(AnalyticsTask, task_id, with_for_update=True)
             if row is None:
                 await session.commit()
-                return False
+                return None
             if row.lease_owner != owner or row.status in TASK_TERMINAL_STATUSES:
                 await session.commit()
-                return False
+                return None
 
             attempt_number = row.attempt_count + 1
             row.attempt_count = attempt_number
@@ -287,8 +362,9 @@ class AnalyticsWorker(DrainableWorkerMixin):
                 row.error_detail = str(error)[:2000]
             row.lease_owner = None
             row.lease_expires_at = None
+            written = row.status
             await session.commit()
-            return True
+            return written
 
 
 def main() -> None:  # pragma: no cover - process entrypoint
