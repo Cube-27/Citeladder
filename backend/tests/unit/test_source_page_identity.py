@@ -95,3 +95,21 @@ def test_a_url_the_policy_refuses_is_unresolved_not_an_error(value: object) -> N
 
     assert identity.method == URL_IDENTITY_UNRESOLVED
     assert identity.url_hash is None
+
+
+def test_a_publisher_writing_about_redirects_keeps_its_identity() -> None:
+    """The marker in a PATH is prose, not a redirect; the page is real."""
+    url = "https://blog.example.com/posts/grounding-api-redirect-explained"
+
+    assert is_grounding_redirect(url) is False
+    assert identify_citation_url(url).method == URL_IDENTITY_VERBATIM
+
+
+def test_a_provider_resolved_url_is_retained_not_discarded() -> None:
+    """It IS the resolution; nulling it throws away work already done."""
+    identity = identify_citation_url(
+        "https://publisher.com/best-crm", provider_resolved=True
+    )
+
+    assert identity.resolved_url == "https://publisher.com/best-crm"
+    assert identity.method == URL_IDENTITY_VERBATIM

@@ -75,14 +75,26 @@ def _resolved(url: str, *, method: str, resolved_url: str | None) -> CitationIde
     )
 
 
-def identify_citation_url(url: str | None) -> CitationIdentity:
-    """Resolve a citation URL offline, without following anything."""
+def identify_citation_url(
+    url: str | None, *, provider_resolved: bool = False
+) -> CitationIdentity:
+    """Resolve a citation URL offline, without following anything.
+
+    ``provider_resolved`` marks a URL the provider itself already unwrapped.
+    That URL is retained, because it IS the resolution: discarding it would
+    throw away work already done and leave the column empty for a citation
+    whose publisher is perfectly well known.
+    """
     raw = str(url or "").strip()
     if not raw:
         return _unresolved()
     if is_grounding_redirect(raw):
         return _unresolved()
-    return _resolved(raw, method=URL_IDENTITY_VERBATIM, resolved_url=None)
+    return _resolved(
+        raw,
+        method=URL_IDENTITY_VERBATIM,
+        resolved_url=raw if provider_resolved else None,
+    )
 
 
 def identify_unwrapped_redirect(final_url: str | None) -> CitationIdentity:

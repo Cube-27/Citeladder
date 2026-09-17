@@ -219,6 +219,11 @@ must account for queued and in-flight work, not only completed work.
   `core/config/source_pages.py`. Automatic inspections, manual inspections, redirect
   resolutions, placement rechecks and retried attempts all consume it. Nothing
   consumes budget outside this accounting.
+- One admitted attempt is one unit, and it covers everything that attempt then
+  does. Following a redirect token IS fetching its publisher, so the page it
+  lands on is inspected from the body already in hand rather than claimed and
+  fetched again. An attempt whose follow-up work could spend a second unit
+  without a second admission would make the remaining allowance a guess.
 - Admission claims candidate pages by transitioning `source_pages.inspection_state`
   to `queued` inside one transaction, under the existing project lock, with the
   claim count bounded by the remaining allowance. An attempt is recorded before the
@@ -246,6 +251,13 @@ Completion of an inspection batch enqueues the existing
 `enqueue_audit_opportunity_tasks`, bounded per batch rather than per page. Pending
 placement checks are then evaluated against eligible new snapshots.
 
+Because terminalization enqueues inspection INSTEAD of the refresh, inspection
+owes that refresh on every terminal outcome, including its own final failure.
+Recomputing without page evidence is what the product did before this feature;
+not recomputing at all would leave a committed audit with permanently stale
+opportunities. A retryable failure waits for its retries rather than handing off
+early and spending the idempotency key before the evidence exists.
+
 Audit completion stays independent of inspection success. A blocked publisher page
 never turns a successfully measured AI answer into a failed audit, and a queue
 outage never rolls back audit evidence.
@@ -264,10 +276,17 @@ partial unique index is keyed identically; a single rule would collapse two
 different actions on one page into one row with one status, and acquiring a listing
 and correcting a listing have different done-states.
 
-Qualification is hard and precedes ranking. No rule fires without sufficient
-extraction coverage, a relevant market and topic, correct entity matching and a
-feasible action. An unqualified candidate stays a source state or a research
-candidate; it never becomes a fabricated action.
+Qualification is hard and precedes ranking. No ACTION rule fires without
+sufficient extraction coverage, a relevant market and topic, correct entity
+matching and a feasible action. An unqualified candidate stays a source state or
+a research candidate; it never becomes a fabricated action.
+
+`earned_page_research_source` is the deliberate exception, because it exists
+precisely for what that gate rejects. Its own bar is relevance and recurrence,
+or an explicit request: it may fire while coverage, classification or an
+actionable route is unresolved, and it asserts only that the source is worth
+resolving. Applying the action gate to it would put every unresolved source back
+in the silent-drop path this plan exists to close.
 
 - `earned_page_acquire_listing`, high: the page was inspected with sufficient
   coverage, its format admits inclusion, its topic and market are relevant, at
@@ -297,8 +316,10 @@ explains what changed. One page and one intended outcome produce one task.
 All four set `target_url` to the canonical page URL, where today the earned hit
 sets null. That makes `_resolve_targets` reachable
 (`implementation_events.py:143-145`), where it would call `resolve_owned_page` on a
-third-party URL and raise a conflict. External target handling must therefore land
-before any interface can declare against these rules.
+third-party URL and raise a conflict. External target handling therefore lands
+BEFORE the rules are wired into hit collection, not merely before the interface:
+once a rule can produce a row, a declaration against it can be attempted, and
+the conflict would surface as a broken action rather than a missing one.
 
 `page_competitor_presence_factor`, computed from verified on-page presence, is the
 only competitor input to the new rules' priority. Answer-level co-occurrence is
@@ -345,9 +366,10 @@ inspect command.
 Qualified page opportunities, in order: the earned action configuration split and
 the four rules with their version bumps; the evidence bundle and pure detector
 including its qualification gate and overlap resolution; extraction of the
-visibility evidence loaders out of `recompute.py`; wiring the detector into hit
-collection over the full eligible answer set; external implementation targets
-accepting an external page and freezing the check contract; the earned brief
+visibility evidence loaders out of `recompute.py`; external implementation
+targets accepting a third-party `target_url` without routing it through
+`resolve_owned_page`; wiring the detector into hit collection over the full
+eligible answer set; the earned brief
 through the existing Content handoff with appropriate output types rather than a
 generic article; the endpoint and the Sources-to-Opportunity route; and the
 controlled retirement of the domain-keyed detector with the conservative status

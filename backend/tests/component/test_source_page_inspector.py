@@ -489,3 +489,103 @@ async def test_the_snapshot_never_retains_the_page_text(
         assert "text" not in (snapshot.page_facts or {})
         assert "Evaluating a platform takes time." * 5 not in str(snapshot.page_facts)
         assert snapshot.fetched_at <= datetime.now(UTC)
+
+
+async def test_reinspecting_the_same_audit_does_not_inflate_recurrence(
+    session_factory: async_sessionmaker[AsyncSession],
+    stub_inspection,
+) -> None:
+    """The inventory syncs twice per run; rank must not double for that."""
+    url = "https://publisher.com/counted-once"
+    async with session_factory() as session:
+        scenario = await _seed_scenario(session)
+        await _freeze_roster(session, scenario)
+        await _seed_citation(
+            session, scenario, url=url, url_hash="3" * 64, domain="publisher.com"
+        )
+        await session.commit()
+    stub_inspection({url: _result(url, _LISTICLE)})
+
+    await inspect_source_pages(session_factory, await _task(scenario))
+
+    async with session_factory() as session:
+        page = await session.scalar(
+            select(SourcePage).where(SourcePage.project_id == scenario.project_id)
+        )
+        assert page is not None
+        assert page.recurrence_count == 1
+
+
+async def test_a_terminal_failure_still_hands_off_to_opportunities(
+    session_factory: async_sessionmaker[AsyncSession],
+    stub_inspection,
+) -> None:
+    """Terminalization queues this INSTEAD of the refresh, so it owes one.
+
+    Recomputing without page evidence is what the product did before this
+    feature; not recomputing at all would leave the audit's opportunities
+    permanently stale.
+    """
+    async with session_factory() as session:
+        scenario = await _seed_scenario(session)
+        await session.commit()
+    stub_inspection({})
+    task = AnalyticsTask(
+        workspace_id=scenario.workspace_id,
+        project_id=scenario.project_id,
+        task_kind=ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
+        payload={"audit_id": str(uuid.uuid4())},
+        idempotency_key=f"inspect:{uuid.uuid4()}",
+        attempt_count=3,
+        max_attempts=3,
+    )
+
+    with pytest.raises(ValueError, match="audit is unavailable"):
+        await inspect_source_pages(session_factory, task)
+
+    async with session_factory() as session:
+        queued = list(
+            (
+                await session.scalars(
+                    select(AnalyticsTask.task_kind).where(
+                        AnalyticsTask.project_id == scenario.project_id
+                    )
+                )
+            ).all()
+        )
+        assert ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH in queued
+
+
+async def test_a_retryable_failure_waits_rather_than_handing_off_early(
+    session_factory: async_sessionmaker[AsyncSession],
+    stub_inspection,
+) -> None:
+    """Handing off on attempt one would spend the idempotency key too soon."""
+    async with session_factory() as session:
+        scenario = await _seed_scenario(session)
+        await session.commit()
+    stub_inspection({})
+    task = AnalyticsTask(
+        workspace_id=scenario.workspace_id,
+        project_id=scenario.project_id,
+        task_kind=ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
+        payload={"audit_id": str(uuid.uuid4())},
+        idempotency_key=f"inspect:{uuid.uuid4()}",
+        attempt_count=1,
+        max_attempts=3,
+    )
+
+    with pytest.raises(ValueError):
+        await inspect_source_pages(session_factory, task)
+
+    async with session_factory() as session:
+        queued = list(
+            (
+                await session.scalars(
+                    select(AnalyticsTask.task_kind).where(
+                        AnalyticsTask.project_id == scenario.project_id
+                    )
+                )
+            ).all()
+        )
+        assert ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH not in queued

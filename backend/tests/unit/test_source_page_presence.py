@@ -223,3 +223,50 @@ def test_page_facts_never_carry_the_extracted_text() -> None:
     assert "text" not in facts
     assert page.extracted_chars > 0
     assert _FILLER.strip() not in str(facts)
+
+
+def test_a_declared_page_type_change_is_a_content_change() -> None:
+    """Format comes from the declaration, so the hash has to cover it."""
+    prose = "<body><p>Acme Corp leads.</p></body>"
+    before = extract_source_page(_page(f"<html><head><title>T</title></head>{prose}"))
+    after = extract_source_page(
+        _page(
+            "<html><head><title>T</title>"
+            '<script type="application/ld+json">{"@type": "ItemList"}</script>'
+            f"</head>{prose}</html>"
+        )
+    )
+
+    assert before.content_hash != after.content_hash
+
+
+def test_a_rotating_link_set_is_not_a_content_change() -> None:
+    """Navigation and ad slots churn constantly; that is the excluded noise."""
+    head = "<html><head><title>T</title></head><body><p>Acme Corp leads.</p>"
+    label = "Sponsored"
+    first = extract_source_page(
+        _page(head + f'<a href="https://a.com/x">{label}</a></body>')
+    )
+    second = extract_source_page(
+        _page(head + f'<a href="https://b.com/y">{label}</a></body>')
+    )
+
+    assert first.outbound_domains != second.outbound_domains
+    assert first.content_hash == second.content_hash
+
+
+def test_hostile_json_ld_nesting_costs_only_its_own_block() -> None:
+    """A page that blows the parser must not lose the whole inspection."""
+    bomb = "[" * 20000 + "]" * 20000
+    body = _page(
+        "<html><head><title>Best CRM tools</title>"
+        f'<script type="application/ld+json">{bomb}</script>'
+        '<script type="application/ld+json">{"@type": "ItemList"}</script>'
+        f"</head><body><p>Acme Corp leads.</p><p>{_FILLER}</p></body></html>"
+    )
+
+    page = extract_source_page(body)
+
+    assert page.parsed is True
+    assert page.extracted_chars > 0
+    assert "ItemList" in page.structured_types

@@ -9,7 +9,9 @@ That last step is the reason this worker exists as a separate hop rather than
 living in audit terminalization. Terminalization queues the Opportunity refresh
 the moment an audit commits; if inspection were queued from the same place, the
 refresh would always run before any page evidence existed and the page-aware
-detectors would see nothing.
+detectors would see nothing. Because terminalization now queues inspection
+INSTEAD of the refresh, this worker owes that refresh even when it fails for the
+last time -- see ``inspect_source_pages``.
 
 Audit completion never depends on any of this. A publisher that blocks us is a
 fact about that publisher, not a failed measurement, and a queue outage must
@@ -77,6 +79,17 @@ def _new_fetcher() -> SecureFetcher:
     return SecureFetcher(resolver=SystemDnsResolver())
 
 
+@dataclass(frozen=True, slots=True)
+class _Scope:
+    """The frozen identity one inspection run works against."""
+
+    workspace_id: uuid.UUID
+    project_id: uuid.UUID
+    audit_id: uuid.UUID | None
+    config: ScoringConfig
+    roster_version: str
+
+
 class HostPacer:
     """One request at a time per host, spaced by a fixed delay.
 
@@ -118,22 +131,25 @@ class _Inspector:
             return True
         return bool(policy.can_fetch(url))
 
+    def _blocked(self, url: str) -> FetchOutcome:
+        return FetchOutcome(
+            outcome=OUTCOME_BLOCKED,
+            requested_url=url,
+            robots_state="disallowed",
+            reason=INSPECTION_REASON_ROBOTS,
+        )
+
     async def fetch(self, url: str, *, redirect: bool) -> FetchResult | FetchOutcome:
         """Fetch one external URL, or describe why it could not be read."""
         if not await self.allowed(url):
-            return FetchOutcome(
-                outcome=OUTCOME_BLOCKED,
-                requested_url=url,
-                robots_state="disallowed",
-                reason=INSPECTION_REASON_ROBOTS,
-            )
+            return self._blocked(url)
         request = (
             redirect_resolution_request(url) if redirect else source_page_request(url)
         )
         try:
             async with self.pacer.slot(authority_key(url)):
                 async with asyncio.timeout(SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS * 2):
-                    return await self.fetcher.fetch(request)
+                    result = await self.fetcher.fetch(request)
         except FetchError as exc:
             return FetchOutcome(
                 outcome=OUTCOME_FAILED,
@@ -147,6 +163,23 @@ class _Inspector:
                 requested_url=url,
                 reason=INSPECTION_REASON_TRANSPORT,
             )
+        return await self._respect_final_host(url, result)
+
+    async def _respect_final_host(
+        self, url: str, result: FetchResult
+    ) -> FetchResult | FetchOutcome:
+        """Honour robots for the host we actually landed on.
+
+        The fetcher re-validates every redirect hop against the SSRF policy but
+        knows nothing about robots, so a cited URL that redirects to another
+        publisher would otherwise be read without that publisher's permission.
+        The destination is what gets stored and quoted, so the destination is
+        what has to consent.
+        """
+        final = result.final_url or url
+        if authority_key(final) == authority_key(url):
+            return result
+        return result if await self.allowed(final) else self._blocked(url)
 
 
 def _outcome_from_result(url: str, result: FetchResult) -> FetchOutcome:
@@ -172,30 +205,28 @@ def _outcome_from_result(url: str, result: FetchResult) -> FetchOutcome:
     )
 
 
-async def _inspect_one(
+async def _record_result(
     session: AsyncSession,
-    inspector: _Inspector,
     *,
     page: SourcePage,
-    config: ScoringConfig,
-    roster_version: str,
-    audit_id: uuid.UUID,
+    result: FetchResult,
+    scope: _Scope,
 ) -> None:
-    result = await inspector.fetch(page.canonical_url, redirect=False)
-    if isinstance(result, FetchOutcome):
-        await record_inspection(session, page=page, fetch=result, audit_id=audit_id)
-        return
+    """Assess and persist one already-downloaded page."""
     outcome = _outcome_from_result(page.canonical_url, result)
     if outcome.outcome != OUTCOME_INSPECTED:
-        await record_inspection(session, page=page, fetch=outcome, audit_id=audit_id)
+        await record_inspection(
+            session, page=page, fetch=outcome, audit_id=scope.audit_id
+        )
         return
     extracted = extract_source_page(result.body, charset=result.charset)
     assessment = assess_page(
         extracted,
-        brand_name=config.brand_name,
-        brand_aliases=config.brand_aliases,
+        brand_name=scope.config.brand_name,
+        brand_aliases=scope.config.brand_aliases,
         competitors=tuple(
-            (competitor.name, competitor.aliases) for competitor in config.competitors
+            (competitor.name, competitor.aliases)
+            for competitor in scope.config.competitors
         ),
     )
     await record_inspection(
@@ -204,9 +235,25 @@ async def _inspect_one(
         fetch=outcome,
         extracted=extracted,
         assessment=assessment,
-        roster_version=roster_version,
-        audit_id=audit_id,
+        roster_version=scope.roster_version,
+        audit_id=scope.audit_id,
     )
+
+
+async def _inspect_one(
+    session: AsyncSession,
+    inspector: _Inspector,
+    *,
+    page: SourcePage,
+    scope: _Scope,
+) -> None:
+    result = await inspector.fetch(page.canonical_url, redirect=False)
+    if isinstance(result, FetchOutcome):
+        await record_inspection(
+            session, page=page, fetch=result, audit_id=scope.audit_id
+        )
+        return
+    await _record_result(session, page=page, result=result, scope=scope)
 
 
 async def _resolve_redirects(
@@ -215,8 +262,14 @@ async def _resolve_redirects(
     *,
     audit: Audit,
     tokens: tuple,
-) -> None:
-    """Follow bounded redirect tokens so their publishers become countable."""
+) -> dict[str, FetchResult]:
+    """Follow bounded redirect tokens so their publishers become countable.
+
+    Returns the page downloaded for each resolved identity. Following the token
+    IS fetching the publisher, so discarding the body would pull the same page
+    over the wire twice and spend two budget units to learn one thing.
+    """
+    resolved: dict[str, FetchResult] = {}
     for token in tokens:
         async with session_factory() as session:
             paid = await spend_for_redirect(
@@ -228,12 +281,12 @@ async def _resolve_redirects(
             await session.commit()
         if not paid:
             logger.info("source-page redirect budget exhausted")
-            return
+            return resolved
         result = await inspector.fetch(token.url, redirect=True)
         if isinstance(result, FetchOutcome):
             continue
         identity = identify_unwrapped_redirect(result.final_url)
-        if not identity.is_resolved:
+        if not identity.is_resolved or not identity.url_hash:
             logger.debug(
                 "redirect did not resolve to a publisher",
                 extra={"reason": INSPECTION_REASON_UNRESOLVED_REDIRECT},
@@ -246,46 +299,145 @@ async def _resolve_redirects(
                 redirect_url=token.url,
                 resolved_url=identity.resolved_url or "",
                 canonical_url=identity.canonical_url or "",
-                url_hash=identity.url_hash or "",
+                url_hash=identity.url_hash,
                 method=identity.method,
                 version=identity.version,
             )
             await session.commit()
+        resolved[identity.url_hash] = result
+    return resolved
 
 
 async def _load_audit(session: AsyncSession, task: AnalyticsTask) -> Audit | None:
-    try:
-        audit_id = uuid.UUID(str((task.payload or {}).get("audit_id")))
-    except (TypeError, ValueError):
-        raise ValueError("Source page inspection requires audit_id") from None
     return await session.scalar(
         select(Audit).where(
             Audit.workspace_id == task.workspace_id,
             Audit.project_id == task.project_id,
-            Audit.id == audit_id,
+            Audit.id == _audit_id(task),
         )
     )
 
 
-async def inspect_source_pages(
-    session_factory: async_sessionmaker[AsyncSession], task: AnalyticsTask
+def _audit_id(task: AnalyticsTask) -> uuid.UUID:
+    try:
+        return uuid.UUID(str((task.payload or {}).get("audit_id")))
+    except (TypeError, ValueError):
+        raise ValueError("Source page inspection requires audit_id") from None
+
+
+async def _record_prefetched(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    scope: _Scope,
+    prefetched: dict[str, FetchResult],
 ) -> None:
-    """Inspect this audit's cited pages, then hand off to Opportunities."""
+    """Store the pages already downloaded while resolving redirect tokens."""
+    for url_hash, result in prefetched.items():
+        async with session_factory() as session:
+            page = await session.scalar(
+                select(SourcePage).where(
+                    SourcePage.project_id == scope.project_id,
+                    SourcePage.url_hash == url_hash,
+                )
+            )
+            if page is None:
+                continue
+            try:
+                await _record_result(session, page=page, result=result, scope=scope)
+                await session.commit()
+            except Exception:
+                logger.exception(
+                    "source-page prefetch persistence failed",
+                    extra={"source_page_id": str(page.id)},
+                )
+                await session.rollback()
+
+
+async def _inspect_claims(
+    session_factory: async_sessionmaker[AsyncSession],
+    inspector: _Inspector,
+    *,
+    scope: _Scope,
+    claims: list,
+) -> None:
+    semaphore = asyncio.Semaphore(SOURCE_PAGE_FETCH_CONCURRENCY)
+
+    async def run(claim) -> None:
+        async with semaphore, session_factory() as session:
+            page = await session.get(SourcePage, claim.source_page_id)
+            if page is None:
+                return
+            try:
+                await _inspect_one(session, inspector, page=page, scope=scope)
+                await session.commit()
+            except Exception:
+                # One unreachable publisher must not discard the pages that
+                # were read successfully alongside it.
+                logger.exception(
+                    "source-page inspection failed",
+                    extra={"source_page_id": str(claim.source_page_id)},
+                )
+                await session.rollback()
+
+    await asyncio.gather(*(run(claim) for claim in claims))
+
+
+async def _hand_off(
+    session_factory: async_sessionmaker[AsyncSession], *, scope: _Scope
+) -> None:
+    """Queue the Opportunity refresh this audit is waiting on.
+
+    Batch completion, not per page: the recompute is project-wide, so running
+    it once per inspected page would be the same work repeated.
+    """
+    if scope.audit_id is None:
+        return
+    async with session_factory() as session:
+        await enqueue_audit_opportunity_tasks(
+            session,
+            workspace_id=scope.workspace_id,
+            project_id=scope.project_id,
+            audit_id=scope.audit_id,
+        )
+        await session.commit()
+
+
+def _is_final_attempt(task: AnalyticsTask) -> bool:
+    return int(task.attempt_count or 0) >= int(task.max_attempts or 1)
+
+
+def _fallback_scope(task: AnalyticsTask) -> _Scope:
+    """Enough identity to hand off after a failure that produced no scope."""
     if task.project_id is None:
         raise ValueError("Source page inspection requires project_id")
+    try:
+        audit_id: uuid.UUID | None = _audit_id(task)
+    except ValueError:
+        audit_id = None
+    return _Scope(
+        workspace_id=task.workspace_id,
+        project_id=task.project_id,
+        audit_id=audit_id,
+        config=ScoringConfig.from_project({}),
+        roster_version="",
+    )
 
+
+async def _run_inspection(
+    session_factory: async_sessionmaker[AsyncSession], task: AnalyticsTask
+) -> _Scope:
     async with session_factory() as session:
         audit = await _load_audit(session, task)
         if audit is None:
             raise ValueError("Source page inspection audit is unavailable")
         sync = await sync_cited_pages(session, audit=audit)
         await session.commit()
-        config = ScoringConfig.from_project(audit.configuration or {})
-        roster_version = project_roster(audit.configuration or {})
-        workspace_id, project_id, audit_id = (
-            audit.workspace_id,
-            audit.project_id,
-            audit.id,
+        scope = _Scope(
+            workspace_id=audit.workspace_id,
+            project_id=audit.project_id,
+            audit_id=audit.id,
+            config=ScoringConfig.from_project(audit.configuration or {}),
+            roster_version=project_roster(audit.configuration or {}),
         )
 
     async with _new_fetcher() as fetcher:
@@ -294,53 +446,42 @@ async def inspect_source_pages(
             robots=RobotsCache(new_fetcher=_new_fetcher),
             pacer=HostPacer(),
         )
-        await _resolve_redirects(
+        prefetched = await _resolve_redirects(
             session_factory, inspector, audit=audit, tokens=sync.unresolved
         )
-        # Resolving tokens creates identities the sync did not see, so the
-        # inventory is refreshed before anything is claimed.
+        # Resolving tokens creates identities the first sync could not see.
         async with session_factory() as session:
             await sync_cited_pages(session, audit=audit)
+            await session.commit()
+        await _record_prefetched(session_factory, scope=scope, prefetched=prefetched)
+        async with session_factory() as session:
             claims = await claim_pages(
-                session, workspace_id=workspace_id, project_id=project_id
+                session,
+                workspace_id=scope.workspace_id,
+                project_id=scope.project_id,
             )
             await session.commit()
+        await _inspect_claims(session_factory, inspector, scope=scope, claims=claims)
+    return scope
 
-        semaphore = asyncio.Semaphore(SOURCE_PAGE_FETCH_CONCURRENCY)
 
-        async def run(claim) -> None:
-            async with semaphore, session_factory() as session:
-                page = await session.get(SourcePage, claim.source_page_id)
-                if page is None:
-                    return
-                try:
-                    await _inspect_one(
-                        session,
-                        inspector,
-                        page=page,
-                        config=config,
-                        roster_version=roster_version,
-                        audit_id=audit_id,
-                    )
-                    await session.commit()
-                except Exception:
-                    # One unreachable publisher must not discard the pages that
-                    # were read successfully alongside it.
-                    logger.exception(
-                        "source-page inspection failed",
-                        extra={"source_page_id": str(claim.source_page_id)},
-                    )
-                    await session.rollback()
+async def inspect_source_pages(
+    session_factory: async_sessionmaker[AsyncSession], task: AnalyticsTask
+) -> None:
+    """Inspect this audit's cited pages, then hand off to Opportunities.
 
-        await asyncio.gather(*(run(claim) for claim in claims))
-
-    # Batch completion, not per page: the recompute is project-wide, and
-    # running it once per inspected page would be the same work repeated.
-    async with session_factory() as session:
-        await enqueue_audit_opportunity_tasks(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            audit_id=audit_id,
-        )
-        await session.commit()
+    The hand-off also runs when this task is about to fail for the last time.
+    Terminalization queues inspection INSTEAD of the Opportunity refresh, so a
+    silent terminal failure here would leave an audit committed with its
+    opportunities never recomputed. Recomputing without page evidence is merely
+    what the product did before this feature; not recomputing at all is worse.
+    """
+    if task.project_id is None:
+        raise ValueError("Source page inspection requires project_id")
+    try:
+        scope = await _run_inspection(session_factory, task)
+    except Exception:
+        if _is_final_attempt(task):
+            await _hand_off(session_factory, scope=_fallback_scope(task))
+        raise
+    await _hand_off(session_factory, scope=scope)

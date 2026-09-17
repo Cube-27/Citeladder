@@ -67,20 +67,16 @@ class FetchOutcome:
     reason: str | None = None
 
 
-async def record_inspection(
-    session: AsyncSession,
+def _snapshot(
     *,
     page: SourcePage,
     fetch: FetchOutcome,
-    extracted: ExtractedPage | None = None,
-    assessment: PageAssessment | None = None,
-    roster_version: str = "",
-    audit_id: uuid.UUID | None = None,
-    now: datetime | None = None,
+    extracted: ExtractedPage | None,
+    assessment: PageAssessment | None,
+    audit_id: uuid.UUID | None,
+    moment: datetime,
 ) -> SourcePageSnapshot:
-    """Append one inspection's evidence and move the page to its new state."""
-    moment = now or datetime.now(UTC)
-    snapshot = SourcePageSnapshot(
+    return SourcePageSnapshot(
         workspace_id=page.workspace_id,
         project_id=page.project_id,
         source_page_id=page.id,
@@ -108,28 +104,86 @@ async def record_inspection(
         inspector_version=SOURCE_PAGE_INSPECTOR_VERSION,
         fetched_at=moment,
     )
+
+
+def _presence_rows(
+    *,
+    page: SourcePage,
+    snapshot: SourcePageSnapshot,
+    assessment: PageAssessment,
+    roster_version: str,
+) -> list[SourcePageEntityPresence]:
+    return [
+        SourcePageEntityPresence(
+            workspace_id=page.workspace_id,
+            project_id=page.project_id,
+            source_page_id=page.id,
+            snapshot_id=snapshot.id,
+            entity_kind=presence.entity_kind,
+            entity_name=presence.entity_name,
+            presence=presence.presence,
+            match_method=presence.match_method,
+            match_count=presence.match_count,
+            first_offset=presence.first_offset,
+            passage_refs=list(presence.passage_refs) or None,
+            roster_version=roster_version,
+            detector_version=SOURCE_PAGE_PRESENCE_VERSION,
+        )
+        for presence in assessment.presences
+    ]
+
+
+def _apply_page_format(page: SourcePage, assessment: PageAssessment | None) -> None:
+    """Only ever the format of THIS page; the publisher's class is untouched.
+
+    An inspection that produced no assessment clears the derivation method and
+    version alongside the format. Leaving them behind would advertise stale
+    provenance next to ``unresolved`` -- a reader would be told how we decided
+    something we did not decide.
+    """
+    if assessment is None:
+        page.page_format = PAGE_FORMAT_UNRESOLVED
+        page.page_format_method = None
+        page.page_format_version = None
+        return
+    page.page_format = assessment.page_format
+    page.page_format_method = assessment.page_format_method
+    page.page_format_version = SOURCE_PAGE_FORMAT_VERSION
+
+
+async def record_inspection(
+    session: AsyncSession,
+    *,
+    page: SourcePage,
+    fetch: FetchOutcome,
+    extracted: ExtractedPage | None = None,
+    assessment: PageAssessment | None = None,
+    roster_version: str = "",
+    audit_id: uuid.UUID | None = None,
+    now: datetime | None = None,
+) -> SourcePageSnapshot:
+    """Append one inspection's evidence and move the page to its new state."""
+    moment = now or datetime.now(UTC)
+    snapshot = _snapshot(
+        page=page,
+        fetch=fetch,
+        extracted=extracted,
+        assessment=assessment,
+        audit_id=audit_id,
+        moment=moment,
+    )
     session.add(snapshot)
     await session.flush()
 
     if assessment is not None:
-        for presence in assessment.presences:
-            session.add(
-                SourcePageEntityPresence(
-                    workspace_id=page.workspace_id,
-                    project_id=page.project_id,
-                    source_page_id=page.id,
-                    snapshot_id=snapshot.id,
-                    entity_kind=presence.entity_kind,
-                    entity_name=presence.entity_name,
-                    presence=presence.presence,
-                    match_method=presence.match_method,
-                    match_count=presence.match_count,
-                    first_offset=presence.first_offset,
-                    passage_refs=list(presence.passage_refs) or None,
-                    roster_version=roster_version,
-                    detector_version=SOURCE_PAGE_PRESENCE_VERSION,
-                )
+        session.add_all(
+            _presence_rows(
+                page=page,
+                snapshot=snapshot,
+                assessment=assessment,
+                roster_version=roster_version,
             )
+        )
 
     page.inspection_state = _STATE_BY_OUTCOME.get(fetch.outcome, INSPECTION_FAILED)
     page.inspection_reason = fetch.reason
@@ -139,12 +193,5 @@ async def record_inspection(
     if fetch.outcome == OUTCOME_INSPECTED:
         page.last_inspected_at = moment
         page.content_hash = extracted.content_hash if extracted else None
-        if assessment is not None:
-            # Only ever the format of THIS page. The publisher's own class is
-            # left exactly as the domain taxonomy set it.
-            page.page_format = assessment.page_format
-            page.page_format_method = assessment.page_format_method
-            page.page_format_version = SOURCE_PAGE_FORMAT_VERSION
-        else:
-            page.page_format = PAGE_FORMAT_UNRESOLVED
+        _apply_page_format(page, assessment)
     return snapshot

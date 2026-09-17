@@ -162,8 +162,10 @@ def _persist_analysis_rows(
         # Offline only. Analysis runs inside audit scoring, so a citation write
         # must not depend on a third party being reachable; a redirect token is
         # recorded as unresolved and the inspector follows it later.
+        provider_resolved = str(citation.get("resolved_url") or "").strip()
         identity = identify_citation_url(
-            citation.get("resolved_url") or citation.get("url")
+            provider_resolved or citation.get("url"),
+            provider_resolved=bool(provider_resolved),
         )
         session.add(
             Citation(

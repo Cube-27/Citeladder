@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
-from sqlalchemy import CursorResult, func, select, update
+from sqlalchemy import CursorResult, case, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -147,7 +147,18 @@ async def sync_cited_pages(
                     # Recurrence accumulates across audits: a page cited once
                     # per run for months is a stronger candidate than one cited
                     # three times in a single run and never again.
-                    "recurrence_count": SourcePage.recurrence_count + answers,
+                    #
+                    # Guarded on the audit, because this runs more than once
+                    # per audit -- the inventory is refreshed after redirects
+                    # resolve. Without the guard a re-sync would inflate a
+                    # page's rank purely by being processed twice.
+                    "recurrence_count": case(
+                        (
+                            SourcePage.last_seen_audit_id.is_distinct_from(audit.id),
+                            SourcePage.recurrence_count + answers,
+                        ),
+                        else_=SourcePage.recurrence_count,
+                    ),
                     "last_cited_at": moment,
                     "last_seen_audit_id": audit.id,
                     "source_class": source_class,

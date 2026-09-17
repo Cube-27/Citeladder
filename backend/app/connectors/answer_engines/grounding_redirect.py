@@ -42,4 +42,8 @@ def is_grounding_redirect(value: Any) -> bool:
         return True
     if host == GROUNDING_REDIRECT_MARKER:
         return True
-    return GROUNDING_REDIRECT_MARKER in parts.path.lower()
+    # Only when there is no host at all. The real redirect always carries the
+    # Google host matched above, so reading the marker out of any path would
+    # only ever misclassify a publisher writing about grounding redirects --
+    # and that page would silently lose its identity.
+    return not host and GROUNDING_REDIRECT_MARKER in parts.path.lower()

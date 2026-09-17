@@ -34,6 +34,8 @@ from app.core.config.source_pages import (
 # never reach a brief as if a publisher had written it about anyone.
 _NON_PROSE_TAGS = ("script", "style", "noscript", "template", "svg", "iframe")
 _HEADING_TAGS = ("h1", "h2", "h3")
+# Real schema.org graphs nest a few levels; anything deeper is not data.
+_MAX_SCHEMA_DEPTH = 12
 
 
 def _safe_parser_encoding(charset: str) -> str | None:
@@ -116,13 +118,19 @@ def _headings(root: Any) -> tuple[str, ...]:
     return tuple(found)
 
 
-def _schema_types(payload: Any, found: list[str]) -> None:
-    """Collect ``@type`` values from arbitrarily shaped JSON-LD."""
-    if len(found) >= SOURCE_PAGE_MAX_STRUCTURED_TYPES:
+def _schema_types(payload: Any, found: list[str], depth: int = 0) -> None:
+    """Collect ``@type`` values from arbitrarily shaped JSON-LD.
+
+    Depth-bounded: this walks a structure a third party controls, and real
+    schema graphs are shallow. Trusting the interpreter's recursion limit
+    instead would turn a hostile document into a lost inspection that still
+    spent its budget unit.
+    """
+    if len(found) >= SOURCE_PAGE_MAX_STRUCTURED_TYPES or depth > _MAX_SCHEMA_DEPTH:
         return
     if isinstance(payload, list):
         for item in payload:
-            _schema_types(item, found)
+            _schema_types(item, found, depth + 1)
         return
     if not isinstance(payload, dict):
         return
@@ -131,7 +139,7 @@ def _schema_types(payload: Any, found: list[str]) -> None:
         if isinstance(value, str) and value and value not in found:
             found.append(value)
     for value in payload.values():
-        _schema_types(value, found)
+        _schema_types(value, found, depth + 1)
 
 
 def _structured_types(root: Any) -> tuple[str, ...]:
@@ -142,7 +150,10 @@ def _structured_types(root: Any) -> tuple[str, ...]:
                 continue
             try:
                 _schema_types(json.loads(node.text or ""), found)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, RecursionError):
+                # ``json.loads`` itself recurses, so excessive nesting raises
+                # before the depth guard above is ever reached. One unreadable
+                # block must not cost the rest of the page.
                 continue
     except DOM_ERRORS as exc:
         dom_failure("source_page.structured_data", exc)
@@ -212,6 +223,13 @@ def extract_source_page(body: bytes, *, charset: str = "") -> ExtractedPage:
                 "meta": meta_description,
                 "headings": list(headings),
                 "text": text,
+                # The publisher's own declaration of what this page IS. It
+                # changes the page's format without touching a word of prose,
+                # so a hash that ignored it would call that page unchanged.
+                # Outbound links are deliberately excluded: navigation and ad
+                # slots rotate constantly, which is the noise this hash exists
+                # to keep out.
+                "structured_types": list(structured_types),
             }
         ),
         parsed=True,
