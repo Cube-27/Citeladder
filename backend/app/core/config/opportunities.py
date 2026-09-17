@@ -127,9 +127,17 @@ IMPLEMENTATION_EVENT_MAX_LIMIT: Final = 200
 IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN: Final = 160
 IMPLEMENTATION_EXPECTED_CHECKS_MAX: Final = 32
 IMPLEMENTATION_TARGETS_MAX: Final = 64
-IMPLEMENTATION_VERIFIER_VERSION: Final = "implementation-verifier-1"
+IMPLEMENTATION_VERIFIER_VERSION: Final = "implementation-verifier-2"
 IMPLEMENTATION_VERIFICATION_BATCH_MAX: Final = 100
 IMPLEMENTATION_VERIFICATION_HISTORY_MAX: Final = 50
+# Visibility expectations are movements against a baseline frozen at
+# declaration time, never absolute floors. Both metrics below sit on the same
+# 0-100 scale (``visibility_score`` is already ``brand_mention_rate * 100``,
+# and per-prompt mention stability is scaled to match) so one delta serves
+# either scope. A prompt-keyed Opportunity is measured on its own prompt.
+VISIBILITY_METRIC_PROJECT_SCORE: Final = "visibility_score"
+VISIBILITY_METRIC_PROMPT_MENTION_RATE: Final = "prompt_mention_rate"
+VISIBILITY_CHECK_MIN_DELTA: Final = 1.0
 SOURCE_ROLLUP_MAX_DOMAINS: Final = 100
 ACTION_PATH_OWNED: Final = "owned"
 ACTION_PATH_EARNED: Final = "earned"

@@ -26,6 +26,10 @@ from app.core.config.site_health_contracts import (
 )
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.domain.opportunities.verification_result import build_verification_result
+from app.domain.opportunities.visibility_checks import (
+    metric_value,
+    resolve_prompt_index,
+)
 from app.models.analysis import MetricSnapshot
 from app.models.analytics import AnalyticsTask
 from app.models.audit import Audit
@@ -201,8 +205,31 @@ async def _audit_evidence(
         if kind != "visibility_metric":
             result.limitations.append(f"{kind}: unavailable from an AI audit")
             continue
-        _evaluate_visibility_metric(snapshot=snapshot, check=check, result=result)
+        # ``prompt_index`` is audit-relative, so a prompt-keyed expectation is
+        # located in *this* audit rather than reusing the baseline's position.
+        prompt_index = await _check_prompt_index(
+            session, audit_id=audit_id, check=check
+        )
+        _evaluate_visibility_metric(
+            snapshot=snapshot,
+            check=check,
+            prompt_index=prompt_index,
+            result=result,
+        )
     return result
+
+
+async def _check_prompt_index(
+    session: AsyncSession, *, audit_id: uuid.UUID, check: dict[str, Any]
+) -> int | None:
+    raw = check.get("target_prompt_id")
+    if raw is None:
+        return None
+    try:
+        prompt_id = uuid.UUID(str(raw))
+    except ValueError:
+        return None
+    return await resolve_prompt_index(session, audit_id=audit_id, prompt_id=prompt_id)
 
 
 async def _traffic_evidence(
@@ -280,29 +307,35 @@ def _evaluate_visibility_metric(
     *,
     snapshot: MetricSnapshot | None,
     check: dict[str, Any],
+    prompt_index: int | None,
     result: _Evaluation,
 ) -> None:
+    """Compare a post-declaration observation against its frozen baseline.
+
+    An expectation without a baseline, or a metric this snapshot cannot
+    supply, is unobservable. It is recorded as a limitation and counts as
+    neither a match nor a contradiction, so nothing is verified by default.
+    """
     if snapshot is None:
         result.limitations.append("visibility_metric: no metric snapshot")
         return
     metric_name = str(check.get("metric") or "")
-    value = (
-        snapshot.visibility_score
-        if metric_name == "visibility_score"
-        else (snapshot.metrics or {}).get(metric_name)
-    )
-    expected = check.get("expected_value")
-    if not isinstance(value, (int, float)) or not isinstance(expected, (int, float)):
+    baseline = check.get("baseline_value")
+    if not isinstance(baseline, (int, float)):
         result.limitations.append(
-            f"visibility_metric: {metric_name} lacks an absolute expectation"
+            f"visibility_metric: {metric_name} has no frozen baseline"
         )
+        return
+    value = metric_value(snapshot, metric=metric_name, prompt_index=prompt_index)
+    if value is None:
+        result.limitations.append(f"visibility_metric: {metric_name} unavailable")
         return
     result.observed += 1
     result.metric_ids.add(snapshot.id)
     if _metric_matches(
         direction=check.get("direction"),
-        value=float(value),
-        expected=float(expected),
+        value=value - float(baseline),
+        expected=float(check.get("min_delta") or 0),
         tolerance=float(check.get("tolerance") or 0),
     ):
         result.matched += 1

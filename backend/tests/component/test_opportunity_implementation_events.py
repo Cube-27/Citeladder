@@ -13,7 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.domain.opportunities.verification import verify_implementation_events
 from app.models.analytics import AnalyticsTask
 from app.models.content import ContentGeneration
-from app.models.opportunity import Opportunity, OpportunityImplementationEvent
+from app.models.opportunity import (
+    Opportunity,
+    OpportunityImplementationEvent,
+    OpportunitySnapshot,
+)
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.urls import SiteUrl
 from tests.component.opportunity_helpers import Scenario, _seed_scenario
@@ -73,14 +77,7 @@ async def test_declaration_is_idempotent_and_projects_declared_state(
         "opportunity_id": str(opportunity.id),
         "target_site_url_ids": [str(site_url.id)],
         "declared_implemented_at": datetime.now(UTC).isoformat(),
-        "expected_checks": [
-            {
-                "kind": "site_rule",
-                "target_site_url_id": str(site_url.id),
-                "rule_id": opportunity.rule_id,
-                "expected_outcome": "pass",
-            }
-        ],
+        "expected_checks": [],
     }
     url = f"/api/v1/projects/{scenario.project_id}/opportunities/implementation-events"
 
@@ -97,6 +94,10 @@ async def test_declaration_is_idempotent_and_projects_declared_state(
     assert created.json() == replay.json()
     assert created.json()["state"] == "declared"
     assert created.json()["limitations"] == []
+    # The declaration carries the server's own expectation, not the caller's.
+    assert [check["kind"] for check in created.json()["expected_checks"]] == [
+        "site_rule"
+    ]
     listed = await client.get(
         url, headers={"X-Workspace-Id": str(scenario.workspace_id)}
     )
@@ -140,13 +141,7 @@ async def test_cross_workspace_target_is_rejected(
             "opportunity_id": str(opportunity.id),
             "target_site_url_ids": [str(foreign_target_id)],
             "declared_implemented_at": datetime.now(UTC).isoformat(),
-            "expected_checks": [
-                {
-                    "kind": "site_rule",
-                    "rule_id": opportunity.rule_id,
-                    "expected_outcome": "pass",
-                }
-            ],
+            "expected_checks": [],
         },
     )
 
@@ -243,19 +238,34 @@ async def test_terminal_crawl_appends_all_persisted_projection_states(
     )
     headers = {"X-Workspace-Id": str(scenario.workspace_id)}
 
+    # Expected checks are server-owned, so the four projection states cannot be
+    # driven through the API. Seed the declarations directly: what is under
+    # test here is how the verifier projects differing check OUTCOMES, not how
+    # a declaration chooses them.
     async def declare(key: str, checks: list[dict]) -> dict:
-        response = await client.post(
-            base_url,
-            headers={**headers, "Idempotency-Key": key},
-            json={
-                "opportunity_id": str(opportunity.id),
-                "target_site_url_ids": [str(site_url.id)],
-                "declared_implemented_at": boundary.isoformat(),
-                "expected_checks": checks,
-            },
-        )
-        assert response.status_code == 201
-        return response.json()
+        async with session_factory() as session:
+            snapshot_id = await session.scalar(
+                select(OpportunitySnapshot.id).where(
+                    OpportunitySnapshot.project_id == scenario.project_id
+                )
+            )
+            assert snapshot_id is not None
+            row = OpportunityImplementationEvent(
+                workspace_id=scenario.workspace_id,
+                project_id=scenario.project_id,
+                opportunity_id=opportunity.id,
+                opportunity_snapshot_id=snapshot_id,
+                target_site_url_ids=[str(site_url.id)],
+                generation_id=None,
+                declared_implemented_at=boundary,
+                expected_checks=checks,
+                actor_user_id=scenario.user_id,
+                idempotency_key=key,
+                request_fingerprint=key,
+            )
+            session.add(row)
+            await session.commit()
+            return {"id": str(row.id)}
 
     site_check = {
         "kind": "site_rule",
@@ -325,7 +335,7 @@ async def test_terminal_crawl_appends_all_persisted_projection_states(
     assert observation["crawl_id"] == str(scenario.crawl_id)
     assert observation["source_analysis_ids"]
     assert observation["source_rule_evaluation_ids"]
-    assert observation["verifier_version"] == "implementation-verifier-1"
+    assert observation["verifier_version"] == "implementation-verifier-2"
     assert observation["result"]["state"] == "available"
     assert observation["result"]["legs"]["visibility"]["state"] == "not_run"
     assert observation["result"]["legs"]["ai_referral_traffic"]["state"] == "not_run"
@@ -344,3 +354,39 @@ async def test_terminal_crawl_appends_all_persisted_projection_states(
             ).all()
         }
     assert after == before
+
+
+async def test_caller_supplied_expected_checks_are_rejected(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Verification intent is server-owned.
+
+    A caller that could name its own expectation could declare itself verified
+    against one it knows already holds.
+    """
+    scenario, opportunity, site_url = await _seed_and_recompute(client, session_factory)
+
+    response = await client.post(
+        f"/api/v1/projects/{scenario.project_id}/opportunities/implementation-events",
+        headers={
+            "X-Workspace-Id": str(scenario.workspace_id),
+            "Idempotency-Key": "caller-supplied-checks",
+        },
+        json={
+            "opportunity_id": str(opportunity.id),
+            "target_site_url_ids": [str(site_url.id)],
+            "declared_implemented_at": datetime.now(UTC).isoformat(),
+            "expected_checks": [
+                {
+                    "kind": "visibility_metric",
+                    "metric": "visibility_score",
+                    "direction": "increase",
+                    "expected_value": 0,
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "implementation_target_conflict"

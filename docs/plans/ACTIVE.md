@@ -2,6 +2,11 @@
 
 ## Active
 
+- [Earned-source page intelligence](citeladder-earned-source-page-intelligence.md)
+  — third-party opportunity loop: cited-page inspection, page-keyed qualified
+  earned opportunities, and external placement verification kept separate from
+  visibility movement. Three pull requests in ordered slices.
+
 ## Queued
 
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
