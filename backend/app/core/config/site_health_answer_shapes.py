@@ -44,7 +44,11 @@ PAGE_KIND_SLUG_PATTERNS: Final[tuple[tuple[str, str], ...]] = (
     # An explicit how-to outranks "best" appearing later in the same slug:
     # "how to choose the best CRM" is a guide, not a ranking.
     (PAGE_KIND_HOW_TO, r"(^|-)(how-to|tutorials?)(-|$)"),
-    (PAGE_KIND_LISTICLE, r"(^|-)(best|top-\d+|\d+-best)(-|$)"),
+    # "Best sellers" is a commerce collection, not a ranking somebody wrote:
+    # `/collections/best-sellers` is what a store calls a shelf, and claiming
+    # it as a listicle both mislabels it and takes it away from the segment
+    # catalog, which had it right as a category.
+    (PAGE_KIND_LISTICLE, r"(^|-)(best(?!-sell)|top-\d+|\d+-best)(-|$)"),
 )
 
 

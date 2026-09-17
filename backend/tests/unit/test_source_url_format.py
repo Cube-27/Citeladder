@@ -59,6 +59,23 @@ def test_a_url_shape_establishes_the_kind_a_reader_would_agree_with(url, expecte
     assert page_format == expected
 
 
+def test_a_commerce_shelf_is_not_a_ranking_somebody_wrote():
+    """`/collections/best-sellers` is a category page, not a listicle.
+
+    "Best sellers" is what a store calls a shelf. Claiming it as a ranking both
+    mislabels it and takes it from the segment catalog, which had it right.
+    """
+    assert derive_url_format("https://shop.test/collections/best-sellers")[0] == (
+        PAGE_FORMAT_CATEGORY
+    )
+    assert derive_url_format("https://shop.test/collections/best-selling-mugs")[0] == (
+        PAGE_FORMAT_CATEGORY
+    )
+    assert derive_url_format("https://news.test/blog/best-crm-tools")[0] == (
+        PAGE_FORMAT_LISTICLE
+    )
+
+
 def test_a_comparison_marker_is_a_whole_segment_and_not_a_substring():
     """`vs` is a segment. `versatile` and `advsomething` are not."""
     assert derive_url_format("https://site.com/versatile-tools")[0] != (
