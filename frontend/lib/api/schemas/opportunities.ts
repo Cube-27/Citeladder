@@ -36,7 +36,71 @@ const sourceMixSchema = responseObject({
   gap_keys: z.array(z.string()).optional(),
 });
 const domainRollupSchema = z.record(z.string(), z.unknown());
+/**
+ * One entity's verdict on the publisher page an earned action targets, as the
+ * brief carries it.
+ *
+ * `passages` is the quoted window behind a positive finding and is empty for
+ * anything else — `match_method` and the brief's `extracted_chars` are what a
+ * non-detection is reported with, because no passage can demonstrate one.
+ */
+const handoffPageEntitySchema = responseObject({
+  entity_kind: z.string(),
+  entity_name: z.string(),
+  presence: z.string(),
+  match_method: z.string(),
+  match_count: z.number().int(),
+  passages: z.array(z.string()),
+});
+
+/**
+ * The earned half of the handoff.
+ *
+ * Every field is optional: an owned-pathway handoff has none of them, and the
+ * backend projects a different shape for each. They were all being fetched and
+ * then stripped by this schema, which is why the evidence drawer could only
+ * render one sentence and a button.
+ *
+ * `observed_competitors` (already declared below) are the rivals found ON the
+ * page. `answer_competitors` are names that merely appeared in an answer that
+ * cited it. They stay separate fields here, and separate on screen, because
+ * collapsing them is the defect the page-keyed detector was built to remove.
+ */
+const earnedHandoffFields = {
+  rule_id: z.string().optional(),
+  url_hash: z.string().optional(),
+  page_format: z.string().optional(),
+  page_format_method: z.string().nullable().optional(),
+  page_title: z.string().optional(),
+  snapshot_id: z.string().nullable().optional(),
+  inspection_state: z.string().optional(),
+  inspection_reason: z.string().nullable().optional(),
+  extracted_chars: z.number().int().optional(),
+  sufficient_coverage: z.boolean().optional(),
+  page_entities: z.array(handoffPageEntitySchema).optional(),
+  answer_competitors: z.array(z.string()).optional(),
+  observed_citation_frequency: z
+    .object({
+      answers_citing_page: z.number().int(),
+      eligible_answers: z.number().int(),
+    })
+    .optional(),
+  qualified: z.boolean().optional(),
+  unmet_qualification: z.array(z.string()).optional(),
+  // Rule-specific evidence: the named discrepancies a correction must fix,
+  // and how a defended placement got worse.
+  discrepancies: z.array(z.string()).optional(),
+  deterioration: z.array(z.string()).optional(),
+  prior_snapshot_id: z.string().nullable().optional(),
+  requested: z.boolean().optional(),
+  inspector_version: z.string().optional(),
+  presence_version: z.string().optional(),
+  page_format_version: z.string().optional(),
+  handoff_template_version: z.string().optional(),
+} as const;
+
 const contentHandoffSchema = responseObject({
+  ...earnedHandoffFields,
   opportunity_id: z.string(),
   pathway: z.enum(['owned', 'earned']),
   source_class: z.string().nullable(),

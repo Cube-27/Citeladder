@@ -1,47 +1,43 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
-import type { z } from 'zod';
-import type { visibilitySourcesSchema } from '@/lib/api/schemas/visibility-evidence';
-import type { Visibility } from '@/lib/api/types';
-import { useQuery } from '@tanstack/react-query';
+import { useState, type ReactNode } from 'react';
+
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { InfoHint } from '@/components/ui/info-hint';
 import { Stack } from '@/components/ui/layout';
-import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
+import { CitedSourcesStrip } from '@/components/visibility/cited-sources-strip';
+import { SourcePaging, SourceTotals, SourceTypes } from '@/components/visibility/source-panels';
+import { SourcePageDrawer } from '@/components/visibility/source-page-drawer';
 import { SourceTable, type SourceFilters } from '@/components/visibility/source-rows';
 import { SOURCE_MODES } from '@/lib/config/visibility';
-import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
-import { retainPreviousDataForScope } from '@/lib/api/query-client';
-import { queryKeys } from '@/lib/api/query-keys';
-import { visibilityApi } from '@/lib/api/visibility';
 import {
   optionalStringUrlCodec,
   setUrlParams,
   stringUrlCodec,
   useUrlState,
 } from '@/lib/navigation/url-state';
-import { formatRate } from '@/lib/visibility/dashboard';
 import { textRole } from '@/components/ui/typography';
-import { sourceCategoryLabels } from '@/lib/visibility/vocabulary';
-import type { useVisibilityQueries } from '@/lib/visibility/use-visibility-dashboard';
+import {
+  useSourceAnalysis,
+  useSourceTypes,
+  type SourceQueries,
+} from '@/lib/visibility/use-source-analysis';
 
 const modeCodec = stringUrlCodec(
   SOURCE_MODES.map((item) => item.value),
-  'sources',
+  // ANSWERS, not sources. Reaching one quoted line used to cost four
+  // interactions — pick the tab, switch the mode, click a domain, click a page
+  // — and the thing a reader came for was the evidence at the end of them. The
+  // domain table is refinement and stays one deliberate switch away.
+  'answers',
 );
 
-/** A query parameter is either a value or absent; null is neither. */
-function set<T>(value: T | null | undefined): T | undefined {
-  return value ?? undefined;
-}
-
-type SourceData = z.infer<typeof visibilitySourcesSchema>;
-type SourceQueries = ReturnType<typeof useVisibilityQueries>;
-
+/**
+ * Mentions & Citations: the persisted answer evidence, with the cited-source
+ * rollup above it and the full domain table behind one switch.
+ */
 export function VisibilitySources({
   filters,
   queries,
@@ -61,42 +57,49 @@ export function VisibilitySources({
   const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec, {
     clearKeys: ['source_offset', 'source_as_of'],
   });
-  const { params, sourceQuery } = useSourceAnalysis(
-    filters,
-    queries,
+  const { params, sourceQuery } = useSourceAnalysis(filters, queries, {
     mode,
     domain,
     offset,
     asOf,
     sourceType,
     pageSize,
-  );
+  });
 
+  if (mode === 'answers') {
+    return (
+      <Stack gap="workspace">
+        {filters.competitor ? (
+          <p className={textRole('meta', 'text-secondary')}>
+            Answers naming {filters.competitor} but not you.
+          </p>
+        ) : null}
+        <CitedSourcesStrip
+          data={sourceQuery.data}
+          activeDomain={filters.domain}
+          onSelectDomain={(value) => filters.openEvidence({ domain: value })}
+          onOpenTable={() => setUrlParams({ mode: 'sources' })}
+        />
+        {children}
+      </Stack>
+    );
+  }
   return (
     <Stack gap="workspace">
-      {filters.competitor && mode === 'answers' ? (
-        <p className={textRole('meta', 'text-secondary')}>
-          Answers naming {filters.competitor} but not you.
-        </p>
-      ) : null}
-      {mode === 'answers' ? (
-        children
-      ) : (
-        <SourcesPanel
-          filters={filters}
-          queries={queries}
-          sourceQuery={sourceQuery}
-          domain={domain}
-          offset={params.offset}
-          pageSize={pageSize}
-          onPageSizeChange={(value) => {
-            setPageSize(isTablePageSize(value) ? value : TABLE_DEFAULT_PAGE_SIZE);
-            setUrlParams({ source_offset: null, source_as_of: null });
-          }}
-          sourceType={sourceType}
-          onChangeSourceType={setSourceType}
-        />
-      )}
+      <SourcesPanel
+        filters={filters}
+        queries={queries}
+        sourceQuery={sourceQuery}
+        domain={domain}
+        offset={params.offset}
+        pageSize={pageSize}
+        onPageSizeChange={(value) => {
+          setPageSize(isTablePageSize(value) ? value : TABLE_DEFAULT_PAGE_SIZE);
+          setUrlParams({ source_offset: null, source_as_of: null });
+        }}
+        sourceType={sourceType}
+        onChangeSourceType={setSourceType}
+      />
     </Stack>
   );
 }
@@ -123,6 +126,7 @@ function SourcesPanel({
   sourceType: string | null;
   onChangeSourceType: (value: string | null) => void;
 }>) {
+  const [openHash, setOpenHash] = useState<string | null>(null);
   const data = sourceQuery.data;
   const types = useSourceTypes(data);
   const rows = data?.items ?? [];
@@ -166,6 +170,7 @@ function SourcesPanel({
               domain={domain}
               filters={filters}
               activeRunId={queries.activeRunId}
+              onInspectPage={setOpenHash}
             />
             {data && rows.length === 0 ? (
               <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
@@ -186,229 +191,12 @@ function SourcesPanel({
         </Card>
         <SourceTypes types={types} selected={sourceType} />
       </div>
+      <SourcePageDrawer
+        projectId={queries.projectId}
+        workspaceId={queries.workspaceId}
+        urlHash={openHash}
+        onClose={() => setOpenHash(null)}
+      />
     </>
   );
-}
-
-/**
- * What the whole selection cited, as a sentence and the numbers behind it.
- *
- * The lede is a claim a reader can repeat — "cited by 96 sources" — with the
- * figures that support it beside it, rather than a row of bare tiles they have
- * to assemble into a sentence themselves.
- */
-function SourceTotals({
-  data,
-  domain,
-  citations,
-}: Readonly<{
-  data?: SourceData;
-  domain: string | null;
-  citations?: Visibility['citation_totals'];
-}>) {
-  if (!data) return null;
-  return (
-    <div className="bg-surface border-border-subtle grid gap-4 rounded-[var(--radius-card)] border p-[var(--card-padding)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-      {/* Each label names exactly what its number counts. `data.total` is
-          distinct DOMAIN GROUPS on the current filter, `data.responses` is
-          every analyzed answer (cited or not), and `citations.citations` is
-          every citation in those answers including competitors' — the owned
-          subset is the tile below. */}
-      <p className={textRole('objectTitle')}>
-        {domain
-          ? `${data.total} ${data.total === 1 ? 'page' : 'pages'} cited on ${domain}`
-          : `${data.total} ${data.total === 1 ? 'source' : 'sources'} cited across these answers`}
-      </p>
-      <MetricGroup className="lg:w-auto">
-        <MetricItem
-          label="Answers analyzed"
-          value={String(data.responses)}
-          detail={`across ${data.prompts} ${data.prompts === 1 ? 'prompt' : 'prompts'}`}
-        />
-        {citations ? (
-          <MetricItem label="Citations in answers" value={String(citations.citations)} />
-        ) : null}
-        {citations ? (
-          <MetricItem
-            label="Citations to your site"
-            value={String(citations.owned_citations)}
-            detail={
-              citations.owned_share == null ? null : `${formatRate(citations.owned_share)} of all`
-            }
-          />
-        ) : null}
-      </MetricGroup>
-    </div>
-  );
-}
-
-type SourceType = { token: string; label: string; domains: number; share: number };
-
-/**
- * The mix of sites the models drew on.
- *
- * Counted server-side over the whole selection. This folded the loaded rows
- * until the backend published a rollup, which meant page one could pass for the
- * whole picture on any project with more domains than fit a page.
- */
-function useSourceTypes(data?: SourceData): SourceType[] {
-  return useMemo(() => {
-    const totals = data?.category_totals ?? {};
-    const total = Object.values(totals).reduce((sum, count) => sum + count, 0);
-    return Object.entries(totals)
-      .map(([token, domains]) => ({
-        token,
-        // An unmapped class is dropped rather than shown raw; that is how
-        // `editorial_third_party` reached the screen in the first place.
-        label: sourceCategoryLabels([token])[0],
-        domains,
-        share: total ? domains / total : 0,
-      }))
-      .filter((type): type is SourceType => Boolean(type.label))
-      .sort((a, b) => b.domains - a.domains || a.label.localeCompare(b.label));
-  }, [data]);
-}
-
-function SourceTypes({
-  types,
-  selected,
-}: Readonly<{ types: SourceType[]; selected: string | null }>) {
-  if (!types.length) return null;
-  return (
-    <Card>
-      <CardHeader className="grid gap-1">
-        <CardTitle>
-          <span className="inline-flex items-center gap-1.5">
-            Source types
-            <InfoHint label="Source types">
-              The kind of site each cited domain is. Independent editorial and review sites are the
-              ones you cannot publish to directly.
-            </InfoHint>
-          </span>
-        </CardTitle>
-        <p className={textRole('meta', 'text-secondary')}>
-          Across every cited domain in this selection, including types the table is filtered out of.
-        </p>
-      </CardHeader>
-      <CardContent>
-        <Stack gap="compact">
-          {types.map((type) => (
-            <div key={type.label} className="grid gap-1.5">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className={textRole(type.token === selected ? 'bodyStrong' : 'body')}>
-                  {type.label}
-                  {type.token === selected ? ' · filtered' : ''}
-                </span>
-                <span className={textRole('metricSm')}>
-                  {formatRate(type.share)}
-                  <span className={textRole('meta', 'text-secondary ms-1.5')}>{type.domains}</span>
-                </span>
-              </div>
-              <div className="bg-surface-2 h-1.5 w-full overflow-hidden rounded-full" aria-hidden>
-                <div
-                  className="bg-accent h-full rounded-full"
-                  style={{ inlineSize: `${Math.max(2, type.share * 100)}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-}
-
-/**
- * The shared table footer, driven by the endpoint's offsets.
- *
- * The endpoint pages by offset rather than page number, so the page index is
- * derived from it. Using the app's one pagination control keeps this table
- * behaving like every other table in the product instead of growing its own
- * pair of buttons.
- */
-function SourcePaging({
-  data,
-  domain,
-  offset,
-  pageSize,
-  busy,
-  onPageSizeChange,
-}: Readonly<{
-  data?: SourceData;
-  domain: string | null;
-  offset: number;
-  pageSize: number;
-  busy: boolean;
-  onPageSizeChange: (value: number) => void;
-}>) {
-  if (!data) return null;
-  const total = data.total;
-  const from = total === 0 ? 0 : offset + 1;
-  const to = Math.min(total, offset + data.items.length);
-  return (
-    <CursorTableFooter
-      from={from}
-      to={to}
-      total={total}
-      noun={domain ? 'pages' : 'domains'}
-      pageSize={pageSize}
-      onPageSizeChange={onPageSizeChange}
-      canPrev={offset > 0}
-      canNext={data.next_offset !== null}
-      busy={busy}
-      onPrev={() => {
-        const nextOffset = Math.max(0, offset - pageSize);
-        setUrlParams({
-          source_offset: nextOffset ? String(nextOffset) : null,
-          source_as_of: nextOffset ? (data.as_of ?? null) : null,
-        });
-      }}
-      onNext={() => {
-        if (data.next_offset === null) return;
-        setUrlParams({
-          source_offset: String(data.next_offset),
-          source_as_of: data.as_of ?? null,
-        });
-      }}
-    />
-  );
-}
-
-function useSourceAnalysis(
-  filters: SourceFilters,
-  queries: SourceQueries,
-  mode: string,
-  domain: string | null,
-  offset: string | null,
-  asOf: string | null,
-  sourceType: string | null,
-  pageSize: number,
-) {
-  const comparison = queries.visibilityQuery.data?.comparison;
-  const params = {
-    audit_id: queries.selectedRunIds ? undefined : set(queries.activeRunId),
-    audit_ids: queries.selectedRunIds,
-    baseline_audit_ids:
-      comparison?.status === 'comparable' ? comparison.baseline_audit_ids : undefined,
-    engine: set(filters.engine === 'all' ? null : filters.engine),
-    cohort: filters.cohort,
-    domain: set(domain),
-    source_type: set(sourceType),
-    offset: Math.max(0, Number.parseInt(offset ?? '0', 10) || 0),
-    as_of: set(asOf),
-    limit: pageSize,
-  };
-  const sourceQuery = useQuery({
-    queryKey: queryKeys.visibility.sources(queries.projectId ?? '', params),
-    queryFn: ({ signal }) =>
-      visibilityApi.getSources(queries.projectId!, params, {
-        signal,
-        workspaceId: queries.workspaceId,
-      }),
-    enabled: mode === 'sources' && Boolean(queries.projectId && queries.activeRunId),
-    // Hold the page on screen while the next one loads: without it the header
-    // fell back to "Unknown" and the table emptied on every offset change.
-    placeholderData: (data, query) => retainPreviousDataForScope(queries.projectId!, data, query),
-  });
-  return { params, sourceQuery };
 }

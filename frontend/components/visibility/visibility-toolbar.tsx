@@ -104,7 +104,7 @@ export function VisibilityToolbar(props: ToolbarProps) {
       {props.activeTab === 'mentions-citations' && props.onChangeSourceMode ? (
         <AnalysisChoice
           label="Show"
-          value={props.sourceMode ?? 'sources'}
+          value={props.sourceMode ?? 'answers'}
           options={SOURCE_MODES}
           onChange={props.onChangeSourceMode}
         />

@@ -2,12 +2,12 @@ import { expect, test, type Page, type Request } from '@playwright/test';
 import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
 /**
- * F9 four-tab Visibility workspace e2e (Task 4).
+ * Visibility workspace e2e (Task 4).
  *
  * All backend calls are stubbed at the network layer so the spec runs without a
- * live backend (mirrors `runs.spec.ts`). It asserts the four-tab IA — exactly
- * Trends, Mentions & Citations, Query fanouts (no Overview / Sources / Topics /
- * Sentiment) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
+ * live backend (mirrors `runs.spec.ts`). It asserts the tab IA — Trends,
+ * Mentions & Citations, Competitor analysis, Query fanouts (no Overview /
+ * Sources / Topics / Sentiment) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
  * a time, `?tab=` URL sync), shared-filter persistence across tabs, the evidence
  * populated / empty / error states, the three query-fanout states, and a
  * narrow-viewport (mobile) layout check.
@@ -376,8 +376,7 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   // Mentions & Citations.
   await page.getByRole('tab', { name: 'Mentions & Citations' }).click();
   await expect(page).toHaveURL(/[?&]tab=mentions-citations/);
-  await page.getByRole('button', { name: 'Show' }).click();
-  await page.getByRole('menuitemradio', { name: 'Answers', exact: true }).click();
+  // The answers ARE the default now; no mode switch is needed to reach them.
   // One row per execution, each captioned with the frozen prompt it answered —
   // the fixture holds three answers to the same prompt.
   await expect(page.getByText('Best affordable clothing stores in Australia?')).toHaveCount(3);
@@ -409,8 +408,8 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   const selectedTab = tablist.getByRole('tab', { selected: true });
   await expect(selectedTab).toBeVisible();
 
-  // All three retained tabs are still present in the one row.
-  await expect(tablist.getByRole('tab')).toHaveCount(3);
+  // Every retained tab is still present in the one row.
+  await expect(tablist.getByRole('tab')).toHaveCount(4);
 
   // Inactive panels are NOT stacked — still exactly one panel in the DOM.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
