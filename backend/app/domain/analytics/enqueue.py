@@ -35,6 +35,7 @@ from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
     ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
     ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
+    ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
     analytics_settings,
 )
@@ -538,3 +539,29 @@ async def enqueue_post_sync_projections(
         )
     )
     return enqueued
+
+
+async def enqueue_source_page_inspection(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    audit_id: uuid.UUID,
+) -> uuid.UUID | None:
+    """Queue inspection of the external pages one terminal audit cited.
+
+    This replaces the direct Opportunity refresh for an audit rather than
+    running beside it. The inspection enqueues that refresh itself once its
+    batch finishes, so the page-aware detectors see the evidence the audit just
+    produced instead of racing it.
+    """
+    return await _enqueue_task(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        task_kind=ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
+        payload={"audit_id": str(audit_id)},
+        idempotency_key=_idempotency_key(
+            ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION, project_id, audit_id
+        ),
+    )

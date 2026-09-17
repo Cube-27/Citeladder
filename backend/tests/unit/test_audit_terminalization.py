@@ -65,15 +65,15 @@ async def test_shelf_failure_does_not_block_audit_terminalization(
         steps.append("analysis")
 
     async def enqueue(**_: object) -> None:
-        steps.append("opportunity")
+        steps.append("inspection")
 
     monkeypatch.setattr(terminalization, "finalize_commerce_shelf", fail_shelf)
     monkeypatch.setattr(terminalization, "finalize_audit_analysis", finalize_analysis)
     worker = SimpleNamespace(
         _session_factory=lambda: Session(),
-        _enqueue_opportunity_refresh=enqueue,
+        _enqueue_source_page_inspection=enqueue,
     )
 
     await AuditTerminalizationMixin._finalize_analysis(worker, audit_id)
 
-    assert steps == ["shelf", "analysis", "commit", "opportunity"]
+    assert steps == ["shelf", "analysis", "commit", "inspection"]
