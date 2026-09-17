@@ -25,6 +25,19 @@ Human status changes remain separate from immutable source observations.
 Source routing distinguishes owned and earned actions and exposes the persisted
 source mix. The [Content handoff](../backend/app/domain/opportunities/content_handoff.py)
 projects target IDs, citations, limitations, coverage and suggested skill.
+
+Earned actions are keyed on one inspected page, not on a publisher domain.
+`earned_page_acquire_listing`, `earned_page_correct_listing`,
+`earned_page_defend_listing` and `earned_page_research_source` fire only on
+evidence that a page was read, behind a qualification gate that research is
+the explicit exception to. Their priority reads verified on-page competitor
+presence; answer-level co-occurrence is descriptive and never scores. The
+domain-keyed `earned_source_recurs_beside_gap` is retired and config-only, and
+a human status carries forward to a page only where one page unambiguously
+succeeds it. [Earned sources](earned-sources.md) is the authority for the
+inspection and the four rules; a declaration against them targets the
+publisher page and never an owned `SiteUrl`.
+
 The [screen](../frontend/components/opportunities/opportunities-screen.tsx)
 renders that contract; it never reclassifies domains or fabricates task prose.
 A successful Content generation may link back without declaring implementation.

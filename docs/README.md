@@ -14,6 +14,7 @@ Historical records are evidence, not task authority.
 | Integrations, search, traffic, referrals and demand | [Connected data](integrations-traffic-analytics.md) |
 | Generation, context, runtime skills and history | [Content](content-generation.md) |
 | Ranked actions, implementation and verification | [Opportunities](opportunities.md) |
+| Inspection of externally cited pages and earned actions | [Earned sources](earned-sources.md) |
 | Commercial accounts, access and usage accounting | [Billing and entitlements](billing-entitlements.md) |
 | Catalog, competitors, buyer prompts and AI Shelf | [Commerce](commerce-intelligence.md) |
 | Bounded explain/roadmap tasks | [Growth Agent](growth-agent.md) |
