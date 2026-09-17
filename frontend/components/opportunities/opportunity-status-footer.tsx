@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-status-badge';
+import { VerificationObservations } from '@/components/opportunities/verification-observations';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
 import { Button } from '@/components/ui/button';
 import { MutationNotice } from '@/components/ui/mutation-notice';
@@ -51,7 +51,7 @@ function ScopedStatusFooter({
   return (
     <div className="grid gap-2">
       <MutationErrors updateStatus={updateStatus} declaration={declaration} />
-      <ImplementationState implementation={implementation} />
+      <VerificationObservations implementation={implementation} />
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-muted text-xs">Status</span>
@@ -127,71 +127,6 @@ function MutationErrors({
       ) : null}
     </>
   );
-}
-
-function ImplementationState({
-  implementation,
-}: Readonly<{
-  implementation:
-    | {
-        state: string;
-        limitations: string[];
-        verification_events?: Array<{ result: Record<string, unknown> }>;
-      }
-    | undefined;
-}>) {
-  if (!implementation) return null;
-  const color =
-    implementation.state === 'verified'
-      ? 'text-success-text'
-      : implementation.state === 'contradicted'
-        ? 'text-danger-text'
-        : 'text-muted';
-  const latest = implementation.verification_events?.at(-1);
-  const result = latest?.result;
-  const legs = result && typeof result === 'object' && 'legs' in result ? result.legs : null;
-  return (
-    <div className={`${color} grid gap-1 text-xs`}>
-      <p>
-        {implementation.state === 'declared'
-          ? 'Declared for verification.'
-          : `Verification: ${implementation.state}.`}
-        {implementation.limitations.length ? ` ${implementation.limitations.join(' ')}` : null}
-      </p>
-      {legs && typeof legs === 'object'
-        ? Object.entries(legs).map(([name, leg]) => (
-            <p key={name}>
-              {name.replaceAll('_', ' ')}: {legState(leg)}
-            </p>
-          ))
-        : null}
-      <GapChanges result={result} />
-      <ProjectLink className="focus-ring w-fit underline underline-offset-2" href="/runs">
-        Run a comparable audit
-      </ProjectLink>
-    </div>
-  );
-}
-
-function GapChanges({ result }: Readonly<{ result: Record<string, unknown> | undefined }>) {
-  const changes = result?.gap_changes;
-  if (!changes || typeof changes !== 'object' || !('state' in changes)) return null;
-  if (changes.state !== 'available') return <p>Gap comparison: not run</p>;
-  const count = (key: string) => {
-    const value = key in changes ? changes[key as keyof typeof changes] : null;
-    return Array.isArray(value) ? value.length : 0;
-  };
-  return (
-    <p>
-      Gaps: {count('no_longer_observed')} no longer observed · {count('persistent')} persistent ·{' '}
-      {count('new')} new
-    </p>
-  );
-}
-
-function legState(value: unknown): string {
-  if (!value || typeof value !== 'object' || !('state' in value)) return 'unavailable';
-  return String(value.state).replaceAll('_', ' ');
 }
 
 function StatusActions({

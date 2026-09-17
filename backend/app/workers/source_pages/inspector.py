@@ -31,6 +31,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -52,7 +53,15 @@ from app.core.config.source_pages import (
     SOURCE_PAGE_PER_HOST_DELAY_SECONDS,
     SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS,
 )
-from app.domain.opportunities.verification import enqueue_audit_opportunity_tasks
+from app.domain.opportunities.placement_checks import (
+    due_placement_page_ids,
+    evaluate_placement_checks,
+)
+from app.domain.opportunities.verification import (
+    TRIGGER_SOURCE_PAGE,
+    enqueue_audit_opportunity_tasks,
+    enqueue_implementation_verification,
+)
 from app.domain.source_pages.admission import claim_pages, spend_for_redirect
 from app.domain.source_pages.identity import identify_unwrapped_redirect
 from app.domain.source_pages.persistence import (
@@ -401,6 +410,51 @@ async def _hand_off(
         await session.commit()
 
 
+async def _settle_placements(
+    session_factory: async_sessionmaker[AsyncSession],
+    task: AnalyticsTask,
+    *,
+    scope: _Scope,
+) -> None:
+    """Compare every pending placement check against what this batch just read.
+
+    Runs here rather than on the verification task because the readings are
+    this batch's. A check is settled against the snapshot the batch committed,
+    and only then is a verification observation asked for -- so the event
+    records a comparison that already exists rather than triggering one.
+
+    The trigger revision is this inspection TASK's id, matching the one other
+    caller that supplies one. A later recheck arrives on its own task and so
+    enqueues its own verification, while a retry of this task reuses the same
+    key and is deduplicated -- which is the whole reason the enqueue takes a
+    revision. A wall-clock revision would switch that dedup off for exactly
+    this trigger kind.
+    """
+    moment = datetime.now(UTC)
+    async with session_factory() as session:
+        observed = await evaluate_placement_checks(
+            session,
+            workspace_id=scope.workspace_id,
+            project_id=scope.project_id,
+            now=moment,
+        )
+        if observed:
+            await enqueue_implementation_verification(
+                session,
+                workspace_id=scope.workspace_id,
+                project_id=scope.project_id,
+                trigger_kind=TRIGGER_SOURCE_PAGE,
+                trigger_id=scope.audit_id,
+                trigger_revision=str(task.id),
+                # The moment this batch settled its checks. Every check it
+                # touched carries the same value in ``updated_at``, so the
+                # verification it queues is dated by ITS OWN readings rather
+                # than by whatever another batch happened to settle later.
+                payload_extra={"settled_since": moment.isoformat()},
+            )
+        await session.commit()
+
+
 async def compensate_inspection_handoff(
     session_factory: async_sessionmaker[AsyncSession], task: AnalyticsTask
 ) -> None:
@@ -463,6 +517,12 @@ async def _run_inspection(
                 session,
                 workspace_id=scope.workspace_id,
                 project_id=scope.project_id,
+                # Admission ranks; the verification domain decides what is
+                # owed. Asking here keeps the dependency pointing the way
+                # every other one between these two packages already does.
+                due_page_ids=await due_placement_page_ids(
+                    session, project_id=scope.project_id
+                ),
             )
             await session.commit()
         await _inspect_claims(session_factory, inspector, scope=scope, claims=claims)
@@ -490,3 +550,4 @@ async def inspect_source_pages(
         project_id=scope.project_id,
         audit_id=scope.audit_id,
     )
+    await _settle_placements(session_factory, task, scope=scope)

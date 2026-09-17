@@ -28,7 +28,10 @@ export type SourceFilters = ReturnType<typeof useVisibilityFilters>;
  * or a page nobody has read — rather than being papered over with a generic
  * suggestion to improve something.
  */
-function PageAction({ row }: Readonly<{ row: SourceRow }>) {
+function PageAction({
+  row,
+  onInspectPage,
+}: Readonly<{ row: SourceRow; onInspectPage: (urlHash: string) => void }>) {
   if (row.opportunity_id) {
     return (
       <ProjectLink href={`/opportunities?selected=${row.opportunity_id}`}>
@@ -40,10 +43,17 @@ function PageAction({ row }: Readonly<{ row: SourceRow }>) {
   // an identity whether or not this project has ever looked at that page, so
   // keying the label on `url_hash` reported an unread page as one with
   // nothing to do.
+  //
+  // A page this project HAS a record for opens its detail, where the explicit
+  // inspect command lives. A page it has no record for has nothing to open,
+  // and offering a detail that 404s would be worse than the plain sentence.
+  if (!row.inspection_state || !row.url_hash) {
+    return <span className={textRole('meta', 'text-secondary')}>Not inspected</span>;
+  }
   return (
-    <span className={textRole('meta', 'text-secondary')}>
-      {row.inspection_state ? 'No action yet' : 'Not inspected'}
-    </span>
+    <Button variant="ghost" size="sm" onClick={() => onInspectPage(row.url_hash!)}>
+      View page
+    </Button>
   );
 }
 
@@ -52,11 +62,13 @@ function SourceTableRow({
   domain,
   filters,
   activeRunId,
+  onInspectPage,
 }: Readonly<{
   row: SourceRow;
   domain: string | null;
   filters: SourceFilters;
   activeRunId: string | null;
+  onInspectPage: (urlHash: string) => void;
 }>) {
   return (
     <TableRow>
@@ -84,7 +96,7 @@ function SourceTableRow({
       </TableCell>
       {domain ? (
         <TableCell>
-          <PageAction row={row} />
+          <PageAction row={row} onInspectPage={onInspectPage} />
         </TableCell>
       ) : null}
     </TableRow>
@@ -97,11 +109,13 @@ export function SourceTable({
   domain,
   filters,
   activeRunId,
+  onInspectPage,
 }: Readonly<{
   rows: SourceRow[];
   domain: string | null;
   filters: SourceFilters;
   activeRunId: string | null;
+  onInspectPage: (urlHash: string) => void;
 }>) {
   return (
     <Table>
@@ -125,6 +139,7 @@ export function SourceTable({
             domain={domain}
             filters={filters}
             activeRunId={activeRunId}
+            onInspectPage={onInspectPage}
           />
         ))}
       </TableBody>

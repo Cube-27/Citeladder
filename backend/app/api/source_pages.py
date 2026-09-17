@@ -4,8 +4,8 @@ Its own router rather than more surface on ``projects``: that module already
 carries the project lifecycle, visibility evidence and run selection, and these
 two endpoints have their own owner underneath them.
 
-Reads render persisted projections. Neither endpoint here fetches anything, and
-the inspect route is an explicit authorized command that pays the same budget as
+Reads render persisted projections. No read here fetches anything, and the
+inspect route is an explicit authorized command that pays the same budget as
 automatic selection -- a page someone asked for is not free.
 """
 
@@ -23,8 +23,10 @@ from app.core.http_errors import raise_not_found
 from app.domain.analytics.enqueue import enqueue_source_page_inspection
 from app.domain.projects.service import ProjectNotFoundError, get_project
 from app.domain.source_pages.admission import current_budget, mark_inspection_requested
+from app.domain.source_pages.competitor_analysis import get_competitor_analysis
 from app.domain.source_pages.projection import SourcePageView, get_source_page
 from app.domain.source_pages.schemas import (
+    CompetitorAnalysis,
     SourcePageDetail,
     SourcePageInspectionRequested,
 )
@@ -37,6 +39,15 @@ _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 _UrlHash = Annotated[str, Path(min_length=64, max_length=64)]
 
 
+async def _project(
+    session: AsyncSession, *, ctx: WorkspaceContext, project_id: uuid.UUID
+) -> None:
+    try:
+        await get_project(session, workspace_id=ctx.workspace_id, project_id=project_id)
+    except ProjectNotFoundError as exc:
+        raise_not_found("Project", cause=exc)
+
+
 async def _resolve(
     session: AsyncSession,
     *,
@@ -44,10 +55,7 @@ async def _resolve(
     project_id: uuid.UUID,
     url_hash: str,
 ) -> SourcePageView:
-    try:
-        await get_project(session, workspace_id=ctx.workspace_id, project_id=project_id)
-    except ProjectNotFoundError as exc:
-        raise_not_found("Project", cause=exc)
+    await _project(session, ctx=ctx, project_id=project_id)
     view = await get_source_page(
         session,
         workspace_id=ctx.workspace_id,
@@ -57,6 +65,33 @@ async def _resolve(
     if view is None:
         raise_not_found("Source page")
     return view
+
+
+@router.get(
+    "/{project_id}/source-pages/competitor-analysis",
+    response_model=CompetitorAnalysis,
+)
+async def competitor_analysis_endpoint(
+    project_id: uuid.UUID,
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+) -> CompetitorAnalysis:
+    """Where competitors are on a cited page and the brand is not, by source kind.
+
+    Declared BEFORE the ``{url_hash}`` route: a path parameter would otherwise
+    swallow this literal segment and answer it as a 64-character hash lookup,
+    which fails validation rather than routing here.
+
+    Project-wide rather than run-scoped. The question is about the pages
+    themselves -- inspection is not per run, and a page read last week is
+    still what that page said.
+    """
+    await _project(session, ctx=ctx, project_id=project_id)
+    return CompetitorAnalysis.model_validate(
+        await get_competitor_analysis(
+            session, workspace_id=ctx.workspace_id, project_id=project_id
+        )
+    )
 
 
 @router.get("/{project_id}/source-pages/{url_hash}", response_model=SourcePageDetail)

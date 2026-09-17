@@ -99,9 +99,14 @@ export function useVisibilityFilters() {
   });
   // Which half of Mentions & Citations is showing. It lives here rather than in
   // the panel so the page keeps ONE filter row instead of stacking a second.
+  //
+  // Defaults to the ANSWERS, which are the evidence. The domain table defaulted
+  // here and made a quoted line cost four interactions to reach; it is still
+  // one switch away, and the cited-source rollup rides above the answers so
+  // nothing about the sites is hidden by the change.
   const [sourceMode, setSourceMode] = useUrlState(
     'mode',
-    stringUrlCodec(['sources', 'answers'] as const, 'sources'),
+    stringUrlCodec(['sources', 'answers'] as const, 'answers'),
     { clearKeys: [...pageKeys, 'outcome'] },
   );
   const [competitor] = useUrlState('competitor', optionalStringUrlCodec);
@@ -280,7 +285,12 @@ export function useVisibilityQueries(
     if (tab === 'trends') {
       warmQuery(queryClient, projectionOptions);
       warmQuery(queryClient, trendOptions);
-    } else if (hasEvidenceScope) {
+      return;
+    }
+    // Competitor analysis reads the project's page inventory, not this run's
+    // evidence. Warming the evidence request for it would spend a round trip
+    // on a dataset that tab never shows.
+    if (isEvidenceTab(tab) && hasEvidenceScope) {
       warmQuery(queryClient, evidenceOptions);
     }
   };

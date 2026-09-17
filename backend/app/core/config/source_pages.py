@@ -146,3 +146,19 @@ SOURCE_PAGE_CLAIM_LEASE_MINUTES: Final = 30
 # already read in this run -- from a redirect body, say -- stays claimable and
 # is fetched and charged a second time for the same reading.
 SOURCE_PAGE_REUSE_WITHIN_HOURS: Final = 12
+
+# =========================================================================
+# Grouped competitor-presence read
+# =========================================================================
+# Bounds for the project-wide "where are competitors cited and we are not"
+# projection. It reads the whole project's inventory rather than one run's,
+# so every bound here is what keeps an unbounded read off a read path.
+#
+# The per-class page bound is deliberately small. The surface answers a
+# question, not a paging request: a reader needs the worst pages of each kind
+# of source on one screen, and the Sources inventory is where the full list
+# lives.
+SOURCE_PAGE_ANALYSIS_MAX_PAGES: Final = 500
+SOURCE_PAGE_ANALYSIS_MAX_PER_CLASS: Final = 10
+SOURCE_PAGE_ANALYSIS_MAX_COMPETITORS: Final = 8
+SOURCE_PAGE_ANALYSIS_MAX_PASSAGES: Final = 2

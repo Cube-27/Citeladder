@@ -83,6 +83,26 @@ def _citations_by_analysis(
     return {analysis_id: tuple(rows) for analysis_id, rows in grouped.items()}
 
 
+async def owned_domain_list(
+    session: AsyncSession, *, project_id: uuid.UUID
+) -> list[str]:
+    """The project's reviewed owned domains, in one deterministic order.
+
+    The ORDER is the point: a placement check freezes this list into its
+    expectation, so two callers ordering it differently would freeze two
+    different-looking records of the same fact.
+    """
+    return list(
+        (
+            await session.scalars(
+                select(OwnedDomain.domain)
+                .where(OwnedDomain.project_id == project_id)
+                .order_by(OwnedDomain.domain.asc())
+            )
+        ).all()
+    )
+
+
 async def load_visibility_evidence(
     session: AsyncSession, *, workspace_id: uuid.UUID, audit: Audit
 ) -> tuple[VisibilityEvidence, MetricSnapshot | None]:
@@ -141,15 +161,7 @@ async def load_visibility_evidence(
             )
         ).all()
     )
-    owned_domains = list(
-        (
-            await session.scalars(
-                select(OwnedDomain.domain)
-                .where(OwnedDomain.project_id == audit.project_id)
-                .order_by(OwnedDomain.domain.asc())
-            )
-        ).all()
-    )
+    owned_domains = await owned_domain_list(session, project_id=audit.project_id)
     metric_snapshot = await session.scalar(
         select(MetricSnapshot).where(
             MetricSnapshot.audit_id == audit.id,

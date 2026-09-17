@@ -30,6 +30,10 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.config.placement import (
+    PLACEMENT_CHECKER_VERSION,
+    PLACEMENT_STATE_PENDING,
+)
 from app.core.config.source_pages import (
     INSPECTION_NOT_INSPECTED,
     PAGE_FORMAT_UNRESOLVED,
@@ -41,6 +45,7 @@ _FK_PROJECT = "projects.id"
 _FK_AUDIT = "audits.id"
 _FK_SOURCE_PAGE = "source_pages.id"
 _FK_SOURCE_PAGE_SNAPSHOT = "source_page_snapshots.id"
+_FK_IMPLEMENTATION_EVENT = "opportunity_implementation_events.id"
 _CASCADE = "CASCADE"
 _SET_NULL = "SET NULL"
 
@@ -344,4 +349,109 @@ class SourcePageInspectionSpend(Base):
     idempotency_key: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
+    )
+
+
+class PlacementCheck(Base):
+    """Whether one declared change actually appeared on a publisher's page.
+
+    Anchored on the IMPLEMENTATION EVENT, not the opportunity. The same page
+    and the same action can be attempted more than once -- a first approach
+    that went nowhere, a second that worked -- and a check has to know which
+    declaration it verifies. Anchoring on the opportunity would make the
+    second attempt's observation retroactively describe the first.
+
+    The opportunity's stable key rides alongside for navigation across
+    recompute, where an opportunity ROW id does not survive. It is never the
+    verification anchor.
+
+    It never references an owned ``SiteUrl``. The target is somebody else's
+    page, identified by this project's ``source_pages`` row; resolving it
+    against our own crawled inventory is the confusion the earned path exists
+    to prevent.
+
+    ``baseline_snapshot_id`` is frozen at declaration time and never moves. A
+    later reading is compared against THAT, for the SPECIFIC expected change,
+    so "the brand appears somewhere on the page now" cannot pass a check whose
+    declaration was about a missing outbound link.
+    """
+
+    __tablename__ = "placement_checks"
+    __table_args__ = (
+        # One declaration, one check. A second attempt is a second
+        # declaration and therefore a second row.
+        UniqueConstraint(
+            "implementation_event_id", name="uq_placement_check_declaration"
+        ),
+        Index("ix_placement_checks_project_state", "project_id", "state"),
+        # Admission asks "which pages have a check due" on every batch.
+        Index("ix_placement_checks_due", "project_id", "state", "due_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_WORKSPACE, ondelete=_CASCADE),
+        index=True,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_PROJECT, ondelete=_CASCADE),
+        index=True,
+    )
+    implementation_event_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_IMPLEMENTATION_EVENT, ondelete=_CASCADE),
+        index=True,
+    )
+    # Navigation only; recompute replaces opportunity rows and this survives it.
+    opportunity_stable_key: Mapped[str] = mapped_column(Text, default="")
+    rule_id: Mapped[str] = mapped_column(String(64), default="")
+    source_page_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SOURCE_PAGE, ondelete=_CASCADE),
+        index=True,
+    )
+    url_hash: Mapped[str] = mapped_column(String(64), default="")
+    expected_change: Mapped[str] = mapped_column(String(32))
+    # What specifically must change, when the kind alone is not enough: the
+    # discrepancy codes a correction named, or the deterioration a defence did.
+    expected_detail: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Frozen at declaration, never moved. Null when nothing had been read yet,
+    # which makes the check unavailable rather than passing it for free.
+    baseline_snapshot_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SOURCE_PAGE_SNAPSHOT, ondelete=_SET_NULL),
+        nullable=True,
+    )
+    # The roster the baseline verdicts were judged against. A reading taken
+    # against a different one is not comparable and is not compared.
+    baseline_roster_version: Mapped[str] = mapped_column(String(64), default="")
+    observation_snapshot_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SOURCE_PAGE_SNAPSHOT, ondelete=_SET_NULL),
+        nullable=True,
+    )
+    state: Mapped[str] = mapped_column(String(16), default=PLACEMENT_STATE_PENDING)
+    state_reason: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    # When this page is worth reading again. Null once the check is settled,
+    # so a finished check stops competing for the inspection budget.
+    due_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    declared_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    observed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    checker_version: Mapped[str] = mapped_column(
+        String(32), default=PLACEMENT_CHECKER_VERSION
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )

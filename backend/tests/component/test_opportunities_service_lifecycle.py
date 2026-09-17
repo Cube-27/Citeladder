@@ -33,7 +33,7 @@ from app.domain.opportunities.errors import (
     OpportunitySupersededError,
     OpportunityValidationError,
 )
-from app.domain.opportunities.projection import _stable_key
+from app.domain.opportunities.projection import stable_key
 from app.models.analysis import Citation, MetricSnapshot, ResponseAnalysis
 from app.models.audit import Audit
 from app.models.opportunity import (
@@ -397,5 +397,5 @@ async def test_stable_order_key_is_collision_safe() -> None:
     left = Opportunity(rule_id="rule:target", target_key="key")
     right = Opportunity(rule_id="rule", target_key="target:key")
 
-    assert _stable_key(left) != _stable_key(right)
-    assert json.loads(_stable_key(left)) == ["rule:target", "key"]
+    assert stable_key(left) != stable_key(right)
+    assert json.loads(stable_key(left)) == ["rule:target", "key"]

@@ -76,8 +76,14 @@ class SourcePageView:
     limitations: tuple[str, ...]
 
 
-def _page_limitations(page: SourcePage, snapshot: SourcePageSnapshot | None) -> tuple:
-    """Why this page's findings should be read with caution, if they should."""
+def page_limitations(page: SourcePage, snapshot: SourcePageSnapshot | None) -> tuple:
+    """Why this page's findings should be read with caution, if they should.
+
+    Public because the grouped competitor view answers the same question about
+    the same rows. A second copy of these sentences would drift the moment one
+    of them was reworded, and the two surfaces would then disagree about what
+    an unread page means.
+    """
     if page.inspection_state == INSPECTION_BLOCKED:
         return (
             "This publisher does not permit automated access, so nothing on the "
@@ -102,7 +108,7 @@ def _page_limitations(page: SourcePage, snapshot: SourcePageSnapshot | None) -> 
     return ()
 
 
-def _entity_limitations(row: SourcePageEntityPresence) -> tuple[str, ...]:
+def entity_limitations(row: SourcePageEntityPresence) -> tuple[str, ...]:
     """A non-detection carries its own caveat; a passage speaks for itself."""
     if row.presence == PRESENCE_PARTIAL:
         return ("Not enough of the page was readable to judge this.",)
@@ -127,8 +133,87 @@ def passage_texts(snapshot: SourcePageSnapshot | None, refs: list | None) -> tup
     return tuple(out)
 
 
-def _state(page: SourcePage, row: SourcePageEntityPresence | None) -> str:
+def page_title(snapshot: SourcePageSnapshot | None) -> str:
+    """The page's own title, or empty when nobody has read it.
+
+    ``page_facts`` is an untyped JSON blob, so every reader that reaches into
+    it by hand is a separate place a key rename has to be found. It has one
+    owner, here, beside the passage reader that exists for the same reason.
+    """
+    return str(((snapshot.page_facts or {}) if snapshot else {}).get("title") or "")
+
+
+def page_fact_strings(facts: dict | None, key: str) -> tuple[str, ...]:
+    """A bounded list of strings out of ``page_facts`` -- headings, domains."""
+    return tuple(str(item) for item in ((facts or {}).get(key) or []))
+
+
+def entity_view(
+    page: SourcePage,
+    snapshot: SourcePageSnapshot | None,
+    row: SourcePageEntityPresence,
+    *,
+    max_passages: int | None = None,
+) -> EntityView:
+    """One entity's verdict, resolved for a reader.
+
+    The one assembly. A second copy means a field added here reaches one
+    surface and silently not the other, and the two then disagree about the
+    same verdict on the same page.
+    """
+    passages = passage_texts(snapshot, row.passage_refs)
+    return EntityView(
+        entity_kind=row.entity_kind,
+        entity_name=row.entity_name,
+        state=entity_state(page, row),
+        match_method=row.match_method,
+        match_count=row.match_count,
+        passages=passages if max_passages is None else passages[:max_passages],
+        limitations=entity_limitations(row),
+    )
+
+
+async def presence_rows(
+    session: AsyncSession,
+    *,
+    project_id: uuid.UUID,
+    snapshot_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, list[SourcePageEntityPresence]]:
+    """Presence verdicts for a set of snapshots, grouped and brand-first.
+
+    The brand-first ordering is load-bearing for every consumer -- each picks
+    the brand's own verdict out of the list -- so the ordering has one owner
+    rather than one per caller.
+    """
+    if not snapshot_ids:
+        return {}
+    rows = (
+        await session.scalars(
+            select(SourcePageEntityPresence)
+            .where(
+                SourcePageEntityPresence.project_id == project_id,
+                SourcePageEntityPresence.snapshot_id.in_(snapshot_ids),
+            )
+            .order_by(
+                SourcePageEntityPresence.entity_kind != ENTITY_KIND_BRAND,
+                SourcePageEntityPresence.entity_name.asc(),
+            )
+        )
+    ).all()
+    grouped: dict[uuid.UUID, list[SourcePageEntityPresence]] = {}
+    for row in rows:
+        grouped.setdefault(row.snapshot_id, []).append(row)
+    return grouped
+
+
+def entity_state(page: SourcePage, row: SourcePageEntityPresence | None) -> str:
     """One vocabulary for "what do we know", from page state and verdict.
+
+    THE resolver. Every surface that reports whether a brand or a competitor
+    is on a page goes through this function, because the answer depends on
+    facts held in two rows -- did anyone read the page, and what did they find
+    -- and any view that answers from one of them alone eventually reports an
+    unread page as an absence.
 
     A verdict is only meaningful if the page behind it was read recently
     enough. A stale or blocked page overrides whatever the last snapshot
@@ -196,18 +281,7 @@ async def get_source_page(
         if snapshot is not None
         else []
     )
-    entities = tuple(
-        EntityView(
-            entity_kind=row.entity_kind,
-            entity_name=row.entity_name,
-            state=_state(page, row),
-            match_method=row.match_method,
-            match_count=row.match_count,
-            passages=passage_texts(snapshot, row.passage_refs),
-            limitations=_entity_limitations(row),
-        )
-        for row in rows
-    )
+    entities = tuple(entity_view(page, snapshot, row) for row in rows)
     return SourcePageView(
         id=page.id,
         canonical_url=page.canonical_url,
@@ -220,8 +294,8 @@ async def get_source_page(
         last_inspected_at=page.last_inspected_at,
         last_cited_at=page.last_cited_at,
         recurrence_count=page.recurrence_count,
-        title=str(((snapshot.page_facts or {}) if snapshot else {}).get("title") or ""),
+        title=page_title(snapshot),
         extracted_chars=snapshot.extracted_chars if snapshot else 0,
         entities=entities,
-        limitations=_page_limitations(page, snapshot),
+        limitations=page_limitations(page, snapshot),
     )

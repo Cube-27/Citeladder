@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -18,6 +18,12 @@ from app.core.config.analytics import (
 from app.core.config.opportunities import (
     IMPLEMENTATION_VERIFICATION_BATCH_MAX,
     IMPLEMENTATION_VERIFIER_VERSION,
+)
+from app.core.config.placement import (
+    PLACEMENT_CHECK_KIND,
+    PLACEMENT_STATE_PENDING,
+    PLACEMENT_STATE_SATISFIED,
+    PLACEMENT_STATE_UNMET,
 )
 from app.core.config.site_health_contracts import (
     RULE_OUTCOME_MISSING,
@@ -40,6 +46,7 @@ from app.models.opportunity import (
 from app.models.site_health.acquisition import SiteFetchArtifact
 from app.models.site_health.analysis import SitePageAnalysis, SiteRuleEvaluation
 from app.models.site_health.crawl import SiteCrawl
+from app.models.source_pages import PlacementCheck
 from app.models.traffic import TrafficSnapshot
 
 
@@ -52,6 +59,14 @@ class _Evaluation:
     rule_evaluation_ids: set[uuid.UUID] = field(default_factory=set)
     metric_ids: set[uuid.UUID] = field(default_factory=set)
     limitations: list[str] = field(default_factory=list)
+
+
+# A placement observation comes from an inspection batch, not from an audit or
+# a crawl. It gets its own trigger kind so the batch's own observation time --
+# not the audit's completion time -- becomes the event's revision, which is
+# what keeps a recheck weeks later from colliding with the first reading's
+# idempotency key and being silently dropped.
+TRIGGER_SOURCE_PAGE = "source_page_inspection"
 
 
 @dataclass(frozen=True, slots=True)
@@ -350,6 +365,64 @@ def _evaluate_visibility_metric(
         result.contradicted = True
 
 
+async def _placement_evidence(
+    session: AsyncSession, *, declaration: OpportunityImplementationEvent
+) -> _Evaluation:
+    """What the persisted placement check says about this declaration.
+
+    The comparison itself already happened, against a frozen baseline and for
+    the specific expected change, when the inspection batch committed. This
+    reads that verdict; it never re-decides one, and it never reaches a
+    publisher's page.
+
+    ``unmet`` with readings still to come is an OBSERVATION, not a
+    contradiction. A publisher does not act the day somebody emails them, and
+    calling the first empty reading a contradiction would report a slow
+    editor as a false declaration.
+    """
+    result = _Evaluation()
+    kinds = [check.get("kind") for check in declaration.expected_checks or []]
+    for kind in kinds:
+        if kind != PLACEMENT_CHECK_KIND:
+            result.limitations.append(f"{kind}: unavailable from a page inspection")
+    if PLACEMENT_CHECK_KIND not in kinds:
+        return result
+    # Once, not once per expectation. The evidence is one row per DECLARATION,
+    # so looping would count the same verdict twice the day a declaration
+    # carries two placement expectations.
+    _evaluate_placement_check(
+        await session.scalar(
+            select(PlacementCheck).where(
+                PlacementCheck.workspace_id == declaration.workspace_id,
+                PlacementCheck.implementation_event_id == declaration.id,
+            )
+        ),
+        result=result,
+    )
+    return result
+
+
+def _evaluate_placement_check(
+    check: PlacementCheck | None, *, result: _Evaluation
+) -> None:
+    if check is None:
+        result.limitations.append("placement: no check was opened for this page")
+        return
+    if check.state == PLACEMENT_STATE_PENDING:
+        result.limitations.append("placement: the page has not been read since")
+        return
+    if check.state not in {PLACEMENT_STATE_SATISFIED, PLACEMENT_STATE_UNMET}:
+        result.limitations.append(f"placement: {check.state_reason or check.state}")
+        return
+    result.observed += 1
+    if check.state == PLACEMENT_STATE_SATISFIED:
+        result.matched += 1
+    elif check.due_at is None:
+        # Read as often as this check is going to be, and the change is still
+        # not there. That is a contradiction of what was declared.
+        result.contradicted = True
+
+
 def _observation_kind(result: _Evaluation, total_checks: int) -> str | None:
     if result.observed == 0:
         return None
@@ -368,6 +441,7 @@ async def enqueue_implementation_verification(
     trigger_kind: str,
     trigger_id: uuid.UUID,
     trigger_revision: str | None = None,
+    payload_extra: dict[str, Any] | None = None,
 ) -> None:
     idempotency_key = (
         f"implementation-verification:{trigger_kind}:{trigger_id}:"
@@ -379,7 +453,11 @@ async def enqueue_implementation_verification(
             workspace_id=workspace_id,
             project_id=project_id,
             task_kind=ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
-            payload={"trigger_kind": trigger_kind, "trigger_id": str(trigger_id)},
+            payload={
+                "trigger_kind": trigger_kind,
+                "trigger_id": str(trigger_id),
+                **(payload_extra or {}),
+            },
             idempotency_key=idempotency_key,
             status=TASK_STATUS_QUEUED,
             max_attempts=analytics_settings.task_max_attempts,
@@ -450,11 +528,45 @@ async def _verification_source(
             )
         )
         observed_at = snapshot.created_at if snapshot is not None else None
+    elif trigger_kind == TRIGGER_SOURCE_PAGE:
+        observed_at = await _batch_observed_at(session, task=task, payload=payload)
     else:
         raise ValueError("Implementation verification trigger kind is invalid")
     if observed_at is None:
         raise ValueError("Implementation verification source is not terminal")
     return _Source(trigger_kind, trigger_id, observed_at)
+
+
+async def _batch_observed_at(
+    session: AsyncSession, *, task: AnalyticsTask, payload: dict[str, Any]
+) -> datetime | None:
+    """When THIS inspection batch's placement readings were settled.
+
+    A placement observation has no terminal row of its own to read a time
+    from, so the batch stamps the moment it settled its checks into the task
+    payload and the checks it touched carry that same moment in ``updated_at``.
+    Taking the project-wide maximum instead would let a task queued by one
+    batch be dated by a reading another batch took, which is how "which
+    reading produced this observation" stops being answerable.
+
+    Falls back to the project-wide maximum for a task queued before the batch
+    marker existed; an absent marker is the only case that can reach it.
+    """
+    settled_since = _parsed_datetime(payload.get("settled_since"))
+    statement = select(func.max(PlacementCheck.observed_at)).where(
+        PlacementCheck.workspace_id == task.workspace_id,
+        PlacementCheck.project_id == task.project_id,
+    )
+    if settled_since is not None:
+        statement = statement.where(PlacementCheck.updated_at >= settled_since)
+    return await session.scalar(statement)
+
+
+def _parsed_datetime(value: object) -> datetime | None:
+    try:
+        return datetime.fromisoformat(str(value)) if value else None
+    except ValueError:
+        return None
 
 
 async def _eligible_declarations(
@@ -535,6 +647,33 @@ async def _append_observation(
     )
 
 
+async def _evidence_for(
+    session: AsyncSession,
+    *,
+    declaration: OpportunityImplementationEvent,
+    source: _Source,
+) -> _Evaluation:
+    """Read this trigger's evidence for one declaration's expected checks.
+
+    Every branch records the check kinds it cannot answer as limitations
+    rather than skipping them, so a declaration is never reported as verified
+    on the strength of a check nobody could observe.
+    """
+    if source.kind == "site_crawl":
+        return await _site_evidence(
+            session, declaration=declaration, crawl_id=source.id
+        )
+    if source.kind == "audit":
+        return await _audit_evidence(
+            session, declaration=declaration, audit_id=source.id
+        )
+    if source.kind == TRIGGER_SOURCE_PAGE:
+        return await _placement_evidence(session, declaration=declaration)
+    return await _traffic_evidence(
+        session, declaration=declaration, snapshot_id=source.id
+    )
+
+
 async def verify_implementation_events(
     session_factory: async_sessionmaker[AsyncSession], task: AnalyticsTask
 ) -> None:
@@ -549,18 +688,9 @@ async def verify_implementation_events(
                 session, task=task, observed_at=source.observed_at, after=after
             )
             for declaration in declarations:
-                if source.kind == "site_crawl":
-                    result = await _site_evidence(
-                        session, declaration=declaration, crawl_id=source.id
-                    )
-                elif source.kind == "audit":
-                    result = await _audit_evidence(
-                        session, declaration=declaration, audit_id=source.id
-                    )
-                else:
-                    result = await _traffic_evidence(
-                        session, declaration=declaration, snapshot_id=source.id
-                    )
+                result = await _evidence_for(
+                    session, declaration=declaration, source=source
+                )
                 kind = _observation_kind(result, len(declaration.expected_checks or []))
                 if kind is not None:
                     await _append_observation(

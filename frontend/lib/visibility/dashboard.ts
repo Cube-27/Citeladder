@@ -24,21 +24,41 @@ import type {
 const DASHBOARD_STATUSES: readonly AuditStatus[] = ['completed', 'partially_completed'];
 
 /**
- * The four Visibility workspace tabs, in display order. Exactly these four —
- * no Overview / Sources / Topics / Sentiment. `trends` is the default.
- *   - trends:              cross-run metrics + charts + ranking movement
- *   - mentions-citations:  persisted mention/citation evidence
- *   - query-fanout:        frozen prompts + generated search-query evidence
+ * The Visibility workspace tabs, in display order. `trends` is the default.
+ *   - trends:               cross-run metrics + charts + ranking movement
+ *   - mentions-citations:   persisted mention/citation evidence
+ *   - competitor-analysis:  cited pages where rivals appear and we do not
+ *   - query-fanout:         frozen prompts + generated search-query evidence
+ *
+ * `competitor-analysis` is the only tab that is NOT run-scoped. Inspection is
+ * a property of the page rather than of the audit that cited it, so its data
+ * does not change when a reader picks another run — see `isRunScopedTab`.
  */
-export type VisibilityTab = 'trends' | 'mentions-citations' | 'query-fanout';
+export type VisibilityTab =
+  | 'trends'
+  | 'mentions-citations'
+  | 'competitor-analysis'
+  | 'query-fanout';
 
 /** The ordered tab definitions (id + human label) rendered by the tablist. */
 export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [
   // NOTE: `id` is the persisted `?tab=` URL value — only labels are restyled.
   { id: 'trends', label: 'Trends' },
   { id: 'mentions-citations', label: 'Mentions & Citations' },
+  { id: 'competitor-analysis', label: 'Competitor analysis' },
   { id: 'query-fanout', label: 'Query fanouts' },
 ] as const;
+
+/**
+ * Whether this tab's data is a function of the selected run.
+ *
+ * The run/engine/prompt/range controls are meaningless on a tab that reads the
+ * project's page inventory, and offering them would imply a narrowing that
+ * does not happen.
+ */
+export function isRunScopedTab(tab: VisibilityTab): boolean {
+  return tab !== 'competitor-analysis';
+}
 
 /** The two evidence tabs share one execution-evidence query + cache key. */
 export function isEvidenceTab(tab: VisibilityTab): boolean {

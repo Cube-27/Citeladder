@@ -464,7 +464,14 @@ async def test_an_external_placement_declares_against_the_publisher_page(
     body = response.json()
     assert body["target_external_url"] == _PUBLISHER_URL
     assert body["target_site_url_ids"] == []
-    assert [check["kind"] for check in body["expected_checks"]] == ["visibility_metric"]
+    # A PLACEMENT check, not the baseline-anchored visibility one. A listing
+    # going live and the project score moving are different observations, and
+    # measuring an external placement by the score is what made every earned
+    # declaration verifiable by an unrelated gain.
+    assert [check["kind"] for check in body["expected_checks"]] == ["placement"]
+    check = body["expected_checks"][0]
+    assert check["expected_change"] == "brand_listed"
+    assert check["rule_id"] == RULE_EARNED_PAGE_ACQUIRE
 
 
 async def test_the_database_refuses_a_row_claiming_both_target_kinds(

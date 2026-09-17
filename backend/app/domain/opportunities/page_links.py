@@ -33,6 +33,11 @@ class PageAction:
 
     inspection_state: str
     opportunity_id: uuid.UUID | None
+    # What the live action IS, for a reader who should not have to open the
+    # drawer to find out. Null exactly when ``opportunity_id`` is null.
+    rule_id: str | None = None
+    status: str | None = None
+    title: str | None = None
 
 
 async def live_page_opportunities(
@@ -60,7 +65,14 @@ async def live_page_opportunities(
     # of keys assembled in Python and kept in step by hand.
     page_key = literal(EARNED_PAGE_TARGET_PREFIX).concat(SourcePage.url_hash)
     rows = await session.execute(
-        select(SourcePage.url_hash, SourcePage.inspection_state, Opportunity.id)
+        select(
+            SourcePage.url_hash,
+            SourcePage.inspection_state,
+            Opportunity.id,
+            Opportunity.rule_id,
+            Opportunity.status,
+            Opportunity.title,
+        )
         .outerjoin(
             Opportunity,
             (Opportunity.target_key == page_key)
@@ -78,15 +90,21 @@ async def live_page_opportunities(
         )
     )
     found: dict[str, PageAction] = {}
-    for url_hash, inspection_state, opportunity_id in rows.all():
+    for url_hash, state, opportunity_id, rule_id, status, title in rows.all():
         # Ordered by descending priority, so the first row per page is the
         # one a reader should act on first if a future rule set ever emits
         # two for one page.
         found.setdefault(
             str(url_hash),
             PageAction(
-                inspection_state=str(inspection_state),
+                inspection_state=str(state),
                 opportunity_id=opportunity_id,
+                # Off the same row as the id. The outer join makes these NULL
+                # together, so a page can never be shown an action's name
+                # beside another action's identity.
+                rule_id=rule_id,
+                status=status,
+                title=title,
             ),
         )
     return found

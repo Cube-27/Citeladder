@@ -4,7 +4,7 @@
  * All ids are string UUIDs (workspace-scoped contract). One namespace per API
  * domain owner, each defined in its own module under `query-keys/`:
  *   - core.ts          — auth, workspaces, projects, prompts, providers, content
- *   - runs.ts          — runs (audits + executions), visibility
+ *   - runs.ts          — runs (audits + executions), visibility, cited pages
  *   - site-health.ts   — site health (crawls, inventory, monitored, issues)
  *   - integrations.ts  — integrations (connections, sync runs)
  *   - performance.ts   — performance (dashboard, dimension tables, range task)
@@ -31,7 +31,7 @@ import {
 } from './query-keys/core';
 import { integrationKeys } from './query-keys/integrations';
 import { opportunityKeys } from './query-keys/opportunities';
-import { runKeys, visibilityKeys } from './query-keys/runs';
+import { runKeys, sourcePageKeys, visibilityKeys } from './query-keys/runs';
 import { siteHealthKeys } from './query-keys/site-health';
 import { performanceKeys } from './query-keys/performance';
 
@@ -46,6 +46,7 @@ export const queryKeys = {
   providers: providerKeys,
   runs: runKeys,
   visibility: visibilityKeys,
+  sourcePages: sourcePageKeys,
   siteHealth: siteHealthKeys,
   content: contentKeys,
   integrations: integrationKeys,

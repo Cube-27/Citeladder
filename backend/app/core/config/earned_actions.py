@@ -120,6 +120,20 @@ def url_hash_from_target_key(target_key: str) -> str:
 
 
 # =========================================================================
+# Named discrepancies
+# =========================================================================
+# What a correction task can assert is wrong with a page, and therefore what a
+# placement check has to see resolved. Both kinds are checkable from the page
+# itself; neither infers intent from prose.
+#
+# Config-owned because the detector that raises one and the verifier that
+# settles it are in different layers. Two copies of this vocabulary would let a
+# renamed code silently stop matching, and a correction would then verify as
+# unavailable forever with nothing to point at.
+DISCREPANCY_NOT_LISTED_AS_ENTRY: Final = "not_listed_as_entry"
+DISCREPANCY_OWNED_DOMAIN_MISSING: Final = "owned_domain_missing"
+
+# =========================================================================
 # Qualification gate
 # =========================================================================
 # Hard, and ahead of ranking. An unqualified candidate stays a source state or

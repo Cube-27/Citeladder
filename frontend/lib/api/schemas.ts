@@ -6,6 +6,7 @@ export * from './schemas/visibility';
 export * from './schemas/site-health';
 export * from './schemas/visibility-trends';
 export * from './schemas/visibility-evidence';
+export * from './schemas/source-pages';
 export * from './schemas/content';
 export * from './schemas/integrations';
 export * from './schemas/analytics';

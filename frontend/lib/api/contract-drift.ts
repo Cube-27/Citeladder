@@ -84,6 +84,10 @@ export const CONTRACT_SCHEMA_MAP = {
   visibilitySchema: 'VisibilityResponse',
   visibilityTrendPointSchema: 'VisibilityTrendPoint',
   visibilityEvidenceResponseSchema: 'VisibilityEvidenceResponse',
+  // Externally cited pages
+  sourcePageDetailSchema: 'SourcePageDetail',
+  sourcePageInspectionSchema: 'SourcePageInspectionRequested',
+  competitorAnalysisSchema: 'CompetitorAnalysis',
   // Content
   contentGenerationListItemSchema: 'ContentGenerationListItem',
   contentGenerationDetailSchema: 'ContentGenerationDetail',

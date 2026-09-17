@@ -18,7 +18,7 @@ from app.domain.opportunities.errors import (
     OpportunitySupersededError,
     OpportunityValidationError,
 )
-from app.domain.opportunities.projection import _stable_key, project_item
+from app.domain.opportunities.projection import project_item, stable_key
 from app.models.opportunity import Opportunity, OpportunityOrder, OpportunityStatusEvent
 from app.models.project import Project
 
@@ -53,7 +53,7 @@ async def update_status(
                 workspace_id=workspace_id,
                 project_id=row.project_id,
                 opportunity_id=row.id,
-                stable_key=_stable_key(row),
+                stable_key=stable_key(row),
                 previous_status=previous_status,
                 next_status=status,
                 changed_by_user_id=changed_by_user_id,
@@ -126,7 +126,7 @@ async def update_order(
             f"queue version changed from {expected_version} to {current_version}"
         )
 
-    ordered_keys = [_stable_key(by_id[item_id]) for item_id in ordered_opportunity_ids]
+    ordered_keys = [stable_key(by_id[item_id]) for item_id in ordered_opportunity_ids]
     if order is None:
         order = OpportunityOrder(
             workspace_id=workspace_id,

@@ -8,8 +8,17 @@ from app.core.config.source_patterns import CONTENT_HANDOFF_TEMPLATE_VERSION
 from app.models.opportunity import Opportunity
 
 
+def persisted_handoff(row: Opportunity) -> dict:
+    """The brief a detector froze on this row, or empty when it froze none.
+
+    The shape of ``evidence.content_handoff`` has one owner, here, so a reader
+    reaching into the evidence blob by hand cannot drift from it.
+    """
+    return dict((row.evidence or {}).get("content_handoff") or {})
+
+
 def project_content_handoff(row: Opportunity) -> dict:
-    persisted = dict((row.evidence or {}).get("content_handoff") or {})
+    persisted = persisted_handoff(row)
     snapshot_versions = {
         "detector": row.analyzer_version,
         "rule": row.rule_version,

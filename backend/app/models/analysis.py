@@ -217,6 +217,14 @@ class Citation(DerivedRowProvenanceMixin, Base):
     """
 
     __tablename__ = "citations"
+    __table_args__ = (
+        # Page identity is how every cross-run reader groups citations: the
+        # Sources drill-down, the earned detector and the grouped competitor
+        # view all ask "which answers cited THIS page". Without this the
+        # question is a scan of every citation in the workspace -- all
+        # projects, all runs, all history -- on a read path.
+        Index("ix_citations_workspace_url_hash", "workspace_id", "url_hash"),
+    )
 
     analysis_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
