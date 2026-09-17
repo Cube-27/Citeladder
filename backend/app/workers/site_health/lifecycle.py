@@ -98,6 +98,7 @@ from app.models.site_health.urls import SiteUrlObservation
 from app.workers.site_health.lifecycle_finalize import (
     CrawlFinalizeMixin,
 )
+from app.workers.site_health.score_refresh import ScoreRefreshCadence
 
 logger = logging.getLogger("app.workers.site_health.lifecycle")
 
@@ -266,6 +267,7 @@ class CrawlLifecycle(CrawlFinalizeMixin):
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
+        self._score_refresh = ScoreRefreshCadence()
 
     async def reconcile_after_task(
         self,
@@ -290,11 +292,12 @@ class CrawlLifecycle(CrawlFinalizeMixin):
         if outcome is _FinalizeAction.NONE:
             return
         if outcome is _FinalizeAction.REFRESH_SCORES:
-            await refresh_live_score_summary_for_crawl(
-                self._session_factory,
-                crawl_id=task.crawl_id,
-                workspace_id=task.workspace_id,
-            )
+            if self._score_refresh.admits(task.crawl_id):
+                await refresh_live_score_summary_for_crawl(
+                    self._session_factory,
+                    crawl_id=task.crawl_id,
+                    workspace_id=task.workspace_id,
+                )
             return
         await self.reconcile(task.crawl_id)
 

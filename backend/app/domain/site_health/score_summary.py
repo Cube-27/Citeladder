@@ -164,6 +164,11 @@ async def load_classification_projection(
     selected_ids: list[uuid.UUID],
     rows: Sequence[Row],
 ) -> ClassificationProjection:
+    # Deliberately ORM entities, not a narrow column select. The app runs with
+    # ``autoflush=False``, so an entity query answers from the identity map and
+    # sees a caller's not-yet-flushed mutations; a column select reads only
+    # what is committed. The terminal snapshot depends on that -- it evaluates
+    # task rows the finalize pass has changed in the same open transaction.
     tasks = (
         await session.scalars(
             select(SiteCrawlTask)

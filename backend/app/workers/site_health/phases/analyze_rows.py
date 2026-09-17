@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 from sqlalchemy import select, update
@@ -69,7 +70,11 @@ async def _write_page_analysis(
     )
     site_facts = _root_site_facts(crawl, task)
     audit_time = crawl.started_at or crawl.created_at
-    result = analyze_page(
+    # Off the event loop for the same reason as ``extract_page_facts``: rule
+    # evaluation is pure CPU over plain dicts. Every argument is materialized
+    # here, in the caller, so no ORM attribute is touched from the thread.
+    result = await asyncio.to_thread(
+        analyze_page,
         facts,
         sitemap_member=sitemap_member,
         site_facts=site_facts,

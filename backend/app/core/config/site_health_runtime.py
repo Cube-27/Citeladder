@@ -166,6 +166,16 @@ class SiteHealthSettings(BaseSettings):
     # Hard ceiling on cached authorities. Expired entries are dropped first;
     # beyond the cap, the oldest go. 0 disables the cap.
     robots_cache_max_authorities: int = 2048
+    # Curl sessions are pooled per pinned address so a crawl of one host reuses
+    # its connection and TLS session instead of handshaking per page. An idle
+    # session holds an open socket against someone else's server, so it is
+    # dropped once it has gone unused this long. Entries in flight are never
+    # evicted -- a fetch holds a streaming response well past the request call.
+    curl_session_pool_idle_seconds: float = 90.0
+    # Hard ceiling on pooled sessions, so a crawl spanning many hosts (or a
+    # rotating-DNS host) cannot accumulate sockets without bound. Idle entries
+    # go oldest-first. 0 disables the cap.
+    curl_session_pool_max_entries: int = 64
 
     # --- Parser bounds (bounded, deterministic extraction) ---
     max_links_per_page: int = 2000
@@ -208,12 +218,26 @@ class SiteHealthSettings(BaseSettings):
     # reuse of a sibling's discover artifact is an optimization, never a
     # correctness requirement.
     analysis_dependency_max_wait_seconds: float = 180.0
+    # Spread applied to a recrawl's pre-seeded analyze tasks. Seeding creates
+    # one per monitored URL, all immediately claimable, before discovery has
+    # fetched anything -- so at t0 every processing slot claims a task whose
+    # prerequisite cannot exist yet and immediately defers it. Staggering
+    # ``available_at`` by rank lets discovery get ahead of the seeded set
+    # instead of racing it for slots. Capped so a large monitored set cannot
+    # push its own tail minutes into the future. 0 disables the stagger.
+    monitored_seed_stagger_seconds: float = 0.25
+    monitored_seed_stagger_max_seconds: float = 30.0
     # Deterministic bound on how many expired leases the sweeper reclaims in
     # ONE transaction. A mass expiry across a large frontier (e.g. 50,000
     # URLs) would otherwise lock and update every expired row in a single
     # long-running transaction and stall live claims; the sweeper instead
     # drains the remainder across subsequent polls.
     lease_reclaim_batch_size: int = 500
+    # Rows per multi-row INSERT in the crawl-finalize pass. Bounded because
+    # PostgreSQL caps a statement at 65,535 bind parameters and an evaluation
+    # row carries 22 columns -- a large crawl's ~3 evaluations per page would
+    # otherwise build one statement past that ceiling and fail outright.
+    finalize_insert_batch_size: int = 500
     # Backstop for crawl terminalization. A crawl normally goes terminal from a
     # task's finalize; any path that drains the last non-terminal task without
     # running one (a sweeper reclaim at max attempts, a killed process between
@@ -235,6 +259,26 @@ class SiteHealthSettings(BaseSettings):
     # well above any healthy crawl so it can never truncate live work. 0
     # disables it.
     overdue_crawl_seconds: float = 3_600.0
+
+    # --- Live score projection ---
+    # A successful analyze rewrites the crawl's WHOLE score summary: it locks
+    # the crawl row and the profile row, reloads every analysis, every rule
+    # evaluation the analyses cite, and the classification cohort. Doing that
+    # once per page made the cost of displaying a running mean grow with the
+    # square of the crawl, and those two row locks are the same ones the user's
+    # Stop button needs -- the contention documented on
+    # ``_finalize_reconcile_outcome``. A refresh is admitted at most once per
+    # this many analyses, or once per the interval below, whichever comes
+    # first. The number is a live convenience, never the record:
+    # terminalization always rebuilds the summary from persisted evidence, so
+    # a debounced crawl cannot settle on a partial one. The mark is per worker
+    # process, so N workers refresh up to N times as often -- fresher than
+    # configured, never staler. 0 on either knob disables that trigger.
+    live_score_refresh_page_interval: int = 10
+    live_score_refresh_min_interval_seconds: float = 5.0
+    # Ceiling on how many crawls carry a live-refresh mark in one worker, so a
+    # long-lived process cannot accumulate one entry per crawl it ever saw.
+    live_score_refresh_max_tracked_crawls: int = 256
 
     # --- Export ---
     # Bounds how many rows ``_export_items`` materializes into memory for a
@@ -298,6 +342,31 @@ class SiteHealthSettings(BaseSettings):
         return self
 
     @model_validator(mode="after")
+    def _validate_live_score_refresh(self) -> SiteHealthSettings:
+        """Keep the live-summary debounce non-negative (0 disables a trigger)."""
+        _require_non_negative(
+            self,
+            (
+                "live_score_refresh_page_interval",
+                "live_score_refresh_min_interval_seconds",
+                "live_score_refresh_max_tracked_crawls",
+            ),
+        )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_monitored_seed_stagger(self) -> SiteHealthSettings:
+        """Keep the recrawl seeding stagger non-negative (0 disables it)."""
+        _require_non_negative(
+            self,
+            (
+                "monitored_seed_stagger_seconds",
+                "monitored_seed_stagger_max_seconds",
+            ),
+        )
+        return self
+
+    @model_validator(mode="after")
     def _validate_acquisition(self) -> SiteHealthSettings:
         """Keep curl acquisition policy reproducible."""
         _require_non_empty(
@@ -305,6 +374,13 @@ class SiteHealthSettings(BaseSettings):
             ("acquisition_policy_version", "curl_cffi_impersonation_profile"),
         )
         _require_positive(self, ("rate_limit_cooldown_seconds",))
+        _require_non_negative(
+            self,
+            (
+                "curl_session_pool_idle_seconds",
+                "curl_session_pool_max_entries",
+            ),
+        )
         return self
 
     @model_validator(mode="after")

@@ -49,6 +49,7 @@ class _Response:
 class _Session:
     def __init__(self, response: _Response | Exception) -> None:
         self.response = response
+        self.closed = False
 
     async def __aenter__(self):
         return self
@@ -60,6 +61,10 @@ class _Session:
         if isinstance(self.response, Exception):
             raise self.response
         return self.response
+
+    async def close(self) -> None:
+        """Pooled sessions are closed on eviction rather than per request."""
+        self.closed = True
 
 
 async def _fetch(monkeypatch, response: _Response | Exception, *, target=None):
@@ -168,11 +173,16 @@ async def test_user_agent_is_left_to_the_impersonation_profile(
     """
     captured: dict[str, str] = {}
 
-    def session_factory(**kwargs):
-        captured.update(kwargs["headers"])
-        return _Session(_Response())
+    class _CapturingSession(_Session):
+        async def request(self, *args, **kwargs):
+            captured.update(kwargs["headers"])
+            return await super().request(*args, **kwargs)
 
-    monkeypatch.setattr(curl_transport, "AsyncSession", session_factory)
+    monkeypatch.setattr(
+        curl_transport,
+        "AsyncSession",
+        lambda **_kwargs: _CapturingSession(_Response()),
+    )
     transport = curl_transport.CurlCffiTransport(impersonation_profile="chrome")
     await transport.fetch(
         FetchRequest(
