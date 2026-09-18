@@ -158,7 +158,12 @@ function useTypeOptions({
   const tokens = (list: ReturnType<typeof availableTypes>) =>
     list.map((type) => type.token).join('|');
   if (!filtered && loaded && tokens(known) !== tokens(measured)) setKnown(measured);
-  return filtered ? known : measured;
+  // Nothing remembered means nothing was ever seen unfiltered -- which is what
+  // a shared link that already carries `source_type` looks like on its first
+  // render. Returning the empty list there left the control offering only
+  // "All URL types" and no way to reach any other one.
+  if (!filtered) return measured;
+  return known.length ? known : measured;
 }
 
 export function SourcesPanel({

@@ -85,6 +85,9 @@ function UsagePlot({
   );
 }
 
+/** The ring, its centre total and its legend. Every state occupies it. */
+const TYPES_RING_BOX = 'h-[240px]';
+
 /** The citation mix, counted server-side over the whole selection. */
 export function TypesCard({
   slices,
@@ -106,9 +109,11 @@ export function TypesCard({
             reported "no citations in this selection" for a request that never
             answered. */}
         {query.isError ? (
-          <Alert tone="danger">Could not load source types.</Alert>
+          <div className={TYPES_RING_BOX}>
+            <Alert tone="danger">Could not load source types.</Alert>
+          </div>
         ) : query.isLoading ? (
-          <Skeleton className="h-[240px] w-full" />
+          <Skeleton className={cn(TYPES_RING_BOX, 'w-full')} />
         ) : (
           <DonutChart
             slices={slices}

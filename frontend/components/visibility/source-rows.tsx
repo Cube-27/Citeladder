@@ -1,23 +1,13 @@
 'use client';
 
-import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
-
 import { Badge } from '@/components/ui/badge';
 import { Pressable } from '@/components/ui/pressable';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrandLogo } from '@/components/ui/brand-logo';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { MissingValue } from '@/components/ui/unavailable-value';
 import { textRole } from '@/components/ui/typography';
-import { cn } from '@/lib/utils';
 import {
   count,
   hostOf,
@@ -30,68 +20,11 @@ import {
   type SortState,
   type SourceItem,
 } from '@/lib/visibility/sources';
+import { HintedHead, SortableHead } from '@/components/visibility/source-heads';
 import { pageFormatBasis } from '@/lib/visibility/vocabulary';
 import type { useVisibilityFilters } from '@/lib/visibility/use-visibility-dashboard';
 
 export type SourceFilters = ReturnType<typeof useVisibilityFilters>;
-
-/**
- * A column header that can reorder the table.
- *
- * The sort indicator is always present, not only on the active column: a
- * header that grows an arrow on hover gives no sign it is sortable until the
- * pointer is already on it, which is invisible to anyone navigating by
- * keyboard.
- */
-function SortableHead({
-  column,
-  label,
-  sort,
-  onSort,
-  numeric,
-  hint,
-  className,
-}: Readonly<{
-  column: string;
-  label: string;
-  sort: SortState;
-  onSort: (column: string) => void;
-  numeric?: boolean;
-  hint?: string;
-  className?: string;
-}>) {
-  const active = sort?.column === column;
-  const Icon = !active ? ChevronsUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown;
-  const heading = (
-    <Pressable
-      onClick={() => onSort(column)}
-      aria-label={`Sort by ${label}`}
-      className={cn(
-        'hover:text-primary inline-flex items-center gap-1 transition-colors',
-        // A data column centres its label over its values, so the two read as
-        // one block. `flex-row-reverse` used to push the sort glyph against
-        // the right padding edge, which left the label sitting off the
-        // numbers by the width of the icon plus its gap.
-        numeric ? 'w-full justify-center text-center' : 'w-auto text-left',
-        active && 'text-primary',
-      )}
-    >
-      <Icon className={cn('size-3 shrink-0', active ? 'opacity-100' : 'opacity-40')} aria-hidden />
-      <span>{label}</span>
-    </Pressable>
-  );
-  return (
-    <TableHead
-      numeric={numeric}
-      // On the header cell, not on the button inside it: `aria-sort` describes
-      // the COLUMN, and a screen reader looks for it on the `th`.
-      aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined}
-      className={className}
-    >
-      {hint ? <Tooltip content={hint}>{heading}</Tooltip> : heading}
-    </TableHead>
-  );
-}
 
 /** The source's own mark and name, with the favicon a reader recognises first. */
 function SourceName({
@@ -128,9 +61,34 @@ function NumericCell({ value, className }: Readonly<{ value: string | null; clas
   );
 }
 
-/** Column counts, so an empty row spans exactly what the header lays out. */
-const DOMAIN_COLUMNS = 7;
-const URL_COLUMNS = 7;
+/**
+ * Each table's columns, as the classes that govern them.
+ *
+ * One list per table, shared by the header, the rows and the loading state, so
+ * a column that is hidden below `lg` is hidden in ALL THREE. A skeleton that
+ * rendered seven cells under a five-column header put a placeholder in every
+ * wrong place and shifted the columns the moment the real rows arrived --
+ * which is the movement this state exists to prevent.
+ */
+const DOMAIN_COLUMNS = [
+  'w-[30%]',
+  'w-[15%]',
+  '',
+  'hidden lg:table-cell',
+  '',
+  'hidden md:table-cell',
+  '',
+] as const;
+
+const URL_COLUMNS = [
+  'w-[32%]',
+  'w-[13%]',
+  '',
+  '',
+  'hidden xl:table-cell',
+  'hidden lg:table-cell',
+  'hidden lg:table-cell',
+] as const;
 
 /**
  * What a table shows INSTEAD of rows, without giving up its own structure.
@@ -149,14 +107,17 @@ export type SourceTableState =
 function StateRows({
   state,
   columns,
-}: Readonly<{ state: Exclude<SourceTableState, { kind: 'rows' }>; columns: number }>) {
+}: Readonly<{
+  state: Exclude<SourceTableState, { kind: 'rows' }>;
+  columns: readonly string[];
+}>) {
   if (state.kind === 'loading') {
     return (
       <>
         {Array.from({ length: state.rows }, (_, row) => (
           <TableRow key={`loading-${row}`}>
-            {Array.from({ length: columns }, (_, cell) => (
-              <TableCell key={cell}>
+            {columns.map((columnClass, cell) => (
+              <TableCell key={cell} className={columnClass || undefined}>
                 <Skeleton className="h-4 w-full" />
               </TableCell>
             ))}
@@ -167,31 +128,10 @@ function StateRows({
   }
   return (
     <TableRow>
-      <TableCell colSpan={columns}>
+      <TableCell colSpan={columns.length}>
         <span className={textRole('body', 'text-secondary')}>{state.message}</span>
       </TableCell>
     </TableRow>
-  );
-}
-
-/**
- * A plain column label, with the column's own caveat behind a tooltip.
- *
- * The place a shared reason belongs. "Not every page has been read" is one
- * fact about the column, and printing it into every cell that lacks a value
- * says it twenty times to make the point once.
- */
-function HintedHead({
-  label,
-  hint,
-  className,
-}: Readonly<{ label: string; hint: string; className?: string }>) {
-  return (
-    <TableHead className={className}>
-      <Tooltip content={hint}>
-        <Pressable className="w-auto cursor-default">{label}</Pressable>
-      </Tooltip>
-    </TableHead>
   );
 }
 
@@ -246,12 +186,12 @@ export function DomainTable({
             label="Source"
             sort={sort}
             onSort={onSort}
-            className="w-[30%]"
+            className={DOMAIN_COLUMNS[0]}
           />
           <HintedHead
             label="Domain type"
             hint="How this publisher is classified. A domain nobody has classified yet has no type."
-            className="w-[15%]"
+            className={DOMAIN_COLUMNS[1]}
           />
           <SortableHead
             column="response_rate"
@@ -267,7 +207,7 @@ export function DomainTable({
             sort={sort}
             onSort={onSort}
             numeric
-            className="hidden lg:table-cell"
+            className={DOMAIN_COLUMNS[3]}
             hint="Unique pages retrieved from this domain per answer in the selection."
           />
           <SortableHead
@@ -284,7 +224,7 @@ export function DomainTable({
             sort={sort}
             onSort={onSort}
             numeric
-            className="hidden md:table-cell"
+            className={DOMAIN_COLUMNS[5]}
             hint="This domain's citations as a share of every citation in the current filtered view."
           />
           <SortableHead
@@ -315,12 +255,9 @@ export function DomainTable({
                   <TypeChip token={itemType(row)} dimension="domain" />
                 </TableCell>
                 <NumericCell value={percent(row.response_rate)} />
-                <NumericCell value={ratio(row.retrieval_rate)} className="hidden lg:table-cell" />
+                <NumericCell value={ratio(row.retrieval_rate)} className={DOMAIN_COLUMNS[3]} />
                 <NumericCell value={count(row.annotations)} />
-                <NumericCell
-                  value={percent(row.citation_share, 1)}
-                  className="hidden md:table-cell"
-                />
+                <NumericCell value={percent(row.citation_share, 1)} className={DOMAIN_COLUMNS[5]} />
                 <NumericCell value={ratio(row.citation_rate)} />
               </TableRow>
             ))}
@@ -392,11 +329,17 @@ export function UrlTable({
     <Table className="table-fixed">
       <TableHeader>
         <TableRow>
-          <SortableHead column="key" label="URL" sort={sort} onSort={onSort} className="w-[32%]" />
+          <SortableHead
+            column="key"
+            label="URL"
+            sort={sort}
+            onSort={onSort}
+            className={URL_COLUMNS[0]}
+          />
           <HintedHead
             label="URL type"
             hint="What kind of page this is. Pages nobody has read yet, and pages on your own domain, carry no type."
-            className="w-[13%]"
+            className={URL_COLUMNS[1]}
           />
           <SortableHead
             column="responses"
@@ -420,13 +363,13 @@ export function UrlTable({
             sort={sort}
             onSort={onSort}
             numeric
-            className="hidden xl:table-cell"
+            className={URL_COLUMNS[4]}
             hint="Distinct brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page."
           />
           <HintedHead
             label="Mentioned"
             hint="The brands named in the answers that cited this URL. Co-occurrence in the answer, not presence on the page."
-            className="hidden lg:table-cell"
+            className={URL_COLUMNS[5]}
           />
           <SortableHead
             column="last_cited_at"
@@ -434,7 +377,7 @@ export function UrlTable({
             sort={sort}
             onSort={onSort}
             numeric
-            className="hidden lg:table-cell"
+            className={URL_COLUMNS[6]}
             hint="The most recent run in this selection whose answer used this URL as a source."
           />
         </TableRow>
@@ -466,14 +409,11 @@ export function UrlTable({
                 </TableCell>
                 <NumericCell value={count(row.responses)} />
                 <NumericCell value={ratio(row.citation_rate)} />
-                <NumericCell value={count(row.mentions)} className="hidden xl:table-cell" />
-                <TableCell className="hidden lg:table-cell">
+                <NumericCell value={count(row.mentions)} className={URL_COLUMNS[4]} />
+                <TableCell className={URL_COLUMNS[5]}>
                   <MentionedChips brands={row.brands} total={row.mentions} />
                 </TableCell>
-                <NumericCell
-                  value={sinceLabel(row.last_cited_at)}
-                  className="hidden lg:table-cell"
-                />
+                <NumericCell value={sinceLabel(row.last_cited_at)} className={URL_COLUMNS[6]} />
               </TableRow>
             ))}
       </TableBody>
