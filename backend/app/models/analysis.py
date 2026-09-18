@@ -32,6 +32,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config.source_patterns import SOURCE_ORIGIN_EXTERNAL
 from app.core.database import Base
 from app.models.constants import (
     CASCADE_ALL_DELETE_ORPHAN,
@@ -238,6 +239,15 @@ class Citation(DerivedRowProvenanceMixin, Base):
     # Deterministic classification (owned/unintended/competitor/third_party).
     classification: Mapped[str] = mapped_column(String(24), default="third_party")
     source_class: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    # Who owns the PLATFORM, independent of what kind of source it is. A
+    # YouTube citation is ``google_owned`` AND ``video``: the two axes
+    # disagree on purpose, because Google owning the player says nothing
+    # about whether the channel behind it is worth pursuing.
+    source_origin: Mapped[str] = mapped_column(
+        String(24),
+        default=SOURCE_ORIGIN_EXTERNAL,
+        server_default=SOURCE_ORIGIN_EXTERNAL,
+    )
     source_taxonomy_version: Mapped[str | None] = mapped_column(
         String(32), nullable=True
     )

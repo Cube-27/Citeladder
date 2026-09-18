@@ -39,6 +39,7 @@ from app.core.config.dataforseo import (
     is_pending_status,
     is_terminal_failure_status,
 )
+from app.core.config.source_patterns import classify_source_origin
 
 # The one item type this version reads. Every other type in the response —
 # organic, people_also_ask, popular_products, local_pack and the rest — is
@@ -60,16 +61,6 @@ KNOWN_ELEMENT_TYPES: Final[frozenset[str]] = frozenset(
 # brand name is Google's surface, not the brand's citation — attributing it to
 # whoever is named nearby would manufacture an owned citation out of Google's
 # own furniture.
-# Google's non-``google.*`` properties. The ccTLDs are matched by rule
-# instead of enumerated: an overview served into one market routinely cites
-# google.<another ccTLD>, and a fixed list of three was already wrong for
-# every market outside it -- google.de and google.co.in read as ordinary
-# third-party publishers, which is precisely the misattribution this exists
-# to prevent.
-GOOGLE_OWNED_HOSTS: Final[frozenset[str]] = frozenset({"goo.gl", "youtube.com"})
-
-SOURCE_GOOGLE: Final = "google"
-SOURCE_EXTERNAL: Final = "external"
 
 
 class AiOverviewParseError(ValueError):
@@ -366,22 +357,12 @@ def _collect_references(block: dict[str, Any]) -> tuple[AioReference, ...]:
             url=url,
             domain=domain,
             title=str(reference.get("title") or ""),
-            source=SOURCE_GOOGLE if _is_google_owned(domain) else SOURCE_EXTERNAL,
+            source_origin=classify_source_origin(domain),
         )
     return tuple(collected.values())
 
 
 # --- Small helpers --------------------------------------------------------
-
-
-def _is_google_owned(domain: str) -> bool:
-    """True when Google itself owns the content behind this domain.
-
-    ``domain`` is already a registrable domain, so ``google.`` as its first
-    label identifies the search property in any market without enumerating
-    Google's ccTLDs.
-    """
-    return domain in GOOGLE_OWNED_HOSTS or domain.startswith("google.")
 
 
 def _select_ai_overview(items: list[Any]) -> dict[str, Any] | None:

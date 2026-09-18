@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Final
 
-SOURCE_TAXONOMY_VERSION: Final = "source-taxonomy-1"
+SOURCE_TAXONOMY_VERSION: Final = "source-taxonomy-2"
 SOURCE_MIX_PROJECTION_VERSION: Final = "opportunity-source-mix-1"
 CONTENT_HANDOFF_TEMPLATE_VERSION: Final = "opportunity-content-handoff-1"
 
@@ -32,6 +32,28 @@ SOURCE_CLASS_INSTITUTIONAL: Final = "institutional"
 SOURCE_CLASS_REVIEW_MARKETPLACE: Final = "review_marketplace"
 SOURCE_CLASS_EDITORIAL_THIRD_PARTY: Final = "editorial_third_party"
 SOURCE_CLASS_OTHER_THIRD_PARTY: Final = "other_third_party"
+# A search engine's OWN generated result surface (Google Shopping, a Google
+# SERP page). It is cited like a publisher and is not one: there is no
+# underlying author to reach, so it can never be an earned-citation target.
+# Kept out of the independent classes for exactly that reason.
+SOURCE_CLASS_SEARCH_SURFACE: Final = "search_surface"
+
+# --- Provenance: WHO OWNS THE PLATFORM -----------------------------------
+# Orthogonal to ``source_class``, which says what KIND of source something
+# is. A YouTube video is google-owned infrastructure AND genuine video
+# evidence with a reachable author; a Google Shopping page is google-owned
+# and no kind of publisher at all. Collapsing the two axes is what made the
+# second look like an ordinary third-party opportunity.
+SOURCE_ORIGIN_EXTERNAL: Final = "external"
+SOURCE_ORIGIN_GOOGLE_OWNED: Final = "google_owned"
+
+# Google-owned platforms that HOST someone else's content. The platform is
+# Google's; the author is not, and is reachable -- a channel to pitch, a blog
+# to approach, a shortened link that resolves to a real publisher. These keep
+# whatever ``source_class`` their content earns.
+GOOGLE_OWNED_PLATFORM_DOMAINS: Final[frozenset[str]] = frozenset(
+    {"youtube.com", "youtu.be", "goo.gl", "blogger.com", "blogspot.com"}
+)
 
 # Stable render/report order (never alphabetical — this is the order a reader
 # should reason about a gap in: who owns it, then how independent it is).
@@ -44,6 +66,7 @@ SOURCE_CLASS_ORDER: Final[tuple[str, ...]] = (
     SOURCE_CLASS_SOCIAL,
     SOURCE_CLASS_INSTITUTIONAL,
     SOURCE_CLASS_VIDEO,
+    SOURCE_CLASS_SEARCH_SURFACE,
     SOURCE_CLASS_OTHER_THIRD_PARTY,
 )
 
@@ -161,3 +184,51 @@ PATTERN_TO_ACTION: Final[tuple[tuple[str, str], ...]] = (
     (PATTERN_COMMUNITY_EVIDENCE, ACTION_PURSUE_COMMUNITY_EVIDENCE),
     (PATTERN_VIDEO_EVIDENCE, ACTION_PURSUE_COMMUNITY_EVIDENCE),
 )
+
+
+# The second-level labels Google's country domains sit under
+# (``google.co.uk``, ``google.com.au``). Used to tell a real Google ccTLD
+# from a lookalike.
+_PUBLIC_SECOND_LEVEL_LABELS: Final[frozenset[str]] = frozenset(
+    {"co", "com", "org", "net", "ac", "gov", "edu"}
+)
+
+
+def is_google_search_surface(domain: str) -> bool:
+    """True when the domain is Google's own generated result surface.
+
+    Matched by rule rather than enumerated, because an overview served into
+    one market routinely cites ``google.<another ccTLD>`` and a fixed list is
+    wrong for every market outside it.
+
+    The rule is NOT a ``google.`` prefix test. ``domain`` is not always a
+    registrable domain -- ``normalize_domain`` only lowercases and strips
+    ``www.`` -- so a prefix test hands ``google.evil.com`` the search
+    engine's identity, and with it the exemption from being pursued as a
+    publisher. What has to be true is that ``google`` is the registrable
+    label: the ONLY thing left after it is a public suffix.
+    """
+    labels = domain.split(".")
+    if len(labels) < 2 or labels[0] != "google":
+        return False
+    suffix = labels[1:]
+    if len(suffix) == 1:
+        return True
+    return len(suffix) == 2 and suffix[0] in _PUBLIC_SECOND_LEVEL_LABELS
+
+
+def classify_source_origin(domain: str) -> str:
+    """Who owns the platform this citation sits on.
+
+    Provenance only. It never decides whether the source is worth pursuing --
+    that is ``source_class``'s job, and the two disagree on purpose for
+    YouTube: google-owned platform, genuine video evidence.
+    """
+    normalized = domain.strip().lower().removeprefix("www.")
+    if not normalized:
+        return SOURCE_ORIGIN_EXTERNAL
+    if is_google_search_surface(normalized):
+        return SOURCE_ORIGIN_GOOGLE_OWNED
+    if normalized in GOOGLE_OWNED_PLATFORM_DOMAINS:
+        return SOURCE_ORIGIN_GOOGLE_OWNED
+    return SOURCE_ORIGIN_EXTERNAL

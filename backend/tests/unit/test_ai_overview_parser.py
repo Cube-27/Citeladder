@@ -11,8 +11,6 @@ from __future__ import annotations
 import pytest
 
 from app.analysis.search_surfaces.ai_overview import (
-    SOURCE_EXTERNAL,
-    SOURCE_GOOGLE,
     parse_task,
     parse_task_payload,
 )
@@ -23,6 +21,10 @@ from app.connectors.search_surfaces.contracts import (
     OUTCOME_PROVIDER_ERROR,
     RESULT_STILL_PENDING,
     SearchSurfaceResult,
+)
+from app.core.config.source_patterns import (
+    SOURCE_ORIGIN_EXTERNAL,
+    SOURCE_ORIGIN_GOOGLE_OWNED,
 )
 from tests.fixtures import ai_overview_payloads as payloads
 
@@ -168,7 +170,11 @@ class TestReferencesAndLinks:
     def test_google_shopping_references_are_google_sources(self) -> None:
         """Never an owned citation for the brand named beside them."""
         result = _parse(payloads.completed_task())
-        google = [ref for ref in result.references if ref.source == SOURCE_GOOGLE]
+        google = [
+            ref
+            for ref in result.references
+            if ref.source_origin == SOURCE_ORIGIN_GOOGLE_OWNED
+        ]
         assert len(google) == 2
         assert {ref.url for ref in google} == {
             payloads.GOOGLE_SHOPPING_URL_A,
@@ -177,7 +183,11 @@ class TestReferencesAndLinks:
 
     def test_non_google_references_stay_external(self) -> None:
         result = _parse(payloads.completed_task())
-        external = [ref for ref in result.references if ref.source == SOURCE_EXTERNAL]
+        external = [
+            ref
+            for ref in result.references
+            if ref.source_origin == SOURCE_ORIGIN_EXTERNAL
+        ]
         assert {ref.domain for ref in external} == {
             payloads.BRAND_DOMAIN,
             payloads.COMPETITOR_DOMAIN,

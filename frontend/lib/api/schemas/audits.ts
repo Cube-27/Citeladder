@@ -145,6 +145,10 @@ export const citationSchema = responseObject({
   domain: z.string(),
   classification: citationClassificationSchema,
   source_class: z.string().nullable().optional(),
+  // Who owns the PLATFORM ('external' | 'google_owned'), independent of
+  // source_class. A YouTube citation is google_owned AND video: the platform
+  // being Google's says nothing about whether the channel is worth pursuing.
+  source_origin: z.string().optional(),
   source_taxonomy_version: z.string().nullable().optional(),
   is_owned: z.boolean(),
   is_unintended: z.boolean(),
