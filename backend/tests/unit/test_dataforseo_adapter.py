@@ -8,6 +8,8 @@ line between them.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import httpx
 import pytest
 
@@ -266,3 +268,77 @@ class TestAdapterDispatch:
                 api_key=_SECRET,
             )
         assert excinfo.value.error_code == "invalid_surface"
+
+
+class TestReconciliationWindow:
+    """The id-list endpoint's real contract, verified against a live account."""
+
+    @pytest.mark.asyncio
+    async def test_the_sweep_uses_the_api_level_id_list_path(self) -> None:
+        # The per-endpoint spelling `/v3/serp/google/organic/id_list` returns
+        # HTTP 404. This path is API-level and covers every SERP task type,
+        # which is why a sweep identifies its rows by tag.
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            return httpx.Response(200, json={"status_code": 20000, "tasks": []})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            adapter = DataForSeoSearchSurfaceAdapter(secret=_SECRET, client=client)
+            await adapter.list_task_ids(
+                datetime_from=datetime(2026, 9, 18, 6, 0, tzinfo=UTC),
+                datetime_to=datetime(2026, 9, 18, 7, 0, tzinfo=UTC),
+            )
+
+        assert seen[0].url.path == "/v3/serp/id_list"
+
+    @pytest.mark.asyncio
+    async def test_the_sweep_asks_for_metadata_because_the_tag_lives_there(
+        self,
+    ) -> None:
+        """Without it, reconciliation has nothing to match on.
+
+        The tag is returned in `metadata.tag` and nowhere else on this
+        endpoint, so omitting the flag would silently make every uncertain
+        submission unreconcilable.
+        """
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            return httpx.Response(200, json={"status_code": 20000, "tasks": []})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            adapter = DataForSeoSearchSurfaceAdapter(secret=_SECRET, client=client)
+            await adapter.list_task_ids(
+                datetime_from=datetime(2026, 9, 18, 6, 0, tzinfo=UTC),
+                datetime_to=datetime(2026, 9, 18, 7, 0, tzinfo=UTC),
+            )
+
+        import json
+
+        body = json.loads(seen[0].content)[0]
+        assert body["include_metadata"] is True
+        assert body["limit"] == 1000
+
+    @pytest.mark.asyncio
+    async def test_window_bounds_use_the_providers_timestamp_format(self) -> None:
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            return httpx.Response(200, json={"status_code": 20000, "tasks": []})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            adapter = DataForSeoSearchSurfaceAdapter(secret=_SECRET, client=client)
+            await adapter.list_task_ids(
+                datetime_from=datetime(2026, 9, 18, 6, 30, 5, tzinfo=UTC),
+                datetime_to=datetime(2026, 9, 18, 7, 30, 5, tzinfo=UTC),
+            )
+
+        import json
+
+        body = json.loads(seen[0].content)[0]
+        assert body["datetime_from"] == "2026-09-18 06:30:05 +00:00"
+        assert body["datetime_to"] == "2026-09-18 07:30:05 +00:00"

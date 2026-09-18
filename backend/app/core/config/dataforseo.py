@@ -31,11 +31,19 @@ PATH_USER_DATA: Final = "/v3/appendix/user_data"
 # Standard (submit-then-poll) Google Organic SERP lifecycle.
 PATH_TASK_POST: Final = "/v3/serp/google/organic/task_post"
 PATH_TASK_GET_ADVANCED: Final = "/v3/serp/google/organic/task_get/advanced"
-# Lists the bound account's task ids WITH metadata, over a bounded time
-# window. This is the reconciliation sweep's endpoint: it returns uncompleted
-# as well as completed tasks, which is exactly the case that matters.
 PATH_TASKS_READY: Final = "/v3/serp/google/organic/tasks_ready"
-PATH_TASKS_FIXED: Final = "/v3/serp/google/organic/id_list"
+
+# The reconciliation sweep's endpoint: the bound account's task ids WITH
+# metadata, over a bounded window. It returns uncompleted as well as completed
+# tasks, which is exactly the case that matters — an orphaned submission is by
+# definition one CiteLadder never saw finish.
+#
+# Note the path is API-LEVEL, not per-endpoint: the per-endpoint spelling
+# ``/v3/serp/google/organic/id_list`` returns HTTP 404 / ``40400``. Verified
+# live 2026-09-18. Because it spans every SERP task type, a sweep must
+# identify its rows by TAG rather than by assuming the account posts nothing
+# else.
+PATH_ID_LIST: Final = "/v3/serp/id_list"
 
 # --- Provider status-code families ----------------------------------------
 # DataForSEO answers almost everything with HTTP 200 and carries the real
@@ -102,6 +110,11 @@ def is_complete_status(status_code: int) -> bool:
 # interval is the re-park delay; the ceiling bounds how long a task may stay
 # in flight before it terminates as an honest local failure rather than
 # quietly becoming "no AI Overview".
+# A live Standard task with ``load_async_ai_overview`` completed in ~13
+# seconds (verified 2026-09-18), so the first poll is deliberately sooner than
+# the steady interval: waiting a full minute on a task that finished in
+# thirteen seconds is latency the customer pays for nothing.
+FIRST_POLL_DELAY_SECONDS: Final = 15.0
 POLL_INTERVAL_SECONDS: Final = 60.0
 POLL_CEILING: Final = 30
 # How far back a reconciliation sweep looks for an orphaned submission.
@@ -109,6 +122,12 @@ RECONCILE_WINDOW_HOURS: Final = 24
 # Provider caps the id-list endpoint at 10 calls/minute and 1,000 ids/call, so
 # reconciliation sweeps per ACCOUNT rather than per task.
 RECONCILE_PAGE_SIZE: Final = 1000
+# ``datetime_to`` must be STRICTLY in the past: a window ending at or after
+# "now" is refused with ``40501 Invalid Field: datetime_to - must be earlier
+# than present date``. Verified live 2026-09-18. The sweep therefore ends its
+# window this far back, which also means a submission newer than this is not
+# yet reconcilable and must simply be polled again.
+RECONCILE_WINDOW_LAG_SECONDS: Final = 60
 # How many tasks one submission or collection pass handles.
 BATCH_SIZE: Final = 100
 # The provider's own limit on the correlation tag sent at submission.
@@ -130,6 +149,14 @@ DEFAULT_DEPTH: Final = 10
 # The provider charges a surcharge for this and refunds it in full when the
 # element is absent or carries ``asynchronous_ai_overview: false``.
 LOAD_ASYNC_AI_OVERVIEW: Final = True
+
+# Observed Standard-queue charge for one such task: $0.0012, which is the
+# $0.0006 base plus the $0.0006 asynchronous-AI-Overview surcharge (verified
+# live 2026-09-18). Recorded here as OBSERVATION ONLY — it is not a rate card
+# and nothing prices from it. The provider reports the real charge on every
+# submission and ``ExecutionCostProjection`` reconciles against that.
+OBSERVED_STANDARD_TASK_COST_MICROUSD: Final = 1200
+ASYNC_AI_OVERVIEW_SURCHARGE_MICROUSD: Final = 600
 
 # --- Search context vocabulary -------------------------------------------
 # One location, one language, one device per project. These are the values a

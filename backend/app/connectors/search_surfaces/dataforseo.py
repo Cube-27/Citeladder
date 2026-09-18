@@ -243,18 +243,28 @@ class DataForSeoSearchSurfaceAdapter:
         )
 
     async def list_task_ids(
-        self, *, datetime_from: str, datetime_to: str, offset: int = 0
+        self, *, datetime_from: datetime, datetime_to: datetime, offset: int = 0
     ) -> dict[str, Any]:
         """List the bound account's tasks WITH metadata, over a window.
 
         The reconciliation sweep's endpoint. It returns uncompleted as well as
         completed tasks, which is exactly the case that matters: an orphaned
         submission is by definition one CiteLadder never saw finish.
+
+        ``include_metadata`` is what makes reconciliation possible at all —
+        the tag comes back in ``metadata.tag`` and nowhere else on this
+        endpoint. Verified live: the provider's published example omits it,
+        but it is returned.
+
+        The window is per ACCOUNT, not per task: the provider caps this
+        endpoint at ten calls a minute, so one bounded sweep resolves every
+        uncertain task it finds. A scan per uncertain task would exhaust the
+        budget on the first handful.
         """
         payload = [
             {
-                "datetime_from": datetime_from,
-                "datetime_to": datetime_to,
+                "datetime_from": _window_bound(datetime_from),
+                "datetime_to": _window_bound(datetime_to),
                 "limit": dataforseo_config.RECONCILE_PAGE_SIZE,
                 "offset": offset,
                 "include_metadata": True,
@@ -262,7 +272,7 @@ class DataForSeoSearchSurfaceAdapter:
         ]
         return await self._call(
             "POST",
-            dataforseo_config.PATH_TASKS_FIXED,
+            dataforseo_config.PATH_ID_LIST,
             json=payload,
             timeout_seconds=dataforseo_settings.request_timeout_seconds,
         )
@@ -345,6 +355,16 @@ def _task_payload(request: SearchSurfaceRequest) -> dict[str, Any]:
         # verbatim.
         "tag": request.provider_submission_ref[: dataforseo_config.TAG_MAX_CHARS],
     }
+
+
+def _window_bound(value: datetime) -> str:
+    """The provider's window timestamp format.
+
+    ``datetime_to`` must be STRICTLY in the past — a bound at or after "now"
+    is refused outright — so the sweep's caller lags its upper bound rather
+    than discovering this as a 40501 in production.
+    """
+    return value.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S +00:00")
 
 
 def _single_task(body: dict[str, Any]) -> dict[str, Any]:
