@@ -7,8 +7,17 @@
   earned opportunities, and external placement verification kept separate from
   visibility movement. Three pull requests in ordered slices.
 
+- [Google AI Overview surface](citeladder-google-ai-overview-surface.md)
+  — fourth measured visibility surface via the DataForSEO Google Organic SERP
+  API, folded into the existing scoring, Sources and Trends projections. Five
+  pull requests in ordered slices. Selected to start next.
+
 ## Queued
 
+- [Search intelligence signals](citeladder-search-intelligence-signals.md)
+  — internal authority, significant-content-update detection, query relevance,
+  topical coherence and anchor quality, then content differentiation once the
+  SERP connector from the Google AI Overview plan exists. Six pull requests.
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
   — pending; remaining evidence/action and selected-query generation work.
 - [Razorpay local test integration](citeladder-razorpay-local-test-integration.md)
