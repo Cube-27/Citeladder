@@ -231,7 +231,7 @@ function FormActions({ controller }: Readonly<{ controller: Controller }>) {
         {test.isPending ? 'Testing…' : 'Test connection'}
       </Button>
       <Button disabled={!canSave} onClick={() => save.mutate()}>
-        {saveLabel(save.isPending, connection !== null)}
+        {saveLabel(save.isPending, connection !== undefined)}
       </Button>
     </div>
   );
