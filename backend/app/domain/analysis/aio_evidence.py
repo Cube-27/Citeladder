@@ -36,7 +36,7 @@ from sqlalchemy.orm import selectinload
 from app.analysis.position import brand_position, competitor_position
 from app.analysis.scoring import ScoringConfig, classify_citation
 from app.connectors.search_surfaces.contracts import OUTCOME_AI_OVERVIEW_PRESENT
-from app.core.config.provider_catalog import is_search_surface
+from app.core.config.provider_catalog import LOGICAL_ENGINES, is_search_surface
 from app.domain.analysis.aio_rates import (
     AioObservationCounts,
     AioRate,
@@ -55,6 +55,7 @@ from app.domain.analysis.aio_schemas import (
     SurfaceEntityEvidence,
     SurfaceRatesResponse,
 )
+from app.domain.analysis.errors import TrendQueryError
 from app.domain.analysis.selection import authorize_run_set
 from app.models.analysis import Citation, CompetitorMention, ResponseAnalysis
 from app.models.audit import Audit, AuditPromptSnapshot, AuditTask
@@ -297,12 +298,25 @@ async def surface_rates(
 
     An engine that is not an observed surface has no rates rather than empty
     ones: asking an LLM for a trigger rate is a category error, and answering
-    with zeroes would look like one that measured nothing.
+    with zeroes would look like one that measured nothing. A name that is not
+    an engine AT ALL is a different thing again -- a typo, not a question --
+    and is rejected rather than answered, so a misspelled filter cannot read
+    as a surface that measured nothing.
     """
+    if logical_engine not in LOGICAL_ENGINES:
+        raise TrendQueryError(f"Unknown logical engine: {logical_engine!r}")
     if not is_search_surface(logical_engine):
         return SurfaceRatesResponse(logical_engine=logical_engine)
+    # The single `audit_id` needs authorizing exactly as much as the set does.
+    # Left out, an unknown or out-of-scope id simply matched no rows and the
+    # caller got zero-denominator rates -- our own 200 reading as a measured
+    # absence -- where the run set answers 404. `conditions()` already gives
+    # `audit_ids` precedence over `audit_id`, so this mirrors that order.
     await authorize_run_set(
-        session, workspace_id=workspace_id, project_id=project_id, audit_ids=audit_ids
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        audit_ids=audit_ids or ([audit_id] if audit_id is not None else None),
     )
     scope = _Scope(
         workspace_id=workspace_id,

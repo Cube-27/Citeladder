@@ -82,6 +82,40 @@ describe('AI Overview rates', () => {
     expect(screen.queryByText('0%')).toBeNull();
   });
 
+  it('gives every competitor rate its own numerator', () => {
+    panel(
+      rates({
+        competitor_mention_rates: [
+          {
+            name: 'Globex',
+            rate: rate({
+              numerator: 1,
+              denominator: 40,
+              denominator_kind: 'observations_with_ai_overview',
+              value: 0.025,
+            }),
+          },
+          {
+            name: 'Initech',
+            rate: rate({
+              numerator: 30,
+              denominator: 40,
+              denominator_kind: 'observations_with_ai_overview',
+              value: 0.75,
+            }),
+          },
+        ],
+      }),
+    );
+
+    // The shared denominator is stated once above the list, but the
+    // numerators are what separate these two. Percentages alone made a
+    // competitor named in one overview look like the same kind of claim as
+    // one named in thirty.
+    expect(screen.getByText('1 of 40')).toBeVisible();
+    expect(screen.getByText('30 of 40')).toBeVisible();
+  });
+
   it('says how many observations it could not use', () => {
     panel(rates({ excluded: 3 }));
 

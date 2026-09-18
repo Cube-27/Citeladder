@@ -395,6 +395,40 @@ class PostgresTaskQueue[
             await session.commit()
             return True
 
+    async def _park(
+        self,
+        *,
+        status: str,
+        task_id: uuid.UUID,
+        owner: str,
+        available_at: datetime,
+        mutate: Callable[[T], None] | None = None,
+    ) -> bool:
+        """Release an owned task's lease into ``status`` until ``available_at``.
+
+        The three parks below differ only in what the status MEANS; what they
+        do to the row is one thing, written once. None of them touches
+        ``attempt_count``: parking is not a failed attempt, and spending
+        budget on it would exhaust a task's retries while it was making
+        perfectly normal progress.
+
+        ``mutate`` runs in the SAME transaction that parks the row, so a row
+        can never be parked awaiting a result it has no way to fetch.
+        """
+        async with self._session_factory() as session:
+            task = await self._owned_task(session, task_id, owner)
+            if task is None:
+                await session.commit()
+                return False
+            task.status = status
+            task.lease_owner = None
+            task.lease_expires_at = None
+            task.available_at = available_at
+            if mutate is not None:
+                mutate(task)
+            await session.commit()
+            return True
+
     async def park_capacity_wait(
         self,
         *,
@@ -404,21 +438,16 @@ class PostgresTaskQueue[
     ) -> bool:
         """Park an owned task in ``capacity_wait`` until ``available_at``.
 
-        Releases the lease without touching ``attempt_count`` — no provider
-        call happened, so no attempt budget is spent. The row re-enters the
-        claimable set once ``available_at`` passes, exactly like a retry.
+        No provider call happened, so no attempt budget is spent. The row
+        re-enters the claimable set once ``available_at`` passes, exactly
+        like a retry.
         """
-        async with self._session_factory() as session:
-            task = await self._owned_task(session, task_id, owner)
-            if task is None:
-                await session.commit()
-                return False
-            task.status = TASK_STATUS_CAPACITY_WAIT
-            task.lease_owner = None
-            task.lease_expires_at = None
-            task.available_at = available_at
-            await session.commit()
-            return True
+        return await self._park(
+            status=TASK_STATUS_CAPACITY_WAIT,
+            task_id=task_id,
+            owner=owner,
+            available_at=available_at,
+        )
 
     async def park_awaiting_provider_result(
         self,
@@ -430,34 +459,21 @@ class PostgresTaskQueue[
     ) -> bool:
         """Park an owned task on an OUTSTANDING external provider task.
 
-        Mechanically ``park_capacity_wait``: release the lease, set
-        ``available_at``, leave ``attempt_count`` alone. Semantically the
-        opposite — a capacity wait means nothing happened yet, while this
-        means a paid submission is already outstanding and the provider is
-        working on it.
+        Mechanically a capacity wait; semantically the opposite. A capacity
+        wait means nothing happened yet, while this means a paid submission
+        is already outstanding and the provider is working on it.
 
-        ``attempt_count`` is untouched deliberately. Retrieval is free and
-        polling is not an attempt at anything; spending budget per poll would
-        exhaust a task's retries while it was making perfectly normal
-        progress, and then report it as having failed.
-
-        ``mutate`` writes the provider-task columns in the SAME transaction
+        ``mutate`` writes the provider-task columns in the same transaction
         that parks the row, so a row can never be parked awaiting a result it
         has no way to fetch.
         """
-        async with self._session_factory() as session:
-            task = await self._owned_task(session, task_id, owner)
-            if task is None:
-                await session.commit()
-                return False
-            task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
-            task.lease_owner = None
-            task.lease_expires_at = None
-            task.available_at = available_at
-            if mutate is not None:
-                mutate(task)
-            await session.commit()
-            return True
+        return await self._park(
+            status=TASK_STATUS_AWAITING_PROVIDER_RESULT,
+            task_id=task_id,
+            owner=owner,
+            available_at=available_at,
+            mutate=mutate,
+        )
 
     async def park_submission_uncertain(
         self,
@@ -473,19 +489,13 @@ class PostgresTaskQueue[
         waits to be reconciled against the provider by its correlation tag —
         never resubmitted on the assumption that nothing happened.
         """
-        async with self._session_factory() as session:
-            task = await self._owned_task(session, task_id, owner)
-            if task is None:
-                await session.commit()
-                return False
-            task.status = TASK_STATUS_SUBMISSION_UNCERTAIN
-            task.lease_owner = None
-            task.lease_expires_at = None
-            task.available_at = available_at
-            if mutate is not None:
-                mutate(task)
-            await session.commit()
-            return True
+        return await self._park(
+            status=TASK_STATUS_SUBMISSION_UNCERTAIN,
+            task_id=task_id,
+            owner=owner,
+            available_at=available_at,
+            mutate=mutate,
+        )
 
     async def cancel(self, *, task_id: uuid.UUID) -> bool:
         now = _utcnow()

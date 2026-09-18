@@ -26,6 +26,7 @@ from app.connectors.answer_engines.http_client import shared_client
 from app.connectors.search_surfaces.contracts import (
     SearchSurfaceRequest,
     SearchSurfaceSubmission,
+    provider_cost_microusd,
 )
 from app.core.config import dataforseo as dataforseo_config
 from app.core.config.dataforseo import (
@@ -237,7 +238,7 @@ class DataForSeoSearchSurfaceAdapter:
         return SearchSurfaceSubmission(
             provider_task_id=task_id,
             submitted_at=datetime.now(UTC),
-            provider_cost_microusd=_cost_microusd(task),
+            provider_cost_microusd=provider_cost_microusd(task),
         )
 
     async def fetch(self, provider_task_id: str) -> dict[str, Any]:
@@ -429,10 +430,3 @@ def _submission_error_code(status: int) -> str:
     if status == dataforseo_config.STATUS_UNAUTHORIZED:
         return ERROR_AUTH
     return ERROR_CLIENT
-
-
-def _cost_microusd(task: dict[str, Any]) -> int | None:
-    cost = task.get("cost")
-    if isinstance(cost, bool) or not isinstance(cost, (int, float)):
-        return None
-    return round(float(cost) * 1_000_000)

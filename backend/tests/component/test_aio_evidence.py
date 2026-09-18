@@ -649,6 +649,62 @@ class TestTheRatesEndpoint:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
+    async def test_an_unknown_run_is_not_found_even_as_a_single_audit_id(
+        self,
+        client: httpx.AsyncClient,
+        session_factory: async_sessionmaker[AsyncSession],
+    ) -> None:
+        """A singular ``audit_id`` is authorized exactly as the set is.
+
+        Authorizing only ``audit_ids`` left the singular selector unchecked:
+        an unknown run simply matched no rows, and the caller got a 200 full
+        of zero denominators. Our own "that run is not yours" then read as
+        "Google showed nothing" -- the one confusion every denominator in
+        this module exists to prevent.
+        """
+        async with session_factory() as session:
+            fixture = await _seed_audit(session)
+            await _seed_observation(session, fixture)
+            await session.commit()
+        await _authenticate(client, session_factory, workspace_id=fixture.workspace_id)
+
+        response = await client.get(
+            f"/api/v1/projects/{fixture.project_id}/visibility/surface-rates",
+            params={
+                "engine": ENGINE_GOOGLE_AI_OVERVIEW,
+                "audit_id": str(uuid.uuid4()),
+            },
+            headers={"X-Workspace-Id": str(fixture.workspace_id)},
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_a_name_that_is_no_engine_is_rejected_not_answered(
+        self,
+        client: httpx.AsyncClient,
+        session_factory: async_sessionmaker[AsyncSession],
+    ) -> None:
+        """A typo is a bad request, not a surface that measured nothing.
+
+        An answer engine deliberately answers with no rates -- asking one for
+        a trigger rate is a category error. A name that is no engine at all
+        is a different thing, and answering it the same way let a misspelled
+        filter render as an empty measurement.
+        """
+        async with session_factory() as session:
+            fixture = await _seed_audit(session)
+            await _seed_observation(session, fixture)
+            await session.commit()
+        await _authenticate(client, session_factory, workspace_id=fixture.workspace_id)
+
+        response = await client.get(
+            f"/api/v1/projects/{fixture.project_id}/visibility/surface-rates",
+            params={"engine": "gooogle_ai_overview"},
+            headers={"X-Workspace-Id": str(fixture.workspace_id)},
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
     async def test_the_rates_travel_with_their_denominators(
         self,
         client: httpx.AsyncClient,

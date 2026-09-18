@@ -68,6 +68,45 @@ describe('siteScoreSummarySchema by_page_kind (v2 P1)', () => {
     },
   };
 
+  it('accepts the expanded page-kind vocabulary (how_to, listicle, alternative)', () => {
+    // The classifier vocabulary (how_to, listicle, alternative) shipped
+    // without the frontend zod enum catching up, so any completed cohort
+    // containing one of these kinds failed the dashboard parse and took the
+    // whole screen down.
+    const parsed = strictValidate(
+      siteCrawlSchema,
+      {
+        ...crawl,
+        score_summary: {
+          ...scoreSummary,
+          scored_page_kind_set: ['guide', 'how_to', 'listicle', 'comparison', 'alternative'],
+          scored_page_count_by_kind: {
+            guide: 1,
+            how_to: 2,
+            listicle: 1,
+            comparison: 1,
+            alternative: 1,
+          },
+        },
+      },
+      'crawl',
+    );
+    expect(parsed.score_summary?.scored_page_kind_set).toEqual([
+      'guide',
+      'how_to',
+      'listicle',
+      'comparison',
+      'alternative',
+    ]);
+    expect(parsed.score_summary?.scored_page_count_by_kind).toEqual({
+      guide: 1,
+      how_to: 2,
+      listicle: 1,
+      comparison: 1,
+      alternative: 1,
+    });
+  });
+
   it('accepts classification completeness and a scored page-kind breakdown', () => {
     const parsed = strictValidate(
       siteCrawlSchema,

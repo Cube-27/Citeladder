@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Final
 
+from app.core.config.costs import MICRO_USD_PER_USD
+
 # --- Terminal outcomes ----------------------------------------------------
 # The closed vocabulary persisted for every task that reaches an end. Every
 # rate in the product divides by these, so the distinctions are load-bearing:
@@ -190,3 +192,18 @@ class SearchSurfaceResult:
             raise ValueError(
                 "no provider result supplied a status or an observation time"
             )
+
+
+def provider_cost_microusd(task: dict[str, Any]) -> int | None:
+    """What the provider charged for one task, in micro-USD, or None.
+
+    Both ends of the surface read this off the same ``cost`` field -- the
+    submission reads what the task was billed at, the retrieval reads what it
+    finally cost -- so it is decided once here rather than twice. ``bool`` is
+    excluded ahead of the numeric check because it is an ``int`` in Python,
+    and a ``cost`` of ``True`` would otherwise bill one micro-USD.
+    """
+    cost = task.get("cost")
+    if isinstance(cost, bool) or not isinstance(cost, (int, float)):
+        return None
+    return round(float(cost) * MICRO_USD_PER_USD)

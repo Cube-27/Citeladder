@@ -3,6 +3,7 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
+import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label, textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -74,10 +75,22 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
         {rates.map((entry) => (
           <li key={entry.name} className="flex items-center justify-between gap-3 py-2">
             <span className={textRole('body', 'min-w-0 truncate')}>{entry.name}</span>
-            <span className="text-secondary shrink-0 text-sm tabular-nums">
-              {entry.rate.value === null
-                ? 'Unavailable'
-                : `${Math.round(entry.rate.value * 1000) / 10}%`}
+            <span className="shrink-0 text-right">
+              {entry.rate.value === null ? (
+                <span className="text-muted text-sm">Unavailable</span>
+              ) : (
+                <>
+                  <span className="text-secondary text-sm tabular-nums">
+                    {`${Math.round(entry.rate.value * 1000) / 10}%`}
+                  </span>
+                  {/* The denominator is stated once for the list above; the
+                      numerator is not, and it is what separates one competitor
+                      named in a single overview from one named in fifty. */}
+                  <span className="text-muted ml-2 text-xs tabular-nums">
+                    {`${entry.rate.numerator} of ${entry.rate.denominator}`}
+                  </span>
+                </>
+              )}
             </span>
           </li>
         ))}
@@ -109,8 +122,15 @@ export function SurfaceRatesPanel({
   const data = query.data;
   if (query.isError) return <Alert tone="danger">Could not load the AI Overview rates.</Alert>;
   if (!data) return <div className="bg-surface-2 min-h-48 rounded-[var(--radius-card)]" />;
+  // These rates are RETAINED across a surface or run change, the same way
+  // the sources and evidence panels retain theirs, so the reader is not
+  // handed a skeleton for every round trip. Retained numbers carry no
+  // shape of their own to recognise, though -- five percentages look
+  // equally plausible under any selection -- so the busy bar every other
+  // retaining panel shows is what keeps them from reading as settled.
   return (
-    <Card aria-busy={query.isFetching}>
+    <Card className="relative" aria-busy={query.isFetching}>
+      <BusyBar active={query.isFetching} label="Updating AI Overview rates" />
       <CardHeader>
         <CardTitle>Google AI Overview</CardTitle>
         <p className={textRole('meta', 'text-secondary')}>

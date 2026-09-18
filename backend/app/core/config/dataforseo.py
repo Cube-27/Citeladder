@@ -376,13 +376,3 @@ def platform_credential_secret() -> SecretStr:
     if not login or not password:
         return SecretStr("")
     return SecretStr(pack_credential(login=login, password=password))
-
-
-def configured_base_url() -> str:
-    """The single approved DataForSEO destination, normalised."""
-    return dataforseo_settings.base_url.strip().rstrip("/")
-
-
-def endpoint(path: str) -> str:
-    """Absolute URL for one DataForSEO path."""
-    return f"{configured_base_url()}{path}"

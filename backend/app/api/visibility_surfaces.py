@@ -52,7 +52,11 @@ async def get_surface_rates_endpoint(
     ``engine`` is required and must name an observed surface. An LLM engine
     answers with no rates at all rather than zeroes: a trigger rate for a
     surface that is asked rather than observed is a category error, and
-    zeroes would read as a measurement that found nothing.
+    zeroes would read as a measurement that found nothing. A name that is no
+    engine at all is a typo rather than a question, and answers 422.
+
+    A single ``audit_id`` is authorized exactly as the run set is, so an
+    unknown or out-of-scope run answers 404 rather than empty rates.
 
     Failed and pending observations are excluded from every denominator and
     reported separately as ``excluded``. An empty denominator yields a null

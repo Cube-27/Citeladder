@@ -160,7 +160,10 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
             const href = safeLinkUrl(link.url);
             const title = link.title || link.domain || link.url;
             return (
-              <li key={link.url} className="grid gap-0.5 p-3.5">
+              // An overview can point at the same URL from two places in its
+              // own text, so the URL alone is not unique among siblings. The
+              // element it was drawn from is what separates them.
+              <li key={`${link.element_index}-${link.url}`} className="grid gap-0.5 p-3.5">
                 {href ? (
                   <a
                     href={href}
