@@ -1,20 +1,22 @@
-"""DataForSEO Google Organic payloads for the AI Overview parser.
+"""Hand-built DataForSEO Google Organic payloads for the parser.
 
-**Provenance.** The plan cites a real captured response at
-``docs/evaluations/SERP_sample_result.json``. That file is NOT in this
-repository — it was never committed and is absent from history. These
-fixtures are therefore reconstructed from the plan's structural description
-of it, which is specific: sixteen items, the AI Overview at
-``rank_absolute: 3``, four ``ai_overview_element`` blocks of which only the
-second carries ``links[]``, five root references of which two are
-``www.google.com`` Shopping URLs, and ``items[1].references`` duplicating the
-root list.
+These are SHAPED after the captured response at
+``docs/evaluations/DATAFORSEO_sample_result.json`` — sixteen items, the AI
+Overview at ``rank_absolute: 3``, four elements of which only the second
+carries ``links[]``, five root references of which two are Google Shopping
+URLs, and ``items[1].references`` repeating the root list.
 
-They therefore prove the parser matches the DOCUMENTED shape. They do not
-prove it matches a live response, and they are not a substitute for the
-captured sample. When that file lands, point
-``test_ai_overview_parser.py::test_the_captured_sample_yields_five_citations``
-at it and delete this note.
+They exist to reach states the captured sample cannot: a completed task with
+no overview at all, a queued task, a failed task, an unknown element type,
+and table content. The captured sample is a single successful Live response,
+so it proves none of those. ``test_ai_overview_captured_sample.py`` covers
+the real payload; this file covers the branches around it.
+
+One case here is deliberately NOT in the captured sample: an element carrying
+``table`` content. Google renders comparison tables inside overviews and a
+brand named only in a cell is named in the answer, so the extractor must
+handle it — but the sample happens not to contain one, and an untested branch
+in the visible-answer walk is exactly where a silent mention drop hides.
 """
 
 from __future__ import annotations
