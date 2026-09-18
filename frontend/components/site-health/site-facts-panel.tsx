@@ -99,7 +99,6 @@ function BlockedBotsAlert({ blocked }: Readonly<{ blocked: SiteFactsView['bots']
   );
 }
 
-/** Mono status code for one well-known file, `Unknown` when no fetch answered. */
 /** Whether robots.txt was read, and the three answers that are not one yes/no. */
 function RobotsFetchBadge({ status }: Readonly<{ status: SiteFactsView['robotsFetchStatus'] }>) {
   if (status === 'fetched') {
