@@ -41,6 +41,7 @@ import type {
   providerConnectionSchema,
   rankingRowSchema,
   sessionUserSchema,
+  surfaceKindSchema,
   transportProviderSchema,
   topicSchema,
   visibilityEngineSchema,
@@ -132,6 +133,7 @@ export type Project = z.infer<typeof projectSchema>;
 export type Competitor = z.infer<typeof competitorSchema>;
 export type TransportProvider = z.infer<typeof transportProviderSchema>;
 export type LogicalEngine = z.infer<typeof logicalEngineSchema>;
+export type SurfaceKind = z.infer<typeof surfaceKindSchema>;
 export type ProviderConnection = z.infer<typeof providerConnectionSchema>;
 export type ProviderCatalog = z.infer<typeof providerCatalogSchema>;
 // The authenticated workspace projection — distinct from public availability.

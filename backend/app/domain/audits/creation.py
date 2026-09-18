@@ -19,7 +19,13 @@ from app.core.config.audits import (
     EVENT_AUDIT_QUEUED,
     audit_settings,
 )
+from app.core.config.dataforseo import (
+    DEFAULT_DEVICE,
+    DEFAULT_LANGUAGE_CODE,
+    is_supported_search_context,
+)
 from app.core.config.entitlements import CREDENTIAL_MODE_BYOK
+from app.core.config.provider_catalog import is_search_surface
 from app.domain.abuse.service import reserve_workspace_capacity
 from app.domain.audits.errors import AuditValidationError
 from app.domain.audits.frozen_plan import (
@@ -54,6 +60,36 @@ from app.domain.entitlements.enforcement import (
     evaluate_manual_run_admission,
 )
 from app.models.audit import Audit
+from app.models.project import Project
+
+
+def _require_search_context(*, project: Project, engines: list[str]) -> None:
+    """Refuse a run that selects an observed surface it cannot observe from.
+
+    Rejected at ADMISSION rather than left to fail repeatedly: a run that
+    queues tasks with no location would submit nothing, retry, and eventually
+    report a provider problem for what is actually a missing project setting.
+
+    The location is the part that cannot be defaulted. Guessing a market would
+    measure the wrong country and present the answer as though it were the
+    right one.
+    """
+    selected = [engine for engine in engines if is_search_surface(engine)]
+    if not selected:
+        return
+    if not project.serp_location_code:
+        raise AuditValidationError(
+            "Set this project's search location before measuring Google AI Overview."
+        )
+    if not is_supported_search_context(
+        location_code=project.serp_location_code,
+        language_code=project.serp_language_code or DEFAULT_LANGUAGE_CODE,
+        device=project.serp_device or DEFAULT_DEVICE,
+    ):
+        raise AuditValidationError(
+            "This project's search location, language or device is not one "
+            "this deployment can measure."
+        )
 
 
 async def create_audit(
@@ -107,6 +143,8 @@ async def create_audit(
         engines=engines,
         credential_mode=credential_mode,
     )
+
+    _require_search_context(project=project, engines=engines)
 
     plan = _freeze_plan(
         project=project,
@@ -245,6 +283,7 @@ async def create_audit(
         funded=funded,
         expected_costs=expected_costs,
         workspace_id=workspace_id,
+        project=project,
         at=admission_at,
     )
 

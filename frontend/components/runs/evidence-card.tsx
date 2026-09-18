@@ -174,21 +174,53 @@ export function normalizeEvidenceMarkdown(markdown: string): string {
   return normalized.join('\n\n');
 }
 
-function EvidenceAnswer({ answerText }: Readonly<{ answerText?: string | null }>) {
+function EvidenceAnswer({
+  answerText,
+  isSearchSurface,
+  outcome,
+}: Readonly<{
+  answerText?: string | null;
+  isSearchSurface?: boolean;
+  outcome?: string;
+}>) {
   const trimmed = answerText?.trim();
+  // An observed surface with no text is two completely different things, and
+  // only the persisted OUTCOME separates them. Inferring from "succeeded and
+  // empty" was wrong: an overview that was present but carried no extractable
+  // text produces exactly that, and would have been reported as Google
+  // showing nothing — our own gap presented as the brand's absence.
+  const measuredAbsence = Boolean(isSearchSurface) && outcome === 'no_ai_overview';
   return (
     <section className="grid gap-2">
-      <Label>Engine response</Label>
+      <Label>{isSearchSurface ? 'AI Overview' : 'Engine response'}</Label>
       <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'min-w-0 overflow-hidden')}>
-        {trimmed ? (
-          <ContentMarkdown markdown={normalizeEvidenceMarkdown(trimmed)} density="compact" />
-        ) : (
-          <span className="text-muted text-sm">
-            No answer text was captured for this execution.
-          </span>
-        )}
+        <EvidenceAnswerBody text={trimmed} measuredAbsence={measuredAbsence} />
       </div>
     </section>
+  );
+}
+
+/**
+ * The three states an answer panel can be in, named rather than nested.
+ *
+ * They are genuinely three, not two: text, a measured absence, and a missing
+ * capture. The middle one is a finding and the last one is a gap in ours, so
+ * they must never share a sentence.
+ */
+function EvidenceAnswerBody({
+  text,
+  measuredAbsence,
+}: Readonly<{ text?: string; measuredAbsence: boolean }>) {
+  if (text) {
+    return <ContentMarkdown markdown={normalizeEvidenceMarkdown(text)} density="compact" />;
+  }
+  if (measuredAbsence) {
+    return (
+      <span className="text-secondary text-sm">No AI Overview was shown for this search.</span>
+    );
+  }
+  return (
+    <span className="text-muted text-sm">No answer text was captured for this execution.</span>
   );
 }
 
@@ -321,12 +353,16 @@ export function EvidenceCard({
   promptText,
   promptIndex,
   repetition,
+  isSearchSurface,
+  outcome,
 }: Readonly<{
   evidence: ExecutionEvidence;
   answerText?: string | null;
   promptText?: string | null;
   promptIndex?: number;
   repetition?: number;
+  isSearchSurface?: boolean;
+  outcome?: string;
 }>) {
   return (
     <div className="grid min-w-0 gap-[var(--workspace-gap)]">
@@ -337,7 +373,7 @@ export function EvidenceCard({
         repetition={repetition}
       />
       <EvidenceMetrics evidence={evidence} />
-      <EvidenceAnswer answerText={answerText} />
+      <EvidenceAnswer answerText={answerText} isSearchSurface={isSearchSurface} outcome={outcome} />
       <EvidenceOutcomes evidence={evidence} />
       <EvidenceCitationsList citations={evidence.citations} />
       <EvidenceFooter evidence={evidence} />

@@ -94,15 +94,38 @@ export function executionBadgeValue(
     // Parked on a full provider pool: nothing is wrong, but the row is not
     // progressing either, so it reads like a retry wait rather than in-flight.
     case 'capacity_wait':
+    // A submission whose fate is unknown. Warning rather than info: it needs
+    // reconciling before it can progress, and presenting it as ordinary
+    // in-flight work would hide that.
+    case 'submission_uncertain':
       return 'warning';
+    // Waiting on a task the provider is genuinely working on. This IS
+    // in-flight work, just not in this process, so it must not read as a
+    // problem — the run is progressing normally.
+    case 'awaiting_provider_result':
+      return 'info';
     default:
       return 'info';
   }
 }
 
-/** Human-readable label for an execution status. */
+/**
+ * Human-readable label for an execution status.
+ *
+ * The two provider-wait states are named explicitly rather than title-cased.
+ * "Awaiting Provider Result" describes our plumbing; "Waiting for Google"
+ * describes what is actually happening, which is what someone watching a run
+ * needs to know.
+ */
 export function executionStatusLabel(status: ExecutionStatus): string {
-  return titleCaseStatus(status);
+  switch (status) {
+    case 'awaiting_provider_result':
+      return 'Waiting for Google';
+    case 'submission_uncertain':
+      return 'Reconciling';
+    default:
+      return titleCaseStatus(status);
+  }
 }
 
 /**

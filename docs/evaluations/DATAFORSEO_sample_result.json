@@ -1,0 +1,1236 @@
+{
+  "id": "09180435-2172-0139-0000-9ac68034561f",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "1.8212 sec.",
+  "cost": 0.002,
+  "result_count": 1,
+  "path": ["v3", "serp", "google", "organic", "live", "advanced"],
+  "data": {
+    "api": "serp",
+    "function": "live",
+    "se": "google",
+    "se_type": "organic",
+    "keyword": "affordable plus size clothing",
+    "location_code": 2036,
+    "language_code": "en",
+    "device": "desktop",
+    "os": "windows",
+    "depth": 10,
+    "load_async_ai_overview": true
+  },
+  "result": [
+    {
+      "keyword": "affordable plus size clothing",
+      "type": "organic",
+      "se_domain": "google.com",
+      "location_code": 2036,
+      "language_code": "en",
+      "check_url": "https://www.google.com/search?q=affordable%20plus%20size%20clothing&hl=en&gl=AU&ie=UTF-8&uule=w+CAIQIFISCd_Fh2cH_SsrEVITW5WhZ4JT",
+      "datetime": "2026-09-18 04:35:52 +00:00",
+      "spell": null,
+      "refinement_chips": {
+        "type": "refinement_chips",
+        "xpath": "/html[1]/body[1]/div[3]/div[1]/div[9]/div[1]/div[2]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]",
+        "items": [
+          {
+            "type": "refinement_chips_element",
+            "title": "Online",
+            "url": "https://www.google.com/search?q=online+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYEiodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyCggSEgZPbmxpbmVgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAF6BQgsEJgB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Women's",
+            "url": "https://www.google.com/search?q=women's+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyFwgBEgdXb21lbidzOgoIgKM-EIKjPjAFWPOnIGAB&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAJ6BQgsEJkB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Nearby",
+            "url": "https://www.google.com/search?q=affordable+plus+size+clothing+nearby&hl=en&gl=AU&shoprs=CAEYAyodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyDAgDEgZOZWFyYnkYAljzpyBgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAN6BQgsEJoB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "On sale",
+            "url": "https://www.google.com/search?q=affordable+plus+size+clothing+sale&hl=en&gl=AU&shoprs=CAESBEoCCAEYBiodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyEwgGEgdPbiBzYWxlGAIiBEoCCAFY86cgYAE&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAR6BQgsEJsB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Buy",
+            "url": "https://www.google.com/search?q=buy+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYEiodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyBwgSEgNCdXlgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAV6BQgsEJwB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Store",
+            "url": "https://www.google.com/search?q=store+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYEiodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyCQgSEgVTdG9yZWAB&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAZ6BQgsEJ0B",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Dresses",
+            "url": "https://www.google.com/search?q=dresses+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYCSodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyCwgJEgdEcmVzc2VzYAE&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAd6BQgsEJ4B",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Shirts & Tops",
+            "url": "https://www.google.com/search?q=shirts+%26+tops+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYCSodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyEQgJEg1TaGlydHMgJiBUb3BzYAE&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAh6BQgsEJ8B",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Brand",
+            "url": "https://www.google.com/search?q=brand+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYEiodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyCQgSEgVCcmFuZGAB&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAl6BQgsEKAB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Trousers",
+            "url": "https://www.google.com/search?q=trousers+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYCSodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyDAgJEghUcm91c2Vyc2AB&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAp6BQgsEKEB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Cotton",
+            "url": "https://www.google.com/search?q=cotton+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyFggBEgZDb3R0b246Cgj2kmMQ_5JjMABY86cgYAE&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAt6BQgsEKIB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Reviews",
+            "url": "https://www.google.com/search?q=reviews+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYEiodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyCwgSEgdSZXZpZXdzYAE&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKAx6BQgsEKMB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Jeans",
+            "url": "https://www.google.com/search?q=jeans+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyFQgBEgVKZWFuczoKCPv9ORD-_TkwAljzpyBgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKA16BQgsEKQB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Long Sleeve",
+            "url": "https://www.google.com/search?q=long+sleeve+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyHQgBEgtMb25nIFNsZWV2ZToMCOHBnwEQ4sGfATAAWPOnIGAB&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKA56BQgsEKUB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Black",
+            "url": "https://www.google.com/search?q=black+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyFwgBEgVCbGFjazoMCNiM9QEQ5Yr1ATALWPOnIGAB&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKA96BQgsEKYB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Coats & Jackets",
+            "url": "https://www.google.com/search?q=coats+%26+jackets+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYCSodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyEwgJEg9Db2F0cyAmIEphY2tldHNgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBB6BQgsEKcB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Skirts",
+            "url": "https://www.google.com/search?q=skirts+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYCSodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyCggJEgZTa2lydHNgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBF6BQgsEKgB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "T-shirt",
+            "url": "https://www.google.com/search?q=t-shirt+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyFwgBEgdULXNoaXJ0OgoI9f44EPv-ODACWPOnIGAB&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBJ6BQgsEKkB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Linen",
+            "url": "https://www.google.com/search?q=linen+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyFQgBEgVMaW5lbjoKCPaSYxCQk2MwAFjzpyBgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBN6BQgsEKoB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Casual",
+            "url": "https://www.google.com/search?q=casual+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyFggBEgZDYXN1YWw6CgjY_zgQ2f84MAJY86cgYAE&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBR6BQgsEKsB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "White",
+            "url": "https://www.google.com/search?q=white+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyFwgBEgVXaGl0ZToMCNiM9QEQoYv1ATALWPOnIGAB&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBV6BQgsEKwB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Workwear",
+            "url": "https://www.google.com/search?q=workwear+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyGAgBEghXb3Jrd2VhcjoKCNj_OBDd_zgwAljzpyBgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBZ6BQgsEK0B",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Short Sleeve",
+            "url": "https://www.google.com/search?q=short+sleeve+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyHggBEgxTaG9ydCBTbGVldmU6DAjhwZ8BEOXBnwEwAFjzpyBgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBd6BQgsEK4B",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Cardigans",
+            "url": "https://www.google.com/search?q=cardigans+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYCSodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyDQgJEglDYXJkaWdhbnNgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBh6BQgsEK8B",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Outfit Sets",
+            "url": "https://www.google.com/search?q=outfit+sets+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYCSodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyDwgJEgtPdXRmaXQgU2V0c2AB&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBl6BQgsELAB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Maxi",
+            "url": "https://www.google.com/search?q=maxi+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyFggBEgRNYXhpOgwIqIWgARCphaABMABY86cgYAE&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBp6BQgsELEB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "eBay",
+            "url": "https://www.google.com/search?q=ebay+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYAiodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyCAgCEgRlQmF5WPOnIGAB&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBt6BQgsELIB",
+            "domain": "www.google.com",
+            "options": null
+          },
+          {
+            "type": "refinement_chips_element",
+            "title": "Shirt",
+            "url": "https://www.google.com/search?q=shirt+affordable+plus+size+clothing&hl=en&gl=AU&shoprs=CAEYASodYWZmb3JkYWJsZSBwbHVzIHNpemUgY2xvdGhpbmcyFQgBEgVTaGlydDoKCPX-OBD4_jgwAljzpyBgAQ&sa=X&ved=2ahUKEwiX9Jf7pveWAxUkdqQEHbbbOVoQip4GKBx6BQgsELMB",
+            "domain": "www.google.com",
+            "options": null
+          }
+        ]
+      },
+      "item_types": [
+        "ai_overview",
+        "organic",
+        "people_also_ask",
+        "popular_products",
+        "local_pack",
+        "related_searches",
+        "google_reviews"
+      ],
+      "se_results_count": 195,
+      "pages_count": 1,
+      "items_count": 16,
+      "items": [
+        {
+          "type": "organic",
+          "rank_group": 1,
+          "rank_absolute": 1,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/div[1]/div[1]/div[1]",
+          "domain": "www.citychic.com.au",
+          "title": "Women's Plus Size Clothing, Dresses, Lingerie, Jeans, Tops ...",
+          "url": "https://www.citychic.com.au/?srsltid=AU7gw4W3STvY3fv6GtBJpG2Rw5hy-_6nsbBPfhfpu6wSHR3ETZOLpvdz",
+          "cache_url": null,
+          "related_search_url": null,
+          "breadcrumb": "https://www.citychic.com.au",
+          "website_name": "City Chic",
+          "is_image": false,
+          "is_video": false,
+          "is_featured_snippet": false,
+          "is_malicious": false,
+          "is_web_story": false,
+          "checks": null,
+          "description": "Plus Size Clothing - Sizes 12+ DIVE. SEPARATES FROM $29* From special occasion dresses, to tailored suiting and everyday denim, we are cut for curves.",
+          "pre_snippet": null,
+          "extended_snippet": null,
+          "images": null,
+          "amp_version": false,
+          "rating": null,
+          "price": {
+            "current": 149.99,
+            "regular": null,
+            "max_value": null,
+            "currency": "AUD",
+            "is_price_range": false,
+            "displayed_price": "Free delivery over $149.99"
+          },
+          "highlighted": ["Plus Size Clothing - Sizes 12+ DIVE"],
+          "links": null,
+          "faq": null,
+          "extended_people_also_search": null,
+          "about_this_result": null,
+          "related_result": null,
+          "timestamp": null,
+          "rectangle": null
+        },
+        {
+          "type": "organic",
+          "rank_group": 2,
+          "rank_absolute": 2,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]",
+          "domain": "proudpoppyclothing.com.au",
+          "title": "Proud Poppy Clothing: Sizes 6 to 30 | Women's Clothing ...",
+          "url": "https://proudpoppyclothing.com.au/?srsltid=AU7gw4Uv7935wG45vih-lejDt7o4Jv3lsXZfpYNdloYefKY3Un3CHS7Y",
+          "cache_url": null,
+          "related_search_url": null,
+          "breadcrumb": "https://proudpoppyclothing.com.au",
+          "website_name": "Proud Poppy Clothing",
+          "is_image": false,
+          "is_video": false,
+          "is_featured_snippet": false,
+          "is_malicious": false,
+          "is_web_story": false,
+          "checks": null,
+          "description": "Proud Poppy are passionate about providing affordable, on trend, inclusive fashion options to women from size 6 to 30.",
+          "pre_snippet": null,
+          "extended_snippet": null,
+          "images": null,
+          "amp_version": false,
+          "rating": null,
+          "price": {
+            "current": 150,
+            "regular": null,
+            "max_value": null,
+            "currency": "AUD",
+            "is_price_range": false,
+            "displayed_price": "Free delivery over $150"
+          },
+          "highlighted": ["affordable", "size"],
+          "links": null,
+          "faq": null,
+          "extended_people_also_search": null,
+          "about_this_result": null,
+          "related_result": null,
+          "timestamp": null,
+          "rectangle": null
+        },
+        {
+          "type": "ai_overview",
+          "rank_group": 1,
+          "rank_absolute": 3,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[4]/div[1]/div[1]",
+          "asynchronous_ai_overview": false,
+          "markdown": "You can find cheap plus-size clothing `online and in stores through budget-friendly retailers` that offer extended sizing and steep discounts.\n\n### Affordable Plus-Size Retailers\n\n- **Best&Less:** This brand offers budget basics like longline tees, tanks, and culotte trousers up to size 26, with most items priced between $12 and $25. Shop the collection at [Best&Less](https://www.bestandless.com.au/womens-plus-size-clothing/).[[1]](https://www.bestandless.com.au/womens-plus-size-clothing)\n- **Boohoo:** They carry over 1,000 curvy styles, including high-waisted jeans, basic tees, and wrap dresses designed for fuller figures. Browse the range at [Boohoo](https://au.boohoo.com/categories/womens-plus-size).[[1]](https://au.boohoo.com/categories/womens-plus-size)\n- **PrettyLittleThing:** Their online clearance features deep discounts on plus-size dresses, co-ords, and swimwear with many pieces marked down by 60% to 80%. Check out the [PrettyLittleThing Sale](https://www.prettylittlething.com.au/categories/womens-sale-plus-size).[[1]](https://www.prettylittlething.com.au/categories/womens-sale-plus-size)\n- **[Fashion Nova](https://www.fashionnova.com/products/alyssa-crew-neck-top?color=yellow&variant=39296376733820&currency=AUD):** Known for cheap plus-size bodysuits, denim, and trendy midi dresses starting around $11 to $14.[[1]](https://www.google.com/search?q=product&prds=pvt:hg,productid:12057639492774827414,catalogid:393438609275770010,gpcid:17165319661629830650,mid:576462561885936969&ibp=oshop)[[2]](https://www.google.com/search?q=product&prds=pvt:hg,productid:16670283232610783534,catalogid:14132129980469062681,gpcid:15683526728224410836,mid:576462884833045195&ibp=oshop)\n\n### Tips for Shopping on a Budget\n\n- **Filter by size and price:** Always use website filters to narrow choices directly to your size and sort from lowest to highest price.\n- **Check the return policy:** Cheap clothes can sometimes have inconsistent sizing, so make sure you can easily return or exchange items.\n\nTo help me recommend the best specific items or stores for you, let me know:\n\n- What **type of clothing** you are looking for (casual wear, workwear, dresses, activewear)\n- Your **preferred budget range** per item\n- What **size** you typically wear",
+          "items": [
+            {
+              "type": "ai_overview_element",
+              "position": "left",
+              "title": null,
+              "text": "You can find cheap plus-size clothing online and in stores through budget-friendly retailers that offer extended sizing and steep discounts.",
+              "markdown": "You can find cheap plus-size clothing `online and in stores through budget-friendly retailers` that offer extended sizing and steep discounts.",
+              "links": null,
+              "images": null,
+              "references": null
+            },
+            {
+              "type": "ai_overview_element",
+              "position": "left",
+              "title": "Affordable Plus-Size Retailers",
+              "text": "Best&Less: This brand offers budget basics like longline tees, tanks, and culotte trousers up to size 26, with most items priced between $12 and $25. Shop the collection at Best&Less. Boohoo: They carry over 1,000 curvy styles, including high-waisted jeans, basic tees, and wrap dresses designed for fuller figures. Browse the range at Boohoo. PrettyLittleThing: Their online clearance features deep discounts on plus-size dresses, co-ords, and swimwear with many pieces marked down by 60% to 80%. Check out the PrettyLittleThing Sale. Fashion Nova : Known for cheap plus-size bodysuits, denim, and trendy midi dresses starting around $11 to $14.",
+              "markdown": "- **Best&Less:** This brand offers budget basics like longline tees, tanks, and culotte trousers up to size 26, with most items priced between $12 and $25. Shop the collection at [Best&Less](https://www.bestandless.com.au/womens-plus-size-clothing/).[[1]](https://www.bestandless.com.au/womens-plus-size-clothing)\n- **Boohoo:** They carry over 1,000 curvy styles, including high-waisted jeans, basic tees, and wrap dresses designed for fuller figures. Browse the range at [Boohoo](https://au.boohoo.com/categories/womens-plus-size).[[1]](https://au.boohoo.com/categories/womens-plus-size)\n- **PrettyLittleThing:** Their online clearance features deep discounts on plus-size dresses, co-ords, and swimwear with many pieces marked down by 60% to 80%. Check out the [PrettyLittleThing Sale](https://www.prettylittlething.com.au/categories/womens-sale-plus-size).[[1]](https://www.prettylittlething.com.au/categories/womens-sale-plus-size)\n- **[Fashion Nova](https://www.fashionnova.com/products/alyssa-crew-neck-top?color=yellow&variant=39296376733820&currency=AUD):** Known for cheap plus-size bodysuits, denim, and trendy midi dresses starting around $11 to $14.[[1]](https://www.google.com/search?q=product&prds=pvt:hg,productid:12057639492774827414,catalogid:393438609275770010,gpcid:17165319661629830650,mid:576462561885936969&ibp=oshop)[[2]](https://www.google.com/search?q=product&prds=pvt:hg,productid:16670283232610783534,catalogid:14132129980469062681,gpcid:15683526728224410836,mid:576462884833045195&ibp=oshop)",
+              "links": [
+                {
+                  "type": "link_element",
+                  "title": "Best&Less",
+                  "description": null,
+                  "url": "https://www.bestandless.com.au/womens-plus-size-clothing/",
+                  "domain": "www.bestandless.com.au"
+                },
+                {
+                  "type": "link_element",
+                  "title": "Boohoo",
+                  "description": null,
+                  "url": "https://au.boohoo.com/categories/womens-plus-size",
+                  "domain": "au.boohoo.com"
+                },
+                {
+                  "type": "link_element",
+                  "title": "PrettyLittleThing Sale",
+                  "description": null,
+                  "url": "https://www.prettylittlething.com.au/categories/womens-sale-plus-size",
+                  "domain": "www.prettylittlething.com.au"
+                },
+                {
+                  "type": "link_element",
+                  "title": "Fashion Nova",
+                  "description": null,
+                  "url": "https://www.fashionnova.com/products/alyssa-crew-neck-top?color=yellow&variant=39296376733820&currency=AUD",
+                  "domain": "www.fashionnova.com"
+                }
+              ],
+              "images": null,
+              "references": [
+                {
+                  "type": "ai_overview_reference",
+                  "position": "left",
+                  "source": "Best and Less",
+                  "domain": "www.bestandless.com.au",
+                  "url": "https://www.bestandless.com.au/womens-plus-size-clothing",
+                  "title": "Plus Size Clothing | Best&Less™ Online",
+                  "text": "Friends Club $22.00 Womens Culotte Trouser UP TO SIZE 26 View more colours › Friends Club $22.00 Womens Culotte Trouser UP TO SIZE..."
+                },
+                {
+                  "type": "ai_overview_reference",
+                  "position": "left",
+                  "source": "Boohoo",
+                  "domain": "au.boohoo.com",
+                  "url": "https://au.boohoo.com/categories/womens-plus-size",
+                  "title": "Plus Size Clothing | Women's Curvy Clothing | boohoo AU",
+                  "text": "Boohoo has over 1,000 plus size products. Some of their plus size clothing includes: * Crepe Sleeveless Dress With Chiffon Skirt *"
+                },
+                {
+                  "type": "ai_overview_reference",
+                  "position": "left",
+                  "source": "PrettyLittleThing AU",
+                  "domain": "www.prettylittlething.com.au",
+                  "url": "https://www.prettylittlething.com.au/categories/womens-sale-plus-size",
+                  "title": "Plus Size Sale Clothing | PrettyLittleThing AUS",
+                  "text": "SALE Plus Size * Category. Dresses. Tops. Trousers. Swimwear. Skirts. Jackets & Coats. Beachwear. Jumpers & Cardigans. T-Shirts. S..."
+                },
+                {
+                  "type": "ai_overview_reference",
+                  "position": "left",
+                  "source": "Google",
+                  "domain": "www.google.com",
+                  "url": "https://www.google.com/search?q=product&prds=pvt:hg,productid:12057639492774827414,catalogid:393438609275770010,gpcid:17165319661629830650,mid:576462561885936969&ibp=oshop",
+                  "title": "Fashion Nova Short Sleeve Bodysuit in Butter Yellow",
+                  "text": "Available In Black, Brown, Burgundy, Butter Yellow, Charcoal, Chocolate, Dark. Red, Heather Grey, Light Blue, Light Pink, Magenta,"
+                },
+                {
+                  "type": "ai_overview_reference",
+                  "position": "left",
+                  "source": "Google",
+                  "domain": "www.google.com",
+                  "url": "https://www.google.com/search?q=product&prds=pvt:hg,productid:16670283232610783534,catalogid:14132129980469062681,gpcid:15683526728224410836,mid:576462884833045195&ibp=oshop",
+                  "title": "Fashion Nova Slit Sleeveless Scoop Neck Body Moves Midi Dress",
+                  "text": "Available In Black Floral. Printed Midi DressAdjustable Spaghetti StrapsStretchDisclaimer- Print Placement Will Vary90% Polyester ..."
+                }
+              ]
+            },
+            {
+              "type": "ai_overview_element",
+              "position": "left",
+              "title": "Tips for Shopping on a Budget",
+              "text": "Filter by size and price: Always use website filters to narrow choices directly to your size and sort from lowest to highest price. Check the return policy: Cheap clothes can sometimes have inconsistent sizing, so make sure you can easily return or exchange items.",
+              "markdown": "- **Filter by size and price:** Always use website filters to narrow choices directly to your size and sort from lowest to highest price.\n- **Check the return policy:** Cheap clothes can sometimes have inconsistent sizing, so make sure you can easily return or exchange items.",
+              "links": null,
+              "images": null,
+              "references": null
+            },
+            {
+              "type": "ai_overview_element",
+              "position": "left",
+              "title": null,
+              "text": "To help me recommend the best specific items or stores for you, let me know:What type of clothing you are looking for (casual wear, workwear, dresses, activewear)\nYour preferred budget range per item\nWhat size you typically wear",
+              "markdown": "To help me recommend the best specific items or stores for you, let me know:\n\n- What **type of clothing** you are looking for (casual wear, workwear, dresses, activewear)\n- Your **preferred budget range** per item\n- What **size** you typically wear",
+              "links": null,
+              "images": null,
+              "references": null
+            }
+          ],
+          "references": [
+            {
+              "type": "ai_overview_reference",
+              "position": "right",
+              "source": "Best and Less",
+              "domain": "www.bestandless.com.au",
+              "url": "https://www.bestandless.com.au/womens-plus-size-clothing",
+              "title": "Plus Size Clothing | Best&Less™ Online",
+              "text": "Friends Club $22.00 Womens Culotte Trouser UP TO SIZE 26 View more colours › Friends Club $22.00 Womens Culotte Trouser UP TO SIZE..."
+            },
+            {
+              "type": "ai_overview_reference",
+              "position": "right",
+              "source": "Boohoo",
+              "domain": "au.boohoo.com",
+              "url": "https://au.boohoo.com/categories/womens-plus-size",
+              "title": "Plus Size Clothing | Women's Curvy Clothing | boohoo AU",
+              "text": "Boohoo has over 1,000 plus size products. Some of their plus size clothing includes: * Crepe Sleeveless Dress With Chiffon Skirt *"
+            },
+            {
+              "type": "ai_overview_reference",
+              "position": "right",
+              "source": "PrettyLittleThing AU",
+              "domain": "www.prettylittlething.com.au",
+              "url": "https://www.prettylittlething.com.au/categories/womens-sale-plus-size",
+              "title": "Plus Size Sale Clothing | PrettyLittleThing AUS",
+              "text": "SALE Plus Size * Category. Dresses. Tops. Trousers. Swimwear. Skirts. Jackets & Coats. Beachwear. Jumpers & Cardigans. T-Shirts. S..."
+            },
+            {
+              "type": "ai_overview_reference",
+              "position": "right",
+              "source": "Google",
+              "domain": "www.google.com",
+              "url": "https://www.google.com/search?q=product&prds=pvt:hg,productid:12057639492774827414,catalogid:393438609275770010,gpcid:17165319661629830650,mid:576462561885936969&ibp=oshop",
+              "title": "Fashion Nova Short Sleeve Bodysuit in Butter Yellow",
+              "text": "Available In Black, Brown, Burgundy, Butter Yellow, Charcoal, Chocolate, Dark. Red, Heather Grey, Light Blue, Light Pink, Magenta,"
+            },
+            {
+              "type": "ai_overview_reference",
+              "position": "right",
+              "source": "Google",
+              "domain": "www.google.com",
+              "url": "https://www.google.com/search?q=product&prds=pvt:hg,productid:16670283232610783534,catalogid:14132129980469062681,gpcid:15683526728224410836,mid:576462884833045195&ibp=oshop",
+              "title": "Fashion Nova Slit Sleeveless Scoop Neck Body Moves Midi Dress",
+              "text": "Available In Black Floral. Printed Midi DressAdjustable Spaghetti StrapsStretchDisclaimer- Print Placement Will Vary90% Polyester ..."
+            }
+          ],
+          "rectangle": null
+        },
+        {
+          "type": "people_also_ask",
+          "rank_group": 1,
+          "rank_absolute": 4,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[6]/div[1]/div[1]/div[1]",
+          "items": [
+            {
+              "type": "people_also_ask_element",
+              "title": "Where can I buy inexpensive plus size clothing?",
+              "seed_question": null,
+              "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[6]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]",
+              "expanded_element": [
+                {
+                  "type": "people_also_ask_ai_overview_expanded_element",
+                  "items": null,
+                  "references": null,
+                  "asynchronous_ai_overview": true
+                }
+              ]
+            },
+            {
+              "type": "people_also_ask_element",
+              "title": "What is the 3-3-3 rule for clothes?",
+              "seed_question": null,
+              "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[6]/div[1]/div[1]/div[1]/div[1]/div[2]/div[2]",
+              "expanded_element": [
+                {
+                  "type": "people_also_ask_ai_overview_expanded_element",
+                  "items": null,
+                  "references": null,
+                  "asynchronous_ai_overview": true
+                }
+              ]
+            },
+            {
+              "type": "people_also_ask_element",
+              "title": "What clothes are most flattering for plus size?",
+              "seed_question": null,
+              "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[6]/div[1]/div[1]/div[1]/div[1]/div[2]/div[3]",
+              "expanded_element": [
+                {
+                  "type": "people_also_ask_ai_overview_expanded_element",
+                  "items": null,
+                  "references": null,
+                  "asynchronous_ai_overview": true
+                }
+              ]
+            },
+            {
+              "type": "people_also_ask_element",
+              "title": "What is the best brand for plus size?",
+              "seed_question": null,
+              "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[6]/div[1]/div[1]/div[1]/div[1]/div[2]/div[4]",
+              "expanded_element": [
+                {
+                  "type": "people_also_ask_ai_overview_expanded_element",
+                  "items": null,
+                  "references": null,
+                  "asynchronous_ai_overview": true
+                }
+              ]
+            }
+          ],
+          "rectangle": null
+        },
+        {
+          "type": "organic",
+          "rank_group": 3,
+          "rank_absolute": 5,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[8]/div[1]/div[1]/div[1]",
+          "domain": "www.suzannegrae.com.au",
+          "title": "Suzanne Grae - Women's Plus Size Clothing - Sizes 6-24",
+          "url": "https://www.suzannegrae.com.au/",
+          "cache_url": null,
+          "related_search_url": null,
+          "breadcrumb": "https://www.suzannegrae.com.au",
+          "website_name": "Suzanne Grae",
+          "is_image": false,
+          "is_video": false,
+          "is_featured_snippet": false,
+          "is_malicious": false,
+          "is_web_story": false,
+          "checks": null,
+          "description": "Suzanne Grae offers women&#39;s clothing and accessories for all sizes, plus size clothing online at Suzanne Grae. As low as $79.95 + More colours. As low as $ ...",
+          "pre_snippet": null,
+          "extended_snippet": null,
+          "images": null,
+          "amp_version": false,
+          "rating": null,
+          "price": {
+            "current": 80,
+            "regular": null,
+            "max_value": null,
+            "currency": "AUD",
+            "is_price_range": false,
+            "displayed_price": "Free delivery over $80"
+          },
+          "highlighted": ["women&#39;s clothing and accessories for all sizes"],
+          "links": null,
+          "faq": null,
+          "extended_people_also_search": null,
+          "about_this_result": null,
+          "related_result": null,
+          "timestamp": null,
+          "rectangle": null
+        },
+        {
+          "type": "organic",
+          "rank_group": 4,
+          "rank_absolute": 6,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[10]/div[1]/div[1]/div[1]",
+          "domain": "youandallfashion.com",
+          "title": "Women's Curvy & Plus Size Clothing | You & All | Online Store",
+          "url": "https://youandallfashion.com/?srsltid=AU7gw4UJLMsS5rUHMA4RPwK0yPw8N29owcUJUj7MT-PA0A3whbI0QTxa",
+          "cache_url": null,
+          "related_search_url": null,
+          "breadcrumb": "https://youandallfashion.com",
+          "website_name": "You & All",
+          "is_image": false,
+          "is_video": false,
+          "is_featured_snippet": false,
+          "is_malicious": false,
+          "is_web_story": false,
+          "checks": null,
+          "description": "You & All is your number one destination for plus size and curvy clothing and accessories. From plus size dresses, skirts, tops, denim, pants and more, ...",
+          "pre_snippet": null,
+          "extended_snippet": null,
+          "images": null,
+          "amp_version": false,
+          "rating": null,
+          "price": {
+            "current": 100,
+            "regular": null,
+            "max_value": null,
+            "currency": "AUD",
+            "is_price_range": false,
+            "displayed_price": "Free delivery over $100"
+          },
+          "highlighted": ["plus size and curvy clothing and accessories"],
+          "links": null,
+          "faq": null,
+          "extended_people_also_search": null,
+          "about_this_result": null,
+          "related_result": null,
+          "timestamp": null,
+          "rectangle": null
+        },
+        {
+          "type": "organic",
+          "rank_group": 5,
+          "rank_absolute": 7,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[12]/div[1]/div[1]/div[1]",
+          "domain": "au.boohoo.com",
+          "title": "Plus Size Clothing Sale | boohoo AU",
+          "url": "https://au.boohoo.com/categories/womens-sale-plus-size?srsltid=AU7gw4WHUWruYcNzUczDvPfll0HoXTSAhwKB9jIjbBf3wgOiz_ZAU2MK",
+          "cache_url": null,
+          "related_search_url": null,
+          "breadcrumb": "https://au.boohoo.com › Sale › Womens Sale",
+          "website_name": "Boohoo",
+          "is_image": false,
+          "is_video": false,
+          "is_featured_snippet": false,
+          "is_malicious": false,
+          "is_web_story": false,
+          "checks": null,
+          "description": "Discover the plus sale at boohoo . Shop cheap plus size clothing today. Dresses Tops Trousers Swimwear Jackets & Coats Skirts Jeans Shorts Beachwear Trouser",
+          "pre_snippet": null,
+          "extended_snippet": null,
+          "images": null,
+          "amp_version": false,
+          "rating": null,
+          "price": {
+            "current": 19.99,
+            "regular": null,
+            "max_value": null,
+            "currency": "AUD",
+            "is_price_range": false,
+            "displayed_price": "$19.99 delivery"
+          },
+          "highlighted": ["Shop cheap plus size clothing today"],
+          "links": null,
+          "faq": null,
+          "extended_people_also_search": null,
+          "about_this_result": null,
+          "related_result": null,
+          "timestamp": null,
+          "rectangle": null
+        },
+        {
+          "type": "popular_products",
+          "rank_group": 1,
+          "rank_absolute": 8,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[14]/div[1]",
+          "title": "Popular products",
+          "items": [
+            {
+              "type": "popular_products_element",
+              "title": "Proud Poppy Elsia Shacket in Burgundy Faux Suede - Size 20 - Size Inclusive Womens Clothing",
+              "url": null,
+              "domain": null,
+              "description": "Proud Poppy Clothing\nFree delivery on $150+",
+              "more_sellers": false,
+              "seller": "Proud Poppy Clothing",
+              "image_url": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcR1LNWgPa4STFehwFmITArhnbucaLyf8nVvvarAquQtYelO1ROjwOYHmkwstqc3_H5PDn7vPZysER8CO9dflO6PLAVHY0FLtKGbdwDtTwk",
+              "price": {
+                "current": 40,
+                "regular": 90,
+                "max_value": null,
+                "currency": "AUD",
+                "is_price_range": false,
+                "displayed_price": "$40.00 $90"
+              },
+              "rating": {
+                "rating_type": "Max5",
+                "value": 5,
+                "votes_count": 33,
+                "rating_max": 5
+              },
+              "product_identifiers": {
+                "product_id": null,
+                "data_docid": "14426668637658881260",
+                "gid": null
+              }
+            },
+            {
+              "type": "popular_products_element",
+              "title": "Boohoo Women's Plus Textured Tie Detail Maxi Dress",
+              "url": null,
+              "domain": null,
+              "description": "boohoo AUS",
+              "more_sellers": false,
+              "seller": "boohoo AUS",
+              "image_url": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcQysCvq4j-alkblhPFqiK5nloJs6LnS-VqiHN1NPrZBiOHAtVcokq3Xfnq-mZrD_VrVdc27xB1kGOapVZ8IrH_52J8J-Qs6tuCHNMip1XAKU-YYI0bFCn_kvw",
+              "price": {
+                "current": 35,
+                "regular": 70,
+                "max_value": null,
+                "currency": "AUD",
+                "is_price_range": false,
+                "displayed_price": "$35.00 $70"
+              },
+              "rating": {
+                "rating_type": "Max5",
+                "value": 3.7,
+                "votes_count": 7,
+                "rating_max": 5
+              },
+              "product_identifiers": {
+                "product_id": "1313672599173812946",
+                "data_docid": "7639429050519258127",
+                "gid": "15792330731587271461"
+              }
+            },
+            {
+              "type": "popular_products_element",
+              "title": "Proud Poppy Elsia Shacket in Choc Faux Suede - Size 20 - Size Inclusive Womens Clothing",
+              "url": null,
+              "domain": null,
+              "description": "Proud Poppy Clothing\nFree delivery on $150+",
+              "more_sellers": false,
+              "seller": "Proud Poppy Clothing",
+              "image_url": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcQ3KHlju-aEdYmezWpiO8H1jw9RNkz9GMlUtGc6tolGuRsf62azEVi0am-h6W9vYLnnJFZ_oLUWD0wzl9g-xYbwGoEt6N6YMW6RZdIqU2RW",
+              "price": {
+                "current": 40,
+                "regular": 90,
+                "max_value": null,
+                "currency": "AUD",
+                "is_price_range": false,
+                "displayed_price": "$40.00 $90"
+              },
+              "rating": {
+                "rating_type": "Max5",
+                "value": 5,
+                "votes_count": 33,
+                "rating_max": 5
+              },
+              "product_identifiers": {
+                "product_id": null,
+                "data_docid": "17805957581718304229",
+                "gid": null
+              }
+            },
+            {
+              "type": "popular_products_element",
+              "title": "Plus Textured Tie Detail Maxi Dress",
+              "url": null,
+              "domain": null,
+              "description": "PrettyLittleThing",
+              "more_sellers": false,
+              "seller": "PrettyLittleThing",
+              "image_url": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcQ0LuKUfFARihH4lAYGIJuIQEVwRugLSKCXFx-q8VSilzEPcQapMVhPJ16ISdSIG-8Ry5zkMsQG9cye_gDp-fmRyS0B5mX71ElOC0KU9eo-6PFRA8jbFhx7",
+              "price": {
+                "current": 35,
+                "regular": 70,
+                "max_value": null,
+                "currency": "AUD",
+                "is_price_range": false,
+                "displayed_price": "$35.00 $70"
+              },
+              "rating": null,
+              "product_identifiers": {
+                "product_id": null,
+                "data_docid": "8018886174600320441",
+                "gid": null
+              }
+            },
+            {
+              "type": "popular_products_element",
+              "title": "Plus Size Women's Stretch Denim 5-Pocket Straight-Leg Jeans by Woman Within in Olive Green (Size 44 T)",
+              "url": null,
+              "domain": null,
+              "description": "Woman Within",
+              "more_sellers": false,
+              "seller": "Woman Within",
+              "image_url": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcTfZL_VbFQtyaHSDzFj1Aa10sp_mat-jYLaTWVFrxulOMi4k2ZT2ZesQ8LqnmpUAW7wRkv6Miuntcv4D1Jho4bq6c-kBgVL9khyp7NDJwdUyNIB_SuyQyNp",
+              "price": {
+                "current": 18,
+                "regular": null,
+                "max_value": null,
+                "currency": "AUD",
+                "is_price_range": false,
+                "displayed_price": "$18.00"
+              },
+              "rating": {
+                "rating_type": "Max5",
+                "value": 4.1,
+                "votes_count": 9600,
+                "rating_max": 5
+              },
+              "product_identifiers": {
+                "product_id": null,
+                "data_docid": "411892921333619967",
+                "gid": null
+              }
+            },
+            {
+              "type": "popular_products_element",
+              "title": "Plus Woven Drape Blouse & Trouser Co-Ord",
+              "url": null,
+              "domain": null,
+              "description": "PrettyLittleThing",
+              "more_sellers": false,
+              "seller": "PrettyLittleThing",
+              "image_url": "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcSHkB30FRybf5zib2LHh8bMjNPgKZk57ZD0WHrr2uyRp_VGoBtTFlJDnKGmtpqDhOr6fgkS8sFU5BsreNIUHfpg7Pug1SLTcwwa4u4vFkH6tuKmJJ-XrlATdw",
+              "price": {
+                "current": 49,
+                "regular": 98,
+                "max_value": null,
+                "currency": "AUD",
+                "is_price_range": false,
+                "displayed_price": "$49.00 $98"
+              },
+              "rating": null,
+              "product_identifiers": {
+                "product_id": null,
+                "data_docid": "18042588272737110923",
+                "gid": null
+              }
+            },
+            {
+              "type": "popular_products_element",
+              "title": "Proud Poppy Evan Longline Sweatshirt in Loud Black Acid Wash by Kasey Rainbow - Size S - Size Inclusive Womens Clothing",
+              "url": null,
+              "domain": null,
+              "description": "Proud Poppy Clothing\nFree delivery on $150+",
+              "more_sellers": false,
+              "seller": "Proud Poppy Clothing",
+              "image_url": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcS56sSU-iBMREEhL-wB1I9BjM3ihZ6Tie8BuK4VA84ncTdCcl9AcJRRcTVPWpW8H7JkfFUPOCRL1KQiCOidEJcz4KKQotMUsLQlQR3fUuL0",
+              "price": {
+                "current": 40,
+                "regular": 100,
+                "max_value": null,
+                "currency": "AUD",
+                "is_price_range": false,
+                "displayed_price": "$40.00 $100"
+              },
+              "rating": {
+                "rating_type": "Max5",
+                "value": 4.7,
+                "votes_count": 23,
+                "rating_max": 5
+              },
+              "product_identifiers": {
+                "product_id": null,
+                "data_docid": "760763185749029861",
+                "gid": null
+              }
+            },
+            {
+              "type": "popular_products_element",
+              "title": "Plus Ruched Tie Front Detail Smock Top",
+              "url": null,
+              "domain": null,
+              "description": "PrettyLittleThing",
+              "more_sellers": false,
+              "seller": "PrettyLittleThing",
+              "image_url": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcQqb7wnSQ5BuB8xfpfDx7w6gx_aTkGJzVcbgp2fKcOCSxYKh4LPpLicg3Mz-5qb6F1TW9kegeTdKZbPaWt9ipq2VHTnk1gxqFs_nhOTnJP4GQ68OHKQZOG0",
+              "price": {
+                "current": 25,
+                "regular": null,
+                "max_value": null,
+                "currency": "AUD",
+                "is_price_range": false,
+                "displayed_price": "$25.00"
+              },
+              "rating": null,
+              "product_identifiers": {
+                "product_id": null,
+                "data_docid": "5718355981202339815",
+                "gid": null
+              }
+            },
+            {
+              "type": "popular_products_element",
+              "title": "Plus Size Women's Perfect Back-Elastic Gap-Free Straight-Leg Cotton Jeans by Woman Within in Deep Claret (Size 44 T)",
+              "url": null,
+              "domain": null,
+              "description": "Woman Within",
+              "more_sellers": false,
+              "seller": "Woman Within",
+              "image_url": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcRNpMGvjArr_y_b8m56SlbMu3-8fzDNmJrMG--hftjy2m-kaSQplZg774xVFrCE3SDP742lrpLMO7Xy_Lzy-pCdFRqQjeyjKLvaQaFTKNfm1MgYICXPfPRO",
+              "price": {
+                "current": 18,
+                "regular": null,
+                "max_value": null,
+                "currency": "AUD",
+                "is_price_range": false,
+                "displayed_price": "$18.00"
+              },
+              "rating": {
+                "rating_type": "Max5",
+                "value": 3.4,
+                "votes_count": 2700,
+                "rating_max": 5
+              },
+              "product_identifiers": {
+                "product_id": null,
+                "data_docid": "5781878542340424107",
+                "gid": null
+              }
+            },
+            {
+              "type": "popular_products_element",
+              "title": "Plus Burnout Ruffle Front Tie Blouse",
+              "url": null,
+              "domain": null,
+              "description": "PrettyLittleThing",
+              "more_sellers": false,
+              "seller": "PrettyLittleThing",
+              "image_url": "https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcQKmzPuJYpflgChxv8Jk4pC3sB2zDFYhwFW7aMpaEc7nZbdR3tBjFwqk3cVOJotyoBzkxCHSfZ-AvU3Zc87qZu7nyAIyiN8OEiSTA9Ai7g_hfE42TGNgkt9pg",
+              "price": {
+                "current": 36.5,
+                "regular": 73,
+                "max_value": null,
+                "currency": "AUD",
+                "is_price_range": false,
+                "displayed_price": "$36.50 $73"
+              },
+              "rating": null,
+              "product_identifiers": {
+                "product_id": null,
+                "data_docid": "12012844534744805054",
+                "gid": null
+              }
+            }
+          ],
+          "rectangle": null
+        },
+        {
+          "type": "organic",
+          "rank_group": 6,
+          "rank_absolute": 9,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[16]/div[1]/div[1]/div[1]",
+          "domain": "au.yoursclothing.com",
+          "title": "Yours Clothing Official Site: Women's Fashion & Plus Size ...",
+          "url": "https://au.yoursclothing.com/",
+          "cache_url": null,
+          "related_search_url": null,
+          "breadcrumb": "https://au.yoursclothing.com",
+          "website_name": "Yours Clothing",
+          "is_image": false,
+          "is_video": false,
+          "is_featured_snippet": false,
+          "is_malicious": false,
+          "is_web_story": false,
+          "checks": null,
+          "description": "We are Yours Clothing, the UK's leading plus size fashion retailer specialising in on-trend, quality, great value clothing for plus size women in sizes 10-40. Read more",
+          "pre_snippet": null,
+          "extended_snippet": null,
+          "images": null,
+          "amp_version": false,
+          "rating": null,
+          "price": null,
+          "highlighted": ["Clothing", "plus size", "clothing"],
+          "links": [
+            {
+              "type": "link_element",
+              "title": "Read more",
+              "description": null,
+              "url": "https://au.yoursclothing.com/#:~:text=We%20are%20Yours%20Clothing%2C%20the,size%20women%20in%20sizes%2010-40.",
+              "domain": "au.yoursclothing.com"
+            }
+          ],
+          "faq": null,
+          "extended_people_also_search": null,
+          "about_this_result": null,
+          "related_result": null,
+          "timestamp": null,
+          "rectangle": null
+        },
+        {
+          "type": "local_pack",
+          "rank_group": 1,
+          "rank_absolute": 10,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[18]/div[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]",
+          "title": "Curvaceous Plus Size Clothing",
+          "description": "Jamisontown NSW · (02) 4722 5756 \n\"Beautiful quality plus size clothing at affordable prices.\" \n",
+          "domain": "curvaceous.com.au",
+          "phone": "(02) 4722 5756",
+          "booking_url": null,
+          "url": "https://curvaceous.com.au/",
+          "is_paid": false,
+          "rating": {
+            "rating_type": "Max5",
+            "value": 4.7,
+            "votes_count": 148,
+            "rating_max": 5
+          },
+          "cid": "14185778635441425409",
+          "rectangle": null
+        },
+        {
+          "type": "local_pack",
+          "rank_group": 2,
+          "rank_absolute": 11,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[18]/div[1]/div[1]/div[1]/div[1]/div[3]/div[1]/div[3]/div[1]/div[1]",
+          "title": "Curvy Closet",
+          "description": "Warilla NSW · 0422 680 333 \nOpen · Closes 5:30 pm \n\"Huge range of items at awesome prices.\" \n",
+          "domain": "www.curvycloset.com.au",
+          "phone": "0422 680 333",
+          "booking_url": null,
+          "url": "http://www.curvycloset.com.au/",
+          "is_paid": false,
+          "rating": {
+            "rating_type": "Max5",
+            "value": 5,
+            "votes_count": 20,
+            "rating_max": 5
+          },
+          "cid": "9628916864171278857",
+          "rectangle": null
+        },
+        {
+          "type": "organic",
+          "rank_group": 7,
+          "rank_absolute": 12,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[20]/div[1]/div[1]/div[1]",
+          "domain": "takingshape.com",
+          "title": "Plus Size Clothing Australia: Curve Fashion | Sizes 10-30",
+          "url": "https://takingshape.com/AU/",
+          "cache_url": null,
+          "related_search_url": null,
+          "breadcrumb": "https://takingshape.com › ...",
+          "website_name": "Taking Shape Australia",
+          "is_image": false,
+          "is_video": false,
+          "is_featured_snippet": false,
+          "is_malicious": false,
+          "is_web_story": false,
+          "checks": null,
+          "description": "Shop plus size women's clothing from Taking Shape Australia. Browse curve fashion: plus size dresses, tops, pants, jeans & more to stay stylish this Winter.",
+          "pre_snippet": null,
+          "extended_snippet": null,
+          "images": null,
+          "amp_version": false,
+          "rating": null,
+          "price": null,
+          "highlighted": ["plus size women's clothing from Taking Shape Australia"],
+          "links": null,
+          "faq": null,
+          "extended_people_also_search": null,
+          "about_this_result": null,
+          "related_result": null,
+          "timestamp": null,
+          "rectangle": null
+        },
+        {
+          "type": "organic",
+          "rank_group": 8,
+          "rank_absolute": 13,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[22]/div[1]/div[1]/div[1]",
+          "domain": "www.reddit.com",
+          "title": "Fat women of Melbourne: where do you go to buy halfway ...",
+          "url": "https://www.reddit.com/r/melbourne/comments/ysosur/fat_women_of_melbourne_where_do_you_go_to_buy/",
+          "cache_url": null,
+          "related_search_url": null,
+          "breadcrumb": "110+ comments  ·  3 years ago",
+          "website_name": "Reddit · r/melbourne",
+          "is_image": false,
+          "is_video": false,
+          "is_featured_snippet": false,
+          "is_malicious": false,
+          "is_web_story": false,
+          "checks": null,
+          "description": "Obviously I’m trying to lose weight. But that shit takes time and for now I’m still fat. And I still need to wear clothes.\n\nCity chic is overpriced ...",
+          "pre_snippet": null,
+          "extended_snippet": null,
+          "images": null,
+          "amp_version": false,
+          "rating": null,
+          "price": null,
+          "highlighted": null,
+          "links": [
+            {
+              "type": "link_element",
+              "title": "114 answers",
+              "description": null,
+              "url": "https://www.reddit.com/r/melbourne/comments/ysosur/fat_women_of_melbourne_where_do_you_go_to_buy/iw0bu1k/",
+              "domain": "www.reddit.com"
+            }
+          ],
+          "faq": null,
+          "extended_people_also_search": null,
+          "about_this_result": null,
+          "related_result": null,
+          "timestamp": null,
+          "rectangle": null
+        },
+        {
+          "type": "organic",
+          "rank_group": 9,
+          "rank_absolute": 14,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[2]/div[2]/div[1]/div[1]/div[24]/div[1]/div[1]/div[1]",
+          "domain": "curvaceous.com.au",
+          "title": "Buy Plus Size clothing Online Penrith Generous Sizes tops ...",
+          "url": "https://curvaceous.com.au/?srsltid=AU7gw4XpW35mJnICwTWq1kuPHtH1FJSrypgfYBiCHdorLlC5PUgDIMgw",
+          "cache_url": null,
+          "related_search_url": null,
+          "breadcrumb": "https://curvaceous.com.au",
+          "website_name": "Curvaceous",
+          "is_image": false,
+          "is_video": false,
+          "is_featured_snippet": false,
+          "is_malicious": false,
+          "is_web_story": false,
+          "checks": null,
+          "description": "Curvaceous is an Australian online store specialising in comfortable plus size clothing for women sizes 18 to 32. Stay In The Loop - ... Read more",
+          "pre_snippet": null,
+          "extended_snippet": null,
+          "images": null,
+          "amp_version": false,
+          "rating": null,
+          "price": null,
+          "highlighted": ["plus size clothing"],
+          "links": [
+            {
+              "type": "link_element",
+              "title": "Read more",
+              "description": null,
+              "url": "https://curvaceous.com.au/?srsltid=AU7gw4XpW35mJnICwTWq1kuPHtH1FJSrypgfYBiCHdorLlC5PUgDIMgw#:~:text=We%20post%20Australia%20wide%20and,Sign%20Up%20Here.%20It's%20easy",
+              "domain": "curvaceous.com.au"
+            }
+          ],
+          "faq": null,
+          "extended_people_also_search": null,
+          "about_this_result": null,
+          "related_result": null,
+          "timestamp": null,
+          "rectangle": null
+        },
+        {
+          "type": "related_searches",
+          "rank_group": 1,
+          "rank_absolute": 15,
+          "page": 1,
+          "position": "left",
+          "xpath": "/html[1]/body[1]/div[3]/div[1]/div[13]/div[1]/div[3]/div[1]/div[3]/div[1]/div[1]/div[1]/div[1]/div[2]",
+          "items": [
+            "Affordable plus size clothing australia",
+            "Trendy plus size clothing Australia",
+            "Best affordable plus size clothing",
+            "Affordable plus size clothing online",
+            "Affordable plus size clothing online australia",
+            "Affordable plus size clothing stores",
+            "Best online plus size clothing",
+            "Affordable plus size clothing brands"
+          ],
+          "rectangle": null
+        },
+        {
+          "type": "google_reviews",
+          "rank_group": 1,
+          "rank_absolute": 16,
+          "page": 1,
+          "position": "left",
+          "xpath": "/#document",
+          "reviews_count": 0,
+          "rating": null,
+          "place_id": "ChIJOdSymVqPEmsRAczPa4IC3sQ",
+          "feature": "0x6b128f5a99b2d439:0xc4de02826bcfcc01",
+          "cid": "14185778635441425409",
+          "rectangle": null
+        }
+      ]
+    }
+  ]
+}

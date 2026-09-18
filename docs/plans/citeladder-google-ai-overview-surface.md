@@ -1,5 +1,18 @@
 # Google AI Overview — fourth measured visibility surface
 
+**Status: slices 1-4 shipped.** The surface is live and selectable. Slice 5
+(full evidence view, surface filters across Trends and Sources, labelled
+AIO-specific rates, and the three-engine copy sweep) is not started.
+
+Three things the live account corrected in this plan, now fixed in code:
+the reconciliation endpoint is `/v3/serp/id_list`, not the per-endpoint
+spelling below, which returns 404; `datetime_to` must be strictly in the
+past; and the observed Standard charge is $0.0012 ($0.0006 base plus the
+$0.0006 asynchronous surcharge). The `tag` round-trip IS confirmed, in both
+`data.tag` and `metadata.tag`, so the strict identity rule stands. The
+captured sample is committed at `docs/evaluations/DATAFORSEO_sample_result.json`,
+not the filename cited below.
+
 Owner-selected. [Visibility](../visibility-prompt.md), [Architecture](../architecture.md)
 and [Backend architecture](../backend-architecture.md) own shipped behavior. The
 originating material is an owner-authored integration specification, retained as

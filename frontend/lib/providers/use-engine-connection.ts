@@ -60,8 +60,41 @@ export function useEngineConnection({
 
   const route = model.route;
   const transport = route?.transport_provider ?? null;
+  // Two credential SHAPES, one state machine. Bearer transports fill
+  // `apiKey`; DataForSEO authenticates with an HTTP Basic pair and fills
+  // `apiLogin` + `apiPassword`. All three stay write-only and are never
+  // pre-filled — the stored secret is never on the wire.
+  const credentialShape = route?.credential_shape ?? 'key';
   const [apiKey, setApiKey] = useState('');
+  const [apiLogin, setApiLogin] = useState('');
+  const [apiPassword, setApiPassword] = useState('');
   const [testResult, setTestResult] = useState<ConnectionTestState>(null);
+
+  // Whether the user has entered a COMPLETE credential. A half-entered pair
+  // is not input: sending one half would rotate the stored credential into a
+  // state nobody typed.
+  const hasCredentialInput =
+    credentialShape === 'basic' ? Boolean(apiLogin.trim() && apiPassword) : Boolean(apiKey);
+
+  // ...and a half-entered pair is not "nothing" either. On an already
+  // configured connection the save button is enabled (you may be updating
+  // only the routes), so without this a half-typed pair would be quietly
+  // dropped and the save would report success — telling the user their
+  // credentials were updated when the field they typed into was ignored.
+  const hasPartialCredentialInput =
+    credentialShape === 'basic' && Boolean(apiLogin.trim()) !== Boolean(apiPassword);
+
+  const clearCredentialInput = () => {
+    setApiKey('');
+    setApiLogin('');
+    setApiPassword('');
+  };
+
+  /** The write-only credential fields for this shape, or nothing to rotate. */
+  const credentialPayload = () =>
+    credentialShape === 'basic'
+      ? { api_login: apiLogin.trim(), api_password: apiPassword }
+      : { api_key: apiKey };
 
   const connection = transport ? connectionForTransport(connections, transport) : undefined;
   const configured = isConfigured(connection);
@@ -89,15 +122,21 @@ export function useEngineConnection({
       if (!isConnectable(model) || !transport || !route) {
         throw new Error('No route available.');
       }
+      if (hasPartialCredentialInput) {
+        throw new Error('Enter both the API login and the API password.');
+      }
       const routes = mergeRoutePayload(connection, model.logical_engine);
+      const credential = hasCredentialInput ? credentialPayload() : {};
       const saved = connection
         ? await providersApi.updateConnection(
             connection.id,
-            { api_key: apiKey || undefined, routes },
-            { workspaceId },
+            { ...credential, routes },
+            {
+              workspaceId,
+            },
           )
         : await providersApi.createConnection(
-            { transport_provider: transport, api_key: apiKey, routes },
+            { transport_provider: transport, ...credentialPayload(), routes },
             { workspaceId },
           );
       // The key IS stored at this point, so a probe fault is reported as a
@@ -114,7 +153,7 @@ export function useEngineConnection({
       return { saved, verified };
     },
     onSuccess: async ({ verified }) => {
-      setApiKey('');
+      clearCredentialInput();
       await queryClient.invalidateQueries({ queryKey: queryKeys.providers.allConnections() });
       if (verified?.status === 'ok') onSaved?.();
     },
@@ -139,8 +178,15 @@ export function useEngineConnection({
     transport,
     connection,
     configured,
+    credentialShape,
+    hasPartialCredentialInput,
     apiKey,
     setApiKey,
+    apiLogin,
+    setApiLogin,
+    apiPassword,
+    setApiPassword,
+    hasCredentialInput,
     testResult,
     saveMutation,
     testMutation,

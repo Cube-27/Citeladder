@@ -15,9 +15,10 @@ from app.core.config.entitlements import CREDENTIAL_MODE_BYOK, CREDENTIAL_MODE_F
 from app.core.config.prompts import PROMPT_STATUS_ACTIVE
 from app.core.config.provider_catalog import (
     CREDENTIAL_SOURCE_BYOK,
-    LOGICAL_ENGINES,
+    SELECTABLE_ENGINES,
     is_endpoint_approved,
     is_route_approved,
+    is_search_surface,
     measurement_route,
 )
 from app.domain.audits.errors import AuditValidationError
@@ -155,7 +156,10 @@ def _normalize_engines(engines: list[str]) -> list[str]:
     seen: set[str] = set()
     unique_engines: list[str] = []
     for engine in normalized:
-        if engine not in LOGICAL_ENGINES:
+        # SELECTABLE, not merely known: an engine whose adapter has not
+        # shipped is a real member of the analysis vocabulary but must never
+        # be requestable, or a run would queue work nothing can execute.
+        if engine not in SELECTABLE_ENGINES:
             raise AuditValidationError(f"Unknown logical engine: {engine}")
         if engine not in seen:
             seen.add(engine)
@@ -237,6 +241,18 @@ def _resolve_funded_routes(engines: list[str]) -> dict[str, _ResolvedRoute]:
     """
     resolved: dict[str, _ResolvedRoute] = {}
     for engine in _normalize_engines(engines):
+        if is_search_surface(engine):
+            # Funded routing binds a PLATFORM connection in the system
+            # workspace at per-task credential resolution. No platform
+            # DataForSEO account is provisioned — the shipped credential model
+            # for this surface is BYOK — so allowing it here would admit a run
+            # that passes route resolution and then fails every task on
+            # `execution_credentials_unavailable`. Reject it while the error
+            # can still name the actual cause.
+            raise AuditValidationError(
+                f"{engine} runs on your own DataForSEO credentials and cannot "
+                "be launched in funded mode."
+            )
         try:
             catalog_route = measurement_route(engine)
         except ValueError as exc:

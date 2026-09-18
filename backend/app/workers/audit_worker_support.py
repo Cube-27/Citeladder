@@ -38,7 +38,7 @@ from app.core.config.provider_catalog import (
     ERROR_TIMEOUT,
     is_active_transport,
     is_endpoint_approved,
-    route_policy,
+    llm_reasoning_effort,
 )
 from app.models.audit import AuditTask, RawResponseArtifact
 from app.orchestration.provider_capacity import (
@@ -296,7 +296,12 @@ def build_request(
     logical_engine: str,
     policy: AuditExecutionPolicy,
 ) -> AnswerEngineRequest:
-    """Build an adapter request from the frozen measurement policy only."""
+    """Build an adapter request from the frozen measurement policy only.
+
+    ``llm_reasoning_effort`` rather than the raw policy field: this builds an
+    LLM request, so asking a search surface for one is a bug, and it should
+    say so here rather than send ``None`` as if it were a pin.
+    """
     return AnswerEngineRequest(
         prompt=prompt_text,
         system_instruction=system_instruction,
@@ -304,7 +309,7 @@ def build_request(
         timeout_seconds=policy.timeout_seconds,
         retrieval_enabled=policy.retrieval_enabled,
         max_output_tokens=policy.max_output_tokens,
-        reasoning_effort=route_policy(logical_engine).reasoning_effort,
+        reasoning_effort=llm_reasoning_effort(logical_engine),
     )
 
 

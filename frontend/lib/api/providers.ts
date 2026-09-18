@@ -39,9 +39,17 @@ export type ProviderAppRouteInput = {
   active?: boolean;
 };
 
+/**
+ * A connection write. The credential is supplied in exactly ONE shape: a
+ * bearer `api_key`, or an HTTP Basic `api_login` + `api_password` pair. The
+ * backend rejects the wrong shape for a transport, and rejects half a pair,
+ * so a mismatch fails at the edge rather than at the first paid task.
+ */
 type ProviderConnectionInput = {
   transport_provider: TransportProvider;
-  api_key: string;
+  api_key?: string;
+  api_login?: string;
+  api_password?: string;
   base_url?: string;
   label?: string;
   active?: boolean;

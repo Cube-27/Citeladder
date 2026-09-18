@@ -435,6 +435,24 @@ def upgrade() -> None:
         sa.Column("subindustry", sa.String(length=255), nullable=False),
         sa.Column("primary_market", sa.String(length=8), nullable=False),
         sa.Column("benchmark_mode", sa.String(length=32), nullable=False),
+        # WHERE this project's AI Overviews are observed from. A location code
+        # of 0 means unset, and unset is not a default: guessing a market
+        # would measure the wrong country and present it as the right one.
+        sa.Column(
+            "serp_location_code", sa.Integer(), nullable=False, server_default="0"
+        ),
+        sa.Column(
+            "serp_language_code",
+            sa.String(length=8),
+            nullable=False,
+            server_default="",
+        ),
+        sa.Column(
+            "serp_device",
+            sa.String(length=16),
+            nullable=False,
+            server_default="desktop",
+        ),
         sa.Column("default_repetitions", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
@@ -2852,6 +2870,27 @@ def upgrade() -> None:
         sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("attempt_count", sa.Integer(), nullable=False),
         sa.Column("max_attempts", sa.Integer(), nullable=False),
+        # Outstanding provider task (search surfaces only; empty on LLM rows).
+        # `provider_submission_ref` is committed BEFORE the POST, so a worker
+        # that died between submitting and persisting the provider's task id
+        # still leaves evidence that a paid submission was attempted.
+        sa.Column(
+            "provider_submission_ref",
+            sa.String(length=255),
+            nullable=False,
+            server_default="",
+        ),
+        sa.Column(
+            "provider_task_id", sa.String(length=64), nullable=False, server_default=""
+        ),
+        sa.Column(
+            "provider_task_submitted_at", sa.DateTime(timezone=True), nullable=True
+        ),
+        sa.Column("provider_connection_id", sa.UUID(), nullable=True),
+        sa.Column("provider_credential_revision", sa.UUID(), nullable=True),
+        sa.Column(
+            "provider_poll_count", sa.Integer(), nullable=False, server_default="0"
+        ),
         sa.Column("result_artifact_id", sa.UUID(), nullable=True),
         sa.Column("source_task_id", sa.UUID(), nullable=True),
         sa.Column("answer_text", sa.Text(), nullable=False),
@@ -2884,6 +2923,11 @@ def upgrade() -> None:
             ["source_task_id"],
             ["audit_tasks.id"],
             name="fk_audit_tasks_source_task_id",
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["provider_connection_id"],
+            ["provider_connections.id"],
             ondelete="SET NULL",
         ),
         sa.ForeignKeyConstraint(
@@ -6521,6 +6565,98 @@ def upgrade() -> None:
         "placement_checks",
         ("workspace_id", "project_id", "implementation_event_id", "source_page_id"),
     )
+    # --- Observed search surfaces (Google AI Overview) -------------------
+    # Keyed on `task_id`, not `analysis_id`: a failed task never reaches
+    # analysis, so hanging the outcome off the analysis row would make it
+    # unrecordable exactly when it matters most.
+    op.create_table(
+        "aio_observations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("outcome", sa.String(length=32), nullable=False),
+        sa.Column("error_code", sa.String(length=64), nullable=False, server_default=""),
+        sa.Column("provider_status_code", sa.Integer(), nullable=True),
+        # NULLABLE on purpose: `false` is an observed absence, `null` is "we
+        # never successfully looked". Collapsing the two would report our own
+        # failures as measured absence of the brand.
+        sa.Column("aio_present", sa.Boolean(), nullable=True),
+        sa.Column("aio_serp_position", sa.Integer(), nullable=True),
+        sa.Column("location_code", sa.Integer(), nullable=False),
+        sa.Column("language_code", sa.String(length=8), nullable=False),
+        sa.Column("device", sa.String(length=16), nullable=False),
+        sa.Column(
+            "provider_task_id", sa.String(length=64), nullable=False, server_default=""
+        ),
+        sa.Column(
+            "provider_submission_ref",
+            sa.String(length=255),
+            nullable=False,
+            server_default="",
+        ),
+        sa.Column("provider_connection_id", sa.UUID(), nullable=True),
+        sa.Column("element_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("reference_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("observed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("retrieved_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["provider_connection_id"],
+            ["provider_connections.id"],
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("task_id", name="uq_aio_observation_task"),
+    )
+    op.create_index(
+        "ix_aio_observations_audit_outcome",
+        "aio_observations",
+        ["audit_id", "outcome"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_aio_observations_outcome"),
+        "aio_observations",
+        ["outcome"],
+        unique=False,
+    )
+    _create_indexes("aio_observations", ("workspace_id", "audit_id"))
+    # Inline links ONLY, never references: deriving these from the citation
+    # list would make every citation-only entity look linked.
+    op.create_table(
+        "aio_entity_links",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("observation_id", sa.UUID(), nullable=False),
+        sa.Column("url", sa.Text(), nullable=False),
+        sa.Column("domain", sa.String(length=255), nullable=False, server_default=""),
+        sa.Column("title", sa.Text(), nullable=False, server_default=""),
+        sa.Column("element_index", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["observation_id"], ["aio_observations.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "observation_id", "url", name="uq_aio_entity_link_observation_url"
+        ),
+    )
+    op.create_index(
+        "ix_aio_entity_links_domain",
+        "aio_entity_links",
+        ["observation_id", "domain"],
+        unique=False,
+    )
+    _create_indexes("aio_entity_links", ("workspace_id", "observation_id"))
     # Added after both tables exist: a page points at its latest snapshot and
     # every snapshot points back at its page, so neither can carry the other's
     # constraint inline.
@@ -6540,6 +6676,8 @@ def downgrade() -> None:
     # installed, so replaying the generated reverse delta would recreate those
     # retired authorities. Drop the explicit final table set instead.
     final_tables = (
+        "aio_entity_links",
+        "aio_observations",
         "mcp_oauth_grants",
         "mcp_authorization_codes",
         "mcp_authorization_requests",

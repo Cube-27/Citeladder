@@ -8,8 +8,15 @@ const uuid = () => z.uuid();
 // ---------------------------------------------------------------------------
 
 // The complete BYOK transport surface exposed by the provider catalog.
-export const transportProviderSchema = z.enum(['openai', 'anthropic', 'google']);
-export const logicalEngineSchema = z.enum(['chatgpt', 'gemini', 'claude']);
+export const transportProviderSchema = z.enum(['openai', 'anthropic', 'google', 'dataforseo']);
+// Every engine the analysis side understands. `google_ai_overview` is an
+// OBSERVED search surface rather than a conversational engine, and it is a
+// member here before it is selectable in a run — a connection may be
+// configured for a surface whose execution path has not shipped.
+export const logicalEngineSchema = z.enum(['chatgpt', 'gemini', 'claude', 'google_ai_overview']);
+// How a surface is reached, and therefore which request shape it has. An
+// `llm` route is asked a question; a `search_ai` route is observed.
+export const surfaceKindSchema = z.enum(['llm', 'search_ai']);
 
 // A configured route on a connection: which logical engine this transport
 // serves and the concrete transport model to call.
@@ -56,11 +63,15 @@ export const providerConnectionSchema = responseObject({
   updated_at: z.string(),
 });
 
+// `retrieval_enabled` and `reasoning_effort` describe how an LLM is ASKED and
+// are null on an observed search surface. Read `surface_kind` to know which
+// shape a route is, rather than inferring it from a missing field.
 const providerCatalogRouteSchema = responseObject({
   transport_provider: transportProviderSchema,
   transport_model: z.string(),
-  retrieval_enabled: z.boolean(),
-  reasoning_effort: z.string(),
+  retrieval_enabled: z.boolean().nullable().default(null),
+  reasoning_effort: z.string().nullable().default(null),
+  surface_kind: surfaceKindSchema,
 });
 
 const providerCatalogEngineSchema = responseObject({

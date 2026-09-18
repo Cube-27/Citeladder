@@ -595,9 +595,22 @@ def test_plan_period_grant_specs_reads_the_catalog_and_rejects_stale_revisions(
     assert plan_period_grant_specs("nope", billing_settings.catalog_version) is None
 
 
-def test_active_write_enums_stay_openai_anthropic_google_only() -> None:
-    assert ACTIVE_TRANSPORTS == frozenset({"openai", "anthropic", "google"})
-    assert set(MEASUREMENT_ROUTES) == {"chatgpt", "claude", "gemini"}
+def test_coming_soon_providers_never_reach_the_active_write_surface() -> None:
+    """A display-only provider must stay unroutable and unwritable.
+
+    The point is the SEPARATION between the public catalog and the executable
+    surface, not the size of either. Asserting a count instead is what makes
+    adding a real surface look like a regression.
+    """
+    assert ACTIVE_TRANSPORTS == frozenset(
+        {"openai", "anthropic", "google", "dataforseo"}
+    )
+    assert set(MEASUREMENT_ROUTES) == {
+        "chatgpt",
+        "claude",
+        "gemini",
+        "google_ai_overview",
+    }
     coming_soon = {"grok", "perplexity", "copilot"}
     assert not coming_soon & set(MEASUREMENT_ROUTES)
     assert not coming_soon & ACTIVE_TRANSPORTS

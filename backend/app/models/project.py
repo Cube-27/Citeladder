@@ -12,6 +12,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config.dataforseo import DEFAULT_DEVICE
 from app.core.config.projects import DEFAULT_BENCHMARK_MODE, DEFAULT_REPETITIONS
 from app.core.database import Base
 from app.models.constants import CASCADE_ALL_DELETE_ORPHAN
@@ -47,6 +48,28 @@ class Project(Base):
     language_code: Mapped[str] = mapped_column(String(16), default="")
     benchmark_mode: Mapped[str] = mapped_column(
         String(32), default=DEFAULT_BENCHMARK_MODE
+    )
+    # --- Observed-search context ------------------------------------------
+    # WHERE the project's AI Overviews are observed from. One location, one
+    # language, one device per project.
+    #
+    # This is project configuration rather than a per-schedule choice on
+    # purpose. The set of engines a run measures already lives on
+    # ``AuditSchedule.engines``, and adding a second, project-level engine
+    # roster would fork the source of truth. Search CONTEXT is a different
+    # question from surface SELECTION, so it lives in a different place.
+    #
+    # Zero means unset, and unset is not a default: an unmapped market must
+    # fail at configuration time rather than silently measure the United
+    # States for a project configured for somewhere else.
+    serp_location_code: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0"
+    )
+    serp_language_code: Mapped[str] = mapped_column(
+        String(8), default="", server_default=""
+    )
+    serp_device: Mapped[str] = mapped_column(
+        String(16), default=DEFAULT_DEVICE, server_default=DEFAULT_DEVICE
     )
     default_repetitions: Mapped[int] = mapped_column(
         Integer, default=DEFAULT_REPETITIONS

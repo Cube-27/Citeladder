@@ -166,6 +166,11 @@ export const executionStatusSchema = z.enum([
   'succeeded',
   'retry_wait',
   'capacity_wait',
+  // Observed search surfaces wait on a task running at the PROVIDER, not
+  // here. Both are common mid-run and, per the note above, a status missing
+  // from this list fails the whole executions list rather than one row.
+  'awaiting_provider_result',
+  'submission_uncertain',
   'failed',
   'cancelled',
 ]);
@@ -185,6 +190,11 @@ export const executionSchema = responseObject({
   // Execution surface: the provenance triple is SINGULAR (one execution = one
   // exact model), projected from the frozen task snapshots only.
   retrieval_enabled: z.boolean().nullable().default(null),
+  // The persisted search-surface outcome; '' for an LLM execution. Absence
+  // must be read from this and never inferred from an empty answer, because
+  // an AI Overview that was present but carried no extractable text looks
+  // identical from the outside.
+  search_surface_outcome: z.string().default(''),
   status: executionStatusSchema,
   attempt_count: z.number().int(),
   max_attempts: z.number().int(),

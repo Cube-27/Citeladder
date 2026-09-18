@@ -75,8 +75,18 @@ async def test_provision_creates_system_workspace_connections_and_routes(
         } == set(_references().values())
         assert all(connection.api_key_encrypted == "" for connection in connections)
 
+        # Only the transports an operator supplied a reference for are
+        # provisioned. A transport the deployment funds no account for has no
+        # platform connection and therefore no route — that is the whole point
+        # of driving this from the references rather than from the catalog.
         routes = (await session.execute(select(ProviderRoute))).scalars().all()
-        for engine, approved in MEASUREMENT_ROUTES.items():
+        provisioned = {
+            engine: approved
+            for engine, approved in MEASUREMENT_ROUTES.items()
+            if approved.transport_provider in _references()
+        }
+        assert {route.logical_engine for route in routes} == set(provisioned)
+        for engine, approved in provisioned.items():
             route = next(item for item in routes if item.logical_engine == engine)
             assert route.transport_provider == approved.transport_provider
             assert route.transport_model == approved.transport_model

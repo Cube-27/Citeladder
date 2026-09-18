@@ -64,7 +64,10 @@ function RouteDetails({ state }: Readonly<{ state: ConnectionState }>) {
       </div>
       <div className="text-muted grid gap-1 font-mono text-xs">
         <div className="flex items-center justify-between">
-          <span>Model</span>
+          {/* An observed surface has no model to pin: the answer is whatever
+              Google rendered. Labelling its SERP product "Model" would claim
+              a model identity that does not exist. */}
+          <span>{state.route.surface_kind === 'search_ai' ? 'Source' : 'Model'}</span>
           <span className="text-secondary">{state.route.model}</span>
         </div>
       </div>
@@ -73,7 +76,17 @@ function RouteDetails({ state }: Readonly<{ state: ConnectionState }>) {
 }
 
 function ConnectionControls({ state }: Readonly<{ state: ConnectionState }>) {
-  const { transport, configured, apiKey, saveMutation, testMutation, busy } = state;
+  const {
+    transport,
+    configured,
+    hasCredentialInput,
+    hasPartialCredentialInput,
+    saveMutation,
+    testMutation,
+    busy,
+  } = state;
+  const credentialNoun = state.credentialShape === 'basic' ? 'credentials' : 'key';
+  const saveLabel = configured ? `Update ${credentialNoun}` : `Save ${credentialNoun}`;
   return (
     <div className="grid gap-3 pt-1">
       <EngineConnectionFields state={state} />
@@ -82,9 +95,11 @@ function ConnectionControls({ state }: Readonly<{ state: ConnectionState }>) {
           type="button"
           size="sm"
           onClick={() => saveMutation.mutate()}
-          disabled={busy || !transport || (!apiKey && !configured)}
+          disabled={
+            busy || !transport || hasPartialCredentialInput || (!hasCredentialInput && !configured)
+          }
         >
-          {saveMutation.isPending ? 'Saving & testing…' : configured ? 'Update key' : 'Save key'}
+          {saveMutation.isPending ? 'Saving & testing…' : saveLabel}
         </Button>
         <Button
           type="button"

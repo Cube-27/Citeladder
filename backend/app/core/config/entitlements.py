@@ -67,6 +67,16 @@ KEY_PROVIDER_PERPLEXITY: Final = "provider.perplexity"
 KEY_PROVIDER_COPILOT: Final = "provider.copilot"
 KEY_EXPORTS: Final = "exports"
 KEY_MANUAL_RUNS_PER_DAY: Final = "manual_runs_per_day"
+# --- INTERIM, pending the real billing model ---------------------------
+# An extra allowance of SERP task units per period, on top of the shared run
+# budget. Semantics, so that two counters can never disagree: the shared
+# budget is the ONLY gate that can reject admission, and this is a CREDIT
+# CONSUMED FIRST, recorded through the same capacity accounting rather than a
+# parallel counter.
+#
+# This is explicitly temporary. It is one key, commented as interim, and
+# deletable in one place once real SERP billing is defined.
+KEY_SERP_TASKS_PER_PERIOD: Final = "serp_tasks_per_period"
 KEY_CONTENT_CREATION: Final = "content_creation"
 KEY_GROWTH_AGENT: Final = "growth_agent"
 KEY_PROJECT_DELETION: Final = "project_deletion"
@@ -277,6 +287,13 @@ def _build_registry() -> CapabilityRegistry:
                 capability_type=CapabilityType.COUNTER_RATE,
                 resolution_rule=ResolutionRule.SUM,
                 rolling_window_seconds=MANUAL_RUNS_ROLLING_WINDOW_SECONDS,
+            ),
+            # INTERIM (see the key's comment). A consumable counter, so
+            # concurrent grants add and a spent unit stays spent.
+            CapabilityDefinition(
+                key=KEY_SERP_TASKS_PER_PERIOD,
+                capability_type=CapabilityType.COUNTER_CONSUMABLE,
+                resolution_rule=ResolutionRule.SUM,
             ),
             CapabilityDefinition(
                 key=KEY_CONTENT_CREATION,

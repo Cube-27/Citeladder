@@ -17,7 +17,7 @@ const ROUTE_ID = '33333333-3333-4333-8333-333333333333';
 export const CHATGPT_MODEL = 'gpt-5.5';
 
 export const providerCatalogFixture = {
-  transports: ['openai', 'anthropic', 'google'],
+  transports: ['openai', 'anthropic', 'google', 'dataforseo'],
   engines: [
     {
       logical_engine: 'chatgpt',
@@ -27,6 +27,7 @@ export const providerCatalogFixture = {
           transport_model: 'gpt-5.5',
           retrieval_enabled: true,
           reasoning_effort: 'off',
+          surface_kind: 'llm',
         },
       ],
     },
@@ -38,6 +39,7 @@ export const providerCatalogFixture = {
           transport_model: 'gemini-3.6-flash',
           retrieval_enabled: true,
           reasoning_effort: 'low',
+          surface_kind: 'llm',
         },
       ],
     },
@@ -49,6 +51,22 @@ export const providerCatalogFixture = {
           transport_model: 'claude-sonnet-5',
           retrieval_enabled: true,
           reasoning_effort: 'low',
+          surface_kind: 'llm',
+        },
+      ],
+    },
+    {
+      // An OBSERVED surface. The LLM request fields are null because there is
+      // no request to pin them on, and the fixture keeps them null so a test
+      // cannot pass against a shape the backend never sends.
+      logical_engine: 'google_ai_overview',
+      routes: [
+        {
+          transport_provider: 'dataforseo',
+          transport_model: 'google-organic-serp',
+          retrieval_enabled: null,
+          reasoning_effort: null,
+          surface_kind: 'search_ai',
         },
       ],
     },

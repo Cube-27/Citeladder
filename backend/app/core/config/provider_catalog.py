@@ -17,6 +17,10 @@ from typing import Final
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.config.dataforseo import (
+    dataforseo_settings,
+    platform_credential_secret,
+)
 from app.core.config.entitlements import (
     CAPABILITY_REGISTRY,
     KEY_PROVIDER_COPILOT,
@@ -24,93 +28,99 @@ from app.core.config.entitlements import (
     KEY_PROVIDER_PERPLEXITY,
 )
 
-# --- Logical engines (what the user asked for) ----------------------------
-ENGINE_CHATGPT: Final = "chatgpt"
-ENGINE_GEMINI: Final = "gemini"
-ENGINE_CLAUDE: Final = "claude"
-LOGICAL_ENGINES: Final[tuple[str, str, str]] = (
-    ENGINE_CHATGPT,
-    ENGINE_CLAUDE,
-    ENGINE_GEMINI,
+# --- Route identity (re-exported) -----------------------------------------
+# The engine/transport/surface vocabularies and the frozen route catalog live
+# in ``provider_routes``. They are re-exported here — with redundant aliases,
+# which is what marks an import as a deliberate re-export rather than dead
+# weight — so every existing import keeps working and no caller needs to know
+# where the split falls.
+from app.core.config.provider_routes import (
+    ACTIVE_TRANSPORTS as ACTIVE_TRANSPORTS,
 )
-
-# --- Transport providers (how we physically reach the engine) -------------
-TRANSPORT_OPENAI: Final = "openai"
-TRANSPORT_ANTHROPIC: Final = "anthropic"
-TRANSPORT_GOOGLE: Final = "google"
-# Transports a NEW BYOK ``ProviderConnection`` may declare (active surface).
-ACTIVE_TRANSPORTS: Final[frozenset[str]] = frozenset(
-    {TRANSPORT_OPENAI, TRANSPORT_ANTHROPIC, TRANSPORT_GOOGLE}
+from app.core.config.provider_routes import (
+    ENGINE_CHATGPT as ENGINE_CHATGPT,
 )
-
-# --- Measurement routes ---------------------------------------------------
-
-REASONING_EFFORT_OFF: Final = "off"
-REASONING_EFFORT_MINIMAL: Final = "minimal"
-REASONING_EFFORT_LOW: Final = "low"
-REASONING_EFFORT_UNVERIFIED: Final = "unverified"
-
-# Whether the pinned transport model is known to match the corresponding
-# consumer product. Every active route remains unverified until evidence exists.
-REPRESENTATIVE_STATUS_UNVERIFIED: Final = "unverified"
-REPRESENTATIVE_STATUS_VERIFIED: Final = "verified"
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class MeasurementRoute:
-    logical_engine: str
-    transport_provider: str
-    transport_model: str
-    retrieval_enabled: bool
-    reasoning_effort: str
-    reasoning_pinnable: bool
-    representative_status: str
-
-
-# Exact model identity is frozen here. There is intentionally no provider
-# alias, default-model fallback, or single-route compatibility view.
-MEASUREMENT_ROUTES: Final[dict[str, MeasurementRoute]] = {
-    ENGINE_CHATGPT: MeasurementRoute(
-        logical_engine=ENGINE_CHATGPT,
-        transport_provider=TRANSPORT_OPENAI,
-        transport_model="gpt-5.5",
-        retrieval_enabled=True,
-        reasoning_effort=REASONING_EFFORT_OFF,
-        reasoning_pinnable=True,
-        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
-    ),
-    ENGINE_CLAUDE: MeasurementRoute(
-        logical_engine=ENGINE_CLAUDE,
-        transport_provider=TRANSPORT_ANTHROPIC,
-        transport_model="claude-sonnet-5",
-        retrieval_enabled=True,
-        reasoning_effort=REASONING_EFFORT_LOW,
-        reasoning_pinnable=True,
-        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
-    ),
-    ENGINE_GEMINI: MeasurementRoute(
-        logical_engine=ENGINE_GEMINI,
-        transport_provider=TRANSPORT_GOOGLE,
-        transport_model="gemini-3.6-flash",
-        retrieval_enabled=True,
-        reasoning_effort=REASONING_EFFORT_LOW,
-        reasoning_pinnable=True,
-        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
-    ),
-}
-
-
-def measurement_route(logical_engine: str) -> MeasurementRoute:
-    """Return one exact executable route; unknown identities fail closed."""
-    route = MEASUREMENT_ROUTES.get(logical_engine)
-    if route is None:
-        raise ValueError(f"no measurement route for {logical_engine!r}")
-    return route
-
-
-def measurement_routes_for_engine(logical_engine: str) -> tuple[MeasurementRoute, ...]:
-    route = MEASUREMENT_ROUTES.get(logical_engine)
-    return (route,) if route is not None else ()
+from app.core.config.provider_routes import (
+    ENGINE_CLAUDE as ENGINE_CLAUDE,
+)
+from app.core.config.provider_routes import (
+    ENGINE_GEMINI as ENGINE_GEMINI,
+)
+from app.core.config.provider_routes import (
+    ENGINE_GOOGLE_AI_OVERVIEW as ENGINE_GOOGLE_AI_OVERVIEW,
+)
+from app.core.config.provider_routes import (
+    LOGICAL_ENGINES as LOGICAL_ENGINES,
+)
+from app.core.config.provider_routes import (
+    MEASUREMENT_ROUTES as MEASUREMENT_ROUTES,
+)
+from app.core.config.provider_routes import (
+    REASONING_EFFORT_LOW as REASONING_EFFORT_LOW,
+)
+from app.core.config.provider_routes import (
+    REASONING_EFFORT_MINIMAL as REASONING_EFFORT_MINIMAL,
+)
+from app.core.config.provider_routes import (
+    REASONING_EFFORT_OFF as REASONING_EFFORT_OFF,
+)
+from app.core.config.provider_routes import (
+    REASONING_EFFORT_UNVERIFIED as REASONING_EFFORT_UNVERIFIED,
+)
+from app.core.config.provider_routes import (
+    REPRESENTATIVE_STATUS_UNVERIFIED as REPRESENTATIVE_STATUS_UNVERIFIED,
+)
+from app.core.config.provider_routes import (
+    REPRESENTATIVE_STATUS_VERIFIED as REPRESENTATIVE_STATUS_VERIFIED,
+)
+from app.core.config.provider_routes import (
+    SURFACE_KIND_LLM as SURFACE_KIND_LLM,
+)
+from app.core.config.provider_routes import (
+    SURFACE_KIND_SEARCH_AI as SURFACE_KIND_SEARCH_AI,
+)
+from app.core.config.provider_routes import (
+    SURFACE_KINDS as SURFACE_KINDS,
+)
+from app.core.config.provider_routes import (
+    TRANSPORT_ANTHROPIC as TRANSPORT_ANTHROPIC,
+)
+from app.core.config.provider_routes import (
+    TRANSPORT_DATAFORSEO as TRANSPORT_DATAFORSEO,
+)
+from app.core.config.provider_routes import (
+    TRANSPORT_GOOGLE as TRANSPORT_GOOGLE,
+)
+from app.core.config.provider_routes import (
+    TRANSPORT_OPENAI as TRANSPORT_OPENAI,
+)
+from app.core.config.provider_routes import (
+    MeasurementRoute as MeasurementRoute,
+)
+from app.core.config.provider_routes import (
+    SearchContext as SearchContext,
+)
+from app.core.config.provider_routes import (
+    is_search_surface as is_search_surface,
+)
+from app.core.config.provider_routes import (
+    llm_reasoning_effort as llm_reasoning_effort,
+)
+from app.core.config.provider_routes import (
+    llm_route as llm_route,
+)
+from app.core.config.provider_routes import (
+    measurement_route as measurement_route,
+)
+from app.core.config.provider_routes import (
+    measurement_routes_for_engine as measurement_routes_for_engine,
+)
+from app.core.config.provider_routes import (
+    search_context as search_context,
+)
+from app.core.config.provider_routes import (
+    surface_kind as surface_kind,
+)
 
 
 # --- Execution-time route policy -----------------------------------------
@@ -129,6 +139,10 @@ def measurement_routes_for_engine(logical_engine: str) -> tuple[MeasurementRoute
 class RoutePolicy:
     """Execution-time policy for one approved (engine, transport) route.
 
+    ``surface_kind`` mirrors the catalogue route. On a ``search_ai`` policy
+    every reasoning/retrieval field is ``None`` for the same reason it is on
+    the route: there is no request to pin them on.
+
     ``reasoning_effort`` is the value the adapter pins (or the ``unverified``
     sentinel when nothing may be pinned yet); ``reasoning_pinnable`` says
     whether the route accepts an explicit reasoning control at all;
@@ -138,10 +152,11 @@ class RoutePolicy:
     prompt caching.
     """
 
-    reasoning_effort: str
-    reasoning_pinnable: bool
+    reasoning_effort: str | None
+    reasoning_pinnable: bool | None
     representative_status: str
     batch_enabled: bool
+    surface_kind: str = SURFACE_KIND_LLM
 
 
 ROUTE_POLICIES: Final[dict[str, RoutePolicy]] = {
@@ -150,6 +165,7 @@ ROUTE_POLICIES: Final[dict[str, RoutePolicy]] = {
         reasoning_pinnable=route.reasoning_pinnable,
         representative_status=route.representative_status,
         batch_enabled=False,
+        surface_kind=route.surface_kind,
     )
     for key, route in MEASUREMENT_ROUTES.items()
 }
@@ -215,6 +231,15 @@ ROUTE_CAPACITY_POLICIES: Final[dict[tuple[str, str], RouteCapacityPolicy]] = {
         refill_tokens_per_second=None,
         max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
     ),
+    # Unset for the same reason as the LLM routes: no measured provider tier
+    # rate exists yet. Note that on a polled surface a "call start" paced here
+    # is a SUBMISSION or a POLL, not a whole execution — the two are separated
+    # by the queue, not by this bucket.
+    (ENGINE_GOOGLE_AI_OVERVIEW, TRANSPORT_DATAFORSEO): RouteCapacityPolicy(
+        capacity=None,
+        refill_tokens_per_second=None,
+        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+    ),
 }
 
 
@@ -237,9 +262,18 @@ def route_capacity_policy(
 
 
 def is_reasoning_pinned_off(logical_engine: str) -> bool:
-    """True only when the route pins reasoning explicitly OFF."""
+    """True only when the route pins reasoning explicitly OFF.
+
+    A search surface has no reasoning control at all, so it is False here —
+    "not pinned off" — rather than an error: callers are asking whether to
+    send a pin, and the answer for an observed surface is simply no.
+    """
     policy = route_policy(logical_engine)
-    return policy.reasoning_pinnable and policy.reasoning_effort == REASONING_EFFORT_OFF
+    if policy.surface_kind != SURFACE_KIND_LLM:
+        return False
+    return bool(policy.reasoning_pinnable) and (
+        policy.reasoning_effort == REASONING_EFFORT_OFF
+    )
 
 
 def is_route_approved(logical_engine: str, transport_provider: str) -> bool:
@@ -294,6 +328,10 @@ def configured_endpoint(transport_provider: str) -> str:
         TRANSPORT_OPENAI: provider_catalog_settings.openai_responses_url,
         TRANSPORT_ANTHROPIC: provider_catalog_settings.anthropic_messages_url,
         TRANSPORT_GOOGLE: provider_catalog_settings.google_interactions_url,
+        # One base URL, not one operation path: the search surface calls
+        # several paths (submit, poll, reconcile, probe) against the same
+        # approved destination.
+        TRANSPORT_DATAFORSEO: dataforseo_settings.base_url,
     }.get(transport_provider, "")
     return endpoint.strip().rstrip("/")
 
@@ -414,6 +452,27 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
         grant_key="provider.gemini",
         issuable=False,
     ),
+    # ACTIVATED. This flag is the single switch, and it was held closed
+    # deliberately while the surface was built: a half-wired engine a customer
+    # can select is worse than no engine.
+    #
+    # It flipped only once the complete path works end to end — connector,
+    # parser, submit/park/poll/finalize lifecycle, reconciliation, analysis
+    # through the unchanged scorer — AND the app can render the results
+    # legibly, which means a run showing "Waiting for Google" while a task is
+    # outstanding, and a measured absence reading as "no AI Overview was
+    # shown" rather than as a missing answer. An executable surface whose
+    # results cannot be understood in the app is worse than an unavailable
+    # one.
+    ProviderCatalogEntry(
+        key=ENGINE_GOOGLE_AI_OVERVIEW,
+        label="Google AI Overview",
+        availability=AVAILABILITY_AVAILABLE,
+        unavailable_reason=None,
+        adapter_shipped=True,
+        grant_key="provider.google_ai_overview",
+        issuable=False,
+    ),
     # Coming soon: no adapter ships, no route exists, and no plan bundle may
     # issue a runnable grant for them. Copilot is additionally NON-ISSUABLE in
     # the entitlement registry — nothing may ever write it.
@@ -445,6 +504,31 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
         issuable=False,
     ),
 )
+
+
+# --- Selectable engines (what a RUN or SCHEDULE may request) --------------
+# ``LOGICAL_ENGINES`` is the READ vocabulary: every engine whose results the
+# analysis side understands, including one whose execution path is still being
+# built. Selection is narrower — an engine may only be requested once its
+# adapter actually ships.
+#
+# Keeping these separate is what lets the surface land across several slices
+# without a half-wired engine ever appearing in a run or schedule form. The
+# public catalog's ``adapter_shipped`` is the single source of that truth, so
+# activation is one flag in one row, not a second list to keep in step.
+SELECTABLE_ENGINES: Final[tuple[str, ...]] = tuple(
+    engine
+    for engine in LOGICAL_ENGINES
+    if any(
+        entry.key == engine and entry.adapter_shipped
+        for entry in PUBLIC_PROVIDER_CATALOG
+    )
+)
+
+
+def is_selectable_engine(logical_engine: str) -> bool:
+    """True when a run or schedule may request this engine."""
+    return logical_engine in SELECTABLE_ENGINES
 
 
 def public_provider_routes(provider_key: str) -> tuple[MeasurementRoute, ...]:
@@ -598,6 +682,15 @@ def resolve_platform_credential(transport_provider: str, reference: str) -> str:
         TRANSPORT_GOOGLE: (
             provider_catalog_settings.platform_google_credential_ref,
             provider_catalog_settings.platform_google_api_key,
+        ),
+        # Declared, not yet reached: the shipped DataForSEO credential model is
+        # BYOK. This branch exists so platform funding can be enabled later by
+        # provisioning a system-workspace connection, with no migration and no
+        # second resolution path. Until then no platform DataForSEO connection
+        # is provisioned, so nothing resolves through here.
+        TRANSPORT_DATAFORSEO: (
+            dataforseo_settings.platform_credential_ref,
+            platform_credential_secret(),
         ),
     }.get(transport_provider)
     if configured is None:

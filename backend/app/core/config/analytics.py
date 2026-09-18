@@ -28,6 +28,7 @@ from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
+    ENGINE_GOOGLE_AI_OVERVIEW,
 )
 from app.core.config.task_queue import ERROR_MAX_ATTEMPTS, PostgresQueueSpec
 
@@ -78,12 +79,24 @@ AI_SOURCES: Final[frozenset[str]] = frozenset(
     }
 )
 
-# ``ai_source`` -> audited ``logical_engine`` where one exists (invariant 10),
-# Sources outside the audited three deliberately have NO entry.
+# ``ai_source`` -> audited ``logical_engine`` where one exists (invariant 10).
+# A source outside the audited set deliberately has NO entry: referral traffic
+# CiteLadder cannot measure the origin of must not be attributed to a surface
+# it never observed.
+#
+# ``google_ai_overview`` appears on BOTH sides, which reads like a tautology
+# and is not one. The two vocabularies are different: on the left it is a GA4
+# AI-referral traffic-source label — someone arrived from an AI Overview — and
+# on the right it is a measured answer surface. The string is shared because
+# they now genuinely refer to the same thing, and that is exactly what makes
+# the entry correct rather than redundant. It was omitted before because the
+# surface was outside the audited set; once it is measured, the referral and
+# the measurement can finally be joined.
 AI_SOURCE_TO_LOGICAL_ENGINE: Final[dict[str, str]] = {
     AI_SOURCE_CHATGPT: ENGINE_CHATGPT,
     AI_SOURCE_GEMINI: ENGINE_GEMINI,
     AI_SOURCE_CLAUDE: ENGINE_CLAUDE,
+    AI_SOURCE_GOOGLE_AI_OVERVIEW: ENGINE_GOOGLE_AI_OVERVIEW,
 }
 
 # --- Classification signal + confidence vocabulary ----------------------------

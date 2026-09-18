@@ -37,6 +37,7 @@ from app.core.config.provider_catalog import (
     CREDENTIAL_SOURCE_PLATFORM,
     ERROR_PARSE,
     PlatformCredentialUnavailableError,
+    is_search_surface,
     resolve_platform_credential,
 )
 from app.core.config.task_queue import TASK_STATUS_LEASED, TASK_STATUS_RUNNING
@@ -135,6 +136,13 @@ class AuditExecutionMixin:
         context = await self._load_execution_context(task_id, audit_id)
         if context is None:
             return False
+        if is_search_surface(context.logical_engine):
+            # A different execution SHAPE, not a different provider. An
+            # observed surface is submitted and collected across several
+            # claims of this same row, so it cannot run the single-call
+            # attempt below; the branch is here, at the top, rather than
+            # threaded through helpers that all assume one call.
+            return await self._run_search_surface(task_id, audit_id)
         rejection = _terminal_rejection(context)
         if rejection is not None:
             await self._fail_terminal(
