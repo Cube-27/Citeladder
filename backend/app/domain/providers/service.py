@@ -25,6 +25,7 @@ from app.connectors.app_model_transport import (
     AppModelJsonTransport,
     CurlAppModelJsonTransport,
 )
+from app.connectors.search_surfaces.dataforseo import probe_credential
 from app.core.config.provider_catalog import (
     CREDENTIAL_SOURCE_BYOK,
     ERROR_PARSE,
@@ -41,6 +42,8 @@ from app.core.config.provider_catalog import (
     is_active_transport,
     is_endpoint_approved,
     is_route_approved,
+    is_search_surface,
+    llm_reasoning_effort,
     measurement_route,
     provider_catalog_settings,
     public_provider_routes,
@@ -58,6 +61,7 @@ from app.domain.providers.connection_updates import (
     build_app_routes,
     ensure_app_features_available,
     replace_app_routes,
+    rotated_secret,
 )
 from app.domain.providers.credentials import connection_paused
 from app.domain.providers.schemas import (
@@ -245,7 +249,7 @@ async def create_connection(
         label=payload.label,
         transport_provider=payload.transport_provider,
         base_url=payload.base_url,
-        api_key_encrypted=encrypt_secret(payload.api_key.strip()),
+        api_key_encrypted=encrypt_secret(payload.secret_material()),
         active=payload.active,
         routes=routes,
         app_routes=build_app_routes(
@@ -271,7 +275,7 @@ def _apply_endpoint_update(
     new_destination = payload.base_url or configured_endpoint(
         connection.transport_provider
     )
-    has_fresh_key = bool(payload.api_key and payload.api_key.strip())
+    has_fresh_key = rotated_secret(connection, payload) is not None
     if new_destination != old_destination and (
         not has_fresh_key or not payload.confirm_destination_change
     ):
@@ -300,7 +304,7 @@ async def _apply_connection_update(
                 session,
                 connection=connection,
                 items=payload.app_routes,
-                fresh_key=bool(payload.api_key and payload.api_key.strip()),
+                fresh_key=rotated_secret(connection, payload) is not None,
                 confirmed=payload.confirm_destination_change,
             )
         except InvalidAppModelDestinationError as exc:
@@ -360,6 +364,77 @@ async def delete_connection(
         ) from exc
 
 
+async def _run_search_surface_test(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    connection: ProviderConnection,
+    logical_engine: str,
+    model: str,
+) -> ProviderConnectionTestResponse:
+    """Probe an observed search surface instead of asking a question.
+
+    A search surface has no prompt to send, so the LLM probe's whole shape —
+    a neutral prompt, a tiny output cap, retrieval disabled — has nothing to
+    act on. The equivalent liveness check is an authenticated call to an
+    endpoint that creates NO billable task, and it returns connection state
+    only: never balance, quota or any other account detail.
+
+    Everything after the call is identical to the LLM path on purpose, so one
+    test history and one ``last_test_status`` vocabulary cover both surfaces.
+    """
+    status = TEST_STATUS_OK
+    error_code = ""
+    detail = "Connection succeeded"
+    latency_ms: int | None = None
+
+    started = time.monotonic()
+    try:
+        secret = decrypt_secret(connection.api_key_encrypted)
+        result = await probe_credential(secret=secret, base_url=connection.base_url)
+        latency_ms = result.latency_ms
+    except ProviderError as exc:
+        status = TEST_STATUS_FAILED
+        error_code = exc.error_code
+        detail = str(exc)
+        latency_ms = int((time.monotonic() - started) * 1000)
+    except Exception as exc:  # noqa: BLE001 - any transport fault is a failure
+        status = TEST_STATUS_FAILED
+        error_code = ERROR_PARSE
+        detail = f"Unexpected error: {type(exc).__name__}"
+        latency_ms = int((time.monotonic() - started) * 1000)
+
+    tested_at = datetime.now(UTC)
+    session.add(
+        ProviderConnectionTest(
+            workspace_id=workspace_id,
+            connection_id=connection.id,
+            status=status,
+            error_code=error_code,
+            detail=detail[:1024],
+            latency_ms=latency_ms,
+            logical_engine=logical_engine,
+            transport_provider=connection.transport_provider,
+            transport_model=model,
+        )
+    )
+    connection.last_tested_at = tested_at
+    connection.last_test_status = status
+    await session.commit()
+
+    return ProviderConnectionTestResponse(
+        connection_id=connection.id,
+        status=status,
+        error_code=error_code,
+        detail=detail,
+        latency_ms=latency_ms,
+        logical_engine=logical_engine,
+        transport_provider=connection.transport_provider,
+        transport_model=model,
+        tested_at=tested_at,
+    )
+
+
 async def run_connection_test(
     session: AsyncSession,
     *,
@@ -407,6 +482,15 @@ async def run_connection_test(
         model = measurement_route(logical_engine).transport_model
         break
 
+    if is_search_surface(logical_engine):
+        return await _run_search_surface_test(
+            session,
+            workspace_id=workspace_id,
+            connection=connection,
+            logical_engine=logical_engine,
+            model=model,
+        )
+
     status = TEST_STATUS_OK
     error_code = ""
     detail = "Connection succeeded"
@@ -436,7 +520,7 @@ async def run_connection_test(
                 # measurement policy, so it must not invent one.
                 retrieval_enabled=provider_catalog_settings.test_retrieval_enabled,
                 max_output_tokens=provider_catalog_settings.test_max_output_tokens,
-                reasoning_effort=measurement_route(logical_engine).reasoning_effort,
+                reasoning_effort=llm_reasoning_effort(logical_engine),
             )
         )
         latency_ms = response.latency_ms

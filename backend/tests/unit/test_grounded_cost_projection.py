@@ -13,6 +13,7 @@ from app.core.config.costs import (
     ROUTE_CHATGPT,
     ROUTE_CLAUDE,
     ROUTE_GEMINI,
+    ROUTE_GOOGLE_AI_OVERVIEW,
     RouteIdentity,
     route_pricing_for,
 )
@@ -33,13 +34,31 @@ def _artifact(usage: dict, route: RouteIdentity = ROUTE_CHATGPT) -> RawResponseA
     )
 
 
-def test_catalog_contains_only_three_exact_audit_routes() -> None:
+def test_catalog_pins_an_exact_model_for_every_approved_route() -> None:
     assert APPROVED_ROUTE_IDENTITIES == frozenset(
-        {ROUTE_CHATGPT, ROUTE_CLAUDE, ROUTE_GEMINI}
+        {ROUTE_CHATGPT, ROUTE_CLAUDE, ROUTE_GEMINI, ROUTE_GOOGLE_AI_OVERVIEW}
     )
     assert ROUTE_CHATGPT.transport_model == "gpt-5.5"
     assert ROUTE_CLAUDE.transport_model == "claude-sonnet-5"
     assert ROUTE_GEMINI.transport_model == "gemini-3.6-flash"
+    # Not a model identity: an observed surface reports whatever Google
+    # rendered, so this names the SERP product it was read from.
+    assert ROUTE_GOOGLE_AI_OVERVIEW.transport_model == "google-organic-serp"
+
+
+def test_search_surface_pricing_is_flat_fee_with_no_token_rates() -> None:
+    """Nothing about an observed surface is priced per token.
+
+    The token rates are null permanently rather than pending verification,
+    and the per-task fee stays null until a verified Standard-queue rate
+    exists — so funded admission fails closed instead of inventing one.
+    """
+    pricing = route_pricing_for(ROUTE_GOOGLE_AI_OVERVIEW, PRICING_CATALOG_VERSION)
+    assert pricing is not None
+    assert pricing.uncached_input_microusd_per_million is None
+    assert pricing.output_microusd_per_million is None
+    assert pricing.reasoning_microusd_per_million is None
+    assert pricing.search_fee_microusd is None
 
 
 def test_unknown_official_price_lines_remain_null() -> None:

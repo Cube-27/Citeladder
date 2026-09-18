@@ -11,6 +11,7 @@
  */
 import type {
   LogicalEngine,
+  SurfaceKind,
   ProviderCatalog,
   ProviderConnection,
   ProviderConnectionState,
@@ -19,13 +20,19 @@ import type {
 } from '@/lib/api/types';
 
 /** Logical engines rendered as cards, in display order. */
-export const ENGINE_ORDER: readonly LogicalEngine[] = ['chatgpt', 'gemini', 'claude'] as const;
+export const ENGINE_ORDER: readonly LogicalEngine[] = [
+  'chatgpt',
+  'gemini',
+  'claude',
+  'google_ai_overview',
+] as const;
 
 /** Human display names for each logical engine. */
 export const ENGINE_LABELS: Record<LogicalEngine, string> = {
   chatgpt: 'ChatGPT',
   gemini: 'Gemini',
   claude: 'Claude',
+  google_ai_overview: 'Google AI Overview',
 };
 
 /** Human display names for each transport provider. */
@@ -33,6 +40,9 @@ export const TRANSPORT_LABELS: Record<TransportProvider, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
   google: 'Google',
+  // Named only in helper text on the credential card. The product label for
+  // this surface is "Google AI Overview"; the provider is how we reach it.
+  dataforseo: 'DataForSEO',
 };
 
 /** Domains for brand logo resolution via Logo.dev / BrandLogo. */
@@ -43,6 +53,7 @@ export const ENGINE_DOMAINS: Record<string, string> = {
   grok: 'x.ai',
   perplexity: 'perplexity.ai',
   copilot: 'microsoft.com',
+  google_ai_overview: 'google.com',
 };
 
 /** Local brand logo assets for engines when available. */
@@ -63,13 +74,28 @@ export function transportLabel(key: string): string {
   return TRANSPORT_LABELS[key as TransportProvider] ?? key;
 }
 
-/** The single fixed direct route on an engine card. */
+/** The single fixed route on an engine card. */
 type EngineRouteOption = {
   transport_provider: TransportProvider;
   model: string;
   /** Toggle-free label, e.g. "Direct (OpenAI)". */
   label: string;
+  /** `llm` routes are asked a question; `search_ai` routes are observed. */
+  surface_kind: SurfaceKind;
+  /**
+   * Which auth shape this route's credential takes. Kept on the route rather
+   * than derived at each input, so exactly one place decides it.
+   */
+  credential_shape: CredentialShape;
 };
+
+/** The two credential shapes a transport can authenticate with. */
+export type CredentialShape = 'key' | 'basic';
+
+/** The auth shape for a transport. Bearer key unless stated otherwise. */
+export function credentialShapeFor(transport: TransportProvider): CredentialShape {
+  return transport === 'dataforseo' ? 'basic' : 'key';
+}
 
 /** The full view-model for one engine card. */
 export type EngineCardModel = {
@@ -107,9 +133,17 @@ const PLANNED_ENGINES = [
   { key: 'copilot', label: 'Copilot' },
 ] as const;
 
-/** Display label for a direct transport route. */
-function directLabel(transport: TransportProvider): string {
-  return `Direct (${TRANSPORT_LABELS[transport]})`;
+/**
+ * Display label for a route.
+ *
+ * An observed surface is not reached "directly" in the sense the LLM cards
+ * mean — nothing is sent to Google. Saying so would misdescribe what the
+ * measurement is.
+ */
+function routeLabel(transport: TransportProvider, surfaceKind: SurfaceKind): string {
+  return surfaceKind === 'search_ai'
+    ? `Observed via ${TRANSPORT_LABELS[transport]}`
+    : `Direct (${TRANSPORT_LABELS[transport]})`;
 }
 
 /**
@@ -137,7 +171,9 @@ export function buildEngineCards(
       ? {
           transport_provider: approvedRoute.transport_provider,
           model: approvedRoute.transport_model,
-          label: directLabel(approvedRoute.transport_provider),
+          label: routeLabel(approvedRoute.transport_provider, approvedRoute.surface_kind),
+          surface_kind: approvedRoute.surface_kind,
+          credential_shape: credentialShapeFor(approvedRoute.transport_provider),
         }
       : null;
     const entry = byKey.get(engine) ?? byKey.get(`provider.${engine}`);

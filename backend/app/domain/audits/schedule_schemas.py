@@ -21,7 +21,7 @@ from app.core.config.projects import (
     MAX_REPETITIONS,
     MIN_REPETITIONS,
 )
-from app.core.config.provider_catalog import LOGICAL_ENGINES
+from app.core.config.provider_catalog import SELECTABLE_ENGINES
 from app.core.literals import lock_literal
 
 AuditScheduleCadence = Literal[
@@ -75,7 +75,7 @@ class AuditScheduleCreate(BaseModel):
     @classmethod
     def validate_engines(cls, value: list[str]) -> list[str]:
         if len(set(value)) != len(value) or any(
-            engine not in LOGICAL_ENGINES for engine in value
+            engine not in SELECTABLE_ENGINES for engine in value
         ):
             raise ValueError("engines must be unique supported logical engines")
         return value
@@ -132,7 +132,7 @@ class AuditScheduleUpdate(BaseModel):
         if value is None:
             return value
         if len(set(value)) != len(value) or any(
-            engine not in LOGICAL_ENGINES for engine in value
+            engine not in SELECTABLE_ENGINES for engine in value
         ):
             raise ValueError("engines must be unique supported logical engines")
         return value

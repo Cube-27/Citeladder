@@ -15,7 +15,7 @@ from app.core.config.entitlements import CREDENTIAL_MODE_BYOK, CREDENTIAL_MODE_F
 from app.core.config.prompts import PROMPT_STATUS_ACTIVE
 from app.core.config.provider_catalog import (
     CREDENTIAL_SOURCE_BYOK,
-    LOGICAL_ENGINES,
+    SELECTABLE_ENGINES,
     is_endpoint_approved,
     is_route_approved,
     measurement_route,
@@ -155,7 +155,10 @@ def _normalize_engines(engines: list[str]) -> list[str]:
     seen: set[str] = set()
     unique_engines: list[str] = []
     for engine in normalized:
-        if engine not in LOGICAL_ENGINES:
+        # SELECTABLE, not merely known: an engine whose adapter has not
+        # shipped is a real member of the analysis vocabulary but must never
+        # be requestable, or a run would queue work nothing can execute.
+        if engine not in SELECTABLE_ENGINES:
             raise AuditValidationError(f"Unknown logical engine: {engine}")
         if engine not in seen:
             seen.add(engine)

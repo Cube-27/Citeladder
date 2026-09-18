@@ -1,0 +1,257 @@
+"""The surface model: a measured surface that is observed, not asked.
+
+These tests pin the three things that make a fourth surface safe to add
+before its execution path exists: LLM request policy is null rather than
+defaulted, the engine is READABLE but not SELECTABLE, and the credential
+shape a transport authenticates with is enforced at the edge.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from app.core.config.dataforseo import (
+    DataForSeoCredentialError,
+    pack_credential,
+    unpack_credential,
+)
+from app.core.config.provider_catalog import (
+    ENGINE_CHATGPT,
+    ENGINE_GOOGLE_AI_OVERVIEW,
+    LOGICAL_ENGINES,
+    SELECTABLE_ENGINES,
+    SURFACE_KIND_LLM,
+    SURFACE_KIND_SEARCH_AI,
+    TRANSPORT_DATAFORSEO,
+    MeasurementRoute,
+    SearchContext,
+    is_reasoning_pinned_off,
+    is_route_approved,
+    is_search_surface,
+    is_selectable_engine,
+    llm_reasoning_effort,
+    llm_route,
+    measurement_route,
+    route_capacity_policy,
+    route_policy,
+    search_context,
+)
+from app.domain.providers.schemas import ProviderConnectionCreate
+
+
+class TestSurfaceModel:
+    def test_the_search_surface_publishes_no_llm_request_policy(self) -> None:
+        route = measurement_route(ENGINE_GOOGLE_AI_OVERVIEW)
+        assert route.surface_kind == SURFACE_KIND_SEARCH_AI
+        assert route.retrieval_enabled is None
+        assert route.reasoning_effort is None
+        assert route.reasoning_pinnable is None
+
+    def test_reading_an_llm_knob_off_a_search_surface_raises(self) -> None:
+        # A None flowing onward as a default is the failure this prevents:
+        # it would silently become "retrieval off" on a surface that has no
+        # such concept.
+        with pytest.raises(ValueError, match="search_ai surface"):
+            llm_route(ENGINE_GOOGLE_AI_OVERVIEW)
+        with pytest.raises(ValueError, match="search_ai surface"):
+            llm_reasoning_effort(ENGINE_GOOGLE_AI_OVERVIEW)
+
+    def test_an_llm_route_still_answers_the_llm_accessors(self) -> None:
+        assert llm_route(ENGINE_CHATGPT).surface_kind == SURFACE_KIND_LLM
+        assert llm_reasoning_effort(ENGINE_CHATGPT) == "off"
+        assert is_reasoning_pinned_off(ENGINE_CHATGPT) is True
+
+    def test_a_search_surface_is_not_reasoning_pinned_off(self) -> None:
+        # False, not an error: the caller is asking whether to SEND a pin,
+        # and for an observed surface the answer is simply no.
+        assert is_reasoning_pinned_off(ENGINE_GOOGLE_AI_OVERVIEW) is False
+
+    def test_the_search_surface_carries_a_frozen_search_context(self) -> None:
+        context = search_context(ENGINE_GOOGLE_AI_OVERVIEW)
+        assert context.location_code > 0
+        assert context.language_code
+        assert context.device
+
+    def test_asking_an_llm_route_for_a_search_context_raises(self) -> None:
+        with pytest.raises(ValueError, match="not a search surface"):
+            search_context(ENGINE_CHATGPT)
+
+    def test_is_search_surface_separates_the_two_kinds(self) -> None:
+        assert is_search_surface(ENGINE_GOOGLE_AI_OVERVIEW) is True
+        assert is_search_surface(ENGINE_CHATGPT) is False
+        assert is_search_surface("nonexistent") is False
+
+    def test_every_approved_route_declares_both_policies(self) -> None:
+        for engine in LOGICAL_ENGINES:
+            route = measurement_route(engine)
+            assert route_policy(engine).surface_kind == route.surface_kind
+            assert route_capacity_policy(engine, route.transport_provider) is not None
+
+    def test_the_search_surface_route_is_approved(self) -> None:
+        assert is_route_approved(ENGINE_GOOGLE_AI_OVERVIEW, TRANSPORT_DATAFORSEO)
+        assert not is_route_approved(ENGINE_CHATGPT, TRANSPORT_DATAFORSEO)
+
+
+class TestRouteConstruction:
+    """A route cannot be built in a shape that means two things at once."""
+
+    def test_a_search_route_may_not_pin_llm_fields(self) -> None:
+        with pytest.raises(ValueError, match="must leave LLM fields null"):
+            MeasurementRoute(
+                logical_engine="x",
+                transport_provider="y",
+                transport_model="z",
+                retrieval_enabled=True,
+                reasoning_effort=None,
+                reasoning_pinnable=None,
+                representative_status="verified",
+                surface_kind=SURFACE_KIND_SEARCH_AI,
+                search_context=SearchContext(
+                    location_code=1, language_code="en", device="desktop"
+                ),
+            )
+
+    def test_a_search_route_needs_a_search_context(self) -> None:
+        with pytest.raises(ValueError, match="needs a search context"):
+            MeasurementRoute(
+                logical_engine="x",
+                transport_provider="y",
+                transport_model="z",
+                retrieval_enabled=None,
+                reasoning_effort=None,
+                reasoning_pinnable=None,
+                representative_status="verified",
+                surface_kind=SURFACE_KIND_SEARCH_AI,
+            )
+
+    def test_an_llm_route_must_pin_every_llm_field(self) -> None:
+        with pytest.raises(ValueError, match="must pin every LLM field"):
+            MeasurementRoute(
+                logical_engine="x",
+                transport_provider="y",
+                transport_model="z",
+                retrieval_enabled=None,
+                reasoning_effort="off",
+                reasoning_pinnable=True,
+                representative_status="verified",
+            )
+
+    def test_an_llm_route_carries_no_search_context(self) -> None:
+        with pytest.raises(ValueError, match="carries no search context"):
+            MeasurementRoute(
+                logical_engine="x",
+                transport_provider="y",
+                transport_model="z",
+                retrieval_enabled=True,
+                reasoning_effort="off",
+                reasoning_pinnable=True,
+                representative_status="verified",
+                search_context=SearchContext(
+                    location_code=1, language_code="en", device="desktop"
+                ),
+            )
+
+
+class TestSelectability:
+    """Readable is not the same as runnable."""
+
+    def test_the_surface_is_known_to_analysis_but_not_selectable_yet(self) -> None:
+        assert ENGINE_GOOGLE_AI_OVERVIEW in LOGICAL_ENGINES
+        assert ENGINE_GOOGLE_AI_OVERVIEW not in SELECTABLE_ENGINES
+        assert is_selectable_engine(ENGINE_GOOGLE_AI_OVERVIEW) is False
+
+    def test_the_shipped_engines_stay_selectable(self) -> None:
+        for engine in ("chatgpt", "claude", "gemini"):
+            assert is_selectable_engine(engine) is True
+
+    def test_selectable_engines_are_a_subset_of_known_engines(self) -> None:
+        assert set(SELECTABLE_ENGINES) <= set(LOGICAL_ENGINES)
+
+    def test_a_run_may_not_request_the_unshipped_surface(self) -> None:
+        from app.domain.audits.errors import AuditValidationError
+        from app.domain.audits.resolution import _normalize_engines
+
+        with pytest.raises(AuditValidationError, match="Unknown logical engine"):
+            _normalize_engines([ENGINE_GOOGLE_AI_OVERVIEW])
+
+    def test_a_schedule_may_not_request_the_unshipped_surface(self) -> None:
+        from pydantic import ValidationError
+
+        from app.domain.audits.schedule_schemas import AuditScheduleCreate
+
+        with pytest.raises(ValidationError, match="supported logical engines"):
+            AuditScheduleCreate(
+                cadence="daily",
+                timezone="UTC",
+                engines=[ENGINE_GOOGLE_AI_OVERVIEW],
+            )
+
+
+class TestCredentialShape:
+    """One stored secret, two auth shapes, neither leaking into the other."""
+
+    def test_a_pair_round_trips_through_the_stored_shape(self) -> None:
+        packed = pack_credential(login="user@example.com", password="s3cret")
+        credential = unpack_credential(packed)
+        assert credential.login == "user@example.com"
+        assert credential.password == "s3cret"
+        assert credential.basic_auth() == ("user@example.com", "s3cret")
+
+    @pytest.mark.parametrize(
+        "login,password",
+        [("", "pw"), ("user", ""), ("   ", "pw")],
+    )
+    def test_half_a_credential_is_refused_at_pack_time(
+        self, login: str, password: str
+    ) -> None:
+        # Failing when the connection is SAVED beats failing on its first
+        # paid task with an opaque authentication error.
+        with pytest.raises(DataForSeoCredentialError):
+            pack_credential(login=login, password=password)
+
+    @pytest.mark.parametrize(
+        "secret",
+        ["not json", "[]", '{"login": "u"}', '{"login": "u", "password": 1}', "{}"],
+    )
+    def test_an_unreadable_stored_secret_raises_without_echoing_it(
+        self, secret: str
+    ) -> None:
+        with pytest.raises(DataForSeoCredentialError) as excinfo:
+            unpack_credential(secret)
+        assert secret not in str(excinfo.value)
+
+    def test_the_search_transport_accepts_a_pair(self) -> None:
+        payload = ProviderConnectionCreate(
+            transport_provider=TRANSPORT_DATAFORSEO,
+            api_login="user@example.com",
+            api_password="s3cret",
+        )
+        assert unpack_credential(payload.secret_material()).login == "user@example.com"
+
+    def test_the_search_transport_refuses_a_bearer_key(self) -> None:
+        with pytest.raises(ValueError, match="not a single key"):
+            ProviderConnectionCreate(
+                transport_provider=TRANSPORT_DATAFORSEO, api_key="sk-live"
+            )
+
+    def test_the_search_transport_refuses_half_a_pair(self) -> None:
+        with pytest.raises(ValueError, match="login and an API password"):
+            ProviderConnectionCreate(
+                transport_provider=TRANSPORT_DATAFORSEO, api_login="user"
+            )
+
+    def test_a_bearer_transport_refuses_a_pair(self) -> None:
+        with pytest.raises(ValueError, match="not a login and password"):
+            ProviderConnectionCreate(
+                transport_provider="openai", api_login="user", api_password="pw"
+            )
+
+    def test_a_bearer_transport_still_requires_its_key(self) -> None:
+        with pytest.raises(ValueError, match="api_key is required"):
+            ProviderConnectionCreate(transport_provider="openai")
+
+    def test_a_bearer_credential_is_stored_verbatim(self) -> None:
+        payload = ProviderConnectionCreate(
+            transport_provider="openai", api_key="  sk-live  "
+        )
+        assert payload.secret_material() == "sk-live"

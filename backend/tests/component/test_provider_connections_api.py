@@ -516,22 +516,50 @@ async def test_test_endpoint_reports_failure_and_redacts_logs(
 
 
 @pytest.mark.asyncio
-async def test_provider_catalog_lists_direct_routes_only(
+async def test_provider_catalog_gives_each_engine_one_transport(
     client: httpx.AsyncClient,
 ) -> None:
     resp = await client.get("/api/v1/provider-catalog")
     assert resp.status_code == 200
     body = resp.json()
-    # Active surface is exactly the three direct transports.
-    assert set(body["transports"]) == {"openai", "anthropic", "google"}
+    # The active write surface, engine by engine. The assertion that matters
+    # is ONE transport per engine, not how many engines there are — a count
+    # here would have to be edited every time a surface is added.
+    assert set(body["transports"]) == {"openai", "anthropic", "google", "dataforseo"}
     engines = {e["logical_engine"]: e for e in body["engines"]}
-    # chatgpt is served ONLY via direct openai now.
-    chatgpt_transports = {r["transport_provider"] for r in engines["chatgpt"]["routes"]}
-    assert chatgpt_transports == {"openai"}
-    gemini_transports = {r["transport_provider"] for r in engines["gemini"]["routes"]}
-    assert gemini_transports == {"google"}
-    claude_transports = {r["transport_provider"] for r in engines["claude"]["routes"]}
-    assert claude_transports == {"anthropic"}
+    expected = {
+        "chatgpt": "openai",
+        "gemini": "google",
+        "claude": "anthropic",
+        "google_ai_overview": "dataforseo",
+    }
+    for engine, transport in expected.items():
+        transports = {r["transport_provider"] for r in engines[engine]["routes"]}
+        assert transports == {transport}
+
+
+@pytest.mark.asyncio
+async def test_provider_catalog_marks_the_search_surface_and_nulls_llm_fields(
+    client: httpx.AsyncClient,
+) -> None:
+    """An observed surface publishes no reasoning or retrieval policy.
+
+    Null here is the contract, not an omission: forcing a default would
+    publish a measurement claim that was never made.
+    """
+    resp = await client.get("/api/v1/provider-catalog")
+    engines = {e["logical_engine"]: e for e in resp.json()["engines"]}
+
+    aio = engines["google_ai_overview"]["routes"][0]
+    assert aio["surface_kind"] == "search_ai"
+    assert aio["retrieval_enabled"] is None
+    assert aio["reasoning_effort"] is None
+
+    for engine in ("chatgpt", "gemini", "claude"):
+        route = engines[engine]["routes"][0]
+        assert route["surface_kind"] == "llm"
+        assert isinstance(route["retrieval_enabled"], bool)
+        assert route["reasoning_effort"]
 
 
 @pytest.mark.asyncio

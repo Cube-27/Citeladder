@@ -8,6 +8,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.dataforseo import pack_credential
+from app.core.config.provider_catalog import TRANSPORT_DATAFORSEO
 from app.core.security import encrypt_secret
 from app.models.provider import ProviderAppRoute, ProviderConnection
 from app.models.workspace import Workspace
@@ -58,13 +60,39 @@ def build_app_routes(
     ]
 
 
+def rotated_secret(connection: ProviderConnection, payload: Any) -> str | None:
+    """The new secret this update supplies, or None to keep the stored one.
+
+    One helper because "was a fresh credential supplied?" is asked in three
+    places — key rotation, endpoint change confirmation and app-route
+    revalidation — and the answer has to be the same in all three. It is not
+    the same question as "is ``api_key`` non-empty" once a transport
+    authenticates with a pair.
+
+    A DataForSEO rotation must carry BOTH halves. Half a rotation is refused
+    at the schema, so reaching here with one half is impossible; the check
+    below is the belt to that braces.
+    """
+    if connection.transport_provider == TRANSPORT_DATAFORSEO:
+        login = (getattr(payload, "api_login", None) or "").strip()
+        password = getattr(payload, "api_password", None) or ""
+        if not login and not password:
+            return None
+        return pack_credential(login=login, password=password)
+    api_key = getattr(payload, "api_key", None)
+    if api_key is not None and api_key.strip():
+        return api_key.strip()
+    return None
+
+
 def apply_scalar_updates(connection: ProviderConnection, payload: Any) -> None:
     if payload.label is not None:
         connection.label = payload.label
     if payload.active is not None:
         connection.active = payload.active
-    if payload.api_key is not None and payload.api_key.strip():
-        connection.api_key_encrypted = encrypt_secret(payload.api_key.strip())
+    secret = rotated_secret(connection, payload)
+    if secret is not None:
+        connection.api_key_encrypted = encrypt_secret(secret)
         connection.credential_revision = uuid.uuid4()
 
 

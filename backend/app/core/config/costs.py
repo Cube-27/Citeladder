@@ -28,6 +28,7 @@ from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
+    ENGINE_GOOGLE_AI_OVERVIEW,
     measurement_route,
 )
 
@@ -146,11 +147,13 @@ ESTIMATE_SEARCH_CALLS: Final[dict[str, int]] = {
 }
 ROUTE_CLAUDE: Final = _approved_route(ENGINE_CLAUDE)
 ROUTE_GEMINI: Final = _approved_route(ENGINE_GEMINI)
+ROUTE_GOOGLE_AI_OVERVIEW: Final = _approved_route(ENGINE_GOOGLE_AI_OVERVIEW)
 APPROVED_ROUTE_IDENTITIES: Final[frozenset[RouteIdentity]] = frozenset(
     {
         ROUTE_CHATGPT,
         ROUTE_CLAUDE,
         ROUTE_GEMINI,
+        ROUTE_GOOGLE_AI_OVERVIEW,
     }
 )
 
@@ -197,6 +200,20 @@ _ROUTE_PRICING_CATALOGS: Final[dict[str, dict[RouteIdentity, RoutePricing]]] = {
         ROUTE_CHATGPT: _unverified_pricing(PRICING_CATALOG_VERSION),
         ROUTE_CLAUDE: _pricing(3_000_000, 15_000_000, search_fee=10_000),
         ROUTE_GEMINI: _pricing(1_500_000, 7_500_000, search_fee=14_000),
+        # A FLAT-FEE route, not a metered one. Nothing about an observed
+        # search surface is priced per token, so every token rate is null
+        # permanently rather than pending verification, and the whole charge
+        # is one per-task fee carried in ``search_fee_microusd``.
+        #
+        # That fee is null for the usual reason: no verified Standard-queue
+        # rate exists yet. The committed sample's ``cost`` is LIVE pricing and
+        # is explicitly not evidence for the Standard queue, and the
+        # asynchronous-AI-Overview surcharge is a separate line. Funded
+        # admission therefore fails closed on this route exactly as it does on
+        # ChatGPT — which is the intended state, because the provider REPORTS
+        # the real charge on every submission and the projection reconciles
+        # against that rather than against an estimate.
+        ROUTE_GOOGLE_AI_OVERVIEW: _unverified_pricing(PRICING_CATALOG_VERSION),
     }
 }
 

@@ -60,8 +60,33 @@ export function useEngineConnection({
 
   const route = model.route;
   const transport = route?.transport_provider ?? null;
+  // Two credential SHAPES, one state machine. Bearer transports fill
+  // `apiKey`; DataForSEO authenticates with an HTTP Basic pair and fills
+  // `apiLogin` + `apiPassword`. All three stay write-only and are never
+  // pre-filled — the stored secret is never on the wire.
+  const credentialShape = route?.credential_shape ?? 'key';
   const [apiKey, setApiKey] = useState('');
+  const [apiLogin, setApiLogin] = useState('');
+  const [apiPassword, setApiPassword] = useState('');
   const [testResult, setTestResult] = useState<ConnectionTestState>(null);
+
+  // Whether the user has entered a complete credential. A half-entered pair
+  // is NOT input: sending one half would rotate the stored credential into a
+  // state nobody typed, so the save stays disabled until both are present.
+  const hasCredentialInput =
+    credentialShape === 'basic' ? Boolean(apiLogin.trim() && apiPassword) : Boolean(apiKey);
+
+  const clearCredentialInput = () => {
+    setApiKey('');
+    setApiLogin('');
+    setApiPassword('');
+  };
+
+  /** The write-only credential fields for this shape, or nothing to rotate. */
+  const credentialPayload = () =>
+    credentialShape === 'basic'
+      ? { api_login: apiLogin.trim(), api_password: apiPassword }
+      : { api_key: apiKey };
 
   const connection = transport ? connectionForTransport(connections, transport) : undefined;
   const configured = isConfigured(connection);
@@ -90,14 +115,17 @@ export function useEngineConnection({
         throw new Error('No route available.');
       }
       const routes = mergeRoutePayload(connection, model.logical_engine);
+      const credential = hasCredentialInput ? credentialPayload() : {};
       const saved = connection
         ? await providersApi.updateConnection(
             connection.id,
-            { api_key: apiKey || undefined, routes },
-            { workspaceId },
+            { ...credential, routes },
+            {
+              workspaceId,
+            },
           )
         : await providersApi.createConnection(
-            { transport_provider: transport, api_key: apiKey, routes },
+            { transport_provider: transport, ...credentialPayload(), routes },
             { workspaceId },
           );
       // The key IS stored at this point, so a probe fault is reported as a
@@ -114,7 +142,7 @@ export function useEngineConnection({
       return { saved, verified };
     },
     onSuccess: async ({ verified }) => {
-      setApiKey('');
+      clearCredentialInput();
       await queryClient.invalidateQueries({ queryKey: queryKeys.providers.allConnections() });
       if (verified?.status === 'ok') onSaved?.();
     },
@@ -139,8 +167,14 @@ export function useEngineConnection({
     transport,
     connection,
     configured,
+    credentialShape,
     apiKey,
     setApiKey,
+    apiLogin,
+    setApiLogin,
+    apiPassword,
+    setApiPassword,
+    hasCredentialInput,
     testResult,
     saveMutation,
     testMutation,

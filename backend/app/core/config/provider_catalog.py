@@ -17,6 +17,13 @@ from typing import Final
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.config.dataforseo import (
+    DEFAULT_DEVICE,
+    DEFAULT_LANGUAGE_CODE,
+    DEFAULT_LOCATION_CODE,
+    dataforseo_settings,
+    platform_credential_secret,
+)
 from app.core.config.entitlements import (
     CAPABILITY_REGISTRY,
     KEY_PROVIDER_COPILOT,
@@ -28,19 +35,43 @@ from app.core.config.entitlements import (
 ENGINE_CHATGPT: Final = "chatgpt"
 ENGINE_GEMINI: Final = "gemini"
 ENGINE_CLAUDE: Final = "claude"
-LOGICAL_ENGINES: Final[tuple[str, str, str]] = (
+# Google's AI Overview is a measured answer surface, not a conversational
+# engine: it is OBSERVED inside a search result page rather than asked. It
+# shares this vocabulary because it produces the same ``ResponseAnalysis``
+# the LLM engines do; ``surface_kind`` below carries the difference.
+ENGINE_GOOGLE_AI_OVERVIEW: Final = "google_ai_overview"
+# Deliberately ``tuple[str, ...]``: the arity is not part of the contract.
+# Nothing may assert "exactly three engines" off this annotation again.
+LOGICAL_ENGINES: Final[tuple[str, ...]] = (
     ENGINE_CHATGPT,
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
+    ENGINE_GOOGLE_AI_OVERVIEW,
 )
 
 # --- Transport providers (how we physically reach the engine) -------------
 TRANSPORT_OPENAI: Final = "openai"
 TRANSPORT_ANTHROPIC: Final = "anthropic"
 TRANSPORT_GOOGLE: Final = "google"
+TRANSPORT_DATAFORSEO: Final = "dataforseo"
 # Transports a NEW BYOK ``ProviderConnection`` may declare (active surface).
 ACTIVE_TRANSPORTS: Final[frozenset[str]] = frozenset(
-    {TRANSPORT_OPENAI, TRANSPORT_ANTHROPIC, TRANSPORT_GOOGLE}
+    {TRANSPORT_OPENAI, TRANSPORT_ANTHROPIC, TRANSPORT_GOOGLE, TRANSPORT_DATAFORSEO}
+)
+
+# --- Surface kind (HOW an engine is reached) ------------------------------
+# The third axis. ``logical_engine`` says which answer surface is measured and
+# ``transport_provider`` says whose API carries it; neither says whether the
+# surface is ASKED a question or OBSERVED. That distinction decides which
+# request contract is built, which adapter protocol is used, which execution
+# shape the worker runs, and which pricing shape applies.
+#
+# It is NOT a user-facing concept. The UI says "Google AI Overview"; the words
+# DataForSEO, Google Organic and SERP API never appear as a product label.
+SURFACE_KIND_LLM: Final = "llm"
+SURFACE_KIND_SEARCH_AI: Final = "search_ai"
+SURFACE_KINDS: Final[frozenset[str]] = frozenset(
+    {SURFACE_KIND_LLM, SURFACE_KIND_SEARCH_AI}
 )
 
 # --- Measurement routes ---------------------------------------------------
@@ -57,14 +88,67 @@ REPRESENTATIVE_STATUS_VERIFIED: Final = "verified"
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class SearchContext:
+    """What a search surface is observed FROM.
+
+    An AI Overview differs by where, in what language and on what device the
+    search was run, so the context is part of the measurement identity rather
+    than a request detail. It is frozen into the task at admission.
+    """
+
+    location_code: int
+    language_code: str
+    device: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class MeasurementRoute:
+    """One exact executable route.
+
+    ``surface_kind`` is the branch point. ``retrieval_enabled``,
+    ``reasoning_effort`` and ``reasoning_pinnable`` describe how an LLM is
+    ASKED and mean nothing for an observed search surface, so a ``search_ai``
+    route carries them as ``None`` rather than as force-fitted defaults —
+    a default here would be a measurement claim nobody made. ``search_context``
+    is the mirror image: set for ``search_ai``, ``None`` for ``llm``.
+    """
+
     logical_engine: str
     transport_provider: str
     transport_model: str
-    retrieval_enabled: bool
-    reasoning_effort: str
-    reasoning_pinnable: bool
+    retrieval_enabled: bool | None
+    reasoning_effort: str | None
+    reasoning_pinnable: bool | None
     representative_status: str
+    surface_kind: str = SURFACE_KIND_LLM
+    search_context: SearchContext | None = None
+
+    def __post_init__(self) -> None:
+        if self.surface_kind not in SURFACE_KINDS:
+            raise ValueError(f"unsupported surface kind: {self.surface_kind!r}")
+        llm_fields = (
+            self.retrieval_enabled,
+            self.reasoning_effort,
+            self.reasoning_pinnable,
+        )
+        if self.surface_kind == SURFACE_KIND_LLM:
+            if any(field is None for field in llm_fields):
+                raise ValueError(
+                    f"llm route {self.logical_engine!r} must pin every LLM field"
+                )
+            if self.search_context is not None:
+                raise ValueError(
+                    f"llm route {self.logical_engine!r} carries no search context"
+                )
+            return
+        if any(field is not None for field in llm_fields):
+            raise ValueError(
+                f"search route {self.logical_engine!r} must leave LLM fields null"
+            )
+        if self.search_context is None:
+            raise ValueError(
+                f"search route {self.logical_engine!r} needs a search context"
+            )
 
 
 # Exact model identity is frozen here. There is intentionally no provider
@@ -97,6 +181,29 @@ MEASUREMENT_ROUTES: Final[dict[str, MeasurementRoute]] = {
         reasoning_pinnable=True,
         representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
     ),
+    # Observed, not asked. There is no model to pin: DataForSEO reports what
+    # Google rendered, so ``transport_model`` names the SERP product rather
+    # than a model identity, and it is never presented as one.
+    #
+    # ``representative_status`` is VERIFIED, and uniquely so: the LLM routes
+    # are unverified because an API model may differ from the consumer
+    # product, whereas the observed block IS the consumer product. Nothing
+    # stands between the measurement and what a searcher sees.
+    ENGINE_GOOGLE_AI_OVERVIEW: MeasurementRoute(
+        logical_engine=ENGINE_GOOGLE_AI_OVERVIEW,
+        transport_provider=TRANSPORT_DATAFORSEO,
+        transport_model="google-organic-serp",
+        retrieval_enabled=None,
+        reasoning_effort=None,
+        reasoning_pinnable=None,
+        representative_status=REPRESENTATIVE_STATUS_VERIFIED,
+        surface_kind=SURFACE_KIND_SEARCH_AI,
+        search_context=SearchContext(
+            location_code=DEFAULT_LOCATION_CODE,
+            language_code=DEFAULT_LANGUAGE_CODE,
+            device=DEFAULT_DEVICE,
+        ),
+    ),
 }
 
 
@@ -111,6 +218,56 @@ def measurement_route(logical_engine: str) -> MeasurementRoute:
 def measurement_routes_for_engine(logical_engine: str) -> tuple[MeasurementRoute, ...]:
     route = MEASUREMENT_ROUTES.get(logical_engine)
     return (route,) if route is not None else ()
+
+
+def surface_kind(logical_engine: str) -> str:
+    """Which execution shape an engine runs (fails closed on unknown)."""
+    return measurement_route(logical_engine).surface_kind
+
+
+def is_search_surface(logical_engine: str) -> bool:
+    """True when the engine is OBSERVED rather than asked."""
+    route = MEASUREMENT_ROUTES.get(logical_engine)
+    return route is not None and route.surface_kind == SURFACE_KIND_SEARCH_AI
+
+
+def llm_route(logical_engine: str) -> MeasurementRoute:
+    """A route guaranteed to carry the LLM request fields.
+
+    Every accessor that reads ``retrieval_enabled``/``reasoning_effort`` goes
+    through this, so reading an LLM knob off a search surface raises at the
+    call site instead of yielding a ``None`` that flows onward as a default.
+    """
+    route = measurement_route(logical_engine)
+    if route.surface_kind != SURFACE_KIND_LLM:
+        raise ValueError(
+            f"{logical_engine!r} is a {route.surface_kind} surface and has no "
+            "LLM request policy"
+        )
+    return route
+
+
+def llm_reasoning_effort(logical_engine: str) -> str:
+    """The reasoning pin an LLM request carries.
+
+    ``MeasurementRoute.reasoning_effort`` is optional because a search surface
+    has none; on an ``llm`` route the constructor guarantees it is set. This
+    accessor turns that guarantee into something the type system can see, so
+    request builders take a ``str`` rather than a ``str | None`` they would
+    have to defend against with an invented default.
+    """
+    effort = llm_route(logical_engine).reasoning_effort
+    if effort is None:  # pragma: no cover - forbidden by MeasurementRoute
+        raise ValueError(f"llm route {logical_engine!r} has no reasoning effort")
+    return effort
+
+
+def search_context(logical_engine: str) -> SearchContext:
+    """The default search context for a search surface (fails closed)."""
+    route = measurement_route(logical_engine)
+    if route.surface_kind != SURFACE_KIND_SEARCH_AI or route.search_context is None:
+        raise ValueError(f"{logical_engine!r} is not a search surface")
+    return route.search_context
 
 
 # --- Execution-time route policy -----------------------------------------
@@ -129,6 +286,10 @@ def measurement_routes_for_engine(logical_engine: str) -> tuple[MeasurementRoute
 class RoutePolicy:
     """Execution-time policy for one approved (engine, transport) route.
 
+    ``surface_kind`` mirrors the catalogue route. On a ``search_ai`` policy
+    every reasoning/retrieval field is ``None`` for the same reason it is on
+    the route: there is no request to pin them on.
+
     ``reasoning_effort`` is the value the adapter pins (or the ``unverified``
     sentinel when nothing may be pinned yet); ``reasoning_pinnable`` says
     whether the route accepts an explicit reasoning control at all;
@@ -138,10 +299,11 @@ class RoutePolicy:
     prompt caching.
     """
 
-    reasoning_effort: str
-    reasoning_pinnable: bool
+    reasoning_effort: str | None
+    reasoning_pinnable: bool | None
     representative_status: str
     batch_enabled: bool
+    surface_kind: str = SURFACE_KIND_LLM
 
 
 ROUTE_POLICIES: Final[dict[str, RoutePolicy]] = {
@@ -150,6 +312,7 @@ ROUTE_POLICIES: Final[dict[str, RoutePolicy]] = {
         reasoning_pinnable=route.reasoning_pinnable,
         representative_status=route.representative_status,
         batch_enabled=False,
+        surface_kind=route.surface_kind,
     )
     for key, route in MEASUREMENT_ROUTES.items()
 }
@@ -215,6 +378,15 @@ ROUTE_CAPACITY_POLICIES: Final[dict[tuple[str, str], RouteCapacityPolicy]] = {
         refill_tokens_per_second=None,
         max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
     ),
+    # Unset for the same reason as the LLM routes: no measured provider tier
+    # rate exists yet. Note that on a polled surface a "call start" paced here
+    # is a SUBMISSION or a POLL, not a whole execution — the two are separated
+    # by the queue, not by this bucket.
+    (ENGINE_GOOGLE_AI_OVERVIEW, TRANSPORT_DATAFORSEO): RouteCapacityPolicy(
+        capacity=None,
+        refill_tokens_per_second=None,
+        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+    ),
 }
 
 
@@ -237,9 +409,18 @@ def route_capacity_policy(
 
 
 def is_reasoning_pinned_off(logical_engine: str) -> bool:
-    """True only when the route pins reasoning explicitly OFF."""
+    """True only when the route pins reasoning explicitly OFF.
+
+    A search surface has no reasoning control at all, so it is False here —
+    "not pinned off" — rather than an error: callers are asking whether to
+    send a pin, and the answer for an observed surface is simply no.
+    """
     policy = route_policy(logical_engine)
-    return policy.reasoning_pinnable and policy.reasoning_effort == REASONING_EFFORT_OFF
+    if policy.surface_kind != SURFACE_KIND_LLM:
+        return False
+    return bool(policy.reasoning_pinnable) and (
+        policy.reasoning_effort == REASONING_EFFORT_OFF
+    )
 
 
 def is_route_approved(logical_engine: str, transport_provider: str) -> bool:
@@ -294,6 +475,10 @@ def configured_endpoint(transport_provider: str) -> str:
         TRANSPORT_OPENAI: provider_catalog_settings.openai_responses_url,
         TRANSPORT_ANTHROPIC: provider_catalog_settings.anthropic_messages_url,
         TRANSPORT_GOOGLE: provider_catalog_settings.google_interactions_url,
+        # One base URL, not one operation path: the search surface calls
+        # several paths (submit, poll, reconcile, probe) against the same
+        # approved destination.
+        TRANSPORT_DATAFORSEO: dataforseo_settings.base_url,
     }.get(transport_provider, "")
     return endpoint.strip().rstrip("/")
 
@@ -414,6 +599,25 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
         grant_key="provider.gemini",
         issuable=False,
     ),
+    # Google AI Overview ships its route, its credential shape and (from the
+    # connector slice) its lifecycle before it ships as SELECTABLE. It stays
+    # unavailable until the whole path — connector, lifecycle, analysis and
+    # the presentation that makes a result legible — works end to end: a
+    # half-wired surface a customer can select is worse than no surface.
+    #
+    # Unlike the coming-soon rows below, this one HAS a measurement route, so
+    # ``LOGICAL_ENGINES`` already contains it and analysis-side reads accept
+    # it. ``adapter_shipped`` is what gates selection, and it is the single
+    # switch that activates the surface.
+    ProviderCatalogEntry(
+        key=ENGINE_GOOGLE_AI_OVERVIEW,
+        label="Google AI Overview",
+        availability=AVAILABILITY_UNAVAILABLE,
+        unavailable_reason=REASON_PROVIDER_UNAVAILABLE,
+        adapter_shipped=False,
+        grant_key="provider.google_ai_overview",
+        issuable=False,
+    ),
     # Coming soon: no adapter ships, no route exists, and no plan bundle may
     # issue a runnable grant for them. Copilot is additionally NON-ISSUABLE in
     # the entitlement registry — nothing may ever write it.
@@ -445,6 +649,31 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
         issuable=False,
     ),
 )
+
+
+# --- Selectable engines (what a RUN or SCHEDULE may request) --------------
+# ``LOGICAL_ENGINES`` is the READ vocabulary: every engine whose results the
+# analysis side understands, including one whose execution path is still being
+# built. Selection is narrower — an engine may only be requested once its
+# adapter actually ships.
+#
+# Keeping these separate is what lets the surface land across several slices
+# without a half-wired engine ever appearing in a run or schedule form. The
+# public catalog's ``adapter_shipped`` is the single source of that truth, so
+# activation is one flag in one row, not a second list to keep in step.
+SELECTABLE_ENGINES: Final[tuple[str, ...]] = tuple(
+    engine
+    for engine in LOGICAL_ENGINES
+    if any(
+        entry.key == engine and entry.adapter_shipped
+        for entry in PUBLIC_PROVIDER_CATALOG
+    )
+)
+
+
+def is_selectable_engine(logical_engine: str) -> bool:
+    """True when a run or schedule may request this engine."""
+    return logical_engine in SELECTABLE_ENGINES
 
 
 def public_provider_routes(provider_key: str) -> tuple[MeasurementRoute, ...]:
@@ -598,6 +827,15 @@ def resolve_platform_credential(transport_provider: str, reference: str) -> str:
         TRANSPORT_GOOGLE: (
             provider_catalog_settings.platform_google_credential_ref,
             provider_catalog_settings.platform_google_api_key,
+        ),
+        # Declared, not yet reached: the shipped DataForSEO credential model is
+        # BYOK. This branch exists so platform funding can be enabled later by
+        # provisioning a system-workspace connection, with no migration and no
+        # second resolution path. Until then no platform DataForSEO connection
+        # is provisioned, so nothing resolves through here.
+        TRANSPORT_DATAFORSEO: (
+            dataforseo_settings.platform_credential_ref,
+            platform_credential_secret(),
         ),
     }.get(transport_provider)
     if configured is None:

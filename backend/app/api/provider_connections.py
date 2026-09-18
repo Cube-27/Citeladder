@@ -198,6 +198,7 @@ async def get_provider_catalog() -> ProviderCatalogResponse:
                     transport_model=route.transport_model,
                     retrieval_enabled=route.retrieval_enabled,
                     reasoning_effort=route.reasoning_effort,
+                    surface_kind=route.surface_kind,
                 )
                 for route in measurement_routes_for_engine(engine)
             ],
