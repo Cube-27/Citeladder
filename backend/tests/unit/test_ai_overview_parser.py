@@ -96,6 +96,45 @@ class TestVisibleAnswer:
         assert "Choice" not in result.answer_text
         assert "We compared eight Australian retailers" not in result.answer_text
 
+    def test_a_nested_element_is_type_validated_like_any_other(self) -> None:
+        """The text and link readers walk ONE validated tree.
+
+        Text used to recurse into nested elements without checking their type
+        while links did not recurse at all, so a nested element could
+        contribute unvalidated text and silently lose its links.
+        """
+        task = payloads.completed_task()
+        block = task["result"][0]["items"][0]
+        block["items"][0]["items"] = [
+            {"type": "ai_overview_carousel", "text": "smuggled in"}
+        ]
+        result = _parse(task)
+        assert result.outcome == OUTCOME_PARSER_ERROR
+        assert "smuggled in" not in result.answer_text
+
+    def test_a_nested_elements_links_are_collected(self) -> None:
+        task = payloads.completed_task()
+        block = task["result"][0]["items"][0]
+        block["items"][0]["items"] = [
+            {
+                "type": "ai_overview_element",
+                "text": "Nested passage.",
+                "links": [
+                    {
+                        "type": "link_element",
+                        "title": "Nested",
+                        "url": "https://shop.nestedbrand.com/page",
+                        "domain": "shop.nestedbrand.com",
+                    }
+                ],
+            }
+        ]
+        result = _parse(task)
+        assert "Nested passage." in result.answer_text
+        # Previously dropped: links only ever read the top level.
+        # Collapsed to its registrable domain, like every other link.
+        assert "nestedbrand.com" in {link.domain for link in result.links}
+
     def test_an_unknown_element_type_is_a_parser_error(self) -> None:
         task = payloads.completed_task()
         task["result"][0]["items"][0]["items"][0]["type"] = "ai_overview_carousel"

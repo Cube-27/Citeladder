@@ -57,7 +57,7 @@ export function ExecutionEvidenceDrawer({
           promptIndex={execution?.prompt_index}
           repetition={execution?.repetition}
           isSearchSurface={execution?.logical_engine === 'google_ai_overview'}
-          succeeded={execution?.status === 'succeeded'}
+          outcome={execution?.search_surface_outcome}
         />
       )}
     </Drawer>

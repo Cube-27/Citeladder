@@ -190,6 +190,11 @@ export const executionSchema = responseObject({
   // Execution surface: the provenance triple is SINGULAR (one execution = one
   // exact model), projected from the frozen task snapshots only.
   retrieval_enabled: z.boolean().nullable().default(null),
+  // The persisted search-surface outcome; '' for an LLM execution. Absence
+  // must be read from this and never inferred from an empty answer, because
+  // an AI Overview that was present but carried no extractable text looks
+  // identical from the outside.
+  search_surface_outcome: z.string().default(''),
   status: executionStatusSchema,
   attempt_count: z.number().int(),
   max_attempts: z.number().int(),

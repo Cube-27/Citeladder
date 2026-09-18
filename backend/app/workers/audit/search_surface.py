@@ -362,12 +362,21 @@ class AuditSearchSurfaceMixin:
             await self._park_submission_uncertain(task_id, audit_id, spend_poll=True)
             return True
 
-        # Bound only now, on a verified tag match.
+        # Bound only now, on a verified tag match — and the budget resets.
+        #
+        # One counter covers two phases, and they are not the same phase.
+        # Reconciliation sweeps spend it looking for the task; polling spends
+        # it waiting for that task's result. Carrying the sweep's spend into
+        # the polling phase means a submission reconciled on its LAST sweep
+        # enters polling already at the ceiling, finalizes as
+        # `poll_ceiling_exceeded` before a single fetch, and throws away a
+        # paid, matched provider task while naming the wrong cause.
         await self._park_awaiting_result(
             task_id,
             audit_id,
             provider_task_id=matched,
             delay_seconds=dataforseo_config.FIRST_POLL_DELAY_SECONDS,
+            reset_poll_count=True,
         )
         logger.info(
             "reconciled an uncertain submission by tag",
@@ -386,12 +395,15 @@ class AuditSearchSurfaceMixin:
         cost_microusd: int | None = None,
         delay_seconds: float,
         spend_poll: bool = False,
+        reset_poll_count: bool = False,
     ) -> None:
         del audit_id  # parking needs only the row
 
         def _apply(task: Any) -> None:
             if provider_task_id is not None:
                 task.provider_task_id = provider_task_id
+            if reset_poll_count:
+                task.provider_poll_count = 0
             if spend_poll:
                 task.provider_poll_count = (task.provider_poll_count or 0) + 1
             if cost_microusd is not None:
@@ -467,10 +479,32 @@ class AuditSearchSurfaceMixin:
                 select(AioObservation).where(AioObservation.task_id == task_id)
             )
             if existing is not None:
-                # A late poll landing after finalization is a no-op. This
-                # codebase's idempotency style is unique constraint plus
-                # pre-check, not upsert.
+                # The observation is already recorded, so the EVIDENCE side is
+                # done and must not be written twice — this codebase's
+                # idempotency style is unique constraint plus pre-check, not
+                # upsert.
+                #
+                # But returning here is not enough. The observation and the
+                # queue terminalization commit in separate transactions, so a
+                # lease lost between them leaves a recorded observation on a
+                # task that is still claimable. It would be polled again, land
+                # here, return without terminalizing, and repeat until the
+                # sweeper failed it — marking a SUCCESSFUL observation as
+                # failed. So the queue is repaired from what was already
+                # recorded rather than from the result just parsed.
+                # Read the outcome out BEFORE the session goes: the row is
+                # detached after the rollback and touching it later would try
+                # to refresh it with no connection to refresh from.
+                recorded_outcome = existing.outcome
+                recorded_error_code = existing.error_code
+                recorded_artifact_id = task.result_artifact_id
                 await session.rollback()
+                await self._terminalize_search_task(
+                    task_id,
+                    outcome=recorded_outcome,
+                    error_code=recorded_error_code,
+                    artifact_id=recorded_artifact_id,
+                )
                 return
 
             observation = AioObservation(
@@ -551,20 +585,36 @@ class AuditSearchSurfaceMixin:
                 )
             await session.commit()
 
-        if succeeded:
+        await self._terminalize_search_task(
+            task_id,
+            outcome=result.outcome,
+            error_code=result.error_code,
+            artifact_id=artifact_id,
+        )
+
+    async def _terminalize_search_task(
+        self,
+        task_id: uuid.UUID,
+        *,
+        outcome: str,
+        error_code: str,
+        artifact_id: uuid.UUID | None,
+    ) -> None:
+        """Move the queue row to its terminal status for one outcome."""
+        if outcome in SUCCESSFUL_OUTCOMES:
             # The artifact id is passed through rather than left to the write
             # above: ``succeed`` sets this column unconditionally, so omitting
             # it here would null the evidence link the transaction just made.
             await self._queue.succeed(
                 task_id=task_id, owner=self.owner, result_artifact_id=artifact_id
             )
-        else:
-            await self._queue.fail(
-                task_id=task_id,
-                owner=self.owner,
-                error_code=(result.error_code or result.outcome)[:32],
-                error_detail=f"search surface outcome {result.outcome}",
-            )
+            return
+        await self._queue.fail(
+            task_id=task_id,
+            owner=self.owner,
+            error_code=(error_code or outcome)[:32],
+            error_detail=f"search surface outcome {outcome}",
+        )
 
     # --- Context ----------------------------------------------------------
 

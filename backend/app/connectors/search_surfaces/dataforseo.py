@@ -206,6 +206,12 @@ class DataForSeoSearchSurfaceAdapter:
             json=[_task_payload(request)],
             timeout_seconds=request.timeout_seconds,
         )
+        # The ENVELOPE first. DataForSEO returns application failures inside
+        # HTTP 200, so a rejected submission can arrive looking fine at the
+        # transport layer — and can carry a task stub whose status would then
+        # be read as authoritative. An auth or payment failure must surface as
+        # exactly that, not as a parse error and not as whatever the stub said.
+        _require_accepted_envelope(body)
         task = _single_task(body)
         status = _task_status(task)
         if status not in dataforseo_config.ACCEPTED_SUBMISSION_STATUS_CODES:
@@ -367,6 +373,26 @@ def _window_bound(value: datetime) -> str:
     return value.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S +00:00")
 
 
+def _require_accepted_envelope(body: dict[str, Any]) -> None:
+    """Fail unless the response-level status accepted the request."""
+    status = body.get("status_code")
+    if isinstance(status, bool) or not isinstance(status, int):
+        raise ProviderError(
+            "DataForSEO returned no response status",
+            error_code=ERROR_PARSE,
+            retryable=False,
+        )
+    if status in dataforseo_config.ACCEPTED_SUBMISSION_STATUS_CODES:
+        return
+    message = str(body.get("status_message") or "").strip()[:240]
+    suffix = f" ({message})" if message else ""
+    raise ProviderError(
+        f"DataForSEO rejected the request (status {status}){suffix}",
+        error_code=_submission_error_code(status),
+        retryable=False,
+    )
+
+
 def _single_task(body: dict[str, Any]) -> dict[str, Any]:
     tasks = body.get("tasks")
     if not isinstance(tasks, list) or not tasks or not isinstance(tasks[0], dict):
@@ -390,7 +416,12 @@ def _task_status(task: dict[str, Any]) -> int:
 
 
 def _submission_error_code(status: int) -> str:
-    """Map a refused submission onto the shared classification tokens."""
+    """Map a refused submission onto the shared classification tokens.
+
+    Payment-required maps to ``client_error`` rather than ``auth_failure``:
+    the credential is valid, the account simply cannot pay, and treating it as
+    an auth fault would pause a working connection.
+    """
     if status == dataforseo_config.STATUS_UNAUTHORIZED:
         return ERROR_AUTH
     return ERROR_CLIENT

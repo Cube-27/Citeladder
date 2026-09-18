@@ -156,17 +156,29 @@ def test_linked_and_cited_are_genuinely_independent_here(
     """
     linked = {link.domain for link in parsed.links}
     cited = {ref.domain for ref in parsed.references}
-    assert "fashionnova.com" in linked
-    assert "fashionnova.com" not in cited
-    assert "google.com" in cited
-    assert "google.com" not in linked
+    # Exact set difference, not membership: it states WHICH domains fall on
+    # each side rather than spot-checking two of them, so a future sample
+    # that quietly merged the signals could not still pass.
+    assert linked - cited == {"fashionnova.com"}
+    assert cited - linked == {"google.com"}
+    assert linked & cited == {
+        "bestandless.com.au",
+        "boohoo.com",
+        "prettylittlething.com.au",
+    }
 
 
 def test_mentioned_is_independent_of_cited(parsed: SearchSurfaceResult) -> None:
     # Google is cited five-references-deep and named nowhere in the answer.
     # Reference-card text never enters `answer_text`, which is what keeps
     # these two apart.
-    assert "google.com" in {ref.domain for ref in parsed.references}
+    cited = {ref.domain for ref in parsed.references}
+    assert cited == {
+        "bestandless.com.au",
+        "boohoo.com",
+        "prettylittlething.com.au",
+        "google.com",
+    }
     assert "Google" not in parsed.answer_text
 
 

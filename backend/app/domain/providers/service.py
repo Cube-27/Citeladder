@@ -35,6 +35,7 @@ from app.core.config.provider_catalog import (
     REASON_VERIFICATION_REQUIRED,
     TEST_STATUS_FAILED,
     TEST_STATUS_OK,
+    TRANSPORT_DATAFORSEO,
     MeasurementRoute,
     ProviderCatalogEntry,
     configured_endpoint,
@@ -291,6 +292,10 @@ async def _apply_connection_update(
     payload: ProviderConnectionUpdate,
 ) -> None:
     _apply_endpoint_update(connection, payload)
+    if payload.app_routes and connection.transport_provider == TRANSPORT_DATAFORSEO:
+        # Same rule as creation, enforced here because an update does not name
+        # its transport — the stored connection does.
+        raise InvalidRouteError("Google AI Overview connections host no app model")
     apply_scalar_updates(connection, payload)
     if payload.routes is not None:
         connection.routes = _build_routes(

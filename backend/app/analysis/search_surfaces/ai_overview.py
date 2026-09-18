@@ -190,6 +190,45 @@ def _parse_completed_task(task: dict[str, Any], status: int) -> SearchSurfaceRes
 # --- Visible answer -------------------------------------------------------
 
 
+def _walk_elements(block: dict[str, Any]) -> list[tuple[int, dict[str, Any]]]:
+    """Every element of the overview, nested ones included, type-validated.
+
+    ONE traversal, shared by the text and link projections. They used to walk
+    different sets — text recursed into nested elements without checking their
+    type, links did not recurse at all — so a nested element could contribute
+    unvalidated text while its links were silently dropped. Two readers of one
+    tree disagreeing about which nodes exist is how a brand ends up mentioned
+    but not linked for no reason anyone could see.
+
+    The index returned is the TOP-LEVEL element a node belongs to, so evidence
+    display still points at the block a link actually appeared in.
+    """
+    elements = block.get("items")
+    if elements is None:
+        elements = []
+    if not isinstance(elements, list):
+        raise AiOverviewParseError("ai_overview items were not a list")
+
+    walked: list[tuple[int, dict[str, Any]]] = []
+
+    def _descend(node: Any, index: int) -> None:
+        if not isinstance(node, dict):
+            raise AiOverviewParseError("ai_overview element was not an object")
+        element_type = str(node.get("type") or "")
+        if element_type not in KNOWN_ELEMENT_TYPES:
+            raise AiOverviewParseError(f"unknown element type: {element_type!r}")
+        walked.append((index, node))
+        for nested in _as_list(node.get("items")):
+            # A nested string is inline content of THIS element, not a child
+            # element, so it is left for the fragment reader.
+            if isinstance(nested, dict):
+                _descend(nested, index)
+
+    for index, element in enumerate(elements):
+        _descend(element, index)
+    return walked
+
+
 def _extract_visible_answer(
     block: dict[str, Any],
 ) -> tuple[str, tuple[dict[str, Any], ...]]:
@@ -201,24 +240,13 @@ def _extract_visible_answer(
     would record a real mention as an absence.
 
     Reference cards are never appended. Concatenating a card's title or
-    snippet would manufacture a mention the answer never made.
+    snippet would manufacture a mention the overview never made.
     """
-    elements = block.get("items")
-    if elements is None:
-        elements = []
-    if not isinstance(elements, list):
-        raise AiOverviewParseError("ai_overview items were not a list")
-
     parts: list[str] = []
     seen: set[str] = set()
     captured: list[dict[str, Any]] = []
 
-    for element in elements:
-        if not isinstance(element, dict):
-            raise AiOverviewParseError("ai_overview element was not an object")
-        element_type = str(element.get("type") or "")
-        if element_type not in KNOWN_ELEMENT_TYPES:
-            raise AiOverviewParseError(f"unknown element type: {element_type!r}")
+    for _index, element in _walk_elements(block):
         captured.append(element)
         for fragment in _element_fragments(element):
             # Guard against emitting the same content twice: an element often
@@ -247,10 +275,11 @@ def _element_fragments(element: dict[str, Any]) -> list[str]:
 
     fragments.extend(_table_fragments(element.get("table")))
 
+    # Only inline STRING children here. Nested elements are visited by
+    # ``_walk_elements``, which validates them first; recursing again would
+    # both bypass that check and emit their text twice.
     for nested in _as_list(element.get("items")):
-        if isinstance(nested, dict):
-            fragments.extend(_element_fragments(nested))
-        elif isinstance(nested, str) and nested.strip():
+        if isinstance(nested, str) and nested.strip():
             fragments.append(nested)
 
     if not fragments:
@@ -295,9 +324,7 @@ def _collect_links(block: dict[str, Any]) -> tuple[AioLink, ...]:
     preserve.
     """
     collected: dict[str, AioLink] = {}
-    for index, element in enumerate(_as_list(block.get("items"))):
-        if not isinstance(element, dict):
-            continue
+    for index, element in _walk_elements(block):
         for link in _as_list(element.get("links")):
             if not isinstance(link, dict):
                 continue

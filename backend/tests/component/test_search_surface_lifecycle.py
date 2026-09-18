@@ -932,11 +932,15 @@ async def test_the_surface_folds_into_the_existing_projections_unchanged(
     # Root references became citations through the SAME path the LLM engines
     # use — five of them, matching the block's root reference list.
     assert len(citations) == 5
-    domains = {citation.domain for citation in citations}
-    assert payloads.BRAND_DOMAIN in domains
-    # The two Google Shopping URLs are present as citations but are Google's,
-    # not the brand's.
-    assert "google.com" in domains
+    # The exact citation domains. The two Google Shopping URLs collapse to one
+    # `google.com` identity and are present as citations, but they are
+    # Google's rather than the brand's.
+    assert {citation.domain for citation in citations} == {
+        payloads.BRAND_DOMAIN,
+        payloads.COMPETITOR_DOMAIN,
+        "choice.com.au",
+        "google.com",
+    }
 
 
 @pytest.mark.asyncio
@@ -1022,3 +1026,135 @@ async def test_a_failed_observation_produces_no_analysis_but_is_still_recorded(
     observation = await _observation(session_factory, task_id)
     assert observation is not None
     assert observation.outcome == OUTCOME_PROVIDER_ERROR
+
+
+@pytest.mark.asyncio
+async def test_reconciliation_does_not_spend_the_polling_budget(
+    session_factory: async_sessionmaker[AsyncSession], adapter, monkeypatch
+) -> None:
+    """One counter, two phases — they must not share a budget.
+
+    A submission reconciled on its LAST sweep would otherwise enter polling
+    already at the ceiling and finalize as `poll_ceiling_exceeded` before a
+    single fetch, throwing away a paid, matched provider task and naming the
+    wrong cause.
+    """
+    from app.core.config import dataforseo as cfg
+
+    monkeypatch.setattr(cfg, "POLL_CEILING", 3)
+    adapter(
+        _RecordingAdapter(
+            listing={
+                "tasks": [
+                    {"result": [{"id": "our-task", "metadata": {"tag": "audit-ref-1"}}]}
+                ]
+            }
+        )
+    )
+    _audit_id, task_id, _ = await _seed_search_task(session_factory)
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        task.provider_submission_ref = "audit-ref-1"
+        task.status = TASK_STATUS_SUBMISSION_UNCERTAIN
+        # Every sweep so far has been spent looking for the task.
+        task.provider_poll_count = 3
+        await session.commit()
+
+    await _claim_and_run(session_factory, _worker(session_factory))
+
+    task = await _task(session_factory, task_id)
+    assert task.provider_task_id == "our-task"
+    # The polling phase starts fresh, so the very next claim actually fetches.
+    assert task.provider_poll_count == 0
+    assert await _observation(session_factory, task_id) is None
+
+
+@pytest.mark.asyncio
+async def test_a_recorded_observation_repairs_a_stranded_queue_row(
+    session_factory: async_sessionmaker[AsyncSession], adapter
+) -> None:
+    """The observation and the queue status commit separately.
+
+    A lease lost between them leaves a recorded observation on a claimable
+    task. Without repair it would be polled, hit the existing-observation
+    branch, return without terminalizing, and repeat until the sweeper marked
+    a SUCCESSFUL observation as failed.
+    """
+    payload = payloads.response(payloads.completed_task(task_id="provider-task-1"))
+    adapter(_RecordingAdapter(fetch_payloads=[payload, dict(payload)]))
+    _audit_id, task_id, _ = await _seed_search_task(session_factory)
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        task.provider_task_id = "provider-task-1"
+        task.provider_submission_ref = "audit-ref-1"
+        task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
+        await session.commit()
+
+    await _claim_and_run(session_factory, _worker(session_factory))
+
+    # Simulate the queue write having been lost mid-run: the observation
+    # stands, the run is still in flight, and the row is claimable again.
+    async with session_factory() as session:
+        from app.core.config.audits import AUDIT_STATUS_RUNNING
+        from app.models.audit import Audit
+
+        task = await session.get(AuditTask, task_id)
+        audit = await session.get(Audit, _audit_id)
+        assert task is not None and audit is not None
+        task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
+        task.completed_at = None
+        task.lease_owner = None
+        audit.status = AUDIT_STATUS_RUNNING
+        await session.commit()
+
+    await _claim_and_run(session_factory, _worker(session_factory))
+
+    task = await _task(session_factory, task_id)
+    # Terminal again, and terminal as the SUCCESS it actually was.
+    assert task.status == TASK_STATUS_SUCCEEDED
+    async with session_factory() as session:
+        observations = (await session.scalars(select(AioObservation))).all()
+    assert len(observations) == 1
+
+
+@pytest.mark.asyncio
+async def test_the_execution_dto_exposes_the_search_surface_outcome(
+    session_factory: async_sessionmaker[AsyncSession], adapter
+) -> None:
+    """So the client never has to infer absence from an empty answer.
+
+    An overview that was present but carried no extractable text looks
+    identical to a measured absence from the outside; only this token
+    separates them.
+    """
+    from app.domain.audits.schemas import AuditTaskResponse
+
+    adapter(
+        _RecordingAdapter(
+            fetch_payloads=[
+                payloads.response(
+                    payloads.completed_task(
+                        task_id="provider-task-1", with_overview=False
+                    )
+                )
+            ]
+        )
+    )
+    _audit_id, task_id, _ = await _seed_search_task(session_factory)
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        task.provider_task_id = "provider-task-1"
+        task.provider_submission_ref = "audit-ref-1"
+        task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
+        await session.commit()
+
+    await _claim_and_run(session_factory, _worker(session_factory))
+
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        dto = AuditTaskResponse.model_validate(task)
+    assert dto.search_surface_outcome == OUTCOME_NO_AI_OVERVIEW
+    assert dto.answer_text == ""

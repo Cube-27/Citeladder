@@ -276,6 +276,12 @@ class AuditTaskResponse(BaseModel):
     transport_provider: str
     transport_model: str
     retrieval_enabled: bool | None = None
+    # The persisted search-surface outcome, "" for an LLM execution. The
+    # client must not infer absence from an empty answer plus a succeeded
+    # status: an AI Overview that was PRESENT but carried no extractable text
+    # produces exactly that combination, and would be shown as "no overview".
+    # Only this token separates the two.
+    search_surface_outcome: str = ""
     status: str
     attempt_count: int
     max_attempts: int
@@ -303,6 +309,12 @@ class AuditTaskResponse(BaseModel):
             request_snapshot=getattr(data, "request_snapshot", None),
             route_snapshot=getattr(data, "provider_route_snapshot", None),
             audit_configuration=getattr(data, "audit_configuration", None),
+        )
+        metadata = getattr(data, "provider_metadata", None)
+        values["search_surface_outcome"] = (
+            str(metadata.get("search_surface_outcome") or "")
+            if isinstance(metadata, dict)
+            else ""
         )
         return values
 

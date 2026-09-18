@@ -171,6 +171,20 @@ class ProviderConnectionCreate(BaseModel):
     app_routes: list[ProviderAppRouteInput] = Field(default_factory=list)
 
     @model_validator(mode="after")
+    def app_routes_need_a_chat_transport(self) -> ProviderConnectionCreate:
+        """An observed search surface hosts no app model.
+
+        App routes are an LLM-chat concept and each carries its OWN
+        ``api_base_url``. Attaching one to a DataForSEO connection would send
+        that connection's login and password to an operator-supplied
+        destination, and would make the ``/test`` probe exercise a chat
+        protocol this transport does not speak.
+        """
+        if self.transport_provider == TRANSPORT_DATAFORSEO and self.app_routes:
+            raise ValueError("Google AI Overview connections host no app model")
+        return self
+
+    @model_validator(mode="after")
     def credential_shape_matches_transport(self) -> ProviderConnectionCreate:
         _require_credential_shape(
             transport_provider=self.transport_provider,
