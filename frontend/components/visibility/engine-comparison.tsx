@@ -14,9 +14,11 @@ import type { Visibility } from '@/lib/api/types';
 import {
   engineLabel,
   formatRate,
+  measured,
   visibleEngines,
   type VisibilityFilters,
 } from '@/lib/visibility/dashboard';
+import { MissingValue } from '@/components/ui/unavailable-value';
 import { textRole } from '@/components/ui/typography';
 
 export function EngineComparison({
@@ -70,8 +72,12 @@ export function EngineComparison({
                         .join(', ')}
                     </p>
                   </TableCell>
-                  <TableCell numeric>{formatRate(engine.brand_mention_rate)}</TableCell>
-                  <TableCell numeric>{formatRate(engine.owned_citation_rate)}</TableCell>
+                  <TableCell numeric>
+                    {measured(formatRate(engine.brand_mention_rate)) ?? <MissingValue />}
+                  </TableCell>
+                  <TableCell numeric>
+                    {measured(formatRate(engine.owned_citation_rate)) ?? <MissingValue />}
+                  </TableCell>
                   {/* This read "N measured / M expected", or "expected count
                       unavailable" — the run's own bookkeeping. How many answers
                       a rate is drawn from is the reader's business; how many we

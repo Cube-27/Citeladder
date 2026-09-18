@@ -4,26 +4,26 @@ import { useMemo, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { BusyBar } from '@/components/ui/busy-bar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DonutChart } from '@/components/ui/donut-chart';
+import { Card, CardContent } from '@/components/ui/card';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { SeriesChart } from '@/components/ui/series-chart';
-import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
 import { SourceTableToolbar } from '@/components/visibility/source-toolbar';
+import { TypesCard, UsageCard } from '@/components/visibility/source-charts';
 import { SourceUrlDetail } from '@/components/visibility/source-url-detail';
 import { SourcePaging } from '@/components/visibility/source-panels';
-import { DomainTable, UrlTable, type SourceFilters } from '@/components/visibility/source-rows';
+import {
+  DomainTable,
+  UrlTable,
+  type SourceFilters,
+  type SourceTableState,
+} from '@/components/visibility/source-rows';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import { optionalStringUrlCodec, setUrlParams, useUrlState } from '@/lib/navigation/url-state';
 import {
   availableTypes,
   matchesSearch,
-  seriesCeiling,
   sortItems,
-  toChartSeries,
   typeSlices,
   type SortState,
 } from '@/lib/visibility/sources';
@@ -118,8 +118,11 @@ function SourcesInventory({
   });
   const dimension = rawDimension === 'url' ? 'url' : 'domain';
   return (
+    // Deliberately NOT keyed on `dimension`. Remounting threw away the React
+    // Query observer along with the panel, so `retainPreviousDataForScope` had
+    // no previous data to hold and the table emptied to a skeleton on every
+    // switch. The panel resets its own local state instead -- see `SourcesPanel`.
     <SourcesPanel
-      key={dimension}
       dimension={dimension}
       onChangeDimension={(value) => setDimension(value === 'domain' ? null : value)}
       filters={filters}
@@ -128,6 +131,39 @@ function SourcesInventory({
       onOpenDomain={onOpenDomain}
     />
   );
+}
+
+/**
+ * Every type in the selection, including while one of them is filtering.
+ *
+ * `category_totals` follows the type filter on purpose: the ring beside the
+ * table prints the same `total_citations` its segments are shares of. The
+ * filter's OPTIONS cannot follow it -- picking "Editorial" left exactly one
+ * option, the control fell below its own minimum and unmounted, and there was
+ * no way back to "All URL types". So the last unfiltered list is remembered,
+ * exactly as `useSourceDomains` reads its own list unfiltered.
+ */
+function useTypeOptions({
+  measured,
+  filtered,
+  loaded,
+}: Readonly<{
+  measured: ReturnType<typeof availableTypes>;
+  filtered: boolean;
+  loaded: boolean;
+}>) {
+  const [known, setKnown] = useState(measured);
+  // Compared by token, not by identity: `availableTypes` builds a fresh array
+  // every render, so an identity check would set state on every pass.
+  const tokens = (list: ReturnType<typeof availableTypes>) =>
+    list.map((type) => type.token).join('|');
+  if (!filtered && loaded && tokens(known) !== tokens(measured)) setKnown(measured);
+  // Nothing remembered means nothing was ever seen unfiltered -- which is what
+  // a shared link that already carries `source_type` looks like on its first
+  // render. Returning the empty list there left the control offering only
+  // "All URL types" and no way to reach any other one.
+  if (!filtered) return measured;
+  return known.length ? known : measured;
 }
 
 export function SourcesPanel({
@@ -157,6 +193,18 @@ export function SourcesPanel({
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortState>(null);
+  // What the panel was showing last render, so a dimension change can clear the
+  // controls that do not carry over -- page three of domains is not page three
+  // of URLs, and `editorial` is not a page format. Done during render rather
+  // than in an effect so the table never paints one frame of the old sort
+  // applied to the new dimension.
+  const [shownDimension, setShownDimension] = useState(dimension);
+  if (shownDimension !== dimension) {
+    setShownDimension(dimension);
+    setPageSize(TABLE_DEFAULT_PAGE_SIZE);
+    setSearch('');
+    setSort(null);
+  }
 
   // On a domain's own page the publisher is fixed by the route above, so the
   // control is not offered there — it would let a reader contradict the
@@ -175,7 +223,11 @@ export function SourcesPanel({
   });
 
   const data = sourceQuery.data;
-  const types = availableTypes(data?.category_totals, dimension);
+  const types = useTypeOptions({
+    measured: availableTypes(data?.category_totals, dimension),
+    filtered: Boolean(sourceType),
+    loaded: Boolean(data),
+  });
   const slices = typeSlices(data?.category_totals, dimension);
   // Search and sort narrow what is LOADED. The footer reports the loaded count
   // against the server's total, so a reader can see the difference.
@@ -237,8 +289,13 @@ export function SourcesPanel({
             />
           }
         />
-        <CardContent className="p-0">
-          <TableBody
+        {/* A floor, with the footer pinned to the bottom of it. The card used
+            to be exactly as tall as whatever it was showing, so a filter that
+            returned three rows instead of ten pulled everything below it up
+            by seven rows -- and then pushed it back down when the filter was
+            cleared. The height is the toolbar plus a full page of rows. */}
+        <CardContent className="flex min-h-[560px] flex-col justify-between p-0">
+          <SourceTable
             dimension={dimension}
             query={sourceQuery}
             rows={rows}
@@ -246,6 +303,7 @@ export function SourcesPanel({
             onSort={onSort}
             onOpenUrl={onOpenUrl}
             onOpenDomain={onOpenDomain}
+            pageSize={pageSize}
             narrowed={Boolean(search || sourceType)}
             searching={Boolean(search)}
           />
@@ -277,7 +335,9 @@ function DomainFilter({
   options: readonly string[];
   onChange: (value: string | null) => void;
 }>) {
-  if (options.length < 2) return null;
+  // As in `TypeFilter`: a control that is currently filtering must stay, or
+  // there is no way back to "All domains".
+  if (options.length < 2 && !value) return null;
   return (
     <AnalysisChoice
       label="Filter by domain"
@@ -303,7 +363,9 @@ function TypeFilter({
   options: readonly { token: string; label: string }[];
   onChange: (value: string | null) => void;
 }>) {
-  if (options.length < 2) return null;
+  // One option is nothing to choose between -- unless a filter is already
+  // applied, in which case removing the control strands the reader inside it.
+  if (options.length < 2 && !value) return null;
   const urls = dimension === 'url';
   return (
     <AnalysisChoice
@@ -318,96 +380,37 @@ function TypeFilter({
   );
 }
 
-/** The usage-over-time chart, and the states it can be in instead. */
-function UsageCard({
-  dimension,
+/**
+ * Which of the four things the table is doing right now.
+ *
+ * Four states, kept apart on purpose: nothing has been measured yet, the
+ * filters exclude everything, the rows are on their way, and the read failed.
+ * They are not interchangeable -- "no cited sources in this selection" is a
+ * finding, "could not load sources" is a fault -- and a reader who cannot tell
+ * them apart cannot tell whether to change the filter or retry.
+ */
+function tableState({
   query,
+  rows,
+  pageSize,
+  narrowed,
+  searching,
 }: Readonly<{
-  dimension: 'domain' | 'url';
-  query: ReturnType<typeof useSourceSeries>;
-}>) {
-  const series = toChartSeries(query.data);
-  const urls = dimension === 'url';
-  return (
-    <Card className="relative">
-      <BusyBar active={query.isFetching} label="Updating usage" />
-      <CardHeader>
-        <CardTitle>{urls ? 'Source usage by URL' : 'Source usage by domain'}</CardTitle>
-        <p className={textRole('meta', 'text-secondary')}>
-          {`How often each of the leading ${urls ? 'pages' : 'domains'} was used as a source, as a share of the answers in each period.`}
-        </p>
-      </CardHeader>
-      <CardContent>
-        <UsagePlot query={query} series={series} />
-      </CardContent>
-    </Card>
-  );
-}
-
-/** The plot, or the one state standing in for it. */
-function UsagePlot({
-  query,
-  series,
-}: Readonly<{
-  query: ReturnType<typeof useSourceSeries>;
-  series: ReturnType<typeof toChartSeries>;
-}>) {
-  if (query.isError) return <Alert tone="danger">Could not load source usage.</Alert>;
-  if (query.isLoading) return <Skeleton className="h-[200px] w-full" />;
-  if (!series.length) {
-    return (
-      <p className={textRole('meta', 'text-secondary')}>No sources were used in this period.</p>
-    );
-  }
-  return (
-    <SeriesChart
-      series={series}
-      labels={(query.data?.buckets ?? []).map(bucketLabel)}
-      domainMax={seriesCeiling(series)}
-      yAxisLabel="Share of answers"
-    />
-  );
-}
-
-/** The citation mix, counted server-side over the whole selection. */
-function TypesCard({
-  slices,
-  total,
-  query,
-}: Readonly<{
-  slices: ReturnType<typeof typeSlices>;
-  total: number;
   query: ReturnType<typeof useSourceAnalysis>['sourceQuery'];
-}>) {
-  return (
-    <Card className="relative">
-      <BusyBar active={query.isFetching} label="Updating source types" />
-      <CardHeader>
-        <CardTitle>Source types</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* A failed read is not an empty mix. Drawing the empty ring here
-            reported "no citations in this selection" for a request that never
-            answered. */}
-        {query.isError ? (
-          <Alert tone="danger">Could not load source types.</Alert>
-        ) : query.isLoading ? (
-          <Skeleton className="h-[240px] w-full" />
-        ) : (
-          <DonutChart
-            slices={slices}
-            total={total}
-            totalLabel="Citations"
-            emptyLabel="No citations in this selection."
-          />
-        )}
-      </CardContent>
-    </Card>
-  );
+  rows: ReturnType<typeof sortItems>;
+  pageSize: number;
+  narrowed: boolean;
+  searching: boolean;
+}>): SourceTableState {
+  if (query.isLoading) return { kind: 'loading', rows: pageSize };
+  if (rows.length) return { kind: 'rows' };
+  if (searching) return { kind: 'empty', message: 'No sources on this page match your search.' };
+  if (narrowed) return { kind: 'empty', message: 'No sources of this type in this selection.' };
+  return { kind: 'empty', message: 'No cited sources in this selection.' };
 }
 
-/** Whichever table the dimension calls for, or the state standing in for it. */
-function TableBody({
+/** Whichever table the dimension calls for, carrying its own state inside it. */
+function SourceTable({
   dimension,
   query,
   rows,
@@ -415,6 +418,7 @@ function TableBody({
   onSort,
   onOpenUrl,
   onOpenDomain,
+  pageSize,
   narrowed,
   searching,
 }: Readonly<{
@@ -425,33 +429,30 @@ function TableBody({
   onSort: (column: string) => void;
   onOpenUrl: (url: string) => void;
   onOpenDomain?: (domain: string) => void;
+  pageSize: number;
   narrowed: boolean;
   searching: boolean;
 }>) {
-  if (query.isError) return <Alert tone="danger">Could not load sources.</Alert>;
-  if (query.isLoading) return <Skeleton className="m-[var(--card-padding)] h-40" />;
-  if (rows.length === 0) {
+  // A failed read is the one state that has no table to fill: there are no
+  // columns to be honest about, and leaving an empty grid under an error
+  // presents a fault as a finding.
+  if (query.isError) {
     return (
-      <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
-        {searching
-          ? 'No sources on this page match your search.'
-          : narrowed
-            ? 'No sources of this type in this selection.'
-            : 'No cited sources in this selection.'}
-      </p>
+      <Alert tone="danger" className="m-[var(--card-padding)]">
+        Could not load sources. Check your connection and try again.
+      </Alert>
     );
   }
+  const state = tableState({ query, rows, pageSize, narrowed, searching });
   return dimension === 'url' ? (
-    <UrlTable rows={rows} sort={sort} onSort={onSort} onOpenUrl={onOpenUrl} />
+    <UrlTable rows={rows} sort={sort} onSort={onSort} onOpenUrl={onOpenUrl} state={state} />
   ) : (
-    <DomainTable rows={rows} sort={sort} onSort={onSort} onOpenDomain={onOpenDomain} />
+    <DomainTable
+      rows={rows}
+      sort={sort}
+      onSort={onSort}
+      onOpenDomain={onOpenDomain}
+      state={state}
+    />
   );
-}
-
-/** A bucket boundary as an axis tick — the date, never the time. */
-function bucketLabel(value: string): string {
-  const at = new Date(value);
-  return Number.isNaN(at.getTime())
-    ? value
-    : at.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }

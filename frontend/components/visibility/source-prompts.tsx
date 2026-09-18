@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { MissingValue } from '@/components/ui/unavailable-value';
 import { TruncationNotice } from '@/components/visibility/evidence-states';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
@@ -29,6 +29,11 @@ import type { SourceFilters } from '@/components/visibility/source-rows';
 import { count, hostOf, sinceLabel } from '@/lib/visibility/sources';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
 import { EVIDENCE_LIMIT } from '@/lib/visibility/use-visibility-dashboard';
+
+/** A counted nought in a column of chips, kept apart from an absent one. */
+function ObservedNone() {
+  return <span className={textRole('meta', 'text-secondary tabular-nums')}>0</span>;
+}
 
 /** Chips a cell carries before it stops being a cell; the rest become "+N". */
 const MAX_CHIPS = 3;
@@ -172,7 +177,7 @@ function PromptRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
         <SourceChips item={item} />
       </TableCell>
       <TableCell numeric className="hidden sm:table-cell">
-        {sinceLabel(item.completed_at) ?? <UnavailableValue state="not_measured" />}
+        {sinceLabel(item.completed_at) ?? <MissingValue />}
       </TableCell>
       <TableCell>
         {/* The row summarises the answer; this reaches the answer itself. It
@@ -188,10 +193,16 @@ function PromptRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   );
 }
 
-/** The brands this answer named, as marks. */
+/**
+ * The brands this answer named, as marks.
+ *
+ * An empty list is an OBSERVED zero, not an absent measurement: the answer was
+ * read and it named nobody. `MissingValue` would report that as "not measured",
+ * which is the opposite finding -- so the cell says nought and means it.
+ */
 function MentionChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   const named = [...new Map(item.mentions.map((one) => [one.name, one])).values()];
-  if (!named.length) return <UnavailableValue state="not_measured" />;
+  if (!named.length) return <ObservedNone />;
   return (
     <ChipRow overflow={named.length - MAX_CHIPS}>
       {named.slice(0, MAX_CHIPS).map((mention) => (
@@ -205,12 +216,12 @@ function MentionChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>)
   );
 }
 
-/** The sites this answer drew on, as their favicons. */
+/** The sites this answer drew on, as their favicons. An empty list is zero. */
 function SourceChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   const hosts = [
     ...new Set(item.citations.map((citation) => hostOf(citation.url)).filter(Boolean)),
   ] as string[];
-  if (!hosts.length) return <UnavailableValue state="not_measured" />;
+  if (!hosts.length) return <ObservedNone />;
   return (
     <ChipRow overflow={hosts.length - MAX_CHIPS}>
       {hosts.slice(0, MAX_CHIPS).map((host) => (

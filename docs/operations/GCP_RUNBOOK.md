@@ -78,7 +78,25 @@ Add these environment secrets:
 - `CONTENT_API_KEY`: required for the configured Content generation provider;
 - `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE`: optional Logo.dev publishable token. It
   is injected only while building the frontend and becomes public client
-  configuration; do not use a Logo.dev secret key here.
+  configuration; do not use a Logo.dev secret key here. It reaches the deploy
+  as the `gcp-demo` environment **variable** `LOGO_DEV_PUBLISHABLE` — a
+  variable and not a secret on purpose, because the token is published in the
+  client bundle anyway and filing it as a secret only makes it write-only and
+  masks it to `***` in the logs you would debug from. Without it every brand
+  mark in the app falls back to initials. Three consequences worth knowing:
+  - `vars.` and `secrets.` are separate namespaces and neither falls back to
+    the other, so a token filed under the wrong one reads as the empty string
+    however carefully it was set. This is not hypothetical: the value sat as a
+    secret named `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE` while the workflow read
+    `vars.LOGO_DEV_PUBLISHABLE`, and every logo in the deployed app was
+    initials for it. Use the variable, under exactly that name.
+  - The value is baked into the image, not read at runtime. The frontend build
+    now logs `Building with empty public values: ...` when one is missing, so
+    check the build step's log before chasing the app.
+  - `deploy-vite-app` reuses any image already tagged with the current
+    `GITHUB_SHA`. Setting the value and re-running the workflow **on the same
+    commit** therefore redeploys the old token-less image; push a new commit,
+    or delete the existing tag, to force the rebuild.
 - `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`: required. One Google
   OAuth client serves both sign-in and the Search Console / Analytics connect.
 - `BING_OAUTH_CLIENT_ID` / `BING_OAUTH_CLIENT_SECRET`: optional. They are issued

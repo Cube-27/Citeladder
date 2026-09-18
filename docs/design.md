@@ -101,6 +101,8 @@ Twelve pixels is reserved for short metadata, provenance, badges, and table head
 | Control | 30–40px | 44px minimum target |
 | Table row | 44px | Labelled record |
 
+Data columns and their headers are centre-aligned and tabular; text columns stay left-aligned. The header centres with its values so a column reads as one block — a sort glyph pushed to the padding edge leaves the label sitting off the numbers by its own width. This resolves the table-header precedence question previously recorded as unresolved: the shared `numeric` flag on `TableHead`/`TableCell` owns both alignment and tabular figures, and call sites do not re-declare either.
+
 Content caps at 1392px; sidebar content shares an 18px inset. Compact gutters are 16px; dialogs/drawers use 20px. Internal groups use 16–24px. The source's conflicting major-section spacing is recorded below.
 
 | Geometry role | Value | Use |
@@ -129,6 +131,10 @@ Use the state actually known; never punctuation alone or a fabricated zero.
 | **Unknown** | System cannot determine the state |
 
 Observed zero remains `0`. Chart series retain unavailable-point gaps and explain them accessibly. Authored prose punctuation is unaffected.
+
+Where the label appears depends on the surface. Metric cards, chart states, non-tabular values and workflow states a reader can act on (**Not run**, **Failed**) print the word: there is one of them, and it is the answer. A **metric cell in a table** does not: a column repeats its placeholder once per row to make a point it only needs to make once, and at `--text-xs` inside a `text-sm` tabular column it reads as a different kind of value rather than an absent one. Those cells use `MissingValue` from `components/ui/unavailable-value.tsx` — a muted en dash, with the state as assistive text and the reason available on hover and focus. It is never blank: an empty cell and a measured zero look identical, and those are opposite findings.
+
+State a shared reason once, on the column header or the section, not in every cell that lacks a value. Core columns stay present across loading, filtering and pagination; omit a column only where it is unsupported or irrelevant for the entire view, never because the current page happens to be empty. A table or chart with nothing to show uses one contextual empty state that distinguishes first use, no results, loading and error — those four are different findings and a reader who cannot tell them apart cannot tell whether to change the filter or retry.
 
 ## Layout and content composition
 
@@ -222,6 +228,14 @@ Shared buttons use the 6px control radius: app heights 30px compact, 34px defaul
 
 Controls need direct labels, immediate pressed feedback, and visible focus: accent on their own border plus one attached soft glow, no gap or second floating ring. Inputs use semantic input/border roles; labels stay beside controls, helpers explain constraints, and errors provide recovery. Placeholder-only labels are forbidden. Composed inputs have one shared-frame focus ring, not an additional native-input outline.
 
+### Charts
+
+`components/ui/chart.tsx` owns the chart frame: the responsive container, the axis defaults, the legend and the hover card. It is built on Recharts, which sizes to the container it is actually given — the hand-rolled predecessors scaled a fixed viewBox unevenly, squashing their own tick text and running a rotated axis title through the values beside it. Series colours come from the `--color-chart-1..8` ladder and are passed as token values, never literals.
+
+`series-chart.tsx` is on this frame. `trend-chart.tsx`, `chart-axes.tsx` and `performance-chart.tsx` are still the hand-rolled SVG layer and are migrating; they carry behaviour the frame has yet to prove it can hold (gap-not-zero with version markers, per-point evidence links, timestamp-proportional spacing). `donut-chart.tsx` stays hand-drawn on purpose: it is a fixed square with no axes, and it distinguishes the declared total from its slices' sum, which a generic pie does not.
+
+Every chart is `aria-hidden` and carries a written description instead. A null point is a gap, never a zero, in the drawing and in the hover card alike.
+
 ### Panels, badges, and evidence
 
 Structural sections remain open or tonal. `Card` is a real white semantic object with the shared card radius; its unresolved elevation instructions appear below. `Card` sets no display mode; opt into aligned-footer layouts at call sites without breaking sticky scrolling. Never nest a `Card` inside another `Card`, modal, drawer, or sheet.
@@ -270,4 +284,3 @@ These are ambiguities in the supplied contract, not verified implementation defe
 | --- | --- | --- |
 | Card elevation | Card recipes prescribe subtle directional `--shadow-card`; general colour/checklist rules reserve shadows for floating surfaces. Named flat app panels explicitly have no added elevation. | Whether semantic `Card` is an exception to the floating-only rule |
 | Major-section spacing | `Stack` names `section` as 32px; Data and geometry says major sections separate by 24px. | Which governs major route sections, or how their scopes differ |
-| Table-header type | `label` covers column labels at 14/20px, weight 500, `muted`; prose reserves 12px for table headers without naming a separate role. | Required table-header role/precedence |

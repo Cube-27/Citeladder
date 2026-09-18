@@ -117,6 +117,12 @@ export function useSourceSeries(
         workspaceId: queries.workspaceId,
       }),
     enabled: Boolean(queries.projectId && queries.activeRunId),
+    // Hold the plot while the next one loads, exactly as the table above does.
+    // The legend sits ABOVE the chart and wraps to as many lines as it needs,
+    // so dropping to a bare skeleton did not just blank the plot -- it removed
+    // those lines and shortened the card, moving the table underneath on every
+    // filter change.
+    placeholderData: (data, query) => retainPreviousDataForScope(queries.projectId!, data, query),
   });
 }
 

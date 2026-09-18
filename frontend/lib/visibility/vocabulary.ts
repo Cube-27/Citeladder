@@ -18,6 +18,8 @@
  *     shared availability vocabulary. Never a placeholder sentence per cell.
  */
 
+import { availabilityLabel } from '@/lib/format';
+
 /**
  * A change in percentage points, or `null` when there is none to show.
  *
@@ -41,7 +43,7 @@ export function changeLabel(value: number | null | undefined): string | null {
  * vocabulary).
  */
 export function observationLabel(state: string | null | undefined): string | null {
-  return state === 'no_observations' ? 'Not measured' : null;
+  return state === 'no_observations' ? availabilityLabel('not_measured') : null;
 }
 
 /**

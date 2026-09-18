@@ -8,7 +8,9 @@ import { cn } from '@/lib/utils';
  *    full-strength under-rule; no vertical column-separator hairlines, which
  *    made the tables read as spreadsheets rather than designed surfaces
  *  - --table-row-height rows, --text-sm cells, subtle ROW hairlines only
- *  - numeric columns are right-aligned and tabular so values compare by digit
+ *  - data columns are centre-aligned and tabular; text columns stay left.
+ *    The header centres with its values, so a column reads as one block
+ *    rather than a label floating off the numbers beneath it
  *  - hover tints the row with `active`; `highlight` marks the user's own row
  *    with the same tint permanently
  * The wrapper is scroll-capable so the sticky header pins on vertical scroll.
@@ -96,7 +98,7 @@ export function TableHead({
       className={cn(
         tableHeadClasses,
         'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
-        numeric && 'text-right tabular-nums',
+        numeric && 'text-center tabular-nums',
         className,
       )}
     >
@@ -118,7 +120,7 @@ export function TableCell({
         'text-foreground border-border-subtle px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle text-sm',
         // Row rule, dropped on the last row.
         'border-b [tr:last-child>&]:border-b-0',
-        numeric && 'text-right tabular-nums',
+        numeric && 'text-center tabular-nums',
         className,
       )}
     >

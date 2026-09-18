@@ -10,9 +10,14 @@ import {
 } from '@/components/ui/table';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Pressable } from '@/components/ui/pressable';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { MissingValue } from '@/components/ui/unavailable-value';
 import type { RankingRow } from '@/lib/api/types';
-import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
+import {
+  formatPosition,
+  formatPositionExact,
+  formatRate,
+  measured,
+} from '@/lib/visibility/dashboard';
 import { changeLabel } from '@/lib/visibility/vocabulary';
 import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
 import { textRole } from '@/components/ui/typography';
@@ -136,6 +141,33 @@ function BrandName({
   );
 }
 
+/**
+ * A brand's place in the ranking, with the mean it rounds from behind it.
+ *
+ * `#1.2` reads as a broken ordinal rather than an average, and a reader cannot
+ * be anywhere other than a whole place in a list -- so the cell shows the
+ * whole number and the title keeps the fraction that separates two brands
+ * rounding to the same place.
+ */
+function PositionValue({
+  row,
+  rank,
+  rankedCount,
+}: Readonly<{ row: RankingRow; rank: number | null; rankedCount: number }>) {
+  if (rank == null) return <MissingValue />;
+  const mean =
+    row.avg_position == null
+      ? ''
+      : `, and is named ${formatPositionExact(row.avg_position)} on average within the answers that name it`;
+  return (
+    <span
+      title={`${row.name} ranks ${formatPosition(rank)} of ${rankedCount} tracked brands by visibility${mean}`}
+    >
+      {formatPosition(rank)}
+    </span>
+  );
+}
+
 export function RankingRowsTable({
   rows,
   onSelect,
@@ -217,34 +249,24 @@ export function RankingRowsTable({
                 {/* The rate is the column. Printing its fraction under every
                   row turned a scannable column of percentages into two
                   stacked numbers per cell. */}
-                <TableCell numeric>{formatRate(row.mention_rate)}</TableCell>
+                <TableCell numeric>
+                  {measured(formatRate(row.mention_rate)) ?? <MissingValue />}
+                </TableCell>
                 {anyPosition ? (
                   <TableCell numeric>
-                    {ranks.get(rowKey(row)) == null ? (
-                      <UnavailableValue state="not_measured" />
-                    ) : (
-                      <span
-                        title={`${row.name} ranks ${formatPosition(ranks.get(rowKey(row)) ?? null)} of ${rankedCount} tracked brands by visibility${
-                          row.avg_position == null
-                            ? ''
-                            : `, and is named ${formatPositionExact(row.avg_position)} on average within the answers that name it`
-                        }`}
-                      >
-                        {formatPosition(ranks.get(rowKey(row)) ?? null)}
-                      </span>
-                    )}
+                    <PositionValue
+                      row={row}
+                      rank={ranks.get(rowKey(row)) ?? null}
+                      rankedCount={rankedCount}
+                    />
                   </TableCell>
                 ) : null}
-                {anyChange ? (
-                  <TableCell numeric>
-                    {change ?? <UnavailableValue state="not_measured" />}
-                  </TableCell>
-                ) : null}
+                {anyChange ? <TableCell numeric>{change ?? <MissingValue />}</TableCell> : null}
                 <TableCell numeric className="hidden md:table-cell">
-                  {formatRate(row.share_of_voice)}
+                  {measured(formatRate(row.share_of_voice)) ?? <MissingValue />}
                 </TableCell>
                 <TableCell numeric className="hidden md:table-cell">
-                  {formatRate(row.citation_rate)}
+                  {measured(formatRate(row.citation_rate)) ?? <MissingValue />}
                 </TableCell>
               </TableRow>
             );

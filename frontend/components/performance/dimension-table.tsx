@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { Pressable } from '@/components/ui/pressable';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MissingValue } from '@/components/ui/unavailable-value';
 import {
   Table,
   TableBody,
@@ -31,6 +32,7 @@ import {
   formatDifference,
   formatDimensionValue,
   formatMetric,
+  measured,
   metricDifference,
   sortDirection,
   sortKey,
@@ -83,13 +85,13 @@ function SortableHead({
     <TableHead
       numeric
       aria-sort={active ? (descending ? 'descending' : 'ascending') : undefined}
-      className={cn('text-right', sublabel ? 'min-w-[7.5rem]' : undefined)}
+      className={cn(sublabel ? 'min-w-[7.5rem]' : undefined)}
     >
       <Pressable
         type="button"
         onClick={() => onSort(metric)}
         className={cn(
-          'inline-flex w-full flex-col items-end gap-0.5 text-right',
+          'inline-flex w-full flex-col items-center gap-0.5 text-center',
           active ? 'text-accent-text' : 'hover:text-foreground',
         )}
       >
@@ -128,8 +130,8 @@ function orderableSort(
 /** A header cell for a derived column — not sortable, since it is not stored. */
 function StaticHead({ label, sublabel }: Readonly<{ label: string; sublabel: string }>) {
   return (
-    <TableHead numeric className="min-w-[7.5rem] text-right">
-      <span className="inline-flex w-full flex-col items-end gap-0.5 text-right">
+    <TableHead numeric className="min-w-[7.5rem]">
+      <span className="inline-flex w-full flex-col items-center gap-0.5 text-center">
         <span>{label}</span>
         <span className={cn('max-w-[10rem] truncate', textRole('meta'))} title={sublabel}>
           {sublabel}
@@ -287,12 +289,8 @@ export function DimensionTable({
               Array.from({ length: table.pageSize }, (_, index) => (
                 <TableRow key={`skeleton-${index}`} className="h-11">
                   {Array.from({ length: columnCount }, (_, cell) => (
-                    <TableCell
-                      key={cell}
-                      numeric={cell > 0}
-                      className={cell > 0 ? 'text-right' : undefined}
-                    >
-                      <Skeleton className={cell === 0 ? 'h-4 w-3/4' : 'ml-auto h-4 w-16'} />
+                    <TableCell key={cell} numeric={cell > 0}>
+                      <Skeleton className={cell === 0 ? 'h-4 w-3/4' : 'mx-auto h-4 w-16'} />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -319,9 +317,11 @@ export function DimensionTable({
               </TableCell>
               {displayedMetrics.flatMap((metric) => {
                 const selectedCell = (
-                  <TableCell key={metric.key} numeric className="text-right">
+                  <TableCell key={metric.key} numeric>
                     <span className="mono">
-                      {formatMetric(metric.key, row.metrics[metric.key])}
+                      {measured(formatMetric(metric.key, row.metrics[metric.key])) ?? (
+                        <MissingValue />
+                      )}
                     </span>
                   </TableCell>
                 );
@@ -335,16 +335,16 @@ export function DimensionTable({
                 );
                 return [
                   selectedCell,
-                  <TableCell key={`${metric.key}-comparison`} numeric className="text-right">
+                  <TableCell key={`${metric.key}-comparison`} numeric>
                     <span className="mono text-muted">
-                      {formatMetric(metric.key, comparisonValue)}
+                      {measured(formatMetric(metric.key, comparisonValue)) ?? <MissingValue />}
                     </span>
                   </TableCell>,
-                  <TableCell key={`${metric.key}-difference`} numeric className="text-right">
+                  <TableCell key={`${metric.key}-difference`} numeric>
                     <span
                       className={cn('mono', TONE_CLASS[differenceTone(metric.key, difference)])}
                     >
-                      {formatDifference(metric.key, difference)}
+                      {measured(formatDifference(metric.key, difference)) ?? <MissingValue />}
                     </span>
                   </TableCell>,
                 ];

@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { MissingValue, UnavailableValue } from '@/components/ui/unavailable-value';
 import type { visibilitySourceUrlSchema } from '@/lib/api/schemas/visibility-evidence';
 import { engineLabel } from '@/lib/providers/catalog';
 import { count } from '@/lib/visibility/sources';
@@ -124,9 +124,7 @@ export function EnginesCard({
                     ) : null}
                   </span>
                 </TableCell>
-                <TableCell numeric>
-                  {count(row.retrievals) ?? <UnavailableValue state="not_measured" />}
-                </TableCell>
+                <TableCell numeric>{count(row.retrievals) ?? <MissingValue />}</TableCell>
               </TableRow>
             ))}
           </TableBody>
