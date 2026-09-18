@@ -84,7 +84,7 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
     // lost `manage_billing` would keep seeing the finances they may no longer
     // read. Gate on the capability, not just on the fetch.
     const usage = canReadBilling && usageQuery.data?.status === 'resolved' ? usageQuery.data : null;
-    if (!data || data.status !== 'resolved') {
+    if (data?.status !== 'resolved') {
       return {
         ...FAIL_CLOSED,
         // Account usage is independently authoritative: the allowance a new

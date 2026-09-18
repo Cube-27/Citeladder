@@ -87,12 +87,7 @@ export function parsePendingIntent(
   now: number = Date.now(),
 ): PendingPricingIntentV1 | null {
   const value = recordFrom(raw);
-  if (
-    !value ||
-    value.version !== 1 ||
-    value.return_path !== PRICING_RETURN_PATH ||
-    !validFields(value)
-  ) {
+  if (value?.version !== 1 || value.return_path !== PRICING_RETURN_PATH || !validFields(value)) {
     return null;
   }
   if (!hasValidTimestamp(value.created_at_ms as number, now)) return null;

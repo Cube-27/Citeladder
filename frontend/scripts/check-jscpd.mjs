@@ -11,7 +11,7 @@ const BASELINE_PATH = path.join(FRONTEND, 'scripts', 'jscpd-baseline.json');
 const CONFIG_PATH = path.join(ROOT, 'jscpd.json');
 const BASELINE_REPOSITORY_PATH = 'frontend/scripts/jscpd-baseline.json';
 const GIT_EXECUTABLE =
-  process.platform === 'win32' ? 'C:\\Program Files\\Git\\cmd\\git.exe' : '/usr/bin/git';
+  process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
 const BIN = process.execPath;
 const JSCPD_ENTRYPOINT = path.join(FRONTEND, 'node_modules', 'jscpd', 'run-jscpd.js');
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;

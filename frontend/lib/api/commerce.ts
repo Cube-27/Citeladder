@@ -17,6 +17,11 @@ import {
 
 const path = (projectId: string, suffix: string) => `/projects/${projectId}/commerce/${suffix}`;
 
+/** The audit is optional, and an empty `&audit_id=` is not the same request. */
+function auditParameter(auditId: string | undefined): string {
+  return auditId ? `&audit_id=${encodeURIComponent(auditId)}` : '';
+}
+
 export const commerceApi = {
   catalog: async (projectId: string, options?: ApiRequestOptions) =>
     strictValidate(
@@ -70,12 +75,10 @@ export const commerceApi = {
     options?: ApiRequestOptions,
   ) => {
     const query = (taskIds ?? []).map((id) => `task_ids=${encodeURIComponent(id)}`).join('&');
+    const search = query ? `?${query}` : '';
     return strictValidate(
       z.array(competitorDiscoveryTaskSchema),
-      await apiClient.get(
-        `${path(projectId, 'competitors/discoveries')}${query ? `?${query}` : ''}`,
-        options,
-      ),
+      await apiClient.get(`${path(projectId, 'competitors/discoveries')}${search}`, options),
       'commerce.competitorDiscoveries',
     );
   },
@@ -142,7 +145,7 @@ export const commerceApi = {
     strictValidate(
       shelfSchema,
       await apiClient.get(
-        `${path(projectId, 'ai-shelf')}?target_kind=${target.kind}&target_id=${encodeURIComponent(target.id)}${auditId ? `&audit_id=${encodeURIComponent(auditId)}` : ''}`,
+        `${path(projectId, 'ai-shelf')}?target_kind=${target.kind}&target_id=${encodeURIComponent(target.id)}${auditParameter(auditId)}`,
         options,
       ),
       'commerce.shelf',

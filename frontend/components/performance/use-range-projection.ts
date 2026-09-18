@@ -100,7 +100,7 @@ export function useRangeProjection(
 function missingWindow(data: PerformanceDashboard | undefined) {
   if (!data) return null;
   for (const window of [data.selected, data.comparison]) {
-    if (window && window.snapshot_id === null && window.window_start && window.window_end) {
+    if (window?.snapshot_id === null && window.window_start && window.window_end) {
       return { from: window.window_start, to: window.window_end };
     }
   }

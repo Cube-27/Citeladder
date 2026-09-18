@@ -15,7 +15,8 @@ export function discoveryMessage(status: string, kind: string, errorCode: string
     if (errorCode === 'provider_unavailable') {
       return 'Competitor discovery is unavailable: no search provider is configured.';
     }
-    return `Discovery failed for this ${kind}${errorCode ? ` (${errorCode})` : ''}.`;
+    const code = errorCode ? ` (${errorCode})` : '';
+    return `Discovery failed for this ${kind}${code}.`;
   }
   return `Finding competitors for this ${kind}…`;
 }

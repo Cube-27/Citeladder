@@ -44,7 +44,7 @@ export function usePromptSet() {
     onSuccess: async (created) => {
       if (projectId) {
         queryClient.setQueryData<PromptSet[]>(queryKeys.prompts.sets(projectId), (prev) =>
-          prev && prev.length ? prev : [created],
+          prev?.length ? prev : [created],
         );
         await queryClient.invalidateQueries({ queryKey: queryKeys.prompts.sets(projectId) });
       }

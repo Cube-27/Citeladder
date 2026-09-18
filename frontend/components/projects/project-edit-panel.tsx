@@ -54,6 +54,11 @@ const nextCompetitorKey = () => `competitor-${(competitorKeySeq += 1)}`;
 
 type CompetitorDraft = { key: string; name: string; domains: string };
 
+/** An unnamed competitor row still needs something for a screen reader to say. */
+function competitorName(name: string, index: number): string {
+  return name || `competitor ${index + 1}`;
+}
+
 export function ProjectEditPanel({
   project,
   open,
@@ -279,7 +284,7 @@ export function ProjectEditPanel({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Remove ${competitor.name || `competitor ${index + 1}`}`}
+                    aria-label={`Remove ${competitorName(competitor.name, index)}`}
                     onClick={() => setCompetitors((prev) => prev.filter((_, i) => i !== index))}
                   >
                     <X className="size-4" aria-hidden />

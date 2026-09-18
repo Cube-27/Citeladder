@@ -54,7 +54,7 @@ describe('prefetchRoute', () => {
     prefetchRoute(client, '/demand', PROJECT);
     await Promise.resolve();
 
-    expect(vi.mocked(demandApi.getLatest).mock.calls.length).toBe(callsAfterFailure);
+    expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(callsAfterFailure);
     expect(query?.state.status).toBe('error');
   });
 

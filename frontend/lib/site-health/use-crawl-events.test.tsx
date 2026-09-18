@@ -128,7 +128,7 @@ describe('useCrawlEvents', () => {
         JSON.stringify((arg as { queryKey: unknown }).queryKey) ===
         JSON.stringify(queryKeys.siteHealth.dashboard(PROJECT)),
     );
-    expect(dashboardCalls.length).toBe(1);
+    expect(dashboardCalls).toHaveLength(1);
   });
 
   it('leaves per-page progress to the bounded dashboard poll', async () => {
@@ -223,7 +223,7 @@ describe('useCrawlEvents', () => {
     unmount();
     const afterUnmount = fetchMock.mock.calls.length;
     await vi.advanceTimersByTimeAsync(SITE_HEALTH_STREAM_RECONNECT_BASE_MS * 5);
-    expect(fetchMock.mock.calls.length).toBe(afterUnmount);
+    expect(fetchMock.mock.calls).toHaveLength(afterUnmount);
 
     vi.unstubAllGlobals();
     vi.useRealTimers();

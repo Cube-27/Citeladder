@@ -122,7 +122,7 @@ describe('warmQuery', () => {
     warmQuery(app, { queryKey: KEY, queryFn });
     await Promise.resolve();
 
-    expect(queryFn.mock.calls.length).toBe(callsAfterFailure);
+    expect(queryFn.mock.calls).toHaveLength(callsAfterFailure);
     expect(query?.state.status).toBe('error');
   });
 });

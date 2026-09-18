@@ -545,7 +545,7 @@ export function directRadixImportViolations(source, label) {
 const TEXT_ROLE_BACKGROUND = new RegExp(
   // Assembled from fragments so this policy source -- which the walk in
   // check-design-system.mjs also reads -- can never match itself.
-  `(^|\\s)${['bg', '-'].join('')}(subtle|secondary|muted)(\\s|/|$)`,
+  String.raw`(^|\s)${['bg', '-'].join('')}(subtle|secondary|muted)(\s|/|$)`,
 );
 
 const TEXT_ROLE_BACKGROUND_MESSAGE =
@@ -716,11 +716,11 @@ function cssRules(source) {
 }
 
 function escapeRegExp(value) {
-  return value.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&');
+  return value.replace(/[.*+?^$(){}|[\]\\]/g, String.raw`\$&`);
 }
 
 function selectorPattern(selector) {
-  return new RegExp(escapeRegExp(selector) + '(?![\\w-])');
+  return new RegExp(escapeRegExp(selector) + String.raw`(?![\w-])`);
 }
 
 function tokenHex(source, token) {

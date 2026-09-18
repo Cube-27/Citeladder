@@ -396,7 +396,7 @@ export function DemandProjection() {
   // with an empty content region, so it keeps its identity band rather than
   // losing the heading and the rule above the work.
   const snapshot = latest.data;
-  if (activeProject && snapshot && snapshot.coverage.search === 'observed') {
+  if (activeProject && snapshot?.coverage.search === 'observed') {
     // The route already wraps this subtree in a TooltipProvider.
     //
     // A refresh that fails over evidence we already hold keeps the evidence and

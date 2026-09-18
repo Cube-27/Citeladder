@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
-import { textRole } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -16,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Label } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { PageKindSelect } from '@/components/site-health/page-kind-select';
 import { PagesTable } from '@/components/site-health/pages-table';

@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { ContentTargetPage } from '@/lib/api/content';
 
-import type { ContentOpportunityContext } from './content-screen-data';
-import type { useSiteHealthHandoff } from './content-screen-data';
+import type { ContentOpportunityContext, useSiteHealthHandoff } from './content-screen-data';
 
 /**
  * Whether an identifier-derived default at `priority` may claim the skill slot,
