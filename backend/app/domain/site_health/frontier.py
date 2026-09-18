@@ -164,7 +164,7 @@ async def _store_frontier_candidates(
     configuration: dict,
 ) -> None:
     """Persist admissible candidates before applying the current batch budget."""
-    eligible = _eligible_frontier_candidates(crawl, candidates, configuration)
+    eligible = _eligible_frontier_candidates(candidates, configuration)
     if not eligible:
         return
     existing_count = int(
@@ -198,7 +198,7 @@ async def _store_frontier_candidates(
 
 
 def _eligible_frontier_candidates(
-    crawl: SiteCrawl, candidates: list[FrontierCandidate], configuration: dict
+    candidates: list[FrontierCandidate], configuration: dict
 ) -> list[FrontierCandidate]:
     return [
         candidate

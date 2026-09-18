@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
@@ -142,6 +143,19 @@ def detect_search_signals(
     return candidates
 
 
+def detector_state(*, abstained: int, rows: Sequence[object]) -> str:
+    """What a detector observed, in the vocabulary the evidence contract uses.
+
+    Any abstention makes the result partial regardless of how much landed: a
+    detector that silently dropped rows must not report full coverage. With
+    nothing abstained, having rows at all is the difference between an answer
+    and no data.
+    """
+    if abstained:
+        return "partial"
+    return "available" if rows else "unavailable"
+
+
 def detect_striking_distance(rows: list[QueryEvidenceInput]) -> DetectorEvaluation:
     """Separate branded demand and detect only resolved non-branded candidates."""
     grouped: dict[tuple[str, str, str], list[QueryEvidenceInput]] = {}
@@ -184,7 +198,7 @@ def detect_striking_distance(rows: list[QueryEvidenceInput]) -> DetectorEvaluati
                     gap_weight=DEMAND_STRIKING_DISTANCE_GAP_WEIGHT,
                 )
             )
-    state = "partial" if abstained else ("available" if rows else "unavailable")
+    state = detector_state(abstained=abstained, rows=rows)
     limitations = (
         (
             f"{abstained} rows abstained on ambiguous classification, "

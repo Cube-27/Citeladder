@@ -61,6 +61,11 @@ _HARD_ADMISSION_EXCLUSION_CODES = frozenset(
 _REDIRECT_STATUSES: frozenset[int] = frozenset({301, 302, 303, 307, 308})
 
 
+def _error_status(error: FetchError | None) -> int | None:
+    """A failed attempt's status, when the failure carried one at all."""
+    return error.status_code if error else None
+
+
 def enforce_admission(
     url: str,
     *,
@@ -276,13 +281,7 @@ class SecureFetcher:
         error: FetchError | None = None,
         error_code: str | None = None,
     ) -> None:
-        status_code = (
-            result.status_code
-            if result is not None
-            else error.status_code
-            if error
-            else None
-        )
+        status_code = result.status_code if result is not None else _error_status(error)
         attempts.append(
             FetchCallTrace(
                 request_ordinal=len(attempts),

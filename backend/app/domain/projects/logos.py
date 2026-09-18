@@ -82,7 +82,7 @@ def _project_targets(project: Project) -> dict[str, _LogoTarget]:
         identity = next(
             (
                 parsed
-                for domain_value in list(competitor.domains or [])
+                for domain_value in competitor.domains or []
                 if (parsed := _target_identity(str(domain_value))) is not None
             ),
             None,

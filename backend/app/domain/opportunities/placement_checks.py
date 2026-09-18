@@ -276,13 +276,12 @@ def _reading(
         None,
     )
     facts = snapshot.page_facts or {}
+    observed_version = rows[0].roster_version if rows else ""
     return PlacementReading(
         snapshot_id=str(snapshot.id),
-        roster_version=(
-            roster_version
-            if roster_version is not None
-            else (rows[0].roster_version if rows else "")
-        ),
+        roster_version=roster_version
+        if roster_version is not None
+        else observed_version,
         extracted_chars=snapshot.extracted_chars,
         brand_presence=brand.presence if brand else None,
         brand_present=bool(brand and brand.presence == PRESENCE_PRESENT),

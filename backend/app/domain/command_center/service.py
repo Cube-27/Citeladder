@@ -329,12 +329,20 @@ def _evidence_state(
     partial: bool = False,
 ) -> EvidenceState:
     return EvidenceState(
-        state=("partial" if partial else "observed") if observed_at else "not_run",
+        state=_observed_state(observed_at, partial=partial),
         observed_at=observed_at,
         freshness="current" if observed_at else "unknown",
         coverage=coverage if observed_at else [],
         limitations=limitations,
     )
+
+
+def _observed_state(observed_at: object, *, partial: bool) -> str:
+    """Partial and observed are both observations; neither applies to a surface
+    that never ran."""
+    if not observed_at:
+        return "not_run"
+    return "partial" if partial else "observed"
 
 
 async def _loop_state(

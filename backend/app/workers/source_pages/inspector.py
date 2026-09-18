@@ -187,6 +187,17 @@ class _Inspector:
         return result if await self.allowed(final) else self._blocked(url)
 
 
+def _inspection_reason(*, ok: bool, readable: bool) -> str | None:
+    """Why an inspection failed, or ``None`` when it did not.
+
+    A refused status is reported ahead of an unreadable type: a 404 that also
+    served HTML is a status problem, not a content-type one.
+    """
+    if ok and readable:
+        return None
+    return INSPECTION_REASON_STATUS if not ok else INSPECTION_REASON_NON_HTML
+
+
 def _outcome_from_result(url: str, result: FetchResult) -> FetchOutcome:
     content_type = (result.content_type or "").split(";")[0].strip().lower()
     readable = content_type in SOURCE_PAGE_ALLOWED_CONTENT_TYPES
@@ -202,11 +213,7 @@ def _outcome_from_result(url: str, result: FetchResult) -> FetchOutcome:
         redirect_chain=tuple(hop.to_url for hop in result.redirect_chain),
         redacted_headers=dict(result.redacted_headers or {}),
         robots_state="allowed",
-        reason=(
-            None
-            if (ok and readable)
-            else (INSPECTION_REASON_STATUS if not ok else INSPECTION_REASON_NON_HTML)
-        ),
+        reason=_inspection_reason(ok=ok, readable=readable),
     )
 
 

@@ -297,7 +297,7 @@ def _qualified_action(
     return None
 
 
-def _research_extra(page: SourcePageEvidence, missing: tuple[str, ...]) -> dict | None:
+def _research_extra(page: SourcePageEvidence) -> dict | None:
     """Whether an UNQUALIFIED page is worth resolving, and what is unresolved.
 
     The explicit exception to the qualification gate. Its own bar is relevance
@@ -330,7 +330,7 @@ def _page_hit(
     if qualified:
         selected = _qualified_action(page, evidence.owned_domains)
     else:
-        extra = _research_extra(page, missing)
+        extra = _research_extra(page)
         selected = None if extra is None else (RULE_EARNED_PAGE_RESEARCH, extra)
     if selected is None:
         return None

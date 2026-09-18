@@ -209,6 +209,11 @@ def evaluate_canonical_integrity(
     )
 
 
+#: An absent port means the scheme's default, which is what makes two
+#: otherwise identical origins compare equal.
+_DEFAULT_PORTS = {"https": 443, "http": 80}
+
+
 def _canonical_origin(url: str) -> tuple[str, str, int]:
     parts = urlsplit(url)
     scheme = parts.scheme.casefold()
@@ -218,7 +223,7 @@ def _canonical_origin(url: str) -> tuple[str, str, int]:
     return (
         scheme,
         parts.hostname.casefold(),
-        port if port is not None else (443 if scheme == "https" else 80),
+        port if port is not None else _DEFAULT_PORTS[scheme],
     )
 
 

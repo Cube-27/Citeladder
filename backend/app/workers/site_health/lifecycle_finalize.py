@@ -338,7 +338,7 @@ class CrawlFinalizeMixin:
             return
         ctx = await _load_finalize_context(session, crawl=crawl, rows=rows)
         evaluations = self._evaluate_hreflang_conflicts(ctx)
-        evaluations.extend(self._evaluate_resolution_rules(crawl, ctx))
+        evaluations.extend(self._evaluate_resolution_rules(ctx))
         evaluations.extend(await self._evaluate_sitemap_orphans(session, crawl, ctx))
         await self._persist_evaluations(
             session, crawl=crawl, ctx=ctx, evaluations=evaluations
@@ -428,7 +428,7 @@ class CrawlFinalizeMixin:
         ]
 
     def _evaluate_resolution_rules(
-        self, crawl: SiteCrawl, ctx: _FinalizeContext
+        self, ctx: _FinalizeContext
     ) -> list[tuple[uuid.UUID, RuleEvaluation]]:
         """Build canonical, internal-link, and sitemap resolution results."""
         analysis_ids_by_artifact: dict[uuid.UUID, list[uuid.UUID]] = {}

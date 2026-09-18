@@ -374,15 +374,15 @@ def _apply_brand_update(project: Project, payload: Any, data: dict) -> None:
     if data.get("brand_name") is None and payload.brand is None:
         return
     brand = project.brand
+    existing_name = brand.name if brand is not None else project.brand_name
+    existing_aliases = (
+        [alias.alias for alias in brand.aliases] if brand is not None else []
+    )
     new_name = (
-        data["brand_name"]
-        if data.get("brand_name") is not None
-        else (brand.name if brand is not None else project.brand_name)
+        data["brand_name"] if data.get("brand_name") is not None else existing_name
     )
     new_aliases = (
-        payload.brand.aliases
-        if payload.brand is not None
-        else ([alias.alias for alias in brand.aliases] if brand is not None else [])
+        payload.brand.aliases if payload.brand is not None else existing_aliases
     )
     _apply_brand(project, new_name, new_aliases)
 
