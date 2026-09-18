@@ -166,6 +166,11 @@ export const executionStatusSchema = z.enum([
   'succeeded',
   'retry_wait',
   'capacity_wait',
+  // Observed search surfaces wait on a task running at the PROVIDER, not
+  // here. Both are common mid-run and, per the note above, a status missing
+  // from this list fails the whole executions list rather than one row.
+  'awaiting_provider_result',
+  'submission_uncertain',
   'failed',
   'cancelled',
 ]);

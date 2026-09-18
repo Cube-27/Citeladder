@@ -153,38 +153,40 @@ class TestRouteConstruction:
 
 
 class TestSelectability:
-    """Readable is not the same as runnable."""
+    """Readable and runnable are separate questions with one switch.
 
-    def test_the_surface_is_known_to_analysis_but_not_selectable_yet(self) -> None:
+    The surface was a member of the read vocabulary for three slices before it
+    became requestable. These tests now pin the ACTIVATED state; the gate
+    itself is what kept a half-wired engine off the run form while it was
+    being built.
+    """
+
+    def test_the_surface_is_both_known_and_selectable(self) -> None:
         assert ENGINE_GOOGLE_AI_OVERVIEW in LOGICAL_ENGINES
-        assert ENGINE_GOOGLE_AI_OVERVIEW not in SELECTABLE_ENGINES
-        assert is_selectable_engine(ENGINE_GOOGLE_AI_OVERVIEW) is False
+        assert ENGINE_GOOGLE_AI_OVERVIEW in SELECTABLE_ENGINES
+        assert is_selectable_engine(ENGINE_GOOGLE_AI_OVERVIEW) is True
 
     def test_the_shipped_engines_stay_selectable(self) -> None:
         for engine in ("chatgpt", "claude", "gemini"):
             assert is_selectable_engine(engine) is True
 
     def test_selectable_engines_are_a_subset_of_known_engines(self) -> None:
+        # The gate can only ever narrow. An engine nothing can analyse must
+        # never become requestable by flipping one flag.
         assert set(SELECTABLE_ENGINES) <= set(LOGICAL_ENGINES)
 
-    def test_a_run_may_not_request_the_unshipped_surface(self) -> None:
-        from app.domain.audits.errors import AuditValidationError
-        from app.domain.audits.resolution import _normalize_engines
+    def test_selectability_is_derived_from_the_public_catalog(self) -> None:
+        """One switch, not a second list to keep in step."""
+        from app.core.config.provider_catalog import PUBLIC_PROVIDER_CATALOG
 
-        with pytest.raises(AuditValidationError, match="Unknown logical engine"):
-            _normalize_engines([ENGINE_GOOGLE_AI_OVERVIEW])
+        shipped = {
+            entry.key for entry in PUBLIC_PROVIDER_CATALOG if entry.adapter_shipped
+        }
+        assert set(SELECTABLE_ENGINES) == shipped & set(LOGICAL_ENGINES)
 
-    def test_a_schedule_may_not_request_the_unshipped_surface(self) -> None:
-        from pydantic import ValidationError
-
-        from app.domain.audits.schedule_schemas import AuditScheduleCreate
-
-        with pytest.raises(ValidationError, match="supported logical engines"):
-            AuditScheduleCreate(
-                cadence="daily",
-                timezone="UTC",
-                engines=[ENGINE_GOOGLE_AI_OVERVIEW],
-            )
+    def test_a_display_only_provider_is_never_selectable(self) -> None:
+        for key in ("grok", "perplexity", "copilot"):
+            assert is_selectable_engine(key) is False
 
 
 class TestCredentialShape:
@@ -313,3 +315,94 @@ class TestSearchContextAdmission:
             project=self._project(serp_location_code=0),
             engines=[ENGINE_CHATGPT, "claude", "gemini"],
         )
+
+
+class TestRotationShape:
+    """A rotation in the wrong shape is refused, never silently dropped."""
+
+    def _connection(self, transport: str):
+        from app.models.provider import ProviderConnection
+
+        return ProviderConnection(transport_provider=transport, api_key_encrypted="x")
+
+    def _update(self, **values: object):
+        from app.domain.providers.schemas import ProviderConnectionUpdate
+
+        return ProviderConnectionUpdate(**values)
+
+    def test_omitting_credentials_leaves_the_stored_secret_alone(self) -> None:
+        from app.domain.providers.connection_updates import rotated_secret
+
+        assert rotated_secret(self._connection("openai"), self._update()) is None
+        assert (
+            rotated_secret(self._connection(TRANSPORT_DATAFORSEO), self._update())
+            is None
+        )
+
+    def test_a_complete_pair_rotates_the_search_credential(self) -> None:
+        from app.domain.providers.connection_updates import rotated_secret
+
+        secret = rotated_secret(
+            self._connection(TRANSPORT_DATAFORSEO),
+            self._update(api_login="u@x.com", api_password="pw"),
+        )
+        assert secret is not None
+        assert unpack_credential(secret).login == "u@x.com"
+
+    def test_half_a_pair_is_refused_by_the_schema(self) -> None:
+        # Rotating one half against a remembered other half would leave the
+        # stored credential in a state nobody entered.
+        with pytest.raises(ValueError, match="both halves"):
+            self._update(api_login="u@x.com")
+
+    def test_a_key_and_a_pair_together_are_refused_by_the_schema(self) -> None:
+        with pytest.raises(ValueError, match="not both"):
+            self._update(api_key="sk-x", api_login="u", api_password="p")
+
+    def test_a_bearer_key_sent_to_a_search_connection_is_refused_by_name(
+        self,
+    ) -> None:
+        # Silently ignoring it would report a rotation that never happened.
+        from app.domain.providers.connection_updates import (
+            CredentialShapeError,
+            rotated_secret,
+        )
+
+        with pytest.raises(CredentialShapeError, match="not a single key"):
+            rotated_secret(
+                self._connection(TRANSPORT_DATAFORSEO), self._update(api_key="sk-x")
+            )
+
+    def test_a_pair_sent_to_a_bearer_connection_is_refused_by_name(self) -> None:
+        from app.domain.providers.connection_updates import (
+            CredentialShapeError,
+            rotated_secret,
+        )
+
+        with pytest.raises(CredentialShapeError, match="not a login and password"):
+            rotated_secret(
+                self._connection("openai"),
+                self._update(api_login="u@x.com", api_password="pw"),
+            )
+
+
+class TestFundedModeExcludesTheSearchSurface:
+    def test_a_funded_run_cannot_select_the_byok_only_surface(self) -> None:
+        """Rejected where the error can still name the cause.
+
+        Funded routing binds a platform connection at per-task credential
+        resolution, and no platform DataForSEO account is provisioned. Letting
+        it through would admit a run that then failed every task on an opaque
+        `execution_credentials_unavailable`.
+        """
+        from app.domain.audits.errors import AuditValidationError
+        from app.domain.audits.resolution import _resolve_funded_routes
+
+        with pytest.raises(AuditValidationError, match="your own DataForSEO"):
+            _resolve_funded_routes([ENGINE_GOOGLE_AI_OVERVIEW])
+
+    def test_funded_routing_still_works_for_the_llm_engines(self) -> None:
+        from app.domain.audits.resolution import _resolve_funded_routes
+
+        resolved = _resolve_funded_routes([ENGINE_CHATGPT])
+        assert resolved[ENGINE_CHATGPT].transport_provider == "openai"

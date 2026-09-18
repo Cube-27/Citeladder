@@ -89,11 +89,12 @@ def parse_task_payload(
 
     # Rule 1, envelope level: a response-level failure is authoritative and is
     # handled BEFORE any task is looked at. A task cannot vouch for a response
-    # that was rejected outright.
+    # that was rejected outright, so the presence of a ``tasks[]`` array is NOT
+    # permission to skip this — a rejected request can still carry task stubs,
+    # and reading their statuses would let a payment or auth failure be
+    # reported as whatever the stub happened to say.
     envelope_status = _status_code(envelope)
-    if envelope_status is not None and not (
-        is_complete_status(envelope_status) or _has_tasks(tasks)
-    ):
+    if envelope_status is not None and not is_complete_status(envelope_status):
         return _provider_error(envelope_status, envelope)
 
     if not _has_tasks(tasks):

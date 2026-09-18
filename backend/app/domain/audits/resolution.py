@@ -18,6 +18,7 @@ from app.core.config.provider_catalog import (
     SELECTABLE_ENGINES,
     is_endpoint_approved,
     is_route_approved,
+    is_search_surface,
     measurement_route,
 )
 from app.domain.audits.errors import AuditValidationError
@@ -240,6 +241,18 @@ def _resolve_funded_routes(engines: list[str]) -> dict[str, _ResolvedRoute]:
     """
     resolved: dict[str, _ResolvedRoute] = {}
     for engine in _normalize_engines(engines):
+        if is_search_surface(engine):
+            # Funded routing binds a PLATFORM connection in the system
+            # workspace at per-task credential resolution. No platform
+            # DataForSEO account is provisioned — the shipped credential model
+            # for this surface is BYOK — so allowing it here would admit a run
+            # that passes route resolution and then fails every task on
+            # `execution_credentials_unavailable`. Reject it while the error
+            # can still name the actual cause.
+            raise AuditValidationError(
+                f"{engine} runs on your own DataForSEO credentials and cannot "
+                "be launched in funded mode."
+            )
         try:
             catalog_route = measurement_route(engine)
         except ValueError as exc:

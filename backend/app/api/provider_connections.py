@@ -29,6 +29,7 @@ from app.core.config.provider_catalog import (
 )
 from app.core.http_errors import raise_api_error
 from app.domain.billing.schemas import ProviderConnectionStatesResponse
+from app.domain.providers.connection_updates import CredentialShapeError
 from app.domain.providers.schemas import (
     ProviderCatalogEngine,
     ProviderCatalogResponse,
@@ -104,7 +105,13 @@ async def create_connection_endpoint(
         connection = await create_connection(
             session, workspace_id=ctx.workspace_id, payload=payload
         )
-    except (InvalidRouteError, InvalidProviderEndpointError) as exc:
+    except (
+        CredentialShapeError,
+        InvalidRouteError,
+        InvalidProviderEndpointError,
+    ) as exc:
+        # A credential in the wrong shape is a caller mistake, not a server
+        # fault: it must read as 400 with the reason, never a 500.
         raise_api_error(status.HTTP_400_BAD_REQUEST, str(exc), cause=exc)
     return connection_to_response(connection)
 
@@ -127,7 +134,13 @@ async def update_connection_endpoint(
         raise_api_error(status.HTTP_404_NOT_FOUND, _NOT_FOUND, cause=exc)
     except RetiredConnectionReadOnlyError as exc:
         raise_api_error(status.HTTP_409_CONFLICT, str(exc), cause=exc)
-    except (InvalidRouteError, InvalidProviderEndpointError) as exc:
+    except (
+        CredentialShapeError,
+        InvalidRouteError,
+        InvalidProviderEndpointError,
+    ) as exc:
+        # A credential in the wrong shape is a caller mistake, not a server
+        # fault: it must read as 400 with the reason, never a 500.
         raise_api_error(status.HTTP_400_BAD_REQUEST, str(exc), cause=exc)
     return connection_to_response(connection)
 

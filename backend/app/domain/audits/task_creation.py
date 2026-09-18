@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.audits import TASK_STATUS_PENDING_RESERVATION
 from app.core.config.costs import ExpectedExecutionCost
+from app.core.config.dataforseo import DEFAULT_DEVICE, DEFAULT_LANGUAGE_CODE
 from app.core.config.entitlements import CAPABILITY_REGISTRY
 from app.core.config.provider_catalog import is_search_surface
 from app.core.config.task_queue import TASK_STATUS_QUEUED
@@ -43,10 +44,14 @@ def _frozen_search_snapshot(project: Project | None) -> dict[str, Any] | None:
     """
     if project is None:
         return None
+    # The SAME fallbacks admission validated with. Freezing the raw empty
+    # string instead would record a context that was never checked and leave
+    # the real value to be re-derived at read time — which is exactly the
+    # "re-read it later" this function exists to prevent.
     return {
         "location_code": project.serp_location_code,
-        "language_code": project.serp_language_code,
-        "device": project.serp_device,
+        "language_code": project.serp_language_code or DEFAULT_LANGUAGE_CODE,
+        "device": project.serp_device or DEFAULT_DEVICE,
     }
 
 

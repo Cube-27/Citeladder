@@ -60,6 +60,43 @@ def build_app_routes(
     ]
 
 
+class CredentialShapeError(ValueError):
+    """A rotation supplied credentials this connection cannot authenticate with."""
+
+
+def _supplied_credentials(payload: Any) -> tuple[str, str, str]:
+    """The three credential fields, normalised. Absent reads as empty."""
+    return (
+        (getattr(payload, "api_login", None) or "").strip(),
+        getattr(payload, "api_password", None) or "",
+        (getattr(payload, "api_key", None) or "").strip(),
+    )
+
+
+def _rotated_basic_secret(login: str, password: str, api_key: str) -> str | None:
+    """A login/password rotation for a connection that authenticates with one."""
+    if api_key:
+        raise CredentialShapeError(
+            "This connection uses an API login and password, not a single key"
+        )
+    if not login and not password:
+        return None
+    if not (login and password):
+        raise CredentialShapeError(
+            "Rotating these credentials needs both the login and the password"
+        )
+    return pack_credential(login=login, password=password)
+
+
+def _rotated_bearer_secret(login: str, password: str, api_key: str) -> str | None:
+    """A bearer-key rotation for a connection that authenticates with one."""
+    if login or password:
+        raise CredentialShapeError(
+            "This connection uses a single API key, not a login and password"
+        )
+    return api_key or None
+
+
 def rotated_secret(connection: ProviderConnection, payload: Any) -> str | None:
     """The new secret this update supplies, or None to keep the stored one.
 
@@ -69,20 +106,21 @@ def rotated_secret(connection: ProviderConnection, payload: Any) -> str | None:
     the same question as "is ``api_key`` non-empty" once a transport
     authenticates with a pair.
 
-    A DataForSEO rotation must carry BOTH halves. Half a rotation is refused
-    at the schema, so reaching here with one half is impossible; the check
-    below is the belt to that braces.
+    This is also where the TRANSPORT-specific rule lives, because this is
+    where the connection is loaded. The schema can tell that a key and a pair
+    together are incoherent; only here can it be known that THIS connection
+    authenticates with one shape and not the other. Sending the wrong shape is
+    refused by name rather than ignored — a key silently dropped on a
+    DataForSEO connection would report a successful rotation that never
+    happened.
     """
-    if connection.transport_provider == TRANSPORT_DATAFORSEO:
-        login = (getattr(payload, "api_login", None) or "").strip()
-        password = getattr(payload, "api_password", None) or ""
-        if not login and not password:
-            return None
-        return pack_credential(login=login, password=password)
-    api_key = getattr(payload, "api_key", None)
-    if api_key is not None and api_key.strip():
-        return api_key.strip()
-    return None
+    login, password, api_key = _supplied_credentials(payload)
+    reader = (
+        _rotated_basic_secret
+        if connection.transport_provider == TRANSPORT_DATAFORSEO
+        else _rotated_bearer_secret
+    )
+    return reader(login, password, api_key)
 
 
 def apply_scalar_updates(connection: ProviderConnection, payload: Any) -> None:

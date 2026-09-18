@@ -249,6 +249,22 @@ class TestEvaluationOrder:
         assert result.outcome == OUTCOME_PROVIDER_ERROR
         assert result.provider_status_code == 40100
 
+    def test_an_envelope_failure_wins_even_when_tasks_are_present(self) -> None:
+        """A rejected request can still carry task stubs.
+
+        Reading their statuses would let a payment or auth failure be reported
+        as whatever the stub happened to say — including, at worst, a
+        successful observation.
+        """
+        payload = payloads.response(
+            payloads.completed_task(task_id="t-1"), status_code=40200
+        )
+        result = parse_task_payload(payload, expected_task_id="t-1")
+        assert isinstance(result, SearchSurfaceResult)
+        assert result.outcome == OUTCOME_PROVIDER_ERROR
+        assert result.provider_status_code == 40200
+        assert result.aio_present is None
+
     def test_the_submitted_task_is_selected_by_id(self) -> None:
         payload = payloads.response(
             payloads.completed_task(task_id="other", with_overview=False),

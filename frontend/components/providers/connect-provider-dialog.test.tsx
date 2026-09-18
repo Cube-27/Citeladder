@@ -22,6 +22,7 @@ afterAll(() => mswServer.close());
 
 const OTHER_ID = '11111111-1111-4111-8111-111111111112';
 const THIRD_ID = '11111111-1111-4111-8111-111111111113';
+const FOURTH_ID = '11111111-1111-4111-8111-111111111114';
 
 /** Stateful host so the dialog really closes after a successful save. */
 function Harness({ onConnected }: { onConnected?: () => void }) {
@@ -218,8 +219,11 @@ describe('ConnectProviderDialog', () => {
   // route, so once all three shipped engines were configured it selected a
   // PLANNED provider — a value the engine picker cannot display.
   it('never defaults to a planned provider when every shipped engine is configured', async () => {
-    // All three VERIFIED, so no card is left needing attention and the default
-    // falls through to the fallback this regression is about.
+    // Every SHIPPED surface VERIFIED, so no card is left needing attention and
+    // the default falls through to the fallback this regression is about.
+    // Google AI Overview is included deliberately: leaving it unconfigured
+    // would give the dialog a real engine to default to and the test would
+    // pass without exercising the fallback at all.
     const verified = {
       last_test_status: 'ok',
       last_tested_at: '2026-07-15T00:00:00Z',
@@ -237,6 +241,11 @@ describe('ConnectProviderDialog', () => {
           connection({
             id: THIRD_ID,
             transport_provider: 'anthropic',
+            ...verified,
+          }),
+          connection({
+            id: FOURTH_ID,
+            transport_provider: 'dataforseo',
             ...verified,
           }),
         ]),

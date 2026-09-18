@@ -717,15 +717,50 @@ async def test_the_poll_ceiling_is_a_named_failure_not_a_silent_absence(
     assert observation.aio_present is None
 
 
+async def _seed_connected_project(
+    session_factory: async_sessionmaker[AsyncSession], *, location_code: int
+):
+    """A workspace that CAN reach DataForSEO, with a given search location."""
+    from app.models.project import Project
+
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+        connection = ProviderConnection(
+            workspace_id=seed.workspace_id,
+            transport_provider=TRANSPORT_DATAFORSEO,
+            api_key_encrypted=encrypt_secret(_SECRET),
+            active=True,
+            last_test_status="ok",
+        )
+        session.add(connection)
+        await session.flush()
+        session.add(
+            ProviderRoute(
+                workspace_id=seed.workspace_id,
+                connection_id=connection.id,
+                logical_engine=ENGINE_GOOGLE_AI_OVERVIEW,
+                transport_provider=TRANSPORT_DATAFORSEO,
+                transport_model="google-organic-serp",
+                is_default=True,
+            )
+        )
+        project = await session.get(Project, seed.project_id)
+        assert project is not None
+        project.serp_location_code = location_code
+        project.serp_language_code = "en"
+        project.serp_device = "desktop"
+        await session.commit()
+    return seed
+
+
 @pytest.mark.asyncio
-async def test_the_surface_is_not_yet_requestable_by_a_run(
+async def test_a_run_without_configured_credentials_is_rejected_at_admission(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Two gates, in order, and this is the outer one.
+    """Rather than queueing tasks that can never execute.
 
-    Until the adapter ships, the engine is a member of the READ vocabulary
-    and not of the selectable set, so a run is refused before any
-    search-context question is even asked.
+    The alternative is a run that submits nothing, retries to exhaustion, and
+    reports a provider fault for what is a missing connection.
     """
     from app.core.config.audits import AUDIT_TRIGGER_MANUAL
     from app.domain.audits.creation import create_audit
@@ -735,7 +770,7 @@ async def test_the_surface_is_not_yet_requestable_by_a_run(
         seed = await seed_audit_fixtures(session, prompt_count=1)
 
     async with session_factory() as session:
-        with pytest.raises(AuditValidationError, match="Unknown logical engine"):
+        with pytest.raises(AuditValidationError, match="No active provider route"):
             await create_audit(
                 session,
                 trigger=AUDIT_TRIGGER_MANUAL,
@@ -746,6 +781,80 @@ async def test_the_surface_is_not_yet_requestable_by_a_run(
                 repetitions=1,
                 random_seed="1",
             )
+
+
+@pytest.mark.asyncio
+async def test_a_connected_run_without_a_search_location_is_still_rejected(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Credentials are not the only precondition.
+
+    A project with a working connection but no configured vantage point has
+    nowhere to observe FROM, and guessing a market would measure the wrong
+    country and present it as the right one.
+    """
+    from app.core.config.audits import AUDIT_TRIGGER_MANUAL
+    from app.domain.audits.creation import create_audit
+    from app.domain.audits.errors import AuditValidationError
+
+    seed = await _seed_connected_project(session_factory, location_code=0)
+
+    async with session_factory() as session:
+        with pytest.raises(AuditValidationError, match="search location"):
+            await create_audit(
+                session,
+                trigger=AUDIT_TRIGGER_MANUAL,
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+                engines=[ENGINE_GOOGLE_AI_OVERVIEW],
+                prompt_set_id=seed.prompt_set_id,
+                repetitions=1,
+                random_seed="1",
+            )
+
+
+@pytest.mark.asyncio
+async def test_a_fully_configured_run_plans_tasks_with_a_frozen_context(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Activation, end to end: the surface is selectable and plans work.
+
+    The frozen context is the part worth asserting — a queued execution must
+    carry what it was asked to measure, not a pointer to settings that can
+    change under it.
+    """
+    from app.core.config.audits import AUDIT_TRIGGER_MANUAL
+    from app.domain.audits.creation import create_audit
+
+    seed = await _seed_connected_project(session_factory, location_code=2036)
+
+    async with session_factory() as session:
+        audit = await create_audit(
+            session,
+            trigger=AUDIT_TRIGGER_MANUAL,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            engines=[ENGINE_GOOGLE_AI_OVERVIEW],
+            prompt_set_id=seed.prompt_set_id,
+            repetitions=1,
+            random_seed="1",
+        )
+        audit_id = audit.id
+
+    async with session_factory() as session:
+        tasks = (
+            await session.scalars(
+                select(AuditTask).where(AuditTask.audit_id == audit_id)
+            )
+        ).all()
+    assert tasks
+    for task in tasks:
+        assert task.logical_engine == ENGINE_GOOGLE_AI_OVERVIEW
+        assert task.request_snapshot == {
+            "location_code": 2036,
+            "language_code": "en",
+            "device": "desktop",
+        }
 
 
 @pytest.mark.asyncio

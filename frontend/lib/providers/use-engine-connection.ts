@@ -70,11 +70,19 @@ export function useEngineConnection({
   const [apiPassword, setApiPassword] = useState('');
   const [testResult, setTestResult] = useState<ConnectionTestState>(null);
 
-  // Whether the user has entered a complete credential. A half-entered pair
-  // is NOT input: sending one half would rotate the stored credential into a
-  // state nobody typed, so the save stays disabled until both are present.
+  // Whether the user has entered a COMPLETE credential. A half-entered pair
+  // is not input: sending one half would rotate the stored credential into a
+  // state nobody typed.
   const hasCredentialInput =
     credentialShape === 'basic' ? Boolean(apiLogin.trim() && apiPassword) : Boolean(apiKey);
+
+  // ...and a half-entered pair is not "nothing" either. On an already
+  // configured connection the save button is enabled (you may be updating
+  // only the routes), so without this a half-typed pair would be quietly
+  // dropped and the save would report success — telling the user their
+  // credentials were updated when the field they typed into was ignored.
+  const hasPartialCredentialInput =
+    credentialShape === 'basic' && Boolean(apiLogin.trim()) !== Boolean(apiPassword);
 
   const clearCredentialInput = () => {
     setApiKey('');
@@ -113,6 +121,9 @@ export function useEngineConnection({
       // at all — a saved key for it would be a credential we can never use.
       if (!isConnectable(model) || !transport || !route) {
         throw new Error('No route available.');
+      }
+      if (hasPartialCredentialInput) {
+        throw new Error('Enter both the API login and the API password.');
       }
       const routes = mergeRoutePayload(connection, model.logical_engine);
       const credential = hasCredentialInput ? credentialPayload() : {};
@@ -168,6 +179,7 @@ export function useEngineConnection({
     connection,
     configured,
     credentialShape,
+    hasPartialCredentialInput,
     apiKey,
     setApiKey,
     apiLogin,

@@ -274,12 +274,18 @@ def test_ai_source_vocabulary_and_logical_engine_mapping() -> None:
             "other",
         }
     )
-    # Only the audited three map onto logical engines (invariant 10).
+    # Only MEASURED sources map onto logical engines (invariant 10). Google
+    # AI Overview joined them once it became a measured surface; referral
+    # traffic from a surface CiteLadder cannot observe still maps to nothing,
+    # because attributing it would claim a measurement never made.
     assert AI_SOURCE_TO_LOGICAL_ENGINE == {
         "chatgpt": "chatgpt",
         "gemini": "gemini",
         "claude": "claude",
+        "google_ai_overview": "google_ai_overview",
     }
+    for unmeasured in ("perplexity", "copilot"):
+        assert unmeasured not in AI_SOURCE_TO_LOGICAL_ENGINE
     assert set(AI_SOURCE_TO_LOGICAL_ENGINE.values()) <= set(LOGICAL_ENGINES)
     assert AI_SOURCE_OTHER not in AI_SOURCE_TO_LOGICAL_ENGINE
 

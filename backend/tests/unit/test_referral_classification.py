@@ -86,11 +86,18 @@ def test_utm_source_equality_is_normalized() -> None:
     assert classify_referral_signals(utm_medium="referral") is None
 
 
-def test_utm_google_ai_overview_has_no_logical_engine() -> None:
+def test_utm_google_ai_overview_now_resolves_to_a_measured_engine() -> None:
+    """It used to map to nothing, because nothing measured it.
+
+    The referral label and the measured surface were always the same string;
+    the mapping was withheld because CiteLadder could not observe the surface.
+    Now that it can, a visit arriving from an AI Overview can finally be
+    joined to what that overview actually said.
+    """
     match = classify_referral_signals(utm_source="google_ai_overview")
     assert match is not None
     assert match.ai_source == "google_ai_overview"
-    assert match.logical_engine is None
+    assert match.logical_engine == "google_ai_overview"
 
 
 def test_user_agent_substring_tier_is_heuristic() -> None:

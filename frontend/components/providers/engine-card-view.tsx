@@ -76,7 +76,15 @@ function RouteDetails({ state }: Readonly<{ state: ConnectionState }>) {
 }
 
 function ConnectionControls({ state }: Readonly<{ state: ConnectionState }>) {
-  const { transport, configured, hasCredentialInput, saveMutation, testMutation, busy } = state;
+  const {
+    transport,
+    configured,
+    hasCredentialInput,
+    hasPartialCredentialInput,
+    saveMutation,
+    testMutation,
+    busy,
+  } = state;
   const credentialNoun = state.credentialShape === 'basic' ? 'credentials' : 'key';
   return (
     <div className="grid gap-3 pt-1">
@@ -86,7 +94,9 @@ function ConnectionControls({ state }: Readonly<{ state: ConnectionState }>) {
           type="button"
           size="sm"
           onClick={() => saveMutation.mutate()}
-          disabled={busy || !transport || (!hasCredentialInput && !configured)}
+          disabled={
+            busy || !transport || hasPartialCredentialInput || (!hasCredentialInput && !configured)
+          }
         >
           {saveMutation.isPending
             ? 'Saving & testing…'

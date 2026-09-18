@@ -90,10 +90,16 @@ type EngineRouteOption = {
 };
 
 /** The two credential shapes a transport can authenticate with. */
-export type CredentialShape = 'key' | 'basic';
+type CredentialShape = 'key' | 'basic';
 
-/** The auth shape for a transport. Bearer key unless stated otherwise. */
-export function credentialShapeFor(transport: TransportProvider): CredentialShape {
+/**
+ * The auth shape for a transport. Bearer key unless stated otherwise.
+ *
+ * Module-private: the shape reaches the UI on the route it belongs to, so
+ * nothing outside this file needs to ask the question again and get a
+ * different answer.
+ */
+function credentialShapeFor(transport: TransportProvider): CredentialShape {
   return transport === 'dataforseo' ? 'basic' : 'key';
 }
 

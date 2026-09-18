@@ -161,3 +161,26 @@ class TestIndependentSignals:
         competitor = competitor_mention_rate(counts, competitor_mentions=20)
         assert brand.denominator == competitor.denominator == 40
         assert competitor.value == 0.5
+
+
+class TestContradictoryRows:
+    """Rows come from the database, where nothing enforces the contract."""
+
+    def test_a_present_outcome_with_a_false_flag_is_refused(self) -> None:
+        # Silently folding it into a denominator would publish a rate derived
+        # from data already known to be wrong.
+        import pytest
+
+        with pytest.raises(ValueError, match="aio_present"):
+            count_observations([(OUTCOME_AI_OVERVIEW_PRESENT, False, True, False)])
+
+    def test_a_present_outcome_with_a_null_flag_is_refused(self) -> None:
+        import pytest
+
+        with pytest.raises(ValueError, match="aio_present"):
+            count_observations([(OUTCOME_AI_OVERVIEW_PRESENT, None, False, False)])
+
+    def test_a_failed_outcome_with_a_null_flag_is_perfectly_normal(self) -> None:
+        # Null is exactly what a non-observation is SUPPOSED to carry.
+        counts = count_observations([(OUTCOME_EXECUTION_FAILURE, None, False, False)])
+        assert counts.excluded == 1

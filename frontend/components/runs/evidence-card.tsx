@@ -174,14 +174,30 @@ export function normalizeEvidenceMarkdown(markdown: string): string {
   return normalized.join('\n\n');
 }
 
-function EvidenceAnswer({ answerText }: Readonly<{ answerText?: string | null }>) {
+function EvidenceAnswer({
+  answerText,
+  isSearchSurface,
+  succeeded,
+}: Readonly<{
+  answerText?: string | null;
+  isSearchSurface?: boolean;
+  succeeded?: boolean;
+}>) {
   const trimmed = answerText?.trim();
+  // An observed surface with no text is two completely different things, and
+  // the run outcome is what separates them. On a SUCCEEDED execution the
+  // absence is the measurement: Google was asked and showed no AI Overview.
+  // Anywhere else, empty text means we failed to capture an answer. Showing
+  // the same sentence for both would report our own failures as the brand's.
+  const measuredAbsence = isSearchSurface && succeeded && !trimmed;
   return (
     <section className="grid gap-2">
-      <Label>Engine response</Label>
+      <Label>{isSearchSurface ? 'AI Overview' : 'Engine response'}</Label>
       <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'min-w-0 overflow-hidden')}>
         {trimmed ? (
           <ContentMarkdown markdown={normalizeEvidenceMarkdown(trimmed)} density="compact" />
+        ) : measuredAbsence ? (
+          <span className="text-secondary text-sm">No AI Overview was shown for this search.</span>
         ) : (
           <span className="text-muted text-sm">
             No answer text was captured for this execution.
@@ -321,12 +337,16 @@ export function EvidenceCard({
   promptText,
   promptIndex,
   repetition,
+  isSearchSurface,
+  succeeded,
 }: Readonly<{
   evidence: ExecutionEvidence;
   answerText?: string | null;
   promptText?: string | null;
   promptIndex?: number;
   repetition?: number;
+  isSearchSurface?: boolean;
+  succeeded?: boolean;
 }>) {
   return (
     <div className="grid min-w-0 gap-[var(--workspace-gap)]">
@@ -337,7 +357,11 @@ export function EvidenceCard({
         repetition={repetition}
       />
       <EvidenceMetrics evidence={evidence} />
-      <EvidenceAnswer answerText={answerText} />
+      <EvidenceAnswer
+        answerText={answerText}
+        isSearchSurface={isSearchSurface}
+        succeeded={succeeded}
+      />
       <EvidenceOutcomes evidence={evidence} />
       <EvidenceCitationsList citations={evidence.citations} />
       <EvidenceFooter evidence={evidence} />

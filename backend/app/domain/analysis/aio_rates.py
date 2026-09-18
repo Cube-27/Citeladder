@@ -100,8 +100,18 @@ def count_observations(
             excluded += 1
             continue
         successful += 1
-        if outcome != OUTCOME_AI_OVERVIEW_PRESENT or not aio_present:
+        if outcome != OUTCOME_AI_OVERVIEW_PRESENT:
             continue
+        if aio_present is not True:
+            # The outcome says an overview was present and the flag disagrees.
+            # These rows come from the database, where nothing enforces the
+            # result contract, so a contradiction here is a persistence bug —
+            # and folding it silently into a denominator would publish a rate
+            # derived from data known to be wrong.
+            raise ValueError(
+                f"{OUTCOME_AI_OVERVIEW_PRESENT} observation has "
+                f"aio_present={aio_present!r}"
+            )
         with_overview += 1
         if named_brand:
             mentioned += 1

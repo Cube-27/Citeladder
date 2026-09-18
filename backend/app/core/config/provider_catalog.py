@@ -18,9 +18,6 @@ from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.dataforseo import (
-    DEFAULT_DEVICE,
-    DEFAULT_LANGUAGE_CODE,
-    DEFAULT_LOCATION_CODE,
     dataforseo_settings,
     platform_credential_secret,
 )
@@ -31,243 +28,99 @@ from app.core.config.entitlements import (
     KEY_PROVIDER_PERPLEXITY,
 )
 
-# --- Logical engines (what the user asked for) ----------------------------
-ENGINE_CHATGPT: Final = "chatgpt"
-ENGINE_GEMINI: Final = "gemini"
-ENGINE_CLAUDE: Final = "claude"
-# Google's AI Overview is a measured answer surface, not a conversational
-# engine: it is OBSERVED inside a search result page rather than asked. It
-# shares this vocabulary because it produces the same ``ResponseAnalysis``
-# the LLM engines do; ``surface_kind`` below carries the difference.
-ENGINE_GOOGLE_AI_OVERVIEW: Final = "google_ai_overview"
-# Deliberately ``tuple[str, ...]``: the arity is not part of the contract.
-# Nothing may assert "exactly three engines" off this annotation again.
-LOGICAL_ENGINES: Final[tuple[str, ...]] = (
-    ENGINE_CHATGPT,
-    ENGINE_CLAUDE,
-    ENGINE_GEMINI,
-    ENGINE_GOOGLE_AI_OVERVIEW,
+# --- Route identity (re-exported) -----------------------------------------
+# The engine/transport/surface vocabularies and the frozen route catalog live
+# in ``provider_routes``. They are re-exported here — with redundant aliases,
+# which is what marks an import as a deliberate re-export rather than dead
+# weight — so every existing import keeps working and no caller needs to know
+# where the split falls.
+from app.core.config.provider_routes import (
+    ACTIVE_TRANSPORTS as ACTIVE_TRANSPORTS,
 )
-
-# --- Transport providers (how we physically reach the engine) -------------
-TRANSPORT_OPENAI: Final = "openai"
-TRANSPORT_ANTHROPIC: Final = "anthropic"
-TRANSPORT_GOOGLE: Final = "google"
-TRANSPORT_DATAFORSEO: Final = "dataforseo"
-# Transports a NEW BYOK ``ProviderConnection`` may declare (active surface).
-ACTIVE_TRANSPORTS: Final[frozenset[str]] = frozenset(
-    {TRANSPORT_OPENAI, TRANSPORT_ANTHROPIC, TRANSPORT_GOOGLE, TRANSPORT_DATAFORSEO}
+from app.core.config.provider_routes import (
+    ENGINE_CHATGPT as ENGINE_CHATGPT,
 )
-
-# --- Surface kind (HOW an engine is reached) ------------------------------
-# The third axis. ``logical_engine`` says which answer surface is measured and
-# ``transport_provider`` says whose API carries it; neither says whether the
-# surface is ASKED a question or OBSERVED. That distinction decides which
-# request contract is built, which adapter protocol is used, which execution
-# shape the worker runs, and which pricing shape applies.
-#
-# It is NOT a user-facing concept. The UI says "Google AI Overview"; the words
-# DataForSEO, Google Organic and SERP API never appear as a product label.
-SURFACE_KIND_LLM: Final = "llm"
-SURFACE_KIND_SEARCH_AI: Final = "search_ai"
-SURFACE_KINDS: Final[frozenset[str]] = frozenset(
-    {SURFACE_KIND_LLM, SURFACE_KIND_SEARCH_AI}
+from app.core.config.provider_routes import (
+    ENGINE_CLAUDE as ENGINE_CLAUDE,
 )
-
-# --- Measurement routes ---------------------------------------------------
-
-REASONING_EFFORT_OFF: Final = "off"
-REASONING_EFFORT_MINIMAL: Final = "minimal"
-REASONING_EFFORT_LOW: Final = "low"
-REASONING_EFFORT_UNVERIFIED: Final = "unverified"
-
-# Whether the pinned transport model is known to match the corresponding
-# consumer product. Every active route remains unverified until evidence exists.
-REPRESENTATIVE_STATUS_UNVERIFIED: Final = "unverified"
-REPRESENTATIVE_STATUS_VERIFIED: Final = "verified"
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SearchContext:
-    """What a search surface is observed FROM.
-
-    An AI Overview differs by where, in what language and on what device the
-    search was run, so the context is part of the measurement identity rather
-    than a request detail. It is frozen into the task at admission.
-    """
-
-    location_code: int
-    language_code: str
-    device: str
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class MeasurementRoute:
-    """One exact executable route.
-
-    ``surface_kind`` is the branch point. ``retrieval_enabled``,
-    ``reasoning_effort`` and ``reasoning_pinnable`` describe how an LLM is
-    ASKED and mean nothing for an observed search surface, so a ``search_ai``
-    route carries them as ``None`` rather than as force-fitted defaults —
-    a default here would be a measurement claim nobody made. ``search_context``
-    is the mirror image: set for ``search_ai``, ``None`` for ``llm``.
-    """
-
-    logical_engine: str
-    transport_provider: str
-    transport_model: str
-    retrieval_enabled: bool | None
-    reasoning_effort: str | None
-    reasoning_pinnable: bool | None
-    representative_status: str
-    surface_kind: str = SURFACE_KIND_LLM
-    search_context: SearchContext | None = None
-
-    def __post_init__(self) -> None:
-        if self.surface_kind not in SURFACE_KINDS:
-            raise ValueError(f"unsupported surface kind: {self.surface_kind!r}")
-        llm_fields = (
-            self.retrieval_enabled,
-            self.reasoning_effort,
-            self.reasoning_pinnable,
-        )
-        if self.surface_kind == SURFACE_KIND_LLM:
-            if any(field is None for field in llm_fields):
-                raise ValueError(
-                    f"llm route {self.logical_engine!r} must pin every LLM field"
-                )
-            if self.search_context is not None:
-                raise ValueError(
-                    f"llm route {self.logical_engine!r} carries no search context"
-                )
-            return
-        if any(field is not None for field in llm_fields):
-            raise ValueError(
-                f"search route {self.logical_engine!r} must leave LLM fields null"
-            )
-        if self.search_context is None:
-            raise ValueError(
-                f"search route {self.logical_engine!r} needs a search context"
-            )
-
-
-# Exact model identity is frozen here. There is intentionally no provider
-# alias, default-model fallback, or single-route compatibility view.
-MEASUREMENT_ROUTES: Final[dict[str, MeasurementRoute]] = {
-    ENGINE_CHATGPT: MeasurementRoute(
-        logical_engine=ENGINE_CHATGPT,
-        transport_provider=TRANSPORT_OPENAI,
-        transport_model="gpt-5.5",
-        retrieval_enabled=True,
-        reasoning_effort=REASONING_EFFORT_OFF,
-        reasoning_pinnable=True,
-        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
-    ),
-    ENGINE_CLAUDE: MeasurementRoute(
-        logical_engine=ENGINE_CLAUDE,
-        transport_provider=TRANSPORT_ANTHROPIC,
-        transport_model="claude-sonnet-5",
-        retrieval_enabled=True,
-        reasoning_effort=REASONING_EFFORT_LOW,
-        reasoning_pinnable=True,
-        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
-    ),
-    ENGINE_GEMINI: MeasurementRoute(
-        logical_engine=ENGINE_GEMINI,
-        transport_provider=TRANSPORT_GOOGLE,
-        transport_model="gemini-3.6-flash",
-        retrieval_enabled=True,
-        reasoning_effort=REASONING_EFFORT_LOW,
-        reasoning_pinnable=True,
-        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
-    ),
-    # Observed, not asked. There is no model to pin: DataForSEO reports what
-    # Google rendered, so ``transport_model`` names the SERP product rather
-    # than a model identity, and it is never presented as one.
-    #
-    # ``representative_status`` is VERIFIED, and uniquely so: the LLM routes
-    # are unverified because an API model may differ from the consumer
-    # product, whereas the observed block IS the consumer product. Nothing
-    # stands between the measurement and what a searcher sees.
-    ENGINE_GOOGLE_AI_OVERVIEW: MeasurementRoute(
-        logical_engine=ENGINE_GOOGLE_AI_OVERVIEW,
-        transport_provider=TRANSPORT_DATAFORSEO,
-        transport_model="google-organic-serp",
-        retrieval_enabled=None,
-        reasoning_effort=None,
-        reasoning_pinnable=None,
-        representative_status=REPRESENTATIVE_STATUS_VERIFIED,
-        surface_kind=SURFACE_KIND_SEARCH_AI,
-        search_context=SearchContext(
-            location_code=DEFAULT_LOCATION_CODE,
-            language_code=DEFAULT_LANGUAGE_CODE,
-            device=DEFAULT_DEVICE,
-        ),
-    ),
-}
-
-
-def measurement_route(logical_engine: str) -> MeasurementRoute:
-    """Return one exact executable route; unknown identities fail closed."""
-    route = MEASUREMENT_ROUTES.get(logical_engine)
-    if route is None:
-        raise ValueError(f"no measurement route for {logical_engine!r}")
-    return route
-
-
-def measurement_routes_for_engine(logical_engine: str) -> tuple[MeasurementRoute, ...]:
-    route = MEASUREMENT_ROUTES.get(logical_engine)
-    return (route,) if route is not None else ()
-
-
-def surface_kind(logical_engine: str) -> str:
-    """Which execution shape an engine runs (fails closed on unknown)."""
-    return measurement_route(logical_engine).surface_kind
-
-
-def is_search_surface(logical_engine: str) -> bool:
-    """True when the engine is OBSERVED rather than asked."""
-    route = MEASUREMENT_ROUTES.get(logical_engine)
-    return route is not None and route.surface_kind == SURFACE_KIND_SEARCH_AI
-
-
-def llm_route(logical_engine: str) -> MeasurementRoute:
-    """A route guaranteed to carry the LLM request fields.
-
-    Every accessor that reads ``retrieval_enabled``/``reasoning_effort`` goes
-    through this, so reading an LLM knob off a search surface raises at the
-    call site instead of yielding a ``None`` that flows onward as a default.
-    """
-    route = measurement_route(logical_engine)
-    if route.surface_kind != SURFACE_KIND_LLM:
-        raise ValueError(
-            f"{logical_engine!r} is a {route.surface_kind} surface and has no "
-            "LLM request policy"
-        )
-    return route
-
-
-def llm_reasoning_effort(logical_engine: str) -> str:
-    """The reasoning pin an LLM request carries.
-
-    ``MeasurementRoute.reasoning_effort`` is optional because a search surface
-    has none; on an ``llm`` route the constructor guarantees it is set. This
-    accessor turns that guarantee into something the type system can see, so
-    request builders take a ``str`` rather than a ``str | None`` they would
-    have to defend against with an invented default.
-    """
-    effort = llm_route(logical_engine).reasoning_effort
-    if effort is None:  # pragma: no cover - forbidden by MeasurementRoute
-        raise ValueError(f"llm route {logical_engine!r} has no reasoning effort")
-    return effort
-
-
-def search_context(logical_engine: str) -> SearchContext:
-    """The default search context for a search surface (fails closed)."""
-    route = measurement_route(logical_engine)
-    if route.surface_kind != SURFACE_KIND_SEARCH_AI or route.search_context is None:
-        raise ValueError(f"{logical_engine!r} is not a search surface")
-    return route.search_context
+from app.core.config.provider_routes import (
+    ENGINE_GEMINI as ENGINE_GEMINI,
+)
+from app.core.config.provider_routes import (
+    ENGINE_GOOGLE_AI_OVERVIEW as ENGINE_GOOGLE_AI_OVERVIEW,
+)
+from app.core.config.provider_routes import (
+    LOGICAL_ENGINES as LOGICAL_ENGINES,
+)
+from app.core.config.provider_routes import (
+    MEASUREMENT_ROUTES as MEASUREMENT_ROUTES,
+)
+from app.core.config.provider_routes import (
+    REASONING_EFFORT_LOW as REASONING_EFFORT_LOW,
+)
+from app.core.config.provider_routes import (
+    REASONING_EFFORT_MINIMAL as REASONING_EFFORT_MINIMAL,
+)
+from app.core.config.provider_routes import (
+    REASONING_EFFORT_OFF as REASONING_EFFORT_OFF,
+)
+from app.core.config.provider_routes import (
+    REASONING_EFFORT_UNVERIFIED as REASONING_EFFORT_UNVERIFIED,
+)
+from app.core.config.provider_routes import (
+    REPRESENTATIVE_STATUS_UNVERIFIED as REPRESENTATIVE_STATUS_UNVERIFIED,
+)
+from app.core.config.provider_routes import (
+    REPRESENTATIVE_STATUS_VERIFIED as REPRESENTATIVE_STATUS_VERIFIED,
+)
+from app.core.config.provider_routes import (
+    SURFACE_KIND_LLM as SURFACE_KIND_LLM,
+)
+from app.core.config.provider_routes import (
+    SURFACE_KIND_SEARCH_AI as SURFACE_KIND_SEARCH_AI,
+)
+from app.core.config.provider_routes import (
+    SURFACE_KINDS as SURFACE_KINDS,
+)
+from app.core.config.provider_routes import (
+    TRANSPORT_ANTHROPIC as TRANSPORT_ANTHROPIC,
+)
+from app.core.config.provider_routes import (
+    TRANSPORT_DATAFORSEO as TRANSPORT_DATAFORSEO,
+)
+from app.core.config.provider_routes import (
+    TRANSPORT_GOOGLE as TRANSPORT_GOOGLE,
+)
+from app.core.config.provider_routes import (
+    TRANSPORT_OPENAI as TRANSPORT_OPENAI,
+)
+from app.core.config.provider_routes import (
+    MeasurementRoute as MeasurementRoute,
+)
+from app.core.config.provider_routes import (
+    SearchContext as SearchContext,
+)
+from app.core.config.provider_routes import (
+    is_search_surface as is_search_surface,
+)
+from app.core.config.provider_routes import (
+    llm_reasoning_effort as llm_reasoning_effort,
+)
+from app.core.config.provider_routes import (
+    llm_route as llm_route,
+)
+from app.core.config.provider_routes import (
+    measurement_route as measurement_route,
+)
+from app.core.config.provider_routes import (
+    measurement_routes_for_engine as measurement_routes_for_engine,
+)
+from app.core.config.provider_routes import (
+    search_context as search_context,
+)
+from app.core.config.provider_routes import (
+    surface_kind as surface_kind,
+)
 
 
 # --- Execution-time route policy -----------------------------------------
@@ -599,22 +452,24 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
         grant_key="provider.gemini",
         issuable=False,
     ),
-    # Google AI Overview ships its route, its credential shape and (from the
-    # connector slice) its lifecycle before it ships as SELECTABLE. It stays
-    # unavailable until the whole path — connector, lifecycle, analysis and
-    # the presentation that makes a result legible — works end to end: a
-    # half-wired surface a customer can select is worse than no surface.
+    # ACTIVATED. This flag is the single switch, and it was held closed
+    # deliberately while the surface was built: a half-wired engine a customer
+    # can select is worse than no engine.
     #
-    # Unlike the coming-soon rows below, this one HAS a measurement route, so
-    # ``LOGICAL_ENGINES`` already contains it and analysis-side reads accept
-    # it. ``adapter_shipped`` is what gates selection, and it is the single
-    # switch that activates the surface.
+    # It flipped only once the complete path works end to end — connector,
+    # parser, submit/park/poll/finalize lifecycle, reconciliation, analysis
+    # through the unchanged scorer — AND the app can render the results
+    # legibly, which means a run showing "Waiting for Google" while a task is
+    # outstanding, and a measured absence reading as "no AI Overview was
+    # shown" rather than as a missing answer. An executable surface whose
+    # results cannot be understood in the app is worse than an unavailable
+    # one.
     ProviderCatalogEntry(
         key=ENGINE_GOOGLE_AI_OVERVIEW,
         label="Google AI Overview",
-        availability=AVAILABILITY_UNAVAILABLE,
-        unavailable_reason=REASON_PROVIDER_UNAVAILABLE,
-        adapter_shipped=False,
+        availability=AVAILABILITY_AVAILABLE,
+        unavailable_reason=None,
+        adapter_shipped=True,
         grant_key="provider.google_ai_overview",
         issuable=False,
     ),

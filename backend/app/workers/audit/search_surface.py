@@ -36,7 +36,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -50,7 +49,6 @@ from app.connectors.search_surfaces.contracts import (
     ERROR_POLL_CEILING_EXCEEDED,
     ERROR_SUBMISSION_UNRECONCILED,
     OUTCOME_EXECUTION_FAILURE,
-    OUTCOME_PROVIDER_ERROR,
     RESULT_STILL_PENDING,
     SUCCESSFUL_OUTCOMES,
     SearchSurfaceRequest,
@@ -58,17 +56,26 @@ from app.connectors.search_surfaces.contracts import (
 )
 from app.connectors.search_surfaces.dataforseo import DataForSeoSearchSurfaceAdapter
 from app.core.config import dataforseo as dataforseo_config
-from app.core.config.audits import AUDIT_STATUS_CANCELLED, AUDIT_TERMINAL_STATUSES
 from app.core.config.provider_catalog import RETRYABLE_ERRORS
 from app.core.config.task_queue import (
     TASK_STATUS_LEASED,
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUBMISSION_UNCERTAIN,
 )
-from app.core.security import decrypt_secret
 from app.models.audit import Audit, AuditTask, RawResponseArtifact
-from app.models.provider import ProviderConnection
 from app.models.search_surfaces import AioEntityLink, AioObservation
+from app.workers.audit.search_surface_support import (
+    _audit_is_closed,
+    _bound_credential,
+    _citation_rows,
+    _frozen_connection_id,
+    _frozen_search_context,
+    _match_by_tag,
+    _provider_refusal,
+    _SearchContext,
+    _submission_ref,
+    _task_metadata,
+)
 
 logger = logging.getLogger("app.workers.audit_worker")
 
@@ -575,25 +582,15 @@ class AuditSearchSurfaceMixin:
         async with self._session_factory() as session:
             task = await session.get(AuditTask, task_id)
             audit = await session.get(Audit, audit_id)
-            if task is None or audit is None:
+            if task is None or audit is None or _audit_is_closed(audit):
                 return None
-            if audit.status == AUDIT_STATUS_CANCELLED or (
-                audit.status in AUDIT_TERMINAL_STATUSES
-            ):
-                return None
-            snapshot = dict(task.request_snapshot or {})
             route = dict(task.provider_route_snapshot or {})
             connection_id = task.provider_connection_id or _frozen_connection_id(route)
-            secret = ""
-            revision = task.provider_credential_revision
-            if connection_id is not None:
-                connection = await session.get(ProviderConnection, connection_id)
-                secret = _usable_secret(connection, revision)
-                if revision is None and connection is not None:
-                    # First submission: the revision the credential is valid
-                    # at is captured now and bound to the task, so a later
-                    # rotation is detectable rather than silent.
-                    revision = connection.credential_revision
+            secret, revision = await _bound_credential(
+                session,
+                connection_id=connection_id,
+                revision=task.provider_credential_revision,
+            )
             return _SearchContext(
                 task_id=task_id,
                 audit_id=audit_id,
@@ -606,169 +603,8 @@ class AuditSearchSurfaceMixin:
                 credential_revision=revision,
                 secret=secret,
                 base_url=str(route.get("base_url") or ""),
-                # FROZEN at admission. A queued execution never re-reads
-                # mutable project settings, so this is what was actually
-                # measured rather than what the project is configured for now.
-                location_code=int(
-                    snapshot.get("location_code")
-                    or dataforseo_config.DEFAULT_LOCATION_CODE
-                ),
-                language_code=str(
-                    snapshot.get("language_code")
-                    or dataforseo_config.DEFAULT_LANGUAGE_CODE
-                ),
-                device=str(snapshot.get("device") or dataforseo_config.DEFAULT_DEVICE),
+                **_frozen_search_context(task.request_snapshot),
             )
-
-
-# --- Plain helpers --------------------------------------------------------
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class _SearchContext:
-    """One phase's frozen view of a task. Deliberately carries no session.
-
-    The search context is what was FROZEN at admission, not what the project
-    is configured for now: a queued execution must never re-read mutable
-    settings, or a location change would silently rewrite what past runs are
-    reported to have measured.
-    """
-
-    task_id: uuid.UUID
-    audit_id: uuid.UUID
-    prompt_text: str
-    idempotency_key: str
-    submission_ref: str
-    provider_task_id: str
-    poll_count: int
-    connection_id: uuid.UUID | None
-    credential_revision: uuid.UUID | None
-    secret: str
-    base_url: str
-    location_code: int
-    language_code: str
-    device: str
-
-
-def _submission_ref(idempotency_key: str) -> str:
-    """A stable correlation identifier derived from the task's own identity.
-
-    Derived rather than random so the same task always produces the same ref:
-    a reconciliation sweep can then recognise a submission even if the local
-    row was reconstructed. Capped to the provider's tag limit, because a
-    truncated tag would not match on the way back.
-    """
-    return idempotency_key[: dataforseo_config.TAG_MAX_CHARS]
-
-
-def _match_by_tag(listing: dict[str, Any], submission_ref: str) -> str | None:
-    """The provider task whose tag EQUALS ours, or nothing.
-
-    Nothing else is accepted. The tag comes back in ``metadata.tag`` on the id
-    list, and an exact match on it is the only thing that proves which local
-    task produced which provider task.
-    """
-    if not submission_ref:
-        return None
-    matches: list[str] = []
-    for task in listing.get("tasks") or []:
-        if not isinstance(task, dict):
-            continue
-        for row in task.get("result") or []:
-            if not isinstance(row, dict):
-                continue
-            metadata = row.get("metadata")
-            if not isinstance(metadata, dict):
-                continue
-            if str(metadata.get("tag") or "") == submission_ref:
-                task_id = str(row.get("id") or "").strip()
-                if task_id:
-                    matches.append(task_id)
-    # Ambiguity is not resolved by picking one. Two provider tasks carrying
-    # our tag means we cannot say which observation is ours.
-    return matches[0] if len(matches) == 1 else None
-
-
-def _provider_refusal(exc: ProviderError) -> SearchSurfaceResult:
-    """A non-retryable provider refusal.
-
-    ``provider_status_code`` stays null on purpose: a transport-level refusal
-    never produced a task status, and inventing one would put a number in the
-    evidence that the provider never said.
-    """
-    logger.info(
-        "search surface refused by provider",
-        extra={"error_code": exc.error_code},
-    )
-    return SearchSurfaceResult(outcome=OUTCOME_PROVIDER_ERROR)
-
-
-def _citation_rows(result: SearchSurfaceResult) -> list[dict[str, Any]]:
-    """Root references in the shape the existing scorer already consumes.
-
-    Same keys as the LLM path's serialisation, so ``analyze_task`` needs no
-    knowledge that this surface exists.
-    """
-    return [
-        {
-            "ordinal": index,
-            "url": reference.url,
-            "domain": reference.domain,
-            "title": reference.title,
-            "start_index": None,
-            "end_index": None,
-            "cited_text": "",
-        }
-        for index, reference in enumerate(result.references)
-    ]
-
-
-def _task_metadata(task: AuditTask, result: SearchSurfaceResult) -> dict[str, Any]:
-    """Merge the observation's provenance into the task's provider metadata."""
-    metadata = dict(task.provider_metadata or {})
-    metadata.update(
-        {
-            "search_surface_outcome": result.outcome,
-            "provider_status_code": result.provider_status_code,
-            "aio_serp_position": result.aio_serp_position,
-            "aio_markdown": result.aio_markdown,
-        }
-    )
-    if result.provider_cost_microusd is not None:
-        metadata["provider_reported_cost_microusd"] = result.provider_cost_microusd
-    return metadata
-
-
-def _frozen_connection_id(route: dict[str, Any]) -> uuid.UUID | None:
-    raw = route.get("connection_id")
-    if not raw:
-        return None
-    try:
-        return uuid.UUID(str(raw))
-    except (TypeError, ValueError):
-        return None
-
-
-def _usable_secret(
-    connection: ProviderConnection | None, revision: uuid.UUID | None
-) -> str:
-    """The bound connection's secret, or "" if it may no longer be used.
-
-    Rotated, paused or deactivated all mean the same thing here: the account
-    that owns the outstanding task is no longer available, and polling a
-    different one would be wrong rather than merely unlucky.
-    """
-    if connection is None or not connection.active or connection.paused_at is not None:
-        return ""
-    if revision is not None and connection.credential_revision != revision:
-        return ""
-    if not connection.api_key_encrypted:
-        return ""
-    try:
-        return decrypt_secret(connection.api_key_encrypted)
-    except Exception:  # noqa: BLE001 - an unreadable secret is an unusable one
-        logger.warning("bound search-surface credential could not be decrypted")
-        return ""
 
 
 __all__ = ["AuditSearchSurfaceMixin"]

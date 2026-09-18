@@ -218,6 +218,34 @@ class ProviderConnectionUpdate(BaseModel):
     confirm_destination_change: bool = False
 
     @model_validator(mode="after")
+    def credential_shape_is_coherent(self) -> ProviderConnectionUpdate:
+        """Shape rules that hold WITHOUT knowing the transport.
+
+        An update does not name its transport — the stored connection does —
+        so the transport-specific rule (which shape this connection accepts)
+        stays in the service, where the connection is loaded. What can be
+        decided here is decided here:
+
+        - supplying both a bearer key and a login/password pair is incoherent
+          whatever the transport, and
+        - half a pair is never a rotation. Rotating one half against a
+          remembered other half would leave the stored credential in a state
+          nobody entered.
+
+        Omitting everything stays valid and means "leave the secret alone".
+        """
+        login = (self.api_login or "").strip()
+        password = self.api_password or ""
+        key = (self.api_key or "").strip()
+        if key and (login or password):
+            raise ValueError(
+                "Supply either an API key or an API login and password, not both"
+            )
+        if bool(login) != bool(password):
+            raise ValueError("Rotating these credentials needs both halves")
+        return self
+
+    @model_validator(mode="after")
     def unique_app_features(self) -> ProviderConnectionUpdate:
         features = [route.feature for route in self.app_routes or []]
         if len(features) != len(set(features)):

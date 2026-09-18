@@ -79,13 +79,11 @@ def _require_search_context(*, project: Project, engines: list[str]) -> None:
         return
     if not project.serp_location_code:
         raise AuditValidationError(
-            "Set this project's search location before measuring "
-            "Google AI Overview."
+            "Set this project's search location before measuring Google AI Overview."
         )
     if not is_supported_search_context(
         location_code=project.serp_location_code,
-        language_code=project.serp_language_code
-        or DEFAULT_LANGUAGE_CODE,
+        language_code=project.serp_language_code or DEFAULT_LANGUAGE_CODE,
         device=project.serp_device or DEFAULT_DEVICE,
     ):
         raise AuditValidationError(

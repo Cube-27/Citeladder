@@ -14,6 +14,8 @@ import {
   failedTestHandler,
 } from '@/test/provider-catalog-fixture';
 
+import { ENGINE_ORDER } from '@/lib/providers/catalog';
+
 import { ProviderSettings } from './provider-settings';
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
@@ -29,7 +31,7 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('ProviderSettings', () => {
-  it('renders a card for all three engines with unconfigured state', async () => {
+  it('renders a card for every measured surface with unconfigured state', async () => {
     mswServer.use(
       catalogHandler(),
       http.get('/api/v1/provider-connections', () => HttpResponse.json([])),
@@ -42,8 +44,12 @@ describe('ProviderSettings', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Gemini' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Claude' })).toBeInTheDocument();
-    // No connections → every card reads "Missing".
-    expect(screen.getAllByText('Missing')).toHaveLength(3);
+    // The observed surface is a card like any other: it takes a credential
+    // and reports connection state, even though it is never "asked" anything.
+    expect(screen.getByRole('heading', { name: 'Google AI Overview' })).toBeInTheDocument();
+    // No connections → every card reads "Missing". Length-derived rather than
+    // a literal, so adding a surface is not a test edit.
+    expect(screen.getAllByText('Missing')).toHaveLength(ENGINE_ORDER.length);
   });
 
   it('shows ChatGPT as a fixed direct OpenAI route with no toggle', async () => {

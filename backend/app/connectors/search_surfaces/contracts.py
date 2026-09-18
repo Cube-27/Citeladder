@@ -162,6 +162,11 @@ class SearchSurfaceResult:
     def __post_init__(self) -> None:
         if self.outcome not in TERMINAL_OUTCOMES:
             raise ValueError(f"not a terminal outcome: {self.outcome!r}")
+        self._require_coherent_presence()
+        self._require_coherent_error_code()
+
+    def _require_coherent_presence(self) -> None:
+        """``aio_present`` must say exactly what the outcome says."""
         if self.outcome == OUTCOME_NO_AI_OVERVIEW and self.aio_present is not False:
             raise ValueError("no_ai_overview is the observation that aio_present=False")
         if self.outcome == OUTCOME_AI_OVERVIEW_PRESENT and self.aio_present is not True:
@@ -170,15 +175,18 @@ class SearchSurfaceResult:
             raise ValueError(
                 f"{self.outcome} observed nothing, so aio_present must stay null"
             )
+
+    def _require_coherent_error_code(self) -> None:
+        """An internal error code belongs to a LOCAL failure and nowhere else."""
         if self.error_code and self.outcome != OUTCOME_EXECUTION_FAILURE:
             raise ValueError("error_code names a LOCAL failure; use it only there")
-        if self.outcome == OUTCOME_EXECUTION_FAILURE:
-            if self.error_code not in EXECUTION_FAILURE_CODES:
-                raise ValueError(
-                    f"execution_failure needs a known error code, got "
-                    f"{self.error_code!r}"
-                )
-            if self.provider_status_code is not None or self.observed_at is not None:
-                raise ValueError(
-                    "no provider result supplied a status or an observation time"
-                )
+        if self.outcome != OUTCOME_EXECUTION_FAILURE:
+            return
+        if self.error_code not in EXECUTION_FAILURE_CODES:
+            raise ValueError(
+                f"execution_failure needs a known error code, got {self.error_code!r}"
+            )
+        if self.provider_status_code is not None or self.observed_at is not None:
+            raise ValueError(
+                "no provider result supplied a status or an observation time"
+            )
