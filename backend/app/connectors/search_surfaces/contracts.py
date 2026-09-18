@@ -127,12 +127,17 @@ class AioLink:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AioReference:
-    """One row of the AI Overview's root reference list."""
+    """One row of the AI Overview's root reference list.
+
+    ``source_origin`` is provenance -- who owns the platform -- and nothing
+    more. What KIND of source it is, and whether it is worth pursuing, is
+    decided later by the shared source taxonomy against the same domain.
+    """
 
     url: str
     domain: str
     title: str
-    source: str
+    source_origin: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

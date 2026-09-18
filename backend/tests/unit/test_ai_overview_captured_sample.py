@@ -18,13 +18,15 @@ import pathlib
 import pytest
 
 from app.analysis.search_surfaces.ai_overview import (
-    SOURCE_EXTERNAL,
-    SOURCE_GOOGLE,
     parse_task,
 )
 from app.connectors.search_surfaces.contracts import (
     OUTCOME_AI_OVERVIEW_PRESENT,
     SearchSurfaceResult,
+)
+from app.core.config.source_patterns import (
+    SOURCE_ORIGIN_EXTERNAL,
+    SOURCE_ORIGIN_GOOGLE_OWNED,
 )
 
 # One element of `tasks[]`, not the full API envelope — its top-level keys are
@@ -99,7 +101,11 @@ def test_two_of_the_five_are_google_shopping_sources(
     brand named beside them would manufacture an owned citation out of
     Google's own furniture.
     """
-    google = [ref for ref in parsed.references if ref.source == SOURCE_GOOGLE]
+    google = [
+        ref
+        for ref in parsed.references
+        if ref.source_origin == SOURCE_ORIGIN_GOOGLE_OWNED
+    ]
     assert len(google) == 2
     assert all("prds=" in ref.url for ref in google)
     assert all(ref.domain == "google.com" for ref in google)
@@ -109,7 +115,9 @@ def test_the_other_three_are_external_publisher_citations(
     parsed: SearchSurfaceResult,
 ) -> None:
     external = {
-        ref.domain for ref in parsed.references if ref.source == SOURCE_EXTERNAL
+        ref.domain
+        for ref in parsed.references
+        if ref.source_origin == SOURCE_ORIGIN_EXTERNAL
     }
     assert external == {
         "bestandless.com.au",

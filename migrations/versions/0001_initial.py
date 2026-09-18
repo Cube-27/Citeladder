@@ -4125,6 +4125,12 @@ def upgrade() -> None:
         sa.Column("domain", sa.String(length=255), nullable=False),
         sa.Column("classification", sa.String(length=24), nullable=False),
         sa.Column("source_class", sa.String(length=48), nullable=True),
+        sa.Column(
+            "source_origin",
+            sa.String(length=24),
+            server_default="external",
+            nullable=False,
+        ),
         sa.Column("source_taxonomy_version", sa.String(length=32), nullable=True),
         sa.Column("is_owned", sa.Boolean(), nullable=False),
         sa.Column("is_unintended", sa.Boolean(), nullable=False),

@@ -33,6 +33,11 @@ from app.core.config.provider_catalog import (
     ENGINE_GOOGLE_AI_OVERVIEW,
     TRANSPORT_DATAFORSEO,
 )
+from app.core.config.source_patterns import (
+    SOURCE_CLASS_SEARCH_SURFACE,
+    SOURCE_ORIGIN_EXTERNAL,
+    SOURCE_ORIGIN_GOOGLE_OWNED,
+)
 from app.core.config.task_queue import (
     TASK_STATUS_AWAITING_PROVIDER_RESULT,
     TASK_STATUS_FAILED,
@@ -41,6 +46,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.core.security import encrypt_secret
+from app.models.analysis import Citation
 from app.models.audit import AuditTask, ExecutionCostProjection
 from app.models.provider import ProviderConnection, ProviderRoute
 from app.models.search_surfaces import AioEntityLink, AioObservation
@@ -454,6 +460,61 @@ async def test_a_completed_overview_finalizes_with_its_analysis(
     assert task.status == TASK_STATUS_SUCCEEDED
     assert task.result_artifact_id is not None
     assert task.answer_text
+
+
+@pytest.mark.asyncio
+async def test_provenance_and_source_class_persist_as_two_axes(
+    session_factory: async_sessionmaker[AsyncSession], adapter
+) -> None:
+    """A citation carries who hosts it AND what kind of source it is.
+
+    The parser used to compute a google-owned flag and `_citation_rows` threw
+    it away, so a Google Shopping card reached Sources as an ordinary
+    third-party publisher -- an opportunity to "go get cited by" a page
+    Google generated and nobody authors.
+
+    The two axes are deliberately allowed to disagree. Both Shopping cards
+    here are `google_owned`; so is a YouTube citation, but that one stays
+    `video` and stays pursuable, because a channel has an author and a SERP
+    card does not.
+    """
+    adapter(
+        _RecordingAdapter(
+            fetch_payloads=[
+                payloads.response(payloads.completed_task(task_id="provider-task-1"))
+            ]
+        )
+    )
+    audit_id, task_id, _ = await _seed_search_task(session_factory)
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        task.provider_submission_ref = "audit-ref-1"
+        task.provider_task_id = "provider-task-1"
+        task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
+        await session.commit()
+
+    await _claim_and_run(session_factory, _worker(session_factory))
+
+    async with session_factory() as session:
+        citations = list(
+            (
+                await session.scalars(
+                    select(Citation).where(Citation.audit_id == audit_id)
+                )
+            ).all()
+        )
+        assert citations
+        by_domain = {citation.domain: citation for citation in citations}
+
+        shopping = by_domain["google.com"]
+        assert shopping.source_origin == SOURCE_ORIGIN_GOOGLE_OWNED
+        # Not `other_third_party`: there is no publisher behind it to pursue.
+        assert shopping.source_class == SOURCE_CLASS_SEARCH_SURFACE
+
+        external = by_domain["choice.com.au"]
+        assert external.source_origin == SOURCE_ORIGIN_EXTERNAL
+        assert external.source_class != SOURCE_CLASS_SEARCH_SURFACE
 
 
 @pytest.mark.asyncio

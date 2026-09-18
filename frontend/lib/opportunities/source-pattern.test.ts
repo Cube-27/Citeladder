@@ -7,7 +7,7 @@ import {
 } from '@/lib/opportunities/source-pattern';
 
 const BLOCK = {
-  taxonomy_version: 'source-taxonomy-1',
+  taxonomy_version: 'source-taxonomy-2',
   distinct_domain_count: 3,
   independent_domain_count: 2,
   class_counts: { community: 1, competitor_owned: 1, review_marketplace: 1 },
@@ -32,6 +32,32 @@ const BLOCK = {
   top_citations_truncated: false,
   recommended_action: 'investigate_competitor_sources',
 };
+
+describe('search_surface', () => {
+  it('survives parsing instead of being dropped as an unknown class', () => {
+    // Every backend class needs a line in this module or it vanishes from
+    // the breakdown entirely -- the bug that once hid `social` and
+    // `institutional`. A Google SERP card must render as what it is.
+    const pattern = parseSourcePattern({
+      source_pattern: {
+        ...BLOCK,
+        class_counts: { search_surface: 2 },
+        top_citations: [
+          {
+            domain: 'google.com',
+            url: 'https://www.google.com/search?q=x&prds=y',
+            title: 'Google Shopping',
+            source_class: 'search_surface',
+            matched_competitor: null,
+          },
+        ],
+      },
+    });
+    expect(pattern?.topCitations).toHaveLength(1);
+    expect(pattern?.classCounts).toEqual([{ sourceClass: 'search_surface', count: 2 }]);
+    expect(sourceClassBadgeValue('search_surface')).toBe('third-party');
+  });
+});
 
 describe('parseSourcePattern', () => {
   it('projects a full backend payload', () => {

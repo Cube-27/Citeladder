@@ -20,6 +20,7 @@ export type SourceClass =
   | 'social'
   | 'institutional'
   | 'video'
+  | 'search_surface'
   | 'other_third_party';
 
 type SourcePatternCitation = {
@@ -51,6 +52,7 @@ const SOURCE_CLASSES: readonly SourceClass[] = [
   'social',
   'institutional',
   'video',
+  'search_surface',
   'other_third_party',
 ];
 
@@ -69,6 +71,10 @@ const CLASS_LABELS: Record<SourceClass, string> = {
   social: 'Social',
   institutional: 'Institutional',
   video: 'Video',
+  // A search engine's own generated result page. Named plainly rather than
+  // folded into "Other third-party", which is what it used to arrive as --
+  // and which invited pursuing a page that has no publisher to pursue.
+  search_surface: 'Search surface',
   other_third_party: 'Other third-party',
 };
 
@@ -86,6 +92,7 @@ const CLASS_BADGE: Record<SourceClass, ClassificationValue> = {
   social: 'third-party',
   institutional: 'third-party',
   video: 'third-party',
+  search_surface: 'third-party',
   other_third_party: 'third-party',
 };
 

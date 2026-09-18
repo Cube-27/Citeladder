@@ -497,6 +497,9 @@ class CitationEvidence(BaseModel):
     domain: str = ""
     classification: str = "third_party"
     source_class: str | None = None
+    # Who owns the platform. Independent of ``source_class``: a YouTube
+    # citation is ``google_owned`` and ``video`` at the same time.
+    source_origin: str = "external"
     source_taxonomy_version: str | None = None
     is_owned: bool = False
     is_unintended: bool = False

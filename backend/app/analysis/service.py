@@ -50,7 +50,10 @@ from app.core.config.audits import (
     EVENT_AUDIT_COMPLETED,
 )
 from app.core.config.prompts import ORGANIC_PROMPT_COHORTS
-from app.core.config.source_patterns import SOURCE_TAXONOMY_VERSION
+from app.core.config.source_patterns import (
+    SOURCE_TAXONOMY_VERSION,
+    classify_source_origin,
+)
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.audits.state_events import apply_transition, record_event
 from app.domain.prompts.normalization import prompt_text_hash
@@ -167,6 +170,10 @@ def _persist_analysis_rows(
             provider_resolved or citation.get("url"),
             provider_resolved=bool(provider_resolved),
         )
+        # Read once: all three of the domain, its class and its provenance
+        # are decided from the same string, and re-deriving it per field is
+        # how they would drift apart.
+        domain = str(classified.get("domain") or "")
         session.add(
             Citation(
                 workspace_id=task.workspace_id,
@@ -177,13 +184,17 @@ def _persist_analysis_rows(
                 ordinal=int(citation.get("ordinal", ordinal)),
                 url=str(citation.get("url") or ""),
                 title=str(citation.get("title") or ""),
-                domain=str(classified.get("domain") or ""),
+                domain=domain,
                 classification=_classification(classified),
                 source_class=classify_source_domain(
-                    str(classified.get("domain") or ""),
+                    domain,
                     is_owned=bool(classified.get("is_owned")),
                     matched_competitor=classified.get("matched_competitor"),
                 ),
+                # Provenance, not worth: decided from the domain alone, so a
+                # google-owned platform is recognised identically whichever
+                # engine cited it.
+                source_origin=classify_source_origin(domain),
                 source_taxonomy_version=SOURCE_TAXONOMY_VERSION,
                 is_owned=bool(classified.get("is_owned")),
                 is_unintended=bool(classified.get("is_unintended")),

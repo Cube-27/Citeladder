@@ -35,13 +35,20 @@ from app.core.config.source_patterns import (
     SOURCE_CLASS_ORDER,
     SOURCE_CLASS_OTHER_THIRD_PARTY,
     SOURCE_CLASS_REVIEW_MARKETPLACE,
+    SOURCE_CLASS_SEARCH_SURFACE,
     SOURCE_CLASS_SOCIAL,
     SOURCE_CLASS_VIDEO,
     SOURCE_TAXONOMY_VERSION,
+    is_google_search_surface,
 )
 
 # The classes that count as evidence NOT published by the brand or by a tracked
 # competitor. "Independent" here means independent OWNERSHIP, nothing more.
+#
+# ``search_surface`` is deliberately absent. Every other class names someone
+# a customer could go and reach; a Google Shopping page names nobody, because
+# Google generated it. Counting it as independent validation invented an
+# opportunity that cannot be acted on.
 _INDEPENDENT_CLASSES = frozenset(
     {
         SOURCE_CLASS_REVIEW_MARKETPLACE,
@@ -81,6 +88,13 @@ def classify_source_domain(
     channel is still competitor-owned content. Everything else falls through
     to the config tables, and an unknown domain abstains to
     ``other_third_party`` rather than being guessed into a class.
+
+    Google-owned is NOT one answer here. A YouTube video is ``video`` like
+    any other video -- Google owns the platform, but the channel behind it is
+    a real author a customer can reach. A Google SERP surface is
+    ``search_surface``, because there is no author behind it at all. Which of
+    the two a domain is lives in ``source_origin``; what it is worth lives
+    here, and the two are read together.
     """
     if is_owned:
         return SOURCE_CLASS_BRAND_OWNED
@@ -89,6 +103,11 @@ def classify_source_domain(
     normalized = normalize_domain(domain)
     if not normalized:
         return SOURCE_CLASS_OTHER_THIRD_PARTY
+    # By rule, ahead of the tables: Google's ccTLDs cannot be enumerated, and
+    # falling through to ``other_third_party`` is what made a generated SERP
+    # surface read as an ordinary publisher worth pursuing.
+    if is_google_search_surface(normalized):
+        return SOURCE_CLASS_SEARCH_SURFACE
     for source_class, known in SOURCE_CLASS_DOMAIN_TABLES:
         if any(domain_matches(normalized, entry) for entry in known):
             return source_class
