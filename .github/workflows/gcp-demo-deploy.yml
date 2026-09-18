@@ -82,10 +82,18 @@ jobs:
             .venv/bin/python -m pytest -q --no-cov -x --tb=short
             if ($LASTEXITCODE -ne 0) { throw 'Backend tests failed' }
           } finally { Pop-Location }
+      # pnpm's entry point is a Node script behind a shebang, and PowerShell on
+      # Linux execs it directly rather than through the loader, so calling it
+      # from the pwsh step above dies with 'Exec format error'. Keep every pnpm
+      # gate in bash, where the shebang is honoured.
+      - name: Run frontend gates for the deployed commit
+        shell: bash
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder # pragma: allowlist secret -- CI-only fixture
+        run: |
+          set -euo pipefail
           pnpm --dir frontend test
-          if ($LASTEXITCODE -ne 0) { throw 'Frontend tests failed' }
           pnpm --dir frontend test:e2e
-          if ($LASTEXITCODE -ne 0) { throw 'Browser tests failed' }
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
