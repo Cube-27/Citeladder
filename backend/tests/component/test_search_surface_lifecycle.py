@@ -27,6 +27,7 @@ from app.connectors.search_surfaces.contracts import (
     OUTCOME_PROVIDER_ERROR,
     SearchSurfaceSubmission,
 )
+from app.core.config.costs import PROJECTION_STATUS_PARTIAL
 from app.core.config.dataforseo import pack_credential
 from app.core.config.provider_catalog import (
     ENGINE_GOOGLE_AI_OVERVIEW,
@@ -40,7 +41,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.core.security import encrypt_secret
-from app.models.audit import AuditTask
+from app.models.audit import AuditTask, ExecutionCostProjection
 from app.models.provider import ProviderConnection, ProviderRoute
 from app.models.search_surfaces import AioEntityLink, AioObservation
 from app.workers.audit_worker import AuditWorker
@@ -453,6 +454,62 @@ async def test_a_completed_overview_finalizes_with_its_analysis(
     assert task.status == TASK_STATUS_SUCCEEDED
     assert task.result_artifact_id is not None
     assert task.answer_text
+
+
+@pytest.mark.asyncio
+async def test_the_surfaces_real_charge_reaches_the_cost_ledger(
+    session_factory: async_sessionmaker[AsyncSession], adapter
+) -> None:
+    """The provider's own reported charge lands in the cost projection.
+
+    The artifact used to be built with ``usage=None`` and no projection was
+    recorded at all, so every AI Overview task was missing from the ledger
+    the audit's cost summary sums -- not as `unknown`, but absent. This is
+    the one route whose real charge the provider reports outright, so
+    omitting it understated the bill by exactly the amount that was known
+    most precisely.
+
+    Every token rate on the route is permanently null (it is flat-fee, not
+    metered), so the row is `partial`: a reported charge and no fabricated
+    per-token estimate beside it.
+    """
+    adapter(
+        _RecordingAdapter(
+            fetch_payloads=[
+                payloads.response(payloads.completed_task(task_id="provider-task-1"))
+            ]
+        )
+    )
+    _audit_id, task_id, _ = await _seed_search_task(session_factory)
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        task.provider_submission_ref = "audit-ref-1"
+        task.provider_task_id = "provider-task-1"
+        task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
+        # What the submission was billed, recorded when it was known.
+        task.provider_metadata = {"provider_submission_cost_microusd": 1200}
+        await session.commit()
+
+    await _claim_and_run(session_factory, _worker(session_factory))
+
+    async with session_factory() as session:
+        projection = await session.scalar(
+            select(ExecutionCostProjection).where(
+                ExecutionCostProjection.task_id == task_id
+            )
+        )
+        assert projection is not None
+        # 1200, not 3200. The retrieval echoes the same task's cost (2000 in
+        # this payload) rather than charging again, so the two reports are
+        # one charge seen twice -- adding them would bill every observation
+        # double. The submission figure is the one the money moved on.
+        assert projection.provider_reported_cost_microusd == 1200
+        assert projection.projection_status == PROJECTION_STATUS_PARTIAL
+        # Flat-fee route: nothing is priced per token, so no token line is
+        # invented and no projected total is claimed.
+        assert projection.output_cost_microusd is None
+        assert projection.projected_total_cost_microusd is None
 
 
 @pytest.mark.asyncio

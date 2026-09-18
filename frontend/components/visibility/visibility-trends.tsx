@@ -13,7 +13,8 @@ import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { RankingRowsTable } from '@/components/visibility/ranking-rows';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
-import type { Visibility, VisibilityTrendPoint } from '@/lib/api/types';
+import { SurfaceRatesPanel } from '@/components/visibility/surface-rates';
+import type { SurfaceRates, Visibility, VisibilityTrendPoint } from '@/lib/api/types';
 import {
   formatPercent,
   formatPosition,
@@ -40,11 +41,16 @@ export function VisibilityTrends({
   query,
   visibilityQuery,
   engineFilter,
+  surfaceRatesQuery,
+  surfaceEngine,
   onEvidence,
 }: Readonly<{
   query: UseQueryResult<VisibilityTrendPoint[], unknown>;
   visibilityQuery: UseQueryResult<Visibility, unknown>;
   engineFilter: VisibilityFilters['engine'];
+  surfaceRatesQuery: UseQueryResult<SurfaceRates, unknown>;
+  /** Non-null only while the surface filter names an observed surface. */
+  surfaceEngine: string | null;
   hasRuns: boolean;
   isFiltered: boolean;
   onEvidence?: (slice: Record<string, string | null>) => void;
@@ -77,6 +83,11 @@ export function VisibilityTrends({
     <Stack gap="workspace" aria-busy={visibilityQuery.isFetching}>
       <PooledSelectionNote selected={selected} />
       <HeadlineMetrics selected={selected} />
+      {/* Only when the reader has narrowed to the observed surface. These
+          rates divide by observations, not by answers, so showing them beside
+          an unfiltered cross-surface view would invite reading them as the
+          whole product's numbers. */}
+      {surfaceEngine ? <SurfaceRatesPanel query={surfaceRatesQuery} /> : null}
       <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-2">
         <MeasurementHistory
           query={query}

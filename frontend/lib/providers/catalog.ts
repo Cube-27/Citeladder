@@ -35,6 +35,21 @@ export const ENGINE_LABELS: Record<LogicalEngine, string> = {
   google_ai_overview: 'Google AI Overview',
 };
 
+/**
+ * The engines that are OBSERVED on a results page rather than asked a question.
+ *
+ * Kept as its own list because the difference is real everywhere it shows up:
+ * nothing is sent to an observed surface, it has no model and no retrieval
+ * state, and a filter that calls the whole set "models" misdescribes it. The
+ * backend carries the same distinction as `surface_kind` on the route.
+ */
+const SEARCH_SURFACE_ENGINES: readonly LogicalEngine[] = ['google_ai_overview'] as const;
+
+/** True when this engine key names an observed surface. */
+export function isSearchSurfaceEngine(key: string): boolean {
+  return SEARCH_SURFACE_ENGINES.some((engine) => engine === key);
+}
+
 /** Human display names for each transport provider. */
 export const TRANSPORT_LABELS: Record<TransportProvider, string> = {
   openai: 'OpenAI',

@@ -74,6 +74,7 @@ from app.workers.audit.search_surface_support import (
     _provider_refusal,
     _SearchContext,
     _submission_ref,
+    _surface_usage,
     _task_metadata,
 )
 
@@ -561,11 +562,24 @@ class AuditSearchSurfaceMixin:
                     # Nothing outside the parser reads the other types and no
                     # projection exposes them.
                     provider_metadata=result.raw_payload,
-                    usage=None,
+                    # The flat per-task fee this surface actually cost. The
+                    # route is priced per task rather than per token, so this
+                    # is the whole of its usage -- and leaving it null was
+                    # what kept every AI Overview task out of the cost ledger
+                    # entirely, so an audit's total silently omitted the one
+                    # route whose real charge the provider reports outright.
+                    usage=_surface_usage(task, result),
                 )
                 session.add(artifact)
                 await session.flush()
                 artifact_id = artifact.id
+                # Same append-only projection the LLM path records. Every
+                # token rate on this route is permanently null, so the row
+                # lands as `partial`, carrying the provider-reported charge
+                # and no fabricated estimate beside it.
+                self._record_cost_projection(
+                    session, artifact=artifact, attempt_count=task.attempt_count or 0
+                )
                 task.result_artifact_id = artifact_id
                 task.answer_text = result.answer_text
                 task.citations = citations

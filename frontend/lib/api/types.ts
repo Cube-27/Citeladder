@@ -26,6 +26,7 @@ import type {
   brandProfileDraftSchema,
   brandProfileSchema,
   citationClassificationSchema,
+  aioRateSchema,
   executionEvidenceSchema,
   executionSchema,
   executionStatusSchema,
@@ -38,6 +39,9 @@ import type {
   promptSetSchema,
   promptStatusSchema,
   providerCatalogSchema,
+  searchSurfaceEvidenceSchema,
+  surfaceEntitySchema,
+  surfaceRatesSchema,
   providerConnectionSchema,
   rankingRowSchema,
   sessionUserSchema,
@@ -151,6 +155,10 @@ export type Execution = z.infer<typeof executionSchema>;
 export type PromptMetricItem = z.infer<typeof promptMetricItemSchema>;
 export type ObservedCompetitor = z.infer<typeof observedCompetitorSchema>;
 export type ExecutionEvidence = z.infer<typeof executionEvidenceSchema>;
+export type SearchSurfaceEvidence = z.infer<typeof searchSurfaceEvidenceSchema>;
+export type SurfaceEntity = z.infer<typeof surfaceEntitySchema>;
+export type AioRate = z.infer<typeof aioRateSchema>;
+export type SurfaceRates = z.infer<typeof surfaceRatesSchema>;
 export type VisibilityEngine = z.infer<typeof visibilityEngineSchema>;
 export type RankingRow = z.infer<typeof rankingRowSchema>;
 export type Visibility = z.infer<typeof visibilitySchema>;

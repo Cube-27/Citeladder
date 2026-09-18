@@ -15,6 +15,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.domain.analysis.aio_schemas import SearchSurfaceEvidence
 from app.domain.audits.schemas import ModelProvenance
 
 
@@ -544,6 +545,10 @@ class ExecutionEvidenceResponse(BaseModel):
     score: dict | None = None
     citations: list[CitationEvidence] = Field(default_factory=list)
     competitors_mentioned: list[str] = Field(default_factory=list)
+    # Present ONLY for an observed-search-surface execution. Null on an LLM
+    # execution, and null on a search execution that produced no observation
+    # row -- which is a gap in ours, not a measured absence.
+    search_surface: SearchSurfaceEvidence | None = None
     created_at: datetime
 
 

@@ -21,6 +21,7 @@ from app.core.config.brand_profile import (
     BRAND_PROFILE_REVIEW_UNREVIEWED,
     BRAND_PROFILE_SOURCE_MANUAL,
 )
+from app.core.config.dataforseo import LANGUAGE_CODES, location_code_for_country
 from app.core.config.entitlements import KEY_PROJECT_DELETION, KEY_PROJECT_SLOTS
 from app.core.config.projects import MAX_PROJECT_COMPETITORS
 from app.domain.entitlements.enforcement import (
@@ -229,6 +230,24 @@ def _seed_manual_brand_profile(
     )
 
 
+def _map_observed_search_context(
+    project: Project, *, country_code: str, language_code: str
+) -> None:
+    """Derive the observed-search context from the project's configured market.
+
+    The deployment's location allow-list is country-keyed, so the SERP location
+    is a pure function of the market -- the customer cannot express a divergent
+    target. Unmapped stays zero, and zero is not a default: an unmapped market
+    fails at admission rather than silently measuring the wrong market. An
+    unsupported language stores empty, which is the same fallback admission
+    validates with (``serp_language_code or DEFAULT_LANGUAGE_CODE``).
+    """
+    location = location_code_for_country(country_code)
+    project.serp_location_code = location if location is not None else 0
+    normalized = language_code.strip().lower()
+    project.serp_language_code = normalized if normalized in LANGUAGE_CODES else ""
+
+
 async def create_project(
     session: AsyncSession,
     *,
@@ -264,6 +283,11 @@ async def create_project(
         language_code=payload.language_code,
         benchmark_mode=normalize_benchmark_mode(payload.benchmark_mode),
         default_repetitions=payload.default_repetitions,
+    )
+    _map_observed_search_context(
+        project,
+        country_code=payload.country_code,
+        language_code=payload.language_code,
     )
     _apply_brand(project, payload.brand_name, payload.brand_aliases)
     project.competitors = _build_competitors(payload.competitors)
@@ -379,6 +403,20 @@ def _apply_collection_updates(project: Project, payload: Any, data: dict) -> Non
 
 def _apply_project_updates(project: Project, payload: Any, data: dict) -> None:
     _apply_scalar_project_updates(project, data)
+    if "country_code" in data or "language_code" in data:
+        # The observed-search context follows the configured market: when the
+        # market changes the mapping re-maps, and a market change to an
+        # unmapped market re-maps to zero (unset fails at admission rather
+        # than silently measuring the previous market).
+        country = data.get("country_code")
+        if country is None:
+            country = project.country_code
+        language = data.get("language_code")
+        if language is None:
+            language = project.language_code
+        _map_observed_search_context(
+            project, country_code=country, language_code=language
+        )
     if data.get("benchmark_mode") is not None:
         project.benchmark_mode = normalize_benchmark_mode(data["benchmark_mode"])
     if data.get("default_repetitions") is not None:

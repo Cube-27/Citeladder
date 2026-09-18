@@ -28,6 +28,7 @@ from app.connectors.search_surfaces.contracts import (
 from app.core.config import dataforseo as dataforseo_config
 from app.core.config.audits import AUDIT_STATUS_CANCELLED, AUDIT_TERMINAL_STATUSES
 from app.core.security import decrypt_secret
+from app.domain.audits.cost_projection import normalize_optional_non_negative_int
 from app.models.audit import Audit, AuditTask
 from app.models.provider import ProviderConnection
 
@@ -208,6 +209,34 @@ def _task_metadata(task: AuditTask, result: SearchSurfaceResult) -> dict[str, An
     if result.provider_cost_microusd is not None:
         metadata["provider_reported_cost_microusd"] = result.provider_cost_microusd
     return metadata
+
+
+def _surface_usage(
+    task: AuditTask, result: SearchSurfaceResult
+) -> dict[str, Any] | None:
+    """What the provider charged for this task, in the shape the ledger reads.
+
+    The route is flat-fee and priced per task, so there is no token usage to
+    carry -- only the real charge. That charge is ONE number reported twice:
+    DataForSEO bills at submission, and the retrieval echoes the same task's
+    cost back rather than adding a second one. Summing them would bill every
+    observation double.
+
+    The submission figure wins. It is the moment the money actually moved,
+    and it is recorded even for a task whose retrieval never lands -- the
+    retrieval echo only stands in when no submission figure was captured.
+
+    None when neither reported anything. A fabricated zero would be
+    indistinguishable from a real zero-cost report and would overstate how
+    much of the bill is known.
+    """
+    submitted = normalize_optional_non_negative_int(
+        (task.provider_metadata or {}).get("provider_submission_cost_microusd")
+    )
+    charge = submitted if submitted is not None else result.provider_cost_microusd
+    if charge is None:
+        return None
+    return {"provider_cost_microusd": charge}
 
 
 def _frozen_connection_id(route: dict[str, Any]) -> uuid.UUID | None:

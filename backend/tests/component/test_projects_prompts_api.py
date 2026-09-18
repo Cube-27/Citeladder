@@ -30,6 +30,7 @@ from app.core.config.entitlements import (
 from app.domain.entitlements.types import GrantSpec
 from app.domain.workspaces.policy import WORKSPACE_ROLE_MEMBER
 from app.models.brand import Brand, BrandLogoAsset, Competitor
+from app.models.project import Project
 from app.models.site_health.crawl import SiteCrawl
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
@@ -86,6 +87,103 @@ async def test_create_project_persists_normalized_identity(
     got = await client.get(f"/api/v1/projects/{body['id']}")
     assert got.status_code == 200
     assert got.json()["brand"]["aliases"] == ["Acme", "ACME Inc"]
+
+
+@pytest.mark.asyncio
+async def test_create_project_seeds_observed_search_context_from_market(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    """A created project freezes the observed-search context from its market.
+
+    The Google AI Overview surface refuses to run until the observed-search
+    triple is configured; the mapping from the deployment's country-keyed
+    allow-list is what configures it. A created project therefore ships with
+    the triple resolved (mapped market -> provider location code, supported
+    language -> provider language code) instead of blocking its first
+    observed run.
+    """
+    await _register(client, "search-context@example.com")
+    created = await client.post(
+        "/api/v1/projects",
+        json=_project_payload(country_code="IN", language_code="en"),
+    )
+    assert created.status_code == 201
+    project_id = uuid.UUID(created.json()["id"])
+
+    row = await db_session.get(Project, project_id)
+    assert row is not None
+    assert row.serp_location_code == 2356  # IN -> provider location code
+    assert row.serp_language_code == "en"
+
+    # An unmapped market maps to unset, and unset is not a market default: an
+    # observed run fails at admission rather than silently measuring the
+    # market the project used to be configured for. Asserted by re-marketing
+    # this project rather than creating a second one -- a fresh account holds
+    # one project slot, so a second create answers 403 and would prove only
+    # that entitlements work.
+    response = await client.patch(
+        f"/api/v1/projects/{project_id}", json={"country_code": "BR"}
+    )
+    assert response.status_code == 200
+    db_session.expire_all()
+    row = await db_session.get(Project, project_id)
+    assert row is not None
+    assert row.serp_location_code == 0
+
+
+@pytest.mark.asyncio
+async def test_observed_search_context_follows_market_changes(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    """The observed-search triple re-maps when the configured market changes.
+
+    Every re-read expires the identity map first. The request wrote through
+    its own session, so a plain ``get`` here returns the instance this
+    session already loaded and the assertions pass against a pre-PATCH row --
+    reporting a mapping that never ran as one that did.
+    """
+    await _register(client, "search-context-update@example.com")
+    created = await client.post(
+        "/api/v1/projects",
+        json=_project_payload(country_code="IN", language_code="en"),
+    )
+    assert created.status_code == 201
+    project_id = uuid.UUID(created.json()["id"])
+
+    response = await client.patch(
+        f"/api/v1/projects/{project_id}", json={"country_code": "DE"}
+    )
+    assert response.status_code == 200
+    db_session.expire_all()
+    row = await db_session.get(Project, project_id)
+    assert row is not None
+    assert row.serp_location_code == 2276  # DE
+    assert row.serp_language_code == "en"  # carried over
+
+    # Changing the language re-maps it with the market carried over.
+    response = await client.patch(
+        f"/api/v1/projects/{project_id}",
+        json={"language_code": "de"},
+    )
+    assert response.status_code == 200
+    db_session.expire_all()
+    row = await db_session.get(Project, project_id)
+    assert row is not None
+    assert row.serp_location_code == 2276
+    assert row.serp_language_code == "de"
+
+    # A name-only change never touches the observed-search context.
+    response = await client.patch(
+        f"/api/v1/projects/{project_id}", json={"name": "Renamed Visibility"}
+    )
+    assert response.status_code == 200
+    db_session.expire_all()
+    row = await db_session.get(Project, project_id)
+    assert row is not None
+    assert row.serp_location_code == 2276
+    assert row.serp_language_code == "de"
 
 
 @pytest.mark.asyncio

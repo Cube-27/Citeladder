@@ -1,8 +1,34 @@
 # Google AI Overview — fourth measured visibility surface
 
-**Status: slices 1-4 shipped.** The surface is live and selectable. Slice 5
-(full evidence view, surface filters across Trends and Sources, labelled
-AIO-specific rates, and the three-engine copy sweep) is not started.
+**Status: slice 5 shipped, except the marketing-site copy sweep.** The product
+surface is complete: the evidence view composes mentioned / linked / cited from
+their three independent sources, the surface filter groups answer engines apart
+from observed surfaces across Trends and Sources, and the five rates are served
+from `GET /projects/{id}/visibility/surface-rates` with their denominators
+labelled.
+
+**The marketing-site copy sweep is withdrawn from this plan, by owner
+decision.** `lib/marketing-content/*`, `components/marketing/*`,
+`apps/marketing/*` and the engine-roster block in `globals.css` are NOT part of
+this work and were reverted. Website copy is changed only when the owner asks
+for it, separately. Do not re-add it to a slice.
+
+Three things this slice deliberately did NOT change, with reasons:
+
+- **The dev seed scripts stay at three engines.** `seed_dev_runs` stubs
+  `audit_execution.build_adapter`, and an observed surface never goes through
+  it -- it takes the submit/park/poll branch, which constructs its DataForSEO
+  adapter directly. Seeding the fourth surface would POST real, billable tasks
+  with a fake dev key. It needs a stubbed search-surface adapter first.
+- **`assert len(connections) == 3` in
+  `test_provision_platform_provider_connections.py` is correct as written.**
+  Platform provisioning is driven by the supplied credential references and no
+  platform DataForSEO account exists.
+- **The scheduled-coverage shortfall is recorded, not closed.**
+  `CiteLadder_Launch_Config.md` now multiplies scheduled answers by
+  `surface_count: 4`, which makes every plan's optional remainder negative
+  against an unchanged `audit_credits_per_period`. That is an owner pricing
+  decision; the document states it rather than absorbing it.
 
 Three things the live account corrected in this plan, now fixed in code:
 the reconciliation endpoint is `/v3/serp/id_list`, not the per-endpoint

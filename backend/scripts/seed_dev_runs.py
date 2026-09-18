@@ -63,6 +63,14 @@ from scripts.seed_dev_support import (
 logger = logging.getLogger("seed_dev_data")
 
 #: Every engine the primary project audits across.
+#
+#: The three ANSWER ENGINES only, deliberately. ``google_ai_overview`` is a
+#: fourth measured surface in the product, but the seeder's deterministic stub
+#: replaces ``audit_execution.build_adapter``, and an observed surface does not
+#: go through it -- it takes the submit/park/poll branch, which constructs its
+#: DataForSEO adapter directly. Adding the surface here would make `seed_dev`
+#: POST real, billable tasks to a live provider with a fake dev key. Seeding it
+#: needs a stubbed search-surface adapter first.
 ALL_ENGINES = [ENGINE_CHATGPT, ENGINE_CLAUDE, ENGINE_GEMINI]
 
 

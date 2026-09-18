@@ -101,9 +101,16 @@ common_paid_features:
   self_serve_sla: false
 
 common_paid_tracking:
-  logical_engines: [chatgpt, claude, gemini]
-  transports: [openai, anthropic, google]
-  engine_count: 3
+  # Four measured surfaces: three answer engines that are ASKED a question,
+  # and Google's AI Overview, which is OBSERVED on a results page through a
+  # SERP provider. `surface_count` counts all four; `answer_engine_count`
+  # counts only the ones a model answers, because the two numbers drive
+  # different things (task quota multiplies by all four; model-provenance copy
+  # is about the three).
+  logical_engines: [chatgpt, claude, gemini, google_ai_overview]
+  transports: [openai, anthropic, google, dataforseo]
+  surface_count: 4
+  answer_engine_count: 3
   audit_cadence: daily
   scheduled_samples_per_prompt_per_engine_per_day: 1
   site_health_full_refresh_cadence: weekly
@@ -195,7 +202,7 @@ visibility_answers:
   entitlement_key: audit_credits
   unit: one_successful_prompt_engine_sample
   debit_per_successful_funded_answer: 1
-  full_audit_units: prompt_count_times_engine_count_times_repetitions
+  full_audit_units: prompt_count_times_surface_count_times_repetitions
   failed_answer_credit_debit: 0
   system_duplicate_credit_debit: 0
   account_for_provider_attempt_costs_separately: true
@@ -276,11 +283,28 @@ recurring_allowances:
 
 ### Scheduled-coverage validation fixtures
 
-| Plan | Prompts | Engines | Days | Scheduled answers | Included answers | Optional remaining |
+| Plan | Prompts | Surfaces | Days | Scheduled answers | Included answers | Optional remaining |
 |---|---:|---:|---:|---:|---:|---:|
-| Starter | 10 | 3 | 31 | 930 | 1,000 | 70 |
-| Growth | 30 | 3 | 31 | 2,790 | 3,000 | 210 |
-| Scale | 60 | 3 | 31 | 5,580 | 6,000 | 420 |
+| Starter | 10 | 4 | 31 | 1,240 | 1,000 | -240 |
+| Growth | 30 | 4 | 31 | 3,720 | 3,000 | -720 |
+| Scale | 60 | 4 | 31 | 7,440 | 6,000 | -1,440 |
+
+**Every remainder above is negative, and that is an unresolved pricing
+decision, not a rounding artifact.** `full_audit_units` multiplies by
+`surface_count`, so measuring a fourth surface on a daily cadence raises
+scheduled consumption by a third while `audit_credits_per_period` is unchanged
+from the three-engine catalog. `scheduled_coverage` reserves the whole
+scheduled period before any optional manual work, so at these numbers every
+plan reserves more than it includes and no manual run is ever admissible.
+
+The shortfall is recorded rather than absorbed because
+`silently_reduce_scheduled_service_already_sold: false` forbids closing it by
+quietly dropping a surface from the schedule. Closing it needs an owner
+decision among: raising `audit_credits_per_period`, funding the observed
+surface from `serp_tasks_per_period` instead of the shared answer pool (it is
+BYOK-only today and has no platform credential), lowering the cadence for the
+observed surface, or repricing. Until one is chosen, do not sell these plans
+with the observed surface on a daily schedule.
 
 ## 4. Add-ons and top-ups
 
@@ -521,6 +545,11 @@ contribution_margin = contribution / subscription_revenue
 
 Uses the buffered estimate of $0.0381417/answer, not the rounded $0.04 internal budget.
 Extra manual usage and provider-specific taxes or fees are excluded.
+
+Scheduled answers here count the three ANSWER ENGINES only (10/30/60 prompts x 3 x 31
+days), deliberately unlike the section 3 fixtures. The per-answer cost model above is
+built from LLM token and search-query rates, and an observed SERP task is neither; its
+cost belongs to a SERP rate card that is not modeled here.
 
 | Metric | Starter | Growth | Scale |
 |---|---:|---:|---:|
