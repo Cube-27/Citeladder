@@ -57,6 +57,10 @@ ALL_CAPABILITY_KEYS = (
     "provider.copilot",
     "exports",
     "manual_runs_per_day",
+    # INTERIM, pending the real SERP billing model. It is a credit consumed
+    # before the shared run budget, never a second gate that can reject
+    # admission on its own — see the key's comment in config.
+    "serp_tasks_per_period",
     "content_creation",
     "growth_agent",
     "project_deletion",

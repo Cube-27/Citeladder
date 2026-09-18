@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.audits import TASK_STATUS_PENDING_RESERVATION
 from app.core.config.costs import ExpectedExecutionCost
 from app.core.config.entitlements import CAPABILITY_REGISTRY
+from app.core.config.provider_catalog import is_search_surface
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.domain.audits.frozen_plan import _FrozenPlan, _task_route_snapshot
 from app.domain.audits.funded_admission import (
@@ -26,7 +27,27 @@ from app.domain.audits.resolution import _ResolvedRoute
 from app.domain.entitlements.types import no_capability_entitlement
 from app.domain.providers.credentials import ResolvedCredential
 from app.models.audit import Audit, AuditEngineSnapshot, AuditPromptSnapshot, AuditTask
+from app.models.project import Project
 from app.models.prompt import Prompt
+
+
+def _frozen_search_snapshot(project: Project | None) -> dict[str, Any] | None:
+    """Freeze WHERE a search surface is observed from, at admission.
+
+    A queued execution must never re-read mutable project settings. Without
+    this, changing a project's location would silently rewrite what past runs
+    are reported to have measured — the rows would still be there, but the
+    thing they measured would have changed underneath them.
+
+    Returns ``None`` for an LLM task, which has no search context at all.
+    """
+    if project is None:
+        return None
+    return {
+        "location_code": project.serp_location_code,
+        "language_code": project.serp_language_code,
+        "device": project.serp_device,
+    }
 
 
 async def _create_audit_tasks(
@@ -41,6 +62,7 @@ async def _create_audit_tasks(
     funded: _FundedAdmission,
     expected_costs: dict[str, ExpectedExecutionCost],
     workspace_id: uuid.UUID,
+    project: Project | None,
     at: datetime,
 ) -> None:
     """Create one task per shuffled slot; credentials freeze before claimable.
@@ -90,6 +112,11 @@ async def _create_audit_tasks(
                 TASK_STATUS_PENDING_RESERVATION
                 if funded.enabled
                 else TASK_STATUS_QUEUED
+            ),
+            # The search context is frozen HERE, alongside the query, so a
+            # task carries what it was actually asked to measure.
+            request_snapshot=(
+                _frozen_search_snapshot(project) if is_search_surface(engine) else None
             ),
         )
         session.add(task)

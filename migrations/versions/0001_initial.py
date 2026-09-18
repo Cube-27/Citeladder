@@ -435,6 +435,24 @@ def upgrade() -> None:
         sa.Column("subindustry", sa.String(length=255), nullable=False),
         sa.Column("primary_market", sa.String(length=8), nullable=False),
         sa.Column("benchmark_mode", sa.String(length=32), nullable=False),
+        # WHERE this project's AI Overviews are observed from. A location code
+        # of 0 means unset, and unset is not a default: guessing a market
+        # would measure the wrong country and present it as the right one.
+        sa.Column(
+            "serp_location_code", sa.Integer(), nullable=False, server_default="0"
+        ),
+        sa.Column(
+            "serp_language_code",
+            sa.String(length=8),
+            nullable=False,
+            server_default="",
+        ),
+        sa.Column(
+            "serp_device",
+            sa.String(length=16),
+            nullable=False,
+            server_default="desktop",
+        ),
         sa.Column("default_repetitions", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),

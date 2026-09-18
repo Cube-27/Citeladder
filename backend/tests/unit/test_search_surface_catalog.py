@@ -255,3 +255,61 @@ class TestCredentialShape:
             transport_provider="openai", api_key="  sk-live  "
         )
         assert payload.secret_material() == "sk-live"
+
+
+class TestSearchContextAdmission:
+    """A run may not select a surface it has no vantage point for.
+
+    Tested directly rather than through `create_audit`, because the
+    selectability gate fires first and would mask this one until activation.
+    """
+
+    def _project(self, **overrides: object):
+        from app.models.project import Project
+
+        values = {
+            "name": "P",
+            "brand_name": "B",
+            "serp_location_code": 2036,
+            "serp_language_code": "en",
+            "serp_device": "desktop",
+        }
+        values.update(overrides)
+        return Project(**values)
+
+    def test_a_configured_project_passes(self) -> None:
+        from app.domain.audits.creation import _require_search_context
+
+        _require_search_context(
+            project=self._project(), engines=[ENGINE_GOOGLE_AI_OVERVIEW]
+        )
+
+    def test_a_missing_location_is_rejected_by_name(self) -> None:
+        from app.domain.audits.creation import _require_search_context
+        from app.domain.audits.errors import AuditValidationError
+
+        with pytest.raises(AuditValidationError, match="search location"):
+            _require_search_context(
+                project=self._project(serp_location_code=0),
+                engines=[ENGINE_GOOGLE_AI_OVERVIEW],
+            )
+
+    def test_an_unsupported_location_is_rejected_rather_than_defaulted(self) -> None:
+        # Silently measuring somewhere else would be a wrong measurement
+        # presented as a right one.
+        from app.domain.audits.creation import _require_search_context
+        from app.domain.audits.errors import AuditValidationError
+
+        with pytest.raises(AuditValidationError, match="not one this deployment"):
+            _require_search_context(
+                project=self._project(serp_location_code=999999),
+                engines=[ENGINE_GOOGLE_AI_OVERVIEW],
+            )
+
+    def test_an_llm_only_run_never_consults_the_search_context(self) -> None:
+        from app.domain.audits.creation import _require_search_context
+
+        _require_search_context(
+            project=self._project(serp_location_code=0),
+            engines=[ENGINE_CHATGPT, "claude", "gemini"],
+        )

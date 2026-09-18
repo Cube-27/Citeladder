@@ -715,3 +715,59 @@ async def test_the_poll_ceiling_is_a_named_failure_not_a_silent_absence(
     assert observation.error_code == ERROR_POLL_CEILING_EXCEEDED
     # Giving up is not the same as Google showing nothing.
     assert observation.aio_present is None
+
+
+@pytest.mark.asyncio
+async def test_the_surface_is_not_yet_requestable_by_a_run(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Two gates, in order, and this is the outer one.
+
+    Until the adapter ships, the engine is a member of the READ vocabulary
+    and not of the selectable set, so a run is refused before any
+    search-context question is even asked.
+    """
+    from app.core.config.audits import AUDIT_TRIGGER_MANUAL
+    from app.domain.audits.creation import create_audit
+    from app.domain.audits.errors import AuditValidationError
+
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+
+    async with session_factory() as session:
+        with pytest.raises(AuditValidationError, match="Unknown logical engine"):
+            await create_audit(
+                session,
+                trigger=AUDIT_TRIGGER_MANUAL,
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+                engines=[ENGINE_GOOGLE_AI_OVERVIEW],
+                prompt_set_id=seed.prompt_set_id,
+                repetitions=1,
+                random_seed="1",
+            )
+
+
+@pytest.mark.asyncio
+async def test_an_llm_run_is_unaffected_by_the_search_context_gate(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The gate must not become a new precondition for the shipped engines."""
+    from app.core.config.audits import AUDIT_TRIGGER_MANUAL
+    from app.domain.audits.creation import create_audit
+
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+
+    async with session_factory() as session:
+        audit = await create_audit(
+            session,
+            trigger=AUDIT_TRIGGER_MANUAL,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            engines=seed.engines,
+            prompt_set_id=seed.prompt_set_id,
+            repetitions=1,
+            random_seed="1",
+        )
+    assert audit is not None
