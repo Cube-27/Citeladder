@@ -66,6 +66,7 @@ from app.models.audit import (
 )
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.audit.execution import AuditExecutionMixin
+from app.workers.audit.search_surface import AuditSearchSurfaceMixin
 from app.workers.audit.terminalization import AuditTerminalizationMixin
 from app.workers.audit_worker_support import (
     assert_worker_pool_capacity,
@@ -95,7 +96,12 @@ __all__ = ["AuditWorker"]
 TASK_PRE_CALL_STATUSES = frozenset({TASK_STATUS_LEASED, TASK_STATUS_RUNNING})
 
 
-class AuditWorker(AuditExecutionMixin, AuditTerminalizationMixin, DrainableWorkerMixin):
+class AuditWorker(
+    AuditExecutionMixin,
+    AuditSearchSurfaceMixin,
+    AuditTerminalizationMixin,
+    DrainableWorkerMixin,
+):
     """Owns a claim/lease loop against ``PostgresTaskQueue``.
 
     A single worker claims up to ``worker_concurrency`` tasks per poll and runs

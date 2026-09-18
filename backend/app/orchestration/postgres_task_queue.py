@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.task_queue import (
     TASK_CLAIMABLE_STATUSES,
+    TASK_STATUS_AWAITING_PROVIDER_RESULT,
     TASK_STATUS_CANCELLED,
     TASK_STATUS_CAPACITY_WAIT,
     TASK_STATUS_FAILED,
@@ -35,6 +36,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
     TASK_STATUS_RETRY_WAIT,
     TASK_STATUS_RUNNING,
+    TASK_STATUS_SUBMISSION_UNCERTAIN,
     TASK_STATUS_SUCCEEDED,
     PostgresQueueSpec,
 )
@@ -418,6 +420,73 @@ class PostgresTaskQueue[
             await session.commit()
             return True
 
+    async def park_awaiting_provider_result(
+        self,
+        *,
+        task_id: uuid.UUID,
+        owner: str,
+        available_at: datetime,
+        mutate: Callable[[T], None] | None = None,
+    ) -> bool:
+        """Park an owned task on an OUTSTANDING external provider task.
+
+        Mechanically ``park_capacity_wait``: release the lease, set
+        ``available_at``, leave ``attempt_count`` alone. Semantically the
+        opposite — a capacity wait means nothing happened yet, while this
+        means a paid submission is already outstanding and the provider is
+        working on it.
+
+        ``attempt_count`` is untouched deliberately. Retrieval is free and
+        polling is not an attempt at anything; spending budget per poll would
+        exhaust a task's retries while it was making perfectly normal
+        progress, and then report it as having failed.
+
+        ``mutate`` writes the provider-task columns in the SAME transaction
+        that parks the row, so a row can never be parked awaiting a result it
+        has no way to fetch.
+        """
+        async with self._session_factory() as session:
+            task = await self._owned_task(session, task_id, owner)
+            if task is None:
+                await session.commit()
+                return False
+            task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
+            task.lease_owner = None
+            task.lease_expires_at = None
+            task.available_at = available_at
+            if mutate is not None:
+                mutate(task)
+            await session.commit()
+            return True
+
+    async def park_submission_uncertain(
+        self,
+        *,
+        task_id: uuid.UUID,
+        owner: str,
+        available_at: datetime,
+        mutate: Callable[[T], None] | None = None,
+    ) -> bool:
+        """Park an owned task whose submission may or may not have landed.
+
+        This is NOT a retry. The task may already have been paid for, so it
+        waits to be reconciled against the provider by its correlation tag —
+        never resubmitted on the assumption that nothing happened.
+        """
+        async with self._session_factory() as session:
+            task = await self._owned_task(session, task_id, owner)
+            if task is None:
+                await session.commit()
+                return False
+            task.status = TASK_STATUS_SUBMISSION_UNCERTAIN
+            task.lease_owner = None
+            task.lease_expires_at = None
+            task.available_at = available_at
+            if mutate is not None:
+                mutate(task)
+            await session.commit()
+            return True
+
     async def cancel(self, *, task_id: uuid.UUID) -> bool:
         now = _utcnow()
         async with self._session_factory() as session:
@@ -487,9 +556,31 @@ class PostgresTaskQueue[
                 .with_for_update(skip_locked=True)
             )
             tasks = list((await session.scalars(stmt)).all())
+            holds_submission = self._spec.unreconciled_submission
             for task in tasks:
                 task.lease_owner = None
                 task.lease_expires_at = None
+                if holds_submission is not None and holds_submission(task):
+                    # This row died holding a PAID submission it never got to
+                    # record. Returning it to the retry set would submit — and
+                    # pay for — the same observation again, so it is diverted
+                    # to reconciliation instead, whatever killed it. That
+                    # closes the gap between a handled network timeout and a
+                    # process that died before it could handle anything.
+                    #
+                    # No attempt is spent: nothing here failed, and the
+                    # question of what happened is still open.
+                    task.status = TASK_STATUS_SUBMISSION_UNCERTAIN
+                    task.available_at = now
+                    reclaimed += 1
+                    logger.warning(
+                        "sweeper diverted a task holding an unreconciled submission",
+                        extra={
+                            "task_id": str(task.id),
+                            "queue": model.__tablename__,
+                        },
+                    )
+                    continue
                 # A reclaim IS a consumed attempt. `attempt_count` was only
                 # ever incremented by a worker's finalize, so a task whose
                 # executor died mid-run (crash, OOM, container stop) came back

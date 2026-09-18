@@ -138,6 +138,14 @@ class PostgresQueueSpec[
       reclaim must be reconciled against that parent, because the sweeper
       terminalizes rows OUTSIDE any worker's finalize path. ``None`` (the
       default) leaves every other queue's behavior unchanged.
+    - ``unreconciled_submission`` — optional predicate answering "did this row
+      die holding an outstanding PAID submission?". When it says yes, the
+      sweeper diverts the row to ``submission_uncertain`` instead of returning
+      it to the retry set. Without it, a worker killed between the POST and
+      persisting the provider's task id would come back looking like an
+      ordinary failed attempt and be submitted — and charged — a second time.
+      ``None`` (the default) leaves every other queue's behavior unchanged,
+      because no other queue can be holding one.
 
     Every queue-row model must carry the shared column contract (``status``,
     ``lease_owner``, ``lease_expires_at``, ``heartbeat_at``, ``attempt_count``,
@@ -151,6 +159,7 @@ class PostgresQueueSpec[
     claim_order: Callable[[type[T]], Sequence[Any]]
     max_attempts_error: str = field(default=ERROR_MAX_ATTEMPTS)
     parent_id_attr: str | None = field(default=None)
+    unreconciled_submission: Callable[[Any], bool] | None = field(default=None)
 
     @property
     def model(self) -> type[T]:
