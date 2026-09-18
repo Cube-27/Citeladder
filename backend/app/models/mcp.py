@@ -11,6 +11,7 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.models.constants import FK_MCP_OAUTH_CLIENTS_CLIENT_ID
 
 
 def _utcnow() -> datetime:
@@ -44,7 +45,7 @@ class McpAuthorizationRequest(Base):
     transaction_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     client_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("mcp_oauth_clients.client_id", ondelete="CASCADE"),
+        ForeignKey(FK_MCP_OAUTH_CLIENTS_CLIENT_ID, ondelete="CASCADE"),
         index=True,
     )
     state: Mapped[str] = mapped_column(Text, default="")
@@ -73,7 +74,7 @@ class McpAuthorizationCode(Base):
     code_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     client_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("mcp_oauth_clients.client_id", ondelete="CASCADE"),
+        ForeignKey(FK_MCP_OAUTH_CLIENTS_CLIENT_ID, ondelete="CASCADE"),
         index=True,
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -103,7 +104,7 @@ class McpOAuthGrant(Base):
     )
     client_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("mcp_oauth_clients.client_id", ondelete="CASCADE"),
+        ForeignKey(FK_MCP_OAUTH_CLIENTS_CLIENT_ID, ondelete="CASCADE"),
         index=True,
     )
     user_id: Mapped[uuid.UUID] = mapped_column(

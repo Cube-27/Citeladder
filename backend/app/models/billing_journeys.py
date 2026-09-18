@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.models.constants import FK_USERS_ID
 
 
 def _utcnow() -> datetime:
@@ -44,7 +45,7 @@ class IntroductoryOperatorCode(Base):
     redemption_limit: Mapped[int] = mapped_column(Integer, default=1)
     redemption_count: Mapped[int] = mapped_column(Integer, default=0)
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT")
+        PGUUID(as_uuid=True), ForeignKey(FK_USERS_ID, ondelete="RESTRICT")
     )
     reason: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
@@ -78,7 +79,7 @@ class IntroductoryClaim(Base):
     terms_consent_version: Mapped[str] = mapped_column(String(64))
     data_sharing_consent_version: Mapped[str] = mapped_column(String(64))
     consented_by_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT")
+        PGUUID(as_uuid=True), ForeignKey(FK_USERS_ID, ondelete="RESTRICT")
     )
     claimed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -92,7 +93,7 @@ class IntroductoryClaim(Base):
     )
     ended_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="RESTRICT"),
+        ForeignKey(FK_USERS_ID, ondelete="RESTRICT"),
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(

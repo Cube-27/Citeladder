@@ -28,7 +28,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.config.provider_catalog import CREDENTIAL_SOURCE_BYOK
 from app.core.database import Base
-from app.models.constants import CASCADE_ALL_DELETE_ORPHAN, ON_DELETE_SET_NULL
+from app.models.constants import (
+    CASCADE_ALL_DELETE_ORPHAN,
+    FK_PROVIDER_CONNECTIONS_ID,
+    FK_WORKSPACES_ID,
+    ON_DELETE_SET_NULL,
+)
 
 
 class ProviderConnection(Base):
@@ -66,7 +71,7 @@ class ProviderConnection(Base):
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        ForeignKey(FK_WORKSPACES_ID, ondelete="CASCADE"),
         index=True,
     )
     # Human label for the connection (for example, "Production OpenAI key").
@@ -164,12 +169,12 @@ class ProviderRoute(Base):
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        ForeignKey(FK_WORKSPACES_ID, ondelete="CASCADE"),
         index=True,
     )
     connection_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("provider_connections.id", ondelete="CASCADE"),
+        ForeignKey(FK_PROVIDER_CONNECTIONS_ID, ondelete="CASCADE"),
         index=True,
     )
     logical_engine: Mapped[str] = mapped_column(String(32))
@@ -212,12 +217,12 @@ class ProviderAppRoute(Base):
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        ForeignKey(FK_WORKSPACES_ID, ondelete="CASCADE"),
         index=True,
     )
     connection_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("provider_connections.id", ondelete="CASCADE"),
+        ForeignKey(FK_PROVIDER_CONNECTIONS_ID, ondelete="CASCADE"),
         index=True,
     )
     feature: Mapped[str] = mapped_column(String(32))
@@ -263,12 +268,12 @@ class ProviderConnectionTest(Base):
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        ForeignKey(FK_WORKSPACES_ID, ondelete="CASCADE"),
         index=True,
     )
     connection_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("provider_connections.id", ondelete="CASCADE"),
+        ForeignKey(FK_PROVIDER_CONNECTIONS_ID, ondelete="CASCADE"),
         index=True,
     )
     # ok | failed (provider_catalog.TEST_STATUS_*).
@@ -307,12 +312,12 @@ class DiscoveryModelConfig(Base):
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        ForeignKey(FK_WORKSPACES_ID, ondelete="CASCADE"),
         index=True,
     )
     connection_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("provider_connections.id", ondelete=ON_DELETE_SET_NULL),
+        ForeignKey(FK_PROVIDER_CONNECTIONS_ID, ondelete=ON_DELETE_SET_NULL),
         nullable=True,
         index=True,
     )

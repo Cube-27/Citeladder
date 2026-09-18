@@ -68,6 +68,10 @@ from app.domain.providers.app_routes import (
 from app.models.content import ContentGeneration
 from app.models.project import Project
 
+#: Deliberately uniform: a generation in another workspace and one that never
+#: existed are indistinguishable to the caller, so a probe learns nothing.
+_GENERATION_NOT_FOUND = "Content generation not found"
+
 
 class ContentGenerationNotFoundError(LookupError):
     """Record/project missing or owned by another workspace (-> 404)."""
@@ -560,7 +564,7 @@ async def get_generation(
         )
     )
     if row is None:
-        raise ContentGenerationNotFoundError("Content generation not found")
+        raise ContentGenerationNotFoundError(_GENERATION_NOT_FOUND)
     return row
 
 
@@ -585,7 +589,7 @@ async def cancel_generation(
         .with_for_update()
     )
     if locked is None:
-        raise ContentGenerationNotFoundError("Content generation not found")
+        raise ContentGenerationNotFoundError(_GENERATION_NOT_FOUND)
     if locked.status in TASK_TERMINAL_STATUSES:
         # Capture before rollback: rollback expires the instance and a later
         # attribute access would trigger sync lazy-loading (MissingGreenlet).
@@ -619,7 +623,7 @@ async def delete_generation(
         .with_for_update()
     )
     if locked is None:
-        raise ContentGenerationNotFoundError("Content generation not found")
+        raise ContentGenerationNotFoundError(_GENERATION_NOT_FOUND)
     if locked.status not in TASK_TERMINAL_STATUSES:
         active_status = locked.status
         await session.rollback()
@@ -770,7 +774,7 @@ async def record_feedback(
         .with_for_update()
     )
     if row is None:
-        raise ContentGenerationNotFoundError("Content generation not found")
+        raise ContentGenerationNotFoundError(_GENERATION_NOT_FOUND)
     if feedback not in {FEEDBACK_ACCEPTED, FEEDBACK_REJECTED}:
         raise ValueError("unknown content feedback")
     if reason and reason not in CONTENT_FEEDBACK_REASONS:

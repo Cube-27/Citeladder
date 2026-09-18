@@ -23,6 +23,7 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.models.constants import FK_USERS_ID
 
 
 class ProductTourStatus(StrEnum):
@@ -86,7 +87,7 @@ class WorkspaceMember(Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey(FK_USERS_ID, ondelete="CASCADE"),
         index=True,
     )
     role: Mapped[str] = mapped_column(String(20), default="owner")
@@ -153,7 +154,7 @@ class WorkspaceInvitation(Base):
     token_sha256: Mapped[str] = mapped_column(String(64), unique=True)
     invited_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
+        ForeignKey(FK_USERS_ID, ondelete="SET NULL"),
         nullable=True,
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -162,7 +163,7 @@ class WorkspaceInvitation(Base):
     )
     accepted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
+        ForeignKey(FK_USERS_ID, ondelete="SET NULL"),
         nullable=True,
     )
     revoked_at: Mapped[datetime | None] = mapped_column(

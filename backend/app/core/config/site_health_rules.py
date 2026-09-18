@@ -43,6 +43,10 @@ from app.core.config.site_health_taxonomy import (
 )
 from app.core.config.site_health_web_fundamentals import WEB_FUNDAMENTALS_RULES
 
+#: Three advisories name this rule as the defect they hang off, so the id
+#: has to stay identical across all four declarations.
+RULE_ID_STRUCTURED_DATA_PRESENT = "aeo.structured_data_present"
+
 SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
     SiteHealthRule(
         rule_id="technical.title_present",
@@ -120,7 +124,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         score_roles=(SCORE_ROLE_WEB_FUNDAMENTALS,),
     ),
     SiteHealthRule(
-        rule_id="aeo.structured_data_present",
+        rule_id=RULE_ID_STRUCTURED_DATA_PRESENT,
         rule_version=RULE_CATALOG_VERSION,
         dimension=DIMENSION_AEO,
         category=CATEGORY_STRUCTURED_DATA,
@@ -250,7 +254,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation="Add the missing required properties to the schema markup.",
         display_label="Required schema properties missing",
         score_roles=(SCORE_ROLE_AEO,),
-        triggered_by="aeo.structured_data_present",
+        triggered_by=RULE_ID_STRUCTURED_DATA_PRESENT,
     ),
     SiteHealthRule(
         rule_id="aeo.schema_recommended_present",
@@ -273,7 +277,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation=("Add the recommended properties to strengthen the schema markup."),
         display_label="Recommended schema properties missing",
         score_roles=(SCORE_ROLE_AEO,),
-        triggered_by="aeo.structured_data_present",
+        triggered_by=RULE_ID_STRUCTURED_DATA_PRESENT,
     ),
     SiteHealthRule(
         rule_id="aeo.schema_matches_content",
@@ -296,7 +300,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         ),
         display_label="Schema markup does not match visible content",
         score_roles=(SCORE_ROLE_AEO,),
-        triggered_by="aeo.structured_data_present",
+        triggered_by=RULE_ID_STRUCTURED_DATA_PRESENT,
     ),
     # --- v2 P2: citability (per-page) ---------------------------------------
     SiteHealthRule(

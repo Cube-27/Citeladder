@@ -6,9 +6,14 @@
 # behavior change.
 from __future__ import annotations
 
-# ForeignKey target for the audits table (repeated across analysis/audit models).
+# ForeignKey targets, repeated wherever a model hangs off one of these tables.
 FK_AUDITS_ID = "audits.id"
 FK_PROVIDER_CONNECTIONS_ID = "provider_connections.id"
+FK_USERS_ID = "users.id"
+FK_WORKSPACES_ID = "workspaces.id"
+FK_PROJECTS_ID = "projects.id"
+FK_MCP_OAUTH_CLIENTS_CLIENT_ID = "mcp_oauth_clients.client_id"
+FK_TRAFFIC_SNAPSHOTS_WORKSPACE_ID = "traffic_snapshots.workspace_id"
 
 # ``ondelete`` policy: null out the child FK when the parent row is removed.
 ON_DELETE_SET_NULL = "SET NULL"
