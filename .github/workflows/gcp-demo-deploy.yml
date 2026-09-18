@@ -42,12 +42,12 @@ jobs:
       # 'true' restores the single-account demo (no public sign-up).
       DEMO_MODE: ${{ vars.DEMO_MODE || 'false' }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      # A SECRET, not a variable, and under its full name: `vars.` never reads
-      # secrets, so `vars.LOGO_DEV_PUBLISHABLE` resolved to the empty string
-      # however the value was set. The token then baked into the bundle as ''
-      # and every brand mark in the deployed app fell back to initials, with
-      # nothing in any log to say why.
-      LOGO_DEV_PUBLISHABLE: ${{ secrets.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE }}
+      # A VARIABLE, deliberately: this key is publishable and ships in the
+      # client bundle, so storing it as a secret would only make it write-only
+      # and mask it to `***` in the logs you would debug from. `vars.` does not
+      # fall back to `secrets.`, so a token filed under the wrong one resolves
+      # to the empty string and bakes '' into the bundle silently.
+      LOGO_DEV_PUBLISHABLE: ${{ vars.LOGO_DEV_PUBLISHABLE }}
       DEMO_LOGIN_EMAIL: ${{ vars.DEMO_LOGIN_EMAIL }}
       DEV_LOGIN_COUNTER_ALLOWANCE: ${{ vars.DEV_LOGIN_COUNTER_ALLOWANCE || '200' }}
     steps:

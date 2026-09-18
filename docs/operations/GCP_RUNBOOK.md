@@ -79,14 +79,17 @@ Add these environment secrets:
 - `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE`: optional Logo.dev publishable token. It
   is injected only while building the frontend and becomes public client
   configuration; do not use a Logo.dev secret key here. It reaches the deploy
-  as the `gcp-demo` environment **secret** `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE`.
-  Without it every brand mark in the app falls back to initials. Three
-  consequences worth knowing:
-  - `secrets.` and `vars.` are separate namespaces and neither falls back to
-    the other. The workflow read `vars.LOGO_DEV_PUBLISHABLE` while the value
-    was stored as a secret under its full `NEXT_PUBLIC_` name, so it resolved
-    empty no matter what was set. If you move this value, move the workflow
-    reference with it.
+  as the `gcp-demo` environment **variable** `LOGO_DEV_PUBLISHABLE` — a
+  variable and not a secret on purpose, because the token is published in the
+  client bundle anyway and filing it as a secret only makes it write-only and
+  masks it to `***` in the logs you would debug from. Without it every brand
+  mark in the app falls back to initials. Three consequences worth knowing:
+  - `vars.` and `secrets.` are separate namespaces and neither falls back to
+    the other, so a token filed under the wrong one reads as the empty string
+    however carefully it was set. This is not hypothetical: the value sat as a
+    secret named `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE` while the workflow read
+    `vars.LOGO_DEV_PUBLISHABLE`, and every logo in the deployed app was
+    initials for it. Use the variable, under exactly that name.
   - The value is baked into the image, not read at runtime. The frontend build
     now logs `Building with empty public values: ...` when one is missing, so
     check the build step's log before chasing the app.
