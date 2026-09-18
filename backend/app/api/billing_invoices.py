@@ -60,7 +60,7 @@ def _summary(row: BillingInvoice) -> BillingInvoiceResponse:
     )
 
 
-@router.get("/billing/invoices", response_model=BillingInvoicesResponse)
+@router.get("/billing/invoices")
 async def get_billing_invoices(
     ctx: BillingWorkspace,
     session: Session,

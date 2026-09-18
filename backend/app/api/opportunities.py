@@ -192,7 +192,6 @@ def _guidance_conflict(
 # =========================================================================
 @router.get(
     "/projects/{project_id}/opportunities",
-    response_model=OpportunitiesPage,
 )
 async def list_opportunities_endpoint(
     project_id: uuid.UUID,
@@ -232,7 +231,6 @@ async def list_opportunities_endpoint(
 
 @router.get(
     "/projects/{project_id}/opportunities/summary",
-    response_model=OpportunitySummary,
 )
 async def get_summary_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -248,7 +246,6 @@ async def get_summary_endpoint(
 
 @router.post(
     "/projects/{project_id}/opportunities/recompute",
-    response_model=RecomputeResponse,
 )
 async def recompute_endpoint(
     project_id: uuid.UUID,
@@ -271,7 +268,6 @@ async def recompute_endpoint(
 
 @router.get(
     "/projects/{project_id}/opportunities/history",
-    response_model=OpportunityHistoryResponse,
 )
 async def get_grouped_history_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -287,7 +283,6 @@ async def get_grouped_history_endpoint(
 
 @router.post(
     "/projects/{project_id}/opportunities/implementation-events",
-    response_model=ImplementationEventView,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_implementation_event_endpoint(
@@ -356,7 +351,6 @@ async def create_implementation_event_endpoint(
 
 @router.get(
     "/projects/{project_id}/opportunities/implementation-events",
-    response_model=ImplementationEventsPage,
 )
 async def list_implementation_events_endpoint(
     project_id: uuid.UUID,
@@ -390,7 +384,6 @@ async def list_implementation_events_endpoint(
 
 @router.get(
     "/projects/{project_id}/opportunities/implementation-events/{event_id}",
-    response_model=ImplementationEventView,
 )
 async def get_implementation_event_endpoint(
     project_id: uuid.UUID,
@@ -419,7 +412,7 @@ async def get_implementation_event_endpoint(
 # =========================================================================
 # Row read + the one mutation (human workflow status)
 # =========================================================================
-@router.get("/opportunities/{opportunity_id}", response_model=OpportunityDetail)
+@router.get("/opportunities/{opportunity_id}")
 async def get_opportunity_endpoint(
     opportunity_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> OpportunityDetail:
@@ -432,7 +425,7 @@ async def get_opportunity_endpoint(
     return OpportunityDetail.model_validate(detail)
 
 
-@router.patch("/opportunities/{opportunity_id}", response_model=OpportunityItem)
+@router.patch("/opportunities/{opportunity_id}")
 async def update_status_endpoint(
     opportunity_id: uuid.UUID,
     payload: OpportunityStatusPatch,
@@ -458,7 +451,6 @@ async def update_status_endpoint(
 
 @router.put(
     "/projects/{project_id}/opportunities/order",
-    response_model=OpportunityOrderResponse,
 )
 async def update_order_endpoint(
     project_id: uuid.UUID,
@@ -493,7 +485,6 @@ async def update_order_endpoint(
 # =========================================================================
 @router.post(
     "/opportunities/{opportunity_id}/guidance",
-    response_model=OpportunityGuidanceItem,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_guidance_endpoint(
@@ -525,7 +516,6 @@ async def create_guidance_endpoint(
 
 @router.get(
     "/opportunities/{opportunity_id}/guidance",
-    response_model=OpportunityGuidanceItem | None,
 )
 async def get_latest_guidance_endpoint(
     opportunity_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -545,7 +535,6 @@ async def get_latest_guidance_endpoint(
 
 @router.get(
     "/opportunities/{opportunity_id}/guidance/history",
-    response_model=OpportunityGuidanceHistory,
 )
 async def get_guidance_history_endpoint(
     opportunity_id: uuid.UUID,

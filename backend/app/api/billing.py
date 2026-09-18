@@ -282,7 +282,7 @@ async def _run_intent(
     return result.response
 
 
-@router.get("/billing/catalog", response_model=BillingCatalogResponse)
+@router.get("/billing/catalog")
 async def get_catalog(
     session: Session,
     country: Annotated[str | None, Query(max_length=2)] = None,
@@ -302,7 +302,6 @@ async def get_catalog(
 
 @router.get(
     "/workspaces/{workspace_id}/entitlements",
-    response_model=WorkspaceEntitlementResponse,
 )
 async def get_workspace_entitlements(
     workspace_id: Annotated[uuid.UUID, PathParam()],
@@ -345,7 +344,7 @@ async def get_workspace_entitlements(
     )
 
 
-@router.get("/billing/entitlement", response_model=BillingEntitlementResponse)
+@router.get("/billing/entitlement")
 async def get_entitlement(
     ctx: BillingWorkspace,
     session: Session,
@@ -355,7 +354,7 @@ async def get_entitlement(
     return await account_entitlement(session, account=account, at=datetime.now(UTC))
 
 
-@router.get("/billing/usage", response_model=BillingUsageResponse)
+@router.get("/billing/usage")
 async def get_usage(ctx: BillingWorkspace, session: Session) -> BillingUsageResponse:
     """The authenticated account usage read; commits nothing.
 
@@ -366,7 +365,7 @@ async def get_usage(ctx: BillingWorkspace, session: Session) -> BillingUsageResp
     return await account_usage(session, account=account, at=datetime.now(UTC))
 
 
-@router.get("/billing/early-access", response_model=NoCardOfferResponse)
+@router.get("/billing/early-access")
 async def get_early_access(
     ctx: BillingWorkspace, session: Session
 ) -> NoCardOfferResponse:
@@ -383,7 +382,7 @@ async def get_early_access(
     )
 
 
-@router.post("/billing/early-access/claim", response_model=NoCardClaimResponse)
+@router.post("/billing/early-access/claim")
 async def post_early_access_claim(
     payload: NoCardClaimRequest,
     ctx: BillingWorkspace,
@@ -410,7 +409,7 @@ async def post_early_access_claim(
         )
 
 
-@router.delete("/billing/early-access", response_model=IntroductoryEndResponse)
+@router.delete("/billing/early-access")
 async def delete_early_access(
     ctx: BillingWorkspace, session: Session, idempotency_key: IdempotencyKey
 ) -> IntroductoryEndResponse:
@@ -425,7 +424,7 @@ async def delete_early_access(
         return IntroductoryEndResponse(ended_at=ended_at)
 
 
-@router.get("/billing/card-trial/quote", response_model=CardTrialUnavailableResponse)
+@router.get("/billing/card-trial/quote")
 async def get_card_trial_quote(ctx: BillingWorkspace) -> CardTrialUnavailableResponse:
     del ctx
     return CardTrialUnavailableResponse()
@@ -433,7 +432,6 @@ async def get_card_trial_quote(ctx: BillingWorkspace) -> CardTrialUnavailableRes
 
 @router.post(
     "/billing/subscriptions",
-    response_model=ActivationResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def post_subscription(
@@ -505,7 +503,6 @@ async def post_subscription(
 
 @router.post(
     "/billing/addons",
-    response_model=ActivationResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def post_addon(
@@ -560,7 +557,6 @@ async def post_addon(
 
 @router.post(
     "/billing/topups",
-    response_model=ActivationResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def post_topup(
@@ -615,7 +611,7 @@ async def post_topup(
         )
 
 
-@router.delete("/billing/subscription", response_model=SubscriptionChangeResponse)
+@router.delete("/billing/subscription")
 async def delete_subscription(
     ctx: BillingWorkspace,
     session: Session,
@@ -643,7 +639,7 @@ async def delete_subscription(
         )
 
 
-@router.delete("/billing/addons/{key}", response_model=SubscriptionChangeResponse)
+@router.delete("/billing/addons/{key}")
 async def delete_addon(
     ctx: BillingWorkspace,
     session: Session,

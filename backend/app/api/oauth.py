@@ -111,7 +111,7 @@ def _signin_error_redirect(code: str) -> RedirectResponse:
     return response
 
 
-@router.get("/providers", response_model=OAuthProvidersResponse)
+@router.get("/providers")
 async def list_oauth_providers() -> OAuthProvidersResponse:
     """List the OAuth provider catalog — ``configured`` flags only.
 
@@ -129,7 +129,7 @@ async def list_oauth_providers() -> OAuthProvidersResponse:
     )
 
 
-@router.get("/{provider}/start", response_model=OAuthStartResponse)
+@router.get("/{provider}/start")
 async def oauth_start(provider: str, response: Response) -> OAuthStartResponse:
     """Build the provider authorize URL and arm the transaction cookie.
 

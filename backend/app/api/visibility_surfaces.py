@@ -36,7 +36,6 @@ _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 
 @router.get(
     "/{project_id}/visibility/surface-rates",
-    response_model=SurfaceRatesResponse,
 )
 async def get_surface_rates_endpoint(
     project_id: uuid.UUID,

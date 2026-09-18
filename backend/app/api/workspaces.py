@@ -141,7 +141,7 @@ def _raise_membership(exc: MembershipError | InvitationError) -> NoReturn:
     raise ApiException.coded(http_status, code, exc.code) from exc
 
 
-@router.get("", response_model=list[WorkspaceResponse])
+@router.get("")
 async def list_workspaces(
     user: _CurrentUser, session: _SessionDep
 ) -> list[WorkspaceResponse]:
@@ -154,7 +154,7 @@ async def list_workspaces(
     return [_workspace_view(workspace, member) for workspace, member in rows]
 
 
-@router.post("", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_workspace_endpoint(
     payload: WorkspaceCreate, user: _CurrentUser, session: _SessionDep
 ) -> WorkspaceResponse:
@@ -170,7 +170,7 @@ async def create_workspace_endpoint(
     return _workspace_view(workspace, member)
 
 
-@router.post("/invitations/accept", response_model=WorkspaceResponse)
+@router.post("/invitations/accept")
 async def accept_workspace_invitation(
     payload: WorkspaceInvitationAccept, user: _CurrentUser, session: _SessionDep
 ) -> WorkspaceResponse:
@@ -198,7 +198,7 @@ async def accept_workspace_invitation(
     return _workspace_view(workspace, member)
 
 
-@router.get("/{workspace_id}/members", response_model=list[WorkspaceMemberResponse])
+@router.get("/{workspace_id}/members")
 async def get_workspace_members(
     ctx: _AdminDep, session: _SessionDep
 ) -> list[WorkspaceMemberResponse]:
@@ -217,9 +217,7 @@ async def get_workspace_members(
     ]
 
 
-@router.patch(
-    "/{workspace_id}/members/{member_id}", response_model=WorkspaceMemberResponse
-)
+@router.patch("/{workspace_id}/members/{member_id}")
 async def patch_workspace_member(
     member_id: uuid.UUID,
     payload: WorkspaceMemberRoleUpdate,
@@ -277,7 +275,7 @@ async def leave_workspace_endpoint(ctx: _MemberDep, session: _SessionDep) -> Non
     await session.commit()
 
 
-@router.post("/{workspace_id}/ownership", response_model=list[WorkspaceMemberResponse])
+@router.post("/{workspace_id}/ownership")
 async def transfer_workspace_ownership(
     payload: WorkspaceOwnershipTransfer, ctx: _AdminDep, session: _SessionDep
 ) -> list[WorkspaceMemberResponse]:
@@ -311,9 +309,7 @@ async def transfer_workspace_ownership(
     ]
 
 
-@router.get(
-    "/{workspace_id}/invitations", response_model=list[WorkspaceInvitationResponse]
-)
+@router.get("/{workspace_id}/invitations")
 async def get_workspace_invitations(
     ctx: _AdminDep, session: _SessionDep
 ) -> list[WorkspaceInvitationResponse]:
@@ -326,7 +322,6 @@ async def get_workspace_invitations(
 
 @router.post(
     "/{workspace_id}/invitations",
-    response_model=WorkspaceInvitationIssued,
     status_code=status.HTTP_201_CREATED,
 )
 async def post_workspace_invitation(
@@ -355,7 +350,6 @@ async def post_workspace_invitation(
 
 @router.post(
     "/{workspace_id}/invitations/{invitation_id}/resend",
-    response_model=WorkspaceInvitationIssued,
 )
 async def post_workspace_invitation_resend(
     invitation_id: uuid.UUID, ctx: _AdminDep, session: _SessionDep
@@ -393,12 +387,12 @@ async def delete_workspace_invitation(
     await session.commit()
 
 
-@router.get("/{workspace_id}/product-tour", response_model=ProductTourResponse)
+@router.get("/{workspace_id}/product-tour")
 async def get_product_tour(ctx: _MemberDep) -> ProductTourResponse:
     return product_tour_response(ctx.member)
 
 
-@router.patch("/{workspace_id}/product-tour", response_model=ProductTourResponse)
+@router.patch("/{workspace_id}/product-tour")
 async def patch_product_tour(
     payload: ProductTourUpdate, ctx: _MemberDep, session: _SessionDep
 ) -> ProductTourResponse:

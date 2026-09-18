@@ -38,7 +38,6 @@ logger = logging.getLogger("app.auth")
 
 @router.post(
     "/register",
-    response_model=RegistrationResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def register(
@@ -62,7 +61,7 @@ async def register(
     )
 
 
-@router.post("/login", response_model=AuthResponse)
+@router.post("/login")
 async def login(
     payload: Credentials,
     request: Request,
@@ -116,6 +115,6 @@ async def logout(
     return response
 
 
-@router.get("/me", response_model=AuthResponse)
+@router.get("/me")
 async def me(user: Annotated[User, Depends(get_current_user)]) -> AuthResponse:
     return AuthResponse(user=SessionUser.model_validate(user))

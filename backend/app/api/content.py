@@ -114,7 +114,7 @@ async def _require_content_creation(
         ) from exc
 
 
-@router.get("/skills", response_model=ContentSkillCatalog)
+@router.get("/skills")
 async def list_skills_endpoint(ctx: _WorkspaceDep) -> ContentSkillCatalog:
     """The reusable output formats a generation may request.
 
@@ -126,7 +126,7 @@ async def list_skills_endpoint(ctx: _WorkspaceDep) -> ContentSkillCatalog:
     return skill_catalog()
 
 
-@router.get("/context-preview", response_model=ContentContextPreview)
+@router.get("/context-preview")
 async def context_preview_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
@@ -195,7 +195,7 @@ def _preview_site_health_reference(
     )
 
 
-@router.get("/generations", response_model=list[ContentGenerationListItem])
+@router.get("/generations")
 async def list_generations_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
@@ -216,7 +216,7 @@ async def list_generations_endpoint(
     return [to_list_item(row) for row in rows]
 
 
-@router.get("/target-pages", response_model=list[ContentTargetPage])
+@router.get("/target-pages")
 async def list_target_pages_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
@@ -236,7 +236,6 @@ async def list_target_pages_endpoint(
 
 @router.post(
     "/generations",
-    response_model=ContentGenerationDetail,
     status_code=status.HTTP_201_CREATED,
 )
 async def enqueue_generation_endpoint(
@@ -310,7 +309,7 @@ async def clear_generation_history_endpoint(
         raise _not_found(exc) from exc
 
 
-@router.get("/generations/{generation_id}", response_model=ContentGenerationDetail)
+@router.get("/generations/{generation_id}")
 async def get_generation_endpoint(
     generation_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> ContentGenerationDetail:
@@ -323,9 +322,7 @@ async def get_generation_endpoint(
     return to_detail(row)
 
 
-@router.post(
-    "/generations/{generation_id}/feedback", response_model=ContentGenerationDetail
-)
+@router.post("/generations/{generation_id}/feedback")
 async def content_feedback_endpoint(
     generation_id: uuid.UUID,
     payload: ContentFeedbackRequest,
@@ -370,7 +367,6 @@ async def _repeat_generation(
 
 @router.post(
     "/generations/{generation_id}/regenerate",
-    response_model=ContentGenerationDetail,
     status_code=status.HTTP_201_CREATED,
 )
 async def regenerate_endpoint(
@@ -386,7 +382,6 @@ async def regenerate_endpoint(
 
 @router.post(
     "/generations/{generation_id}/try-again",
-    response_model=ContentGenerationDetail,
     status_code=status.HTTP_201_CREATED,
 )
 async def try_again_endpoint(
@@ -400,9 +395,7 @@ async def try_again_endpoint(
     )
 
 
-@router.post(
-    "/generations/{generation_id}/cancel", response_model=ContentGenerationDetail
-)
+@router.post("/generations/{generation_id}/cancel")
 async def cancel_generation_endpoint(
     generation_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> ContentGenerationDetail:
