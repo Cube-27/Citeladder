@@ -14,9 +14,12 @@ describe('marketing backend proxy', () => {
     const backend = createServer((request, response) => {
       requests.push(request.url ?? '');
       if (request.url === '/api/v1/auth/start?provider=google') {
+        // Mirrors the real backend's cookie policy (see
+        // backend/app/api/browser_cookies.py): Secure is set outside local
+        // dev, so the fixture carries it too.
         response.writeHead(302, {
           Location: '/identity-provider',
-          'Set-Cookie': 'oauth_state=opaque; HttpOnly; SameSite=Lax; Path=/',
+          'Set-Cookie': 'oauth_state=opaque; HttpOnly; Secure; SameSite=Lax; Path=/',
         });
       }
       response.end();
@@ -38,7 +41,7 @@ describe('marketing backend proxy', () => {
       expect(response?.status).toBe(302);
       expect(response?.headers.get('location')).toBe('/identity-provider');
       expect(response?.headers.get('set-cookie')).toBe(
-        'oauth_state=opaque; HttpOnly; SameSite=Lax; Path=/',
+        'oauth_state=opaque; HttpOnly; Secure; SameSite=Lax; Path=/',
       );
       expect(requests).toEqual(['/api/v1/auth/start?provider=google']);
       expect(next).not.toHaveBeenCalled();

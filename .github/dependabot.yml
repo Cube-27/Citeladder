@@ -20,6 +20,28 @@ updates:
     groups:
       patch-and-minor:
         update-types: [patch, minor]
+    # Vitest is not an independent dependency here. frontend/pnpm-workspace.yaml
+    # pins it in the catalog to the exact version vite-plus bundles, so that the
+    # tree holds exactly one Vitest copy. Bumping it alone splits that copy in
+    # two: Dependabot's vitest 5.0.0 PR kept vite-plus 0.3.1 and
+    # @vitest/coverage-v8 4.1.11, and the suite raised 175 unhandled errors.
+    # Vitest moves when vite-plus moves, by hand, catalog and override together.
+    #
+    # Scoped to the three version-update types on purpose. A bare
+    # `dependency-name` would also suppress Dependabot *security* updates for
+    # vitest, and a held pin is not a reason to stop hearing about an advisory
+    # against it. Naming the version-update types leaves that channel open.
+    ignore:
+      - dependency-name: vitest
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+          - version-update:semver-patch
+      - dependency-name: '@vitest/*'
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+          - version-update:semver-patch
 
   # Both frontend Dockerfiles pin the SAME node digest, so they are ONE entry
   # spanning two directories rather than two entries. Two entries would open
@@ -55,6 +77,19 @@ updates:
     groups:
       patch-and-minor:
         update-types: [patch, minor]
+    # The interpreter version is one decision spread over four files: the root
+    # Dockerfile, backend/.python-version, the `python-version` of the CI gate,
+    # and the `requires-python` floor in backend/pyproject.toml. Dependabot can
+    # only move the first, so a feature bump ships a container running an
+    # interpreter no gate validated. That happened once (see the Dockerfile
+    # header) and the 3.14.7 PR was the same bump again. Patch releases inside
+    # the pinned 3.12 line still arrive; a feature bump is a deliberate,
+    # four-file change.
+    ignore:
+      - dependency-name: python
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
 
   - package-ecosystem: github-actions
     directory: /

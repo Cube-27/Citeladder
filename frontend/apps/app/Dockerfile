@@ -5,7 +5,7 @@ ENV PATH="${PNPM_HOME}:${PATH}"
 WORKDIR /app
 
 # Keep this version in lockstep with packageManager in frontend/package.json.
-RUN npm install --global --ignore-scripts pnpm@11.25.0
+RUN npm install --global --ignore-scripts pnpm@12.4.2
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
@@ -23,12 +23,12 @@ ENV NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=${NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE}
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 WORKDIR /app
 
-RUN npm install --global --ignore-scripts pnpm@11.25.0
+RUN npm install --global --ignore-scripts pnpm@12.4.2
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
 RUN pnpm build:vite
 
-FROM caddy@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648 AS runtime
+FROM caddy@sha256:13ba145cba2f3e28fa801994876e4c086d1b95d5aa2a520a734765ffb6b12017 AS runtime
 
 COPY frontend/apps/app/Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /app/apps/app/dist /srv
