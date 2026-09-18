@@ -25,6 +25,19 @@ import { intentLabels } from '@/lib/prompts/forms';
  * persisted. On confirm, only the importable rows are handed to `onImport`,
  * which posts them to the B3 `/prompt-sets/{id}/import` endpoint.
  */
+/** A row is rejected, admitted with caveats, or clean — in that order. */
+function RowStatus({
+  invalid,
+  errors,
+  warnings,
+}: Readonly<{ invalid: boolean; errors: readonly string[]; warnings: readonly string[] }>) {
+  if (invalid) return <span className="text-danger-text text-xs">{errors.join(' ')}</span>;
+  if (warnings.length > 0) {
+    return <span className="text-warning-text text-xs">{warnings.join(' ')}</span>;
+  }
+  return <span className="text-success-text text-xs">Ready</span>;
+}
+
 export function CsvImportDialog({
   open,
   onOpenChange,
@@ -42,6 +55,7 @@ export function CsvImportDialog({
     useCsvImportFile<ParsedCsv>(parsePromptCsv);
 
   const importable = useMemo(() => (parsed ? validRows(parsed) : []), [parsed]);
+  const importNoun = importable.length === 1 ? 'prompt' : 'prompts';
   const errorCount = parsed ? parsed.rows.filter((row) => row.errors.length > 0).length : 0;
 
   const handleOpenChange = (next: boolean) => {
@@ -71,9 +85,7 @@ export function CsvImportDialog({
             onClick={confirm}
             disabled={isImporting || importable.length === 0}
           >
-            {isImporting
-              ? 'Importing…'
-              : `Import ${importable.length} prompt${importable.length === 1 ? '' : 's'}`}
+            {isImporting ? 'Importing…' : `Import ${importable.length} ${importNoun}`}
           </Button>
         </>
       }
@@ -125,15 +137,7 @@ export function CsvImportDialog({
                       </TableCell>
                       <TableCell>{row.input.enabled ? 'Yes' : 'No'}</TableCell>
                       <TableCell>
-                        {invalid ? (
-                          <span className="text-danger-text text-xs">{row.errors.join(' ')}</span>
-                        ) : row.warnings.length > 0 ? (
-                          <span className="text-warning-text text-xs">
-                            {row.warnings.join(' ')}
-                          </span>
-                        ) : (
-                          <span className="text-success-text text-xs">Ready</span>
-                        )}
+                        <RowStatus invalid={invalid} errors={row.errors} warnings={row.warnings} />
                       </TableCell>
                     </TableRow>
                   );

@@ -225,13 +225,21 @@ function EvidenceAnswerBody({
   );
 }
 
+/** Present, absent and not-applicable are three tones, not a boolean. */
+function outcomeToneClass(positive: boolean | null | undefined): string {
+  if (positive === true) return 'text-score-high';
+  return positive === false ? 'text-muted' : 'text-foreground';
+}
+
 function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   const brandDetail = evidence.brand_mentioned
     ? `First match at character ${evidence.brand_first_offset ?? 0}`
     : 'No tracked brand alias appeared in the answer';
-  const ownedDetail = `${evidence.owned_citation_count} owned ${evidence.owned_citation_count === 1 ? 'source' : 'sources'} found`;
+  const ownedNoun = evidence.owned_citation_count === 1 ? 'source' : 'sources';
+  const ownedDetail = `${evidence.owned_citation_count} owned ${ownedNoun} found`;
+  const searchNoun = evidence.search_query_count === 1 ? 'search' : 'searches';
   const searchDetail = evidence.search_used
-    ? `${evidence.search_query_count} ${evidence.search_query_count === 1 ? 'search' : 'searches'} recorded`
+    ? `${evidence.search_query_count} ${searchNoun} recorded`
     : 'The provider did not report web search';
   const competitorDetail =
     evidence.competitors_mentioned.length > 0
@@ -393,16 +401,7 @@ function EvidenceStat({
   return (
     <div className="border-border-subtle bg-well grid min-w-0 gap-0.5 rounded-[var(--radius-control)] border px-3 py-2.5">
       <span className="text-muted text-xs">{label}</span>
-      <span
-        className={cn(
-          textRole('bodyStrong', 'truncate'),
-          positive === true
-            ? 'text-score-high'
-            : positive === false
-              ? 'text-muted'
-              : 'text-foreground',
-        )}
-      >
+      <span className={cn(textRole('bodyStrong', 'truncate'), outcomeToneClass(positive))}>
         {value}
       </span>
     </div>

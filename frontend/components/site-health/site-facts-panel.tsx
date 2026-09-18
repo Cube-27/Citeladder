@@ -100,6 +100,46 @@ function BlockedBotsAlert({ blocked }: Readonly<{ blocked: SiteFactsView['bots']
 }
 
 /** Mono status code for one well-known file, `Unknown` when no fetch answered. */
+/** Whether robots.txt was read, and the three answers that are not one yes/no. */
+function RobotsFetchBadge({ status }: Readonly<{ status: SiteFactsView['robotsFetchStatus'] }>) {
+  if (status === 'fetched') {
+    return (
+      <Badge variant="status" value="success">
+        Fetched
+      </Badge>
+    );
+  }
+  if (status === 'not_found') return <Badge>Not found</Badge>;
+  return (
+    <Badge variant="status" value="warning">
+      Not fetched
+    </Badge>
+  );
+}
+
+/** A fetch that never happened is not the same finding as a file that is absent. */
+function LlmsTxtBadge({ fetched, present }: Readonly<{ fetched: boolean; present: boolean }>) {
+  if (!fetched) {
+    return (
+      <Badge variant="status" value="warning">
+        Not fetched
+      </Badge>
+    );
+  }
+  if (present) {
+    return (
+      <Badge variant="status" value="success">
+        Present
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="status" value="warning">
+      Absent
+    </Badge>
+  );
+}
+
 function StatusValue({ status }: Readonly<{ status: number | null }>) {
   if (status === null) {
     return <UnavailableValue state="unknown" className="text-sm" />;
@@ -190,36 +230,14 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
                 <Label>robots.txt</Label>
                 <span className="flex items-center gap-2">
                   <StatusValue status={view.robotsStatus} />
-                  {view.robotsFetchStatus === 'fetched' ? (
-                    <Badge variant="status" value="success">
-                      Fetched
-                    </Badge>
-                  ) : view.robotsFetchStatus === 'not_found' ? (
-                    <Badge>Not found</Badge>
-                  ) : (
-                    <Badge variant="status" value="warning">
-                      Not fetched
-                    </Badge>
-                  )}
+                  <RobotsFetchBadge status={view.robotsFetchStatus} />
                 </span>
               </div>
               <div className="grid gap-0.5">
                 <Label>llms.txt</Label>
                 <span className="flex items-center gap-2">
                   <StatusValue status={view.llmsTxtStatus} />
-                  {!view.llmsTxtFetched ? (
-                    <Badge variant="status" value="warning">
-                      Not fetched
-                    </Badge>
-                  ) : view.llmsTxtPresent ? (
-                    <Badge variant="status" value="success">
-                      Present
-                    </Badge>
-                  ) : (
-                    <Badge variant="status" value="warning">
-                      Absent
-                    </Badge>
-                  )}
+                  <LlmsTxtBadge fetched={view.llmsTxtFetched} present={view.llmsTxtPresent} />
                 </span>
               </div>
               <div className="grid min-w-0 gap-0.5 sm:justify-self-end">

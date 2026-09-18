@@ -416,6 +416,19 @@ function useVisibilityRuns(requestScope: ProjectRequestScope) {
   return { queryClient, auditsQuery, runOptions, activeRun };
 }
 
+/**
+ * Three selection modes, and the run id only distinguishes two of them.
+ *
+ * `range` pools every run in the period; without one, an explicit run id means
+ * that run and its absence means whatever is latest.
+ */
+function selectionModeParam(
+  filters: ReturnType<typeof useVisibilityFilters>,
+): 'range' | 'run' | 'latest' {
+  if (filters.selectionMode === 'range') return 'range';
+  return filters.selectedRunId ? 'run' : 'latest';
+}
+
 function selectionParams(
   filters: ReturnType<typeof useVisibilityFilters>,
   from: string | undefined,
@@ -426,8 +439,7 @@ function selectionParams(
     cohort: filters.cohort,
     engine,
     baseline_id: filters.baselineId ?? undefined,
-    selection_mode:
-      filters.selectionMode === 'range' ? 'range' : filters.selectedRunId ? 'run' : 'latest',
+    selection_mode: selectionModeParam(filters),
     from: filters.selectionMode === 'range' ? from : undefined,
     to: filters.selectionMode === 'range' ? (filters.toAt ?? undefined) : undefined,
     configuration_key: filters.configuration ?? undefined,

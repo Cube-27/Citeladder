@@ -43,11 +43,10 @@ function fixedPromptSelection(
   promptSelectionLabel: string | undefined,
 ) {
   const count = fixedPromptIds?.length ?? 0;
+  const noun = count === 1 ? 'prompt' : 'prompts';
   return {
     locked: count > 0 || Boolean(fixedPromptSetId),
-    label:
-      promptSelectionLabel ??
-      (count ? `${count} selected ${count === 1 ? 'prompt' : 'prompts'}` : undefined),
+    label: promptSelectionLabel ?? (count ? `${count} selected ${noun}` : undefined),
   };
 }
 

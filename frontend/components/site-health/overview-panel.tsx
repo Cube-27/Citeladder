@@ -55,12 +55,7 @@ export function OverviewPanel({
       {data ? (
         <Alert tone={searchEligibilityTone(data.search_eligibility)}>
           Audit finished: {data.audited_page_count} of {data.selected_page_count} selected pages
-          analyzed.{' '}
-          {data.search_eligibility === 'blocked'
-            ? 'At least one selected page has a critical search eligibility blocker.'
-            : data.search_eligibility === 'eligible'
-              ? 'No observed blocker.'
-              : `Search access evidence: ${data.search_eligibility}.`}
+          analyzed. {searchEligibilitySentence(data.search_eligibility)}
         </Alert>
       ) : null}
       <OverviewMetricCards overview={data} dashboard={dashboard} crawl={crawl} />
@@ -73,4 +68,13 @@ function searchEligibilityTone(state: 'eligible' | 'blocked' | 'unknown' | 'excl
   if (state === 'eligible') return 'success' as const;
   if (state === 'blocked') return 'danger' as const;
   return 'warning' as const;
+}
+
+/** The sentence beside the tone, so the two cannot describe different states. */
+function searchEligibilitySentence(state: 'eligible' | 'blocked' | 'unknown' | 'excluded') {
+  if (state === 'blocked') {
+    return 'At least one selected page has a critical search eligibility blocker.';
+  }
+  if (state === 'eligible') return 'No observed blocker.';
+  return `Search access evidence: ${state}.`;
 }

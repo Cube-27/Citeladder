@@ -131,6 +131,27 @@ export function ContentComposer({
   );
 }
 
+/**
+ * What the composer is pointed at, named however it was chosen.
+ *
+ * A page picked from the crawl has a title worth showing; a URL typed by hand
+ * has only itself, and neither is the same as nothing selected.
+ */
+function SelectedTargetLine({
+  selected,
+  url,
+}: Readonly<{ selected: ContentTargetPage | undefined; url: string | undefined }>) {
+  if (selected) {
+    return (
+      <p className="text-muted text-xs">
+        Selected: {selected.title} · {selected.display_url}
+      </p>
+    );
+  }
+  if (url) return <p className="text-muted text-xs">Selected URL: {url}</p>;
+  return null;
+}
+
 function TargetPageSelect({
   target,
   targetUrl,
@@ -200,13 +221,7 @@ function TargetPageSelect({
           />
         </div>
       </div>
-      {selected ? (
-        <p className="text-muted text-xs">
-          Selected: {selected.title} · {selected.display_url}
-        </p>
-      ) : target.url ? (
-        <p className="text-muted text-xs">Selected URL: {target.url}</p>
-      ) : null}
+      <SelectedTargetLine selected={selected} url={target.url} />
       {target.siteUrlId || target.url ? (
         <div>
           <Button
@@ -251,11 +266,9 @@ function ContextIndicator({
       `${preview.related_page_count} related ${preview.related_page_count === 1 ? 'page' : 'pages'}`,
     );
   }
-  const label = loading
-    ? 'Checking context…'
-    : preview
-      ? `Context: ${parts.join(' · ') || 'User instruction only'}`
-      : 'Context unavailable';
+  let label = 'Context unavailable';
+  if (loading) label = 'Checking context…';
+  else if (preview) label = `Context: ${parts.join(' · ') || 'User instruction only'}`;
   return (
     <div data-component-id="content-context-indicator" className={textRole('label', 'grid gap-1')}>
       <ContextLine available={Boolean(preview?.brand_memory)} label={label} />

@@ -107,11 +107,17 @@ function Bar({
         style={{ transform: `scaleX(${width / 100})` }}
         className={cn(
           'block h-full w-full origin-left rounded-full transition-transform duration-300',
-          own ? 'bg-accent' : tint ? TINT_RIVAL[tint] : 'bg-border',
+          barFillClass(own, tint),
         )}
       />
     </span>
   );
+}
+
+/** Your own bar is the accent; a rival's takes its tint, and the rest are inert. */
+function barFillClass(own: boolean | undefined, tint: Tint | undefined): string {
+  if (own) return 'bg-accent';
+  return tint ? TINT_RIVAL[tint] : 'bg-border';
 }
 
 /** The shared window chrome: product lockup and surface name. */

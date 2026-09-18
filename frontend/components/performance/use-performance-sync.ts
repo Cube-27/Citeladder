@@ -82,11 +82,15 @@ export function usePerformanceSync(projectId: string | null) {
     enqueued &&
     runQueries.every((query) => query.data !== undefined && !isActiveSyncRun(query.data.status));
   const syncing = enqueued && !allTerminal;
-  const outcome = !allTerminal
-    ? null
-    : runQueries.every((query) => query.data && isSucceededSyncRun(query.data.status))
-      ? 'succeeded'
-      : 'failed';
+  // Only a finished batch has an outcome, and it succeeded only if every run
+  // in it did — one failure is a failed batch.
+  let outcome: 'succeeded' | 'failed' | null = null;
+  if (allTerminal) {
+    const allSucceeded = runQueries.every(
+      (query) => query.data && isSucceededSyncRun(query.data.status),
+    );
+    outcome = allSucceeded ? 'succeeded' : 'failed';
+  }
   // ANY succeeded run enqueues projections, so this is not `outcome ===
   // 'succeeded'`: that is all-or-nothing, and a batch where GSC imported and
   // Bing failed still has fresh evidence to project.

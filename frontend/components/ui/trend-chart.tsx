@@ -104,6 +104,11 @@ function chartDescription(data: readonly TrendPoint[], label?: string): string {
 }
 
 /** Gutters exist only to hold text, so each is sized by the text it holds. */
+/** A gutter carrying an axis title needs the wider of the two sizes. */
+function titledGutter(title: string | undefined, titled: number, bare: number): number {
+  return title ? titled : bare;
+}
+
 function plotBox({
   width,
   height,
@@ -121,8 +126,8 @@ function plotBox({
   // units they collided — a tick reading "100%" is about 22 units wide, so it
   // ran back to x≈3 and straight through the title sitting at x≈9. The gutter
   // is sized for both.
-  const gutterLeft = axes ? (yAxisLabel ? 42 : 22) : padding;
-  const gutterBottom = axes ? (xAxisLabel ? 24 : 14) : padding;
+  const gutterLeft = axes ? titledGutter(yAxisLabel, 42, 22) : padding;
+  const gutterBottom = axes ? titledGutter(xAxisLabel, 24, 14) : padding;
   return {
     padding,
     gutterLeft,
@@ -307,10 +312,9 @@ export function TrendChart({
   // The axis layer is `aria-hidden`, so without this a screen-reader user gets
   // the shape and none of the scale -- strictly less than the sighted reader,
   // on the very chart the axes were added to make readable.
+  const byAxis = xAxisLabel ? `, by ${xAxisLabel.toLowerCase()}` : '';
   const scaleNote = axes
-    ? ` ${yAxisLabel ?? 'Value'} from ${formatTick(0)} to ${formatTick(effectiveDomainMax)}${
-        xAxisLabel ? `, by ${xAxisLabel.toLowerCase()}` : ''
-      }.`
+    ? ` ${yAxisLabel ?? 'Value'} from ${formatTick(0)} to ${formatTick(effectiveDomainMax)}${byAxis}.`
     : '';
   const ariaLabel = `${described}${scaleNote}`;
 

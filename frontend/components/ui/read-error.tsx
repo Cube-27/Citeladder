@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -24,24 +26,30 @@ export function ReadError({
   const detail = humanizeApiError(error, fallback);
   const accessFailure = detail.status === 401 || detail.status === 403;
   const retryable = detail.retryable !== false && !accessFailure;
+  // Three outcomes, not two: a retryable read gets the button, a 401/403 gets
+  // the one instruction that helps, and anything else gets neither.
+  let recovery: ReactNode = null;
+  if (retryable) {
+    recovery = (
+      <Button
+        variant="secondary"
+        size="sm"
+        className="w-fit"
+        onClick={onRetry}
+        pending={pending}
+        pendingLabel="Retrying…"
+      >
+        Retry
+      </Button>
+    );
+  } else if (accessFailure) {
+    recovery = <p className="text-xs">Check your workspace access, then try again.</p>;
+  }
   return (
     <Alert tone="danger" className={className}>
       <div className="grid gap-3">
         <p>{detail.message}</p>
-        {retryable ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="w-fit"
-            onClick={onRetry}
-            pending={pending}
-            pendingLabel="Retrying…"
-          >
-            Retry
-          </Button>
-        ) : accessFailure ? (
-          <p className="text-xs">Check your workspace access, then try again.</p>
-        ) : null}
+        {recovery}
         {detail.requestId ? (
           <p className="text-muted text-xs">Reference: {detail.requestId}</p>
         ) : null}

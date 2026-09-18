@@ -120,6 +120,12 @@ export function useProjectReadiness(projectId: string | null) {
   });
 }
 
+/** Where one rung sits relative to the furthest stage reached. */
+function ladderStepState(index: number, reached: number): 'done' | 'active' | 'pending' {
+  if (index < reached) return 'done';
+  return index === reached ? 'active' : 'pending';
+}
+
 export function ReadinessLadder({
   data,
   hideDisconnected,
@@ -142,7 +148,7 @@ export function ReadinessLadder({
     >
       <ol className="flex flex-wrap items-center gap-x-6 gap-y-2">
         {LADDER.map((step, index) => {
-          const state = index < reached ? 'done' : index === reached ? 'active' : 'pending';
+          const state = ladderStepState(index, reached);
           return (
             <li
               key={step.stage}

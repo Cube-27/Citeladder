@@ -43,6 +43,12 @@ function errorMessage(error: unknown): string {
     : 'Something went wrong. Please try again.';
 }
 
+/** Revoking is only offered when there is a grant left to revoke. */
+function disconnectLabel(pending: boolean, hadConnection: boolean): string {
+  if (pending) return 'Disconnecting…';
+  return hadConnection ? 'Disconnect & revoke' : 'Disconnect';
+}
+
 function ConnectionActions({
   connection,
   grant,
@@ -198,11 +204,7 @@ function DisconnectDialog({
             onClick={() => deleteMutation.mutate()}
             disabled={deleteMutation.isPending}
           >
-            {deleteMutation.isPending
-              ? 'Disconnecting…'
-              : lastConnection
-                ? 'Disconnect & revoke'
-                : 'Disconnect'}
+            {disconnectLabel(deleteMutation.isPending, Boolean(lastConnection))}
           </Button>
         </>
       }

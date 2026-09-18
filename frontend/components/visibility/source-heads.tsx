@@ -1,6 +1,7 @@
 'use client';
 
 import { Pressable } from '@/components/ui/pressable';
+import { sortIndicator } from '@/components/ui/sort-indicator';
 import { TableHead } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -41,7 +42,11 @@ export function SortableHead({
   className?: string;
 }>) {
   const active = sort?.column === column;
-  const Icon = !active ? ChevronsUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown;
+  const { ariaSort, icon: Icon } = sortIndicator(active, sort?.direction === 'desc', {
+    ascending: ArrowUp,
+    descending: ArrowDown,
+    inactive: ChevronsUpDown,
+  });
   const heading = (
     <Pressable
       onClick={() => onSort(column)}
@@ -65,7 +70,7 @@ export function SortableHead({
       numeric={numeric}
       // On the header cell, not on the button inside it: `aria-sort` describes
       // the COLUMN, and a screen reader looks for it on the `th`.
-      aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined}
+      aria-sort={ariaSort}
       className={className}
     >
       {hint ? <Tooltip content={hint}>{heading}</Tooltip> : heading}

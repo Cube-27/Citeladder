@@ -38,17 +38,20 @@ export function withOccurrenceKeys<T>(
   });
 }
 
+type RichPart = Extract<BlogBlock, { type: 'richParagraph' }>['content'][number];
+
+/** The text a rich part contributes to its block's identity. */
+function richPartIdentity(part: RichPart): string {
+  if (typeof part === 'string') return part;
+  return part.type === 'link' ? part.text : part.sourceId;
+}
+
 export function blockIdentity(block: BlogBlock): string {
   if ('text' in block) {
     return `${block.type}:${block.text.slice(0, 40)}`;
   }
   if (block.type === 'richParagraph') {
-    return `rich:${block.content
-      .map((part) =>
-        typeof part === 'string' ? part : part.type === 'link' ? part.text : part.sourceId,
-      )
-      .join('')
-      .slice(0, 40)}`;
+    return `rich:${block.content.map(richPartIdentity).join('').slice(0, 40)}`;
   }
   if (block.type === 'list') {
     return `list:${block.items.length}:${block.items[0] ?? ''}`;

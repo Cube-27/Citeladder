@@ -19,6 +19,12 @@ import { scoreBand, scoreBandStroke, scoreBandText } from './score-band';
  * The arc sweeps to its value over 800ms on mount. `motion-reduce` drops the
  * transition so the ring simply appears at its final value.
  */
+const NUMERAL_SIZE_CLASS: Record<'md' | 'lg' | 'hero', string> = {
+  hero: 'text-2xl',
+  lg: 'text-xl',
+  md: 'text-heading-sm',
+};
+
 export function ScoreRing({
   value,
   size = 96,
@@ -99,11 +105,7 @@ export function ScoreRing({
           aria-hidden
           className={cn(
             'mono absolute inset-0 flex items-center justify-center font-medium',
-            numeralSize === 'hero'
-              ? 'text-2xl'
-              : numeralSize === 'lg'
-                ? 'text-xl'
-                : 'text-heading-sm',
+            NUMERAL_SIZE_CLASS[numeralSize],
             scoreBandText[band],
           )}
         >

@@ -99,7 +99,10 @@ function opportunityScreenState(
 ) {
   if (projectLoading) return 'loading';
   if (!projectId) return 'missing-project';
-  if (!summary) return pending ? 'loading' : error ? 'error' : 'empty';
+  if (!summary) {
+    if (pending) return 'loading';
+    return error ? 'error' : 'empty';
+  }
   return summary.computed ? 'ready' : 'preparing';
 }
 

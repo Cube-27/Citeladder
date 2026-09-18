@@ -41,6 +41,12 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
  * dialog see the new engine immediately) and closes. Full 3-engine management
  * stays in Settings → Providers.
  */
+/** A configured provider's key is replaced; an unconfigured one's is set. */
+function saveKeyLabel(pending: boolean, configured: boolean): string {
+  if (pending) return 'Saving & testing…';
+  return configured ? 'Update key' : 'Save key';
+}
+
 export function ConnectProviderDialog({
   open,
   onOpenChange,
@@ -199,7 +205,7 @@ function ConnectEngineForm({
           onClick={() => saveMutation.mutate()}
           disabled={busy || !transport || (!apiKey && !configured)}
         >
-          {saveMutation.isPending ? 'Saving & testing…' : configured ? 'Update key' : 'Save key'}
+          {saveKeyLabel(saveMutation.isPending, configured)}
         </Button>
       </div>
     </div>

@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
+import { sortIndicator } from '@/components/ui/sort-indicator';
 import { performanceApi, type PerformanceDimension } from '@/lib/api/performance';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -80,13 +81,13 @@ function SortableHead({
 }>) {
   const active = sortKey(sort) === metric;
   const descending = sortDirection(sort) === 'descending';
-  const Icon = active ? (descending ? ArrowDown : ArrowUp) : ArrowUpDown;
+  const { ariaSort, icon: Icon } = sortIndicator(active, descending, {
+    ascending: ArrowUp,
+    descending: ArrowDown,
+    inactive: ArrowUpDown,
+  });
   return (
-    <TableHead
-      numeric
-      aria-sort={active ? (descending ? 'descending' : 'ascending') : undefined}
-      className={cn(sublabel ? 'min-w-[7.5rem]' : undefined)}
-    >
+    <TableHead numeric aria-sort={ariaSort} className={cn(sublabel ? 'min-w-[7.5rem]' : undefined)}>
       <Pressable
         type="button"
         onClick={() => onSort(metric)}

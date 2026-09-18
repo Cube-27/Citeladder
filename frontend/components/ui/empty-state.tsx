@@ -24,6 +24,9 @@ import { textRole } from '@/components/ui/typography';
  * genuinely equal choices — otherwise the secondary path belongs in the body of
  * the screen, not in its empty state.
  */
+/** A route boundary owns the page heading; everything else nests under one. */
+const HEADING_TAG: Record<1 | 2 | 3, 'h1' | 'h2' | 'h3'> = { 1: 'h1', 2: 'h2', 3: 'h3' };
+
 export function EmptyState({
   icon: Icon,
   heading,
@@ -44,7 +47,7 @@ export function EmptyState({
   /** Route boundaries use their one truthful screen heading. */
   headingLevel?: 1 | 2 | 3;
 }>) {
-  const Heading = headingLevel === 1 ? 'h1' : headingLevel === 2 ? 'h2' : 'h3';
+  const Heading = HEADING_TAG[headingLevel];
   return (
     <div className={cn('grid gap-3 py-[var(--empty-state-padding)]', className)}>
       <div className="flex items-center gap-2">

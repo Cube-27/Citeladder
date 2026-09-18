@@ -14,9 +14,15 @@ import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 
 export function metricValue(value: number | null, suffix = '') {
-  return value === null
-    ? availabilityLabel('not_measured')
-    : `${Number.isInteger(value) ? value : value.toFixed(1)}${suffix}`;
+  if (value === null) return availabilityLabel('not_measured');
+  const figure = Number.isInteger(value) ? value : value.toFixed(1);
+  return `${figure}${suffix}`;
+}
+
+/** No comparable run is not a bad one, so it stays muted rather than red. */
+function deltaToneClass(delta: number | null, positive: boolean): string {
+  if (delta === null) return 'text-muted';
+  return positive ? 'text-success' : 'text-danger';
 }
 
 export function deltaLabel(delta: number | null, inverse = false) {
@@ -49,12 +55,7 @@ export function StateMetric({
           <p className={textRole('metric', 'leading-none')}>{metricValue(value, suffix)}</p>
         )}
       </div>
-      <p
-        className={cn(
-          textRole('label', 'tabular-nums'),
-          delta === null ? 'text-muted' : positive ? 'text-success' : 'text-danger',
-        )}
-      >
+      <p className={cn(textRole('label', 'tabular-nums'), deltaToneClass(delta, positive))}>
         {deltaLabel(delta, inverse)}
       </p>
     </div>

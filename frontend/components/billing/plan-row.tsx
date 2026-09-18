@@ -8,7 +8,12 @@ import {
   type CatalogPlan,
   type SelfServePlanKey,
 } from '@/lib/api/billing';
-import { checkoutSelection, formatMoney, headlinePrice } from '@/lib/billing/catalog';
+import {
+  checkoutSelection,
+  formatMoney,
+  headlinePrice,
+  type HeadlinePrice,
+} from '@/lib/billing/catalog';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
 
 import { Button } from '@/components/ui/button';
@@ -69,16 +74,27 @@ export function PlanRow({
             onClick={() => selection.ok && onCheckout(selection.catalog_key, billingDetails)}
           >
             <CreditCard className="size-3.5" aria-hidden />
-            {pending
-              ? 'Opening checkout…'
-              : selection.ok
-                ? `Choose ${plan.name}`
-                : `Choose ${plan.name} — checkout unavailable`}
+            {planCheckoutLabel(pending, selection.ok, plan.name)}
           </Button>
         )}
       </div>
     </div>
   );
+}
+
+/** Only India adds the tax note; every other country sees the bare figure. */
+function byokPriceLabel(price: HeadlinePrice, currencyMinorUnits: number, country: string): string {
+  if (price.kind === 'contact') return 'Contact us';
+  if (price.kind === 'unavailable') return price.reason || 'Unavailable';
+  const tax = country === 'IN' ? ' + applicable GST' : '';
+  return `${formatMoney(price.money, currencyMinorUnits)} / month${tax}`;
+}
+
+/** A plan the caller cannot check out still names itself, then says why not. */
+function planCheckoutLabel(pending: boolean, available: boolean, planName: string): string {
+  if (pending) return 'Opening checkout…';
+  if (available) return `Choose ${planName}`;
+  return `Choose ${planName} — checkout unavailable`;
 }
 
 function planCheckoutState(
@@ -90,12 +106,7 @@ function planCheckoutState(
 ) {
   const price = headlinePrice(plan, 'byok');
   const selection = checkoutSelection(plan, 'byok');
-  const priceLabel =
-    price.kind === 'price'
-      ? `${formatMoney(price.money, currencyMinorUnits)} / month${country === 'IN' ? ' + applicable GST' : ''}`
-      : price.kind === 'contact'
-        ? 'Contact us'
-        : price.reason || 'Unavailable';
+  const priceLabel = byokPriceLabel(price, currencyMinorUnits, country);
   return {
     priceLabel,
     selection,

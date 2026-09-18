@@ -139,8 +139,9 @@ type AgentResult = NonNullable<AgentTaskRun['result']>;
 
 function DataUsed({ result }: Readonly<{ result: AgentResult }>) {
   const artifactCount = result.artifact_refs.length;
+  const artifactNoun = artifactCount === 1 ? 'artifact' : 'artifacts';
   const artifactSummary = artifactCount
-    ? `${artifactCount} saved data ${artifactCount === 1 ? 'artifact' : 'artifacts'} supported this result.`
+    ? `${artifactCount} saved data ${artifactNoun} supported this result.`
     : 'No saved data artifact was available for this result.';
 
   return (

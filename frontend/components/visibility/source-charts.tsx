@@ -105,25 +105,39 @@ export function TypesCard({
         <CardTitle>Source types</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* A failed read is not an empty mix. Drawing the empty ring here
-            reported "no citations in this selection" for a request that never
-            answered. */}
-        {query.isError ? (
-          <div className={TYPES_RING_BOX}>
-            <Alert tone="danger">Could not load source types.</Alert>
-          </div>
-        ) : query.isLoading ? (
-          <Skeleton className={cn(TYPES_RING_BOX, 'w-full')} />
-        ) : (
-          <DonutChart
-            slices={slices}
-            total={total}
-            totalLabel="Citations"
-            emptyLabel="No citations in this selection."
-          />
-        )}
+        <TypesRing slices={slices} total={total} query={query} />
       </CardContent>
     </Card>
+  );
+}
+
+/** The ring, or the one state standing in for it. */
+function TypesRing({
+  slices,
+  total,
+  query,
+}: Readonly<{
+  slices: ReturnType<typeof typeSlices>;
+  total: number;
+  query: ReturnType<typeof useSourceAnalysis>['sourceQuery'];
+}>) {
+  // A failed read is not an empty mix. Drawing the empty ring here reported
+  // "no citations in this selection" for a request that never answered.
+  if (query.isError) {
+    return (
+      <div className={TYPES_RING_BOX}>
+        <Alert tone="danger">Could not load source types.</Alert>
+      </div>
+    );
+  }
+  if (query.isLoading) return <Skeleton className={cn(TYPES_RING_BOX, 'w-full')} />;
+  return (
+    <DonutChart
+      slices={slices}
+      total={total}
+      totalLabel="Citations"
+      emptyLabel="No citations in this selection."
+    />
   );
 }
 

@@ -16,13 +16,16 @@ import { panelClasses } from '@/components/ui/panel';
 
 type ConnectionState = ReturnType<typeof useEngineConnection>;
 
+const CONNECTION_BADGE: Partial<
+  Record<EngineCardModel['state'], { value: 'success' | 'danger'; label: string }>
+> = {
+  connected: { value: 'success', label: 'Connected' },
+  failed: { value: 'danger', label: 'Failed' },
+};
+
 function ConnectionStateBadge({ model }: Readonly<{ model: EngineCardModel }>) {
-  const badge =
-    model.state === 'connected'
-      ? { value: 'success' as const, label: 'Connected' }
-      : model.state === 'failed'
-        ? { value: 'danger' as const, label: 'Failed' }
-        : null;
+  // Only a settled state earns a badge; "not configured" is the absence of one.
+  const badge = CONNECTION_BADGE[model.state] ?? null;
   return badge ? (
     <Badge variant="status" value={badge.value}>
       {badge.label}

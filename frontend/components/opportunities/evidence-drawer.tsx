@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { EarnedPageHandoff } from '@/components/opportunities/earned-page-handoff';
@@ -42,6 +43,35 @@ export function EvidenceDrawer({
   });
   const detail = detailQuery.data?.project_id === projectId ? detailQuery.data : null;
 
+  let body: ReactNode;
+  if (detailQuery.isError) {
+    body = (
+      <ReadError
+        error={detailQuery.error}
+        fallback="Could not load this opportunity."
+        onRetry={() => void detailQuery.refetch()}
+        pending={detailQuery.isFetching}
+      />
+    );
+  } else if (detailQuery.data && !detail) {
+    body = (
+      <Alert tone="danger">
+        This opportunity is unavailable in the selected project. Close this detail and choose a
+        recommendation from the current project.
+      </Alert>
+    );
+  } else if (detailQuery.isLoading || !detail) {
+    body = (
+      <div className="grid gap-3">
+        <Skeleton className="h-8 w-3/4" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  } else {
+    body = <OpportunityDetailBody detail={detail} />;
+  }
+
   return (
     <Drawer
       open={open}
@@ -50,54 +80,39 @@ export function EvidenceDrawer({
       className="sm:max-w-160"
       footer={detail ? <OpportunityStatusFooter detail={detail} projectId={projectId} /> : null}
     >
-      {detailQuery.isError ? (
-        <ReadError
-          error={detailQuery.error}
-          fallback="Could not load this opportunity."
-          onRetry={() => void detailQuery.refetch()}
-          pending={detailQuery.isFetching}
-        />
-      ) : detailQuery.data && !detail ? (
-        <Alert tone="danger">
-          This opportunity is unavailable in the selected project. Close this detail and choose a
-          recommendation from the current project.
-        </Alert>
-      ) : detailQuery.isLoading || !detail ? (
-        <div className="grid gap-3">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          <div className="grid gap-2.5">
-            <h2 className={textRole('objectTitle', 'leading-snug tracking-tight')}>
-              {detail.title}
-            </h2>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge variant="status" value={severityBadgeValue(detail.severity)}>
-                {severityLabel(detail.severity)} impact
-              </Badge>
-              <OpportunityTypeBadge type={detail.opportunity_type} />
-              <OpportunityStatusBadge status={detail.status} />
-            </div>
-          </div>
-          <OpportunityEvidenceSection detail={detail} />
-          {detail.remediation ? (
-            <section className="grid gap-2">
-              <Label>Recommended improvements</Label>
-              <div className={panelClasses({ tone: 'well', pad: 'compact' })}>
-                <p className="text-secondary text-sm leading-relaxed whitespace-pre-line">
-                  {detail.remediation}
-                </p>
-              </div>
-            </section>
-          ) : null}
-          <OpportunitySummarySection detail={detail} />
-          <ActionHandoff detail={detail} />
-        </div>
-      )}
+      {body}
     </Drawer>
+  );
+}
+
+/** Everything the drawer shows once a detail for THIS project has loaded. */
+function OpportunityDetailBody({ detail }: Readonly<{ detail: OpportunityDetail }>) {
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-2.5">
+        <h2 className={textRole('objectTitle', 'leading-snug tracking-tight')}>{detail.title}</h2>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant="status" value={severityBadgeValue(detail.severity)}>
+            {severityLabel(detail.severity)} impact
+          </Badge>
+          <OpportunityTypeBadge type={detail.opportunity_type} />
+          <OpportunityStatusBadge status={detail.status} />
+        </div>
+      </div>
+      <OpportunityEvidenceSection detail={detail} />
+      {detail.remediation ? (
+        <section className="grid gap-2">
+          <Label>Recommended improvements</Label>
+          <div className={panelClasses({ tone: 'well', pad: 'compact' })}>
+            <p className="text-secondary text-sm leading-relaxed whitespace-pre-line">
+              {detail.remediation}
+            </p>
+          </div>
+        </section>
+      ) : null}
+      <OpportunitySummarySection detail={detail} />
+      <ActionHandoff detail={detail} />
+    </div>
   );
 }
 

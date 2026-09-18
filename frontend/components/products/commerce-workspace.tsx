@@ -38,13 +38,12 @@ export function BulkActions({
   onDiscover: () => void;
   onClear: () => void;
 }>) {
+  const noun = count === 1 ? 'target' : 'targets';
   return (
     <Card className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2">
       <div className="grid gap-0.5">
         <span aria-live="polite" className={textRole('bodyStrong')}>
-          {count
-            ? `${count} ${count === 1 ? 'target' : 'targets'} selected`
-            : 'No targets selected'}
+          {count ? `${count} ${noun} selected` : 'No targets selected'}
         </span>
         <span className="text-muted text-xs">
           {count

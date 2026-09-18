@@ -2,7 +2,7 @@
 
 import type { ComponentPropsWithoutRef } from 'react';
 import { Check, Copy } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from './button';
 import { useToast } from './toast';
@@ -46,6 +46,14 @@ export function CopyButton({
     }
   }
 
+  // An icon-only button says what it does through its label alone, so the
+  // copied confirmation has to live there too; a labelled one carries its own
+  // text and reports a failed copy in it.
+  const iconLabel = status === 'copied' ? copiedLabel : 'Copy';
+  let label: ReactNode = children;
+  if (status === 'copied') label = copiedLabel;
+  else if (status === 'error') label = 'Copy failed — retry';
+
   return (
     <Button
       variant="secondary"
@@ -53,20 +61,14 @@ export function CopyButton({
       pending={status === 'copying'}
       onClick={() => void copy()}
       aria-live="polite"
-      aria-label={iconOnly ? (status === 'copied' ? copiedLabel : 'Copy') : props['aria-label']}
+      aria-label={iconOnly ? iconLabel : props['aria-label']}
     >
       {status === 'copied' ? (
         <Check className="size-4" aria-hidden />
       ) : (
         <Copy className="size-4" aria-hidden />
       )}
-      {iconOnly
-        ? null
-        : status === 'copied'
-          ? copiedLabel
-          : status === 'error'
-            ? 'Copy failed — retry'
-            : children}
+      {iconOnly ? null : label}
     </Button>
   );
 }

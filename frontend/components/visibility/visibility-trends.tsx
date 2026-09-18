@@ -1,6 +1,7 @@
 'use client';
 
 import type { UseQueryResult } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { httpErrorStatus } from '@/lib/api/errors';
@@ -269,6 +270,54 @@ function MeasurementHistory({
   // asked to step out of.
   const competitors = focused === null ? toCompetitorSeries(points, metric) : [];
   const primaryLabel = focused ?? 'You';
+
+  let body: ReactNode;
+  if (query.isError) {
+    body = <Alert tone="danger">Could not load history.</Alert>;
+  } else if (query.isPending) {
+    body = (
+      <output className="bg-surface-2 grid min-h-48 place-items-center rounded-[var(--radius-control)]">
+        <span className={textRole('body', 'text-secondary')}>Loading measurement history…</span>
+      </output>
+    );
+  } else if (!points.length) {
+    body = (
+      <p className={textRole('body', 'text-secondary')}>No measurements in this period yet.</p>
+    );
+  } else {
+    body = (
+      <Stack gap="compact" aria-busy={query.isFetching}>
+        <TrendChart
+          label={`${metricLabel} over time`}
+          data={chartPoints}
+          series={competitors}
+          width={360}
+          height={168}
+          xAxisLabel="Run date"
+          yAxisLabel={`${metricLabel} (%)`}
+          formatTick={(value) => `${Math.round(value)}%`}
+          className="h-auto w-full"
+        />
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <SeriesKey label={primaryLabel} swatchClass="bg-accent" />
+          {competitors.map((entry) => (
+            <SeriesKey
+              key={entry.label}
+              label={entry.label}
+              swatchClass={entry.strokeClass.replace('stroke-', 'bg-')}
+            />
+          ))}
+          {focused ? (
+            <li>
+              <Button variant="ghost" size="sm" onClick={onClearFocus}>
+                Show all brands
+              </Button>
+            </li>
+          ) : null}
+        </ul>
+      </Stack>
+    );
+  }
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3">
@@ -280,48 +329,7 @@ function MeasurementHistory({
           onChange={setMetric}
         />
       </CardHeader>
-      <CardContent>
-        {query.isError ? (
-          <Alert tone="danger">Could not load history.</Alert>
-        ) : query.isPending ? (
-          <output className="bg-surface-2 grid min-h-48 place-items-center rounded-[var(--radius-control)]">
-            <span className={textRole('body', 'text-secondary')}>Loading measurement history…</span>
-          </output>
-        ) : !points.length ? (
-          <p className={textRole('body', 'text-secondary')}>No measurements in this period yet.</p>
-        ) : (
-          <Stack gap="compact" aria-busy={query.isFetching}>
-            <TrendChart
-              label={`${metricLabel} over time`}
-              data={chartPoints}
-              series={competitors}
-              width={360}
-              height={168}
-              xAxisLabel="Run date"
-              yAxisLabel={`${metricLabel} (%)`}
-              formatTick={(value) => `${Math.round(value)}%`}
-              className="h-auto w-full"
-            />
-            <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <SeriesKey label={primaryLabel} swatchClass="bg-accent" />
-              {competitors.map((entry) => (
-                <SeriesKey
-                  key={entry.label}
-                  label={entry.label}
-                  swatchClass={entry.strokeClass.replace('stroke-', 'bg-')}
-                />
-              ))}
-              {focused ? (
-                <li>
-                  <Button variant="ghost" size="sm" onClick={onClearFocus}>
-                    Show all brands
-                  </Button>
-                </li>
-              ) : null}
-            </ul>
-          </Stack>
-        )}
-      </CardContent>
+      <CardContent>{body}</CardContent>
     </Card>
   );
 }

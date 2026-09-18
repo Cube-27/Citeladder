@@ -27,6 +27,33 @@ import { AnimatedPrice } from './animated-price';
  * with utility CSS there is no meaningful class to query, and a plan name is
  * ambiguous once it also heads a comparison column.
  */
+/** What a tier costs, or the reason there is no number to show. */
+type TierPrice = { kind: 'price'; money: Money } | { kind: 'contact' } | { kind: 'unavailable' };
+
+function tierPrice(
+  contactOnly: boolean,
+  configuredPrice: number | null,
+  currency: Money['currency'],
+): TierPrice {
+  if (contactOnly) return { kind: 'contact' };
+  if (configuredPrice === null) return { kind: 'unavailable' };
+  return { kind: 'price', money: { currency, amount_minor: configuredPrice } };
+}
+
+/** The settled figure the animated price lands on, whichever kind it is. */
+function settledPriceLabel(price: TierPrice, minorUnits: number): string {
+  if (price.kind === 'price') return formatMoney(price.money, minorUnits);
+  if (price.kind === 'contact') return CONTACT_LABEL;
+  return FUNDED_UNAVAILABLE_LABEL;
+}
+
+/** The CTA's own three states: starting, available, or nothing to start. */
+function checkoutLabel(pending: boolean, unavailable: boolean, planName: string): string {
+  if (pending) return 'Starting checkout…';
+  if (unavailable) return 'Checkout unavailable';
+  return `Choose ${planName}`;
+}
+
 export function PricingTierCard({
   plan,
   catalog,
@@ -45,15 +72,7 @@ export function PricingTierCard({
 }>) {
   const presentation = PLAN_PRESENTATION[plan.key as PlanKey];
   const configuredPrice = launchPlanPrice(plan.key as PlanKey, catalog.currency, mode);
-  const price: { kind: 'price'; money: Money } | { kind: 'contact' } | { kind: 'unavailable' } =
-    plan.contact_only
-      ? { kind: 'contact' }
-      : configuredPrice === null
-        ? { kind: 'unavailable' }
-        : {
-            kind: 'price',
-            money: { currency: catalog.currency, amount_minor: configuredPrice },
-          };
+  const price = tierPrice(plan.contact_only, configuredPrice, catalog.currency);
   const highlighted = presentation?.highlighted ?? false;
 
   return (
@@ -115,12 +134,7 @@ function PriceDisplay({
 }>) {
   const numeric =
     price.kind === 'price' ? majorUnits(price.money, catalog.currency_minor_units) : null;
-  const settled =
-    price.kind === 'price'
-      ? formatMoney(price.money, catalog.currency_minor_units)
-      : price.kind === 'contact'
-        ? CONTACT_LABEL
-        : FUNDED_UNAVAILABLE_LABEL;
+  const settled = settledPriceLabel(price, catalog.currency_minor_units);
   const paidPrice = price.kind === 'price';
   return (
     <div className="text-foreground mt-6 min-h-[3.75rem]">
@@ -207,11 +221,7 @@ function PlanCta({
       className="w-full min-w-0 whitespace-normal"
       aria-label={unavailable ? `Choose ${plan.name} — checkout unavailable` : undefined}
     >
-      {pending
-        ? 'Starting checkout…'
-        : !unavailable
-          ? `Choose ${plan.name}`
-          : 'Checkout unavailable'}
+      {checkoutLabel(pending, unavailable, plan.name)}
     </Button>
   );
 }

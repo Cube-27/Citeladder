@@ -270,7 +270,7 @@ function ScoredInventoryState({
   );
   const allPager = useCursorTable(`pages|${crawl.id}|all|${sort}|${pageKind}`);
   const errorsPager = useCursorTable(`pages|${crawl.id}|errors|${sort}|${pageKind}`);
-  const pager = tab === 'monitored' ? monitoredPager : tab === 'all' ? allPager : errorsPager;
+  const pager = { monitored: monitoredPager, all: allPager, errors: errorsPager }[tab];
 
   const activeTab = TABS.find((t) => t.key === tab)!;
   // A recrawl pre-seeds every monitored URL as pending. Showing that full

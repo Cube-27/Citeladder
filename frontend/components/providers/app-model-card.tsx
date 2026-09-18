@@ -217,6 +217,12 @@ function OperationFeedback({ controller }: Readonly<{ controller: Controller }>)
   );
 }
 
+/** An existing connection is edited; a missing one is configured for the first time. */
+function saveLabel(pending: boolean, connected: boolean): string {
+  if (pending) return 'Saving…';
+  return connected ? 'Save changes' : 'Save configuration';
+}
+
 function FormActions({ controller }: Readonly<{ controller: Controller }>) {
   const { connection, save, test, canSave } = controller;
   return (
@@ -225,7 +231,7 @@ function FormActions({ controller }: Readonly<{ controller: Controller }>) {
         {test.isPending ? 'Testing…' : 'Test connection'}
       </Button>
       <Button disabled={!canSave} onClick={() => save.mutate()}>
-        {save.isPending ? 'Saving…' : connection ? 'Save changes' : 'Save configuration'}
+        {saveLabel(save.isPending, connection !== null)}
       </Button>
     </div>
   );

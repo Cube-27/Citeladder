@@ -32,6 +32,15 @@ import { issueTitle } from '@/lib/site-health/issues';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 
+/** The toggle's label, with the count only once a summary has landed. */
+function findingViewLabel(view: FindingClass, summary: IssuesSummary | null): string {
+  const defects = view === 'defect';
+  const label = defects ? 'Defects' : 'Advisories';
+  if (!summary) return label;
+  const count = defects ? summary.defect_issue_type_count : summary.advisory_issue_type_count;
+  return `${label} (${count})`;
+}
+
 function filterCount(filter: IssueFilterClass, summary: IssuesSummary, view: FindingClass): number {
   if (filter === 'high')
     return (summary.severity_counts.high ?? 0) + (summary.severity_counts.critical ?? 0);
@@ -113,6 +122,43 @@ export function IssuesCatalog({
       </PageShell>
     );
 
+  let issuesBody: ReactNode = (
+    <div
+      // `min-h` matches the loading placeholder's, so the pane keeps its height
+      // while the rail's own read lands rather than growing under the reader.
+      className="border-border-subtle grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
+      aria-busy={issuesQuery.isFetching}
+    >
+      <IssueGroupList
+        rows={rows}
+        selectedGroupId={selected?.group_id}
+        onSelect={catalog.selectIssue}
+      />
+      {shown ? (
+        <IssueDetailRail
+          issue={shown}
+          crawlId={crawlId}
+          detailQuery={detailQuery}
+          canPrevious={catalog.canPageOccurrencesBack}
+          onPrevious={catalog.previousOccurrences}
+          onNext={() => {
+            const next = detailQuery.data?.next_cursor;
+            if (next) catalog.nextOccurrences(next);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+  if (issuesQuery.isError) {
+    issuesBody = <Alert tone="danger">Could not load issues for this crawl. Please refresh.</Alert>;
+  } else if (rows.length === 0) {
+    issuesBody = (
+      <p className="text-secondary py-[var(--empty-state-padding)] text-sm">
+        No issues match this view.
+      </p>
+    );
+  }
+
   return (
     <PageShell
       controls={
@@ -154,40 +200,7 @@ export function IssuesCatalog({
         {notice}
         {summary ? <IssueSummary summary={summary} findingView={findingView} /> : null}
 
-        {issuesQuery.isError ? (
-          <Alert tone="danger">Could not load issues for this crawl. Please refresh.</Alert>
-        ) : rows.length === 0 ? (
-          <p className="text-secondary py-[var(--empty-state-padding)] text-sm">
-            No issues match this view.
-          </p>
-        ) : (
-          <div
-            // `min-h` matches the loading placeholder's, so the pane keeps its
-            // height while the rail's own read lands rather than growing under
-            // the reader.
-            className="border-border-subtle grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
-            aria-busy={issuesQuery.isFetching}
-          >
-            <IssueGroupList
-              rows={rows}
-              selectedGroupId={selected?.group_id}
-              onSelect={catalog.selectIssue}
-            />
-            {shown ? (
-              <IssueDetailRail
-                issue={shown}
-                crawlId={crawlId}
-                detailQuery={detailQuery}
-                canPrevious={catalog.canPageOccurrencesBack}
-                onPrevious={catalog.previousOccurrences}
-                onNext={() => {
-                  const next = detailQuery.data?.next_cursor;
-                  if (next) catalog.nextOccurrences(next);
-                }}
-              />
-            ) : null}
-          </div>
-        )}
+        {issuesBody}
 
         {rows.length > 0 ? (
           <CatalogPager cursor={cursor} page={issuesQuery.data} onGo={catalog.goToPage} />
@@ -297,11 +310,7 @@ function FindingClassFilter({
       ariaLabel="Finding class"
       options={(['defect', 'advisory'] as const).map((view) => ({
         value: view,
-        label: `${view === 'defect' ? 'Defects' : 'Advisories'}${
-          summary
-            ? ` (${view === 'defect' ? summary.defect_issue_type_count : summary.advisory_issue_type_count})`
-            : ''
-        }`,
+        label: findingViewLabel(view, summary),
       }))}
     />
   );

@@ -176,15 +176,7 @@ function ReadinessLedger({
                     {formatScore(dimension.score)}
                   </TableRecordMetricCell>
                   <TableRecordMetricCell label="Quality" className="md:min-w-32">
-                    {dimension.score === null ? (
-                      dimension.dimension_measurement_state === 'not_measured' ? (
-                        <UnavailableValue state="not_measured" />
-                      ) : (
-                        <span className="text-muted text-xs">{state}</span>
-                      )
-                    ) : (
-                      <ScoreBar value={dimension.score} label={`${dimension.label} score`} />
-                    )}
+                    <QualityCell dimension={dimension} state={state} />
                   </TableRecordMetricCell>
                   <TableRecordMetricCell label="Coverage">
                     {dimension.coverage === null ? (
@@ -291,6 +283,34 @@ function checkState(check: ReadinessCheck) {
   return 'Not measured';
 }
 
+/** Says whether the list is the whole set or only its worst rows. */
+function failingPagesCaption(shown: number, total: number): string {
+  if (total === 0) return 'No failing pages were recorded.';
+  if (shown < total) return `Showing the ${shown} most affected of ${total} pages, worst first.`;
+  const noun = total === 1 ? 'page' : 'pages';
+  return `${total} ${noun} failed at least one check, worst first.`;
+}
+
+/**
+ * The quality column: a bar when there is a score, and otherwise the reason.
+ *
+ * A dimension with no score is either one nothing measured or one the state
+ * already explains, and those read differently — "not measured" is an absence
+ * of evidence, the state is a finding.
+ */
+function QualityCell({
+  dimension,
+  state,
+}: Readonly<{ dimension: ReadinessDimension; state: DimensionState }>) {
+  if (dimension.score !== null) {
+    return <ScoreBar value={dimension.score} label={`${dimension.label} score`} />;
+  }
+  if (dimension.dimension_measurement_state === 'not_measured') {
+    return <UnavailableValue state="not_measured" />;
+  }
+  return <span className="text-muted text-xs">{state}</span>;
+}
+
 function FailingPages({
   dimension,
   crawlId,
@@ -302,13 +322,7 @@ function FailingPages({
     <section className="grid gap-2">
       <div className="grid gap-0.5">
         <h3 className={textRole('objectTitle')}>Pages to fix</h3>
-        <p className="text-muted text-xs">
-          {total === 0
-            ? 'No failing pages were recorded.'
-            : shown < total
-              ? `Showing the ${shown} most affected of ${total} pages, worst first.`
-              : `${total} page${total === 1 ? '' : 's'} failed at least one check, worst first.`}
-        </p>
+        <p className="text-muted text-xs">{failingPagesCaption(shown, total)}</p>
       </div>
       <ul className={ledgerClasses()}>
         {dimension.evidence_pages.map((page) => (
