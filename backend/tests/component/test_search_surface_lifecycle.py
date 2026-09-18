@@ -771,3 +771,145 @@ async def test_an_llm_run_is_unaffected_by_the_search_context_gate(
             random_seed="1",
         )
     assert audit is not None
+
+
+@pytest.mark.asyncio
+async def test_the_surface_folds_into_the_existing_projections_unchanged(
+    session_factory: async_sessionmaker[AsyncSession], adapter
+) -> None:
+    """The plan's central structural claim, checked rather than assumed.
+
+    A fourth surface was supposed to need no new scoring path and no formula
+    change: it produces a `ResponseAnalysis` with mentions and citations
+    through the unchanged scorer, and every downstream projection groups on
+    whatever distinct engines exist. This asserts that end to end.
+    """
+    from app.models.analysis import Citation, ResponseAnalysis
+
+    adapter(
+        _RecordingAdapter(
+            fetch_payloads=[
+                payloads.response(payloads.completed_task(task_id="provider-task-1"))
+            ]
+        )
+    )
+    _audit_id, task_id, _ = await _seed_search_task(session_factory)
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        task.provider_task_id = "provider-task-1"
+        task.provider_submission_ref = "audit-ref-1"
+        task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
+        await session.commit()
+
+    await _claim_and_run(session_factory, _worker(session_factory))
+
+    async with session_factory() as session:
+        analysis = await session.scalar(
+            select(ResponseAnalysis).where(ResponseAnalysis.task_id == task_id)
+        )
+        assert analysis is not None
+        # The engine dimension is a plain string column with no CHECK
+        # constraint, so the fourth surface simply appears in it.
+        assert analysis.logical_engine == ENGINE_GOOGLE_AI_OVERVIEW
+        assert analysis.artifact_id is not None
+
+        citations = (
+            await session.scalars(
+                select(Citation).where(Citation.analysis_id == analysis.id)
+            )
+        ).all()
+
+    # Root references became citations through the SAME path the LLM engines
+    # use — five of them, matching the block's root reference list.
+    assert len(citations) == 5
+    domains = {citation.domain for citation in citations}
+    assert payloads.BRAND_DOMAIN in domains
+    # The two Google Shopping URLs are present as citations but are Google's,
+    # not the brand's.
+    assert "google.com" in domains
+
+
+@pytest.mark.asyncio
+async def test_a_measured_absence_scores_as_a_completed_empty_answer(
+    session_factory: async_sessionmaker[AsyncSession], adapter
+) -> None:
+    """Deliberate, and stated so it is not discovered later as a surprise.
+
+    A successful `no_ai_overview` is a completed execution with an empty
+    answer, so it contributes measured absence to the per-prompt components
+    exactly as an answer that never names the brand does.
+    """
+    from app.models.analysis import ResponseAnalysis
+
+    adapter(
+        _RecordingAdapter(
+            fetch_payloads=[
+                payloads.response(
+                    payloads.completed_task(
+                        task_id="provider-task-1", with_overview=False
+                    )
+                )
+            ]
+        )
+    )
+    _audit_id, task_id, _ = await _seed_search_task(session_factory)
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        task.provider_task_id = "provider-task-1"
+        task.provider_submission_ref = "audit-ref-1"
+        task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
+        await session.commit()
+
+    await _claim_and_run(session_factory, _worker(session_factory))
+
+    async with session_factory() as session:
+        analysis = await session.scalar(
+            select(ResponseAnalysis).where(ResponseAnalysis.task_id == task_id)
+        )
+    assert analysis is not None
+    assert analysis.logical_engine == ENGINE_GOOGLE_AI_OVERVIEW
+    # A real execution that measured nothing — not a failure, and not skipped.
+    task = await _task(session_factory, task_id)
+    assert task.answer_text == ""
+    assert task.status == TASK_STATUS_SUCCEEDED
+
+
+@pytest.mark.asyncio
+async def test_a_failed_observation_produces_no_analysis_but_is_still_recorded(
+    session_factory: async_sessionmaker[AsyncSession], adapter
+) -> None:
+    """Why the observation is keyed on the task and not the analysis."""
+    from app.models.analysis import ResponseAnalysis
+
+    adapter(
+        _RecordingAdapter(
+            fetch_payloads=[
+                payloads.response(
+                    payloads.task_with_status(40103, task_id="provider-task-1")
+                )
+            ]
+        )
+    )
+    _audit_id, task_id, _ = await _seed_search_task(session_factory)
+    async with session_factory() as session:
+        task = await session.get(AuditTask, task_id)
+        assert task is not None
+        task.provider_task_id = "provider-task-1"
+        task.provider_submission_ref = "audit-ref-1"
+        task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
+        await session.commit()
+
+    await _claim_and_run(session_factory, _worker(session_factory))
+
+    async with session_factory() as session:
+        analysis = await session.scalar(
+            select(ResponseAnalysis).where(ResponseAnalysis.task_id == task_id)
+        )
+    assert analysis is None
+    # The outcome is still recorded — which it could not be if it hung off
+    # the analysis row.
+    observation = await _observation(session_factory, task_id)
+    assert observation is not None
+    assert observation.outcome == OUTCOME_PROVIDER_ERROR
