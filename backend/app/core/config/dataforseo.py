@@ -37,6 +37,83 @@ PATH_TASK_GET_ADVANCED: Final = "/v3/serp/google/organic/task_get/advanced"
 PATH_TASKS_READY: Final = "/v3/serp/google/organic/tasks_ready"
 PATH_TASKS_FIXED: Final = "/v3/serp/google/organic/id_list"
 
+# --- Provider status-code families ----------------------------------------
+# DataForSEO answers almost everything with HTTP 200 and carries the real
+# status in the body, at TWO levels: once for the response envelope and again
+# on each task. These families are read from a table, never from an inline
+# comparison and never from a numeric RANGE test.
+#
+# A range test is the specific bug this exists to prevent. Every code below is
+# in the ``4xxxx`` band, and that band mixes "still working on it" with
+# "definitively failed" — so `code >= 40000` would park a failed task until
+# the poll ceiling burned and then report the ceiling as the cause, destroying
+# the real one. Confirmed against https://docs.dataforseo.com/v3/appendix/errors/
+STATUS_OK: Final = 20000
+STATUS_TASK_CREATED: Final = 20100
+
+# "task handed" (received, not yet enqueued) and "task in queue" (enqueued).
+# Neither is a result and neither is a failure: re-park and poll again,
+# WITHOUT spending an attempt.
+STATUS_TASK_HANDED: Final = 40601
+STATUS_TASK_IN_QUEUE: Final = 40602
+PENDING_TASK_STATUS_CODES: Final[frozenset[int]] = frozenset(
+    {STATUS_TASK_HANDED, STATUS_TASK_IN_QUEUE}
+)
+
+# Definitively failed. Finalize immediately, preserving the provider's code —
+# re-polling a task the provider has already given up on is what turns a real
+# cause into a poll-ceiling timeout.
+STATUS_TASK_EXECUTION_FAILED: Final = 40103
+STATUS_UNAUTHORIZED: Final = 40100
+STATUS_PAYMENT_REQUIRED: Final = 40200
+STATUS_INVALID_FIELD: Final = 40501
+TERMINAL_FAILURE_STATUS_CODES: Final[frozenset[int]] = frozenset(
+    {
+        STATUS_TASK_EXECUTION_FAILED,
+        STATUS_UNAUTHORIZED,
+        STATUS_PAYMENT_REQUIRED,
+        STATUS_INVALID_FIELD,
+    }
+)
+
+# Codes that mean the submission landed and a task now exists.
+ACCEPTED_SUBMISSION_STATUS_CODES: Final[frozenset[int]] = frozenset(
+    {STATUS_OK, STATUS_TASK_CREATED}
+)
+
+
+def is_pending_status(status_code: int) -> bool:
+    """True when the provider says the task has not finished yet."""
+    return status_code in PENDING_TASK_STATUS_CODES
+
+
+def is_terminal_failure_status(status_code: int) -> bool:
+    """True when the provider has definitively given up on the task."""
+    return status_code in TERMINAL_FAILURE_STATUS_CODES
+
+
+def is_complete_status(status_code: int) -> bool:
+    """True when the task carries a usable result."""
+    return status_code == STATUS_OK
+
+
+# --- Poll cadence and bounds ---------------------------------------------
+# DataForSEO's Standard queue normally settles within a few minutes. The
+# interval is the re-park delay; the ceiling bounds how long a task may stay
+# in flight before it terminates as an honest local failure rather than
+# quietly becoming "no AI Overview".
+POLL_INTERVAL_SECONDS: Final = 60.0
+POLL_CEILING: Final = 30
+# How far back a reconciliation sweep looks for an orphaned submission.
+RECONCILE_WINDOW_HOURS: Final = 24
+# Provider caps the id-list endpoint at 10 calls/minute and 1,000 ids/call, so
+# reconciliation sweeps per ACCOUNT rather than per task.
+RECONCILE_PAGE_SIZE: Final = 1000
+# How many tasks one submission or collection pass handles.
+BATCH_SIZE: Final = 100
+# The provider's own limit on the correlation tag sent at submission.
+TAG_MAX_CHARS: Final = 255
+
 # --- Request shape --------------------------------------------------------
 # The provider documents a 700-character ``keyword`` limit. A tracked prompt
 # longer than this AFTER transport escaping is rejected by name; it is never
@@ -98,6 +175,48 @@ LANGUAGE_CODES: Final[frozenset[str]] = frozenset(
 DEFAULT_LOCATION_CODE: Final = LOCATION_CODES["US"]
 DEFAULT_LANGUAGE_CODE: Final = "en"
 DEFAULT_DEVICE: Final = DEVICE_DESKTOP
+
+
+class KeywordTooLongError(ValueError):
+    """A tracked prompt cannot be represented within the keyword limit."""
+
+
+def serialize_keyword(prompt: str) -> str:
+    """Put a tracked prompt on the wire without changing what it asks.
+
+    Two different things must not be conflated.
+
+    SEMANTIC rewriting is forbidden. No keyword translation, no stop-word
+    stripping, no SEO reformulation, no truncation — a changed query measures
+    something the customer is not tracking, and reports the result as though
+    they were.
+
+    TRANSPORT escaping is required. The provider reads a literal ``%`` and a
+    literal ``+`` as encoding syntax, so those two characters are percent-
+    escaped to survive the wire intact. ``C++`` and ``50% off`` are therefore
+    ordinary prompts, not rejection cases: they round-trip losslessly.
+
+    Only a prompt that exceeds the limit AFTER escaping is rejected, and it is
+    rejected by name rather than silently shortened.
+    """
+    escaped = prompt.replace("%", "%25").replace("+", "%2B")
+    if len(escaped) > KEYWORD_MAX_CHARS:
+        raise KeywordTooLongError(
+            f"prompt is {len(escaped)} characters after escaping, over the "
+            f"{KEYWORD_MAX_CHARS}-character provider limit"
+        )
+    return escaped
+
+
+def deserialize_keyword(keyword: str) -> str:
+    """Read a wire keyword back as the prompt it was made from.
+
+    The inverse of ``serialize_keyword``, used to verify a recovered provider
+    task really carries the query CiteLadder submitted. Order matters: ``%25``
+    is unescaped last, so an escaped ``%2B`` never decodes into a literal
+    ``+`` that was not there.
+    """
+    return keyword.replace("%2B", "+").replace("%25", "%")
 
 
 def location_code_for_country(country_code: str) -> int | None:

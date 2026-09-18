@@ -6,28 +6,38 @@ bearer-token LLM transports. The pair is stored as one encrypted secret (see
 client — it is never logged, never returned in a DTO and never written into a
 snapshot (invariant 6).
 
-This module currently carries the CONNECTIVITY PROBE only. The two-phase
-submit/fetch adapter joins it in the connector slice.
+The adapter is TWO-PHASE because the surface is. An LLM call is one request
+that returns an answer; a SERP observation is a paid submission, a wait, and
+a separate retrieval. Modelling that as one ``execute()`` would hide the only
+moment that costs money inside a call that might be retried.
 """
 
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 
 from app.connectors.answer_engines.errors import ProviderError, classify_provider_status
 from app.connectors.answer_engines.http_client import shared_client
+from app.connectors.search_surfaces.contracts import (
+    SearchSurfaceRequest,
+    SearchSurfaceSubmission,
+)
 from app.core.config import dataforseo as dataforseo_config
 from app.core.config.dataforseo import (
     DataForSeoCredential,
     DataForSeoCredentialError,
     dataforseo_settings,
+    serialize_keyword,
     unpack_credential,
 )
 from app.core.config.provider_catalog import (
     ERROR_AUTH,
+    ERROR_CLIENT,
     ERROR_CONNECTION,
     ERROR_PARSE,
     ERROR_TIMEOUT,
@@ -36,7 +46,7 @@ from app.core.config.provider_catalog import (
 # DataForSEO answers with its own status code INSIDE a 200 response body. A
 # transport-level success therefore proves nothing on its own; this is the
 # response-level "everything is fine" code.
-RESPONSE_STATUS_OK: int = 20000
+RESPONSE_STATUS_OK: int = dataforseo_config.STATUS_OK
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,3 +170,214 @@ def _endpoint(base_url: str, path: str) -> str:
 def credential_from_secret(secret: str) -> DataForSeoCredential:
     """Decrypted-secret entry point for the execution path."""
     return unpack_credential(secret)
+
+
+class DataForSeoSearchSurfaceAdapter:
+    """Submit an observation, then retrieve it.
+
+    Two phases, deliberately not one. ``submit`` is the only call that costs
+    money, and separating it means a retrieval failure can be retried without
+    any chance of paying twice — the worker literally cannot resubmit from the
+    fetch path, because the fetch path has no submit in it.
+
+    The adapter is STATELESS between calls. ``provider_submission_ref`` comes
+    in as an argument on the request and is never read from the database or
+    held on the instance: reconciliation identity depends on that exact value
+    surviving unchanged from the committed intent to the wire, and instance
+    state is where such a value goes to get quietly replaced.
+    """
+
+    def __init__(
+        self,
+        *,
+        secret: str,
+        base_url: str = "",
+        client: httpx.AsyncClient | None = None,
+    ) -> None:
+        self._credential = unpack_credential(secret)
+        self._base_url = base_url
+        self._client = client
+
+    async def submit(self, request: SearchSurfaceRequest) -> SearchSurfaceSubmission:
+        """Create one Standard-queue task. THIS is the billable moment."""
+        body = await self._call(
+            "POST",
+            dataforseo_config.PATH_TASK_POST,
+            json=[_task_payload(request)],
+            timeout_seconds=request.timeout_seconds,
+        )
+        task = _single_task(body)
+        status = _task_status(task)
+        if status not in dataforseo_config.ACCEPTED_SUBMISSION_STATUS_CODES:
+            raise ProviderError(
+                f"DataForSEO refused the submission (status {status})",
+                error_code=_submission_error_code(status),
+                retryable=False,
+            )
+        task_id = str(task.get("id") or "").strip()
+        if not task_id:
+            # An accepted submission with no id is unusable AND already paid
+            # for. Failing here sends it to reconciliation, which is the only
+            # path that can find it again by tag.
+            raise ProviderError(
+                "DataForSEO accepted the task but returned no task id",
+                error_code=ERROR_PARSE,
+                retryable=False,
+            )
+        return SearchSurfaceSubmission(
+            provider_task_id=task_id,
+            submitted_at=datetime.now(UTC),
+            provider_cost_microusd=_cost_microusd(task),
+        )
+
+    async def fetch(self, provider_task_id: str) -> dict[str, Any]:
+        """Retrieve one task's result. Documented by the provider as free.
+
+        Returns the RAW response. Interpreting it belongs to the pure parser,
+        which has no network and can therefore be tested against fixtures
+        exhaustively; a transport that also decided outcomes could not.
+        """
+        path = f"{dataforseo_config.PATH_TASK_GET_ADVANCED}/{provider_task_id}"
+        return await self._call(
+            "GET", path, timeout_seconds=dataforseo_settings.request_timeout_seconds
+        )
+
+    async def list_task_ids(
+        self, *, datetime_from: str, datetime_to: str, offset: int = 0
+    ) -> dict[str, Any]:
+        """List the bound account's tasks WITH metadata, over a window.
+
+        The reconciliation sweep's endpoint. It returns uncompleted as well as
+        completed tasks, which is exactly the case that matters: an orphaned
+        submission is by definition one CiteLadder never saw finish.
+        """
+        payload = [
+            {
+                "datetime_from": datetime_from,
+                "datetime_to": datetime_to,
+                "limit": dataforseo_config.RECONCILE_PAGE_SIZE,
+                "offset": offset,
+                "include_metadata": True,
+            }
+        ]
+        return await self._call(
+            "POST",
+            dataforseo_config.PATH_TASKS_FIXED,
+            json=payload,
+            timeout_seconds=dataforseo_settings.request_timeout_seconds,
+        )
+
+    async def _call(
+        self,
+        method: str,
+        path: str,
+        *,
+        timeout_seconds: float,
+        json: Any = None,
+    ) -> dict[str, Any]:
+        """One authenticated call, classified with the shared vocabulary."""
+        http = self._client or shared_client()
+        url = _endpoint(self._base_url, path)
+        try:
+            response = await http.request(
+                method,
+                url,
+                auth=self._credential.basic_auth(),
+                json=json,
+                timeout=timeout_seconds,
+            )
+        except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout) as exc:
+            raise ProviderError(
+                "DataForSEO request timed out",
+                error_code=ERROR_TIMEOUT,
+                retryable=True,
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise ProviderError(
+                "Could not reach DataForSEO",
+                error_code=ERROR_CONNECTION,
+                retryable=True,
+            ) from exc
+
+        if response.status_code != httpx.codes.OK:
+            error_code, retryable = classify_provider_status(response.status_code)
+            raise ProviderError(
+                f"DataForSEO returned HTTP {response.status_code}",
+                error_code=error_code,
+                retryable=retryable,
+            )
+        try:
+            body = response.json()
+        except ValueError as exc:
+            raise ProviderError(
+                "DataForSEO returned an unreadable response",
+                error_code=ERROR_PARSE,
+                retryable=False,
+            ) from exc
+        if not isinstance(body, dict):
+            raise ProviderError(
+                "DataForSEO returned an unreadable response",
+                error_code=ERROR_PARSE,
+                retryable=False,
+            )
+        return body
+
+
+def _task_payload(request: SearchSurfaceRequest) -> dict[str, Any]:
+    """The submission body.
+
+    Note what is NOT here: no ``target``. The request carries the query and
+    the search context and nothing else, so CiteLadder decides owned,
+    competitor and third-party identity from project configuration against the
+    complete SERP, rather than letting the provider's filtering decide what
+    CiteLadder is allowed to see.
+    """
+    return {
+        "keyword": serialize_keyword(request.query),
+        "location_code": request.location_code,
+        "language_code": request.language_code,
+        "device": request.device,
+        "os": dataforseo_config.OS_FOR_DEVICE[request.device],
+        "depth": request.depth,
+        "load_async_ai_overview": request.load_async_ai_overview,
+        # Our own correlation identifier, echoed back by the provider. It is
+        # what makes an orphaned submission findable, so it goes on the wire
+        # verbatim.
+        "tag": request.provider_submission_ref[: dataforseo_config.TAG_MAX_CHARS],
+    }
+
+
+def _single_task(body: dict[str, Any]) -> dict[str, Any]:
+    tasks = body.get("tasks")
+    if not isinstance(tasks, list) or not tasks or not isinstance(tasks[0], dict):
+        raise ProviderError(
+            "DataForSEO returned no task for the submission",
+            error_code=ERROR_PARSE,
+            retryable=False,
+        )
+    return tasks[0]
+
+
+def _task_status(task: dict[str, Any]) -> int:
+    status = task.get("status_code")
+    if isinstance(status, bool) or not isinstance(status, int):
+        raise ProviderError(
+            "DataForSEO task carried no status code",
+            error_code=ERROR_PARSE,
+            retryable=False,
+        )
+    return status
+
+
+def _submission_error_code(status: int) -> str:
+    """Map a refused submission onto the shared classification tokens."""
+    if status == dataforseo_config.STATUS_UNAUTHORIZED:
+        return ERROR_AUTH
+    return ERROR_CLIENT
+
+
+def _cost_microusd(task: dict[str, Any]) -> int | None:
+    cost = task.get("cost")
+    if isinstance(cost, bool) or not isinstance(cost, (int, float)):
+        return None
+    return round(float(cost) * 1_000_000)
