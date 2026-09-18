@@ -5,7 +5,7 @@ ENV PATH="${PNPM_HOME}:${PATH}"
 WORKDIR /app
 
 # Keep this version in lockstep with packageManager in frontend/package.json.
-RUN npm install --global --ignore-scripts pnpm@11.25.0
+RUN npm install --global --ignore-scripts pnpm@12.4.2
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
@@ -23,7 +23,7 @@ ENV NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=${NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE}
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 WORKDIR /app
 
-RUN npm install --global --ignore-scripts pnpm@11.25.0
+RUN npm install --global --ignore-scripts pnpm@12.4.2
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
 RUN pnpm build:vite

@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Node 26 no longer bundles corepack, so pnpm is installed from npm.
 # Keep this version in lockstep with the packageManager field in frontend/package.json.
-RUN npm install --global --ignore-scripts pnpm@11.25.0
+RUN npm install --global --ignore-scripts pnpm@12.4.2
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
@@ -23,7 +23,7 @@ ENV NODE_ENV=production
 ENV NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS=${NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS}
 WORKDIR /app
 
-RUN npm install --global --ignore-scripts pnpm@11.25.0
+RUN npm install --global --ignore-scripts pnpm@12.4.2
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/apps/marketing ./apps/marketing
