@@ -131,9 +131,15 @@ class TestVisibleAnswer:
         ]
         result = _parse(task)
         assert "Nested passage." in result.answer_text
-        # Previously dropped: links only ever read the top level.
-        # Collapsed to its registrable domain, like every other link.
-        assert "nestedbrand.com" in {link.domain for link in result.links}
+        # The nested link joins the two top-level ones, collapsed to its
+        # registrable domain like every other link. Asserted as the exact set:
+        # previously the nested one was dropped entirely, and a membership
+        # check would not notice if a top-level one went missing instead.
+        assert {link.domain for link in result.links} == {
+            payloads.BRAND_DOMAIN,
+            payloads.COMPETITOR_DOMAIN,
+            "nestedbrand.com",
+        }
 
     def test_an_unknown_element_type_is_a_parser_error(self) -> None:
         task = payloads.completed_task()

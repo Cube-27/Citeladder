@@ -304,6 +304,9 @@ dataforseo_settings = DataForSeoSettings()
 # These two functions are the only code that knows that shape. Everything else
 # handles a ``DataForSeoCredential`` or an opaque blob, so the column contract
 # (one Fernet blob, never returned to the client) is unchanged.
+# One wording for an unreadable stored blob. It deliberately says nothing
+# about WHY — never a fragment of the secret, never its length.
+_UNREADABLE_CREDENTIAL: Final = "stored DataForSEO credential is not readable"
 _CREDENTIAL_LOGIN_KEY: Final = "login"
 _CREDENTIAL_PASSWORD_KEY: Final = "password"
 
@@ -350,15 +353,13 @@ def unpack_credential(secret: str) -> DataForSeoCredential:
     try:
         payload = json.loads(secret)
     except json.JSONDecodeError as exc:
-        raise DataForSeoCredentialError(
-            "stored DataForSEO credential is not readable"
-        ) from exc
+        raise DataForSeoCredentialError(_UNREADABLE_CREDENTIAL) from exc
     if not isinstance(payload, dict):
-        raise DataForSeoCredentialError("stored DataForSEO credential is not readable")
+        raise DataForSeoCredentialError(_UNREADABLE_CREDENTIAL)
     login = payload.get(_CREDENTIAL_LOGIN_KEY)
     password = payload.get(_CREDENTIAL_PASSWORD_KEY)
     if not isinstance(login, str) or not isinstance(password, str):
-        raise DataForSeoCredentialError("stored DataForSEO credential is not readable")
+        raise DataForSeoCredentialError(_UNREADABLE_CREDENTIAL)
     if not login or not password:
         raise DataForSeoCredentialError("stored DataForSEO credential is incomplete")
     return DataForSeoCredential(login=login, password=password)

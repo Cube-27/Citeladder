@@ -17,7 +17,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Final
 
 import httpx
 
@@ -47,6 +47,10 @@ from app.core.config.provider_catalog import (
 # transport-level success therefore proves nothing on its own; this is the
 # response-level "everything is fine" code.
 RESPONSE_STATUS_OK: int = dataforseo_config.STATUS_OK
+
+# One wording for "the body was not something we could read at all", so a
+# caller matching on it cannot accidentally match three of four sites.
+_UNREADABLE_RESPONSE: Final = "DataForSEO returned an unreadable response"
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,13 +141,13 @@ def _require_ok_envelope(response: httpx.Response) -> None:
         payload = response.json()
     except ValueError as exc:
         raise ProviderError(
-            "DataForSEO returned an unreadable response",
+            _UNREADABLE_RESPONSE,
             error_code=ERROR_PARSE,
             retryable=False,
         ) from exc
     if not isinstance(payload, dict):
         raise ProviderError(
-            "DataForSEO returned an unreadable response",
+            _UNREADABLE_RESPONSE,
             error_code=ERROR_PARSE,
             retryable=False,
         )
@@ -326,13 +330,13 @@ class DataForSeoSearchSurfaceAdapter:
             body = response.json()
         except ValueError as exc:
             raise ProviderError(
-                "DataForSEO returned an unreadable response",
+                _UNREADABLE_RESPONSE,
                 error_code=ERROR_PARSE,
                 retryable=False,
             ) from exc
         if not isinstance(body, dict):
             raise ProviderError(
-                "DataForSEO returned an unreadable response",
+                _UNREADABLE_RESPONSE,
                 error_code=ERROR_PARSE,
                 retryable=False,
             )

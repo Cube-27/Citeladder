@@ -8,6 +8,7 @@ from __future__ import annotations
 
 # ForeignKey target for the audits table (repeated across analysis/audit models).
 FK_AUDITS_ID = "audits.id"
+FK_PROVIDER_CONNECTIONS_ID = "provider_connections.id"
 
 # ``ondelete`` policy: null out the child FK when the parent row is removed.
 ON_DELETE_SET_NULL = "SET NULL"

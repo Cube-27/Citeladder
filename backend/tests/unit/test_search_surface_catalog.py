@@ -96,6 +96,7 @@ class TestRouteConstruction:
     """A route cannot be built in a shape that means two things at once."""
 
     def test_a_search_route_may_not_pin_llm_fields(self) -> None:
+        context = SearchContext(location_code=1, language_code="en", device="desktop")
         with pytest.raises(ValueError, match="must leave LLM fields null"):
             MeasurementRoute(
                 logical_engine="x",
@@ -106,9 +107,7 @@ class TestRouteConstruction:
                 reasoning_pinnable=None,
                 representative_status="verified",
                 surface_kind=SURFACE_KIND_SEARCH_AI,
-                search_context=SearchContext(
-                    location_code=1, language_code="en", device="desktop"
-                ),
+                search_context=context,
             )
 
     def test_a_search_route_needs_a_search_context(self) -> None:
@@ -137,6 +136,7 @@ class TestRouteConstruction:
             )
 
     def test_an_llm_route_carries_no_search_context(self) -> None:
+        context = SearchContext(location_code=1, language_code="en", device="desktop")
         with pytest.raises(ValueError, match="carries no search context"):
             MeasurementRoute(
                 logical_engine="x",
@@ -146,9 +146,7 @@ class TestRouteConstruction:
                 reasoning_effort="off",
                 reasoning_pinnable=True,
                 representative_status="verified",
-                search_context=SearchContext(
-                    location_code=1, language_code="en", device="desktop"
-                ),
+                search_context=context,
             )
 
 
@@ -290,10 +288,10 @@ class TestSearchContextAdmission:
         from app.domain.audits.creation import _require_search_context
         from app.domain.audits.errors import AuditValidationError
 
+        project = self._project(serp_location_code=0)
         with pytest.raises(AuditValidationError, match="search location"):
             _require_search_context(
-                project=self._project(serp_location_code=0),
-                engines=[ENGINE_GOOGLE_AI_OVERVIEW],
+                project=project, engines=[ENGINE_GOOGLE_AI_OVERVIEW]
             )
 
     def test_an_unsupported_location_is_rejected_rather_than_defaulted(self) -> None:
@@ -302,10 +300,10 @@ class TestSearchContextAdmission:
         from app.domain.audits.creation import _require_search_context
         from app.domain.audits.errors import AuditValidationError
 
+        project = self._project(serp_location_code=999999)
         with pytest.raises(AuditValidationError, match="not one this deployment"):
             _require_search_context(
-                project=self._project(serp_location_code=999999),
-                engines=[ENGINE_GOOGLE_AI_OVERVIEW],
+                project=project, engines=[ENGINE_GOOGLE_AI_OVERVIEW]
             )
 
     def test_an_llm_only_run_never_consults_the_search_context(self) -> None:
@@ -368,10 +366,10 @@ class TestRotationShape:
             rotated_secret,
         )
 
+        connection = self._connection(TRANSPORT_DATAFORSEO)
+        payload = self._update(api_key="sk-x")
         with pytest.raises(CredentialShapeError, match="not a single key"):
-            rotated_secret(
-                self._connection(TRANSPORT_DATAFORSEO), self._update(api_key="sk-x")
-            )
+            rotated_secret(connection, payload)
 
     def test_a_pair_sent_to_a_bearer_connection_is_refused_by_name(self) -> None:
         from app.domain.providers.connection_updates import (
@@ -379,11 +377,10 @@ class TestRotationShape:
             rotated_secret,
         )
 
+        connection = self._connection("openai")
+        payload = self._update(api_login="u@x.com", api_password="pw")
         with pytest.raises(CredentialShapeError, match="not a login and password"):
-            rotated_secret(
-                self._connection("openai"),
-                self._update(api_login="u@x.com", api_password="pw"),
-            )
+            rotated_secret(connection, payload)
 
 
 class TestFundedModeExcludesTheSearchSurface:

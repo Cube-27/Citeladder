@@ -181,8 +181,9 @@ class TestSubmission:
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
             adapter = DataForSeoSearchSurfaceAdapter(secret=_SECRET, client=client)
+            request = _request()
             with pytest.raises(ProviderError, match="no task id"):
-                await adapter.submit(_request())
+                await adapter.submit(request)
 
     @pytest.mark.asyncio
     async def test_a_refused_submission_is_not_retryable(self) -> None:
@@ -194,8 +195,9 @@ class TestSubmission:
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
             adapter = DataForSeoSearchSurfaceAdapter(secret=_SECRET, client=client)
+            request = _request()
             with pytest.raises(ProviderError) as excinfo:
-                await adapter.submit(_request())
+                await adapter.submit(request)
 
         assert excinfo.value.retryable is False
 

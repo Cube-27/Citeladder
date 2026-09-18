@@ -86,6 +86,7 @@ function ConnectionControls({ state }: Readonly<{ state: ConnectionState }>) {
     busy,
   } = state;
   const credentialNoun = state.credentialShape === 'basic' ? 'credentials' : 'key';
+  const saveLabel = configured ? `Update ${credentialNoun}` : `Save ${credentialNoun}`;
   return (
     <div className="grid gap-3 pt-1">
       <EngineConnectionFields state={state} />
@@ -98,11 +99,7 @@ function ConnectionControls({ state }: Readonly<{ state: ConnectionState }>) {
             busy || !transport || hasPartialCredentialInput || (!hasCredentialInput && !configured)
           }
         >
-          {saveMutation.isPending
-            ? 'Saving & testing…'
-            : configured
-              ? `Update ${credentialNoun}`
-              : `Save ${credentialNoun}`}
+          {saveMutation.isPending ? 'Saving & testing…' : saveLabel}
         </Button>
         <Button
           type="button"

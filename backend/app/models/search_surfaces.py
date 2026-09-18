@@ -24,7 +24,11 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.models.constants import CASCADE_ALL_DELETE_ORPHAN, ON_DELETE_SET_NULL
+from app.models.constants import (
+    CASCADE_ALL_DELETE_ORPHAN,
+    FK_PROVIDER_CONNECTIONS_ID,
+    ON_DELETE_SET_NULL,
+)
 
 
 def _utcnow() -> datetime:
@@ -114,7 +118,7 @@ class AioObservation(Base):
     )
     provider_connection_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("provider_connections.id", ondelete=ON_DELETE_SET_NULL),
+        ForeignKey(FK_PROVIDER_CONNECTIONS_ID, ondelete=ON_DELETE_SET_NULL),
         nullable=True,
     )
 

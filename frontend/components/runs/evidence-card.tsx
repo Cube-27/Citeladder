@@ -189,22 +189,38 @@ function EvidenceAnswer({
   // empty" was wrong: an overview that was present but carried no extractable
   // text produces exactly that, and would have been reported as Google
   // showing nothing — our own gap presented as the brand's absence.
-  const measuredAbsence = isSearchSurface && outcome === 'no_ai_overview';
+  const measuredAbsence = Boolean(isSearchSurface) && outcome === 'no_ai_overview';
   return (
     <section className="grid gap-2">
       <Label>{isSearchSurface ? 'AI Overview' : 'Engine response'}</Label>
       <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'min-w-0 overflow-hidden')}>
-        {trimmed ? (
-          <ContentMarkdown markdown={normalizeEvidenceMarkdown(trimmed)} density="compact" />
-        ) : measuredAbsence ? (
-          <span className="text-secondary text-sm">No AI Overview was shown for this search.</span>
-        ) : (
-          <span className="text-muted text-sm">
-            No answer text was captured for this execution.
-          </span>
-        )}
+        <EvidenceAnswerBody text={trimmed} measuredAbsence={measuredAbsence} />
       </div>
     </section>
+  );
+}
+
+/**
+ * The three states an answer panel can be in, named rather than nested.
+ *
+ * They are genuinely three, not two: text, a measured absence, and a missing
+ * capture. The middle one is a finding and the last one is a gap in ours, so
+ * they must never share a sentence.
+ */
+function EvidenceAnswerBody({
+  text,
+  measuredAbsence,
+}: Readonly<{ text?: string; measuredAbsence: boolean }>) {
+  if (text) {
+    return <ContentMarkdown markdown={normalizeEvidenceMarkdown(text)} density="compact" />;
+  }
+  if (measuredAbsence) {
+    return (
+      <span className="text-secondary text-sm">No AI Overview was shown for this search.</span>
+    );
+  }
+  return (
+    <span className="text-muted text-sm">No answer text was captured for this execution.</span>
   );
 }
 

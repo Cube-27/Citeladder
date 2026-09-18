@@ -44,6 +44,7 @@ from app.core.database import Base
 from app.models.constants import (
     CASCADE_ALL_DELETE_ORPHAN,
     FK_AUDITS_ID,
+    FK_PROVIDER_CONNECTIONS_ID,
     ON_DELETE_SET_NULL,
 )
 
@@ -265,7 +266,7 @@ class AuditEngineSnapshot(Base):
     # deleted connection does not break the frozen snapshot).
     connection_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("provider_connections.id", ondelete=ON_DELETE_SET_NULL),
+        ForeignKey(FK_PROVIDER_CONNECTIONS_ID, ondelete=ON_DELETE_SET_NULL),
         nullable=True,
     )
     base_url: Mapped[str] = mapped_column(String(1024), default="")
@@ -387,7 +388,7 @@ class AuditTask(Base):
     # reference and the revision it was valid at.
     provider_connection_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("provider_connections.id", ondelete=ON_DELETE_SET_NULL),
+        ForeignKey(FK_PROVIDER_CONNECTIONS_ID, ondelete=ON_DELETE_SET_NULL),
         nullable=True,
     )
     provider_credential_revision: Mapped[uuid.UUID | None] = mapped_column(
@@ -674,7 +675,7 @@ class ProviderCapacityBucket(Base):
     # SET NULL: removing a credential/account never destroys pool state.
     connection_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("provider_connections.id", ondelete=ON_DELETE_SET_NULL),
+        ForeignKey(FK_PROVIDER_CONNECTIONS_ID, ondelete=ON_DELETE_SET_NULL),
         nullable=True,
     )
     billing_account_id: Mapped[uuid.UUID | None] = mapped_column(

@@ -638,7 +638,8 @@ async def test_a_rotated_connection_mid_flight_terminates_with_a_name(
     async with session_factory() as session:
         task = await session.get(AuditTask, task_id)
         connection = await session.get(ProviderConnection, connection_id)
-        assert task is not None and connection is not None
+        assert task is not None
+        assert connection is not None
         task.provider_task_id = "provider-task-1"
         task.provider_submission_ref = "audit-ref-1"
         task.provider_connection_id = connection_id
@@ -1102,7 +1103,8 @@ async def test_a_recorded_observation_repairs_a_stranded_queue_row(
 
         task = await session.get(AuditTask, task_id)
         audit = await session.get(Audit, _audit_id)
-        assert task is not None and audit is not None
+        assert task is not None
+        assert audit is not None
         task.status = TASK_STATUS_AWAITING_PROVIDER_RESULT
         task.completed_at = None
         task.lease_owner = None
