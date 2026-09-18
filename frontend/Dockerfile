@@ -1,4 +1,4 @@
-FROM node@sha256:e961046fec20896e8904f2b4a8b4c7e5ca91826d84d8d33d83dbaa61f942069e AS dependencies
+FROM node@sha256:e26b4e7d163a29e0d05806e167db8cc0c76f02f633006c1f5c0aeea5a8415147 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 FROM dependencies AS production-dependencies
 RUN pnpm prune --prod
 
-FROM node@sha256:e961046fec20896e8904f2b4a8b4c7e5ca91826d84d8d33d83dbaa61f942069e AS builder
+FROM node@sha256:e26b4e7d163a29e0d05806e167db8cc0c76f02f633006c1f5c0aeea5a8415147 AS builder
 
 ARG BUILD_REVISION=unknown
 ARG NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS
@@ -34,7 +34,7 @@ COPY frontend/public ./public
 COPY frontend/postcss.config.mjs frontend/tsconfig.json ./
 RUN pnpm build
 
-FROM node@sha256:e961046fec20896e8904f2b4a8b4c7e5ca91826d84d8d33d83dbaa61f942069e AS runtime
+FROM node@sha256:e26b4e7d163a29e0d05806e167db8cc0c76f02f633006c1f5c0aeea5a8415147 AS runtime
 
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="citeladder-marketing" \
