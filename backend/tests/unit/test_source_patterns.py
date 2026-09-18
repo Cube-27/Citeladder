@@ -25,6 +25,7 @@ from app.core.config.source_patterns import (
     SOURCE_ORIGIN_GOOGLE_OWNED,
     SOURCE_TAXONOMY_VERSION,
     classify_source_origin,
+    is_google_search_surface,
 )
 
 
@@ -132,6 +133,33 @@ def test_a_search_surface_is_never_an_independent_opportunity() -> None:
     video = summarize_source_pattern([_citation("youtube.com")])
     assert video["independent_domain_count"] == 1
     assert PATTERN_VIDEO_EVIDENCE in video["observed_patterns"]
+
+
+def test_a_google_lookalike_domain_is_not_the_search_engine() -> None:
+    """`google.evil.com` must not inherit Google's identity.
+
+    `classify_source_domain` receives whatever `normalize_domain` produced,
+    which only lowercases and strips `www.` -- it is NOT a registrable
+    domain. A `google.` prefix test therefore handed an unrelated host the
+    search engine's classification, and with it the exemption from ever
+    being pursued as a publisher. Google has to be the registrable label.
+    """
+    assert not is_google_search_surface("google.evil.com")
+    assert not is_google_search_surface("notgoogle.com")
+    assert not is_google_search_surface("google")
+    assert classify_source_origin("google.evil.com") == SOURCE_ORIGIN_EXTERNAL
+    assert (
+        classify_source_domain(
+            "google.evil.com", is_owned=False, matched_competitor=None
+        )
+        == "other_third_party"
+    )
+
+    # The real ones still are.
+    assert is_google_search_surface("google.com")
+    assert is_google_search_surface("google.de")
+    assert is_google_search_surface("google.co.uk")
+    assert is_google_search_surface("google.com.au")
 
 
 def test_provenance_is_independent_of_the_source_class() -> None:

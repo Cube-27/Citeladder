@@ -27,6 +27,7 @@ from app.core.config.source_patterns import (
     SOURCE_CLASS_BRAND_OWNED,
     SOURCE_CLASS_COMPETITOR_OWNED,
     SOURCE_CLASS_OTHER_THIRD_PARTY,
+    SOURCE_CLASS_SEARCH_SURFACE,
     SOURCE_MIX_PROJECTION_VERSION,
     SOURCE_TAXONOMY_VERSION,
 )
@@ -44,12 +45,26 @@ def observational_path(source_class: str) -> str:
     return _EARNED
 
 
+# Classes with no action behind them. An earned action means "go and get
+# cited here", which needs somebody to ask: `other_third_party` is a domain
+# the taxonomy could not identify, and `search_surface` is a page the search
+# engine generated and nobody authored.
+#
+# Named as a set rather than left to the `!= other_third_party` fallback this
+# replaces. That test was fail-OPEN: every class added to the taxonomy became
+# an earned opportunity by default, which is exactly how `search_surface`
+# turned Google Shopping cards into pitch targets the moment it existed.
+_NO_ACTION_CLASSES = frozenset(
+    {SOURCE_CLASS_OTHER_THIRD_PARTY, SOURCE_CLASS_SEARCH_SURFACE}
+)
+
+
 def action_path(source_class: str) -> str | None:
     if source_class in {SOURCE_CLASS_BRAND_OWNED, SOURCE_CLASS_COMPETITOR_OWNED}:
         return _OWNED
-    if source_class != SOURCE_CLASS_OTHER_THIRD_PARTY:
-        return _EARNED
-    return None
+    if source_class in _NO_ACTION_CLASSES:
+        return None
+    return _EARNED
 
 
 def _empty(state: str, eligible: int, limitations: list[str]) -> dict[str, Any]:

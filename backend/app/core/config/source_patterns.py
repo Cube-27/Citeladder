@@ -186,15 +186,35 @@ PATTERN_TO_ACTION: Final[tuple[tuple[str, str], ...]] = (
 )
 
 
+# The second-level labels Google's country domains sit under
+# (``google.co.uk``, ``google.com.au``). Used to tell a real Google ccTLD
+# from a lookalike.
+_PUBLIC_SECOND_LEVEL_LABELS: Final[frozenset[str]] = frozenset(
+    {"co", "com", "org", "net", "ac", "gov", "edu"}
+)
+
+
 def is_google_search_surface(domain: str) -> bool:
     """True when the domain is Google's own generated result surface.
 
-    Matched by rule rather than enumerated: an overview served into one
-    market routinely cites ``google.<another ccTLD>``, and a fixed list is
-    wrong for every market outside it. ``domain`` is a registrable domain, so
-    ``google.`` as its first label identifies the search property anywhere.
+    Matched by rule rather than enumerated, because an overview served into
+    one market routinely cites ``google.<another ccTLD>`` and a fixed list is
+    wrong for every market outside it.
+
+    The rule is NOT a ``google.`` prefix test. ``domain`` is not always a
+    registrable domain -- ``normalize_domain`` only lowercases and strips
+    ``www.`` -- so a prefix test hands ``google.evil.com`` the search
+    engine's identity, and with it the exemption from being pursued as a
+    publisher. What has to be true is that ``google`` is the registrable
+    label: the ONLY thing left after it is a public suffix.
     """
-    return domain == "google.com" or domain.startswith("google.")
+    labels = domain.split(".")
+    if len(labels) < 2 or labels[0] != "google":
+        return False
+    suffix = labels[1:]
+    if len(suffix) == 1:
+        return True
+    return len(suffix) == 2 and suffix[0] in _PUBLIC_SECOND_LEVEL_LABELS
 
 
 def classify_source_origin(domain: str) -> str:
