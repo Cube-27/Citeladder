@@ -224,6 +224,12 @@ persist_candidate() {
     -e "s|^BACKEND_IMAGE=.*|BACKEND_IMAGE='$candidate_backend_image'|" \
     -e "s|^SOURCE_COMMIT=.*|SOURCE_COMMIT='$candidate_source_commit'|" \
     runtime.env
+
+  # runtime.env was sourced/exported earlier, and shell environment takes
+  # precedence over --env-file in Docker Compose. Keep this process aligned
+  # with the values just persisted before starting the application.
+  export BACKEND_IMAGE="$candidate_backend_image"
+  export SOURCE_COMMIT="$candidate_source_commit"
 }
 
 reset_started=false
