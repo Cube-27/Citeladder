@@ -18,10 +18,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && pip install "uv==${UV_VERSION}"
+    && pip install --only-binary :all: "uv==${UV_VERSION}"
 
 COPY backend/pyproject.toml backend/uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+# `--no-build` holds the install to published wheels, so no dependency's
+# setup.py runs during the image build. Every runtime dependency ships one
+# today; if that ever stops the build fails here instead of quietly
+# executing a setup script.
+RUN uv sync --frozen --no-dev --no-install-project --no-build
 
 FROM python:3.12.14-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS runtime
 
