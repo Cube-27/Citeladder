@@ -1,8 +1,7 @@
 'use client';
 
-import type { ComponentPropsWithoutRef } from 'react';
+import { useEffect, useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import { Check, Copy } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from './button';
 import { useToast } from './toast';

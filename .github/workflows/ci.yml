@@ -257,8 +257,8 @@ jobs:
         working-directory: backend
         run: |
           uv export --frozen --no-emit-project --format requirements.txt -o requirements-audit.txt
-          uvx pip-audit@2.10.1 --strict -r requirements-audit.txt
+          uvx --no-build pip-audit@2.10.1 --strict -r requirements-audit.txt
       - name: Secrets scan (against committed baseline)
         run: |
-          uvx detect-secrets@1.5.0 scan --baseline .secrets.baseline \
+          uvx --no-build detect-secrets@1.5.0 scan --baseline .secrets.baseline \
             --exclude-files 'uv\.lock|pnpm-lock\.yaml|\.secrets\.baseline'

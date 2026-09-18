@@ -2,7 +2,8 @@
 # the CI gate, and the `requires-python` floor are one version: a Dependabot
 # bump had moved this to 3.14 while every gate still validated 3.12, so the
 # container shipped an interpreter nothing tested. Bump all four together.
-FROM python:3.12.14-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS dependencies
+# python:3.12.14-slim-bookworm
+FROM python@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS dependencies
 
 ARG UV_VERSION=0.11.28
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -27,7 +28,8 @@ COPY backend/pyproject.toml backend/uv.lock ./
 # executing a setup script.
 RUN uv sync --frozen --no-dev --no-install-project --no-build
 
-FROM python:3.12.14-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS runtime
+# python:3.12.14-slim-bookworm
+FROM python@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134 AS runtime
 
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="citeladder-backend" \
