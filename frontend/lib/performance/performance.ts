@@ -239,6 +239,17 @@ export function metricDifference(
   return selected - comparison;
 }
 
+/**
+ * A formatted metric, or `null` where nothing was measured.
+ *
+ * Same split as the visibility formatters: the words belong on the metric
+ * cards above this table, the mark belongs in its cells. See `measured` in
+ * `lib/visibility/dashboard.ts`.
+ */
+export function measured(value: string): string | null {
+  return value === NOT_MEASURED ? null : value;
+}
+
 /** A difference rendered with an explicit sign (`+2`, `−3`, `0`). */
 export function formatDifference(key: PerformanceMetricKey, difference: number | null): string {
   if (difference === null) return NOT_MEASURED;

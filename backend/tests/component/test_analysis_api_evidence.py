@@ -180,6 +180,56 @@ async def test_source_counts_and_empty_answers_use_complete_selection(session_fa
         assert foreign.total == 0
 
 
+async def test_url_rows_carry_last_seen_including_the_projects_own_pages(
+    session_factory,
+) -> None:
+    """Last seen comes from the citation evidence, not the page inventory.
+
+    `sync_cited_pages` admits only `is_owned == False`, so a page on the
+    project's own domain never gets a `SourcePage` row -- and reading the date
+    from there reported "Not measured" for every owned URL in the table while
+    the URL's own detail page, which derives it from the same evidence this
+    projection now uses, showed the date correctly.
+    """
+    observed = datetime(2026, 2, 1, tzinfo=UTC)
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+        await _seed_evidence_execution(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            completed_at=observed,
+            citations=[
+                ("https://acme.com/pricing", "acme.com", "owned"),
+                ("https://example.com/a", "example.com", "third_party"),
+            ],
+        )
+        await session.commit()
+        urls = await get_visibility_sources(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            dimension="url",
+            limit=100,
+        )
+    rows = {row.key: row for row in urls.items}
+    assert set(rows) == {"https://acme.com/pricing", "https://example.com/a"}
+    # The owned page is the regression: it has no page record at all.
+    assert rows["https://acme.com/pricing"].last_cited_at == observed
+    assert rows["https://example.com/a"].last_cited_at == observed
+
+    # A domain row is a publisher, and "last seen" is asked of a page.
+    async with session_factory() as session:
+        domains = await get_visibility_sources(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            limit=100,
+        )
+    assert domains.items
+    assert all(row.last_cited_at is None for row in domains.items)
+
+
 @pytest.mark.asyncio
 async def test_evidence_artifact_first_then_task_fallback(
     session_factory: async_sessionmaker[AsyncSession],

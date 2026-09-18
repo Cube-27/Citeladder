@@ -16,7 +16,6 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -221,7 +220,6 @@ class SourcePageFacts:
     title: str
     page_format: str
     page_format_method: str | None
-    last_cited_at: datetime | None
 
 
 async def page_facts_for(
@@ -245,7 +243,6 @@ async def page_facts_for(
                 SourcePage.url_hash,
                 SourcePage.page_format,
                 SourcePage.page_format_method,
-                SourcePage.last_cited_at,
                 SourcePageSnapshot.page_facts,
             )
             .outerjoin(
@@ -264,7 +261,6 @@ async def page_facts_for(
             title=str((facts or {}).get("title") or ""),
             page_format=page_format,
             page_format_method=page_format_method,
-            last_cited_at=last_cited_at,
         )
-        for url_hash, page_format, page_format_method, last_cited_at, facts in rows
+        for url_hash, page_format, page_format_method, facts in rows
     }

@@ -212,6 +212,21 @@ export function formatPositionExact(position: number | null): string {
 export const PLACEHOLDER = availabilityLabel('not_measured');
 
 /**
+ * A formatted value, or `null` where the formatter had nothing to format.
+ *
+ * The formatters above answer in WORDS because most of their callers are
+ * metric cards, prose and chart descriptions, where "Not measured" is the
+ * right thing to say. A table is the one surface where it is not: a column
+ * repeats the phrase once per row to make a point it only needs to make once,
+ * at the top. Cells pass the string through here and render `MissingValue`
+ * on null, which keeps the distinction from a measured zero without the
+ * twenty-fold repetition.
+ */
+export function measured(value: string): string | null {
+  return value === PLACEHOLDER ? null : value;
+}
+
+/**
  * A prompt option for the Query Fanout evidence prompt selector. This is
  * EVIDENCE filtering (restrict by `AuditPromptSnapshot.prompt_id`), NOT the
  * Overview prompt-type taxonomy affordance — it never claims prompt-type

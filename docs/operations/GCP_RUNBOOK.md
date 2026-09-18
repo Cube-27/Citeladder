@@ -78,7 +78,17 @@ Add these environment secrets:
 - `CONTENT_API_KEY`: required for the configured Content generation provider;
 - `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE`: optional Logo.dev publishable token. It
   is injected only while building the frontend and becomes public client
-  configuration; do not use a Logo.dev secret key here.
+  configuration; do not use a Logo.dev secret key here. It reaches the deploy
+  as the repository *variable* `LOGO_DEV_PUBLISHABLE`, which resolves to an
+  empty string when unset, and without it every brand mark in the app falls
+  back to initials. Two consequences worth knowing:
+  - The value is baked into the image, not read at runtime. The frontend build
+    now logs `Building with empty public values: ...` when one is missing, so
+    check the build step's log before chasing the app.
+  - `deploy-vite-app` reuses any image already tagged with the current
+    `GITHUB_SHA`. Setting the variable and re-running the workflow **on the
+    same commit** therefore redeploys the old token-less image; push a new
+    commit, or delete the existing tag, to force the rebuild.
 - `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`: required. One Google
   OAuth client serves both sign-in and the Search Console / Analytics connect.
 - `BING_OAUTH_CLIENT_ID` / `BING_OAUTH_CLIENT_SECRET`: optional. They are issued

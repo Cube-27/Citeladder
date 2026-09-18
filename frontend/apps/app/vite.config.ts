@@ -12,15 +12,39 @@ const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 // every defineConfig overload and dies with TS2321 "Excessive stack depth".
 export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
   const environment = loadEnv(mode, frontendRoot, '');
-  const publicValue = (name: string) =>
-    JSON.stringify(process.env[name] ?? environment[name] ?? '');
+  // Every public value is BAKED into the bundle here, so an empty one is a
+  // permanent property of the image -- and it fails silently. A missing
+  // Logo.dev token simply made `logoDevUrl` answer null, and every brand mark
+  // in the deployed app quietly degraded to initials with nothing in the
+  // console to say why. The names are collected and reported once, so the
+  // build log shows what this image will be missing.
+  const emptyPublicValues: string[] = [];
+  const publicValue = (name: string) => {
+    const value = process.env[name] ?? environment[name] ?? '';
+    if (!value) emptyPublicValues.push(name);
+    return JSON.stringify(value);
+  };
   const proxy =
     command === 'serve' && !isPreview ? createServerProxy(environment.BACKEND_ORIGIN) : undefined;
 
   return {
     root: appRoot,
     publicDir: fileURLToPath(new URL('../../public', import.meta.url)),
-    plugins: [react()],
+    plugins: [
+      react(),
+      {
+        name: 'citeladder:report-empty-public-values',
+        // `configResolved` rather than the factory body: `define` above has
+        // run by then, so the list is complete.
+        configResolved() {
+          if (command !== 'build' || !emptyPublicValues.length) return;
+          console.warn(
+            `[citeladder] Building with empty public values: ${emptyPublicValues.join(', ')}. ` +
+              'They are baked in at build time, so this image will behave as if they are unset.',
+          );
+        },
+      },
+    ],
     define: {
       'process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS': publicValue(
         'NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS',

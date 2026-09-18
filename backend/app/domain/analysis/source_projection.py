@@ -18,7 +18,7 @@ from app.domain.analysis.schemas import SourceRow, SourcesResponse
 from app.domain.analysis.source_mentions import attach_row_mentions
 from app.domain.analysis.source_page_links import attach_page_links
 from app.models.analysis import Citation, ResponseAnalysis
-from app.models.audit import AuditPromptSnapshot
+from app.models.audit import Audit, AuditPromptSnapshot
 from app.models.source_pages import SourcePage
 
 
@@ -217,6 +217,11 @@ async def _scope(
         statement.with_only_columns(
             ResponseAnalysis.id.label("analysis_id"),
             prompt_key.label("prompt_key"),
+            # When the run this response belongs to was observed. Carried here
+            # rather than looked up per row because every "last seen" below is
+            # a max over exactly these responses, and the URL detail view
+            # already derives its own `last_seen` from this same expression.
+            func.coalesce(Audit.completed_at, Audit.created_at).label("observed_at"),
         )
         .order_by(None)
         .subquery()
@@ -242,6 +247,13 @@ def _grouped_sources(scope, *, workspace_id, project_id, domain, source_class, p
             func.min(Citation.url_hash).label("url_hash"),
             func.count(func.distinct(Citation.analysis_id)).label("responses"),
             func.count(func.distinct(scope.c.prompt_key)).label("prompts"),
+            # When this source was last seen, from the evidence that produced
+            # the row. NOT from `SourcePage.last_cited_at`: that table is the
+            # inspection schedule and `sync_cited_pages` admits only
+            # `is_owned == False`, so every page on the project's OWN domain
+            # had no record and reported "Not measured" for a date the
+            # citation was carrying all along.
+            func.max(scope.c.observed_at).label("last_cited_at"),
             func.count(Citation.id).label("annotations"),
             func.count(func.distinct(Citation.url)).label("urls"),
             func.array_agg(func.distinct(Citation.classification)).label("ownership"),
@@ -288,6 +300,9 @@ def _source_row(row, denominator, prompts, total_citations, *, pages: bool = Fal
     return SourceRow(
         key=row["key"],
         url_hash=row["url_hash"] if pages else None,
+        # A domain row is a publisher, not a page; "last seen" is asked of a
+        # page, exactly as `mentions` and `brands` are.
+        last_cited_at=row["last_cited_at"] if pages else None,
         responses=responses,
         prompts=row["prompts"],
         annotations=annotations,

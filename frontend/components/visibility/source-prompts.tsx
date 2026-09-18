@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { MissingValue } from '@/components/ui/unavailable-value';
 import { TruncationNotice } from '@/components/visibility/evidence-states';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
@@ -172,7 +172,7 @@ function PromptRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
         <SourceChips item={item} />
       </TableCell>
       <TableCell numeric className="hidden sm:table-cell">
-        {sinceLabel(item.completed_at) ?? <UnavailableValue state="not_measured" />}
+        {sinceLabel(item.completed_at) ?? <MissingValue />}
       </TableCell>
       <TableCell>
         {/* The row summarises the answer; this reaches the answer itself. It
@@ -191,7 +191,7 @@ function PromptRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
 /** The brands this answer named, as marks. */
 function MentionChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   const named = [...new Map(item.mentions.map((one) => [one.name, one])).values()];
-  if (!named.length) return <UnavailableValue state="not_measured" />;
+  if (!named.length) return <MissingValue />;
   return (
     <ChipRow overflow={named.length - MAX_CHIPS}>
       {named.slice(0, MAX_CHIPS).map((mention) => (
@@ -210,7 +210,7 @@ function SourceChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
   const hosts = [
     ...new Set(item.citations.map((citation) => hostOf(citation.url)).filter(Boolean)),
   ] as string[];
-  if (!hosts.length) return <UnavailableValue state="not_measured" />;
+  if (!hosts.length) return <MissingValue />;
   return (
     <ChipRow overflow={hosts.length - MAX_CHIPS}>
       {hosts.slice(0, MAX_CHIPS).map((host) => (

@@ -74,7 +74,12 @@ async def attach_page_links(
                 row.inspection_state = action.inspection_state
                 row.opportunity_id = action.opportunity_id
             if fact is not None:
+                # `last_cited_at` is deliberately NOT set here. It is a
+                # measurement, and the source projection derives it from the
+                # citation evidence; this table is the inspection schedule and
+                # holds no record at all for a page on the project's own
+                # domain. Reading it from here reported "Not measured" for
+                # every owned URL.
                 row.title = fact.title or None
                 row.page_format = fact.page_format
                 row.page_format_method = fact.page_format_method
-                row.last_cited_at = fact.last_cited_at
