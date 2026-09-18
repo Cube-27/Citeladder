@@ -123,6 +123,7 @@ from app.models.provider import (
     ProviderConnectionTest,
     ProviderRoute,
 )
+from app.models.search_surfaces import AioEntityLink, AioObservation
 from app.models.site_changes import SiteChangeObservation, SiteChangeSnapshot
 from app.models.site_health.acquisition import SiteFetchArtifact, SiteFetchAttempt
 from app.models.site_health.analysis import (
@@ -167,6 +168,8 @@ __all__ = [
     "AgentTaskRun",
     "AgentToolAttempt",
     "AiReferralsSnapshot",
+    "AioEntityLink",
+    "AioObservation",
     "AnalyticsTask",
     "Audit",
     "AuditEngineSnapshot",

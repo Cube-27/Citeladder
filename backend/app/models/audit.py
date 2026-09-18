@@ -358,6 +358,49 @@ class AuditTask(Base):
     attempt_count: Mapped[int] = mapped_column(Integer, default=0)
     max_attempts: Mapped[int] = mapped_column(Integer, default=5)
 
+    # --- Outstanding provider task (search surfaces only) -----------------
+    # Empty on every LLM row. A search surface is SUBMITTED and later
+    # observed, so between those two moments the task's real state lives at
+    # the provider and these columns are the only way back to it.
+    #
+    # ``provider_submission_ref`` is CiteLadder's own correlation identifier
+    # and is written and COMMITTED BEFORE the POST. That ordering is the whole
+    # safety property: a task carrying a submission ref has already attempted
+    # a paid submission, so a worker that died between the POST and persisting
+    # the provider's task id can still be recognised — and reconciled — rather
+    # than resubmitted and paid for twice. It is sent as the provider ``tag``
+    # and verified on the way back; nothing binds a provider task without it.
+    provider_submission_ref: Mapped[str] = mapped_column(
+        String(255), default="", server_default=""
+    )
+    provider_task_id: Mapped[str] = mapped_column(
+        String(64), default="", server_default=""
+    )
+    provider_task_submitted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # The account that submitted, bound for the lifetime of the task.
+    # DataForSEO task ids are scoped to the client account that created them,
+    # so re-resolving credentials at poll time could select a different
+    # account after a settings change and produce a "task not found" that
+    # looks like a provider fault. No secret is persisted — only the
+    # reference and the revision it was valid at.
+    provider_connection_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("provider_connections.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    provider_credential_revision: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    # Polls spent on this task. Bounded by config; exceeding the ceiling is a
+    # terminal failure with its own error code, NEVER a silent "no AI
+    # Overview" — CiteLadder giving up is not the same as Google showing
+    # nothing, and only one of those is a measurement.
+    provider_poll_count: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0"
+    )
+
     # --- Execution result (single-writer = claiming worker, invariant 3) --
     result_artifact_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
