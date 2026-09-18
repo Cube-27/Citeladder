@@ -13,5 +13,5 @@ object_name="${timestamp}-$(basename "$tmp")"
 trap 'rm -f "$tmp"' EXIT
 docker compose --env-file runtime.env -f compose.gcp.yml exec -T db \
   pg_dump -U citeladder -d citeladder | gzip -9 > "$tmp"
-test -s "$tmp"
+[[ -s "$tmp" ]]
 gcloud storage cp "$tmp" "gs://${BACKUP_BUCKET}/${mode}/${object_name}" --quiet

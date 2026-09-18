@@ -32,7 +32,7 @@ expected_registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
 [[ "$VITE_APP_IMAGE" == "$expected_registry/vite-app@sha256:"* ]]
 had_previous=false
 running_services=""
-if test -f /opt/citeladder/runtime.env && test -f /opt/citeladder/compose.gcp.yml; then
+if [[ -f /opt/citeladder/runtime.env ]] && [[ -f /opt/citeladder/compose.gcp.yml ]]; then
   running_services="$(docker compose --env-file /opt/citeladder/runtime.env \
     -f /opt/citeladder/compose.gcp.yml ps --status running --quiet)"
 fi
@@ -58,8 +58,8 @@ install -m 0644 /tmp/citeladder-deploy/frontend-routes.caddy /opt/citeladder/fro
 install -m 0755 /tmp/citeladder-deploy/init-postgres-tls.sh /opt/citeladder/init-postgres-tls.sh
 install -m 0750 /tmp/citeladder-deploy/backup.sh /opt/citeladder/backup.sh
 
-test -s /tmp/citeladder-deploy/cf-v4
-test -s /tmp/citeladder-deploy/cf-v6
+[[ -s /tmp/citeladder-deploy/cf-v4 ]]
+[[ -s /tmp/citeladder-deploy/cf-v6 ]]
 if grep -Fxq '0.0.0.0/0' /tmp/citeladder-deploy/cf-v4; then exit 1; fi
 if grep -Fxq '::/0' /tmp/citeladder-deploy/cf-v6; then exit 1; fi
 cloudflare_ipv4_space="$(paste -sd' ' /tmp/citeladder-deploy/cf-v4)"
@@ -92,12 +92,12 @@ bing_client_id="$(secret citeladder-bing-oauth-client-id 2>/dev/null || true)"
 bing_client_secret="$(secret citeladder-bing-oauth-client-secret 2>/dev/null || true)"
 
 for value in "$db_password" "$jwt_secret" "$encryption_key" "$referral_salt"; do
-  test "${#value}" -ge 32
+  [[ "${#value}" -ge 32 ]]
 done
-test "${#demo_password}" -ge 8
-test "${#demo_password}" -le 128
+[[ "${#demo_password}" -ge 8 ]]
+[[ "${#demo_password}" -le 128 ]]
 for value in "$google_client_id" "$google_client_secret"; do
-  test -n "$value"
+  [[ -n "$value" ]]
 done
 
 write_env() {
@@ -129,13 +129,13 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env SOURCE_COMMIT "$SOURCE_COMMIT"
   write_env TRUSTED_PROXY_CIDRS "$trusted_proxy_cidrs"
   # Only demo mode reads an expiry; the host itself no longer self-terminates.
-  test -z "${DEMO_EXPIRES_AT:-}" || write_env DEMO_EXPIRES_AT "$DEMO_EXPIRES_AT"
+  [[ -z "${DEMO_EXPIRES_AT:-}" ]] || write_env DEMO_EXPIRES_AT "$DEMO_EXPIRES_AT"
   write_env DEMO_MODE "$DEMO_MODE"
   write_env DEV_LOGIN_EMAIL "${DEV_LOGIN_EMAIL:-dev@citeladder.com}"
   write_env DEV_LOGIN_COUNTER_ALLOWANCE "${DEV_LOGIN_COUNTER_ALLOWANCE:-200}"
   # Demo mode admits one MCP account and the backend refuses to start if it is
   # not the provisioned one; a public deployment admits every account.
-  if test "$DEMO_MODE" = "true"; then
+  if [[ "$DEMO_MODE" = "true" ]]; then
     write_env MCP_ALLOWED_ACCOUNT_EMAIL "${DEV_LOGIN_EMAIL:-dev@citeladder.com}"
   else
     write_env MCP_ALLOWED_ACCOUNT_EMAIL ""
@@ -146,15 +146,15 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env ENCRYPTION_KEY "$encryption_key"
   write_env REFERRAL_HASH_SALT "$referral_salt"
   write_env DEV_LOGIN_PASSWORD "$demo_password"
-  test -z "$content_key" || write_env CONTENT_API_KEY "$content_key"
+  [[ -z "$content_key" ]] || write_env CONTENT_API_KEY "$content_key"
   write_env CONTENT_PROVIDER "$CONTENT_PROVIDER"
   write_env CONTENT_PROVIDER_ENDPOINT "$CONTENT_PROVIDER_ENDPOINT"
   write_env CONTENT_MODEL "$CONTENT_MODEL"
-  test -z "$agent_key" || write_env DEFAULT_AGENT_API_KEY "$agent_key"
+  [[ -z "$agent_key" ]] || write_env DEFAULT_AGENT_API_KEY "$agent_key"
   write_env DEFAULT_AGENT_BASE_URL "$DEFAULT_AGENT_BASE_URL"
   write_env DEFAULT_AGENT_MODEL "$DEFAULT_AGENT_MODEL"
-  test -z "$keenable_key" || write_env KEENABLE_API_KEY "$keenable_key"
-  test -z "$tavily_key" || write_env TAVILY_API_KEY "$tavily_key"
+  [[ -z "$keenable_key" ]] || write_env KEENABLE_API_KEY "$keenable_key"
+  [[ -z "$tavily_key" ]] || write_env TAVILY_API_KEY "$tavily_key"
   write_env INTEGRATION_GOOGLE_CLIENT_ID "$google_client_id"
   write_env INTEGRATION_GOOGLE_CLIENT_SECRET "$google_client_secret"
   write_env INTEGRATION_MICROSOFT_CLIENT_ID "$bing_client_id"
@@ -260,12 +260,12 @@ for script in document.scripts:
 PY
 for service in "${stopped_services[@]}" db; do
   container_id="$(docker compose --env-file runtime.env -f compose.gcp.yml ps -q "$service")"
-  test -n "$container_id"
-  test "$(docker inspect --format '{{.State.Running}}' "$container_id")" = true
-  test "$(docker inspect --format '{{.RestartCount}}' "$container_id")" = 0
+  [[ -n "$container_id" ]]
+  [[ "$(docker inspect --format '{{.State.Running}}' "$container_id")" = true ]]
+  [[ "$(docker inspect --format '{{.RestartCount}}' "$container_id")" = 0 ]]
 done
 migrate_id="$(docker compose --env-file runtime.env -f compose.gcp.yml ps -aq migrate)"
-test -n "$migrate_id"
-test "$(docker inspect --format '{{.State.ExitCode}}' "$migrate_id")" = 0
+[[ -n "$migrate_id" ]]
+[[ "$(docker inspect --format '{{.State.ExitCode}}' "$migrate_id")" = 0 ]]
 rm -f runtime.env.previous
 trap - ERR
