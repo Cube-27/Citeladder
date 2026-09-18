@@ -229,11 +229,10 @@ async def test_settlement_requires_captured_invoice_and_deduplicates_receipt(
         assert result.status == "activated"
     assert await db_session.scalar(select(func.count(BillingPayment.id))) == 1
     receipt = await db_session.scalar(select(BillingPayment))
-    assert (
-        receipt.subscription_id is not None
-        and receipt.pending_activation_id == pending_id
-    )
-    assert receipt.period_start == now and receipt.provider_mode == "test"
+    assert receipt.subscription_id is not None
+    assert receipt.pending_activation_id == pending_id
+    assert receipt.period_start == now
+    assert receipt.provider_mode == "test"
     assert (
         await db_session.scalar(
             select(func.count(AccountGrant.id)).where(
@@ -259,7 +258,8 @@ async def test_settlement_requires_captured_invoice_and_deduplicates_receipt(
         updated_at=int(now.timestamp()) + 1,
         cancel_at_period_end=False,
     )
-    assert subscription.is_current and subscription.current_period_end == end
+    assert subscription.is_current
+    assert subscription.current_period_end == end
     assert await db_session.scalar(select(func.count(AccountGrant.id))) == count_before
 
     class AfterPaidPeriod(datetime):
@@ -277,7 +277,8 @@ async def test_settlement_requires_captured_invoice_and_deduplicates_receipt(
         updated_at=int(now.timestamp()) + 2,
         cancel_at_period_end=False,
     )
-    assert not subscription.is_current and subscription.status == "cancelled"
+    assert not subscription.is_current
+    assert subscription.status == "cancelled"
     assert await db_session.scalar(select(func.count(AccountGrant.id))) == count_before
 
 
@@ -316,7 +317,8 @@ async def test_ambiguous_creation_recovers_checkout_without_granting_access(
         Provider(),
         now=datetime.now(UTC),
     )
-    assert result.claimed == 1 and result.still_pending == 1
+    assert result.claimed == 1
+    assert result.still_pending == 1
     db_session.expire_all()
     recovered = await db_session.get(PendingActivation, pending_id)
     assert recovered.external_reference == "sub_recovered"

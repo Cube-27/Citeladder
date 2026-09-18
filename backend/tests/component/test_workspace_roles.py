@@ -296,7 +296,8 @@ async def test_members_spend_the_workspaces_budget_not_their_own(
 
     host_account = await billing_account_for(db_session, owned_workspace)
     guest_account = await billing_account_for(db_session, guest_workspace)
-    assert host_account is not None and guest_account is not None
+    assert host_account is not None
+    assert guest_account is not None
     assert host_account.id != guest_account.id
 
     host_usage = await client.get(

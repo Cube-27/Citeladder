@@ -299,7 +299,8 @@ async def test_lock_order_is_canonical_and_transport_bucket_shared(
         acquire_provider_capacity(session_factory, request=byok),
         acquire_provider_capacity(session_factory, request=funded),
     )
-    assert byok_decision.acquired and funded_decision.acquired
+    assert byok_decision.acquired
+    assert funded_decision.acquired
 
     async with session_factory() as session:
         transport_buckets = (
@@ -476,7 +477,8 @@ async def test_byok_and_funded_pools_are_separate(
     funded = await acquire_provider_capacity(
         session_factory, request=_funded(seed.task_ids[1], seed.account_ids[0])
     )
-    assert byok.acquired and funded.acquired
+    assert byok.acquired
+    assert funded.acquired
 
     async with session_factory() as session:
         buckets = (await session.scalars(select(ProviderCapacityBucket))).all()

@@ -63,7 +63,8 @@ def test_host_labels_strip_scheme_path_port_and_split_dots() -> None:
 def test_vocabulary_collects_identity_tokens_and_phrases() -> None:
     vocabulary = _vocabulary()
     assert "acme" in vocabulary.tokens
-    assert "running" in vocabulary.tokens and "shoes" in vocabulary.tokens
+    assert "running" in vocabulary.tokens
+    assert "shoes" in vocabulary.tokens
     assert "footwear" in vocabulary.tokens
     # Multi-word identity strings become exact phrases.
     assert "acme corp" in vocabulary.phrases

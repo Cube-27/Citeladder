@@ -244,7 +244,8 @@ async def test_partial_coverage_states_the_limit_and_withholds_absence(
     assert body["coverage_state"] == COVERAGE_STATE_PARTIAL
     assert body["page_kinds"][0]["orphan_count"] is None
     assert body["internal_linking"]["orphan_page_count"] is None
-    assert body["limitations"] and "page budget" in body["limitations"][0]
+    assert body["limitations"]
+    assert "page budget" in body["limitations"][0]
 
 
 async def test_architecture_is_unavailable_without_a_persisted_model(

@@ -75,7 +75,8 @@ async def test_failed_crawl_surfaces_failure_summary_and_root_errors(
     )
     assert listing.status_code == 200
     listed = [r for r in listing.json()["items"] if r["id"] == str(scn.crawl_id)]
-    assert listed and listed[0]["failure_summary"] is None
+    assert listed
+    assert listed[0]["failure_summary"] is None
 
     # Pages: no page rows exist for a root failure, but the failed root calls
     # ride alongside as root_errors (SH-4) in call order.

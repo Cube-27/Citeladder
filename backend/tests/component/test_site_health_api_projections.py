@@ -366,7 +366,8 @@ async def test_completed_pages_filter_precedes_keyset_pagination(
         scn = await _seed_scenario(session, email="completed-pages@example.com")
         crawl = await session.get(SiteCrawl, scn.crawl_id)
         completed_b = await session.get(SiteUrl, scn.issue_url_id)
-        assert crawl is not None and completed_b is not None
+        assert crawl is not None
+        assert completed_b is not None
         session.add(
             MonitoredSiteUrl(
                 workspace_id=scn.workspace_id,

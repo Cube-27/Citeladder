@@ -139,7 +139,8 @@ async def test_append_repricing_inserts_once_by_composite_identity(
         await session.commit()
         assert await _projection_count(session, artifact_id) == 1
 
-    assert first is not None and replay is not None
+    assert first is not None
+    assert replay is not None
     assert replay.id == first.id
     assert first.audit_id == audit_id
     assert first.task_id == task_id
@@ -190,7 +191,8 @@ async def test_two_pricing_versions_coexist_for_one_artifact(
         await session.commit()
         assert await _projection_count(session, artifact_id) == 2
 
-    assert v1 is not None and v2 is not None
+    assert v1 is not None
+    assert v2 is not None
     assert v1.id != v2.id
     # The new row prices every applicable line under the verified card.
     assert v2.projection_status == PROJECTION_STATUS_COMPLETE

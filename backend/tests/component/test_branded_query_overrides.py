@@ -46,7 +46,8 @@ async def test_latest_append_only_override_wins_and_stays_workspace_scoped(
         project_id=project.id,
         query="cube pricing",
     )
-    assert automatic is not None and automatic.classification == "ambiguous"
+    assert automatic is not None
+    assert automatic.classification == "ambiguous"
 
     first = await append_override(
         db_session,

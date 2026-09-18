@@ -306,7 +306,8 @@ def test_pack_dimension_key_single_bare_multi_joined_in_order() -> None:
 
 def test_allow_list_covers_provider_api_hosts_and_is_host_only() -> None:
     for host in INTEGRATION_APPROVED_ENDPOINT_HOSTS:
-        assert "://" not in host and "/" not in host
+        assert "://" not in host
+        assert "/" not in host
     assert urlsplit(GSC_API_BASE_URL).hostname in INTEGRATION_APPROVED_ENDPOINT_HOSTS
     assert urlsplit(GA4_API_BASE_URL).hostname in INTEGRATION_APPROVED_ENDPOINT_HOSTS
     assert urlsplit(BING_API_BASE_URL).hostname in INTEGRATION_APPROVED_ENDPOINT_HOSTS

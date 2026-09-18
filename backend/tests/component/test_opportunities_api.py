@@ -497,7 +497,8 @@ async def test_export_csv_and_markdown(
     assert csv_resp.status_code == 200
     assert csv_resp.headers["content-type"].startswith("text/csv")
     disposition = csv_resp.headers["content-disposition"]
-    assert "attachment" in disposition and "opportunities-" in disposition
+    assert "attachment" in disposition
+    assert "opportunities-" in disposition
     lines = csv_resp.text.strip().splitlines()
     assert lines[0].startswith("id,rule_id,opportunity_type,severity")
     assert len(lines) == 5  # header + 4 rows

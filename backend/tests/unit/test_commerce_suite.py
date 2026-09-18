@@ -344,7 +344,8 @@ def test_matching_uses_frozen_measurement_product_evidence() -> None:
     matched, confidence = _match_product("Try Frozen Runner", products)
 
     assert candidates == []
-    assert matched is not None and matched.id == product_id
+    assert matched is not None
+    assert matched.id == product_id
     assert confidence == 1.0
 
 

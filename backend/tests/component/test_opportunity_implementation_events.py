@@ -233,7 +233,8 @@ async def test_terminal_crawl_appends_all_persisted_projection_states(
     scenario, opportunity, site_url = await _seed_and_recompute(client, session_factory)
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, scenario.crawl_id)
-        assert crawl is not None and crawl.completed_at is not None
+        assert crawl is not None
+        assert crawl.completed_at is not None
         boundary = crawl.completed_at - timedelta(minutes=1)
     base_url = (
         f"/api/v1/projects/{scenario.project_id}/opportunities/implementation-events"

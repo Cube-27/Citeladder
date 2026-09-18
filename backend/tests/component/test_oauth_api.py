@@ -239,7 +239,8 @@ async def test_start_arms_httponly_cookie_and_never_returns_the_nonce(
     assert "path=/api/v1/auth/oauth" in set_cookie.lower()
 
     nonce = client.cookies.get(AUTH_OAUTH_TRANSACTION_COOKIE)
-    assert nonce and nonce not in resp.text
+    assert nonce
+    assert nonce not in resp.text
     claims = decode_oauth_state(resp.json()["state"], "google", nonce)
     assert claims["provider"] == "google"
     assert claims["sub"] == "oauth-state"

@@ -393,7 +393,8 @@ async def test_full_allowance_discover_admits_children_and_completes(
             .scalars()
             .all()
         )
-        assert statuses and all(s == TASK_STATUS_SUCCEEDED for s in statuses)
+        assert statuses
+        assert all(s == TASK_STATUS_SUCCEEDED for s in statuses)
 
         # Every succeeded discover task points at its fetch artifact (mirrors
         # the audit worker's result_artifact_id contract).
@@ -409,9 +410,8 @@ async def test_full_allowance_discover_admits_children_and_completes(
             .scalars()
             .all()
         )
-        assert result_artifact_ids and all(
-            aid is not None for aid in result_artifact_ids
-        )
+        assert result_artifact_ids
+        assert all(aid is not None for aid in result_artifact_ids)
 
         # First attempt row is numbered 1 (not 0).
         attempt_numbers = (
@@ -425,7 +425,8 @@ async def test_full_allowance_discover_admits_children_and_completes(
             .scalars()
             .all()
         )
-        assert attempt_numbers and all(n == 1 for n in attempt_numbers)
+        assert attempt_numbers
+        assert all(n == 1 for n in attempt_numbers)
 
 
 @pytest.mark.asyncio

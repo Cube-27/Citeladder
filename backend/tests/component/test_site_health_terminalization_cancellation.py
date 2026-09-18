@@ -73,7 +73,8 @@ async def test_claim_preparation_rejects_foreign_workspace(
 
     async with session_factory() as session:
         task = await session.get(SiteCrawlTask, task_id)
-        assert task is not None and task.status == TASK_STATUS_CANCELLED
+        assert task is not None
+        assert task.status == TASK_STATUS_CANCELLED
 
 
 @pytest.mark.asyncio

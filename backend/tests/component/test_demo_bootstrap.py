@@ -107,10 +107,12 @@ async def test_empty_public_bootstrap_creates_login_and_published_pricing_once(
     candidate = _demo_settings().model_copy(update={"demo_mode": False})
     await ensure_configured_dev_account(db_session, candidate)
     user = await db_session.scalar(select(User))
-    assert user is not None and user.role == "admin"
+    assert user is not None
+    assert user.role == "admin"
     assert verify_password(candidate.dev_login_password, user.hashed_password)
     catalog = await db_session.scalar(select(BillingCatalogRevision))
-    assert catalog is not None and catalog.publication_state == "published"
+    assert catalog is not None
+    assert catalog.publication_state == "published"
     assert catalog.published_by_user_id == user.id
     assert "checkout_enabled" not in catalog.payload
     assert len(catalog.payload["plans"]) == 4
@@ -137,7 +139,6 @@ async def test_local_bootstrap_uses_development_transport_policy(
     user = await db_session.scalar(
         select(User).where(User.email == candidate.dev_login_email)
     )
-    assert user is not None and verify_password(
-        candidate.dev_login_password, user.hashed_password
-    )
+    assert user is not None
+    assert verify_password(candidate.dev_login_password, user.hashed_password)
     assert await db_session.scalar(select(BillingCatalogRevision.id)) is not None

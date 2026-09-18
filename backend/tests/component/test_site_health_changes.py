@@ -365,12 +365,14 @@ async def test_selection_skips_newer_incompatible_crawl_and_codes_no_match(
         await session.flush()
 
         selected = await select_previous_comparable_crawl(session, crawl_b=crawl_b)
-        assert selected is not None and selected.id == compatible.id
+        assert selected is not None
+        assert selected.id == compatible.id
 
         compatible.analyzer_version = "v2"
         await session.flush()
         selected = await select_previous_comparable_crawl(session, crawl_b=crawl_b)
-        assert selected is not None and selected.id == incompatible.id
+        assert selected is not None
+        assert selected.id == incompatible.id
         snapshot = await build_change_snapshot(session, crawl_b=crawl_b)
         assert snapshot.state == "non_comparable"
         assert snapshot.reason_code == "crawl_scope_mismatch"

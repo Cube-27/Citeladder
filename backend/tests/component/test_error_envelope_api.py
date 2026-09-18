@@ -66,8 +66,10 @@ def _assert_envelope(body: dict, *, code: str, retryable: bool) -> None:
     error = body["error"]
     assert error["code"] == code
     assert error["retryable"] is retryable
-    assert isinstance(error["message"], str) and error["message"]
-    assert isinstance(error["request_id"], str) and error["request_id"]
+    assert isinstance(error["message"], str)
+    assert error["message"]
+    assert isinstance(error["request_id"], str)
+    assert error["request_id"]
     # ``detail`` stays the legacy human payload; the block mirrors it.
     assert body["detail"] == error["message"] or isinstance(body["detail"], dict)
 
