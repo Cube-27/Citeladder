@@ -3,6 +3,7 @@
 import { CheckCircle2, ExternalLink, Search, XCircle } from 'lucide-react';
 
 import { MeasurementContext } from '@/components/runs/measurement-context';
+import { SurfaceEvidence } from '@/components/runs/surface-evidence';
 import { Badge } from '@/components/ui/badge';
 import { Label, textRole } from '@/components/ui/typography';
 import { engineLabel, transportLabel } from '@/lib/providers/catalog';
@@ -374,6 +375,9 @@ export function EvidenceCard({
       />
       <EvidenceMetrics evidence={evidence} />
       <EvidenceAnswer answerText={answerText} isSearchSurface={isSearchSurface} outcome={outcome} />
+      {/* Only an observed surface has one, and its absence is not a state to
+          render: an LLM execution has no overview to report on. */}
+      {evidence.search_surface ? <SurfaceEvidence evidence={evidence.search_surface} /> : null}
       <EvidenceOutcomes evidence={evidence} />
       <EvidenceCitationsList citations={evidence.citations} />
       <EvidenceFooter evidence={evidence} />

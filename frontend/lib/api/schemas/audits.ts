@@ -208,6 +208,96 @@ export const executionSchema = responseObject({
   completed_at: z.string().nullable(),
 });
 
+/**
+ * One inline link the AI Overview pointed at from inside its own text
+ * (`AioLinkEvidence`). Inline links only — never the block's references, which
+ * arrive as citations. Keeping them apart is what lets the evidence view show
+ * "linked but not cited" as the distinct fact it is.
+ */
+export const aioLinkSchema = responseObject({
+  url: z.string(),
+  domain: z.string(),
+  title: z.string(),
+  element_index: z.number().int(),
+});
+
+/**
+ * One tracked entity's presence in an AI Overview (`SurfaceEntityEvidence`).
+ *
+ * `mentioned`, `linked` and `cited` come from three independent sources and
+ * are never derived from one another. `mention_order` is computed server-side
+ * from persisted offsets and is null for an entity the answer never named —
+ * which is not last place.
+ */
+export const surfaceEntitySchema = responseObject({
+  name: z.string(),
+  kind: z.enum(['brand', 'competitor']),
+  mentioned: z.boolean(),
+  linked: z.boolean(),
+  cited: z.boolean(),
+  first_offset: z.number().int().nullable(),
+  mention_order: z.number().int().nullable(),
+});
+
+/**
+ * What one observed-surface execution saw (`SearchSurfaceEvidence`).
+ *
+ * `aio_present` keeps three states: true shown, false observed absence, null
+ * we never successfully looked. It must never be coerced to a boolean.
+ */
+export const searchSurfaceEvidenceSchema = responseObject({
+  outcome: z.string(),
+  aio_present: z.boolean().nullable(),
+  // The overview BLOCK's position on the SERP. Never a brand rank.
+  aio_serp_position: z.number().int().nullable(),
+  provider_status_code: z.number().int().nullable(),
+  error_code: z.string(),
+  element_count: z.number().int(),
+  reference_count: z.number().int(),
+  location_code: z.number().int(),
+  language_code: z.string(),
+  device: z.string(),
+  observed_at: z.string().nullable(),
+  retrieved_at: z.string().nullable(),
+  links: z.array(aioLinkSchema),
+  entities: z.array(surfaceEntitySchema),
+});
+
+/**
+ * One published rate with the denominator it divided by (`AioRateValue`).
+ *
+ * `value` is null for UNAVAILABLE and is never 0. Rendering an empty
+ * denominator as 0% would be a measurement claim nobody made.
+ */
+export const aioRateSchema = responseObject({
+  numerator: z.number().int(),
+  denominator: z.number().int(),
+  denominator_kind: z.string(),
+  value: z.number().nullable(),
+});
+
+export const aioCompetitorRateSchema = responseObject({
+  name: z.string(),
+  rate: aioRateSchema,
+});
+
+/**
+ * The five AI Overview rates for one measurement selection
+ * (`SurfaceRatesResponse`). `excluded` counts observations that entered no
+ * denominator — failures on our side, reported rather than hidden.
+ */
+export const surfaceRatesSchema = responseObject({
+  logical_engine: z.string(),
+  successful: z.number().int(),
+  with_overview: z.number().int(),
+  excluded: z.number().int(),
+  trigger_rate: aioRateSchema,
+  brand_mention_rate_when_present: aioRateSchema,
+  overall_brand_visibility: aioRateSchema,
+  owned_citation_rate_when_present: aioRateSchema,
+  competitor_mention_rates: z.array(aioCompetitorRateSchema),
+});
+
 // One execution's persisted analysis + evidence (B6 `ExecutionEvidenceResponse`,
 // `GET /executions/{id}`). `id`/`task_id` are the EXECUTION (AuditTask) id — the
 // same id space as the executions list — so the evidence page keys off the row
@@ -242,5 +332,8 @@ export const executionEvidenceSchema = responseObject({
   score: z.record(z.string(), z.unknown()).nullable(),
   citations: z.array(citationSchema),
   competitors_mentioned: z.array(z.string()),
+  // Null for an LLM execution, and null for a search execution that
+  // produced no observation — a gap in ours, not a measured absence.
+  search_surface: searchSurfaceEvidenceSchema.nullable().default(null),
   created_at: z.string(),
 });

@@ -32,6 +32,11 @@ export const visibilityKeys = {
     ['visibility', 'trends', projectId, filters] as const,
   evidence: (projectId: string, filters: ListFilters = {}) =>
     ['visibility', 'evidence', projectId, filters] as const,
+  // The observed-surface rates. Its own namespace because it is scoped by
+  // the SURFACE as well as the selection, and changing the engine filter
+  // must not refetch a projection that does not take one.
+  surfaceRates: (projectId: string, filters: ListFilters = {}) =>
+    ['visibility', 'surface-rates', projectId, filters] as const,
   prompts: (projectId: string, auditId?: string) =>
     ['visibility', 'prompts', projectId, auditId ?? 'latest'] as const,
   competitorSuggestions: (projectId: string) =>

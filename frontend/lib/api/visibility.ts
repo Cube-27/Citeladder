@@ -29,6 +29,7 @@ import {
   visibilitySchema,
 } from './schemas/visibility';
 import { visibilityEvidenceResponseSchema } from './schemas/visibility-evidence';
+import { surfaceRatesSchema } from './schemas/audits';
 import { visibilityTrendListSchema } from './schemas/visibility-trends';
 import { definedQuery, withQuery } from './shared';
 import type {
@@ -147,6 +148,28 @@ export const visibilityApi = {
       options,
     );
     return strictValidate(visibilitySourcesSchema, result, 'visibility.getSources');
+  },
+  /**
+   * The five AI Overview rates for one selection.
+   *
+   * `engine` is required: the rates belong to an observed surface, and asking
+   * for them without naming one would answer a question nobody asked.
+   */
+  getSurfaceRates: async (
+    projectId: string,
+    params: {
+      engine: string;
+      audit_id?: string;
+      audit_ids?: string[];
+      cohort?: string;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/surface-rates`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(surfaceRatesSchema, result, 'visibility.getSurfaceRates');
   },
   getSourceSeries: async (
     projectId: string,

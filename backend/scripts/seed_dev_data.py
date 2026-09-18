@@ -273,6 +273,10 @@ async def _seed_user_and_workspaces() -> _SeedWorkspaces:
 async def _seed_provider_connections(workspace_id: uuid.UUID) -> None:
     # 2. Provider connections + routes (BYOK, fake keys) on the main workspace.
     async with SessionLocal() as session:
+        # The three answer engines only. A fake DataForSEO credential would
+        # pass the local checks and then submit real, billable SERP tasks the
+        # first time a seeded run selected the observed surface, so the dev
+        # workspace deliberately has no connection for it.
         engines_transports = [
             (ENGINE_CHATGPT, TRANSPORT_OPENAI),
             (ENGINE_CLAUDE, TRANSPORT_ANTHROPIC),

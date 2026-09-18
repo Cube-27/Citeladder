@@ -20,6 +20,7 @@ from app.core.config.prompts import (
     REQUESTABLE_PROMPT_COHORTS,
 )
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
+from app.domain.analysis.aio_evidence import execution_surface_evidence
 from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
 from app.domain.analysis.evidence_selection import (
     EvidenceFilters,
@@ -425,6 +426,12 @@ async def get_execution_evidence(
         score=analysis.score,
         citations=[CitationEvidence.model_validate(c) for c in citations],
         competitors_mentioned=list(score.get("competitors_mentioned") or []),
+        # Null for an LLM execution. For an observed surface it carries the
+        # outcome the client needs in order to tell a measured absence apart
+        # from a retrieval we never completed.
+        search_surface=await execution_surface_evidence(
+            session, workspace_id=workspace_id, task_id=task_id, analysis=analysis
+        ),
         created_at=analysis.created_at,
     )
 

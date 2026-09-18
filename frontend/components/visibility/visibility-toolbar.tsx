@@ -17,6 +17,7 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 import type { LogicalEngine } from '@/lib/api/types';
 import { ICONS } from '@/lib/icons';
+import { isSearchSurfaceEngine } from '@/lib/providers/catalog';
 import {
   engineLabel,
   isEvidenceTab,
@@ -77,7 +78,7 @@ type ToolbarProps = Readonly<{
 
 /**
  * Two clusters, and every control answers a question a customer would actually
- * ask: which measurement, over what period, about which prompts and models.
+ * ask: which measurement, over what period, about which prompts and surfaces.
  *
  * What used to sit here and no longer does: a separate "Measurement selection"
  * toggle (folded into the measurement picker, because "which run am I looking
@@ -218,26 +219,50 @@ function MeasurementFilter({
   );
 }
 
+/**
+ * Which measured surface the page is reading.
+ *
+ * Two groups, not one flat list, and the control no longer says "model". An
+ * answer engine is ASKED a question and answers with a model; Google's AI
+ * Overview is OBSERVED on a results page and has no model at all. Listing
+ * them together under "All models" described three of the four correctly and
+ * quietly misdescribed the fourth.
+ */
 function EngineFilterControl({ engine, onChangeEngine }: ToolbarProps) {
+  const asked = TREND_ENGINES.filter((key) => !isSearchSurfaceEngine(key));
+  const observed = TREND_ENGINES.filter((key) => isSearchSurfaceEngine(key));
   return (
     <Dropdown>
       <DropdownTrigger asChild>
-        <FilterButton active={engine !== 'all'} label="Filter by model">
+        <FilterButton active={engine !== 'all'} label="Filter by surface">
           <ICONS.analytics className="size-3" aria-hidden />
-          <span>{engine === 'all' ? 'All models' : engineLabel(engine)}</span>
+          <span>{engine === 'all' ? 'All surfaces' : engineLabel(engine)}</span>
         </FilterButton>
       </DropdownTrigger>
       <DropdownContent>
-        <DropdownLabel>Model</DropdownLabel>
+        <DropdownLabel>Surface</DropdownLabel>
         <DropdownRadioGroup value={engine}>
           <DropdownRadioItem value="all" onSelect={() => onChangeEngine('all')}>
-            All models
+            All surfaces
           </DropdownRadioItem>
-          {TREND_ENGINES.map((engine) => (
-            <DropdownRadioItem key={engine} value={engine} onSelect={() => onChangeEngine(engine)}>
-              {engineLabel(engine)}
+          <DropdownSeparator />
+          <DropdownLabel>Answer engines</DropdownLabel>
+          {asked.map((key) => (
+            <DropdownRadioItem key={key} value={key} onSelect={() => onChangeEngine(key)}>
+              {engineLabel(key)}
             </DropdownRadioItem>
           ))}
+          {observed.length ? (
+            <>
+              <DropdownSeparator />
+              <DropdownLabel>Observed surfaces</DropdownLabel>
+              {observed.map((key) => (
+                <DropdownRadioItem key={key} value={key} onSelect={() => onChangeEngine(key)}>
+                  {engineLabel(key)}
+                </DropdownRadioItem>
+              ))}
+            </>
+          ) : null}
         </DropdownRadioGroup>
       </DropdownContent>
     </Dropdown>

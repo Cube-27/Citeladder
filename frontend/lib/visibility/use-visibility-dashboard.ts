@@ -15,6 +15,7 @@ import {
   toRunOptions,
   type VisibilityTab,
 } from '@/lib/visibility/dashboard';
+import { isSearchSurfaceEngine } from '@/lib/providers/catalog';
 import { shouldPollAudit } from '@/lib/runs/status';
 import { ACTIVE_RUN_POLL_MS, EVIDENCE_LIMIT } from '@/lib/config/operational';
 import {
@@ -244,6 +245,15 @@ export function useVisibilityQueries(
     enabled: requestScope.enabled && filters.activeTab === 'trends',
     placeholderData: (data, query) => retainPreviousDataForScope(projectId!, data, query),
   });
+  const { surfaceEngine, surfaceRatesQuery } = useSurfaceRates({
+    requestScope,
+    projectId,
+    engine,
+    cohort: filters.cohort,
+    onTrendsTab: filters.activeTab === 'trends',
+    activeRunId,
+    selectedRunIds,
+  });
   // A range that resolved to NO runs sends neither `audit_id` nor a usable
   // `audit_ids`, so the request would read the project unscoped and answer a
   // question nobody asked. An empty selection has empty evidence.
@@ -294,6 +304,10 @@ export function useVisibilityQueries(
     visibilityQuery,
     trendQuery,
     evidenceQuery,
+    surfaceRatesQuery,
+    // Null unless the surface filter names an observed surface, which is what
+    // decides whether the rates panel belongs on the page at all.
+    surfaceEngine,
     // The run/engine/cohort scope the evidence was read under. The fanout tab
     // re-uses it to ask the server for SELECTION-wide totals, so its headline
     // figures describe the same population the table is drawn from.
@@ -308,6 +322,61 @@ export function useVisibilityQueries(
     promptOptions: evidenceQuery.data?.prompt_options ?? [],
     prefetchTab,
   };
+}
+
+/**
+ * The observed-surface rates, scoped to the same resolved run selection the
+ * rest of the tab reads.
+ *
+ * Its own hook rather than more lines inside `useVisibilityQueries`: it is the
+ * only read here that is gated on WHICH surface is selected, and folding that
+ * condition into the shared body put a filter-specific branch in front of
+ * every other query.
+ *
+ * Requested only when the filter names an observed surface. The five rates are
+ * properties of that surface, and asking an answer engine for a trigger rate
+ * is a category error rather than a query with an empty result.
+ */
+function useSurfaceRates({
+  requestScope,
+  projectId,
+  engine,
+  cohort,
+  onTrendsTab,
+  activeRunId,
+  selectedRunIds,
+}: {
+  requestScope: ProjectRequestScope;
+  projectId: string | null;
+  engine: string | undefined;
+  cohort: string;
+  onTrendsTab: boolean;
+  activeRunId: string | null;
+  selectedRunIds: string[] | undefined;
+}) {
+  const surfaceEngine = engine && isSearchSurfaceEngine(engine) ? engine : null;
+  const params = {
+    engine: surfaceEngine ?? '',
+    audit_id: selectedRunIds ? undefined : (activeRunId ?? undefined),
+    audit_ids: selectedRunIds,
+    cohort,
+  };
+  const surfaceRatesQuery = useQuery({
+    queryKey: queryKeys.visibility.surfaceRates(projectId ?? '', params),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      visibilityApi.getSurfaceRates(requestScope.projectId, params, {
+        signal,
+        workspaceId: requestScope.workspaceId,
+      }),
+    enabled:
+      requestScope.enabled &&
+      onTrendsTab &&
+      surfaceEngine !== null &&
+      Boolean(activeRunId) &&
+      selectedRunIds?.length !== 0,
+    placeholderData: (data, query) => retainPreviousDataForScope(projectId!, data, query),
+  });
+  return { surfaceEngine, surfaceRatesQuery };
 }
 
 function useVisibilityRuns(requestScope: ProjectRequestScope) {

@@ -155,6 +155,8 @@ function DashboardPanel({
         query={queries.trendQuery}
         visibilityQuery={queries.visibilityQuery}
         engineFilter={filters.engine}
+        surfaceRatesQuery={queries.surfaceRatesQuery}
+        surfaceEngine={queries.surfaceEngine}
         hasRuns={queries.hasRuns}
         isFiltered={filters.isTrendFiltered}
         onEvidence={filters.openEvidence}
