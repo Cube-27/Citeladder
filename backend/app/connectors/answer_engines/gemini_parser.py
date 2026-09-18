@@ -42,7 +42,7 @@ Key facts used here:
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from typing import Any
 
 from app.connectors.answer_engines.contracts import (
@@ -103,20 +103,29 @@ def gemini_raw_finish_reason(payload: Mapping[str, Any]) -> str:
     the first candidate's (the Generate Content shape), then the interaction
     ``status``. Returned verbatim so no provider spelling is lost.
     """
-    for key in ("finish_reason", "finishReason"):
-        raw = str(payload.get(key) or "").strip()
-        if raw:
-            return raw
+    interaction = _finish_token(payload)
+    if interaction:
+        return interaction
     candidates = payload.get("candidates")
     if isinstance(candidates, list):
         for candidate in candidates:
-            if not isinstance(candidate, Mapping):
-                continue
-            for key in ("finish_reason", "finishReason"):
-                raw = str(candidate.get(key) or "").strip()
-                if raw:
-                    return raw
+            token = _finish_token(candidate) if isinstance(candidate, Mapping) else ""
+            if token:
+                return token
     return str(payload.get("status") or "").strip()
+
+
+#: Gemini spells the same field both ways depending on the surface.
+_FINISH_REASON_KEYS = ("finish_reason", "finishReason")
+
+
+def _finish_token(source: Mapping[str, Any]) -> str:
+    """The first non-empty finish reason this mapping states, under either spelling."""
+    for key in _FINISH_REASON_KEYS:
+        raw = str(source.get(key) or "").strip()
+        if raw:
+            return raw
+    return ""
 
 
 def normalize_gemini_usage(
@@ -197,27 +206,33 @@ def _text_blocks(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return blocks
 
 
+def _url_citation_annotations(block: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """The URL citations one block carries, skipping anything else it holds."""
+    for annotation in block.get("annotations") or []:
+        if not isinstance(annotation, dict):
+            continue
+        if str(annotation.get("type") or "") != "url_citation":
+            continue
+        # An annotation naming neither a URL nor a title cites nothing.
+        if not str(annotation.get("url") or "").strip():
+            if not str(annotation.get("title") or "").strip():
+                continue
+        yield annotation
+
+
 def _extract_citations(blocks: list[dict[str, Any]]) -> list[CitationResult]:
     citations: list[CitationResult] = []
-    ordinal = 0
     for block in blocks:
         text = str(block.get("text") or "")
-        for annotation in block.get("annotations") or []:
-            if not isinstance(annotation, dict):
-                continue
-            if str(annotation.get("type") or "") != "url_citation":
-                continue
-            url = str(annotation.get("url") or "").strip()
+        for annotation in _url_citation_annotations(block):
             title = str(annotation.get("title") or "").strip()
-            if not url and not title:
-                continue
             # Derive cited text from the answer where offsets are valid, rather
             # than trusting a possibly-stale provider-duplicated field.
             start, end, cited_text = cited_span(text, annotation)
             citations.append(
                 CitationResult(
-                    ordinal=ordinal,
-                    url=url,
+                    ordinal=len(citations),
+                    url=str(annotation.get("url") or "").strip(),
                     title=title,
                     domain=normalize_domain(title),
                     start_index=start,
@@ -225,7 +240,6 @@ def _extract_citations(blocks: list[dict[str, Any]]) -> list[CitationResult]:
                     cited_text=cited_text,
                 )
             )
-            ordinal += 1
     return citations
 
 

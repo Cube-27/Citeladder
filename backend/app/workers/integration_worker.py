@@ -117,6 +117,18 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def _apply_page_cursor(client: DataClient, page_cursor: str | None) -> None:
+    """Hand the resume cursor to a client that understands one.
+
+    A narrow OPTIONAL capability: the value travels as the GraphQL ``after``
+    variable, while ``start_row`` stays a logical offset and is never
+    translated into it. A client without the hook simply pages by offset.
+    """
+    set_page_cursor = getattr(client, "set_page_cursor", None)
+    if set_page_cursor is not None:
+        set_page_cursor(page_cursor)
+
+
 class IntegrationWorker(DrainableWorkerMixin):
     """Claim/lease loop for ``IntegrationSyncRun`` rows.
 
@@ -584,12 +596,7 @@ class IntegrationWorker(DrainableWorkerMixin):
             if not await self._still_owned(ctx.run_id):
                 return False
             if cursor_mode:
-                # The narrow optional cursor capability: the value is sent
-                # as the GraphQL ``after`` variable; ``start_row`` stays a
-                # logical offset and is never translated.
-                set_page_cursor = getattr(client, "set_page_cursor", None)
-                if set_page_cursor is not None:
-                    set_page_cursor(page_cursor)
+                _apply_page_cursor(client, page_cursor)
             page = await client.query_search_analytics(
                 access_token=access_token,
                 property_ref=ctx.property_ref,

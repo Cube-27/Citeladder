@@ -20,7 +20,7 @@ import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Select, func, select
 from sqlalchemy.dialects.postgresql import insert
@@ -539,6 +539,31 @@ class PostgresTaskQueue[
         outcome = await self.release_expired_detailed(batch_size=batch_size)
         return outcome.reclaimed
 
+    def _terminalize_expired(self, task: Any, *, now: datetime) -> None:
+        """Fail one task whose lease expired with no attempts left.
+
+        Logged per row, not in aggregate: this is the ONLY trace that a task
+        died without a worker finalize, so a count alone leaves a stalled run
+        un-diagnosable.
+        """
+        task.status = TASK_STATUS_FAILED
+        task.completed_at = now
+        if not task.error_code:
+            task.error_code = self._spec.max_attempts_error
+            task.error_detail = "lease expired after max attempts exhausted"
+        parent_attr = self._spec.parent_id_attr
+        logger.warning(
+            "sweeper failed task at max attempts",
+            extra={
+                "task_id": str(task.id),
+                "queue": self._model.__tablename__,
+                "attempt_count": task.attempt_count,
+                "parent_id": str(getattr(task, parent_attr, ""))
+                if parent_attr
+                else None,
+            },
+        )
+
     async def release_expired_detailed(
         self, *, batch_size: int = 500
     ) -> ExpiredLeaseSweep:
@@ -599,30 +624,13 @@ class PostgresTaskQueue[
                 # terminal status and never clearing the UI's "is running".
                 task.attempt_count += 1
                 if task.attempt_count >= task.max_attempts:
-                    task.status = TASK_STATUS_FAILED
-                    task.completed_at = now
-                    if not task.error_code:
-                        task.error_code = self._spec.max_attempts_error
-                        task.error_detail = "lease expired after max attempts exhausted"
+                    self._terminalize_expired(task, now=now)
                     failed_task_ids.append(task.id)
-                    if parent_attr is not None:
-                        parent_id = getattr(task, parent_attr, None)
-                        if parent_id is not None:
-                            failed_parent_ids.append(parent_id)
-                    # Attributable per-row record: this is the only trace that a
-                    # task died without a worker finalize, so an aggregate count
-                    # alone leaves a stalled run un-diagnosable.
-                    logger.warning(
-                        "sweeper failed task at max attempts",
-                        extra={
-                            "task_id": str(task.id),
-                            "queue": model.__tablename__,
-                            "attempt_count": task.attempt_count,
-                            "parent_id": str(getattr(task, parent_attr, ""))
-                            if parent_attr
-                            else None,
-                        },
+                    parent_id = (
+                        getattr(task, parent_attr, None) if parent_attr else None
                     )
+                    if parent_id is not None:
+                        failed_parent_ids.append(parent_id)
                 else:
                     task.status = TASK_STATUS_RETRY_WAIT
                     task.available_at = now

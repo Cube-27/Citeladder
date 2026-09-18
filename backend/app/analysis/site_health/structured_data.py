@@ -26,6 +26,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
+from itertools import islice
 from typing import Any
 
 from app.core.config import site_health_acquisition as site_health_config
@@ -325,11 +327,18 @@ def parse_jsonld_blocks(raw_blocks: list[str], *, max_blocks: int) -> list[dict]
     one bounded fact dict per recognized schema.org object across all blocks,
     capped at ``max_blocks`` (invariant 9: deterministic + bounded).
     """
-    facts: list[dict] = []
+    return list(islice(_iter_jsonld_facts(raw_blocks), max_blocks))
+
+
+def _iter_jsonld_facts(raw_blocks: list[str]) -> Iterator[dict]:
+    """Every fact the blocks describe, in order and unbounded.
+
+    Lazily, so the caller's cap stops the work rather than only discarding it.
+    The three bound checks this replaces were one cap tested at three nesting
+    depths, which is most of what made the original hard to follow.
+    """
     entity_index = 0
     for body in raw_blocks:
-        if len(facts) >= max_blocks:
-            break
         text = (body or "").strip()
         if not text:
             continue
@@ -342,14 +351,8 @@ def parse_jsonld_blocks(raw_blocks: list[str], *, max_blocks: int) -> list[dict]
             # _iter_jsonld_objects()'s own depth cap ever runs.
             continue
         for obj in _iter_jsonld_objects(parsed):
-            if len(facts) >= max_blocks:
-                break
-            for fact in _validate_objects(obj, entity_index=entity_index):
-                if len(facts) >= max_blocks:
-                    break
-                facts.append(fact)
+            yield from _validate_objects(obj, entity_index=entity_index)
             entity_index += 1
-    return facts
 
 
 def validate_microdata_types(
@@ -366,79 +369,96 @@ def validate_microdata_types(
     are attribute-scattered in microdata and not required for the current
     rule set). Bounded by ``max_blocks``.
     """
-    facts: list[dict] = []
-    product_value_index = 0
+    return list(islice(_iter_microdata_facts(itemtypes, product_values), max_blocks))
+
+
+def _recognized_microdata_types(itemtypes: list[str]) -> Iterator[str]:
+    """The recognized schema.org types these ``itemtype`` attributes name.
+
+    A valid ``itemtype`` may list several space-separated URLs, so the
+    attribute is split before cleaning: handing the whole thing to
+    ``_clean_type()`` would discard every recognized type in a multi-value
+    attribute.
+    """
+    recognized = STRUCTURED_DATA_RECOGNIZED_TYPES | PRODUCT_RECOGNIZED_SCHEMA_TYPES
     for raw in itemtypes:
-        if len(facts) >= max_blocks:
-            break
-        # A valid `itemtype` attribute may list multiple space-separated
-        # schema.org URLs; passing the whole attribute to `_clean_type()`
-        # would discard every recognized type in a multi-value attribute.
         for candidate in str(raw or "").split():
-            if len(facts) >= max_blocks:
-                break
             schema_type = _clean_type(candidate)
-            if not schema_type or schema_type not in (
-                STRUCTURED_DATA_RECOGNIZED_TYPES | PRODUCT_RECOGNIZED_SCHEMA_TYPES
-            ):
-                continue
-            # v1 back-compat: microdata property extraction stays shallow, so
-            # v1-map types record their full required list as missing/invalid;
-            # newly recognized types carry an empty contract (valid=True).
-            required = STRUCTURED_DATA_REQUIRED_PROPERTIES.get(schema_type, ())
-            product = {}
-            if schema_type == "Product" and product_values:
-                index = min(product_value_index, len(product_values) - 1)
-                product = product_values[index]
-                product_value_index += 1
-            facts.append(
-                {
-                    "type": schema_type,
-                    "syntax": "microdata",
-                    "required": list(required),
-                    "present": [],
-                    "missing": list(required),
-                    "valid": not required,
-                    "schema_id": "",
-                    "name": "",
-                    "author": "",
-                    "date_published": "",
-                    "date_modified": "",
-                    "same_as": [],
-                    "props_present": [],
-                    "url": "",
-                    "main_entity_id": "",
-                    "main_entity_of_page_id": "",
-                    "product": product,
-                }
-            )
-    return facts
+            if schema_type and schema_type in recognized:
+                yield schema_type
+
+
+def _iter_microdata_facts(
+    itemtypes: list[str],
+    product_values: list[dict[str, list[str]]] | None,
+) -> Iterator[dict]:
+    """One fact per recognized type, in order and unbounded."""
+    product_value_index = 0
+    for schema_type in _recognized_microdata_types(itemtypes):
+        # v1 back-compat: microdata property extraction stays shallow, so
+        # v1-map types record their full required list as missing/invalid;
+        # newly recognized types carry an empty contract (valid=True).
+        required = STRUCTURED_DATA_REQUIRED_PROPERTIES.get(schema_type, ())
+        product: dict[str, list[str]] = {}
+        if schema_type == "Product" and product_values:
+            index = min(product_value_index, len(product_values) - 1)
+            product = product_values[index]
+            product_value_index += 1
+        yield {
+            "type": schema_type,
+            "syntax": "microdata",
+            "required": list(required),
+            "present": [],
+            "missing": list(required),
+            "valid": not required,
+            "schema_id": "",
+            "name": "",
+            "author": "",
+            "date_published": "",
+            "date_modified": "",
+            "same_as": [],
+            "props_present": [],
+            "url": "",
+            "main_entity_id": "",
+            "main_entity_of_page_id": "",
+            "product": product,
+        }
 
 
 def microdata_product_values(nodes: list[Any]) -> list[dict[str, list[str]]]:
     """Extract bounded Product properties from already-parsed microdata nodes."""
-    values: list[dict[str, list[str]]] = []
-    for node in nodes:
-        product = _empty_product_values()
-        try:
-            property_nodes = node.xpath(".//*[@itemprop]")
-        except (AttributeError, TypeError, ValueError):
-            property_nodes = []
-        for property_node in property_nodes:
-            if _belongs_to_nested_product(node, property_node):
-                continue
-            value = _microdata_value(property_node)
-            for property_name in str(property_node.get("itemprop") or "").split():
-                target = _microdata_product_target(property_name)
-                if (
-                    target
-                    and value
-                    and value not in product[target]
-                    and len(product[target]) < PRODUCT_FACT_MAX_VALUES
-                ):
-                    product[target].append(value[:PRODUCT_FACT_MAX_VALUE_CHARS])
-        values.append(product)
-    return values
+    return [_product_values_for(node) for node in nodes]
+
+
+def _product_values_for(node: Any) -> dict[str, list[str]]:
+    """The bounded Product properties one microdata node carries itself."""
+    product = _empty_product_values()
+    try:
+        property_nodes = node.xpath(".//*[@itemprop]")
+    except (AttributeError, TypeError, ValueError):
+        property_nodes = []
+    for property_node in property_nodes:
+        # A nested Product's properties belong to that product, not this one.
+        if _belongs_to_nested_product(node, property_node):
+            continue
+        value = _microdata_value(property_node)
+        if not value:
+            continue
+        for property_name in str(property_node.get("itemprop") or "").split():
+            _record_product_value(product, property_name, value)
+    return product
+
+
+def _record_product_value(
+    product: dict[str, list[str]], property_name: str, value: str
+) -> None:
+    """Record one property value: deduplicated, truncated and bounded."""
+    target = _microdata_product_target(property_name)
+    if not target:
+        return
+    bucket = product[target]
+    if value not in bucket and len(bucket) < PRODUCT_FACT_MAX_VALUES:
+        bucket.append(value[:PRODUCT_FACT_MAX_VALUE_CHARS])
 
 
 def _belongs_to_nested_product(product_node: Any, property_node: Any) -> bool:
