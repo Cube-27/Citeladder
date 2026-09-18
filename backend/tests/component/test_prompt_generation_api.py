@@ -1340,7 +1340,8 @@ async def test_topics_crud_with_counts(client: httpx.AsyncClient) -> None:
     assert created.status_code == 201
     topic = created.json()
     assert topic["origin"] == "manual"
-    assert topic["active_count"] == 0 and topic["proposed_count"] == 0
+    assert topic["active_count"] == 0
+    assert topic["proposed_count"] == 0
 
     # Duplicate name (same project) -> 409.
     dup = await client.post(

@@ -84,7 +84,7 @@ def _map_error(exc: Exception) -> ApiException:
     )
 
 
-@router.get("/{project_id}/commerce/catalog", response_model=CatalogResponse)
+@router.get("/{project_id}/commerce/catalog")
 async def catalog_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> CatalogResponse:
@@ -98,7 +98,6 @@ async def catalog_endpoint(
 
 @router.post(
     "/{project_id}/commerce/catalog/import",
-    response_model=CatalogImportResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def catalog_import_endpoint(
@@ -120,7 +119,6 @@ async def catalog_import_endpoint(
 
 @router.post(
     "/{project_id}/commerce/competitors/discover",
-    response_model=DiscoveryResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def competitor_discovery_endpoint(
@@ -142,7 +140,6 @@ async def competitor_discovery_endpoint(
 
 @router.get(
     "/{project_id}/commerce/competitors",
-    response_model=list[CompetitorCandidateResponse],
 )
 async def competitors_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -157,7 +154,6 @@ async def competitors_endpoint(
 
 @router.get(
     "/{project_id}/commerce/competitors/discoveries",
-    response_model=list[DiscoveryTaskResponse],
 )
 async def competitor_discovery_status_endpoint(
     project_id: uuid.UUID,
@@ -186,7 +182,6 @@ async def competitor_discovery_status_endpoint(
 
 @router.patch(
     "/{project_id}/commerce/competitors/{candidate_id}",
-    response_model=CompetitorCandidateResponse,
 )
 async def competitor_decision_endpoint(
     project_id: uuid.UUID,
@@ -207,9 +202,7 @@ async def competitor_decision_endpoint(
         raise _map_error(exc) from exc
 
 
-@router.get(
-    "/{project_id}/commerce/buyer-prompts", response_model=list[BuyerPromptResponse]
-)
+@router.get("/{project_id}/commerce/buyer-prompts")
 async def buyer_prompts_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> list[BuyerPromptResponse]:
@@ -223,7 +216,6 @@ async def buyer_prompts_endpoint(
 
 @router.post(
     "/{project_id}/commerce/buyer-prompts/generate",
-    response_model=list[BuyerPromptResponse],
     status_code=status.HTTP_201_CREATED,
 )
 async def buyer_prompts_generate_endpoint(
@@ -265,7 +257,6 @@ async def buyer_prompts_generate_endpoint(
 
 @router.post(
     "/{project_id}/commerce/buyer-prompts/manual",
-    response_model=BuyerPromptResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def buyer_prompt_manual_endpoint(
@@ -292,7 +283,6 @@ async def buyer_prompt_manual_endpoint(
 
 @router.patch(
     "/{project_id}/commerce/buyer-prompts/{prompt_id}",
-    response_model=BuyerPromptResponse,
 )
 async def buyer_prompt_decision_endpoint(
     project_id: uuid.UUID,
@@ -313,7 +303,7 @@ async def buyer_prompt_decision_endpoint(
         raise _map_error(exc) from exc
 
 
-@router.get("/{project_id}/commerce/ai-shelf", response_model=ShelfResponse)
+@router.get("/{project_id}/commerce/ai-shelf")
 async def ai_shelf_endpoint(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,

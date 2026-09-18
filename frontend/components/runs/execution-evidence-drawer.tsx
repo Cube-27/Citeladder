@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { EvidenceCard } from '@/components/runs/evidence-card';
 import { Alert } from '@/components/ui/alert';
@@ -28,6 +29,31 @@ export function ExecutionEvidenceDrawer({
     enabled: open && execution !== null && workspaceId !== null,
   });
 
+  let evidenceBody: ReactNode;
+  if (evidenceQuery.isError) {
+    evidenceBody = <Alert tone="danger">Could not load this execution&apos;s evidence.</Alert>;
+  } else if (evidenceQuery.isLoading || !evidenceQuery.data) {
+    evidenceBody = (
+      <div className="grid gap-4" aria-label="Loading execution evidence">
+        <Skeleton className="h-10 w-2/3" />
+        <Skeleton className="h-44 w-full" />
+        <Skeleton className="h-52 w-full" />
+      </div>
+    );
+  } else {
+    evidenceBody = (
+      <EvidenceCard
+        evidence={evidenceQuery.data}
+        answerText={execution?.answer_text}
+        promptText={execution?.prompt_text}
+        promptIndex={execution?.prompt_index}
+        repetition={execution?.repetition}
+        isSearchSurface={execution?.logical_engine === 'google_ai_overview'}
+        outcome={execution?.search_surface_outcome}
+      />
+    );
+  }
+
   return (
     <Drawer
       open={open}
@@ -41,25 +67,7 @@ export function ExecutionEvidenceDrawer({
       className="sm:max-w-220"
       closeLabel="Close evidence drawer"
     >
-      {evidenceQuery.isError ? (
-        <Alert tone="danger">Could not load this execution&apos;s evidence.</Alert>
-      ) : evidenceQuery.isLoading || !evidenceQuery.data ? (
-        <div className="grid gap-4" aria-label="Loading execution evidence">
-          <Skeleton className="h-10 w-2/3" />
-          <Skeleton className="h-44 w-full" />
-          <Skeleton className="h-52 w-full" />
-        </div>
-      ) : (
-        <EvidenceCard
-          evidence={evidenceQuery.data}
-          answerText={execution?.answer_text}
-          promptText={execution?.prompt_text}
-          promptIndex={execution?.prompt_index}
-          repetition={execution?.repetition}
-          isSearchSurface={execution?.logical_engine === 'google_ai_overview'}
-          outcome={execution?.search_surface_outcome}
-        />
-      )}
+      {evidenceBody}
     </Drawer>
   );
 }

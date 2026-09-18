@@ -106,7 +106,7 @@ def _bad_cursor(exc: PerformanceCursorError) -> ApiException:
     return api_error(status.HTTP_400_BAD_REQUEST, str(exc), code=CODE_INVALID_CURSOR)
 
 
-@router.get("/{project_id}/performance", response_model=PerformanceDashboardResponse)
+@router.get("/{project_id}/performance")
 async def get_performance_endpoint(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,
@@ -145,7 +145,7 @@ async def get_performance_endpoint(
         raise _unprocessable(exc) from exc
 
 
-@router.get("/{project_id}/performance/table", response_model=PerformanceTablePage)
+@router.get("/{project_id}/performance/table")
 async def get_performance_table_endpoint(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,
@@ -200,7 +200,6 @@ def _range_task_response(task: AnalyticsTask) -> PerformanceRangeTaskResponse:
 @router.post(
     "/{project_id}/performance/range",
     status_code=status.HTTP_202_ACCEPTED,
-    response_model=PerformanceRangeTaskResponse,
 )
 async def enqueue_performance_range_endpoint(
     project_id: uuid.UUID,
@@ -243,7 +242,6 @@ async def enqueue_performance_range_endpoint(
 
 @router.get(
     "/{project_id}/performance/range/{task_id}",
-    response_model=PerformanceRangeTaskResponse,
 )
 async def get_performance_range_endpoint(
     project_id: uuid.UUID,
@@ -272,7 +270,6 @@ async def get_performance_range_endpoint(
 @router.post(
     "/{project_id}/performance/sync",
     status_code=status.HTTP_202_ACCEPTED,
-    response_model=list[IntegrationSyncEnqueueResponse],
 )
 async def sync_performance_endpoint(
     project_id: uuid.UUID,
@@ -336,7 +333,6 @@ async def sync_performance_endpoint(
 
 @router.get(
     "/{project_id}/readiness",
-    response_model=ProjectReadinessResponse,
 )
 async def get_project_readiness_endpoint(
     project_id: uuid.UUID,

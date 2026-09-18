@@ -156,6 +156,21 @@ export function setUrlParams(
   commitUrl(href, history);
 }
 
+/**
+ * A same-document href, dropping the `?` when the query is empty.
+ *
+ * Three call sites rebuilt this string by hand — here, and the two pricing
+ * hooks that clear their intent parameters — and a stray `?` on an otherwise
+ * identical URL is enough to make a history entry look like a navigation.
+ */
+export function hrefWithQuery(
+  location: Readonly<{ pathname: string; hash: string }>,
+  query: string,
+): string {
+  const search = query ? `?${query}` : '';
+  return `${location.pathname}${search}${location.hash}`;
+}
+
 export function useUrlState<T>(
   key: string,
   codec: UrlCodec<T>,
@@ -179,8 +194,7 @@ export function useUrlState<T>(
       if (encoded === null) params.delete(key);
       else params.set(key, encoded);
       for (const ownedKey of clearKeys ?? []) params.delete(ownedKey);
-      const query = params.toString();
-      const href = `${current.pathname}${query ? `?${query}` : ''}${current.hash}`;
+      const href = hrefWithQuery(current, params.toString());
       commitUrl(href, history);
     },
     [codec, key, clearKeys, historyOption],

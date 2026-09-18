@@ -133,7 +133,7 @@ async def _get_project_or_404(
         raise_not_found(_RES_PROJECT, cause=exc)
 
 
-@router.get("", response_model=list[ProjectResponse])
+@router.get("")
 async def list_projects_endpoint(
     ctx: _WorkspaceDep, session: _SessionDep
 ) -> list[ProjectResponse]:
@@ -141,7 +141,7 @@ async def list_projects_endpoint(
     return [project_to_response(project) for project in projects]
 
 
-@router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_project_endpoint(
     payload: ProjectCreate, ctx: _WriteDep, session: _SessionDep
 ) -> ProjectResponse:
@@ -158,7 +158,6 @@ async def create_project_endpoint(
 
 @router.get(
     "/{project_id}/brand-profile",
-    response_model=BrandProfileResponse,
 )
 async def get_brand_profile_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -176,7 +175,6 @@ async def get_brand_profile_endpoint(
 
 @router.put(
     "/{project_id}/brand-profile",
-    response_model=BrandProfileResponse,
 )
 async def put_brand_profile_endpoint(
     project_id: uuid.UUID,
@@ -199,7 +197,6 @@ async def put_brand_profile_endpoint(
 
 @router.get(
     "/{project_id}/visibility/prompts",
-    response_model=list[PromptMetricItem],
 )
 async def get_prompt_metrics_endpoint(
     project_id: uuid.UUID,
@@ -234,7 +231,6 @@ async def get_prompt_metrics_endpoint(
 
 @router.get(
     "/{project_id}/visibility/trends",
-    response_model=list[VisibilityTrendPoint],
 )
 async def get_visibility_trends_endpoint(
     project_id: uuid.UUID,
@@ -281,7 +277,7 @@ async def get_visibility_trends_endpoint(
         raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
 
 
-@router.get("/{project_id}/visibility/fanout", response_model=FanoutResponse)
+@router.get("/{project_id}/visibility/fanout")
 async def get_visibility_fanout_endpoint(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,
@@ -318,7 +314,7 @@ async def get_visibility_fanout_endpoint(
         raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
 
 
-@router.get("/{project_id}/visibility/sources", response_model=SourcesResponse)
+@router.get("/{project_id}/visibility/sources")
 async def get_visibility_sources_endpoint(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,
@@ -367,7 +363,6 @@ async def get_visibility_sources_endpoint(
 
 @router.get(
     "/{project_id}/visibility/evidence",
-    response_model=VisibilityEvidenceResponse,
 )
 async def get_visibility_evidence_endpoint(
     project_id: uuid.UUID,
@@ -457,7 +452,7 @@ def _logo_response(
     )
 
 
-@router.post("/{project_id}/logos/refresh", response_model=ProjectResponse)
+@router.post("/{project_id}/logos/refresh")
 async def refresh_project_logos_endpoint(
     project_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> ProjectResponse:
@@ -530,7 +525,7 @@ async def get_competitor_logo_endpoint(
     )
 
 
-@router.get("/{project_id}", response_model=ProjectResponse)
+@router.get("/{project_id}")
 async def get_project_endpoint(
     project_id: uuid.UUID, ctx: _ProjectMemberDep, session: _SessionDep
 ) -> ProjectResponse:
@@ -551,7 +546,7 @@ async def get_project_endpoint(
     return project_to_response(project)
 
 
-@router.get("/{project_id}/command-center", response_model=CommandCenterResponse)
+@router.get("/{project_id}/command-center")
 async def get_command_center_endpoint(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,
@@ -611,7 +606,7 @@ async def get_executive_report_endpoint(
     )
 
 
-@router.get("/{project_id}/visibility", response_model=VisibilityResponse)
+@router.get("/{project_id}/visibility")
 async def get_visibility_endpoint(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,
@@ -661,7 +656,6 @@ async def get_visibility_endpoint(
 
 @router.get(
     "/{project_id}/competitor-suggestions",
-    response_model=list[ObservedCompetitorResponse],
 )
 async def list_observed_competitors_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -675,7 +669,6 @@ async def list_observed_competitors_endpoint(
 
 @router.post(
     "/{project_id}/competitor-suggestions/{candidate_id}/accept",
-    response_model=CompetitorResponse,
 )
 async def accept_observed_competitor_endpoint(
     project_id: uuid.UUID,
@@ -695,7 +688,7 @@ async def accept_observed_competitor_endpoint(
     return CompetitorResponse.model_validate(competitor)
 
 
-@router.patch("/{project_id}", response_model=ProjectResponse)
+@router.patch("/{project_id}")
 async def update_project_endpoint(
     project_id: uuid.UUID,
     payload: ProjectUpdate,

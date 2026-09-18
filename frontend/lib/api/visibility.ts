@@ -13,6 +13,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
+  visibilityEvidenceResponseSchema,
   visibilityFanoutSummarySchema,
   visibilitySourceSeriesSchema,
   visibilitySourceUrlSchema,
@@ -28,7 +29,6 @@ import {
   promptMetricItemSchema,
   visibilitySchema,
 } from './schemas/visibility';
-import { visibilityEvidenceResponseSchema } from './schemas/visibility-evidence';
 import { surfaceRatesSchema } from './schemas/audits';
 import { visibilityTrendListSchema } from './schemas/visibility-trends';
 import { definedQuery, withQuery } from './shared';

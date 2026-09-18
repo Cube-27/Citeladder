@@ -28,6 +28,13 @@ function presenceCaption(evidence: SearchSurfaceEvidence): string {
   return 'This search was never successfully retrieved, so nothing was observed.';
 }
 
+/** The same tri-state as `presenceCaption`, as a stat value rather than prose. */
+function presenceLabel(evidence: SearchSurfaceEvidence): string {
+  if (evidence.aio_present === true) return 'Shown';
+  if (evidence.aio_present === false) return 'Not shown';
+  return 'Not observed';
+}
+
 function SurfaceStat({
   label,
   value,
@@ -223,10 +230,7 @@ export function SurfaceEvidence({ evidence }: Readonly<{ evidence: SearchSurface
         <p className="text-muted text-xs">{presenceCaption(evidence)}</p>
       </div>
       <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4">
-        <SurfaceStat
-          label="Overview"
-          value={shown ? 'Shown' : evidence.aio_present === false ? 'Not shown' : 'Not observed'}
-        />
+        <SurfaceStat label="Overview" value={presenceLabel(evidence)} />
         <SurfaceStat
           label="Block position"
           value={

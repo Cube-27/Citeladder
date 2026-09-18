@@ -71,7 +71,7 @@ _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 _NOT_FOUND = "Provider connection not found"
 
 
-@router.get("", response_model=list[ProviderConnectionResponse])
+@router.get("")
 async def list_connections_endpoint(
     ctx: _WorkspaceDep, session: _SessionDep
 ) -> list[ProviderConnectionResponse]:
@@ -79,7 +79,7 @@ async def list_connections_endpoint(
     return [connection_to_response(c) for c in connections]
 
 
-@router.get("/states", response_model=ProviderConnectionStatesResponse)
+@router.get("/states")
 async def get_connection_states_endpoint(
     ctx: _WorkspaceDep, session: _SessionDep
 ) -> ProviderConnectionStatesResponse:
@@ -93,7 +93,6 @@ async def get_connection_states_endpoint(
 
 @router.post(
     "",
-    response_model=ProviderConnectionResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_connection_endpoint(
@@ -116,7 +115,7 @@ async def create_connection_endpoint(
     return connection_to_response(connection)
 
 
-@router.patch("/{connection_id}", response_model=ProviderConnectionResponse)
+@router.patch("/{connection_id}")
 async def update_connection_endpoint(
     connection_id: uuid.UUID,
     payload: ProviderConnectionUpdate,
@@ -163,7 +162,6 @@ async def delete_connection_endpoint(
 
 @router.post(
     "/{connection_id}/test",
-    response_model=ProviderConnectionTestResponse,
 )
 async def test_connection_endpoint(
     connection_id: uuid.UUID, ctx: _CredentialDep, session: _SessionDep
@@ -199,7 +197,7 @@ async def test_connection_endpoint(
 catalog_router = APIRouter(prefix="/provider-catalog", tags=["providers"])
 
 
-@catalog_router.get("", response_model=ProviderCatalogResponse)
+@catalog_router.get("")
 async def get_provider_catalog() -> ProviderCatalogResponse:
     """Exact approved audit routes; no aliases or model fallback."""
     engines = [

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { textRole } from '@/components/ui/typography';
@@ -246,6 +246,47 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
     );
   }
 
+  // An empty library and a library filtered to nothing read differently: one
+  // needs a way to add prompts, the other needs its filter loosened.
+  let libraryBody: ReactNode = (
+    <PromptTable
+      prompts={visible}
+      onEdit={openEdit}
+      onDelete={(prompt) => {
+        setBusyId(prompt.id);
+        deleteMutation.mutate(prompt.id);
+      }}
+      onToggleEnabled={(prompt) => {
+        setBusyId(prompt.id);
+        toggleMutation.mutate(prompt);
+      }}
+      onSetStatus={(prompt, status) => {
+        setBusyId(prompt.id);
+        statusMutation.mutate({ prompt, status });
+      }}
+      busyId={busyId}
+      measurements={measurements}
+    />
+  );
+  if (!hasPrompts) {
+    libraryBody = <PromptEmptyState onAdd={openAdd} onImport={() => setImportOpen(true)} />;
+  } else if (visible.length === 0) {
+    libraryBody = (
+      <p className={textRole('body', 'px-[var(--card-padding)] py-[var(--empty-state-padding)]')}>
+        No prompts match your search or filters.
+      </p>
+    );
+  }
+
+  // Whichever topic mutation failed is the one worth reporting; they cannot
+  // both be in flight from this panel.
+  let topicActionError: string | null = null;
+  if (createTopicMutation.isError) {
+    topicActionError = errorMessage(createTopicMutation.error);
+  } else if (deleteTopicMutation.isError) {
+    topicActionError = errorMessage(deleteTopicMutation.error);
+  }
+
   if (isLoading) {
     return (
       <PageShell>
@@ -299,13 +340,7 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
               onDelete={(topic) => deleteTopicMutation.mutate(topic)}
               isCreating={createTopicMutation.isPending}
               loadError={topicsQuery.isError}
-              actionError={
-                createTopicMutation.isError
-                  ? errorMessage(createTopicMutation.error)
-                  : deleteTopicMutation.isError
-                    ? errorMessage(deleteTopicMutation.error)
-                    : null
-              }
+              actionError={topicActionError}
             />
           }
         >
@@ -327,37 +362,7 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
               }))}
             />
 
-            {!hasPrompts ? (
-              <PromptEmptyState onAdd={openAdd} onImport={() => setImportOpen(true)} />
-            ) : visible.length === 0 ? (
-              <p
-                className={textRole(
-                  'body',
-                  'px-[var(--card-padding)] py-[var(--empty-state-padding)]',
-                )}
-              >
-                No prompts match your search or filters.
-              </p>
-            ) : (
-              <PromptTable
-                prompts={visible}
-                onEdit={openEdit}
-                onDelete={(prompt) => {
-                  setBusyId(prompt.id);
-                  deleteMutation.mutate(prompt.id);
-                }}
-                onToggleEnabled={(prompt) => {
-                  setBusyId(prompt.id);
-                  toggleMutation.mutate(prompt);
-                }}
-                onSetStatus={(prompt, status) => {
-                  setBusyId(prompt.id);
-                  statusMutation.mutate({ prompt, status });
-                }}
-                busyId={busyId}
-                measurements={measurements}
-              />
-            )}
+            {libraryBody}
           </div>
         </ResizablePromptWorkspace>
 

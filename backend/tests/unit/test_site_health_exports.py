@@ -147,7 +147,8 @@ def test_markdown_escapes_pipes_backslashes_and_collapses_newlines() -> None:
     assert "\n" not in data_line.replace("|", "")
     assert "\r" not in data_line
     # Newlines are collapsed to spaces; no raw line break leaks into the cell.
-    assert "fix" in data_line and "now" in data_line
+    assert "fix" in data_line
+    assert "now" in data_line
 
 
 @pytest.mark.parametrize("trigger", ["=", "+", "-", "@"])

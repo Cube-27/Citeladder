@@ -318,9 +318,10 @@ function useDebouncedNeedle(needle: string): string {
  * group restarted the column widths at each prompt and left nothing aligned.
  */
 function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
+  const undisclosedNoun = group.undisclosed === 1 ? 'answer' : 'answers';
   const note = [
     group.undisclosed
-      ? `${group.undisclosed} ${group.undisclosed === 1 ? 'answer' : 'answers'} searched without returning the wording`
+      ? `${group.undisclosed} ${undisclosedNoun} searched without returning the wording`
       : null,
     group.silent ? `${group.silent} answered without searching` : null,
   ]

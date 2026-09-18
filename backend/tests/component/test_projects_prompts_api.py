@@ -70,7 +70,8 @@ async def test_create_project_persists_normalized_identity(
     resp = await client.post("/api/v1/projects", json=_project_payload())
     assert resp.status_code == 201
     body = resp.json()
-    assert "-" in body["id"] and "-" in body["workspace_id"]
+    assert "-" in body["id"]
+    assert "-" in body["workspace_id"]
     assert body["brand_name"] == "Acme Corp"
     assert body["brand"]["aliases"] == ["Acme", "ACME Inc"]
     assert body["brand"]["logo_url"] is None
@@ -244,7 +245,8 @@ async def test_project_logo_assets_are_workspace_scoped(
     competitor = await db_session.scalar(
         select(Competitor).where(Competitor.project_id == project_id)
     )
-    assert brand is not None and competitor is not None
+    assert brand is not None
+    assert competitor is not None
     png = b"\x89PNG\r\n\x1a\nasset"
     asset = BrandLogoAsset(
         domain="acme.com",
@@ -270,8 +272,10 @@ async def test_project_logo_assets_are_workspace_scoped(
     competitor_logo = await client.get(
         f"/api/v1/projects/{project['id']}/competitors/{competitor_id}/logo"
     )
-    assert own_logo.status_code == 200 and own_logo.content == png
-    assert competitor_logo.status_code == 200 and competitor_logo.content == png
+    assert own_logo.status_code == 200
+    assert own_logo.content == png
+    assert competitor_logo.status_code == 200
+    assert competitor_logo.content == png
     assert own_logo.headers["content-type"] == "image/png"
     assert own_logo.headers["cache-control"] == "private, max-age=86400"
     assert own_logo.headers["etag"] == f'"{hashlib.sha256(png).hexdigest()}"'
@@ -344,7 +348,8 @@ async def test_logo_is_served_without_the_active_workspace_header(
     competitor = await db_session.scalar(
         select(Competitor).where(Competitor.project_id == project_id)
     )
-    assert brand is not None and competitor is not None
+    assert brand is not None
+    assert competitor is not None
     png = b"\x89PNG\r\n\x1a\nsecond"
     asset = BrandLogoAsset(
         domain="acme.com",

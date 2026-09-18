@@ -379,6 +379,62 @@ function AnonymousActions() {
   );
 }
 
+/**
+ * The desktop session row, which has three answers rather than two.
+ *
+ * Before `me` answers, this render is also the STATIC HTML, so React cannot
+ * choose without guessing. It emits BOTH answers and lets CSS pick before
+ * paint: `ReturningVisitorHint` marks the document when this browser holds a
+ * live session hint and `globals.css` shows the matching branch. The anonymous
+ * majority get "Log in" in the first paint; someone returning gets Dashboard
+ * in the first paint, instead of an empty row that fills in a moment later.
+ */
+function DesktopSessionActions({
+  sessionPending,
+  isAuthenticated,
+  dashboardHref,
+  email,
+}: Readonly<{
+  sessionPending: boolean;
+  isAuthenticated: boolean;
+  dashboardHref: string;
+  email: string;
+}>) {
+  if (sessionPending) {
+    return (
+      <>
+        <span data-session-anon>
+          <AnonymousActions />
+        </span>
+        <span data-session-returning>
+          <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
+            Dashboard
+          </ButtonLink>
+          {/* The account circle is reserved here, not deferred until `me`
+              answers. Its initials need the round trip, but its BOX does not —
+              and rendering only "Dashboard" first meant the circle appeared a
+              beat later and pushed the button sideways on every refresh and
+              every page change. Holding the space makes the arrival a fade of
+              two letters into a circle that was already there. */}
+          <MarketingAccountGlyphPlaceholder />
+        </span>
+      </>
+    );
+  }
+  if (!isAuthenticated) return <AnonymousActions />;
+  // The topbar CTA runs one step smaller than the page CTAs — chrome, not a
+  // section action. The account sits beside it rather than replacing it:
+  // leaving is a menu item, arriving is the button.
+  return (
+    <>
+      <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
+        Dashboard
+      </ButtonLink>
+      <MarketingAccountMenu email={email} dashboardHref={dashboardHref} />
+    </>
+  );
+}
+
 function NavActions({
   isAuthenticated,
   sessionPending,
@@ -404,45 +460,12 @@ function NavActions({
           resize to desktop, where the sheet itself is `lg:hidden`, does not
           take the desktop actions down with it. */}
       <div className={cn('flex items-center gap-3', mobileOpen && 'max-lg:hidden')}>
-        {sessionPending ? (
-          // `me` has not answered yet, and this render is also the STATIC HTML —
-          // so React cannot choose here without guessing. It emits both answers
-          // and lets CSS pick before paint: `ReturningVisitorHint` marks the
-          // document when this browser holds a live session hint, and
-          // `globals.css` shows the matching branch. The anonymous majority get
-          // "Log in" in the first paint; someone returning gets Dashboard in
-          // the first paint, instead of an empty row that fills in a moment later.
-          <>
-            <span data-session-anon>
-              <AnonymousActions />
-            </span>
-            <span data-session-returning>
-              <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
-                Dashboard
-              </ButtonLink>
-              {/* The account circle is reserved here, not deferred until `me`
-                  answers. Its initials need the round trip, but its BOX does
-                  not — and rendering only "Dashboard" first meant the circle
-                  appeared a beat later and pushed the button sideways on every
-                  refresh and every page change. Holding the space makes the
-                  arrival a fade of two letters into a circle that was already
-                  there. */}
-              <MarketingAccountGlyphPlaceholder />
-            </span>
-          </>
-        ) : isAuthenticated ? (
-          // The topbar CTA runs one step smaller than the page CTAs — chrome,
-          // not a section action. The account sits beside it rather than
-          // replacing it: leaving is a menu item, arriving is the button.
-          <>
-            <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
-              Dashboard
-            </ButtonLink>
-            <MarketingAccountMenu email={email} dashboardHref={dashboardHref} />
-          </>
-        ) : (
-          <AnonymousActions />
-        )}
+        <DesktopSessionActions
+          sessionPending={sessionPending}
+          isAuthenticated={isAuthenticated}
+          dashboardHref={dashboardHref}
+          email={email}
+        />
       </div>
       <button
         type="button"

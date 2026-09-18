@@ -85,7 +85,9 @@ async def test_usage_counts_only_its_own_workspace(
     ) == (5, 1, 4)
     assert items["project_slots"].reserved == items["prompt_slots"].reserved == 0
     assert items["monitored_urls"].limit_state == "unknown"
-    assert not db_session.new and not db_session.dirty and not db_session.deleted
+    assert not db_session.new
+    assert not db_session.dirty
+    assert not db_session.deleted
     assert account.entitlement_lifecycle_version == before_version
 
 

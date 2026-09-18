@@ -26,6 +26,13 @@ import {
 } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
 
+/** Queued is neither "running" nor "ready to ask again": it is its own state. */
+function rerunLabel(pending: boolean, queued: boolean): string {
+  if (pending) return 'Re-auditing…';
+  if (queued) return 'Re-audit queued';
+  return 'Re-audit this page';
+}
+
 export function UrlDetailView({
   detail,
   rerunPending,
@@ -42,7 +49,7 @@ export function UrlDetailView({
       title={pageDisplayTitle(detail.title, detail.display_url)}
       actions={
         <Button size="sm" onClick={onRerun} disabled={rerunPending}>
-          {rerunPending ? 'Re-auditing…' : rerunQueued ? 'Re-audit queued' : 'Re-audit this page'}
+          {rerunLabel(rerunPending, rerunQueued)}
         </Button>
       }
     >

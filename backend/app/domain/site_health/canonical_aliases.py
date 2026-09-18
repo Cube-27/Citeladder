@@ -175,6 +175,20 @@ def _observe_alias_edge(
         graph.edges.pop(url_hash_value, None)
 
 
+def _cycle_representative(graph: _AliasGraph, cycle: set[str]) -> str:
+    """Which member of an alias cycle the whole cycle resolves to.
+
+    A protected hash wins over a merely active one, and the lowest hash breaks
+    the remaining tie, so a cycle resolves to the same page whichever member
+    the walk happened to enter it from. A cycle of nothing retained resolves to
+    nothing.
+    """
+    retained = sorted(cycle & graph.protected_hashes) or sorted(
+        cycle & graph.active_hashes
+    )
+    return retained[0] if retained else ""
+
+
 def _resolved_representative(graph: _AliasGraph, source_hash: str) -> str:
     path: list[str] = []
     positions: dict[str, int] = {}
@@ -183,11 +197,7 @@ def _resolved_representative(graph: _AliasGraph, source_hash: str) -> str:
         if current != source_hash and current in graph.protected_hashes:
             return current
         if current in positions:
-            cycle = set(path[positions[current] :])
-            retained = sorted(cycle & graph.protected_hashes) or sorted(
-                cycle & graph.active_hashes
-            )
-            return retained[0] if retained else ""
+            return _cycle_representative(graph, set(path[positions[current] :]))
         if current not in graph.known_hashes:
             return ""
         positions[current] = len(path)

@@ -196,12 +196,12 @@ async def test_india_quote_applies_configured_gst(monkeypatch) -> None:
         "INR",
         9_900 * 83,
     )
+    assert quote.tax_treatment == "CGST_SGST"
+    assert quote.cgst.amount_minor == quote.sgst.amount_minor
     assert (
-        quote.tax_treatment == "CGST_SGST"
-        and quote.cgst.amount_minor == quote.sgst.amount_minor
-        and quote.total_price.amount_minor
+        quote.total_price.amount_minor
         == quote.base_price.amount_minor + quote.tax.amount_minor
-        == 9_900 * 83 + round(9_900 * 83 * 0.18)
+        == 9900 * 83 + round(9900 * 83 * 0.18)
     )
 
 

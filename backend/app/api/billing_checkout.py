@@ -28,9 +28,7 @@ BillingWorkspace = Annotated[
 Session = Annotated[AsyncSession, Depends(get_db)]
 
 
-@router.get(
-    "/billing/subscriptions/{activation_id}/checkout", response_model=CheckoutResponse
-)
+@router.get("/billing/subscriptions/{activation_id}/checkout")
 async def get_checkout(
     activation_id: uuid.UUID, ctx: BillingWorkspace, session: Session
 ) -> CheckoutResponse:
@@ -45,7 +43,7 @@ async def get_checkout(
         raise_api_error(409, "Checkout is unavailable for this activation.", cause=exc)
 
 
-@router.get("/billing/activations/{activation_id}", response_model=ActivationResponse)
+@router.get("/billing/activations/{activation_id}")
 async def get_activation(
     activation_id: uuid.UUID, ctx: BillingWorkspace, session: Session
 ) -> ActivationResponse:
@@ -62,7 +60,6 @@ async def get_activation(
 
 @router.post(
     "/billing/subscriptions/{activation_id}/verify",
-    response_model=ActivationResponse,
     status_code=202,
 )
 async def post_verify(

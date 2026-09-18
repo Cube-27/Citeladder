@@ -14,6 +14,13 @@ import { textRole } from '@/components/ui/typography';
  * missing allowance is never drawn as an empty meter — that reads as "none
  * left" when it means "we don't know".
  */
+/** Two thresholds, three bands — the bar's only colour decision. */
+function usageToneClass(ratio: number): string {
+  if (ratio >= USAGE_METER_CRITICAL_RATIO) return 'bg-danger-solid';
+  if (ratio >= USAGE_METER_WARNING_RATIO) return 'bg-warning-solid';
+  return 'bg-brand-solid';
+}
+
 export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   const label = humanizeKey(item.key);
 
@@ -53,12 +60,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   const consumed = item.consumed ?? 0;
   const remaining = item.remaining ?? 0;
   const ratio = allowance > 0 ? consumed / allowance : 0;
-  const tone =
-    ratio >= USAGE_METER_CRITICAL_RATIO
-      ? 'bg-danger-solid'
-      : ratio >= USAGE_METER_WARNING_RATIO
-        ? 'bg-warning-solid'
-        : 'bg-brand-solid';
+  const tone = usageToneClass(ratio);
 
   return (
     <div className="border-border-subtle grid gap-1.5 border-b pb-3.5 last:border-b-0 last:pb-0">

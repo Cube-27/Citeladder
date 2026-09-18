@@ -68,6 +68,17 @@ function selectedCompetitors(competitors: ReviewCompetitor[]) {
   );
 }
 
+/**
+ * Where a resumed onboarding picks up.
+ *
+ * Without a discovery to resume there is nothing to return to, so the flow
+ * starts at the brand step whatever the URL claims.
+ */
+function resumedStep(discoveryId: string | null, stepParameter: string | null): OnboardingStep {
+  if (!discoveryId) return 0;
+  return stepParameter === 'review' ? 2 : 1;
+}
+
 function stepQueryValue(step: OnboardingStep): 'brand' | 'discovery' | 'review' {
   return ['brand', 'discovery', 'review'][step] as 'brand' | 'discovery' | 'review';
 }
@@ -108,8 +119,9 @@ export function useOnboardingFlow(transactionKey: string) {
   }, []);
   const isAdditional = searchParams?.get('new') === '1';
   const initialDiscoveryId = searchParams?.get('discovery') ?? null;
+  const initialStepParameter = searchParams?.get('step') ?? null;
   const [step, setStep] = useState<OnboardingStep>(() =>
-    initialDiscoveryId && searchParams?.get('step') === 'review' ? 2 : initialDiscoveryId ? 1 : 0,
+    resumedStep(initialDiscoveryId, initialStepParameter),
   );
   const [resumeDiscoveryId, setResumeDiscoveryId] = useState<string | null>(initialDiscoveryId);
   const [brand, setBrand] = useState<BrandStepValues | null>(null);

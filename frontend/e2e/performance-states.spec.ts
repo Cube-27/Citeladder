@@ -24,7 +24,21 @@ const emptyCounts = {
   bing_page: 0,
 };
 
-function performanceDashboard(mode: 'first-use' | 'zero' | 'bing') {
+type DashboardMode = 'first-use' | 'zero' | 'bing';
+
+const EVIDENCE_STATE: Record<DashboardMode, string> = {
+  zero: 'observed_zero',
+  bing: 'available',
+  'first-use': 'not_run',
+};
+
+const PROVIDERS: Record<DashboardMode, string[]> = {
+  bing: ['bing'],
+  zero: ['gsc'],
+  'first-use': [],
+};
+
+function performanceDashboard(mode: DashboardMode) {
   const measured = mode !== 'first-use';
   return {
     project_id: PROJECT,
@@ -35,7 +49,7 @@ function performanceDashboard(mode: 'first-use' | 'zero' | 'bing') {
       snapshot_id: measured ? SNAPSHOT : null,
       window_start: measured ? '2026-08-01' : '',
       window_end: measured ? '2026-08-28' : '',
-      evidence_state: mode === 'zero' ? 'observed_zero' : mode === 'bing' ? 'available' : 'not_run',
+      evidence_state: EVIDENCE_STATE[mode],
       totals: mode === 'zero' ? { ...emptyTotals, clicks: 0, impressions: 0 } : emptyTotals,
       series: emptySeries,
     },
@@ -53,7 +67,7 @@ function performanceDashboard(mode: 'first-use' | 'zero' | 'bing') {
 test('Performance distinguishes first use, measured zero, and Bing-only evidence', async ({
   page,
 }) => {
-  let mode: 'first-use' | 'zero' | 'bing' = 'first-use';
+  let mode: DashboardMode = 'first-use';
   let tableReads = 0;
   await page.setViewportSize({ width: 390, height: 844 });
   await stubAuthedShell(page);
@@ -66,7 +80,7 @@ test('Performance distinguishes first use, measured zero, and Bing-only evidence
         project_id: PROJECT,
         stage: mode === 'first-use' ? 'not_connected' : 'analysis_ready',
         connection_count: mode === 'first-use' ? 0 : 1,
-        providers: mode === 'bing' ? ['bing'] : mode === 'zero' ? ['gsc'] : [],
+        providers: PROVIDERS[mode],
         backfill_state: null,
         imported_through: mode === 'first-use' ? null : '2026-08-28',
         has_performance_snapshot: mode !== 'first-use',

@@ -12,6 +12,13 @@ import { Input } from '@/components/ui/input';
 import { billingApi, createIdempotencyKey, type NoCardOffer } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 
+/** Claimed stays on the button after the mutation settles, so it cannot be re-run. */
+function claimLabel(pending: boolean, claimed: boolean): string {
+  if (pending) return 'Claiming…';
+  if (claimed) return 'Early access claimed';
+  return 'Claim 7-day early access';
+}
+
 export function EarlyAccessDialog({
   offer,
   open,
@@ -47,11 +54,7 @@ export function EarlyAccessDialog({
       description="A temporary promotional grant while payments are disabled. No card, no charge, and nothing renews."
       footer={
         <Button disabled={!canClaim || claim.isSuccess} onClick={() => claim.mutate()}>
-          {claim.isPending
-            ? 'Claiming…'
-            : claim.isSuccess
-              ? 'Early access claimed'
-              : 'Claim 7-day early access'}
+          {claimLabel(claim.isPending, claim.isSuccess)}
         </Button>
       }
     >

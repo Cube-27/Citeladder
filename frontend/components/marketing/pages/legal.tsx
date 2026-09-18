@@ -99,8 +99,8 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
               aria-label="Other legal documents"
               className="border-border-subtle mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t pt-6"
             >
-              {FOOTER_LEGAL_LINKS.map((link) =>
-                link.href === `/${document.slug}` ? null : link.external ? (
+              {FOOTER_LEGAL_LINKS.filter((link) => link.href !== `/${document.slug}`).map((link) =>
+                link.external ? (
                   <a
                     key={link.href}
                     href={link.href}

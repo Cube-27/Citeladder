@@ -28,6 +28,7 @@ from app.core.config.billing_contracts import (
     SUBSCRIPTION_PENDING,
 )
 from app.core.database import Base
+from app.models.constants import FK_USERS_ID, ON_DELETE_SET_NULL
 
 
 def _utcnow() -> datetime:
@@ -60,7 +61,7 @@ class BillingCatalogRevision(Base):
     payload_sha256: Mapped[str] = mapped_column(String(64), unique=True)
     publication_state: Mapped[str] = mapped_column(String(16), default="draft")
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT")
+        PGUUID(as_uuid=True), ForeignKey(FK_USERS_ID, ondelete="RESTRICT")
     )
     created_reason: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
@@ -68,7 +69,7 @@ class BillingCatalogRevision(Base):
     )
     published_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="RESTRICT"),
+        ForeignKey(FK_USERS_ID, ondelete="RESTRICT"),
         nullable=True,
     )
     published_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -98,7 +99,7 @@ class BillingAccount(Base):
     # the workspace's billing account.
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
+        ForeignKey(FK_USERS_ID, ondelete=ON_DELETE_SET_NULL),
         nullable=True,
         index=True,
     )
@@ -214,7 +215,7 @@ class BillingSubscription(Base):
     )
     billing_customer_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("billing_customers.id", ondelete="SET NULL"),
+        ForeignKey("billing_customers.id", ondelete=ON_DELETE_SET_NULL),
         nullable=True,
     )
     provider: Mapped[str] = mapped_column(String(24), default=PROVIDER_RAZORPAY)
@@ -422,7 +423,7 @@ class GrantRevocation(Base):
     # a null actor_user_id plus the actor kind.
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
+        ForeignKey(FK_USERS_ID, ondelete=ON_DELETE_SET_NULL),
         nullable=True,
     )
     actor_kind: Mapped[str] = mapped_column(String(24))

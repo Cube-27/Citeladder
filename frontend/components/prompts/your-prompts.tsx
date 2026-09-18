@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
@@ -166,6 +166,124 @@ export function YourPrompts() {
     );
   }
 
+  // Three different absences: no prompts configured at all, none matching
+  // the current search, and the table itself.
+  let promptsBody: ReactNode = (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-8" aria-label="Expand" />
+          <TableHead>Prompt</TableHead>
+          <TableHead numeric>Visibility Score</TableHead>
+          <TableHead numeric>Avg Position</TableHead>
+          <TableHead>Topic</TableHead>
+          <TableHead>Branded</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {groups.map((group) => {
+          const isCollapsed = collapsed.has(group.key);
+          const label = group.topic?.name ?? 'Ungrouped';
+          return (
+            <Fragment key={group.key}>
+              <TableRow className="bg-background-alt/50">
+                <TableCell>
+                  <Pressable
+                    type="button"
+                    aria-expanded={!isCollapsed}
+                    aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} topic ${label}`}
+                    onClick={() => toggleGroup(group.key)}
+                    className="focus-ring text-muted hover:text-foreground hover:bg-well grid size-7 place-items-center rounded-[var(--radius-card)] transition-colors"
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="size-4" aria-hidden />
+                    ) : (
+                      <ChevronDown className="size-4" aria-hidden />
+                    )}
+                  </Pressable>
+                </TableCell>
+                <TableCell>
+                  <span className="inline-flex items-center gap-2">
+                    <Badge variant="neutral">{label}</Badge>
+                    <span className="text-muted text-xs">
+                      {group.prompts.length} {group.prompts.length === 1 ? 'prompt' : 'prompts'}
+                    </span>
+                  </span>
+                </TableCell>
+                <TableCell numeric>
+                  <ScoreCell score={group.score} />
+                </TableCell>
+                <TableCell numeric>
+                  <UnavailableValue state="not_measured" />
+                </TableCell>
+                <TableCell />
+                <TableCell />
+              </TableRow>
+              {!isCollapsed
+                ? group.prompts.map((prompt) => (
+                    <TableRow key={prompt.id}>
+                      <TableCell />
+                      <TableCell className="max-w-120">
+                        <span className="text-foreground block truncate" title={prompt.text}>
+                          {prompt.text}
+                        </span>
+                      </TableCell>
+                      <TableCell numeric>
+                        <ScoreCell score={scores.get(prompt.id) ?? null} />
+                      </TableCell>
+                      <TableCell numeric>
+                        <UnavailableValue state="not_measured" />
+                      </TableCell>
+                      <TableCell>
+                        {group.topic ? (
+                          <Badge variant="neutral">{group.topic.name}</Badge>
+                        ) : (
+                          <UnavailableValue state="not_set" />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {prompt.branded ? (
+                          <Badge variant="status" value="info">
+                            Branded
+                          </Badge>
+                        ) : (
+                          <span className={textRole('label')}>Not branded</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                : null}
+            </Fragment>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+  if (activePrompts.length === 0) {
+    promptsBody = (
+      <div className="grid gap-3 py-[var(--empty-state-padding)]">
+        <p className={eyebrowClasses}>Your prompts</p>
+        <h2 className={textRole('sectionTitle')}>No active prompts yet</h2>
+        <p className="text-secondary max-w-md text-sm leading-relaxed">
+          Switch to manage mode to add prompts manually, import a CSV, or generate prompts and
+          topics with AI.
+        </p>
+        <ProjectLink
+          href="/prompts?mode=manage"
+          className={buttonVariants({ variant: 'secondary', size: 'md' })}
+        >
+          Manage prompts
+        </ProjectLink>
+      </div>
+    );
+  } else if (visiblePrompts.length === 0) {
+    promptsBody = (
+      <p className={textRole('body', 'py-[var(--empty-state-padding)]')}>
+        No prompts match your search.
+      </p>
+    );
+  }
+
   return (
     <PageShell
       actions={
@@ -211,117 +329,7 @@ export function YourPrompts() {
           {topicCount === 1 ? 'topic' : 'topics'}, which are run on each audit.
         </p>
 
-        {activePrompts.length === 0 ? (
-          <div className="grid gap-3 py-[var(--empty-state-padding)]">
-            <p className={eyebrowClasses}>Your prompts</p>
-            <h2 className={textRole('sectionTitle')}>No active prompts yet</h2>
-            <p className="text-secondary max-w-md text-sm leading-relaxed">
-              Switch to manage mode to add prompts manually, import a CSV, or generate prompts and
-              topics with AI.
-            </p>
-            <ProjectLink
-              href="/prompts?mode=manage"
-              className={buttonVariants({ variant: 'secondary', size: 'md' })}
-            >
-              Manage prompts
-            </ProjectLink>
-          </div>
-        ) : visiblePrompts.length === 0 ? (
-          <p className={textRole('body', 'py-[var(--empty-state-padding)]')}>
-            No prompts match your search.
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8" aria-label="Expand" />
-                <TableHead>Prompt</TableHead>
-                <TableHead numeric>Visibility Score</TableHead>
-                <TableHead numeric>Avg Position</TableHead>
-                <TableHead>Topic</TableHead>
-                <TableHead>Branded</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {groups.map((group) => {
-                const isCollapsed = collapsed.has(group.key);
-                const label = group.topic?.name ?? 'Ungrouped';
-                return (
-                  <Fragment key={group.key}>
-                    <TableRow className="bg-background-alt/50">
-                      <TableCell>
-                        <Pressable
-                          type="button"
-                          aria-expanded={!isCollapsed}
-                          aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} topic ${label}`}
-                          onClick={() => toggleGroup(group.key)}
-                          className="focus-ring text-muted hover:text-foreground hover:bg-well grid size-7 place-items-center rounded-[var(--radius-card)] transition-colors"
-                        >
-                          {isCollapsed ? (
-                            <ChevronRight className="size-4" aria-hidden />
-                          ) : (
-                            <ChevronDown className="size-4" aria-hidden />
-                          )}
-                        </Pressable>
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center gap-2">
-                          <Badge variant="neutral">{label}</Badge>
-                          <span className="text-muted text-xs">
-                            {group.prompts.length}{' '}
-                            {group.prompts.length === 1 ? 'prompt' : 'prompts'}
-                          </span>
-                        </span>
-                      </TableCell>
-                      <TableCell numeric>
-                        <ScoreCell score={group.score} />
-                      </TableCell>
-                      <TableCell numeric>
-                        <UnavailableValue state="not_measured" />
-                      </TableCell>
-                      <TableCell />
-                      <TableCell />
-                    </TableRow>
-                    {!isCollapsed
-                      ? group.prompts.map((prompt) => (
-                          <TableRow key={prompt.id}>
-                            <TableCell />
-                            <TableCell className="max-w-120">
-                              <span className="text-foreground block truncate" title={prompt.text}>
-                                {prompt.text}
-                              </span>
-                            </TableCell>
-                            <TableCell numeric>
-                              <ScoreCell score={scores.get(prompt.id) ?? null} />
-                            </TableCell>
-                            <TableCell numeric>
-                              <UnavailableValue state="not_measured" />
-                            </TableCell>
-                            <TableCell>
-                              {group.topic ? (
-                                <Badge variant="neutral">{group.topic.name}</Badge>
-                              ) : (
-                                <UnavailableValue state="not_set" />
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {prompt.branded ? (
-                                <Badge variant="status" value="info">
-                                  Branded
-                                </Badge>
-                              ) : (
-                                <span className={textRole('label')}>Not branded</span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      : null}
-                  </Fragment>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
+        {promptsBody}
       </Stack>
     </PageShell>
   );

@@ -280,7 +280,8 @@ def test_changing_the_default_leaves_prior_records_on_their_adapter(
 
     # The existing record still routes to the provider that created it.
     adapter = provider_for_record(ALPHA, "test")
-    assert isinstance(adapter, _Adapter) and adapter.name == ALPHA
+    assert isinstance(adapter, _Adapter)
+    assert adapter.name == ALPHA
 
 
 def test_a_records_environment_must_still_match(doubles: None) -> None:
@@ -299,7 +300,8 @@ def test_checkout_initialization_comes_from_the_originating_adapter(
     beta = resolve_binding(BETA).registration.checkout.initialization(
         external_reference="ref_1", provider_mode="live"
     )
-    assert alpha.provider == ALPHA and beta.provider == BETA
+    assert alpha.provider == ALPHA
+    assert beta.provider == BETA
     assert alpha.redirect_url != beta.redirect_url
 
 
@@ -369,7 +371,8 @@ def test_webhook_authentication_is_provider_specific(doubles: None) -> None:
         f"X-{ALPHA}-Event": "evt_1",
     }
     envelope = authenticate_webhook(ALPHA, raw_body=body, headers=alpha_headers)
-    assert envelope.provider == ALPHA and envelope.provider_mode == "test"
+    assert envelope.provider == ALPHA
+    assert envelope.provider_mode == "test"
 
     # ALPHA's credentials never authenticate BETA's ingress.
     with pytest.raises(InvalidWebhookError):
@@ -498,7 +501,8 @@ def test_a_pending_row_carries_its_own_provider_identity() -> None:
     from app.models.billing import PendingActivation
 
     columns = PendingActivation.__table__.columns
-    assert "provider" in columns and "provider_mode" in columns
+    assert "provider" in columns
+    assert "provider_mode" in columns
     assert uuid.UUID  # keeps the import meaningful for the module's typing
 
 

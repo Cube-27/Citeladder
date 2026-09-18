@@ -307,7 +307,7 @@ describe('DemandProjection', () => {
     // The worker has not run yet, so the UI must say the job is queued and
     // must NOT silently refetch the identical snapshot as if it had rebuilt.
     expect(await screen.findByText(/Recompute queued/i)).toBeInTheDocument();
-    expect(vi.mocked(demandApi.getLatest).mock.calls.length).toBe(fetchesBeforeRecompute);
+    expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(fetchesBeforeRecompute);
   });
 
   it('shows no snapshot from the project that was just switched away from', async () => {

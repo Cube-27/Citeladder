@@ -141,7 +141,8 @@ class TestSerializeBrandEvidence:
         assert out.startswith("<brand_website_evidence>")
         assert out.endswith("</brand_website_evidence>")
         # Prompt-injection framing: page text is data, never instructions.
-        assert "never" in out and "instructions" in out
+        assert "never" in out
+        assert "instructions" in out
 
     def test_total_character_budget_is_enforced(self) -> None:
         pages = [self._page("word " * 20_000) for _ in range(3)]
@@ -217,7 +218,8 @@ class TestSerializeBrandEvidence:
         worker.join(timeout=10)
 
         assert not worker.is_alive(), "_strip_delimiters did not terminate"
-        assert result and result[0].count("</brand_website_evidence>") == 1
+        assert result
+        assert result[0].count("</brand_website_evidence>") == 1
 
     def test_delimiters_are_stripped_from_every_serialized_field(self) -> None:
         page = BrandEvidencePage(

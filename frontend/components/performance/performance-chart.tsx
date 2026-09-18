@@ -110,6 +110,13 @@ function chartSummary(series: readonly ChartSeries[], columnCount: number): stri
   }`;
 }
 
+/** The end ticks hug the plot edges; everything between them is centred. */
+function tickAlignClass(position: number, count: number): string {
+  if (position === 0) return 'translate-x-0 text-left';
+  if (position === count - 1) return '-translate-x-full text-right';
+  return '-translate-x-1/2 text-center';
+}
+
 export function PerformanceChart({
   series,
   className,
@@ -269,12 +276,7 @@ export function PerformanceChart({
           if (!dateStr) return null;
           const label = formatShortDate(dateStr);
           const pct = (pointX(idx) / VIEW_WIDTH) * 100;
-          const alignClass =
-            i === 0
-              ? 'translate-x-0 text-left'
-              : i === tickIndices.length - 1
-                ? '-translate-x-full text-right'
-                : '-translate-x-1/2 text-center';
+          const alignClass = tickAlignClass(i, tickIndices.length);
           return (
             <span
               key={`x-label-${idx}`}

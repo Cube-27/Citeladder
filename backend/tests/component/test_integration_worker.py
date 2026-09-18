@@ -609,7 +609,8 @@ async def test_lost_lease_before_start_writes_nothing(
     assert list((await db_session.scalars(select(AnalyticsTask))).all()) == []
     connection = await db_session.get(IntegrationConnection, seed.connection_id)
     assert connection.last_synced_at is None
-    assert fake.token_calls == [] and fake.gsc_auth == []
+    assert fake.token_calls == []
+    assert fake.gsc_auth == []
 
 
 @pytest.mark.asyncio

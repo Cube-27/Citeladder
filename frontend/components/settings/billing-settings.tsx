@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -346,6 +346,40 @@ function PlanCatalog({
   checkoutError: unknown;
   onCheckout: (key: SelfServePlanKey, details: BillingCustomerDetails) => void;
 }>) {
+  let catalogBody: ReactNode;
+  if (error) {
+    catalogBody = (
+      <Alert tone="danger">Could not load the plan catalog. Check your connection and retry.</Alert>
+    );
+  } else if (loading || !catalog) {
+    catalogBody = <Skeleton className="h-24 w-full" />;
+  } else {
+    catalogBody = (
+      <div className="grid gap-3">
+        <BillingCountryInput country={country} setCountry={setCountry} />
+        <BillingDetailsForm
+          country={country}
+          details={billingDetails}
+          setDetails={setBillingDetails}
+          idPrefix="settings"
+        />
+        <div className="grid gap-2.5">
+          {catalog.plans.map((plan) => (
+            <PlanRow
+              key={plan.key}
+              plan={plan}
+              currencyMinorUnits={catalog.currency_minor_units}
+              country={country}
+              billingDetails={billingDetails}
+              pending={pending}
+              onCheckout={onCheckout}
+            />
+          ))}
+        </div>
+        {checkoutError ? <Alert tone="danger">{message(checkoutError)}</Alert> : null}
+      </div>
+    );
+  }
   return (
     <div className={panelClasses({}, 'grid gap-4 lg:col-span-7')}>
       <div className="grid gap-0.5">
@@ -355,37 +389,7 @@ function PlanCatalog({
           provider keys, billed by those providers directly.
         </p>
       </div>
-      {error ? (
-        <Alert tone="danger">
-          Could not load the plan catalog. Check your connection and retry.
-        </Alert>
-      ) : loading || !catalog ? (
-        <Skeleton className="h-24 w-full" />
-      ) : (
-        <div className="grid gap-3">
-          <BillingCountryInput country={country} setCountry={setCountry} />
-          <BillingDetailsForm
-            country={country}
-            details={billingDetails}
-            setDetails={setBillingDetails}
-            idPrefix="settings"
-          />
-          <div className="grid gap-2.5">
-            {catalog.plans.map((plan) => (
-              <PlanRow
-                key={plan.key}
-                plan={plan}
-                currencyMinorUnits={catalog.currency_minor_units}
-                country={country}
-                billingDetails={billingDetails}
-                pending={pending}
-                onCheckout={onCheckout}
-              />
-            ))}
-          </div>
-          {checkoutError ? <Alert tone="danger">{message(checkoutError)}</Alert> : null}
-        </div>
-      )}
+      {catalogBody}
     </div>
   );
 }

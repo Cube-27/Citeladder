@@ -304,7 +304,8 @@ def test_rule_tables_are_well_formed() -> None:
         assert rule.confidence in CONFIDENCE_BUCKETS
         # Bare normalized hosts only (suffix-safe matching needs no scheme).
         assert rule.host == rule.host.strip().casefold()
-        assert "://" not in rule.host and "/" not in rule.host
+        assert "://" not in rule.host
+        assert "/" not in rule.host
         assert not rule.host.startswith("www.")
     for rule in AI_REFERRAL_UTM_RULES:
         all_rule_ids.append(rule.rule_id)
@@ -319,7 +320,8 @@ def test_rule_tables_are_well_formed() -> None:
         all_rule_ids.append(rule.rule_id)
         assert rule.ai_source in AI_SOURCES - {AI_SOURCE_OTHER}
         assert rule.confidence in CONFIDENCE_BUCKETS
-        assert rule.substring and rule.substring == rule.substring.casefold()
+        assert rule.substring
+        assert rule.substring == rule.substring.casefold()
     # Rule ids are unique and stable (they persist as matched_rule_id).
     assert len(all_rule_ids) == len(set(all_rule_ids))
 

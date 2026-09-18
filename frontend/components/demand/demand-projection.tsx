@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { Calendar, RefreshCw, Search, Sparkles } from 'lucide-react';
 
@@ -219,6 +219,45 @@ function SearchDemandView({
     );
   }, [snapshot.signals, activeTab, searchQuery]);
 
+  // An empty feed has two different causes, and they need different words:
+  // nothing was detected at all, or the filter hid everything that was.
+  let signalsFeed: ReactNode = (
+    <EmptyState
+      icon={Search}
+      heading="No signals match your filter"
+      description="Try choosing a different filter tab or clearing your search term."
+      action={
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setActiveTab('all');
+            setSearchQuery('');
+          }}
+        >
+          Clear Filters
+        </Button>
+      }
+    />
+  );
+  if (filteredSignals.length > 0) {
+    signalsFeed = (
+      <div className="grid gap-3">
+        {filteredSignals.map(({ signal, rank }) => (
+          <DemandSignalCard key={signal.id} signal={signal} rank={rank} onInspect={handleInspect} />
+        ))}
+      </div>
+    );
+  } else if (snapshot.signals.length === 0) {
+    signalsFeed = (
+      <EmptyState
+        icon={Sparkles}
+        heading="No qualifying search gaps observed"
+        description="Search Console data was observed, but no configured detector emitted a signal in this window."
+      />
+    );
+  }
+
   return (
     <PageShell
       actions={
@@ -322,42 +361,7 @@ function SearchDemandView({
         </Card>
 
         {/* Signals List Feed */}
-        {filteredSignals.length > 0 ? (
-          <div className="grid gap-3">
-            {filteredSignals.map(({ signal, rank }) => (
-              <DemandSignalCard
-                key={signal.id}
-                signal={signal}
-                rank={rank}
-                onInspect={handleInspect}
-              />
-            ))}
-          </div>
-        ) : snapshot.signals.length === 0 ? (
-          <EmptyState
-            icon={Sparkles}
-            heading="No qualifying search gaps observed"
-            description="Search Console data was observed, but no configured detector emitted a signal in this window."
-          />
-        ) : (
-          <EmptyState
-            icon={Search}
-            heading="No signals match your filter"
-            description="Try choosing a different filter tab or clearing your search term."
-            action={
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setActiveTab('all');
-                  setSearchQuery('');
-                }}
-              >
-                Clear Filters
-              </Button>
-            }
-          />
-        )}
+        {signalsFeed}
 
         {/* Evidence Inspection Drawer */}
         <DemandEvidenceDrawer
@@ -392,7 +396,7 @@ export function DemandProjection() {
   // with an empty content region, so it keeps its identity band rather than
   // losing the heading and the rule above the work.
   const snapshot = latest.data;
-  if (activeProject && snapshot && snapshot.coverage.search === 'observed') {
+  if (activeProject && snapshot?.coverage.search === 'observed') {
     // The route already wraps this subtree in a TooltipProvider.
     //
     // A refresh that fails over evidence we already hold keeps the evidence and

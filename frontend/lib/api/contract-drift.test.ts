@@ -125,8 +125,8 @@ describe('diffContract', () => {
 
   it('fails on an unresolved mapping (the guard must stay maintainable)', () => {
     const result = diffContract(specWith({}));
-    expect(result.unresolved.length).toBe(Object.keys(CONTRACT_SCHEMA_MAP).length);
-    expect(result.failures.length).toBe(result.unresolved.length);
+    expect(result.unresolved).toHaveLength(Object.keys(CONTRACT_SCHEMA_MAP).length);
+    expect(result.failures).toHaveLength(result.unresolved.length);
   });
 });
 

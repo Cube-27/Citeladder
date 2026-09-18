@@ -265,8 +265,10 @@ async def test_provenance_and_citation_classification_persisted(
         assert all(c.analyzer_version for c in citations)
         owned = [c for c in citations if c.classification == "owned"]
         competitor = [c for c in citations if c.classification == "competitor"]
-        assert owned and all(c.is_owned for c in owned)
-        assert competitor and all(c.matched_competitor == "Globex" for c in competitor)
+        assert owned
+        assert all(c.is_owned for c in owned)
+        assert competitor
+        assert all(c.matched_competitor == "Globex" for c in competitor)
 
 
 @pytest.mark.asyncio

@@ -28,6 +28,12 @@ import {
  * create (no `prompt`) and edit (prefilled from `prompt`). Submit maps to the
  * API `PromptInput` and delegates persistence to `onSubmit`.
  */
+/** Saving wins over both; otherwise the verb follows which dialog this is. */
+function submitLabel(saving: boolean | undefined, editing: boolean): string {
+  if (saving) return 'Saving…';
+  return editing ? 'Save changes' : 'Add prompt';
+}
+
 export function PromptFormDialog({
   open,
   onOpenChange,
@@ -75,7 +81,7 @@ export function PromptFormDialog({
             Cancel
           </Button>
           <Button variant="primary" onClick={submit} disabled={isSaving}>
-            {isSaving ? 'Saving…' : isEdit ? 'Save changes' : 'Add prompt'}
+            {submitLabel(isSaving, isEdit)}
           </Button>
         </>
       }

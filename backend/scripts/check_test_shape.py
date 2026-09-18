@@ -95,29 +95,38 @@ def _record_text_binding(
                 names.add(target.id)
 
 
+def _substring_violations(node: ast.Compare, names: set[str]) -> list[tuple[int, str]]:
+    """`needle in haystack` where the haystack is a bound piece of text."""
+    return [
+        (node.lineno, f"substring assertion against '{right.id}'")
+        for operator, right in zip(node.ops, node.comparators, strict=True)
+        if isinstance(operator, (ast.In, ast.NotIn))
+        and isinstance(right, ast.Name)
+        and right.id in names
+    ]
+
+
+def _position_violation(node: ast.Call, names: set[str]) -> tuple[int, str] | None:
+    """`text.index(...)`, which asserts WHERE something sits, not that it does."""
+    if not isinstance(node.func, ast.Attribute) or node.func.attr != "index":
+        return None
+    owner = node.func.value
+    if not isinstance(owner, ast.Name) or owner.id not in names:
+        return None
+    return (node.lineno, f"text-position assertion on '{owner.id}'")
+
+
 def _assertion_violations(
     assertion: ast.Assert, names: set[str]
 ) -> list[tuple[int, str]]:
     found: list[tuple[int, str]] = []
     for node in ast.walk(assertion.test):
         if isinstance(node, ast.Compare):
-            for operator, right in zip(node.ops, node.comparators, strict=True):
-                if (
-                    isinstance(operator, (ast.In, ast.NotIn))
-                    and isinstance(right, ast.Name)
-                    and right.id in names
-                ):
-                    found.append(
-                        (node.lineno, f"substring assertion against '{right.id}'")
-                    )
-        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-            owner = node.func.value
-            if (
-                node.func.attr == "index"
-                and isinstance(owner, ast.Name)
-                and owner.id in names
-            ):
-                found.append((node.lineno, f"text-position assertion on '{owner.id}'"))
+            found.extend(_substring_violations(node, names))
+        elif isinstance(node, ast.Call):
+            violation = _position_violation(node, names)
+            if violation is not None:
+                found.append(violation)
     return found
 
 

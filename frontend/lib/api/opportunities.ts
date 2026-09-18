@@ -179,7 +179,7 @@ export const opportunitiesApi = {
 };
 
 function extractProjectId(queryKey: readonly unknown[] | undefined): string | undefined {
-  if (!queryKey || queryKey[0] !== 'opportunities') return undefined;
+  if (queryKey?.[0] !== 'opportunities') return undefined;
   if (queryKey[1] === 'list' || queryKey[1] === 'summary') {
     return typeof queryKey[2] === 'string' ? queryKey[2] : undefined;
   }

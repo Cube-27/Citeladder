@@ -25,7 +25,7 @@ _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
-@router.get("/{execution_id}", response_model=ExecutionEvidenceResponse)
+@router.get("/{execution_id}")
 async def get_execution_endpoint(
     execution_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> ExecutionEvidenceResponse:

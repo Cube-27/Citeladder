@@ -84,7 +84,7 @@ test('enqueue → worker → sanitised markdown result, persisted across reload'
   // never executed or injected, javascript: href neutralised.
   await expect(page.getByText('we make excellent things')).toBeVisible();
   expect(await page.evaluate(() => (window as { pwned?: boolean }).pwned)).toBeUndefined();
-  expect(await page.locator('script:has-text("pwned")').count()).toBe(0);
+  await expect(page.locator('script:has-text("pwned")')).toHaveCount(0);
   const goodLink = page.getByRole('link', { name: 'Contact us' });
   await expect(goodLink).toHaveAttribute('href', 'https://acme.example/contact');
   await expect(goodLink).toHaveAttribute('rel', /noopener/);
@@ -156,7 +156,7 @@ test('cancel during a slow provider call ends cancelled with no output', async (
   const list = (await (
     await page.request.get(`/api/v1/content/generations?project_id=${projectId}`)
   ).json()) as Array<{ id: string; status: string }>;
-  expect(list.length).toBe(1);
+  expect(list).toHaveLength(1);
   const detailUrl = `/api/v1/content/generations/${list[0]!.id}`;
   await expect
     .poll(
@@ -182,7 +182,7 @@ test('regenerate and try-again create new records; originals are untouched', asy
 
   const listUrl = `/api/v1/content/generations?project_id=${projectId}`;
   const firstList = (await (await page.request.get(listUrl)).json()) as Array<{ id: string }>;
-  expect(firstList.length).toBe(1);
+  expect(firstList).toHaveLength(1);
   const originalId = firstList[0]!.id;
 
   // Regenerate from the result card creates a second record...

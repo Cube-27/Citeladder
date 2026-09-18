@@ -38,6 +38,7 @@ from app.domain.demand.projection import (
     QueryEvidenceInput,
     _aggregate_query_rows,
     _priority,
+    detector_state,
     stable_hash,
 )
 
@@ -54,7 +55,7 @@ def detect_cannibalization(rows: list[QueryEvidenceInput]) -> DetectorEvaluation
             abstained += 1
         if candidate is not None:
             candidates.append(candidate)
-    state = "partial" if abstained else ("available" if rows else "unavailable")
+    state = detector_state(abstained=abstained, rows=rows)
     return DetectorEvaluation(
         state,
         tuple(candidates),

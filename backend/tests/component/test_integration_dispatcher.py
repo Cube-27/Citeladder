@@ -274,7 +274,8 @@ async def test_late_data_revision_window_resyncs_with_bumped_seq(
     # late-data read collides with the trailing read on the metric-row
     # identity and its corrected values are dropped by ON CONFLICT DO NOTHING.
     # This is the regression that made the late-data pass a no-op.
-    assert late[0] >= trailing[0] and late[1] <= trailing[1]
+    assert late[0] >= trailing[0]
+    assert late[1] <= trailing[1]
     assert windows[late] != windows[trailing]
     assert windows[late] > windows[trailing]
 

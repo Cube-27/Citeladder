@@ -494,7 +494,8 @@ def test_base_and_credit_prices_stay_separate_and_funded_needs_a_margin(
     assert funded is not None
     base = funded.base_price(REGION_INTERNATIONAL)
     credit = funded.credit_price(REGION_INTERNATIONAL)
-    assert base is not None and credit is not None
+    assert base is not None
+    assert credit is not None
     assert base.amount_minor == 9_900
     assert credit.amount_minor == 60_000
     assert base.amount_minor != credit.amount_minor

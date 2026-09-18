@@ -92,6 +92,18 @@ function readStance(value: unknown): SiteFactsStance {
 }
 
 /**
+ * A bot's stance, which only means anything once robots.txt was actually read.
+ *
+ * A site with no robots.txt allows everything, so `not_found` is an `allow` for
+ * every bot. A fetch that failed says nothing either way, and reporting it as
+ * `allow` would have claimed access the crawl never observed.
+ */
+function botStance(status: RobotsFetchStatus, value: unknown): SiteFactsStance {
+  if (status === 'fetched') return readStance(value);
+  return status === 'not_found' ? 'allow' : 'unknown';
+}
+
+/**
  * Read the persisted robots.txt fetch classification without reconstructing it.
  */
 function readRobotsFetchStatus(robots: Record<string, unknown>): RobotsFetchStatus {
@@ -126,12 +138,7 @@ export function readSiteFacts(facts: unknown): SiteFactsView | null {
   const aiCrawlers = isRecord(robots.ai_crawlers) ? robots.ai_crawlers : {};
   const bots: SiteFactsBotStance[] = AI_CRAWLER_BOTS.map((bot) => ({
     bot,
-    stance:
-      robotsFetchStatus === 'fetched'
-        ? readStance(aiCrawlers[bot])
-        : robotsFetchStatus === 'not_found'
-          ? 'allow'
-          : 'unknown',
+    stance: botStance(robotsFetchStatus, aiCrawlers[bot]),
   }));
 
   return {

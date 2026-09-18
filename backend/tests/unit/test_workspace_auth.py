@@ -198,4 +198,5 @@ def test_unauthenticated_current_user_rejected() -> None:
 
 def test_valid_token_shape() -> None:
     token = create_access_token(str(uuid.uuid4()))
-    assert isinstance(token, str) and token.count(".") == 2
+    assert isinstance(token, str)
+    assert token.count(".") == 2

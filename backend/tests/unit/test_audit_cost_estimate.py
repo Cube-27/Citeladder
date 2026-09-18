@@ -259,7 +259,8 @@ def test_a_verified_engine_with_retrieval_on_prices_the_search_line() -> None:
         ),
         PRICING_CATALOG_VERSION,
     )
-    assert pricing is not None and pricing.search_fee_microusd is not None
+    assert pricing is not None
+    assert pricing.search_fee_microusd is not None
 
     row = _estimate_engine(
         ENGINE_GEMINI,

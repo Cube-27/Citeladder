@@ -30,6 +30,7 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
+import { sortIndicator } from '@/components/ui/sort-indicator';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 
 /**
@@ -78,12 +79,13 @@ function SortableHead({
   numeric?: boolean;
   onSort: () => void;
 }>) {
-  const Icon = active ? (descending ? ArrowDown : ArrowUp) : ArrowUpDown;
+  const { ariaSort, icon: Icon } = sortIndicator(active, descending, {
+    ascending: ArrowUp,
+    descending: ArrowDown,
+    inactive: ArrowUpDown,
+  });
   return (
-    <TableHead
-      numeric={numeric}
-      aria-sort={active ? (descending ? 'descending' : 'ascending') : undefined}
-    >
+    <TableHead numeric={numeric} aria-sort={ariaSort}>
       <Pressable
         type="button"
         onClick={onSort}

@@ -35,6 +35,9 @@ from app.core.config.billing_settings import billing_settings
 from app.core.config.razorpay_settings import RazorpaySettings, razorpay_settings
 
 _SECONDS_PER_DAY = 86_400
+#: Razorpay's subscriptions collection, used for create, fetch and list.
+_SUBSCRIPTIONS_PATH = "/subscriptions"
+
 _NOTE_INTENT = "citeladder_intent_id"
 _NOTE_ACCOUNT = "citeladder_account_ref"
 
@@ -215,7 +218,7 @@ class RazorpayBillingProvider:
             payload["start_at"] = int(
                 datetime.now(UTC).timestamp() + trial_days * _SECONDS_PER_DAY
             )
-        data = await self._request("POST", "/subscriptions", payload=payload)
+        data = await self._request("POST", _SUBSCRIPTIONS_PATH, payload=payload)
         return self._hosted_subscription(data, expected_price_ref=price_ref)
 
     async def create_addon_subscription(
@@ -229,7 +232,7 @@ class RazorpayBillingProvider:
     ) -> HostedSubscription:
         data = await self._request(
             "POST",
-            "/subscriptions",
+            _SUBSCRIPTIONS_PATH,
             payload={
                 "plan_id": price_ref,
                 "quantity": quantity,
@@ -265,7 +268,7 @@ class RazorpayBillingProvider:
     async def find_subscription(
         self, intent_id: str, account_ref: str
     ) -> ProviderSubscription | None:
-        data = await self._collection("/subscriptions")
+        data = await self._collection(_SUBSCRIPTIONS_PATH)
         items = data.get("items")
         if not isinstance(items, list):
             raise BillingProviderError("provider_invalid_response")

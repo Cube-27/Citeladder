@@ -167,7 +167,7 @@ export function useSubscriptionCheckout() {
         ) {
           const state = await refresh(controller.signal);
           if (state) settled = state;
-          if (!state || state.status !== 'pending') break;
+          if (state?.status !== 'pending') break;
           await new Promise((resolve) => {
             setTimeout(resolve, CHECKOUT_POLL_INTERVAL_MS);
           });

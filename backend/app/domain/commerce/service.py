@@ -437,7 +437,10 @@ async def _import_row(
             names=names,
             source_observation_id=observation.id,
         )
-    status = "created" if created else "updated" if changed else "unchanged"
+    if created:
+        status = "created"
+    else:
+        status = "updated" if changed else "unchanged"
     return CatalogRowOutcome(
         row_number=row_number, status=status, product_id=product.id
     )

@@ -209,4 +209,5 @@ async def test_running_status_transition(
     assert await queue.mark_running(task_id=row_id, owner="content-w")
     async with session_factory() as session:
         refreshed = await session.get(ContentGeneration, row_id)
-    assert refreshed is not None and refreshed.status == TASK_STATUS_RUNNING
+    assert refreshed is not None
+    assert refreshed.status == TASK_STATUS_RUNNING

@@ -39,6 +39,7 @@ import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { useByokPricing } from './use-byok-pricing';
 import { PricingBillingDialog } from './pricing-billing-dialog';
+import { hrefWithQuery } from '@/lib/navigation/url-state';
 
 const STALE_INTENT_MESSAGE = 'That pricing option is no longer available. Please choose again.';
 
@@ -231,12 +232,7 @@ export function PricingCatalog() {
 
     // Consume the flag before starting, so a re-render cannot resume twice.
     params.delete(PRICING_RESUME_QUERY_PARAM);
-    const query = params.toString();
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
-    );
+    window.history.replaceState(null, '', hrefWithQuery(window.location, params.toString()));
     startResume();
   }, [catalog, isAuthenticated, startResume]);
 

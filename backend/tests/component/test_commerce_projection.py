@@ -302,7 +302,8 @@ async def test_shelf_membership_falls_back_to_main_region_anchors(
         seed = await seed_site_crawl(session, task_count=2)
         task = await session.get(SiteCrawlTask, seed.task_ids[0])
         product_task = await session.get(SiteCrawlTask, seed.task_ids[1])
-        assert task is not None and product_task is not None
+        assert task is not None
+        assert product_task is not None
         category_url, category_hash = canonical_identity(
             "https://example.com/collections/dresses"
         )

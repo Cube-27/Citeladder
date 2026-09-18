@@ -66,8 +66,10 @@ for (const path of files(root)) {
   if (path !== tokenOwner && path !== import.meta.filename && /@theme\b/.test(source)) {
     violations.push(`${label}: @theme outside apps/app/src/globals.css`);
   }
-  violations.push(...directRadixImportViolations(source, label));
-  violations.push(...styleAssertionViolations(source, label));
+  violations.push(
+    ...directRadixImportViolations(source, label),
+    ...styleAssertionViolations(source, label),
+  );
   const ownsWebsiteEditorialCopy =
     !label.includes('.test.') &&
     ((label.startsWith('components/marketing/') &&
@@ -86,18 +88,22 @@ for (const path of files(root)) {
   // Applies to every source file, not just product UI: the ESLint rule this
   // replaced was repository-wide, and a text-ink background is wrong on a
   // marketing surface too.
-  violations.push(...textRoleBackgroundViolations(source, label));
-  violations.push(...rawRadiusViolations(source, label));
-  violations.push(...editorialTypographyViolations(source, label, ownsWebsiteEditorialCopy));
-  violations.push(...standalonePlaceholderViolations(source, label, ownsProductUi));
-  violations.push(...productUiSourceViolations(source, label, ownsProductUi));
-  violations.push(...nestedCardViolations(source, label, ownsProductUi));
-  violations.push(...productControlViolations(source, label, ownsProductUi));
+  violations.push(
+    ...textRoleBackgroundViolations(source, label),
+    ...rawRadiusViolations(source, label),
+    ...editorialTypographyViolations(source, label, ownsWebsiteEditorialCopy),
+    ...standalonePlaceholderViolations(source, label, ownsProductUi),
+    ...productUiSourceViolations(source, label, ownsProductUi),
+    ...nestedCardViolations(source, label, ownsProductUi),
+    ...productControlViolations(source, label, ownsProductUi),
+  );
 }
 
-violations.push(...websiteContractViolations(root));
-violations.push(...textContrastViolations(root));
-violations.push(...productContractViolations(root));
+violations.push(
+  ...websiteContractViolations(root),
+  ...textContrastViolations(root),
+  ...productContractViolations(root),
+);
 
 if (violations.length) {
   console.error(violations.join('\n'));

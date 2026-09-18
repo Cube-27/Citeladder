@@ -181,7 +181,7 @@ describe('tick indices calculation', () => {
 
   it('samples evenly when count exceeds max ticks', () => {
     const ticks = computeTickIndices(28, 6);
-    expect(ticks.length).toBe(6);
+    expect(ticks).toHaveLength(6);
     expect(ticks[0]).toBe(0);
     expect(ticks[ticks.length - 1]).toBe(27);
   });

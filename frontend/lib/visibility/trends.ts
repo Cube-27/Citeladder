@@ -153,22 +153,27 @@ const SERIES_STROKES = [
  */
 const TREND_SERIES_LIMIT = 5;
 
+/** Each metric reads its OWN column; the table is what keeps them paired. */
+const RANKING_METRIC_COLUMN: Record<TrendMetric, (row: RankingMetricRow) => number | null> = {
+  owned_citation_rate: (row) => row.citation_rate,
+  sov: (row) => row.share_of_voice,
+  brand_mention_rate: (row) => row.mention_rate,
+};
+
+type RankingMetricRow = {
+  mention_rate: number | null;
+  citation_rate: number | null;
+  share_of_voice: number | null;
+};
+
 /**
  * One ranking row's value for a metric, as whole percent.
  *
  * Each metric reads its OWN column — plotting mention rate under a Share of
  * voice heading drew a line that was not the metric selected.
  */
-function rankingMetricValue(
-  row: { mention_rate: number | null; citation_rate: number | null; share_of_voice: number | null },
-  metric: TrendMetric,
-): number | null {
-  const value =
-    metric === 'owned_citation_rate'
-      ? row.citation_rate
-      : metric === 'sov'
-        ? row.share_of_voice
-        : row.mention_rate;
+function rankingMetricValue(row: RankingMetricRow, metric: TrendMetric): number | null {
+  const value = RANKING_METRIC_COLUMN[metric](row);
   return value === null || value === undefined ? null : value * 100;
 }
 

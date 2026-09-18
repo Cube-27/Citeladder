@@ -178,9 +178,10 @@ function MeasurementFilter({
 }: ToolbarProps) {
   const pooled = selectionMode === 'range';
   const selected = runs.find((run) => run.id === selectedRunId);
-  const current = pooled
-    ? 'All runs in period'
-    : (selected?.label ?? (selectedRunId ? 'Run unavailable' : 'Latest run'));
+  // A selected run the list no longer carries is not the latest run: saying so
+  // keeps a stale link from reading as a fresh measurement.
+  const missingRunLabel = selectedRunId ? 'Run unavailable' : 'Latest run';
+  const current = pooled ? 'All runs in period' : (selected?.label ?? missingRunLabel);
   return (
     <Dropdown>
       <DropdownTrigger asChild>

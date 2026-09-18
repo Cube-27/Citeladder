@@ -79,11 +79,12 @@ export function SearchScopeNote({
   matched,
 }: Readonly<{ search: string | null; matched: number | null }>) {
   if (!search || matched == null) return null;
+  const noun = matched === 1 ? 'search' : 'searches';
   return (
     <span className={textRole('label', 'text-secondary')}>
       {matched === 0
         ? 'No searches match in this run set'
-        : `${matched} matching ${matched === 1 ? 'search' : 'searches'} in this run set`}
+        : `${matched} matching ${noun} in this run set`}
     </span>
   );
 }
@@ -102,9 +103,8 @@ export function NoSearchMatch({
   search,
   matched,
 }: Readonly<{ search: string | null; matched: number | null }>) {
-  const elsewhere = matched
-    ? ` — ${matched} ${matched === 1 ? 'match sits' : 'matches sit'} elsewhere in the run set.`
-    : '.';
+  const verb = matched === 1 ? 'match sits' : 'matches sit';
+  const elsewhere = matched ? ` — ${matched} ${verb} elsewhere in the run set.` : '.';
   return (
     <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
       {`No search matches “${search}” on this page${elsewhere}`}

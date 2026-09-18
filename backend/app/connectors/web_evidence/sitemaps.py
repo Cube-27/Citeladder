@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import gzip
 import io
+from typing import Any
 
 from defusedxml.ElementTree import fromstring as safe_fromstring
 
@@ -100,30 +101,33 @@ def parse_sitemap_document(body: bytes, *, content_type: str = "") -> SitemapDoc
     except Exception as exc:  # defusedxml raises on entity attacks + malformed
         raise SitemapParseError("malformed or unsafe sitemap XML") from exc
 
-    root_name = _localname(root.tag)
-    is_index = root_name == "sitemapindex"
+    is_index = _localname(root.tag) == "sitemapindex"
     max_urls = site_health_settings.max_sitemap_urls
     urls: list[str] = []
     refs: list[str] = []
 
     for child in root:
-        if _localname(child.tag) not in ("url", "sitemap"):
+        child_name = _localname(child.tag)
+        if child_name not in ("url", "sitemap"):
             continue
-        loc_text = ""
-        for grand in child:
-            if _localname(grand.tag) == "loc":
-                loc_text = (grand.text or "").strip()
-                break
+        loc_text = _first_loc(child)
         if not loc_text:
             continue
-        if is_index or _localname(child.tag) == "sitemap":
-            refs.append(loc_text)
-        else:
-            urls.append(loc_text)
+        # A `<sitemap>` entry is a reference whichever root it appeared under.
+        bucket = refs if is_index or child_name == "sitemap" else urls
+        bucket.append(loc_text)
         if len(urls) >= max_urls or len(refs) >= max_urls:
             break
 
     return SitemapDocument(urls=urls, sitemap_refs=refs, is_index=is_index)
+
+
+def _first_loc(entry: Any) -> str:
+    """The entry's own ``<loc>`` text, empty when it states none."""
+    for child in entry:
+        if _localname(child.tag) == "loc":
+            return (child.text or "").strip()
+    return ""
 
 
 class SitemapCollector:

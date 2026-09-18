@@ -46,7 +46,6 @@ async def _get_project_or_404(
 
 @router.get(
     "/{project_id}/visibility/sources/series",
-    response_model=SourceSeriesResponse,
 )
 async def get_visibility_source_series_endpoint(
     project_id: uuid.UUID,
@@ -95,7 +94,7 @@ async def get_visibility_source_series_endpoint(
         raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
 
 
-@router.get("/{project_id}/visibility/sources/url", response_model=SourceUrlDetail)
+@router.get("/{project_id}/visibility/sources/url")
 async def get_visibility_source_url_endpoint(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,

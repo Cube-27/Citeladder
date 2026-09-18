@@ -220,16 +220,27 @@ def _iter_ga4_properties(summaries: list) -> list[ProviderProperty]:
             continue
         account_label = str(summary.get("displayName") or "").strip()
         for entry in summary.get("propertySummaries") or []:
-            if not isinstance(entry, dict):
-                continue
-            resource = str(entry.get("property") or "").strip()
-            property_ref = resource.removeprefix(GA4_PROPERTY_RESOURCE_PREFIX)
-            if not property_ref.isdigit():
-                continue
-            name = str(entry.get("displayName") or "").strip() or property_ref
-            label = f"{name} ({account_label})" if account_label else name
-            properties.append(ProviderProperty(property_ref=property_ref, label=label))
+            selectable = _ga4_property(entry, account_label=account_label)
+            if selectable is not None:
+                properties.append(selectable)
     return properties
+
+
+def _ga4_property(entry: object, *, account_label: str) -> ProviderProperty | None:
+    """One selectable property, or ``None`` when the entry cannot name one.
+
+    A summary without a numeric ``property`` resource id cannot be selected
+    safely, so it is skipped rather than guessed at.
+    """
+    if not isinstance(entry, dict):
+        return None
+    resource = str(entry.get("property") or "").strip()
+    property_ref = resource.removeprefix(GA4_PROPERTY_RESOURCE_PREFIX)
+    if not property_ref.isdigit():
+        return None
+    name = str(entry.get("displayName") or "").strip() or property_ref
+    label = f"{name} ({account_label})" if account_label else name
+    return ProviderProperty(property_ref=property_ref, label=label)
 
 
 def _report_currency_code(report: dict) -> str | None:

@@ -185,7 +185,7 @@ async def _map_prompt_mutation[T](call: Callable[[], Awaitable[T]]) -> T:
 # --------------------------------------------------------------------------
 # Prompt sets
 # --------------------------------------------------------------------------
-@router.get("/prompt-sets", response_model=list[PromptSetResponse])
+@router.get("/prompt-sets")
 async def list_prompt_sets_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
@@ -199,7 +199,6 @@ async def list_prompt_sets_endpoint(
 
 @router.post(
     "/prompt-sets",
-    response_model=PromptSetResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_prompt_set_endpoint(
@@ -214,7 +213,7 @@ async def create_prompt_set_endpoint(
     return prompt_set_to_response(prompt_set)
 
 
-@router.get("/prompt-sets/{prompt_set_id}", response_model=PromptSetResponse)
+@router.get("/prompt-sets/{prompt_set_id}")
 async def get_prompt_set_endpoint(
     prompt_set_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> PromptSetResponse:
@@ -227,7 +226,7 @@ async def get_prompt_set_endpoint(
     return prompt_set_to_response(prompt_set)
 
 
-@router.patch("/prompt-sets/{prompt_set_id}", response_model=PromptSetResponse)
+@router.patch("/prompt-sets/{prompt_set_id}")
 async def update_prompt_set_endpoint(
     prompt_set_id: uuid.UUID,
     payload: PromptSetUpdate,
@@ -263,7 +262,6 @@ async def delete_prompt_set_endpoint(
 # --------------------------------------------------------------------------
 @router.get(
     "/prompt-sets/{prompt_set_id}/prompts",
-    response_model=list[PromptResponse],
 )
 async def list_prompts_endpoint(
     prompt_set_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -279,7 +277,6 @@ async def list_prompts_endpoint(
 
 @router.post(
     "/prompt-sets/{prompt_set_id}/prompts",
-    response_model=PromptResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_prompt_endpoint(
@@ -306,7 +303,7 @@ async def create_prompt_endpoint(
     return prompt_to_response(prompt)
 
 
-@router.patch("/prompts/{prompt_id}", response_model=PromptResponse)
+@router.patch("/prompts/{prompt_id}")
 async def update_prompt_endpoint(
     prompt_id: uuid.UUID,
     payload: PromptUpdate,
@@ -369,7 +366,6 @@ async def _resolve_import_rows(
 
 @router.post(
     "/prompt-sets/{prompt_set_id}/import",
-    response_model=PromptSetResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def import_prompts_endpoint(
@@ -410,7 +406,6 @@ async def import_prompts_endpoint(
 
 @router.post(
     "/prompt-sets/{prompt_set_id}/generate",
-    response_model=PromptGenerateResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def generate_prompts_endpoint(
@@ -507,7 +502,6 @@ async def generate_prompts_endpoint(
 
 @router.post(
     "/prompt-sets/{prompt_set_id}/prompts/bulk-status",
-    response_model=PromptSetResponse,
 )
 async def bulk_status_endpoint(
     prompt_set_id: uuid.UUID,
@@ -536,7 +530,7 @@ async def bulk_status_endpoint(
 # --------------------------------------------------------------------------
 # Topics
 # --------------------------------------------------------------------------
-@router.get("/projects/{project_id}/topics", response_model=list[TopicResponse])
+@router.get("/projects/{project_id}/topics")
 async def list_topics_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> list[TopicResponse]:
@@ -552,7 +546,6 @@ async def list_topics_endpoint(
 
 @router.post(
     "/projects/{project_id}/topics",
-    response_model=TopicResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_topic_endpoint(
@@ -575,7 +568,7 @@ async def create_topic_endpoint(
     return topic_to_response(topic)
 
 
-@router.patch("/topics/{topic_id}", response_model=TopicResponse)
+@router.patch("/topics/{topic_id}")
 async def update_topic_endpoint(
     topic_id: uuid.UUID,
     payload: TopicUpdate,

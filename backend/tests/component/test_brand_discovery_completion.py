@@ -405,7 +405,8 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
         task = await session.get(BrandDiscoveryTask, claimed_task.id)
         persisted = await session.get(BrandDiscovery, discovery_id)
         assert task is not None
-        assert persisted is not None and persisted.status == "completing"
+        assert persisted is not None
+        assert persisted.status == "completing"
         assert await session.scalar(select(func.count()).select_from(Prompt)) == 0
         task.lease_expires_at = datetime.now(UTC) - timedelta(seconds=1)
         await session.commit()
@@ -418,7 +419,8 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
     await brand_discovery_worker._reap_expired()
     async with session_factory() as session:
         task = await session.get(BrandDiscoveryTask, claimed_task.id)
-        assert task is not None and task.status == TASK_STATUS_RETRY_WAIT
+        assert task is not None
+        assert task.status == TASK_STATUS_RETRY_WAIT
 
     assert await brand_discovery_worker.run_once("completion-test") is True
     assert generation_calls == 2

@@ -57,6 +57,12 @@ function progressAnnouncement(activeStep: ActivityStep | undefined, completed: n
  * deliberately knows nothing about queue states or worker vocabulary, which
  * prevents an internal token from becoming fallback UI copy.
  */
+/** Where one step sits relative to the animation's cursor. */
+function stepStateAt(index: number, completed: number): 'complete' | 'active' | 'pending' {
+  if (index < completed) return 'complete';
+  return index === completed ? 'active' : 'pending';
+}
+
 export function ActivityProgress({
   steps,
   label,
@@ -94,15 +100,7 @@ export function ActivityProgress({
     if (!shouldAnimate || displayedCompleted >= targetCompleted) return steps;
     return steps.map((step, index): ActivityStep => {
       if (step.state === 'attention') return step;
-      return {
-        ...step,
-        state:
-          index < displayedCompleted
-            ? 'complete'
-            : index === displayedCompleted
-              ? 'active'
-              : 'pending',
-      };
+      return { ...step, state: stepStateAt(index, displayedCompleted) };
     });
   }, [displayedCompleted, shouldAnimate, steps, targetCompleted]);
 

@@ -9,7 +9,11 @@ from app.connectors.web_evidence.brand_evidence import (
     BrandEvidencePage,
     extract_brand_page,
 )
-from app.connectors.web_evidence.contracts import FetchError, FetchRequest
+from app.connectors.web_evidence.contracts import (
+    FetchError,
+    FetchRequest,
+    FetchResult,
+)
 from app.connectors.web_evidence.fetcher import SecureFetcher
 from app.connectors.web_evidence.resolver import SystemDnsResolver
 from app.connectors.web_evidence.url_policy import UrlPolicyError, registrable_domain
@@ -45,6 +49,24 @@ def _http_variant(url: str) -> str:
     return urlunsplit(("http", parts.netloc, parts.path, parts.query, ""))
 
 
+def _readable_page(
+    result: FetchResult, final_url: str
+) -> tuple[BrandEvidencePage | None, str]:
+    """The brand page this response yielded, and why it yielded none.
+
+    Research only runs on a 2xx served over HTTPS, and only counts when the
+    extraction found something. Every other path degrades rather than failing:
+    the site exists, it just cannot be read here.
+    """
+    is_https = urlsplit(final_url).scheme == "https"
+    if not (200 <= result.status_code < 300 and is_https):
+        return None, "research_degraded"
+    extracted = extract_brand_page(result.body, url=final_url, charset=result.charset)
+    if extracted.word_count or extracted.meta_description:
+        return extracted, ""
+    return None, "research_degraded"
+
+
 async def resolve_site(entered_url: str, normalized_url: str) -> ResolvedSite:
     request_urls = [normalized_url]
     if urlsplit(normalized_url).scheme == "https":
@@ -76,19 +98,7 @@ async def resolve_site(entered_url: str, normalized_url: str) -> ResolvedSite:
             domain = registrable_domain(final_url)
             if not domain:
                 raise SiteNotFoundError("site_not_found")
-            page = None
-            warning = ""
-            is_https = urlsplit(final_url).scheme == "https"
-            if 200 <= result.status_code < 300 and is_https:
-                extracted = extract_brand_page(
-                    result.body, url=final_url, charset=result.charset
-                )
-                if extracted.word_count or extracted.meta_description:
-                    page = extracted
-                else:
-                    warning = "research_degraded"
-            else:
-                warning = "research_degraded"
+            page, warning = _readable_page(result, final_url)
             return ResolvedSite(
                 entered_url=entered_url,
                 canonical_url=final_url,

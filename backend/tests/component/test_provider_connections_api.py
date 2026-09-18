@@ -54,7 +54,8 @@ def _assert_no_secret(blob: object) -> None:
     assert _SECRET not in text
     assert "api_key_encrypted" not in text
     # The write-only "api_key" value field must never round-trip in a response.
-    assert '"api_key"' not in text and "'api_key'" not in text
+    assert '"api_key"' not in text
+    assert "'api_key'" not in text
 
 
 async def _resolve_workspace_id(db_session) -> object:
@@ -73,7 +74,8 @@ async def test_create_connection_redacts_secret_in_response(
     resp = await client.post("/api/v1/provider-connections", json=_connection_payload())
     assert resp.status_code == 201
     body = resp.json()
-    assert "-" in body["id"] and "-" in body["workspace_id"]
+    assert "-" in body["id"]
+    assert "-" in body["workspace_id"]
     assert body["transport_provider"] == "openai"
     assert body["api_key_set"] is True
     # Invariant 6: the secret and any key field are absent from the DTO.
@@ -662,7 +664,8 @@ async def test_system_workspace_hidden_and_membership_inert(
     system = await db_session.scalar(
         select(Workspace).where(Workspace.is_system.is_(True))
     )
-    assert user is not None and system is not None
+    assert user is not None
+    assert system is not None
     # A membership row naming the system workspace exists (e.g. seeded by a
     # future provisioning flow) — it must stay inert.
     db_session.add(

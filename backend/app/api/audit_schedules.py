@@ -43,7 +43,6 @@ _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 @router.post(
     "/{project_id}/audit-schedules",
-    response_model=AuditScheduleResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_audit_schedule_endpoint(
@@ -64,7 +63,7 @@ async def create_audit_schedule_endpoint(
     return AuditScheduleResponse.model_validate(schedule)
 
 
-@router.get("/{project_id}/audit-schedules", response_model=list[AuditScheduleResponse])
+@router.get("/{project_id}/audit-schedules")
 async def list_audit_schedules_endpoint(
     project_id: uuid.UUID, ctx: _ProjectDep, session: _SessionDep
 ) -> list[AuditScheduleResponse]:
@@ -74,9 +73,7 @@ async def list_audit_schedules_endpoint(
     return [AuditScheduleResponse.model_validate(item) for item in schedules]
 
 
-@router.get(
-    "/{project_id}/audit-schedules/{schedule_id}", response_model=AuditScheduleResponse
-)
+@router.get("/{project_id}/audit-schedules/{schedule_id}")
 async def get_audit_schedule_endpoint(
     project_id: uuid.UUID,
     schedule_id: uuid.UUID,
@@ -95,9 +92,7 @@ async def get_audit_schedule_endpoint(
     return AuditScheduleResponse.model_validate(schedule)
 
 
-@router.patch(
-    "/{project_id}/audit-schedules/{schedule_id}", response_model=AuditScheduleResponse
-)
+@router.patch("/{project_id}/audit-schedules/{schedule_id}")
 async def update_audit_schedule_endpoint(
     project_id: uuid.UUID,
     schedule_id: uuid.UUID,

@@ -33,7 +33,7 @@ function isFrontend(path) {
 
 function globRegex(pattern) {
   let source = '^';
-  for (let index = 0; index < pattern.length; ) {
+  for (let index = 0; index < pattern.length;) {
     if (pattern[index] === '*') {
       if (pattern[index + 1] === '*') {
         if (pattern[index + 2] === '/') {
@@ -51,7 +51,7 @@ function globRegex(pattern) {
       source += '[^/]';
       index += 1;
     } else {
-      source += pattern[index].replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+      source += pattern[index].replace(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
       index += 1;
     }
   }
@@ -83,7 +83,9 @@ export function selectE2EFiles(paths) {
       }
     }
   }
-  return [...selected].sort();
+  // Test paths, so plain code-point order is the intended ordering; the
+  // comparator only says so out loud.
+  return [...selected].sort((left, right) => (left < right ? -1 : Number(left > right)));
 }
 
 function isNonBrowserTooling(path) {
@@ -183,7 +185,14 @@ export function classifyPaths(paths, { full = false } = {}) {
   };
 }
 
-export function selectDiff({ eventName, action, beforeSha, baseSha, headSha, previousRunTrusted = true }) {
+export function selectDiff({
+  eventName,
+  action,
+  beforeSha,
+  baseSha,
+  headSha,
+  previousRunTrusted = true,
+}) {
   if (eventName !== 'pull_request') return { full: true, range: null };
 
   const usableBefore = beforeSha && !/^0+$/.test(beforeSha);
@@ -274,7 +283,9 @@ async function previousRunIsTrusted(environment) {
 }
 
 function writeOutputs(result, outputPath, e2eFiles) {
-  const lines = Object.entries(result).map(([name, enabled]) => `${name}=${enabled ? TRUE : FALSE}`);
+  const lines = Object.entries(result).map(
+    ([name, enabled]) => `${name}=${enabled ? TRUE : FALSE}`,
+  );
   lines.push(`e2e_args=${e2eFiles.join(' ')}`);
   appendFileSync(outputPath, `${lines.join('\n')}\n`, 'utf8');
 }

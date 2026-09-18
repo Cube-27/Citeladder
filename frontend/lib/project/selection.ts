@@ -166,7 +166,7 @@ export function pickActiveProject(
   projects: readonly Project[],
   activeProjectId: string | null,
 ): Project | null {
-  if (resolvedProject && resolvedProject.id === activeProjectId) return resolvedProject;
+  if (resolvedProject?.id === activeProjectId) return resolvedProject;
   return projects.find((project) => project.id === activeProjectId) ?? null;
 }
 

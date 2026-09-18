@@ -112,6 +112,17 @@ def _append_unique(
         rows.append(row)
 
 
+def _category_role(product_cards: list[Any], category_links: list[Any]) -> str:
+    """What the page's own contents say it is in the catalogue tree.
+
+    Product cards win: a page that lists products is a leaf even when it also
+    links onward to sibling categories.
+    """
+    if product_cards:
+        return "leaf"
+    return "hub" if category_links else "unknown"
+
+
 def extract_commerce_facts(
     root: Any, *, final_url: str, text_of: Callable[[Any], str]
 ) -> dict[str, Any]:
@@ -131,9 +142,7 @@ def extract_commerce_facts(
         "breadcrumb_links": breadcrumb_links,
         "product_cards": product_cards,
         "category_links": category_links,
-        "category_role": (
-            "leaf" if product_cards else "hub" if category_links else "unknown"
-        ),
+        "category_role": _category_role(product_cards, category_links),
         "visible_price": match.group(0)[:64] if match else "",
         "visible_availability": availability.group(0)[:64] if availability else "",
         # The words AROUND the price decide whether it is a price at all.

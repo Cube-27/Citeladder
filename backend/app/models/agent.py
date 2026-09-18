@@ -21,6 +21,7 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.models.constants import FK_PROJECTS_ID, FK_WORKSPACES_ID
 
 
 def _utcnow() -> datetime:
@@ -44,11 +45,11 @@ class AgentTaskRun(Base):
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        ForeignKey(FK_WORKSPACES_ID, ondelete="CASCADE"),
         index=True,
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True
+        PGUUID(as_uuid=True), ForeignKey(FK_PROJECTS_ID, ondelete="CASCADE"), index=True
     )
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
@@ -116,11 +117,13 @@ class AgentModelAttempt(Base):
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("workspaces.id", ondelete="RESTRICT"),
+        ForeignKey(FK_WORKSPACES_ID, ondelete="RESTRICT"),
         index=True,
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("projects.id", ondelete="RESTRICT"), index=True
+        PGUUID(as_uuid=True),
+        ForeignKey(FK_PROJECTS_ID, ondelete="RESTRICT"),
+        index=True,
     )
     task_run_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -200,11 +203,11 @@ class AgentToolAttempt(Base):
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        ForeignKey(FK_WORKSPACES_ID, ondelete="CASCADE"),
         index=True,
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True
+        PGUUID(as_uuid=True), ForeignKey(FK_PROJECTS_ID, ondelete="CASCADE"), index=True
     )
     task_run_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),

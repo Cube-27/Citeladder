@@ -60,26 +60,29 @@ def _safe_canonicalize(value: str) -> str | None:
         return None
 
 
+def _host_variants(host: str) -> set[str]:
+    """A host and its `www.` counterpart, which Search Console reports as one."""
+    counterpart = host[4:] if host.startswith("www.") else f"www.{host}"
+    return {host, counterpart}
+
+
+def _path_variants(path: str) -> set[str]:
+    """A path with and without its trailing slash; root has only one form."""
+    if path == "/":
+        return {path}
+    counterpart = path.rstrip("/") if path.endswith("/") else f"{path}/"
+    return {path, counterpart}
+
+
 def _variant_urls(url: str) -> tuple[str, ...]:
-    canonical = canonicalize(url)
-    parts = urlsplit(canonical)
-    host = parts.hostname or ""
-    hosts = {host, host[4:] if host.startswith("www.") else f"www.{host}"}
-    path = parts.path or "/"
-    paths = {path}
-    if path != "/":
-        paths.add(path.rstrip("/") if path.endswith("/") else f"{path}/")
-    variants: set[str] = set()
-    for scheme in ("http", "https"):
-        for candidate_host in hosts:
-            for candidate_path in paths:
-                value = _safe_canonicalize(
-                    urlunsplit(
-                        (scheme, candidate_host, candidate_path, parts.query, "")
-                    )
-                )
-                if value:
-                    variants.add(value)
+    parts = urlsplit(canonicalize(url))
+    candidates = (
+        urlunsplit((scheme, host, path, parts.query, ""))
+        for scheme in ("http", "https")
+        for host in _host_variants(parts.hostname or "")
+        for path in _path_variants(parts.path or "/")
+    )
+    variants = {value for value in map(_safe_canonicalize, candidates) if value}
     return tuple(sorted(variants))
 
 

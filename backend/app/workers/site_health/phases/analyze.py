@@ -552,33 +552,15 @@ async def _persist_analyze(
                 abandon = not guard_denied
             else:
                 task, crawl = locked
-                if artifact_id is None:
-                    retry_attempt = task.attempt_count + 1
-                    should_retry = (
-                        outcome.retryable and retry_attempt < task.max_attempts
-                    )
-                if outcome.reused_artifact_id is None:
-                    ctx.write_attempt(
-                        session,
-                        crawl=crawl,
-                        task=task,
-                        outcome=outcome,
-                        succeeded=outcome.facts is not None,
-                        requested_url=requested_url,
-                        artifact_id=artifact_id,
-                    )
-                task.attempt_count += 1
-                if artifact_id is not None:
-                    task.result_artifact_id = artifact_id
-                    crawl.analyzed_url_count += 1
-                    record_crawl_event(
-                        session,
-                        crawl_id=crawl.id,
-                        event_type=EVENT_ANALYSIS_PROGRESS,
-                        message="analysis progress",
-                        payload={"analyzed": crawl.analyzed_url_count},
-                        count_disclosure=_count_disclosure(crawl),
-                    )
+                should_retry, retry_attempt = _record_analyze_attempt(
+                    ctx,
+                    session,
+                    task=task,
+                    crawl=crawl,
+                    outcome=outcome,
+                    artifact_id=artifact_id,
+                    requested_url=requested_url,
+                )
                 await session.commit()
 
     if guard_denied:
@@ -594,6 +576,51 @@ async def _persist_analyze(
             error_detail=outcome.error_detail,
             retry_after_seconds=outcome.retry_after_seconds,
         )
+
+
+def _record_analyze_attempt(
+    ctx: PhaseContext,
+    session: AsyncSession,
+    *,
+    task: SiteCrawlTask,
+    crawl: SiteCrawl,
+    outcome: _AnalyzeOutcome,
+    artifact_id: uuid.UUID | None,
+    requested_url: str,
+) -> tuple[bool, int]:
+    """Stage this attempt's bookkeeping; says whether to retry, and as which attempt.
+
+    Writes only — the caller owns the transaction, so everything here rolls
+    back with it if the commit never happens.
+    """
+    should_retry = False
+    retry_attempt = 0
+    if artifact_id is None:
+        retry_attempt = task.attempt_count + 1
+        should_retry = outcome.retryable and retry_attempt < task.max_attempts
+    if outcome.reused_artifact_id is None:
+        ctx.write_attempt(
+            session,
+            crawl=crawl,
+            task=task,
+            outcome=outcome,
+            succeeded=outcome.facts is not None,
+            requested_url=requested_url,
+            artifact_id=artifact_id,
+        )
+    task.attempt_count += 1
+    if artifact_id is not None:
+        task.result_artifact_id = artifact_id
+        crawl.analyzed_url_count += 1
+        record_crawl_event(
+            session,
+            crawl_id=crawl.id,
+            event_type=EVENT_ANALYSIS_PROGRESS,
+            message="analysis progress",
+            payload={"analyzed": crawl.analyzed_url_count},
+            count_disclosure=_count_disclosure(crawl),
+        )
+    return should_retry, retry_attempt
 
 
 async def _analyze_preflight(

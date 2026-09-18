@@ -144,16 +144,22 @@ function StripContent({
   return <DashboardNotice crawl={crawl} />;
 }
 
+/** Why a terminal crawl has no score: its own reason wherever there is one. */
+function terminalMessage(
+  status: SiteCrawl['status'],
+  failure: ReturnType<typeof crawlFailureCopy> | null,
+): string {
+  if (status === 'cancelled') return 'This crawl was cancelled before it produced results.';
+  if (status === 'paused') {
+    return 'This crawl is paused and has no completed score yet. Run a new crawl to try again.';
+  }
+  if (failure) return [endSentence(failure.reason), failure.guidance].filter(Boolean).join(' ');
+  return 'This crawl ended before it produced results. Run a new crawl to try again.';
+}
+
 function TerminalNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   const failure = crawl.status === 'failed' ? crawlFailureCopy(crawl) : null;
-  const message =
-    crawl.status === 'cancelled'
-      ? 'This crawl was cancelled before it produced results.'
-      : crawl.status === 'paused'
-        ? 'This crawl is paused and has no completed score yet. Run a new crawl to try again.'
-        : failure
-          ? [endSentence(failure.reason), failure.guidance].filter(Boolean).join(' ')
-          : 'This crawl ended before it produced results. Run a new crawl to try again.';
+  const message = terminalMessage(crawl.status, failure);
   return (
     <Alert tone={failure ? 'danger' : 'info'}>
       <RunNotice crawl={crawl} message={message} />

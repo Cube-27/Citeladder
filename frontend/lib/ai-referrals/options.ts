@@ -62,8 +62,14 @@ export { GRANULARITY_OPTIONS } from '@/lib/format';
 /** Snapshot bucket granularity — mirrors the backend contract vocabulary. */
 export type AiReferralsGranularity = z.infer<typeof snapshotGranularitySchema>;
 
+const BUCKET_NOUN: Record<AiReferralsGranularity, string> = {
+  day: 'day',
+  week: 'week',
+  month: 'month',
+};
+
 /** Bucket-count badge label ("13 weeks", "1 day"). */
 export function bucketCountLabel(granularity: AiReferralsGranularity, count: number): string {
-  const noun = granularity === 'day' ? 'day' : granularity === 'week' ? 'week' : 'month';
+  const noun = BUCKET_NOUN[granularity];
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }

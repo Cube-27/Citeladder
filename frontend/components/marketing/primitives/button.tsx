@@ -8,8 +8,15 @@ import { cn } from '@/lib/utils';
 type Variant = 'primary' | 'dark' | 'nav' | 'ghost';
 type VisualProps = Readonly<{ variant?: Variant; className?: string }>;
 
-const sharedVariant = (variant: Variant) =>
-  variant === 'ghost' ? 'ghost' : variant === 'primary' ? 'primary' : 'secondary';
+/** `dark` and `nav` are marketing-only skins over the shared secondary. */
+const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'ghost'> = {
+  primary: 'primary',
+  ghost: 'ghost',
+  dark: 'secondary',
+  nav: 'secondary',
+};
+
+const sharedVariant = (variant: Variant) => SHARED_VARIANT[variant];
 
 export function ButtonLink({
   href,

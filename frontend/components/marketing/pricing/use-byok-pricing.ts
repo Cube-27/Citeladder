@@ -3,6 +3,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 import { PRICING_BYOK_DEFAULT_ON, PRICING_BYOK_QUERY_PARAM } from '@/lib/config/billing';
+import { hrefWithQuery } from '@/lib/navigation/url-state';
 
 /** Subscribers to URL changes we make ourselves (replaceState fires no event). */
 const listeners = new Set<() => void>();
@@ -51,12 +52,7 @@ export function useByokPricing(): { byok: boolean; setByok: (next: boolean) => v
     // parameter stays meaningful when it IS present.
     if (next === PRICING_BYOK_DEFAULT_ON) params.delete(PRICING_BYOK_QUERY_PARAM);
     else params.set(PRICING_BYOK_QUERY_PARAM, next ? '1' : '0');
-    const query = params.toString();
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
-    );
+    window.history.replaceState(null, '', hrefWithQuery(window.location, params.toString()));
     for (const listener of listeners) listener();
   }, []);
 

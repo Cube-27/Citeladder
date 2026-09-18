@@ -46,6 +46,7 @@ from app.core.config.traffic import (
     TRAFFIC_NORMALIZATION_VERSION,
 )
 from app.core.database import Base
+from app.models.constants import FK_TRAFFIC_SNAPSHOTS_WORKSPACE_ID
 
 # FK target references + ondelete actions as named constants (site_health /
 # integrations pattern): a typo in a ``table.column`` reference would
@@ -173,7 +174,7 @@ class TrafficPageStat(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "snapshot_id"],
-            ["traffic_snapshots.workspace_id", _FK_SNAPSHOT],
+            [FK_TRAFFIC_SNAPSHOTS_WORKSPACE_ID, _FK_SNAPSHOT],
             ondelete=_ON_DELETE_CASCADE,
             name="fk_traffic_page_stat_snapshot_scoped",
         ),
@@ -245,7 +246,7 @@ class PerformanceDimensionStat(Base):
         ForeignKeyConstraint(
             ["workspace_id", "project_id", "snapshot_id"],
             [
-                "traffic_snapshots.workspace_id",
+                FK_TRAFFIC_SNAPSHOTS_WORKSPACE_ID,
                 "traffic_snapshots.project_id",
                 _FK_SNAPSHOT,
             ],
@@ -301,7 +302,7 @@ class TrafficQueryStat(Base):
         ),
         ForeignKeyConstraint(
             ["workspace_id", "snapshot_id"],
-            ["traffic_snapshots.workspace_id", _FK_SNAPSHOT],
+            [FK_TRAFFIC_SNAPSHOTS_WORKSPACE_ID, _FK_SNAPSHOT],
             ondelete=_ON_DELETE_CASCADE,
             name="fk_traffic_query_stat_snapshot_scoped",
         ),

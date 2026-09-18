@@ -77,7 +77,7 @@ function PromptSetField({
             onValueChange={setPromptSetId}
             options={promptSets.map((set) => ({
               value: set.id,
-              label: `${set.name}${typeof set.prompt_count === 'number' ? ` (${set.prompt_count})` : ''}`,
+              label: promptSetLabel(set),
             }))}
           />
         );
@@ -126,6 +126,12 @@ function BatchField({
       )}
     </Field>
   );
+}
+
+/** A prompt set names its size only when the server counted it. */
+function promptSetLabel(set: Readonly<{ name: string; prompt_count?: number | null }>): string {
+  const count = typeof set.prompt_count === 'number' ? ` (${set.prompt_count})` : '';
+  return `${set.name}${count}`;
 }
 
 export function LaunchDialogView({

@@ -78,6 +78,18 @@ def extract_robots_directives(root: Any) -> dict[str, Any]:
     return _projection(tokens)
 
 
+def _merged_max_snippet(bounded: list[int], observed: list[int]) -> int | None:
+    """The tightest snippet limit stated, keeping ``-1`` distinct from unset.
+
+    ``-1`` is "no limit" — an explicit directive — so it cannot be minimised
+    alongside real lengths, and it is not the same finding as a page that said
+    nothing about snippets at all.
+    """
+    if bounded:
+        return min(bounded)
+    return -1 if -1 in observed else None
+
+
 def merge_x_robots_tag(robots: dict[str, Any], header_value: str) -> dict[str, Any]:
     """Merge the persisted allowlisted X-Robots-Tag into meta observations."""
     header_tokens = _header_tokens(header_value)
@@ -91,7 +103,5 @@ def merge_x_robots_tag(robots: dict[str, Any], header_value: str) -> dict[str, A
         if isinstance(value, int)
     ]
     bounded = [value for value in snippet_values if value >= 0]
-    merged["max_snippet"] = (
-        min(bounded) if bounded else (-1 if -1 in snippet_values else None)
-    )
+    merged["max_snippet"] = _merged_max_snippet(bounded, snippet_values)
     return merged

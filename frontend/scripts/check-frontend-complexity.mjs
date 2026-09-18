@@ -11,7 +11,7 @@ const REPOSITORY = path.resolve(FRONTEND, '..');
 const POLICY_PATH = path.join(FRONTEND, 'scripts', 'frontend_complexity_policy.json');
 const POLICY_REPOSITORY_PATH = 'frontend/scripts/frontend_complexity_policy.json';
 const GIT_EXECUTABLE =
-  process.platform === 'win32' ? 'C:\\Program Files\\Git\\cmd\\git.exe' : '/usr/bin/git';
+  process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
 const EXPECTED_ROOTS = ['apps/app', 'components', 'lib'];
 const ROOT_RENAMES = new Map([['app', 'apps/app']]);
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;

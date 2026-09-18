@@ -225,6 +225,12 @@ async function parseResponse<T>(response: Response, kind: ResponseKind): Promise
   return response.json() as Promise<T>;
 }
 
+/** FormData is already an encoded body; anything else becomes JSON. */
+function encodeBody(body: unknown): BodyInit | undefined {
+  if (body === undefined) return undefined;
+  return body instanceof FormData ? body : JSON.stringify(body);
+}
+
 async function request<T>(
   method: RequestMethod,
   path: string,
@@ -232,8 +238,7 @@ async function request<T>(
   body: unknown,
   options: ApiRequestOptions = {},
 ) {
-  const encodedBody =
-    body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body);
+  const encodedBody = encodeBody(body);
   const { response, requestId } = await requestResponse(path, {
     ...options,
     method,

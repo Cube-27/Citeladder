@@ -165,7 +165,7 @@ async def _required_query_snapshot(
     return row
 
 
-@router.get("/{project_id}/demand/query-evidence", response_model=QueryEvidencePageView)
+@router.get("/{project_id}/demand/query-evidence")
 async def query_evidence(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,
@@ -217,7 +217,6 @@ async def query_evidence(
 
 @router.get(
     "/{project_id}/demand/query-evidence/summary",
-    response_model=QueryEvidenceSummaryView,
 )
 async def query_evidence_summary(
     project_id: uuid.UUID,
@@ -244,7 +243,6 @@ async def query_evidence_summary(
 
 @router.post(
     "/{project_id}/demand/query-classification-overrides",
-    response_model=BrandedQueryClassificationView,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_query_classification_override(

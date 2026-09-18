@@ -50,7 +50,8 @@ async def test_unsupported_provider_fails_clean(session_factory, db_session) -> 
     assert run.status == TASK_STATUS_FAILED
     assert run.error_code == ERROR_PROVIDER_API
     assert run.attempt_count == 1
-    assert fake.gsc_auth == [] and fake.token_calls == []
+    assert fake.gsc_auth == []
+    assert fake.token_calls == []
 
 
 @pytest.mark.asyncio
@@ -68,7 +69,8 @@ async def test_grant_not_connected_fails_without_provider_calls(
     await db_session.refresh(run)
     assert run.status == TASK_STATUS_FAILED
     assert run.error_code == ERROR_GRANT_AUTH_FAILED
-    assert fake.gsc_auth == [] and fake.token_calls == []
+    assert fake.gsc_auth == []
+    assert fake.token_calls == []
 
 
 @pytest.mark.asyncio

@@ -70,7 +70,8 @@ def test_shared_settings_hold_no_vendor_credentials() -> None:
     """The shared block must not carry a gateway credential (plan 3.4)."""
     shared = set(BillingSettings.model_fields)
     assert not [name for name in shared if name.startswith("razorpay_")]
-    assert "checkout_enabled" in shared and "quote_signing_secret" in shared
+    assert "checkout_enabled" in shared
+    assert "quote_signing_secret" in shared
     vendor = set(RazorpaySettings.model_fields)
     assert {"key_id", "key_secret", "webhook_secret", "mode"} <= vendor
 
@@ -92,7 +93,8 @@ async def test_redirect_never_forwards_credentials() -> None:
             await RazorpayBillingProvider(
                 client=client, settings=configured()
             ).fetch_plan("plan_fixture")
-    assert len(requests) == 1 and requests[0].url.host == "api.razorpay.com"
+    assert len(requests) == 1
+    assert requests[0].url.host == "api.razorpay.com"
 
 
 @pytest.mark.asyncio
@@ -214,7 +216,8 @@ async def test_valid_callback_only_requests_reconciliation(monkeypatch) -> None:
     }
     callback = CheckoutVerifyRequest(fields=fields)
     result = await verify_checkout(session, row, callback)
-    assert result.status == "pending" and row.reconciliation_next_at is not None
+    assert result.status == "pending"
+    assert row.reconciliation_next_at is not None
     session.commit.assert_awaited_once()
     with pytest.raises(ValueError):
         await verify_checkout(

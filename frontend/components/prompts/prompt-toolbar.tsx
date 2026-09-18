@@ -25,6 +25,19 @@ import { textRole } from '@/components/ui/typography';
  * they moved to the identity band with every other route action, and this is
  * what was left. Presentational; state lives in the page.
  */
+/** The two filter menus share a vocabulary but not their wording. */
+const ENABLED_FILTER_LABEL: Record<'all' | 'enabled' | 'disabled', string> = {
+  all: 'All',
+  enabled: 'Enabled only',
+  disabled: 'Disabled only',
+};
+
+const BRANDED_FILTER_LABEL: Record<'all' | 'enabled' | 'disabled', string> = {
+  all: 'All',
+  enabled: 'Branded only',
+  disabled: 'Unbranded only',
+};
+
 export function PromptFilterControls({
   search,
   onSearchChange,
@@ -114,7 +127,7 @@ export function PromptFilterControls({
                 setEnabled(value);
               }}
             >
-              {value === 'all' ? 'All' : value === 'enabled' ? 'Enabled only' : 'Disabled only'}
+              {ENABLED_FILTER_LABEL[value]}
             </DropdownCheckboxItem>
           ))}
           <DropdownSeparator />
@@ -128,7 +141,7 @@ export function PromptFilterControls({
                 setBranded(value);
               }}
             >
-              {value === 'all' ? 'All' : value === 'enabled' ? 'Branded only' : 'Unbranded only'}
+              {BRANDED_FILTER_LABEL[value]}
             </DropdownCheckboxItem>
           ))}
         </DropdownContent>

@@ -105,14 +105,14 @@ async def get_visibility_fanout(
     # past the first page of answers the table came back empty, because the
     # same offset had been applied to a list that had nothing that far down.
     query_rows = matched[offset : offset + limit] if query is None else matched[:limit]
+    # Drilling into one query pages its ANSWERS; the table pages its rows.
+    pageable_total = total_answers if query is not None else len(matched)
     return FanoutResponse(
         event_count=total_events,
         distinct_queries=len(ordered),
         matched_queries=len(matched),
         coverage=dict(states),
-        next_offset=offset + limit
-        if offset + limit < (total_answers if query is not None else len(matched))
-        else None,
+        next_offset=offset + limit if offset + limit < pageable_total else None,
         answers=answers,
         total_answers=total_answers,
         items=[

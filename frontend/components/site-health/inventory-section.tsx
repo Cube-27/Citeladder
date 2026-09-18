@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
-import { textRole } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -16,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Label } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { PageKindSelect } from '@/components/site-health/page-kind-select';
 import { PagesTable } from '@/components/site-health/pages-table';
@@ -270,7 +269,7 @@ function ScoredInventoryState({
   );
   const allPager = useCursorTable(`pages|${crawl.id}|all|${sort}|${pageKind}`);
   const errorsPager = useCursorTable(`pages|${crawl.id}|errors|${sort}|${pageKind}`);
-  const pager = tab === 'monitored' ? monitoredPager : tab === 'all' ? allPager : errorsPager;
+  const pager = { monitored: monitoredPager, all: allPager, errors: errorsPager }[tab];
 
   const activeTab = TABS.find((t) => t.key === tab)!;
   // A recrawl pre-seeds every monitored URL as pending. Showing that full

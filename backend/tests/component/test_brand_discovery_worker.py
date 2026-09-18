@@ -348,8 +348,10 @@ async def test_a_discovery_that_is_already_complete_is_not_reprocessed(
     async with session_factory() as session:
         row = await session.get(BrandDiscoveryTask, task.id)
         parent = await session.get(BrandDiscovery, discovery.id)
-    assert row is not None and row.status == TASK_STATUS_SUCCEEDED
-    assert parent is not None and parent.status == "ready"
+    assert row is not None
+    assert row.status == TASK_STATUS_SUCCEEDED
+    assert parent is not None
+    assert parent.status == "ready"
 
 
 @pytest.mark.asyncio
@@ -413,8 +415,10 @@ async def test_an_exhausted_completion_failure_terminalizes_the_discovery(
     async with session_factory() as session:
         task_row = await session.get(BrandDiscoveryTask, task.id)
         parent = await session.get(BrandDiscovery, discovery.id)
-    assert task_row is not None and task_row.status == TASK_STATUS_FAILED
-    assert parent is not None and parent.status == DISCOVERY_STATUS_FAILED
+    assert task_row is not None
+    assert task_row.status == TASK_STATUS_FAILED
+    assert parent is not None
+    assert parent.status == DISCOVERY_STATUS_FAILED
     assert parent.error_code == ERROR_BRAND_COMPLETION
     assert WARNING_BRAND_COMPLETION_FAILED in parent.warnings
 

@@ -278,7 +278,7 @@ async def integration_oauth_callback(
     return _oauth_callback_redirect({"connected": provider})
 
 
-@router.get("", response_model=list[IntegrationConnectionResponse])
+@router.get("")
 async def list_integrations_endpoint(
     ctx: _WorkspaceDep, session: _SessionDep
 ) -> list[IntegrationConnectionResponse]:
@@ -288,7 +288,6 @@ async def list_integrations_endpoint(
 
 @router.post(
     "/{connection_id}/test",
-    response_model=IntegrationTestResponse,
 )
 async def test_integration_endpoint(
     connection_id: uuid.UUID, ctx: _CredentialDep, session: _SessionDep
@@ -304,7 +303,6 @@ async def test_integration_endpoint(
 
 @router.get(
     "/{connection_id}/properties",
-    response_model=list[IntegrationPropertyResponse],
 )
 async def list_properties_endpoint(
     connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -371,7 +369,6 @@ async def delete_integration_endpoint(
 @router.post(
     "/{connection_id}/sync",
     status_code=status.HTTP_202_ACCEPTED,
-    response_model=IntegrationSyncEnqueueResponse,
 )
 async def enqueue_sync_endpoint(
     connection_id: uuid.UUID,
@@ -452,7 +449,6 @@ async def enqueue_sync_endpoint(
 
 @router.get(
     "/{connection_id}/syncs",
-    response_model=list[IntegrationSyncRunResponse],
 )
 async def list_syncs_endpoint(
     connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -468,7 +464,6 @@ async def list_syncs_endpoint(
 
 @router.get(
     "/{connection_id}/syncs/progress",
-    response_model=IntegrationBackfillProgressResponse,
 )
 async def get_backfill_progress_endpoint(
     connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -488,7 +483,6 @@ async def get_backfill_progress_endpoint(
 
 @router.get(
     "/{connection_id}/syncs/{sync_run_id}",
-    response_model=IntegrationSyncRunResponse,
 )
 async def get_sync_endpoint(
     connection_id: uuid.UUID,
@@ -515,7 +509,6 @@ async def get_sync_endpoint(
 
 @router.get(
     "/{connection_id}/mappings",
-    response_model=list[IntegrationPropertyMappingResponse],
 )
 async def list_mappings_endpoint(
     connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
@@ -532,7 +525,6 @@ async def list_mappings_endpoint(
 @router.post(
     "/{connection_id}/mappings",
     status_code=status.HTTP_201_CREATED,
-    response_model=IntegrationPropertyMappingResponse,
 )
 async def create_mapping_endpoint(
     connection_id: uuid.UUID,

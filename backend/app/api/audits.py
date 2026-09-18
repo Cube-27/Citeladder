@@ -159,7 +159,7 @@ def _translate_create_audit_errors() -> Iterator[None]:
         ) from exc
 
 
-@router.post("", response_model=AuditResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_audit_endpoint(
     payload: AuditCreate, ctx: _RunDep, session: _SessionDep
 ) -> AuditResponse:
@@ -194,7 +194,7 @@ async def estimate_audit_endpoint(
         raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
 
 
-@router.get("", response_model=list[AuditResponse])
+@router.get("")
 async def list_audits_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
@@ -210,7 +210,7 @@ async def list_audits_endpoint(
     return [AuditResponse.model_validate(a) for a in audits]
 
 
-@router.get("/{audit_id}", response_model=AuditResponse)
+@router.get("/{audit_id}")
 async def get_audit_endpoint(
     audit_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> AuditResponse:
@@ -230,7 +230,7 @@ async def audit_performance_endpoint(
         raise_not_found("Audit", cause=exc)
 
 
-@router.post("/{audit_id}/cancel", response_model=AuditResponse)
+@router.post("/{audit_id}/cancel")
 async def cancel_audit_endpoint(
     audit_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> AuditResponse:
@@ -247,7 +247,6 @@ async def cancel_audit_endpoint(
 
 @router.post(
     "/{audit_id}/rerun-failures",
-    response_model=AuditResponse,
     status_code=status.HTTP_201_CREATED,
     responses={status.HTTP_200_OK: {"model": AuditResponse}},
 )
@@ -281,7 +280,7 @@ async def rerun_failures_endpoint(
     return AuditResponse.model_validate(child)
 
 
-@router.get("/{audit_id}/executions", response_model=list[AuditTaskResponse])
+@router.get("/{audit_id}/executions")
 async def list_executions_endpoint(
     audit_id: uuid.UUID,
     ctx: _WorkspaceDep,
@@ -298,7 +297,7 @@ async def list_executions_endpoint(
     return [AuditTaskResponse.model_validate(t) for t in tasks]
 
 
-@router.get("/{audit_id}/metrics", response_model=MetricsResponse)
+@router.get("/{audit_id}/metrics")
 async def get_metrics_endpoint(
     audit_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> MetricsResponse:

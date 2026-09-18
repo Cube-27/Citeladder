@@ -225,15 +225,18 @@ async def require_active_workspace(
 # it actually does. Hiding a control in the browser is never the boundary —
 # these are.
 
+#: Three capabilities refuse with the same sentence. Naming it keeps them
+#: answering identically: a caller that probes two of them must not be able to
+#: tell from the wording which one it hit.
+_OWNER_OR_ADMIN_REQUIRED = "Workspace owner or admin access is required"
+
 _DENIAL: dict[WorkspaceCapability, str] = {
     WorkspaceCapability.READ: "Workspace access is required",
     WorkspaceCapability.WRITE: "Workspace member access is required",
     WorkspaceCapability.RUN: "Workspace member access is required",
-    WorkspaceCapability.MANAGE_BILLING: "Workspace owner or admin access is required",
-    WorkspaceCapability.MANAGE_MEMBERS: "Workspace owner or admin access is required",
-    WorkspaceCapability.MANAGE_CREDENTIALS: (
-        "Workspace owner or admin access is required"
-    ),
+    WorkspaceCapability.MANAGE_BILLING: _OWNER_OR_ADMIN_REQUIRED,
+    WorkspaceCapability.MANAGE_MEMBERS: _OWNER_OR_ADMIN_REQUIRED,
+    WorkspaceCapability.MANAGE_CREDENTIALS: _OWNER_OR_ADMIN_REQUIRED,
 }
 
 

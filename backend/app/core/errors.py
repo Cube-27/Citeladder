@@ -327,7 +327,10 @@ async def request_validation_error_handler(
     )
 
 
-async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+async def unhandled_exception_handler(
+    request: Request,
+    _exc: Exception,  # required by Starlette; `logger.exception` reads sys.exc_info()
+) -> JSONResponse:
     """Last-resort 500: full detail to the log, nothing internal to the client.
 
     Logs the exception with the correlation id (the structlog pipeline
