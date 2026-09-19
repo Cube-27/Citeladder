@@ -273,15 +273,13 @@ async def synthesize_identity(
     )
 
     def validate(envelope: IdentityResearchEnvelope) -> None:
-        returned_refs = {
-            ref for refs in envelope.field_evidence_refs.values() for ref in refs
-        }
-        unknown_refs = returned_refs - known_refs
-        if unknown_refs:
-            raise ValueError(
-                "identity response cited unknown evidence refs "
-                f"{sorted(unknown_refs)}; allowed refs are {sorted(known_refs)}"
-            )
+        for field, refs in envelope.field_evidence_refs.items():
+            supported = [ref for ref in refs if ref in known_refs]
+            if refs and not supported:
+                raise ValueError(
+                    f"identity response cited unknown evidence refs for {field}"
+                )
+            envelope.field_evidence_refs[field] = supported
 
     return await complete_validated_envelope(
         client,

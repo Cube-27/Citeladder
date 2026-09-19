@@ -28,8 +28,10 @@ durable attempt, capped at 20 seconds, with at most three attempts. Provider
 authentication and rate-limit errors terminate immediately.
 
 The resolved homepage is reused. First-party pages and independent research
-are separate bounded evidence sources. One optional category-and-market search
-supplies snippets to the configured model for up to ten provisional
+are separate bounded evidence sources. Identity keeps supported field citations
+when a model adds an unsupported citation; a field citing only unknown sources
+still rejects the identity result. One optional company, category, and market
+search supplies snippets to the configured model for up to ten provisional
 competitor names and domains. Search failure warns but does not block model
 suggestions. Name/domain cleanup excludes owned and reference sites; it does
 not prove commercial equivalence. The review screen starts with none selected,

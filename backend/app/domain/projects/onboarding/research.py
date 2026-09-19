@@ -429,6 +429,7 @@ async def _run_competitor_phase(
     if keenable is not None and signature.category:
         result = await discover_competitor_candidates(
             keenable,
+            brand_name=brand_name,
             owned_domain=owned_domain,
             signature=signature,
             budget=budget,

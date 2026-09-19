@@ -63,17 +63,18 @@ class _Gateway:
 
 
 @pytest.mark.asyncio
-async def test_optional_search_is_one_bounded_category_market_query() -> None:
+async def test_optional_search_names_company_category_and_market() -> None:
     client = _Search()
     budget = ResearchCallBudget(2)
     result = await discover_competitor_candidates(
         client,
+        brand_name="Acme",
         owned_domain="acme.com",
         signature=CompetitiveSignature(category="workflow analytics"),
         budget=budget,
         market="United States",
     )
-    assert client.calls == ["workflow analytics United States competing brands"]
+    assert client.calls == ["Acme workflow analytics United States competitors"]
     assert budget.used == 1
     assert [item.source_url for item in result.evidence] == ["https://source.com/list"]
     assert result.state == "ready"
@@ -83,6 +84,7 @@ async def test_optional_search_is_one_bounded_category_market_query() -> None:
 async def test_failed_search_does_not_block_model_suggestions() -> None:
     search = await discover_competitor_candidates(
         _Search(fails=True),
+        brand_name="Acme",
         owned_domain="acme.com",
         signature=CompetitiveSignature(category="workflow analytics"),
         budget=ResearchCallBudget(1),

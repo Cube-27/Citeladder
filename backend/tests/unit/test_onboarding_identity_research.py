@@ -148,3 +148,39 @@ async def test_identity_synthesis_rejects_an_invented_reference_without_retry() 
 
     assert gateway.calls == 1
     assert '"allowed_evidence_refs": ["fp-1"]' in gateway.users[0]
+
+
+@pytest.mark.asyncio
+async def test_identity_keeps_supported_evidence_when_one_citation_is_unknown() -> None:
+    gateway = _Gateway(
+        [
+            {
+                "status": "ready",
+                "profile": {"category": "Digital Textbook Platform"},
+                "signature": {"category": "Digital Textbook Platform"},
+                "field_evidence_refs": {
+                    "category": ["fp-1", "ki-search-16"],
+                },
+            }
+        ]
+    )
+    evidence = ResearchEvidenceItem(
+        evidence_ref="fp-1",
+        source_url="https://kitaboo.example",
+        text="Digital textbook platform for publishers.",
+        source_kind="first_party",
+    )
+
+    result = await synthesize_identity(
+        gateway,
+        brand_name="Kitaboo",
+        primary_market="IN",
+        industry="General",
+        subindustry="General",
+        language_code="en",
+        evidence=[evidence],
+    )
+
+    assert result.profile.category == "Digital Textbook Platform"
+    assert result.field_evidence_refs == {"category": ["fp-1"]}
+    assert gateway.calls == 1

@@ -50,15 +50,19 @@ class CompetitorResearchResult:
     state: str
 
 
-def competitor_query(signature: CompetitiveSignature, market: str) -> str:
+def competitor_query(
+    signature: CompetitiveSignature, market: str, *, brand_name: str
+) -> str:
+    company = " ".join(brand_name.split()[:6])
     category = " ".join(signature.category.split()[:6])
     place = " ".join((market or signature.market_context).split()[:3])
-    return f"{category} {place} competing brands".strip()
+    return f"{company} {category} {place} competitors".strip()
 
 
 async def discover_competitor_candidates(
     client: KeenableClient,
     *,
+    brand_name: str,
     owned_domain: str,
     signature: CompetitiveSignature,
     budget: ResearchCallBudget,
@@ -68,7 +72,7 @@ async def discover_competitor_candidates(
         return CompetitorResearchResult((), "unavailable")
     try:
         response = await client.search(
-            competitor_query(signature, market),
+            competitor_query(signature, market, brand_name=brand_name),
             max_results=brand_discovery_settings.competitor_search_max_results,
             snippet_max_length=brand_discovery_settings.keenable_snippet_max_chars,
         )
@@ -94,7 +98,7 @@ async def discover_competitor_candidates(
                 ],
                 source_kind="external_search",
                 provider="keenable",
-                query_ref="competitor-category-market",
+                query_ref="competitor-company-category-market",
                 published_at=result.published_at,
                 acquired_at=result.acquired_at,
                 supports=["competitors"],
