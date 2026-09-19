@@ -205,8 +205,9 @@ async def test_selected_domain_failure_keeps_review_editable_without_shell(
         json=_completion_payload(),
     )
     assert response.status_code == 409
-    assert "Globex" in response.text
-    assert "globex.com" in response.text
+    assert response.json()["detail"] == (
+        "Could not resolve website for Globex: globex.com"
+    )
     async with session_factory() as session:
         persisted = await session.get(BrandDiscovery, discovery_id)
         assert persisted is not None
