@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_QUEUE_SPEC,
     ERROR_BRAND_DISCOVERY,
+    brand_discovery_settings,
 )
 from app.core.config.entitlements import KEY_PROJECT_SLOTS, KEY_PROMPT_SLOTS
 from app.core.config.task_queue import TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT
@@ -545,6 +546,7 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
             )
         )
         assert task is not None
+        assert task.max_attempts == brand_discovery_settings.completion_maximum_attempts
         assert await session.scalar(select(func.count()).select_from(Project)) == 1
         assert await session.scalar(select(func.count()).select_from(PromptSet)) == 1
         assert await session.scalar(select(func.count()).select_from(Topic)) == 0
@@ -711,13 +713,14 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
         assert profile.sources["target_audience"].get("reviewed_by") is None
         assert profile.sources["target_audience"].get("reviewed_at") is None
         assert set(profile.source_artifact_ids) == set(profile.sources)
-        # The confirmed business context must survive project creation. Before
-        # this existed, `business_type` and `price_tier` were collected, shown,
-        # confirmed by the user and then silently dropped on the floor.
+        # The confirmed business context must survive project creation.
         assert profile.business_context["category"] == "workflow analytics platform"
         assert profile.business_context["business_model"] == "b2b_saas"
         assert profile.business_context["market_scope"] == "global"
-        assert profile.business_context["business_type"] == "b2b"
+        assert profile.business_context["buyer_type"] == "b2b"
+        assert profile.business_context["field_sources"]["buyer_type"] == "reviewed"
+        assert profile.business_context["field_sources"]["primary_market"] == "reviewed"
+        assert profile.business_context["field_sources"]["language_code"] == "reviewed"
         assert profile.business_context["price_tier"] == "premium"
         assert profile.business_context["knowledge_strength"] == "strong"
         assert len(set(profile.source_artifact_ids.values())) == 1

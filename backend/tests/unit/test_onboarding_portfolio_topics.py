@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 import pytest
 
 from app.connectors.answer_engines.errors import ProviderError
+from app.core.config.brand_discovery import brand_discovery_settings
+from app.domain.projects.discovery_schemas import (
+    BrandDiscoveryComplete,
+    ConfirmedDiscoveryProfile,
+)
 from app.domain.projects.offering_harvest import OfferingHarvest
 from app.domain.projects.onboarding import portfolio_generation as pg
+from app.domain.projects.onboarding import service as onboarding_service
 
 
 def _response() -> dict:
@@ -253,3 +260,31 @@ async def test_provider_failure_does_not_consume_a_repair_call(
             page_evidence=[],
         )
     assert gateway.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_portfolio_timeout_ends_a_slow_completion_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def hang(**_kwargs):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(onboarding_service, "generate_portfolio", hang)
+    monkeypatch.setattr(
+        brand_discovery_settings, "portfolio_generation_timeout_seconds", 0.001
+    )
+    payload = BrandDiscoveryComplete(
+        profile=ConfirmedDiscoveryProfile(category="Retail"),
+        domains=["acme.com"],
+    )
+    with pytest.raises(onboarding_service.BrandDiscoveryError, match="Initial prompt"):
+        await onboarding_service._generate_confirmed_portfolio(
+            payload=payload,
+            domains=["acme.com"],
+            brand_name="Acme",
+            primary_market="AU",
+            language_code="en",
+            competitors=[],
+            harvest=OfferingHarvest(),
+            page_evidence=[],
+        )

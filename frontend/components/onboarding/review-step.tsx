@@ -97,8 +97,7 @@ function CompetitorRow({
   const url = competitorUrl(competitor);
   return (
     <EntityRow
-      name={displayName}
-      meta={primaryDomain}
+      name={primaryDomain || displayName}
       selected={competitor.selected}
       disabled={disabled}
       onToggle={onToggle}

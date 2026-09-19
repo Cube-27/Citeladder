@@ -21,6 +21,10 @@ bounded first-party acquisition, identity research and provisional competitor
 suggestions.
 The [worker](../backend/app/workers/brand_discovery_worker.py) claims PostgreSQL
 tasks with leases and commits before provider I/O.
+Identity and competitor model phases each have a bounded wall-clock budget;
+timeouts degrade to reviewable evidence. Portfolio generation has its own
+per-attempt timeout and at most two durable attempts. Non-retryable provider
+errors terminate immediately.
 
 The resolved homepage is reused. First-party pages and independent research
 are separate bounded evidence sources. One optional category-and-market search

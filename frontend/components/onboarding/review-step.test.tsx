@@ -34,7 +34,7 @@ describe('ReviewStep competitor limit', () => {
     expect(websiteGroup.parentElement).toBe(competitorGroup.parentElement);
   });
 
-  it('shows only the competitor URL beneath its name', () => {
+  it('shows a competitor logo and website without its name', () => {
     const { container } = render(
       <ReviewStep
         domains={[]}
@@ -59,6 +59,8 @@ describe('ReviewStep competitor limit', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toContain(
       'https://logos.example/kmart.com.au',
     );
+    expect(screen.getByRole('button', { name: 'kmart.com.au' })).toBeInTheDocument();
+    expect(screen.queryByText('Kmart Australia')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://kmart.com.au' })).toHaveAttribute(
       'href',
       'https://kmart.com.au',

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC, datetime
 
@@ -10,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.normalization import normalize_alias
+from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.web_evidence.url_policy import registrable_domain
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_VERSION,
@@ -504,7 +506,11 @@ async def _persist_project_shell(
             positioning=profile.positioning,
             products_services=profile.products_services,
             target_audience=profile.target_audience,
-            business_context=BusinessContext.from_onboarding(profile).persisted(),
+            business_context=BusinessContext.from_onboarding(
+                profile,
+                primary_market=str(data["primary_market"]),
+                language_code=str(data.get("language_code") or "en"),
+            ).persisted(),
         ),
         commit=False,
         brand_profile_sources=profile_sources,
@@ -745,31 +751,36 @@ async def _generate_confirmed_portfolio(
     page_evidence: list[dict[str, str]],
 ) -> PortfolioResult:
     try:
-        result = await generate_portfolio(
-            brand_name=brand_name,
-            brand_terms=brand_terms(
-                brand_name,
-                _domain_brand_aliases(domains),
-                _category_vocabulary(payload.profile),
-            ),
-            primary_market=primary_market,
-            profile={
-                **payload.profile.model_dump(),
-                "business_context": BusinessContext.from_onboarding(
-                    payload.profile,
-                    primary_market=primary_market,
-                    language_code=language_code,
-                ).model_dump(mode="json", exclude_none=True),
-            },
-            competitors=[competitor["name"] for competitor in competitors],
-            competitor_terms=[
-                term
-                for competitor in competitors
-                for term in [competitor["name"], *competitor.get("aliases", [])]
-            ],
-            harvest=harvest,
-            page_evidence=page_evidence,
-        )
+        async with asyncio.timeout(
+            brand_discovery_settings.portfolio_generation_timeout_seconds
+        ):
+            result = await generate_portfolio(
+                brand_name=brand_name,
+                brand_terms=brand_terms(
+                    brand_name,
+                    _domain_brand_aliases(domains),
+                    _category_vocabulary(payload.profile),
+                ),
+                primary_market=primary_market,
+                profile={
+                    **payload.profile.model_dump(),
+                    "business_context": BusinessContext.from_onboarding(
+                        payload.profile,
+                        primary_market=primary_market,
+                        language_code=language_code,
+                    ).model_dump(mode="json", exclude_none=True),
+                },
+                competitors=[competitor["name"] for competitor in competitors],
+                competitor_terms=[
+                    term
+                    for competitor in competitors
+                    for term in [competitor["name"], *competitor.get("aliases", [])]
+                ],
+                harvest=harvest,
+                page_evidence=page_evidence,
+            )
+    except ProviderError:
+        raise
     except (RuntimeError, TimeoutError, ValueError) as exc:
         raise BrandDiscoveryError("Initial prompt generation failed") from exc
     if not result.prompts:

@@ -17,7 +17,7 @@ def test_unknown_facets_remain_unknown() -> None:
     )
     assert context.business_model is None
     assert context.market_scope is None
-    assert context.business_type is None
+    assert context.buyer_type is None
     assert "business_model" not in context.for_generation()
 
 
@@ -36,6 +36,7 @@ def test_reviewed_fields_override_inference_and_survive_project_roundtrip() -> N
         inferred={
             "category": "Software",
             "business_type": "b2c",
+            "buyer_type": "b2c",
             "market_scope": "local",
         },
     )
@@ -46,10 +47,13 @@ def test_reviewed_fields_override_inference_and_survive_project_roundtrip() -> N
     )
     loaded = BusinessContext.from_project(project)
     assert loaded.category == "Implementation services"
-    assert loaded.business_type == "b2b"
+    assert loaded.buyer_type == "b2b"
+    assert loaded.for_generation()["buyer_type"] == "b2b"
+    assert "business_type" not in loaded.persisted()
     assert loaded.market_scope == "global"
     assert loaded.business_model == "professional_service"
     assert loaded.field_sources["category"] == "reviewed"
+    assert loaded.field_sources["buyer_type"] == "reviewed"
     assert loaded.field_sources["business_model"] == "inferred"
     assert "field_sources" not in loaded.for_generation()
 
@@ -72,6 +76,28 @@ def test_invalid_legacy_facet_does_not_break_valid_persisted_context() -> None:
     assert "business_model" not in loaded.field_sources
 
 
+def test_legacy_reviewed_business_type_wins_over_stale_buyer_type() -> None:
+    loaded = BusinessContext.from_persisted(
+        {
+            "business_type": "b2b",
+            "buyer_type": "b2c",
+            "field_sources": {"business_type": "reviewed", "buyer_type": "inferred"},
+        }
+    )
+    assert loaded.for_generation()["buyer_type"] == "b2b"
+    assert "business_type" not in loaded.persisted()
+    assert loaded.field_sources["buyer_type"] == "reviewed"
+
+
+def test_missing_reviewed_buyer_type_does_not_keep_stale_inference() -> None:
+    context = BusinessContext.from_onboarding(
+        ConfirmedDiscoveryProfile(category="Retail"),
+        inferred={"buyer_type": "b2b"},
+    )
+    assert context.buyer_type is None
+    assert "buyer_type" not in context.for_generation()
+
+
 def test_project_manual_profile_edit_overrides_inferred_field_provenance() -> None:
     project = SimpleNamespace(
         brand=SimpleNamespace(
@@ -88,3 +114,10 @@ def test_project_manual_profile_edit_overrides_inferred_field_provenance() -> No
     assert loaded.positioning == "Edited position"
     assert loaded.field_sources["positioning"] == "reviewed"
     assert loaded.for_generation()["language_code"] == "en-AU"
+
+
+def test_project_market_falls_back_when_country_code_is_blank() -> None:
+    project = SimpleNamespace(country_code="", primary_market="AU", language_code="en")
+    assert (
+        BusinessContext.from_project(project).for_generation()["primary_market"] == "AU"
+    )

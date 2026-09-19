@@ -11,7 +11,11 @@ from app.connectors.web_evidence.brand_evidence import (
     BrandEvidenceLink,
     BrandEvidencePage,
 )
-from app.core.config.brand_discovery import _discovery_research_system_prompt
+from app.core.config.brand_discovery import (
+    _competitor_suggestion_system_prompt,
+    _discovery_research_system_prompt,
+    brand_discovery_settings,
+)
 from app.core.config.visibility_prompts import (
     CONFIRMED_OFFERING_SOURCE_REF,
     cohort_system_prompt,
@@ -108,6 +112,13 @@ def test_research_prompt_no_longer_owns_topics() -> None:
     prompt = _discovery_research_system_prompt()
     assert "TOPICS." not in prompt
     assert "COMPETITORS must be substitutable" in prompt
+
+
+def test_competitor_prompt_uses_configured_suggestion_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(brand_discovery_settings, "competitor_suggestion_maximum", 3)
+    assert "up to 3" in _competitor_suggestion_system_prompt()
 
 
 def test_prompt_instruction_shows_register_for_the_business_kind() -> None:

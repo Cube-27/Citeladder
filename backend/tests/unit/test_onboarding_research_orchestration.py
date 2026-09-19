@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -203,6 +204,38 @@ async def test_failed_identity_attempt_is_recorded_without_success_provenance(
 
     assert phase.identity is None
     assert phase.gateway is None
+
+
+@pytest.mark.asyncio
+async def test_slow_identity_model_reaches_review_with_degraded_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domain.projects.onboarding import research as module
+
+    async def hang(*_args, **_kwargs):
+        await asyncio.Event().wait()
+
+    gateway = SimpleNamespace(base_url_host="provider.invalid", model="fixture-model")
+    monkeypatch.setattr(module, "create_model_gateway", lambda: gateway)
+    monkeypatch.setattr(module, "synthesize_identity", hang)
+    monkeypatch.setattr(
+        module.brand_discovery_settings, "research_model_timeout_seconds", 0.001
+    )
+
+    phase = await module._run_identity_phase(
+        keenable=None,
+        brand_name="Acme",
+        owned_domain="acme.example",
+        primary_market="US",
+        industry="Software",
+        subindustry="Workflow",
+        language_code="en",
+        first_party=[],
+        budget=module.ResearchCallBudget(0),
+    )
+    assert phase.identity is None
+    assert phase.gateway is None
+    assert phase.model_calls[0]["outcome"] == "failed"
     assert phase.model_calls == [
         {
             "phase": "identity",
@@ -212,3 +245,35 @@ async def test_failed_identity_attempt_is_recorded_without_success_provenance(
             "outcome": "failed",
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_slow_competitor_model_returns_no_unverified_suggestions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domain.projects.onboarding import research as module
+
+    async def hang(*_args, **_kwargs):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(module, "suggest_competitors", hang)
+    monkeypatch.setattr(
+        module.brand_discovery_settings, "research_model_timeout_seconds", 0.001
+    )
+    calls: list[dict] = []
+    result = await module._run_competitor_phase(
+        keenable=None,
+        gateway=SimpleNamespace(
+            base_url_host="provider.invalid", model="fixture-model"
+        ),
+        profile=PersistableDiscoveryProfile(category="Retail"),
+        signature=CompetitiveSignature(category="Retail"),
+        brand_name="Acme",
+        owned_domain="acme.com",
+        primary_market="AU",
+        budget=module.ResearchCallBudget(0),
+        model_calls=calls,
+    )
+    assert result.suggestions == []
+    assert result.suggestion_available is False
+    assert calls[0]["outcome"] == "failed"

@@ -39,7 +39,6 @@ class BusinessContext(BaseModel):
     buyer_register: BuyerRegister | None = None
     buyer_roles: list[str] = Field(default_factory=list)
     service_areas: list[str] = Field(default_factory=list)
-    business_type: str | None = None
     price_tier: str | None = None
     knowledge_strength: KnowledgeStrength = "none"
     field_sources: dict[str, str] = Field(default_factory=dict)
@@ -54,9 +53,10 @@ class BusinessContext(BaseModel):
         language_code: str = "",
     ) -> BusinessContext:
         values = dict(inferred or {})
+        values.pop("business_type", None)
         reviewed = {
             "category",
-            "business_type",
+            "buyer_type",
             "market_scope",
             "primary_market",
             "language_code",
@@ -64,6 +64,7 @@ class BusinessContext(BaseModel):
         for field in cls.model_fields:
             if field in reviewed or field not in values:
                 values[field] = getattr(confirmed, field, None)
+        values["buyer_type"] = confirmed.business_type
         values["primary_market"] = primary_market
         values["language_code"] = language_code
         values["field_sources"] = {
@@ -102,7 +103,11 @@ class BusinessContext(BaseModel):
                     getattr(profile, "products_services", None) or []
                 ),
                 "target_audience": getattr(profile, "target_audience", "") or "",
-                "primary_market": getattr(project, "country_code", "") or "",
+                "primary_market": (
+                    getattr(project, "country_code", "")
+                    or getattr(project, "primary_market", "")
+                    or ""
+                ),
                 "language_code": getattr(project, "language_code", "") or "",
                 "field_sources": sources,
             }
@@ -111,7 +116,15 @@ class BusinessContext(BaseModel):
     @classmethod
     def from_persisted(cls, value: object) -> BusinessContext:
         """Read older and public-API context without losing unrelated valid facts."""
-        raw = value if isinstance(value, dict) else {}
+        raw = dict(value) if isinstance(value, dict) else {}
+        if "business_type" in raw:
+            raw["buyer_type"] = raw.pop("business_type")
+            sources = raw.get("field_sources")
+            if isinstance(sources, dict):
+                sources = dict(sources)
+                if "business_type" in sources:
+                    sources["buyer_type"] = sources.pop("business_type")
+                raw["field_sources"] = sources
         try:
             return cls.model_validate(raw)
         except ValidationError:

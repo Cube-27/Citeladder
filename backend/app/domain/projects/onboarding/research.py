@@ -291,15 +291,18 @@ async def _run_identity_phase(
     model_calls: list[dict] = []
     try:
         gateway = create_model_gateway()
-        identity = await synthesize_identity(
-            gateway,
-            brand_name=brand_name,
-            primary_market=primary_market,
-            industry=industry,
-            subindustry=subindustry,
-            language_code=language_code,
-            evidence=[*first_party, *external],
-        )
+        async with asyncio.timeout(
+            brand_discovery_settings.research_model_timeout_seconds
+        ):
+            identity = await synthesize_identity(
+                gateway,
+                brand_name=brand_name,
+                primary_market=primary_market,
+                industry=industry,
+                subindustry=subindustry,
+                language_code=language_code,
+                evidence=[*first_party, *external],
+            )
         model_calls.append(
             _model_call(
                 phase="identity",
@@ -308,7 +311,7 @@ async def _run_identity_phase(
                 outcome="succeeded",
             )
         )
-    except (AgentNotConfiguredError, ProviderError, ValueError):
+    except (AgentNotConfiguredError, ProviderError, TimeoutError, ValueError):
         if gateway is not None:
             model_calls.append(
                 _model_call(
@@ -434,14 +437,17 @@ async def _run_competitor_phase(
         evidence = list(result.evidence)
         search_state = result.state
     try:
-        suggestions = await suggest_competitors(
-            gateway,
-            profile=profile,
-            signature=signature,
-            evidence=tuple(evidence),
-            brand_name=brand_name,
-            owned_domain=owned_domain,
-        )
+        async with asyncio.timeout(
+            brand_discovery_settings.research_model_timeout_seconds
+        ):
+            suggestions = await suggest_competitors(
+                gateway,
+                profile=profile,
+                signature=signature,
+                evidence=tuple(evidence),
+                brand_name=brand_name,
+                owned_domain=owned_domain,
+            )
         model_calls.append(
             _model_call(
                 phase="competitor_suggestions",
@@ -451,7 +457,7 @@ async def _run_competitor_phase(
             )
         )
         return _CompetitorPhase(suggestions, evidence, True, search_state)
-    except (ProviderError, ValueError):
+    except (ProviderError, TimeoutError, ValueError):
         model_calls.append(
             _model_call(
                 phase="competitor_suggestions",

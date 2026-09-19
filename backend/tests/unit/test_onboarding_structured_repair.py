@@ -117,3 +117,29 @@ async def test_non_retryable_provider_error_is_not_repeated(monkeypatch) -> None
         )
 
     assert gateway.users == ["request"]
+
+
+@pytest.mark.asyncio
+async def test_persistent_rate_limit_stops_after_one_retry(monkeypatch) -> None:
+    async def no_wait(_delay: float) -> None:
+        return None
+
+    monkeypatch.setattr(module.asyncio, "sleep", no_wait)
+    gateway = _Gateway(
+        [
+            ProviderError("rate limited", error_code=ERROR_RATE_LIMIT, retryable=True),
+            ProviderError("rate limited", error_code=ERROR_RATE_LIMIT, retryable=True),
+            '{"status":"ok","value":3}',
+        ]
+    )
+
+    with pytest.raises(ProviderError, match="rate limited"):
+        await module.complete_validated_envelope(
+            gateway,
+            system="system",
+            user="request",
+            schema_name="fixture",
+            envelope_type=_Envelope,
+            validate=lambda _value: None,
+        )
+    assert gateway.users == ["request", "request"]

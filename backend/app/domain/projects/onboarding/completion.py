@@ -85,6 +85,7 @@ async def _ensure_completion_task(
                 discovery_id=row.id,
                 workspace_id=workspace_id,
                 task_kind=TASK_KIND_BRAND_COMPLETION,
+                max_attempts=brand_discovery_settings.completion_maximum_attempts,
                 idempotency_key=f"brand-completion:{row.id}",
             )
         )

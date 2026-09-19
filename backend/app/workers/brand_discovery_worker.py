@@ -11,6 +11,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from time import perf_counter
 
+from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_QUEUE_SPEC,
     DISCOVERY_STATUS_COMPLETING,
@@ -84,7 +85,9 @@ async def _finalize(
             task.completed_at = now
             task.error_code = ""
             task.error_detail = ""
-        elif task.attempt_count < task.max_attempts:
+        elif task.attempt_count < task.max_attempts and not (
+            isinstance(error, ProviderError) and not error.retryable
+        ):
             task.status = TASK_STATUS_RETRY_WAIT
             task.available_at = now + timedelta(
                 seconds=brand_discovery_settings.failure_backoff_max_seconds
@@ -94,7 +97,11 @@ async def _finalize(
         else:
             task.status = TASK_STATUS_FAILED
             task.completed_at = now
-            task.error_code = BRAND_DISCOVERY_QUEUE_SPEC.max_attempts_error
+            task.error_code = (
+                error.error_code
+                if isinstance(error, ProviderError)
+                else BRAND_DISCOVERY_QUEUE_SPEC.max_attempts_error
+            )
             task.error_detail = str(error)[:2000]
         task.lease_owner = None
         task.lease_expires_at = None
