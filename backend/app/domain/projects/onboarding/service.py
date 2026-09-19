@@ -36,11 +36,7 @@ from app.core.config.prompts import (
     PROMPT_COHORT_COMPARISON,
     PROMPT_COHORT_CORE,
 )
-from app.core.config.visibility_prompts import (
-    BUYER_QUERY_POLICY_VERSION,
-    TOPIC_SELECTION_PROMPT_VERSION,
-    VISIBILITY_TOPIC_MAX,
-)
+from app.core.config.visibility_prompts import BUYER_QUERY_POLICY_VERSION
 from app.domain.projects.business_context import BusinessContext
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryComplete,
@@ -48,6 +44,7 @@ from app.domain.projects.discovery_schemas import (
     DiscoveryProfile,
     DiscoveryTopic,
 )
+from app.domain.projects.offering_harvest import OfferingHarvest
 from app.domain.projects.onboarding.industry_library import (
     industry_context,
     industry_names,
@@ -59,6 +56,8 @@ from app.domain.projects.onboarding.normalization import (
     normalize_website_url,
 )
 from app.domain.projects.onboarding.portfolio_generation import (
+    PORTFOLIO_VERSION,
+    PortfolioResult,
     generate_portfolio,
 )
 from app.domain.projects.onboarding.research import research_brand
@@ -419,15 +418,18 @@ def _generated_prompts(
     prompt_set_id: uuid.UUID,
     discovery_id: uuid.UUID,
     prompts: list[dict],
+    discovery_topics: list[DiscoveryTopic],
     topics_by_id: dict[str, Topic],
     provider: str,
     model: str,
-    topic_provider: str,
-    topic_model: str,
-    topic_duration_ms: int,
+    intents: list[dict],
     research_snapshot_id: uuid.UUID | None,
 ) -> list[Prompt]:
     generated: list[Prompt] = []
+    intents_by_id = {item["id"]: item for item in intents}
+    refs_by_topic_id = {
+        str(item.topic_id): item.source_refs for item in discovery_topics
+    }
     for item in prompts:
         topic_id = item.get("topic_id")
         topic = topics_by_id.get(str(topic_id)) if topic_id else None
@@ -452,10 +454,9 @@ def _generated_prompts(
                     "discovery_id": str(discovery_id),
                     "provider": provider,
                     "model": model,
-                    "topic_selection_provider": topic_provider,
-                    "topic_selection_model": topic_model,
-                    "topic_selection_prompt_version": TOPIC_SELECTION_PROMPT_VERSION,
-                    "topic_selection_duration_ms": topic_duration_ms,
+                    "portfolio_version": PORTFOLIO_VERSION,
+                    "buyer_intent": intents_by_id.get(str(item.get("slot_id") or "")),
+                    "topic_source_refs": refs_by_topic_id.get(str(topic_id), []),
                     "research_snapshot_id": (
                         str(research_snapshot_id) if research_snapshot_id else None
                     ),
@@ -528,9 +529,7 @@ async def _persist_generated_prompts(
     discovery_topics: list[DiscoveryTopic],
     prompt_provider: str,
     prompt_model: str,
-    topic_provider: str,
-    topic_model: str,
-    topic_duration_ms: int,
+    intents: list[dict],
 ) -> None:
     """Fill the shell's existing prompt set exactly once under the row lock."""
     if row.project_id is None:
@@ -589,12 +588,11 @@ async def _persist_generated_prompts(
         prompt_set_id=prompt_set.id,
         discovery_id=row.id,
         prompts=prompts,
+        discovery_topics=discovery_topics,
         topics_by_id=by_id,
         provider=prompt_provider,
         model=prompt_model,
-        topic_provider=topic_provider,
-        topic_model=topic_model,
-        topic_duration_ms=topic_duration_ms,
+        intents=intents,
         research_snapshot_id=research_snapshot_id,
     )
     retained = [
@@ -623,11 +621,7 @@ def _confirmed_portfolio_inputs(
         brand_name=str(row.input_data["brand_name"]),
         owned_domains=domains,
     )
-    try:
-        topics = [DiscoveryTopic.model_validate(item) for item in row.topics]
-    except (TypeError, ValueError):
-        topics = []
-    topics = topics[:VISIBILITY_TOPIC_MAX]
+    topics: list[DiscoveryTopic] = []
     brand_name = str(row.input_data["brand_name"])
     primary_market = str(row.input_data["primary_market"])
     profile_sources = _reviewed_profile_sources(payload.profile.model_dump())
@@ -734,29 +728,38 @@ async def _generate_confirmed_portfolio(
     *,
     payload: BrandDiscoveryComplete,
     domains: list[str],
-    topics: list[DiscoveryTopic],
     brand_name: str,
     primary_market: str,
     competitors: list[dict],
-) -> tuple[list[dict], str, str, list[str]]:
-    result = await generate_portfolio(
-        brand_name=brand_name,
-        brand_terms=brand_terms(
-            brand_name,
-            _domain_brand_aliases(domains),
-            _category_vocabulary(payload.profile, topics),
-        ),
-        primary_market=primary_market,
-        profile=payload.profile.model_dump(),
-        competitors=[competitor["name"] for competitor in competitors],
-        competitor_terms=[
-            term
-            for competitor in competitors
-            for term in [competitor["name"], *competitor.get("aliases", [])]
-        ],
-        topics=topics,
-    )
+    harvest: OfferingHarvest,
+    page_evidence: list[dict[str, str]],
+) -> PortfolioResult:
+    try:
+        result = await generate_portfolio(
+            brand_name=brand_name,
+            brand_terms=brand_terms(
+                brand_name,
+                _domain_brand_aliases(domains),
+                _category_vocabulary(payload.profile, []),
+            ),
+            primary_market=primary_market,
+            profile={
+                **payload.profile.model_dump(),
+                "business_context": BusinessContext.from_onboarding(
+                    payload.profile
+                ).for_generation(),
+            },
+            competitors=[competitor["name"] for competitor in competitors],
+            competitor_terms=[
+                term
+                for competitor in competitors
+                for term in [competitor["name"], *competitor.get("aliases", [])]
+            ],
+            harvest=harvest,
+            page_evidence=page_evidence,
+        )
+    except (RuntimeError, TimeoutError, ValueError) as exc:
+        raise BrandDiscoveryError("Initial prompt generation failed") from exc
     if not result.prompts:
-        detail = ", ".join(result.errors) or "generation_failed"
-        raise BrandDiscoveryError(f"Initial prompt generation failed: {detail}")
-    return list(result.prompts), result.provider, result.model, list(result.errors)
+        raise BrandDiscoveryError("Initial prompt generation failed")
+    return result

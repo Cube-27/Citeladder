@@ -15,7 +15,6 @@ from app.core.config.brand_discovery import _discovery_research_system_prompt
 from app.core.config.visibility_prompts import (
     CONFIRMED_OFFERING_SOURCE_REF,
     MODEL_PRIOR_SOURCE_REF,
-    TOPIC_SELECTION_SYSTEM_PROMPT,
     cohort_system_prompt,
 )
 from app.domain.projects.discovery_schemas import (
@@ -110,15 +109,6 @@ def test_research_prompt_no_longer_owns_topics() -> None:
     prompt = _discovery_research_system_prompt()
     assert "TOPICS." not in prompt
     assert "COMPETITORS must be substitutable" in prompt
-
-
-def test_topic_prompt_asks_for_selection_not_invention() -> None:
-    prompt = TOPIC_SELECTION_SYSTEM_PROMPT
-    assert "SELECT, MERGE, and NAME - do not invent" in prompt
-    assert "offering_candidates" in prompt
-    # The exact failure the old contract shipped is named as a non-example.
-    assert "Ecommerce Marketplace" in prompt
-    assert "insufficient_evidence" in prompt
 
 
 def test_prompt_instruction_shows_register_for_the_business_kind() -> None:
@@ -781,57 +771,6 @@ def test_one_unreadable_row_no_longer_voids_its_whole_batch() -> None:
     assert dropped == 1
 
 
-def test_onboarding_uses_the_shared_constrained_buyer_query_plan() -> None:
-    import uuid
-
-    from app.domain.projects.discovery_schemas import DiscoveryTopic
-    from app.domain.projects.onboarding.portfolio_generation import (
-        _brand_request,
-        _topic_request,
-        onboarding_brand_context,
-    )
-    from tests.fixtures.prompt_generation import slots_from_user_message
-
-    topic = DiscoveryTopic(
-        topic_id=uuid.uuid4(),
-        name="Product Feed Management",
-        description="Retail catalog distribution and diagnostics",
-        source_refs=["confirmed-profile"],
-    )
-    brand_context = onboarding_brand_context(
-        brand_name="Feedonomics",
-        primary_market="US",
-        profile={
-            "business_model": "b2b_saas",
-            "buyer_register": "research_comparative",
-            "description": "Feedonomics manages retail product feeds.",
-            "products_services": ["Managed product feeds"],
-        },
-        competitors=["Productsup"],
-    )
-    user, slots = _topic_request(
-        brand_context=brand_context,
-        topics=[topic],
-        rejected=(),
-        existing_prompts=("Existing feed-management query",),
-    )
-
-    planned = slots_from_user_message(user)
-    assert len(slots) == len(planned) == 7
-    assert all(slot.topic_id == str(topic.topic_id) for slot in slots)
-    assert all("archetype" not in slot and "form" not in slot for slot in planned)
-    assert "Managed product feeds" in user
-    assert "Existing feed-management query" in user
-
-    _, brand_slots = _brand_request(
-        brand_context=brand_context,
-        competitors=["Productsup"],
-        topics=[topic],
-        count=2,
-        cohort="brand_diagnostic",
-    )
-    assert len(brand_slots) == 2
-    assert all(slot.topic_id is None for slot in brand_slots)
 
 
 def test_admission_rejects_an_unsplit_bundle_but_keeps_real_departments() -> None:

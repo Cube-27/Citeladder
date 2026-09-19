@@ -51,15 +51,19 @@ and queues a brand-completion task in one transaction. A rollback leaves no
 partial shell. The response can carry the committed project ID while portfolio
 generation is still running; no initial Site Health crawl is started.
 
-The worker selects topics from the confirmed profile, accepted competitors,
-persisted offering harvest and page evidence. If topic selection is unavailable
-or insufficient, confirmed products/services supply bounded starting topics.
-It then generates prompts, re-locks the discovery and persists topics, prompts
-and terminal completion together. Generated topics join any existing project
-topics before prompt binding; unresolved core or explicitly topic-bound prompts
-reject the transaction. A terminal-state guard and prompt uniqueness
-prevent repeated delivery from creating a second portfolio. Same-key replays
-return the same shell; exhausted work has a completion-specific failure.
+After the business context and competitor choices are confirmed, the worker
+makes one structured portfolio request with the confirmed context, accepted
+competitors, offering harvest and persisted research. Request-local buyer
+intents link topics to core prompts and may also link diagnostic and comparison
+prompts. Code validates those links, evidence references and prompt cohorts,
+then admits supported topics and prompts. An empty valid core portfolio uses
+the recoverable completion-failure flow. Schema or admission failure can
+receive one structured repair attempt. The worker re-locks the discovery and
+persists topics, prompts and terminal completion together. Generated topics
+join any existing project topics before prompt binding; unresolved core or
+explicitly topic-bound prompts reject the transaction. A terminal-state guard
+and prompt uniqueness prevent repeated delivery from creating a second
+portfolio. Same-key replays return the same shell.
 
 The [onboarding screen](../frontend/components/onboarding/onboarding-screen.tsx)
 enters the project as soon as a committed project ID is available. It seeds the

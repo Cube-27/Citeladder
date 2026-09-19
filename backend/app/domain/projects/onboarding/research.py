@@ -103,7 +103,7 @@ def _fallback_profile(
     # The declared industry/subindustry is user-supplied, so it is always
     # present and is a usable category of last resort. It is carried into
     # ``category``/``category_terms`` for the downstream readers that still
-    # need a category -- ``business_category`` in topic selection -- NOT to
+    # need a category for the portfolio -- NOT to
     # keep competitor discovery running: the fallback signature deliberately
     # leaves ``category`` empty, which skips the competitor phase entirely.
     category = subindustry.strip() or industry.strip()

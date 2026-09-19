@@ -203,9 +203,8 @@ def admit_topics(
 def confirmed_offering_topics(offerings: list[str]) -> list[DiscoveryTopic]:
     """Create starting topics from the offerings a person confirmed.
 
-    This is the deterministic recovery path when best-effort topic selection
-    returns nothing. It preserves the user's wording and stamps explicit
-    provenance; it does not infer, broaden, or pad the portfolio.
+    Subsequent Generate prompts uses this when an existing project has no
+    topics. It preserves the user's wording and stamps explicit provenance.
     """
     topics: list[DiscoveryTopic] = []
     seen: set[str] = set()

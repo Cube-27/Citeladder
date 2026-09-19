@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from time import perf_counter
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,8 +39,6 @@ from app.domain.projects.onboarding.site_resolution import (
     SiteNotFoundError,
     resolve_site,
 )
-from app.domain.projects.onboarding.topic_admission import confirmed_offering_topics
-from app.domain.projects.onboarding.topic_selection import select_topics
 from app.models.discovery import (
     BrandDiscovery,
     BrandDiscoveryTask,
@@ -203,34 +200,14 @@ async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
     harvest, page_evidence = await _topic_context(session, row=row)
     await session.commit()
 
-    topic_started = perf_counter()
-    topic_selection = await select_topics(
-        brand_name=brand_name,
-        brand_aliases=[],
-        competitors=[str(item["name"]) for item in competitors],
-        business_category=payload.profile.category,
-        business_aliases=[
-            *payload.profile.category_aliases,
-            *payload.profile.category_options,
-        ],
-        sector=payload.profile.sector,
-        business_model=payload.profile.business_model,
-        market=primary_market,
-        harvest=harvest,
-        page_evidence=page_evidence,
-        allow_model_prior=payload.profile.has_reliable_prior(),
-    )
-    topic_duration_ms = int((perf_counter() - topic_started) * 1000)
-    topics = topic_selection.topics or confirmed_offering_topics(
-        payload.profile.products_services
-    )
-    prompts, provider, model, warnings = await _generate_confirmed_portfolio(
+    portfolio = await _generate_confirmed_portfolio(
         payload=payload,
-        topics=topics,
         brand_name=brand_name,
         primary_market=primary_market,
         competitors=competitors,
         domains=domains,
+        harvest=harvest,
+        page_evidence=page_evidence,
     )
     row = await get_discovery(
         session,
@@ -243,22 +220,18 @@ async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
     row.domains = domains
     row.competitors = competitors
     row.profile = payload.profile.model_dump()
-    row.topics = [topic.model_dump(mode="json") for topic in topics]
-    row.prompt_suggestions = prompts
-    row.warnings = list(
-        dict.fromkeys([*row.warnings, *topic_selection.warnings, *warnings])
-    )
+    row.topics = [topic.model_dump(mode="json") for topic in portfolio.topics]
+    row.prompt_suggestions = list(portfolio.prompts)
+    row.warnings = list(dict.fromkeys([*row.warnings, *portfolio.warnings]))
     await _persist_generated_prompts(
         session,
         workspace_id=workspace_id,
         row=row,
-        prompts=prompts,
-        discovery_topics=topics,
-        prompt_provider=provider,
-        prompt_model=model,
-        topic_provider=topic_selection.provider,
-        topic_model=topic_selection.model,
-        topic_duration_ms=topic_duration_ms,
+        prompts=list(portfolio.prompts),
+        discovery_topics=list(portfolio.topics),
+        prompt_provider=portfolio.provider,
+        prompt_model=portfolio.model,
+        intents=list(portfolio.intents),
     )
     row.status = DISCOVERY_STATUS_PROJECT_CREATED
     row.stage = "complete"
@@ -266,7 +239,7 @@ async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
         phase="complete",
         completed_steps=DISCOVERY_PROGRESS_TOTAL_STEPS,
         competitors_found=len(row.competitors),
-        prompts_prepared=len(prompts),
+        prompts_prepared=len(portfolio.prompts),
         previous=row.progress,
     )
     await session.commit()
@@ -321,12 +294,14 @@ def _page_evidence(value: object) -> list[dict[str, str]]:
             "evidence_ref": str(item.get("evidence_ref") or ""),
             "url": str(item.get("source_url") or ""),
             "title": str(item.get("title") or ""),
+            "source_kind": str(item.get("source_kind") or ""),
+            "provider": str(item.get("provider") or ""),
+            "query_ref": str(item.get("query_ref") or ""),
+            "acquired_at": str(item.get("acquired_at") or ""),
             "text": str(item.get("text") or "")[
                 : brand_discovery_settings.topic_evidence_max_chars_per_page
             ],
         }
         for item in items
-        if isinstance(item, dict)
-        and item.get("source_kind") == "first_party"
-        and item.get("evidence_ref")
+        if isinstance(item, dict) and item.get("evidence_ref")
     ]

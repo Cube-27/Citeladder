@@ -20,12 +20,8 @@ DISCOVERY_STATUS_RUNNING: Final = "running"
 DISCOVERY_STATUS_FAILED: Final = "failed"
 DISCOVERY_STATUS_READY: Final = "ready"
 # Review is confirmed and the portfolio is being generated on a worker. The
-# completion request used to run that generation INLINE -- one model call per
-# topic, plus retries, plus the two named cohorts -- inside an HTTP request the
-# client abandons after 30s. Every first click reported "We couldn't finish
-# this setup step just now" while the server carried on and often created the
-# project anyway. A visible in-between state is what lets the client wait
-# honestly instead of guessing.
+# completion request once ran generation inline and could outlast the client.
+# The visible in-between state lets the client wait for the worker's result.
 DISCOVERY_STATUS_COMPLETING: Final = "completing"
 DISCOVERY_STATUS_PROJECT_CREATED: Final = "project_created"
 ERROR_BRAND_DISCOVERY: Final = "brand_discovery_failed"
@@ -183,10 +179,9 @@ IDENTITY_CONFLICT_FIELDS: Final[tuple[str, ...]] = (
 IDENTITY_CONFLICT_CONFIDENCE_CEILING: Final = 0.75
 BRAND_COMPETITOR_SUGGESTION_VERSION: Final = "brand-competitor-suggestion-v1"
 KEENABLE_RESEARCH_VERSION: Final = "keenable-research-v1"
-BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION: Final = "brand-discovery-prompts-v1"
+BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION: Final = "brand-discovery-prompts-v2"
 BRAND_DISCOVERY_PROMPT_VALIDATION_VERSION: Final = "initial-portfolio-validation-v1"
 DISCOVERY_PROGRESS_TOTAL_STEPS: Final = 4
-DISCOVERY_PROMPT_GENERATION_CONCURRENCY: Final = 4
 # Bounded model-call duration. Completion ends its read transaction before the
 # call and reacquires the discovery lock only for the final write.
 PORTFOLIO_GENERATION_TIMEOUT_MAX_SECONDS: Final = 60.0

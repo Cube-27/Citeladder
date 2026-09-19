@@ -20,7 +20,7 @@ from app.core.config.visibility_prompts import (
 )
 from app.domain.prompts.normalization import prompt_text_hash
 from app.domain.prompts.portfolio import contains_tracked_name
-from app.domain.prompts.style import words
+from app.domain.prompts.style import contains_placeholder, words
 
 __all__ = [
     "PortfolioValidator",
@@ -169,7 +169,7 @@ class PortfolioValidator:
         return list(self._accepted)
 
     def _shape_error(self, text: str, topic_id: str, intent: str, cohort: str) -> str:
-        if cohort == PROMPT_COHORT_BRAND_DIAGNOSTIC:
+        if cohort in {PROMPT_COHORT_BRAND_DIAGNOSTIC, PROMPT_COHORT_COMPARISON}:
             # A diagnostic prompt need not name a topic, but an id it does
             # carry has to be one of ours. Blanking an unknown id threw the
             # association away silently; rejecting feeds the reason back into
@@ -182,6 +182,8 @@ class PortfolioValidator:
             return "intent"
         if not text or len(text) > PROMPT_TEXT_MAX_CHARS:
             return "length"
+        if contains_placeholder(text):
+            return "placeholder"
         # A floor as well as a ceiling. The old four-word window is gone on
         # purpose -- real queries are short -- but its removal left NO lower
         # bound, and onboarding's portfolio path has no topical-binding gate to
