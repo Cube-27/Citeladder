@@ -1,10 +1,38 @@
 import type { ComponentPropsWithoutRef } from 'react';
 
 import { Tooltip } from '@/components/ui/tooltip';
-import { availabilityLabel, type DataAvailabilityState } from '@/lib/format';
+import { availabilityLabel, MISSING_MARK, type DataAvailabilityState } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-/** Compact, explicit presentation for a product value that is not available as a number. */
+/**
+ * The mark itself. Shared by `UnavailableValue` and `MissingValue` so a missing
+ * measurement is the same glyph with the same accessible name on every surface.
+ * Private: callers reach it through one of those two, which is what keeps the
+ * accessible name attached to it.
+ */
+function MissingMark({
+  className,
+  ...props
+}: Readonly<Omit<ComponentPropsWithoutRef<'span'>, 'children'>>) {
+  return (
+    <span {...props} className={cn('value-placeholder', className)}>
+      {/* Aria-hidden so the dash is never read as punctuation; the label
+          below is what a screen reader receives in its place. */}
+      <span aria-hidden>{MISSING_MARK}</span>
+      <span className="sr-only">{availabilityLabel('not_measured')}</span>
+    </span>
+  );
+}
+
+/**
+ * Compact, explicit presentation for a product value that is not available as
+ * a number.
+ *
+ * `not_measured` is the one state that renders as the mark rather than as
+ * words, wherever it appears — see `MISSING_MARK`. Every other state is a
+ * workflow answer the reader can act on ("Not run", "Not set", "Failed"), so
+ * it keeps its words.
+ */
 export function UnavailableValue({
   state,
   className,
@@ -14,6 +42,7 @@ export function UnavailableValue({
     state: DataAvailabilityState;
   }
 >) {
+  if (state === 'not_measured') return <MissingMark className={className} {...props} />;
   return (
     <span {...props} className={cn('value-placeholder', className)}>
       {availabilityLabel(state)}
@@ -24,20 +53,14 @@ export function UnavailableValue({
 /**
  * The same fact as `UnavailableValue`, for a cell in a column of numbers.
  *
- * A table repeats its placeholder once per row, and a column of "Not measured"
- * says the phrase twenty times to make one point — while sitting at a
- * different size from the digits above it, so it reads as a different KIND of
- * value rather than an absent one. The mark here is quiet enough to scan past
- * and still wide enough to see, and it holds the row's rhythm.
+ * It exists for the `reason` affordance: a cell whose column cannot explain why
+ * one particular value is absent hangs that explanation off the mark. Without a
+ * `reason` this is exactly `UnavailableValue`, which now renders the same mark
+ * for `not_measured` on every surface — a metric card, a chart label and a row
+ * all say it the same way.
  *
- * Nothing is lost by shortening it. The state is still announced to assistive
- * technology, and `reason` puts the specific explanation a keystroke or a
- * hover away. What it must never become is blank: an empty cell and a measured
- * zero look identical, and those are opposite findings.
- *
- * Use it for MEASUREMENTS. A workflow state a reader can act on -- "Failed",
- * "Not run" -- keeps its words in `UnavailableValue`, because that one is not
- * a missing number, it is the answer.
+ * What it must never become is blank: an empty cell and a measured zero look
+ * identical, and those are opposite findings.
  */
 export function MissingValue({
   state = 'not_measured',
@@ -51,15 +74,14 @@ export function MissingValue({
     reason?: string;
   }
 >) {
-  const label = availabilityLabel(state);
-  const mark = (
-    <span {...props} className={cn('value-placeholder', className)}>
-      {/* Aria-hidden so the dash is never read as punctuation; the label
-          below is what a screen reader receives in its place. */}
-      <span aria-hidden>&ndash;</span>
-      <span className="sr-only">{label}</span>
-    </span>
-  );
+  const mark =
+    state === 'not_measured' ? (
+      <MissingMark className={className} {...props} />
+    ) : (
+      <span {...props} className={cn('value-placeholder', className)}>
+        {availabilityLabel(state)}
+      </span>
+    );
   if (!reason) return mark;
   return (
     <Tooltip content={reason}>

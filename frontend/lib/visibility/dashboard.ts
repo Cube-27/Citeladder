@@ -214,13 +214,11 @@ export const PLACEHOLDER = availabilityLabel('not_measured');
 /**
  * A formatted value, or `null` where the formatter had nothing to format.
  *
- * The formatters above answer in WORDS because most of their callers are
- * metric cards, prose and chart descriptions, where "Not measured" is the
- * right thing to say. A table is the one surface where it is not: a column
- * repeats the phrase once per row to make a point it only needs to make once,
- * at the top. Cells pass the string through here and render `MissingValue`
- * on null, which keeps the distinction from a measured zero without the
- * twenty-fold repetition.
+ * The formatters answer in WORDS, and the COMPONENT that renders them decides
+ * to draw the shared mark instead — `UnavailableValue` and `MetricValue` both
+ * do, pairing it with those words as its accessible name. Keeping the mark out
+ * of the string is what makes that possible: a bare dash in a formatter's
+ * output reaches the screen with nothing to announce it.
  */
 export function measured(value: string): string | null {
   return value === PLACEHOLDER ? null : value;

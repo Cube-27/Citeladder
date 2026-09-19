@@ -44,10 +44,7 @@ export function RadioGroup<T extends string>({
         onValueChange={(next) => onValueChange(next as T)}
         aria-label={ariaLabel}
         data-radio-variant="row"
-        className={cn(
-          'border-border-subtle divide-border-subtle grid divide-y border-y',
-          className,
-        )}
+        className={cn('border-border divide-border-subtle grid divide-y border-y', className)}
       >
         {options.map((option) => (
           <RadioRow key={option.value} option={option} />

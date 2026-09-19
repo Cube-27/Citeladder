@@ -45,7 +45,7 @@ export function CardHeader({
       {...props}
       className={cn(
         'flex flex-col gap-1 p-[var(--card-padding-large)] pb-2',
-        bordered && 'border-border-subtle border-b pb-3',
+        bordered && 'border-border border-b pb-3',
         className,
       )}
     >

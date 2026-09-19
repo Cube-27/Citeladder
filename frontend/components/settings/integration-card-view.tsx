@@ -141,7 +141,7 @@ function ConnectedCard({
         <GrantHeader family={family} grant={grant} />
         <CardContent className="grid gap-3 pt-4">
           <GrantAlert family={family} status={grant.status} />
-          <div className="bg-well/60 border-border-subtle text-muted flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
+          <div className="bg-well/60 border-border text-muted flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
             <Info className="text-secondary size-3.5 shrink-0" aria-hidden />
             <span>
               One OAuth grant shared by {grant.connections.length}{' '}

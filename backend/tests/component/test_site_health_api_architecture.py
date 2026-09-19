@@ -245,7 +245,8 @@ async def test_partial_coverage_states_the_limit_and_withholds_absence(
     assert body["page_kinds"][0]["orphan_count"] is None
     assert body["internal_linking"]["orphan_page_count"] is None
     assert body["limitations"]
-    assert "page budget" in body["limitations"][0]
+    # The limitation names the limit it hit; its casing is copy, not contract.
+    assert "page budget" in body["limitations"][0].lower()
 
 
 async def test_architecture_is_unavailable_without_a_persisted_model(

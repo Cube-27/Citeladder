@@ -100,7 +100,7 @@ export function TaskHistory({
   // Nothing to switch between until a run exists; the newest run auto-selects.
   if (!runs?.length) return null;
   return (
-    <details className="border-border-subtle rounded-[var(--radius-control)] border">
+    <details className="border-border rounded-[var(--radius-control)] border">
       <summary
         className={textRole(
           'label',
@@ -145,7 +145,7 @@ function DataUsed({ result }: Readonly<{ result: AgentResult }>) {
     : 'No saved data artifact was available for this result.';
 
   return (
-    <details className="border-border-subtle bg-well grid gap-3 rounded-[var(--radius-control)] border px-3 py-3">
+    <details className="border-border bg-well grid gap-3 rounded-[var(--radius-control)] border px-3 py-3">
       <summary
         className={textRole(
           'bodyStrong',
@@ -190,7 +190,7 @@ function Roadmap({ items }: Readonly<{ items: AgentResult['roadmap_items'] }>) {
         {items.map((item) => (
           <li
             key={`${item.rank}:${item.title}`}
-            className="border-border-subtle rounded-[var(--radius-control)] border p-3"
+            className="border-border rounded-[var(--radius-control)] border p-3"
           >
             <div className="flex items-start gap-3">
               <span

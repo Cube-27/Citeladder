@@ -41,7 +41,7 @@ function SurfaceStat({
   hint,
 }: Readonly<{ label: string; value: string; hint?: string }>) {
   return (
-    <div className="border-border-subtle bg-well grid min-w-0 gap-0.5 rounded-[var(--radius-control)] border px-3 py-2.5">
+    <div className="border-border bg-well grid min-w-0 gap-0.5 rounded-[var(--radius-control)] border px-3 py-2.5">
       <span className="text-muted text-xs">{label}</span>
       <span className={textRole('bodyStrong', 'truncate')}>{value}</span>
       {hint ? <span className="text-muted truncate text-xs">{hint}</span> : null}
@@ -96,13 +96,13 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
 function PresenceTable({ entities }: Readonly<{ entities: readonly SurfaceEntity[] }>) {
   if (entities.length === 0) {
     return (
-      <div className="border-border-subtle text-muted rounded-[var(--radius-card)] border border-dashed p-4 text-center text-sm">
+      <div className="border-border text-muted rounded-[var(--radius-card)] border border-dashed p-4 text-center text-sm">
         No tracked brands were configured for this run.
       </div>
     );
   }
   return (
-    <div className="border-border-subtle min-w-0 overflow-x-auto rounded-[var(--radius-card)] border">
+    <div className="border-border min-w-0 overflow-x-auto rounded-[var(--radius-card)] border">
       <table className="w-full min-w-[34rem] border-collapse text-left">
         <thead>
           <tr className="text-muted text-xs">
@@ -158,7 +158,7 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
         </p>
       </div>
       {links.length === 0 ? (
-        <div className="border-border-subtle text-muted rounded-[var(--radius-card)] border border-dashed p-4 text-center text-sm">
+        <div className="border-border text-muted rounded-[var(--radius-card)] border border-dashed p-4 text-center text-sm">
           The overview&rsquo;s text carried no inline links.
         </div>
       ) : (

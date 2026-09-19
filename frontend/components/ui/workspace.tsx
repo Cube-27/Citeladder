@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
  * second row indented.
  */
 export const hairlineBandClasses =
-  'border-border-subtle divide-border-subtle grid divide-y border-y sm:divide-x sm:divide-y-0';
+  'border-border divide-border-subtle grid divide-y border-y sm:divide-x sm:divide-y-0';
 
 /**
  * The pane's second row. Tabs, filter chips and toolbars are all shorter than
@@ -45,8 +45,8 @@ export const hairlineBandItemClasses = 'min-w-0 py-2.5 sm:px-4 sm:first:ps-0 sm:
  */
 const LEDGER_SHELL = {
   open: '',
-  ruled: 'border-border-subtle border-y',
-  boxed: 'bg-panel overflow-hidden rounded-[var(--radius-card)]',
+  ruled: 'border-border border-y',
+  boxed: 'bg-panel border-border overflow-hidden rounded-[var(--radius-card)] border',
 } as const;
 
 export type LedgerShell = keyof typeof LEDGER_SHELL;
@@ -135,7 +135,7 @@ export function EditorialSectionHeader({
     <header
       className={cn(
         'flex flex-wrap items-end justify-between gap-4',
-        ruled && 'border-border-subtle border-t pt-3',
+        ruled && 'border-border border-t pt-3',
         className,
       )}
     >

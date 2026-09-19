@@ -97,7 +97,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               </div>
             </div>
 
-            <div className="border-border-subtle shrink-0 border-t p-[var(--sidebar-pad-x)]">
+            <div className="border-border shrink-0 border-t p-[var(--sidebar-pad-x)]">
               <Link
                 to={overviewHref}
                 className="focus-ring flex items-center rounded-xs px-2.5 py-1 transition-opacity hover:opacity-90"

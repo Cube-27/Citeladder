@@ -126,7 +126,7 @@ export function IssuesCatalog({
     <div
       // `min-h` matches the loading placeholder's, so the pane keeps its height
       // while the rail's own read lands rather than growing under the reader.
-      className="border-border-subtle grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
+      className="border-border grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
       aria-busy={issuesQuery.isFetching}
     >
       <IssueGroupList

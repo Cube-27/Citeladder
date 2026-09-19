@@ -162,7 +162,7 @@ export function ActivityProgress({
                   step.state === 'complete' && 'bg-success text-accent-fg',
                   step.state === 'active' && 'bg-accent-subtle text-accent-text',
                   step.state === 'attention' && 'bg-warning-bg text-warning-text',
-                  step.state === 'pending' && 'border-border-subtle bg-panel text-muted border',
+                  step.state === 'pending' && 'border-border bg-panel text-muted border',
                 )}
               >
                 <StepIndicator state={step.state} />

@@ -301,7 +301,12 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
               {CHANGE_METRIC_LABELS[metric.key] ?? metric.label}
             </span>
             <span className={textRole('emphasis', 'text-foreground tabular-nums')}>
-              {directionIndicator(metric.direction)} {formatDelta(metric.delta, metric.key)}
+              {directionIndicator(metric.direction)}{' '}
+              {metric.delta === null ? (
+                <UnavailableValue state="not_measured" />
+              ) : (
+                formatDelta(metric.delta, metric.key)
+              )}
             </span>
           </div>
         ))}
@@ -335,7 +340,7 @@ function ScoreEffect({ roles }: Readonly<{ roles: readonly string[] }>) {
     const label = SCORE_ROLE_LABELS[role];
     return label ? [[role, label] as const] : [];
   });
-  if (labels.length === 0) return <span className="text-muted text-xs">{PLACEHOLDER}</span>;
+  if (labels.length === 0) return <UnavailableValue state="not_measured" />;
   return (
     <div className="flex flex-wrap gap-1">
       {labels.map(([role, label]) => (

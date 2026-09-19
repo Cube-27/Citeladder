@@ -171,7 +171,7 @@ function SearchConsoleWorkspace({
 }>) {
   if (!available) return null;
   return (
-    <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-card)] border">
+    <div className="border-border bg-panel overflow-hidden rounded-[var(--radius-card)] border">
       <div className="border-border-subtle flex flex-col border-b lg:flex-row lg:items-stretch lg:justify-between">
         <MetricCards
           selected={selected}

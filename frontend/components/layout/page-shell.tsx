@@ -119,7 +119,7 @@ function PageBand({
   children: ReactNode;
 }>) {
   return (
-    <div data-page-band={kind} className="border-border-subtle border-b">
+    <div data-page-band={kind} className="border-border border-b">
       <div className={cn(pageGutterClasses, 'flex', className)}>{children}</div>
     </div>
   );
@@ -142,7 +142,7 @@ function IdentityBand({ title, actions }: Readonly<{ title?: string; actions?: R
     <div
       data-page-band="identity"
       className={cn(
-        'border-border-subtle border-b',
+        'border-border border-b',
         // Below 701px the compact topbar already names the page, so a band
         // holding only a screen-reader title would be an empty ruled row.
         !actions && 'max-[700px]:hidden',

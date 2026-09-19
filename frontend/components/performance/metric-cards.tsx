@@ -299,7 +299,7 @@ export function Ga4SummaryRow({
 }>) {
   return (
     <dl
-      className="border-border-subtle bg-panel flex flex-wrap gap-x-8 gap-y-2 rounded-[var(--radius-control)] border px-3 py-2"
+      className="border-border bg-panel flex flex-wrap gap-x-8 gap-y-2 rounded-[var(--radius-control)] border px-3 py-2"
       data-testid="ga4-summary"
     >
       {GA4_SUMMARY_ENTRIES.map((entry) => {

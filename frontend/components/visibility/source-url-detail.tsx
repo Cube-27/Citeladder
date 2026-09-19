@@ -12,7 +12,7 @@ import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import { SourceBreadcrumb } from '@/components/visibility/source-breadcrumb';
 import { SourcePrompts } from '@/components/visibility/source-prompts';
 import type { SourceFilters } from '@/components/visibility/source-rows';
-import { BrandsCard, EnginesCard, PromptsCard } from '@/components/visibility/source-url-cards';
+import { BrandsCard, EnginesCard } from '@/components/visibility/source-url-cards';
 import { availabilityLabel } from '@/lib/format';
 import { count, hostOf, pathOf, ratio, sinceLabel } from '@/lib/visibility/sources';
 import { safeExternalUrl } from '@/lib/visibility/urls';
@@ -76,8 +76,6 @@ export function SourceUrlDetail({
         <EnginesCard engines={data?.engines} loading={query.isLoading} errored={query.isError} />
         <BrandsCard brands={data?.brands} loading={query.isLoading} errored={query.isError} />
       </div>
-
-      <PromptsCard rows={data?.prompt_rows} loading={query.isLoading} errored={query.isError} />
 
       <SourcePrompts filters={filters} queries={queries} url={url} />
     </div>

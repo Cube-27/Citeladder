@@ -40,6 +40,24 @@ export function availabilityLabel(state: DataAvailabilityState): string {
   return availabilityLabels[state];
 }
 
+/**
+ * The mark a missing MEASUREMENT renders as, everywhere it is shown.
+ *
+ * `not_measured` is the one availability state with no words on screen: a
+ * metric card, a table cell and a chart label all print this dash, because the
+ * phrase said the same thing at every figure on the page and crowded out the
+ * figures that WERE measured. The words stay the accessible name — every
+ * renderer pairs the mark with `availabilityLabel('not_measured')` in sr-only
+ * text, so nothing is lost to a screen reader.
+ *
+ * It must never be an empty string: a blank and a measured zero look identical,
+ * and those are opposite findings.
+ *
+ * Workflow states a reader can ACT on — "Not run", "Failed", "Not set" — keep
+ * their words. Those are answers, not absent numbers.
+ */
+export const MISSING_MARK = '–';
+
 export const GRANULARITY_OPTIONS: readonly { value: BucketGranularity; label: string }[] = [
   { value: 'day', label: 'Day' },
   { value: 'week', label: 'Week' },

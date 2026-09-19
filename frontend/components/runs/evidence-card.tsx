@@ -6,7 +6,7 @@ import { MeasurementContext } from '@/components/runs/measurement-context';
 import { SurfaceEvidence } from '@/components/runs/surface-evidence';
 import { Badge } from '@/components/ui/badge';
 import { Label, textRole } from '@/components/ui/typography';
-import { engineLabel, transportLabel } from '@/lib/providers/catalog';
+import { engineLabel, productModelLabel, productTransportLabel } from '@/lib/providers/catalog';
 import type { ExecutionEvidence } from '@/lib/api/types';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 import { cn } from '@/lib/utils';
@@ -64,6 +64,9 @@ function EvidencePromptHeader({
       : `Prompt #${evidence.prompt_index + 1}`);
   const displayRepetition = repetition !== undefined ? repetition : evidence.repetition;
   const promptBadgeNumber = promptIndex !== undefined ? promptIndex + 1 : evidence.prompt_index + 1;
+  // Null for an observed search surface, whose engine name is already the whole
+  // product fact; the vendor behind it stays on the Settings credential card.
+  const transport = productTransportLabel(evidence.transport_provider);
 
   return (
     <section className="border-border-subtle grid min-w-0 gap-2.5 border-b pb-4">
@@ -74,11 +77,12 @@ function EvidencePromptHeader({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="neutral">
-            {engineLabel(evidence.logical_engine)} · {transportLabel(evidence.transport_provider)}
+            {engineLabel(evidence.logical_engine)}
+            {transport ? ` · ${transport}` : ''}
           </Badge>
           <MeasurementContext
             retrieval={evidence.retrieval_enabled}
-            model={evidence.transport_model}
+            model={productModelLabel(evidence.logical_engine, evidence.transport_model)}
           />
         </div>
       </div>
@@ -328,7 +332,7 @@ function EvidenceCitationsList({
         </span>
       </div>
       {citations.length === 0 ? (
-        <div className="border-border-subtle text-muted rounded-[var(--radius-card)] border border-dashed p-4 text-center text-sm">
+        <div className="border-border text-muted rounded-[var(--radius-card)] border border-dashed p-4 text-center text-sm">
           No citations were captured from this response.
         </div>
       ) : (
@@ -399,7 +403,7 @@ function EvidenceStat({
   positive,
 }: Readonly<{ label: string; value: string; positive?: boolean }>) {
   return (
-    <div className="border-border-subtle bg-well grid min-w-0 gap-0.5 rounded-[var(--radius-control)] border px-3 py-2.5">
+    <div className="border-border bg-well grid min-w-0 gap-0.5 rounded-[var(--radius-control)] border px-3 py-2.5">
       <span className="text-muted text-xs">{label}</span>
       <span className={cn(textRole('bodyStrong', 'truncate'), outcomeToneClass(positive))}>
         {value}

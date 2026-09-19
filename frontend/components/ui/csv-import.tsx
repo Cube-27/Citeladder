@@ -119,7 +119,7 @@ export function CsvImportPreview({
           </Badge>
         ) : null}
       </div>
-      <div className="border-border-subtle max-h-85 overflow-auto rounded-[var(--radius-control)] border">
+      <div className="border-border max-h-85 overflow-auto rounded-[var(--radius-control)] border">
         {children}
       </div>
     </div>

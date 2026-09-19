@@ -40,9 +40,11 @@ Consume semantic roles, never page-local values.
 | Structure | `surface` `#F7F9FC`; `surface-2` `#EEF1F5` | Insets, wells, tonal panels; hover/selected states |
 | Paper | `white` `#FFFFFF` | Work surfaces, inputs, semantic objects, overlays |
 | Ink | `ink-strong` `#1A1F36`; `ink` `#30313D`; `muted` `#596579`; `subtle` `#667085` | Headings/primary values; body/row values; labels/support; tertiary metadata/placeholders |
-| Boundaries | `line` `#E4E7EC`; `line-strong` `#CBD2DC`; `field-line` `#8793A3` | Hairline structure and field boundaries |
+| Boundaries | `line-subtle` `#E8EDF3`; `line` `#D9E0EA`; `line-strong` `#C3CCD9`; `field-line` `#94A3B8` | Four rungs that must stay visibly distinct. `line-subtle` is a rule *inside* a surface (row hairlines, divides between peers, menu separators, chart gridlines); `line` is the edge *of* a box (card, panel, table wrapper, band, pane seam) and is the default; `line-strong` is deliberate emphasis; `field-line` bounds inputs. |
 | Interaction | `accent` `#175CD3`; hover `#134DAB`; pressed `#10419D`; soft `#EDF4FF`; line `#C4D7F5` | Primary actions on every surface, links, tabs, selection, active navigation, focus, first chart series |
 | Evidence | success, warning, error, info, `chart-secondary`, `chart-grid` | Persisted status/data, always labelled or paired with an icon |
+
+Hierarchy is carried by boundary and tone, not by elevation: a box is separated by its edge and the tone beneath it, and shadow is reserved for surfaces that genuinely float (menus, sheets, dialogs, tooltips). A `Card` carries at most a contact shadow — a hair that stops a bordered white box from looking printed onto the ground — never a lift. If something needs to read as *above* rather than *on*, it is a different object, not a larger shadow.
 
 Reading text must meet 4.5:1 contrast. `subtle` metadata belongs on reading surfaces; active/tonal surfaces use `muted` or `ink` to retain contrast. Cyan, coral, lime, and amber express evidence/status, not route decoration. Never communicate meaning through colour alone.
 
@@ -142,7 +144,7 @@ State a shared reason once, on the column header or the section, not in every ce
 
 Use sections, ledgers, tables, and split workspaces. Cards support architecture; they do not replace it. Recommendations show impact, deterministic priority factors, scope, status, and persisted evidence; never invent confidence, effort, ownership, or causality.
 
-The shell is neutral ground with an inset white `.app-pane`, not separately bordered chrome. Desktop sidebar paints no separate surface; document scrolling remains normal and workspace/content overflow stays unset. The pane meets the sidebar and right/bottom viewport edges: only its top corners round (`.app-pane-workspace`). Below 768px it is edge-to-edge without radius or lift. Ground/paper separates by tone and radius, not a rule; sections inside paper use space and hairlines.
+The shell is neutral ground with an inset white `.app-pane`, not separately bordered chrome. Desktop sidebar paints no separate surface; document scrolling remains normal and workspace/content overflow stays unset. The pane meets the sidebar and right/bottom viewport edges: only its top corners round (`.app-pane-workspace`). Below 768px it is edge-to-edge without radius or lift. Ground/paper separates by tone and radius plus the pane's own single cast edge (`--shadow-pane`), which follows the pane's radius; the sidebar adds no border of its own, or the two rules stack into a trench at that one seam. Sections inside paper use space and hairlines.
 
 Overview sections, Website metric cards/page tables, Opportunities tables, and Prompts tables use the shared white panel role without added elevation. The 56px topbar is present at every width: from 981px it carries only the account trigger, and below that it adds the menu trigger, the compact route title, and a focus-managed off-canvas drawer. Retain every critical mobile action; tables become labelled records, and filters/evidence use full-height sheets.
 
@@ -238,7 +240,7 @@ Every chart is `aria-hidden` and carries a written description instead. A null p
 
 ### Panels, badges, and evidence
 
-Structural sections remain open or tonal. `Card` is a real white semantic object with the shared card radius; its unresolved elevation instructions appear below. `Card` sets no display mode; opt into aligned-footer layouts at call sites without breaking sticky scrolling. Never nest a `Card` inside another `Card`, modal, drawer, or sheet.
+Structural sections remain open or tonal. `Card` is a real white semantic object with the shared card radius, a `line` edge, and the contact shadow described above — it is separated by its border, not by lift. `Card` sets no display mode; opt into aligned-footer layouts at call sites without breaking sticky scrolling. Never nest a `Card` inside another `Card`, modal, drawer, or sheet.
 
 For a bordered, filled, padded box inside a card/section, use `panelClasses({ tone, pad })` from `components/ui/panel.tsx`. Drawer field groups/lists use unboxed sections/rows. Multi-category editors use shared underline tabs and one linear field flow, not dashboard grids.
 
@@ -282,5 +284,4 @@ These are ambiguities in the supplied contract, not verified implementation defe
 
 | Topic | Instructions retained from the source | Decision still needed |
 | --- | --- | --- |
-| Card elevation | Card recipes prescribe subtle directional `--shadow-card`; general colour/checklist rules reserve shadows for floating surfaces. Named flat app panels explicitly have no added elevation. | Whether semantic `Card` is an exception to the floating-only rule |
 | Major-section spacing | `Stack` names `section` as 32px; Data and geometry says major sections separate by 24px. | Which governs major route sections, or how their scopes differ |

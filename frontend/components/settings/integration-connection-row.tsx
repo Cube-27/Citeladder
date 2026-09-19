@@ -83,7 +83,7 @@ function ConnectionActions({
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <span
           aria-hidden
-          className="bg-well border-border-subtle text-secondary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] border"
+          className="bg-well border-border text-secondary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] border"
         >
           <Icon className="size-4" aria-hidden />
         </span>

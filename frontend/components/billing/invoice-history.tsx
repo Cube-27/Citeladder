@@ -63,7 +63,7 @@ export function InvoiceHistory({
         {invoices.map((invoice) => (
           <div
             key={invoice.invoice_id}
-            className="border-border-subtle flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
+            className="border-border flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
           >
             <div className="grid gap-1 text-sm">
               <span className={textRole('emphasis')}>

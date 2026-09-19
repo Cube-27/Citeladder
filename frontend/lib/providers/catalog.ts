@@ -89,6 +89,30 @@ export function transportLabel(key: string): string {
   return TRANSPORT_LABELS[key as TransportProvider] ?? key;
 }
 
+/**
+ * The transport as the PRODUCT names it, or null where naming it says nothing
+ * a reader can act on.
+ *
+ * A measured LLM answer is genuinely "ChatGPT via OpenAI" — the reader chose
+ * that route and can change it. An observed search surface is not: "Google AI
+ * Overview" IS the product, and the vendor we reach the results page through is
+ * a procurement detail. It belongs on the credential card in Settings, where
+ * someone is entering those credentials, and nowhere in AI visibility.
+ */
+export function productTransportLabel(key: string): string | null {
+  return key === 'dataforseo' ? null : transportLabel(key);
+}
+
+/**
+ * The same rule for a transport MODEL id. An LLM route's model is real
+ * provenance a reader compares runs by; an observed surface's is the vendor's
+ * endpoint name, which describes our plumbing rather than what was measured.
+ */
+export function productModelLabel(engine: string, model: string | null | undefined): string | null {
+  if (!model) return null;
+  return isSearchSurfaceEngine(engine) ? null : model;
+}
+
 /** The single fixed route on an engine card. */
 type EngineRouteOption = {
   transport_provider: TransportProvider;

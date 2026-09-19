@@ -1,11 +1,15 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
-import { ProjectLink } from '@/components/layout/scoped-link';
+import {
+  ExecutionEvidenceDrawer,
+  type EvidenceSubject,
+} from '@/components/runs/execution-evidence-drawer';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,7 +28,7 @@ import { TruncationNotice } from '@/components/visibility/evidence-states';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { visibilityApi } from '@/lib/api/visibility';
-import { engineLabel } from '@/lib/providers/catalog';
+import { engineLabel, productModelLabel } from '@/lib/providers/catalog';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import { count, hostOf, sinceLabel } from '@/lib/visibility/sources';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
@@ -80,6 +84,12 @@ export function SourcePrompts({
     enabled: Boolean(queries.projectId && queries.activeRunId && (domain || url)),
   });
 
+  // The answer opens over this screen rather than routing to the run that
+  // produced it. A reader here is comparing which prompts reached this source;
+  // being dropped on Query fanouts with the source selection gone meant the
+  // only way back to the comparison was the browser's back button.
+  const [opened, setOpened] = useState<EvidenceSubject | null>(null);
+
   return (
     <Card className="relative" aria-busy={query.isFetching}>
       <BusyBar active={query.isFetching} label="Updating prompts" />
@@ -91,12 +101,20 @@ export function SourcePrompts({
           items={query.data?.items ?? []}
           loading={query.isLoading}
           errored={query.isError}
+          onOpenAnswer={setOpened}
         />
         {/* The endpoint returns a bounded newest-first window. Without this a
             source cited by more answers than fit simply looked like it had
             fewer. */}
         {query.data?.truncated ? <TruncationNotice limit={EVIDENCE_LIMIT} /> : null}
       </CardContent>
+      <ExecutionEvidenceDrawer
+        execution={opened}
+        open={opened !== null}
+        onOpenChange={(next) => {
+          if (!next) setOpened(null);
+        }}
+      />
     </Card>
   );
 }
@@ -105,10 +123,12 @@ function PromptsBody({
   items,
   loading,
   errored,
+  onOpenAnswer,
 }: Readonly<{
   items: readonly VisibilityExecutionEvidence[];
   loading: boolean;
   errored: boolean;
+  onOpenAnswer: (subject: EvidenceSubject) => void;
 }>) {
   if (errored) return <Alert tone="danger">Could not load the tracked answers.</Alert>;
   if (loading) return <Skeleton className="m-[var(--card-padding)] h-40" />;
@@ -137,7 +157,7 @@ function PromptsBody({
       </TableHeader>
       <TableBody>
         {items.map((item) => (
-          <PromptRow key={item.analysis_id} item={item} />
+          <PromptRow key={item.analysis_id} item={item} onOpenAnswer={onOpenAnswer} />
         ))}
       </TableBody>
     </Table>
@@ -151,7 +171,13 @@ function PromptsBody({
  * it is an identity, and a reader scanning for "what did Gemini say" finds a
  * logo faster than a word.
  */
-function PromptRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
+function PromptRow({
+  item,
+  onOpenAnswer,
+}: Readonly<{
+  item: VisibilityExecutionEvidence;
+  onOpenAnswer: (subject: EvidenceSubject) => void;
+}>) {
   return (
     <TableRow>
       <TableCell className="max-w-[34rem]">
@@ -164,7 +190,9 @@ function PromptRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
           <span className="grid min-w-0">
             <span className="truncate">{item.prompt_text || 'Untitled prompt'}</span>
             <span className={textRole('meta', 'text-secondary truncate')}>
-              {item.transport_model || engineLabel(item.logical_engine) || item.logical_engine}
+              {productModelLabel(item.logical_engine, item.transport_model) ||
+                engineLabel(item.logical_engine) ||
+                item.logical_engine}
             </span>
           </span>
         </span>
@@ -183,10 +211,25 @@ function PromptRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
         {/* The row summarises the answer; this reaches the answer itself. It
             is the one thing the old evidence feed carried that a compact row
             cannot replace with a number. */}
-        <Button asChild variant="ghost" size="sm">
-          <ProjectLink href={`/runs/${item.audit_id}?execution=${item.task_id}`}>
-            Open answer
-          </ProjectLink>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            onOpenAnswer({
+              // The visibility row names the execution as `task_id`; the drawer
+              // fetches the rest of the evidence from it, and the answer text
+              // from the audit that owns it — a source row summarises an answer
+              // without carrying one.
+              id: item.task_id,
+              audit_id: item.audit_id,
+              prompt_text: item.prompt_text,
+              prompt_index: item.prompt_index,
+              repetition: item.repetition,
+              logical_engine: item.logical_engine,
+            })
+          }
+        >
+          Open answer
         </Button>
       </TableCell>
     </TableRow>
