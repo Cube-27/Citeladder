@@ -2,15 +2,10 @@
 
 ## Active
 
-- [Earned-source page intelligence](citeladder-earned-source-page-intelligence.md)
-  — third-party opportunity loop: cited-page inspection, page-keyed qualified
-  earned opportunities, and external placement verification kept separate from
-  visibility movement. Three pull requests in ordered slices.
-
-- [Google AI Overview surface](citeladder-google-ai-overview-surface.md)
-  — fourth measured visibility surface via the DataForSEO Google Organic SERP
-  API, folded into the existing scoring, Sources and Trends projections. Five
-  pull requests in ordered slices. Selected to start next.
+- [Discovery simplification](citeladder-discovery-simplification.md)
+  — selected by the owner; prioritize buyer-demand topic/prompt discovery,
+  shared business context and simpler competitor selection. Five ordered
+  implementation slices. Registration does not authorize execution.
 
 ## Queued
 
@@ -18,6 +13,7 @@
   — internal authority, significant-content-update detection, query relevance,
   topical coherence and anchor quality, then content differentiation once the
   SERP connector from the Google AI Overview plan exists. Six pull requests.
+  Next queued after Discovery simplification.
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
   — pending; remaining evidence/action and selected-query generation work.
 - [Razorpay local test integration](citeladder-razorpay-local-test-integration.md)
@@ -29,6 +25,14 @@ for deferred sign-in selection and invitation delivery; it is not an active or
 additional queued assignment. Listed work is not authorization to execute it.
 
 ## Last completed
+
+[Google AI Overview surface](citeladder-google-ai-overview-surface.md)
+— completion confirmed by the owner on 19 September 2026. Retain the plan's
+recorded limitations and withdrawn marketing-copy scope.
+
+[Earned-source page intelligence](citeladder-earned-source-page-intelligence.md)
+— completion confirmed by the owner on 19 September 2026. Retain its plan as
+implementation history; this status update does not establish new validation.
 
 [Frontend migration — Next.js to Vite and Astro](frontend-migration.md)
 — completed on 14 September 2026. Astro owns public SSR and generated

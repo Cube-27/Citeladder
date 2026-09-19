@@ -1,6 +1,7 @@
 # Google AI Overview — fourth measured visibility surface
 
-**Status: slice 5 shipped, except the marketing-site copy sweep.** The product
+**Status: completed, per owner confirmation on 19 September 2026.** The marketing
+copy sweep remains withdrawn and the recorded limitations below remain. The product
 surface is complete: the evidence view composes mentioned / linked / cited from
 their three independent sources, the surface filter groups answer engines apart
 from observed surfaces across Trends and Sources, and the five rates are served

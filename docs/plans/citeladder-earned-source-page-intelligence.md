@@ -1,6 +1,8 @@
 # Earned-source page intelligence — third-party opportunity loop
 
-Active, selected by the owner. [Opportunities](../opportunities.md),
+Completed, per owner confirmation on 19 September 2026. Retained as implementation
+history, including any recorded limitations; do not resume its slices from this
+document. [Opportunities](../opportunities.md),
 [Visibility](../visibility-prompt.md) and [Site Health](../site-health.md) own
 shipped behavior. The originating material is an external product audit
 (`CiteLadder_AI_Visibility_Product_Plan.md`) and a subsequent external review of
