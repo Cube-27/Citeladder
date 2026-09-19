@@ -165,7 +165,10 @@ function OnboardingActions({
           pending={flow.isCompleting}
           pendingLabel="Creating…"
           disabled={
-            flow.completionFailed || !flow.hasSelectedDomain || !hasConfirmedIcp(flow.profile)
+            flow.completionFailed ||
+            !flow.hasSelectedDomain ||
+            flow.hasIncompleteCompetitor ||
+            !hasConfirmedIcp(flow.profile)
           }
         >
           Create project

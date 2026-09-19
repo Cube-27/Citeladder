@@ -21,9 +21,6 @@ export type ReviewCompetitor = {
   name: string;
   aliases: string[];
   domains: string[];
-  reasoning?: string;
-  evidence_urls?: string[];
-  confidence?: number;
   /** False when the user has deselected it; kept in the list so it can return. */
   selected: boolean;
 };

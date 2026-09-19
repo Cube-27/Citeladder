@@ -50,9 +50,7 @@ function selectedDomains(domains: ReviewDomain[]): string[] {
 
 function selectedCompetitors(competitors: ReviewCompetitor[]) {
   return competitors.flatMap((item) =>
-    item.selected && item.name.trim()
-      ? [{ name: item.name.trim(), aliases: item.aliases, domains: item.domains }]
-      : [],
+    item.selected ? [{ name: item.name.trim(), aliases: item.aliases, domains: item.domains }] : [],
   );
 }
 
@@ -191,7 +189,7 @@ export function useOnboardingFlow(transactionKey: string) {
   }, [discoveryState]);
 
   useEffect(() => {
-    if (maximumCompetitors === undefined || discoveryState?.status !== 'ready') return;
+    if (discoveryState?.status !== 'ready') return;
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setCompetitors((current) =>
       current.length
@@ -199,10 +197,10 @@ export function useOnboardingFlow(transactionKey: string) {
         : discoveryState.competitors.map((competitor, index) => ({
             ...competitor,
             id: `competitor:${index}:${competitor.name}`,
-            selected: index < maximumCompetitors,
+            selected: false,
           })),
     );
-  }, [discoveryState, maximumCompetitors]);
+  }, [discoveryState]);
 
   // Resolve the committed project and reconcile its list before navigating.
   // Cancel older list reads so they cannot overwrite the creation hand-off.
@@ -358,6 +356,9 @@ export function useOnboardingFlow(transactionKey: string) {
     domains,
     form,
     hasSelectedDomain: domains.some((item) => item.selected),
+    hasIncompleteCompetitor: competitors.some(
+      (item) => item.selected && (!item.name.trim() || !item.domains.some(Boolean)),
+    ),
     isAdditional,
     maximumCompetitors,
     profile,

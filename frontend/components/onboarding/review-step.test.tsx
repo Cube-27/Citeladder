@@ -18,7 +18,7 @@ describe('ReviewStep competitor limit', () => {
         maximumCompetitors={5}
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
-        onEditCompetitorDomain={vi.fn()}
+        onEditCompetitor={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
     );
@@ -43,22 +43,17 @@ describe('ReviewStep competitor limit', () => {
             name: 'Kmart Australia',
             aliases: [],
             domains: ['kmart.com.au'],
-            reasoning: 'A long generated competitor explanation.',
-            evidence_urls: ['https://example.com/evidence'],
             selected: true,
           },
         ]}
         maximumCompetitors={5}
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
-        onEditCompetitorDomain={vi.fn()}
+        onEditCompetitor={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
     );
 
-    expect(screen.queryByText('A long generated competitor explanation.')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Supporting links available/)).not.toBeInTheDocument();
-    expect(screen.queryByText('https://example.com/evidence')).not.toBeInTheDocument();
     expect(container.querySelector('img')?.getAttribute('src')).toContain(
       'https://logos.example/kmart.com.au',
     );
@@ -84,7 +79,7 @@ describe('ReviewStep competitor limit', () => {
         maximumCompetitors={5}
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
-        onEditCompetitorDomain={vi.fn()}
+        onEditCompetitor={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
     );
@@ -109,7 +104,7 @@ describe('ReviewStep competitor limit', () => {
         maximumCompetitors={5}
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
-        onEditCompetitorDomain={vi.fn()}
+        onEditCompetitor={vi.fn()}
         onAddCompetitor={add}
       />,
     );
@@ -120,5 +115,31 @@ describe('ReviewStep competitor limit', () => {
     expect(button).toBeDisabled();
     await userEvent.click(button);
     expect(add).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Competitor 1' })).toBeEnabled();
+  });
+
+  it('accepts a manual name and domain before the choice is submitted', async () => {
+    const edit = vi.fn();
+    render(
+      <ReviewStep
+        domains={[]}
+        competitors={[{ id: 'manual', name: '', aliases: [], domains: [], selected: true }]}
+        maximumCompetitors={5}
+        resolutionError="Could not resolve website for Peer: peer.com"
+        onToggleDomain={vi.fn()}
+        onToggleCompetitor={vi.fn()}
+        onEditCompetitor={edit}
+        onAddCompetitor={vi.fn()}
+      />,
+    );
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Competitor name' }), 'Peer');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Website for New competitor' }),
+      'peer.com',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(edit).toHaveBeenCalledWith(0, 'Peer', 'peer.com');
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not resolve website for Peer');
   });
 });

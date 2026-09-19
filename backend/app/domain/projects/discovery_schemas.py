@@ -5,7 +5,6 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from typing import Annotated, Literal
-from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -17,6 +16,7 @@ from app.core.config.brand_discovery import (
     KNOWLEDGE_STRENGTHS,
     MARKET_SCOPES,
     PRICE_TIERS,
+    brand_discovery_settings,
 )
 from app.core.config.brand_profile import (
     BRAND_PROFILE_PRODUCT_MAX_CHARS,
@@ -167,24 +167,7 @@ class ConfirmedDiscoveryProfile(PersistableDiscoveryProfile):
 
 
 class DiscoveryCompetitorSuggestion(CompetitorInput):
-    # What kind of company THIS competitor is. Confidence measures the model's
-    # bounded judgement; this facet prevents a service firm from admitting the
-    # platforms it implements as substitutes. Missing classification abstains.
-    business_model: BusinessModel | None = None
-    reasoning: str = Field(default="", max_length=2000)
-    evidence_urls: list[str] = Field(
-        default_factory=list, max_length=DISCOVERY_CONFIRM_MAX_DOMAINS
-    )
-    confidence: float = Field(default=0, ge=0, le=1)
-
-    @field_validator("evidence_urls")
-    @classmethod
-    def validate_evidence_urls(cls, values: list[str]) -> list[str]:
-        for value in values:
-            parts = urlsplit(value)
-            if parts.scheme not in {"http", "https"} or not parts.hostname:
-                raise ValueError("evidence_urls must contain HTTP(S) URLs")
-        return values
+    """Provisional identity, pending user selection and domain resolution."""
 
 
 class DiscoveryTopic(BaseModel):
@@ -234,7 +217,8 @@ class BrandDiscoveryProgress(BaseModel):
 
 class DiscoveryCompetitorCandidates(BaseModel):
     competitors: list[DiscoveryCompetitorSuggestion] = Field(
-        default_factory=list, max_length=MAX_PROJECT_COMPETITORS
+        default_factory=list,
+        max_length=brand_discovery_settings.competitor_suggestion_maximum,
     )
 
 

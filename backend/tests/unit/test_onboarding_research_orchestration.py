@@ -7,7 +7,10 @@ from types import SimpleNamespace
 import pytest
 
 from app.domain.projects.brand_evidence import BrandEvidence
-from app.domain.projects.discovery_schemas import PersistableDiscoveryProfile
+from app.domain.projects.discovery_schemas import (
+    DiscoveryCompetitorSuggestion,
+    PersistableDiscoveryProfile,
+)
 from app.domain.projects.onboarding.competitor_research import (
     CompetitorResearchResult,
 )
@@ -73,11 +76,8 @@ async def test_ready_path_records_two_structured_phases(monkeypatch) -> None:
     async def discover(*_args, **_kwargs):
         return CompetitorResearchResult(evidence=(competitor_evidence,), state="ready")
 
-    async def qualify(*_args, **_kwargs):
-        return [], [{"name": "Peer", "domain": "peer.com"}]
-
-    async def verify(*_args, **_kwargs):
-        return []
+    async def suggest(*_args, **_kwargs):
+        return [DiscoveryCompetitorSuggestion(name="Peer", domains=["peer.com"])]
 
     async def searches(*_args, **_kwargs):
         return []
@@ -93,8 +93,7 @@ async def test_ready_path_records_two_structured_phases(monkeypatch) -> None:
     monkeypatch.setattr(module, "create_model_gateway", lambda: gateway)
     monkeypatch.setattr(module, "synthesize_identity", synthesize)
     monkeypatch.setattr(module, "discover_competitor_candidates", discover)
-    monkeypatch.setattr(module, "qualify_competitors", qualify)
-    monkeypatch.setattr(module, "_verify_competitors", verify)
+    monkeypatch.setattr(module, "suggest_competitors", suggest)
     monkeypatch.setattr(
         module, "harvest_offerings", lambda *_args, **_kwargs: _Harvest()
     )
@@ -112,11 +111,11 @@ async def test_ready_path_records_two_structured_phases(monkeypatch) -> None:
 
     assert [call["phase"] for call in result.model_calls] == [
         "identity",
-        "competitor_qualification",
+        "competitor_suggestions",
     ]
     assert all(call["outcome"] == "succeeded" for call in result.model_calls)
     assert result.provider == "provider.invalid"
-    assert result.competitor_verdicts[0]["domain"] == "peer.com"
+    assert result.competitors[0]["domains"] == ["peer.com"]
     assert any(item["capture_method"] == "external_search" for item in result.evidence)
     model_supports = {
         item["source_url"]: item["supports"]
@@ -125,7 +124,7 @@ async def test_ready_path_records_two_structured_phases(monkeypatch) -> None:
     }
     assert model_supports == {
         "model://application-research/identity": ["profile"],
-        "model://application-research/competitor_qualification": ["competitors"],
+        "model://application-research/competitor_suggestions": ["competitors"],
     }
     assert result.topics == []
     assert result.metrics["phase_duration_ms"]["total"] >= 0
@@ -144,14 +143,14 @@ async def test_missing_keenable_degrades_without_failing_identity(monkeypatch) -
     async def synthesize(*_args, **_kwargs):
         return _identity().model_copy(update={"field_evidence_refs": {}})
 
-    async def verify(*_args, **_kwargs):
+    async def suggest(*_args, **_kwargs):
         return []
 
     monkeypatch.setattr(module, "_site_evidence", site_evidence)
     monkeypatch.setattr(module, "_keenable_client", lambda: None)
     monkeypatch.setattr(module, "create_model_gateway", lambda: gateway)
     monkeypatch.setattr(module, "synthesize_identity", synthesize)
-    monkeypatch.setattr(module, "_verify_competitors", verify)
+    monkeypatch.setattr(module, "suggest_competitors", suggest)
     monkeypatch.setattr(
         module, "harvest_offerings", lambda *_args, **_kwargs: _Harvest()
     )
@@ -169,9 +168,12 @@ async def test_missing_keenable_degrades_without_failing_identity(monkeypatch) -
 
     assert result.profile["category"] == "workflow software"
     assert "external_research_unavailable" in result.warnings
-    assert "research_degraded" in result.warnings
+    assert "research_degraded" not in result.warnings
     assert "competitors_not_found" in result.warnings
-    assert [call["phase"] for call in result.model_calls] == ["identity"]
+    assert [call["phase"] for call in result.model_calls] == [
+        "identity",
+        "competitor_suggestions",
+    ]
 
 
 @pytest.mark.asyncio

@@ -53,17 +53,11 @@ const readyDiscovery = {
       name: 'The Doon School',
       aliases: [],
       domains: ['doonschool.com'],
-      reasoning: '',
-      evidence_urls: [],
-      confidence: 0.8,
     },
     {
       name: "Welham Girls' School",
       aliases: [],
       domains: ['welhamgirls.com'],
-      reasoning: '',
-      evidence_urls: [],
-      confidence: 0.8,
     },
   ],
   topics: [

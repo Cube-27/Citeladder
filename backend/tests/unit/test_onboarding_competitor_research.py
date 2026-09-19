@@ -1,4 +1,4 @@
-"""Deterministic competitor evidence and admission tests."""
+"""Provisional competitor discovery uses one search and stable identity cleanup."""
 
 from __future__ import annotations
 
@@ -6,300 +6,127 @@ import json
 
 import pytest
 
-from app.connectors.keenable import KeenableSearchResult
-from app.core.config.brand_discovery import (
-    BRAND_COMPETITOR_QUALIFICATION_VERSION,
-    COMPETITOR_QUALIFICATION_SYSTEM_PROMPT,
-)
+from app.connectors.keenable import KeenableSearchResponse, KeenableSearchResult
 from app.domain.projects.discovery_schemas import DiscoveryProfile
 from app.domain.projects.onboarding.competitor_research import (
-    NamedCompetitor,
-    _admitted_competitors,
-    _search_evidence,
-    competitor_queries,
     discover_competitor_candidates,
-    qualify_competitors,
+    suggest_competitors,
 )
 from app.domain.projects.onboarding.research_evidence import (
     CompetitiveSignature,
     ResearchCallBudget,
-    ResearchEvidenceItem,
-    bounded_evidence,
 )
 
 
+class _Search:
+    def __init__(self, *, fails: bool = False) -> None:
+        self.calls: list[str] = []
+        self.fails = fails
+
+    async def search(self, query: str, **_kwargs) -> KeenableSearchResponse:
+        self.calls.append(query)
+        if self.fails:
+            raise RuntimeError("search unavailable")
+        return KeenableSearchResponse(
+            results=(
+                KeenableSearchResult(
+                    title="Owned", url="https://acme.com", snippet="owned"
+                ),
+                KeenableSearchResult(
+                    title="Directory", url="https://g2.com/list", snippet="peer"
+                ),
+                KeenableSearchResult(
+                    title="Source",
+                    url="https://source.com/list",
+                    snippet="Peer offers workflow tools",
+                ),
+                KeenableSearchResult(
+                    title="Duplicate source",
+                    url="https://source.com/other",
+                    snippet="Peer",
+                ),
+            )
+        )
+
+
 class _Gateway:
-    def __init__(self, responses: list[dict]) -> None:
-        self.responses = responses
+    base_url_host = "provider.test"
+    model = "model-test"
+
+    def __init__(self, competitors: list[dict]) -> None:
+        self.competitors = competitors
         self.calls = 0
-        self.users: list[str] = []
 
-    async def complete_structured_json(self, **kwargs) -> str:
-        self.users.append(kwargs["user"])
-        response = self.responses[self.calls]
+    async def complete_structured_json(self, **_kwargs) -> str:
         self.calls += 1
-        return json.dumps(response)
-
-
-def _competitor(**updates) -> dict:
-    values = {
-        "name": "Peer",
-        "domain": "peer.com",
-        "business_model": "retail",
-        "same_buyer": True,
-        "same_market": True,
-        "confidence": 0.8,
-        "evidence_refs": ["kc-search-1"],
-        "reasoning": "Named in the supplied listing as a value rival.",
-    }
-    values.update(updates)
-    return NamedCompetitor.model_validate(values).model_dump(mode="json")
-
-
-def test_search_evidence_dedupes_by_domain_and_drops_owned_site() -> None:
-    results = [
-        (
-            "q1",
-            KeenableSearchResult(
-                title="Listicle | Home", url="https://blog.com/top-10", snippet="one"
-            ),
-        ),
-        (
-            "q2",
-            KeenableSearchResult(
-                title="Listicle", url="https://blog.com/other", snippet="two"
-            ),
-        ),
-        (
-            "q3",
-            KeenableSearchResult(
-                title="Owned", url="https://owned.com/about", snippet="owned"
-            ),
-        ),
-    ]
-
-    evidence = _search_evidence(results, owned_domain="owned.com")
-
-    assert [item.source_url for item in evidence] == ["https://blog.com/other"]
-    assert evidence[0].evidence_ref == "kc-search-1"
-    assert evidence[0].source_kind == "external_search"
-
-
-def test_queries_are_short_keyword_searches_not_signature_prose() -> None:
-    signature = CompetitiveSignature(
-        category="family apparel retail for value-seeking households",
-        buyer="budget-conscious parents and caregivers across the country",
-        core_job="provide affordable everyday clothing for the whole family",
-        market_context="Australian national value fashion market",
-    )
-
-    queries = competitor_queries(
-        brand_name="Acme", signature=signature, market="Australia"
-    )
-
-    assert all(len(query) <= 80 for query in queries), queries
-    assert "Acme competitors" in queries
-    assert "Acme alternatives" in queries
-    # Signature prose must not be pasted into a query verbatim.
-    assert not any(signature.core_job in query for query in queries)
-
-
-def test_admission_drops_wrong_buyer_market_aggregators_and_duplicates() -> None:
-    competitors = [
-        NamedCompetitor.model_validate(_competitor(confidence=0.4)),
-        NamedCompetitor.model_validate(
-            _competitor(name="Best", domain="peer.com", confidence=0.9)
-        ),
-        NamedCompetitor.model_validate(_competitor(name="Off", same_buyer=False)),
-        NamedCompetitor.model_validate(_competitor(name="Far", same_market=False)),
-        NamedCompetitor.model_validate(
-            _competitor(name="Own brand", domain="https://www.owned.com/products")
-        ),
-        NamedCompetitor.model_validate(_competitor(name="Directory", domain="g2.com")),
-        NamedCompetitor.model_validate(_competitor(name="Bad", domain="not a domain")),
-        # A hallucinated, unregistrable domain must never reach the customer.
-        NamedCompetitor.model_validate(_competitor(name="Fake", domain="peer.example")),
-    ]
-
-    admitted = _admitted_competitors(competitors, owned_domain="owned.com")
-
-    # Highest confidence first, one row per domain, no aggregators.
-    assert [(item.name, item.domain) for item in admitted] == [("Best", "peer.com")]
-
-
-def test_reasoning_is_truncated_rather_than_rejected() -> None:
-    item = NamedCompetitor.model_validate(_competitor(reasoning="x" * 5000))
-
-    assert len(item.reasoning) == 240
-
-
-def test_competitor_without_evidence_is_rejected() -> None:
-    with pytest.raises(ValueError):
-        NamedCompetitor.model_validate(_competitor(evidence_refs=[]))
-
-
-def test_evidence_uses_one_shared_character_budget(monkeypatch) -> None:
-    from app.domain.projects.onboarding import competitor_research as module
-
-    monkeypatch.setattr(
-        module.brand_discovery_settings,
-        "competitor_qualification_evidence_max_chars",
-        7,
-    )
-    evidence = tuple(
-        ResearchEvidenceItem(
-            evidence_ref=f"kc-search-{index}",
-            source_url=f"https://peer{index}.com",
-            text="abcdefghij",
-            source_kind="external_search",
-            supports=["competitors"],
-        )
-        for index in range(2)
-    )
-
-    bounded = bounded_evidence(evidence, max_chars=7)
-
-    assert sum(len(item.text) for item in bounded) == 7
-
-
-def test_evidence_budget_deduplicates_canonical_source_urls() -> None:
-    evidence = tuple(
-        ResearchEvidenceItem(
-            evidence_ref=evidence_ref,
-            source_url=source_url,
-            text="evidence",
-            source_kind="external_search",
-            supports=["competitors"],
-        )
-        for evidence_ref, source_url in (
-            ("first", "https://Example.com/page?utm_source=research#summary"),
-            ("duplicate", "https://example.com/page"),
-            ("other", "https://other.example/page"),
-        )
-    )
-
-    bounded = bounded_evidence(evidence, max_chars=100)
-
-    assert [item.evidence_ref for item in bounded] == ["first", "other"]
-
-
-def test_broad_retailer_pool_exposes_every_distinct_source(monkeypatch) -> None:
-    """Long early fetches must not hide later retailer search results."""
-    from app.domain.projects.onboarding import competitor_research as module
-
-    monkeypatch.setattr(
-        module.brand_discovery_settings,
-        "competitor_qualification_evidence_max_chars",
-        12_000,
-    )
-    fetched = [
-        ResearchEvidenceItem(
-            evidence_ref=f"kc-fetch-{index}",
-            source_url=f"https://retailer{index}.example",
-            text="f" * 6_000,
-            source_kind="external_fetch",
-            supports=["competitors"],
-        )
-        for index in range(1, 6)
-    ]
-    searches = [
-        ResearchEvidenceItem(
-            evidence_ref=f"kc-search-{index}",
-            source_url=f"https://retailer{index}.example",
-            text="s" * 1_500,
-            source_kind="external_search",
-            supports=["competitors"],
-        )
-        for index in range(1, 25)
-    ]
-
-    bounded = bounded_evidence(tuple([*fetched, *searches]), max_chars=12_000)
-
-    assert len(bounded) == 24
-    assert bounded[-1].evidence_ref == "kc-search-24"
-    assert bounded[-1].text
-    assert sum(len(item.text) for item in bounded) == 12_000
-
-
-def test_qualification_contract_accepts_matching_official_company_pages() -> None:
-    assert BRAND_COMPETITOR_QUALIFICATION_VERSION == "brand-competitor-qualification-v1"
-    assert (
-        "official company homepage or product page"
-        in COMPETITOR_QUALIFICATION_SYSTEM_PROMPT
-    )
-    assert (
-        "Never return an uncited competitor" in COMPETITOR_QUALIFICATION_SYSTEM_PROMPT
-    )
+        return json.dumps({"competitors": self.competitors})
 
 
 @pytest.mark.asyncio
-async def test_full_evidence_pool_skips_reformulation(monkeypatch) -> None:
-    from app.domain.projects.onboarding import competitor_research as module
-
-    monkeypatch.setattr(module.brand_discovery_settings, "competitor_candidate_cap", 1)
-    monkeypatch.setattr(
-        module.brand_discovery_settings, "competitor_fetch_max_pages", 0
-    )
-    calls = 0
-
-    async def search(_client, _queries):
-        nonlocal calls
-        calls += 1
-        return [
-            (
-                "query-1",
-                KeenableSearchResult(
-                    title="Peer", url="https://peer.com", snippet="Peer"
-                ),
-            )
-        ]
-
-    monkeypatch.setattr(module, "_search_queries", search)
-
+async def test_optional_search_is_one_bounded_category_market_query() -> None:
+    client = _Search()
+    budget = ResearchCallBudget(2)
     result = await discover_competitor_candidates(
-        object(),
-        brand_name="Acme",
+        client,
         owned_domain="acme.com",
-        signature=CompetitiveSignature(
-            category="workflow software", buyer="operations teams"
-        ),
-        budget=ResearchCallBudget(6),
+        signature=CompetitiveSignature(category="workflow analytics"),
+        budget=budget,
+        market="United States",
     )
-
-    assert calls == 1
-    assert len(result.evidence) == 1
+    assert client.calls == ["workflow analytics United States competing brands"]
+    assert budget.used == 1
+    assert [item.source_url for item in result.evidence] == ["https://source.com/list"]
     assert result.state == "ready"
 
 
 @pytest.mark.asyncio
-async def test_qualification_retries_unknown_evidence_and_keeps_domain() -> None:
-    evidence = (
-        ResearchEvidenceItem(
-            evidence_ref="kc-search-1",
-            source_url="https://listicle.com/top-10",
-            title="Top 10",
-            text="Peer is the best-known rival in this market.",
-            source_kind="external_search",
-            provider="keenable",
-        ),
+async def test_failed_search_does_not_block_model_suggestions() -> None:
+    search = await discover_competitor_candidates(
+        _Search(fails=True),
+        owned_domain="acme.com",
+        signature=CompetitiveSignature(category="workflow analytics"),
+        budget=ResearchCallBudget(1),
     )
-    invalid = _competitor(evidence_refs=["invented-ref"])
-    valid = _competitor()
-    gateway = _Gateway([{"competitors": [invalid]}, {"competitors": [valid]}])
-
-    suggestions, verdicts = await qualify_competitors(
+    gateway = _Gateway([{"name": " Peer  Inc ", "domain": "https://www.peer.com/path"}])
+    suggestions = await suggest_competitors(
         gateway,
-        profile=DiscoveryProfile(),
-        signature=CompetitiveSignature(),
-        evidence=evidence,
-        owned_domain="owned.com",
+        profile=DiscoveryProfile(category="workflow analytics"),
+        signature=CompetitiveSignature(category="workflow analytics"),
+        evidence=search.evidence,
+        brand_name="Acme",
+        owned_domain="acme.com",
     )
+    assert search.state == "failed"
+    assert gateway.calls == 1
+    assert [(item.name, item.domains) for item in suggestions] == [
+        ("Peer Inc", ["peer.com"])
+    ]
 
-    assert gateway.calls == 2
-    assert "CORRECTION_REQUIRED" not in gateway.users[0]
-    assert '"allowed_evidence_refs": ["kc-search-1"]' in gateway.users[0]
-    assert "invented-ref" in gateway.users[1]
-    assert suggestions[0].domains == ["peer.com"]
-    assert suggestions[0].name == "Peer"
-    assert suggestions[0].evidence_urls == ["https://listicle.com/top-10"]
-    assert verdicts[0]["domain"] == "peer.com"
+
+@pytest.mark.asyncio
+async def test_suggestions_drop_noise_duplicates_and_owned_domains_in_model_order() -> (
+    None
+):
+    gateway = _Gateway(
+        [
+            {"name": "First", "domain": "first.com"},
+            {"name": "Same site", "domain": "https://www.first.com/about"},
+            {"name": "Owned", "domain": "acme.com"},
+            {"name": "Directory", "domain": "g2.com"},
+            {"name": "FIRST", "domain": "another.com"},
+            {"name": "Second", "domain": "second.com"},
+            {"name": "Invalid", "domain": "not a domain"},
+        ]
+    )
+    suggestions = await suggest_competitors(
+        gateway,
+        profile=DiscoveryProfile(category="workflow analytics"),
+        signature=CompetitiveSignature(category="workflow analytics"),
+        evidence=(),
+        brand_name="Acme",
+        owned_domain="acme.com",
+    )
+    assert [(item.name, item.domains[0]) for item in suggestions] == [
+        ("First", "first.com"),
+        ("Second", "second.com"),
+    ]

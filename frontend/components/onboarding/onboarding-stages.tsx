@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { humanizeApiError } from '@/lib/api/errors';
 import { MarketSelect } from '@/components/ui/market-select';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
@@ -231,10 +232,14 @@ export function ReviewStage({
     setProfile,
     toggle,
   } = flow;
+  const completionMessage = complete.isError ? humanizeApiError(complete.error).message : '';
+  const resolutionError = completionMessage.startsWith('Could not resolve website for ')
+    ? `${completionMessage}. Edit that competitor's website and try again.`
+    : undefined;
   return (
     <div>
       <StageHeader title="Does this look right?">
-        Everything below was found automatically. Deselect anything you don&apos;t want to track.
+        Choose up to five competitors to track. Suggestions are provisional.
       </StageHeader>
       {/* Two columns: what we found on the left, what only you can tell us on
           the right. One `.flow-groups` per column — this used to nest three of
@@ -249,11 +254,12 @@ export function ReviewStage({
             onToggleCompetitor={(index) =>
               toggleCompetitor(index, setCompetitors, maximumCompetitors)
             }
-            onEditCompetitorDomain={(index, domain) =>
-              editCompetitorDomain(index, domain, setCompetitors)
+            onEditCompetitor={(index, name, domain) =>
+              editCompetitor(index, name, domain, setCompetitors)
             }
             onAddCompetitor={() => addCompetitor(setCompetitors, maximumCompetitors)}
             maximumCompetitors={maximumCompetitors}
+            resolutionError={resolutionError}
           />
         </div>
         {profile ? (
@@ -274,12 +280,15 @@ export function ReviewStage({
             </div>
           </Alert>
         ) : null}
-        {complete.isError ? (
+        {complete.isError && !resolutionError ? (
           <Alert tone="warning">{onboardingErrorMessage(complete.error)}</Alert>
         ) : null}
         <CompletionStateAlert failed={completionFailed} />
         {!hasSelectedDomain ? (
           <Alert tone="warning">Keep at least one website address selected.</Alert>
+        ) : null}
+        {flow.hasIncompleteCompetitor ? (
+          <Alert tone="warning">Add a name and website for each selected competitor.</Alert>
         ) : null}
         {!hasConfirmedIcp(profile) ? (
           <Alert tone="warning">Choose or describe what you sell.</Alert>
@@ -354,8 +363,9 @@ function toggleCompetitor(
   });
 }
 
-function editCompetitorDomain(
+function editCompetitor(
   index: number,
+  name: string,
   domain: string,
   setCompetitors: React.Dispatch<
     React.SetStateAction<import('@/lib/onboarding/forms').ReviewCompetitor[]>
@@ -363,7 +373,7 @@ function editCompetitorDomain(
 ) {
   setCompetitors((items) =>
     items.map((item, itemIndex) =>
-      itemIndex === index ? { ...item, domains: [domain], name: item.name || domain } : item,
+      itemIndex === index ? { ...item, domains: [domain], name } : item,
     ),
   );
 }

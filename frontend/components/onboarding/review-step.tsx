@@ -20,46 +20,51 @@ function CompetitorRow({
   competitor,
   disabled,
   onToggle,
-  onEditDomain,
+  onEdit,
 }: Readonly<{
   competitor: ReviewCompetitor;
   disabled: boolean;
   onToggle: () => void;
-  onEditDomain: (domain: string) => void;
+  onEdit: (name: string, domain: string) => void;
 }>) {
   const primaryDomain = competitor.domains.find(Boolean) || '';
   const displayName = competitor.name || primaryDomain || 'New competitor';
 
-  // A manually added competitor arrives empty, so it opens straight into the
-  // field it exists to collect.
+  // A manual choice opens in the identity editor immediately.
   const [isEditing, setIsEditing] = useState(
     competitor.name === '' && competitor.domains.length === 0,
   );
   const [draft, setDraft] = useState(primaryDomain);
+  const [draftName, setDraftName] = useState(competitor.name);
 
-  // The field is labelled, seeded, and placeheld as a DOMAIN, so it writes the
-  // domain. It used to write `name` instead, which left `domains` holding the
-  // value the user had just replaced — the submitted payload carried both, and
-  // the row's link still pointed at the old host.
   const save = () => {
-    setIsEditing(false);
     const trimmed = draft.trim();
-    if (trimmed) onEditDomain(trimmed);
+    const name = draftName.trim();
+    if (!trimmed || !name) return;
+    onEdit(name, trimmed);
+    setIsEditing(false);
   };
 
   if (isEditing) {
     return (
       <li className="flow-entity">
         <Input
-          // oxlint-disable-next-line jsx-a11y/no-autofocus -- Edit is an explicit action and focus must enter the newly mounted inline editor.
+          // oxlint-disable-next-line jsx-a11y/no-autofocus -- Add and Edit explicitly reveal this field.
           autoFocus
+          value={draftName}
+          onChange={(event) => setDraftName(event.target.value)}
+          placeholder="Competitor name"
+          aria-label="Competitor name"
+          className="my-1.5"
+        />
+        <Input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          onBlur={save}
           onKeyDown={(event) => {
             if (event.key === 'Enter') save();
             if (event.key === 'Escape') {
               setDraft(primaryDomain);
+              setDraftName(competitor.name);
               setIsEditing(false);
             }
           }}
@@ -67,6 +72,14 @@ function CompetitorRow({
           aria-label={`Website for ${displayName}`}
           className="my-1.5"
         />
+        <Button
+          type="button"
+          size="sm"
+          onClick={save}
+          disabled={!draft.trim() || !draftName.trim()}
+        >
+          Save
+        </Button>
       </li>
     );
   }
@@ -82,6 +95,7 @@ function CompetitorRow({
       leading={<BrandLogo name={displayName} websiteUrl={primaryDomain} size="md" />}
       onEdit={() => {
         setDraft(primaryDomain);
+        setDraftName(competitor.name);
         setIsEditing(true);
       }}
       editLabel={`Edit website for ${displayName}`}
@@ -103,17 +117,19 @@ export function ReviewStep({
   competitors,
   onToggleDomain,
   onToggleCompetitor,
-  onEditCompetitorDomain,
+  onEditCompetitor,
   onAddCompetitor,
   maximumCompetitors,
+  resolutionError,
 }: Readonly<{
   domains: ReviewDomain[];
   competitors: ReviewCompetitor[];
   onToggleDomain: (index: number) => void;
   onToggleCompetitor: (index: number) => void;
-  onEditCompetitorDomain: (index: number, domain: string) => void;
+  onEditCompetitor: (index: number, name: string, domain: string) => void;
   onAddCompetitor: () => void;
   maximumCompetitors: number | undefined;
+  resolutionError?: string;
 }>) {
   const selectedDomains = domains.filter((item) => item.selected).length;
   const selectedCompetitors = competitors.filter((item) => item.selected).length;
@@ -171,11 +187,16 @@ export function ReviewStep({
                 competitor={competitor}
                 disabled={competitorLimitReached}
                 onToggle={() => onToggleCompetitor(index)}
-                onEditDomain={(domain) => onEditCompetitorDomain(index, domain)}
+                onEdit={(name, domain) => onEditCompetitor(index, name, domain)}
               />
             ))}
           </ul>
         )}
+        {resolutionError ? (
+          <p role="alert" className="flow-help">
+            {resolutionError}
+          </p>
+        ) : null}
       </FlowGroup>
     </>
   );

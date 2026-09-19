@@ -21,7 +21,6 @@ from app.core.config.visibility_prompts import (
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryCreate,
     ConfirmedDiscoveryProfile,
-    DiscoveryCompetitorSuggestion,
     DiscoveryPromptSuggestion,
     PersistableDiscoveryProfile,
 )
@@ -31,10 +30,7 @@ from app.domain.projects.onboarding.normalization import (
     normalize_primary_market,
     normalize_website_url,
 )
-from app.domain.projects.onboarding.research import (
-    _customer_warnings,
-    _is_peer_company,
-)
+from app.domain.projects.onboarding.research import _customer_warnings
 from app.domain.projects.onboarding.service import discovery_catalog
 from app.domain.projects.onboarding.site_resolution import resolve_site
 from app.domain.projects.onboarding.topic_admission import (
@@ -55,6 +51,7 @@ def _profile() -> dict:
         "positioning": "Affordable shoes.",
         "products_services": ["Footwear"],
         "target_audience": "Families",
+        "category": "Footwear",
     }
 
 
@@ -91,13 +88,9 @@ def test_discovery_prompt_contract_normalizes_legacy_unbound_topic() -> None:
 
 @pytest.mark.parametrize(
     "payload",
-    [
-        {**_profile(), "positioning": " "},
-        {**_profile(), "target_audience": " "},
-        {**_profile(), "products_services": [" "]},
-    ],
+    [{**_profile(), "category": " "}],
 )
-def test_confirmed_profile_rejects_blank_required_fields(payload: dict) -> None:
+def test_confirmed_profile_rejects_blank_category(payload: dict) -> None:
     with pytest.raises(ValidationError):
         ConfirmedDiscoveryProfile(**payload)
 
@@ -110,24 +103,6 @@ def test_generated_profile_rejects_product_too_long_for_project_persistence() ->
     confirmed_payload = {**_profile(), "products_services": ["x" * 256]}
     with pytest.raises(ValidationError):
         ConfirmedDiscoveryProfile(**confirmed_payload)
-
-
-def _competitor(model: str | None) -> DiscoveryCompetitorSuggestion:
-    return DiscoveryCompetitorSuggestion(
-        name="Peer",
-        domains=["peer.example"],
-        business_model=model,
-    )
-
-
-def test_services_firm_does_not_accept_product_vendor_as_peer() -> None:
-    assert not _is_peer_company(
-        _competitor("b2b_saas"), brand_model="professional_service"
-    )
-    assert _is_peer_company(
-        _competitor("professional_service"), brand_model="professional_service"
-    )
-    assert not _is_peer_company(_competitor(None), brand_model="professional_service")
 
 
 def test_research_prompt_no_longer_owns_topics() -> None:

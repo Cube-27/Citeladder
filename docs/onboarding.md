@@ -17,19 +17,22 @@ The [discovery API](../backend/app/api/brand_discoveries.py) accepts a
 workspace-authorized, idempotent discovery request and returns persisted
 progress. [Discovery](../backend/app/domain/projects/discovery.py) and the
 [onboarding owner](../backend/app/domain/projects/onboarding/) coordinate
-bounded first-party acquisition, identity research and competitor qualification.
+bounded first-party acquisition, identity research and provisional competitor
+suggestions.
 The [worker](../backend/app/workers/brand_discovery_worker.py) claims PostgreSQL
 tasks with leases and commits before provider I/O.
 
 The resolved homepage is reused. First-party pages and independent research
-are separate bounded evidence sources. Structured identity output and
-competitive signatures feed brand-neutral competitor searches; candidates must
-cite retrieved evidence, match the buyer/market and resolve on their declared
-non-owned domain. Editorial publishers can supply evidence about a competitor
-but do not become that competitor by being the source. Schema and reference
-validation remain mandatory even when a provider supports native structured
-output. Bounded repair handles contract failures; retryable provider failures
-use the configured backoff. Warnings preserve degraded research states.
+are separate bounded evidence sources. One optional category-and-market search
+supplies snippets to one configured model request for up to ten provisional
+competitor names and domains. Search failure warns but does not block model
+suggestions. Name/domain cleanup excludes owned and reference sites; it does
+not prove commercial equivalence. The review screen starts with none selected,
+permits up to five tracked choices and manual name/domain additions, and keeps
+selected choices removable at capacity. Only selected domains are resolved
+before completion acceptance, outside the discovery lock; failures leave the
+choice editable. Bounded repair handles model contract failures, and warnings
+preserve degraded research states.
 
 [BrandResearchSnapshot](../backend/app/models/discovery.py) and
 [discovery records](../backend/app/models/discovery.py) retain the research

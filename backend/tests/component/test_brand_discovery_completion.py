@@ -24,7 +24,10 @@ from app.domain.projects.discovery_schemas import BrandDiscoveryComplete, Discov
 from app.domain.projects.onboarding import completion as onboarding_completion
 from app.domain.projects.onboarding import service as onboarding_service
 from app.domain.projects.onboarding.portfolio_generation import PortfolioResult
-from app.domain.projects.onboarding.site_resolution import SiteNotFoundError
+from app.domain.projects.onboarding.site_resolution import (
+    ResolvedSite,
+    SiteNotFoundError,
+)
 from app.domain.projects.onboarding.topic_selection import TopicSelectionResult
 from app.models.brand import BrandProfile
 from app.models.discovery import (
@@ -40,6 +43,22 @@ from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers import brand_discovery_worker
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import seed_occupancy_grants
+
+
+@pytest.fixture(autouse=True)
+def mock_selected_competitor_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def resolve(entered_url: str, normalized_url: str) -> ResolvedSite:
+        from app.connectors.web_evidence.url_policy import registrable_domain
+
+        return ResolvedSite(
+            entered_url=entered_url,
+            canonical_url=normalized_url,
+            registrable_domain=registrable_domain(normalized_url),
+            status_code=200,
+            page=None,
+        )
+
+    monkeypatch.setattr(onboarding_completion, "resolve_site", resolve)
 
 
 def _completion_payload() -> dict:
@@ -152,6 +171,47 @@ async def _completion_shell(
         )
         assert row.project_id is not None
         return workspace_id, discovery_id, row.project_id
+
+
+@pytest.mark.asyncio
+async def test_selected_domain_failure_keeps_review_editable_without_shell(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client, "selected-domain-failure@example.com")
+    async with session_factory() as session:
+        workspace_id = await session.scalar(select(Workspace.id).limit(1))
+        assert workspace_id is not None
+        await seed_occupancy_grants(
+            session,
+            workspace_id=workspace_id,
+            grants=(
+                GrantSpec(key=KEY_PROJECT_SLOTS, value=10),
+                GrantSpec(key=KEY_PROMPT_SLOTS, value=100),
+            ),
+        )
+        discovery = await _seed_ready_discovery(session, workspace_id)
+        await session.commit()
+        discovery_id = discovery.id
+
+    async def fail(_domain: str, _url: str) -> ResolvedSite:
+        raise SiteNotFoundError("dns_resolution_failed")
+
+    monkeypatch.setattr(onboarding_completion, "resolve_site", fail)
+    response = await client.post(
+        f"/api/v1/brand-discoveries/{discovery_id}/complete",
+        headers={"Idempotency-Key": "selected-domain-failure"},
+        json=_completion_payload(),
+    )
+    assert response.status_code == 409
+    assert "Globex" in response.text
+    assert "globex.com" in response.text
+    async with session_factory() as session:
+        persisted = await session.get(BrandDiscovery, discovery_id)
+        assert persisted is not None
+        assert persisted.status == "ready"
+        assert persisted.project_id is None
 
 
 @pytest.mark.asyncio

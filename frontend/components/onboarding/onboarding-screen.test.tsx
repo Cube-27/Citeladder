@@ -122,9 +122,6 @@ function discovery(status: BrandDiscovery['status'], phase: BrandDiscovery['prog
         name: 'Globex',
         aliases: [],
         domains: ['globex.example'],
-        reasoning: 'Serves the same analytics buyers in US.',
-        evidence_urls: ['https://globex.example/'],
-        confidence: 0.8,
       },
     ],
     topics: [
@@ -679,16 +676,13 @@ describe('OnboardingScreen', () => {
     expect(screen.queryByLabelText(/^description/i)).toBeNull();
   });
 
-  it('selects only the first five discovered competitors', async () => {
+  it('starts suggestions unselected and permits five reversible choices', async () => {
     discoveryState = {
       ...discovery('ready', 'preparing_review'),
       competitors: Array.from({ length: 6 }, (_, index) => ({
         name: `Peer ${index + 1}`,
         aliases: [],
         domains: [`peer-${index + 1}.example`],
-        reasoning: '',
-        evidence_urls: [],
-        confidence: 0,
       })),
     };
     mswServer.use(catalogHandler());
@@ -697,9 +691,14 @@ describe('OnboardingScreen', () => {
     const user = await enterBrand();
     await user.click(screen.getByRole('button', { name: 'Review' }));
 
-    expect(await screen.findByText('5 of 5')).toBeInTheDocument();
-    // The chip keeps its own name in both states; `aria-pressed` carries
-    // whether it is tracked.
+    expect(await screen.findByText('0 of 5')).toBeInTheDocument();
+    for (let index = 1; index <= 5; index++) {
+      await user.click(screen.getByRole('button', { name: `Peer ${index}` }));
+    }
+    expect(screen.getByText('5 of 5')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Peer 6' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Peer 6' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Peer 1' }));
+    expect(screen.getByRole('button', { name: 'Peer 6' })).toBeEnabled();
   });
 });

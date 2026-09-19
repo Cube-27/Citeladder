@@ -218,7 +218,9 @@ async def get_discovery(
         BrandDiscovery.workspace_id == workspace_id,
     )
     if for_update:
-        statement = statement.with_for_update()
+        statement = statement.with_for_update().execution_options(
+            populate_existing=True
+        )
     row = await session.scalar(statement)
     if row is None:
         raise LookupError("Brand discovery not found")
@@ -307,7 +309,6 @@ async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
                 "profile": result.profile,
                 "competitive_signature": result.competitive_signature,
                 "competitors": result.competitors,
-                "competitor_verdicts": result.competitor_verdicts,
                 "topics": result.topics,
                 "offerings": result.offerings,
                 "evidence_manifest": result.evidence_manifest,

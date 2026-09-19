@@ -21,15 +21,24 @@ from app.domain.projects.discovery_schemas import (
     DiscoveryTopic,
 )
 from app.domain.projects.offering_harvest import OfferingHarvest, OfferingNode
+from app.domain.projects.onboarding.normalization import (
+    InvalidWebsiteUrl,
+    normalize_website_url,
+)
 from app.domain.projects.onboarding.service import (
     IDEMPOTENCY_KEY_REQUIRED,
     BrandDiscoveryError,
+    _confirmed_domains,
     _confirmed_portfolio_inputs,
     _generate_confirmed_portfolio,
     _persist_generated_prompts,
     _persist_project_shell,
     _progress,
     get_discovery,
+)
+from app.domain.projects.onboarding.site_resolution import (
+    SiteNotFoundError,
+    resolve_site,
 )
 from app.domain.projects.onboarding.topic_admission import confirmed_offering_topics
 from app.domain.projects.onboarding.topic_selection import select_topics
@@ -102,6 +111,16 @@ async def complete_discovery(
     if not key:
         raise BrandDiscoveryError(IDEMPOTENCY_KEY_REQUIRED)
     row = await get_discovery(
+        session, workspace_id=workspace_id, discovery_id=discovery_id
+    )
+    if row.status == DISCOVERY_STATUS_READY and not row.input_data.get(
+        "completion_idempotency_key"
+    ):
+        # The read transaction must end before any selected-domain network I/O.
+        owned = set(_confirmed_domains(payload.domains))
+        await session.commit()
+        await _resolve_selected_competitors(payload, owned_domains=owned)
+    row = await get_discovery(
         session,
         workspace_id=workspace_id,
         discovery_id=discovery_id,
@@ -142,6 +161,28 @@ async def complete_discovery(
     await _ensure_completion_task(session, row=row, workspace_id=workspace_id)
     await session.commit()
     return row, None
+
+
+async def _resolve_selected_competitors(
+    payload: BrandDiscoveryComplete, *, owned_domains: set[str]
+) -> None:
+    for competitor in payload.competitors:
+        if not competitor.domains:
+            raise BrandDiscoveryError(
+                f"Could not resolve website for {competitor.name}: add a domain"
+            )
+        for domain in competitor.domains:
+            try:
+                url, normalized = normalize_website_url(domain)
+                if normalized in owned_domains:
+                    raise SiteNotFoundError("owned_domain")
+                resolved = await resolve_site(domain, url)
+                if resolved.registrable_domain != normalized:
+                    raise SiteNotFoundError("domain_redirected")
+            except (InvalidWebsiteUrl, SiteNotFoundError) as exc:
+                raise BrandDiscoveryError(
+                    f"Could not resolve website for {competitor.name}: {domain}"
+                ) from exc
 
 
 async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
