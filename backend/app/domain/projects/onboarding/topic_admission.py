@@ -13,7 +13,6 @@ import uuid
 
 from app.core.config.visibility_prompts import (
     CONFIRMED_OFFERING_SOURCE_REF,
-    MODEL_PRIOR_SOURCE_REF,
     PROVIDER_DESCRIPTION_PHRASES,
     TOPIC_BUNDLE_CONNECTORS,
     VISIBILITY_TOPIC_MAX,
@@ -91,18 +90,12 @@ def _structural_failure(
     source_refs: list[str],
     known_refs: set[str],
     forbidden_terms: list[str],
-    allow_model_prior: bool,
 ) -> bool:
     if not name or len(name.split()) > VISIBILITY_TOPIC_NAME_MAX_WORDS:
         return True
     if _is_unsplit_bundle(name):
         return True
-    # A topic must cite pages we actually fetched -- unless the brand was
-    # recognised, in which case an uncited topic is admitted and stamped as
-    # prior-derived by the caller instead of being dropped.
-    if not allow_model_prior and (
-        not source_refs or any(ref not in known_refs for ref in source_refs)
-    ):
+    if not source_refs or any(ref not in known_refs for ref in source_refs):
         return True
     normalized = _normalize(name)
     return any(
@@ -116,7 +109,6 @@ def _admissible_candidate(
     *,
     known_refs: set[str],
     forbidden_terms: list[str],
-    allow_model_prior: bool,
 ) -> tuple[str, str, list[str]] | None:
     name = " ".join(str(candidate.get("name") or "").split())
     refs = list(dict.fromkeys(str(ref) for ref in candidate.get("source_refs") or []))
@@ -125,14 +117,12 @@ def _admissible_candidate(
         source_refs=refs,
         known_refs=known_refs,
         forbidden_terms=forbidden_terms,
-        allow_model_prior=allow_model_prior,
     ) or _is_provider_description(name):
         return None
-    resolved_refs = [ref for ref in refs if ref in known_refs]
     return (
         name,
         " ".join(str(candidate.get("description") or "").split()),
-        resolved_refs or [MODEL_PRIOR_SOURCE_REF],
+        refs,
     )
 
 
@@ -163,7 +153,6 @@ def admit_topics(
     known_refs: set[str],
     forbidden_terms: list[str],
     business_terms: list[str],
-    allow_model_prior: bool = False,
 ) -> list[DiscoveryTopic]:
     """Admit distinct, evidence-backed topics that name what customers want.
 
@@ -184,7 +173,6 @@ def admit_topics(
                 candidate,
                 known_refs=known_refs,
                 forbidden_terms=forbidden_terms,
-                allow_model_prior=allow_model_prior,
             )
         )
         is not None
@@ -203,9 +191,8 @@ def admit_topics(
 def confirmed_offering_topics(offerings: list[str]) -> list[DiscoveryTopic]:
     """Create starting topics from the offerings a person confirmed.
 
-    This is the deterministic recovery path when best-effort topic selection
-    returns nothing. It preserves the user's wording and stamps explicit
-    provenance; it does not infer, broaden, or pad the portfolio.
+    Subsequent Generate prompts uses this when an existing project has no
+    topics. It preserves the user's wording and stamps explicit provenance.
     """
     topics: list[DiscoveryTopic] = []
     seen: set[str] = set()

@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_QUEUE_SPEC,
     ERROR_BRAND_DISCOVERY,
+    brand_discovery_settings,
 )
 from app.core.config.entitlements import KEY_PROJECT_SLOTS, KEY_PROMPT_SLOTS
 from app.core.config.task_queue import TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT
@@ -24,8 +25,10 @@ from app.domain.projects.discovery_schemas import BrandDiscoveryComplete, Discov
 from app.domain.projects.onboarding import completion as onboarding_completion
 from app.domain.projects.onboarding import service as onboarding_service
 from app.domain.projects.onboarding.portfolio_generation import PortfolioResult
-from app.domain.projects.onboarding.site_resolution import SiteNotFoundError
-from app.domain.projects.onboarding.topic_selection import TopicSelectionResult
+from app.domain.projects.onboarding.site_resolution import (
+    ResolvedSite,
+    SiteNotFoundError,
+)
 from app.models.brand import BrandProfile
 from app.models.discovery import (
     BrandDiscovery,
@@ -40,6 +43,22 @@ from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers import brand_discovery_worker
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import seed_occupancy_grants
+
+
+@pytest.fixture(autouse=True)
+def mock_selected_competitor_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def resolve(entered_url: str, normalized_url: str) -> ResolvedSite:
+        from app.connectors.web_evidence.url_policy import registrable_domain
+
+        return ResolvedSite(
+            entered_url=entered_url,
+            canonical_url=normalized_url,
+            registrable_domain=registrable_domain(normalized_url),
+            status_code=200,
+            page=None,
+        )
+
+    monkeypatch.setattr(onboarding_completion, "resolve_site", resolve)
 
 
 def _completion_payload() -> dict:
@@ -120,6 +139,197 @@ async def _seed_ready_discovery(
         )
     )
     return row
+
+
+async def _completion_shell(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
+    await _register(client, f"topic-persistence-{uuid.uuid4()}@example.com")
+    async with session_factory() as session:
+        workspace_id = await session.scalar(select(Workspace.id).limit(1))
+        assert workspace_id is not None
+        await seed_occupancy_grants(
+            session,
+            workspace_id=workspace_id,
+            grants=(
+                GrantSpec(key=KEY_PROJECT_SLOTS, value=10),
+                GrantSpec(key=KEY_PROMPT_SLOTS, value=100),
+            ),
+        )
+        discovery = await _seed_ready_discovery(session, workspace_id)
+        await session.commit()
+        discovery_id = discovery.id
+    async with session_factory() as session:
+        row, _ = await onboarding_completion.complete_discovery(
+            session,
+            workspace_id=workspace_id,
+            discovery_id=discovery_id,
+            payload=BrandDiscoveryComplete.model_validate(_completion_payload()),
+            idempotency_key="persist-topics",
+            reviewer_id=uuid.uuid4(),
+        )
+        assert row.project_id is not None
+        return workspace_id, discovery_id, row.project_id
+
+
+@pytest.mark.asyncio
+async def test_selected_domain_failure_keeps_review_editable_without_shell(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client, "selected-domain-failure@example.com")
+    async with session_factory() as session:
+        workspace_id = await session.scalar(select(Workspace.id).limit(1))
+        assert workspace_id is not None
+        await seed_occupancy_grants(
+            session,
+            workspace_id=workspace_id,
+            grants=(
+                GrantSpec(key=KEY_PROJECT_SLOTS, value=10),
+                GrantSpec(key=KEY_PROMPT_SLOTS, value=100),
+            ),
+        )
+        discovery = await _seed_ready_discovery(session, workspace_id)
+        await session.commit()
+        discovery_id = discovery.id
+
+    async def fail(_domain: str, _url: str) -> ResolvedSite:
+        raise SiteNotFoundError("dns_resolution_failed")
+
+    monkeypatch.setattr(onboarding_completion, "resolve_site", fail)
+    response = await client.post(
+        f"/api/v1/brand-discoveries/{discovery_id}/complete",
+        headers={"Idempotency-Key": "selected-domain-failure"},
+        json=_completion_payload(),
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "Could not resolve website for Globex: globex.com"
+    )
+    async with session_factory() as session:
+        persisted = await session.get(BrandDiscovery, discovery_id)
+        assert persisted is not None
+        assert persisted.status == "ready"
+        assert persisted.project_id is None
+
+
+@pytest.mark.asyncio
+async def test_completion_persists_missing_topics_and_resolves_existing_names(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    workspace_id, discovery_id, project_id = await _completion_shell(
+        client, session_factory
+    )
+    reused = DiscoveryTopic(
+        topic_id=uuid.uuid4(), name="Existing need", source_refs=["confirmed-profile"]
+    )
+    added = DiscoveryTopic(
+        topic_id=uuid.uuid4(), name="New need", source_refs=["confirmed-profile"]
+    )
+    async with session_factory() as session:
+        existing = Topic(project_id=project_id, name="Existing need", origin="manual")
+        session.add(existing)
+        await session.commit()
+        row = await session.get(BrandDiscovery, discovery_id)
+        assert row is not None
+        await onboarding_service._persist_generated_prompts(
+            session,
+            workspace_id=workspace_id,
+            row=row,
+            prompts=[
+                {
+                    "topic_id": str(reused.topic_id),
+                    "text": "Which existing solutions fit teams",
+                    "intent": "discovery",
+                    "cohort": "core",
+                },
+                {
+                    "topic_id": str(added.topic_id),
+                    "text": "How do teams solve the new need",
+                    "intent": "discovery",
+                    "cohort": "core",
+                },
+                {
+                    "topic_id": None,
+                    "text": "Is Acme suitable for teams",
+                    "intent": "discovery",
+                    "cohort": "brand_diagnostic",
+                },
+            ],
+            discovery_topics=[reused, added],
+            prompt_provider="test",
+            prompt_model="test",
+            intents=[],
+        )
+        await session.commit()
+    async with session_factory() as session:
+        topics = (
+            await session.scalars(select(Topic).where(Topic.project_id == project_id))
+        ).all()
+        prompts = (await session.scalars(select(Prompt))).all()
+    assert {topic.name for topic in topics} == {"Existing need", "New need"}
+    assert {prompt.topic_id for prompt in prompts if prompt.cohort == "core"} == {
+        existing.id,
+        added.topic_id,
+    }
+    assert (
+        next(
+            prompt for prompt in prompts if prompt.cohort == "brand_diagnostic"
+        ).topic_id
+        is None
+    )
+
+
+@pytest.mark.parametrize("cohort", ["core", "brand_diagnostic"])
+@pytest.mark.asyncio
+async def test_unresolved_core_topic_rolls_back_generated_rows(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    cohort: str,
+) -> None:
+    workspace_id, discovery_id, project_id = await _completion_shell(
+        client, session_factory
+    )
+    topic = DiscoveryTopic(
+        topic_id=uuid.uuid4(), name="New need", source_refs=["confirmed-profile"]
+    )
+    async with session_factory() as session:
+        row = await session.get(BrandDiscovery, discovery_id)
+        assert row is not None
+        with pytest.raises(
+            onboarding_service.BrandDiscoveryError, match="unknown topic"
+        ):
+            await onboarding_service._persist_generated_prompts(
+                session,
+                workspace_id=workspace_id,
+                row=row,
+                prompts=[
+                    {
+                        "topic_id": str(uuid.uuid4()),
+                        "text": "Which solutions fit teams",
+                        "intent": "discovery",
+                        "cohort": cohort,
+                    }
+                ],
+                discovery_topics=[topic],
+                prompt_provider="test",
+                prompt_model="test",
+                intents=[],
+            )
+        await session.rollback()
+    async with session_factory() as session:
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(Topic)
+                .where(Topic.project_id == project_id)
+            )
+            == 0
+        )
+        assert await session.scalar(select(func.count()).select_from(Prompt)) == 0
 
 
 @pytest.mark.asyncio
@@ -215,17 +425,10 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
         for name in ("Process mining", "Journey analytics", "Workflow analytics")
     ]
 
-    async def fixture_topic_selection(**_kwargs) -> TopicSelectionResult:
-        return TopicSelectionResult(
-            topics=selected_topics,
-            provider="topic-agent.test",
-            model="topic-model",
-        )
-
     async def fixture_portfolio(**kwargs) -> PortfolioResult:
         nonlocal generation_calls
         generation_calls += 1
-        topic_ids = [str(topic.topic_id) for topic in kwargs["topics"]]
+        topic_ids = [str(topic.topic_id) for topic in selected_topics]
         organic_texts = (
             "how can teams understand inefficient business workflows",
             "which tools reveal bottlenecks in complex processes",
@@ -241,6 +444,7 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
                 "topic_id": topic_ids[index % len(topic_ids)],
                 "text": text,
                 "intent": "discovery",
+                "buyer_intent_id": "need-1",
                 "cohort": "core",
             }
             for index, text in enumerate(organic_texts)
@@ -251,24 +455,36 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
                     "topic_id": topic_ids[0],
                     "text": "is Acme suitable for workflow analytics",
                     "intent": "discovery",
+                    "buyer_intent_id": "need-1",
                     "cohort": "brand_diagnostic",
                 },
                 {
                     "topic_id": topic_ids[1],
                     "text": "how does Acme support process mining teams",
                     "intent": "service",
+                    "buyer_intent_id": "need-1",
                     "cohort": "brand_diagnostic",
                 },
             ]
         )
         return PortfolioResult(
-            prompts=tuple(prompts), provider="agent.test", model="fake-model"
+            topics=tuple(selected_topics),
+            prompts=tuple(prompts),
+            intents=(
+                {
+                    "id": "need-1",
+                    "buyer_need": "Understand business workflows",
+                    "decision_intent": "learn",
+                    "buyer_stage": "awareness",
+                },
+            ),
+            provider="agent.test",
+            model="fake-model",
         )
 
     # This component test owns atomic completion, not a live application-model
     # call. Supply an already validated Pass 2 portfolio fixture.
     monkeypatch.setattr(onboarding_service, "generate_portfolio", fixture_portfolio)
-    monkeypatch.setattr(onboarding_completion, "select_topics", fixture_topic_selection)
     await _register(client, "complete-owner@example.com")
     async with session_factory() as session:
         workspace_id = await session.scalar(select(Workspace.id).limit(1))
@@ -331,6 +547,7 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
             )
         )
         assert task is not None
+        assert task.max_attempts == brand_discovery_settings.completion_maximum_attempts
         assert await session.scalar(select(func.count()).select_from(Project)) == 1
         assert await session.scalar(select(func.count()).select_from(PromptSet)) == 1
         assert await session.scalar(select(func.count()).select_from(Topic)) == 0
@@ -471,8 +688,17 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
             for prompt in prompt_rows
         )
         assert all(
-            prompt.generation_evidence.get("topic_selection_provider")
-            == "topic-agent.test"
+            prompt.generation_evidence.get("portfolio_version")
+            == "visibility-intent-portfolio-v1"
+            for prompt in prompt_rows
+        )
+        assert all(
+            prompt.generation_evidence.get("buyer_intent", {}).get("id") == "need-1"
+            for prompt in prompt_rows
+        )
+        assert all(
+            prompt.generation_evidence.get("topic_source_refs")
+            == [CONFIRMED_OFFERING_SOURCE_REF]
             for prompt in prompt_rows
         )
         profile = await session.scalar(select(BrandProfile))
@@ -488,13 +714,14 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
         assert profile.sources["target_audience"].get("reviewed_by") is None
         assert profile.sources["target_audience"].get("reviewed_at") is None
         assert set(profile.source_artifact_ids) == set(profile.sources)
-        # The confirmed business context must survive project creation. Before
-        # this existed, `business_type` and `price_tier` were collected, shown,
-        # confirmed by the user and then silently dropped on the floor.
+        # The confirmed business context must survive project creation.
         assert profile.business_context["category"] == "workflow analytics platform"
         assert profile.business_context["business_model"] == "b2b_saas"
         assert profile.business_context["market_scope"] == "global"
-        assert profile.business_context["business_type"] == "b2b"
+        assert profile.business_context["buyer_type"] == "b2b"
+        assert profile.business_context["field_sources"]["buyer_type"] == "reviewed"
+        assert profile.business_context["field_sources"]["primary_market"] == "reviewed"
+        assert profile.business_context["field_sources"]["language_code"] == "reviewed"
         assert profile.business_context["price_tier"] == "premium"
         assert profile.business_context["knowledge_strength"] == "strong"
         assert len(set(profile.source_artifact_ids.values())) == 1
@@ -566,27 +793,13 @@ async def test_completion_rolls_back_shell_when_task_scheduling_fails(
 
 
 @pytest.mark.asyncio
-async def test_completion_recovers_zero_selected_topics_from_confirmed_offerings(
+async def test_completion_does_not_invent_topics_when_portfolio_has_no_core(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def fixture_portfolio(**kwargs) -> PortfolioResult:
-        topics = kwargs["topics"]
-        assert [topic.name for topic in topics] == ["analytics software"]
-        assert topics[0].source_refs == [CONFIRMED_OFFERING_SOURCE_REF]
-        return PortfolioResult(
-            prompts=(
-                {
-                    "topic_id": str(topics[0].topic_id),
-                    "text": "how can teams choose analytics software",
-                    "intent": "discovery",
-                    "cohort": "core",
-                },
-            ),
-            provider="agent.test",
-            model="fake-model",
-        )
+    async def fixture_portfolio(**_kwargs) -> PortfolioResult:
+        return PortfolioResult(provider="agent.test", model="fake-model")
 
     monkeypatch.setattr(onboarding_service, "generate_portfolio", fixture_portfolio)
     await _register(client, "complete-topic-fallback@example.com")
@@ -623,12 +836,9 @@ async def test_completion_recovers_zero_selected_topics_from_confirmed_offerings
     async with session_factory() as session:
         persisted = await session.get(BrandDiscovery, discovery_id)
         assert persisted is not None
-        assert persisted.topics[0]["name"] == "analytics software"
-        assert persisted.topics[0]["source_refs"] == [CONFIRMED_OFFERING_SOURCE_REF]
-        topic = await session.scalar(select(Topic))
-        assert topic is not None
-        assert topic.name == "analytics software"
-        assert topic.origin == "generated"
+        assert persisted.topics == []
+        assert persisted.status != "project_created"
+        assert await session.scalar(select(Topic)) is None
 
 
 @pytest.mark.asyncio

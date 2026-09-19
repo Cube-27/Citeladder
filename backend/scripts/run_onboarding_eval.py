@@ -51,7 +51,10 @@ def _load_env() -> None:
 
 _load_env()
 
-from app.domain.projects.discovery_schemas import DiscoveryTopic  # noqa: E402
+from app.domain.projects.offering_harvest import (  # noqa: E402
+    OfferingHarvest,
+    OfferingNode,
+)
 from app.domain.projects.onboarding.industry_library import (  # noqa: E402
     industry_context,
     load_industry_library,
@@ -150,6 +153,32 @@ def _archetype_templates() -> list[str]:
     return list(dict.fromkeys(templates))
 
 
+def _evaluation_harvest(offerings: list[dict]) -> OfferingHarvest:
+    return OfferingHarvest(
+        nodes=tuple(
+            OfferingNode(
+                ref=str(item["ref"]),
+                label=str(item["label"]),
+                path=str(item["path"]),
+            )
+            for item in offerings
+            if all(item.get(key) for key in ("ref", "label", "path"))
+        )
+    )
+
+
+def _evaluation_evidence(manifest: list[dict]) -> list[dict[str, str]]:
+    return [
+        {
+            "evidence_ref": str(item["evidence_ref"]),
+            "text": str(item.get("text") or ""),
+            "url": str(item.get("source_url") or ""),
+        }
+        for item in manifest
+        if item.get("evidence_ref")
+    ]
+
+
 async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseResult:
     started = time.perf_counter()
     industry, subindustry = BEST_FIT_INDUSTRY[case.slug]
@@ -176,25 +205,22 @@ async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseRes
         profile = _as_mapping(research.profile)
         competitors = [_competitor_name(entry) for entry in research.competitors]
         competitors = [name for name in competitors if name]
-        topics = [DiscoveryTopic.model_validate(topic) for topic in research.topics]
         portfolio = await generate_portfolio(
             brand_name=case.brand_name,
             brand_terms=brand_terms(
                 case.brand_name,
                 [],
-                _category_vocabulary(profile, topics),
+                _category_vocabulary(profile),
             ),
             primary_market=market,
             profile=profile,
             competitors=competitors,
             competitor_terms=_competitor_terms(research.competitors),
-            topics=topics,
+            harvest=_evaluation_harvest(research.offerings),
+            page_evidence=_evaluation_evidence(research.evidence_manifest),
         )
         if not portfolio.prompts:
-            raise RuntimeError(
-                "initial portfolio failed: "
-                + ", ".join(portfolio.errors or ("generation_failed",))
-            )
+            raise RuntimeError("initial portfolio failed")
         prompts = list(portfolio.prompts)
         result.prompts = [
             PortfolioPrompt(
@@ -210,7 +236,7 @@ async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseRes
             result.prompts,
             profile=profile,
             competitors=competitors,
-            research_topics=[topic.name for topic in topics],
+            research_topics=[topic.name for topic in portfolio.topics],
             warnings=list(research.warnings),
             judge_key=judge_key,
             judge_model=judge_model,
@@ -251,9 +277,7 @@ def _competitor_terms(entries: Any) -> list[str]:
     ]
 
 
-def _category_vocabulary(
-    profile: dict[str, Any], topics: list[DiscoveryTopic]
-) -> list[str]:
+def _category_vocabulary(profile: dict[str, Any]) -> list[str]:
     """The business's own category language, mirroring the onboarding service.
 
     A token the confirmed category uses is category language first and brand
@@ -272,7 +296,6 @@ def _category_vocabulary(
             values.append(raw)
         elif isinstance(raw, list):
             values.extend(str(item) for item in raw)
-    values.extend(topic.name for topic in topics)
     return [value.strip() for value in values if value.strip()]
 
 

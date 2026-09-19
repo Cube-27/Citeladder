@@ -5,7 +5,6 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from typing import Annotated, Literal
-from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -17,6 +16,7 @@ from app.core.config.brand_discovery import (
     KNOWLEDGE_STRENGTHS,
     MARKET_SCOPES,
     PRICE_TIERS,
+    brand_discovery_settings,
 )
 from app.core.config.brand_profile import (
     BRAND_PROFILE_PRODUCT_MAX_CHARS,
@@ -92,7 +92,7 @@ class DiscoveryProfile(BaseModel):
     `category` and `category_terms` are open vocabulary and carry the real
     specificity -- they are what reaches prompt generation. The remaining facets
     are a closed vocabulary that routes archetype selection and buyer register.
-    See `onboarding.context_profile` for why a fixed industry tree cannot do
+    See `projects.business_context` for why a fixed industry tree cannot do
     this job.
     """
 
@@ -101,7 +101,7 @@ class DiscoveryProfile(BaseModel):
     products_services: list[str] = Field(default_factory=list)
     target_audience: str = ""
     industry: str = ""
-    business_type: Literal["b2b", "b2c", "both"] = "both"
+    business_type: Literal["b2b", "b2c", "both"] | None = None
     price_tier: PriceTier = "unknown"
     field_confidence: dict[str, float] = Field(default_factory=dict)
 
@@ -114,31 +114,17 @@ class DiscoveryProfile(BaseModel):
     category_aliases: list[str] = Field(default_factory=list)
     category_terms: list[str] = Field(default_factory=list)
     jobs_to_be_done: list[str] = Field(default_factory=list)
-    sector: str = "Other"
-    business_model: BusinessModel = "d2c_product"
+    sector: str | None = None
+    business_model: BusinessModel | None = None
     # Real businesses are often composite: Urban Company is a marketplace AND a
     # local service, and the half a single enum discards is exactly the half
     # that drives a whole family of buyer queries ("plumber near me").
     secondary_business_models: list[BusinessModel] = Field(default_factory=list)
-    market_scope: MarketScope = "national"
-    buyer_register: BuyerRegister = "research_comparative"
+    market_scope: MarketScope | None = None
+    buyer_register: BuyerRegister | None = None
     buyer_roles: list[str] = Field(default_factory=list)
     service_areas: list[str] = Field(default_factory=list)
     knowledge_strength: KnowledgeStrength = "none"
-
-    def has_reliable_prior(self) -> bool:
-        """Whether the model positively recognised this brand.
-
-        The wire-side twin of ``ContextProfile.is_thin`` (inverted): the two
-        MUST agree, because one decides whether to shorten a portfolio and the
-        other whether topics may be drawn from prior knowledge, and a brand
-        that is "thin" for one but recognised by the other produces exactly the
-        contradiction this predicate was added to remove -- naming a brand's
-        category and competitors confidently while reporting zero topics.
-        """
-        return self.knowledge_strength != "none" and bool(
-            self.category or self.category_terms
-        )
 
 
 class PersistableDiscoveryProfile(DiscoveryProfile):
@@ -153,50 +139,21 @@ class PersistableDiscoveryProfile(DiscoveryProfile):
 
 
 class ConfirmedDiscoveryProfile(PersistableDiscoveryProfile):
-    """The minimum structured ICP a person must confirm before generation."""
+    """Reviewed category and optional inferred brand prose."""
 
-    positioning: str = Field(min_length=1, max_length=BRAND_PROFILE_TEXT_MAX_CHARS)
-    products_services: list[
-        Annotated[str, Field(max_length=BRAND_PROFILE_PRODUCT_MAX_CHARS)]
-    ] = Field(min_length=1, max_length=BRAND_PROFILE_PRODUCTS_MAX_COUNT)
-    target_audience: str = Field(min_length=1, max_length=BRAND_PROFILE_TEXT_MAX_CHARS)
+    category: str = Field(min_length=1, max_length=160)
 
-    @field_validator("positioning", "target_audience")
+    @field_validator("category")
     @classmethod
-    def require_nonblank_text(cls, value: str) -> str:
+    def require_category(cls, value: str) -> str:
         value = value.strip()
         if not value:
-            raise ValueError("confirmed ICP text must not be blank")
+            raise ValueError("category must not be blank")
         return value
-
-    @field_validator("products_services")
-    @classmethod
-    def require_nonblank_products(cls, values: list[str]) -> list[str]:
-        cleaned = [value.strip() for value in values if value.strip()]
-        if not cleaned:
-            raise ValueError("products_services must contain a non-blank value")
-        return cleaned
 
 
 class DiscoveryCompetitorSuggestion(CompetitorInput):
-    # What kind of company THIS competitor is. Confidence measures the model's
-    # bounded judgement; this facet prevents a service firm from admitting the
-    # platforms it implements as substitutes. Missing classification abstains.
-    business_model: BusinessModel | None = None
-    reasoning: str = Field(default="", max_length=2000)
-    evidence_urls: list[str] = Field(
-        default_factory=list, max_length=DISCOVERY_CONFIRM_MAX_DOMAINS
-    )
-    confidence: float = Field(default=0, ge=0, le=1)
-
-    @field_validator("evidence_urls")
-    @classmethod
-    def validate_evidence_urls(cls, values: list[str]) -> list[str]:
-        for value in values:
-            parts = urlsplit(value)
-            if parts.scheme not in {"http", "https"} or not parts.hostname:
-                raise ValueError("evidence_urls must contain HTTP(S) URLs")
-        return values
+    """Provisional identity, pending user selection and domain resolution."""
 
 
 class DiscoveryTopic(BaseModel):
@@ -246,7 +203,8 @@ class BrandDiscoveryProgress(BaseModel):
 
 class DiscoveryCompetitorCandidates(BaseModel):
     competitors: list[DiscoveryCompetitorSuggestion] = Field(
-        default_factory=list, max_length=MAX_PROJECT_COMPETITORS
+        default_factory=list,
+        max_length=brand_discovery_settings.competitor_suggestion_maximum,
     )
 
 

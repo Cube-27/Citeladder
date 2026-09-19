@@ -1,519 +1,268 @@
-"""Pass C: generate prompts for the canonical topics, a few topics at a time.
-
-Batching is the point. The old contract asked for twelve prompts covering five
-topics in one call under a twelve-word ceiling, which leaves a small model no
-move except applying one sentence frame to every topic name -- and that is
-exactly what shipped. Four prompts for one named topic is a task it can do.
-
-Failure is per topic, not per portfolio. The old selector returned nothing
-unless it could assemble exactly eight organic and two brand prompts, so a
-single malformed row voided the whole run.
-"""
+"""One evidence-grounded, intent-linked initial visibility portfolio request."""
 
 from __future__ import annotations
 
-import asyncio
+import json
 from dataclasses import dataclass
-from functools import partial
-from math import floor
 
-from app.connectors.agent.client import AgentNotConfiguredError
+from pydantic import BaseModel, ConfigDict, Field
+
 from app.connectors.agent.factory import create_model_gateway
-from app.connectors.agent.gateway import ModelGateway
-from app.connectors.answer_engines.errors import ProviderError
-from app.core.config.brand_discovery import (
-    DISCOVERY_PROMPT_GENERATION_CONCURRENCY,
-    brand_discovery_settings,
-)
 from app.core.config.prompts import (
     PROMPT_COHORT_BRAND_DIAGNOSTIC,
     PROMPT_COHORT_COMPARISON,
     PROMPT_COHORT_CORE,
 )
 from app.core.config.visibility_prompts import (
-    VISIBILITY_BRAND_PROMPT_COUNT,
-    VISIBILITY_BRANDED_SHARE_WARNING,
-    VISIBILITY_COMPARISON_PROMPT_COUNT,
-    VISIBILITY_MAX_BRANDED_SHARE,
-    VISIBILITY_MIN_BRANDED_PROMPTS,
-    VISIBILITY_PROMPTS_PER_TOPIC,
-    VISIBILITY_TOPIC_BATCH_SIZE,
-    VISIBILITY_TOPIC_NAME_LIMIT,
-    cohort_system_prompt,
+    BUYER_STAGES,
+    PROMPT_INTENT_LEGACY,
+    VISIBILITY_MAX_ORGANIC_PROMPTS,
+    onboarding_portfolio_system_prompt,
 )
 from app.domain.projects.discovery_schemas import DiscoveryTopic
-from app.domain.prompts.generation_contract import (
-    GenerationOutput,
-    GenerationOutputError,
-    build_generation_user_message,
-    parse_planned_output,
-)
-from app.domain.prompts.portfolio_validation import (
-    PortfolioValidator,
-    ordered_portfolio,
-)
-from app.domain.prompts.query_patterns import PromptSlot, build_prompt_slots
+from app.domain.projects.offering_harvest import OfferingHarvest
+from app.domain.projects.onboarding.structured_repair import complete_validated_envelope
+from app.domain.projects.onboarding.topic_admission import admit_topics
+from app.domain.prompts.portfolio_validation import PortfolioValidator
 
-# The cohorts that name the tracked brand. Capped as a share of the final
-# portfolio so a thin organic cohort cannot leave a set that only measures
-# the brand answering about itself.
-_NAMED_COHORTS = frozenset({PROMPT_COHORT_BRAND_DIAGNOSTIC, PROMPT_COHORT_COMPARISON})
+CONFIRMED_CONTEXT_REF = "confirmed_profile:reviewed"
+PROVISIONAL_CONTEXT_REF = "research_profile:unreviewed"
+
+
+class BuyerIntent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(min_length=1, max_length=64, pattern=r"\S")
+    buyer_need: str = Field(min_length=1, max_length=300, pattern=r"\S")
+    decision_intent: str = Field(min_length=1, max_length=32)
+    buyer_stage: str = Field(min_length=1, max_length=32)
+
+
+class IntentPrompt(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=500)
+    intent_id: str = Field(min_length=1, max_length=64)
+
+
+class IntentTopic(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=255)
+    description: str = Field(default="", max_length=1024)
+    intent_ids: list[str] = Field(min_length=1, max_length=30)
+    evidence_refs: list[str] = Field(min_length=1, max_length=30)
+    prompts: list[IntentPrompt] = Field(default_factory=list, max_length=40)
+
+
+class PortfolioEnvelope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    intents: list[BuyerIntent] = Field(min_length=1, max_length=30)
+    topics: list[IntentTopic] = Field(min_length=1, max_length=30)
+    diagnostic_prompts: list[IntentPrompt] = Field(default_factory=list, max_length=20)
+    comparison_prompts: list[IntentPrompt] = Field(default_factory=list, max_length=20)
 
 
 @dataclass(frozen=True, slots=True)
 class PortfolioResult:
+    topics: tuple[DiscoveryTopic, ...] = ()
     prompts: tuple[dict, ...] = ()
-    errors: tuple[str, ...] = ()
+    intents: tuple[dict, ...] = ()
+    warnings: tuple[str, ...] = ()
     provider: str = ""
     model: str = ""
 
 
-def _batches(topics: list[DiscoveryTopic]) -> list[list[DiscoveryTopic]]:
-    size = VISIBILITY_TOPIC_BATCH_SIZE
-    return [topics[start : start + size] for start in range(0, len(topics), size)]
-
-
-def onboarding_brand_context(
-    *,
-    brand_name: str,
-    primary_market: str,
-    profile: dict,
-    competitors: list[str],
-) -> dict:
-    """Onboarding's confirmed facts, in the shape the shared builder reads.
-
-    There is no demand evidence yet at onboarding -- a demand snapshot needs
-    connected Search Console data -- so that key is simply absent and the
-    builder omits the block.
-    """
-    return {
-        "brand_name": brand_name,
-        "brand_aliases": [str(alias) for alias in profile.get("brand_aliases") or []],
-        "competitors": [{"name": name} for name in competitors],
-        "country_code": primary_market,
-        "language_code": str(profile.get("language_code") or ""),
-        "knowledge_base": {
-            **{
-                field: str(profile.get(field) or "")
-                for field in ("description", "positioning", "target_audience")
-            },
-            "products_services": list(profile.get("products_services") or []),
-        },
-        "business_context": {
-            field: profile.get(field)
-            for field in (
-                "business_model",
-                "buyer_register",
-                "category",
-                "category_terms",
-                "jobs_to_be_done",
-                "service_areas",
-                "buyer_roles",
-            )
-            if profile.get(field)
-        },
+def _provisional_facts(profile: dict, context: dict, sources: dict) -> dict:
+    inferred = {
+        key: value
+        for key, value in context.items()
+        if key != "field_sources" and sources.get(key) != "reviewed"
     }
+    for field in ("description", "positioning", "products_services", "target_audience"):
+        if profile.get(field):
+            inferred[field] = profile[field]
+    return inferred
 
 
-def _topic_request(
-    *,
-    brand_context: dict,
-    topics: list[DiscoveryTopic],
-    rejected: tuple[str, ...],
-    existing_prompts: tuple[str, ...] = (),
-) -> tuple[str, list[PromptSlot]]:
-    slots = build_prompt_slots(
-        topics=topics,
-        count=len(topics) * VISIBILITY_PROMPTS_PER_TOPIC,
-        cohort=PROMPT_COHORT_CORE,
-        brand_name=str(brand_context.get("brand_name") or ""),
-    )
-    return (
-        build_generation_user_message(
-            brand_context=brand_context,
-            slots=slots,
-            existing_prompts=list(existing_prompts),
-            rejected_reasons=rejected,
-        ),
-        slots,
-    )
+def _context_sections(profile: dict) -> tuple[dict, dict]:
+    context = profile.get("business_context") or {}
+    if not context:
+        return {}, {key: value for key, value in profile.items() if value}
+    sources = context.get("field_sources") or {}
+    reviewed = {
+        key: value for key, value in context.items() if sources.get(key) == "reviewed"
+    }
+    return reviewed, _provisional_facts(profile, context, sources)
 
 
-def _brand_request(
-    *,
-    brand_context: dict,
-    competitors: list[str],
-    topics: list[DiscoveryTopic],
-    count: int,
-    cohort: str,
-    rejected: tuple[str, ...] = (),
-    existing_prompts: tuple[str, ...] = (),
-) -> tuple[str, list[PromptSlot]]:
-    slots = build_prompt_slots(
-        topics=topics,
-        count=count,
-        cohort=cohort,
-        brand_name=str(brand_context.get("brand_name") or ""),
-        competitor_names=tuple(competitors),
-        unbound_brand_diagnostic=cohort == PROMPT_COHORT_BRAND_DIAGNOSTIC,
-    )
-    named_context = dict(brand_context)
-    if cohort != PROMPT_COHORT_COMPARISON:
-        named_context["competitors"] = []
-    return (
-        build_generation_user_message(
-            brand_context=named_context,
-            slots=slots,
-            existing_prompts=list(existing_prompts),
-            rejected_reasons=rejected,
-        ),
-        slots,
-    )
+def _validate_topic_links(
+    topic: IntentTopic, *, intents: dict[str, BuyerIntent], known_refs: set[str]
+) -> None:
+    if any(ref not in known_refs for ref in topic.evidence_refs):
+        raise ValueError("Unknown topic evidence reference")
+    if any(intent_id not in intents for intent_id in topic.intent_ids):
+        raise ValueError("Unknown topic intent reference")
+    if any(prompt.intent_id not in topic.intent_ids for prompt in topic.prompts):
+        raise ValueError("Core prompt is not linked to its topic intent")
 
 
-async def _call(
-    client: ModelGateway, *, system: str, user: str, slots: list[PromptSlot]
-) -> list[dict] | None:
-    """One generation call. ``None`` means the provider itself failed."""
-    try:
-        raw = await client.complete_structured_json(
-            system=system,
-            user=user,
-            schema_name="visibility_prompts",
-            schema=GenerationOutput.model_json_schema(),
+def _validate_links(
+    envelope: PortfolioEnvelope, known_refs: set[str]
+) -> dict[str, BuyerIntent]:
+    intents = {intent.id: intent for intent in envelope.intents}
+    if len(intents) != len(envelope.intents):
+        raise ValueError("Duplicate buyer intent IDs")
+    if any(
+        intent.buyer_stage not in BUYER_STAGES
+        or intent.decision_intent not in PROMPT_INTENT_LEGACY
+        for intent in envelope.intents
+    ):
+        raise ValueError("Invalid buyer stage or decision intent")
+    for topic in envelope.topics:
+        _validate_topic_links(topic, intents=intents, known_refs=known_refs)
+    named = [*envelope.diagnostic_prompts, *envelope.comparison_prompts]
+    if any(prompt.intent_id not in intents for prompt in named):
+        raise ValueError("Unknown named prompt intent reference")
+    return intents
+
+
+class _Admission:
+    def __init__(
+        self,
+        *,
+        intents: dict[str, BuyerIntent],
+        topics: list[DiscoveryTopic],
+        brand_terms: list[str],
+        competitor_terms: list[str],
+    ) -> None:
+        self.intents = intents
+        self.topics = topics
+        self.validator = PortfolioValidator(
+            topic_ids=frozenset(str(topic.topic_id) for topic in topics),
+            brand_terms=brand_terms,
+            competitor_terms=competitor_terms,
         )
-        planned, _ = parse_planned_output(raw, slots=slots)
-    except (ProviderError, GenerationOutputError, ValueError):
-        return None
-    return [
-        {
-            "slot_id": prompt.slot_id,
-            "topic_id": str(prompt.topic_id) if prompt.topic_id is not None else None,
-            "text": prompt.text,
-            "intent": prompt.intent,
-            "buyer_stage": prompt.buyer_stage,
-            "prompt_intent": prompt.prompt_intent,
-            "cohort": prompt.cohort,
-        }
-        for prompt in planned
-    ]
+        self.warnings: list[str] = []
+        self.core_count: dict[str, int] = {}
+        self.covered_intents: set[str] = set()
+        self.by_name = {topic.name.casefold(): topic for topic in topics}
 
-
-async def _gather_batches(
-    client: ModelGateway,
-    *,
-    batches: list[list[DiscoveryTopic]],
-    system: str,
-    brand_context: dict,
-    rejected: tuple[str, ...] = (),
-    existing_prompts: tuple[str, ...] = (),
-) -> list[tuple[list[DiscoveryTopic], list[dict] | None]]:
-    semaphore = asyncio.Semaphore(DISCOVERY_PROMPT_GENERATION_CONCURRENCY)
-
-    async def run(topics: list[DiscoveryTopic]) -> list[dict] | None:
-        async with semaphore:
-            user, slots = _topic_request(
-                brand_context=brand_context,
-                topics=topics,
-                rejected=rejected,
-                existing_prompts=existing_prompts,
-            )
-            return await _call(
-                client,
-                system=system,
-                user=user,
-                slots=slots,
-            )
-
-    results = await asyncio.gather(
-        *(run(batch) for batch in batches), return_exceptions=True
-    )
-    return [
-        (batch, None if isinstance(item, BaseException) else item)
-        for batch, item in zip(batches, results, strict=True)
-    ]
-
-
-@dataclass(frozen=True, slots=True)
-class _Absorbed:
-    """What ONE call admitted, separate from the shared validator's totals.
-
-    The cohorts run concurrently against one validator, so its accepted rows
-    answer for the whole portfolio, not for the caller.
-    Reading them to decide "did my cohort produce anything?" let a core
-    admission satisfy the named cohort's retry gate, and let the single
-    comparison prompt -- which is stamped with the leading topic's id -- mark
-    that topic as covered, so the organic cohort never retried it and never
-    reported it missing. Each call now decides from its own admissions.
-    """
-
-    reasons: tuple[str, ...] = ()
-    topics: tuple[str, ...] = ()
-
-    @property
-    def admitted(self) -> int:
-        return len(self.topics)
-
-
-def _absorb(
-    validator: PortfolioValidator,
-    rows: list[dict] | None,
-    *,
-    cohort: str,
-    limit: int | None = None,
-) -> _Absorbed:
-    reasons: list[str] = []
-    topics: list[str] = []
-    for row in rows or []:
-        if limit is not None and len(topics) >= limit:
-            break
-        error = validator.offer(row, cohort=cohort)
-        if error:
-            reasons.append(error)
-        else:
-            topics.append(str(row.get("topic_id") or ""))
-    return _Absorbed(tuple(reasons), tuple(topics))
-
-
-async def _generate_core(
-    client: ModelGateway,
-    validator: PortfolioValidator,
-    *,
-    topics: list[DiscoveryTopic],
-    brand_context: dict,
-    business_model: str,
-) -> tuple[list[str], list[str]]:
-    """Generate for every topic, then retry only the topics that came up empty.
-
-    Returns the per-topic coverage warnings and the raw rejection reasons. The
-    reasons used to be consumed by the retry and then dropped, which is why a
-    portfolio that lost its whole organic cohort reported nothing about why.
-    """
-    system = cohort_system_prompt(business_model)
-    results = await _gather_batches(
-        client,
-        batches=_batches(topics),
-        system=system,
-        brand_context=brand_context,
-    )
-    reasons: list[str] = []
-    covered: set[str] = set()
-    for _batch, rows in results:
-        absorbed = _absorb(validator, rows, cohort=PROMPT_COHORT_CORE)
-        reasons.extend(absorbed.reasons)
-        covered.update(absorbed.topics)
-
-    missing = [topic for topic in topics if str(topic.topic_id) not in covered]
-    if missing:
-        retried = await _gather_batches(
-            client,
-            batches=_batches(missing),
-            system=system,
-            brand_context=brand_context,
-            rejected=tuple(dict.fromkeys(reasons))[:8],
-            existing_prompts=tuple(row["text"] for row in validator.accepted),
-        )
-        for _batch, rows in retried:
-            absorbed = _absorb(validator, rows, cohort=PROMPT_COHORT_CORE)
-            reasons.extend(absorbed.reasons)
-            covered.update(absorbed.topics)
-
-    warnings = [
-        f"topic_without_prompts:{topic.name}"
-        for topic in topics
-        if str(topic.topic_id) not in covered
-    ]
-    if not covered:
-        # The organic cohort is the portfolio: without it the user is left with
-        # the two mandatory brand prompts and no explanation.
-        warnings.append("core_prompts_empty")
-    return warnings, reasons
-
-
-async def _generate_named(
-    client: ModelGateway,
-    validator: PortfolioValidator,
-    *,
-    topics: list[DiscoveryTopic],
-    brand_context: dict,
-    business_model: str,
-    competitors: list[str],
-) -> list[str]:
-    """Brand-diagnostic and comparison cohorts. Never scored, only reported."""
-    cohorts: list[tuple[str, int]] = [
-        (PROMPT_COHORT_BRAND_DIAGNOSTIC, VISIBILITY_BRAND_PROMPT_COUNT)
-    ]
-    if competitors:
-        cohorts.append((PROMPT_COHORT_COMPARISON, VISIBILITY_COMPARISON_PROMPT_COUNT))
-    reasons: list[str] = []
-    for cohort, count in cohorts:
-        attempt = partial(
-            _named_attempt,
-            client,
-            validator,
-            topics=topics,
-            brand_context=brand_context,
-            business_model=business_model,
-            competitors=competitors,
+    def offer(self, prompt: IntentPrompt, *, cohort: str, topic_id: str = "") -> None:
+        intent = self.intents[prompt.intent_id]
+        error = self.validator.offer(
+            {
+                "text": prompt.text,
+                "topic_id": topic_id,
+                "intent": PROMPT_INTENT_LEGACY[intent.decision_intent],
+                "buyer_stage": intent.buyer_stage,
+                "prompt_intent": intent.decision_intent,
+                "slot_id": prompt.intent_id,
+            },
             cohort=cohort,
-            count=count,
         )
-        rows, absorbed = await attempt()
-        cohort_reasons = list(absorbed.reasons)
-        # These cohorts had no retry at all, so a model that simply forgot to
-        # name the brand lost the whole cohort -- and with the organic cohort
-        # also empty that is a portfolio of nothing, which is what shipped as
-        # "Initial prompt generation failed". One bounded retry, told what was
-        # wrong, is the same deal the core cohort already gets. A provider
-        # failure (``rows is None``) produces no rejection reasons at all, so
-        # it has to arm the retry itself; a well-formed empty response is a
-        # real answer and is left alone.
-        if not absorbed.admitted and (rows is None or cohort_reasons):
-            _, retried = await attempt(
-                rejected=tuple(dict.fromkeys(cohort_reasons))[:8]
-            )
-            cohort_reasons.extend(retried.reasons)
-        reasons.extend(cohort_reasons)
-    return reasons
+        if error:
+            self.warnings.append(f"prompt_rejected:{error}")
+        elif cohort == PROMPT_COHORT_CORE:
+            self.core_count[topic_id] = self.core_count.get(topic_id, 0) + 1
+            self.covered_intents.add(prompt.intent_id)
+
+    def admit_core(self, candidates: list[IntentTopic]) -> None:
+        admitted = self._admitted_core_topics(candidates)
+        if not admitted:
+            return
+        for depth in range(max(len(candidate.prompts) for candidate, _ in admitted)):
+            if sum(self.core_count.values()) >= VISIBILITY_MAX_ORGANIC_PROMPTS:
+                self.warnings.append("organic_capacity_reached")
+                break
+            for candidate, topic_id in admitted:
+                if depth >= len(candidate.prompts):
+                    continue
+                if sum(self.core_count.values()) >= VISIBILITY_MAX_ORGANIC_PROMPTS:
+                    break
+                self.offer(
+                    candidate.prompts[depth],
+                    cohort=PROMPT_COHORT_CORE,
+                    topic_id=topic_id,
+                )
+        for _, topic_id in admitted:
+            if not self.core_count.get(topic_id):
+                self.warnings.append("empty_topic_dropped")
+
+    def _admitted_core_topics(
+        self, candidates: list[IntentTopic]
+    ) -> list[tuple[IntentTopic, str]]:
+        admitted: list[tuple[IntentTopic, str]] = []
+        for candidate in candidates:
+            name = " ".join(candidate.name.split()).casefold()
+            topic = self.by_name.pop(name, None)
+            if topic is None:
+                self.warnings.append("topic_rejected")
+                continue
+            admitted.append((candidate, str(topic.topic_id)))
+        return admitted
+
+    def admit_named(self, envelope: PortfolioEnvelope) -> None:
+        for prompt in envelope.diagnostic_prompts:
+            if prompt.intent_id in self.covered_intents:
+                self.offer(prompt, cohort=PROMPT_COHORT_BRAND_DIAGNOSTIC)
+        for prompt in envelope.comparison_prompts:
+            if prompt.intent_id in self.covered_intents:
+                self.offer(prompt, cohort=PROMPT_COHORT_COMPARISON)
+
+    def result(self, envelope: PortfolioEnvelope) -> PortfolioResult:
+        surviving_topics = tuple(
+            topic for topic in self.topics if self.core_count.get(str(topic.topic_id))
+        )
+        if not surviving_topics or not self.covered_intents:
+            raise ValueError("No valid intent-linked core portfolio remains")
+        self.admit_named(envelope)
+        return PortfolioResult(
+            topics=surviving_topics,
+            prompts=tuple(
+                {
+                    **{key: value for key, value in row.items() if key != "slot_id"},
+                    "buyer_intent_id": row["slot_id"],
+                }
+                for row in self.validator.accepted
+            ),
+            intents=tuple(
+                intent.model_dump()
+                for intent in envelope.intents
+                if intent.id in self.covered_intents
+            ),
+            warnings=tuple(dict.fromkeys(self.warnings)),
+        )
 
 
-async def _named_attempt(
-    client: ModelGateway,
-    validator: PortfolioValidator,
+def _admit(
+    envelope: PortfolioEnvelope,
     *,
-    topics: list[DiscoveryTopic],
-    brand_context: dict,
-    business_model: str,
-    competitors: list[str],
-    cohort: str,
-    count: int,
-    rejected: tuple[str, ...] = (),
-) -> tuple[list[dict] | None, _Absorbed]:
-    """One call for one named cohort, with its raw rows and its own admissions.
-
-    The rows come back so the caller can tell a provider failure (``None``)
-    from a well-formed response that simply admitted nothing.
-    """
-    user, slots = _brand_request(
-        brand_context=brand_context,
-        competitors=competitors,
-        topics=topics[:VISIBILITY_TOPIC_NAME_LIMIT],
-        count=count,
-        cohort=cohort,
-        rejected=rejected,
-        existing_prompts=tuple(row["text"] for row in validator.accepted),
-    )
-    rows = await _call(
-        client,
-        system=cohort_system_prompt(business_model, cohort),
-        user=user,
-        slots=slots,
-    )
-    return rows, _absorb(validator, rows, cohort=cohort, limit=count)
-
-
-def _validator(
-    *,
-    brand_terms: list[str],
-    competitors: list[str],
-    competitor_terms: list[str] | None,
-    topics: list[DiscoveryTopic],
-) -> PortfolioValidator:
-    return PortfolioValidator(
-        topic_ids=frozenset(str(topic.topic_id) for topic in topics),
-        brand_terms=brand_terms,
-        competitor_terms=competitor_terms or competitors,
-    )
-
-
-async def _generate_all(
-    client: ModelGateway,
-    validator: PortfolioValidator,
-    *,
-    topics: list[DiscoveryTopic],
     brand_name: str,
-    primary_market: str,
-    profile: dict,
-    competitors: list[str],
-) -> list[str]:
-    business_model = str(profile.get("business_model") or "")
-    brand_context = onboarding_brand_context(
-        brand_name=brand_name,
-        primary_market=primary_market,
-        profile=profile,
-        competitors=competitors,
+    brand_terms: list[str],
+    competitor_terms: list[str],
+    category_terms: list[str],
+    known_refs: set[str],
+) -> PortfolioResult:
+    intents = _validate_links(envelope, known_refs)
+    topics = admit_topics(
+        [
+            {
+                "name": topic.name,
+                "description": topic.description,
+                "source_refs": topic.evidence_refs,
+            }
+            for topic in envelope.topics
+        ],
+        known_refs=known_refs,
+        forbidden_terms=[brand_name, *competitor_terms],
+        business_terms=category_terms,
     )
-    # Concurrent because the cohorts are independent, and because running them
-    # in sequence meant a slow organic cohort could burn the whole budget and
-    # leave the brand and comparison cohorts ungenerated.
-    core, named = await asyncio.gather(
-        _generate_core(
-            client,
-            validator,
-            topics=topics,
-            brand_context=brand_context,
-            business_model=business_model,
-        ),
-        _generate_named(
-            client,
-            validator,
-            topics=topics,
-            brand_context=brand_context,
-            business_model=business_model,
-            competitors=competitors,
-        ),
+    admission = _Admission(
+        intents=intents,
+        topics=topics,
+        brand_terms=brand_terms,
+        competitor_terms=competitor_terms,
     )
-    warnings, core_reasons = core
-    return [*warnings, *_reason_codes([*core_reasons, *named])]
-
-
-def _reason_codes(reasons: list[str]) -> list[str]:
-    """The distinct rejection reasons, bounded, as reportable codes."""
-    return [f"prompt_rejected:{reason}" for reason in dict.fromkeys(reasons)][:5]
-
-
-def _cap_branded_share(accepted: list[dict]) -> tuple[list[dict], bool]:
-    """Trim the named cohorts so they never dominate a thin organic portfolio.
-
-    The named counts are fixed and the organic count is not, so a portfolio
-    that lost most of its organic cohort shipped as mostly brand prompts --
-    a set that measures the brand answering about itself. Capping the SHARE
-    (rather than raising or lowering the fixed counts) keeps a healthy
-    portfolio exactly as it is today and only bites when the organic side came
-    back thin.
-
-    The share is of the FINAL portfolio -- organic plus branded -- which is
-    what "a third of the set is brand prompts" means to anyone reading it.
-    Taking it as a fraction of the organic count alone made the cap markedly
-    tighter than documented: six organic prompts allowed only two branded when
-    three of nine is 33%, comfortably inside the limit, so a healthy portfolio
-    was trimmed and flagged for no reason.
-
-    Trims from the end so the deterministic generation order decides which
-    named prompts survive, and never drops below the diagnostic floor.
-    """
-    named = [row for row in accepted if row.get("cohort") in _NAMED_COHORTS]
-    organic = [row for row in accepted if row.get("cohort") not in _NAMED_COHORTS]
-    if not named:
-        return accepted, False
-    # Largest n with n / (organic + n) <= share, rearranged so the division is
-    # by the constant rather than by a total that depends on n.
-    allowed = max(
-        VISIBILITY_MIN_BRANDED_PROMPTS,
-        floor(
-            len(organic)
-            * VISIBILITY_MAX_BRANDED_SHARE
-            / (1 - VISIBILITY_MAX_BRANDED_SHARE)
-        ),
-    )
-    if len(named) <= allowed:
-        return accepted, False
-    keep = {id(row) for row in named[:allowed]}
-    return [
-        row
-        for row in accepted
-        if row.get("cohort") not in _NAMED_COHORTS or id(row) in keep
-    ], True
+    admission.admit_core(envelope.topics)
+    return admission.result(envelope)
 
 
 async def generate_portfolio(
@@ -523,54 +272,69 @@ async def generate_portfolio(
     primary_market: str,
     profile: dict,
     competitors: list[str],
-    competitor_terms: list[str] | None,
-    topics: list[DiscoveryTopic],
+    competitor_terms: list[str],
+    harvest: OfferingHarvest,
+    page_evidence: list[dict[str, str]],
 ) -> PortfolioResult:
-    """Build the initial portfolio. Fails only when no topic produced a prompt."""
-    try:
-        client = create_model_gateway()
-    except AgentNotConfiguredError:
-        return PortfolioResult(errors=("generation_unavailable",))
-
-    validator = _validator(
-        brand_terms=brand_terms,
-        competitors=competitors,
-        competitor_terms=competitor_terms,
-        topics=topics,
+    """Ask once for the complete hierarchy, with one bounded repair if needed."""
+    client = create_model_gateway()
+    reviewed, inferred = _context_sections(profile)
+    known_refs = {node.ref for node in harvest.nodes} | {
+        str(item["evidence_ref"]) for item in page_evidence
+    }
+    if reviewed:
+        known_refs.add(CONFIRMED_CONTEXT_REF)
+    if inferred:
+        known_refs.add(PROVISIONAL_CONTEXT_REF)
+    user = json.dumps(
+        {
+            "brand_name": brand_name,
+            "market": primary_market,
+            "confirmed_context": {"ref": CONFIRMED_CONTEXT_REF, "facts": reviewed},
+            "provisional_research_context": {
+                "ref": PROVISIONAL_CONTEXT_REF,
+                "facts": inferred,
+                "review_state": "unreviewed",
+            },
+            "accepted_competitors": competitors,
+            "offering_harvest": harvest.serialize(),
+            "research_evidence": page_evidence,
+        },
+        ensure_ascii=False,
     )
-    warnings: list[str] = []
-    try:
-        async with asyncio.timeout(
-            brand_discovery_settings.portfolio_generation_timeout_seconds
-        ):
-            warnings = await _generate_all(
-                client,
-                validator,
-                topics=topics,
-                brand_name=brand_name,
-                primary_market=primary_market,
-                profile=profile,
-                competitors=competitors,
-            )
-    except TimeoutError:
-        warnings.append("generation_timeout")
+    result: PortfolioResult | None = None
 
-    accepted, capped = _cap_branded_share(validator.accepted)
-    if capped:
-        warnings.append(VISIBILITY_BRANDED_SHARE_WARNING)
-    if not accepted:
-        return PortfolioResult(
-            errors=tuple(warnings) or ("generation_failed",),
-            provider=client.base_url_host,
-            model=client.model,
+    def validate(envelope: PortfolioEnvelope) -> None:
+        nonlocal result
+        result = _admit(
+            envelope,
+            brand_name=brand_name,
+            brand_terms=brand_terms,
+            competitor_terms=competitor_terms,
+            category_terms=[
+                profile.get("category") or "",
+                *(profile.get("category_aliases") or []),
+            ],
+            known_refs=known_refs,
         )
+
+    await complete_validated_envelope(
+        client,
+        system=onboarding_portfolio_system_prompt(),
+        user=user,
+        schema_name="visibility_intent_portfolio",
+        envelope_type=PortfolioEnvelope,
+        validate=validate,
+        maximum_attempts=2,
+        retry_provider_errors=False,
+    )
+    if result is None:
+        raise RuntimeError("Portfolio admission did not complete")
     return PortfolioResult(
-        prompts=tuple(
-            ordered_portfolio(
-                accepted, topic_ids=[str(topic.topic_id) for topic in topics]
-            )
-        ),
-        errors=tuple(dict.fromkeys(warnings)),
+        topics=result.topics,
+        prompts=result.prompts,
+        intents=result.intents,
+        warnings=result.warnings,
         provider=client.base_url_host,
         model=client.model,
     )

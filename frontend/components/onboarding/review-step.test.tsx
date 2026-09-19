@@ -18,7 +18,8 @@ describe('ReviewStep competitor limit', () => {
         maximumCompetitors={5}
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
-        onEditCompetitorDomain={vi.fn()}
+        onEditCompetitor={vi.fn()}
+        onRemoveCompetitor={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
     );
@@ -33,7 +34,7 @@ describe('ReviewStep competitor limit', () => {
     expect(websiteGroup.parentElement).toBe(competitorGroup.parentElement);
   });
 
-  it('shows only the competitor URL beneath its name', () => {
+  it('shows a competitor logo and website without its name', () => {
     const { container } = render(
       <ReviewStep
         domains={[]}
@@ -43,25 +44,23 @@ describe('ReviewStep competitor limit', () => {
             name: 'Kmart Australia',
             aliases: [],
             domains: ['kmart.com.au'],
-            reasoning: 'A long generated competitor explanation.',
-            evidence_urls: ['https://example.com/evidence'],
             selected: true,
           },
         ]}
         maximumCompetitors={5}
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
-        onEditCompetitorDomain={vi.fn()}
+        onEditCompetitor={vi.fn()}
+        onRemoveCompetitor={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
     );
 
-    expect(screen.queryByText('A long generated competitor explanation.')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Supporting links available/)).not.toBeInTheDocument();
-    expect(screen.queryByText('https://example.com/evidence')).not.toBeInTheDocument();
     expect(container.querySelector('img')?.getAttribute('src')).toContain(
       'https://logos.example/kmart.com.au',
     );
+    expect(screen.getByRole('button', { name: 'Kmart Australia' })).toBeInTheDocument();
+    expect(screen.getByText('kmart.com.au')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://kmart.com.au' })).toHaveAttribute(
       'href',
       'https://kmart.com.au',
@@ -84,7 +83,8 @@ describe('ReviewStep competitor limit', () => {
         maximumCompetitors={5}
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
-        onEditCompetitorDomain={vi.fn()}
+        onEditCompetitor={vi.fn()}
+        onRemoveCompetitor={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
     );
@@ -109,7 +109,8 @@ describe('ReviewStep competitor limit', () => {
         maximumCompetitors={5}
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
-        onEditCompetitorDomain={vi.fn()}
+        onEditCompetitor={vi.fn()}
+        onRemoveCompetitor={vi.fn()}
         onAddCompetitor={add}
       />,
     );
@@ -120,5 +121,66 @@ describe('ReviewStep competitor limit', () => {
     expect(button).toBeDisabled();
     await userEvent.click(button);
     expect(add).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Competitor 1' })).toBeEnabled();
+  });
+
+  it('accepts a manual name and domain before the choice is submitted', async () => {
+    const edit = vi.fn();
+    render(
+      <ReviewStep
+        domains={[]}
+        competitors={[{ id: 'manual', name: '', aliases: [], domains: [], selected: true }]}
+        maximumCompetitors={5}
+        resolutionError="Could not resolve website for Peer: peer.com"
+        onToggleDomain={vi.fn()}
+        onToggleCompetitor={vi.fn()}
+        onEditCompetitor={edit}
+        onRemoveCompetitor={vi.fn()}
+        onAddCompetitor={vi.fn()}
+      />,
+    );
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Competitor name' }), 'Peer');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Website for New competitor' }),
+      'peer.com',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(edit).toHaveBeenCalledWith(0, 'Peer', 'peer.com');
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not resolve website for Peer');
+  });
+
+  it('can cancel an unsaved fifth manual choice and free the selection slot', async () => {
+    const remove = vi.fn();
+    const selected = Array.from({ length: 4 }, (_, index) => ({
+      id: `peer-${index}`,
+      name: `Peer ${index}`,
+      aliases: [],
+      domains: [`peer-${index}.com`],
+      selected: true,
+    }));
+    const props = {
+      domains: [],
+      maximumCompetitors: 5,
+      onToggleDomain: vi.fn(),
+      onToggleCompetitor: vi.fn(),
+      onEditCompetitor: vi.fn(),
+      onRemoveCompetitor: remove,
+      onAddCompetitor: vi.fn(),
+    };
+    const { rerender } = render(
+      <ReviewStep
+        {...props}
+        competitors={[
+          ...selected,
+          { id: 'manual', name: '', aliases: [], domains: [], selected: true },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(remove).toHaveBeenCalledWith(4);
+    rerender(<ReviewStep {...props} competitors={selected} />);
+    expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled();
   });
 });

@@ -5,7 +5,9 @@
 Onboarding establishes the owned website, market, reviewed company profile and
 accepted competitors. Discovery output is evidence-backed suggestion, not
 confirmed business truth. It creates the project and its starting portfolio
-only after the user confirms positioning, audience and products/services.
+only after the user confirms the visible category, buyer type and market scope
+choices where known. Generated positioning, audience and offerings remain
+unreviewed until edited in the project.
 [Workspace access](workspace-access.md) owns identity and project selection;
 [prompts and Visibility](visibility-prompt.md) owns the resulting portfolio.
 
@@ -15,24 +17,34 @@ The [discovery API](../backend/app/api/brand_discoveries.py) accepts a
 workspace-authorized, idempotent discovery request and returns persisted
 progress. [Discovery](../backend/app/domain/projects/discovery.py) and the
 [onboarding owner](../backend/app/domain/projects/onboarding/) coordinate
-bounded first-party acquisition, identity research and competitor qualification.
+bounded first-party acquisition, identity research and provisional competitor
+suggestions.
 The [worker](../backend/app/workers/brand_discovery_worker.py) claims PostgreSQL
 tasks with leases and commits before provider I/O.
+Identity and competitor model phases each have a bounded wall-clock budget;
+timeouts degrade to reviewable evidence. Portfolio generation has its own
+per-attempt timeout and at most two durable attempts. Non-retryable provider
+errors terminate immediately.
 
 The resolved homepage is reused. First-party pages and independent research
-are separate bounded evidence sources. Structured identity output and
-competitive signatures feed brand-neutral competitor searches; candidates must
-cite retrieved evidence, match the buyer/market and resolve on their declared
-non-owned domain. Editorial publishers can supply evidence about a competitor
-but do not become that competitor by being the source. Schema and reference
-validation remain mandatory even when a provider supports native structured
-output. Bounded repair handles contract failures; retryable provider failures
-use the configured backoff. Warnings preserve degraded research states.
+are separate bounded evidence sources. One optional category-and-market search
+supplies snippets to one configured model request for up to ten provisional
+competitor names and domains. Search failure warns but does not block model
+suggestions. Name/domain cleanup excludes owned and reference sites; it does
+not prove commercial equivalence. The review screen starts with none selected,
+permits up to five tracked choices and manual name/domain additions, and keeps
+selected choices removable at capacity. Only selected domains are resolved
+before completion acceptance, outside the discovery lock; failures leave the
+choice editable. Bounded repair handles model contract failures, and warnings
+preserve degraded research states.
 
 [BrandResearchSnapshot](../backend/app/models/discovery.py) and
 [discovery records](../backend/app/models/discovery.py) retain the research
 manifest, model provenance and progress. BrandProfile field provenance records
-origin, review state, reviewer and review time. Reads never repeat discovery.
+origin, review state, reviewer and review time. The Projects-owned
+`BusinessContext` serializes confirmed and inferred facets into that profile;
+unknown facets remain absent, and its field sources distinguish visible choices
+from inferred values. Reads never repeat discovery.
 
 ## Confirmation and asynchronous completion
 
@@ -43,13 +55,27 @@ and queues a brand-completion task in one transaction. A rollback leaves no
 partial shell. The response can carry the committed project ID while portfolio
 generation is still running; no initial Site Health crawl is started.
 
-The worker selects topics from the confirmed profile, accepted competitors,
-persisted offering harvest and page evidence. If topic selection is unavailable
-or insufficient, confirmed products/services supply bounded starting topics.
-It then generates prompts, re-locks the discovery and persists topics, prompts
-and terminal completion together. A terminal-state guard and prompt uniqueness
-prevent repeated delivery from creating a second portfolio. Same-key replays
-return the same shell; exhausted work has a completion-specific failure.
+After the business context and competitor choices are confirmed, the worker
+makes one structured portfolio request with the confirmed context, accepted
+competitors, offering harvest and persisted research. Request-local buyer
+intents link topics to core prompts and may also link diagnostic and comparison
+prompts. Code validates those links, evidence references and prompt cohorts,
+then admits supported topics and prompts. An empty valid core portfolio uses
+the recoverable completion-failure flow. Schema or admission failure can
+receive one structured repair attempt. The worker re-locks the discovery and
+persists topics, prompts and terminal completion together. Generated topics
+join any existing project topics before prompt binding; unresolved core or
+explicitly topic-bound prompts reject the transaction. A terminal-state guard
+and prompt uniqueness prevent repeated delivery from creating a second
+portfolio. Same-key replays return the same shell.
+
+The request separates reviewed category and market choices from provisional
+research prose. Both have explicit source references; the project market is
+supplied as a confirmed locale fact, while language may use its default.
+BrandProfile remains the
+store for offerings, positioning and audience, while Project owns locale.
+The Projects-owned BusinessContext composes those facts for generation without
+duplicating their storage.
 
 The [onboarding screen](../frontend/components/onboarding/onboarding-screen.tsx)
 enters the project as soon as a committed project ID is available. It seeds the

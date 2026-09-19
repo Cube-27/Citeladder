@@ -58,3 +58,38 @@ async def test_native_adapter_uses_responses_contract_without_leaking_key() -> N
     assert result.provider_adapter == "openai_responses"
     assert result.returned_model == "gpt-test-2026-08-01"
     assert result.usage["total_tokens"] == 7
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["json_object", "prompt_json"])
+async def test_native_adapter_honors_explicit_structured_mode(mode: str) -> None:
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "output": [
+                    {
+                        "type": "message",
+                        "content": [{"type": "output_text", "text": "{}"}],
+                    }
+                ]
+            },
+        )
+
+    settings = _settings().model_copy(update={"structured_output_mode": mode})
+    gateway = create_model_gateway(settings, transport=httpx.MockTransport(handler))
+    await gateway.complete_structured_json(
+        system="system",
+        user="user",
+        schema_name="fixture",
+        schema={"type": "object"},
+    )
+
+    if mode == "prompt_json":
+        assert "text" not in captured
+    else:
+        assert captured["text"] == {"format": {"type": "json_object"}}
+    assert "schema" in str(captured["input"])

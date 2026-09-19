@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
-from time import perf_counter
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,14 +16,17 @@ from app.core.config.brand_discovery import (
     TASK_KIND_BRAND_COMPLETION,
     brand_discovery_settings,
 )
-from app.domain.projects.discovery_schemas import (
-    BrandDiscoveryComplete,
-    DiscoveryTopic,
-)
+from app.core.config.brand_evidence import BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS
+from app.domain.projects.discovery_schemas import BrandDiscoveryComplete
 from app.domain.projects.offering_harvest import OfferingHarvest, OfferingNode
+from app.domain.projects.onboarding.normalization import (
+    InvalidWebsiteUrl,
+    normalize_website_url,
+)
 from app.domain.projects.onboarding.service import (
     IDEMPOTENCY_KEY_REQUIRED,
     BrandDiscoveryError,
+    _confirmed_domains,
     _confirmed_portfolio_inputs,
     _generate_confirmed_portfolio,
     _persist_generated_prompts,
@@ -31,8 +34,10 @@ from app.domain.projects.onboarding.service import (
     _progress,
     get_discovery,
 )
-from app.domain.projects.onboarding.topic_admission import confirmed_offering_topics
-from app.domain.projects.onboarding.topic_selection import select_topics
+from app.domain.projects.onboarding.site_resolution import (
+    SiteNotFoundError,
+    resolve_site,
+)
 from app.models.discovery import (
     BrandDiscovery,
     BrandDiscoveryTask,
@@ -82,6 +87,7 @@ async def _ensure_completion_task(
                 discovery_id=row.id,
                 workspace_id=workspace_id,
                 task_kind=TASK_KIND_BRAND_COMPLETION,
+                max_attempts=brand_discovery_settings.completion_maximum_attempts,
                 idempotency_key=f"brand-completion:{row.id}",
             )
         )
@@ -102,6 +108,16 @@ async def complete_discovery(
     if not key:
         raise BrandDiscoveryError(IDEMPOTENCY_KEY_REQUIRED)
     row = await get_discovery(
+        session, workspace_id=workspace_id, discovery_id=discovery_id
+    )
+    if row.status == DISCOVERY_STATUS_READY and not row.input_data.get(
+        "completion_idempotency_key"
+    ):
+        # The read transaction must end before any selected-domain network I/O.
+        owned = set(_confirmed_domains(payload.domains))
+        await session.commit()
+        await _resolve_selected_competitors(payload, owned_domains=owned)
+    row = await get_discovery(
         session,
         workspace_id=workspace_id,
         discovery_id=discovery_id,
@@ -113,14 +129,13 @@ async def complete_discovery(
     if row.status != DISCOVERY_STATUS_READY:
         raise BrandDiscoveryError("Discovery is not ready for completion")
 
-    domains, competitors, _, _, _, profile_sources = _confirmed_portfolio_inputs(
+    domains, competitors, _, _, profile_sources = _confirmed_portfolio_inputs(
         row, payload=payload
     )
-    topics: list[DiscoveryTopic] = []
     row.domains = domains
     row.competitors = competitors
     row.profile = payload.profile.model_dump()
-    row.topics = [topic.model_dump(mode="json") for topic in topics]
+    row.topics = []
     row.input_data = {
         **row.input_data,
         "completion_idempotency_key": key,
@@ -136,12 +151,34 @@ async def complete_discovery(
         workspace_id=workspace_id,
         row=row,
         payload=payload,
-        discovery_topics=topics,
         profile_sources=profile_sources,
     )
     await _ensure_completion_task(session, row=row, workspace_id=workspace_id)
     await session.commit()
     return row, None
+
+
+async def _resolve_selected_competitors(
+    payload: BrandDiscoveryComplete, *, owned_domains: set[str]
+) -> None:
+    for competitor in payload.competitors:
+        if not competitor.domains:
+            raise BrandDiscoveryError(
+                f"Could not resolve website for {competitor.name}: add a domain"
+            )
+        for domain in competitor.domains:
+            try:
+                url, normalized = normalize_website_url(domain)
+                if normalized in owned_domains:
+                    raise SiteNotFoundError("owned_domain")
+                async with asyncio.timeout(BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS):
+                    resolved = await resolve_site(domain, url)
+                if resolved.registrable_domain != normalized:
+                    raise SiteNotFoundError("domain_redirected")
+            except (InvalidWebsiteUrl, SiteNotFoundError, TimeoutError) as exc:
+                raise BrandDiscoveryError(
+                    f"Could not resolve website for {competitor.name}: {domain}"
+                ) from exc
 
 
 async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
@@ -154,7 +191,6 @@ async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
     (
         domains,
         competitors,
-        _,
         brand_name,
         primary_market,
         _,
@@ -162,34 +198,15 @@ async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
     harvest, page_evidence = await _topic_context(session, row=row)
     await session.commit()
 
-    topic_started = perf_counter()
-    topic_selection = await select_topics(
-        brand_name=brand_name,
-        brand_aliases=[],
-        competitors=[str(item["name"]) for item in competitors],
-        business_category=payload.profile.category,
-        business_aliases=[
-            *payload.profile.category_aliases,
-            *payload.profile.category_options,
-        ],
-        sector=payload.profile.sector,
-        business_model=payload.profile.business_model,
-        market=primary_market,
-        harvest=harvest,
-        page_evidence=page_evidence,
-        allow_model_prior=payload.profile.has_reliable_prior(),
-    )
-    topic_duration_ms = int((perf_counter() - topic_started) * 1000)
-    topics = topic_selection.topics or confirmed_offering_topics(
-        payload.profile.products_services
-    )
-    prompts, provider, model, warnings = await _generate_confirmed_portfolio(
+    portfolio = await _generate_confirmed_portfolio(
         payload=payload,
-        topics=topics,
         brand_name=brand_name,
         primary_market=primary_market,
+        language_code=str(row.input_data.get("language_code") or ""),
         competitors=competitors,
         domains=domains,
+        harvest=harvest,
+        page_evidence=page_evidence,
     )
     row = await get_discovery(
         session,
@@ -202,22 +219,18 @@ async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
     row.domains = domains
     row.competitors = competitors
     row.profile = payload.profile.model_dump()
-    row.topics = [topic.model_dump(mode="json") for topic in topics]
-    row.prompt_suggestions = prompts
-    row.warnings = list(
-        dict.fromkeys([*row.warnings, *topic_selection.warnings, *warnings])
-    )
+    row.topics = [topic.model_dump(mode="json") for topic in portfolio.topics]
+    row.prompt_suggestions = list(portfolio.prompts)
+    row.warnings = list(dict.fromkeys([*row.warnings, *portfolio.warnings]))
     await _persist_generated_prompts(
         session,
         workspace_id=workspace_id,
         row=row,
-        prompts=prompts,
-        discovery_topics=topics,
-        prompt_provider=provider,
-        prompt_model=model,
-        topic_provider=topic_selection.provider,
-        topic_model=topic_selection.model,
-        topic_duration_ms=topic_duration_ms,
+        prompts=list(portfolio.prompts),
+        discovery_topics=list(portfolio.topics),
+        prompt_provider=portfolio.provider,
+        prompt_model=portfolio.model,
+        intents=list(portfolio.intents),
     )
     row.status = DISCOVERY_STATUS_PROJECT_CREATED
     row.stage = "complete"
@@ -225,7 +238,7 @@ async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
         phase="complete",
         completed_steps=DISCOVERY_PROGRESS_TOTAL_STEPS,
         competitors_found=len(row.competitors),
-        prompts_prepared=len(prompts),
+        prompts_prepared=len(portfolio.prompts),
         previous=row.progress,
     )
     await session.commit()
@@ -276,16 +289,24 @@ def _offering_harvest(value: object) -> OfferingHarvest:
 def _page_evidence(value: object) -> list[dict[str, str]]:
     items = value if isinstance(value, list) else []
     return [
-        {
-            "evidence_ref": str(item.get("evidence_ref") or ""),
-            "url": str(item.get("source_url") or ""),
-            "title": str(item.get("title") or ""),
-            "text": str(item.get("text") or "")[
-                : brand_discovery_settings.topic_evidence_max_chars_per_page
-            ],
-        }
+        _page_evidence_item(item)
         for item in items
-        if isinstance(item, dict)
-        and item.get("source_kind") == "first_party"
-        and item.get("evidence_ref")
+        if isinstance(item, dict) and item.get("evidence_ref")
     ]
+
+
+def _page_evidence_item(item: dict) -> dict[str, str]:
+    fields = {
+        "evidence_ref": "evidence_ref",
+        "url": "source_url",
+        "title": "title",
+        "source_kind": "source_kind",
+        "provider": "provider",
+        "query_ref": "query_ref",
+        "acquired_at": "acquired_at",
+    }
+    serialized = {key: str(item.get(source) or "") for key, source in fields.items()}
+    serialized["text"] = str(item.get("text") or "")[
+        : brand_discovery_settings.topic_evidence_max_chars_per_page
+    ]
+    return serialized

@@ -163,7 +163,8 @@ describe('IcpConfirmation', () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ market_scope: 'regional' }));
     rerender(<IcpConfirmation profile={profile({ market_scope: 'local' })} onChange={onChange} />);
 
-    expect(screen.getByRole('radio', { name: 'Regional' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Locally' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Regional' })).toBeVisible();
     expect(screen.getByRole('radio', { name: 'Worldwide' })).toBeVisible();
     expect(screen.getByRole('radio', { name: 'Businesses' })).toBeVisible();
     expect(screen.getByText('What you sell')).toBeVisible();

@@ -28,7 +28,7 @@ def _client(handler) -> DefaultAgentClient:
 
 
 @pytest.mark.asyncio
-async def test_complete_json_uses_json_mode_without_key_in_body() -> None:
+async def test_complete_json_uses_prompt_mode_without_key_in_body() -> None:
     captured: dict[str, object] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -44,7 +44,8 @@ async def test_complete_json_uses_json_mode_without_key_in_body() -> None:
     assert captured["authorization"] == "Bearer test-key"
     body = captured["body"]
     assert isinstance(body, dict)
-    assert body["response_format"] == {"type": "json_object"}
+    assert "response_format" not in body
+    assert "valid JSON object" in body["messages"][1]["content"]
     assert body["max_tokens"] == 123
     assert "test-key" not in json.dumps(body)
 
@@ -63,7 +64,7 @@ async def test_complete_json_removes_markdown_fences() -> None:
 
 
 @pytest.mark.asyncio
-async def test_complete_structured_json_requests_strict_schema() -> None:
+async def test_complete_structured_json_prompts_with_schema_by_default() -> None:
     captured: dict[str, object] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -79,19 +80,29 @@ async def test_complete_structured_json_requests_strict_schema() -> None:
 
     body = captured["body"]
     assert isinstance(body, dict)
-    assert body["response_format"] == {"type": "json_object"}
+    assert "response_format" not in body
     assert "additionalProperties" in body["messages"][1]["content"]
 
 
 @pytest.mark.asyncio
-async def test_native_schema_mode_is_explicitly_configurable() -> None:
+@pytest.mark.parametrize(
+    ("mode", "expected_format"),
+    [
+        ("prompt_json", None),
+        ("json_object", {"type": "json_object"}),
+        ("json_schema", {"type": "json_schema"}),
+    ],
+)
+async def test_structured_transport_uses_configured_format(
+    mode: str, expected_format: dict[str, str] | None
+) -> None:
     captured: dict[str, object] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured["body"] = json.loads(request.content)
         return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
 
-    settings = _settings().model_copy(update={"structured_output_mode": "json_schema"})
+    settings = _settings().model_copy(update={"structured_output_mode": mode})
     client = DefaultAgentClient(settings, transport=httpx.MockTransport(handler))
     await client.complete_structured_json(
         system="system",
@@ -102,8 +113,35 @@ async def test_native_schema_mode_is_explicitly_configurable() -> None:
 
     body = captured["body"]
     assert isinstance(body, dict)
-    assert body["response_format"]["type"] == "json_schema"
-    assert body["response_format"]["json_schema"]["strict"] is True
+    if expected_format is None:
+        assert "response_format" not in body
+    elif mode == "json_schema":
+        assert body["response_format"]["type"] == "json_schema"
+        assert body["response_format"]["json_schema"]["strict"] is True
+    else:
+        assert body["response_format"] == expected_format
+
+
+@pytest.mark.asyncio
+async def test_prompt_mode_succeeds_when_provider_rejects_response_format() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if "response_format" in body:
+            return httpx.Response(400, json={"error": "unsupported response_format"})
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": '{"ok":true}'}}]}
+        )
+
+    client = _client(handler)
+    assert (
+        await client.complete_structured_json(
+            system="system",
+            user="user",
+            schema_name="fixture",
+            schema={"type": "object"},
+        )
+        == '{"ok":true}'
+    )
 
 
 @pytest.mark.asyncio
@@ -145,6 +183,13 @@ def test_mistral_configuration_is_entirely_env_driven(
     assert settings.resolved_api_key == "mistral-key"
     assert settings.base_url == "https://api.mistral.ai/v1"
     assert settings.model == "mistral-small-2603"
+    assert settings.resolved_structured_output_mode == "prompt_json"
+
+
+def test_auto_mode_depends_on_adapter_not_provider_host() -> None:
+    settings = _settings().model_copy(
+        update={"base_url": "https://api.mistral.ai/v1", "adapter": "openai_responses"}
+    )
     assert settings.resolved_structured_output_mode == "json_schema"
 
 

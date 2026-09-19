@@ -547,12 +547,8 @@
   }
 }
 
-/* A found entity as a ruled row rather than a boxed chip.
-
-   Competitors arrive with a logo each, and a logo is already a piece of design;
-   putting twelve of them in twelve outlined rectangles made the rectangles the
-   thing you saw. The rows hang between hairlines instead, and the only mark is
-   the one that says whether we are tracking it. */
+/* Owned domains use ruled rows. Competitor suggestions use compact toggles
+   in two equal columns so ten choices occupy five rows. */
 .flow-entity-list {
   display: grid;
   border-block: 1px solid var(--color-border-subtle);
@@ -624,6 +620,48 @@
 .flow-entity-row[aria-pressed='true'] .flow-entity-mark {
   background: var(--color-accent);
   border-color: var(--color-accent);
+}
+
+.flow-competitor-chips {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  border: 0;
+}
+
+.flow-competitor-chips > li {
+  min-width: 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+  padding-right: 0.25rem;
+}
+
+.flow-competitor-chips > li + li {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.flow-competitor-chips > li:has([aria-pressed='true']) {
+  border-color: var(--color-border-strong);
+}
+
+.flow-competitor-chips .flow-entity-row {
+  min-width: 0;
+  flex: 1;
+}
+
+.flow-competitor-chips > li:has(input) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.5rem;
+}
+
+.flow-competitor-chips > li:has(input) input {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 480px) {
+  .flow-competitor-chips {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .flow-activity {

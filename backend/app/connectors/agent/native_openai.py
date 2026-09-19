@@ -17,7 +17,12 @@ from app.connectors.answer_engines.errors import (
     classify_provider_status,
     parse_retry_after,
 )
-from app.core.config.agent import DefaultAgentSettings, default_agent_settings
+from app.core.config.agent import (
+    STRUCTURED_OUTPUT_JSON_OBJECT,
+    STRUCTURED_OUTPUT_JSON_SCHEMA,
+    DefaultAgentSettings,
+    default_agent_settings,
+)
 from app.core.config.provider_catalog import (
     ERROR_CONNECTION,
     ERROR_PARSE,
@@ -78,19 +83,40 @@ class NativeOpenAIClient:
         schema_name: str,
         schema: Mapping[str, Any],
     ) -> ModelResult:
-        return await self._complete(
-            system=system,
-            user=user,
-            text_format={
+        schema_payload = dict(schema)
+        mode = self._settings.resolved_structured_output_mode
+        text_format: Mapping[str, Any] | None = None
+        if mode == STRUCTURED_OUTPUT_JSON_SCHEMA:
+            text_format = {
                 "type": "json_schema",
                 "name": schema_name,
                 "strict": True,
-                "schema": dict(schema),
-            },
+                "schema": schema_payload,
+            }
+        elif mode == STRUCTURED_OUTPUT_JSON_OBJECT:
+            text_format = {"type": "json_object"}
+        return await self._complete(
+            system=system,
+            user=(
+                f"{user}\n\nReturn JSON that matches the {schema_name} schema "
+                "exactly:\n"
+                + json.dumps(schema_payload, ensure_ascii=False, separators=(",", ":"))
+            ),
+            text_format=text_format,
         )
 
     async def complete_json(self, *, system: str, user: str) -> str:
-        result = await self.complete_text(system=system, user=user)
+        mode = self._settings.resolved_structured_output_mode
+        text_format = (
+            {"type": "json_object"}
+            if mode in (STRUCTURED_OUTPUT_JSON_OBJECT, STRUCTURED_OUTPUT_JSON_SCHEMA)
+            else None
+        )
+        result = await self._complete(
+            system=system,
+            user=f"{user}\n\nReturn only a valid JSON object, without commentary.",
+            text_format=text_format,
+        )
         return strip_json_fence(result.content)
 
     async def complete_structured_json(

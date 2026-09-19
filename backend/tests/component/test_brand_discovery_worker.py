@@ -23,6 +23,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_QUEUE_SPEC,
     DISCOVERY_STATUS_COMPLETING,
@@ -32,6 +33,7 @@ from app.core.config.brand_discovery import (
     TASK_KIND_BRAND_COMPLETION,
     WARNING_BRAND_COMPLETION_FAILED,
 )
+from app.core.config.provider_catalog import ERROR_AUTH
 from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
     TASK_STATUS_QUEUED,
@@ -174,6 +176,37 @@ async def test_a_failure_inside_the_budget_is_scheduled_for_retry(
         available_at = available_at.replace(tzinfo=UTC)
     assert available_at > before
     assert row.lease_owner is None
+
+
+@pytest.mark.asyncio
+async def test_non_retryable_provider_failure_ends_completion_immediately(
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    workspace_id = await _workspace(db_session)
+    discovery = await _discovery(
+        db_session, workspace_id, status=DISCOVERY_STATUS_COMPLETING
+    )
+    task = await _task(
+        db_session,
+        discovery,
+        max_attempts=3,
+        task_kind=TASK_KIND_BRAND_COMPLETION,
+    )
+    await db_session.commit()
+
+    await worker_module._finalize(
+        task.id,
+        worker_id=_OWNER,
+        error=ProviderError("bad key", error_code=ERROR_AUTH, retryable=False),
+    )
+
+    async with session_factory() as session:
+        row = await session.get(BrandDiscoveryTask, task.id)
+    assert row is not None
+    assert row.status == TASK_STATUS_FAILED
+    assert row.attempt_count == 1
+    assert row.error_code == ERROR_AUTH
 
 
 @pytest.mark.asyncio

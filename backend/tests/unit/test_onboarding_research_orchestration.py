@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
 
 from app.domain.projects.brand_evidence import BrandEvidence
-from app.domain.projects.discovery_schemas import PersistableDiscoveryProfile
+from app.domain.projects.discovery_schemas import (
+    DiscoveryCompetitorSuggestion,
+    PersistableDiscoveryProfile,
+)
 from app.domain.projects.onboarding.competitor_research import (
     CompetitorResearchResult,
 )
@@ -73,11 +77,8 @@ async def test_ready_path_records_two_structured_phases(monkeypatch) -> None:
     async def discover(*_args, **_kwargs):
         return CompetitorResearchResult(evidence=(competitor_evidence,), state="ready")
 
-    async def qualify(*_args, **_kwargs):
-        return [], [{"name": "Peer", "domain": "peer.com"}]
-
-    async def verify(*_args, **_kwargs):
-        return []
+    async def suggest(*_args, **_kwargs):
+        return [DiscoveryCompetitorSuggestion(name="Peer", domains=["peer.com"])]
 
     async def searches(*_args, **_kwargs):
         return []
@@ -93,8 +94,7 @@ async def test_ready_path_records_two_structured_phases(monkeypatch) -> None:
     monkeypatch.setattr(module, "create_model_gateway", lambda: gateway)
     monkeypatch.setattr(module, "synthesize_identity", synthesize)
     monkeypatch.setattr(module, "discover_competitor_candidates", discover)
-    monkeypatch.setattr(module, "qualify_competitors", qualify)
-    monkeypatch.setattr(module, "_verify_competitors", verify)
+    monkeypatch.setattr(module, "suggest_competitors", suggest)
     monkeypatch.setattr(
         module, "harvest_offerings", lambda *_args, **_kwargs: _Harvest()
     )
@@ -112,11 +112,11 @@ async def test_ready_path_records_two_structured_phases(monkeypatch) -> None:
 
     assert [call["phase"] for call in result.model_calls] == [
         "identity",
-        "competitor_qualification",
+        "competitor_suggestions",
     ]
     assert all(call["outcome"] == "succeeded" for call in result.model_calls)
     assert result.provider == "provider.invalid"
-    assert result.competitor_verdicts[0]["domain"] == "peer.com"
+    assert result.competitors[0]["domains"] == ["peer.com"]
     assert any(item["capture_method"] == "external_search" for item in result.evidence)
     model_supports = {
         item["source_url"]: item["supports"]
@@ -125,9 +125,8 @@ async def test_ready_path_records_two_structured_phases(monkeypatch) -> None:
     }
     assert model_supports == {
         "model://application-research/identity": ["profile"],
-        "model://application-research/competitor_qualification": ["competitors"],
+        "model://application-research/competitor_suggestions": ["competitors"],
     }
-    assert result.topics == []
     assert result.metrics["phase_duration_ms"]["total"] >= 0
     assert result.metrics["evidence_chars"]["identity_external"] == len(evidence.text)
 
@@ -144,14 +143,14 @@ async def test_missing_keenable_degrades_without_failing_identity(monkeypatch) -
     async def synthesize(*_args, **_kwargs):
         return _identity().model_copy(update={"field_evidence_refs": {}})
 
-    async def verify(*_args, **_kwargs):
+    async def suggest(*_args, **_kwargs):
         return []
 
     monkeypatch.setattr(module, "_site_evidence", site_evidence)
     monkeypatch.setattr(module, "_keenable_client", lambda: None)
     monkeypatch.setattr(module, "create_model_gateway", lambda: gateway)
     monkeypatch.setattr(module, "synthesize_identity", synthesize)
-    monkeypatch.setattr(module, "_verify_competitors", verify)
+    monkeypatch.setattr(module, "suggest_competitors", suggest)
     monkeypatch.setattr(
         module, "harvest_offerings", lambda *_args, **_kwargs: _Harvest()
     )
@@ -169,9 +168,12 @@ async def test_missing_keenable_degrades_without_failing_identity(monkeypatch) -
 
     assert result.profile["category"] == "workflow software"
     assert "external_research_unavailable" in result.warnings
-    assert "research_degraded" in result.warnings
+    assert "research_degraded" not in result.warnings
     assert "competitors_not_found" in result.warnings
-    assert [call["phase"] for call in result.model_calls] == ["identity"]
+    assert [call["phase"] for call in result.model_calls] == [
+        "identity",
+        "competitor_suggestions",
+    ]
 
 
 @pytest.mark.asyncio
@@ -211,3 +213,67 @@ async def test_failed_identity_attempt_is_recorded_without_success_provenance(
             "outcome": "failed",
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_slow_identity_model_reaches_review_with_degraded_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domain.projects.onboarding import research as module
+
+    async def hang(*_args, **_kwargs):
+        await asyncio.Event().wait()
+
+    gateway = SimpleNamespace(base_url_host="provider.invalid", model="fixture-model")
+    monkeypatch.setattr(module, "create_model_gateway", lambda: gateway)
+    monkeypatch.setattr(module, "synthesize_identity", hang)
+    monkeypatch.setattr(
+        module.brand_discovery_settings, "research_model_timeout_seconds", 0.001
+    )
+
+    phase = await module._run_identity_phase(
+        keenable=None,
+        brand_name="Acme",
+        owned_domain="acme.example",
+        primary_market="US",
+        industry="Software",
+        subindustry="Workflow",
+        language_code="en",
+        first_party=[],
+        budget=module.ResearchCallBudget(0),
+    )
+    assert phase.identity is None
+    assert phase.gateway is None
+    assert phase.model_calls[0]["outcome"] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_slow_competitor_model_returns_no_unverified_suggestions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domain.projects.onboarding import research as module
+
+    async def hang(*_args, **_kwargs):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(module, "suggest_competitors", hang)
+    monkeypatch.setattr(
+        module.brand_discovery_settings, "research_model_timeout_seconds", 0.001
+    )
+    calls: list[dict] = []
+    result = await module._run_competitor_phase(
+        keenable=None,
+        gateway=SimpleNamespace(
+            base_url_host="provider.invalid", model="fixture-model"
+        ),
+        profile=PersistableDiscoveryProfile(category="Retail"),
+        signature=CompetitiveSignature(category="Retail"),
+        brand_name="Acme",
+        owned_domain="acme.com",
+        primary_market="AU",
+        budget=module.ResearchCallBudget(0),
+        model_calls=calls,
+    )
+    assert result.suggestions == []
+    assert result.suggestion_available is False
+    assert calls[0]["outcome"] == "failed"

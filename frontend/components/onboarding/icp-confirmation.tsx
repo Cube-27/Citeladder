@@ -32,6 +32,7 @@ export function hasConfirmedIcp(profile: DiscoveryProfile | null): profile is Di
 }
 
 const MARKET_SCOPE_CHOICES = [
+  { value: 'local', label: 'Locally' },
   { value: 'national', label: 'Nationwide' },
   { value: 'regional', label: 'Regional' },
   { value: 'global', label: 'Worldwide' },
@@ -151,9 +152,11 @@ export function IcpAudience({ profile, onChange }: IcpPart) {
         <RadioGroup
           variant="row"
           ariaLabel="Who buys it"
-          value={profile.business_type}
+          value={profile.business_type ?? ''}
           options={BUYER_TYPE_CHOICES}
-          onValueChange={(value) => update('business_type', value)}
+          onValueChange={(value) => {
+            if (value) update('business_type', value);
+          }}
         />
       </FlowGroup>
 
@@ -161,9 +164,11 @@ export function IcpAudience({ profile, onChange }: IcpPart) {
         <RadioGroup
           variant="row"
           ariaLabel="Where they buy it"
-          value={profile.market_scope === 'local' ? 'regional' : profile.market_scope}
+          value={profile.market_scope ?? ''}
           options={MARKET_SCOPE_CHOICES}
-          onValueChange={(value) => update('market_scope', value)}
+          onValueChange={(value) => {
+            if (value) update('market_scope', value);
+          }}
         />
       </FlowGroup>
     </>

@@ -7,7 +7,7 @@
 # noun-phrase labels -- so one harvest serves every business model and nothing
 # here encodes any industry's actual categories.
 #
-# This exists because topic selection used to invent topics from prose. Asked
+# This exists because topic selection once invented topics from prose. Asked
 # to describe a marketplace in five topics with no list to work from, a model
 # can only abstract, and it returned "Online Retail", "Ecommerce Marketplace"
 # and "Online General Merchandise" -- one topic restated five times. Handed the
@@ -76,11 +76,9 @@ class OfferingHarvest:
     def is_ready(self) -> bool:
         """Whether there is a usable published list.
 
-        Below the floor the caller must tell topic selection the harvest is
-        empty so it works from page text and is allowed to return fewer
-        topics -- or none. A law firm that renders its practice areas
-        client-side genuinely cannot be read, and saying so is the correct
-        outcome.
+        Below the floor the portfolio request still receives the acquired
+        pages and can return fewer topics. A law firm that renders its practice
+        areas client-side may genuinely have little usable evidence.
         """
         return len(self.nodes) >= BRAND_EVIDENCE_MIN_OFFERING_NODES
 

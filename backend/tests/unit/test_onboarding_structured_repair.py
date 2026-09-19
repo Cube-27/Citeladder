@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 
+import httpx
 import pytest
 from pydantic import BaseModel
 
+from app.connectors.agent.client import DefaultAgentClient
 from app.connectors.answer_engines.errors import ProviderError
+from app.core.config.agent import DefaultAgentSettings
 from app.core.config.provider_catalog import ERROR_AUTH, ERROR_RATE_LIMIT
 from app.domain.projects.onboarding import structured_repair as module
 
@@ -117,3 +120,100 @@ async def test_non_retryable_provider_error_is_not_repeated(monkeypatch) -> None
         )
 
     assert gateway.users == ["request"]
+
+
+@pytest.mark.asyncio
+async def test_persistent_rate_limit_stops_after_one_retry(monkeypatch) -> None:
+    async def no_wait(_delay: float) -> None:
+        return None
+
+    monkeypatch.setattr(module.asyncio, "sleep", no_wait)
+    gateway = _Gateway(
+        [
+            ProviderError("rate limited", error_code=ERROR_RATE_LIMIT, retryable=True),
+            ProviderError("rate limited", error_code=ERROR_RATE_LIMIT, retryable=True),
+            '{"status":"ok","value":3}',
+        ]
+    )
+
+    with pytest.raises(ProviderError, match="rate limited"):
+        await module.complete_validated_envelope(
+            gateway,
+            system="system",
+            user="request",
+            schema_name="fixture",
+            envelope_type=_Envelope,
+            validate=lambda _value: None,
+        )
+    assert gateway.users == ["request", "request"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "invalid_content", ["not json", '{"status":"ok","value":"invalid"}']
+)
+async def test_mock_transport_repairs_invalid_json_or_schema(
+    invalid_content: str,
+) -> None:
+    requests: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(json.loads(request.content))
+        content = invalid_content if len(requests) == 1 else '{"status":"ok","value":3}'
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": content}}]}
+        )
+
+    settings = DefaultAgentSettings(
+        DEFAULT_AGENT_API_KEY="test-key",
+        DEFAULT_AGENT_BASE_URL="https://provider.invalid/v1",
+        DEFAULT_AGENT_MODEL="test-model",
+        DEFAULT_AGENT_STRUCTURED_OUTPUT_MODE="prompt_json",
+        _env_file=None,
+    )
+    client = DefaultAgentClient(settings, transport=httpx.MockTransport(handler))
+    result = await module.complete_validated_envelope(
+        client,
+        system="system",
+        user="request",
+        schema_name="fixture",
+        envelope_type=_Envelope,
+        validate=lambda _value: None,
+        maximum_attempts=2,
+    )
+
+    assert result.value == 3
+    assert len(requests) == 2
+    assert "response_format" not in requests[0]
+    assert "CORRECTION_REQUIRED" in requests[1]["messages"][1]["content"]
+
+
+@pytest.mark.asyncio
+async def test_mock_transport_never_accepts_persistently_invalid_output() -> None:
+    calls = 0
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": '{"value":3}'}}]}
+        )
+
+    settings = DefaultAgentSettings(
+        DEFAULT_AGENT_API_KEY="test-key",
+        DEFAULT_AGENT_BASE_URL="https://provider.invalid/v1",
+        DEFAULT_AGENT_MODEL="test-model",
+        _env_file=None,
+    )
+    client = DefaultAgentClient(settings, transport=httpx.MockTransport(handler))
+    with pytest.raises(ValueError):
+        await module.complete_validated_envelope(
+            client,
+            system="system",
+            user="request",
+            schema_name="fixture",
+            envelope_type=_Envelope,
+            validate=lambda _value: None,
+            maximum_attempts=2,
+        )
+    assert calls == 2

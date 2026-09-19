@@ -26,6 +26,7 @@ from app.core.config.dotenv import dotenv_sources
 
 STRUCTURED_OUTPUT_AUTO = "auto"
 STRUCTURED_OUTPUT_PROMPT_JSON = "prompt_json"
+STRUCTURED_OUTPUT_JSON_OBJECT = "json_object"
 STRUCTURED_OUTPUT_JSON_SCHEMA = "json_schema"
 
 # v4: a bounded evidence read whose snapshot does not exist is recorded as an
@@ -170,7 +171,7 @@ class DefaultAgentSettings(BaseSettings):
             "DEFAULT_AGENT_STRUCTURED_OUTPUT_MODE",
             "default_agent_structured_output_mode",
         ),
-        pattern="^(auto|prompt_json|json_schema)$",
+        pattern="^(auto|prompt_json|json_object|json_schema)$",
     )
     # HTTP client timeout for a single agent call.
     timeout_seconds: float = Field(
@@ -239,8 +240,7 @@ class DefaultAgentSettings(BaseSettings):
     def resolved_structured_output_mode(self) -> str:
         if self.structured_output_mode != STRUCTURED_OUTPUT_AUTO:
             return self.structured_output_mode
-        host = (urlsplit(self.base_url).hostname or "").casefold()
-        if _is_provider_host(host, "mistral.ai"):
+        if self.adapter == "openai_responses":
             return STRUCTURED_OUTPUT_JSON_SCHEMA
         return STRUCTURED_OUTPUT_PROMPT_JSON
 

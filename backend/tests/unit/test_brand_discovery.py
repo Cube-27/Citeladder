@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -11,31 +12,34 @@ from app.connectors.web_evidence.brand_evidence import (
     BrandEvidenceLink,
     BrandEvidencePage,
 )
-from app.core.config.brand_discovery import _discovery_research_system_prompt
+from app.core.config.brand_discovery import (
+    _competitor_suggestion_system_prompt,
+    _discovery_research_system_prompt,
+    brand_discovery_settings,
+)
 from app.core.config.visibility_prompts import (
     CONFIRMED_OFFERING_SOURCE_REF,
-    MODEL_PRIOR_SOURCE_REF,
-    TOPIC_SELECTION_SYSTEM_PROMPT,
     cohort_system_prompt,
 )
 from app.domain.projects.discovery_schemas import (
+    BrandDiscoveryComplete,
     BrandDiscoveryCreate,
     ConfirmedDiscoveryProfile,
-    DiscoveryCompetitorSuggestion,
     DiscoveryPromptSuggestion,
     PersistableDiscoveryProfile,
 )
 from app.domain.projects.offering_harvest import harvest_offerings
+from app.domain.projects.onboarding import completion as onboarding_completion
 from app.domain.projects.onboarding.normalization import (
     InvalidWebsiteUrl,
     normalize_primary_market,
     normalize_website_url,
 )
-from app.domain.projects.onboarding.research import (
-    _customer_warnings,
-    _is_peer_company,
+from app.domain.projects.onboarding.research import _customer_warnings
+from app.domain.projects.onboarding.service import (
+    BrandDiscoveryError,
+    discovery_catalog,
 )
-from app.domain.projects.onboarding.service import discovery_catalog
 from app.domain.projects.onboarding.site_resolution import resolve_site
 from app.domain.projects.onboarding.topic_admission import (
     admit_topics,
@@ -55,7 +59,30 @@ def _profile() -> dict:
         "positioning": "Affordable shoes.",
         "products_services": ["Footwear"],
         "target_audience": "Families",
+        "category": "Footwear",
     }
+
+
+@pytest.mark.asyncio
+async def test_selected_competitor_resolution_has_a_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def hang(_domain: str, _url: str):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(onboarding_completion, "resolve_site", hang)
+    monkeypatch.setattr(
+        onboarding_completion, "BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS", 0.001
+    )
+    payload = BrandDiscoveryComplete(
+        profile=ConfirmedDiscoveryProfile(category="Retail"),
+        domains=["acme.com"],
+        competitors=[{"name": "Globex", "domains": ["globex.com"]}],
+    )
+    with pytest.raises(BrandDiscoveryError, match=r"Globex: globex\.com"):
+        await onboarding_completion._resolve_selected_competitors(
+            payload, owned_domains={"acme.com"}
+        )
 
 
 def test_normalizes_url_and_market() -> None:
@@ -91,13 +118,9 @@ def test_discovery_prompt_contract_normalizes_legacy_unbound_topic() -> None:
 
 @pytest.mark.parametrize(
     "payload",
-    [
-        {**_profile(), "positioning": " "},
-        {**_profile(), "target_audience": " "},
-        {**_profile(), "products_services": [" "]},
-    ],
+    [{**_profile(), "category": " "}],
 )
-def test_confirmed_profile_rejects_blank_required_fields(payload: dict) -> None:
+def test_confirmed_profile_rejects_blank_category(payload: dict) -> None:
     with pytest.raises(ValidationError):
         ConfirmedDiscoveryProfile(**payload)
 
@@ -112,24 +135,6 @@ def test_generated_profile_rejects_product_too_long_for_project_persistence() ->
         ConfirmedDiscoveryProfile(**confirmed_payload)
 
 
-def _competitor(model: str | None) -> DiscoveryCompetitorSuggestion:
-    return DiscoveryCompetitorSuggestion(
-        name="Peer",
-        domains=["peer.example"],
-        business_model=model,
-    )
-
-
-def test_services_firm_does_not_accept_product_vendor_as_peer() -> None:
-    assert not _is_peer_company(
-        _competitor("b2b_saas"), brand_model="professional_service"
-    )
-    assert _is_peer_company(
-        _competitor("professional_service"), brand_model="professional_service"
-    )
-    assert not _is_peer_company(_competitor(None), brand_model="professional_service")
-
-
 def test_research_prompt_no_longer_owns_topics() -> None:
     """Topic selection is its own pass; the research prompt must not compete."""
     prompt = _discovery_research_system_prompt()
@@ -137,13 +142,11 @@ def test_research_prompt_no_longer_owns_topics() -> None:
     assert "COMPETITORS must be substitutable" in prompt
 
 
-def test_topic_prompt_asks_for_selection_not_invention() -> None:
-    prompt = TOPIC_SELECTION_SYSTEM_PROMPT
-    assert "SELECT, MERGE, and NAME - do not invent" in prompt
-    assert "offering_candidates" in prompt
-    # The exact failure the old contract shipped is named as a non-example.
-    assert "Ecommerce Marketplace" in prompt
-    assert "insufficient_evidence" in prompt
+def test_competitor_prompt_uses_configured_suggestion_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(brand_discovery_settings, "competitor_suggestion_maximum", 3)
+    assert "up to 3" in _competitor_suggestion_system_prompt()
 
 
 def test_prompt_instruction_shows_register_for_the_business_kind() -> None:
@@ -222,36 +225,7 @@ def test_admission_collapses_restatements_of_one_topic() -> None:
     assert names == ["Air Conditioners", "Footwear", "Homewares"]
 
 
-def test_recognised_brand_keeps_topics_with_no_resolvable_evidence() -> None:
-    """adidas: the site 403s, but the model knows the brand.
-
-    Refusing here contradicted the same run's profile pass, which named the
-    category and five competitors from that identical prior knowledge.
-    """
-    topics = admit_topics(
-        [
-            _candidate("Running Shoes", ["missing"]),
-            _candidate("Football Boots", []),
-            _candidate("Training Apparel", ["missing"]),
-        ],
-        known_refs=set(),
-        forbidden_terms=["Adidas"],
-        business_terms=[],
-        allow_model_prior=True,
-    )
-    assert [topic.name for topic in topics] == [
-        "Running Shoes",
-        "Football Boots",
-        "Training Apparel",
-    ]
-    # Provenance stays legible: none of these came from a page we fetched.
-    assert {ref for topic in topics for ref in topic.source_refs} == {
-        MODEL_PRIOR_SOURCE_REF
-    }
-
-
-def test_unrecognised_brand_still_requires_real_evidence() -> None:
-    """The permission is narrow: without recognition nothing changes."""
+def test_topics_require_supplied_evidence_references() -> None:
     assert (
         admit_topics(
             [
@@ -262,22 +236,9 @@ def test_unrecognised_brand_still_requires_real_evidence() -> None:
             known_refs=set(),
             forbidden_terms=[],
             business_terms=[],
-            allow_model_prior=False,
         )
         == []
     )
-
-
-def test_recognised_brand_still_prefers_real_refs_when_they_resolve() -> None:
-    """A page-backed topic keeps its page ref rather than being stamped."""
-    topics = admit_topics(
-        [_candidate("Running Shoes"), _candidate("Bags"), _candidate("Hats")],
-        known_refs={"nav-1"},
-        forbidden_terms=[],
-        business_terms=[],
-        allow_model_prior=True,
-    )
-    assert {ref for topic in topics for ref in topic.source_refs} == {"nav-1"}
 
 
 def test_admission_keeps_departments_that_merely_look_alike() -> None:
@@ -804,59 +765,6 @@ def test_one_unreadable_row_no_longer_voids_its_whole_batch() -> None:
 
     assert [row.text for row in rows] == ["Best linen dresses for a summer wedding"]
     assert dropped == 1
-
-
-def test_onboarding_uses_the_shared_constrained_buyer_query_plan() -> None:
-    import uuid
-
-    from app.domain.projects.discovery_schemas import DiscoveryTopic
-    from app.domain.projects.onboarding.portfolio_generation import (
-        _brand_request,
-        _topic_request,
-        onboarding_brand_context,
-    )
-    from tests.fixtures.prompt_generation import slots_from_user_message
-
-    topic = DiscoveryTopic(
-        topic_id=uuid.uuid4(),
-        name="Product Feed Management",
-        description="Retail catalog distribution and diagnostics",
-        source_refs=["confirmed-profile"],
-    )
-    brand_context = onboarding_brand_context(
-        brand_name="Feedonomics",
-        primary_market="US",
-        profile={
-            "business_model": "b2b_saas",
-            "buyer_register": "technical_buyer",
-            "description": "Feedonomics manages retail product feeds.",
-            "products_services": ["Managed product feeds"],
-        },
-        competitors=["Productsup"],
-    )
-    user, slots = _topic_request(
-        brand_context=brand_context,
-        topics=[topic],
-        rejected=(),
-        existing_prompts=("Existing feed-management query",),
-    )
-
-    planned = slots_from_user_message(user)
-    assert len(slots) == len(planned) == 7
-    assert all(slot.topic_id == str(topic.topic_id) for slot in slots)
-    assert all("archetype" not in slot and "form" not in slot for slot in planned)
-    assert "Managed product feeds" in user
-    assert "Existing feed-management query" in user
-
-    _, brand_slots = _brand_request(
-        brand_context=brand_context,
-        competitors=["Productsup"],
-        topics=[topic],
-        count=2,
-        cohort="brand_diagnostic",
-    )
-    assert len(brand_slots) == 2
-    assert all(slot.topic_id is None for slot in brand_slots)
 
 
 def test_admission_rejects_an_unsplit_bundle_but_keeps_real_departments() -> None:

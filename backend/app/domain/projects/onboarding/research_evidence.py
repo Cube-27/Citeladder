@@ -32,9 +32,6 @@ class CompetitiveSignature(BaseModel):
     core_job: str = ""
     delivery_model: str = ""
     market_context: str = ""
-    qualifiers: list[str] = Field(default_factory=list, max_length=5)
-    adjacent_categories: list[str] = Field(default_factory=list, max_length=3)
-    search_terms: list[str] = Field(default_factory=list, max_length=8)
 
 
 @dataclass(slots=True)

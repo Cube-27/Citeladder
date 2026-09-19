@@ -35,18 +35,6 @@ import { hasConfirmedIcp } from './icp-confirmation';
 
 export type OnboardingStep = 0 | 1 | 2;
 
-function withBrandKnowledgeDefaults(profile: DiscoveryProfile): DiscoveryProfile {
-  const category = profile.category.trim();
-  const products = profile.products_services.filter((item) => item.trim());
-  return {
-    ...profile,
-    positioning: profile.positioning.trim() || category,
-    target_audience: profile.target_audience.trim() || `Buyers searching for ${category}`,
-    products_services: products.length > 0 ? products : [category],
-    market_scope: profile.market_scope === 'local' ? 'regional' : profile.market_scope,
-  };
-}
-
 /** Insert or replace one project in a cached list, deduplicated by id. */
 function upsertProject(current: Project[], project: Project): Project[] {
   const index = current.findIndex((candidate) => candidate.id === project.id);
@@ -62,9 +50,7 @@ function selectedDomains(domains: ReviewDomain[]): string[] {
 
 function selectedCompetitors(competitors: ReviewCompetitor[]) {
   return competitors.flatMap((item) =>
-    item.selected && item.name.trim()
-      ? [{ name: item.name.trim(), aliases: item.aliases, domains: item.domains }]
-      : [],
+    item.selected ? [{ name: item.name.trim(), aliases: item.aliases, domains: item.domains }] : [],
   );
 }
 
@@ -203,7 +189,7 @@ export function useOnboardingFlow(transactionKey: string) {
   }, [discoveryState]);
 
   useEffect(() => {
-    if (maximumCompetitors === undefined || discoveryState?.status !== 'ready') return;
+    if (discoveryState?.status !== 'ready') return;
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setCompetitors((current) =>
       current.length
@@ -211,10 +197,10 @@ export function useOnboardingFlow(transactionKey: string) {
         : discoveryState.competitors.map((competitor, index) => ({
             ...competitor,
             id: `competitor:${index}:${competitor.name}`,
-            selected: index < maximumCompetitors,
+            selected: false,
           })),
     );
-  }, [discoveryState, maximumCompetitors]);
+  }, [discoveryState]);
 
   // Resolve the committed project and reconcile its list before navigating.
   // Cancel older list reads so they cannot overwrite the creation hand-off.
@@ -263,7 +249,7 @@ export function useOnboardingFlow(transactionKey: string) {
           discoveryState.id,
           {
             name: brand.brand_name.trim(),
-            profile: withBrandKnowledgeDefaults(profile),
+            profile,
             domains: selectedDomains(domains),
             competitors: selectedCompetitors(competitors),
           },
@@ -370,6 +356,11 @@ export function useOnboardingFlow(transactionKey: string) {
     domains,
     form,
     hasSelectedDomain: domains.some((item) => item.selected),
+    hasIncompleteCompetitor: competitors.some(
+      (item) =>
+        item.selected &&
+        (!item.name.trim() || !item.domains.some((domain) => domain.trim().length > 0)),
+    ),
     isAdditional,
     maximumCompetitors,
     profile,

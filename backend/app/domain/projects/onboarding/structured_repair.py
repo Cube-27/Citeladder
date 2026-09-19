@@ -21,6 +21,8 @@ async def complete_validated_envelope[EnvelopeT: BaseModel](
     schema_name: str,
     envelope_type: type[EnvelopeT],
     validate: Callable[[EnvelopeT], None],
+    maximum_attempts: int | None = None,
+    retry_provider_errors: bool = True,
 ) -> EnvelopeT:
     """Generate, validate, and boundedly repair one structured response.
 
@@ -29,7 +31,9 @@ async def complete_validated_envelope[EnvelopeT: BaseModel](
     honor the provider/configured backoff without weakening deterministic gates.
     """
     attempt_user = user
-    maximum_attempts = brand_discovery_settings.synthesis_max_attempts
+    maximum_attempts = (
+        maximum_attempts or brand_discovery_settings.synthesis_max_attempts
+    )
     for attempt in range(maximum_attempts):
         try:
             raw = await client.complete_structured_json(
@@ -42,7 +46,11 @@ async def complete_validated_envelope[EnvelopeT: BaseModel](
             validate(envelope)
             return envelope
         except ProviderError as exc:
-            if not exc.retryable or attempt + 1 >= maximum_attempts:
+            if (
+                not retry_provider_errors
+                or not exc.retryable
+                or attempt + 1 >= maximum_attempts
+            ):
                 raise
             delay = brand_discovery_settings.synthesis_retry_delay(
                 attempt, retry_after_seconds=exc.retry_after_seconds
