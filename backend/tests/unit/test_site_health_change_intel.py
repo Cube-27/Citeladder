@@ -13,7 +13,10 @@ from app.core.config.site_health_contracts import (
     RULE_OUTCOME_SATISFIED,
 )
 from app.domain.opportunities.change_hits import _rule_id
-from app.domain.site_health.change_intel import _content_comparison_record
+from app.domain.site_health.change_intel import (
+    _comparison_state,
+    _content_comparison_record,
+)
 
 
 def _page(*, title: str = "Same", status: int = 200) -> ChangePage:
@@ -224,6 +227,39 @@ def test_date_only_refresh_is_recorded_without_claiming_the_page_did_not_change(
     assert change.after_value["content_delta_measure"] == (
         "measured_text_divergence_over_compared_portion"
     )
+
+
+def test_equivalent_modified_timestamps_do_not_create_a_cosmetic_refresh() -> None:
+    before = _content_page(
+        shingles=["alpha beta gamma delta epsilon"],
+        modified="2026-01-01T00:00:00Z",
+    )
+    after = _content_page(
+        shingles=["alpha beta gamma delta epsilon"],
+        modified="2026-01-01T01:00:00+01:00",
+    )
+
+    change = next(
+        item
+        for item in compare_crawls([before], [after], complete_pair=True)
+        if item.field == "content_change"
+    )
+
+    assert change.after_value["metadata_consistency"] == "consistent"
+
+
+def test_extractor_mismatch_keeps_crawl_pair_non_comparable() -> None:
+    common = {
+        "root_url": "https://example.com/",
+        "configuration": {},
+        "analyzer_version": "v1",
+    }
+    earlier = SimpleNamespace(**common, extractor_version="extract-v1")
+    current = SimpleNamespace(**common, extractor_version="extract-v2")
+
+    state, reason = _comparison_state(earlier, current, [object()], [object()])
+
+    assert (state, reason) == ("non_comparable", "analysis_version_mismatch")
 
 
 def test_legacy_cap_equality_and_extractor_mismatch_are_insufficient() -> None:

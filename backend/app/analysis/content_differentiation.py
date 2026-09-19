@@ -51,12 +51,14 @@ def _organic_row(
     url = str(item.get("url") or "").strip()
     if not url:
         return None
+    try:
+        rank = int(item.get("rank_absolute") or item.get("rank_group") or fallback_rank)
+    except (TypeError, ValueError):
+        return None
     return {
         "url": url,
         "title": str(item.get("title") or "")[:1000],
-        "rank": int(
-            item.get("rank_absolute") or item.get("rank_group") or fallback_rank
-        ),
+        "rank": rank,
     }
 
 

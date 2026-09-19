@@ -116,6 +116,7 @@ async def select_previous_comparable_crawl(
             if root_origin(candidate) == root_origin(crawl_b)
             and crawl_scope_hash(candidate) == crawl_scope_hash(crawl_b)
             and candidate.analyzer_version == crawl_b.analyzer_version
+            and candidate.extractor_version == crawl_b.extractor_version
         ),
         None,
     )
@@ -422,7 +423,10 @@ def _comparison_state(
         crawl_a
     ) != crawl_scope_hash(crawl_b):
         return CHANGE_STATE_NON_COMPARABLE, CHANGE_REASON_SCOPE_MISMATCH
-    if crawl_a.analyzer_version != crawl_b.analyzer_version:
+    if (
+        crawl_a.analyzer_version != crawl_b.analyzer_version
+        or crawl_a.extractor_version != crawl_b.extractor_version
+    ):
         return CHANGE_STATE_NON_COMPARABLE, CHANGE_REASON_VERSION_MISMATCH
     if not pages_a or not pages_b:
         return CHANGE_STATE_UNAVAILABLE, CHANGE_REASON_NO_USABLE_EVIDENCE

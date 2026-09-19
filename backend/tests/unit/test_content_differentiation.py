@@ -31,6 +31,29 @@ def test_organic_results_are_deduplicated_ranked_and_bounded() -> None:
     ]
 
 
+def test_bad_organic_rank_does_not_abort_other_results() -> None:
+    payload = {
+        "result": [
+            {
+                "items": [
+                    {
+                        "type": "organic",
+                        "url": "https://bad.example",
+                        "rank_absolute": "unknown",
+                    },
+                    {
+                        "type": "organic",
+                        "url": "https://good.example",
+                        "rank_absolute": 2,
+                    },
+                ]
+            }
+        ]
+    }
+
+    assert [row["url"] for row in organic_results(payload)] == ["https://good.example"]
+
+
 def test_differentiation_uses_inspected_denominator_and_most_threshold() -> None:
     owned = DifferentiationPage(
         "owned",

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.domain.demand.detector_source import _analysis_window
+from app.domain.demand.detector_source import _analysis_window, page_revision_material
 from app.domain.demand.projection import (
     QueryEvidenceInput,
     SearchDemandInput,
@@ -88,6 +89,15 @@ def _query_row(
         page_primary_content=page_primary_content,
         page_content_usable=page_content_usable,
     )
+
+
+def test_page_revision_material_changes_with_inspected_page_revision() -> None:
+    row = _query_row("example")
+    first = replace(row, page_analysis_id="analysis-1", page_artifact_id="artifact-1")
+    revised = replace(row, page_analysis_id="analysis-2", page_artifact_id="artifact-2")
+
+    assert page_revision_material([first, first]) == [("analysis-1", "artifact-1")]
+    assert page_revision_material([revised]) != page_revision_material([first])
 
 
 def test_striking_distance_includes_exact_thresholds_and_branded_cohort() -> None:

@@ -189,6 +189,17 @@ async def load_query_detector_inputs(
     return inputs
 
 
+def page_revision_material(rows: list[QueryEvidenceInput]) -> list[tuple[str, str]]:
+    """Identify the exact inspected page revisions used by query detectors."""
+    return sorted(
+        {
+            (row.page_analysis_id, row.page_artifact_id)
+            for row in rows
+            if row.page_analysis_id is not None and row.page_artifact_id is not None
+        }
+    )
+
+
 async def classification_revision_material(
     session: AsyncSession,
     *,

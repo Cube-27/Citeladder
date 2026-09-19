@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core.config.site_change_intel import (
@@ -139,14 +139,16 @@ def _expected_link(
     return True, item.implementation_event_id
 
 
-def _valid_date(value: Any) -> bool:
+def _parsed_date(value: Any) -> datetime | None:
     if not isinstance(value, str) or not value.strip():
-        return False
+        return None
     try:
-        datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
-        return False
-    return True
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _content_delta(
@@ -201,13 +203,11 @@ def _content_classification(
 def _metadata_consistency(
     before_modified: Any, after_modified: Any, *, coverage: str, classification: str
 ) -> str:
-    if (
-        coverage != "complete"
-        or not _valid_date(before_modified)
-        or not _valid_date(after_modified)
-    ):
+    before_date = _parsed_date(before_modified)
+    after_date = _parsed_date(after_modified)
+    if coverage != "complete" or before_date is None or after_date is None:
         return "unknown"
-    date_moved = before_modified != after_modified
+    date_moved = before_date != after_date
     content_moved = classification in {"substantial_change", "minor_change"}
     return "consistent" if date_moved == content_moved else "inconsistent"
 

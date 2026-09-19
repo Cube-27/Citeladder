@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.opportunities.detectors import DetectorHit
@@ -71,6 +71,10 @@ async def load_change_hits(
                     SiteChangeObservation.workspace_id == workspace_id,
                     SiteChangeObservation.snapshot_id == snapshot.id,
                     SiteChangeObservation.expected.is_(False),
+                    or_(
+                        SiteChangeObservation.change_class.in_(_RULE_BY_CLASS),
+                        SiteChangeObservation.field == CONTENT_CHANGE_FIELD,
+                    ),
                 )
                 .order_by(
                     SiteChangeObservation.normalized_url,
