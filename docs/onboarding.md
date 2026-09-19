@@ -21,22 +21,23 @@ bounded first-party acquisition, identity research and provisional competitor
 suggestions.
 The [worker](../backend/app/workers/brand_discovery_worker.py) claims PostgreSQL
 tasks with leases and commits before provider I/O.
-Identity and competitor model phases each have a bounded wall-clock budget;
-timeouts degrade to reviewable evidence. Portfolio generation has its own
-per-attempt timeout and at most two durable attempts. Non-retryable provider
-errors terminate immediately.
+Identity makes one model request with a 20-second timeout. Competitor suggestions
+make at most three independent requests, each capped at 20 seconds. Failures
+degrade to reviewable evidence. Portfolio generation makes one request per
+durable attempt, capped at 20 seconds, with at most three attempts. Provider
+authentication and rate-limit errors terminate immediately.
 
 The resolved homepage is reused. First-party pages and independent research
 are separate bounded evidence sources. One optional category-and-market search
-supplies snippets to one configured model request for up to ten provisional
+supplies snippets to the configured model for up to ten provisional
 competitor names and domains. Search failure warns but does not block model
 suggestions. Name/domain cleanup excludes owned and reference sites; it does
 not prove commercial equivalence. The review screen starts with none selected,
 permits up to five tracked choices and manual name/domain additions, and keeps
 selected choices removable at capacity. Only selected domains are resolved
 before completion acceptance, outside the discovery lock; failures leave the
-choice editable. Bounded repair handles model contract failures, and warnings
-preserve degraded research states.
+choice editable. Invalid model output may be retried with the original request;
+warnings preserve degraded research states.
 
 [BrandResearchSnapshot](../backend/app/models/discovery.py) and
 [discovery records](../backend/app/models/discovery.py) retain the research
@@ -61,8 +62,8 @@ competitors, offering harvest and persisted research. Request-local buyer
 intents link topics to core prompts and may also link diagnostic and comparison
 prompts. Code validates those links, evidence references and prompt cohorts,
 then admits supported topics and prompts. An empty valid core portfolio uses
-the recoverable completion-failure flow. Schema or admission failure can
-receive one structured repair attempt. The worker re-locks the discovery and
+the recoverable completion-failure flow. A failed attempt is retried by the
+durable worker with the same frozen input. The worker re-locks the discovery and
 persists topics, prompts and terminal completion together. Generated topics
 join any existing project topics before prompt binding; unresolved core or
 explicitly topic-bound prompts reject the transaction. A terminal-state guard

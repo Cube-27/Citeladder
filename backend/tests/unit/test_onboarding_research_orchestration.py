@@ -253,19 +253,25 @@ async def test_slow_competitor_model_returns_no_unverified_suggestions(
 ) -> None:
     from app.domain.projects.onboarding import research as module
 
-    async def hang(*_args, **_kwargs):
-        await asyncio.Event().wait()
+    class SlowGateway:
+        base_url_host = "provider.invalid"
+        model = "fixture-model"
 
-    monkeypatch.setattr(module, "suggest_competitors", hang)
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def complete_structured_json(self, **_kwargs):
+            self.calls += 1
+            await asyncio.Event().wait()
+
+    gateway = SlowGateway()
     monkeypatch.setattr(
         module.brand_discovery_settings, "research_model_timeout_seconds", 0.001
     )
     calls: list[dict] = []
     result = await module._run_competitor_phase(
         keenable=None,
-        gateway=SimpleNamespace(
-            base_url_host="provider.invalid", model="fixture-model"
-        ),
+        gateway=gateway,
         profile=PersistableDiscoveryProfile(category="Retail"),
         signature=CompetitiveSignature(category="Retail"),
         brand_name="Acme",
@@ -276,4 +282,5 @@ async def test_slow_competitor_model_returns_no_unverified_suggestions(
     )
     assert result.suggestions == []
     assert result.suggestion_available is False
+    assert gateway.calls == 3
     assert calls[0]["outcome"] == "failed"

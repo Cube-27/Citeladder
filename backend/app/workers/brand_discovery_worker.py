@@ -23,6 +23,7 @@ from app.core.config.brand_discovery import (
     TASK_KIND_BRAND_COMPLETION,
     brand_discovery_settings,
 )
+from app.core.config.provider_catalog import ERROR_RATE_LIMIT
 from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
     TASK_STATUS_RETRY_WAIT,
@@ -86,7 +87,8 @@ async def _finalize(
             task.error_code = ""
             task.error_detail = ""
         elif task.attempt_count < task.max_attempts and not (
-            isinstance(error, ProviderError) and not error.retryable
+            isinstance(error, ProviderError)
+            and (not error.retryable or error.error_code == ERROR_RATE_LIMIT)
         ):
             task.status = TASK_STATUS_RETRY_WAIT
             task.available_at = now + timedelta(

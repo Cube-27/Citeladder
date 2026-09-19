@@ -21,7 +21,9 @@ from app.core.config.visibility_prompts import (
 )
 from app.domain.projects.discovery_schemas import DiscoveryTopic
 from app.domain.projects.offering_harvest import OfferingHarvest
-from app.domain.projects.onboarding.structured_repair import complete_validated_envelope
+from app.domain.projects.onboarding.structured_generation import (
+    complete_validated_envelope,
+)
 from app.domain.projects.onboarding.topic_admission import admit_topics
 from app.domain.prompts.portfolio_validation import PortfolioValidator
 
@@ -276,7 +278,7 @@ async def generate_portfolio(
     harvest: OfferingHarvest,
     page_evidence: list[dict[str, str]],
 ) -> PortfolioResult:
-    """Ask once for the complete hierarchy, with one bounded repair if needed."""
+    """Ask once for the complete hierarchy and validate it before persistence."""
     client = create_model_gateway()
     reviewed, inferred = _context_sections(profile)
     known_refs = {node.ref for node in harvest.nodes} | {
@@ -325,8 +327,6 @@ async def generate_portfolio(
         schema_name="visibility_intent_portfolio",
         envelope_type=PortfolioEnvelope,
         validate=validate,
-        maximum_attempts=2,
-        retry_provider_errors=False,
     )
     if result is None:
         raise RuntimeError("Portfolio admission did not complete")

@@ -437,17 +437,14 @@ async def _run_competitor_phase(
         evidence = list(result.evidence)
         search_state = result.state
     try:
-        async with asyncio.timeout(
-            brand_discovery_settings.research_model_timeout_seconds
-        ):
-            suggestions = await suggest_competitors(
-                gateway,
-                profile=profile,
-                signature=signature,
-                evidence=tuple(evidence),
-                brand_name=brand_name,
-                owned_domain=owned_domain,
-            )
+        suggestions = await suggest_competitors(
+            gateway,
+            profile=profile,
+            signature=signature,
+            evidence=tuple(evidence),
+            brand_name=brand_name,
+            owned_domain=owned_domain,
+        )
         model_calls.append(
             _model_call(
                 phase="competitor_suggestions",
