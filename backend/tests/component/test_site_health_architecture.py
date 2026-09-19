@@ -138,7 +138,7 @@ async def test_architecture_runs_after_link_metrics_with_exact_provenance(
         )
 
         monkeypatch.setattr(
-            architecture_domain, "ARCHITECTURE_FORMULA_VERSION", "sh-architecture-2"
+            architecture_domain, "ARCHITECTURE_FORMULA_VERSION", "sh-architecture-3"
         )
         assert await persist_observed_architecture(session, crawl=crawl) == 1
         await session.commit()
@@ -166,7 +166,7 @@ async def test_architecture_runs_after_link_metrics_with_exact_provenance(
         )
         assert {row.architecture_formula_version for row in architectures} == {
             ARCHITECTURE_FORMULA_VERSION,
-            "sh-architecture-2",
+            "sh-architecture-3",
         }
         assert len(structural_evaluations) == 12
         assert {

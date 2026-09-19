@@ -22,6 +22,7 @@ from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
 )
 from app.models.audit import Audit
+from app.models.project import Project
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.runtime import SiteHealthProfile
 from app.models.user import User
@@ -188,9 +189,12 @@ async def test_recompute_foreign_audit_404(
         other_ws = Workspace(name="Foreign WS")
         session.add(other_ws)
         await session.flush()
+        other_project = Project(workspace_id=other_ws.id, name="Foreign project")
+        session.add(other_project)
+        await session.flush()
         foreign_audit = Audit(
             workspace_id=other_ws.id,
-            project_id=scn.project_id,  # even reusing ids cannot cross scopes
+            project_id=other_project.id,
             status="completed",
         )
         session.add(foreign_audit)
