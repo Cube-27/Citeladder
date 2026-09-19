@@ -192,7 +192,7 @@ export function ReviewStep({
             No competitors were confirmed. Add the companies you lose deals to.
           </p>
         ) : (
-          <ul className="flow-entity-list">
+          <ul className="flow-entity-list flow-competitor-chips">
             {competitors.map((competitor, index) => (
               <CompetitorRow
                 key={competitor.id}
