@@ -52,7 +52,9 @@ The worker selects topics from the confirmed profile, accepted competitors,
 persisted offering harvest and page evidence. If topic selection is unavailable
 or insufficient, confirmed products/services supply bounded starting topics.
 It then generates prompts, re-locks the discovery and persists topics, prompts
-and terminal completion together. A terminal-state guard and prompt uniqueness
+and terminal completion together. Generated topics join any existing project
+topics before prompt binding; unresolved core or explicitly topic-bound prompts
+reject the transaction. A terminal-state guard and prompt uniqueness
 prevent repeated delivery from creating a second portfolio. Same-key replays
 return the same shell; exhausted work has a completion-specific failure.
 

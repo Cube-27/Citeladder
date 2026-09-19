@@ -418,7 +418,7 @@ def _generated_prompts(
     prompt_set_id: uuid.UUID,
     discovery_id: uuid.UUID,
     prompts: list[dict],
-    topics: list[Topic],
+    topics_by_id: dict[str, Topic],
     provider: str,
     model: str,
     topic_provider: str,
@@ -426,10 +426,12 @@ def _generated_prompts(
     topic_duration_ms: int,
     research_snapshot_id: uuid.UUID | None,
 ) -> list[Prompt]:
-    topics_by_id = {str(topic.id): topic for topic in topics}
     generated: list[Prompt] = []
     for item in prompts:
-        topic = topics_by_id.get(str(item["topic_id"]))
+        topic_id = item.get("topic_id")
+        topic = topics_by_id.get(str(topic_id)) if topic_id else None
+        if topic is None and (item["cohort"] == PROMPT_COHORT_CORE or topic_id):
+            raise BrandDiscoveryError("Generated prompt references an unknown topic")
         generated.append(
             Prompt(
                 prompt_set_id=prompt_set_id,
@@ -554,14 +556,25 @@ async def _persist_generated_prompts(
         prompt_set_id=prompt_set.id,
         texts=[str(item["text"]) for item in prompts],
     )
-    topics = list(
+    existing_topics = list(
         (
             await session.scalars(select(Topic).where(Topic.project_id == project.id))
         ).all()
     )
-    if not topics:
-        topics = _generated_topics(project.id, discovery_topics)
-        session.add_all(topics)
+    by_id = {str(topic.id): topic for topic in existing_topics}
+    by_name = {topic.name.casefold(): topic for topic in existing_topics}
+    missing_topics: list[Topic] = []
+    for generated in _generated_topics(project.id, discovery_topics):
+        canonical = by_id.get(str(generated.id)) or by_name.get(
+            generated.name.casefold()
+        )
+        if canonical is None:
+            canonical = generated
+            missing_topics.append(canonical)
+            by_name[canonical.name.casefold()] = canonical
+        by_id[str(generated.id)] = canonical
+    if missing_topics:
+        session.add_all(missing_topics)
         await session.flush()
     research_snapshot_id = await session.scalar(
         select(BrandResearchSnapshot.id)
@@ -575,7 +588,7 @@ async def _persist_generated_prompts(
         prompt_set_id=prompt_set.id,
         discovery_id=row.id,
         prompts=prompts,
-        topics=topics,
+        topics_by_id=by_id,
         provider=prompt_provider,
         model=prompt_model,
         topic_provider=topic_provider,

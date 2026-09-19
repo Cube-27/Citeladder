@@ -122,6 +122,159 @@ async def _seed_ready_discovery(
     return row
 
 
+async def _completion_shell(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
+    await _register(client, f"topic-persistence-{uuid.uuid4()}@example.com")
+    async with session_factory() as session:
+        workspace_id = await session.scalar(select(Workspace.id).limit(1))
+        assert workspace_id is not None
+        await seed_occupancy_grants(
+            session,
+            workspace_id=workspace_id,
+            grants=(
+                GrantSpec(key=KEY_PROJECT_SLOTS, value=10),
+                GrantSpec(key=KEY_PROMPT_SLOTS, value=100),
+            ),
+        )
+        discovery = await _seed_ready_discovery(session, workspace_id)
+        await session.commit()
+        discovery_id = discovery.id
+    async with session_factory() as session:
+        row, _ = await onboarding_completion.complete_discovery(
+            session,
+            workspace_id=workspace_id,
+            discovery_id=discovery_id,
+            payload=BrandDiscoveryComplete.model_validate(_completion_payload()),
+            idempotency_key="persist-topics",
+            reviewer_id=uuid.uuid4(),
+        )
+        assert row.project_id is not None
+        return workspace_id, discovery_id, row.project_id
+
+
+@pytest.mark.asyncio
+async def test_completion_persists_missing_topics_and_resolves_existing_names(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    workspace_id, discovery_id, project_id = await _completion_shell(
+        client, session_factory
+    )
+    reused = DiscoveryTopic(
+        topic_id=uuid.uuid4(), name="Existing need", source_refs=["confirmed-profile"]
+    )
+    added = DiscoveryTopic(
+        topic_id=uuid.uuid4(), name="New need", source_refs=["confirmed-profile"]
+    )
+    async with session_factory() as session:
+        existing = Topic(project_id=project_id, name="Existing need", origin="manual")
+        session.add(existing)
+        await session.commit()
+        row = await session.get(BrandDiscovery, discovery_id)
+        assert row is not None
+        await onboarding_service._persist_generated_prompts(
+            session,
+            workspace_id=workspace_id,
+            row=row,
+            prompts=[
+                {
+                    "topic_id": str(reused.topic_id),
+                    "text": "Which existing solutions fit teams",
+                    "intent": "discovery",
+                    "cohort": "core",
+                },
+                {
+                    "topic_id": str(added.topic_id),
+                    "text": "How do teams solve the new need",
+                    "intent": "discovery",
+                    "cohort": "core",
+                },
+                {
+                    "topic_id": None,
+                    "text": "Is Acme suitable for teams",
+                    "intent": "discovery",
+                    "cohort": "brand_diagnostic",
+                },
+            ],
+            discovery_topics=[reused, added],
+            prompt_provider="test",
+            prompt_model="test",
+            topic_provider="test",
+            topic_model="test",
+            topic_duration_ms=0,
+        )
+        await session.commit()
+    async with session_factory() as session:
+        topics = (
+            await session.scalars(select(Topic).where(Topic.project_id == project_id))
+        ).all()
+        prompts = (await session.scalars(select(Prompt))).all()
+    assert {topic.name for topic in topics} == {"Existing need", "New need"}
+    assert {prompt.topic_id for prompt in prompts if prompt.cohort == "core"} == {
+        existing.id,
+        added.topic_id,
+    }
+    assert (
+        next(
+            prompt for prompt in prompts if prompt.cohort == "brand_diagnostic"
+        ).topic_id
+        is None
+    )
+
+
+@pytest.mark.parametrize("cohort", ["core", "brand_diagnostic"])
+@pytest.mark.asyncio
+async def test_unresolved_core_topic_rolls_back_generated_rows(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    cohort: str,
+) -> None:
+    workspace_id, discovery_id, project_id = await _completion_shell(
+        client, session_factory
+    )
+    topic = DiscoveryTopic(
+        topic_id=uuid.uuid4(), name="New need", source_refs=["confirmed-profile"]
+    )
+    async with session_factory() as session:
+        row = await session.get(BrandDiscovery, discovery_id)
+        assert row is not None
+        with pytest.raises(
+            onboarding_service.BrandDiscoveryError, match="unknown topic"
+        ):
+            await onboarding_service._persist_generated_prompts(
+                session,
+                workspace_id=workspace_id,
+                row=row,
+                prompts=[
+                    {
+                        "topic_id": str(uuid.uuid4()),
+                        "text": "Which solutions fit teams",
+                        "intent": "discovery",
+                        "cohort": cohort,
+                    }
+                ],
+                discovery_topics=[topic],
+                prompt_provider="test",
+                prompt_model="test",
+                topic_provider="test",
+                topic_model="test",
+                topic_duration_ms=0,
+            )
+        await session.rollback()
+    async with session_factory() as session:
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(Topic)
+                .where(Topic.project_id == project_id)
+            )
+            == 0
+        )
+        assert await session.scalar(select(func.count()).select_from(Prompt)) == 0
+
+
 @pytest.mark.asyncio
 async def test_missing_site_persists_stable_blocking_error(
     client: httpx.AsyncClient,
