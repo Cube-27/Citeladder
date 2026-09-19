@@ -77,31 +77,47 @@ records.
 ### Initial prompt portfolio
 
 Replace topic selection followed by per-topic generation with one structured
-portfolio request after business-context confirmation.
+discovery request after business-context confirmation. Its response hierarchy
+must preserve the semantic order: business context → buyer needs and decision
+intents → topics → prompts. Buyer intent guides portfolio construction; it is
+not merely a label assigned to prompts after generation. This remains one
+model request, with no separate intent-generation or post-generation
+classification call.
 
 The model receives canonical context, accepted competitors, first-party
-evidence, offering harvest and already acquired research. It returns:
+evidence, offering harvest and already acquired research. It first identifies
+meaningful buyer needs and decision intents supported by that context. Its
+structured response then relates each need or intent to:
 
-- Topics containing name, description, supplied evidence references and nested
-  core prompts.
+- Distinct topics containing name, description, supplied evidence references
+  and nested core prompts.
 - Separate diagnostic and comparison prompt lists using existing cohort
-  semantics.
-- Existing buyer-stage and prompt-intent labels.
+  semantics, tied to the needs or intents that caused them to exist.
+- Buyer-stage and prompt-intent metadata derived from each prompt's governing
+  need or intent.
+
+The response may nest topics beneath intents or give topics explicit intent
+references, but the relationship must be inspectable and validated before
+admission. An unlinked prompt label is not evidence of intent coverage.
 
 Code assigns topic UUIDs after admission. Topics describe buyer needs, rather
 than mirroring navigation.
 
 Guide the model toward roughly two to ten meaningful topics without hard topic
-quotas, fixed prompts per topic, stage quotas or filler. Existing capacity,
-payload and transport limits remain safety constraints.
+quotas, fixed prompts per topic, stage quotas or filler. Require deliberate
+coverage of the materially different buyer needs and decision intents found
+for that business; an arbitrary set of prompts with labels added afterward
+does not meet this contract. Existing capacity, payload and transport limits
+remain safety constraints.
 
 Reuse deterministic admission for source references, topic cleanup/distinctness,
 prompt identity, exact duplicates, placeholders, length and cohort rules. Allow
 references to supplied confirmed context and research, not only website offerings.
 
 Drop topics with no surviving prompts and record warnings. Accept smaller valid
-portfolios without regeneration. If no valid core portfolio remains, use the
-existing recoverable completion-failure flow.
+portfolios without regeneration. If no meaningful buyer-intent coverage or no
+valid core portfolio remains, use the existing recoverable completion-failure
+flow.
 
 Use the existing structured-repair owner with at most two attempts per stage.
 Remove missing-topic, per-topic and per-cohort semantic retry loops; preserve
@@ -122,10 +138,13 @@ bounded worker recovery and idempotency.
    workspace authorization, completion locking and replay behavior.
 
 3. **Replace onboarding portfolio generation.** Change completion orchestration
-   and provenance together with the nested response contract. Reuse existing
-   validators. Delete separate onboarding topic selection, per-topic/named-cohort
-   fan-out, quota machinery and obsolete configuration once their callers are
-   removed.
+   and provenance together with a structured response that links buyer needs
+   and decision intents to the topics and prompts they produce. Admit the
+   relationships before persisting prompts; use the linked intents to assess
+   material coverage without numeric quotas or a second model stage. Reuse
+   existing validators. Delete separate onboarding topic selection,
+   per-topic/named-cohort fan-out, quota machinery and obsolete configuration
+   once their callers are removed.
 
 4. **Simplify competitors and selection UI.** Implement the ten-suggestion
    contract and five-selection chips. Remove automatic peer scoring,
@@ -151,8 +170,9 @@ Add focused deterministic tests for:
 
 - Unknown facets, reviewed-value precedence, and context continuity from
   onboarding into prompts and Content.
-- Nested topic binding, valid and invalid evidence references, empty topics,
-  duplicates, cohort rules and bounded model attempts.
+- Intent-to-topic-to-prompt binding, meaningful buyer-intent coverage, valid
+  and invalid evidence references, empty topics, duplicates, cohort rules and
+  bounded model attempts.
 - Existing-topic insertion, unresolved-topic rollback, cross-workspace rejection
   and idempotent completion replay.
 - Competitor cleanup, manual additions, five-selection enforcement, deselection
