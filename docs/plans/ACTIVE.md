@@ -4,7 +4,7 @@
 
 - [Discovery simplification](citeladder-discovery-simplification.md)
   — selected by the owner; prioritize buyer-demand topic/prompt discovery,
-  shared business context and simpler competitor selection. Five ordered
+  shared business context and simpler competitor selection. Four ordered
   implementation slices. Registration does not authorize execution.
 
 ## Queued
@@ -14,6 +14,8 @@
   topical coherence and anchor quality, then content differentiation once the
   SERP connector from the Google AI Overview plan exists. Six pull requests.
   Next queued after Discovery simplification.
+- [Subsequent prompt grounding](citeladder-subsequent-prompt-grounding.md)
+  — pending; relevance-ranked persisted GSC evidence for later Generate prompts.
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
   — pending; remaining evidence/action and selected-query generation work.
 - [Razorpay local test integration](citeladder-razorpay-local-test-integration.md)
