@@ -23,6 +23,10 @@ from app.analysis.site_health.fact_regions import (
 from app.core.config import site_health_acquisition as config
 from app.core.config import site_health_company_entity as company_entity_config
 from app.core.config import site_health_taxonomy as taxonomy
+from app.core.config.content_differentiation import (
+    SOURCE_PAGE_MAX_TABLE_HEADERS,
+    SOURCE_PAGE_MAX_TABLES,
+)
 from app.core.config.site_health_rules import (
     ANSWER_FIRST_MIN_WORDS,
 )
@@ -57,6 +61,8 @@ def empty_page_owned_content_facts() -> dict[str, Any]:
         "editorial_lead": "",
         "direct_answer": "",
         "primary_content_text": "",
+        "primary_content_pre_truncation_length": 0,
+        "primary_content_truncated": False,
         "entity_proposition": {
             "identity": "",
             "proposition": "",
@@ -66,6 +72,7 @@ def empty_page_owned_content_facts() -> dict[str, Any]:
             "next_action": "",
         },
         "primary_heading_outline": [],
+        "primary_table_headers": [],
         "question_answer_relationships": [],
     }
 
@@ -82,9 +89,14 @@ def page_owned_content_facts(root: Any) -> dict[str, Any]:
             if _is_recommendation_container(item)
             or not _contains_rich_text_content(item)
         }
-        facts["primary_content_text"] = region_text(
-            region, excluded_container_ids=container_ids
-        )[: taxonomy.PAGE_OWNED_TEXT_MAX_CHARS]
+        primary_text = region_text(region, excluded_container_ids=container_ids)
+        facts["primary_content_pre_truncation_length"] = len(primary_text)
+        facts["primary_content_truncated"] = (
+            len(primary_text) > taxonomy.PAGE_OWNED_TEXT_MAX_CHARS
+        )
+        facts["primary_content_text"] = primary_text[
+            : taxonomy.PAGE_OWNED_TEXT_MAX_CHARS
+        ]
         outline = _primary_heading_outline(region, container_ids)
         lead = _editorial_lead(region, container_ids)
         proposition = (
@@ -94,6 +106,7 @@ def page_owned_content_facts(root: Any) -> dict[str, Any]:
         )
         direct = direct_answer(region, container_ids)
         facts["primary_heading_outline"] = outline
+        facts["primary_table_headers"] = _primary_table_headers(region, container_ids)
         facts["question_answer_relationships"] = question_answer_relationships(
             region, container_ids
         )
@@ -107,6 +120,23 @@ def page_owned_content_facts(root: Any) -> dict[str, Any]:
     except DOM_ERRORS as exc:
         dom_failure("page_owned_content_facts", exc)
     return facts
+
+
+def _primary_table_headers(region: Any, container_ids: set[int]) -> list[list[str]]:
+    tables: list[list[str]] = []
+    try:
+        for table in region.iter("table"):
+            if not node_outside_containers(table, container_ids):
+                continue
+            headers = [
+                _text(node)[:200] for node in table.iter("th") if _text(node).strip()
+            ][:SOURCE_PAGE_MAX_TABLE_HEADERS]
+            tables.append(headers)
+            if len(tables) >= SOURCE_PAGE_MAX_TABLES:
+                break
+    except DOM_ERRORS as exc:
+        dom_failure("primary_table_headers", exc)
+    return tables
 
 
 def _primary_heading_outline(

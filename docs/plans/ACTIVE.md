@@ -9,11 +9,6 @@
 
 ## Queued
 
-- [Search intelligence signals](citeladder-search-intelligence-signals.md)
-  — internal authority, significant-content-update detection, query relevance,
-  topical coherence and anchor quality, then content differentiation once the
-  SERP connector from the Google AI Overview plan exists. Six pull requests.
-  Next queued after Discovery simplification.
 - [Subsequent prompt grounding](citeladder-subsequent-prompt-grounding.md)
   — pending; relevance-ranked persisted GSC evidence for later Generate prompts.
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
@@ -27,6 +22,11 @@ for deferred sign-in selection and invitation delivery; it is not an active or
 additional queued assignment. Listed work is not authorization to execute it.
 
 ## Last completed
+
+[Search intelligence signals](citeladder-search-intelligence-signals.md)
+— completed across internal authority, significant content change, query
+relevance, anchor diagnostics, topical coherence and bounded content
+differentiation. Retain the plan's evidence and uncertainty contracts.
 
 [Google AI Overview surface](citeladder-google-ai-overview-surface.md)
 — completion confirmed by the owner on 19 September 2026. Retain the plan's

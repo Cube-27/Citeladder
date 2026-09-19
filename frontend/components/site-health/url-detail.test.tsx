@@ -117,6 +117,11 @@ function detail(overrides: Partial<PageDetail> = {}): PageDetail {
       nofollow_inbound_count: 1,
       depth_from_home: 2,
       source_page_count: 7,
+      authority_share: 0.1275,
+      authority_rank: 3,
+      authority_scope: 'observed_crawl',
+      observed_crawl_incomplete: false,
+      anchor_diagnostics: [],
       top_inbound: [
         {
           site_url_id: 'dddddddd-1111-4111-8111-111111111111',
@@ -585,7 +590,7 @@ describe('UrlDetail', () => {
     expect(screen.getByRole('heading', { name: 'Internal Links' })).toBeInTheDocument();
     // Inbound and main-content inbound are different facts and both are shown.
     expect(screen.getByText('Main-content inbound')).toBeInTheDocument();
-    expect(screen.getByText('Counted across 7 crawled pages')).toBeInTheDocument();
+    expect(screen.getByText('Modelled over 7 observed crawl pages')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://acme.com/collections/bags' })).toHaveAttribute(
       'href',
       `/site/crawls/${CRAWL}/pages/dddddddd-1111-4111-8111-111111111111`,

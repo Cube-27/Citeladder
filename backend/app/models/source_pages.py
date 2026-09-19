@@ -20,6 +20,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     String,
@@ -71,6 +72,14 @@ class SourcePage(Base):
 
     __tablename__ = "source_pages"
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete=_CASCADE,
+        ),
+        UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_source_pages_ws_project_id"
+        ),
         UniqueConstraint("project_id", "url_hash", name="uq_source_page_project_url"),
         Index("ix_source_pages_project_state", "project_id", "inspection_state"),
         Index("ix_source_pages_project_domain", "project_id", "registrable_domain"),
@@ -88,7 +97,6 @@ class SourcePage(Base):
     # project-relative, so two projects citing one URL need separate verdicts.
     project_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey(_FK_PROJECT, ondelete=_CASCADE),
         index=True,
     )
     url_hash: Mapped[str] = mapped_column(String(64))

@@ -398,6 +398,7 @@ async def _seed_evidence_execution(
     task = AuditTask(
         audit_id=audit.id,
         workspace_id=workspace_id,
+        project_id=project_id,
         # A TASK's terminal success is `succeeded`; `completed` is the AUDIT
         # vocabulary. Stamping the audit's constant here is what let a filter
         # on a status no task can hold pass every test while returning nothing

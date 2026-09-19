@@ -24,12 +24,35 @@ export function InternalLinksCard({
   crawlId,
 }: Readonly<{ links: PageDetail['internal_links']; crawlId: string }>) {
   if (links === null) return null;
+  const diagnosticCounts = {
+    generic: links.anchor_diagnostics.filter((item) => item.kind === 'generic').length,
+    repeated_destination: links.anchor_diagnostics.filter(
+      (item) => item.kind === 'repeated_destination',
+    ).length,
+    low_lexical_alignment: links.anchor_diagnostics.filter(
+      (item) => item.kind === 'low_lexical_alignment',
+    ).length,
+  };
   const metrics = [
     { label: 'Inbound', value: links.inbound_count },
     { label: 'Main-content inbound', value: links.main_content_inbound_count },
     { label: 'Outbound', value: links.outbound_count },
     { label: 'Main-content outbound', value: links.main_content_outbound_count },
     { label: 'Nofollow inbound', value: links.nofollow_inbound_count },
+    {
+      label: 'Internal authority',
+      value: `${(links.authority_share * 100).toFixed(2)}%`,
+    },
+    { label: 'Authority rank', value: links.authority_rank },
+    { label: 'Generic anchor patterns', value: diagnosticCounts.generic },
+    {
+      label: 'Repeated destination patterns',
+      value: diagnosticCounts.repeated_destination,
+    },
+    {
+      label: 'Low lexical alignment',
+      value: diagnosticCounts.low_lexical_alignment,
+    },
     {
       label: 'Depth from home',
       value: links.depth_from_home === null ? PLACEHOLDER : links.depth_from_home,
@@ -39,7 +62,7 @@ export function InternalLinksCard({
     <section className="border-border-subtle grid min-w-0 gap-4 border-y py-4">
       <EditorialSectionHeader
         title="Internal Links"
-        description={`Counted across ${links.source_page_count} crawled page${links.source_page_count === 1 ? '' : 's'}`}
+        description={`Modelled over ${links.source_page_count} observed crawl page${links.source_page_count === 1 ? '' : 's'}${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
       />
       <dl className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3">
         {metrics.map((metric) => (

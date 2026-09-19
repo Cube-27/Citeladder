@@ -6,6 +6,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
@@ -29,6 +30,9 @@ from app.core.config.entitlements import KEY_CONTENT_CREATION
 from app.core.errors import ApiException
 from app.core.http_errors import api_error, raise_api_error
 from app.domain.abuse.service import UsageLimitExceededError
+from app.domain.content.differentiation_schemas import (
+    ContentDifferentiationReportView,
+)
 from app.domain.content.schemas import (
     ContentContextPreview,
     ContentFeedbackRequest,
@@ -61,10 +65,12 @@ from app.domain.content.service import (
     to_list_item,
     try_again,
 )
+from app.domain.content_differentiation import list_content_differentiation_reports
 from app.domain.entitlements.enforcement import (
     CapabilityNotGrantedError,
     require_workspace_capability,
 )
+from app.models.project import Project
 
 router = APIRouter(prefix="/content", tags=["content"])
 
@@ -214,6 +220,29 @@ async def list_generations_endpoint(
     except ContentGenerationNotFoundError as exc:
         raise _not_found(exc) from exc
     return [to_list_item(row) for row in rows]
+
+
+@router.get("/differentiation")
+async def list_differentiation_reports_endpoint(
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+    project_id: Annotated[uuid.UUID, Query()],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> list[ContentDifferentiationReportView]:
+    project_exists = await session.scalar(
+        select(Project.id).where(
+            Project.id == project_id, Project.workspace_id == ctx.workspace_id
+        )
+    )
+    if project_exists is None:
+        raise _not_found(ContentGenerationNotFoundError("Project not found"))
+    rows = await list_content_differentiation_reports(
+        session,
+        workspace_id=ctx.workspace_id,
+        project_id=project_id,
+        limit=limit,
+    )
+    return [ContentDifferentiationReportView.model_validate(row) for row in rows]
 
 
 @router.get("/target-pages")

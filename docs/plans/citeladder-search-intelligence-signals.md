@@ -1,13 +1,14 @@
 # Search intelligence signals — relevance, authority, change and differentiation
 
-Owner-selected, queued behind
-[Google AI Overview](citeladder-google-ai-overview-surface.md). [Site Health](../site-health.md),
-[Opportunities](../opportunities.md) and [Visibility](../visibility-prompt.md)
-own shipped behavior. The originating material is an owner-authored analysis of
-the 2024 Google Content Warehouse API leak, retained as guidance only; every
-capability below was re-scoped against what this codebase can actually observe.
-Verified against `main` at `9a34305e`. Listed work is not authorization to
-execute it. Scope each slice explicitly before starting it.
+> **Status:** completed. The six slices are implemented; this plan is retained
+> as contract and implementation history.
+
+[Site Health](../site-health.md), [Opportunities](../opportunities.md),
+[Connected data](../integrations-traffic-analytics.md), [Content](../content-generation.md)
+and [Visibility](../visibility-prompt.md) own shipped behavior. The originating
+material is an owner-authored analysis of the 2024 Google Content Warehouse API
+leak, retained as guidance only; every capability below was re-scoped against
+what this codebase can actually observe.
 
 ## Problem
 
@@ -25,8 +26,8 @@ observed or cannot be reproduced honestly, it is excluded.
 
 ## Scope decision
 
-Six capabilities were assessed. Four are built, one is deliberately reduced, and
-one is scheduled behind a dependency.
+Six capabilities were assessed and implemented in six bounded slices. Anchor
+quality remains deliberately reduced and topical coherence remains lexical-only.
 
 | Capability | Decision | Basis |
 |---|---|---|
@@ -115,10 +116,11 @@ construction than a fixed CTR threshold. It is extended by PR 3, not replaced.
   (`analysis/site_health/fact_links.py:32-68`). Anchor-to-destination relevance is
   computable today; source-paragraph context relevance would need a new extractor
   field and would only apply to future crawls.
-- **There is no SERP provider yet.** `grep -ri dataforseo backend/` returns
-  nothing on `main`. Content differentiation is scheduled after the
-  [Google AI Overview](citeladder-google-ai-overview-surface.md) plan lands that
-  connector.
+- **The SERP transport dependency is now shipped.** The Google AI Overview plan
+  delivered the DataForSEO connector, raw successful task payloads and proven
+  credential/lifecycle/cost paths. Organic items remain excluded from visibility
+  citation parsing and are opened only by PR 6's separate comparison pipeline.
+
 
 ## Naming
 
@@ -410,10 +412,9 @@ not link to a topic hub, and internal authority weighed against topical support.
 
 ### PR 6 — Content differentiation
 
-Depends on the DataForSEO connector delivered by the
-[Google AI Overview](citeladder-google-ai-overview-surface.md) plan. Do not start
-this slice until that connector is merged and its credential, lifecycle and cost
-paths are proven in production.
+The DataForSEO connector delivered by the
+[Google AI Overview](citeladder-google-ai-overview-surface.md) plan is the transport
+dependency used here; source-page inspection remains the retrieval boundary.
 
 **Architectural boundary, and it is the important part.** This slice reuses the
 DataForSEO *transport* and the source-page *inspection* infrastructure
@@ -429,16 +430,16 @@ answered and first-party evidence markers are added only once their extraction a
 uncertainty rules are written down, because each is a judgement call disguised as
 a count.
 
-Contracts that must be explicit before implementation:
+Implemented contracts:
 
-| Contract | What must be decided |
+| Contract | Shipped decision |
 |---|---|
-| Comparison set | How many results, duplicate-domain treatment, canonical deduplication, the search context, and result freshness |
-| Usable evidence | How many selected pages were actually fetched and successfully extracted, recorded per report |
-| Features | Exact extraction and normalisation rules per supported feature type |
-| "Most competing pages" | A stated threshold over successfully inspected, comparable pages |
-| Percentages | The numerator and denominator of every published figure |
-| Unknowns | Blocked, failed, truncated or under-extracted pages are never evidence that a feature is absent |
+| Comparison set | First 10 ranked organic results; exact URLs are deduplicated before admission, canonical source-page identity deduplicates again, and distinct canonical pages on one domain remain eligible. Provider request context and observation time are persisted. |
+| Usable evidence | Every report records selected, inspected and unusable page counts plus candidate and successful snapshot IDs. |
+| Features | Lowercase ASCII lexical heading-topic sets, normalized table-header sets including an explicit unlabelled-table value, and lowercase outbound registrable domains. |
+| "Most competing pages" | At least 60% of successfully inspected comparable pages, with a minimum denominator of three. |
+| Percentages | Each item records pages containing the feature, inspected-page denominator and their quotient. |
+| Unknowns | Blocked, failed, unparsed, explicitly truncated and under-200-character inspections are excluded from the denominator; insufficient evidence emits no gaps or uniqueness claims. |
 
 **Unknown is not absence.** If three of ten selected pages were inspectable, the
 report says the comparison covers three. It may not imply that the seven unseen

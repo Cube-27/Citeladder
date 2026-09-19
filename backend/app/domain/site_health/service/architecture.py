@@ -11,12 +11,26 @@ from app.core.config.site_health_archetypes import (
     ARCHITECTURE_FORMULA_VERSION,
 )
 from app.core.config.site_health_link_metrics import COVERAGE_STATE_COMPLETE
+from app.core.config.site_health_topical import TOPICAL_FORMULA_VERSION
 from app.domain.site_health.service.common import (
     resolve_usable_crawl,
 )
 from app.models.site_health.architecture import SiteObservedArchitecture
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.snapshot import SiteHealthSnapshot
+
+
+def _unavailable_topical(reason: str) -> dict:
+    return {
+        "state": "unavailable",
+        "formula_version": TOPICAL_FORMULA_VERSION,
+        "eligible_page_count": 0,
+        "total_page_count": 0,
+        "clusters": [],
+        "assignments": [],
+        "outliers": [],
+        "limitations": [reason],
+    }
 
 
 def _unavailable(reason: str, *, crawl_id: uuid.UUID | None = None) -> dict:
@@ -39,6 +53,16 @@ def _unavailable(reason: str, *, crawl_id: uuid.UUID | None = None) -> dict:
             "measured_page_count": 0,
             "unmeasured_page_count": 0,
             "buckets": [],
+        },
+        "topical_coherence": {
+            "state": "unavailable",
+            "formula_version": TOPICAL_FORMULA_VERSION,
+            "eligible_page_count": 0,
+            "total_page_count": 0,
+            "clusters": [],
+            "assignments": [],
+            "outliers": [],
+            "limitations": [reason],
         },
         "architecture_formula_version": ARCHITECTURE_FORMULA_VERSION,
         "limitations": [reason],
@@ -203,6 +227,11 @@ def _projection(
         "nodes": nodes,
         "internal_linking": internal_linking,
         "structure_depth": dict(model.structure_depth or {}),
+        "topical_coherence": (
+            dict(model.topical_coherence)
+            if model.topical_coherence is not None
+            else _unavailable_topical("The persisted model predates topical coherence.")
+        ),
         "architecture_formula_version": model.architecture_formula_version,
         "limitations": _limitations(coverage_state),
     }

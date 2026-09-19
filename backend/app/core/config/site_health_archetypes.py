@@ -21,7 +21,7 @@ from app.core.config.site_health_taxonomy import (
     PAGE_KIND_TRUST_POLICY,
 )
 
-ARCHITECTURE_FORMULA_VERSION: Final = "sh-architecture-1"
+ARCHITECTURE_FORMULA_VERSION: Final = "sh-architecture-2"
 ARCHETYPE_POLICY_VERSION: Final = "sh-archetypes-1"
 
 ARCHETYPE_COMMERCE: Final = "commerce"

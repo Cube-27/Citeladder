@@ -506,6 +506,7 @@ async def _seed_http_evidence(
     task = AuditTask(
         audit_id=audit.id,
         workspace_id=workspace_id,
+        project_id=project_id,
         prompt_snapshot_id=snapshot.id,
         engine_snapshot_id=engine_snapshot.id,
         prompt_index=0,

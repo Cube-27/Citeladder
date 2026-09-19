@@ -22,6 +22,7 @@ import {
 import { useActiveProject } from '@/lib/project/project-context';
 import { saveBlob } from '@/lib/site-health/download';
 
+import { ContentDifferentiationPanel } from './content-differentiation-panel';
 import {
   useContentContextPreview,
   useContentTargetPages,
@@ -188,6 +189,7 @@ function ProjectContentScreen({
 
   return (
     <ContentWorkspace
+      projectId={projectId}
       siteHealth={siteHealth}
       instruction={instruction}
       instructionRef={instructionRef}
@@ -221,6 +223,7 @@ function ProjectContentScreen({
 }
 
 function ContentWorkspace({
+  projectId,
   siteHealth,
   instruction,
   instructionRef,
@@ -248,6 +251,7 @@ function ContentWorkspace({
   reasonOpen,
   setReasonOpen,
 }: Readonly<{
+  projectId: string;
   siteHealth: ReturnType<typeof useSiteHealthHandoff>;
   instruction: string;
   instructionRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -302,6 +306,7 @@ function ContentWorkspace({
     >
       <Stack gap="workspace" className="min-w-0">
         {siteHealthAlert}
+        <ContentDifferentiationPanel projectId={projectId} />
         <ContentComposer
           instruction={instruction}
           instructionRef={instructionRef}

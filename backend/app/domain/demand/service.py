@@ -18,6 +18,7 @@ from app.core.config.demand import (
 from app.domain.demand.detector_source import (
     classification_revision_material,
     load_query_detector_inputs,
+    page_revision_material,
 )
 from app.domain.demand.projection import (
     DemandSignalCandidate,
@@ -311,6 +312,7 @@ async def recompute_demand(
             ),
             "query_evidence_revision": query_evidence.source_hash[:24],
             "query_classifications": classification_material,
+            "page_evidence": page_revision_material(query_detector_inputs),
         }
         source_hash = stable_hash(source_material)
         existing_snapshot_id = await session.scalar(
@@ -464,6 +466,7 @@ async def demand_source_revision(
             ),
             "query_evidence_revision": query_revision,
             "query_classifications": classification_material,
+            "page_evidence": page_revision_material(query_detector_inputs),
         }
     )[:24]
 

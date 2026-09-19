@@ -23,6 +23,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -75,7 +76,6 @@ class Audit(Base):
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("projects.id", ondelete="CASCADE"),
         index=True,
     )
     parent_audit_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -183,7 +183,15 @@ class Audit(Base):
     )
 
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
         UniqueConstraint("schedule_id", "scheduled_for", name="uq_audit_schedule_slot"),
+        UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_audits_ws_project_id"
+        ),
         UniqueConstraint(
             "parent_audit_id", "repair_key", name="uq_audit_parent_repair_key"
         ),
@@ -290,6 +298,18 @@ class AuditTask(Base):
 
     __tablename__ = "audit_tasks"
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["workspace_id", "project_id", "audit_id"],
+            ["audits.workspace_id", "audits.project_id", "audits.id"],
+            ondelete="CASCADE",
+        ),
+        UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "audit_id",
+            "id",
+            name="uq_audit_tasks_ws_project_audit_id",
+        ),
         UniqueConstraint("idempotency_key", name="uq_audit_task_idempotency_key"),
         UniqueConstraint(
             "audit_id",
@@ -305,12 +325,16 @@ class AuditTask(Base):
     )
     audit_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey(FK_AUDITS_ID, ondelete="CASCADE"),
         index=True,
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("workspaces.id", ondelete="CASCADE"),
+        index=True,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
         index=True,
     )
     source_task_id: Mapped[uuid.UUID | None] = mapped_column(

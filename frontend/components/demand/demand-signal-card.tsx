@@ -186,6 +186,93 @@ function ctrGapInsight(signal: DemandSignal): DiagnosticInsight {
   };
 }
 
+type QueryRelevance = {
+  state: string;
+  reason?: string;
+  title_coverage?: number;
+  h1_coverage?: number;
+  primary_content_coverage?: number;
+  absent_from_title?: string[];
+  absent_from_h1?: string[];
+  statement?: string | null;
+};
+
+function queryRelevance(signal: DemandSignal): QueryRelevance | null {
+  const value = signal.evidence.query_relevance;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const relevance = value as Record<string, unknown>;
+  if (typeof relevance.state !== 'string') return null;
+  return relevance as QueryRelevance;
+}
+
+function coverageLabel(value: number | undefined) {
+  return typeof value === 'number'
+    ? `${Math.round(value * 100)}%`
+    : availabilityLabel('not_measured');
+}
+
+function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) {
+  const relevance = queryRelevance(signal);
+  if (!relevance) return null;
+  if (relevance.state !== 'measured') {
+    return (
+      <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1')}>
+        <span className={textRole('label')}>Query relevance unavailable</span>
+        <p className="text-muted text-xs">
+          {relevance.reason === 'page_content_unavailable'
+            ? 'The resolved page had no usable inspected content.'
+            : 'No usable query terms were available for comparison.'}
+        </p>
+      </div>
+    );
+  }
+  const missing = Array.from(
+    new Set([...(relevance.absent_from_title ?? []), ...(relevance.absent_from_h1 ?? [])]),
+  );
+  return (
+    <section
+      className={panelClasses({ tone: 'well', pad: 'compact' })}
+      aria-label="Query relevance"
+    >
+      <div className="grid gap-2">
+        <div>
+          <span className={textRole('label')}>Query relevance</span>
+          <p className="text-secondary mt-0.5 text-xs">
+            {relevance.statement ??
+              'Query-term coverage measured against the currently inspected page.'}
+          </p>
+        </div>
+        <dl className="grid grid-cols-3 gap-3 text-xs">
+          <div>
+            <dt className="text-muted">Title</dt>
+            <dd className={textRole('emphasis', 'tabular-nums')}>
+              {coverageLabel(relevance.title_coverage)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted">H1</dt>
+            <dd className={textRole('emphasis', 'tabular-nums')}>
+              {coverageLabel(relevance.h1_coverage)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted">Page text</dt>
+            <dd className={textRole('emphasis', 'tabular-nums')}>
+              {coverageLabel(relevance.primary_content_coverage)}
+            </dd>
+          </div>
+        </dl>
+        {missing.length > 0 ? (
+          <p className="text-secondary text-xs">
+            <span className={textRole('label')}>Missing from title or H1:</span>{' '}
+            {missing.join(', ')}
+          </p>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 function emergingInsight(signal: DemandSignal): DiagnosticInsight {
   const prior = numericMetric(signal, 'prior_impressions');
   const recent = numericMetric(signal, 'recent_impressions');
@@ -341,6 +428,8 @@ export function DemandSignalCard({
             </div>
           )}
         </div>
+
+        <QueryRelevanceEvidence signal={signal} />
 
         {/* Metrics Bar & Next Steps */}
         <div className="border-border-subtle flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">

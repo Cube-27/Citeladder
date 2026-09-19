@@ -29,7 +29,9 @@ from sqlalchemy import CursorResult, case, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.content_differentiation import organic_results
 from app.analysis.source_pages.url_format import derive_url_format
+from app.core.config.content_differentiation import DIFFERENTIATION_RESULT_LIMIT
 from app.core.config.source_pages import (
     INSPECTION_INSPECTED,
     INSPECTION_STALE,
@@ -41,8 +43,10 @@ from app.core.config.source_pages import (
     SOURCE_PAGE_STALE_AFTER_HOURS,
     URL_IDENTITY_UNRESOLVED,
 )
+from app.domain.source_pages.identity import CitationIdentity, identify_citation_url
 from app.models.analysis import Citation, ResponseAnalysis
-from app.models.audit import Audit
+from app.models.audit import Audit, AuditTask, RawResponseArtifact
+from app.models.content_differentiation import ContentDifferentiationCandidate
 from app.models.source_pages import SourcePage
 
 
@@ -212,6 +216,96 @@ async def sync_cited_pages(
         .values(inspection_state=INSPECTION_STALE, updated_at=moment)
     )
     return await _unresolved_rows(session, audit=audit)
+
+
+def _canonical_differentiation_results(
+    payload: dict[str, Any] | None,
+) -> tuple[tuple[dict[str, Any], CitationIdentity], ...]:
+    selected: list[tuple[dict[str, Any], CitationIdentity]] = []
+    seen: set[str] = set()
+    for result in organic_results(payload, limit=None):
+        identity = identify_citation_url(result["url"], provider_resolved=True)
+        if (
+            not identity.is_resolved
+            or identity.url_hash is None
+            or identity.url_hash in seen
+        ):
+            continue
+        seen.add(identity.url_hash)
+        selected.append((result, identity))
+        if len(selected) >= DIFFERENTIATION_RESULT_LIMIT:
+            break
+    return tuple(selected)
+
+
+async def sync_differentiation_pages(
+    session: AsyncSession, *, audit: Audit, now: datetime | None = None
+) -> int:
+    """Admit selected organic pages without creating citation evidence."""
+    moment = now or datetime.now(UTC)
+    statement = (
+        select(RawResponseArtifact, AuditTask)
+        .join(AuditTask, AuditTask.id == RawResponseArtifact.task_id)
+        .where(
+            RawResponseArtifact.audit_id == audit.id,
+            RawResponseArtifact.transport_provider == "dataforseo",
+        )
+        .order_by(RawResponseArtifact.created_at, RawResponseArtifact.id)
+    )
+    admitted = 0
+    for artifact, task in (await session.execute(statement)).all():
+        for result, identity in _canonical_differentiation_results(
+            artifact.provider_metadata
+        ):
+            page_format, method = derive_url_format(identity.canonical_url or "")
+            page_id = await session.scalar(
+                pg_insert(SourcePage)
+                .values(
+                    workspace_id=audit.workspace_id,
+                    project_id=audit.project_id,
+                    url_hash=identity.url_hash,
+                    canonical_url=identity.canonical_url or "",
+                    registrable_domain=identity.registrable_domain or "",
+                    recurrence_count=0,
+                    page_format=page_format,
+                    page_format_method=method,
+                    page_format_version=SOURCE_PAGE_FORMAT_VERSION,
+                    first_seen_audit_id=audit.id,
+                    last_seen_audit_id=audit.id,
+                    inspector_version=SOURCE_PAGE_INSPECTOR_VERSION,
+                )
+                .on_conflict_do_update(
+                    constraint="uq_source_page_project_url",
+                    set_={"updated_at": moment},
+                )
+                .returning(SourcePage.id)
+            )
+            if page_id is None:
+                continue
+            await session.execute(
+                pg_insert(ContentDifferentiationCandidate)
+                .values(
+                    workspace_id=audit.workspace_id,
+                    project_id=audit.project_id,
+                    audit_id=audit.id,
+                    audit_task_id=task.id,
+                    source_page_id=page_id,
+                    query_text=task.prompt_text,
+                    rank=result["rank"],
+                    result_title=result["title"],
+                    search_context={
+                        "logical_engine": task.logical_engine,
+                        "provider": artifact.transport_provider,
+                        "observed_at": artifact.created_at.isoformat(),
+                        "request": dict(task.request_snapshot or {}),
+                    },
+                )
+                .on_conflict_do_nothing(
+                    constraint="uq_content_diff_candidate_task_page"
+                )
+            )
+            admitted += 1
+    return admitted
 
 
 async def backfill_citation_identity(

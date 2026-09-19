@@ -372,7 +372,7 @@ EVENT_CRAWL_FAILED: Final = "crawl.failed"
 EVENT_CRAWL_CANCELLED: Final = "crawl.cancelled"
 
 # Pre-launch semantic versions reset with the disposable development database.
-EXTRACTOR_VERSION: Final = "sh-extractor-1"
+EXTRACTOR_VERSION: Final = "sh-extractor-2"
 
 LINK_REWRITE_VERSION: Final = "sh-link-rewrite-1"
 

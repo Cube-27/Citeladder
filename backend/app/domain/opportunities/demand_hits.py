@@ -56,6 +56,7 @@ def _hit(snapshot: DemandSnapshot, signal: DemandSignal) -> DetectorHit | None:
             "metrics": dict(signal.metrics or {}),
             "coverage": dict(signal.coverage or {}),
             "limitations": list(signal.limitations or []),
+            "query_relevance": evidence.get("query_relevance"),
         },
         source_analysis_ids=(),
         source_issue_ids=(),

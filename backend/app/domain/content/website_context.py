@@ -43,6 +43,7 @@ from app.core.config.content import (
 from app.core.config.site_health_contracts import (
     CRAWL_TERMINAL_STATUSES,
 )
+from app.domain.content.lexical import lexical_tokens
 from app.models.site_health.acquisition import SiteFetchArtifact
 from app.models.site_health.analysis import SitePageAnalysis
 from app.models.site_health.crawl import SiteCrawl
@@ -54,71 +55,6 @@ from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl
 # included) to single spaces.
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 _WHITESPACE = re.compile(r"\s+")
-
-# Relevance tokenisation: split on anything non-alphanumeric so URL path
-# segments ("/school-polos") tokenise the same way prose does.
-_TOKEN_SPLIT = re.compile(r"[^a-z0-9]+")
-# Small inline stop list — enough to stop instruction verbs and articles from
-# matching every page. Deliberately not a linguistics dependency.
-_STOP_WORDS: frozenset[str] = frozenset(
-    {
-        "about",
-        "and",
-        "any",
-        "are",
-        "best",
-        "but",
-        "can",
-        "content",
-        "create",
-        "for",
-        "from",
-        "get",
-        "give",
-        "guide",
-        "has",
-        "have",
-        "how",
-        "into",
-        "its",
-        "make",
-        "more",
-        "new",
-        "not",
-        "our",
-        "out",
-        "page",
-        "post",
-        "some",
-        "that",
-        "the",
-        "their",
-        "them",
-        "then",
-        "there",
-        "these",
-        "they",
-        "this",
-        "top",
-        "use",
-        "using",
-        "want",
-        "was",
-        "were",
-        "what",
-        "when",
-        "where",
-        "which",
-        "who",
-        "why",
-        "will",
-        "with",
-        "write",
-        "writing",
-        "you",
-        "your",
-    }
-)
 
 
 def _facts_usable() -> ColumnElement[bool]:
@@ -181,13 +117,8 @@ def _is_homepage(site_url: SiteUrl, *, root_url: str, root_host: str) -> bool:
 
 
 def _tokens(value: object) -> set[str]:
-    """Lowercase alphanumeric terms, minus stop words and 1-2 char noise."""
-    text = str(value or "").lower()
-    return {
-        token
-        for token in _TOKEN_SPLIT.split(text)
-        if len(token) > 2 and token not in _STOP_WORDS
-    }
+    """Keep the context selector's existing stop-word and short-term policy."""
+    return lexical_tokens(value, min_length=3)
 
 
 def _overlap(terms: set[str], value: object) -> int:

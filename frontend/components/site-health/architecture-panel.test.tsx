@@ -93,7 +93,17 @@ function architecture(overrides: Record<string, unknown> = {}) {
         { key: 'depth_3_plus', page_count: 0, percentage: 0 },
       ],
     },
-    architecture_formula_version: 'sh-architecture-1',
+    topical_coherence: {
+      state: 'available',
+      formula_version: 'site-topical-1',
+      eligible_page_count: 3,
+      total_page_count: 3,
+      clusters: [{ cluster_id: 'cluster-1', page_count: 3, top_terms: ['bags', 'leather'] }],
+      assignments: [],
+      outliers: [],
+      limitations: [],
+    },
+    architecture_formula_version: 'sh-architecture-2',
     limitations: [],
     coverage_reasons: [],
     ...overrides,
@@ -242,5 +252,25 @@ describe('Architecture panel', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'This crawl has no observed architecture yet.',
     );
+  });
+
+  it('exposes the topical coherence limitation when unavailable', async () => {
+    stubArchitecture({
+      topical_coherence: {
+        state: 'unavailable',
+        formula_version: 'site-topical-1',
+        eligible_page_count: 0,
+        total_page_count: 0,
+        clusters: [],
+        assignments: [],
+        outliers: [],
+        limitations: ['This crawl has too little eligible text.'],
+      },
+    });
+    renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
+
+    expect(
+      await screen.findByTitle('This crawl has too little eligible text.'),
+    ).toBeInTheDocument();
   });
 });

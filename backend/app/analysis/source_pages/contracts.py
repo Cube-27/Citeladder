@@ -51,7 +51,9 @@ class ExtractedPage:
     text: str = ""
     headings: tuple[str, ...] = ()
     structured_types: tuple[str, ...] = ()
+    table_headers: tuple[tuple[str, ...], ...] = ()
     outbound_domains: tuple[str, ...] = ()
+    text_truncated: bool = False
     content_hash: str = ""
     parsed: bool = False
 
@@ -66,7 +68,9 @@ class ExtractedPage:
             "meta_description": self.meta_description,
             "headings": list(self.headings),
             "structured_types": list(self.structured_types),
+            "table_headers": [list(headers) for headers in self.table_headers],
             "outbound_domains": list(self.outbound_domains),
+            "text_truncated": self.text_truncated,
             "parsed": self.parsed,
         }
 

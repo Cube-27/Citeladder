@@ -252,6 +252,24 @@ async def test_enqueue_without_a_crawl_still_grounds_on_brand_context(
         ).status_code == 404
 
 
+async def test_differentiation_reports_require_a_project_in_the_workspace(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "content-differentiation-read@example.com")
+    project_id = await _create_project(client)
+
+    available = await client.get(
+        "/api/v1/content/differentiation", params={"project_id": project_id}
+    )
+    missing = await client.get(
+        "/api/v1/content/differentiation", params={"project_id": str(uuid.uuid4())}
+    )
+
+    assert available.status_code == 200
+    assert available.json() == []
+    assert missing.status_code == 404
+
+
 async def test_context_preview_uses_canonical_compact_summary(
     client: httpx.AsyncClient,
 ) -> None:

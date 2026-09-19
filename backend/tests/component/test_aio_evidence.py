@@ -133,6 +133,7 @@ async def _seed_observation(
     task = AuditTask(
         audit_id=fixture.audit_id,
         workspace_id=fixture.workspace_id,
+        project_id=fixture.project_id,
         prompt_snapshot_id=prompt_snapshot.id,
         engine_snapshot_id=fixture.engine_snapshot_id,
         prompt_index=prompt_index,

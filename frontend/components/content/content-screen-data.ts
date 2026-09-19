@@ -60,6 +60,17 @@ export function useContentContextPreview(projectId: string, input: ContentContex
   });
 }
 
+export function useContentDifferentiation(projectId: string, limit = 10) {
+  const workspaceId = useActiveWorkspaceId();
+  return useQuery({
+    queryKey: queryKeys.content.differentiation(projectId, limit),
+    queryFn: ({ signal }) =>
+      contentApi.listDifferentiationReports(projectId, limit, { signal, workspaceId }),
+    enabled: workspaceId !== null,
+    staleTime: 60_000,
+  });
+}
+
 export function useContentTargetPages(projectId: string, query: string) {
   const workspaceId = useActiveWorkspaceId();
   return useQuery({

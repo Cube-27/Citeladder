@@ -84,7 +84,9 @@ async def _link_metrics_by_site_url(
     return {row.site_url_id: row for row in rows.all()}
 
 
-def _internal_links_row(metric: SitePageLinkMetric | None) -> dict | None:
+def _internal_links_row(
+    metric: SitePageLinkMetric | None, *, crawl: SiteCrawl
+) -> dict | None:
     """Bounded internal-link projection for one page (None when unmeasured)."""
     if metric is None:
         return None
@@ -96,6 +98,13 @@ def _internal_links_row(metric: SitePageLinkMetric | None) -> dict | None:
         "nofollow_inbound_count": metric.nofollow_inbound_count,
         "depth_from_home": metric.depth_from_home,
         "source_page_count": metric.source_page_count,
+        "authority_share": metric.authority_share,
+        "authority_rank": metric.authority_rank,
+        "authority_scope": "observed_crawl",
+        "observed_crawl_incomplete": bool(
+            crawl.sample_mode or not crawl.inventory_complete
+        ),
+        "anchor_diagnostics": list(metric.anchor_diagnostics or []),
         "top_inbound": list(metric.top_inbound or []),
         "top_outbound": list(metric.top_outbound or []),
         "formula_version": metric.formula_version,
