@@ -118,10 +118,6 @@ SERVICE_BUSINESS_MODELS: Final[frozenset[str]] = frozenset(
 )
 
 
-def is_service_business(business_model: str) -> bool:
-    return business_model in SERVICE_BUSINESS_MODELS
-
-
 # Business models that sell a CATALOG OF SKUS -- the only ones for which a
 # product/category shelf is a real object. The Commerce projector used to run
 # for any page the classifier called `category` or `product`, whatever the
@@ -142,12 +138,6 @@ def sells_a_catalog(business_model: str) -> bool:
     return business_model in COMMERCE_BUSINESS_MODELS
 
 
-def same_business_class(left: str, right: str) -> bool:
-    """True when two business models describe the same KIND of company."""
-    return is_service_business(left) is is_service_business(right)
-
-
-CONTEXT_PROFILE_VERSION: Final = "business-context-v1"
 CAPTURE_METHOD_CRAWLER: Final = "secure_crawler"
 CAPTURE_METHOD_APPLICATION_MODEL: Final = "application_model"
 CAPTURE_METHOD_EXTERNAL_SEARCH: Final = "external_search"
@@ -354,7 +344,7 @@ class BrandDiscoverySettings(BaseSettings):
     competitor_suggestion_maximum: int = Field(default=10, ge=1, le=10)
     identity_first_party_evidence_max_chars: int = Field(default=12_000, ge=1)
     identity_external_evidence_max_chars: int = Field(default=12_000, ge=1)
-    # Per-page text handed to topic selection alongside the offering list. The
+    # Per-page text handed to portfolio generation alongside the offering list. The
     # list carries the taxonomy; page text only corroborates it, and is the
     # sole source when a site publishes no readable list at all.
     topic_evidence_max_chars_per_page: int = Field(default=2_500, ge=1)

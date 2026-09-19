@@ -14,7 +14,6 @@ from app.connectors.web_evidence.brand_evidence import (
 from app.core.config.brand_discovery import _discovery_research_system_prompt
 from app.core.config.visibility_prompts import (
     CONFIRMED_OFFERING_SOURCE_REF,
-    MODEL_PRIOR_SOURCE_REF,
     cohort_system_prompt,
 )
 from app.domain.projects.discovery_schemas import (
@@ -187,36 +186,7 @@ def test_admission_collapses_restatements_of_one_topic() -> None:
     assert names == ["Air Conditioners", "Footwear", "Homewares"]
 
 
-def test_recognised_brand_keeps_topics_with_no_resolvable_evidence() -> None:
-    """adidas: the site 403s, but the model knows the brand.
-
-    Refusing here contradicted the same run's profile pass, which named the
-    category and five competitors from that identical prior knowledge.
-    """
-    topics = admit_topics(
-        [
-            _candidate("Running Shoes", ["missing"]),
-            _candidate("Football Boots", []),
-            _candidate("Training Apparel", ["missing"]),
-        ],
-        known_refs=set(),
-        forbidden_terms=["Adidas"],
-        business_terms=[],
-        allow_model_prior=True,
-    )
-    assert [topic.name for topic in topics] == [
-        "Running Shoes",
-        "Football Boots",
-        "Training Apparel",
-    ]
-    # Provenance stays legible: none of these came from a page we fetched.
-    assert {ref for topic in topics for ref in topic.source_refs} == {
-        MODEL_PRIOR_SOURCE_REF
-    }
-
-
-def test_unrecognised_brand_still_requires_real_evidence() -> None:
-    """The permission is narrow: without recognition nothing changes."""
+def test_topics_require_supplied_evidence_references() -> None:
     assert (
         admit_topics(
             [
@@ -227,22 +197,9 @@ def test_unrecognised_brand_still_requires_real_evidence() -> None:
             known_refs=set(),
             forbidden_terms=[],
             business_terms=[],
-            allow_model_prior=False,
         )
         == []
     )
-
-
-def test_recognised_brand_still_prefers_real_refs_when_they_resolve() -> None:
-    """A page-backed topic keeps its page ref rather than being stamped."""
-    topics = admit_topics(
-        [_candidate("Running Shoes"), _candidate("Bags"), _candidate("Hats")],
-        known_refs={"nav-1"},
-        forbidden_terms=[],
-        business_terms=[],
-        allow_model_prior=True,
-    )
-    assert {ref for topic in topics for ref in topic.source_refs} == {"nav-1"}
 
 
 def test_admission_keeps_departments_that_merely_look_alike() -> None:

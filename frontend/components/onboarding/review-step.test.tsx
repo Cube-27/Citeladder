@@ -19,6 +19,7 @@ describe('ReviewStep competitor limit', () => {
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
         onEditCompetitor={vi.fn()}
+        onRemoveCompetitor={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
     );
@@ -50,6 +51,7 @@ describe('ReviewStep competitor limit', () => {
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
         onEditCompetitor={vi.fn()}
+        onRemoveCompetitor={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
     );
@@ -80,6 +82,7 @@ describe('ReviewStep competitor limit', () => {
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
         onEditCompetitor={vi.fn()}
+        onRemoveCompetitor={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
     );
@@ -105,6 +108,7 @@ describe('ReviewStep competitor limit', () => {
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
         onEditCompetitor={vi.fn()}
+        onRemoveCompetitor={vi.fn()}
         onAddCompetitor={add}
       />,
     );
@@ -129,6 +133,7 @@ describe('ReviewStep competitor limit', () => {
         onToggleDomain={vi.fn()}
         onToggleCompetitor={vi.fn()}
         onEditCompetitor={edit}
+        onRemoveCompetitor={vi.fn()}
         onAddCompetitor={vi.fn()}
       />,
     );
@@ -141,5 +146,39 @@ describe('ReviewStep competitor limit', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(edit).toHaveBeenCalledWith(0, 'Peer', 'peer.com');
     expect(screen.getByRole('alert')).toHaveTextContent('Could not resolve website for Peer');
+  });
+
+  it('can cancel an unsaved fifth manual choice and free the selection slot', async () => {
+    const remove = vi.fn();
+    const selected = Array.from({ length: 4 }, (_, index) => ({
+      id: `peer-${index}`,
+      name: `Peer ${index}`,
+      aliases: [],
+      domains: [`peer-${index}.com`],
+      selected: true,
+    }));
+    const props = {
+      domains: [],
+      maximumCompetitors: 5,
+      onToggleDomain: vi.fn(),
+      onToggleCompetitor: vi.fn(),
+      onEditCompetitor: vi.fn(),
+      onRemoveCompetitor: remove,
+      onAddCompetitor: vi.fn(),
+    };
+    const { rerender } = render(
+      <ReviewStep
+        {...props}
+        competitors={[
+          ...selected,
+          { id: 'manual', name: '', aliases: [], domains: [], selected: true },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(remove).toHaveBeenCalledWith(4);
+    rerender(<ReviewStep {...props} competitors={selected} />);
+    expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled();
   });
 });

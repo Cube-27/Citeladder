@@ -6,6 +6,7 @@ import json
 
 import pytest
 
+from app.connectors.answer_engines.errors import ProviderError
 from app.domain.projects.offering_harvest import OfferingHarvest
 from app.domain.projects.onboarding import portfolio_generation as pg
 
@@ -79,7 +80,10 @@ def test_intent_topic_prompt_links_and_evidence_are_admitted() -> None:
     result = _admit(_response())
     assert len(result.topics) == 2
     assert len(result.prompts) == 4
-    assert {item["slot_id"] for item in result.prompts} == {"need-1", "need-2"}
+    assert {item["buyer_intent_id"] for item in result.prompts} == {
+        "need-1",
+        "need-2",
+    }
     assert {item["cohort"] for item in result.prompts} == {
         "core",
         "brand_diagnostic",
@@ -111,6 +115,37 @@ def test_empty_and_duplicate_topics_drop_without_filler() -> None:
     assert [item.name for item in result.topics] == ["Process Mining"]
     assert [item["id"] for item in result.intents] == ["need-2"]
     assert "empty_topic_dropped" in result.warnings
+
+
+def test_topic_name_whitespace_cleanup_preserves_prompt_binding() -> None:
+    response = _response()
+    response["topics"][0]["name"] = "Workflow   Analytics"
+    result = _admit(response)
+    assert {topic.name for topic in result.topics} == {
+        "Workflow Analytics",
+        "Process Mining",
+    }
+
+
+def test_core_capacity_preserves_later_topic_coverage() -> None:
+    response = _response()
+    response["topics"][0]["prompts"] = [
+        {
+            "text": f"Which workflow analytics option handles bottleneck case {index}",
+            "intent_id": "need-1",
+        }
+        for index in range(25)
+    ]
+    result = _admit(response)
+    assert len(result.topics) == 2
+    assert len([row for row in result.prompts if row["cohort"] == "core"]) == 20
+    core_intents = {
+        row["buyer_intent_id"] for row in result.prompts if row["cohort"] == "core"
+    }
+    assert core_intents == {
+        "need-1",
+        "need-2",
+    }
 
 
 def test_no_surviving_core_portfolio_rejects_response() -> None:
@@ -146,9 +181,11 @@ async def test_one_repair_then_stop(monkeypatch: pytest.MonkeyPatch) -> None:
 
         def __init__(self) -> None:
             self.calls = 0
+            self.users: list[str] = []
 
-        async def complete_structured_json(self, **_kwargs) -> str:
+        async def complete_structured_json(self, **kwargs) -> str:
             self.calls += 1
+            self.users.append(kwargs["user"])
             if self.calls == 1:
                 return json.dumps({**_response(), "topics": []})
             return json.dumps(_response())
@@ -159,7 +196,19 @@ async def test_one_repair_then_stop(monkeypatch: pytest.MonkeyPatch) -> None:
         brand_name="Acme",
         brand_terms=["Acme"],
         primary_market="US",
-        profile={"category": "analytics software"},
+        profile={
+            "category": "analytics software",
+            "business_context": {
+                "category": "analytics software",
+                "positioning": "Suggested market leader",
+                "language_code": "en-US",
+                "field_sources": {
+                    "category": "reviewed",
+                    "positioning": "inferred",
+                    "language_code": "reviewed",
+                },
+            },
+        },
         competitors=["Beta"],
         competitor_terms=["Beta"],
         harvest=OfferingHarvest(),
@@ -167,3 +216,40 @@ async def test_one_repair_then_stop(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert gateway.calls == 2
     assert len(result.topics) == 2
+    request = json.loads(gateway.users[0])
+    assert request["confirmed_context"]["facts"]["language_code"] == "en-US"
+    assert "positioning" not in request["confirmed_context"]["facts"]
+    assert request["provisional_research_context"]["facts"]["positioning"] == (
+        "Suggested market leader"
+    )
+
+
+@pytest.mark.asyncio
+async def test_provider_failure_does_not_consume_a_repair_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Gateway:
+        base_url_host = "fake"
+        model = "fake-model"
+        calls = 0
+
+        async def complete_structured_json(self, **_kwargs) -> str:
+            self.calls += 1
+            raise ProviderError(
+                "temporarily unavailable", error_code="rate_limit", retryable=True
+            )
+
+    gateway = Gateway()
+    monkeypatch.setattr(pg, "create_model_gateway", lambda: gateway)
+    with pytest.raises(ProviderError):
+        await pg.generate_portfolio(
+            brand_name="Acme",
+            brand_terms=["Acme"],
+            primary_market="US",
+            profile={"category": "analytics software"},
+            competitors=[],
+            competitor_terms=[],
+            harvest=OfferingHarvest(),
+            page_evidence=[],
+        )
+    assert gateway.calls == 1

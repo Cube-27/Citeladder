@@ -52,3 +52,39 @@ def test_reviewed_fields_override_inference_and_survive_project_roundtrip() -> N
     assert loaded.field_sources["category"] == "reviewed"
     assert loaded.field_sources["business_model"] == "inferred"
     assert "field_sources" not in loaded.for_generation()
+
+
+def test_invalid_legacy_facet_does_not_break_valid_persisted_context() -> None:
+    raw = {
+        "business_model": "agency",
+        "category": "Analytics services",
+        "jobs_to_be_done": ["Find workflow bottlenecks"],
+        "field_sources": {"category": "reviewed", "business_model": "reviewed"},
+    }
+    project = SimpleNamespace(
+        brand=SimpleNamespace(profile=SimpleNamespace(business_context=raw))
+    )
+    loaded = BusinessContext.from_project(project)
+    assert loaded.business_model is None
+    assert loaded.category == "Analytics services"
+    assert loaded.jobs_to_be_done == ["Find workflow bottlenecks"]
+    assert loaded.field_sources["category"] == "reviewed"
+    assert "business_model" not in loaded.field_sources
+
+
+def test_project_manual_profile_edit_overrides_inferred_field_provenance() -> None:
+    project = SimpleNamespace(
+        brand=SimpleNamespace(
+            profile=SimpleNamespace(
+                business_context={"field_sources": {"positioning": "inferred"}},
+                positioning="Edited position",
+                sources={"positioning": {"review_state": "edited"}},
+            )
+        ),
+        country_code="AU",
+        language_code="en-AU",
+    )
+    loaded = BusinessContext.from_project(project)
+    assert loaded.positioning == "Edited position"
+    assert loaded.field_sources["positioning"] == "reviewed"
+    assert loaded.for_generation()["language_code"] == "en-AU"

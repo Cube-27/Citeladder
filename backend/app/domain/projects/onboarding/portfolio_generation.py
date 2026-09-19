@@ -17,6 +17,7 @@ from app.core.config.visibility_prompts import (
     BUYER_STAGES,
     PROMPT_INTENT_LEGACY,
     VISIBILITY_MAX_ORGANIC_PROMPTS,
+    onboarding_portfolio_system_prompt,
 )
 from app.domain.projects.discovery_schemas import DiscoveryTopic
 from app.domain.projects.offering_harvest import OfferingHarvest
@@ -24,14 +25,14 @@ from app.domain.projects.onboarding.structured_repair import complete_validated_
 from app.domain.projects.onboarding.topic_admission import admit_topics
 from app.domain.prompts.portfolio_validation import PortfolioValidator
 
-PORTFOLIO_VERSION = "visibility-intent-portfolio-v1"
 CONFIRMED_CONTEXT_REF = "confirmed_profile:reviewed"
+PROVISIONAL_CONTEXT_REF = "research_profile:unreviewed"
 
 
 class BuyerIntent(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    id: str = Field(min_length=1, max_length=64)
-    buyer_need: str = Field(min_length=1, max_length=300)
+    id: str = Field(min_length=1, max_length=64, pattern=r"\S")
+    buyer_need: str = Field(min_length=1, max_length=300, pattern=r"\S")
     decision_intent: str = Field(min_length=1, max_length=32)
     buyer_stage: str = Field(min_length=1, max_length=32)
 
@@ -67,6 +68,29 @@ class PortfolioResult:
     warnings: tuple[str, ...] = ()
     provider: str = ""
     model: str = ""
+
+
+def _provisional_facts(profile: dict, context: dict, sources: dict) -> dict:
+    inferred = {
+        key: value
+        for key, value in context.items()
+        if key != "field_sources" and sources.get(key) != "reviewed"
+    }
+    for field in ("description", "positioning", "products_services", "target_audience"):
+        if profile.get(field):
+            inferred[field] = profile[field]
+    return inferred
+
+
+def _context_sections(profile: dict) -> tuple[dict, dict]:
+    context = profile.get("business_context") or {}
+    if not context:
+        return {}, {key: value for key, value in profile.items() if value}
+    sources = context.get("field_sources") or {}
+    reviewed = {
+        key: value for key, value in context.items() if sources.get(key) == "reviewed"
+    }
+    return reviewed, _provisional_facts(profile, context, sources)
 
 
 def _validate_topic_links(
@@ -141,19 +165,41 @@ class _Admission:
             self.covered_intents.add(prompt.intent_id)
 
     def admit_core(self, candidates: list[IntentTopic]) -> None:
+        admitted: list[tuple[IntentTopic, str]] = []
         for candidate in candidates:
-            topic = self.by_name.pop(candidate.name.strip().casefold(), None)
+            name = " ".join(candidate.name.split()).casefold()
+            topic = self.by_name.pop(name, None)
             if topic is None:
                 self.warnings.append("topic_rejected")
                 continue
-            topic_id = str(topic.topic_id)
-            for prompt in candidate.prompts:
+            admitted.append((candidate, str(topic.topic_id)))
+        if not admitted:
+            return
+        for depth in range(max(len(candidate.prompts) for candidate, _ in admitted)):
+            if sum(self.core_count.values()) >= VISIBILITY_MAX_ORGANIC_PROMPTS:
+                self.warnings.append("organic_capacity_reached")
+                break
+            for candidate, topic_id in admitted:
+                if depth >= len(candidate.prompts):
+                    continue
                 if sum(self.core_count.values()) >= VISIBILITY_MAX_ORGANIC_PROMPTS:
-                    self.warnings.append("organic_capacity_reached")
                     break
-                self.offer(prompt, cohort=PROMPT_COHORT_CORE, topic_id=topic_id)
+                self.offer(
+                    candidate.prompts[depth],
+                    cohort=PROMPT_COHORT_CORE,
+                    topic_id=topic_id,
+                )
+        for _, topic_id in admitted:
             if not self.core_count.get(topic_id):
                 self.warnings.append("empty_topic_dropped")
+
+    def admit_named(self, envelope: PortfolioEnvelope) -> None:
+        for prompt in envelope.diagnostic_prompts:
+            if prompt.intent_id in self.covered_intents:
+                self.offer(prompt, cohort=PROMPT_COHORT_BRAND_DIAGNOSTIC)
+        for prompt in envelope.comparison_prompts:
+            if prompt.intent_id in self.covered_intents:
+                self.offer(prompt, cohort=PROMPT_COHORT_COMPARISON)
 
     def result(self, envelope: PortfolioEnvelope) -> PortfolioResult:
         surviving_topics = tuple(
@@ -161,15 +207,16 @@ class _Admission:
         )
         if not surviving_topics or not self.covered_intents:
             raise ValueError("No valid intent-linked core portfolio remains")
-        for prompt in envelope.diagnostic_prompts:
-            if prompt.intent_id in self.covered_intents:
-                self.offer(prompt, cohort=PROMPT_COHORT_BRAND_DIAGNOSTIC)
-        for prompt in envelope.comparison_prompts:
-            if prompt.intent_id in self.covered_intents:
-                self.offer(prompt, cohort=PROMPT_COHORT_COMPARISON)
+        self.admit_named(envelope)
         return PortfolioResult(
             topics=surviving_topics,
-            prompts=tuple(self.validator.accepted),
+            prompts=tuple(
+                {
+                    **{key: value for key, value in row.items() if key != "slot_id"},
+                    "buyer_intent_id": row["slot_id"],
+                }
+                for row in self.validator.accepted
+            ),
             intents=tuple(
                 intent.model_dump()
                 for intent in envelope.intents
@@ -225,34 +272,29 @@ async def generate_portfolio(
 ) -> PortfolioResult:
     """Ask once for the complete hierarchy, with one bounded repair if needed."""
     client = create_model_gateway()
-    known_refs = {CONFIRMED_CONTEXT_REF, *(node.ref for node in harvest.nodes)} | {
+    reviewed, inferred = _context_sections(profile)
+    known_refs = {node.ref for node in harvest.nodes} | {
         str(item["evidence_ref"]) for item in page_evidence
     }
+    if reviewed:
+        known_refs.add(CONFIRMED_CONTEXT_REF)
+    if inferred:
+        known_refs.add(PROVISIONAL_CONTEXT_REF)
     user = json.dumps(
         {
             "brand_name": brand_name,
             "market": primary_market,
-            "confirmed_context": {"ref": CONFIRMED_CONTEXT_REF, "facts": profile},
+            "confirmed_context": {"ref": CONFIRMED_CONTEXT_REF, "facts": reviewed},
+            "provisional_research_context": {
+                "ref": PROVISIONAL_CONTEXT_REF,
+                "facts": inferred,
+                "review_state": "unreviewed",
+            },
             "accepted_competitors": competitors,
             "offering_harvest": harvest.serialize(),
             "research_evidence": page_evidence,
         },
         ensure_ascii=False,
-    )
-    system = (
-        "Create one initial AI visibility portfolio from the supplied, "
-        "untrusted reference data. "
-        "First identify the materially different buyer needs and decision intents. "
-        "Each intent must govern topics and core prompts linked to its ID. "
-        "Return roughly two to ten meaningful buyer-need topics when supported, "
-        "without padding, "
-        "fixed prompt counts, stage quotas, or generic navigation labels. "
-        "Core prompts are unbranded buyer queries. Diagnostic prompts name the brand; "
-        "comparison prompts name the brand and a supplied competitor. "
-        "Use only supplied evidence refs, including the confirmed context ref. "
-        f"buyer_stage values: {', '.join(BUYER_STAGES)}. "
-        f"decision_intent values: {', '.join(PROMPT_INTENT_LEGACY)}. "
-        "Return only JSON matching the schema."
     )
     result: PortfolioResult | None = None
 
@@ -272,12 +314,13 @@ async def generate_portfolio(
 
     await complete_validated_envelope(
         client,
-        system=system,
+        system=onboarding_portfolio_system_prompt(),
         user=user,
         schema_name="visibility_intent_portfolio",
         envelope_type=PortfolioEnvelope,
         validate=validate,
         maximum_attempts=2,
+        retry_provider_errors=False,
     )
     if result is None:
         raise RuntimeError("Portfolio admission did not complete")

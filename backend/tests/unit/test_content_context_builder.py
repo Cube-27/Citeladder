@@ -48,6 +48,7 @@ async def _project(session: AsyncSession) -> tuple[uuid.UUID, uuid.UUID]:
                 business_context={
                     "buyer_type": "b2c",
                     "sector": "Retail",
+                    "business_model": "agency",
                     "jobs_to_be_done": ["Find durable school uniforms"],
                 },
             ),

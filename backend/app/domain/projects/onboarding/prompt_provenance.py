@@ -8,8 +8,10 @@ from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,
     BRAND_DISCOVERY_PROMPT_VALIDATION_VERSION,
 )
-from app.core.config.visibility_prompts import BUYER_QUERY_POLICY_VERSION
-from app.domain.projects.onboarding.portfolio_generation import PORTFOLIO_VERSION
+from app.core.config.visibility_prompts import (
+    BUYER_QUERY_POLICY_VERSION,
+    ONBOARDING_PORTFOLIO_VERSION,
+)
 
 
 def prompt_evidence(
@@ -22,15 +24,15 @@ def prompt_evidence(
     refs_by_topic_id: dict[str, list[str]],
     research_snapshot_id: uuid.UUID | None,
 ) -> dict:
-    intent_id = str(item.get("slot_id") or "")
+    intent_id = str(item.get("buyer_intent_id") or "")
     return {
         "generator_version": BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,
         "buyer_query_policy_version": BUYER_QUERY_POLICY_VERSION,
-        "buyer_query_slot_id": intent_id,
+        "buyer_intent_id": intent_id,
         "discovery_id": str(discovery_id),
         "provider": provider,
         "model": model,
-        "portfolio_version": PORTFOLIO_VERSION,
+        "portfolio_version": ONBOARDING_PORTFOLIO_VERSION,
         "buyer_intent": intents_by_id.get(intent_id),
         "topic_source_refs": refs_by_topic_id.get(str(item.get("topic_id")), []),
         "research_snapshot_id": (

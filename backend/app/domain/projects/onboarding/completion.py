@@ -15,10 +15,7 @@ from app.core.config.brand_discovery import (
     TASK_KIND_BRAND_COMPLETION,
     brand_discovery_settings,
 )
-from app.domain.projects.discovery_schemas import (
-    BrandDiscoveryComplete,
-    DiscoveryTopic,
-)
+from app.domain.projects.discovery_schemas import BrandDiscoveryComplete
 from app.domain.projects.offering_harvest import OfferingHarvest, OfferingNode
 from app.domain.projects.onboarding.normalization import (
     InvalidWebsiteUrl,
@@ -129,14 +126,13 @@ async def complete_discovery(
     if row.status != DISCOVERY_STATUS_READY:
         raise BrandDiscoveryError("Discovery is not ready for completion")
 
-    domains, competitors, _, _, _, profile_sources = _confirmed_portfolio_inputs(
+    domains, competitors, _, _, profile_sources = _confirmed_portfolio_inputs(
         row, payload=payload
     )
-    topics: list[DiscoveryTopic] = []
     row.domains = domains
     row.competitors = competitors
     row.profile = payload.profile.model_dump()
-    row.topics = [topic.model_dump(mode="json") for topic in topics]
+    row.topics = []
     row.input_data = {
         **row.input_data,
         "completion_idempotency_key": key,
@@ -152,7 +148,6 @@ async def complete_discovery(
         workspace_id=workspace_id,
         row=row,
         payload=payload,
-        discovery_topics=topics,
         profile_sources=profile_sources,
     )
     await _ensure_completion_task(session, row=row, workspace_id=workspace_id)
@@ -192,7 +187,6 @@ async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
     (
         domains,
         competitors,
-        _,
         brand_name,
         primary_market,
         _,
@@ -204,6 +198,7 @@ async def run_completion(session: AsyncSession, row: BrandDiscovery) -> None:
         payload=payload,
         brand_name=brand_name,
         primary_market=primary_market,
+        language_code=str(row.input_data.get("language_code") or ""),
         competitors=competitors,
         domains=domains,
         harvest=harvest,
@@ -306,9 +301,7 @@ def _page_evidence_item(item: dict) -> dict[str, str]:
         "query_ref": "query_ref",
         "acquired_at": "acquired_at",
     }
-    serialized = {
-        key: str(item.get(source) or "") for key, source in fields.items()
-    }
+    serialized = {key: str(item.get(source) or "") for key, source in fields.items()}
     serialized["text"] = str(item.get("text") or "")[
         : brand_discovery_settings.topic_evidence_max_chars_per_page
     ]

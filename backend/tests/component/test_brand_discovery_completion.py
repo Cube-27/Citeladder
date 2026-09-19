@@ -442,6 +442,7 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
                 "topic_id": topic_ids[index % len(topic_ids)],
                 "text": text,
                 "intent": "discovery",
+                "buyer_intent_id": "need-1",
                 "cohort": "core",
             }
             for index, text in enumerate(organic_texts)
@@ -452,12 +453,14 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
                     "topic_id": topic_ids[0],
                     "text": "is Acme suitable for workflow analytics",
                     "intent": "discovery",
+                    "buyer_intent_id": "need-1",
                     "cohort": "brand_diagnostic",
                 },
                 {
                     "topic_id": topic_ids[1],
                     "text": "how does Acme support process mining teams",
                     "intent": "service",
+                    "buyer_intent_id": "need-1",
                     "cohort": "brand_diagnostic",
                 },
             ]
@@ -465,6 +468,14 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
         return PortfolioResult(
             topics=tuple(selected_topics),
             prompts=tuple(prompts),
+            intents=(
+                {
+                    "id": "need-1",
+                    "buyer_need": "Understand business workflows",
+                    "decision_intent": "learn",
+                    "buyer_stage": "awareness",
+                },
+            ),
             provider="agent.test",
             model="fake-model",
         )
@@ -676,6 +687,15 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
         assert all(
             prompt.generation_evidence.get("portfolio_version")
             == "visibility-intent-portfolio-v1"
+            for prompt in prompt_rows
+        )
+        assert all(
+            prompt.generation_evidence.get("buyer_intent", {}).get("id") == "need-1"
+            for prompt in prompt_rows
+        )
+        assert all(
+            prompt.generation_evidence.get("topic_source_refs")
+            == [CONFIRMED_OFFERING_SOURCE_REF]
             for prompt in prompt_rows
         )
         profile = await session.scalar(select(BrandProfile))

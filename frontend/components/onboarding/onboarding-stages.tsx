@@ -257,6 +257,9 @@ export function ReviewStage({
             onEditCompetitor={(index, name, domain) =>
               editCompetitor(index, name, domain, setCompetitors)
             }
+            onRemoveCompetitor={(index) =>
+              setCompetitors((current) => current.filter((_, itemIndex) => itemIndex !== index))
+            }
             onAddCompetitor={() => addCompetitor(setCompetitors, maximumCompetitors)}
             maximumCompetitors={maximumCompetitors}
             resolutionError={resolutionError}
@@ -333,10 +336,6 @@ function warningMessage(code: string): string {
       'We used the website details we could confirm. Review them before continuing.',
     conflicting_evidence:
       'Sources disagreed about this business. Review the suggested positioning carefully.',
-    topic_selection_unavailable:
-      'Your starting topics will be created from the offerings you confirm.',
-    insufficient_offering_evidence:
-      'Your starting topics will be created from the offerings you confirm.',
     site_health_deferred:
       'The project is ready; its Site Health review will need to be started later.',
   };

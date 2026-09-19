@@ -21,11 +21,13 @@ function CompetitorRow({
   disabled,
   onToggle,
   onEdit,
+  onRemove,
 }: Readonly<{
   competitor: ReviewCompetitor;
   disabled: boolean;
   onToggle: () => void;
   onEdit: (name: string, domain: string) => void;
+  onRemove: () => void;
 }>) {
   const primaryDomain = competitor.domains.find(Boolean) || '';
   const displayName = competitor.name || primaryDomain || 'New competitor';
@@ -42,6 +44,15 @@ function CompetitorRow({
     const name = draftName.trim();
     if (!trimmed || !name) return;
     onEdit(name, trimmed);
+    setIsEditing(false);
+  };
+  const cancel = () => {
+    if (!competitor.name && !primaryDomain) {
+      onRemove();
+      return;
+    }
+    setDraft(primaryDomain);
+    setDraftName(competitor.name);
     setIsEditing(false);
   };
 
@@ -62,11 +73,7 @@ function CompetitorRow({
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') save();
-            if (event.key === 'Escape') {
-              setDraft(primaryDomain);
-              setDraftName(competitor.name);
-              setIsEditing(false);
-            }
+            if (event.key === 'Escape') cancel();
           }}
           placeholder="acme.com"
           aria-label={`Website for ${displayName}`}
@@ -79,6 +86,9 @@ function CompetitorRow({
           disabled={!draft.trim() || !draftName.trim()}
         >
           Save
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={cancel}>
+          Cancel
         </Button>
       </li>
     );
@@ -118,6 +128,7 @@ export function ReviewStep({
   onToggleDomain,
   onToggleCompetitor,
   onEditCompetitor,
+  onRemoveCompetitor,
   onAddCompetitor,
   maximumCompetitors,
   resolutionError,
@@ -127,6 +138,7 @@ export function ReviewStep({
   onToggleDomain: (index: number) => void;
   onToggleCompetitor: (index: number) => void;
   onEditCompetitor: (index: number, name: string, domain: string) => void;
+  onRemoveCompetitor: (index: number) => void;
   onAddCompetitor: () => void;
   maximumCompetitors: number | undefined;
   resolutionError?: string;
@@ -188,6 +200,7 @@ export function ReviewStep({
                 disabled={competitorLimitReached}
                 onToggle={() => onToggleCompetitor(index)}
                 onEdit={(name, domain) => onEditCompetitor(index, name, domain)}
+                onRemove={() => onRemoveCompetitor(index)}
               />
             ))}
           </ul>

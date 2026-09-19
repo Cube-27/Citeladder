@@ -61,7 +61,6 @@ class ResearchResult:
     profile: dict
     competitive_signature: dict
     competitors: list[dict]
-    topics: list[dict]
     offerings: list[dict]
     evidence: list[dict]
     evidence_manifest: list[dict]
@@ -226,7 +225,7 @@ async def _research_brand(
         competitors_found=bool(competitor_phase.suggestions),
         external_state=identity_phase.external_state,
         conflicting=_identity_conflicts(identity_phase.identity),
-        qualification_available=competitor_phase.suggestion_available,
+        suggestion_available=competitor_phase.suggestion_available,
     )
     if competitor_phase.search_state == "failed":
         warnings.append("competitor_search_failed")
@@ -235,7 +234,6 @@ async def _research_brand(
         profile=profile.model_dump(),
         competitive_signature=signature.model_dump(),
         competitors=[item.model_dump() for item in competitor_phase.suggestions],
-        topics=[],
         offerings=harvest.serialize(),
         evidence=_research_evidence(site, all_evidence, identity_phase.model_calls),
         evidence_manifest=[item.model_dump(mode="json") for item in all_evidence],
@@ -390,7 +388,6 @@ def _profile_and_signature(
         buyer=profile.target_audience,
         core_job=(profile.jobs_to_be_done or [""])[0],
         market_context=primary_market,
-        search_terms=profile.category_terms[:8],
     )
 
 
@@ -597,7 +594,7 @@ def _customer_warnings(
     competitors_found: bool,
     external_state: str = "ready",
     conflicting: bool = False,
-    qualification_available: bool = True,
+    suggestion_available: bool = True,
 ) -> list[str]:
     warnings = []
     if external_state in {"unavailable", "failed"}:
@@ -606,7 +603,7 @@ def _customer_warnings(
         warnings.append("external_research_no_results")
     if conflicting:
         warnings.append("conflicting_evidence")
-    if not model_available or not qualification_available:
+    if not model_available or not suggestion_available:
         warnings.append("research_degraded")
     if not competitors_found:
         warnings.append("competitors_not_found")

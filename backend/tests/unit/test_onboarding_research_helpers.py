@@ -11,7 +11,7 @@ def test_missing_competitors_and_external_research_remain_distinct() -> None:
         model_available=True,
         competitors_found=False,
         external_state="unavailable",
-        qualification_available=True,
+        suggestion_available=True,
     ) == ["external_research_unavailable", "competitors_not_found"]
 
 

@@ -126,7 +126,6 @@ async def test_ready_path_records_two_structured_phases(monkeypatch) -> None:
         "model://application-research/identity": ["profile"],
         "model://application-research/competitor_suggestions": ["competitors"],
     }
-    assert result.topics == []
     assert result.metrics["phase_duration_ms"]["total"] >= 0
     assert result.metrics["evidence_chars"]["identity_external"] == len(evidence.text)
 

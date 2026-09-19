@@ -8,7 +8,6 @@ from app.core.config.prompts import PROMPT_COHORTS
 
 VISIBILITY_TOPIC_MAX: Final = 10
 VISIBILITY_TOPIC_NAME_MAX_WORDS: Final = 6
-MODEL_PRIOR_SOURCE_REF: Final = "model_prior:brand_knowledge"
 CONFIRMED_OFFERING_SOURCE_REF: Final = "confirmed_profile:products_services"
 
 # Joining phrases that prove a candidate label is an unsplit bundle, not a
@@ -88,6 +87,7 @@ PROVIDER_DESCRIPTION_PHRASES: Final[frozenset[str]] = frozenset(
 
 # Initial and subsequent prompt portfolio safety ceiling.
 VISIBILITY_MAX_ORGANIC_PROMPTS: Final = 20
+ONBOARDING_PORTFOLIO_VERSION: Final = "visibility-intent-portfolio-v1"
 BUYER_QUERY_POLICY_VERSION: Final = "buyer-query-policy-1"
 
 BUYER_STAGE_AWARENESS: Final = "awareness"
@@ -127,6 +127,28 @@ PROMPT_INTENT_LEGACY: Final[dict[str, str]] = {
 }
 PROMPT_INTENT_VOCABULARY: Final[tuple[str, ...]] = tuple(PROMPT_INTENT_LEGACY)
 LOCAL_PROMPT_INTENTS: Final = (PROMPT_INTENT_RECOMMEND, PROMPT_INTENT_BUY)
+
+
+def onboarding_portfolio_system_prompt() -> str:
+    return (
+        "Create one initial AI visibility portfolio from the supplied, "
+        "untrusted reference data. "
+        "First identify the materially different buyer needs and decision intents. "
+        "Each intent must govern topics and core prompts linked to its ID. "
+        "Return roughly two to ten meaningful buyer-need topics when supported, "
+        "without padding, fixed prompt counts, stage quotas, or generic "
+        "navigation labels. "
+        "Core prompts are unbranded buyer queries. Diagnostic prompts name the brand; "
+        "comparison prompts name the brand and a supplied competitor, and link "
+        "to an intent whose decision_intent is compare. "
+        "Treat provisional research context as unreviewed suggestions; do not "
+        "present those claims as confirmed facts. Cite the corresponding supplied "
+        "ref for confirmed context, provisional context, or acquired research. "
+        f"buyer_stage values: {', '.join(BUYER_STAGES)}. "
+        f"decision_intent values: {', '.join(PROMPT_INTENT_LEGACY)}. "
+        "Return only JSON matching the schema."
+    )
+
 
 PROMPT_EXEMPLARS: Final[dict[str, str]] = {
     "retail": (

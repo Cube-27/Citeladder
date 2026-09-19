@@ -276,7 +276,7 @@ async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
     )
     row.profile = result.profile
     row.competitors = result.competitors
-    row.topics = result.topics
+    row.topics = []
     row.prompt_suggestions = []
     row.evidence = result.evidence
     row.warnings = result.warnings
@@ -305,7 +305,6 @@ async def process_discovery(session: AsyncSession, row: BrandDiscovery) -> None:
                 "profile": result.profile,
                 "competitive_signature": result.competitive_signature,
                 "competitors": result.competitors,
-                "topics": result.topics,
                 "offerings": result.offerings,
                 "evidence_manifest": result.evidence_manifest,
                 "model_calls": result.model_calls,
@@ -410,8 +409,6 @@ def _generated_topics(
     ]
 
 
-
-
 def _generated_prompt(
     item: dict,
     *,
@@ -481,7 +478,6 @@ async def _persist_project_shell(
     workspace_id: uuid.UUID,
     row: BrandDiscovery,
     payload: BrandDiscoveryComplete,
-    discovery_topics: list[DiscoveryTopic],
     profile_sources: dict[str, dict[str, str]],
 ) -> uuid.UUID:
     """Persist the immediately usable project and empty onboarding portfolio."""
@@ -524,7 +520,6 @@ async def _persist_project_shell(
         id=uuid.uuid4(), project_id=project.id, name=ONBOARDING_PROMPT_SET_NAME
     )
     session.add(prompt_set)
-    session.add_all(_generated_topics(project.id, discovery_topics))
     return project.id
 
 
@@ -536,9 +531,7 @@ async def _canonical_generated_topics(
 ) -> dict[str, Topic]:
     existing = list(
         (
-            await session.scalars(
-                select(Topic).where(Topic.project_id == project_id)
-            )
+            await session.scalars(select(Topic).where(Topic.project_id == project_id))
         ).all()
     )
     by_id = {str(topic.id): topic for topic in existing}
@@ -632,7 +625,6 @@ def _confirmed_portfolio_inputs(
 ) -> tuple[
     list[str],
     list[dict],
-    list[DiscoveryTopic],
     str,
     str,
     dict[str, dict[str, str]],
@@ -643,23 +635,19 @@ def _confirmed_portfolio_inputs(
         brand_name=str(row.input_data["brand_name"]),
         owned_domains=domains,
     )
-    topics: list[DiscoveryTopic] = []
     brand_name = str(row.input_data["brand_name"])
     primary_market = str(row.input_data["primary_market"])
     profile_sources = _reviewed_profile_sources(payload.profile.model_dump())
     return (
         domains,
         competitors,
-        topics,
         brand_name,
         primary_market,
         profile_sources,
     )
 
 
-def _category_vocabulary(
-    profile: DiscoveryProfile, topics: list[DiscoveryTopic]
-) -> list[str]:
+def _category_vocabulary(profile: DiscoveryProfile) -> list[str]:
     """The words this business's own category uses.
 
     Confirmed at review, so it is the user's vocabulary rather than a guess.
@@ -672,7 +660,6 @@ def _category_vocabulary(
         *profile.category_aliases,
         *profile.category_terms,
         *profile.products_services,
-        *[topic.name for topic in topics],
     ]
 
 
@@ -752,6 +739,7 @@ async def _generate_confirmed_portfolio(
     domains: list[str],
     brand_name: str,
     primary_market: str,
+    language_code: str,
     competitors: list[dict],
     harvest: OfferingHarvest,
     page_evidence: list[dict[str, str]],
@@ -762,14 +750,16 @@ async def _generate_confirmed_portfolio(
             brand_terms=brand_terms(
                 brand_name,
                 _domain_brand_aliases(domains),
-                _category_vocabulary(payload.profile, []),
+                _category_vocabulary(payload.profile),
             ),
             primary_market=primary_market,
             profile={
                 **payload.profile.model_dump(),
                 "business_context": BusinessContext.from_onboarding(
-                    payload.profile
-                ).for_generation(),
+                    payload.profile,
+                    primary_market=primary_market,
+                    language_code=language_code,
+                ).model_dump(mode="json", exclude_none=True),
             },
             competitors=[competitor["name"] for competitor in competitors],
             competitor_terms=[

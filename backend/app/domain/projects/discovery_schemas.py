@@ -126,20 +126,6 @@ class DiscoveryProfile(BaseModel):
     service_areas: list[str] = Field(default_factory=list)
     knowledge_strength: KnowledgeStrength = "none"
 
-    def has_reliable_prior(self) -> bool:
-        """Whether the model positively recognised this brand.
-
-        The wire-side twin of ``ContextProfile.is_thin`` (inverted): the two
-        MUST agree, because one decides whether to shorten a portfolio and the
-        other whether topics may be drawn from prior knowledge, and a brand
-        that is "thin" for one but recognised by the other produces exactly the
-        contradiction this predicate was added to remove -- naming a brand's
-        category and competitors confidently while reporting zero topics.
-        """
-        return self.knowledge_strength != "none" and bool(
-            self.category or self.category_terms
-        )
-
 
 class PersistableDiscoveryProfile(DiscoveryProfile):
     """Discovery profile constrained to the downstream BrandProfile contract."""

@@ -406,7 +406,7 @@ def _profile_brand_values(
 def _business_context_values(
     context: dict,
 ) -> tuple[list[tuple[str, object]], list[str]]:
-    facts = BusinessContext.model_validate(context).for_generation()
+    facts = BusinessContext.from_persisted(context).for_generation()
     entries = (
         ("category", "Business category"),
         ("category_terms", "Category terms"),

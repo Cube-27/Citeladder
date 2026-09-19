@@ -458,22 +458,6 @@ describe('OnboardingScreen', () => {
     );
   });
 
-  it('explains unavailable topic selection without a generic warning', async () => {
-    discoveryState = {
-      ...discovery('ready', 'preparing_review'),
-      warnings: ['topic_selection_unavailable'],
-    };
-    mswServer.use(catalogHandler());
-    renderOnboarding();
-
-    await enterBrand();
-
-    expect(
-      screen.getByText('Your starting topics will be created from the offerings you confirm.'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/Some research could not be confirmed/i)).toBeNull();
-  });
-
   it('submits one confirmed ICP completion and redirects to the command center', async () => {
     discoveryState = discovery('ready', 'preparing_review');
     let completionBody: unknown;

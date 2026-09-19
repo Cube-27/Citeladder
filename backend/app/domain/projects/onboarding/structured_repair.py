@@ -22,6 +22,7 @@ async def complete_validated_envelope[EnvelopeT: BaseModel](
     envelope_type: type[EnvelopeT],
     validate: Callable[[EnvelopeT], None],
     maximum_attempts: int | None = None,
+    retry_provider_errors: bool = True,
 ) -> EnvelopeT:
     """Generate, validate, and boundedly repair one structured response.
 
@@ -45,7 +46,11 @@ async def complete_validated_envelope[EnvelopeT: BaseModel](
             validate(envelope)
             return envelope
         except ProviderError as exc:
-            if not exc.retryable or attempt + 1 >= maximum_attempts:
+            if (
+                not retry_provider_errors
+                or not exc.retryable
+                or attempt + 1 >= maximum_attempts
+            ):
                 raise
             delay = brand_discovery_settings.synthesis_retry_delay(
                 attempt, retry_after_seconds=exc.retry_after_seconds

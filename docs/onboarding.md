@@ -65,6 +65,13 @@ explicitly topic-bound prompts reject the transaction. A terminal-state guard
 and prompt uniqueness prevent repeated delivery from creating a second
 portfolio. Same-key replays return the same shell.
 
+The request separates reviewed category and market choices from provisional
+research prose. Both have explicit source references; the project market and
+language are supplied as confirmed locale facts. BrandProfile remains the
+store for offerings, positioning and audience, while Project owns locale.
+The Projects-owned BusinessContext composes those facts for generation without
+duplicating their storage.
+
 The [onboarding screen](../frontend/components/onboarding/onboarding-screen.tsx)
 enters the project as soon as a committed project ID is available. It seeds the
 detail cache and navigates through the shared project destination owner.
