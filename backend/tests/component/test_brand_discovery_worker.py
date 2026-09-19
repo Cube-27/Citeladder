@@ -33,7 +33,7 @@ from app.core.config.brand_discovery import (
     TASK_KIND_BRAND_COMPLETION,
     WARNING_BRAND_COMPLETION_FAILED,
 )
-from app.core.config.provider_catalog import ERROR_AUTH
+from app.core.config.provider_catalog import ERROR_AUTH, ERROR_RATE_LIMIT
 from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
     TASK_STATUS_QUEUED,
@@ -207,6 +207,65 @@ async def test_non_retryable_provider_failure_ends_completion_immediately(
     assert row.status == TASK_STATUS_FAILED
     assert row.attempt_count == 1
     assert row.error_code == ERROR_AUTH
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_does_not_queue_the_same_completion_again(
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    workspace_id = await _workspace(db_session)
+    discovery = await _discovery(
+        db_session, workspace_id, status=DISCOVERY_STATUS_COMPLETING
+    )
+    task = await _task(
+        db_session,
+        discovery,
+        max_attempts=3,
+        task_kind=TASK_KIND_BRAND_COMPLETION,
+    )
+    await db_session.commit()
+
+    await worker_module._finalize(
+        task.id,
+        worker_id=_OWNER,
+        error=ProviderError(
+            "rate limited", error_code=ERROR_RATE_LIMIT, retryable=True
+        ),
+    )
+
+    async with session_factory() as session:
+        row = await session.get(BrandDiscoveryTask, task.id)
+    assert row is not None
+    assert row.status == TASK_STATUS_FAILED
+    assert row.attempt_count == 1
+    assert row.error_code == ERROR_RATE_LIMIT
+
+
+@pytest.mark.asyncio
+async def test_retryable_rate_limit_schedules_research_retry(
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    workspace_id = await _workspace(db_session)
+    discovery = await _discovery(db_session, workspace_id)
+    task = await _task(db_session, discovery, max_attempts=3)
+    await db_session.commit()
+
+    await worker_module._finalize(
+        task.id,
+        worker_id=_OWNER,
+        error=ProviderError(
+            "rate limited", error_code=ERROR_RATE_LIMIT, retryable=True
+        ),
+    )
+
+    async with session_factory() as session:
+        row = await session.get(BrandDiscoveryTask, task.id)
+    assert row is not None
+    assert row.status == TASK_STATUS_RETRY_WAIT
+    assert row.attempt_count == 1
+    assert row.error_code == ERROR_BRAND_DISCOVERY
 
 
 @pytest.mark.asyncio

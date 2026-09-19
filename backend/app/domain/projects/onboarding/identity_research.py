@@ -36,7 +36,7 @@ from app.domain.projects.onboarding.research_evidence import (
     bounded_evidence,
     evidence_payload,
 )
-from app.domain.projects.onboarding.structured_repair import (
+from app.domain.projects.onboarding.structured_generation import (
     complete_validated_envelope,
 )
 

@@ -174,7 +174,7 @@ BRAND_DISCOVERY_PROMPT_VALIDATION_VERSION: Final = "initial-portfolio-validation
 DISCOVERY_PROGRESS_TOTAL_STEPS: Final = 4
 # Bounded model-call duration. Completion ends its read transaction before the
 # call and reacquires the discovery lock only for the final write.
-PORTFOLIO_GENERATION_TIMEOUT_MAX_SECONDS: Final = 60.0
+PORTFOLIO_GENERATION_TIMEOUT_MAX_SECONDS: Final = 20.0
 DISCOVERY_CONFIRM_MAX_DOMAINS: Final = 50
 DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS: Final = 1024
 MARKET_CONTEXT_TERMS: Final[dict[str, tuple[str, ...]]] = {
@@ -348,21 +348,15 @@ class BrandDiscoverySettings(BaseSettings):
     # list carries the taxonomy; page text only corroborates it, and is the
     # sole source when a site publishes no readable list at all.
     topic_evidence_max_chars_per_page: int = Field(default=2_500, ge=1)
-    # One repair or transient-provider retry keeps research moving to review.
-    synthesis_max_attempts: int = Field(default=2, ge=1)
-    # Providers rate-limit on a PER-MINUTE token bucket (Mistral: 50k
-    # tokens/min) and send no Retry-After, so a 1s/2s backoff retried straight
-    # back into the same exhausted window and burned the whole attempt budget.
-    synthesis_retry_base_delay_seconds: float = Field(default=4.0, gt=0)
-    synthesis_retry_max_delay_seconds: float = Field(default=60.0, gt=0)
-    research_model_timeout_seconds: float = Field(default=50.0, gt=0, le=60.0)
-    # The completion worker bounds one portfolio attempt before deterministic
-    # templates take over. Cohorts run concurrently, but 30s could not cover a
-    # slow provider attempt and often left the organic cohort half-absorbed.
+    # One initial competitor request and at most two retries. Identity makes
+    # one bounded request and degrades to reviewable evidence on failure.
+    competitor_model_maximum_attempts: int = Field(default=3, ge=1, le=3)
+    research_model_timeout_seconds: float = Field(default=20.0, gt=0, le=20.0)
+    # Completion has one model request per durable queue attempt.
     portfolio_generation_timeout_seconds: float = Field(
-        default=50.0, gt=0, le=PORTFOLIO_GENERATION_TIMEOUT_MAX_SECONDS
+        default=20.0, gt=0, le=PORTFOLIO_GENERATION_TIMEOUT_MAX_SECONDS
     )
-    completion_maximum_attempts: int = Field(default=2, ge=1, le=5)
+    completion_maximum_attempts: int = Field(default=3, ge=1, le=3)
     keenable_api_key: SecretStr = Field(
         default=SecretStr(""),
         validation_alias=AliasChoices("KEENABLE_API_KEY", "KEEBNABLE_API_KEY"),
@@ -380,14 +374,6 @@ class BrandDiscoverySettings(BaseSettings):
     keenable_concurrency: int = Field(default=5, ge=1, le=8)
     keenable_request_timeout_seconds: float = Field(default=6.0, gt=0, le=30)
     keenable_total_call_cap: int = Field(default=24, ge=1, le=30)
-
-    def synthesis_retry_delay(
-        self, attempt: int, *, retry_after_seconds: float | None = None
-    ) -> float:
-        cap = self.synthesis_retry_max_delay_seconds
-        if retry_after_seconds is not None:
-            return min(retry_after_seconds, cap)
-        return min(self.synthesis_retry_base_delay_seconds * (2**attempt), cap)
 
     @field_validator("keenable_base_url")
     @classmethod

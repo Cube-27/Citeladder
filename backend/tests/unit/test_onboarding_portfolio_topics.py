@@ -181,7 +181,7 @@ def test_placeholder_and_exact_duplicate_prompts_are_dropped() -> None:
 
 
 @pytest.mark.asyncio
-async def test_one_repair_then_stop(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_portfolio_uses_one_model_call(monkeypatch: pytest.MonkeyPatch) -> None:
     class Gateway:
         base_url_host = "fake"
         model = "fake-model"
@@ -193,8 +193,6 @@ async def test_one_repair_then_stop(monkeypatch: pytest.MonkeyPatch) -> None:
         async def complete_structured_json(self, **kwargs) -> str:
             self.calls += 1
             self.users.append(kwargs["user"])
-            if self.calls == 1:
-                return json.dumps({**_response(), "topics": []})
             return json.dumps(_response())
 
     gateway = Gateway()
@@ -221,7 +219,7 @@ async def test_one_repair_then_stop(monkeypatch: pytest.MonkeyPatch) -> None:
         harvest=OfferingHarvest(),
         page_evidence=[{"evidence_ref": "research-1", "text": "Process mining"}],
     )
-    assert gateway.calls == 2
+    assert gateway.calls == 1
     assert len(result.topics) == 2
     request = json.loads(gateway.users[0])
     assert request["confirmed_context"]["facts"]["language_code"] == "en-US"
@@ -232,7 +230,34 @@ async def test_one_repair_then_stop(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_provider_failure_does_not_consume_a_repair_call(
+async def test_invalid_portfolio_has_no_hidden_repair_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Gateway:
+        calls = 0
+
+        async def complete_structured_json(self, **_kwargs) -> str:
+            self.calls += 1
+            return "not json"
+
+    gateway = Gateway()
+    monkeypatch.setattr(pg, "create_model_gateway", lambda: gateway)
+    with pytest.raises(ValueError):
+        await pg.generate_portfolio(
+            brand_name="Acme",
+            brand_terms=["Acme"],
+            primary_market="US",
+            profile={"category": "analytics software"},
+            competitors=[],
+            competitor_terms=[],
+            harvest=OfferingHarvest(),
+            page_evidence=[],
+        )
+    assert gateway.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_provider_failure_does_not_start_another_model_call(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     class Gateway:

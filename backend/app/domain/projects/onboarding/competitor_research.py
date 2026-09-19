@@ -30,7 +30,9 @@ from app.domain.projects.onboarding.research_evidence import (
     ResearchEvidenceItem,
     bounded_evidence,
 )
-from app.domain.projects.onboarding.structured_repair import complete_validated_envelope
+from app.domain.projects.onboarding.structured_generation import (
+    complete_validated_envelope,
+)
 
 
 class NamedCompetitor(BaseModel):
@@ -136,6 +138,8 @@ async def suggest_competitors(
         schema_name="competitor_suggestions",
         envelope_type=CompetitorSuggestionEnvelope,
         validate=lambda _envelope: None,
+        maximum_attempts=brand_discovery_settings.competitor_model_maximum_attempts,
+        timeout_seconds=brand_discovery_settings.research_model_timeout_seconds,
     )
     seen_names: set[str] = set()
     seen_domains: set[str] = set()

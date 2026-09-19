@@ -23,6 +23,7 @@ from app.core.config.brand_discovery import (
     TASK_KIND_BRAND_COMPLETION,
     brand_discovery_settings,
 )
+from app.core.config.provider_catalog import ERROR_RATE_LIMIT
 from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
     TASK_STATUS_RETRY_WAIT,
@@ -69,6 +70,16 @@ def _retry_error_code(task_kind: str) -> str:
     return ERROR_BRAND_DISCOVERY
 
 
+def _stops_retry(task_kind: str, error: Exception) -> bool:
+    return isinstance(error, ProviderError) and (
+        not error.retryable
+        or (
+            task_kind == TASK_KIND_BRAND_COMPLETION
+            and error.error_code == ERROR_RATE_LIMIT
+        )
+    )
+
+
 async def _finalize(
     task_id, *, worker_id: str, error: Exception | None
 ) -> tuple[str | None, uuid.UUID | None]:
@@ -85,8 +96,8 @@ async def _finalize(
             task.completed_at = now
             task.error_code = ""
             task.error_detail = ""
-        elif task.attempt_count < task.max_attempts and not (
-            isinstance(error, ProviderError) and not error.retryable
+        elif task.attempt_count < task.max_attempts and not _stops_retry(
+            task.task_kind, error
         ):
             task.status = TASK_STATUS_RETRY_WAIT
             task.available_at = now + timedelta(

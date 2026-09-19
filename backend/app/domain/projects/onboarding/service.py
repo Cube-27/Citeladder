@@ -781,7 +781,13 @@ async def _generate_confirmed_portfolio(
             )
     except ProviderError:
         raise
-    except (RuntimeError, TimeoutError, ValueError) as exc:
+    except TimeoutError as exc:
+        raise BrandDiscoveryError("Initial prompt generation timed out") from exc
+    except ValueError as exc:
+        raise BrandDiscoveryError(
+            "Initial prompt generation returned invalid output"
+        ) from exc
+    except RuntimeError as exc:
         raise BrandDiscoveryError("Initial prompt generation failed") from exc
     if not result.prompts:
         raise BrandDiscoveryError("Initial prompt generation failed")

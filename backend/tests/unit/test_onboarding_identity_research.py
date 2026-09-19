@@ -112,7 +112,7 @@ async def test_external_identity_evidence_has_one_shared_budget(monkeypatch) -> 
 
 
 @pytest.mark.asyncio
-async def test_identity_synthesis_retries_an_invented_reference() -> None:
+async def test_identity_synthesis_rejects_an_invented_reference_without_retry() -> None:
     base = {
         "status": "ready",
         "profile": {"brand_name": "Acme"},
@@ -125,7 +125,6 @@ async def test_identity_synthesis_retries_an_invented_reference() -> None:
     gateway = _Gateway(
         [
             {**base, "field_evidence_refs": {"category": ["invented"]}},
-            {**base, "field_evidence_refs": {"category": ["fp-1"]}},
         ]
     )
     evidence = ResearchEvidenceItem(
@@ -136,20 +135,16 @@ async def test_identity_synthesis_retries_an_invented_reference() -> None:
         source_kind="first_party",
     )
 
-    result = await synthesize_identity(
-        gateway,
-        brand_name="Acme",
-        primary_market="US",
-        industry="software",
-        subindustry="workflow",
-        language_code="en",
-        evidence=[evidence],
-    )
+    with pytest.raises(ValueError, match="unknown evidence refs"):
+        await synthesize_identity(
+            gateway,
+            brand_name="Acme",
+            primary_market="US",
+            industry="software",
+            subindustry="workflow",
+            language_code="en",
+            evidence=[evidence],
+        )
 
-    assert gateway.calls == 2
-    assert "CORRECTION_REQUIRED" not in gateway.users[0]
+    assert gateway.calls == 1
     assert '"allowed_evidence_refs": ["fp-1"]' in gateway.users[0]
-    assert "invented" in gateway.users[1]
-    assert "fp-1" in gateway.users[1]
-    assert result.signature.category == "workflow software"
-    assert result.field_evidence_refs == {"category": ["fp-1"]}
