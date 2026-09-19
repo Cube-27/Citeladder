@@ -29,7 +29,7 @@ export function IssuesLoading() {
         ))}
       </div>
 
-      <div className="border-border-subtle grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]">
+      <div className="border-border grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]">
         <div className="border-border-subtle divide-border-subtle flex min-w-0 divide-x overflow-hidden border-b min-[701px]:grid min-[701px]:divide-x-0 min-[701px]:divide-y min-[701px]:border-r min-[701px]:border-b-0">
           {ISSUE_PLACEHOLDERS.map((placeholder) => (
             <div

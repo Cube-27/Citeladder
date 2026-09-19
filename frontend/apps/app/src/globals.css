@@ -61,7 +61,7 @@
   --color-amber-500: #f59e0b;
   --color-amber-700: #b45309;
 
-  --color-background: #f8fafc;
+  --color-background: #f2f6fa;
   --color-background-alt: #f1f5f9;
   --color-panel: #ffffff;
   --color-panel-tonal: #f8fafc;
@@ -74,13 +74,13 @@
      so a call site reaching for it cannot resurrect the old slab. It must be a
      literal (the policy requires six-digit hex here), so it moves with
      --color-shell below. */
-  --color-sidebar: #f8fafc;
+  --color-sidebar: #f2f6fa;
   --color-surface-inverse: #0c4a6e;
 
   /* Shell ground and stronger neutral surface. Workspace content remains
      white; interaction alone uses the accent ramp. */
-  --color-shell: #f8fafc;
-  --color-shell-alt: #f1f5f9;
+  --color-shell: #f2f6fa;
+  --color-shell-alt: #e9eff6;
 
   /* The marketing band ramp: canvas (paper) → soft (sunken) → indigo → teal.
      The two dark canvases rebind the semantic tokens in one place — see the
@@ -104,11 +104,26 @@
   --color-atmosphere-green: rgb(214 236 222 / 60%);
   --color-atmosphere-blue: rgb(219 234 248 / 55%);
 
-  /* Low-contrast surface edges. Stronger rungs are reserved for focus,
-     selected states, and high-emphasis separators. */
-  --color-border: #e2e8f0;
-  --color-border-subtle: #e7ecf1;
-  --color-border-strong: #cbd5e1;
+  /* The separation ladder. Four rungs that must each be visibly different
+     from the one above it, because they carry the whole hierarchy: the app
+     draws structure with edges and tone, not with elevation.
+
+       subtle  — a RULE inside a surface: row hairlines, the divides between
+                 peers in a band, a menu separator, a chart gridline. Reads as
+                 a fold in one sheet, not as an edge.
+       border  — the EDGE of a box: a card, a panel, a ledger, a page band, the
+                 pane's seam against the ground. This is the default, and it is
+                 the rung that has to be legible from across the desk.
+       strong  — a deliberate emphasis: a selected edge, a section the reader
+                 is being pointed at.
+       bold    — field boundaries and anything that must survive on a tinted
+                 fill.
+
+     `border` used to sit a hair under `subtle`, so the two rungs collapsed and
+     every object edge dissolved into its own contents. It now steps clear. */
+  --color-border: #d9e0ea;
+  --color-border-subtle: #e8edf3;
+  --color-border-strong: #c3ccd9;
   --color-border-bold: #94a3b8;
 
   /* Neutral ink roles match the frozen working-text hierarchy. */
@@ -302,13 +317,16 @@
   --shadow-sm: 0 1px 2px rgb(26 31 54 / 0.06);
   /* Smudged control edge — the shared edge treatment for buttons and fields.
      A faint full-perimeter ring fused with a soft bottom-weighted drop reads
-     as diffused graphite rather than a drawn hairline. Hover deepens the fuse
-     slightly; it never returns to a crisp border. The ring rides the same ink
-     as --shadow-xs, so the dark band rebinds below re-ink it. */
+     as diffused graphite rather than a drawn hairline. The ring now carries the
+     weight and the drop only softens it, so a control's edge lands at roughly
+     the same strength as --color-border and a row of buttons reads as objects
+     rather than as tinted patches. Hover deepens the fuse; it never returns to
+     a crisp border. The ring rides the same ink as --shadow-xs, so the dark
+     band rebinds below re-ink it. */
   --shadow-smudge:
-    0 0 0 1px rgb(26 31 54 / 0.06), 0 1px 2px rgb(26 31 54 / 0.07);
+    0 0 0 1px rgb(26 31 54 / 0.16), 0 1px 2px rgb(26 31 54 / 0.04);
   --shadow-smudge-hover:
-    0 0 0 1px rgb(26 31 54 / 0.1), 0 1px 3px rgb(26 31 54 / 0.11);
+    0 0 0 1px rgb(26 31 54 / 0.24), 0 1px 2px rgb(26 31 54 / 0.06);
   --shadow-smudge-danger:
     0 0 0 1px rgb(180 35 50 / 0.42), 0 1px 2px rgb(180 35 50 / 0.12);
   /* Composer lift. The one case where a FIELD is the page: a brief box or an
@@ -317,12 +335,12 @@
      the surface in front rather than as one more control in a row. */
   --shadow-raised:
     0 0 0 1px rgb(26 31 54 / 0.07), 0 2px 8px -2px rgb(26 31 54 / 0.1);
-  --shadow-card:
-    0 1px 0 0 rgb(255 255 255 / 0.8) inset,
-    0 8px 24px -4px rgb(17 28 69 / 0.06), 0 2px 6px -1px rgb(17 28 69 / 0.03);
-  --shadow-card-hover:
-    0 1px 0 0 rgb(255 255 255 / 0.9) inset,
-    0 16px 32px -6px rgb(17 28 69 / 0.09), 0 4px 12px -2px rgb(17 28 69 / 0.04);
+  /* A card is separated by its border and the tone under it; this is only the
+     hair of contact shadow that stops a bordered white box from looking
+     printed onto the ground. If a card ever needs to read as "above" rather
+     than "on", that is a different object, not a bigger shadow here. */
+  --shadow-card: 0 1px 2px -1px rgb(17 28 69 / 0.06);
+  --shadow-card-hover: 0 2px 6px -2px rgb(17 28 69 / 0.09);
   --shadow-elevated:
     0 12px 32px rgb(26 31 54 / 0.12), 0 2px 6px rgb(26 31 54 / 0.06);
   --shadow-modal-value:
@@ -396,12 +414,11 @@
   --card-padding: 16px;
   --card-padding-compact: 12px;
   --card-padding-large: 20px;
-  --shadow-card: none;
-  --shadow-card-hover: none;
-  /* The content pane's lift off the ground. Wide and very soft: the pane is a
-     sheet resting on a sheet, not an object floating over one, so this must
-     read as a cast edge rather than as a card's elevation. */
-  --shadow-pane: -1px 0 0 var(--color-border-subtle);
+  /* The content pane's cast edge against the ground. One hairline that follows
+     the pane's radius, so the seam between rail and paper is drawn once — the
+     sidebar deliberately carries no border of its own, or the two rules would
+     stack into a 2px trench at the one seam this model exists to soften. */
+  --shadow-pane: -1px 0 0 var(--color-border);
   --modal-padding: 24px;
   --empty-state-padding: 24px;
   --control-height-sm: 32px;

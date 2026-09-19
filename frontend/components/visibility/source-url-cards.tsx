@@ -15,9 +15,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { MissingValue, UnavailableValue } from '@/components/ui/unavailable-value';
+import { MissingValue } from '@/components/ui/unavailable-value';
 import type { visibilitySourceUrlSchema } from '@/lib/api/schemas/visibility-evidence';
-import { engineLabel } from '@/lib/providers/catalog';
+import { engineLabel, productModelLabel } from '@/lib/providers/catalog';
 import { count } from '@/lib/visibility/sources';
 
 type UrlDetail = z.infer<typeof visibilitySourceUrlSchema>;
@@ -117,9 +117,9 @@ export function EnginesCard({
                 <TableCell>
                   <span className="grid">
                     <span>{engineLabel(row.logical_engine) || row.logical_engine}</span>
-                    {row.transport_model ? (
+                    {productModelLabel(row.logical_engine, row.transport_model) ? (
                       <span className={textRole('meta', 'text-secondary')}>
-                        {row.transport_model}
+                        {productModelLabel(row.logical_engine, row.transport_model)}
                       </span>
                     ) : null}
                   </span>
@@ -179,58 +179,6 @@ export function BrandsCard({
             </li>
           ))}
         </ul>
-      ) : null}
-    </SectionCard>
-  );
-}
-
-export function PromptsCard({
-  rows,
-  loading,
-  errored,
-}: Readonly<{
-  rows: UrlDetail['prompt_rows'] | undefined;
-  loading: boolean;
-  errored?: boolean;
-}>) {
-  return (
-    <SectionCard
-      title="Prompts using this URL"
-      loading={loading}
-      errored={errored}
-      empty="No prompt in this selection reached this URL."
-    >
-      {rows?.length ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Prompt</TableHead>
-              <TableHead className="hidden md:table-cell">Topic</TableHead>
-              <TableHead className="hidden lg:table-cell">Models</TableHead>
-              <TableHead numeric>Answers</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={`${row.prompt_text}:${row.topic ?? ''}`}>
-                <TableCell className="max-w-[32rem]">
-                  <span className="block truncate">{row.prompt_text || 'Untitled prompt'}</span>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {row.topic ? (
-                    <Badge variant="neutral">{row.topic}</Badge>
-                  ) : (
-                    <UnavailableValue state="not_set" />
-                  )}
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  {row.engines.map((engine) => engineLabel(engine) || engine).join(', ')}
-                </TableCell>
-                <TableCell numeric>{count(row.responses) ?? '0'}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
       ) : null}
     </SectionCard>
   );

@@ -31,7 +31,7 @@ export function BillingDetailsForm({
   const india = country.trim().toUpperCase() === 'IN';
 
   return (
-    <fieldset className="border-border-subtle grid gap-3 rounded-[var(--radius-card)] border p-4">
+    <fieldset className="border-border grid gap-3 rounded-[var(--radius-card)] border p-4">
       <legend className={textRole('label', 'px-1')}>Billing details</legend>
       <div className="grid gap-3 sm:grid-cols-2">
         {addressFields.map(([key, label, autoComplete]) => (

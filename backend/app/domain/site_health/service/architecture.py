@@ -96,17 +96,16 @@ def _page_kind(row: dict) -> dict:
 def _limitations(coverage_state: str) -> list[str]:
     if coverage_state == COVERAGE_STATE_COMPLETE:
         return []
+    # One line: the coverage badge already names the state and `coverage_reasons`
+    # already names the cause, so this only has to say what the counts mean.
+    # Site-wide absence claims stay withheld either way — that is enforced in the
+    # projection, not asserted in prose.
     prefix = (
-        "This crawl hit its page budget"
+        "Page budget reached"
         if coverage_state == "partial"
-        else "This crawl could not prove it saw the whole site"
+        else "Full coverage unproven"
     )
-    return [
-        f"{prefix}, so these are the pages CiteLadder observed — not the whole "
-        "site. Counts describe what was crawled. Claims that a structure is "
-        "missing site-wide are withheld, because a partial crawl cannot prove "
-        "absence."
-    ]
+    return [f"{prefix} — counts cover the pages crawled, not the whole site."]
 
 
 async def get_architecture(

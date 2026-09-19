@@ -70,7 +70,7 @@ export function Drawer({
           }}
           data-side={side}
           className={cn(
-            'drawer-panel border-border-subtle bg-elevated shadow-modal-value z-modal fixed inset-y-0 flex w-full max-w-[32.5rem] flex-col focus:outline-none',
+            'drawer-panel border-border bg-elevated shadow-modal-value z-modal fixed inset-y-0 flex w-full max-w-[32.5rem] flex-col focus:outline-none',
             side === 'left'
               ? 'left-0 rounded-r-[var(--radius-overlay)] border-r'
               : 'right-0 rounded-l-[var(--radius-overlay)] border-l',
@@ -97,7 +97,7 @@ export function Drawer({
               </DialogPrimitive.Close>
             </>
           ) : (
-            <header className="border-border-subtle flex items-start justify-between gap-3 border-b p-[var(--modal-padding)]">
+            <header className="border-border flex items-start justify-between gap-3 border-b p-[var(--modal-padding)]">
               <div className="min-w-0">
                 <DialogPrimitive.Title className="text-foreground truncate text-lg font-semibold tracking-[-0.35px]">
                   {title}
@@ -124,7 +124,7 @@ export function Drawer({
             {children}
           </div>
           {footer ? (
-            <footer className="border-border-subtle border-t px-[var(--modal-padding)] pt-4 pb-[var(--modal-padding)]">
+            <footer className="border-border border-t px-[var(--modal-padding)] pt-4 pb-[var(--modal-padding)]">
               {footer}
             </footer>
           ) : null}

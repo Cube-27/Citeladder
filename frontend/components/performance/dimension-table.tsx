@@ -221,7 +221,7 @@ export function DimensionTable({
   }
 
   return (
-    <div className="border-border-subtle bg-panel flex min-h-[520px] flex-col justify-between overflow-hidden rounded-[var(--radius-panel)] border">
+    <div className="border-border bg-panel flex min-h-[520px] flex-col justify-between overflow-hidden rounded-[var(--radius-panel)] border">
       {/* 12px for the data inside the tab: these tables are dense and read
           as a block of figures, so the smaller size fits more of a row on
           screen without shrinking the tab labels that head them. */}

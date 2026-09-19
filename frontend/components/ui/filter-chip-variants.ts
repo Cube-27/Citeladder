@@ -25,7 +25,7 @@ export function filterChipClasses(active: boolean): string {
  */
 const TAG_TONE = {
   well: 'bg-well text-secondary',
-  outline: 'bg-panel border-border-subtle text-secondary border',
+  outline: 'bg-panel border-border text-secondary border',
   accent: 'bg-accent-subtle text-accent-text',
 } as const;
 

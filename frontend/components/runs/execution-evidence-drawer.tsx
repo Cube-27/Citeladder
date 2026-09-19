@@ -9,16 +9,38 @@ import { Drawer } from '@/components/ui/drawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
-import type { Execution } from '@/lib/api/types';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
-/** Persisted execution evidence shown without leaving the run detail context. */
+/**
+ * What the drawer needs from whatever row opened it.
+ *
+ * Structural rather than `Execution`, because the same evidence is reached from
+ * two places: a run's executions table, and the source-prompt rows in AI
+ * visibility, whose rows are `VisibilityExecutionEvidence` and name the
+ * execution as `task_id`. Both satisfy this shape, so neither has to fabricate
+ * a full `Execution` to open the answer it already has a handle on.
+ *
+ * Everything past `id` is a display fallback the drawer shows while the fetch
+ * is in flight; the fetched evidence is what it actually renders.
+ */
+export type EvidenceSubject = {
+  /** The execution id. */
+  id: string;
+  answer_text?: string;
+  prompt_text?: string;
+  prompt_index?: number;
+  repetition?: number;
+  logical_engine?: string;
+  search_surface_outcome?: string;
+};
+
+/** Persisted execution evidence shown without leaving the surface that opened it. */
 export function ExecutionEvidenceDrawer({
   execution,
   open,
   onOpenChange,
 }: Readonly<{
-  execution: Execution | null;
+  execution: EvidenceSubject | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
@@ -60,9 +82,10 @@ export function ExecutionEvidenceDrawer({
       onOpenChange={onOpenChange}
       title="Execution evidence"
       description={
-        execution
-          ? `Prompt #${execution.prompt_index + 1} · repetition ${execution.repetition}`
-          : undefined
+        execution?.prompt_index === undefined
+          ? undefined
+          : `Prompt #${execution.prompt_index + 1}` +
+            (execution.repetition === undefined ? '' : ` · repetition ${execution.repetition}`)
       }
       className="sm:max-w-220"
       closeLabel="Close evidence drawer"

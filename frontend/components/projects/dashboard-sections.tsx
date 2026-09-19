@@ -60,7 +60,7 @@ export function DashboardHeader({
                   rel="noreferrer"
                   className={textRole(
                     'label',
-                    'hover:text-foreground border-border-subtle bg-background-alt inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2 py-0.5 transition-colors',
+                    'hover:text-foreground border-border bg-background-alt inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2 py-0.5 transition-colors',
                   )}
                 >
                   <span className="truncate">
@@ -350,7 +350,7 @@ export function ActionsAndProof({
       </section>
       <section
         aria-labelledby="progress-proof"
-        className="border-border-subtle flex flex-col justify-between gap-4 border-y py-4 sm:flex-row sm:items-center"
+        className="border-border flex flex-col justify-between gap-4 border-y py-4 sm:flex-row sm:items-center"
       >
         <div className="grid gap-1">
           <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>

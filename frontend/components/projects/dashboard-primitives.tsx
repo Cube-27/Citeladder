@@ -68,7 +68,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
       <EmptyState
         icon={TrendingUp}
         heading="No comparable measurement yet"
-        description="Movement appears after a run with the same prompts, engines, and measurement mode."
+        description="Needs a second run with the same prompts and engines."
       />
     );
   const ceiling = Math.max(...movements.flatMap((row) => [row.current ?? 0, row.previous ?? 0]), 1);

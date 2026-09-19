@@ -260,10 +260,14 @@ export function PagesTable({
               );
             })}
             <TableCell className="text-secondary text-xs">
-              {formatIndexability(page.main_content_indexable)}
+              {page.main_content_indexable === null ? (
+                <UnavailableValue state="not_measured" />
+              ) : (
+                formatIndexability(page.main_content_indexable)
+              )}
             </TableCell>
             <TableCell className="text-secondary text-xs whitespace-nowrap">
-              {formatAudited(page.last_audited)}
+              <Measured value={formatAudited(page.last_audited)} />
             </TableCell>
             <TableCell>
               <ProjectLink
@@ -284,6 +288,15 @@ export function PagesTable({
 function formatIndexability(value: boolean | null) {
   if (value === null) return PLACEHOLDER;
   return value ? 'Indexable' : 'Blocked';
+}
+
+/**
+ * A formatted string, or the shared mark when the formatter had nothing to
+ * format. The formatters answer in words so the value carries its own meaning;
+ * this is where those words become the mark that the rest of the table uses.
+ */
+function Measured({ value }: Readonly<{ value: string }>) {
+  return value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : <>{value}</>;
 }
 
 function MeasurementValue({

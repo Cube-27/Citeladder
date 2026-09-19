@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { engineLabel, transportLabel } from '@/lib/providers/catalog';
+import { engineLabel, productTransportLabel } from '@/lib/providers/catalog';
 import type { Execution } from '@/lib/api/types';
 import { executionBadgeValue, executionStatusLabel } from '@/lib/runs/status';
 import { textRole } from '@/components/ui/typography';
@@ -53,9 +53,11 @@ export function ExecutionsTable({
               <span className={textRole('bodyStrong')}>
                 {engineLabel(execution.logical_engine)}
               </span>
-              <span className="text-muted ml-1.5 text-xs">
-                {transportLabel(execution.transport_provider)}
-              </span>
+              {productTransportLabel(execution.transport_provider) ? (
+                <span className="text-muted ml-1.5 text-xs">
+                  {productTransportLabel(execution.transport_provider)}
+                </span>
+              ) : null}
             </TableCell>
             <TableCell>
               <Badge variant="status" value={executionBadgeValue(execution.status)}>

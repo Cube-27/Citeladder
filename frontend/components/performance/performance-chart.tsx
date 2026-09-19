@@ -335,7 +335,7 @@ function ChartTooltip({
   const selectedDate = dateSource?.selected[index]?.date ?? null;
   const comparisonDate = dateSource?.comparison?.[index]?.date ?? null;
   return (
-    <output className="bg-panel border-border-subtle shadow-elevated pointer-events-none absolute top-2 right-2 grid gap-1 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
+    <output className="bg-panel border-border shadow-elevated pointer-events-none absolute top-2 right-2 grid gap-1 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
       <p className="text-secondary">
         Day <span className="mono">{index + 1}</span>
         {selectedDate ? ` · ${selectedDate}` : ''}

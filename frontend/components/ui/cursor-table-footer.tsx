@@ -54,7 +54,7 @@ export function CursorTableFooter({
   return (
     <div
       className={cn(
-        'border-border-subtle flex flex-wrap items-center justify-between gap-3 border-t px-[var(--table-cell-padding-x)] py-2',
+        'border-border flex flex-wrap items-center justify-between gap-3 border-t px-[var(--table-cell-padding-x)] py-2',
         className,
       )}
     >

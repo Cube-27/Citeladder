@@ -1,4 +1,5 @@
 import { Spinner } from '@/components/ui/spinner';
+import { MISSING_MARK } from '@/lib/format';
 import { textRole, type TextRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -10,9 +11,11 @@ import { cn } from '@/lib/utils';
  *   - **loading** — a spinner. Not a placeholder: a refetch in flight does not
  *     mean the value is missing, and rendering "Not measured" for the second
  *     it takes states something the surface does not know yet.
- *   - **missing** — the explicit label, at the SHARED placeholder size and
- *     weight rather than the numeral's. "Not measured" set at 28px reads as a
- *     headline announcement of an absence; it is a footnote about one figure.
+ *   - **missing** — the shared missing mark, at the SHARED placeholder size and
+ *     weight rather than the numeral's. `label` becomes its accessible name, so
+ *     the fact is still announced without the phrase being set at 28px, where
+ *     it read as a headline announcement of an absence rather than a footnote
+ *     about one figure.
  *   - **measured** — the value, at the caller's numeral role.
  *
  * Every state occupies the SAME box. The slot reserves the numeral's line
@@ -39,7 +42,7 @@ export function MetricValue({
 }: Readonly<{
   /** The formatted value, or null when the window measured nothing for it. */
   value: string | null;
-  /** The missing-state label, e.g. "Not measured". */
+  /** The missing state's accessible name, e.g. "Not measured". */
   label: string;
   size?: MetricValueSize;
   loading?: boolean;
@@ -60,7 +63,10 @@ export function MetricValue({
     // absent, on every surface.
     return (
       <div className={slot}>
-        <span className={textRole(PLACEHOLDER_ROLE, tone)}>{label}</span>
+        <span className={textRole(PLACEHOLDER_ROLE, tone)}>
+          <span aria-hidden>{MISSING_MARK}</span>
+          <span className="sr-only">{label}</span>
+        </span>
       </div>
     );
   }

@@ -4,9 +4,10 @@ import { cn } from '@/lib/utils';
 
 /**
  * Dense analytics table — the shared semantic ledger treatment:
- *  - sticky header (--table-header-height) on bg-panel with a single
- *    full-strength under-rule; no vertical column-separator hairlines, which
- *    made the tables read as spreadsheets rather than designed surfaces
+ *  - sticky header (--table-header-height) on the tonal panel fill with a
+ *    single object-rung under-rule, so the column labels read as a band; no
+ *    vertical column-separator hairlines, which made the tables read as
+ *    spreadsheets rather than designed surfaces
  *  - --table-row-height rows, --text-sm cells, subtle ROW hairlines only
  *  - data columns are centre-aligned and tabular; text columns stay left.
  *    The header centres with its values, so a column reads as one block
@@ -14,6 +15,9 @@ import { cn } from '@/lib/utils';
  *  - hover tints the row with `active`; `highlight` marks the user's own row
  *    with the same tint permanently
  * The wrapper is scroll-capable so the sticky header pins on vertical scroll.
+ * It draws NO edge of its own: a table is nearly always laid into a Card with
+ * flush content, and a second border a pixel inside the card's — at a radius
+ * that cannot match it — is the seam this deliberately does not make.
  *
  * The header label recipe (`tableHeadClasses`) is deliberately NOT the shared
  * `eyebrowClasses` micro-label: it uses the product table-header composite
@@ -97,7 +101,7 @@ export function TableHead({
       {...props}
       className={cn(
         tableHeadClasses,
-        'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
+        'border-border bg-panel-tonal sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'text-center tabular-nums',
         className,
       )}

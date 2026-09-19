@@ -58,7 +58,7 @@ function PropertyOption({
       disabled={disabled}
       aria-pressed={selected}
       className={cn(
-        'border-border-subtle flex w-full items-center gap-3 rounded-[var(--radius-control)] border px-3 py-2 text-start',
+        'border-border flex w-full items-center gap-3 rounded-[var(--radius-control)] border px-3 py-2 text-start',
         'focus-ring hover:bg-well',
         'disabled:pointer-events-none disabled:opacity-60',
         selected && 'border-accent bg-well',

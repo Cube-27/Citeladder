@@ -34,9 +34,15 @@ const PANEL_PAD = {
  * TILED inside another surface — a strip of cards filling a card — where the
  * container already draws the outer edge and a per-tile radius would show as
  * notches along the seams.
+ *
+ * The edge is the object rung, not the subtle one. `subtle` is for a RULE
+ * inside a surface — a row hairline, a menu separator, a chart gridline —
+ * where something else already establishes the boundary. A panel has nothing
+ * else: the `panel` tone is white inside a white card, so a hairline a shade
+ * off the fill left the box with no edge at all.
  */
 const PANEL_EDGE = {
-  rounded: 'border-border-subtle rounded-[var(--radius-control)] border',
+  rounded: 'border-border rounded-[var(--radius-control)] border',
   flush: '',
 } as const;
 
