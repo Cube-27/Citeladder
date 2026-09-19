@@ -771,8 +771,6 @@ def test_one_unreadable_row_no_longer_voids_its_whole_batch() -> None:
     assert dropped == 1
 
 
-
-
 def test_admission_rejects_an_unsplit_bundle_but_keeps_real_departments() -> None:
     """ "Womenswear including plus size" is two departments wearing one name.
 

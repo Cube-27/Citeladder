@@ -12,8 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.analysis.normalization import normalize_alias
 from app.connectors.web_evidence.url_policy import registrable_domain
 from app.core.config.brand_discovery import (
-    BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,
-    BRAND_DISCOVERY_PROMPT_VALIDATION_VERSION,
     BRAND_DISCOVERY_VERSION,
     BUSINESS_TYPES,
     CAPTURE_METHOD_APPLICATION_MODEL,
@@ -36,7 +34,6 @@ from app.core.config.prompts import (
     PROMPT_COHORT_COMPARISON,
     PROMPT_COHORT_CORE,
 )
-from app.core.config.visibility_prompts import BUYER_QUERY_POLICY_VERSION
 from app.domain.projects.business_context import BusinessContext
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryComplete,
@@ -56,10 +53,10 @@ from app.domain.projects.onboarding.normalization import (
     normalize_website_url,
 )
 from app.domain.projects.onboarding.portfolio_generation import (
-    PORTFOLIO_VERSION,
     PortfolioResult,
     generate_portfolio,
 )
+from app.domain.projects.onboarding.prompt_provenance import prompt_evidence
 from app.domain.projects.onboarding.research import research_brand
 from app.domain.projects.onboarding.site_resolution import (
     SiteNotFoundError,
@@ -413,6 +410,30 @@ def _generated_topics(
     ]
 
 
+
+
+def _generated_prompt(
+    item: dict,
+    *,
+    prompt_set_id: uuid.UUID,
+    topic: Topic | None,
+    generation_evidence: dict,
+) -> Prompt:
+    return Prompt(
+        prompt_set_id=prompt_set_id,
+        topic_id=topic.id if topic else None,
+        text=str(item["text"]),
+        theme=topic.name if topic else "",
+        intent=str(item["intent"]),
+        buyer_stage=str(item.get("buyer_stage") or ""),
+        prompt_intent=str(item.get("prompt_intent") or ""),
+        cohort=str(item["cohort"]),
+        branded=str(item["cohort"]) != PROMPT_COHORT_CORE,
+        origin="generated",
+        generation_evidence=generation_evidence,
+    )
+
+
 def _generated_prompts(
     *,
     prompt_set_id: uuid.UUID,
@@ -425,43 +446,30 @@ def _generated_prompts(
     intents: list[dict],
     research_snapshot_id: uuid.UUID | None,
 ) -> list[Prompt]:
-    generated: list[Prompt] = []
     intents_by_id = {item["id"]: item for item in intents}
     refs_by_topic_id = {
         str(item.topic_id): item.source_refs for item in discovery_topics
     }
+    generated: list[Prompt] = []
     for item in prompts:
         topic_id = item.get("topic_id")
         topic = topics_by_id.get(str(topic_id)) if topic_id else None
         if topic is None and (item["cohort"] == PROMPT_COHORT_CORE or topic_id):
             raise BrandDiscoveryError("Generated prompt references an unknown topic")
         generated.append(
-            Prompt(
+            _generated_prompt(
+                item,
                 prompt_set_id=prompt_set_id,
-                topic_id=topic.id if topic else None,
-                text=str(item["text"]),
-                theme=topic.name if topic else "",
-                intent=str(item["intent"]),
-                buyer_stage=str(item.get("buyer_stage") or ""),
-                prompt_intent=str(item.get("prompt_intent") or ""),
-                cohort=str(item["cohort"]),
-                branded=str(item["cohort"]) != PROMPT_COHORT_CORE,
-                origin="generated",
-                generation_evidence={
-                    "generator_version": BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,
-                    "buyer_query_policy_version": BUYER_QUERY_POLICY_VERSION,
-                    "buyer_query_slot_id": str(item.get("slot_id") or ""),
-                    "discovery_id": str(discovery_id),
-                    "provider": provider,
-                    "model": model,
-                    "portfolio_version": PORTFOLIO_VERSION,
-                    "buyer_intent": intents_by_id.get(str(item.get("slot_id") or "")),
-                    "topic_source_refs": refs_by_topic_id.get(str(topic_id), []),
-                    "research_snapshot_id": (
-                        str(research_snapshot_id) if research_snapshot_id else None
-                    ),
-                    "validation_version": BRAND_DISCOVERY_PROMPT_VALIDATION_VERSION,
-                },
+                topic=topic,
+                generation_evidence=prompt_evidence(
+                    item=item,
+                    discovery_id=discovery_id,
+                    provider=provider,
+                    model=model,
+                    intents_by_id=intents_by_id,
+                    refs_by_topic_id=refs_by_topic_id,
+                    research_snapshot_id=research_snapshot_id,
+                ),
             )
         )
     return generated
@@ -520,6 +528,37 @@ async def _persist_project_shell(
     return project.id
 
 
+async def _canonical_generated_topics(
+    session: AsyncSession,
+    *,
+    project_id: uuid.UUID,
+    discovery_topics: list[DiscoveryTopic],
+) -> dict[str, Topic]:
+    existing = list(
+        (
+            await session.scalars(
+                select(Topic).where(Topic.project_id == project_id)
+            )
+        ).all()
+    )
+    by_id = {str(topic.id): topic for topic in existing}
+    by_name = {topic.name.casefold(): topic for topic in existing}
+    missing: list[Topic] = []
+    for generated in _generated_topics(project_id, discovery_topics):
+        canonical = by_id.get(str(generated.id)) or by_name.get(
+            generated.name.casefold()
+        )
+        if canonical is None:
+            canonical = generated
+            missing.append(canonical)
+            by_name[canonical.name.casefold()] = canonical
+        by_id[str(generated.id)] = canonical
+    if missing:
+        session.add_all(missing)
+        await session.flush()
+    return by_id
+
+
 async def _persist_generated_prompts(
     session: AsyncSession,
     *,
@@ -556,26 +595,9 @@ async def _persist_generated_prompts(
         prompt_set_id=prompt_set.id,
         texts=[str(item["text"]) for item in prompts],
     )
-    existing_topics = list(
-        (
-            await session.scalars(select(Topic).where(Topic.project_id == project.id))
-        ).all()
+    by_id = await _canonical_generated_topics(
+        session, project_id=project.id, discovery_topics=discovery_topics
     )
-    by_id = {str(topic.id): topic for topic in existing_topics}
-    by_name = {topic.name.casefold(): topic for topic in existing_topics}
-    missing_topics: list[Topic] = []
-    for generated in _generated_topics(project.id, discovery_topics):
-        canonical = by_id.get(str(generated.id)) or by_name.get(
-            generated.name.casefold()
-        )
-        if canonical is None:
-            canonical = generated
-            missing_topics.append(canonical)
-            by_name[canonical.name.casefold()] = canonical
-        by_id[str(generated.id)] = canonical
-    if missing_topics:
-        session.add_all(missing_topics)
-        await session.flush()
     research_snapshot_id = await session.scalar(
         select(BrandResearchSnapshot.id)
         .where(

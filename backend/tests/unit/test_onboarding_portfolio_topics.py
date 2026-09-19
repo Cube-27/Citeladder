@@ -81,7 +81,9 @@ def test_intent_topic_prompt_links_and_evidence_are_admitted() -> None:
     assert len(result.prompts) == 4
     assert {item["slot_id"] for item in result.prompts} == {"need-1", "need-2"}
     assert {item["cohort"] for item in result.prompts} == {
-        "core", "brand_diagnostic", "comparison"
+        "core",
+        "brand_diagnostic",
+        "comparison",
     }
     assert all(item["topic_id"] for item in result.prompts if item["cohort"] == "core")
 

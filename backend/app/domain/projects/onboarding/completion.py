@@ -290,18 +290,26 @@ def _offering_harvest(value: object) -> OfferingHarvest:
 def _page_evidence(value: object) -> list[dict[str, str]]:
     items = value if isinstance(value, list) else []
     return [
-        {
-            "evidence_ref": str(item.get("evidence_ref") or ""),
-            "url": str(item.get("source_url") or ""),
-            "title": str(item.get("title") or ""),
-            "source_kind": str(item.get("source_kind") or ""),
-            "provider": str(item.get("provider") or ""),
-            "query_ref": str(item.get("query_ref") or ""),
-            "acquired_at": str(item.get("acquired_at") or ""),
-            "text": str(item.get("text") or "")[
-                : brand_discovery_settings.topic_evidence_max_chars_per_page
-            ],
-        }
+        _page_evidence_item(item)
         for item in items
         if isinstance(item, dict) and item.get("evidence_ref")
     ]
+
+
+def _page_evidence_item(item: dict) -> dict[str, str]:
+    fields = {
+        "evidence_ref": "evidence_ref",
+        "url": "source_url",
+        "title": "title",
+        "source_kind": "source_kind",
+        "provider": "provider",
+        "query_ref": "query_ref",
+        "acquired_at": "acquired_at",
+    }
+    serialized = {
+        key: str(item.get(source) or "") for key, source in fields.items()
+    }
+    serialized["text"] = str(item.get("text") or "")[
+        : brand_discovery_settings.topic_evidence_max_chars_per_page
+    ]
+    return serialized

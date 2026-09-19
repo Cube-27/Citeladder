@@ -69,6 +69,116 @@ class PortfolioResult:
     model: str = ""
 
 
+def _validate_topic_links(
+    topic: IntentTopic, *, intents: dict[str, BuyerIntent], known_refs: set[str]
+) -> None:
+    if any(ref not in known_refs for ref in topic.evidence_refs):
+        raise ValueError("Unknown topic evidence reference")
+    if any(intent_id not in intents for intent_id in topic.intent_ids):
+        raise ValueError("Unknown topic intent reference")
+    if any(prompt.intent_id not in topic.intent_ids for prompt in topic.prompts):
+        raise ValueError("Core prompt is not linked to its topic intent")
+
+
+def _validate_links(
+    envelope: PortfolioEnvelope, known_refs: set[str]
+) -> dict[str, BuyerIntent]:
+    intents = {intent.id: intent for intent in envelope.intents}
+    if len(intents) != len(envelope.intents):
+        raise ValueError("Duplicate buyer intent IDs")
+    if any(
+        intent.buyer_stage not in BUYER_STAGES
+        or intent.decision_intent not in PROMPT_INTENT_LEGACY
+        for intent in envelope.intents
+    ):
+        raise ValueError("Invalid buyer stage or decision intent")
+    for topic in envelope.topics:
+        _validate_topic_links(topic, intents=intents, known_refs=known_refs)
+    named = [*envelope.diagnostic_prompts, *envelope.comparison_prompts]
+    if any(prompt.intent_id not in intents for prompt in named):
+        raise ValueError("Unknown named prompt intent reference")
+    return intents
+
+
+class _Admission:
+    def __init__(
+        self,
+        *,
+        intents: dict[str, BuyerIntent],
+        topics: list[DiscoveryTopic],
+        brand_terms: list[str],
+        competitor_terms: list[str],
+    ) -> None:
+        self.intents = intents
+        self.topics = topics
+        self.validator = PortfolioValidator(
+            topic_ids=frozenset(str(topic.topic_id) for topic in topics),
+            brand_terms=brand_terms,
+            competitor_terms=competitor_terms,
+        )
+        self.warnings: list[str] = []
+        self.core_count: dict[str, int] = {}
+        self.covered_intents: set[str] = set()
+        self.by_name = {topic.name.casefold(): topic for topic in topics}
+
+    def offer(self, prompt: IntentPrompt, *, cohort: str, topic_id: str = "") -> None:
+        intent = self.intents[prompt.intent_id]
+        error = self.validator.offer(
+            {
+                "text": prompt.text,
+                "topic_id": topic_id,
+                "intent": PROMPT_INTENT_LEGACY[intent.decision_intent],
+                "buyer_stage": intent.buyer_stage,
+                "prompt_intent": intent.decision_intent,
+                "slot_id": prompt.intent_id,
+            },
+            cohort=cohort,
+        )
+        if error:
+            self.warnings.append(f"prompt_rejected:{error}")
+        elif cohort == PROMPT_COHORT_CORE:
+            self.core_count[topic_id] = self.core_count.get(topic_id, 0) + 1
+            self.covered_intents.add(prompt.intent_id)
+
+    def admit_core(self, candidates: list[IntentTopic]) -> None:
+        for candidate in candidates:
+            topic = self.by_name.pop(candidate.name.strip().casefold(), None)
+            if topic is None:
+                self.warnings.append("topic_rejected")
+                continue
+            topic_id = str(topic.topic_id)
+            for prompt in candidate.prompts:
+                if sum(self.core_count.values()) >= VISIBILITY_MAX_ORGANIC_PROMPTS:
+                    self.warnings.append("organic_capacity_reached")
+                    break
+                self.offer(prompt, cohort=PROMPT_COHORT_CORE, topic_id=topic_id)
+            if not self.core_count.get(topic_id):
+                self.warnings.append("empty_topic_dropped")
+
+    def result(self, envelope: PortfolioEnvelope) -> PortfolioResult:
+        surviving_topics = tuple(
+            topic for topic in self.topics if self.core_count.get(str(topic.topic_id))
+        )
+        if not surviving_topics or not self.covered_intents:
+            raise ValueError("No valid intent-linked core portfolio remains")
+        for prompt in envelope.diagnostic_prompts:
+            if prompt.intent_id in self.covered_intents:
+                self.offer(prompt, cohort=PROMPT_COHORT_BRAND_DIAGNOSTIC)
+        for prompt in envelope.comparison_prompts:
+            if prompt.intent_id in self.covered_intents:
+                self.offer(prompt, cohort=PROMPT_COHORT_COMPARISON)
+        return PortfolioResult(
+            topics=surviving_topics,
+            prompts=tuple(self.validator.accepted),
+            intents=tuple(
+                intent.model_dump()
+                for intent in envelope.intents
+                if intent.id in self.covered_intents
+            ),
+            warnings=tuple(dict.fromkeys(self.warnings)),
+        )
+
+
 def _admit(
     envelope: PortfolioEnvelope,
     *,
@@ -78,100 +188,28 @@ def _admit(
     category_terms: list[str],
     known_refs: set[str],
 ) -> PortfolioResult:
-    intents = {item.id: item for item in envelope.intents}
-    if len(intents) != len(envelope.intents):
-        raise ValueError("Duplicate buyer intent IDs")
-    for item in envelope.intents:
-        if (
-            item.buyer_stage not in BUYER_STAGES
-            or item.decision_intent not in PROMPT_INTENT_LEGACY
-        ):
-            raise ValueError("Invalid buyer stage or decision intent")
-    for item in envelope.topics:
-        if any(ref not in known_refs for ref in item.evidence_refs):
-            raise ValueError("Unknown topic evidence reference")
-        if any(intent_id not in intents for intent_id in item.intent_ids):
-            raise ValueError("Unknown topic intent reference")
-        if any(prompt.intent_id not in item.intent_ids for prompt in item.prompts):
-            raise ValueError("Core prompt is not linked to its topic intent")
-    for prompt in [*envelope.diagnostic_prompts, *envelope.comparison_prompts]:
-        if prompt.intent_id not in intents:
-            raise ValueError("Unknown named prompt intent reference")
-
-    admitted = admit_topics(
+    intents = _validate_links(envelope, known_refs)
+    topics = admit_topics(
         [
             {
-                "name": item.name,
-                "description": item.description,
-                "source_refs": item.evidence_refs,
+                "name": topic.name,
+                "description": topic.description,
+                "source_refs": topic.evidence_refs,
             }
-            for item in envelope.topics
+            for topic in envelope.topics
         ],
         known_refs=known_refs,
         forbidden_terms=[brand_name, *competitor_terms],
         business_terms=category_terms,
     )
-    by_name = {topic.name.casefold(): topic for topic in admitted}
-    validator = PortfolioValidator(
-        topic_ids=frozenset(str(topic.topic_id) for topic in admitted),
+    admission = _Admission(
+        intents=intents,
+        topics=topics,
         brand_terms=brand_terms,
         competitor_terms=competitor_terms,
     )
-    warnings: list[str] = []
-    core_count: dict[str, int] = {}
-    covered_intents: set[str] = set()
-
-    def offer(prompt: IntentPrompt, *, cohort: str, topic_id: str = "") -> None:
-        item = intents[prompt.intent_id]
-        error = validator.offer(
-            {
-                "text": prompt.text,
-                "topic_id": topic_id,
-                "intent": PROMPT_INTENT_LEGACY[item.decision_intent],
-                "buyer_stage": item.buyer_stage,
-                "prompt_intent": item.decision_intent,
-                "slot_id": prompt.intent_id,
-            },
-            cohort=cohort,
-        )
-        if error:
-            warnings.append(f"prompt_rejected:{error}")
-        elif cohort == PROMPT_COHORT_CORE:
-            core_count[topic_id] = core_count.get(topic_id, 0) + 1
-            covered_intents.add(prompt.intent_id)
-
-    for item in envelope.topics:
-        topic = by_name.pop(item.name.strip().casefold(), None)
-        if topic is None:
-            warnings.append("topic_rejected")
-            continue
-        for prompt in item.prompts:
-            if sum(core_count.values()) >= VISIBILITY_MAX_ORGANIC_PROMPTS:
-                warnings.append("organic_capacity_reached")
-                break
-            offer(prompt, cohort=PROMPT_COHORT_CORE, topic_id=str(topic.topic_id))
-        if not core_count.get(str(topic.topic_id)):
-            warnings.append("empty_topic_dropped")
-
-    surviving_topics = tuple(
-        topic for topic in admitted if core_count.get(str(topic.topic_id))
-    )
-    if not surviving_topics or not covered_intents:
-        raise ValueError("No valid intent-linked core portfolio remains")
-    for prompt in envelope.diagnostic_prompts:
-        if prompt.intent_id in covered_intents:
-            offer(prompt, cohort=PROMPT_COHORT_BRAND_DIAGNOSTIC)
-    for prompt in envelope.comparison_prompts:
-        if prompt.intent_id in covered_intents:
-            offer(prompt, cohort=PROMPT_COHORT_COMPARISON)
-    return PortfolioResult(
-        topics=surviving_topics,
-        prompts=tuple(validator.accepted),
-        intents=tuple(
-            item.model_dump() for item in envelope.intents if item.id in covered_intents
-        ),
-        warnings=tuple(dict.fromkeys(warnings)),
-    )
+    admission.admit_core(envelope.topics)
+    return admission.result(envelope)
 
 
 async def generate_portfolio(
