@@ -89,6 +89,18 @@ def test_legacy_reviewed_business_type_wins_over_stale_buyer_type() -> None:
     assert loaded.field_sources["buyer_type"] == "reviewed"
 
 
+def test_current_reviewed_buyer_type_survives_stale_legacy_value() -> None:
+    loaded = BusinessContext.from_persisted(
+        {
+            "business_type": "b2b",
+            "buyer_type": "b2c",
+            "field_sources": {"business_type": "inferred", "buyer_type": "reviewed"},
+        }
+    )
+    assert loaded.for_generation()["buyer_type"] == "b2c"
+    assert loaded.field_sources == {"buyer_type": "reviewed"}
+
+
 def test_missing_reviewed_buyer_type_does_not_keep_stale_inference() -> None:
     context = BusinessContext.from_onboarding(
         ConfirmedDiscoveryProfile(category="Retail"),

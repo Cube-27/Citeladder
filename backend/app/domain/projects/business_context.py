@@ -18,6 +18,26 @@ if TYPE_CHECKING:
     from app.models.project import Project
 
 
+def _normalize_legacy_buyer_type(raw: dict[str, Any]) -> None:
+    if "business_type" not in raw:
+        return
+    legacy_buyer_type = raw.pop("business_type")
+    sources = raw.get("field_sources")
+    if not isinstance(sources, dict):
+        if "buyer_type" not in raw:
+            raw["buyer_type"] = legacy_buyer_type
+        return
+    sources = dict(sources)
+    legacy_source = sources.pop("business_type", None)
+    if "buyer_type" not in raw or (
+        legacy_source == "reviewed" and sources.get("buyer_type") != "reviewed"
+    ):
+        raw["buyer_type"] = legacy_buyer_type
+        if legacy_source is not None:
+            sources["buyer_type"] = legacy_source
+    raw["field_sources"] = sources
+
+
 class BusinessContext(BaseModel):
     """Reviewed facts and nullable inferences; BrandProfile remains the store."""
 
@@ -117,14 +137,7 @@ class BusinessContext(BaseModel):
     def from_persisted(cls, value: object) -> BusinessContext:
         """Read older and public-API context without losing unrelated valid facts."""
         raw = dict(value) if isinstance(value, dict) else {}
-        if "business_type" in raw:
-            raw["buyer_type"] = raw.pop("business_type")
-            sources = raw.get("field_sources")
-            if isinstance(sources, dict):
-                sources = dict(sources)
-                if "business_type" in sources:
-                    sources["buyer_type"] = sources.pop("business_type")
-                raw["field_sources"] = sources
+        _normalize_legacy_buyer_type(raw)
         try:
             return cls.model_validate(raw)
         except ValidationError:

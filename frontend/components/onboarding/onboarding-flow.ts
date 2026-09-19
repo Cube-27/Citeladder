@@ -357,7 +357,9 @@ export function useOnboardingFlow(transactionKey: string) {
     form,
     hasSelectedDomain: domains.some((item) => item.selected),
     hasIncompleteCompetitor: competitors.some(
-      (item) => item.selected && (!item.name.trim() || !item.domains.some(Boolean)),
+      (item) =>
+        item.selected &&
+        (!item.name.trim() || !item.domains.some((domain) => domain.trim().length > 0)),
     ),
     isAdditional,
     maximumCompetitors,

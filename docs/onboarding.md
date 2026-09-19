@@ -70,8 +70,9 @@ and prompt uniqueness prevent repeated delivery from creating a second
 portfolio. Same-key replays return the same shell.
 
 The request separates reviewed category and market choices from provisional
-research prose. Both have explicit source references; the project market and
-language are supplied as confirmed locale facts. BrandProfile remains the
+research prose. Both have explicit source references; the project market is
+supplied as a confirmed locale fact, while language may use its default.
+BrandProfile remains the
 store for offerings, positioning and audience, while Project owns locale.
 The Projects-owned BusinessContext composes those facts for generation without
 duplicating their storage.

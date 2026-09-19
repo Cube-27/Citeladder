@@ -59,8 +59,8 @@ describe('ReviewStep competitor limit', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toContain(
       'https://logos.example/kmart.com.au',
     );
-    expect(screen.getByRole('button', { name: 'kmart.com.au' })).toBeInTheDocument();
-    expect(screen.queryByText('Kmart Australia')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kmart Australia' })).toBeInTheDocument();
+    expect(screen.getByText('kmart.com.au')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://kmart.com.au' })).toHaveAttribute(
       'href',
       'https://kmart.com.au',

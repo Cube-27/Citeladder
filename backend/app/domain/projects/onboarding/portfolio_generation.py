@@ -165,14 +165,7 @@ class _Admission:
             self.covered_intents.add(prompt.intent_id)
 
     def admit_core(self, candidates: list[IntentTopic]) -> None:
-        admitted: list[tuple[IntentTopic, str]] = []
-        for candidate in candidates:
-            name = " ".join(candidate.name.split()).casefold()
-            topic = self.by_name.pop(name, None)
-            if topic is None:
-                self.warnings.append("topic_rejected")
-                continue
-            admitted.append((candidate, str(topic.topic_id)))
+        admitted = self._admitted_core_topics(candidates)
         if not admitted:
             return
         for depth in range(max(len(candidate.prompts) for candidate, _ in admitted)):
@@ -192,6 +185,19 @@ class _Admission:
         for _, topic_id in admitted:
             if not self.core_count.get(topic_id):
                 self.warnings.append("empty_topic_dropped")
+
+    def _admitted_core_topics(
+        self, candidates: list[IntentTopic]
+    ) -> list[tuple[IntentTopic, str]]:
+        admitted: list[tuple[IntentTopic, str]] = []
+        for candidate in candidates:
+            name = " ".join(candidate.name.split()).casefold()
+            topic = self.by_name.pop(name, None)
+            if topic is None:
+                self.warnings.append("topic_rejected")
+                continue
+            admitted.append((candidate, str(topic.topic_id)))
+        return admitted
 
     def admit_named(self, envelope: PortfolioEnvelope) -> None:
         for prompt in envelope.diagnostic_prompts:

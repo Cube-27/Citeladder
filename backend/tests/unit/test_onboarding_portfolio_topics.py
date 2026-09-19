@@ -248,6 +248,7 @@ async def test_provider_failure_does_not_consume_a_repair_call(
 
     gateway = Gateway()
     monkeypatch.setattr(pg, "create_model_gateway", lambda: gateway)
+    harvest = OfferingHarvest()
     with pytest.raises(ProviderError):
         await pg.generate_portfolio(
             brand_name="Acme",
@@ -256,7 +257,7 @@ async def test_provider_failure_does_not_consume_a_repair_call(
             profile={"category": "analytics software"},
             competitors=[],
             competitor_terms=[],
-            harvest=OfferingHarvest(),
+            harvest=harvest,
             page_evidence=[],
         )
     assert gateway.calls == 1
@@ -277,6 +278,7 @@ async def test_portfolio_timeout_ends_a_slow_completion_attempt(
         profile=ConfirmedDiscoveryProfile(category="Retail"),
         domains=["acme.com"],
     )
+    harvest = OfferingHarvest()
     with pytest.raises(onboarding_service.BrandDiscoveryError, match="Initial prompt"):
         await onboarding_service._generate_confirmed_portfolio(
             payload=payload,
@@ -285,6 +287,6 @@ async def test_portfolio_timeout_ends_a_slow_completion_attempt(
             primary_market="AU",
             language_code="en",
             competitors=[],
-            harvest=OfferingHarvest(),
+            harvest=harvest,
             page_evidence=[],
         )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -21,19 +22,24 @@ from app.core.config.visibility_prompts import (
     cohort_system_prompt,
 )
 from app.domain.projects.discovery_schemas import (
+    BrandDiscoveryComplete,
     BrandDiscoveryCreate,
     ConfirmedDiscoveryProfile,
     DiscoveryPromptSuggestion,
     PersistableDiscoveryProfile,
 )
 from app.domain.projects.offering_harvest import harvest_offerings
+from app.domain.projects.onboarding import completion as onboarding_completion
 from app.domain.projects.onboarding.normalization import (
     InvalidWebsiteUrl,
     normalize_primary_market,
     normalize_website_url,
 )
 from app.domain.projects.onboarding.research import _customer_warnings
-from app.domain.projects.onboarding.service import discovery_catalog
+from app.domain.projects.onboarding.service import (
+    BrandDiscoveryError,
+    discovery_catalog,
+)
 from app.domain.projects.onboarding.site_resolution import resolve_site
 from app.domain.projects.onboarding.topic_admission import (
     admit_topics,
@@ -55,6 +61,28 @@ def _profile() -> dict:
         "target_audience": "Families",
         "category": "Footwear",
     }
+
+
+@pytest.mark.asyncio
+async def test_selected_competitor_resolution_has_a_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def hang(_domain: str, _url: str):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(onboarding_completion, "resolve_site", hang)
+    monkeypatch.setattr(
+        onboarding_completion, "BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS", 0.001
+    )
+    payload = BrandDiscoveryComplete(
+        profile=ConfirmedDiscoveryProfile(category="Retail"),
+        domains=["acme.com"],
+        competitors=[{"name": "Globex", "domains": ["globex.com"]}],
+    )
+    with pytest.raises(BrandDiscoveryError, match=r"Globex: globex\.com"):
+        await onboarding_completion._resolve_selected_competitors(
+            payload, owned_domains={"acme.com"}
+        )
 
 
 def test_normalizes_url_and_market() -> None:

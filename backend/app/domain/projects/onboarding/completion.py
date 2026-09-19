@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 from sqlalchemy import select
@@ -15,6 +16,7 @@ from app.core.config.brand_discovery import (
     TASK_KIND_BRAND_COMPLETION,
     brand_discovery_settings,
 )
+from app.core.config.brand_evidence import BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS
 from app.domain.projects.discovery_schemas import BrandDiscoveryComplete
 from app.domain.projects.offering_harvest import OfferingHarvest, OfferingNode
 from app.domain.projects.onboarding.normalization import (
@@ -169,10 +171,11 @@ async def _resolve_selected_competitors(
                 url, normalized = normalize_website_url(domain)
                 if normalized in owned_domains:
                     raise SiteNotFoundError("owned_domain")
-                resolved = await resolve_site(domain, url)
+                async with asyncio.timeout(BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS):
+                    resolved = await resolve_site(domain, url)
                 if resolved.registrable_domain != normalized:
                     raise SiteNotFoundError("domain_redirected")
-            except (InvalidWebsiteUrl, SiteNotFoundError) as exc:
+            except (InvalidWebsiteUrl, SiteNotFoundError, TimeoutError) as exc:
                 raise BrandDiscoveryError(
                     f"Could not resolve website for {competitor.name}: {domain}"
                 ) from exc

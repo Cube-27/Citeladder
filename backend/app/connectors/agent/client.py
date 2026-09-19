@@ -31,6 +31,7 @@ from app.connectors.answer_engines.errors import (
     parse_retry_after,
 )
 from app.core.config.agent import (
+    STRUCTURED_OUTPUT_JSON_OBJECT,
     STRUCTURED_OUTPUT_JSON_SCHEMA,
     DefaultAgentSettings,
     default_agent_settings,
@@ -49,7 +50,7 @@ class AgentNotConfiguredError(RuntimeError):
 
 
 class DefaultAgentClient:
-    """Thin JSON-mode chat client over an OpenAI-compatible endpoint."""
+    """Chat client whose structured request format is explicitly configured."""
 
     def __init__(
         self,
@@ -108,21 +109,6 @@ class DefaultAgentClient:
         schema: Mapping[str, Any],
     ) -> ModelResult:
         schema_payload = dict(schema)
-        response_format: Mapping[str, Any]
-        if (
-            self._settings.resolved_structured_output_mode
-            == STRUCTURED_OUTPUT_JSON_SCHEMA
-        ):
-            response_format = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": schema_name,
-                    "strict": True,
-                    "schema": schema_payload,
-                },
-            }
-        else:
-            response_format = {"type": "json_object"}
         return await self._complete_result(
             system=system,
             user=(
@@ -130,15 +116,17 @@ class DefaultAgentClient:
                 "schema exactly:\n"
                 + json.dumps(schema_payload, ensure_ascii=False, separators=(",", ":"))
             ),
-            response_format=response_format,
+            response_format=self._structured_response_format(
+                schema_name, schema_payload
+            ),
         )
 
     async def complete_json(self, *, system: str, user: str) -> str:
-        """Run one JSON-mode completion and return normalized JSON content."""
+        """Request JSON using the configured transport capability."""
         raw = await self._complete(
             system=system,
-            user=user,
-            response_format={"type": "json_object"},
+            user=f"{user}\n\nReturn only a valid JSON object, without commentary.",
+            response_format=self._json_object_response_format(),
         )
         return strip_json_fence(raw)
 
@@ -152,37 +140,41 @@ class DefaultAgentClient:
     ) -> str:
         """Return JSON constrained to a caller-owned JSON Schema.
 
-        The schema stays at the feature boundary; this shared transport never
-        embeds feature-specific shapes. It is also included in the prompt
-        because some OpenAI-compatible hosts accept but do not enforce the
-        standard ``json_schema`` response format.
+        The schema stays at the feature boundary and is also included in the
+        prompt because providers may not enforce their advertised format.
         """
-        schema_payload = dict(schema)
-        response_format: Mapping[str, Any]
-        if (
-            self._settings.resolved_structured_output_mode
-            == STRUCTURED_OUTPUT_JSON_SCHEMA
-        ):
-            response_format = {
+        result = await self.complete_structured(
+            system=system,
+            user=user,
+            schema_name=schema_name,
+            schema=schema,
+        )
+        return strip_json_fence(result.content)
+
+    def _structured_response_format(
+        self, schema_name: str, schema: Mapping[str, Any]
+    ) -> Mapping[str, Any] | None:
+        mode = self._settings.resolved_structured_output_mode
+        if mode == STRUCTURED_OUTPUT_JSON_SCHEMA:
+            return {
                 "type": "json_schema",
                 "json_schema": {
                     "name": schema_name,
                     "strict": True,
-                    "schema": schema_payload,
+                    "schema": dict(schema),
                 },
             }
-        else:
-            response_format = {"type": "json_object"}
-        raw = await self._complete(
-            system=system,
-            user=(
-                f"{user}\n\nReturn JSON that matches the {schema_name} schema "
-                "exactly:\n"
-                + json.dumps(schema_payload, ensure_ascii=False, separators=(",", ":"))
-            ),
-            response_format=response_format,
-        )
-        return strip_json_fence(raw)
+        if mode == STRUCTURED_OUTPUT_JSON_OBJECT:
+            return {"type": "json_object"}
+        return None
+
+    def _json_object_response_format(self) -> Mapping[str, Any] | None:
+        if self._settings.resolved_structured_output_mode in (
+            STRUCTURED_OUTPUT_JSON_SCHEMA,
+            STRUCTURED_OUTPUT_JSON_OBJECT,
+        ):
+            return {"type": "json_object"}
+        return None
 
     async def _complete(
         self,

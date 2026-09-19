@@ -55,7 +55,7 @@ batches do not coordinate their accepted text; final admission handles exact
 duplicates.
 
 Onboarding admits a smaller valid portfolio without filler or semantic retries.
-Subsequent Generate prompts retains its requested-count, topic, cohort and
+Subsequent prompt generation retains its requested-count, topic, cohort and
 batching semantics. Saving/activation retains explicit user-action
 boundaries. Generation evidence freezes buyer-query policy, generator, slot,
 context/source and actual provider/model provenance; historical prompts are not

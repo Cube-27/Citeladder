@@ -204,6 +204,15 @@ async def test_failed_identity_attempt_is_recorded_without_success_provenance(
 
     assert phase.identity is None
     assert phase.gateway is None
+    assert phase.model_calls == [
+        {
+            "phase": "identity",
+            "provider": "provider.invalid",
+            "model": "fixture-model",
+            "prompt_version": module.BRAND_IDENTITY_PROMPT_VERSION,
+            "outcome": "failed",
+        }
+    ]
 
 
 @pytest.mark.asyncio
@@ -236,15 +245,6 @@ async def test_slow_identity_model_reaches_review_with_degraded_context(
     assert phase.identity is None
     assert phase.gateway is None
     assert phase.model_calls[0]["outcome"] == "failed"
-    assert phase.model_calls == [
-        {
-            "phase": "identity",
-            "provider": "provider.invalid",
-            "model": "fixture-model",
-            "prompt_version": module.BRAND_IDENTITY_PROMPT_VERSION,
-            "outcome": "failed",
-        }
-    ]
 
 
 @pytest.mark.asyncio
