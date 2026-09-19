@@ -79,6 +79,48 @@ export const contentTargetPageSchema = responseObject({
   page_kind: z.string(),
 });
 
+export const contentDifferentiationFeatureSchema = responseObject({
+  feature: z.enum(['heading_topics', 'table_structures', 'outbound_sources']),
+  value: z.string(),
+  observed_pages: z.number().int().nonnegative(),
+  inspected_pages: z.number().int().nonnegative(),
+  share: z.number().min(0).max(1).nullable(),
+});
+
+export const contentDifferentiationReportSchema = responseObject({
+  id: uuid(),
+  project_id: uuid(),
+  audit_id: uuid(),
+  audit_task_id: uuid(),
+  owned_site_url_id: uuid().nullable(),
+  formula_version: z.string(),
+  report: responseObject({
+    formula_version: z.string(),
+    state: z.enum(['available', 'insufficient_evidence']),
+    minimum_inspected_pages: z.number().int().positive(),
+    most_pages_ratio: z.number().min(0).max(1),
+    comparison_policy: z.record(z.string(), z.unknown()),
+    provenance: responseObject({
+      selected_result_count: z.number().int().nonnegative(),
+      inspected_page_count: z.number().int().nonnegative(),
+      unusable_page_count: z.number().int().nonnegative(),
+      candidate_ids: z.array(z.string()),
+      snapshot_ids: z.array(z.string()),
+      search_context: z.record(z.string(), z.unknown()),
+    }),
+    parity: z.array(contentDifferentiationFeatureSchema),
+    gaps: z.array(contentDifferentiationFeatureSchema),
+    unique_contributions: z.array(contentDifferentiationFeatureSchema),
+    limitations: z.array(z.string()),
+    query: z.string(),
+    owned_page_selection: responseObject({
+      method: z.string(),
+      site_url_id: uuid().nullable(),
+    }),
+  }),
+  created_at: z.string(),
+});
+
 // Fixed vocabulary for why a draft was rejected.
 export const contentFeedbackReasonSchema = z.enum([
   'too_generic',

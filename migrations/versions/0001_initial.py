@@ -460,6 +460,7 @@ def upgrade() -> None:
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("workspace_id", "id", name="uq_projects_ws_id"),
     )
     op.create_index(
         op.f("ix_projects_workspace_id"), "projects", ["workspace_id"], unique=False
@@ -859,11 +860,18 @@ def upgrade() -> None:
             name="fk_audits_schedule_id",
             ondelete="SET NULL",
         ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_audits_ws_project_id"
+        ),
         sa.UniqueConstraint(
             "parent_audit_id", "repair_key", name="uq_audit_parent_repair_key"
         ),
@@ -2847,6 +2855,7 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("audit_id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
         sa.Column("prompt_snapshot_id", sa.UUID(), nullable=False),
         sa.Column("engine_snapshot_id", sa.UUID(), nullable=False),
         sa.Column("prompt_index", sa.Integer(), nullable=False),
@@ -2912,7 +2921,11 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "audit_id"],
+            ["audits.workspace_id", "audits.project_id", "audits.id"],
+            ondelete="CASCADE",
+        ),
         sa.ForeignKeyConstraint(
             ["engine_snapshot_id"], ["audit_engine_snapshots.id"], ondelete="CASCADE"
         ),
@@ -2933,7 +2946,15 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "audit_id",
+            "id",
+            name="uq_audit_tasks_ws_project_audit_id",
+        ),
         sa.UniqueConstraint(
             "audit_id",
             "prompt_index",
@@ -2959,6 +2980,12 @@ def upgrade() -> None:
         op.f("ix_audit_tasks_workspace_id"),
         "audit_tasks",
         ["workspace_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_audit_tasks_project_id"),
+        "audit_tasks",
+        ["project_id"],
         unique=False,
     )
     op.create_index(
@@ -3982,6 +4009,11 @@ def upgrade() -> None:
         sa.Column("nofollow_inbound_count", sa.Integer(), nullable=False),
         sa.Column("depth_from_home", sa.Integer(), nullable=True),
         sa.Column("source_page_count", sa.Integer(), nullable=False),
+        sa.Column("authority_share", sa.Float(), nullable=False),
+        sa.Column("authority_rank", sa.Integer(), nullable=False),
+        sa.Column(
+            "anchor_diagnostics", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
         sa.Column("top_inbound", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("top_outbound", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("source_artifact_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
@@ -4035,6 +4067,9 @@ def upgrade() -> None:
         ),
         sa.Column("hierarchy", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("archetype", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "topical_coherence", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
         sa.Column("source_analysis_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
         sa.Column("source_artifact_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
         sa.Column("source_evaluation_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
@@ -6287,9 +6322,7 @@ def upgrade() -> None:
         sa.Column("content_hash", sa.String(length=64), nullable=True),
         sa.Column("last_inspected_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_cited_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column(
-            "inspection_requested_at", sa.DateTime(timezone=True), nullable=True
-        ),
+        sa.Column("inspection_requested_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("recurrence_count", sa.Integer(), nullable=False),
         sa.Column("first_seen_audit_id", sa.UUID(), nullable=True),
         sa.Column("last_seen_audit_id", sa.UUID(), nullable=True),
@@ -6302,11 +6335,21 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["last_seen_audit_id"], ["audits.id"], ondelete="SET NULL"
         ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "id",
+            name="uq_source_pages_ws_project_id",
+        ),
         sa.UniqueConstraint(
             "project_id", "url_hash", name="uq_source_page_project_url"
         ),
@@ -6582,7 +6625,9 @@ def upgrade() -> None:
         sa.Column("audit_id", sa.UUID(), nullable=False),
         sa.Column("task_id", sa.UUID(), nullable=False),
         sa.Column("outcome", sa.String(length=32), nullable=False),
-        sa.Column("error_code", sa.String(length=64), nullable=False, server_default=""),
+        sa.Column(
+            "error_code", sa.String(length=64), nullable=False, server_default=""
+        ),
         sa.Column("provider_status_code", sa.Integer(), nullable=True),
         # NULLABLE on purpose: `false` is an observed absence, `null` is "we
         # never successfully looked". Collapsing the two would report our own
@@ -6663,6 +6708,104 @@ def upgrade() -> None:
         unique=False,
     )
     _create_indexes("aio_entity_links", ("workspace_id", "observation_id"))
+    op.create_table(
+        "content_differentiation_candidates",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("audit_task_id", sa.UUID(), nullable=False),
+        sa.Column("source_page_id", sa.UUID(), nullable=False),
+        sa.Column("query_text", sa.Text(), nullable=False),
+        sa.Column("rank", sa.Integer(), nullable=False),
+        sa.Column("result_title", sa.Text(), nullable=False),
+        sa.Column(
+            "search_context", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "audit_id"],
+            ["audits.workspace_id", "audits.project_id", "audits.id"],
+            name="fk_content_diff_candidates_audit",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "audit_id", "audit_task_id"],
+            [
+                "audit_tasks.workspace_id",
+                "audit_tasks.project_id",
+                "audit_tasks.audit_id",
+                "audit_tasks.id",
+            ],
+            name="fk_content_diff_candidates_task",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "source_page_id"],
+            ["source_pages.workspace_id", "source_pages.project_id", "source_pages.id"],
+            name="fk_content_diff_candidates_source_page",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "audit_task_id",
+            "source_page_id",
+            name="uq_content_diff_candidate_task_page",
+        ),
+    )
+    _create_indexes(
+        "content_differentiation_candidates",
+        ("workspace_id", "project_id", "audit_id", "audit_task_id", "source_page_id"),
+    )
+    op.create_table(
+        "content_differentiation_reports",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("audit_task_id", sa.UUID(), nullable=False),
+        sa.Column("owned_site_url_id", sa.UUID(), nullable=True),
+        sa.Column("formula_version", sa.String(length=64), nullable=False),
+        sa.Column("report", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "audit_id"],
+            ["audits.workspace_id", "audits.project_id", "audits.id"],
+            name="fk_content_diff_reports_audit",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "audit_id", "audit_task_id"],
+            [
+                "audit_tasks.workspace_id",
+                "audit_tasks.project_id",
+                "audit_tasks.audit_id",
+                "audit_tasks.id",
+            ],
+            name="fk_content_diff_reports_task",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["owned_site_url_id", "project_id", "workspace_id"],
+            ["site_urls.id", "site_urls.project_id", "site_urls.workspace_id"],
+            name="fk_content_diff_reports_owned_site_url",
+            ondelete="SET NULL (owned_site_url_id)",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("audit_task_id", name="uq_content_diff_report_task"),
+    )
+    _create_indexes(
+        "content_differentiation_reports",
+        ("workspace_id", "project_id", "audit_id", "audit_task_id"),
+    )
     # Added after both tables exist: a page points at its latest snapshot and
     # every snapshot points back at its page, so neither can carry the other's
     # constraint inline.
@@ -6682,6 +6825,8 @@ def downgrade() -> None:
     # installed, so replaying the generated reverse delta would recreate those
     # retired authorities. Drop the explicit final table set instead.
     final_tables = (
+        "content_differentiation_reports",
+        "content_differentiation_candidates",
         "aio_entity_links",
         "aio_observations",
         "mcp_oauth_grants",

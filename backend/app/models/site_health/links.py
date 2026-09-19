@@ -7,6 +7,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     DateTime,
+    Float,
     ForeignKey,
     ForeignKeyConstraint,
     Integer,
@@ -74,6 +75,9 @@ class SitePageLinkMetric(Base):
     nofollow_inbound_count: Mapped[int] = mapped_column(Integer, default=0)
     depth_from_home: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_page_count: Mapped[int] = mapped_column(Integer, default=0)
+    authority_share: Mapped[float] = mapped_column(Float, default=0.0)
+    authority_rank: Mapped[int] = mapped_column(Integer, default=0)
+    anchor_diagnostics: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     top_inbound: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     top_outbound: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     source_artifact_ids: Mapped[list | None] = mapped_column(

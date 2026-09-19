@@ -253,6 +253,7 @@ def _clone_tasks(session, child, workspace_id, tasks, prompt_map, engine_map):
             AuditTask(
                 audit_id=child.id,
                 workspace_id=workspace_id,
+                project_id=child.project_id,
                 source_task_id=source.id,
                 prompt_snapshot_id=prompt_map[source.prompt_snapshot_id].id,
                 engine_snapshot_id=engine_map[source.engine_snapshot_id].id,
@@ -264,6 +265,7 @@ def _clone_tasks(session, child, workspace_id, tasks, prompt_map, engine_map):
                 transport_model=source.transport_model,
                 prompt_text=source.prompt_text,
                 provider_route_snapshot=source.provider_route_snapshot,
+                request_snapshot=source.request_snapshot,
                 idempotency_key=(
                     f"{child.id}:{source.prompt_index}:{source.repetition}:"
                     f"{source.logical_engine}"

@@ -17,6 +17,10 @@ from app.analysis.site_health.architecture import (
     evaluate_architecture_rules,
 )
 from app.analysis.site_health.rules import creates_issue
+from app.analysis.site_health.topical_coherence import (
+    TopicalPage,
+    build_topical_coherence,
+)
 from app.core.config.site_health_archetypes import (
     ARCHETYPE_POLICY_VERSION,
     ARCHITECTURE_FORMULA_VERSION,
@@ -280,6 +284,17 @@ async def persist_observed_architecture(
         coverage_state=coverage.coverage_state,
         business_context=business_context,
     )
+    topical_coherence = build_topical_coherence(
+        [
+            TopicalPage(
+                site_url_id=page.site_url_id,
+                url=page.url,
+                indexable=page.indexable,
+                text=str(page.facts.get("primary_content_text") or ""),
+            )
+            for page in pages
+        ]
+    )
     inserted_id = await session.scalar(
         pg_insert(SiteObservedArchitecture)
         .values(
@@ -295,6 +310,7 @@ async def persist_observed_architecture(
             structure_depth=model.structure_depth,
             hierarchy=list(model.pages),
             archetype=model.archetype.as_dict(),
+            topical_coherence=topical_coherence,
             source_analysis_ids=[page.analysis_id for page in pages],
             source_artifact_ids=[page.artifact_id for page in pages],
             source_evaluation_ids=source_evaluation_ids,

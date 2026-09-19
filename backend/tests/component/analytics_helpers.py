@@ -441,6 +441,9 @@ async def seed_theme_analysis(
     task = AuditTask(
         audit_id=audit_id,
         workspace_id=workspace_id,
+        project_id=await session.scalar(
+            select(Audit.project_id).where(Audit.id == audit_id)
+        ),
         prompt_snapshot_id=prompt_snapshot.id,
         engine_snapshot_id=engine_snapshot.id,
         prompt_index=prompt_index,

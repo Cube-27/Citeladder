@@ -534,6 +534,17 @@ class LinkNeighbour(_Model):
     rel: list[str] = []
 
 
+class AnchorDiagnostic(_Model):
+    kind: Literal["generic", "repeated_destination", "low_lexical_alignment"]
+    anchor_text: str
+    occurrences: int
+    destination_count: int
+    destinations: list[str]
+    regions: list[str]
+    title_coverage: float | None = None
+    h1_coverage: float | None = None
+
+
 class InternalLinks(_Model):
     """A page's persisted internal-link metrics and bounded neighbours.
 
@@ -550,6 +561,11 @@ class InternalLinks(_Model):
     nofollow_inbound_count: int
     depth_from_home: int | None
     source_page_count: int
+    authority_share: float
+    authority_rank: int
+    authority_scope: Literal["observed_crawl"]
+    observed_crawl_incomplete: bool
+    anchor_diagnostics: list[AnchorDiagnostic]
     top_inbound: list[LinkNeighbour]
     top_outbound: list[LinkNeighbour]
     formula_version: str

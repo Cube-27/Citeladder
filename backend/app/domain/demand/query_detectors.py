@@ -17,11 +17,16 @@ from app.core.config.demand import (
     DEMAND_CTR_GAP_MIN_COHORT_ROWS,
     DEMAND_CTR_GAP_RELATIVE_THRESHOLD,
     DEMAND_CTR_GAP_WEIGHT,
+    DEMAND_QUERY_RELEVANCE_H1_COVERAGE_MAX,
+    DEMAND_QUERY_RELEVANCE_MIN_IMPRESSIONS,
+    DEMAND_QUERY_RELEVANCE_PRIMARY_COVERAGE_MAX,
+    DEMAND_QUERY_RELEVANCE_TITLE_COVERAGE_MAX,
     DEMAND_RULE_VERSION,
     DEMAND_SIGNAL_CANNIBALIZATION,
     DEMAND_SIGNAL_CTR_GAP,
     DEMAND_SIGNAL_DECLINING_QUERY,
     DEMAND_SIGNAL_EMERGING_QUERY,
+    DEMAND_SIGNAL_QUERY_PAGE_RELEVANCE,
     DEMAND_SIGNAL_STATE_ACTIVE,
     DEMAND_TREND_DECLINING_RATIO,
     DEMAND_TREND_EMERGING_RATIO,
@@ -32,6 +37,7 @@ from app.core.config.demand import (
     DEMAND_TREND_REQUIRED_DAYS,
     DEMAND_TREND_WINDOW_DAYS,
 )
+from app.domain.content.lexical import lexical_tokens, normalized_coverage
 from app.domain.demand.projection import (
     DemandSignalCandidate,
     DetectorEvaluation,
@@ -217,6 +223,90 @@ def _is_ctr_gap(impressions: int, ctr: float, median_ctr: float) -> bool:
     )
 
 
+def _relevance_scope(aggregate: dict[str, Any]) -> dict[str, Any]:
+    observed_start = aggregate.get("observed_start")
+    observed_end = aggregate.get("observed_end")
+    return {
+        "property_ref": aggregate.get("property_ref"),
+        "country": "all",
+        "device": "all",
+        "date_start": observed_start.isoformat() if observed_start else None,
+        "date_end": observed_end.isoformat() if observed_end else None,
+    }
+
+
+def _unknown_relevance(reason: str, scope: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "signal_type": DEMAND_SIGNAL_QUERY_PAGE_RELEVANCE,
+        "state": "unknown",
+        "reason": reason,
+        "signal_active": False,
+        "scope": scope,
+    }
+
+
+def _relevance_coverages(
+    terms: set[str], aggregate: dict[str, Any]
+) -> tuple[float, float, float]:
+    h1_text = " ".join(aggregate.get("page_h1_texts") or ())
+    return (
+        float(normalized_coverage(terms, aggregate.get("page_title")) or 0.0),
+        float(normalized_coverage(terms, h1_text) or 0.0),
+        float(normalized_coverage(terms, aggregate.get("page_primary_content")) or 0.0),
+    )
+
+
+def _relevance_active(
+    aggregate: dict[str, Any], coverages: tuple[float, float, float]
+) -> bool:
+    title, h1, primary = coverages
+    return (
+        int(aggregate["impressions"]) >= DEMAND_QUERY_RELEVANCE_MIN_IMPRESSIONS
+        and title <= DEMAND_QUERY_RELEVANCE_TITLE_COVERAGE_MAX
+        and h1 <= DEMAND_QUERY_RELEVANCE_H1_COVERAGE_MAX
+        and primary <= DEMAND_QUERY_RELEVANCE_PRIMARY_COVERAGE_MAX
+    )
+
+
+def _query_relevance(query: str, aggregate: dict[str, Any]) -> dict[str, Any]:
+    terms = lexical_tokens(query, min_length=1)
+    scope = _relevance_scope(aggregate)
+    if not terms:
+        return _unknown_relevance("no_usable_query_terms", scope)
+    if not aggregate.get("page_content_usable"):
+        return _unknown_relevance("page_content_unavailable", scope)
+    title_terms = lexical_tokens(aggregate.get("page_title"), min_length=1)
+    h1_terms = lexical_tokens(
+        " ".join(aggregate.get("page_h1_texts") or ()), min_length=1
+    )
+    title_coverage, h1_coverage, primary_coverage = _relevance_coverages(
+        terms, aggregate
+    )
+    active = _relevance_active(
+        aggregate, (title_coverage, h1_coverage, primary_coverage)
+    )
+    statement = None
+    if active:
+        statement = (
+            "This query underperforms its CTR baseline, and important query terms "
+            "are poorly represented in the inspected page."
+        )
+    return {
+        "signal_type": DEMAND_SIGNAL_QUERY_PAGE_RELEVANCE,
+        "state": "measured",
+        "signal_active": active,
+        "title_coverage": round(title_coverage, 6),
+        "h1_coverage": round(h1_coverage, 6),
+        "primary_content_coverage": round(primary_coverage, 6),
+        "absent_from_title": sorted(terms - title_terms),
+        "absent_from_h1": sorted(terms - h1_terms),
+        "page_analysis_id": aggregate.get("page_analysis_id"),
+        "page_artifact_id": aggregate.get("page_artifact_id"),
+        "scope": scope,
+        "statement": statement,
+    }
+
+
 def _ctr_gap_candidate(
     key: tuple[str, ...],
     aggregate: dict[str, Any],
@@ -227,6 +317,7 @@ def _ctr_gap_candidate(
     position_band = _position_band(aggregate)
     if position_band is None:
         return None
+    aggregate = {**aggregate, "property_ref": property_ref}
     return _custom_query_candidate(
         signal_type=DEMAND_SIGNAL_CTR_GAP,
         query=query,
@@ -245,6 +336,7 @@ def _ctr_gap_candidate(
             "position_band": position_band,
             "classifier_versions": aggregate["classifier_versions"],
             "classification_override_ids": aggregate["classification_override_ids"],
+            "query_relevance": _query_relevance(query, aggregate),
         },
         source_metric_row_ids=aggregate["source_metric_row_ids"],
         source_artifact_ids=aggregate["source_artifact_ids"],

@@ -28,7 +28,7 @@ from typing import Final
 # =========================================================================
 SOURCE_PAGE_IDENTITY_VERSION: Final = "citation-identity-1"
 SOURCE_PAGE_INSPECTOR_VERSION: Final = "source-page-inspector-1"
-SOURCE_PAGE_EXTRACTOR_VERSION: Final = "source-page-extractor-1"
+SOURCE_PAGE_EXTRACTOR_VERSION: Final = "source-page-extractor-2"
 SOURCE_PAGE_PRESENCE_VERSION: Final = "source-page-presence-1"
 SOURCE_PAGE_FORMAT_VERSION: Final = "source-page-format-1"
 
@@ -99,6 +99,7 @@ PAGE_FORMAT_METHOD_STRENGTH: Final[tuple[str, ...]] = (
     PAGE_FORMAT_METHOD_URL_PATTERN,
     PAGE_FORMAT_METHOD_NONE,
 )
+
 
 # =========================================================================
 # Entity presence on an inspected page

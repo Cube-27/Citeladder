@@ -68,6 +68,7 @@ class SiteObservedArchitecture(Base):
     structure_depth: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     hierarchy: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     archetype: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    topical_coherence: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     source_analysis_ids: Mapped[list | None] = mapped_column(
         ARRAY(PGUUID(as_uuid=True)), nullable=True
     )

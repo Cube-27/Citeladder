@@ -24,6 +24,7 @@ from app.core.config.source_pages import (
     PRESENCE_PARTIAL,
     PRESENCE_PRESENT,
     SOURCE_PAGE_MAX_PASSAGES,
+    SOURCE_PAGE_MAX_TEXT_CHARS,
     SOURCE_PAGE_PASSAGE_CHARS,
 )
 
@@ -225,6 +226,31 @@ def test_page_facts_never_carry_the_extracted_text() -> None:
     assert "text" not in facts
     assert page.extracted_chars > 0
     assert _FILLER.strip() not in str(facts)
+
+
+def test_structural_facts_include_bounded_table_headers() -> None:
+    page = extract_source_page(
+        _page(
+            "<html><body><table><tr><th>Plan</th><th>Price</th></tr>"
+            "<tr><td>Pro</td><td>$10</td></tr></table></body></html>"
+        )
+    )
+
+    assert page.table_headers == (("Plan", "Price"),)
+    assert page.as_page_facts()["table_headers"] == [["Plan", "Price"]]
+
+
+def test_source_text_cap_records_truncation_in_persisted_facts() -> None:
+    page = extract_source_page(
+        _page(
+            "<html><body><p>"
+            f"{'word ' * (SOURCE_PAGE_MAX_TEXT_CHARS // 2)}"
+            "</p></body></html>"
+        )
+    )
+
+    assert page.text_truncated is True
+    assert page.as_page_facts()["text_truncated"] is True
 
 
 def test_a_declared_page_type_change_is_a_content_change() -> None:

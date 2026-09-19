@@ -390,6 +390,41 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
           ) : null}
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle>Topical coherence</CardTitle>
+          <CardDescription>
+            Crawl-local lexical groups; cluster identifiers do not carry across crawls.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 pt-2">
+          {data.topical_coherence.state === 'available' ? (
+            <>
+              <p className="text-secondary text-xs">
+                {data.topical_coherence.eligible_page_count} of{' '}
+                {data.topical_coherence.total_page_count} pages eligible
+              </p>
+              <ul className="grid gap-2">
+                {data.topical_coherence.clusters.map((cluster) => (
+                  <li key={cluster.cluster_id} className="grid gap-0.5">
+                    <span className={textRole('label')}>
+                      {cluster.page_count} pages · {cluster.top_terms.join(', ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-muted text-xs">
+                {data.topical_coherence.outliers.length} bounded lexical outliers
+              </p>
+            </>
+          ) : (
+            <UnavailableValue
+              state="not_measured"
+              title={data.topical_coherence.limitations.join(' ') || undefined}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

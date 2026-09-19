@@ -64,6 +64,39 @@ class ArchitectureStructureDepthResponse(_Model):
     buckets: list[ArchitectureDepthBucketResponse]
 
 
+class TopicalClusterResponse(_Model):
+    cluster_id: str
+    page_count: int
+    top_terms: list[str]
+
+
+class TopicalAssignmentResponse(_Model):
+    site_url_id: uuid.UUID
+    url: str
+    state: Literal["clustered", "ineligible", "unknown"]
+    reason: str | None = None
+    cluster_id: str | None = None
+    lexical_outlier_score: float | None = None
+
+
+class TopicalOutlierResponse(_Model):
+    site_url_id: uuid.UUID
+    url: str
+    cluster_id: str
+    lexical_outlier_score: float
+
+
+class TopicalCoherenceResponse(_Model):
+    state: Literal["available", "unavailable"]
+    formula_version: str
+    eligible_page_count: int
+    total_page_count: int
+    clusters: list[TopicalClusterResponse]
+    assignments: list[TopicalAssignmentResponse]
+    outliers: list[TopicalOutlierResponse]
+    limitations: list[str]
+
+
 class ArchitectureResponse(_Model):
     state: Literal["available", "unavailable"]
     crawl_id: uuid.UUID | None = None
@@ -73,6 +106,7 @@ class ArchitectureResponse(_Model):
     nodes: list[ArchitectureNodeResponse]
     internal_linking: ArchitectureInternalLinkingResponse
     structure_depth: ArchitectureStructureDepthResponse
+    topical_coherence: TopicalCoherenceResponse
     architecture_formula_version: str
     limitations: list[str]
     coverage_reasons: list[str] = []

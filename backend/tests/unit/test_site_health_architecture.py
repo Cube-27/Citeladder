@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from types import SimpleNamespace
 
 from app.analysis.site_health.architecture import (
     ArchitecturePage,
@@ -25,6 +26,7 @@ from app.core.config.site_health_taxonomy import (
     PAGE_KIND_HOMEPAGE,
     PAGE_KIND_PRODUCT,
 )
+from app.domain.site_health.service.architecture import _projection
 
 
 def _page(
@@ -373,3 +375,29 @@ def test_common_structures_are_matched_by_kind_or_path_and_gate_local() -> None:
     )
     assert "locations" not in _structure_keys(national)
     assert "locations" in _structure_keys(local)
+
+
+def test_null_topical_projection_returns_complete_unavailable_shape() -> None:
+    model = SimpleNamespace(
+        hierarchy=[],
+        coverage_state="complete",
+        page_count=0,
+        internal_linking={},
+        page_kinds=[],
+        structure_depth={},
+        topical_coherence=None,
+        architecture_formula_version="sh-architecture-2",
+    )
+
+    projection = _projection(model, crawl_id=uuid.UUID(int=1), coverage_reasons=[])
+
+    assert projection["topical_coherence"] == {
+        "state": "unavailable",
+        "formula_version": "site-topical-1",
+        "eligible_page_count": 0,
+        "total_page_count": 0,
+        "clusters": [],
+        "assignments": [],
+        "outliers": [],
+        "limitations": ["The persisted model predates topical coherence."],
+    }

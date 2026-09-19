@@ -52,6 +52,39 @@ export const architectureStructureDepthSchema = responseObject({
   buckets: z.array(architectureDepthBucketSchema),
 });
 
+const topicalClusterSchema = responseObject({
+  cluster_id: z.string(),
+  page_count: z.number().int(),
+  top_terms: z.array(z.string()),
+});
+
+const topicalAssignmentSchema = responseObject({
+  site_url_id: uuid(),
+  url: z.string(),
+  state: z.enum(['clustered', 'ineligible', 'unknown']),
+  reason: z.string().nullable(),
+  cluster_id: z.string().nullable(),
+  lexical_outlier_score: z.number().nullable(),
+});
+
+const topicalOutlierSchema = responseObject({
+  site_url_id: uuid(),
+  url: z.string(),
+  cluster_id: z.string(),
+  lexical_outlier_score: z.number(),
+});
+
+const topicalCoherenceSchema = responseObject({
+  state: z.enum(['available', 'unavailable']),
+  formula_version: z.string(),
+  eligible_page_count: z.number().int(),
+  total_page_count: z.number().int(),
+  clusters: z.array(topicalClusterSchema),
+  assignments: z.array(topicalAssignmentSchema),
+  outliers: z.array(topicalOutlierSchema),
+  limitations: z.array(z.string()),
+});
+
 export const architectureSchema = responseObject({
   state: z.enum(['available', 'unavailable']),
   crawl_id: uuid().nullable(),
@@ -61,6 +94,7 @@ export const architectureSchema = responseObject({
   nodes: z.array(architectureNodeSchema),
   internal_linking: architectureInternalLinkingSchema,
   structure_depth: architectureStructureDepthSchema,
+  topical_coherence: topicalCoherenceSchema,
   architecture_formula_version: z.string(),
   limitations: z.array(z.string()),
   coverage_reasons: z.array(z.string()).default([]),

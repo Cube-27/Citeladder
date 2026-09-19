@@ -43,6 +43,11 @@ async def test_repair_clones_only_failed_slots_and_is_idempotent(
         )
         tasks[0].status = TASK_STATUS_SUCCEEDED
         tasks[1].status = TASK_STATUS_FAILED
+        tasks[1].request_snapshot = {
+            "location_code": 2036,
+            "language_code": "en",
+            "device": "mobile",
+        }
         parent.status = AUDIT_STATUS_PARTIALLY_COMPLETED
         parent_id = parent.id
         failed_task_id = tasks[1].id
@@ -60,6 +65,11 @@ async def test_repair_clones_only_failed_slots_and_is_idempotent(
         assert len(child_tasks) == 1
         assert child_tasks[0].source_task_id == failed_task_id
         assert child_tasks[0].prompt_text == failed_prompt_text
+        assert child_tasks[0].request_snapshot == {
+            "location_code": 2036,
+            "language_code": "en",
+            "device": "mobile",
+        }
         events = list(
             (
                 await session.scalars(

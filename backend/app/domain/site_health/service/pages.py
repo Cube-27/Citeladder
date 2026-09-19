@@ -328,7 +328,7 @@ def _detail_response(
         # Persisted internal-link projection (PR2); None when this crawl has no
         # metric row for the URL — the section then says so rather than showing
         # zeros that would read as "nothing links here".
-        "internal_links": _internal_links_row(link_metric),
+        "internal_links": _internal_links_row(link_metric, crawl=crawl),
         "site_url_id": site_url.id,
         "crawl_id": crawl.id,
         "normalized_url": site_url.normalized_url,

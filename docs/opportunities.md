@@ -22,6 +22,13 @@ mentions/citations. Opportunity evidence retains their availability and coverage
 rather than replacing missing inputs with zero or a guessed confidence.
 Human status changes remain separate from immutable source observations.
 
+Search-intelligence promotion is deliberately narrower than observation. A
+substantial content update is history, not an action. Only modification-date
+inconsistency and date-only cosmetic refresh promote, and only with complete,
+extractor-compatible text coverage. Query relevance may enrich the existing CTR
+gap action over the same scope; it never creates a duplicate action or asserts
+causation. Anchor diagnostics and topical outliers do not promote by default.
+
 Source routing distinguishes owned and earned actions and exposes the persisted
 source mix. The [Content handoff](../backend/app/domain/opportunities/content_handoff.py)
 projects target IDs, citations, limitations, coverage and suggested skill.

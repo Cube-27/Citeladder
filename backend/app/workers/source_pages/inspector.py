@@ -53,6 +53,7 @@ from app.core.config.source_pages import (
     SOURCE_PAGE_PER_HOST_DELAY_SECONDS,
     SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS,
 )
+from app.domain.content_differentiation import refresh_content_differentiation_reports
 from app.domain.opportunities.placement_checks import (
     due_placement_page_ids,
     evaluate_placement_checks,
@@ -72,7 +73,11 @@ from app.domain.source_pages.persistence import (
     record_inspection,
 )
 from app.domain.source_pages.roster import project_roster
-from app.domain.source_pages.sync import backfill_citation_identity, sync_cited_pages
+from app.domain.source_pages.sync import (
+    backfill_citation_identity,
+    sync_cited_pages,
+    sync_differentiation_pages,
+)
 from app.models.analytics import AnalyticsTask
 from app.models.audit import Audit
 from app.models.source_pages import SourcePage
@@ -343,8 +348,9 @@ async def _record_prefetched(
     *,
     scope: _Scope,
     prefetched: dict[str, FetchResult],
-) -> None:
-    """Store the pages already downloaded while resolving redirect tokens."""
+) -> set[uuid.UUID]:
+    """Store pages downloaded while resolving redirect tokens."""
+    inspected: set[uuid.UUID] = set()
     for url_hash, result in prefetched.items():
         async with session_factory() as session:
             page = await session.scalar(
@@ -358,12 +364,14 @@ async def _record_prefetched(
             try:
                 await _record_result(session, page=page, result=result, scope=scope)
                 await session.commit()
+                inspected.add(page.id)
             except Exception:
                 logger.exception(
                     "source-page prefetch persistence failed",
                     extra={"source_page_id": str(page.id)},
                 )
                 await session.rollback()
+    return inspected
 
 
 async def _inspect_claims(
@@ -372,17 +380,18 @@ async def _inspect_claims(
     *,
     scope: _Scope,
     claims: list[uuid.UUID],
-) -> None:
+) -> set[uuid.UUID]:
     semaphore = asyncio.Semaphore(SOURCE_PAGE_FETCH_CONCURRENCY)
 
-    async def run(page_id: uuid.UUID) -> None:
+    async def run(page_id: uuid.UUID) -> uuid.UUID | None:
         async with semaphore, session_factory() as session:
             page = await session.get(SourcePage, page_id)
             if page is None:
-                return
+                return None
             try:
                 await _inspect_one(session, inspector, page=page, scope=scope)
                 await session.commit()
+                return page_id
             except Exception:
                 # One unreachable publisher must not discard the pages that
                 # were read successfully alongside it.
@@ -391,8 +400,10 @@ async def _inspect_claims(
                     extra={"source_page_id": str(page_id)},
                 )
                 await session.rollback()
+                return None
 
-    await asyncio.gather(*(run(page_id) for page_id in claims))
+    inspected = await asyncio.gather(*(run(page_id) for page_id in claims))
+    return {page_id for page_id in inspected if page_id is not None}
 
 
 async def _hand_off(
@@ -496,6 +507,7 @@ async def _run_inspection(
         if audit is None:
             raise ValueError("Source page inspection audit is unavailable")
         tokens = await sync_cited_pages(session, audit=audit)
+        await sync_differentiation_pages(session, audit=audit)
         await session.commit()
         scope = _Scope(
             workspace_id=audit.workspace_id,
@@ -518,7 +530,9 @@ async def _run_inspection(
         async with session_factory() as session:
             await sync_cited_pages(session, audit=audit)
             await session.commit()
-        await _record_prefetched(session_factory, scope=scope, prefetched=prefetched)
+        prefetched_page_ids = await _record_prefetched(
+            session_factory, scope=scope, prefetched=prefetched
+        )
         async with session_factory() as session:
             claims = await claim_pages(
                 session,
@@ -532,7 +546,18 @@ async def _run_inspection(
                 ),
             )
             await session.commit()
-        await _inspect_claims(session_factory, inspector, scope=scope, claims=claims)
+        inspected_page_ids = await _inspect_claims(
+            session_factory, inspector, scope=scope, claims=claims
+        )
+    async with session_factory() as session:
+        await refresh_content_differentiation_reports(
+            session,
+            workspace_id=scope.workspace_id,
+            project_id=scope.project_id,
+            audit_id=scope.audit_id,
+            source_page_ids=prefetched_page_ids | inspected_page_ids,
+        )
+        await session.commit()
     return scope
 
 

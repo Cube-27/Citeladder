@@ -118,6 +118,17 @@ const linkNeighbourSchema = responseObject({
 // `main_content_inbound_count` is the separate "genuinely linked, or only in
 // the menu" signal, taken from each anchor's DOM region — never from link
 // frequency.
+const anchorDiagnosticSchema = responseObject({
+  kind: z.enum(['generic', 'repeated_destination', 'low_lexical_alignment']),
+  anchor_text: z.string(),
+  occurrences: z.number().int(),
+  destination_count: z.number().int(),
+  destinations: z.array(z.string()),
+  regions: z.array(z.string()),
+  title_coverage: z.number().nullable(),
+  h1_coverage: z.number().nullable(),
+});
+
 export const internalLinksSchema = responseObject({
   inbound_count: z.number().int(),
   outbound_count: z.number().int(),
@@ -126,6 +137,11 @@ export const internalLinksSchema = responseObject({
   nofollow_inbound_count: z.number().int(),
   depth_from_home: z.number().int().nullable(),
   source_page_count: z.number().int(),
+  authority_share: z.number().min(0).max(1),
+  authority_rank: z.number().int().positive(),
+  authority_scope: z.literal('observed_crawl'),
+  observed_crawl_incomplete: z.boolean(),
+  anchor_diagnostics: z.array(anchorDiagnosticSchema),
   top_inbound: z.array(linkNeighbourSchema),
   top_outbound: z.array(linkNeighbourSchema),
   formula_version: z.string(),

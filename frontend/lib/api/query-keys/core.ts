@@ -96,6 +96,8 @@ export const contentKeys = {
   skills: (workspaceId: string | null) => ['content', 'skills', workspaceId] as const,
   contextPreview: (projectId: string, inputs: object) =>
     ['content', 'context-preview', projectId, inputs] as const,
+  differentiation: (projectId: string, limit: number) =>
+    ['content', 'differentiation', projectId, limit] as const,
   targetPages: (projectId: string, query: string) =>
     ['content', 'target-pages', projectId, query] as const,
 };

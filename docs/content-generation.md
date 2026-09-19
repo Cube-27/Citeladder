@@ -16,6 +16,21 @@ context preview, target-page picker, generation and history actions. The
 ownership, role, capability, concurrency and usage capacity, then resolves the
 configured model route. A missing route fails before provider I/O.
 
+`GET /api/v1/content/differentiation` renders persisted comparison reports
+for a project. Successful DataForSEO organic results are admitted to the existing
+bounded source-page inspection queue without creating Citation rows. Reports
+compare one current owned page selected by normalized prompt coverage with usable,
+non-truncated inspected results. They cover only heading topics, table header
+structures and outbound source domains; each parity/gap figure carries its
+inspected-page numerator and denominator. "Unique contribution" means absent
+from that inspected set, never original on the internet. Insufficient inspected
+pages or no usable owned-page match produces an explicit unavailable state.
+Organic comparison rows do not enter Sources counts or Visibility scoring. The
+Content screen renders the latest persisted reports with inspected-page
+denominators, competitor gaps, parity, unique-in-the-inspected-set contributions
+and evidence limitations; empty, loading, read-error and insufficient-evidence
+states remain distinct.
+
 The single [context builder](../backend/app/domain/content/context_builder.py)
 authorizes optional target, Site Health reference, Opportunity and Demand IDs.
 It combines reviewed brand context, target-page evidence, applicable issues and

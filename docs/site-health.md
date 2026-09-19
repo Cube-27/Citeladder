@@ -121,6 +121,21 @@ pass. Architecture retains its separate post-terminal projection and scoped
 findings; depth, parentlessness, missing hubs, duplicates and orphans do not
 penalize a public score in this release.
 
+Search-intelligence diagnostics remain outside the Site Health score. Link
+metrics persist normalized internal-authority share over the observed crawl,
+including formula version, rank and incomplete/sample caveats; off-crawl targets
+receive no transition weight. Anchor diagnostics group generic, repeated-target
+and low-lexical-alignment evidence without automatic Opportunity promotion.
+Architecture also persists deterministic bounded lexical topic clusters, explicit
+unknown/ineligible page assignments and crawl-local outliers. Cluster identities
+are not comparable across crawls.
+
+Change Intelligence compares bounded primary-text shingles and heading outlines
+under extractor/analyzer provenance. Content change and modification-date
+consistency are separate outputs. Only complete, compatible text coverage may
+promote metadata-inconsistency or cosmetic-refresh actions; legacy, truncated or
+extractor-incompatible comparisons remain recorded but suppressed.
+
 ## AEO pillars and scoring
 
 The AEO pillars and baseline weights are:

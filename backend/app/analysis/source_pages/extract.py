@@ -22,6 +22,10 @@ from lxml import html as lxml_html
 from app.analysis.site_health.dom import DOM_ERRORS, dom_failure
 from app.analysis.source_pages.contracts import ExtractedPage
 from app.connectors.web_evidence.url_policy import registrable_domain
+from app.core.config.content_differentiation import (
+    SOURCE_PAGE_MAX_TABLE_HEADERS,
+    SOURCE_PAGE_MAX_TABLES,
+)
 from app.core.config.source_pages import (
     SOURCE_PAGE_MAX_HEADINGS,
     SOURCE_PAGE_MAX_OUTBOUND_DOMAINS,
@@ -118,6 +122,25 @@ def _headings(root: Any) -> tuple[str, ...]:
     return tuple(found)
 
 
+def _table_headers(root: Any) -> tuple[tuple[str, ...], ...]:
+    tables: list[tuple[str, ...]] = []
+    try:
+        for table in root.iter("table"):
+            headers: list[str] = []
+            for node in table.iter("th"):
+                text = _visible_text(node)[:SOURCE_PAGE_TITLE_MAX_CHARS]
+                if text:
+                    headers.append(text)
+                if len(headers) >= SOURCE_PAGE_MAX_TABLE_HEADERS:
+                    break
+            tables.append(tuple(headers))
+            if len(tables) >= SOURCE_PAGE_MAX_TABLES:
+                break
+    except DOM_ERRORS as exc:
+        dom_failure("source_page.tables", exc)
+    return tuple(tables)
+
+
 def _schema_types(payload: Any, found: list[str], depth: int = 0) -> None:
     """Collect ``@type`` values from arbitrarily shaped JSON-LD.
 
@@ -201,6 +224,7 @@ def extract_source_page(body: bytes, *, charset: str = "") -> ExtractedPage:
     title = _title(root)
     meta_description = _meta_description(root)
     headings = _headings(root)
+    table_headers = _table_headers(root)
     structured_types = _structured_types(root)
     outbound_domains = _outbound_domains(root)
 
@@ -208,19 +232,23 @@ def extract_source_page(body: bytes, *, charset: str = "") -> ExtractedPage:
     body_node = root.find(".//body")
     node = body_node if body_node is not None else root
     _prune_non_prose(node)
-    text = _visible_text(node)[:SOURCE_PAGE_MAX_TEXT_CHARS]
+    complete_text = _visible_text(node)
+    text = complete_text[:SOURCE_PAGE_MAX_TEXT_CHARS]
 
     return ExtractedPage(
         title=title,
         meta_description=meta_description,
         text=text,
         headings=headings,
+        table_headers=table_headers,
         structured_types=structured_types,
         outbound_domains=outbound_domains,
+        text_truncated=len(complete_text) > SOURCE_PAGE_MAX_TEXT_CHARS,
         content_hash=_content_hash(
             {
                 "title": title,
                 "meta": meta_description,
+                "table_headers": [list(headers) for headers in table_headers],
                 "headings": list(headings),
                 "text": text,
                 # The publisher's own declaration of what this page IS. It

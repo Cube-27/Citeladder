@@ -1,4 +1,5 @@
 import uuid
+from types import SimpleNamespace
 
 from app.analysis.site_health.change_intel import (
     ChangePage,
@@ -11,6 +12,8 @@ from app.core.config.site_health_contracts import (
     RULE_OUTCOME_PARTIAL,
     RULE_OUTCOME_SATISFIED,
 )
+from app.domain.opportunities.change_hits import _rule_id
+from app.domain.site_health.change_intel import _content_comparison_record
 
 
 def _page(*, title: str = "Same", status: int = 200) -> ChangePage:
@@ -149,3 +152,142 @@ def test_partial_pair_suppresses_added_and_removed_claims() -> None:
         item.field for item in compare_crawls([before], [added], complete_pair=True)
     }
     assert fields == {"url_presence"}
+
+
+def _content_page(
+    *,
+    shingles: list[str],
+    modified: str,
+    coverage: str = "complete",
+    extractor_version: str = "extract-v2",
+) -> ChangePage:
+    page = _page()
+    return ChangePage(
+        **{
+            **page.__dict__,
+            "fields": {
+                **page.fields,
+                "content_change": {
+                    "shingles": shingles,
+                    "heading_outline": ["Overview"],
+                    "word_count": 50,
+                    "modified": modified,
+                    "coverage": coverage,
+                    "coverage_reason": None,
+                    "extractor_version": extractor_version,
+                    "stored_length": 400,
+                    "pre_truncation_length": 400,
+                },
+            },
+        }
+    )
+
+
+def test_content_change_and_metadata_consistency_are_independent() -> None:
+    before = _content_page(
+        shingles=["alpha beta gamma delta epsilon"], modified="2026-01-01"
+    )
+    after = _content_page(
+        shingles=["new useful evidence for readers"], modified="2026-01-01"
+    )
+
+    change = next(
+        item
+        for item in compare_crawls([before], [after], complete_pair=True)
+        if item.field == "content_change"
+    )
+
+    assert change.after_value["content_change_classification"] == "substantial_change"
+    assert change.after_value["metadata_consistency"] == "inconsistent"
+    assert change.after_value["comparison_coverage"] == "complete"
+    assert change.after_value["content_delta_ratio"] == 1.0
+
+
+def test_date_only_refresh_is_recorded_without_claiming_the_page_did_not_change() -> (
+    None
+):
+    before = _content_page(
+        shingles=["alpha beta gamma delta epsilon"], modified="2026-01-01"
+    )
+    after = _content_page(
+        shingles=["alpha beta gamma delta epsilon"], modified="2026-02-01"
+    )
+
+    change = next(
+        item
+        for item in compare_crawls([before], [after], complete_pair=True)
+        if item.field == "content_change"
+    )
+
+    assert change.after_value["content_change_classification"] == "unchanged"
+    assert change.after_value["metadata_consistency"] == "inconsistent"
+    assert change.after_value["content_delta_measure"] == (
+        "measured_text_divergence_over_compared_portion"
+    )
+
+
+def test_legacy_cap_equality_and_extractor_mismatch_are_insufficient() -> None:
+    legacy = _content_page(
+        shingles=["same stored excerpt at cap"],
+        modified="2026-01-01",
+        coverage="unknown",
+        extractor_version="extract-v1",
+    )
+    current = _content_page(
+        shingles=["same stored excerpt at cap"],
+        modified="2026-02-01",
+        extractor_version="extract-v2",
+    )
+
+    change = next(
+        item
+        for item in compare_crawls([legacy], [current], complete_pair=True)
+        if item.field == "content_change"
+    )
+
+    assert (
+        change.after_value["content_change_classification"] == "insufficient_evidence"
+    )
+    assert change.after_value["comparison_coverage"] == "unknown"
+    assert change.after_value["coverage_reason"] == "extractor_incompatible"
+    assert change.after_value["metadata_consistency"] == "unknown"
+
+
+def test_content_change_promotion_requires_complete_comparison_coverage() -> None:
+    incomplete = SimpleNamespace(
+        change_class="neutral",
+        field="content_change",
+        after_value={
+            "comparison_coverage": "unknown",
+            "metadata_consistency": "inconsistent",
+            "content_change_classification": "substantial_change",
+        },
+    )
+    complete = SimpleNamespace(
+        change_class="neutral",
+        field="content_change",
+        after_value={
+            **incomplete.after_value,
+            "comparison_coverage": "complete",
+        },
+    )
+
+    assert _rule_id(incomplete) is None
+    assert _rule_id(complete) == "site_change_metadata_inconsistency"
+
+
+def test_short_nonempty_content_produces_one_comparison_shingle() -> None:
+    row = SimpleNamespace(
+        artifact=SimpleNamespace(
+            normalized_facts={
+                "primary_content_text": "Short changed text",
+                "primary_content_truncated": False,
+                "primary_content_pre_truncation_length": 18,
+            },
+            extractor_version="extract-v2",
+        )
+    )
+
+    record = _content_comparison_record(row)
+
+    assert record["shingles"] == ["short changed text"]

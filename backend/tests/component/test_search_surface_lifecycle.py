@@ -189,6 +189,7 @@ async def _seed_search_task(
         task = AuditTask(
             audit_id=audit.id,
             workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
             prompt_snapshot_id=prompt_snapshot.id,
             engine_snapshot_id=engine_snapshot.id,
             prompt_index=0,

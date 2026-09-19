@@ -12,6 +12,7 @@ import { CONTENT_LIST_DEFAULT_LIMIT } from '@/lib/config/operational';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import {
+  contentDifferentiationReportSchema,
   contentContextPreviewSchema,
   contentGenerationDetailSchema,
   contentGenerationListItemSchema,
@@ -40,6 +41,7 @@ type ContentSkill = string;
 export type ContentSkillView = z.infer<typeof contentSkillViewSchema>;
 export type ContentSkillCatalog = z.infer<typeof contentSkillCatalogSchema>;
 export type ContentTargetPage = z.infer<typeof contentTargetPageSchema>;
+export type ContentDifferentiationReport = z.infer<typeof contentDifferentiationReportSchema>;
 
 const contentGenerationListSchema = z.array(contentGenerationListItemSchema);
 
@@ -118,6 +120,23 @@ export const contentApi = {
     const path = withQuery('/content/target-pages', definedQuery({ project_id: projectId, query }));
     const response = await apiClient.get<unknown>(path, options);
     return strictValidate(z.array(contentTargetPageSchema), response, 'content.listTargetPages');
+  },
+
+  listDifferentiationReports: async (
+    projectId: string,
+    limit = 10,
+    options?: ApiRequestOptions,
+  ): Promise<ContentDifferentiationReport[]> => {
+    const path = withQuery(
+      '/content/differentiation',
+      definedQuery({ project_id: projectId, limit }),
+    );
+    const response = await apiClient.get<unknown>(path, options);
+    return strictValidate(
+      z.array(contentDifferentiationReportSchema),
+      response,
+      'content.listDifferentiationReports',
+    );
   },
 
   listGenerations: async (

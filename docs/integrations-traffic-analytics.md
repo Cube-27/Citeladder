@@ -92,8 +92,19 @@ property-relative CTR gaps and coverage-qualified adjacent-window trends.
 Branded query classification uses canonical brand/alias/domain vocabulary;
 the newest append-only override for an exact normalized query wins.
 Detector availability and limitations persist with the snapshot.
-opportunities/demand_hits.py alone maps actionable signals to Opportunity rules;
-branded and ambiguous cohorts cannot become actionable hits.
+
+Query-page relevance is an evidence field on an eligible property-relative CTR
+gap, not a second Opportunity. It reports normalized usable-query-term coverage
+for the resolved page's title, H1 and primary content, preserves meaningful short
+terms such as `AI`, and remains unknown when page resolution or extracted
+content is unavailable. The relevance evidence and CTR gap must share the exact
+date, country and device scope; wording is correlational and never claims that
+missing terms caused the CTR result. The Search Demand CTR-gap card renders the
+three measured coverage values and missing title/H1 terms, or the explicit
+unavailable reason when the page could not be inspected.
+
+`opportunities/demand_hits.py` alone maps actionable signals to Opportunity
+rules; branded and ambiguous cohorts cannot become actionable hits.
 
 JourneyDefinition and reviewed conversion-journey mapping were proposed in older
 documentation but are not implemented persistence/API owners. Do not describe

@@ -102,6 +102,7 @@ async def _create_audit_tasks(
         task = AuditTask(
             audit_id=audit.id,
             workspace_id=workspace_id,
+            project_id=audit.project_id,
             prompt_snapshot_id=prompt_snapshot.id,
             engine_snapshot_id=engine_snapshot.id,
             prompt_index=prompt_index,

@@ -1,13 +1,6 @@
-# Opportunities configuration (invariant 1: all config lives in core/config).
-#
-# Owns EVERY tunable knob, enum, catalog entry, and version string for the
-# Opportunities subsystem: the deterministic rule catalog, the site-issue ->
-# opportunity-rule mapping sets, the priority-scoring formula weights, the
-# analyzer/rule/formula versions stamped on every derived row (invariant 4),
-# and the read/write bounds. Detection + scoring are deterministic
-# projections over already-persisted visibility analysis + Site Health issue
-# rows — no provider calls, no LLM (invariants 7 + 9). Domain, analysis, and
-# API code READS these; it never hard-codes the literals inline.
+# Opportunities configuration: catalogs, tunables, bounds and stamped versions.
+# Detection and scoring project persisted evidence only; no provider or model calls.
+# Domain, analysis and API owners read these values rather than hard-coding them.
 from __future__ import annotations
 
 from typing import Final
@@ -18,6 +11,7 @@ from app.core.config.demand import (
     DEMAND_SIGNAL_DECLINING_QUERY,
     DEMAND_SIGNAL_EMERGING_QUERY,
     DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR,
+    DEMAND_SIGNAL_QUERY_PAGE_RELEVANCE,
     DEMAND_SIGNAL_STRIKING_DISTANCE,
 )
 from app.core.config.earned_actions import (
@@ -44,8 +38,8 @@ from app.core.config.projects import (
 # catalog change, and ``FORMULA_VERSION`` on any scoring change so a derived
 # row is always traceable to the exact logic that produced it (mirrors
 # ``SCORING_RULE_VERSION`` in ``config/analysis.py``).
-ANALYZER_VERSION: Final = "opp-analyzer-2"
-RULE_VERSION: Final = "opp-rules-2"
+ANALYZER_VERSION: Final = "opp-analyzer-3"
+RULE_VERSION: Final = "opp-rules-3"
 RULE_PRODUCT_NOT_MENTIONED: Final = "product_not_mentioned"
 RULE_CITED_ALTERNATIVES: Final = "cited_alternatives_without_uploaded_presence"
 RULE_CATALOG_FIELDS_MISSING: Final = "catalog_fields_missing"
@@ -466,6 +460,26 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
         ),
     ),
     OpportunityRule(
+        rule_id="site_change_metadata_inconsistency",
+        opportunity_type=OPPORTUNITY_TYPE_SITE,
+        severity=SEVERITY_MEDIUM,
+        title="Content change and modification date disagree",
+        remediation=(
+            "Review the inspected text change and update the modification date "
+            "only when it accurately describes the published content."
+        ),
+    ),
+    OpportunityRule(
+        rule_id="site_change_cosmetic_refresh",
+        opportunity_type=OPPORTUNITY_TYPE_SITE,
+        severity=SEVERITY_LOW,
+        title="Modification date moved without inspected text change",
+        remediation=(
+            "Confirm whether non-text content changed; otherwise restore an "
+            "accurate modification date."
+        ),
+    ),
+    OpportunityRule(
         rule_id="low_share_of_voice_theme",
         opportunity_type=OPPORTUNITY_TYPE_TOPIC,
         severity=SEVERITY_MEDIUM,
@@ -570,6 +584,7 @@ DEMAND_SIGNAL_RULE_IDS: Final[dict[str, str]] = {
     DEMAND_SIGNAL_STRIKING_DISTANCE: "striking_distance_query",
     DEMAND_SIGNAL_CANNIBALIZATION: "query_cannibalization",
     DEMAND_SIGNAL_CTR_GAP: "property_relative_ctr_gap",
+    DEMAND_SIGNAL_QUERY_PAGE_RELEVANCE: "property_relative_ctr_gap",
     DEMAND_SIGNAL_EMERGING_QUERY: "emerging_query",
     DEMAND_SIGNAL_DECLINING_QUERY: "declining_query",
 }

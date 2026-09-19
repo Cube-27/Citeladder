@@ -5,6 +5,8 @@ from __future__ import annotations
 import random
 import uuid
 
+import pytest
+
 from app.analysis.site_health.link_graph import LinkPageInput, build_link_metrics
 
 
@@ -41,12 +43,14 @@ def _anchor(
     region: str = "main",
     rel: str = "",
     internal: bool = True,
+    text: str = "",
 ) -> dict[str, object]:
     return {
         "url": url,
         "is_internal": internal,
         "region": region,
         "rel": rel,
+        "anchor_text": text,
     }
 
 
@@ -174,3 +178,77 @@ def test_graph_is_deterministic_under_shuffled_pages_and_anchors() -> None:
     )
 
     assert actual == expected
+
+
+def test_authority_weights_mixed_edges_and_dangling_nodes() -> None:
+    pages = [
+        _page(
+            1,
+            "/",
+            [
+                _anchor("/main"),
+                _anchor("/nav", region="nav"),
+                _anchor("/nofollow", rel="nofollow"),
+                _anchor("/mixed", region="nav"),
+                _anchor("/mixed", rel="nofollow"),
+            ],
+        ),
+        _page(2, "/main", []),
+        _page(3, "/nav", []),
+        _page(4, "/nofollow", []),
+        _page(5, "/mixed", []),
+        _page(6, "/disconnected", []),
+    ]
+
+    rows = _metrics(pages)
+
+    assert sum(row.authority_share for row in rows.values()) == pytest.approx(1.0)
+    assert rows[_id(2)].authority_share > rows[_id(5)].authority_share
+    assert rows[_id(5)].authority_share > rows[_id(3)].authority_share
+    assert rows[_id(3)].authority_share > rows[_id(4)].authority_share
+    assert rows[_id(6)].authority_share > 0
+    assert rows[_id(2)].authority_rank < rows[_id(4)].authority_rank
+    assert rows[_id(5)].top_inbound[0]["main_content"] is True
+    assert rows[_id(5)].top_inbound[0]["nofollow"] is True
+
+
+def test_anchor_diagnostics_group_generic_repeated_and_lexical_findings() -> None:
+    destination_a = _page(2, "/analytics", [])
+    destination_a.facts.update(
+        {"title": "Analytics platform", "headings": {"h1_texts": ["Analytics"]}}
+    )
+    destination_b = _page(3, "/reports", [])
+    destination_b.facts.update(
+        {"title": "Reporting software", "headings": {"h1_texts": ["Reports"]}}
+    )
+    pages = [
+        _page(
+            1,
+            "/",
+            [
+                _anchor("/analytics", text="click here"),
+                _anchor("/analytics", text="shared label"),
+                _anchor("/reports", text="shared label"),
+            ],
+        ),
+        destination_a,
+        destination_b,
+    ]
+
+    diagnostics = _metrics(pages)[_id(1)].anchor_diagnostics
+    generic = [item for item in diagnostics if item["kind"] == "generic"]
+    repeated = [item for item in diagnostics if item["kind"] == "repeated_destination"]
+    low_alignment = [
+        item for item in diagnostics if item["kind"] == "low_lexical_alignment"
+    ]
+
+    assert [(item["anchor_text"], item["occurrences"]) for item in generic] == [
+        ("click here", 1)
+    ]
+    assert repeated[0]["anchor_text"] == "shared label"
+    assert repeated[0]["destination_count"] == 2
+    assert repeated[0]["occurrences"] == 2
+    assert len(low_alignment) == 3
+    assert all(item["destination_count"] == 1 for item in low_alignment)
+    assert all(len(item["destinations"]) == 1 for item in low_alignment)
+    assert "semantic" not in str(diagnostics).casefold()

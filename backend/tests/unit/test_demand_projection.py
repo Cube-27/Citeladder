@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+from app.domain.demand.detector_source import _analysis_window
 from app.domain.demand.projection import (
     QueryEvidenceInput,
     SearchDemandInput,
@@ -62,6 +64,10 @@ def _query_row(
     clicks: int = 2,
     observed_date: date = date(2026, 7, 1),
     property_ref: str = "sc-domain:example.com",
+    page_title: str = "",
+    page_h1_texts: tuple[str, ...] = (),
+    page_primary_content: str = "",
+    page_content_usable: bool = False,
 ) -> QueryEvidenceInput:
     return QueryEvidenceInput(
         observed_date=observed_date,
@@ -77,6 +83,10 @@ def _query_row(
         position=position,
         source_metric_row_id=f"row-{query}",
         source_artifact_id="artifact",
+        page_title=page_title,
+        page_h1_texts=page_h1_texts,
+        page_primary_content=page_primary_content,
+        page_content_usable=page_content_usable,
     )
 
 
@@ -283,3 +293,68 @@ async def test_equal_concurrent_query_snapshot_insert_reuses_winner() -> None:
         _Session(), snapshot
     )
     assert result is winner
+
+
+def test_ctr_gap_relevance_preserves_ai_and_requires_usable_page_content() -> None:
+    cohort = [
+        _query_row(f"healthy {index}", impressions=30, clicks=3, position=5.4)
+        for index in range(19)
+    ]
+    measured = detect_property_relative_ctr_gap(
+        [
+            *cohort,
+            _query_row(
+                "AI search",
+                impressions=100,
+                clicks=5,
+                position=5.8,
+                page_content_usable=True,
+                page_title="Search guide",
+                page_h1_texts=("Audit",),
+                page_primary_content="Search guide for teams",
+            ),
+        ]
+    ).candidates[0]
+    relevance = measured.evidence["query_relevance"]
+
+    assert relevance["signal_active"] is True
+    assert relevance["title_coverage"] == 0.5
+    assert relevance["absent_from_title"] == ["ai"]
+    assert relevance["scope"] == {
+        "property_ref": "sc-domain:example.com",
+        "country": "all",
+        "device": "all",
+        "date_start": "2026-07-01",
+        "date_end": "2026-07-01",
+    }
+    assert "caused" not in relevance["statement"].lower()
+
+    unknown = (
+        detect_property_relative_ctr_gap(
+            [
+                *cohort,
+                _query_row("AI search", impressions=100, clicks=5, position=5.8),
+            ]
+        )
+        .candidates[0]
+        .evidence["query_relevance"]
+    )
+    assert unknown == {
+        "signal_type": "query_page_relevance",
+        "state": "unknown",
+        "reason": "page_content_unavailable",
+        "signal_active": False,
+        "scope": relevance["scope"],
+    }
+
+
+def test_page_analysis_window_is_inclusive_by_evidence_date() -> None:
+    start, end = _analysis_window(
+        SimpleNamespace(
+            window_start=date(2026, 7, 1),
+            window_end=date(2026, 7, 28),
+        )
+    )
+
+    assert start == datetime(2026, 7, 1, tzinfo=UTC)
+    assert end == datetime(2026, 7, 29, tzinfo=UTC)

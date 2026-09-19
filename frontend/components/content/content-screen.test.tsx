@@ -105,6 +105,7 @@ function mockBase(listItems: Record<string, unknown>[] = []) {
       }),
     ),
     http.get('/api/v1/content/target-pages', () => HttpResponse.json([])),
+    http.get('/api/v1/content/differentiation', () => HttpResponse.json([])),
     http.get('/api/v1/content/generations', () => HttpResponse.json(listItems)),
     http.post(`/api/v1/projects/${PROJECT}/logos/refresh`, () => HttpResponse.json({})),
   );
@@ -134,6 +135,73 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('ContentScreen clean composer', () => {
+  it('shows persisted differentiation gaps and inspected denominators', async () => {
+    mockBase();
+    mswServer.use(
+      http.get('/api/v1/content/differentiation', () =>
+        HttpResponse.json([
+          {
+            id: '77777777-7777-4777-8777-777777777777',
+            project_id: PROJECT,
+            audit_id: '88888888-8888-4888-8888-888888888888',
+            audit_task_id: '99999999-9999-4999-8999-999999999999',
+            owned_site_url_id: '66666666-6666-4666-8666-666666666666',
+            formula_version: 'content-differentiation-1',
+            created_at: '2026-07-15T00:00:00Z',
+            report: {
+              formula_version: 'content-differentiation-1',
+              state: 'available',
+              minimum_inspected_pages: 3,
+              most_pages_ratio: 0.6,
+              comparison_policy: {},
+              provenance: {
+                selected_result_count: 5,
+                inspected_page_count: 3,
+                unusable_page_count: 2,
+                candidate_ids: [],
+                snapshot_ids: [],
+                search_context: {},
+              },
+              parity: [],
+              gaps: [
+                {
+                  feature: 'heading_topics',
+                  value: 'deployment checklist',
+                  observed_pages: 2,
+                  inspected_pages: 3,
+                  share: 0.6667,
+                },
+              ],
+              unique_contributions: [
+                {
+                  feature: 'outbound_sources',
+                  value: 'research.example',
+                  observed_pages: 0,
+                  inspected_pages: 3,
+                  share: 0,
+                },
+              ],
+              limitations: ['Comparison covers selected inspected organic results.'],
+              query: 'best analytics platform',
+              owned_page_selection: {
+                method: 'highest_normalized_query_coverage',
+                site_url_id: '66666666-6666-4666-8666-666666666666',
+              },
+            },
+          },
+        ]),
+      ),
+    );
+
+    renderScreen();
+
+    expect(await screen.findByText('best analytics platform')).toBeVisible();
+    expect(screen.getByText(/3 of 5 selected pages inspected/)).toBeVisible();
+    expect(screen.getByText('deployment checklist')).toBeVisible();
+    expect(screen.getByText('research.example')).toBeVisible();
+    expect(screen.getByText(/not found in 3 inspected pages/)).toBeVisible();
+  });
+
   it('opens the composer with its context and retains typing during later context reads', async () => {
     mockBase();
     let release!: () => void;

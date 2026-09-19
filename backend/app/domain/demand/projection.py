@@ -67,6 +67,12 @@ class QueryEvidenceInput:
     position: float | None
     source_metric_row_id: str
     source_artifact_id: str
+    page_title: str = ""
+    page_h1_texts: tuple[str, ...] = ()
+    page_primary_content: str = ""
+    page_content_usable: bool = False
+    page_analysis_id: str | None = None
+    page_artifact_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -210,38 +216,75 @@ def detect_striking_distance(rows: list[QueryEvidenceInput]) -> DetectorEvaluati
     return DetectorEvaluation(state, tuple(candidates), counts, limitations)
 
 
-def _aggregate_query_rows(rows: list[QueryEvidenceInput]) -> dict[str, Any]:
-    impressions = 0
-    clicks = 0
-    weighted_total = 0.0
-    has_position = False
-    metric_ids: set[str] = set()
-    artifact_ids: set[str] = set()
-    override_ids: set[str] = set()
-    classifier_versions: set[str] = set()
+def _query_totals(rows: list[QueryEvidenceInput]) -> dict[str, Any]:
+    totals: dict[str, Any] = {
+        "impressions": 0,
+        "clicks": 0,
+        "weighted_total": 0.0,
+        "has_position": False,
+        "metric_ids": set(),
+        "artifact_ids": set(),
+        "override_ids": set(),
+        "classifier_versions": set(),
+    }
     for row in rows:
-        impressions += row.impressions
-        clicks += row.clicks
-        metric_ids.add(row.source_metric_row_id)
-        artifact_ids.add(row.source_artifact_id)
-        classifier_versions.add(row.classifier_version)
+        totals["impressions"] += row.impressions
+        totals["clicks"] += row.clicks
+        totals["metric_ids"].add(row.source_metric_row_id)
+        totals["artifact_ids"].add(row.source_artifact_id)
+        totals["classifier_versions"].add(row.classifier_version)
         if row.position is not None and row.impressions > 0:
-            has_position = True
-            weighted_total += row.position * row.impressions
+            totals["has_position"] = True
+            totals["weighted_total"] += row.position * row.impressions
         if row.classification_override_id:
-            override_ids.add(row.classification_override_id)
+            totals["override_ids"].add(row.classification_override_id)
+    return totals
+
+
+def _page_evidence(page: QueryEvidenceInput | None) -> dict[str, Any]:
+    if page is None:
+        return {
+            "page_title": "",
+            "page_h1_texts": (),
+            "page_primary_content": "",
+            "page_content_usable": False,
+            "page_analysis_id": None,
+            "page_artifact_id": None,
+        }
+    return {
+        "page_title": page.page_title,
+        "page_h1_texts": page.page_h1_texts,
+        "page_primary_content": page.page_primary_content,
+        "page_content_usable": page.page_content_usable,
+        "page_analysis_id": page.page_analysis_id,
+        "page_artifact_id": page.page_artifact_id,
+    }
+
+
+def _aggregate_query_rows(rows: list[QueryEvidenceInput]) -> dict[str, Any]:
+    totals = _query_totals(rows)
+    impressions = int(totals["impressions"])
+    clicks = int(totals["clicks"])
     weighted_position = (
-        weighted_total / impressions if has_position and impressions else None
+        float(totals["weighted_total"]) / impressions
+        if totals["has_position"] and impressions
+        else None
     )
+    page = next((row for row in rows if row.page_content_usable), None)
+    if page is None and rows:
+        page = rows[0]
     return {
         "impressions": impressions,
         "clicks": clicks,
         "ctr": clicks / impressions if impressions else None,
         "position": weighted_position,
-        "source_metric_row_ids": sorted(metric_ids),
-        "source_artifact_ids": sorted(artifact_ids),
-        "classifier_versions": sorted(classifier_versions),
-        "classification_override_ids": sorted(override_ids),
+        "source_metric_row_ids": sorted(totals["metric_ids"]),
+        "source_artifact_ids": sorted(totals["artifact_ids"]),
+        "classifier_versions": sorted(totals["classifier_versions"]),
+        "classification_override_ids": sorted(totals["override_ids"]),
+        "observed_start": min((row.observed_date for row in rows), default=None),
+        "observed_end": max((row.observed_date for row in rows), default=None),
+        **_page_evidence(page),
     }
 
 

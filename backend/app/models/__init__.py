@@ -81,6 +81,10 @@ from app.models.content import (
     ContentGeneration,
     ContentGenerationAttempt,
 )
+from app.models.content_differentiation import (
+    ContentDifferentiationCandidate,
+    ContentDifferentiationReport,
+)
 from app.models.demand import (
     BrandedQueryOverride,
     DemandSignal,
@@ -209,6 +213,8 @@ __all__ = [
     "Competitor",
     "CompetitorMention",
     "ConsumableLedger",
+    "ContentDifferentiationCandidate",
+    "ContentDifferentiationReport",
     "ContentGeneration",
     "ContentGenerationAttempt",
     "DemandSignal",

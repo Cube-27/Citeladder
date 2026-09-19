@@ -89,7 +89,20 @@ const snapshot = {
       state: 'active',
       topic_cluster: 'school fees',
       page_url: 'https://example.com/fees',
-      evidence: { target_kind: 'query', target: 'school fees' },
+      evidence: {
+        target_kind: 'query',
+        target: 'school fees',
+        query_relevance: {
+          state: 'measured',
+          title_coverage: 0.5,
+          h1_coverage: 0,
+          primary_content_coverage: 1,
+          absent_from_title: ['fees'],
+          absent_from_h1: ['school', 'fees'],
+          statement:
+            'This query underperforms its CTR baseline, and important query terms are poorly represented in the inspected page.',
+        },
+      },
       metrics: { impressions: 100, clicks: 0, ctr: 0, position: 12.0 },
       coverage: { search_demand: 'observed' },
       limitations: ['Privacy-filtered queries may be omitted.'],
@@ -158,6 +171,10 @@ describe('DemandProjection', () => {
     expect(screen.getByText('Within reach of the top results')).toBeInTheDocument();
     expect(screen.getByText('school fees')).toBeInTheDocument();
     expect(screen.getByText('Underperforming expected CTR')).toBeInTheDocument();
+
+    const relevance = screen.getByRole('region', { name: 'Query relevance' });
+    expect(relevance).toHaveTextContent('Title50%H10%Page text100%');
+    expect(relevance).toHaveTextContent('Missing from title or H1: fees, school');
 
     // Tabular metrics
     expect(screen.getByText('250')).toBeInTheDocument();

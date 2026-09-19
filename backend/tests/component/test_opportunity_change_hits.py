@@ -87,6 +87,50 @@ async def test_only_unexpected_persisted_regressions_become_hits(
                     expected=expected,
                 )
             )
+        unknown_site_url = SiteUrl(
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            normalized_url="https://example.com/page-unknown",
+            url_hash="d" * 64,
+            display_url="https://example.com/page-unknown",
+            host="example.com",
+        )
+        session.add(unknown_site_url)
+        await session.flush()
+        session.add_all(
+            [
+                SiteChangeObservation(
+                    snapshot_id=snapshot.id,
+                    workspace_id=seed.workspace_id,
+                    site_url_id=site_url.id,
+                    normalized_url=site_url.normalized_url,
+                    field="content_change",
+                    change_class="neutral-change",
+                    before_value={"modified": "2026-01-01"},
+                    after_value={
+                        "comparison_coverage": "complete",
+                        "content_change_classification": "unchanged",
+                        "metadata_consistency": "inconsistent",
+                    },
+                    expected=False,
+                ),
+                SiteChangeObservation(
+                    snapshot_id=snapshot.id,
+                    workspace_id=seed.workspace_id,
+                    site_url_id=unknown_site_url.id,
+                    normalized_url=unknown_site_url.normalized_url,
+                    field="content_change",
+                    change_class="neutral-change",
+                    before_value={"modified": "2026-01-01"},
+                    after_value={
+                        "comparison_coverage": "unknown",
+                        "content_change_classification": "insufficient_evidence",
+                        "metadata_consistency": "unknown",
+                    },
+                    expected=False,
+                ),
+            ]
+        )
         await session.flush()
 
         hits = await load_change_hits(
@@ -99,6 +143,7 @@ async def test_only_unexpected_persisted_regressions_become_hits(
     assert foreign_hits == []
     assert [hit.rule_id for hit in hits] == [
         "site_change_potential_regression",
+        "site_change_cosmetic_refresh",
         "site_change_critical_regression",
     ]
     assert all(hit.source_metric_ids[0] == str(snapshot.id) for hit in hits)

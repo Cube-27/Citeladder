@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -31,6 +32,9 @@ from app.core.config.site_change_intel import (
     CHANGE_STATE_AVAILABLE,
     CHANGE_STATE_NON_COMPARABLE,
     CHANGE_STATE_UNAVAILABLE,
+    CONTENT_CHANGE_FIELD,
+    CONTENT_MAX_SHINGLES,
+    CONTENT_SHINGLE_SIZE,
 )
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
@@ -111,7 +115,6 @@ async def select_previous_comparable_crawl(
             for candidate in candidates
             if root_origin(candidate) == root_origin(crawl_b)
             and crawl_scope_hash(candidate) == crawl_scope_hash(crawl_b)
-            and candidate.extractor_version == crawl_b.extractor_version
             and candidate.analyzer_version == crawl_b.analyzer_version
         ),
         None,
@@ -201,6 +204,47 @@ def _internal_link_count(facts: dict[str, Any]) -> int:
     )
 
 
+def _content_comparison_record(row: _PageRow) -> dict[str, Any]:
+    facts = row.artifact.normalized_facts or {}
+    text = str(facts.get("primary_content_text") or "")
+    words = re.findall(r"[\w]+", text.casefold())
+    shingle_size = min(CONTENT_SHINGLE_SIZE, len(words))
+    shingles = (
+        sorted(
+            {
+                " ".join(words[index : index + shingle_size])
+                for index in range(len(words) - shingle_size + 1)
+            }
+        )[:CONTENT_MAX_SHINGLES]
+        if shingle_size
+        else []
+    )
+    has_provenance = (
+        "primary_content_truncated" in facts
+        and "primary_content_pre_truncation_length" in facts
+    )
+    if not text.strip():
+        coverage, reason = "unknown", "no_usable_text"
+    elif not has_provenance:
+        coverage, reason = "unknown", "legacy_completeness_unknown"
+    elif bool(facts.get("primary_content_truncated")):
+        coverage, reason = "partial", "primary_content_truncated"
+    else:
+        coverage, reason = "complete", None
+    dates = facts.get("dates") or {}
+    return {
+        "shingles": shingles,
+        "heading_outline": list(facts.get("primary_heading_outline") or []),
+        "word_count": len(words),
+        "modified": dates.get("modified") if isinstance(dates, dict) else None,
+        "coverage": coverage,
+        "coverage_reason": reason,
+        "extractor_version": row.artifact.extractor_version,
+        "stored_length": len(text),
+        "pre_truncation_length": facts.get("primary_content_pre_truncation_length"),
+    }
+
+
 def _field_values(row: _PageRow, internal_links: int) -> dict[str, Any]:
     facts = row.artifact.normalized_facts or {}
     headings = facts.get("headings") or {}
@@ -216,6 +260,7 @@ def _field_values(row: _PageRow, internal_links: int) -> dict[str, Any]:
         "internal_link_count": internal_links,
         "http_status": row.artifact.status_code or row.observation.status_code,
         "redirect_target": row.observation.final_url or row.artifact.final_url,
+        CONTENT_CHANGE_FIELD: _content_comparison_record(row),
     }
 
 
@@ -377,10 +422,7 @@ def _comparison_state(
         crawl_a
     ) != crawl_scope_hash(crawl_b):
         return CHANGE_STATE_NON_COMPARABLE, CHANGE_REASON_SCOPE_MISMATCH
-    if (
-        crawl_a.extractor_version != crawl_b.extractor_version
-        or crawl_a.analyzer_version != crawl_b.analyzer_version
-    ):
+    if crawl_a.analyzer_version != crawl_b.analyzer_version:
         return CHANGE_STATE_NON_COMPARABLE, CHANGE_REASON_VERSION_MISMATCH
     if not pages_a or not pages_b:
         return CHANGE_STATE_UNAVAILABLE, CHANGE_REASON_NO_USABLE_EVIDENCE

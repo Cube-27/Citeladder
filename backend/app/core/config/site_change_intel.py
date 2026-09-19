@@ -2,11 +2,18 @@
 
 from typing import Final
 
-CHANGE_ANALYZER_VERSION: Final = "site-change-v1"
+CHANGE_ANALYZER_VERSION: Final = "site-change-v2"
 CHANGE_MAX_PAGES: Final = 5000
 CHANGE_MAX_CRAWL_CANDIDATES: Final = 50
 CHANGE_DEFAULT_LIMIT: Final = 50
 CHANGE_MAX_LIMIT: Final = 200
+
+CONTENT_CHANGE_FIELD: Final = "content_change"
+CONTENT_SHINGLE_SIZE: Final = 5
+CONTENT_MAX_SHINGLES: Final = 2000
+CONTENT_SUBSTANTIAL_DELTA_RATIO: Final = 0.30
+CONTENT_COSMETIC_DELTA_CEILING: Final = 0.03
+CONTENT_SUBSTANTIAL_SECTION_CHANGES: Final = 2
 
 CHANGE_STATE_AVAILABLE: Final = "available"
 CHANGE_STATE_UNAVAILABLE: Final = "unavailable"
@@ -36,7 +43,7 @@ CHANGE_FIELDS: Final = (
     "http_status",
     "redirect_target",
 )
-CHANGE_MAX_OBSERVATIONS: Final = CHANGE_MAX_PAGES * len(CHANGE_FIELDS)
+CHANGE_MAX_OBSERVATIONS: Final = CHANGE_MAX_PAGES * (len(CHANGE_FIELDS) + 1)
 
 CHANGE_FIELD_RULES: Final[dict[str, str]] = {
     "title": "technical.title_present",
