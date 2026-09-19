@@ -243,6 +243,32 @@ async def test_rate_limit_does_not_queue_the_same_completion_again(
 
 
 @pytest.mark.asyncio
+async def test_retryable_rate_limit_schedules_research_retry(
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    workspace_id = await _workspace(db_session)
+    discovery = await _discovery(db_session, workspace_id)
+    task = await _task(db_session, discovery, max_attempts=3)
+    await db_session.commit()
+
+    await worker_module._finalize(
+        task.id,
+        worker_id=_OWNER,
+        error=ProviderError(
+            "rate limited", error_code=ERROR_RATE_LIMIT, retryable=True
+        ),
+    )
+
+    async with session_factory() as session:
+        row = await session.get(BrandDiscoveryTask, task.id)
+    assert row is not None
+    assert row.status == TASK_STATUS_RETRY_WAIT
+    assert row.attempt_count == 1
+    assert row.error_code == ERROR_BRAND_DISCOVERY
+
+
+@pytest.mark.asyncio
 async def test_the_final_failure_fails_closed_with_the_budget_error(
     db_session: AsyncSession,
     session_factory: async_sessionmaker[AsyncSession],

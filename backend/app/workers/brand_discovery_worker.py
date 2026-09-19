@@ -88,7 +88,13 @@ async def _finalize(
             task.error_detail = ""
         elif task.attempt_count < task.max_attempts and not (
             isinstance(error, ProviderError)
-            and (not error.retryable or error.error_code == ERROR_RATE_LIMIT)
+            and (
+                not error.retryable
+                or (
+                    task.task_kind == TASK_KIND_BRAND_COMPLETION
+                    and error.error_code == ERROR_RATE_LIMIT
+                )
+            )
         ):
             task.status = TASK_STATUS_RETRY_WAIT
             task.available_at = now + timedelta(
