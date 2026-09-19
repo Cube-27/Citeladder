@@ -41,7 +41,11 @@ from app.core.config.visibility_prompts import (
     VISIBILITY_TOPIC_NAME_LIMIT,
     cohort_system_prompt,
 )
-from app.domain.projects.discovery_schemas import DiscoveryTopic
+from app.domain.projects.business_context import BusinessContext
+from app.domain.projects.discovery_schemas import (
+    DiscoveryProfile,
+    DiscoveryTopic,
+)
 from app.domain.prompts.generation_contract import (
     GenerationOutput,
     GenerationOutputError,
@@ -99,19 +103,9 @@ def onboarding_brand_context(
             },
             "products_services": list(profile.get("products_services") or []),
         },
-        "business_context": {
-            field: profile.get(field)
-            for field in (
-                "business_model",
-                "buyer_register",
-                "category",
-                "category_terms",
-                "jobs_to_be_done",
-                "service_areas",
-                "buyer_roles",
-            )
-            if profile.get(field)
-        },
+        "business_context": BusinessContext.from_onboarding(
+            DiscoveryProfile.model_validate(profile)
+        ).for_generation(),
     }
 
 

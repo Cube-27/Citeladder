@@ -24,6 +24,7 @@ from app.domain.content.website_context import (
     select_crawl_fragments,
 )
 from app.domain.opportunities.content_handoff import project_content_handoff
+from app.domain.projects.business_context import BusinessContext
 from app.domain.site_health.service.aeo_readiness import get_content_handoff
 from app.domain.site_health.service.common import SiteHealthNotFoundError
 from app.models.brand import Brand, BrandAlias, BrandProfile, Competitor
@@ -382,7 +383,7 @@ async def _render_brand(
         ("Known competitors", competitors),
     ]
     profile_values, profile_fields = _profile_brand_values(profile)
-    context_values, context_fields = _business_context_values(context, project)
+    context_values, context_fields = _business_context_values(context)
     values.extend(profile_values)
     values.extend(context_values)
     fields.extend(profile_fields)
@@ -403,23 +404,22 @@ def _profile_brand_values(
 
 
 def _business_context_values(
-    context: dict, project: Project
+    context: dict,
 ) -> tuple[list[tuple[str, object]], list[str]]:
-    fallbacks = {
-        "category": project.subindustry,
-        "sector": project.industry,
-    }
+    facts = BusinessContext.model_validate(context).for_generation()
     entries = (
         ("category", "Business category"),
+        ("category_terms", "Category terms"),
+        ("jobs_to_be_done", "Buyer needs"),
         ("business_model", "Business model"),
         ("market_scope", "Market scope"),
         ("buyer_type", "Buyer type"),
         ("buyer_register", "Buyer register"),
+        ("buyer_roles", "Buyer roles"),
+        ("service_areas", "Service areas"),
         ("sector", "Sector"),
     )
-    values = [
-        (label, context.get(key) or fallbacks.get(key, "")) for key, label in entries
-    ]
+    values = [(label, facts.get(key)) for key, label in entries]
     fields = [
         f"business_context.{key}"
         for (key, _), (_, value) in zip(entries, values, strict=True)

@@ -41,6 +41,7 @@ from app.core.config.visibility_prompts import (
     TOPIC_SELECTION_PROMPT_VERSION,
     VISIBILITY_TOPIC_MAX,
 )
+from app.domain.projects.business_context import BusinessContext
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryComplete,
     BrandDiscoveryCreate,
@@ -495,7 +496,7 @@ async def _persist_project_shell(
             positioning=profile.positioning,
             products_services=profile.products_services,
             target_audience=profile.target_audience,
-            business_context=_business_context(profile),
+            business_context=BusinessContext.from_onboarding(profile).persisted(),
         ),
         commit=False,
         brand_profile_sources=profile_sources,
@@ -588,37 +589,6 @@ async def _persist_generated_prompts(
     if len(retained) != len(prompts):
         raise BrandDiscoveryError("Reviewed prompts must remain unique")
     session.add_all(retained)
-
-
-# The context fields that survive onboarding. `business_type` and `price_tier`
-# were previously dropped on the floor at project creation -- collected, shown,
-# confirmed, then silently discarded -- so every downstream consumer had to
-# re-derive facts the user had already supplied.
-_BUSINESS_CONTEXT_FIELDS = (
-    "category",
-    "category_aliases",
-    "category_terms",
-    "jobs_to_be_done",
-    "sector",
-    "business_model",
-    "secondary_business_models",
-    "market_scope",
-    "buyer_type",
-    "buyer_register",
-    "buyer_roles",
-    "service_areas",
-    "business_type",
-    "price_tier",
-    "knowledge_strength",
-)
-
-
-def _business_context(profile) -> dict:
-    """Snapshot the confirmed context for persistence."""
-    dumped = profile.model_dump()
-    return {
-        field: dumped[field] for field in _BUSINESS_CONTEXT_FIELDS if field in dumped
-    }
 
 
 def _confirmed_portfolio_inputs(

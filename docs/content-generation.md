@@ -21,6 +21,8 @@ authorizes optional target, Site Health reference, Opportunity and Demand IDs.
 It combines reviewed brand context, target-page evidence, applicable issues and
 a bounded related-page set selected by
 [website context](../backend/app/domain/content/website_context.py).
+The brand block reads persisted `BusinessContext` facts, including buyer needs
+and category terms, and omits unknown facets without guessing from an industry.
 Conflicting origins cannot silently select a different target. Optional evidence
 may be missing; that is recorded as an omission, not filled with a fabricated fact.
 

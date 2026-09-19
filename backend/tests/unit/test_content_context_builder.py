@@ -45,7 +45,11 @@ async def _project(session: AsyncSession) -> tuple[uuid.UUID, uuid.UUID]:
                 project_id=project.id,
                 brand_id=brand.id,
                 description="Schoolwear supplier",
-                business_context={"buyer_type": "b2c", "sector": "Retail"},
+                business_context={
+                    "buyer_type": "b2c",
+                    "sector": "Retail",
+                    "jobs_to_be_done": ["Find durable school uniforms"],
+                },
             ),
             Competitor(project_id=project.id, name="Rival"),
         ]
@@ -68,6 +72,7 @@ async def test_context_has_only_the_canonical_blocks(
     assert "Acme Co" in context.brand_block
     assert "Rival" in context.brand_block
     assert "Buyer type: b2c" in context.brand_block
+    assert "Buyer needs: Find durable school uniforms" in context.brand_block
     assert set(context.snapshot()) == {
         "version",
         "brand_block",

@@ -29,6 +29,7 @@ from app.core.config.prompts import (
     prompt_generation_settings,
 )
 from app.core.config.visibility_prompts import BUYER_QUERY_POLICY_VERSION
+from app.domain.projects.business_context import BusinessContext
 from app.domain.projects.knowledge_base import build_brand_knowledge_data
 from app.domain.projects.shim import project_scoring_identity
 from app.domain.prompts.demand_grounding import (
@@ -359,17 +360,6 @@ async def _insert_prompts_returning(
     return inserted_ids, len(rows) - len(inserted_ids)
 
 
-def _project_business_context(project: Project) -> dict[str, Any]:
-    """The confirmed business facets, which live on the brand profile.
-
-    `project_scoring_identity` is the scorer's projection and deliberately does
-    not carry them; prompt generation needs `business_model` to pick the buyer
-    register its exemplars demonstrate.
-    """
-    profile = project.brand.profile if project.brand is not None else None
-    return dict(getattr(profile, "business_context", None) or {})
-
-
 def _generation_brand_context(
     project: Project,
     demand_signals: list[DemandSignal],
@@ -377,7 +367,7 @@ def _generation_brand_context(
 ) -> dict[str, Any]:
     context = project_scoring_identity(project)
     context["knowledge_base"] = build_brand_knowledge_data(project)
-    context["business_context"] = _project_business_context(project)
+    context["business_context"] = BusinessContext.from_project(project).for_generation()
     context["demand_signals"] = [
         serialize_demand_signal(signal, snapshot=demand_snapshot)
         for signal in demand_signals

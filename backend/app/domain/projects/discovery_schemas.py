@@ -92,7 +92,7 @@ class DiscoveryProfile(BaseModel):
     `category` and `category_terms` are open vocabulary and carry the real
     specificity -- they are what reaches prompt generation. The remaining facets
     are a closed vocabulary that routes archetype selection and buyer register.
-    See `onboarding.context_profile` for why a fixed industry tree cannot do
+    See `projects.business_context` for why a fixed industry tree cannot do
     this job.
     """
 
@@ -101,7 +101,7 @@ class DiscoveryProfile(BaseModel):
     products_services: list[str] = Field(default_factory=list)
     target_audience: str = ""
     industry: str = ""
-    business_type: Literal["b2b", "b2c", "both"] = "both"
+    business_type: Literal["b2b", "b2c", "both"] | None = None
     price_tier: PriceTier = "unknown"
     field_confidence: dict[str, float] = Field(default_factory=dict)
 
@@ -114,14 +114,14 @@ class DiscoveryProfile(BaseModel):
     category_aliases: list[str] = Field(default_factory=list)
     category_terms: list[str] = Field(default_factory=list)
     jobs_to_be_done: list[str] = Field(default_factory=list)
-    sector: str = "Other"
-    business_model: BusinessModel = "d2c_product"
+    sector: str | None = None
+    business_model: BusinessModel | None = None
     # Real businesses are often composite: Urban Company is a marketplace AND a
     # local service, and the half a single enum discards is exactly the half
     # that drives a whole family of buyer queries ("plumber near me").
     secondary_business_models: list[BusinessModel] = Field(default_factory=list)
-    market_scope: MarketScope = "national"
-    buyer_register: BuyerRegister = "research_comparative"
+    market_scope: MarketScope | None = None
+    buyer_register: BuyerRegister | None = None
     buyer_roles: list[str] = Field(default_factory=list)
     service_areas: list[str] = Field(default_factory=list)
     knowledge_strength: KnowledgeStrength = "none"
@@ -153,29 +153,17 @@ class PersistableDiscoveryProfile(DiscoveryProfile):
 
 
 class ConfirmedDiscoveryProfile(PersistableDiscoveryProfile):
-    """The minimum structured ICP a person must confirm before generation."""
+    """Reviewed category and optional inferred brand prose."""
 
-    positioning: str = Field(min_length=1, max_length=BRAND_PROFILE_TEXT_MAX_CHARS)
-    products_services: list[
-        Annotated[str, Field(max_length=BRAND_PROFILE_PRODUCT_MAX_CHARS)]
-    ] = Field(min_length=1, max_length=BRAND_PROFILE_PRODUCTS_MAX_COUNT)
-    target_audience: str = Field(min_length=1, max_length=BRAND_PROFILE_TEXT_MAX_CHARS)
+    category: str = Field(min_length=1, max_length=160)
 
-    @field_validator("positioning", "target_audience")
+    @field_validator("category")
     @classmethod
-    def require_nonblank_text(cls, value: str) -> str:
+    def require_category(cls, value: str) -> str:
         value = value.strip()
         if not value:
-            raise ValueError("confirmed ICP text must not be blank")
+            raise ValueError("category must not be blank")
         return value
-
-    @field_validator("products_services")
-    @classmethod
-    def require_nonblank_products(cls, values: list[str]) -> list[str]:
-        cleaned = [value.strip() for value in values if value.strip()]
-        if not cleaned:
-            raise ValueError("products_services must contain a non-blank value")
-        return cleaned
 
 
 class DiscoveryCompetitorSuggestion(CompetitorInput):

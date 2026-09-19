@@ -160,7 +160,7 @@ class BrandProfile(Base):
     # The resolved business context: open-vocabulary category plus the closed
     # facets (business model, market scope, buyer type, register). This replaces
     # the industry/sub-industry pair, which could not express what a business
-    # actually sells -- see `onboarding/context_profile.py`. Stored as one
+    # actually sells -- see `projects/business_context.py`. Stored as one
     # document because the facet set is still settling and nothing filters on it
     # yet; promote individual facets to columns when reporting needs an index.
     business_context: Mapped[dict] = mapped_column(JSONB, default=dict)

@@ -35,18 +35,6 @@ import { hasConfirmedIcp } from './icp-confirmation';
 
 export type OnboardingStep = 0 | 1 | 2;
 
-function withBrandKnowledgeDefaults(profile: DiscoveryProfile): DiscoveryProfile {
-  const category = profile.category.trim();
-  const products = profile.products_services.filter((item) => item.trim());
-  return {
-    ...profile,
-    positioning: profile.positioning.trim() || category,
-    target_audience: profile.target_audience.trim() || `Buyers searching for ${category}`,
-    products_services: products.length > 0 ? products : [category],
-    market_scope: profile.market_scope === 'local' ? 'regional' : profile.market_scope,
-  };
-}
-
 /** Insert or replace one project in a cached list, deduplicated by id. */
 function upsertProject(current: Project[], project: Project): Project[] {
   const index = current.findIndex((candidate) => candidate.id === project.id);
@@ -263,7 +251,7 @@ export function useOnboardingFlow(transactionKey: string) {
           discoveryState.id,
           {
             name: brand.brand_name.trim(),
-            profile: withBrandKnowledgeDefaults(profile),
+            profile,
             domains: selectedDomains(domains),
             competitors: selectedCompetitors(competitors),
           },

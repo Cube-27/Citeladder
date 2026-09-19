@@ -828,7 +828,7 @@ def test_onboarding_uses_the_shared_constrained_buyer_query_plan() -> None:
         primary_market="US",
         profile={
             "business_model": "b2b_saas",
-            "buyer_register": "technical_buyer",
+            "buyer_register": "research_comparative",
             "description": "Feedonomics manages retail product feeds.",
             "products_services": ["Managed product feeds"],
         },

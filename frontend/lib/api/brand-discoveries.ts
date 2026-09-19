@@ -24,7 +24,7 @@ export type DiscoveryProfile = {
   products_services: string[];
   target_audience: string;
   industry: string;
-  business_type: 'b2b' | 'b2c' | 'both';
+  business_type: 'b2b' | 'b2c' | 'both' | null;
   price_tier: string;
   field_confidence: Record<string, number>;
   /**
@@ -39,11 +39,11 @@ export type DiscoveryProfile = {
   category_aliases: string[];
   category_terms: string[];
   jobs_to_be_done: string[];
-  sector: string;
-  business_model: string;
+  sector: string | null;
+  business_model: string | null;
   secondary_business_models: string[];
-  market_scope: 'global' | 'national' | 'regional' | 'local';
-  buyer_register: string;
+  market_scope: 'global' | 'national' | 'regional' | 'local' | null;
+  buyer_register: string | null;
   buyer_roles: string[];
   service_areas: string[];
   /** How much the model actually recognised the brand; drives the thin-data notice. */

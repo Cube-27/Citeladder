@@ -5,7 +5,9 @@
 Onboarding establishes the owned website, market, reviewed company profile and
 accepted competitors. Discovery output is evidence-backed suggestion, not
 confirmed business truth. It creates the project and its starting portfolio
-only after the user confirms positioning, audience and products/services.
+only after the user confirms the visible category, buyer type and market scope
+choices where known. Generated positioning, audience and offerings remain
+unreviewed until edited in the project.
 [Workspace access](workspace-access.md) owns identity and project selection;
 [prompts and Visibility](visibility-prompt.md) owns the resulting portfolio.
 
@@ -32,7 +34,10 @@ use the configured backoff. Warnings preserve degraded research states.
 [BrandResearchSnapshot](../backend/app/models/discovery.py) and
 [discovery records](../backend/app/models/discovery.py) retain the research
 manifest, model provenance and progress. BrandProfile field provenance records
-origin, review state, reviewer and review time. Reads never repeat discovery.
+origin, review state, reviewer and review time. The Projects-owned
+`BusinessContext` serializes confirmed and inferred facets into that profile;
+unknown facets remain absent, and its field sources distinguish visible choices
+from inferred values. Reads never repeat discovery.
 
 ## Confirmation and asynchronous completion
 
