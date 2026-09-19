@@ -26,6 +26,13 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
 export type EvidenceSubject = {
   /** The execution id. */
   id: string;
+  /**
+   * The audit that owns the execution. Required when `answer_text` is absent:
+   * `/executions/{id}` carries the ANALYSIS of an answer and not the answer
+   * itself, so the text has to come from the audit's execution rows. A caller
+   * that already holds the row passes `answer_text` instead and this is unused.
+   */
+  audit_id?: string;
   answer_text?: string;
   prompt_text?: string;
   prompt_index?: number;
@@ -33,6 +40,42 @@ export type EvidenceSubject = {
   logical_engine?: string;
   search_surface_outcome?: string;
 };
+
+/**
+ * The answer itself, for a caller that could not supply it.
+ *
+ * `/executions/{id}` carries the ANALYSIS of an answer — mentions, citations,
+ * scores — and not the answer's text, which lives on the audit's execution
+ * rows. The run detail screen already holds those rows and passes the text
+ * straight in, so this stays idle there; a source row in AI visibility
+ * summarises an answer without carrying one, so it resolves the text here.
+ */
+function useResolvedAnswer(execution: EvidenceSubject | null, open: boolean) {
+  const workspaceId = useActiveWorkspaceId();
+  const auditId = execution?.audit_id ?? '';
+  const pending = open && execution?.answer_text === undefined && auditId !== '';
+  const rows = useQuery({
+    queryKey: queryKeys.runs.executions(auditId),
+    queryFn: ({ signal }) => runsApi.listExecutions(auditId, { signal, workspaceId }),
+    enabled: pending && workspaceId !== null,
+  });
+  const row = pending ? rows.data?.find((candidate) => candidate.id === execution?.id) : undefined;
+  return {
+    loading: pending && rows.isLoading,
+    answerText: execution?.answer_text ?? row?.answer_text,
+    outcome: execution?.search_surface_outcome ?? row?.search_surface_outcome,
+  };
+}
+
+function EvidenceLoading() {
+  return (
+    <div className="grid gap-4" aria-label="Loading execution evidence">
+      <Skeleton className="h-10 w-2/3" />
+      <Skeleton className="h-44 w-full" />
+      <Skeleton className="h-52 w-full" />
+    </div>
+  );
+}
 
 /** Persisted execution evidence shown without leaving the surface that opened it. */
 export function ExecutionEvidenceDrawer({
@@ -50,28 +93,23 @@ export function ExecutionEvidenceDrawer({
     queryFn: ({ signal }) => runsApi.getExecution(execution?.id ?? '', { signal, workspaceId }),
     enabled: open && execution !== null && workspaceId !== null,
   });
+  const answer = useResolvedAnswer(execution, open);
 
   let evidenceBody: ReactNode;
   if (evidenceQuery.isError) {
     evidenceBody = <Alert tone="danger">Could not load this execution&apos;s evidence.</Alert>;
-  } else if (evidenceQuery.isLoading || !evidenceQuery.data) {
-    evidenceBody = (
-      <div className="grid gap-4" aria-label="Loading execution evidence">
-        <Skeleton className="h-10 w-2/3" />
-        <Skeleton className="h-44 w-full" />
-        <Skeleton className="h-52 w-full" />
-      </div>
-    );
+  } else if (evidenceQuery.isLoading || !evidenceQuery.data || answer.loading) {
+    evidenceBody = <EvidenceLoading />;
   } else {
     evidenceBody = (
       <EvidenceCard
         evidence={evidenceQuery.data}
-        answerText={execution?.answer_text}
+        answerText={answer.answerText}
         promptText={execution?.prompt_text}
         promptIndex={execution?.prompt_index}
         repetition={execution?.repetition}
         isSearchSurface={execution?.logical_engine === 'google_ai_overview'}
-        outcome={execution?.search_surface_outcome}
+        outcome={answer.outcome}
       />
     );
   }
