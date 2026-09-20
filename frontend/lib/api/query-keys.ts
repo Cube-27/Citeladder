@@ -18,6 +18,7 @@
 import { aiReferralsKeys } from './query-keys/ai-referrals';
 import { agentKeys } from './query-keys/agent';
 import { billingKeys } from './query-keys/billing';
+import { brandDiscoveryKeys } from './query-keys/brand-discovery';
 import { commerceKeys } from './query-keys/commerce';
 import { demandKeys } from './query-keys/demand';
 import { searchIntelligenceKeys } from './query-keys/search-intelligence';
@@ -40,6 +41,7 @@ export const queryKeys = {
   agent: agentKeys,
   auth: authKeys,
   billing: billingKeys,
+  brandDiscovery: brandDiscoveryKeys,
   workspaces: workspaceKeys,
   projects: projectKeys,
   prompts: promptKeys,

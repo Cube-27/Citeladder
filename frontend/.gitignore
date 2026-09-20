@@ -9,6 +9,7 @@
 /dist
 /apps/*/dist/
 /apps/*/.astro/
+**/.astro/
 
 # testing
 /coverage

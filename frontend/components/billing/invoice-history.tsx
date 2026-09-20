@@ -13,6 +13,7 @@ import { panelClasses } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { saveBlob } from '@/lib/download';
 
 export function InvoiceHistory({
   invoices,
@@ -34,12 +35,7 @@ export function InvoiceHistory({
     setDownloadError(false);
     try {
       const blob = await billingApi.invoicePdf(invoice.invoice_id, { workspaceId });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `${invoice.invoice_number || invoice.receipt_number}.pdf`;
-      anchor.click();
-      URL.revokeObjectURL(url);
+      saveBlob(blob, `${invoice.invoice_number || invoice.receipt_number}.pdf`);
     } catch {
       setDownloadError(true);
     } finally {

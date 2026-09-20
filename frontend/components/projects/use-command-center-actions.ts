@@ -5,6 +5,7 @@ import { opportunitiesApi } from '@/lib/api/opportunities';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { CommandCenter, Opportunity, Project } from '@/lib/api/types';
+import { saveBlob } from '@/lib/download';
 
 export function useCommandCenterActions(data: CommandCenter, project: Project) {
   const queryClient = useQueryClient();
@@ -87,14 +88,7 @@ async function downloadReport(
     const blob = await projectsApi.downloadExecutiveReport(project.id, {
       workspaceId: project.workspace_id,
     });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `citeladder-${project.brand_name || project.name}-report.pdf`;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    saveBlob(blob, `citeladder-${project.brand_name || project.name}-report.pdf`);
   } catch {
     setError(true);
   } finally {

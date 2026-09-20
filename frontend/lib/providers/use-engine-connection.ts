@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { providersApi } from '@/lib/api/providers';
+import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { ProviderConnection } from '@/lib/api/types';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
@@ -20,8 +21,7 @@ export type ConnectionTestState = { status: 'ok' | 'failed'; message: string } |
 
 /** Shared human-readable mutation error (matches the EngineCard fallback). */
 export function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim()) return error.message;
-  return 'Something went wrong. Please try again.';
+  return humanizeApiError(error).message;
 }
 
 /**

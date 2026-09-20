@@ -16,6 +16,7 @@ import {
   useSelectProject,
 } from '@/lib/navigation/project-destination';
 import { cn } from '@/lib/utils';
+import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
 
 /**
  * CommandPalette — ⌘K / Ctrl+K navigation for the authed shell.
@@ -48,7 +49,6 @@ type Command = {
 /** Chrome shared by the empty state and each row, so heights never drift. */
 const ROW =
   'flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-3 text-left text-sm h-9';
-const OPEN_COMMAND_PALETTE_EVENT = 'citeladder:open-command-palette';
 
 type CommandPaletteLaunch = { trigger: HTMLElement };
 

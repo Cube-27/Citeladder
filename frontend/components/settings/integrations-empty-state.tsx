@@ -5,7 +5,7 @@ import { Unplug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { integrationsApi } from '@/lib/api/integrations';
-import { assignLocation } from '@/lib/navigate';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 
 /**
  * Empty state for the Settings → Integrations tab when the workspace has no
@@ -29,14 +29,14 @@ export function IntegrationsEmptyState({ workspaceId }: Readonly<{ workspaceId: 
           <>
             <Button
               size="md"
-              onClick={() => assignLocation(integrationsApi.oauthStartUrl('gsc', workspaceId))}
+              onClick={() => hardNavigate(integrationsApi.oauthStartUrl('gsc', workspaceId))}
             >
               Connect Google
             </Button>
             <Button
               variant="ghost"
               size="md"
-              onClick={() => assignLocation(integrationsApi.oauthStartUrl('bing', workspaceId))}
+              onClick={() => hardNavigate(integrationsApi.oauthStartUrl('bing', workspaceId))}
             >
               Connect Bing
             </Button>

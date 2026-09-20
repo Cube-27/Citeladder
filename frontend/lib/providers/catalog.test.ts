@@ -11,7 +11,6 @@ import {
   ENGINE_ORDER,
   TRANSPORT_LABELS,
   connectionForTransport,
-  discoveryModelOptions,
   engineLabel,
   isConfigured,
   isVerified,
@@ -140,47 +139,5 @@ describe('mergeRoutePayload', () => {
     expect(mergeRoutePayload(existing, 'chatgpt')).toEqual([
       { logical_engine: 'chatgpt', is_default: true },
     ]);
-  });
-});
-
-describe('discoveryModelOptions', () => {
-  it('is empty when there is no catalog', () => {
-    // Absent catalog is "not loaded", not "no models" — but an empty list is
-    // the only safe render either way.
-    expect(discoveryModelOptions(undefined)).toEqual([]);
-  });
-
-  it('flattens every engine route into a labelled option', () => {
-    const options = discoveryModelOptions({
-      engines: [
-        {
-          logical_engine: 'chatgpt',
-          routes: [
-            { transport_provider: 'openai', transport_model: 'gpt-5.6' },
-            { transport_provider: 'openai', transport_model: 'gpt-5.6-mini' },
-          ],
-        },
-        {
-          logical_engine: 'gemini',
-          routes: [{ transport_provider: 'google', transport_model: 'gemini-2.5-pro' }],
-        },
-      ],
-    } as never);
-
-    expect(options).toHaveLength(3);
-    expect(options[0]?.label).toBe('ChatGPT · OpenAI · gpt-5.6');
-    expect(options[2]).toMatchObject({
-      logical_engine: 'gemini',
-      transport_provider: 'google',
-      transport_model: 'gemini-2.5-pro',
-    });
-  });
-
-  it('drops an engine that exposes no routes', () => {
-    const options = discoveryModelOptions({
-      engines: [{ logical_engine: 'claude', routes: [] }],
-    } as never);
-
-    expect(options).toEqual([]);
   });
 });

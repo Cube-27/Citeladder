@@ -7,7 +7,6 @@ import { textRole } from '@/components/ui/typography';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppModelCard } from '@/components/providers/app-model-card';
-import { DiscoveryModelCard } from '@/components/providers/discovery-model-card';
 import { EngineCard } from '@/components/providers/engine-card';
 import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -25,7 +24,6 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
  * provider. Each card takes a write-only credential in whichever shape its
  * transport authenticates with (the stored secret is never displayed), runs a
  * connection test, and shows a `configured` badge from `api_key_set`. Below,
- * a plumbing-only discovery/analysis model selector.
  * Available transports and models are driven entirely by `/provider-catalog`.
  */
 export function ProviderSettings() {
@@ -104,7 +102,6 @@ export function ProviderSettings() {
           connections={connections}
         />
       )}
-      <DiscoveryModelCard catalog={catalogQuery.data} />
     </div>
   );
 }

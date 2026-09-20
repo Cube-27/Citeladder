@@ -1,7 +1,7 @@
 /**
  * A full-page navigation that deliberately leaves the SPA.
  *
- * Two cases need this rather than the Next router: handing off to an external
+ * Two cases need this rather than client routing: handing off to an external
  * hosted checkout, and bouncing to auth in a way that guarantees a clean
  * re-read of session state on return. Both are "leave this app", not "route
  * within it".

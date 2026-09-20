@@ -46,6 +46,8 @@ function dataset(
     collection_ended_at: null,
     published_at: '2026-09-20T14:07:59Z',
     ...overrides,
+    research_scope: overrides.research_scope ?? 'exact_host',
+    acquisition: overrides.acquisition ?? {},
   };
 }
 const datasets = [

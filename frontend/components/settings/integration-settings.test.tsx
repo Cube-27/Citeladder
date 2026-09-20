@@ -12,7 +12,7 @@ import {
   vi,
 } from 'vite-plus/test';
 
-import { assignLocation } from '@/lib/navigate';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
@@ -22,8 +22,8 @@ let search = '';
 const replaceState = vi.spyOn(window.history, 'replaceState');
 // Connect/Reconnect hard-navigates to the OAuth start 302 endpoint through the
 // lib/navigate seam (jsdom can't stub Location#assign).
-vi.mock('@/lib/navigate', () => ({ assignLocation: vi.fn() }));
-const assignMock = vi.mocked(assignLocation);
+vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
+const assignMock = vi.mocked(hardNavigate);
 
 const WS = '11111111-1111-4111-8111-111111111111';
 const GRANT_GOOGLE = '22222222-2222-4222-8222-222222222222';

@@ -22,9 +22,8 @@ for (const owner of [
   }
 }
 
-// Hard navigation is a two-module seam. The policy keeps direct location
-// mutations in the dedicated, testable navigation owner.
-const NAVIGATION_OWNERS = new Set(['lib/navigate.ts', 'lib/navigation/hard-navigate.ts']);
+// Keep direct location mutations in the dedicated navigation owner.
+const NAVIGATION_OWNERS = new Set(['lib/navigation/hard-navigate.ts']);
 const HARD_NAVIGATION = /location\s*\.\s*(?:assign|replace)\s*\(|location\s*\.\s*href\s*=[^=]/;
 
 function sourceFiles(directory) {
@@ -44,6 +43,14 @@ for (const file of ['app', 'components', 'lib'].flatMap(sourceFiles)) {
   const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '');
   if (HARD_NAVIGATION.test(code)) {
     failures.push(`${file} navigates the browser directly; use lib/navigation/hard-navigate.ts.`);
+  }
+}
+
+for (const file of sourceFiles('lib/api')) {
+  if (file.includes('.test.') || file.startsWith('lib/api/schemas/')) continue;
+  const source = fs.readFileSync(path.join(root, file), 'utf8');
+  if (/\bz\s*\.\s*(?:object|strictObject|looseObject)\s*\(/.test(source)) {
+    failures.push(`${file} declares an API object schema outside lib/api/schemas/.`);
   }
 }
 

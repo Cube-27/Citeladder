@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { brandDiscoveriesApi, type BrandDiscoveryInput } from '@/lib/api/brand-discoveries';
+import { brandDiscoveryKeys } from '@/lib/api/query-keys/brand-discovery';
 
 let fallbackOperationSequence = 0;
 
@@ -59,7 +60,7 @@ export function useBrandDiscovery(
   // the persisted resume id remains visible instead of blanking the timeline.
   const discoveryId = createdDiscoveryId ?? resumeId;
   const query = useQuery({
-    queryKey: ['brand-discovery', workspaceId ?? 'unresolved', discoveryId],
+    queryKey: brandDiscoveryKeys.detail(workspaceId, String(discoveryId)),
     queryFn: ({ signal }) => brandDiscoveriesApi.get(String(discoveryId), { signal, workspaceId }),
     enabled: Boolean(discoveryId),
     initialData: !createdDiscoveryId ? undefined : create.data,

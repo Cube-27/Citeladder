@@ -8,6 +8,7 @@ import { textRole } from '@/components/ui/typography';
 import { Skeleton } from '@/components/ui/skeleton';
 import { promptsApi, type PromptGenerateInput, type PromptInput } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
+import { humanizeApiError } from '@/lib/api/errors';
 import { visibilityApi } from '@/lib/api/visibility';
 import { topicsApi } from '@/lib/api/topics';
 import type {
@@ -33,17 +34,12 @@ import { TopicRail } from './topic-rail';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { resolveProjectRequestScope, type ProjectRequestScope } from '@/lib/project/request-scope';
 
-function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  return 'Something went wrong. Please try again.';
-}
-
 function mutationErrorMessage(
   create: { isError: boolean; error: unknown },
   update: { isError: boolean; error: unknown },
 ): string | undefined {
-  if (create.isError) return errorMessage(create.error);
-  return update.isError ? errorMessage(update.error) : undefined;
+  if (create.isError) return humanizeApiError(create.error).message;
+  return update.isError ? humanizeApiError(update.error).message : undefined;
 }
 
 const STATUS_TABS: { id: PromptStatus; label: string }[] = [
@@ -282,9 +278,9 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
   // both be in flight from this panel.
   let topicActionError: string | null = null;
   if (createTopicMutation.isError) {
-    topicActionError = errorMessage(createTopicMutation.error);
+    topicActionError = humanizeApiError(createTopicMutation.error).message;
   } else if (deleteTopicMutation.isError) {
-    topicActionError = errorMessage(deleteTopicMutation.error);
+    topicActionError = humanizeApiError(deleteTopicMutation.error).message;
   }
 
   if (isLoading) {
@@ -380,7 +376,9 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
             await importMutation.mutateAsync(rows).catch(() => undefined);
           }}
           isImporting={importMutation.isPending}
-          importError={importMutation.isError ? errorMessage(importMutation.error) : undefined}
+          importError={
+            importMutation.isError ? humanizeApiError(importMutation.error).message : undefined
+          }
           generateOpen={generateOpen}
           setGenerateOpen={setGenerateOpen}
           topics={topics}

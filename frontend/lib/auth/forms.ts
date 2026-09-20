@@ -7,6 +7,7 @@
  * these describe form *input*, the API schemas describe server *output*.
  */
 import { z } from 'zod';
+import { humanizeApiError } from '@/lib/api/errors';
 
 /** Shared email + password rules reused by both forms. */
 const email = z.string().trim().min(1, 'Email is required.').email('Enter a valid email address.');
@@ -31,14 +32,8 @@ export const registerFormSchema = z
 export type LoginFormValues = z.infer<typeof loginFormSchema>;
 export type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
-/**
- * Best-effort human message from a thrown mutation error. The transport already
- * unwraps a JSON `{ detail }` body into `ApiError.message`, so we surface that
- * directly and fall back to a generic message for anything else.
- */
 export function authErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim()) return error.message;
-  return 'Something went wrong. Please try again.';
+  return humanizeApiError(error).message;
 }
 
 /**
