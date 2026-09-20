@@ -267,6 +267,9 @@ async def test_review_is_provider_free_and_reads_are_workspace_scoped(
         },
     )
     assert mismatched.status_code == 422
+    unsupported = await client.get(rows_url, params={"sort": "unsupported"})
+    assert unsupported.status_code == 422
+    assert unsupported.json()["error"]["code"] == "invalid_sort"
     for cursor in ("a", "!!!!", base64.urlsafe_b64encode(b"\xff").decode()):
         invalid = await client.get(rows_url, params={"cursor": cursor})
         assert invalid.status_code == 422

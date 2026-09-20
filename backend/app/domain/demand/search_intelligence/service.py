@@ -26,7 +26,10 @@ from app.core.config.search_intelligence import (
 )
 from app.core.config.task_queue import TASK_STATUS_CANCELLED
 from app.domain.analytics.enqueue import enqueue_search_intelligence
-from app.domain.demand.search_intelligence.pagination import sorted_rows
+from app.domain.demand.search_intelligence.pagination import (
+    UnsupportedSortError,
+    sorted_rows,
+)
 from app.domain.demand.search_intelligence.requests import build_request
 from app.domain.demand.search_intelligence.schemas import (
     ContentHandoffResponse,
@@ -687,6 +690,10 @@ async def dataset_page(
         rows, next_cursor = await sorted_rows(
             session, dataset, cursor=cursor, limit=limit, sort=sort, direction=direction
         )
+    except UnsupportedSortError as exc:
+        raise SearchIntelligenceError(
+            "invalid_sort", "Dataset sort or direction is unsupported"
+        ) from exc
     except ValueError as exc:
         raise SearchIntelligenceError(
             "invalid_cursor", "Dataset cursor is invalid"

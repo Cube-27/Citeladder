@@ -79,7 +79,7 @@ class ReviewCreate(BaseModel):
     language_code: str = Field(default="", max_length=16)
     reuse_recent: bool = True
     save_as_defaults: bool = False
-    datasets: list[DatasetSelection] = Field(min_length=1)
+    datasets: list[DatasetSelection] = Field(min_length=1, max_length=25)
     previous_run_id: uuid.UUID | None = None
 
 

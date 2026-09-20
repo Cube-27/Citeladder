@@ -23,6 +23,7 @@ const PAGE_TITLES: ReadonlyArray<readonly [prefix: string, title: string]> = [
   ['/demand', 'Search Demand'],
   ['/search-intelligence', 'Search Intelligence'],
   ['/issues', 'Issues'],
+  ['/settings', 'Settings'],
 ];
 
 /** Deeper-route overrides (checked before the prefix table). */

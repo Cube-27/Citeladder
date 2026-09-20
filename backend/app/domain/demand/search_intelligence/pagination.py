@@ -16,6 +16,10 @@ from app.models.search_intelligence import (
 )
 
 
+class UnsupportedSortError(ValueError):
+    """The requested ordering is not supported for dataset rows."""
+
+
 def _cursor_id(cursor: str, scope: list[object]) -> uuid.UUID:
     decoded = json.loads(base64.urlsafe_b64decode(cursor.encode()).decode())
     if not isinstance(decoded, list) or len(decoded) != 5 or decoded[:4] != scope:
@@ -33,7 +37,7 @@ async def sorted_rows(
     direction: str,
 ) -> tuple[list[SearchIntelligenceRow], str | None]:
     if sort not in ROW_SORT_FIELDS or direction not in {"asc", "desc"}:
-        raise ValueError("Unsupported dataset sort")
+        raise UnsupportedSortError("Unsupported dataset sort")
     column = getattr(SearchIntelligenceRow, sort)
     query = select(SearchIntelligenceRow).where(
         SearchIntelligenceRow.workspace_id == dataset.workspace_id,

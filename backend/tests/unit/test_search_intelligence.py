@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 
 import httpx
 import pytest
+from pydantic import ValidationError
 
 from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.search_intelligence_dataforseo import (
@@ -12,14 +13,22 @@ from app.connectors.search_intelligence_dataforseo import (
     _reported_cost,
     _response_body,
 )
+from app.core.config import settings
+from app.core.config.dataforseo import pack_credential
 from app.core.config.search_intelligence import estimate_dataset, page_sizes
+from app.core.security import encrypt_secret
 from app.domain.demand.search_intelligence import executor
 from app.domain.demand.search_intelligence.executor import _apply_reported_cost
 from app.domain.demand.search_intelligence.normalization import normalize_result
+from app.domain.demand.search_intelligence.pagination import (
+    UnsupportedSortError,
+    sorted_rows,
+)
 from app.domain.demand.search_intelligence.requests import build_request
 from app.domain.demand.search_intelligence.schemas import DatasetSelection, ReviewCreate
 from app.domain.demand.search_intelligence.service import _save_review_defaults
 from app.domain.demand.search_intelligence.targets import CanonicalTarget
+from app.domain.providers.dataforseo_identity import dataforseo_account_identity
 from app.models.project import Project
 from app.models.search_intelligence import SearchIntelligenceRun
 from app.orchestration.provider_capacity import CapacityRequest
@@ -40,6 +49,39 @@ COMPETITOR = CanonicalTarget(
     "https://rival.test",
     "competitor",
 )
+
+
+@pytest.mark.parametrize("count", [0, 1, 25, 26])
+def test_review_dataset_count_is_bounded(count):
+    datasets = [DatasetSelection(kind="footprint")] * count
+    if 1 <= count <= 25:
+        ReviewCreate(datasets=datasets)
+    else:
+        with pytest.raises(ValidationError):
+            ReviewCreate(datasets=datasets)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("sort", "direction"), [("unsupported", "asc"), ("keyword", "sideways")]
+)
+async def test_invalid_ordering_is_distinct_from_invalid_cursor(sort, direction):
+    with pytest.raises(UnsupportedSortError):
+        await sorted_rows(
+            None, None, cursor="invalid", limit=10, sort=sort, direction=direction
+        )
+
+
+def test_account_identity_survives_jwt_and_password_rotation(monkeypatch):
+    def identity(login, password):
+        return dataforseo_account_identity(
+            encrypt_secret(pack_credential(login=login, password=password))
+        )
+
+    original = identity("Account@example.com", "old-password")
+    monkeypatch.setattr(settings, "jwt_secret_key", "rotated-jwt-secret")
+    assert identity(" account@EXAMPLE.com ", "new-password") == original
+    assert identity("other@example.com", "new-password") != original
 
 
 def test_quote_uses_ceil_pages_and_exact_decimal_rates() -> None:
