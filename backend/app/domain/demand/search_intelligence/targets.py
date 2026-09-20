@@ -6,6 +6,10 @@ from dataclasses import asdict, dataclass
 from urllib.parse import urlsplit
 
 from app.connectors.web_evidence.url_policy import registrable_domain
+from app.domain.projects.onboarding.site_resolution import (
+    SiteNotFoundError,
+    resolve_site,
+)
 from app.models.brand import Competitor
 from app.models.project import Project
 
@@ -78,6 +82,26 @@ def competitor_target(competitor: Competitor) -> CanonicalTarget:
         value=domains[0],
         source_kind="competitor",
     )
+
+
+async def resolve_competitor(target: CanonicalTarget) -> CanonicalTarget:
+    """Resolve apex/www redirects before freezing an explicitly requested review."""
+    try:
+        site = await resolve_site(target.origin, target.origin)
+    except SiteNotFoundError as exc:
+        raise TargetScopeError(f"Could not resolve {target.label}'s website") from exc
+    resolved = _from_url(
+        identity=target.identity,
+        label=target.label,
+        value=site.canonical_url,
+        source_kind=target.source_kind,
+    )
+    if (
+        not 200 <= site.status_code < 400
+        or resolved.registrable_domain != target.registrable_domain
+    ):
+        raise TargetScopeError(f"Could not confirm {target.label}'s saved website")
+    return resolved
 
 
 def select_owned_target(project: Project, identity: str | None) -> CanonicalTarget:

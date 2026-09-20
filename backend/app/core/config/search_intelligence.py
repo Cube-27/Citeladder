@@ -8,7 +8,7 @@ from math import ceil
 from typing import Final, Literal
 
 PRICE_VERSION: Final = "dataforseo-standard-2026-09-20"
-PARSER_VERSION: Final = "1"
+PARSER_VERSION: Final = "2"
 REUSE_DAYS: Final = 30
 REVIEW_TTL_SECONDS: Final = 600
 PROVIDER_PAGE_SIZE: Final = 1000

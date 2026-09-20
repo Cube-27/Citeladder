@@ -10,9 +10,9 @@ from urllib.parse import urlsplit
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.demand.search_intelligence.requests import scope_hash
 from app.domain.demand.search_intelligence.service import (
     SearchIntelligenceError,
-    _scope_hash,
     dataset_dict,
 )
 from app.models.analysis import Citation
@@ -150,7 +150,7 @@ def _derived_dataset(
         run_id=parent.run_id,
         parent_dataset_id=parent.id,
         dataset_kind="citation_matches",
-        scope_hash=_scope_hash({"parent_dataset_id": str(parent.id), **selection}),
+        scope_hash=scope_hash({"parent_dataset_id": str(parent.id), **selection}),
         target_domain=parent.target_domain,
         target_hostname=parent.target_hostname,
         target_origin=parent.target_origin,

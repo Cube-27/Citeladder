@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -15,7 +13,6 @@ from sqlalchemy.orm import selectinload
 from app.core.config.provider_catalog import TEST_STATUS_OK, TRANSPORT_DATAFORSEO
 from app.core.config.search_intelligence import (
     DEFAULT_DEPTHS,
-    PARSER_VERSION,
     PRICE_VERSION,
     REUSE_DAYS,
     REVIEW_TTL_SECONDS,
@@ -30,7 +27,11 @@ from app.domain.demand.search_intelligence.pagination import (
     UnsupportedSortError,
     sorted_rows,
 )
-from app.domain.demand.search_intelligence.requests import build_request
+from app.domain.demand.search_intelligence.requests import (
+    build_request,
+    request_identity,
+    scope_hash,
+)
 from app.domain.demand.search_intelligence.schemas import (
     ContentHandoffResponse,
     DatasetSelection,
@@ -43,6 +44,7 @@ from app.domain.demand.search_intelligence.targets import (
     TargetScopeError,
     competitor_target,
     owned_targets,
+    resolve_competitor,
     select_owned_target,
 )
 from app.domain.providers.dataforseo_identity import dataforseo_account_identity
@@ -66,11 +68,6 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-def _scope_hash(value: dict[str, Any]) -> str:
-    encoded = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
-    return hashlib.sha256(encoded).hexdigest()
-
-
 async def _project(
     session: AsyncSession, workspace_id: uuid.UUID, project_id: uuid.UUID
 ) -> Project:
@@ -78,6 +75,7 @@ async def _project(
         select(Project)
         .options(selectinload(Project.owned_domains), selectinload(Project.competitors))
         .where(Project.workspace_id == workspace_id, Project.id == project_id)
+        .execution_options(populate_existing=True)
     )
     if row is None:
         raise SearchIntelligenceError("not_found", "Project not found")
@@ -127,32 +125,6 @@ def _comparison(project: Project, competitor_id: uuid.UUID | None) -> CanonicalT
         return competitor_target(competitor)
     except TargetScopeError as exc:
         raise SearchIntelligenceError("unsupported_target", str(exc)) from exc
-
-
-def _identity(
-    kind: str,
-    target: CanonicalTarget,
-    comparison: CanonicalTarget | None,
-    location_code: int | None,
-    language_code: str,
-    payload: dict[str, Any],
-) -> dict[str, Any]:
-    stable_payload = {
-        key: value for key, value in payload.items() if key not in {"limit", "offset"}
-    }
-    return {
-        "kind": kind,
-        "target": target.public_dict(),
-        "comparison": comparison.public_dict() if comparison else None,
-        "location_code": location_code
-        if kind not in {"backlink_summary", "referring_domains", "destination_pages"}
-        else None,
-        "language_code": language_code
-        if kind not in {"backlink_summary", "referring_domains", "destination_pages"}
-        else "",
-        "provider": stable_payload,
-        "parser_version": PARSER_VERSION,
-    }
 
 
 async def _reusable(
@@ -212,6 +184,7 @@ async def _build_call_plan(
     location: int | None,
     language: str,
     now: datetime,
+    resolved_competitors: dict[str, CanonicalTarget],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[QuoteLine]]:
     call_plan: list[dict[str, Any]] = []
     reused: list[dict[str, Any]] = []
@@ -220,6 +193,11 @@ async def _build_call_plan(
         dataset_target, comparison = _selection_targets(
             project, owned_target, selection
         )
+        dataset_target = resolved_competitors.get(
+            dataset_target.identity, dataset_target
+        )
+        if comparison is not None:
+            comparison = resolved_competitors[comparison.identity]
         depth = (
             1
             if selection.kind in {"footprint", "backlink_summary"}
@@ -235,8 +213,8 @@ async def _build_call_plan(
             offset=0,
             seed=selection.seed,
         )
-        scope_hash = _scope_hash(
-            _identity(
+        dataset_scope_hash = scope_hash(
+            request_identity(
                 selection.kind,
                 dataset_target,
                 comparison,
@@ -251,7 +229,7 @@ async def _build_call_plan(
                 session,
                 workspace_id=workspace_id,
                 project_id=project_id,
-                scope_hash=scope_hash,
+                scope_hash=dataset_scope_hash,
                 requested_rows=depth,
                 now=now,
             )
@@ -278,9 +256,9 @@ async def _build_call_plan(
             )
             call_plan.append(
                 {
-                    "dataset_key": f"{index}:{scope_hash}",
+                    "dataset_key": f"{index}:{dataset_scope_hash}",
                     "dataset_kind": selection.kind,
-                    "scope_hash": scope_hash,
+                    "scope_hash": dataset_scope_hash,
                     "target": dataset_target.public_dict(),
                     "comparison": comparison.public_dict() if comparison else None,
                     "requested_rows": depth,
@@ -389,6 +367,30 @@ async def create_review(
     idempotency_key: str,
     payload: ReviewCreate,
 ) -> SearchIntelligenceRun:
+    existing = await session.scalar(
+        select(SearchIntelligenceRun).where(
+            SearchIntelligenceRun.workspace_id == workspace_id,
+            SearchIntelligenceRun.project_id == project_id,
+            SearchIntelligenceRun.idempotency_key == idempotency_key,
+        )
+    )
+    if existing is not None:
+        return existing
+    project = await _project(session, workspace_id, project_id)
+    saved_competitors = {
+        str(item.competitor_id): _comparison(project, item.competitor_id)
+        for item in payload.datasets
+        if item.competitor_id is not None
+    }
+    # Website resolution is unpaid network I/O; hold no transaction or lock across it.
+    await session.commit()
+    try:
+        resolved_competitors = {
+            key: await resolve_competitor(target)
+            for key, target in saved_competitors.items()
+        }
+    except TargetScopeError as exc:
+        raise SearchIntelligenceError("unsupported_target", str(exc)) from exc
     await session.scalar(
         select(Project.id)
         .where(Project.workspace_id == workspace_id, Project.id == project_id)
@@ -404,6 +406,13 @@ async def create_review(
     if existing is not None:
         return existing
     project = await _project(session, workspace_id, project_id)
+    if any(
+        _comparison(project, uuid.UUID(key)) != target
+        for key, target in saved_competitors.items()
+    ):
+        raise SearchIntelligenceError(
+            "target_changed", "Competitors changed; review again"
+        )
     target = _owned_target(project, payload.owned_target_id)
     connection = await _connection(session, workspace_id, payload.connection_id)
     location, language = _market_scope(project, payload)
@@ -418,6 +427,7 @@ async def create_review(
         location=location,
         language=language,
         now=now,
+        resolved_competitors=resolved_competitors,
     )
     run = _new_review_run(
         workspace_id=workspace_id,
@@ -606,7 +616,15 @@ async def readiness(
             )
         ).all()
     )
-    preference_values = project.search_intelligence_preferences or {}
+    preference_values = dict(project.search_intelligence_preferences or {})
+    preference_values["location_code"] = (
+        preference_values.get("location_code") or project.serp_location_code or None
+    )
+    preference_values["language_code"] = (
+        preference_values.get("language_code")
+        or project.serp_language_code
+        or project.language_code
+    )
     return ReadinessResponse(
         connected=len(connections) == 1,
         connection_id=connections[0].id if len(connections) == 1 else None,

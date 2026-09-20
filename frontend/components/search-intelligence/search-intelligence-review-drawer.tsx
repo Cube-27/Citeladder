@@ -1,7 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { SEARCH_DEFAULT_DEPTHS, SEARCH_MAX_DEPTH } from '@/lib/config/search-intelligence';
+import {
+  SEARCH_DEFAULT_DEPTHS,
+  SEARCH_MAX_DEPTH,
+  SEARCH_MARKET_OPTIONS,
+  searchMarketLabel,
+} from '@/lib/config/search-intelligence';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -104,7 +109,7 @@ export function SearchIntelligenceReviewDrawer({
   const [selections, setSelections] = useState<DatasetSelection[]>(() =>
     defaultSelections(readiness, action),
   );
-  const [location, setLocation] = useState(String(readiness.preferences.location_code ?? 2840));
+  const [location, setLocation] = useState(String(readiness.preferences.location_code ?? ''));
   const [language, setLanguage] = useState(readiness.preferences.language_code || 'en');
   const [seed, setSeed] = useState('');
   const [ownedTarget, setOwnedTarget] = useState(
@@ -270,12 +275,21 @@ export function SearchIntelligenceReviewDrawer({
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label htmlFor="search-location-code" className="grid gap-1 text-sm">
-              <span>Location code</span>
-              <Input
+              <span>Market</span>
+              <Select
                 id="search-location-code"
-                inputMode="numeric"
+                ariaLabel="Market"
                 value={location}
-                onChange={(event) => setLocation(event.target.value)}
+                onValueChange={setLocation}
+                placeholder="Select market"
+                options={
+                  location && !SEARCH_MARKET_OPTIONS.some((item) => item.value === location)
+                    ? [
+                        ...SEARCH_MARKET_OPTIONS,
+                        { value: location, label: searchMarketLabel(Number(location)) },
+                      ]
+                    : SEARCH_MARKET_OPTIONS
+                }
               />
             </label>
             <label htmlFor="search-language" className="grid gap-1 text-sm">

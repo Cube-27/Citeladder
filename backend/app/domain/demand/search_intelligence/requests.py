@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any
 from urllib.parse import urlunsplit
 
-from app.core.config.search_intelligence import ENDPOINTS
+from app.core.config.search_intelligence import ENDPOINTS, PARSER_VERSION
 from app.domain.demand.search_intelligence.targets import CanonicalTarget
 
 
@@ -35,7 +37,7 @@ def _backlink_request(
         # DataForSEO requires a domain target without www; the backlink
         # filter below preserves the saved canonical host within that index.
         "target": target.registrable_domain,
-        "include_subdomains": False,
+        "include_subdomains": target.hostname != target.registrable_domain,
         "include_indirect_links": False,
         "backlinks_status_type": "live",
         "rank_scale": "one_hundred",
@@ -117,3 +119,34 @@ def build_request(
     else:
         raise ValueError(f"unsupported dataset kind: {kind}")
     return ENDPOINTS[kind], payload
+
+
+def scope_hash(value: dict[str, Any]) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def request_identity(
+    kind: str,
+    target: CanonicalTarget,
+    comparison: CanonicalTarget | None,
+    location_code: int | None,
+    language_code: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    stable_payload = {
+        key: value for key, value in payload.items() if key not in {"limit", "offset"}
+    }
+    return {
+        "kind": kind,
+        "target": target.public_dict(),
+        "comparison": comparison.public_dict() if comparison else None,
+        "location_code": location_code
+        if kind not in {"backlink_summary", "referring_domains", "destination_pages"}
+        else None,
+        "language_code": language_code
+        if kind not in {"backlink_summary", "referring_domains", "destination_pages"}
+        else "",
+        "provider": stable_payload,
+        "parser_version": PARSER_VERSION,
+    }

@@ -39,3 +39,8 @@ export function searchMarketLabel(locationCode: number | null): string {
     `Location code ${locationCode}`
   );
 }
+
+export const SEARCH_MARKET_OPTIONS = Object.keys(SEARCH_LOCATION_COUNTRIES).map((value) => ({
+  value,
+  label: searchMarketLabel(Number(value)),
+}));

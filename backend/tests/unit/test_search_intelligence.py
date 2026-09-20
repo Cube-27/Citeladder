@@ -1,6 +1,8 @@
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import httpx
@@ -17,7 +19,7 @@ from app.core.config import settings
 from app.core.config.dataforseo import pack_credential
 from app.core.config.search_intelligence import estimate_dataset, page_sizes
 from app.core.security import encrypt_secret
-from app.domain.demand.search_intelligence import executor
+from app.domain.demand.search_intelligence import executor, targets
 from app.domain.demand.search_intelligence.executor import _apply_reported_cost
 from app.domain.demand.search_intelligence.normalization import normalize_result
 from app.domain.demand.search_intelligence.pagination import (
@@ -49,6 +51,51 @@ COMPETITOR = CanonicalTarget(
     "https://rival.test",
     "competitor",
 )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "url",
+    ["https://www.example.org/shop", "https://blog.example.org", "https://other.com"],
+)
+async def test_competitor_redirect_resolution_retains_saved_domain(monkeypatch, url):
+    monkeypatch.setattr(
+        targets,
+        "resolve_site",
+        AsyncMock(return_value=SimpleNamespace(canonical_url=url, status_code=200)),
+    )
+    target = replace(
+        COMPETITOR,
+        registrable_domain="example.org",
+        hostname="example.org",
+        origin="https://example.org",
+    )
+    if url == "https://www.example.org/shop":
+        resolved = await targets.resolve_competitor(target)
+        assert resolved.origin == "https://www.example.org"
+        assert resolved.identity == COMPETITOR.identity
+    else:
+        with pytest.raises(targets.TargetScopeError):
+            await targets.resolve_competitor(target)
+
+
+@pytest.mark.parametrize("cost", [None, Decimal("0.2")])
+def test_late_cost_does_not_overwrite_cancellation(cost):
+    completed = datetime(2025, 1, 1, tzinfo=UTC)
+    run = SearchIntelligenceRun(
+        status="cancelled",
+        estimated_cost_usd=Decimal("0.1"),
+        uncertain_calls=0,
+        error_code="cancelled",
+        error_detail="Cancelled by user",
+        completed_at=completed,
+    )
+    assert _apply_reported_cost(run, ResearchResponse({}, "", "", cost, None)) is True
+    assert run.status == "cancelled"
+    assert run.error_code == "cancelled"
+    assert run.error_detail == "Cancelled by user"
+    assert run.completed_at == completed
+    assert run.provider_reported_cost_usd == cost
 
 
 @pytest.mark.parametrize("count", [0, 1, 25, 26])
@@ -128,6 +175,7 @@ def test_request_contract_freezes_host_and_prefix_scope() -> None:
         "=",
         "www.example.com",
     ]
+    assert backlinks["include_subdomains"] is True
     assert backlinks["backlinks_filters"] == [
         [
             ["url_to", "like", "https://www.example.com/%"],

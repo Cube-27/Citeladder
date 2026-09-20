@@ -76,7 +76,7 @@ describe('SearchIntelligenceReviewDrawer', () => {
       <SearchIntelligenceReviewDrawer
         open
         action="analysis"
-        readiness={readiness}
+        readiness={{ ...readiness, preferences: { ...readiness.preferences, location_code: null } }}
         onOpenChange={vi.fn()}
         onReview={vi.fn()}
         onConfirm={vi.fn()}
@@ -84,12 +84,9 @@ describe('SearchIntelligenceReviewDrawer', () => {
       />,
     );
     const submit = screen.getByRole('button', { name: 'Review cost' });
-    const location = screen.getByRole('textbox', { name: 'Location code' });
-    await userEvent.clear(location);
-    await userEvent.type(location, 'invalid');
     expect(submit).toBeDisabled();
-    await userEvent.clear(location);
-    await userEvent.type(location, '2840');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Market' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Australia' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Keyword suggestions' }));
     expect(submit).toBeDisabled();
     await userEvent.type(

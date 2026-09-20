@@ -273,4 +273,21 @@ def normalize_result(
 def normalize_response(
     kind: str, body: dict[str, Any], plan: dict[str, Any]
 ) -> tuple[dict[str, Any], list[dict[str, Any]], int | None]:
-    return normalize_result(kind, _task_result(body), plan)
+    result = _task_result(body)
+    summary, rows, total = normalize_result(kind, result, plan)
+    items = result.get("items")
+    received = len(items) if isinstance(items, list) else 0
+    if kind == "backlink_summary" and any(
+        result.get(field) is not None
+        for field in ("backlinks", "referring_main_domains", "rank")
+    ):
+        received = 1
+    return (
+        {
+            **summary,
+            "result_available": bool(result),
+            "provider_items_received": received,
+        },
+        rows,
+        total,
+    )

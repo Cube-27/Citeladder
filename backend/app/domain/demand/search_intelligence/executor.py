@@ -389,6 +389,8 @@ def _apply_reported_cost(
 ) -> bool:
     if response.cost_usd is None:
         run.uncertain_calls += 1
+        if run.status == "cancelled":
+            return True
         run.status = "uncertain"
         run.error_code = "provider_cost_unavailable"
         run.completed_at = _utcnow()
@@ -400,6 +402,8 @@ def _apply_reported_cost(
     run.provider_reported_cost_usd = (
         run.provider_reported_cost_usd or Decimal("0")
     ) + response.cost_usd
+    if run.status == "cancelled":
+        return True
     if run.provider_reported_cost_usd <= run.estimated_cost_usd:
         return False
     run.status = "partial"
@@ -426,8 +430,12 @@ def _publish_complete_dataset(
     if has_later_page and not exhausted:
         return
     dataset.status = "published"
-    if dataset.raw_rows_received == 0:
+    if dataset.summary.get("result_available") is False:
+        dataset.coverage = "unknown"
+    elif dataset.raw_rows_received == 0:
         dataset.coverage = "empty"
+    elif dataset.dataset_kind in {"footprint", "backlink_summary"}:
+        dataset.coverage = "complete"
     elif exhausted or dataset.unique_rows_saved >= dataset.requested_rows:
         dataset.coverage = "complete"
     else:
@@ -452,6 +460,7 @@ async def _persist_success(
     call.provider_task_id = response.provider_task_id
     call.provider_reported_cost_usd = response.cost_usd
     call.completed_at = _utcnow()
+    stopped = _apply_reported_cost(run, response)
     try:
         summary, normalized, total = normalize_response(
             dataset.dataset_kind, response.body, plan
@@ -463,7 +472,15 @@ async def _persist_success(
         dataset.status = "failed"
         dataset.coverage = "unknown"
         dataset.collection_ended_at = call.completed_at
-        return True, False
+        if run.status not in {"cancelled", "uncertain"}:
+            run.status = "partial"
+            run.error_code = call.error_code
+            run.error_detail = (
+                "Provider results did not match the reviewed website; "
+                "remaining calls were stopped"
+            )
+            run.completed_at = call.completed_at
+        return True, True
     existing = set(
         (
             await session.scalars(
@@ -478,19 +495,15 @@ async def _persist_success(
         if key not in existing:
             session.add(_row_model(dataset, call, values))
             existing.add(key)
-    dataset.raw_rows_received += len(normalized)
+    received = summary["provider_items_received"]
+    dataset.raw_rows_received += received
     dataset.unique_rows_saved = len(existing)
     dataset.provider_total = total if total is not None else dataset.provider_total
     dataset.summary = {**(dataset.summary or {}), **summary}
     run.completed_calls += 1
     run.received_rows += len(normalized)
-    cancelled = run.status == "cancelled"
-    stopped = _apply_reported_cost(run, response)
-    if cancelled:
-        run.status = "cancelled"
-        stopped = True
-    _publish_complete_dataset(dataset, call, plan, later_plans, len(normalized))
-    return False, stopped
+    _publish_complete_dataset(dataset, call, plan, later_plans, received)
+    return summary["result_available"] is False, stopped
 
 
 async def _persist_outcome(

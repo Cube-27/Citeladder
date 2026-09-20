@@ -61,6 +61,47 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 
+it('rounds estimated traffic in the table and opens evidence from the keyword', async () => {
+  const result = {
+    ...row('33333333-3333-4333-8333-333333333333', 'Family outfits'),
+    etv: '7.55999994',
+    search_volume: 3600,
+  };
+  mswServer.use(
+    http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
+      HttpResponse.json({ dataset, rows: [result], next_cursor: null }),
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  expect(await screen.findByRole('cell', { name: '8' })).toBeInTheDocument();
+  expect(screen.getByRole('cell', { name: '3,600' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Inspect' })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'View evidence for Family outfits' }));
+  expect(screen.getByRole('dialog', { name: 'Provider evidence' })).toBeInTheDocument();
+});
+
+it('explains a paid empty scope without offering selection or content actions', async () => {
+  const empty = {
+    ...dataset,
+    dataset_kind: 'referring_domains',
+    unique_rows_saved: 0,
+    provider_total: 0,
+  };
+  mswServer.use(
+    http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
+      HttpResponse.json({ dataset: empty, rows: [], next_cursor: null }),
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={empty} title="Referring domains" />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  expect(await screen.findByText(/provider returned no data/i)).toBeInTheDocument();
+  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Create content brief' })).not.toBeInTheDocument();
+});
+
 it('shows a storage failure instead of losing a content handoff', async () => {
   mswServer.use(
     http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>

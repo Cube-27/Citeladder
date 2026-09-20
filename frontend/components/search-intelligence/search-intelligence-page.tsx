@@ -2,21 +2,22 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Database, RefreshCw, Settings2, Unplug } from 'lucide-react';
+import { RefreshCw, Settings2, Unplug } from 'lucide-react';
 
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { SearchIntelligenceCitationMatcher } from '@/components/search-intelligence/search-intelligence-citation-matcher';
-import { SearchIntelligenceDatasetView } from '@/components/search-intelligence/search-intelligence-dataset-view';
+import { SearchIntelligenceCollection } from './search-intelligence-collection';
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
-import { formatEvidenceValue } from './search-intelligence-format';
+import { formatSearchNumber } from './search-intelligence-format';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Drawer } from '@/components/ui/drawer';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select } from '@/components/ui/select';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
@@ -42,76 +43,15 @@ const TAB_CODEC = stringUrlCodec(
   TABS.map(({ value }) => value),
   'overview' as Tab,
 );
-const KINDS: Record<Tab, readonly string[]> = {
-  overview: [],
-  keywords: ['ranking_keywords', 'keyword_suggestions'],
-  competitors: ['footprint', 'missing_keywords', 'shared_keywords'],
-  backlinks: ['backlink_summary', 'referring_domains', 'destination_pages', 'citation_matches'],
-};
-
-function DatasetCollection({ datasets }: Readonly<{ datasets: SearchIntelligenceDataset[] }>) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected =
-    datasets.find((dataset) => dataset.id === selectedId) ??
-    datasets.find((dataset) => dataset.dataset_kind !== 'backlink_summary') ??
-    datasets[0];
-  if (!selected)
-    return (
-      <EmptyState
-        icon={Database}
-        heading="No saved dataset"
-        description="Acquire this scope to publish a durable snapshot."
-      />
-    );
-  return (
-    <div className="grid gap-4">
-      <div className="flex flex-wrap gap-2">
-        {datasets.map((dataset) => (
-          <Button
-            key={dataset.id}
-            size="sm"
-            variant={dataset.id === selected.id ? 'primary' : 'secondary'}
-            onClick={() => setSelectedId(dataset.id)}
-          >
-            {dataset.dataset_kind.replaceAll('_', ' ')} · {dataset.target_hostname}
-          </Button>
-        ))}
-      </div>
-      {selected.dataset_kind === 'backlink_summary' ? (
-        <BacklinkSummary dataset={selected} />
-      ) : (
-        <SearchIntelligenceDatasetView key={selected.id} dataset={selected} />
-      )}
-    </div>
-  );
-}
-
-function BacklinkSummary({ dataset }: Readonly<{ dataset: SearchIntelligenceDataset }>) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{dataset.target_hostname} backlink summary</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {Object.entries(dataset.summary).map(([label, value]) => (
-            <div key={label} className="grid gap-1">
-              <dt className="text-muted text-sm">{label.replaceAll('_', ' ')}</dt>
-              <dd className="text-xl tabular-nums">{formatEvidenceValue(value)}</dd>
-            </div>
-          ))}
-        </dl>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function SearchIntelligencePage() {
   const { activeProject } = useProjectContext();
   const queryClient = useQueryClient();
   const [tab, setTab] = useUrlState('tab', TAB_CODEC);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
+  const [citationOpen, setCitationOpen] = useState(false);
+  const [comparison, setComparison] = useState<SearchIntelligenceDataset | null>(null);
+  const [market, setMarket] = useState('');
   const [action, setAction] = useState('analysis');
   const readiness = useQuery({
     queryKey: searchIntelligenceKeys.readiness(activeProject?.workspace_id, activeProject?.id),
@@ -177,6 +117,28 @@ export function SearchIntelligencePage() {
     }
     return [...result.values()];
   }, [readiness.data?.datasets]);
+  const markets = [
+    ...new Map(
+      latestDatasets
+        .filter((item) => item.location_code !== null)
+        .map((item) => [
+          `${item.location_code}:${item.language_code}`,
+          {
+            value: `${item.location_code}:${item.language_code}`,
+            label: `${searchMarketLabel(item.location_code)} · ${item.language_code}`,
+          },
+        ]),
+    ).values(),
+  ];
+  const activeMarket = markets.find((item) => item.value === market)?.value ?? markets[0]?.value;
+  const datasets = latestDatasets.filter(
+    (item) =>
+      item.location_code === null || `${item.location_code}:${item.language_code}` === activeMarket,
+  );
+  const openComparison = (dataset: SearchIntelligenceDataset) => {
+    setComparison(dataset);
+    setTab('competitors');
+  };
   if (readiness.isPending)
     return (
       <PageShell>
@@ -195,7 +157,7 @@ export function SearchIntelligencePage() {
     );
   const data = readiness.data;
   const tabs = <TabsBar items={TABS} ariaLabel="Search Intelligence views" variant="band" />;
-  if (!data.connected)
+  if (!data.connected && !data.datasets.length)
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
         <PageShell tabs={tabs}>
@@ -238,49 +200,82 @@ export function SearchIntelligencePage() {
             onCost={() => setCostOpen(true)}
           />
         }
-        controls={<ScopeBand data={data} tab={tab} latest={latestDatasets[0]} />}
+        controls={
+          <ScopeBand
+            data={data}
+            tab={tab}
+            latest={datasets.find((item) =>
+              tab === 'backlinks' ? item.location_code === null : item.location_code !== null,
+            )}
+            marketControl={
+              markets.length > 1 && tab !== 'backlinks' ? (
+                <Select
+                  ariaLabel="Saved market"
+                  value={activeMarket}
+                  onValueChange={(value) => {
+                    setMarket(value);
+                    setComparison(null);
+                  }}
+                  options={markets}
+                />
+              ) : null
+            }
+          />
+        }
       >
-        <Stack gap="workspace">
+        <Stack gap="workspace" className="min-w-0">
           <RunNotice run={data.latest_run} />
-          <TabPanel value="overview">
+          <TabPanel value="overview" className="min-w-0">
             <SearchIntelligenceOverview
-              datasets={latestDatasets}
+              datasets={datasets}
               competitors={data.competitors}
               ownedHostname={data.owned_targets[0]?.hostname ?? ''}
-              onNavigate={setTab}
+              onOpen={openComparison}
             />
           </TabPanel>
-          {TABS.filter(({ value }) => value !== 'overview').map(({ value }) => (
-            <TabPanel key={value} value={value}>
-              <div className="grid gap-4">
-                {value === 'keywords' ? (
-                  <div>
-                    <Button variant="secondary" onClick={() => openReview('seed')}>
+          {TABS.filter((item) => item.value !== 'overview').map(({ value }) => (
+            <TabPanel key={value} value={value} className="min-w-0">
+              <SearchIntelligenceCollection
+                tab={value}
+                datasets={datasets}
+                competitors={data.competitors}
+                selected={value === 'competitors' ? comparison : null}
+                onSelect={setComparison}
+                action={
+                  value === 'keywords' ? (
+                    <Button variant="secondary" size="sm" onClick={() => openReview('seed')}>
                       Research a keyword
                     </Button>
-                  </div>
-                ) : null}
-                {value === 'backlinks' ? (
-                  <SearchIntelligenceCitationMatcher
-                    datasets={latestDatasets}
-                    onDerived={() =>
-                      queryClient.invalidateQueries({
-                        queryKey: searchIntelligenceKeys.readiness(
-                          activeProject?.workspace_id,
-                          activeProject?.id,
-                        ),
-                      })
-                    }
-                  />
-                ) : null}
-                <DatasetCollection
-                  datasets={latestDatasets.filter((dataset) =>
-                    KINDS[value].includes(dataset.dataset_kind),
-                  )}
-                />
-              </div>
+                  ) : null
+                }
+              />
+              {value === 'backlinks' &&
+              datasets.some(
+                (item) => item.dataset_kind === 'referring_domains' && item.unique_rows_saved > 0,
+              ) ? (
+                <Button variant="ghost" size="sm" onClick={() => setCitationOpen(true)}>
+                  Match with Visibility citations
+                </Button>
+              ) : null}
             </TabPanel>
           ))}
+          <Drawer
+            open={citationOpen}
+            onOpenChange={setCitationOpen}
+            title="Match Visibility citations"
+          >
+            <SearchIntelligenceCitationMatcher
+              datasets={datasets}
+              onDerived={() =>
+                queryClient.invalidateQueries({
+                  queryKey: searchIntelligenceKeys.readiness(
+                    activeProject?.workspace_id,
+                    activeProject?.id,
+                  ),
+                })
+              }
+            />
+          </Drawer>
           <CostDetails
             open={costOpen}
             onOpenChange={setCostOpen}
@@ -337,10 +332,12 @@ function ScopeBand({
   data,
   tab,
   latest,
+  marketControl,
 }: Readonly<{
   data: SearchIntelligenceReadiness;
   tab: Tab;
   latest?: SearchIntelligenceDataset;
+  marketControl?: import('react').ReactNode;
 }>) {
   return (
     <div className="flex w-full flex-wrap items-center gap-3 py-2">
@@ -348,8 +345,9 @@ function ScopeBand({
       <span className={textRole('meta')}>
         {tab === 'backlinks'
           ? 'Canonical website · all referring countries'
-          : `${searchMarketLabel(data.preferences.location_code)} · ${data.preferences.language_code || 'Language not set'}`}
+          : `${searchMarketLabel(latest?.location_code ?? data.preferences.location_code)} · ${latest?.language_code || data.preferences.language_code || 'Language not set'}`}
       </span>
+      {marketControl}
       <span className={textRole('meta', 'ml-auto')}>
         {latest?.published_at
           ? `Saved ${new Date(latest.published_at).toLocaleString()}`
@@ -380,6 +378,12 @@ function RunNotice({ run }: Readonly<{ run: SearchIntelligenceRun | null }>) {
       </Stack>
     </output>
   );
+}
+
+function reportedCost(run: SearchIntelligenceRun): string {
+  if (!run.confirmed_at) return 'Not charged';
+  if (run.provider_reported_cost_usd === null) return 'Unresolved';
+  return `${formatSearchNumber(run.provider_reported_cost_usd, 6)}`;
 }
 
 function CostDetails({
@@ -413,19 +417,21 @@ function CostDetails({
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <dt className={textRole('label')}>Estimated</dt>
-                  <dd>${run.estimated_cost_usd}</dd>
+                  <dd>${formatSearchNumber(run.estimated_cost_usd, 6)}</dd>
                 </div>
                 <div>
                   <dt className={textRole('label')}>Provider reported</dt>
-                  <dd>
-                    {run.provider_reported_cost_usd === null
-                      ? 'Unresolved'
-                      : `$${run.provider_reported_cost_usd}`}
-                  </dd>
+                  <dd>{reportedCost(run)}</dd>
                 </div>
                 <div>
                   <dt className={textRole('label')}>Calls completed</dt>
-                  <dd>{run.completed_calls}</dd>
+                  <dd>
+                    {run.completed_calls} of {run.planned_calls}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={textRole('label')}>Saved result rows</dt>
+                  <dd>{formatSearchNumber(run.received_rows)}</dd>
                 </div>
                 <div>
                   <dt className={textRole('label')}>Uncertain calls</dt>

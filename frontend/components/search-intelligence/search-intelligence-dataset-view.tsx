@@ -3,27 +3,16 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { Drawer } from '@/components/ui/drawer';
 import { ReadError } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { Skeleton } from '@/components/ui/skeleton';
-import { sortIndicator } from '@/components/ui/sort-indicator';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { httpErrorStatus } from '@/lib/api/errors';
 import {
@@ -32,70 +21,11 @@ import {
   type SearchIntelligenceRow,
 } from '@/lib/api/search-intelligence';
 import { searchIntelligenceKeys } from '@/lib/api/query-keys/search-intelligence';
-import { SEARCH_HANDOFF_MAX_ROWS } from '@/lib/config/search-intelligence';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
-import { formatEvidenceValue } from './search-intelligence-format';
-
-type Column = { field: keyof SearchIntelligenceRow; label: string; numeric?: boolean };
-const columnsByKind: Record<string, Column[]> = {
-  footprint: [
-    { field: 'keyword', label: 'Keyword' },
-    { field: 'search_volume', label: 'Volume', numeric: true },
-    { field: 'difficulty', label: 'Difficulty', numeric: true },
-    { field: 'intent', label: 'Intent' },
-    { field: 'dataforseo_rank', label: 'DataForSEO rank', numeric: true },
-  ],
-  ranking_keywords: [
-    { field: 'keyword', label: 'Keyword' },
-    { field: 'rank_group', label: 'Rank group', numeric: true },
-    { field: 'search_volume', label: 'Volume', numeric: true },
-    { field: 'url', label: 'Ranking URL' },
-    { field: 'etv', label: 'ETV', numeric: true },
-  ],
-  keyword_suggestions: [
-    { field: 'keyword', label: 'Keyword' },
-    { field: 'search_volume', label: 'Volume', numeric: true },
-    { field: 'difficulty', label: 'Difficulty', numeric: true },
-    { field: 'intent', label: 'Intent' },
-  ],
-  missing_keywords: [
-    { field: 'keyword', label: 'Missing keyword' },
-    { field: 'owned_rank_group', label: 'Owned rank', numeric: true },
-    { field: 'rank_group', label: 'Competitor rank', numeric: true },
-    { field: 'search_volume', label: 'Volume', numeric: true },
-    { field: 'difficulty', label: 'Difficulty', numeric: true },
-  ],
-  shared_keywords: [
-    { field: 'keyword', label: 'Shared keyword' },
-    { field: 'owned_rank_group', label: 'Owned rank', numeric: true },
-    { field: 'rank_group', label: 'Competitor rank', numeric: true },
-    { field: 'search_volume', label: 'Volume', numeric: true },
-  ],
-  referring_domains: [
-    { field: 'domain', label: 'Referring domain' },
-    { field: 'backlinks', label: 'Backlinks', numeric: true },
-    { field: 'dataforseo_rank', label: 'DataForSEO rank', numeric: true },
-  ],
-  destination_pages: [
-    { field: 'url', label: 'Destination page' },
-    { field: 'backlinks', label: 'Backlinks', numeric: true },
-    { field: 'referring_main_domains', label: 'Referring domains', numeric: true },
-    { field: 'dataforseo_rank', label: 'DataForSEO rank', numeric: true },
-  ],
-  citation_matches: [
-    { field: 'domain', label: 'Cited domain' },
-    { field: 'url', label: 'Cited URL' },
-  ],
-};
-
-function displayValue(row: SearchIntelligenceRow, field: keyof SearchIntelligenceRow) {
-  const result = row[field];
-  if (result === null || result === undefined || result === '')
-    return <span className="value-placeholder">Not measured</span>;
-  return typeof result === 'object' ? JSON.stringify(result) : String(result);
-}
+import { formatEvidenceValue, formatSearchNumber } from './search-intelligence-format';
+import { SearchIntelligenceRowsTable } from './search-intelligence-rows-table';
 
 function useDatasetRows(
   datasetId: string,
@@ -137,7 +67,8 @@ function useDatasetRows(
 
 export function SearchIntelligenceDatasetView({
   dataset,
-}: Readonly<{ dataset: SearchIntelligenceDataset }>) {
+  title = 'Ranking keywords',
+}: Readonly<{ dataset: SearchIntelligenceDataset; title?: string }>) {
   const { activeProject } = useProjectContext();
   const navigate = useNavigate();
   const projectHref = useProjectHref();
@@ -174,7 +105,12 @@ export function SearchIntelligenceDatasetView({
       navigate(projectHref('/content?source=search-intelligence'));
     },
   });
-  const columns = columnsByKind[dataset.dataset_kind] ?? columnsByKind.footprint;
+  const selectable = [
+    'ranking_keywords',
+    'keyword_suggestions',
+    'missing_keywords',
+    'shared_keywords',
+  ].includes(dataset.dataset_kind);
   if (query.isPending) return <Skeleton className="h-80 w-full" />;
   if (!page)
     return (
@@ -184,6 +120,8 @@ export function SearchIntelligenceDatasetView({
         onRetry={() => void query.refetch()}
       />
     );
+  if (!dataset.unique_rows_saved && !page.rows.length)
+    return <EmptyDataset dataset={dataset} title={title} />;
   const rows = page.rows;
   const visibleRows = rows.filter((row) =>
     [row.keyword, row.domain, row.url, row.intent].some((value) =>
@@ -198,16 +136,8 @@ export function SearchIntelligenceDatasetView({
     : 'Select evidence rows to create a content brief.';
   return (
     <>
-      <Card>
-        <CardHeader bordered className="flex-row items-center justify-between">
-          <div>
-            <CardTitle>{dataset.target_hostname}</CardTitle>
-            <p className={textRole('meta')}>
-              {dataset.coverage} coverage · {dataset.unique_rows_saved.toLocaleString()} saved rows
-              {dataset.truncated ? ' · truncated' : ''}
-            </p>
-          </div>
-        </CardHeader>
+      <Card className="min-w-0">
+        <DatasetHeader dataset={dataset} title={title} />
         <CardContent flush>
           <div className="border-border-subtle flex min-h-14 items-center border-b px-[var(--table-cell-padding-x)] py-2">
             <SearchField
@@ -217,12 +147,6 @@ export function SearchIntelligenceDatasetView({
               placeholder="Filter visible page"
               className="max-w-sm"
             />
-          </div>
-          <div className="border-border-subtle flex min-h-14 flex-wrap items-center justify-between gap-3 border-b px-[var(--table-cell-padding-x)] py-2">
-            <span className={textRole('body')}>{selectionMessage}</span>
-            <Button size="sm" disabled={!selectedCount} onClick={() => setReviewOpen(true)}>
-              Create content brief
-            </Button>
           </div>
           {handoff.isError ? <Alert>{handoff.error.message}</Alert> : null}
           {query.isError ? (
@@ -239,111 +163,22 @@ export function SearchIntelligenceDatasetView({
               minHeight: `calc(var(--table-header-height) + ${table.pageSize} * var(--table-row-height))`,
             }}
           >
-            <Table className="min-w-[900px] table-fixed">
-              <colgroup>
-                <col className="w-14" />
-                {columns.map((column) => (
-                  <col key={column.field} className={column.numeric ? 'w-32' : undefined} />
-                ))}
-                <col className="w-28" />
-              </colgroup>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center">
-                    <Checkbox
-                      aria-label="Select current page"
-                      checked={
-                        visibleRows.length > 0 &&
-                        visibleRows.every((row) => Boolean(selectedEvidence[row.id]))
-                      }
-                      disabled={!visibleRows.length}
-                      onCheckedChange={() =>
-                        setSelectedEvidence((current) => {
-                          const next = { ...current };
-                          if (visibleRows.every((row) => Boolean(next[row.id]))) {
-                            visibleRows.forEach((row) => {
-                              delete next[row.id];
-                            });
-                          } else {
-                            visibleRows.forEach((row) => {
-                              if (Object.keys(next).length < SEARCH_HANDOFF_MAX_ROWS)
-                                next[row.id] = row;
-                            });
-                          }
-                          return next;
-                        })
-                      }
-                    />
-                  </TableHead>
-                  {columns.map((column) => (
-                    <SortableHead
-                      key={column.field}
-                      column={column}
-                      active={order.sort === column.field}
-                      descending={order.direction === 'desc'}
-                      onSort={() => {
-                        setOrder({
-                          sort: column.field,
-                          direction:
-                            order.sort === column.field && order.direction === 'asc'
-                              ? 'desc'
-                              : 'asc',
-                        });
-                        table.reset();
-                      }}
-                    />
-                  ))}
-                  <TableHead>Evidence</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleRows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="text-center">
-                      <Checkbox
-                        aria-label={`Select evidence row ${row.id}`}
-                        checked={Boolean(selectedEvidence[row.id])}
-                        disabled={
-                          selectedCount >= SEARCH_HANDOFF_MAX_ROWS && !selectedEvidence[row.id]
-                        }
-                        onCheckedChange={() =>
-                          setSelectedEvidence((current) => {
-                            if (current[row.id]) {
-                              const next = { ...current };
-                              delete next[row.id];
-                              return next;
-                            }
-                            return { ...current, [row.id]: row };
-                          })
-                        }
-                      />
-                    </TableCell>
-                    {columns.map((column) => (
-                      <TableCell
-                        key={column.field}
-                        numeric={column.numeric}
-                        className="truncate"
-                        title={String(row[column.field] ?? '')}
-                      >
-                        {displayValue(row, column.field)}
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      <Button size="sm" variant="ghost" onClick={() => setSelected(row)}>
-                        Inspect
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!visibleRows.length ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length + 2}>
-                      No saved rows match this view.
-                    </TableCell>
-                  </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
+            <SearchIntelligenceRowsTable
+              kind={dataset.dataset_kind}
+              rows={visibleRows}
+              selectable={selectable}
+              selectedEvidence={selectedEvidence}
+              setSelectedEvidence={setSelectedEvidence}
+              order={order}
+              onSelect={setSelected}
+              onSort={(sort) => {
+                setOrder({
+                  sort,
+                  direction: order.sort === sort && order.direction === 'asc' ? 'desc' : 'asc',
+                });
+                table.reset();
+              }}
+            />
           </div>
           <output
             className={textRole('meta', 'flex h-6 items-center px-[var(--table-cell-padding-x)]')}
@@ -351,6 +186,14 @@ export function SearchIntelligenceDatasetView({
           >
             {query.isFetching ? 'Updating saved rows…' : `${visibleRows.length} rows shown`}
           </output>
+          {selectable ? (
+            <div className="border-border-subtle flex min-h-14 flex-wrap items-center justify-between gap-3 border-b px-[var(--table-cell-padding-x)] py-2">
+              <span className={textRole('body')}>{selectionMessage}</span>
+              <Button size="sm" disabled={!selectedCount} onClick={() => setReviewOpen(true)}>
+                Create content brief
+              </Button>
+            </div>
+          ) : null}
           <CursorTableFooter
             {...range}
             total={dataset.unique_rows_saved}
@@ -386,8 +229,8 @@ export function SearchIntelligenceDatasetView({
               <li key={row.id} className="border-border rounded-[var(--radius-card)] border p-3">
                 <p className={textRole('bodyStrong')}>{row.keyword || row.domain || row.url}</p>
                 <p className={textRole('meta')}>
-                  Volume: {formatEvidenceValue(row.search_volume)} · Position:{' '}
-                  {formatEvidenceValue(row.rank_group)}
+                  Volume: {formatSearchNumber(row.search_volume)} · Position:{' '}
+                  {formatSearchNumber(row.rank_group)}
                 </p>
               </li>
             ))}
@@ -435,33 +278,51 @@ function EvidenceDrawer({
   );
 }
 
-function SortableHead({
-  column,
-  active,
-  descending,
-  onSort,
-}: Readonly<{
-  column: Column;
-  active: boolean;
-  descending: boolean;
-  onSort: () => void;
-}>) {
-  const { ariaSort, icon: Icon } = sortIndicator(active, descending, {
-    ascending: ArrowUp,
-    descending: ArrowDown,
-    inactive: ArrowUpDown,
-  });
+function EmptyDataset({
+  dataset,
+  title,
+}: Readonly<{ dataset: SearchIntelligenceDataset; title: string }>) {
   return (
-    <TableHead numeric={column.numeric} aria-sort={ariaSort}>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onSort}
-        className={column.numeric ? 'w-full justify-center' : 'w-full justify-start'}
-      >
-        <span className="truncate">{column.label}</span>
-        <Icon className="size-4 shrink-0" aria-hidden />
-      </Button>
-    </TableHead>
+    <Card>
+      <CardHeader bordered>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-2 py-[var(--workspace-gap)]">
+        <p className={textRole('bodyStrong')}>
+          The provider returned no data for this saved scope.
+        </p>
+        <p className={textRole('body')}>
+          Requests can incur charges even when no results are returned. Check the website and market
+          in Analysis settings before reviewing another fetch.
+        </p>
+        <p className={textRole('meta')}>
+          {dataset.target_hostname}
+          {dataset.comparison_origin
+            ? ` · compared with ${new URL(dataset.comparison_origin).hostname}`
+            : ''}{' '}
+          · 0 saved rows
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DatasetHeader({
+  dataset,
+  title,
+}: Readonly<{ dataset: SearchIntelligenceDataset; title: string }>) {
+  return (
+    <CardHeader bordered className="flex-row items-center justify-between">
+      <div>
+        <CardTitle>{title}</CardTitle>
+        <p className={textRole('meta')}>
+          {formatSearchNumber(dataset.unique_rows_saved)} saved rows
+          {dataset.provider_total !== null
+            ? ` of ${formatSearchNumber(dataset.provider_total)} available`
+            : ''}
+          {dataset.truncated ? ' · truncated' : ''}
+        </p>
+      </div>
+    </CardHeader>
   );
 }
