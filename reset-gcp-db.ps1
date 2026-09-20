@@ -150,6 +150,14 @@ Write-Warning "Destroying and rebuilding the database on $ProjectId/$Zone/$Insta
 $remoteScript = @'
 #!/usr/bin/env bash
 set -euo pipefail
+phase=preflight
+report_failure() {
+  local failure=$?
+  echo "Database reset failed during $phase at remote script line ${BASH_LINENO[0]} (exit $failure)." >&2
+  exit "$failure"
+}
+trap report_failure ERR
+echo 'Remote database reset preflight started.'
 expected_project="${1:?Explicit GCP project ID required}"
 candidate_source_commit="${2:?Source commit required}"
 candidate_backend_image="${3:?Backend image required}"
@@ -236,7 +244,8 @@ reset_started=false
 recover_reset() {
   local failure=$?
   trap - ERR
-  echo 'Reset failed; attempting one bounded recovery with the candidate backend image.' >&2
+  echo "Database reset failed during $phase at remote script line ${BASH_LINENO[0]} (exit $failure)." >&2
+  echo 'Attempting one bounded recovery with the candidate backend image.' >&2
   if test "$reset_started" = true; then
     if ! "${reset_compose[@]}" exec -T db psql -v ON_ERROR_STOP=1 -U citeladder -d postgres <<'SQL'
 SELECT 'CREATE DATABASE citeladder OWNER citeladder' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'citeladder')
@@ -263,14 +272,20 @@ SQL
 }
 
 trap recover_reset ERR
+phase='stopping application services'
 "${compose[@]}" stop "${services[@]}"
 reset_started=true
+phase='recreating database'
 "${compose[@]}" exec -T db psql -v ON_ERROR_STOP=1 -U citeladder -d postgres \
   -c 'DROP DATABASE citeladder WITH (FORCE);' \
   -c 'CREATE DATABASE citeladder OWNER citeladder;'
+phase='applying migrations'
 "${reset_compose[@]}" run --rm --no-deps migrate
+phase='checking schema'
 "${reset_compose[@]}" run --rm --no-deps migrate alembic check
+phase='saving candidate revision'
 persist_candidate
+phase='starting application services'
 start_application
 trap - ERR
 echo 'Database rebuilt from latest main, development login provisioned, application healthy.'
