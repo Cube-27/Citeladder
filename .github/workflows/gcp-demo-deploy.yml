@@ -329,10 +329,18 @@ jobs:
             test "$attempt" -lt 30
             sleep 10
           done
-          gcloud compute ssh "$VM_NAME" --project "$PROJECT_ID" --zone "$ZONE" --tunnel-through-iap \
-            --quiet --command='rm -rf /tmp/citeladder-deploy && mkdir -m 700 /tmp/citeladder-deploy'
-          gcloud compute scp infra/gcp/runtime/* /tmp/cf-v4 /tmp/cf-v6 "$VM_NAME:/tmp/citeladder-deploy/" \
-            --project "$PROJECT_ID" --zone "$ZONE" --tunnel-through-iap --quiet
+          # Reuse the SSH transport that passed the bootstrap probe. Separate
+          # gcloud compute scp authentication has failed on fresh CI runners.
+          for attempt in 1 2 3; do
+            if tar -cf - -C infra/gcp/runtime . -C /tmp cf-v4 cf-v6 \
+              | gcloud compute ssh "$VM_NAME" --project "$PROJECT_ID" --zone "$ZONE" \
+                  --tunnel-through-iap --quiet --ssh-flag=-T \
+                  --command='rm -rf /tmp/citeladder-deploy && mkdir -m 700 /tmp/citeladder-deploy && tar -xf - -C /tmp/citeladder-deploy'; then
+              break
+            fi
+            test "$attempt" -lt 3
+            sleep 5
+          done
           printf -v remote 'sudo env PROJECT_ID=%q REGION=%q BACKEND_IMAGE=%q FRONTEND_IMAGE=%q VITE_APP_IMAGE=%q BACKUP_BUCKET=%q DOMAIN_NAME=%q SOURCE_COMMIT=%q DEMO_MODE=%q DEMO_EXPIRES_AT=%q DEV_LOGIN_EMAIL=%q DEV_LOGIN_COUNTER_ALLOWANCE=%q DEFAULT_AGENT_BASE_URL=%q DEFAULT_AGENT_MODEL=%q CONTENT_PROVIDER=%q CONTENT_PROVIDER_ENDPOINT=%q CONTENT_MODEL=%q bash /tmp/citeladder-deploy/deploy-vm.sh' \
             "$PROJECT_ID" "$REGION" "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$VITE_APP_IMAGE" "$BACKUP_BUCKET" \
             "$DOMAIN_NAME" "$GITHUB_SHA" "$DEMO_MODE" "$DEMO_EXPIRES_AT" \
