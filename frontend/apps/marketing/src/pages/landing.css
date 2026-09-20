@@ -1659,6 +1659,10 @@
   }
   .cl-engine-inner > p {
     margin-bottom: 15px;
+    white-space: nowrap;
+  }
+  .cl-engine-inner > p br {
+    display: none;
   }
   .cl-engines {
     display: grid;
@@ -1735,7 +1739,7 @@
 }
 @media (max-width: 540px) {
   .cl-hero h1 {
-    font-size: 50px;
+    font-size: 32px;
   }
   .cl-section-head h2,
   .cl-evidence h2,
