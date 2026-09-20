@@ -205,13 +205,12 @@ async def _build_call_plan(
         )
         if comparison is not None:
             comparison = resolved_competitors[comparison.identity]
-        depth = (
-            HISTORY_MAX_OBSERVATIONS
-            if selection.kind == "backlink_history"
-            else 1
-            if selection.kind in {"footprint", "backlink_summary"}
-            else selection.depth
-        )
+        if selection.kind == "backlink_history":
+            depth = HISTORY_MAX_OBSERVATIONS
+        elif selection.kind in {"footprint", "backlink_summary"}:
+            depth = 1
+        else:
+            depth = selection.depth
         request_options: RequestOptions = {
             "research_scope": payload.research_scope or "domain_subdomains",
             "grouping": selection.grouping,

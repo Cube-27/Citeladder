@@ -205,19 +205,18 @@ export function SearchIntelligenceReviewDrawer({
           language_code: language,
           reuse_recent: reuse,
           save_as_defaults: saveDefaults,
-          datasets: selections.map((selection) =>
-            selection.kind === 'keyword_suggestions'
-              ? { ...selection, seed }
-              : selection.kind === 'backlinks'
-                ? { ...selection, grouping }
-                : selection.kind === 'ranking_keywords'
-                  ? {
-                      ...selection,
-                      order: rankingOrder,
-                      min_volume: acquisitionVolume === '' ? undefined : Number(acquisitionVolume),
-                    }
-                  : selection,
-          ),
+          datasets: selections.map((selection) => {
+            if (selection.kind === 'keyword_suggestions') return { ...selection, seed };
+            if (selection.kind === 'backlinks') return { ...selection, grouping };
+            if (selection.kind === 'ranking_keywords') {
+              return {
+                ...selection,
+                order: rankingOrder,
+                min_volume: acquisitionVolume === '' ? undefined : Number(acquisitionVolume),
+              };
+            }
+            return selection;
+          }),
           previous_run_id: action === 'analysis' ? null : (readiness.latest_run?.id ?? null),
         }),
       );

@@ -186,9 +186,9 @@ def _organic_pages_request(
     if research_scope == "exact_host":
         netloc = urlsplit(target.origin).netloc
         payload["filters"] = [
-            ["page_address", "like", f"https://{netloc}/%"],
+            ["page_address", "like", urlunsplit(("https", netloc, "/%", "", ""))],
             "or",
-            ["page_address", "like", f"http://{netloc}/%"],
+            ["page_address", "like", urlunsplit(("http", netloc, "/%", "", ""))],
         ]
     return payload
 
