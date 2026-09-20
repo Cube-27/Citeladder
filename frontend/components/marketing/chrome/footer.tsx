@@ -178,10 +178,7 @@ export async function MarketingFooter() {
             ))}
           </nav>
         </div>
-        <div
-          aria-hidden="true"
-          className="mt-12 overflow-hidden pt-6 pb-7 sm:mt-16 sm:pt-9 sm:pb-11"
-        >
+        <div aria-hidden="true" className="mt-4 overflow-hidden pb-7 sm:mt-5 sm:pb-8">
           <LogoMark size={72} className="max-w-full opacity-20" />
         </div>
       </Container>

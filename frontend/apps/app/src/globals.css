@@ -32,18 +32,6 @@
   --color-gray-700: #30313d;
   --color-gray-800: #1d2939;
   --color-gray-900: #101828;
-  /* Primary blue ramp, tuned from Wensity Atlantic while keeping CiteLadder's
-     existing token names. 300 / 500 / 800 are the Atlantic anchor steps. */
-  --color-indigo-50: #f0f9ff;
-  --color-indigo-100: #e0f2fe;
-  --color-indigo-200: #bae6fd;
-  --color-indigo-300: #7dd3fc;
-  --color-indigo-400: #38bdf8;
-  --color-indigo-500: #0284c7;
-  --color-indigo-600: #0369a1;
-  --color-indigo-700: #075985;
-  --color-indigo-800: #0c4a6e;
-  --color-indigo-900: #082f49;
   --color-cyan-50: #edf7f7;
   --color-cyan-100: #ddf1f2;
   --color-cyan-500: #00a9c5;
@@ -75,7 +63,7 @@
      literal (the policy requires six-digit hex here), so it moves with
      --color-shell below. */
   --color-sidebar: #f2f6fa;
-  --color-surface-inverse: #0c4a6e;
+  --color-surface-inverse: #14532d;
 
   /* Shell ground and stronger neutral surface. Workspace content remains
      white; interaction alone uses the accent ramp. */
@@ -135,28 +123,26 @@
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
 
-  /* Interaction follows the Atlantic blue family. The visual accent can use
-     Atlantic 500 (#0284c7), while text and solid controls step darker so normal
-     text and white-on-blue actions retain AA contrast. */
-  --color-accent: #0284c7;
-  --color-accent-hover: #0369a1;
-  --color-accent-active: #0c4a6e;
+  /* Forest uses the deep shade for white-on-colour controls and text. The
+     brighter brand green appears in the mark, focus, and chart series. */
+  --color-brand-forest: #16a34a;
+  --color-accent: #14532d;
+  --color-accent-hover: #166534;
+  --color-accent-active: #0b3d20;
   --color-accent-fg: #ffffff;
-  --color-accent-subtle: #e0f2fe;
-  --color-accent-soft: #f0f9ff;
-  --color-accent-border: #bae6fd;
+  --color-accent-subtle: #dcfce7;
+  --color-accent-soft: #f0fdf4;
+  --color-accent-border: #86efac;
   --color-recommendation: var(--color-accent-soft);
-  --color-accent-text: #0369a1;
-  --color-focus: var(--color-accent);
-  --color-focus-ring: rgb(2 132 199 / 20%);
-  --color-selection: #bae6fd;
+  --color-accent-text: #14532d;
+  --color-focus: var(--color-brand-forest);
+  --color-focus-ring: rgb(22 163 74 / 20%);
+  --color-selection: #86efac;
   --color-selection-fg: #0f172a;
 
-  /* Atlantic 500 is 4.10:1 against white, so solid actions start one rung
-     deeper rather than sacrificing normal-text contrast. */
-  --color-action: #0369a1;
-  --color-action-hover: #075985;
-  --color-action-active: #0c4a6e;
+  --color-action: #14532d;
+  --color-action-hover: #166534;
+  --color-action-active: #0b3d20;
   --color-action-fg: #ffffff;
 
   /* Answer-engine brand marks (functional identity, marketing engine chips). */
@@ -279,15 +265,15 @@
   --color-score-high-text: #3f6212;
   --color-score-high-ring: #9acd32;
 
-  /* Charts keep categorical identities, with Atlantic as the first product
+  /* Charts keep categorical identities, with forest as the first product
      series. Generic series alias the chart ladder so the two cannot drift. */
-  --color-chart-1: #0284c7;
+  --color-chart-1: #16a34a;
   --color-chart-2: #00a9c5;
   --color-chart-3: #f59e0b;
   --color-chart-4: #ff6e56;
   --color-chart-5: #9acd32;
   --color-chart-6: #8b5cf6;
-  --color-chart-7: #0c4a6e;
+  --color-chart-7: #14532d;
   --color-chart-8: #64748b;
   --color-gsc-clicks: #1a73e8;
   --color-gsc-impressions: #673ab7;
@@ -513,8 +499,6 @@
   --cl-favicon-competitor-ink: #66585e;
   --cl-mini-bar: #9bb2c5;
   --cl-row-hover: #f5f8fa;
-  --cl-drawer-shadow: #17232c24;
-  --cl-backdrop: #17232c66;
   --cl-enterprise: #edf0f2;
   --cl-governance-line: #cdd5d9;
   --cl-closing: #e8edf1;

@@ -1,11 +1,12 @@
-import { useRef, useState } from 'react';
-import { ArrowRight, FileText, Link2, ShieldCheck, X } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, FileText, Link2, ShieldCheck } from 'lucide-react';
+
+import { Drawer } from '@/components/ui/drawer';
 
 export function Evidence() {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [selected, setSelected] = useState<'owned' | 'editorial'>('owned');
+  const [selected, setSelected] = useState<'owned' | 'editorial' | null>(null);
   const source =
-    selected === 'owned'
+    selected !== 'editorial'
       ? {
           name: 'Platform documentation',
           url: 'zernovelle.example/platform',
@@ -20,10 +21,6 @@ export function Evidence() {
           detail:
             'The recorded answer cites an independent comparison discussing criteria for cross-team coordination.',
         };
-  const open = (record: 'owned' | 'editorial') => {
-    setSelected(record);
-    dialog.current?.showModal();
-  };
   return (
     <section className="cl-section cl-evidence" id="evidence">
       <div className="cl-wrap cl-evidence-grid">
@@ -82,7 +79,7 @@ export function Evidence() {
               <span>CITED SOURCES</span>
               <span>2 RECORDS</span>
             </div>
-            <button type="button" onClick={() => open('owned')}>
+            <button type="button" onClick={() => setSelected('owned')}>
               <span className="cl-favicon">Z</span>
               <span>
                 <b>Platform documentation</b>
@@ -91,7 +88,7 @@ export function Evidence() {
               <span>Owned</span>
               <ArrowRight size={16} aria-hidden />
             </button>
-            <button type="button" onClick={() => open('editorial')}>
+            <button type="button" onClick={() => setSelected('editorial')}>
               <span className="cl-favicon">F</span>
               <span>
                 <b>Workflow platform comparison</b>
@@ -103,17 +100,15 @@ export function Evidence() {
           </div>
         </div>
       </div>
-      <dialog ref={dialog} className="cl-drawer" aria-labelledby="cl-record-title">
-        <div className="cl-drawer-head">
-          <h2 id="cl-record-title">Source record</h2>
-          <button
-            type="button"
-            aria-label="Close source record"
-            onClick={() => dialog.current?.close()}
-          >
-            <X size={20} />
-          </button>
-        </div>
+      <Drawer
+        open={selected !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
+        title="Source record"
+        closeLabel="Close source record"
+        className="[&_header_button]:size-11"
+      >
         <div className="cl-drawer-body">
           <span className="cl-overline">SOURCE RECORD</span>
           <h3>{source.name}</h3>
@@ -131,7 +126,7 @@ export function Evidence() {
             <dd>Source cited in the answer</dd>
           </dl>
         </div>
-      </dialog>
+      </Drawer>
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from 'react';
-import { ArrowUpRight, Check, ChevronDown, Grid2X2, Search } from 'lucide-react';
+import { ArrowUpRight, Check, Grid2X2, Search } from 'lucide-react';
 
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { MODULES, SOURCE_ROWS, type ModuleId } from './landing-data';
@@ -119,7 +119,11 @@ function SourcesPreview() {
       <div className="cl-preview-heading">
         <div>
           <h4>Citation sources</h4>
-          <p>Domain usage across completed answers</p>
+          <p>
+            {view === 'urls'
+              ? 'URL usage across completed answers'
+              : 'Domain usage across completed answers'}
+          </p>
         </div>
         <div className="cl-segment" aria-label="Source view">
           <button
@@ -143,16 +147,7 @@ function SourcesPreview() {
 function VisibilityPreview() {
   return (
     <div className="cl-preview-content">
-      <div className="cl-preview-heading">
-        <div>
-          <h4>AI visibility</h4>
-          <p>Tracked prompts across configured engines</p>
-        </div>
-        <span className="cl-pill">
-          Last 30 days <ChevronDown size={13} aria-hidden />
-        </span>
-      </div>
-      <div className="cl-metric-grid">
+      <div className="cl-metric-grid cl-visibility-metrics">
         <div>
           <small>Brand visibility</small>
           <strong>64.4%</strong>
@@ -174,6 +169,9 @@ function VisibilityPreview() {
         <svg viewBox="0 0 560 150" preserveAspectRatio="none" aria-hidden>
           <path d="M0 117 C60 98 76 112 130 80 S222 92 270 67 S358 78 403 42 S489 59 560 17" />
         </svg>
+        <p className="sr-only">
+          Brand visibility trends upward over the last 30 days, ending 8.2 percentage points higher.
+        </p>
       </div>
       <div className="cl-preview-foot">
         Zernovelle <span>vs Brelovanta and Flevorynth</span>
@@ -421,6 +419,11 @@ export function PlatformExplorer({
 export function HeroPreview() {
   const [selected, setSelected] = useState<'overview' | 'sources'>('overview');
   const ids = ['cl-hero-tab-overview', 'cl-hero-tab-sources'];
+  const tabs = [
+    { id: ids[0], label: 'Overview', value: 'overview' },
+    { id: ids[1], label: 'Sources', value: 'sources' },
+  ] as const;
+  const selectTab = (id: string) => setSelected(id === ids[0] ? 'overview' : 'sources');
   return (
     <div className="cl-hero-preview">
       <div className="cl-preview-browser">
@@ -454,38 +457,21 @@ export function HeroPreview() {
             </span>
           </div>
           <div className="cl-hero-preview-tabs" role="tablist" aria-label="Preview view">
-            <button
-              type="button"
-              id={ids[0]}
-              role="tab"
-              aria-controls="cl-hero-panel"
-              aria-selected={selected === 'overview'}
-              tabIndex={selected === 'overview' ? 0 : -1}
-              onClick={() => setSelected('overview')}
-              onKeyDown={(event) =>
-                onTabKeyDown(event, ids, (id) =>
-                  setSelected(id === ids[0] ? 'overview' : 'sources'),
-                )
-              }
-            >
-              Overview
-            </button>
-            <button
-              type="button"
-              id={ids[1]}
-              role="tab"
-              aria-controls="cl-hero-panel"
-              aria-selected={selected === 'sources'}
-              tabIndex={selected === 'sources' ? 0 : -1}
-              onClick={() => setSelected('sources')}
-              onKeyDown={(event) =>
-                onTabKeyDown(event, ids, (id) =>
-                  setSelected(id === ids[0] ? 'overview' : 'sources'),
-                )
-              }
-            >
-              Sources
-            </button>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                id={tab.id}
+                role="tab"
+                aria-controls="cl-hero-panel"
+                aria-selected={selected === tab.value}
+                tabIndex={selected === tab.value ? 0 : -1}
+                onClick={() => setSelected(tab.value)}
+                onKeyDown={(event) => onTabKeyDown(event, ids, selectTab)}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
           <div
             id="cl-hero-panel"

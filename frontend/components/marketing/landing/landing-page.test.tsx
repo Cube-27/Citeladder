@@ -28,6 +28,7 @@ describe('LandingPage', () => {
     const sourceView = within(panel).getByLabelText('Source view');
     await user.click(within(sourceView).getByRole('button', { name: 'URLs' }));
     expect(within(panel).getByRole('columnheader', { name: 'URL' })).toBeVisible();
+    expect(within(panel).getByText('URL usage across completed answers')).toBeVisible();
     expect(within(panel).getByText('zernovelle.example/platform')).toBeVisible();
     await user.click(within(sourceView).getByRole('button', { name: 'Domains' }));
     expect(within(panel).getByRole('columnheader', { name: 'Domain' })).toBeVisible();
@@ -41,5 +42,24 @@ describe('LandingPage', () => {
       'aria-selected',
       'true',
     );
+    expect(
+      within(screen.getByRole('tabpanel', { name: 'Overview' })).getByText(
+        /Brand visibility trends upward/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('opens source evidence in a dismissible drawer and restores focus', async () => {
+    const user = userEvent.setup();
+    render(<LandingPage />);
+
+    const sourceButton = screen.getByRole('button', { name: /Platform documentation/ });
+    await user.click(sourceButton);
+    const drawer = screen.getByRole('dialog', { name: 'Source record' });
+    expect(within(drawer).getByText('zernovelle.example/platform')).toBeVisible();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Source record' })).not.toBeInTheDocument();
+    expect(sourceButton).toHaveFocus();
   });
 });
