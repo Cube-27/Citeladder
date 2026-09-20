@@ -27,7 +27,7 @@ export function setAccentTheme(value: AccentTheme) {
     document.documentElement.dataset.accent = value;
   }
   try {
-    localStorage.setItem(STORAGE_KEY, value);
+    window.localStorage.setItem(STORAGE_KEY, value);
   } catch {
     // The current document can still use the selected palette.
   }
@@ -36,7 +36,11 @@ export function setAccentTheme(value: AccentTheme) {
 
 export function subscribeAccentTheme(callback: () => void) {
   const onStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY) return;
+    if (
+      event.storageArea !== window.localStorage ||
+      (event.key !== STORAGE_KEY && event.key !== null)
+    )
+      return;
     if (isAccentTheme(event.newValue) && event.newValue !== 'emerald') {
       document.documentElement.dataset.accent = event.newValue;
     } else {

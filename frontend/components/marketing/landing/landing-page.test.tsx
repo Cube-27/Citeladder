@@ -48,6 +48,14 @@ describe('LandingPage', () => {
     );
     expect(within(comparison).getByRole('cell', { name: 'Brelovanta' })).toBeVisible();
     expect(within(comparison).getByRole('cell', { name: '58.2%' })).toBeVisible();
+    expect(
+      screen.getByText(/Zernovelle up 12\.4 percentage points from 52\.0% to 64\.4%/),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Source mix preview' })).getByText(
+        '30% of citations',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('opens source evidence in a dismissible drawer and restores focus', async () => {

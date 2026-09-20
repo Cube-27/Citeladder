@@ -1,4 +1,4 @@
-import { HERO_COMPETITORS, SOURCE_ROWS } from './landing-data';
+import { HERO_COMPETITORS, HERO_SOURCE_MIX, SOURCE_ROWS } from './landing-data';
 
 const chartY = (value: number) => 5 + (75 - value) * 3;
 const chartPoints = (history: readonly number[]) =>
@@ -47,8 +47,12 @@ export function HeroDashboardPreview() {
             ))}
           </svg>
           <span className="sr-only">
-            Example visibility trends for Zernovelle, Brelovanta, and Flevorynth over the last 30
-            days.
+            Example visibility trends over the last 30 days:{' '}
+            {HERO_COMPETITORS.map((row) => {
+              const change = row.visibility - row.history[0];
+              const direction = change > 0 ? 'up' : change < 0 ? 'down' : 'unchanged';
+              return `${row.name} ${direction} ${Math.abs(change).toFixed(1)} percentage points from ${row.history[0].toFixed(1)}% to ${row.visibility.toFixed(1)}%.`;
+            }).join(' ')}
           </span>
         </div>
         <div className="cl-hero-chart-axis">
@@ -122,19 +126,17 @@ export function HeroDashboardPreview() {
           <h3>Source mix</h3>
           <span>130 citations</span>
         </div>
-        <div className="cl-source-track">
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
+        <div className="cl-source-track" aria-hidden="true">
+          {HERO_SOURCE_MIX.map((source) => (
+            <i key={source.name} style={{ width: `${source.percent}%` }} />
+          ))}
         </div>
         <div className="cl-source-legend">
-          <span>Owned</span>
-          <span>Review</span>
-          <span>Editorial</span>
-          <span>Community</span>
-          <span>Competitor</span>
+          {HERO_SOURCE_MIX.map((source) => (
+            <span key={source.name}>
+              {source.name} <span className="sr-only">{source.percent}% of citations</span>
+            </span>
+          ))}
         </div>
       </section>
     </div>

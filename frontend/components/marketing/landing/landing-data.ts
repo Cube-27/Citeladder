@@ -44,6 +44,14 @@ export const HERO_COMPETITORS = [
   { name: 'Flevorynth', visibility: 41.8, position: 4.2, history: [36, 38, 39, 40, 42, 41, 41.8] },
 ] as const;
 
+export const HERO_SOURCE_MIX = [
+  { name: 'Owned', percent: 30 },
+  { name: 'Review', percent: 25 },
+  { name: 'Editorial', percent: 23 },
+  { name: 'Community', percent: 14 },
+  { name: 'Competitor', percent: 8 },
+] as const;
+
 export const CAPABILITIES = [
   {
     number: '01',
