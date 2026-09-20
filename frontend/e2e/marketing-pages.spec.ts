@@ -27,7 +27,7 @@ test.describe('marketing routes', () => {
   test('four monitored surfaces stay visible with reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
-    const roster = page.getByLabel('ChatGPT, Gemini, Claude and Google AI Overviews');
+    const roster = page.getByRole('region', { name: 'Monitored answer engines' });
     for (const name of ['ChatGPT', 'Gemini', 'Claude', 'Google AI Overviews']) {
       await expect(roster.getByText(name, { exact: true })).toBeVisible();
     }
