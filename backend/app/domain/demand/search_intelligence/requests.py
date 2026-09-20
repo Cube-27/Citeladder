@@ -3,22 +3,24 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlunsplit
 
 from app.core.config.search_intelligence import ENDPOINTS
 from app.domain.demand.search_intelligence.targets import CanonicalTarget
 
 
 def backlink_filters(target: CanonicalTarget) -> list[Any]:
+    # These are backlink destination values, not URLs used for network calls.
+    # Saved evidence can point to either scheme on the canonical host.
+    url_filters: list[Any] = []
+    for operator, suffix in (("like", "/%"), ("=", "")):
+        for scheme in ("https", "http"):
+            origin = urlunsplit((scheme, target.hostname, "", "", ""))
+            if url_filters:
+                url_filters.append("or")
+            url_filters.append(["url_to", operator, f"{origin}{suffix}"])
     return [
-        [
-            ["url_to", "like", f"https://{target.hostname}/%"],
-            "or",
-            ["url_to", "like", f"http://{target.hostname}/%"],
-            "or",
-            ["url_to", "=", f"https://{target.hostname}"],
-            "or",
-            ["url_to", "=", f"http://{target.hostname}"],
-        ],
+        url_filters,
         "and",
         ["domain_from", "<>", target.registrable_domain],
         "and",
