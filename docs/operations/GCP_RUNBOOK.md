@@ -299,13 +299,14 @@ sessions. It verifies that the local
 checkout is `main` synchronized with `origin/main`, verifies its backend image
 inputs have no local changes, resolves that commit's immutable backend image
 from Artifact Registry, and builds and pushes the image when it does not exist
-yet. It requires an already deployed Astro/Vite runtime with immutable
-marketing and Vite application images; if either the `VITE_APP_IMAGE` setting
-or `vite-app` Compose service is absent, it stops before changing the database.
+yet. It reuses the installed Compose layout and immutable frontend images. A
+legacy layout without `vite-app` can be reset after a deploy was blocked by
+schema drift; the script reports that the current frontend still needs to be
+installed. A layout with `vite-app` must have its immutable `VITE_APP_IMAGE`.
 The VM then rebuilds the database with that image's migration baseline, starts
 the application with the candidate backend and currently installed frontend
-images, and verifies both the marketing (`:3000`) and Vite application (`:3001`)
-health endpoints. It does not create a backup. It refuses a mismatched project
+images, and verifies the health endpoints for the installed frontend services.
+It does not create a backup. It refuses a mismatched project
 or single-account demo mode, and the existing configured credentials provision
 the new dev account. Run the normal **GCP Demo - Deploy** workflow immediately
 afterward to install the frontend images that match the reset backend and
