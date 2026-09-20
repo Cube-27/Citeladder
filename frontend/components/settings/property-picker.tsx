@@ -16,6 +16,7 @@ import {
   type IntegrationProperty,
 } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
+import { humanizeApiError } from '@/lib/api/errors';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
@@ -26,11 +27,6 @@ const PROVIDER_NOUN: Record<IntegrationConnection['provider'], string> = {
   ga4: 'Analytics property',
   bing: 'Bing site',
 };
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  return 'Something went wrong. Please try again.';
-}
 
 /**
  * One selectable row in the picker list.
@@ -223,7 +219,7 @@ export function PropertyPicker({
           {propertiesQuery.isError ? (
             <Alert tone="danger">
               Could not load your properties from the provider.{' '}
-              {errorMessage(propertiesQuery.error)}
+              {humanizeApiError(propertiesQuery.error).message}
             </Alert>
           ) : null}
 
@@ -249,7 +245,7 @@ export function PropertyPicker({
           ))}
 
           {selectMutation.isError ? (
-            <Alert tone="danger">{errorMessage(selectMutation.error)}</Alert>
+            <Alert tone="danger">{humanizeApiError(selectMutation.error).message}</Alert>
           ) : null}
         </div>
       </Dialog>

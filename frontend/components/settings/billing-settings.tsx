@@ -29,6 +29,7 @@ import {
   type SelfServePlanKey,
 } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
+import { humanizeApiError } from '@/lib/api/errors';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { catalogPlanByKey } from '@/lib/billing/catalog';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
@@ -39,7 +40,7 @@ import { PlanRow } from '@/components/billing/plan-row';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 function message(error: unknown) {
-  return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+  return humanizeApiError(error).message;
 }
 
 type BillingCheckout = {
@@ -106,7 +107,7 @@ function useBillingReads({
     placeholderData: keepPreviousData,
   });
   const invoiceQuery = useQuery({
-    queryKey: [...queryKeys.billing.all, 'invoices', workspaceId ?? 'unresolved'],
+    queryKey: queryKeys.billing.invoices(workspaceId),
     queryFn: ({ signal }) => billingApi.invoices({ signal, workspaceId }),
     enabled,
     retry: false,

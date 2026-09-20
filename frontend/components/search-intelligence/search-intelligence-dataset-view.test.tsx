@@ -18,6 +18,8 @@ const dataset: SearchIntelligenceDataset = {
   target_domain: 'example.com',
   target_hostname: 'example.com',
   target_origin: 'https://example.com',
+  research_scope: 'exact_host',
+  acquisition: {},
   comparison_origin: '',
   location_code: 2840,
   language_code: 'en',

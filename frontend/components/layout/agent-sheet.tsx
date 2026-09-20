@@ -13,6 +13,7 @@ import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { GROWTH_AGENT_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
+import { OPEN_AGENT_EVENT } from '@/lib/navigation/shell-events';
 
 /**
  * The agent's workspace, loaded when the drawer is first opened.
@@ -29,7 +30,6 @@ const GrowthAgentWorkspace = lazy(() =>
   })),
 );
 
-const OPEN_AGENT_EVENT = 'citeladder:open-agent';
 const DATE_KEYS = new Set(['start', 'end', 'start_date', 'end_date', 'date_from', 'date_to']);
 
 type AgentLaunch = { taskType: AgentTaskType; objective: string };

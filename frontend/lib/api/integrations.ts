@@ -138,7 +138,7 @@ export const integrationsApi = {
     apiClient.delete<void>(`/integrations/mappings/${mappingId}`, options),
   /**
    * Same-origin OAuth start URL (a 302 endpoint). Used with a full-page
-   * navigation (`assignLocation`), NEVER through `apiClient` — the browser
+   * navigation (`hardNavigate`), NEVER through `apiClient` — the browser
    * follows the redirect to the provider consent screen through the
    * same-origin proxy (invariant 12).
    */

@@ -14,6 +14,7 @@ import { MarketSelect } from '@/components/ui/market-select';
 import { projectsApi } from '@/lib/api/projects';
 import { brandDiscoveriesApi } from '@/lib/api/brand-discoveries';
 import { queryKeys } from '@/lib/api/query-keys';
+import { brandDiscoveryKeys } from '@/lib/api/query-keys/brand-discovery';
 import type { Project } from '@/lib/api/types';
 import { onboardingErrorMessage } from '@/lib/onboarding/forms';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
@@ -66,7 +67,7 @@ export function ProjectEditPanel({
 }: Readonly<{ project: Project; open: boolean; onOpenChange: (open: boolean) => void }>) {
   const queryClient = useQueryClient();
   const discoveryCatalog = useQuery({
-    queryKey: ['brand-discovery-catalog', project.workspace_id],
+    queryKey: brandDiscoveryKeys.catalog(project.workspace_id),
     queryFn: ({ signal }) =>
       brandDiscoveriesApi.catalog({ signal, workspaceId: project.workspace_id }),
     enabled: open,

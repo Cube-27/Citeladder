@@ -142,6 +142,12 @@ detail, pagination, and shared schema primitives. Do not import a focused file f
 avoid the facade; move a genuinely shared primitive into the focused schema
 folder and re-export it through the facade.
 
+Demand Intelligence, Search Intelligence, and Growth Agent response schemas
+likewise live under `frontend/lib/api/schemas/` and are re-exported by the
+public facade. API clients validate through `strictValidate`; the contract
+drift map covers their declared response objects. The frontend architecture
+guard rejects response object declarations in API client modules.
+
 ### CSV import mechanics
 
 `components/ui/csv-import.tsx` owns the reusable import trigger and dialog

@@ -14,7 +14,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { BrandProfile, BrandProfileDraft, Project } from '@/lib/api/types';
-import { formErrorMessage } from '@/lib/forms/error-message';
+import { humanizeApiError } from '@/lib/api/errors';
 import { textRole } from '@/components/ui/typography';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
@@ -95,7 +95,7 @@ export function BrandProfilePanel({
       </div>
 
       {saveMutation.error ? (
-        <Alert tone="danger">{formErrorMessage(saveMutation.error)}</Alert>
+        <Alert tone="danger">{humanizeApiError(saveMutation.error).message}</Alert>
       ) : null}
       {notice ? <Alert tone="success">{notice}</Alert> : null}
 

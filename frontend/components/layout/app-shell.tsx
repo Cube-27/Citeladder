@@ -19,6 +19,7 @@ import { UserMenuTrigger } from './user-menu';
 import { resolveTitle } from './page-titles';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
+import { OPEN_AGENT_EVENT, OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
 
 /**
  * AppShell — the authenticated application chrome.
@@ -58,11 +59,11 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
     pendingDrawerLaunch.current = null;
     if (!launch) return;
     if (launch.kind === 'agent') {
-      window.dispatchEvent(new Event('citeladder:open-agent'));
+      window.dispatchEvent(new Event(OPEN_AGENT_EVENT));
       return;
     }
     window.dispatchEvent(
-      new CustomEvent('citeladder:open-command-palette', {
+      new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, {
         detail: { trigger: launch.trigger },
       }),
     );

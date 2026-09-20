@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -154,6 +154,56 @@ class RunResponse(BaseModel):
     created_at: datetime
 
 
+class SearchDatasetResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    id: uuid.UUID
+    run_id: uuid.UUID
+    dataset_kind: str
+    target_domain: str
+    target_hostname: str
+    target_origin: str
+    research_scope: ResearchScope
+    acquisition: dict[str, Any]
+    comparison_origin: str
+    location_code: int | None
+    language_code: str
+    status: str
+    coverage: str
+    requested_rows: int
+    raw_rows_received: int
+    unique_rows_saved: int
+    provider_total: int | None
+    truncated: bool
+    summary: dict[str, Any]
+    collection_started_at: datetime | None
+    collection_ended_at: datetime | None
+    published_at: datetime | None
+    filtered_saved_count: int | None = None
+
+
+class SearchRowResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    id: uuid.UUID
+    dataset_id: uuid.UUID
+    call_id: uuid.UUID | None
+    row_kind: str
+    keyword: str
+    domain: str
+    url: str
+    search_volume: int | None
+    difficulty: int | None
+    intent: str
+    rank_group: int | None
+    owned_rank_group: int | None
+    etv: str | None
+    backlinks: int | None
+    referring_main_domains: int | None
+    dataforseo_rank: int | None
+    auxiliary: dict[str, Any]
+
+
 class ReadinessResponse(BaseModel):
     connected: bool
     connection_id: uuid.UUID | None
@@ -161,12 +211,12 @@ class ReadinessResponse(BaseModel):
     competitors: list[TargetResponse]
     preferences: SearchIntelligencePreferences
     latest_run: RunResponse | None
-    datasets: list[dict]
+    datasets: list[SearchDatasetResponse]
 
 
 class DatasetPageResponse(BaseModel):
-    dataset: dict
-    rows: list[dict]
+    dataset: SearchDatasetResponse
+    rows: list[SearchRowResponse]
     next_cursor: str | None
 
 

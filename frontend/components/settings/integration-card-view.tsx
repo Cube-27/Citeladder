@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardEyebrow, CardHeader } from '@/components/ui/card';
 import { integrationsApi, type IntegrationConnection } from '@/lib/api/integrations';
-import { assignLocation } from '@/lib/navigate';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { textRole } from '@/components/ui/typography';
 
 type GrantStatus = IntegrationConnection['grant_status'];
@@ -118,7 +118,7 @@ function ConnectCard({
         <Button
           variant="secondary"
           onClick={() =>
-            assignLocation(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
+            hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
           }
         >
           Connect {meta.title}
@@ -161,7 +161,7 @@ function ConnectedCard({
             variant={grant.status === 'connected' ? 'secondary' : 'primary'}
             size="sm"
             onClick={() =>
-              assignLocation(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
+              hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
             }
           >
             Reconnect

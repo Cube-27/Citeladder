@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Pressable } from '@/components/ui/pressable';
 import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/errors';
-import { assignLocation } from '@/lib/navigate';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { cn } from '@/lib/utils';
 
 type InputProps = ComponentProps<typeof Input>;
@@ -150,7 +150,7 @@ export function AuthFormShell({
     setOauthNotice(null);
     try {
       const { authorize_url } = await authApi.oauthStart('google');
-      assignLocation(authorize_url);
+      hardNavigate(authorize_url);
     } catch (err) {
       if (err instanceof ApiError && err.status === 503) {
         setOauthNotice('Google sign-in is coming soon — please use email below.');
@@ -158,7 +158,7 @@ export function AuthFormShell({
         setOauthNotice('Unable to start Google sign-in. Please try email below.');
       }
     } finally {
-      // Cleared even on the success path: `assignLocation` may be a no-op in a
+      // Cleared even on the success path: `hardNavigate` may be a no-op in a
       // test, and a permanently disabled button would strand the user.
       setOauthPending(false);
     }

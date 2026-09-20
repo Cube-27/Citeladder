@@ -45,34 +45,24 @@ function useDatasetRows(
   },
 ) {
   const scope = searchIntelligenceKeys.dataset(workspaceId, projectId, datasetId);
-  const scopeKey = JSON.stringify([...scope, params]);
-  const [lastPage, setLastPage] = useState<{
-    scopeKey: string;
-    data: Awaited<ReturnType<typeof searchIntelligenceApi.rows>>;
-  } | null>(null);
   const query = useQuery({
     queryKey: [...scope, params],
-    queryFn: async ({ signal }) => {
-      const data = await searchIntelligenceApi.rows(
-        projectId!,
-        datasetId,
-        { signal, workspaceId },
-        params,
-      );
-      setLastPage({ scopeKey, data });
-      return data;
-    },
+    queryFn: ({ signal }) =>
+      searchIntelligenceApi.rows(projectId!, datasetId, { signal, workspaceId }, params),
     enabled: Boolean(projectId && workspaceId),
+    // A failed interactive sort/filter must settle promptly so the empty
+    // placeholder is replaced by the read error, not held through retries.
     retry: false,
+    placeholderData: (previousPage, previousQuery) => {
+      if (!previousPage || !previousQuery) return undefined;
+      const previousScope = previousQuery.queryKey.slice(0, scope.length);
+      if (JSON.stringify(previousScope) !== JSON.stringify(scope)) return undefined;
+      return { dataset: previousPage.dataset, rows: [], next_cursor: null };
+    },
   });
   const accessFailure =
     query.isError && [401, 403, 404].includes(httpErrorStatus(query.error) ?? 0);
-  const retainedPage = lastPage?.scopeKey === scopeKey ? lastPage.data : undefined;
-  const pendingPage =
-    query.isPending && lastPage
-      ? { dataset: lastPage.data.dataset, rows: [], next_cursor: null }
-      : undefined;
-  const page = accessFailure ? undefined : (query.data ?? retainedPage ?? pendingPage);
+  const page = accessFailure ? undefined : query.data;
   return { query, page };
 }
 

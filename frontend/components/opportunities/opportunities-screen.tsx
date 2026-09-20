@@ -24,7 +24,7 @@ import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { OpportunitySummary } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
-import { saveBlob } from '@/lib/site-health/download';
+import { saveBlob } from '@/lib/download';
 
 function preparationMessage(state: OpportunitySummary['activation_state']): string {
   if (state === 'waiting_for_evidence') {

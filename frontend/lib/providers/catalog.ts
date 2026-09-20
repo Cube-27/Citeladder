@@ -303,25 +303,3 @@ export function mergeRoutePayload(
   }
   return routes;
 }
-
-/** All approved (engine, transport, model) tuples, for the discovery selector. */
-export type DiscoveryModelOption = {
-  logical_engine: LogicalEngine;
-  transport_provider: TransportProvider;
-  transport_model: string;
-  label: string;
-};
-
-/** Flatten the catalog into discovery-model options (plumbing-only, F8). */
-export function discoveryModelOptions(
-  catalog: ProviderCatalog | undefined,
-): DiscoveryModelOption[] {
-  return (catalog?.engines ?? []).flatMap((engine) =>
-    engine.routes.map((route) => ({
-      logical_engine: engine.logical_engine,
-      transport_provider: route.transport_provider,
-      transport_model: route.transport_model,
-      label: `${ENGINE_LABELS[engine.logical_engine]} · ${TRANSPORT_LABELS[route.transport_provider]} · ${route.transport_model}`,
-    })),
-  );
-}

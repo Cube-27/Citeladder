@@ -12,4 +12,6 @@ export const billingKeys = {
   // prefix from a caller that has no workspace in hand.
   entitlement: (workspaceId: string) => ['billing', 'account-entitlement', workspaceId] as const,
   usage: (workspaceId: string) => ['billing', 'account-usage', workspaceId] as const,
+  invoices: (workspaceId: string | null) =>
+    [...billingKeys.all, 'invoices', workspaceId ?? 'unresolved'] as const,
 };

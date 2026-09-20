@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { exportFilename, saveBlob } from './download';
+import { exportFilename } from './download';
+import { saveBlob } from '@/lib/download';
 
 describe('exportFilename', () => {
   it('builds a per-view CSV filename from a short crawl id', () => {

@@ -21,7 +21,7 @@ import {
   useContentGenerations,
 } from '@/lib/content/use-content-generations';
 import { useActiveProject } from '@/lib/project/project-context';
-import { saveBlob } from '@/lib/site-health/download';
+import { saveBlob } from '@/lib/download';
 
 import { ContentDifferentiationPanel } from './content-differentiation-panel';
 import {

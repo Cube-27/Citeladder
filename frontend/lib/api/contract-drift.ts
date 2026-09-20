@@ -12,13 +12,8 @@
  *     zod schema does not declare. The UI keeps working (unknown keys are
  *     stripped), but `schemas.ts` should be updated promptly.
  *
- * The OpenAPI document is obtained DETERMINISTICALLY (no live server needed):
- *   1. `CITELADDER_OPENAPI_JSON` — path to a schema export (CI override);
- *   2. generated offline from the checked-in backend code via the backend
- *      virtualenv (`backend/.venv`) — importing the FastAPI app needs no
- *      server, database, or network;
- *   3. fetched from the live backend at `CITELADDER_BACKEND_ORIGIN`
- *      (default `http://localhost:8000`) as a last resort.
+ * OpenAPI comes from an explicit JSON export, offline backend generation, or
+ * a configured live backend, in that order.
  *
  * Wired into `pnpm test` via `contract-drift.test.ts`; runnable standalone as
  * `pnpm check:contract`. (The guard lives in `lib/api` — not `scripts/` —
@@ -39,9 +34,7 @@ import {
 import * as schemas from './schemas';
 
 /**
- * The lookup behind `declaredKeysFor`: every response schema, all of which now
- * live in `schemas.ts` — the connection-test result moved there with the v8
- * provider contracts, so there is no longer a domain-owned exception.
+ * The lookup behind `declaredKeysFor`: response schemas exported by the facade.
  */
 const CONTRACT_SCHEMAS: Record<string, unknown> = { ...schemas };
 
@@ -107,6 +100,26 @@ export const CONTRACT_SCHEMA_MAP = {
   integrationTestResultSchema: 'IntegrationTestResponse',
   integrationPropertySchema: 'IntegrationPropertyResponse',
   integrationPropertyMappingSchema: 'IntegrationPropertyMappingResponse',
+  // Demand Intelligence
+  demandSignalSchema: 'DemandSignalView',
+  demandSnapshotSchema: 'DemandSnapshotView',
+  demandRecomputeResponseSchema: 'DemandRecomputeResponse',
+  // Search Intelligence
+  searchTargetSchema: 'TargetResponse',
+  searchPreferencesSchema: 'SearchIntelligencePreferences',
+  searchRunSchema: 'RunResponse',
+  searchDatasetSchema: 'SearchDatasetResponse',
+  searchReadinessSchema: 'ReadinessResponse',
+  searchRowSchema: 'SearchRowResponse',
+  searchDatasetPageSchema: 'DatasetPageResponse',
+  searchContentHandoffSchema: 'ContentHandoffResponse',
+  // Growth Agent
+  agentArtifactReferenceSchema: 'AgentArtifactReference',
+  agentRoadmapItemSchema: 'AgentRoadmapItem',
+  agentEvidenceSourceSchema: 'AgentEvidenceSource',
+  agentResultSchema: 'AgentTaskResult',
+  agentTaskRunSummarySchema: 'AgentTaskRunSummary',
+  agentTaskRunSchema: 'AgentTaskRunDetail',
   // Billing (v8 commercial surface)
   billingCatalogSchema: 'BillingCatalogResponse',
   billingEntitlementSchema: 'BillingEntitlementResponse',

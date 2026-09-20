@@ -8,7 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GRANT_FAMILY, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
-import { IntegrationCard } from '@/components/settings/integration-card';
+import { IntegrationCardView } from '@/components/settings/integration-card-view';
 import { IntegrationsEmptyState } from '@/components/settings/integrations-empty-state';
 import { integrationsApi, type IntegrationConnection } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -178,7 +178,7 @@ export function IntegrationSettings() {
       {!connectionsQuery.isLoading && !connectionsQuery.isError && connections.length > 0 ? (
         <div className="grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr))] gap-4">
           {FAMILY_ORDER.map((family) => (
-            <IntegrationCard
+            <IntegrationCardView
               workspaceId={workspaceId}
               key={family}
               family={family}

@@ -17,3 +17,6 @@ export * from './schemas/opportunities';
 export * from './schemas/billing';
 export * from './schemas/audit-events';
 export * from './schemas/validation';
+export * from './schemas/demand';
+export * from './schemas/search-intelligence';
+export * from './schemas/agent';

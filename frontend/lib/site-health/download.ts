@@ -14,6 +14,7 @@
  */
 import { apiClient, type ApiRequestOptions } from '@/lib/api/client';
 import { siteHealthApi } from '@/lib/api/site-health';
+import { saveBlob } from '@/lib/download';
 
 /**
  * A Site Health export view. `architecture` is the observed-architecture tree,
@@ -50,29 +51,4 @@ export async function downloadCrawlExport(
   const path = absolutePath.replace(/^\/api\/v1/, '');
   const blob = await apiClient.getBlob(path, options);
   saveBlob(blob, exportFilename(crawlId, format, view));
-}
-
-/**
- * Persist a blob to the user's downloads via a temporary object URL. SSR-safe:
- * a no-op when there is no `document`. The object URL is always revoked so it
- * does not leak (memory + a live blob reference).
- */
-export function saveBlob(blob: Blob, filename: string): void {
-  if (typeof document === 'undefined' || typeof URL.createObjectURL !== 'function') {
-    return;
-  }
-  // The matching revoke is guaranteed by the finally block below.
-  // react-doctor-disable-next-line
-  const objectUrl = URL.createObjectURL(blob);
-  try {
-    const anchor = document.createElement('a');
-    anchor.href = objectUrl;
-    anchor.download = filename;
-    anchor.rel = 'noopener';
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
 }

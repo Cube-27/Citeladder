@@ -18,6 +18,7 @@ import {
   type IntegrationProvider,
 } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
+import { humanizeApiError } from '@/lib/api/errors';
 import { formatShortDate, formatUtcTimestamp } from '@/lib/format';
 import { isActiveSyncRun, SYNC_RUN_BADGE, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
 import { textRole } from '@/components/ui/typography';
@@ -36,12 +37,6 @@ const PROVIDER_META: Record<IntegrationProvider, { label: string; Icon: LucideIc
   ga4: { label: 'Google Analytics 4', Icon: BarChart3 },
   bing: { label: 'Bing Webmaster Tools', Icon: Globe },
 };
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error && error.message
-    ? error.message
-    : 'Something went wrong. Please try again.';
-}
 
 /** Revoking is only offered when there is a grant left to revoke. */
 function disconnectLabel(pending: boolean, hadConnection: boolean): string {
@@ -242,7 +237,7 @@ function DisconnectDialog({
           </>
         )}
         {deleteMutation.isError ? (
-          <Alert tone="danger">{errorMessage(deleteMutation.error)}</Alert>
+          <Alert tone="danger">{humanizeApiError(deleteMutation.error).message}</Alert>
         ) : null}
       </div>
     </Dialog>
@@ -305,7 +300,7 @@ function ConnectionRowView({
       ) : null}
       {syncMutation.isError ? (
         <div className="pt-2.5">
-          <Alert tone="danger">{errorMessage(syncMutation.error)}</Alert>
+          <Alert tone="danger">{humanizeApiError(syncMutation.error).message}</Alert>
         </div>
       ) : null}
       <DisconnectDialog
@@ -343,7 +338,7 @@ export function ConnectionRow({
             },
       );
     },
-    onError: (error) => setTestState({ ok: false, message: errorMessage(error) }),
+    onError: (error) => setTestState({ ok: false, message: humanizeApiError(error).message }),
   });
   // The terminal sync poll invalidates integrations; enqueueing alone persists no projection.
   // react-doctor-disable-next-line

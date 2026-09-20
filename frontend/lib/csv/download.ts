@@ -9,6 +9,7 @@
  * order it is on screen. An export that quietly widened to the unfiltered set
  * would be a different answer to the one the reader asked for.
  */
+import { saveBlob } from '@/lib/download';
 
 /**
  * RFC 4180 quoting: double the quotes, wrap anything that could be misread.
@@ -53,16 +54,8 @@ export function downloadCsv(
   headers: readonly string[],
   rows: readonly (readonly (string | number | null | undefined)[])[],
 ): void {
-  if (typeof document === 'undefined') return;
   const blob = new Blob([`﻿${toCsv(headers, rows)}`], {
     type: 'text/csv;charset=utf-8',
   });
-  const href = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = href;
-  anchor.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(href);
+  saveBlob(blob, filename.endsWith('.csv') ? filename : `${filename}.csv`);
 }

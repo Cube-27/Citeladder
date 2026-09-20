@@ -17,6 +17,7 @@ import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { PageShell } from '@/components/layout/page-shell';
 import { projectsApi } from '@/lib/api/projects';
+import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useSessionUser } from '@/lib/auth/session-guard';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
@@ -27,11 +28,6 @@ import { useSelectProject, workspaceDestination } from '@/lib/navigation/project
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  return 'Something went wrong. Please try again.';
-}
 
 /** Human-readable label for a timestamp (falls back to the raw value).
  * Explicit locale + UTC keep server and client output identical, so the
@@ -164,7 +160,7 @@ function ProjectDeletionControls() {
               generated content. This cannot be undone.
             </Alert>
             {deleteMutation.isError ? (
-              <Alert tone="danger">{errorMessage(deleteMutation.error)}</Alert>
+              <Alert tone="danger">{humanizeApiError(deleteMutation.error).message}</Alert>
             ) : null}
           </>
         ) : (

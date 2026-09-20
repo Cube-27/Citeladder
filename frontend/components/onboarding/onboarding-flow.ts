@@ -13,6 +13,7 @@ import {
 } from '@/lib/api/brand-discoveries';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
+import { brandDiscoveryKeys } from '@/lib/api/query-keys/brand-discovery';
 import type { Project } from '@/lib/api/types';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import {
@@ -133,7 +134,7 @@ export function useOnboardingFlow(transactionKey: string) {
     activeWorkspaceId,
   );
   const catalog = useQuery({
-    queryKey: ['brand-discovery-catalog', activeWorkspaceId],
+    queryKey: brandDiscoveryKeys.catalog(activeWorkspaceId),
     queryFn: ({ signal }) =>
       brandDiscoveriesApi.catalog({ signal, workspaceId: activeWorkspaceId }),
     staleTime: Number.POSITIVE_INFINITY,
@@ -267,7 +268,7 @@ export function useOnboardingFlow(transactionKey: string) {
     onSuccess: async (result) => {
       if (result.status === 'failed') return;
       if (result.project_id) await openProject(result.project_id);
-      else await queryClient.invalidateQueries({ queryKey: ['brand-discovery'] });
+      else await queryClient.invalidateQueries({ queryKey: brandDiscoveryKeys.all });
     },
   });
 

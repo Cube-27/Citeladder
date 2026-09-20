@@ -12,7 +12,7 @@ import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
-import { saveBlob } from '@/lib/site-health/download';
+import { saveBlob } from '@/lib/download';
 import {
   auditBadgeValue,
   auditStatusLabel,
