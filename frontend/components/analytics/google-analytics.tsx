@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 import { hasAnalyticsConsent, subscribeToConsent } from '@/lib/consent/cookie-consent';
 
@@ -13,50 +13,63 @@ type GtagWindow = Window & {
   gtag?: (...args: unknown[]) => void;
 };
 
+const SCRIPT_ID = 'citeladder-google-analytics';
+
+function configureLoadedTag(script: HTMLScriptElement, measurementId: string) {
+  if (script.dataset.loaded !== 'true' || script.dataset.configured || !hasAnalyticsConsent())
+    return;
+  const gtag = (window as GtagWindow).gtag;
+  gtag?.('consent', 'update', { analytics_storage: 'granted' });
+  gtag?.('config', measurementId);
+  script.dataset.configured = 'true';
+}
+
 /** Load the optional Google tag only after an explicit analytics opt-in. */
 export function GoogleAnalytics({ measurementId }: Readonly<{ measurementId: string }>) {
   const allowed = useSyncExternalStore(subscribeToConsent, hasAnalyticsConsent, () => false);
-  const wasAllowed = useRef(false);
 
-  /**
-   * Unmounting the two script tags is not a revocation. By the time consent is
-   * withdrawn `gtag.js` has already executed, and it keeps its own timers and
-   * `dataLayer` queue that no longer belong to React — removing the elements
-   * leaves it collecting. Consent Mode is the only channel the tag itself
-   * listens on, so tell it, then drop the elements.
-   */
   useEffect(() => {
-    if (allowed) {
-      wasAllowed.current = true;
+    const withGtag = window as GtagWindow;
+    const existing = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
+    if (!allowed) {
+      if (!existing) return;
+      // A pending tag must never replay an old granted default on load.
+      if (existing.dataset.loaded !== 'true') {
+        for (const entry of withGtag.dataLayer ?? []) {
+          if (Array.isArray(entry) && entry[0] === 'consent' && entry[1] === 'default') {
+            entry[2] = { analytics_storage: 'denied' };
+          }
+        }
+      }
+      withGtag.gtag?.('consent', 'update', { analytics_storage: 'denied' });
       return;
     }
-    if (!wasAllowed.current) return;
-    wasAllowed.current = false;
-    const withGtag = window as GtagWindow;
-    withGtag.gtag?.('consent', 'update', { analytics_storage: 'denied' });
-  }, [allowed]);
+    if (existing) {
+      withGtag.gtag?.('consent', 'update', { analytics_storage: 'granted' });
+      configureLoadedTag(existing, measurementId);
+      return;
+    }
+    withGtag.dataLayer = withGtag.dataLayer || [];
+    withGtag.gtag = (...args: unknown[]) => withGtag.dataLayer?.push(args);
+    withGtag.gtag('consent', 'default', {
+      analytics_storage: hasAnalyticsConsent() ? 'granted' : 'denied',
+    });
+    withGtag.gtag('js', new Date());
+    const script = document.createElement('script');
+    script.id = SCRIPT_ID;
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
+    script.dataset.testid = 'external-script';
+    script.addEventListener(
+      'load',
+      () => {
+        script.dataset.loaded = 'true';
+        configureLoadedTag(script, measurementId);
+      },
+      { once: true },
+    );
+    document.head.appendChild(script);
+  }, [allowed, measurementId]);
 
-  if (!allowed) return null;
-
-  return (
-    <>
-      <script
-        async
-        data-testid="external-script"
-        src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
-      />
-      <script
-        data-testid="google-analytics"
-        dangerouslySetInnerHTML={{
-          __html: `
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            window.gtag = gtag;
-            gtag('js', new Date());
-            gtag('config', '${measurementId}');
-          `,
-        }}
-      />
-    </>
-  );
+  return null;
 }

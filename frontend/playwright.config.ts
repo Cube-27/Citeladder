@@ -43,7 +43,7 @@ export default defineConfig({
       command: `pnpm exec astro dev --root apps/marketing --host 127.0.0.1 --port ${marketingPort}`,
       // Playwright owns the process lifecycle. Prevent Astro's agent detection
       // from spawning a detached background server outside that lifecycle.
-      env: { ASTRO_DEV_BACKGROUND: '1' },
+      env: { ASTRO_DEV_BACKGROUND: '1', NEXT_PUBLIC_GA_MEASUREMENT_ID: 'G-CONSENTTEST' },
       url: `http://127.0.0.1:${marketingPort}`,
       reuseExistingServer: !process.env.CI,
     },

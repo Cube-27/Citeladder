@@ -78,12 +78,14 @@ type LegalSection = {
   paragraphs?: readonly string[];
   bullets?: readonly string[];
   note?: string;
+  storage?: readonly { name: string; purpose: string; duration: string; category: string }[];
 };
 
 export type LegalDocument = {
   slug: 'cookies' | 'ai-policy';
   title: string;
   description: string;
+  lastUpdated?: string;
   sections: readonly LegalSection[];
 };
 
@@ -97,52 +99,83 @@ export const COOKIE_POLICY: LegalDocument = {
   slug: 'cookies',
   title: 'Cookie Policy',
   description: 'How CiteLadder uses cookies and similar technologies on the website and platform.',
+  lastUpdated: '2026-09-20',
   sections: [
     {
       id: 'intro',
       title: 'Introduction',
       paragraphs: [
         `This Cookie Policy explains how ${entity()} (“CiteLadder”, “we”, “us”) uses cookies and similar technologies on our websites and Services. It should be read with the Cube27 Privacy Policy at ${PARENT_COMPANY.privacyHref}.`,
-        'Cookies are small text files stored on your device. We also use related technologies such as local storage and pixels where needed for security, preferences, or (where enabled) analytics.',
+        'Cookies are small text files stored on your device. We also use browser storage for your consent choice and product settings. Google Analytics is enabled only after you accept optional analytics.',
       ],
     },
     {
       id: 'types',
       title: 'Types of cookies we use',
       bullets: [
-        'Strictly necessary — authentication session cookies, CSRF/security tokens, and load-balancing cookies required for the Services to function. These do not require consent where the law provides an exemption for essential cookies.',
-        'Preferences — remember UI choices such as pricing credential-mode toggles stored in the browser.',
-        'Analytics and performance — if enabled, help us understand aggregate traffic and product usage. Non-essential analytics cookies are used only with consent where required.',
-        'Marketing — if enabled in future, may measure campaign effectiveness. We will update this Policy and request consent where required before enabling them.',
+        'Strictly necessary — session, sign-in transaction, and consent-choice storage needed to provide the service and honour your choice.',
+        'Preferences — browser storage remembers settings you choose inside the product, such as your active workspace.',
+        'Analytics — when configured, Google Analytics measures website visits only after you accept optional cookies.',
       ],
     },
     {
       id: 'table',
-      title: 'Cookie categories (summary)',
+      title: 'Cookies and related storage',
       paragraphs: [
-        'Exact cookie names may change as we ship product updates. Categories we use or may use:',
+        'The following first-party cookies and browser storage are used by CiteLadder. Google Analytics cookies appear only when analytics is configured and you accept. Browser limits can shorten the stated lifetimes.',
       ],
-      bullets: [
-        'Session / auth — keeps you signed in to the workspace (essential).',
-        'Security — protects forms and API calls (essential).',
-        'Preferences — stores non-sensitive UI choices (functional).',
-        'Analytics — measures site or product usage when enabled (analytics; consent where required).',
+      storage: [
+        {
+          name: 'citeladder_session',
+          purpose: 'Keeps you signed in; contains the protected session token.',
+          duration: 'Up to 24 hours by default (server setting may differ)',
+          category: 'Essential cookie',
+        },
+        {
+          name: 'citeladder_session_hint',
+          purpose: 'Shows signed-in navigation without exposing the session token.',
+          duration: 'Same lifetime as the session cookie',
+          category: 'Essential cookie',
+        },
+        {
+          name: 'citeladder_auth_oauth, citeladder_integration_oauth',
+          purpose: 'Protects a sign-in or integration connection while it completes.',
+          duration: 'Up to 10 minutes; cleared after completion',
+          category: 'Essential cookies',
+        },
+        {
+          name: 'citeladder.cookie-consent',
+          purpose: 'Remembers your accept or reject choice.',
+          duration: 'Until you clear site data',
+          category: 'Essential local storage',
+        },
+        {
+          name: '_ga',
+          purpose: 'Distinguishes visitors for Google Analytics.',
+          duration: 'Up to 2 years by default',
+          category: 'Optional analytics cookie',
+        },
+        {
+          name: '_ga_<measurement-id>',
+          purpose: 'Keeps Google Analytics session state.',
+          duration: 'Up to 2 years by default',
+          category: 'Optional analytics cookie',
+        },
       ],
-      note: 'Owner: replace this summary with a concrete cookie table (name, purpose, duration, category) before launch if analytics or marketing tags are installed.',
     },
     {
       id: 'manage',
       title: 'How to manage cookies',
       paragraphs: [
         'You can control cookies through your browser settings (block, delete, or alert on cookies). Blocking essential cookies may prevent sign-in or break core features.',
-        'On your first visit we ask whether you accept non-essential cookies. Strictly necessary cookies run either way; nothing non-essential is set unless you accept. To change your answer, clear this site’s data in your browser and we will ask again.',
+        'On your first visit we ask whether you accept optional analytics. We do not load Google Analytics or set its cookies before you accept; rejecting leaves it off. Essential cookies and storage can run either way. To change your answer, clear this site’s data in your browser and we will ask again.',
       ],
     },
     {
       id: 'third-parties',
       title: 'Third parties',
       paragraphs: [
-        'Some cookies may be set by processors that help us host, secure, or analyse the Services. Those parties process data under contract. Answer engines you connect via BYOK set their own cookies on their sites, not on CiteLadder.',
+        'Google Analytics processes website usage only after you accept optional analytics. Answer engines you connect via BYOK set their own cookies on their sites, not on CiteLadder.',
       ],
     },
     {

@@ -1,6 +1,6 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { COOKIE_CONSENT_STORAGE_KEY, writeConsent } from '@/lib/consent/cookie-consent';
 
@@ -9,6 +9,13 @@ import { GoogleAnalytics } from './google-analytics';
 
 describe('GoogleAnalytics', () => {
   beforeEach(() => window.localStorage.clear());
+  afterEach(() => {
+    document
+      .querySelectorAll('[data-testid="external-script"]')
+      .forEach((script) => script.remove());
+    Reflect.deleteProperty(window, 'dataLayer');
+    Reflect.deleteProperty(window, 'gtag');
+  });
 
   it('does not render a tag before consent or after rejection', async () => {
     const user = userEvent.setup();
@@ -41,7 +48,19 @@ describe('GoogleAnalytics', () => {
       'src',
       'https://www.googletagmanager.com/gtag/js?id=G-TEST',
     );
-    expect(documentQueries.getByTestId('google-analytics')).toBeInTheDocument();
+    const script = documentQueries.getByTestId('external-script');
+    const dataLayer = (window as Window & { dataLayer?: unknown[] }).dataLayer;
+    expect(dataLayer).toEqual([
+      ['consent', 'default', { analytics_storage: 'granted' }],
+      expect.arrayContaining(['js', expect.any(Date)]),
+    ]);
+    act(() => script.dispatchEvent(new Event('load')));
+    expect(dataLayer).toEqual([
+      ['consent', 'default', { analytics_storage: 'granted' }],
+      expect.arrayContaining(['js', expect.any(Date)]),
+      ['consent', 'update', { analytics_storage: 'granted' }],
+      ['config', 'G-TEST'],
+    ]);
   });
 
   it('keeps the accepted decision for this page when storage is unavailable', async () => {
@@ -70,22 +89,52 @@ describe('GoogleAnalytics', () => {
   });
   it('tells the loaded tag that consent was withdrawn', async () => {
     const gtag = vi.fn();
-    Object.defineProperty(window, 'gtag', { value: gtag, configurable: true, writable: true });
     try {
       writeConsent('accepted');
       render(<GoogleAnalytics measurementId="G-TEST" />);
-      expect(screen.getByTestId('google-analytics')).toBeInTheDocument();
+      const script = within(document.documentElement).getByTestId('external-script');
+      act(() => script.dispatchEvent(new Event('load')));
+      Object.defineProperty(window, 'gtag', { value: gtag, configurable: true, writable: true });
 
-      // Revocation arrives from the Cookie Policy page or another tab. Dropping
-      // the elements cannot stop a tag that has already run, so the component
-      // has to say so on Consent Mode's channel.
+      // A loaded tag continues to run after its script element exists, so
+      // revocation must reach it through Consent Mode.
       await act(async () => writeConsent('rejected'));
 
-      expect(screen.queryByTestId('google-analytics')).not.toBeInTheDocument();
       expect(gtag).toHaveBeenCalledWith('consent', 'update', { analytics_storage: 'denied' });
     } finally {
       Reflect.deleteProperty(window, 'gtag');
       writeConsent('rejected');
     }
+  });
+
+  it('does not configure a pending tag after consent is revoked', async () => {
+    writeConsent('accepted');
+    render(<GoogleAnalytics measurementId="G-TEST" />);
+    const script = within(document.documentElement).getByTestId('external-script');
+
+    await act(async () => writeConsent('rejected'));
+    act(() => script.dispatchEvent(new Event('load')));
+
+    expect((window as Window & { dataLayer?: unknown[] }).dataLayer).toEqual([
+      ['consent', 'default', { analytics_storage: 'denied' }],
+      expect.arrayContaining(['js', expect.any(Date)]),
+      ['consent', 'update', { analytics_storage: 'denied' }],
+    ]);
+  });
+
+  it('reuses the document tag after remount without configuring twice', () => {
+    writeConsent('accepted');
+    const first = render(<GoogleAnalytics measurementId="G-TEST" />);
+    const script = within(document.documentElement).getByTestId('external-script');
+    act(() => script.dispatchEvent(new Event('load')));
+    first.unmount();
+
+    render(<GoogleAnalytics measurementId="G-TEST" />);
+
+    expect(document.querySelectorAll('#citeladder-google-analytics')).toHaveLength(1);
+    const commands = (window as Window & { dataLayer?: unknown[] }).dataLayer ?? [];
+    expect(commands.filter((command) => Array.isArray(command) && command[0] === 'config')).toEqual(
+      [['config', 'G-TEST']],
+    );
   });
 });

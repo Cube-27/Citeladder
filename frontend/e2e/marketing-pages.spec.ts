@@ -1,6 +1,29 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('marketing routes', () => {
+  test('Google Analytics waits for an explicit cookie acceptance', async ({ page }) => {
+    const tagRequests: string[] = [];
+    await page.route('https://www.googletagmanager.com/gtag/js**', async (route) => {
+      tagRequests.push(route.request().url());
+      await route.fulfill({ status: 200, contentType: 'application/javascript', body: '' });
+    });
+
+    await page.goto('/cookies');
+    const consent = page.getByRole('region', { name: 'Cookie consent' });
+    await expect(consent).toBeVisible();
+    expect(tagRequests).toHaveLength(0);
+    await consent.getByRole('button', { name: 'Reject' }).click();
+    await page.reload();
+    await expect(consent).toHaveCount(0);
+    expect(tagRequests).toHaveLength(0);
+
+    await page.evaluate(() => localStorage.removeItem('citeladder.cookie-consent'));
+    await page.reload();
+    await consent.getByRole('button', { name: 'Accept' }).click();
+    await expect.poll(() => tagRequests.length).toBe(1);
+    expect(tagRequests[0]).toContain('id=G-CONSENTTEST');
+  });
+
   test('homepage clocks stop offscreen and reduced motion keeps the engine roster readable', async ({
     page,
   }) => {

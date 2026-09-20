@@ -38,7 +38,7 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
             <h1 className="website-page-title text-foreground mt-3">{document.title}</h1>
             <p className="website-body-lg text-muted mt-3 max-w-[60ch]">{document.description}</p>
             <Meta as="p" className="mt-5">
-              Last updated · {formatUpdated(LEGAL_ENTITY.lastUpdated)}
+              Last updated · {formatUpdated(document.lastUpdated ?? LEGAL_ENTITY.lastUpdated)}
             </Meta>
           </Reveal>
         </div>
@@ -84,6 +84,37 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
                       <li key={`${section.id}-b-${index}`}>{item}</li>
                     ))}
                   </ul>
+                ) : null}
+                {section.storage && section.storage.length > 0 ? (
+                  <div className="mt-5 overflow-x-auto">
+                    <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
+                      <caption className="sr-only">Cookie and browser storage details</caption>
+                      <thead>
+                        <tr className="border-border-strong border-b">
+                          {['Name', 'Purpose', 'Duration', 'Category'].map((heading) => (
+                            <th key={heading} scope="col" className="px-3 py-3 font-semibold">
+                              {heading}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {section.storage.map((item) => (
+                          <tr key={item.name} className="border-border-subtle border-b align-top">
+                            <th
+                              scope="row"
+                              className="px-3 py-3 font-mono text-xs font-medium break-all"
+                            >
+                              {item.name}
+                            </th>
+                            <td className="px-3 py-3">{item.purpose}</td>
+                            <td className="px-3 py-3">{item.duration}</td>
+                            <td className="px-3 py-3">{item.category}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : null}
                 {section.note ? (
                   <p className="website-label border-border-subtle bg-background-alt text-subtle mt-5 rounded-[var(--radius-control)] border px-4 py-3">
