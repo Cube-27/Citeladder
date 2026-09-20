@@ -46,12 +46,16 @@ from app.core.config.audits import (
 )
 from app.core.config.provider_catalog import (
     ENGINE_GEMINI,
+    ENGINE_GOOGLE_AI_OVERVIEW,
     ROUTE_CAPACITY_POLICIES,
+    SEARCH_INTELLIGENCE_CAPACITY_ENGINE,
+    TRANSPORT_DATAFORSEO,
     TRANSPORT_GOOGLE,
     RouteCapacityPolicy,
 )
 from app.core.config.task_queue import TASK_STATUS_CAPACITY_WAIT
 from app.domain.audits.creation import create_audit
+from app.models.analytics import AnalyticsTask
 from app.models.audit import (
     AuditTask,
     ProviderCapacityBucket,
@@ -657,3 +661,93 @@ async def test_release_returns_concurrency_but_tokens_stay_consumed(
             )
         ).all()
         assert all(lease.released_at is not None for lease in leases)
+
+
+@pytest.mark.asyncio
+async def test_dataforseo_account_pool_is_shared_by_audit_and_analytics_owners(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seed = await _seed(session_factory, prompts=1)
+    async with session_factory() as session:
+        audit_task = await session.get(AuditTask, seed.task_ids[0])
+        assert audit_task is not None
+        connections = []
+        for index in range(2):
+            connection = ProviderConnection(
+                workspace_id=audit_task.workspace_id,
+                label=f"DataForSEO {index}",
+                transport_provider=TRANSPORT_DATAFORSEO,
+                api_key_encrypted="test-ciphertext",
+            )
+            session.add(connection)
+            connections.append(connection)
+        analytics = [
+            AnalyticsTask(
+                workspace_id=audit_task.workspace_id,
+                project_id=audit_task.project_id,
+                task_kind="search_intelligence_acquisition",
+                payload={},
+                idempotency_key=f"capacity-search-{uuid.uuid4()}",
+            )
+            for _ in range(2)
+        ]
+        session.add_all(analytics)
+        await session.commit()
+
+    policy = RouteCapacityPolicy(
+        capacity=100.0,
+        refill_tokens_per_second=100.0,
+        max_cooldown_seconds=60.0,
+        max_concurrency=2,
+    )
+    monkeypatch.setitem(
+        ROUTE_CAPACITY_POLICIES,
+        (ENGINE_GOOGLE_AI_OVERVIEW, TRANSPORT_DATAFORSEO),
+        policy,
+    )
+    monkeypatch.setitem(
+        ROUTE_CAPACITY_POLICIES,
+        (SEARCH_INTELLIGENCE_CAPACITY_ENGINE, TRANSPORT_DATAFORSEO),
+        policy,
+    )
+    account_identity = "opaque-shared-account"
+    requests = [
+        CapacityRequest(
+            task_id=audit_task.id,
+            attempt_number=1,
+            logical_engine=ENGINE_GOOGLE_AI_OVERVIEW,
+            transport_provider=TRANSPORT_DATAFORSEO,
+            credential_kind=CREDENTIAL_KIND_BYOK,
+            connection_id=seed.connection_id,
+            account_pool_identity=account_identity,
+        ),
+        *[
+            CapacityRequest(
+                task_id=None,
+                analytics_task_id=task.id,
+                attempt_number=1,
+                logical_engine=SEARCH_INTELLIGENCE_CAPACITY_ENGINE,
+                transport_provider=TRANSPORT_DATAFORSEO,
+                credential_kind=CREDENTIAL_KIND_BYOK,
+                connection_id=connection.id,
+                account_pool_identity=account_identity,
+            )
+            for task, connection in zip(analytics, connections, strict=True)
+        ],
+    ]
+
+    decisions = [
+        await acquire_provider_capacity(session_factory, request=request)
+        for request in requests
+    ]
+    assert [decision.acquired for decision in decisions] == [True, True, False]
+    assert decisions[2].code == CAPACITY_CODE_CONCURRENCY
+
+    for request, decision in zip(requests, decisions, strict=True):
+        if decision.acquired:
+            await release_provider_capacity(
+                session_factory,
+                request=request,
+                outcome=CapacityOutcome(kind=CAPACITY_OUTCOME_SUCCEEDED),
+            )

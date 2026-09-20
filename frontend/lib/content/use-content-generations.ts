@@ -9,6 +9,7 @@ import {
   CONTENT_LIST_POLL_MS,
   contentApi,
   type SiteHealthReferenceInput,
+  type SearchIntelligenceReferenceInput,
 } from '@/lib/api/content';
 import { queryKeys } from '@/lib/api/query-keys';
 import type {
@@ -48,6 +49,7 @@ export type ContentGenerationsOptions = {
   demandSignalId?: string | null;
   target?: { siteUrlId?: string; url?: string };
   siteHealthReference?: SiteHealthReferenceInput;
+  searchIntelligenceReference?: SearchIntelligenceReferenceInput;
 };
 
 /**
@@ -68,6 +70,7 @@ export function useContentGenerations(
     demandSignalId,
     target,
     siteHealthReference,
+    searchIntelligenceReference,
   }: ContentGenerationsOptions = {},
 ) {
   const queryClient = useQueryClient();
@@ -131,6 +134,7 @@ export function useContentGenerations(
           opportunity_id: opportunityId ?? undefined,
           demand_signal_id: demandSignalId ?? undefined,
           site_health_reference: siteHealthReference,
+          search_intelligence_reference: searchIntelligenceReference,
         },
         newIdempotencyKey(),
         { workspaceId },

@@ -16,7 +16,7 @@ behavior is routed through [the documentation index](README.md).
 |---|---|---|
 | Overview and company facts | /projects | [Onboarding](onboarding.md) |
 | Website and issues | /site, /issues | [Site Health](site-health.md) |
-| Search Demand, Performance, AI Referrals | /demand, /performance, /ai-referrals | [Connected data](integrations-traffic-analytics.md) |
+| Search Demand, Search Intelligence, Performance, AI Referrals | /demand, /search-intelligence, /performance, /ai-referrals | [Connected data](integrations-traffic-analytics.md) |
 | Opportunities and Content | /opportunities, /content | [Opportunities](opportunities.md), [Content](content-generation.md) |
 | Prompts, Visibility and runs | /prompts, /visibility, /runs | [Visibility](visibility-prompt.md) |
 | Commerce | /products | [Commerce](commerce-intelligence.md) |

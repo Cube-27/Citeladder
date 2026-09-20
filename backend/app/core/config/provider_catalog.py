@@ -197,6 +197,7 @@ def route_policy(logical_engine: str) -> RoutePolicy:
 # ``blocked_until`` cooldown is written, so an untrusted provider hint can
 # never park a pool longer than this.
 DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS: Final = 60.0
+SEARCH_INTELLIGENCE_CAPACITY_ENGINE: Final = "search_intelligence"
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,6 +212,7 @@ class RouteCapacityPolicy:
     capacity: float | None
     refill_tokens_per_second: float | None
     max_cooldown_seconds: float
+    max_concurrency: int | None = None
 
 
 # Capacity remains transport-scoped because calls share a provider quota
@@ -236,9 +238,16 @@ ROUTE_CAPACITY_POLICIES: Final[dict[tuple[str, str], RouteCapacityPolicy]] = {
     # is a SUBMISSION or a POLL, not a whole execution — the two are separated
     # by the queue, not by this bucket.
     (ENGINE_GOOGLE_AI_OVERVIEW, TRANSPORT_DATAFORSEO): RouteCapacityPolicy(
-        capacity=None,
-        refill_tokens_per_second=None,
+        capacity=1.0,
+        refill_tokens_per_second=1.0,
         max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+        max_concurrency=2,
+    ),
+    (SEARCH_INTELLIGENCE_CAPACITY_ENGINE, TRANSPORT_DATAFORSEO): RouteCapacityPolicy(
+        capacity=1.0,
+        refill_tokens_per_second=1.0,
+        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+        max_concurrency=2,
     ),
 }
 

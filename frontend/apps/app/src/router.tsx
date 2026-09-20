@@ -81,6 +81,11 @@ export const appRoutes: RouteObject[] = [
               default: DemandRoute,
             })),
           ),
+          productRoute('/search-intelligence', () =>
+            import('./product-routes-demand-performance').then(({ SearchIntelligenceRoute }) => ({
+              default: SearchIntelligenceRoute,
+            })),
+          ),
           productRoute('/performance', () =>
             import('./product-routes-demand-performance').then(({ PerformanceRoute }) => ({
               default: PerformanceRoute,

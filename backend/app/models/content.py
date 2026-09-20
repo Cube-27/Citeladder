@@ -97,6 +97,9 @@ class ContentGeneration(Base):
         index=True,
     )
     site_health_reference: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    search_intelligence_reference: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True
+    )
     # --- Frozen inputs (written at enqueue, never mutated) ----------------
     user_instruction: Mapped[str] = mapped_column(Text)
     skill_id: Mapped[str] = mapped_column(String(64), default=CONTENT_DEFAULT_SKILL)

@@ -23,6 +23,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_RETRY_WAIT,
 )
 from app.models.analytics import AnalyticsTask
+from app.orchestration.executor_errors import CapacityWaitError
 from app.workers.analytics_worker import AnalyticsWorker
 from app.workers.terminal_compensation import compensate_analytics_tasks
 from tests.component.opportunity_helpers import _seed_scenario
@@ -123,6 +124,30 @@ async def test_a_successful_task_compensates_nothing(
     assert await _worker(session_factory, fired=fired, fail=False).run_once() == 1
 
     assert fired == []
+
+
+async def test_capacity_wait_preserves_attempt_budget_and_releases_lease(
+    session_factory,
+) -> None:
+    task_id = await _enqueue(session_factory, max_attempts=1)
+    available_at = datetime.now(UTC) + timedelta(seconds=30)
+
+    async def wait_for_capacity(_factory, _task):
+        raise CapacityWaitError(available_at)
+
+    worker = AnalyticsWorker(
+        session_factory=session_factory,
+        owner="capacity-test",
+        executors={_KIND: wait_for_capacity},
+    )
+    assert await worker.run_once() == 1
+    async with session_factory() as session:
+        row = await session.get(AnalyticsTask, task_id)
+        assert row is not None
+        assert row.status == "capacity_wait"
+        assert row.attempt_count == 0
+        assert row.available_at == available_at
+        assert row.lease_owner is None
 
 
 async def test_the_lease_sweeper_runs_the_compensation_no_executor_reached(

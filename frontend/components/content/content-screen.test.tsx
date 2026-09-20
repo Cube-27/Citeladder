@@ -1,4 +1,5 @@
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -135,6 +136,53 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('ContentScreen clean composer', () => {
+  it('retains a handoff intended for another project', async () => {
+    mockBase();
+    const handoff = JSON.stringify({
+      project_id: GENERATION,
+      user_instructions: 'Keep this draft',
+    });
+    sessionStorage.setItem('citeladder:search-intelligence-handoff', handoff);
+    const readStorage = vi.spyOn(Object.getPrototypeOf(sessionStorage), 'getItem');
+    renderScreen();
+    expect(await screen.findByRole('textbox', { name: 'Your instruction' })).toHaveValue('');
+    await waitFor(() =>
+      expect(readStorage).toHaveBeenCalledWith('citeladder:search-intelligence-handoff'),
+    );
+    expect(sessionStorage.getItem('citeladder:search-intelligence-handoff')).toBe(handoff);
+    sessionStorage.removeItem('citeladder:search-intelligence-handoff');
+  });
+
+  it('consumes a Search Intelligence handoff once under Strict Mode without generating', async () => {
+    mockBase();
+    const generate = vi.fn(() => HttpResponse.json(generation(), { status: 202 }));
+    mswServer.use(http.post('/api/v1/content/generations', generate));
+    sessionStorage.setItem(
+      'citeladder:search-intelligence-handoff',
+      JSON.stringify({
+        project_id: PROJECT,
+        dataset_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        row_ids: ['bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'],
+        evidence: [
+          { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', keyword: 'analytics', search_volume: 0 },
+        ],
+      }),
+    );
+
+    renderWithProviders(
+      <StrictMode>
+        <ProjectProvider>
+          <ContentScreen />
+        </ProjectProvider>
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(screen.getByText('analytics · Volume 0')).toBeInTheDocument());
+    expect(screen.getByRole('textbox', { name: 'Your instruction' })).toHaveValue('');
+    expect(sessionStorage.getItem('citeladder:search-intelligence-handoff')).toBeNull();
+    expect(generate).not.toHaveBeenCalled();
+  });
+
   it('shows persisted differentiation gaps and inspected denominators', async () => {
     mockBase();
     mswServer.use(

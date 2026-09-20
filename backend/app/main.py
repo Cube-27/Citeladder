@@ -33,6 +33,7 @@ from app.api.provider_connections import (
     catalog_router as provider_catalog_router,
 )
 from app.api.provider_connections import router as provider_connections_router
+from app.api.search_intelligence import router as search_intelligence_router
 from app.api.site_health import router as site_health_router
 from app.api.visibility_sources import router as visibility_sources_router
 from app.api.visibility_surfaces import router as visibility_surfaces_router
@@ -97,6 +98,7 @@ _ROUTERS = (
     site_health_router,
     content_router,
     demand_router,
+    search_intelligence_router,
     integrations_router,
     ai_referrals_router,
     performance_router,

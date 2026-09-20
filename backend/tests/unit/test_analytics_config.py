@@ -21,10 +21,6 @@ from app.core.config.analytics import (
     ANALYTICS_MAX_WINDOW_DAYS,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_TTL_S,
-    ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION,
-    ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY,
-    ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
-    ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
     ANALYTICS_TASK_KINDS,
     CONFIDENCE_BUCKETS,
     MATCH_SIGNALS,
@@ -106,37 +102,9 @@ def test_traffic_refresh_trigger_datasets() -> None:
     assert TRAFFIC_REFRESH_TRIGGER_DATASETS <= set(INTEGRATION_DATASET_TEMPLATES)
 
 
-def test_analytics_task_kinds_include_commerce_replacement_tasks() -> None:
-    assert ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION == (
-        "commerce_catalog_projection"
-    )
-    assert ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY == (
-        "commerce_competitor_discovery"
-    )
-    assert ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH == "opportunity_refresh"
-    assert ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION == "opportunity_verification"
-    assert ANALYTICS_TASK_KINDS == frozenset(
-        {
-            "ingest_referrals",
-            "classify_referrals",
-            "traffic_snapshot_refresh",
-            "ai_referrals_snapshot_refresh",
-            "referral_retention_sweep",
-            "performance_range_projection",
-            "commerce_catalog_projection",
-            "commerce_competitor_discovery",
-            "opportunity_refresh",
-            "opportunity_verification",
-            "source_page_inspection",
-            "demand_snapshot_refresh",
-        }
-    )
-    # The worker must actually register an executor for each replacement kind:
-    # a kind in the config with no executor is queued and never drained.
-    assert {
-        ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION,
-        ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY,
-    } <= set(EXECUTORS)
+def test_analytics_task_kinds_have_registered_executors() -> None:
+    # Every configured kind must be drainable, including newly added kinds.
+    assert ANALYTICS_TASK_KINDS == set(EXECUTORS)
 
 
 def test_traffic_sort_whitelists() -> None:

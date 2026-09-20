@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
-__all__ = ["TerminalExecutorError"]
+from datetime import datetime
+
+__all__ = ["CapacityWaitError", "TerminalExecutorError"]
+
+
+class CapacityWaitError(RuntimeError):
+    """No dispatch occurred; release the lease without spending an attempt."""
+
+    def __init__(self, available_at: datetime) -> None:
+        super().__init__("Provider capacity unavailable")
+        self.available_at = available_at
 
 
 class TerminalExecutorError(RuntimeError):

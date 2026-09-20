@@ -36,10 +36,12 @@ from app.core.config.provider_catalog import (
     ERROR_INVALID_SURFACE,
     ERROR_RATE_LIMIT,
     ERROR_TIMEOUT,
+    TRANSPORT_DATAFORSEO,
     is_active_transport,
     is_endpoint_approved,
     llm_reasoning_effort,
 )
+from app.domain.providers.dataforseo_identity import dataforseo_account_identity
 from app.models.audit import AuditTask, RawResponseArtifact
 from app.orchestration.provider_capacity import (
     CapacityDecision,
@@ -218,6 +220,11 @@ def capacity_request(context: ExecutionContext) -> CapacityRequest:
             credential_kind=CREDENTIAL_KIND_FUNDED,
             billing_account_id=context.funding.billing_account_id,
         )
+    account_identity = (
+        dataforseo_account_identity(context.api_key_encrypted)
+        if context.transport_provider == TRANSPORT_DATAFORSEO
+        else ""
+    )
     return CapacityRequest(
         task_id=context.task_id,
         attempt_number=context.attempt_number,
@@ -225,6 +232,7 @@ def capacity_request(context: ExecutionContext) -> CapacityRequest:
         transport_provider=context.transport_provider,
         credential_kind=CREDENTIAL_KIND_BYOK,
         connection_id=context.connection_id,
+        account_pool_identity=account_identity,
     )
 
 

@@ -1,0 +1,490 @@
+from __future__ import annotations
+
+import asyncio
+import base64
+import uuid
+from datetime import UTC, datetime
+from decimal import Decimal
+
+import httpx
+import pytest
+from sqlalchemy import select
+
+from app.connectors.search_intelligence_dataforseo import ResearchResponse
+from app.core.config.dataforseo import pack_credential
+from app.core.security import encrypt_secret
+from app.domain.content.schemas import SearchIntelligenceReference
+from app.domain.content.search_intelligence_context import (
+    SearchIntelligenceEvidenceNotFound,
+    search_intelligence_context,
+)
+from app.domain.demand.search_intelligence import executor as executor_module
+from app.models.analytics import AnalyticsTask
+from app.models.audit import Audit
+from app.models.provider import ProviderConnection
+from app.models.search_intelligence import (
+    SearchIntelligenceCall,
+    SearchIntelligenceDataset,
+    SearchIntelligenceRow,
+    SearchIntelligenceRun,
+)
+from tests.component.auth_helpers import register_and_login
+
+
+async def _project(client: httpx.AsyncClient, name: str) -> dict[str, str]:
+    response = await client.post(
+        "/api/v1/projects",
+        json={"name": name, "website_url": "https://www.example.com"},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("response_missing", [False, True])
+async def test_cancellation_between_datasets_prevents_next_paid_call(
+    client: httpx.AsyncClient,
+    db_session,
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+    response_missing: bool,
+) -> None:
+    await register_and_login(client, f"search-cancel-{response_missing}@example.com")
+    project = await _project(client, "SearchCancel")
+    db_session.add(
+        ProviderConnection(
+            workspace_id=uuid.UUID(project["workspace_id"]),
+            label="DataForSEO",
+            transport_provider="dataforseo",
+            api_key_encrypted=encrypt_secret(
+                pack_credential(login="test@example.com", password="not-a-real-secret")
+            ),
+            active=True,
+            last_test_status="ok",
+        )
+    )
+    await db_session.commit()
+    base = f"/api/v1/projects/{project['id']}/search-intelligence"
+    review = await client.post(
+        f"{base}/reviews",
+        headers={"Idempotency-Key": "cancel-between"},
+        json={
+            "owned_target_id": "primary",
+            "reuse_recent": False,
+            "location_code": 2840,
+            "language_code": "en",
+            "datasets": [
+                {"kind": "ranking_keywords", "depth": 1},
+                {"kind": "backlink_summary", "depth": 1},
+            ],
+        },
+    )
+    assert review.status_code == 201, review.text
+    run_id = uuid.UUID(review.json()["id"])
+    assert (
+        await client.post(f"{base}/runs/{run_id}/confirm", json={})
+    ).status_code == 202
+    async with session_factory() as session:
+        run = await session.get(SearchIntelligenceRun, run_id)
+        assert run is not None
+        task = await session.get(AnalyticsTask, run.analytics_task_id)
+        assert task is not None
+    calls = 0
+
+    async def cancel_after_first_call(**_kwargs: object) -> ResearchResponse | None:
+        nonlocal calls
+        calls += 1
+        assert (
+            await client.post(f"{base}/runs/{run_id}/cancel", json={})
+        ).status_code == 200
+        if response_missing:
+            async with session_factory() as session:
+                cancelled = await session.get(SearchIntelligenceRun, run_id)
+                assert cancelled is not None
+                cancelled.error_code = "prior_error"
+                cancelled.error_detail = "Prior cancellation detail"
+                cancelled.completed_at = datetime(2025, 1, 1, tzinfo=UTC)
+                await session.commit()
+            return None
+        return ResearchResponse(
+            body={"tasks": [{"result": [{"items": [], "total_count": 0}]}]},
+            response_sha256="first-response",
+            provider_task_id="first-task",
+            cost_usd=Decimal("0.001"),
+            cost_source="task",
+        )
+
+    monkeypatch.setattr(executor_module, "execute_live", cancel_after_first_call)
+    await executor_module.execute_search_intelligence(session_factory, task)
+    async with session_factory() as session:
+        finished = await session.get(SearchIntelligenceRun, run_id)
+        assert finished is not None
+        assert finished.status == "cancelled"
+        assert finished.completed_calls == (0 if response_missing else 1)
+        if response_missing:
+            assert finished.uncertain_calls == 1
+            assert finished.error_code == "prior_error"
+            assert finished.error_detail == "Prior cancellation detail"
+            assert finished.completed_at == datetime(2025, 1, 1, tzinfo=UTC)
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_review_is_provider_free_and_reads_are_workspace_scoped(
+    client: httpx.AsyncClient,
+    db_session,
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await register_and_login(client, "search-owner@example.com")
+    project = await _project(client, "SearchOwner")
+    connection = ProviderConnection(
+        workspace_id=uuid.UUID(project["workspace_id"]),
+        label="DataForSEO",
+        transport_provider="dataforseo",
+        api_key_encrypted=encrypt_secret(
+            pack_credential(login="test@example.com", password="not-a-real-secret")
+        ),
+        active=True,
+        last_test_status="ok",
+    )
+    db_session.add(connection)
+    await db_session.commit()
+
+    async def forbidden_live_call(**_kwargs: object) -> object:
+        raise AssertionError("review/read path called the paid provider")
+
+    monkeypatch.setattr(
+        "app.connectors.search_intelligence_dataforseo.execute_live",
+        forbidden_live_call,
+    )
+    base = f"/api/v1/projects/{project['id']}/search-intelligence"
+    readiness = await client.get(base)
+    assert readiness.status_code == 200, readiness.text
+    assert readiness.json()["connected"] is True
+
+    review = await client.post(
+        f"{base}/reviews",
+        headers={"Idempotency-Key": "provider-free-review"},
+        json={
+            "action": "analysis",
+            "owned_target_id": "primary",
+            "reuse_recent": False,
+            "location_code": 2840,
+            "language_code": "en",
+            "datasets": [{"kind": "ranking_keywords", "depth": 1001}],
+        },
+    )
+    assert review.status_code == 201, review.text
+    body = review.json()
+    assert body["status"] == "reviewed"
+    assert body["planned_calls"] == 2
+    assert Decimal(body["estimated_cost_usd"]) == Decimal("0.14412")
+
+    repeated = await client.post(
+        f"{base}/reviews",
+        headers={"Idempotency-Key": "provider-free-review"},
+        json={
+            "action": "analysis",
+            "owned_target_id": "primary",
+            "reuse_recent": False,
+            "location_code": 2840,
+            "language_code": "en",
+            "datasets": [{"kind": "ranking_keywords", "depth": 1001}],
+        },
+    )
+    assert repeated.status_code == 201
+    assert repeated.json()["id"] == body["id"]
+
+    confirmed = await client.post(f"{base}/runs/{body['id']}/confirm", json={})
+    assert confirmed.status_code == 202, confirmed.text
+    async with session_factory() as state_session:
+        run = await state_session.get(SearchIntelligenceRun, uuid.UUID(body["id"]))
+        assert run is not None
+        assert run.analytics_task_id is not None
+        task = await state_session.scalar(
+            select(AnalyticsTask).where(AnalyticsTask.id == run.analytics_task_id)
+        )
+        assert task is not None
+    plan = run.call_plan[0]
+    dataset = executor_module._dataset_from_plan(run, plan)
+    db_session.add(dataset)
+    await db_session.flush()
+    db_session.add(
+        SearchIntelligenceCall(
+            workspace_id=run.workspace_id,
+            project_id=run.project_id,
+            run_id=run.id,
+            dataset_id=dataset.id,
+            request_key=f"{plan['dataset_key']}:{plan['page']}",
+            sequence=0,
+            status="dispatched",
+            endpoint=plan["endpoint"],
+            sanitized_request=plan["request"],
+            estimated_cost_usd=Decimal(plan["estimated_cost_usd"]),
+        )
+    )
+    await db_session.commit()
+    monkeypatch.setattr(executor_module, "execute_live", forbidden_live_call)
+    await executor_module.execute_search_intelligence(session_factory, task)
+    async with session_factory() as verification_session:
+        recovered = await verification_session.get(SearchIntelligenceRun, run.id)
+        assert recovered is not None
+        assert recovered.status == "uncertain"
+        assert recovered.uncertain_calls == 1
+
+    saved_review = await client.post(
+        f"{base}/reviews",
+        headers={"Idempotency-Key": "saved-response-replay"},
+        json={
+            "action": "analysis",
+            "owned_target_id": "primary",
+            "reuse_recent": False,
+            "location_code": 2840,
+            "language_code": "en",
+            "datasets": [{"kind": "ranking_keywords", "depth": 1}],
+        },
+    )
+    assert saved_review.status_code == 201, saved_review.text
+    saved_id = uuid.UUID(saved_review.json()["id"])
+    assert (
+        await client.post(f"{base}/runs/{saved_id}/confirm", json={})
+    ).status_code == 202
+    async with session_factory() as saved_session:
+        saved_run = await saved_session.get(SearchIntelligenceRun, saved_id)
+        assert saved_run is not None
+        saved_task = await saved_session.get(AnalyticsTask, saved_run.analytics_task_id)
+        assert saved_task is not None
+        saved_plan = saved_run.call_plan[0]
+        saved_dataset = executor_module._dataset_from_plan(saved_run, saved_plan)
+        saved_session.add(saved_dataset)
+        await saved_session.flush()
+        saved_session.add(
+            SearchIntelligenceCall(
+                workspace_id=saved_run.workspace_id,
+                project_id=saved_run.project_id,
+                run_id=saved_run.id,
+                dataset_id=saved_dataset.id,
+                request_key=f"{saved_plan['dataset_key']}:{saved_plan['page']}",
+                sequence=0,
+                status="dispatched",
+                endpoint=saved_plan["endpoint"],
+                sanitized_request=saved_plan["request"],
+                sanitized_response={
+                    "tasks": [{"result": [{"items": [], "total_count": 0}]}]
+                },
+                response_sha256="saved-response",
+                provider_reported_cost_usd=Decimal("0.001"),
+                estimated_cost_usd=Decimal(saved_plan["estimated_cost_usd"]),
+            )
+        )
+        await saved_session.commit()
+    await executor_module.execute_search_intelligence(session_factory, saved_task)
+    async with session_factory() as verification_session:
+        saved_result = await verification_session.get(SearchIntelligenceRun, saved_id)
+        assert saved_result is not None
+        assert saved_result.status == "succeeded"
+        saved_projection = await verification_session.get(
+            SearchIntelligenceDataset, saved_dataset.id
+        )
+        assert saved_projection is not None
+        assert saved_projection.coverage == "empty"
+
+    await db_session.rollback()
+    reviewed_run = await db_session.get(SearchIntelligenceRun, uuid.UUID(body["id"]))
+    assert reviewed_run is not None
+    first_plan = body["call_plan"][0]
+    reusable = SearchIntelligenceDataset(
+        workspace_id=reviewed_run.workspace_id,
+        project_id=reviewed_run.project_id,
+        run_id=reviewed_run.id,
+        dataset_kind="ranking_keywords",
+        scope_hash=first_plan["scope_hash"],
+        target_domain="example.com",
+        target_hostname="www.example.com",
+        target_origin="https://www.example.com",
+        comparison_origin="",
+        location_code=2840,
+        language_code="en",
+        status="published",
+        coverage="complete",
+        requested_rows=1001,
+        raw_rows_received=1001,
+        unique_rows_saved=1001,
+        truncated=False,
+        summary={},
+        provider_filters={},
+        published_at=datetime.now(UTC),
+    )
+    db_session.add(reusable)
+    await db_session.commit()
+    reused_review = await client.post(
+        f"{base}/reviews",
+        headers={"Idempotency-Key": "reuse-complete-snapshot"},
+        json={
+            "action": "analysis",
+            "owned_target_id": "primary",
+            "reuse_recent": True,
+            "location_code": 2840,
+            "language_code": "en",
+            "datasets": [{"kind": "ranking_keywords", "depth": 1001}],
+        },
+    )
+    assert reused_review.status_code == 201, reused_review.text
+    assert reused_review.json()["planned_calls"] == 0
+    assert reused_review.json()["reused_datasets"] == [
+        {
+            "dataset_id": str(reusable.id),
+            "dataset_kind": "ranking_keywords",
+            "published_at": reusable.published_at.isoformat(),
+        }
+    ]
+
+    repeated_reviews = await asyncio.gather(
+        *[
+            client.post(
+                f"{base}/reviews",
+                headers={"Idempotency-Key": "concurrent-review"},
+                json={
+                    "owned_target_id": "primary",
+                    "location_code": 2840,
+                    "language_code": "en",
+                    "datasets": [{"kind": "ranking_keywords", "depth": 10}],
+                },
+            )
+            for _ in range(2)
+        ]
+    )
+    assert [response.status_code for response in repeated_reviews] == [201, 201]
+    cancelled_id = repeated_reviews[0].json()["id"]
+    assert repeated_reviews[1].json()["id"] == cancelled_id
+    cancelled = await client.post(f"{base}/runs/{cancelled_id}/cancel", json={})
+    assert cancelled.status_code == 200
+    confirmation = await client.post(f"{base}/runs/{cancelled_id}/confirm", json={})
+    assert confirmation.status_code == 409
+    await executor_module._mark_capacity_wait(
+        session_factory, uuid.UUID(cancelled_id), 0
+    )
+    assert (await client.get(f"{base}/runs/{cancelled_id}")).json()[
+        "status"
+    ] == "cancelled"
+
+    rows = [
+        SearchIntelligenceRow(
+            workspace_id=reusable.workspace_id,
+            project_id=reusable.project_id,
+            dataset_id=reusable.id,
+            provider_row_key=f"keyword:{index}",
+            row_kind="ranking_keywords",
+            keyword=f"keyword {index}",
+            search_volume=volume,
+        )
+        for index, volume in enumerate([5, None, 5, 1])
+    ]
+    db_session.add_all(rows)
+    await db_session.commit()
+    handoff = await client.post(
+        f"{base}/content-handoff",
+        json={
+            "dataset_id": str(reusable.id),
+            "row_ids": [str(rows[1].id), str(rows[0].id)],
+        },
+    )
+    assert handoff.status_code == 200, handoff.text
+    assert handoff.json()["row_ids"] == [str(rows[1].id), str(rows[0].id)]
+    assert {item["id"] for item in handoff.json()["evidence"]} == {
+        str(rows[0].id),
+        str(rows[1].id),
+    }
+    assert "user_instructions" not in handoff.json()
+    evidence_context = await search_intelligence_context(
+        db_session,
+        reusable.workspace_id,
+        reusable.project_id,
+        SearchIntelligenceReference(dataset_id=reusable.id, row_ids=[rows[1].id]),
+    )
+    assert "keyword 1" in evidence_context
+    assert "keyword 0" not in evidence_context
+    other_workspace_id = uuid.uuid4()
+    reference = SearchIntelligenceReference(
+        dataset_id=reusable.id, row_ids=[rows[1].id]
+    )
+    with pytest.raises(SearchIntelligenceEvidenceNotFound):
+        await search_intelligence_context(
+            db_session, other_workspace_id, reusable.project_id, reference
+        )
+    rows_url = f"{base}/datasets/{reusable.id}/rows"
+    first_page = await client.get(rows_url, params={"limit": 2})
+    assert first_page.status_code == 200
+    first = first_page.json()
+    second_page = await client.get(
+        rows_url, params={"limit": 2, "cursor": first["next_cursor"]}
+    )
+    assert second_page.status_code == 200
+    second = second_page.json()
+    assert second["next_cursor"] is None
+    assert {row["id"] for row in first["rows"] + second["rows"]} == {
+        str(row.id) for row in rows
+    }
+    for direction, expected in [("asc", [1, 5, 5, None]), ("desc", [5, 5, 1, None])]:
+        observed = []
+        cursor = None
+        for _ in range(4):
+            params = {"sort": "search_volume", "direction": direction, "limit": 1}
+            if cursor:
+                params["cursor"] = cursor
+            response = await client.get(rows_url, params=params)
+            assert response.status_code == 200, response.text
+            observed.extend(response.json()["rows"])
+            cursor = response.json()["next_cursor"]
+        assert cursor is None
+        assert [row["search_volume"] for row in observed] == expected
+        assert len({row["id"] for row in observed}) == 4
+    mismatched = await client.get(
+        rows_url,
+        params={
+            "limit": 2,
+            "sort": "keyword",
+            "cursor": first["next_cursor"],
+        },
+    )
+    assert mismatched.status_code == 422
+    unsupported = await client.get(rows_url, params={"sort": "unsupported"})
+    assert unsupported.status_code == 422
+    assert unsupported.json()["error"]["code"] == "invalid_sort"
+    for cursor in ("a", "!!!!", base64.urlsafe_b64encode(b"\xff").decode()):
+        invalid = await client.get(rows_url, params={"cursor": cursor})
+        assert invalid.status_code == 422
+        assert invalid.json()["error"]["code"] == "invalid_cursor"
+
+    backlink = executor_module._dataset_from_plan(
+        run,
+        {
+            **first_plan,
+            "dataset_kind": "referring_domains",
+        },
+    )
+    backlink.status = "published"
+    audit = Audit(workspace_id=run.workspace_id, project_id=run.project_id)
+    db_session.add_all([backlink, audit])
+    await db_session.commit()
+    matches = await asyncio.gather(
+        *[
+            client.post(
+                f"{base}/citation-matches",
+                json={
+                    "backlink_dataset_id": str(backlink.id),
+                    "audit_ids": [str(audit.id)],
+                },
+            )
+            for _ in range(2)
+        ]
+    )
+    assert [response.status_code for response in matches] == [201, 201]
+    assert matches[0].json()["id"] == matches[1].json()["id"]
+
+    client.cookies.clear()
+    await register_and_login(client, "search-outsider@example.com")
+    assert (await client.get(base)).status_code == 404
+    assert (await client.get(f"{base}/runs/{body['id']}")).status_code == 404
+    assert (await client.get(rows_url)).status_code == 404

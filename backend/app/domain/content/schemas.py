@@ -74,6 +74,18 @@ class SiteHealthReference(BaseModel):
         return sorted(set(value))
 
 
+class SearchIntelligenceReference(BaseModel):
+    dataset_id: uuid.UUID
+    row_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
+
+    @field_validator("row_ids")
+    @classmethod
+    def unique_rows(cls, value: list[uuid.UUID]) -> list[uuid.UUID]:
+        if len(value) != len(set(value)):
+            raise ValueError("Search Intelligence row IDs must be unique")
+        return value
+
+
 class ContentGenerationCreate(BaseModel):
     """`POST /content/generations` body (workspace resolved from session)."""
 
@@ -85,6 +97,7 @@ class ContentGenerationCreate(BaseModel):
     opportunity_id: uuid.UUID | None = None
     demand_signal_id: uuid.UUID | None = None
     site_health_reference: SiteHealthReference | None = None
+    search_intelligence_reference: SearchIntelligenceReference | None = None
 
     @field_validator("user_instruction")
     @classmethod

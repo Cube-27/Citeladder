@@ -9,6 +9,7 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -74,6 +75,9 @@ class Project(Base):
     )
     default_repetitions: Mapped[int] = mapped_column(
         Integer, default=DEFAULT_REPETITIONS
+    )
+    search_intelligence_preferences: Mapped[dict] = mapped_column(
+        JSONB, default=dict, server_default="{}"
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

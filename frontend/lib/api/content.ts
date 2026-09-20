@@ -68,6 +68,11 @@ export type ContentContextPreviewInput = {
   site_health_reference?: SiteHealthReferenceInput;
 };
 
+export type SearchIntelligenceReferenceInput = {
+  dataset_id: string;
+  row_ids: string[];
+};
+
 export type EnqueueGenerationInput = {
   project_id: string;
   user_instruction: string;
@@ -77,6 +82,7 @@ export type EnqueueGenerationInput = {
   opportunity_id?: string;
   demand_signal_id?: string;
   site_health_reference?: SiteHealthReferenceInput;
+  search_intelligence_reference?: SearchIntelligenceReferenceInput;
 };
 
 export const contentApi = {

@@ -32,7 +32,8 @@ and evidence limitations; empty, loading, read-error and insufficient-evidence
 states remain distinct.
 
 The single [context builder](../backend/app/domain/content/context_builder.py)
-authorizes optional target, Site Health reference, Opportunity and Demand IDs.
+authorizes optional target, Site Health reference, Opportunity, Demand and
+Search Intelligence evidence IDs.
 It combines reviewed brand context, target-page evidence, applicable issues and
 a bounded related-page set selected by
 [website context](../backend/app/domain/content/website_context.py).
@@ -43,6 +44,8 @@ may be missing; that is recorded as an omission, not filled with a fabricated fa
 
 The browser passes identifiers and the user's own instruction. An Opportunity
 may suggest a skill and target, but the instruction field starts empty.
+Search Intelligence hands off selected row IDs as read-only context; the server
+resolves the published dataset and exact rows before freezing generation context.
 [Message building](../backend/app/domain/content/message_builder.py) separates
 the user instruction from untrusted crawl/reference text. Context preview and
 generation use this same owner rather than parallel client-built context.
