@@ -42,11 +42,12 @@ describe('LandingPage', () => {
       'aria-selected',
       'true',
     );
-    expect(
-      within(screen.getByRole('tabpanel', { name: 'Overview' })).getByText(
-        /Brand visibility trends upward/,
-      ),
-    ).toBeInTheDocument();
+    const comparison = within(screen.getByRole('tabpanel', { name: 'Trends' })).getByRole(
+      'region',
+      { name: 'Competitor comparison preview' },
+    );
+    expect(within(comparison).getByRole('cell', { name: 'Brelovanta' })).toBeVisible();
+    expect(within(comparison).getByRole('cell', { name: '58.2%' })).toBeVisible();
   });
 
   it('opens source evidence in a dismissible drawer and restores focus', async () => {

@@ -37,6 +37,13 @@ export const SOURCE_ROWS = [
   },
 ] as const;
 
+/** Fictional values for the public dashboard preview. */
+export const HERO_COMPETITORS = [
+  { name: 'Zernovelle', visibility: 64.4, position: 2.4, history: [52, 54, 55, 59, 58, 62, 64.4] },
+  { name: 'Brelovanta', visibility: 58.2, position: 3.1, history: [61, 61, 60, 60, 59, 59, 58.2] },
+  { name: 'Flevorynth', visibility: 41.8, position: 4.2, history: [36, 38, 39, 40, 42, 41, 41.8] },
+] as const;
+
 export const CAPABILITIES = [
   {
     number: '01',

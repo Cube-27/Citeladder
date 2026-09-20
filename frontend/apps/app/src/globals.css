@@ -454,8 +454,8 @@
 }
 
 .cl-landing {
-  --cl-hero-gradient-start: #1b6b3c;
-  --cl-hero-gradient-end: #104627;
+  --cl-hero-gradient-start: var(--color-accent-text);
+  --cl-hero-gradient-end: var(--color-accent);
   --cl-paper: #f5f4ef;
   --cl-raised: #fffefa;
   --cl-stone: #ebe9e2;
@@ -502,7 +502,6 @@
   --cl-row-hover: #f5f8fa;
   --cl-enterprise: #edf0f2;
   --cl-governance-line: #cdd5d9;
-  --cl-closing: #e8edf1;
 }
 
 @media (min-width: 981px) and (max-width: 1200px) {
@@ -913,6 +912,11 @@ input.focus-input:-webkit-autofill:focus-visible {
    evidence marks inside embedded product previews follow the accent, so
    previews keep reading as the product. */
 [data-public-surface] {
+  --cl-closing: #e8edf1;
+  --marketing-footer-background: #1d1b19;
+  --marketing-footer-foreground: #f8f8f7;
+  --marketing-footer-muted: #b9b8b5;
+  --marketing-footer-line: #4b4845;
   --color-background: #ffffff;
   --color-foreground: #0f172a;
   --color-secondary: #1e293b;
@@ -929,6 +933,111 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-band-indigo-deep: #0d0a1c;
   --color-band-teal: #0c2626;
   --color-band-teal-mid: #114747;
+}
+
+/* Accent preference is shared by public and product runtimes. Brand marks and
+   provider colors keep their own identity; semantic actions and chart series
+   follow the chosen accent. Emerald inherits the base palette. */
+:root[data-accent='chili'] {
+  --color-accent: #b42318;
+  --color-accent-hover: #912018;
+  --color-accent-active: #7a1c15;
+  --color-accent-text: #912018;
+  --color-accent-subtle: #fee4e2;
+  --color-accent-soft: #fff2f0;
+  --color-accent-border: #fda29b;
+  --color-focus: #d92d20;
+  --color-focus-ring: rgb(217 45 32 / 20%);
+  --color-selection: #fda29b;
+  --color-action: #b42318;
+  --color-action-hover: #912018;
+  --color-action-active: #7a1c15;
+  --color-chart-1: #d92d20;
+  --color-surface-inverse: #b42318;
+}
+
+:root[data-accent='blue'] {
+  --color-accent: #1d4ed8;
+  --color-accent-hover: #1e40af;
+  --color-accent-active: #1e3a8a;
+  --color-accent-text: #1e40af;
+  --color-accent-subtle: #dbeafe;
+  --color-accent-soft: #eff6ff;
+  --color-accent-border: #93c5fd;
+  --color-focus: #2563eb;
+  --color-focus-ring: rgb(37 99 235 / 20%);
+  --color-selection: #93c5fd;
+  --color-action: #1d4ed8;
+  --color-action-hover: #1e40af;
+  --color-action-active: #1e3a8a;
+  --color-chart-1: #2563eb;
+  --color-surface-inverse: #1d4ed8;
+}
+
+:root[data-accent='violet'] {
+  --color-accent: #6d28d9;
+  --color-accent-hover: #5b21b6;
+  --color-accent-active: #4c1d95;
+  --color-accent-text: #5b21b6;
+  --color-accent-subtle: #ede9fe;
+  --color-accent-soft: #f5f3ff;
+  --color-accent-border: #c4b5fd;
+  --color-focus: #7c3aed;
+  --color-focus-ring: rgb(124 58 237 / 20%);
+  --color-selection: #c4b5fd;
+  --color-action: #6d28d9;
+  --color-action-hover: #5b21b6;
+  --color-action-active: #4c1d95;
+  --color-chart-1: #7c3aed;
+  --color-surface-inverse: #6d28d9;
+}
+
+:root[data-accent='amber'] {
+  --color-accent: #92400e;
+  --color-accent-hover: #78350f;
+  --color-accent-active: #451a03;
+  --color-accent-text: #92400e;
+  --color-accent-subtle: #fef3c7;
+  --color-accent-soft: #fffbeb;
+  --color-accent-border: #fcd34d;
+  --color-focus: #b45309;
+  --color-focus-ring: rgb(180 83 9 / 20%);
+  --color-selection: #fcd34d;
+  --color-action: #92400e;
+  --color-action-hover: #78350f;
+  --color-action-active: #451a03;
+  --color-chart-1: #d97706;
+  --color-surface-inverse: #92400e;
+}
+
+.accent-theme-swatch {
+  display: inline-block;
+  width: 1.5rem;
+  height: 0.625rem;
+  flex: none;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--accent-swatch-light) 50%, var(--accent-swatch-dark) 50%);
+}
+
+[data-accent-choice='chili'] {
+  --accent-swatch-light: #ef4444;
+  --accent-swatch-dark: #b42318;
+}
+[data-accent-choice='blue'] {
+  --accent-swatch-light: #3b82f6;
+  --accent-swatch-dark: #1d4ed8;
+}
+[data-accent-choice='emerald'] {
+  --accent-swatch-light: #10b981;
+  --accent-swatch-dark: #14532d;
+}
+[data-accent-choice='violet'] {
+  --accent-swatch-light: #8b5cf6;
+  --accent-swatch-dark: #6d28d9;
+}
+[data-accent-choice='amber'] {
+  --accent-swatch-light: #f59e0b;
+  --accent-swatch-dark: #92400e;
 }
 
 /* The marketing pages are static, so their HTML is written before anyone knows

@@ -22,3 +22,26 @@
 @source '../../../components/billing';
 @source '../../../components/ui';
 @source '../../../lib';
+
+.marketing-footer,
+.marketing-closing-band {
+  background: var(--cl-closing);
+}
+
+.marketing-footer-card {
+  --color-foreground: var(--marketing-footer-foreground);
+  --color-muted: var(--marketing-footer-muted);
+  --color-border-subtle: var(--marketing-footer-line);
+  background: var(--marketing-footer-background);
+  color: var(--color-foreground);
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.marketing-footer-card .marketing-footer-description {
+  color: var(--marketing-footer-foreground);
+}
+
+.marketing-footer-card img[src='/citeladder-logo.svg'] {
+  filter: brightness(0) invert(1);
+}

@@ -8,12 +8,12 @@ Tests verify shared ownership, accessibility, and product correctness—not exac
 
 ## Direction and identity
 
-CiteLadder (`citeladder.com`) is a light-only, evidence-led enterprise system. Its **Prism Evidence Workspace** puts neutral ground behind the chrome and white paper behind the work, using navy ink, forest actions, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
+CiteLadder (`citeladder.com`) is a light-only, evidence-led enterprise system. Its **Prism Evidence Workspace** puts neutral ground behind the chrome and white paper behind the work, using navy ink, Emerald actions by default, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
 - **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup: `frontend/public/citeladder-logo.svg` for the wordmark and the matching inline glyph for mark-only mode. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts. The mark inherits `currentColor`; non-empty `alt` supplies either rendering's accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same black silhouette across frames.
 - **Typography:** self-hosted Geist Variable, weight axis 100–900, on every surface; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
-- **Surface identity:** no dark theme. Marketing uses the shared light editorial system; the homepage may use the scoped neutral palette in `globals.css` for its sections and preview. Auth/onboarding use centred light-ground task flows, never a decorative brand rail.
+- **Surface identity:** no dark theme. A local accent preference offers Chili, Blue, Emerald, Violet, and Amber on public and product surfaces; Emerald is the default. The logo and provider marks retain their fixed brand colours. Marketing uses the shared light editorial system; the homepage may use the scoped neutral palette in `globals.css` for its sections and preview. Auth/onboarding use centred light-ground task flows, never a decorative brand rail.
 
 ## Source of truth and implementation rules
 
@@ -41,14 +41,14 @@ Consume semantic roles, never page-local values.
 | Paper | `white` `#FFFFFF` | Work surfaces, inputs, semantic objects, overlays |
 | Ink | `ink-strong` `#1A1F36`; `ink` `#30313D`; `muted` `#596579`; `subtle` `#667085` | Headings/primary values; body/row values; labels/support; tertiary metadata/placeholders |
 | Boundaries | `line-subtle` `#E8EDF3`; `line` `#D9E0EA`; `line-strong` `#C3CCD9`; `field-line` `#94A3B8` | Four rungs that must stay visibly distinct. `line-subtle` is a rule *inside* a surface (row hairlines, divides between peers, menu separators, chart gridlines); `line` is the edge *of* a box (card, panel, table wrapper, band, pane seam) and is the default; `line-strong` is deliberate emphasis; `field-line` bounds inputs. |
-| Interaction | forest `#14532D`; hover `#166534`; pressed `#0B3D20`; brand `#16A34A`; soft `#F0FDF4`; line `#86EFAC` | Primary actions on every surface, links, tabs, selection, active navigation, focus, first chart series |
+| Interaction | Emerald default: forest `#14532D`; hover `#166534`; pressed `#0B3D20`; brand `#16A34A`; soft `#F0FDF4`; line `#86EFAC`. Other accent ramps live in `globals.css`. | Primary actions on every surface, links, tabs, selection, active navigation, focus, first chart series |
 | Evidence | success, warning, error, info, `chart-secondary`, `chart-grid` | Persisted status/data, always labelled or paired with an icon |
 
 Hierarchy is carried by boundary and tone, not by elevation: a box is separated by its edge and the tone beneath it, and shadow is reserved for surfaces that genuinely float (menus, sheets, dialogs, tooltips). A `Card` carries at most a contact shadow — a hair that stops a bordered white box from looking printed onto the ground — never a lift. If something needs to read as *above* rather than *on*, it is a different object, not a larger shadow.
 
 Reading text must meet 4.5:1 contrast. `subtle` metadata belongs on reading surfaces; active/tonal surfaces use `muted` or `ink` to retain contrast. Cyan, coral, lime, and amber express evidence/status, not route decoration. Never communicate meaning through colour alone.
 
-Marketing subpages use a white root, centred Geist hero, quiet `surface` bands, and white footer. The homepage uses its scoped neutral ground and section tones, with the same forest action ramp and white footer. The owner-scoped `[data-public-surface]` rebind deepens inks (`#0F172A` foreground through `#64748B` subtle) and strengthens hairlines. Use `divided` hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews. No dark teal/indigo bands, grain, or decorative icon-tile families.
+Marketing subpages use a white root, centred Geist hero, quiet `surface` bands, and the shared inset dark footer. The homepage uses its scoped neutral ground and section tones, with the selected action ramp and the same footer. The owner-scoped `[data-public-surface]` rebind deepens inks (`#0F172A` foreground through `#64748B` subtle) and strengthens hairlines. Use `divided` hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews. No dark teal/indigo bands, grain, or decorative icon-tile families.
 
 ## Typography
 
@@ -56,7 +56,7 @@ Use Geist exclusively; metrics, dates, ranks, and percentages use tabular numera
 
 ### Website and focused-flow ladder
 
-Roles own all typography properties. The general ladder is mobile-first: base below 700px, with 700px and 981px step-ups where defined. Ordinary paragraphs stay at or above 14px; 13px is for short labels, metadata, captions, and legal support. Prose measure is 45–75 characters; long paragraphs never use accent ink. Body tracking is zero; large text uses calm leading.
+Roles own all typography properties. The general ladder is mobile-first: base below 700px, with 700px and 981px step-ups where defined. Ordinary paragraphs stay at or above 14px, except the compact homepage editorial ladder below 540px, where short supporting paragraphs step down by 2px. Prose measure is 45–75 characters; long paragraphs never use accent ink. Body tracking is zero; large text uses calm leading.
 
 | Role | Size / line height | Weight | Tracking | Ink |
 | --- | --- | --- | --- | --- |
@@ -210,7 +210,7 @@ The same insight retains its server ID/cache identity everywhere. No resolvable 
 
 ### Marketing and auth
 
-Marketing is an editorial stack of full-width sections with centred content. The home hero uses a neutral ground, centred value proposition, sign-up and demo actions, and an interactive product preview. Its main heading is 48px and lead is 16px. Four static surface logos follow the hero: ChatGPT, Gemini, Claude, and Google AI Overviews. The landing uses the forest action accent against neutral section backgrounds, with a subtle light-to-dark green text gradient limited to the emphasized hero headline. Subpages keep their white opener above a hairline. The footer uses an editorial two-part composition across marketing routes while retaining its existing logo, destinations, and legal options.
+Marketing is an editorial stack of full-width sections with centred content. The home hero uses a neutral ground, centred value proposition, sign-up and demo actions, and a compact interactive dashboard preview that fades into the ground at its lower edge. The separate product explorer retains its full preview cards. The main heading is 48px and lead is 16px at desktop widths; the homepage's editorial type ladder steps down by 2px below 540px. Four static surface logos follow the hero: ChatGPT, Gemini, Claude, and Google AI Overviews. The landing uses the selected action accent against neutral section backgrounds, with a subtle accent text gradient limited to the emphasized hero headline. Subpages keep their white opener above a hairline. Closing calls to action centre their message and place actions below it on the light closing ground. The shared footer sits in a dark rounded panel with visible side and bottom gutters on that ground, retaining its logo, destinations, and legal options.
 
 Use optional eyebrow → heading → short lead → evidence/media or focused grid → at most one primary CTA per band. Secondary intents belong in navigation or another band. Prefer asymmetric text/media, proof ledgers, and concise grids over feature-card walls. The operating loop uses open numbered stages with quiet separators and named steps. Body measure is about 60–70 characters; one H1 per page; spacing follows the surface's section rhythm.
 

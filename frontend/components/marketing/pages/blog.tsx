@@ -94,7 +94,7 @@ function BlogCta({
   secondary,
 }: Readonly<{ title: string; secondary: { href: string; label: string } }>) {
   return (
-    <Section tone="paper" rhythm="base" aria-label="Get started">
+    <Section tone="paper" rhythm="base" className="marketing-closing-band" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
         <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-3 max-w-[28ch]">
           {title}

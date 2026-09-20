@@ -127,61 +127,63 @@ export async function MarketingFooter() {
   const name = legalDisplayName();
 
   return (
-    <footer className="bg-background border-border-subtle relative overflow-hidden border-t">
-      <Container className="pt-14 sm:pt-20">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] lg:gap-12">
-          <div className="space-y-5">
-            <a href="/" aria-label="CiteLadder home" className="inline-block">
-              <LogoMark />
-            </a>
+    <footer className="marketing-footer relative px-[var(--site-gutter)] pb-5 sm:pb-8">
+      <div className="marketing-footer-card mx-auto w-full">
+        <Container className="pt-14 sm:pt-20">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] lg:gap-12">
+            <div className="space-y-5">
+              <a href="/" aria-label="CiteLadder home" className="inline-block">
+                <LogoMark />
+              </a>
 
-            <p className="website-body text-muted max-w-[38ch]">
-              AI search intelligence with source-level context.
-            </p>
+              <p className="marketing-footer-description website-body max-w-[38ch]">
+                AI search intelligence with source-level context.
+              </p>
+            </div>
+
+            <nav
+              aria-label="Footer"
+              className="grid grid-cols-2 gap-x-7 gap-y-9 sm:grid-cols-3 xl:grid-cols-5"
+            >
+              {FOOTER_COLUMNS.map((column) => (
+                <div key={column.key}>
+                  <h2 className="website-small-heading text-foreground mb-5">{column.label}</h2>
+                  <div className="grid justify-items-start gap-3.5">
+                    {column.links.map((link) => (
+                      <FooterColumnLink key={link.label} link={link} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </nav>
           </div>
 
-          <nav
-            aria-label="Footer"
-            className="grid grid-cols-2 gap-x-7 gap-y-9 sm:grid-cols-3 xl:grid-cols-5"
-          >
-            {FOOTER_COLUMNS.map((column) => (
-              <div key={column.key}>
-                <h2 className="website-small-heading text-foreground mb-5">{column.label}</h2>
-                <div className="grid justify-items-start gap-3.5">
-                  {column.links.map((link) => (
-                    <FooterColumnLink key={link.label} link={link} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </nav>
-        </div>
-
-        <div className="border-border-subtle mt-12 flex flex-col gap-5 border-t pt-8 lg:flex-row lg:items-center lg:justify-between">
-          {/* CiteLadder is a Cube27 product, so the parent company is named in
+          <div className="border-border-subtle mt-12 flex flex-col gap-5 border-t pt-8 lg:flex-row lg:items-center lg:justify-between">
+            {/* CiteLadder is a Cube27 product, so the parent company is named in
               the ownership line rather than tucked into a link column alone. */}
-          <p className="website-label text-muted">
-            © {year} {name}. A{' '}
-            <a
-              href={PARENT_COMPANY.href}
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-foreground underline-offset-4 transition-colors hover:underline"
-            >
-              {PARENT_COMPANY.name}
-            </a>{' '}
-            product. All rights reserved.
-          </p>
-          <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 lg:justify-end">
-            {FOOTER_LEGAL_LINKS.map((link) => (
-              <LegalStripLink key={link.href} link={link} />
-            ))}
-          </nav>
-        </div>
-        <div aria-hidden="true" className="mt-4 overflow-hidden pb-7 sm:mt-5 sm:pb-8">
-          <LogoMark size={72} className="max-w-full opacity-20" />
-        </div>
-      </Container>
+            <p className="website-label text-muted">
+              © {year} {name}. A{' '}
+              <a
+                href={PARENT_COMPANY.href}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-foreground underline-offset-4 transition-colors hover:underline"
+              >
+                {PARENT_COMPANY.name}
+              </a>{' '}
+              product. All rights reserved.
+            </p>
+            <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 lg:justify-end">
+              {FOOTER_LEGAL_LINKS.map((link) => (
+                <LegalStripLink key={link.href} link={link} />
+              ))}
+            </nav>
+          </div>
+          <div aria-hidden="true" className="mt-4 overflow-hidden pb-7 sm:mt-5 sm:pb-8">
+            <LogoMark size={72} className="max-w-full opacity-20" />
+          </div>
+        </Container>
+      </div>
     </footer>
   );
 }

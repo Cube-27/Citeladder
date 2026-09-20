@@ -3,6 +3,7 @@ import { ArrowUpRight, Check, Grid2X2, Search } from 'lucide-react';
 
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { MODULES, SOURCE_ROWS, type ModuleId } from './landing-data';
+import { HeroDashboardPreview } from './landing-hero-dashboard';
 
 type SourceView = 'domains' | 'urls';
 
@@ -417,13 +418,13 @@ export function PlatformExplorer({
 }
 
 export function HeroPreview() {
-  const [selected, setSelected] = useState<'overview' | 'sources'>('overview');
-  const ids = ['cl-hero-tab-overview', 'cl-hero-tab-sources'];
+  const [selected, setSelected] = useState<'trends' | 'sources'>('trends');
+  const ids = ['cl-hero-tab-trends', 'cl-hero-tab-sources'];
   const tabs = [
-    { id: ids[0], label: 'Overview', value: 'overview' },
+    { id: ids[0], label: 'Trends', value: 'trends' },
     { id: ids[1], label: 'Sources', value: 'sources' },
   ] as const;
-  const selectTab = (id: string) => setSelected(id === ids[0] ? 'overview' : 'sources');
+  const selectTab = (id: string) => setSelected(id === ids[0] ? 'trends' : 'sources');
   return (
     <div className="cl-hero-preview">
       <div className="cl-preview-browser">
@@ -440,8 +441,8 @@ export function HeroPreview() {
           </strong>
           <span className="cl-sidebar-label">WORKSPACE</span>
           <span>Overview</span>
-          <span>AI Visibility</span>
-          <span className="cl-sidebar-active">Sources</span>
+          <span className="cl-sidebar-active">AI Visibility</span>
+          <span>Sources</span>
           <span>Site Health</span>
           <span>Demand</span>
           <span>Content</span>
@@ -479,7 +480,7 @@ export function HeroPreview() {
             aria-labelledby={`cl-hero-tab-${selected}`}
             tabIndex={0}
           >
-            {selected === 'overview' ? <VisibilityPreview /> : <SourcesPreview />}
+            {selected === 'trends' ? <HeroDashboardPreview /> : <SourcesPreview />}
           </div>
         </div>
       </div>
