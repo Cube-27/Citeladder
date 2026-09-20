@@ -24,6 +24,7 @@ import type {
   SearchIntelligenceReadiness,
   SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
+import { prepareReviewSelections } from './search-intelligence-review-selection';
 
 const LABELS: Record<string, string> = {
   footprint: 'Keyword footprint',
@@ -106,8 +107,16 @@ function reviewInputsValid(
   return Boolean(
     selections.length &&
     ownedTarget &&
-    Number.isInteger(Number(location)) &&
-    Number(location) > 0 &&
+    (selections.every(({ kind }) =>
+      [
+        'backlink_summary',
+        'referring_domains',
+        'destination_pages',
+        'backlinks',
+        'backlink_history',
+      ].includes(kind),
+    ) ||
+      (Number.isInteger(Number(location)) && Number(location) > 0)) &&
     !(
       researchScope === 'exact_host' && selections.some(({ kind }) => kind === 'backlink_history')
     ) &&
@@ -126,6 +135,10 @@ function HistoryScopeNotice({
       Deselect history or choose Domain + subdomains. History cannot be filtered to an exact host.
     </Alert>
   );
+}
+
+function indirectLinkPolicy(scope: unknown) {
+  return scope === 'domain_subdomains' ? 'included' : 'excluded';
 }
 
 export function SearchIntelligenceReviewDrawer({
@@ -201,21 +214,15 @@ export function SearchIntelligenceReviewDrawer({
           action,
           research_scope: researchScope,
           owned_target_id: ownedTarget,
-          location_code: Number(location),
+          location_code: location === '' ? null : Number(location),
           language_code: language,
           reuse_recent: reuse,
           save_as_defaults: saveDefaults,
-          datasets: selections.map((selection) => {
-            if (selection.kind === 'keyword_suggestions') return { ...selection, seed };
-            if (selection.kind === 'backlinks') return { ...selection, grouping };
-            if (selection.kind === 'ranking_keywords') {
-              return {
-                ...selection,
-                order: rankingOrder,
-                min_volume: acquisitionVolume === '' ? undefined : Number(acquisitionVolume),
-              };
-            }
-            return selection;
+          datasets: prepareReviewSelections(selections, {
+            seed,
+            grouping,
+            order: rankingOrder,
+            minVolume: acquisitionVolume,
           }),
           previous_run_id: action === 'analysis' ? null : (readiness.latest_run?.id ?? null),
         }),
@@ -270,9 +277,9 @@ export function SearchIntelligenceReviewDrawer({
           <Stack as="section" gap="compact">
             <h3 className={textRole('objectTitle')}>Frozen scope</h3>
             <p>
-              {searchScopeLabel(String(review.frozen_scope.research_scope))}. Indirect links
-              excluded from live backlink datasets. History is the provider’s monthly domain
-              coverage, including its own link population.
+              {searchScopeLabel(String(review.frozen_scope.research_scope))}. Indirect links are{' '}
+              {indirectLinkPolicy(review.frozen_scope.research_scope)} from live backlink datasets.
+              History is the provider’s monthly domain coverage, including its own link population.
             </p>
             <dl className="grid grid-cols-2 gap-[var(--compact-gap)] text-sm">
               <div>

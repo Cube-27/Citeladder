@@ -45,7 +45,7 @@ function useDatasetRows(
   },
 ) {
   const scope = searchIntelligenceKeys.dataset(workspaceId, projectId, datasetId);
-  const scopeKey = scope.join(':');
+  const scopeKey = JSON.stringify([...scope, params]);
   const [lastPage, setLastPage] = useState<{
     scopeKey: string;
     data: Awaited<ReturnType<typeof searchIntelligenceApi.rows>>;
@@ -68,7 +68,11 @@ function useDatasetRows(
   const accessFailure =
     query.isError && [401, 403, 404].includes(httpErrorStatus(query.error) ?? 0);
   const retainedPage = lastPage?.scopeKey === scopeKey ? lastPage.data : undefined;
-  const page = accessFailure ? undefined : (query.data ?? retainedPage);
+  const pendingPage =
+    query.isPending && lastPage
+      ? { dataset: lastPage.data.dataset, rows: [], next_cursor: null }
+      : undefined;
+  const page = accessFailure ? undefined : (query.data ?? retainedPage ?? pendingPage);
   return { query, page };
 }
 
@@ -346,7 +350,12 @@ function KeywordFilters({
         type="number"
         min={0}
         value={minVolume}
-        onChange={(event) => setMinVolume(event.target.value)}
+        step={1}
+        onChange={(event) => {
+          const value = event.target.value;
+          if (value === '' || (Number.isInteger(Number(value)) && Number(value) >= 0))
+            setMinVolume(value);
+        }}
       />
       <Select
         ariaLabel="Saved keyword intent"

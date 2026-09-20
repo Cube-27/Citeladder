@@ -96,6 +96,58 @@ describe('SearchIntelligenceReviewDrawer', () => {
     expect(submit).toBeEnabled();
   });
 
+  it('reviews backlink-only evidence without a market', async () => {
+    const review = vi.fn().mockResolvedValue(reviewedRun);
+    render(
+      <SearchIntelligenceReviewDrawer
+        open
+        action="analysis"
+        readiness={{ ...readiness, preferences: { ...readiness.preferences, location_code: null } }}
+        onOpenChange={vi.fn()}
+        onReview={review}
+        onConfirm={vi.fn()}
+        busy={false}
+      />,
+    );
+    for (const name of ['Keyword footprint', 'Ranked keywords', 'Organic top pages'])
+      await userEvent.click(screen.getByRole('checkbox', { name }));
+    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    expect(review).toHaveBeenCalledWith(expect.objectContaining({ location_code: null }));
+  });
+
+  it('passes suggestion acquisition controls to review', async () => {
+    const review = vi.fn().mockResolvedValue(reviewedRun);
+    render(
+      <SearchIntelligenceReviewDrawer
+        open
+        action="seed"
+        readiness={readiness}
+        onOpenChange={vi.fn()}
+        onReview={review}
+        onConfirm={vi.fn()}
+        busy={false}
+      />,
+    );
+    await userEvent.click(screen.getByRole('combobox', { name: 'Ranking acquisition order' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Acquire by cpc' }));
+    await userEvent.type(
+      screen.getByRole('spinbutton', { name: 'Minimum acquisition search volume' }),
+      '10',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Keyword suggestion seed' }),
+      'analytics',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
+    expect(review).toHaveBeenCalledWith(
+      expect.objectContaining({
+        datasets: [
+          expect.objectContaining({ kind: 'keyword_suggestions', order: 'cpc', min_volume: 10 }),
+        ],
+      }),
+    );
+  });
+
   it('shows review and confirmation failures and clears them when retried', async () => {
     const review = vi
       .fn()

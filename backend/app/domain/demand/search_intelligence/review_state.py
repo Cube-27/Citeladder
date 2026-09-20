@@ -76,15 +76,22 @@ def _save_review_defaults(
     project.search_intelligence_preferences = SearchIntelligencePreferences(
         research_scope=payload.research_scope or "domain_subdomains",
         owned_target_id=payload.owned_target_id,
-        competitor_ids=[
-            item.competitor_id for item in payload.datasets if item.competitor_id
-        ],
+        competitor_ids=list(
+            dict.fromkeys(
+                item.competitor_id for item in payload.datasets if item.competitor_id
+            )
+        ),
         location_code=location,
         language_code=language,
         reuse_recent=payload.reuse_recent,
         depths={
-            item.kind: item.depth
-            for item in payload.datasets
-            if item.depth > 1 and item.kind in DEFAULT_DEPTHS
+            **SearchIntelligencePreferences.model_validate(
+                project.search_intelligence_preferences or {}
+            ).depths,
+            **{
+                item.kind: item.depth
+                for item in payload.datasets
+                if item.kind in DEFAULT_DEPTHS
+            },
         },
     ).model_dump(mode="json")

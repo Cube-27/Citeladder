@@ -67,7 +67,7 @@ def _backlink_request(
         "target": target.registrable_domain,
         "include_subdomains": research_scope == "domain_subdomains"
         or target.hostname != target.registrable_domain,
-        "include_indirect_links": False,
+        "include_indirect_links": research_scope == "domain_subdomains",
         "backlinks_status_type": "live",
         "rank_scale": "one_hundred",
         "backlinks_filters": backlink_filters(target, research_scope),

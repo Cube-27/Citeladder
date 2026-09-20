@@ -324,6 +324,26 @@ def test_backlink_url_filters_preserve_explicit_port(port):
         f"https://www.example.com{port}",
         f"http://www.example.com{port}",
     ]
+    assert request["include_indirect_links"] is False
+
+
+def test_broad_backlink_request_keeps_indirect_links_without_destination_filter():
+    _, request = build_request(
+        kind="backlink_summary",
+        target=OWNED,
+        comparison=None,
+        location_code=None,
+        language_code="",
+        limit=1,
+        offset=0,
+        research_scope="domain_subdomains",
+    )
+    assert request["include_indirect_links"] is True
+    assert all(
+        item[0] == "domain_from"
+        for item in request["backlinks_filters"]
+        if isinstance(item, list)
+    )
 
 
 @pytest.mark.parametrize("kind", ["ranking_keywords", "organic_pages", "backlinks"])
@@ -434,22 +454,38 @@ def test_reported_cost_terminalizes_only_stopped_runs(cost, status, error_code) 
         assert run.provider_reported_cost_usd == cost
 
 
-def test_review_defaults_keep_only_supported_expanded_depths() -> None:
+def test_review_defaults_preserve_other_depths_and_selected_depth_one() -> None:
     project = Project()
+    project.search_intelligence_preferences = {"depths": {"organic_pages": 75}}
+    competitor_id = uuid.uuid4()
     payload = ReviewCreate(
         datasets=[
             DatasetSelection(kind="footprint", depth=20),
             DatasetSelection(kind="backlink_summary", depth=2),
             DatasetSelection(kind="ranking_keywords", depth=500),
             DatasetSelection(kind="referring_domains", depth=1),
+            DatasetSelection(kind="missing_keywords", competitor_id=competitor_id),
+            DatasetSelection(kind="shared_keywords", competitor_id=competitor_id),
         ]
     )
 
     _save_review_defaults(project, payload, 2840, "en")
 
-    assert project.search_intelligence_preferences["depths"] == {
-        "ranking_keywords": 500
-    }
+    depths = project.search_intelligence_preferences["depths"]
+    assert depths["ranking_keywords"] == 500
+    assert depths["referring_domains"] == 1
+    assert depths["organic_pages"] == 75
+    assert "footprint" not in depths
+    assert project.search_intelligence_preferences["competitor_ids"] == [
+        str(competitor_id)
+    ]
+
+
+def test_non_keyword_acquisition_rejects_ignored_controls() -> None:
+    with pytest.raises(ValueError, match="keyword dataset"):
+        DatasetSelection(kind="backlinks", order="traffic")
+    with pytest.raises(ValueError, match="keyword dataset"):
+        DatasetSelection(kind="organic_pages", min_volume=10)
 
 
 @pytest.mark.asyncio

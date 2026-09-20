@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vite-plus/test';
@@ -268,7 +268,7 @@ it('uses shared pagination and resets its cursor when sorting or changing rows p
   expect(requests.at(-1)?.has('cursor')).toBe(false);
 });
 
-it('keeps the table and selected evidence visible while a sort read is pending', async () => {
+it('hides a previous page while a different sort is pending', async () => {
   mswServer.use(
     http.get(
       `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
@@ -291,18 +291,14 @@ it('keeps the table and selected evidence visible while a sort read is pending',
     projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
   });
   expect(await screen.findByText('First keyword')).toBeInTheDocument();
-  const table = screen.getByRole('table');
   await userEvent.click(screen.getByRole('checkbox', { name: /Select evidence row/ }));
   await userEvent.click(screen.getByRole('button', { name: 'Keyword' }));
-  expect(screen.getByRole('table')).toBe(table);
-  expect(screen.getByText('First keyword')).toBeInTheDocument();
-  expect(screen.getByText('1 evidence row selected')).toBeInTheDocument();
+  expect(screen.queryByText('First keyword')).not.toBeInTheDocument();
   expect(await screen.findByText('Sorted keyword')).toBeInTheDocument();
-  expect(screen.getByRole('table')).toBe(table);
   expect(screen.getByText('1 evidence row selected')).toBeInTheDocument();
 });
 
-it('retains the saved page and offers a read retry after a sort read fails', async () => {
+it('does not show a previous query page after a sort read fails', async () => {
   mswServer.use(
     http.get(
       `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
@@ -324,9 +320,36 @@ it('retains the saved page and offers a read retry after a sort read fails', asy
   });
   expect(await screen.findByText('First keyword')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Keyword' }));
-  expect(await screen.findByText(/Saved rows could not be updated/)).toBeInTheDocument();
-  expect(screen.getByText('First keyword')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Retry read' })).toBeInTheDocument();
+  expect(await screen.findByText('Read failed')).toBeInTheDocument();
+  expect(screen.queryByText('First keyword')).not.toBeInTheDocument();
+});
+
+it('sends only nonnegative integer minimum volumes', async () => {
+  const requests: URLSearchParams[] = [];
+  mswServer.use(
+    http.get(
+      `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
+      ({ request }) => {
+        requests.push(new URL(request.url).searchParams);
+        return HttpResponse.json({
+          dataset,
+          rows: [row('44444444-4444-4444-8444-444444444444', 'First keyword')],
+          next_cursor: null,
+        });
+      },
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  await screen.findByText('First keyword');
+  const input = screen.getByRole('spinbutton', { name: 'Minimum search volume' });
+  fireEvent.change(input, { target: { value: '-1' } });
+  fireEvent.change(input, { target: { value: '1.5' } });
+  expect(input).toHaveValue(null);
+  expect(requests).toHaveLength(1);
+  fireEvent.change(input, { target: { value: '10' } });
+  await waitFor(() => expect(requests.at(-1)?.get('min_volume')).toBe('10'));
 });
 
 it('removes saved rows when access to a dataset is revoked', async () => {

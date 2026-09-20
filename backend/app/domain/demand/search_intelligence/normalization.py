@@ -121,7 +121,7 @@ def _footprint_summary(
         else _matching_footprints(rows, hostname)
     )
     if len(matches) > 1:
-        raise ValueError("provider returned duplicate exact-host footprint rows")
+        raise ValueError("provider returned duplicate footprint rows")
     if not matches:
         return {}
     organic = _dictionary(_dictionary(matches[0].get("metrics")).get("organic"))

@@ -92,6 +92,7 @@ const datasets = [
     language_code: '',
     summary: { backlinks: 3000, referring_domains: 400, referring_main_domains: 250, rank: 60 },
   }),
+  dataset(11, 'footprint', { location_code: 2036 }),
 ];
 const rows = Array.from({ length: 10 }, (_, index) => ({
   id: id(100 + index),
@@ -167,7 +168,7 @@ for (const viewport of [
     });
     await page.goto(fixtureProjectPath('/search-intelligence'));
     await expect(page.getByText('8,633', { exact: true })).toBeVisible();
-    await expect(page.getByText('United States · en', { exact: true })).toBeVisible();
+    await expect(page.getByText('United States · en', { exact: true }).first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       viewport.width,
     );
@@ -176,6 +177,15 @@ for (const viewport of [
     await expect(page.getByRole('cell', { name: '8', exact: true }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Inspect', exact: true })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath('keywords.png'), fullPage: true });
+    await page.getByRole('combobox', { name: 'Saved market' }).click();
+    await page.getByRole('option', { name: 'Australia · en' }).click();
+    await page.getByRole('combobox', { name: 'Saved scope' }).click();
+    await page.getByRole('option', { name: 'Domain + subdomains' }).click();
+    await expect(page.getByRole('radio', { name: 'Top pages', exact: true })).toBeVisible();
+    await page.getByRole('combobox', { name: 'Saved scope' }).click();
+    await page.getByRole('option', { name: 'Exact host' }).click();
+    await page.getByRole('combobox', { name: 'Saved market' }).click();
+    await page.getByRole('option', { name: 'United States · en' }).click();
     await page.getByRole('tab', { name: 'Competitors', exact: true }).click();
     await page.getByRole('button', { name: 'shared keywords for Kmart' }).click();
     await expect(
@@ -229,6 +239,12 @@ function newDatasetRows(saved: SearchIntelligenceDataset | undefined) {
     ];
   if (saved.dataset_kind === 'backlink_history')
     return [
+      {
+        ...common,
+        id: id(90),
+        backlinks: 1000,
+        auxiliary: { date: '2026-02-30 00:00:00 +00:00' },
+      },
       {
         ...common,
         id: id(91),

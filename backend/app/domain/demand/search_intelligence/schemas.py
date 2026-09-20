@@ -66,6 +66,16 @@ class DatasetSelection(BaseModel):
 
     @model_validator(mode="after")
     def validate_acquisition(self) -> DatasetSelection:
+        keyword_kind = self.kind in {
+            "ranking_keywords",
+            "missing_keywords",
+            "shared_keywords",
+            "keyword_suggestions",
+        }
+        if not keyword_kind and (self.order != "volume" or self.min_volume is not None):
+            raise ValueError(
+                "acquisition order and minimum volume require a keyword dataset"
+            )
         if self.kind == "keyword_suggestions" and self.order in {"traffic", "position"}:
             raise ValueError(
                 "suggestions have no observed position or traffic ordering"

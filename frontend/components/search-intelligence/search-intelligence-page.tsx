@@ -119,10 +119,17 @@ export function SearchIntelligencePage() {
     }
     return [...result.values()];
   }, [readiness.data?.datasets]);
+  const scopes = [...new Set(latestDatasets.map((item) => item.research_scope ?? 'exact_host'))];
+  const activeScope = scopes.includes(scope as 'exact_host' | 'domain_subdomains')
+    ? scope
+    : scopes[0];
   const markets = [
     ...new Map(
       latestDatasets
-        .filter((item) => item.location_code !== null)
+        .filter(
+          (item) =>
+            (item.research_scope ?? 'exact_host') === activeScope && item.location_code !== null,
+        )
         .map((item) => [
           `${item.location_code}:${item.language_code}`,
           {
@@ -133,10 +140,6 @@ export function SearchIntelligencePage() {
     ).values(),
   ];
   const activeMarket = markets.find((item) => item.value === market)?.value ?? markets[0]?.value;
-  const scopes = [...new Set(latestDatasets.map((item) => item.research_scope ?? 'exact_host'))];
-  const activeScope = scopes.includes(scope as 'exact_host' | 'domain_subdomains')
-    ? scope
-    : scopes[0];
   const datasets = latestDatasets.filter(
     (item) =>
       (item.research_scope ?? 'exact_host') === activeScope &&
