@@ -10,21 +10,20 @@ import { SearchIntelligenceCitationMatcher } from '@/components/search-intellige
 import { SearchIntelligenceCollection } from './search-intelligence-collection';
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
-import { formatSearchNumber } from './search-intelligence-format';
+import { formatSearchNumber, reportedCost } from './search-intelligence-format';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Drawer } from '@/components/ui/drawer';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select } from '@/components/ui/select';
+import { SavedViewControls, ScopeBand } from './search-intelligence-scope';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import {
   searchIntelligenceApi,
   type SearchIntelligenceDataset,
-  type SearchIntelligenceReadiness,
   type SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
 import { searchIntelligenceKeys } from '@/lib/api/query-keys/search-intelligence';
@@ -52,6 +51,7 @@ export function SearchIntelligencePage() {
   const [citationOpen, setCitationOpen] = useState(false);
   const [comparison, setComparison] = useState<SearchIntelligenceDataset | null>(null);
   const [market, setMarket] = useState('');
+  const [scope, setScope] = useState('');
   const [action, setAction] = useState('analysis');
   const readiness = useQuery({
     queryKey: searchIntelligenceKeys.readiness(activeProject?.workspace_id, activeProject?.id),
@@ -108,6 +108,8 @@ export function SearchIntelligencePage() {
     for (const dataset of readiness.data?.datasets ?? []) {
       const key = JSON.stringify([
         dataset.dataset_kind,
+        dataset.research_scope ?? 'exact_host',
+        dataset.acquisition,
         dataset.target_origin,
         dataset.comparison_origin,
         dataset.location_code,
@@ -131,9 +133,15 @@ export function SearchIntelligencePage() {
     ).values(),
   ];
   const activeMarket = markets.find((item) => item.value === market)?.value ?? markets[0]?.value;
+  const scopes = [...new Set(latestDatasets.map((item) => item.research_scope ?? 'exact_host'))];
+  const activeScope = scopes.includes(scope as 'exact_host' | 'domain_subdomains')
+    ? scope
+    : scopes[0];
   const datasets = latestDatasets.filter(
     (item) =>
-      item.location_code === null || `${item.location_code}:${item.language_code}` === activeMarket,
+      (item.research_scope ?? 'exact_host') === activeScope &&
+      (item.location_code === null ||
+        `${item.location_code}:${item.language_code}` === activeMarket),
   );
   const openComparison = (dataset: SearchIntelligenceDataset) => {
     setComparison(dataset);
@@ -208,17 +216,21 @@ export function SearchIntelligencePage() {
               tab === 'backlinks' ? item.location_code === null : item.location_code !== null,
             )}
             marketControl={
-              markets.length > 1 && tab !== 'backlinks' ? (
-                <Select
-                  ariaLabel="Saved market"
-                  value={activeMarket}
-                  onValueChange={(value) => {
-                    setMarket(value);
-                    setComparison(null);
-                  }}
-                  options={markets}
-                />
-              ) : null
+              <SavedViewControls
+                scopes={scopes}
+                scope={activeScope}
+                markets={markets}
+                market={activeMarket}
+                tab={tab}
+                onScope={(value) => {
+                  setScope(value);
+                  setComparison(null);
+                }}
+                onMarket={(value) => {
+                  setMarket(value);
+                  setComparison(null);
+                }}
+              />
             }
           />
         }
@@ -241,6 +253,7 @@ export function SearchIntelligencePage() {
                 competitors={data.competitors}
                 selected={value === 'competitors' ? comparison : null}
                 onSelect={setComparison}
+                onExpand={() => openReview('increase_depth')}
                 action={
                   value === 'keywords' ? (
                     <Button variant="secondary" size="sm" onClick={() => openReview('seed')}>
@@ -328,35 +341,6 @@ function PageActions({
   );
 }
 
-function ScopeBand({
-  data,
-  tab,
-  latest,
-  marketControl,
-}: Readonly<{
-  data: SearchIntelligenceReadiness;
-  tab: Tab;
-  latest?: SearchIntelligenceDataset;
-  marketControl?: import('react').ReactNode;
-}>) {
-  return (
-    <div className="flex w-full flex-wrap items-center gap-3 py-2">
-      <span className={textRole('bodyStrong')}>{data.owned_targets[0]?.hostname}</span>
-      <span className={textRole('meta')}>
-        {tab === 'backlinks'
-          ? 'Canonical website · all referring countries'
-          : `${searchMarketLabel(latest?.location_code ?? data.preferences.location_code)} · ${latest?.language_code || data.preferences.language_code || 'Language not set'}`}
-      </span>
-      {marketControl}
-      <span className={textRole('meta', 'ml-auto')}>
-        {latest?.published_at
-          ? `Saved ${new Date(latest.published_at).toLocaleString()}`
-          : 'No saved analysis'}
-      </span>
-    </div>
-  );
-}
-
 function RunNotice({ run }: Readonly<{ run: SearchIntelligenceRun | null }>) {
   if (!run) return null;
   if (run.status === 'queued' || run.status === 'running')
@@ -378,12 +362,6 @@ function RunNotice({ run }: Readonly<{ run: SearchIntelligenceRun | null }>) {
       </Stack>
     </output>
   );
-}
-
-function reportedCost(run: SearchIntelligenceRun): string {
-  if (!run.confirmed_at) return 'Not charged';
-  if (run.provider_reported_cost_usd === null) return 'Unresolved';
-  return `${formatSearchNumber(run.provider_reported_cost_usd, 6)}`;
 }
 
 function CostDetails({

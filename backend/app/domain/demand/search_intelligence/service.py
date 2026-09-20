@@ -10,27 +10,35 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config.dataforseo import LANGUAGE_CODES, SUPPORTED_LOCATION_CODES
 from app.core.config.provider_catalog import TEST_STATUS_OK, TRANSPORT_DATAFORSEO
 from app.core.config.search_intelligence import (
-    DEFAULT_DEPTHS,
+    BACKLINK_KINDS,
+    HISTORY_DAYS,
+    HISTORY_MAX_OBSERVATIONS,
+    LIST_KINDS,
     PRICE_VERSION,
     REUSE_DAYS,
-    REVIEW_TTL_SECONDS,
     QuoteLine,
     estimate_dataset,
     page_sizes,
-    quote_total,
 )
 from app.core.config.task_queue import TASK_STATUS_CANCELLED
 from app.domain.analytics.enqueue import enqueue_search_intelligence
 from app.domain.demand.search_intelligence.pagination import (
     UnsupportedSortError,
+    filtered_count,
     sorted_rows,
 )
 from app.domain.demand.search_intelligence.requests import (
+    RequestOptions,
     build_request,
     request_identity,
     scope_hash,
+)
+from app.domain.demand.search_intelligence.review_state import (
+    _new_review_run,
+    _save_review_defaults,
 )
 from app.domain.demand.search_intelligence.schemas import (
     ContentHandoffResponse,
@@ -47,7 +55,6 @@ from app.domain.demand.search_intelligence.targets import (
     resolve_competitor,
     select_owned_target,
 )
-from app.domain.providers.dataforseo_identity import dataforseo_account_identity
 from app.models.analytics import AnalyticsTask
 from app.models.project import Project
 from app.models.provider import ProviderConnection
@@ -199,10 +206,20 @@ async def _build_call_plan(
         if comparison is not None:
             comparison = resolved_competitors[comparison.identity]
         depth = (
-            1
+            HISTORY_MAX_OBSERVATIONS
+            if selection.kind == "backlink_history"
+            else 1
             if selection.kind in {"footprint", "backlink_summary"}
             else selection.depth
         )
+        request_options: RequestOptions = {
+            "research_scope": payload.research_scope or "domain_subdomains",
+            "grouping": selection.grouping,
+            "order": selection.order,
+            "min_volume": selection.min_volume,
+            "date_from": (now.date() - timedelta(days=HISTORY_DAYS)).isoformat(),
+            "date_to": (now.date() - timedelta(days=1)).isoformat(),
+        }
         endpoint, first_request = build_request(
             kind=selection.kind,
             target=dataset_target,
@@ -212,6 +229,7 @@ async def _build_call_plan(
             limit=min(depth, 1000),
             offset=0,
             seed=selection.seed,
+            **request_options,
         )
         dataset_scope_hash = scope_hash(
             request_identity(
@@ -221,6 +239,7 @@ async def _build_call_plan(
                 location,
                 language,
                 first_request,
+                request_options["research_scope"],
             )
         )
         snapshot = None
@@ -238,11 +257,7 @@ async def _build_call_plan(
             reused.append(_reused_dataset(snapshot))
             continue
         quote_lines.append(quote)
-        sizes = (
-            page_sizes(depth)
-            if selection.kind not in {"footprint", "backlink_summary"}
-            else (1,)
-        )
+        sizes = page_sizes(depth) if selection.kind in LIST_KINDS else (depth,)
         for page, page_size in enumerate(sizes):
             _, request = build_request(
                 kind=selection.kind,
@@ -253,11 +268,13 @@ async def _build_call_plan(
                 limit=page_size,
                 offset=page * 1000,
                 seed=selection.seed,
+                **request_options,
             )
             call_plan.append(
                 {
                     "dataset_key": f"{index}:{dataset_scope_hash}",
                     "dataset_kind": selection.kind,
+                    "research_scope": payload.research_scope,
                     "scope_hash": dataset_scope_hash,
                     "target": dataset_target.public_dict(),
                     "comparison": comparison.public_dict() if comparison else None,
@@ -285,77 +302,44 @@ def _market_scope(project: Project, payload: ReviewCreate) -> tuple[int | None, 
         or project.serp_language_code
         or project.language_code
     )
-    backlink_kinds = {"backlink_summary", "referring_domains", "destination_pages"}
-    needs_market = any(item.kind not in backlink_kinds for item in payload.datasets)
-    if needs_market and (location is None or not language):
+    needs_market = any(item.kind not in BACKLINK_KINDS for item in payload.datasets)
+    if needs_market and (
+        location not in SUPPORTED_LOCATION_CODES or language not in LANGUAGE_CODES
+    ):
         raise SearchIntelligenceError(
             "unsupported_market", "Select a supported Labs location and language"
         )
     return location, language
 
 
-def _new_review_run(
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    actor_user_id: uuid.UUID,
-    idempotency_key: str,
-    payload: ReviewCreate,
-    target: CanonicalTarget,
-    connection: ProviderConnection,
-    location: int | None,
-    language: str,
-    call_plan: list[dict[str, Any]],
-    reused: list[dict[str, Any]],
-    quote_lines: list[QuoteLine],
-    now: datetime,
-) -> SearchIntelligenceRun:
-    return SearchIntelligenceRun(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        actor_user_id=actor_user_id,
-        previous_run_id=payload.previous_run_id,
-        connection_id=connection.id,
-        connection_revision=connection.credential_revision,
-        account_identity=dataforseo_account_identity(connection.api_key_encrypted),
-        status="reviewed",
-        action=payload.action,
-        idempotency_key=idempotency_key,
-        frozen_scope={
-            "owned_target": target.public_dict(),
-            "location_code": location,
-            "language_code": language,
-            "datasets": [item.model_dump(mode="json") for item in payload.datasets],
-            "connection_id": str(connection.id),
-            "connection_revision": str(connection.credential_revision),
-        },
-        call_plan=call_plan,
-        reused_datasets=reused,
-        pricing_version=PRICE_VERSION,
-        estimated_cost_usd=quote_total(tuple(quote_lines)),
-        planned_calls=len(call_plan),
-        planned_rows=sum(line.requested_rows for line in quote_lines),
-        expires_at=now + timedelta(seconds=REVIEW_TTL_SECONDS),
+def _review_scope(project: Project, payload: ReviewCreate) -> ReviewCreate:
+    payload = payload.model_copy(
+        update={
+            "reuse_recent": payload.reuse_recent
+            and payload.action not in {"refresh", "increase_depth"},
+            "research_scope": payload.research_scope
+            or SearchIntelligencePreferences.model_validate(
+                project.search_intelligence_preferences or {}
+            ).research_scope,
+        }
     )
-
-
-def _save_review_defaults(
-    project: Project, payload: ReviewCreate, location: int | None, language: str
-) -> None:
-    project.search_intelligence_preferences = SearchIntelligencePreferences(
-        owned_target_id=payload.owned_target_id,
-        competitor_ids=[
-            item.competitor_id for item in payload.datasets if item.competitor_id
-        ],
-        location_code=location,
-        language_code=language,
-        reuse_recent=payload.reuse_recent,
-        depths={
-            item.kind: item.depth
-            for item in payload.datasets
-            if item.depth > 1 and item.kind in DEFAULT_DEPTHS
-        },
-    ).model_dump(mode="json")
+    if payload.research_scope == "exact_host" and any(
+        item.kind == "backlink_history" for item in payload.datasets
+    ):
+        raise SearchIntelligenceError(
+            "unsupported_scope",
+            "Backlink history is domain-level evidence; select Domain + subdomains",
+        )
+    if payload.research_scope == "exact_host" and any(
+        item.kind in {"missing_keywords", "shared_keywords"}
+        and item.order in {"traffic", "position"}
+        for item in payload.datasets
+    ):
+        raise SearchIntelligenceError(
+            "unsupported_order",
+            "Exact-host comparisons support volume, CPC or difficulty ordering",
+        )
+    return payload
 
 
 async def create_review(
@@ -377,6 +361,7 @@ async def create_review(
     if existing is not None:
         return existing
     project = await _project(session, workspace_id, project_id)
+    payload = _review_scope(project, payload)
     saved_competitors = {
         str(item.competitor_id): _comparison(project, item.competitor_id)
         for item in payload.datasets
@@ -406,10 +391,7 @@ async def create_review(
     if existing is not None:
         return existing
     project = await _project(session, workspace_id, project_id)
-    if any(
-        _comparison(project, uuid.UUID(key)) != target
-        for key, target in saved_competitors.items()
-    ):
+    if _competitors_changed(project, saved_competitors):
         raise SearchIntelligenceError(
             "target_changed", "Competitors changed; review again"
         )
@@ -450,6 +432,18 @@ async def create_review(
     await session.commit()
     await session.refresh(run)
     return run
+
+
+def _competitors_changed(project: Project, saved: dict[str, CanonicalTarget]) -> bool:
+    try:
+        return any(
+            _comparison(project, uuid.UUID(key)) != target
+            for key, target in saved.items()
+        )
+    except SearchIntelligenceError as exc:
+        if exc.code in {"competitor_not_found", "unsupported_target"}:
+            return True
+        raise
 
 
 def _validate_confirmation(run: SearchIntelligenceRun, now: datetime) -> None:
@@ -644,6 +638,10 @@ def dataset_dict(row: SearchIntelligenceDataset) -> dict[str, Any]:
         "target_domain": row.target_domain,
         "target_hostname": row.target_hostname,
         "target_origin": row.target_origin,
+        "research_scope": (row.provider_filters or {}).get(
+            "research_scope", "exact_host"
+        ),
+        "acquisition": row.provider_filters,
         "comparison_origin": row.comparison_origin,
         "location_code": row.location_code,
         "language_code": row.language_code,
@@ -663,6 +661,7 @@ def dataset_dict(row: SearchIntelligenceDataset) -> dict[str, Any]:
 
 def row_dict(row: SearchIntelligenceRow) -> dict[str, Any]:
     return {
+        **(row.auxiliary or {}),
         "id": str(row.id),
         "dataset_id": str(row.dataset_id),
         "call_id": str(row.call_id) if row.call_id else None,
@@ -693,6 +692,9 @@ async def dataset_page(
     limit: int,
     sort: str = "id",
     direction: str = "asc",
+    search: str = "",
+    min_volume: int | None = None,
+    intent: str = "",
 ) -> tuple[dict, list[dict], str | None]:
     dataset = await session.scalar(
         select(SearchIntelligenceDataset).where(
@@ -706,7 +708,15 @@ async def dataset_page(
         raise SearchIntelligenceError("not_found", "Dataset not found")
     try:
         rows, next_cursor = await sorted_rows(
-            session, dataset, cursor=cursor, limit=limit, sort=sort, direction=direction
+            session,
+            dataset,
+            cursor=cursor,
+            limit=limit,
+            sort=sort,
+            direction=direction,
+            search=search,
+            min_volume=min_volume,
+            intent=intent,
         )
     except UnsupportedSortError as exc:
         raise SearchIntelligenceError(
@@ -716,7 +726,11 @@ async def dataset_page(
         raise SearchIntelligenceError(
             "invalid_cursor", "Dataset cursor is invalid"
         ) from exc
-    return dataset_dict(dataset), [row_dict(row) for row in rows], next_cursor
+    metadata = dataset_dict(dataset)
+    metadata["filtered_saved_count"] = await filtered_count(
+        session, dataset, search, min_volume, intent
+    )
+    return metadata, [row_dict(row) for row in rows], next_cursor
 
 
 async def update_preferences(

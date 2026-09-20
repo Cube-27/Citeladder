@@ -13,64 +13,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { SearchIntelligenceRow } from '@/lib/api/search-intelligence';
-import { SEARCH_HANDOFF_MAX_ROWS } from '@/lib/config/search-intelligence';
+import {
+  SEARCH_HANDOFF_MAX_ROWS,
+  SEARCH_COLUMNS_BY_KIND,
+  type SearchColumn,
+} from '@/lib/config/search-intelligence';
 import { formatSearchNumber } from './search-intelligence-format';
 
-type Column = { field: keyof SearchIntelligenceRow; label: string; numeric?: boolean };
-const columnsByKind: Record<string, Column[]> = {
-  footprint: [
-    { field: 'keyword', label: 'Keyword' },
-    { field: 'search_volume', label: 'Volume', numeric: true },
-    { field: 'difficulty', label: 'Difficulty', numeric: true },
-    { field: 'intent', label: 'Intent' },
-    { field: 'dataforseo_rank', label: 'DataForSEO rank', numeric: true },
-  ],
-  ranking_keywords: [
-    { field: 'keyword', label: 'Keyword' },
-    { field: 'rank_group', label: 'Position', numeric: true },
-    { field: 'search_volume', label: 'Volume', numeric: true },
-    { field: 'url', label: 'Ranking page' },
-    { field: 'etv', label: 'Est. traffic', numeric: true },
-  ],
-  keyword_suggestions: [
-    { field: 'keyword', label: 'Keyword' },
-    { field: 'search_volume', label: 'Volume', numeric: true },
-    { field: 'difficulty', label: 'Difficulty', numeric: true },
-    { field: 'intent', label: 'Intent' },
-  ],
-  missing_keywords: [
-    { field: 'keyword', label: 'Missing keyword' },
-    { field: 'owned_rank_group', label: 'Owned rank', numeric: true },
-    { field: 'rank_group', label: 'Competitor rank', numeric: true },
-    { field: 'search_volume', label: 'Volume', numeric: true },
-    { field: 'difficulty', label: 'Difficulty', numeric: true },
-  ],
-  shared_keywords: [
-    { field: 'keyword', label: 'Shared keyword' },
-    { field: 'owned_rank_group', label: 'Owned rank', numeric: true },
-    { field: 'rank_group', label: 'Competitor rank', numeric: true },
-    { field: 'search_volume', label: 'Volume', numeric: true },
-  ],
-  referring_domains: [
-    { field: 'domain', label: 'Referring domain' },
-    { field: 'backlinks', label: 'Backlinks', numeric: true },
-    { field: 'dataforseo_rank', label: 'DataForSEO rank', numeric: true },
-  ],
-  destination_pages: [
-    { field: 'url', label: 'Destination page' },
-    { field: 'backlinks', label: 'Backlinks', numeric: true },
-    { field: 'referring_main_domains', label: 'Referring domains', numeric: true },
-    { field: 'dataforseo_rank', label: 'DataForSEO rank', numeric: true },
-  ],
-  citation_matches: [
-    { field: 'domain', label: 'Cited domain' },
-    { field: 'url', label: 'Cited URL' },
-  ],
-};
-
-function displayValue(row: SearchIntelligenceRow, column: Column) {
+function displayValue(row: SearchIntelligenceRow, column: SearchColumn) {
   const result = row[column.field];
-  if (column.numeric) return formatSearchNumber(result);
+  if (column.numeric) return formatSearchNumber(result, column.precision ?? 0);
   if (result === null || result === undefined || result === '')
     return <span className="value-placeholder">Not measured</span>;
   return typeof result === 'object' ? JSON.stringify(result) : String(result);
@@ -95,14 +47,18 @@ export function SearchIntelligenceRowsTable({
   onSort: (sort: string) => void;
   onSelect: (row: SearchIntelligenceRow) => void;
 }>) {
-  const columns = columnsByKind[kind] ?? columnsByKind.footprint;
+  const columns = SEARCH_COLUMNS_BY_KIND[kind] ?? SEARCH_COLUMNS_BY_KIND.footprint;
   const selectedCount = Object.keys(selectedEvidence).length;
   return (
-    <Table className="min-w-[900px] table-fixed">
+    <Table
+      className={
+        kind === 'ranking_keywords' ? 'min-w-[1200px] table-fixed' : 'min-w-[900px] table-fixed'
+      }
+    >
       <colgroup>
         {selectable ? <col className="w-14" /> : null}
         {columns.map((column) => (
-          <col key={column.field} className={column.numeric ? 'w-32' : undefined} />
+          <col key={column.field} className={column.numeric ? 'w-28' : 'w-48'} />
         ))}
       </colgroup>
       <TableHeader>
@@ -134,15 +90,21 @@ export function SearchIntelligenceRowsTable({
               />
             </TableHead>
           ) : null}
-          {columns.map((column) => (
-            <SortableHead
-              key={column.field}
-              column={column}
-              active={order.sort === column.field}
-              descending={order.direction === 'desc'}
-              onSort={() => onSort(column.field)}
-            />
-          ))}
+          {columns.map((column) =>
+            column.detail ? (
+              <TableHead key={column.field} numeric={column.numeric}>
+                {column.label}
+              </TableHead>
+            ) : (
+              <SortableHead
+                key={column.field}
+                column={column}
+                active={order.sort === column.field}
+                descending={order.direction === 'desc'}
+                onSort={() => onSort(column.field)}
+              />
+            ),
+          )}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -208,7 +170,7 @@ function SortableHead({
   descending,
   onSort,
 }: Readonly<{
-  column: Column;
+  column: SearchColumn;
   active: boolean;
   descending: boolean;
   onSort: () => void;

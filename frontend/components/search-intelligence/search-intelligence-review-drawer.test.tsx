@@ -117,7 +117,7 @@ describe('SearchIntelligenceReviewDrawer', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Review expired');
     await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
-    const confirmation = await screen.findByRole('button', { name: 'Confirm $0.1441 acquisition' });
+    const confirmation = await screen.findByRole('button', { name: 'Confirm $0.1442 acquisition' });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await userEvent.click(confirmation);
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -149,10 +149,10 @@ describe('SearchIntelligenceReviewDrawer', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Review cost' }));
     expect(review).toHaveBeenCalledTimes(1);
     expect(confirm).not.toHaveBeenCalled();
-    expect(await screen.findByText('$0.1441')).toBeInTheDocument();
+    expect(await screen.findByText('$0.1442')).toBeInTheDocument();
     expect(screen.getByText('2', { selector: 'dd' })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm $0.1441 acquisition' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm $0.1442 acquisition' }));
     expect(confirm).toHaveBeenCalledWith(RUN_ID);
   });
 });

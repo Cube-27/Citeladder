@@ -31,4 +31,7 @@ describe('toCsv', () => {
   it('renders an absent value as an empty cell, never as "null"', () => {
     expect(toCsvForTest(['A', 'B'], [[null, undefined]])).toBe('A,B\r\n,');
   });
+  it('neutralizes formula triggers following whitespace', () => {
+    expect(toCsvForTest(['Title'], [['  =1+1'], ['\t@cmd']])).toBe("Title\r\n'  =1+1\r\n'\t@cmd");
+  });
 });

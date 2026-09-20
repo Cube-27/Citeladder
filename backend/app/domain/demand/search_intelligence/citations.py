@@ -169,7 +169,12 @@ def _derived_dataset(
             "citations_reviewed": len(citations),
             "matches": len(matches),
         },
-        provider_filters=selection,
+        provider_filters={
+            **selection,
+            "research_scope": (parent.provider_filters or {}).get(
+                "research_scope", "exact_host"
+            ),
+        },
         parser_version="citation-match-1",
         collection_started_at=now,
         collection_ended_at=now,

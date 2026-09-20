@@ -43,6 +43,33 @@ OWNED = CanonicalTarget(
     "https://www.example.com",
     "owned",
 )
+
+
+def test_backlink_identity_preserves_distinct_anchors_and_link_types():
+    link = {
+        "domain_from": "publisher.test",
+        "url_from": "https://publisher.test/article",
+        "url_to": OWNED.origin + "/page",
+        "anchor": "Example",
+        "item_type": "anchor",
+    }
+    _, rows, _ = normalize_result(
+        "backlinks",
+        {
+            "items": [
+                link,
+                {**link, "anchor": "Read more"},
+                {**link, "item_type": "image"},
+                link,
+            ]
+        },
+        {"target": OWNED.public_dict()},
+    )
+    keys = [row["provider_row_key"] for row in rows]
+    assert len(set(keys)) == 3
+    assert keys[0] == keys[3]
+
+
 COMPETITOR = CanonicalTarget(
     "competitor",
     "Rival",
@@ -259,7 +286,16 @@ def test_backlink_summary_preserves_zero_and_unknown_metrics() -> None:
         plan,
     )
 
-    assert summary == {
+    assert {
+        key: summary[key]
+        for key in (
+            "backlinks",
+            "referring_main_domains",
+            "rank",
+            "rank_scale",
+            "object_type",
+        )
+    } == {
         "backlinks": 0,
         "referring_main_domains": None,
         "rank": 0,
@@ -268,6 +304,106 @@ def test_backlink_summary_preserves_zero_and_unknown_metrics() -> None:
     }
     assert rows == []
     assert total is None
+
+
+@pytest.mark.parametrize("port", ["", ":8443"])
+def test_backlink_url_filters_preserve_explicit_port(port):
+    _, request = build_request(
+        kind="backlink_summary",
+        target=replace(OWNED, origin=f"https://www.example.com{port}"),
+        comparison=None,
+        location_code=None,
+        language_code="",
+        limit=1,
+        offset=0,
+    )
+    predicates = request["backlinks_filters"][0][::2]
+    assert [item[2] for item in predicates] == [
+        f"https://www.example.com{port}/%",
+        f"http://www.example.com{port}/%",
+        f"https://www.example.com{port}",
+        f"http://www.example.com{port}",
+    ]
+
+
+@pytest.mark.parametrize("kind", ["ranking_keywords", "organic_pages", "backlinks"])
+@pytest.mark.parametrize(
+    "host,allowed",
+    [
+        ("shop.example.com", True),
+        ("example.com.evil.test", False),
+        ("otherexample.com", False),
+    ],
+)
+def test_broad_rows_allow_only_owned_domain_tree(kind, host, allowed):
+    url = f"https://{host}/page?q=1"
+    item = {
+        "page_address": url,
+        "url_to": url,
+        "domain_from": "outside.test",
+        "url_from": "https://outside.test/p",
+        "keyword_data": {"keyword": "family", "keyword_info": {"cpc": 1.25}},
+        "ranked_serp_element": {
+            "serp_item": {"url": url, "rank_group": 2, "rank_absolute": 4}
+        },
+    }
+    plan = {"target": OWNED.public_dict(), "research_scope": "domain_subdomains"}
+    if not allowed:
+        with pytest.raises(ValueError):
+            normalize_result(kind, {"items": [item]}, plan)
+        return
+    _, rows, _ = normalize_result(kind, {"items": [item]}, plan)
+    assert rows[0]["url"] == url
+    if kind == "ranking_keywords":
+        assert rows[0]["rank_group"] == 2
+        assert rows[0]["auxiliary"]["rank_absolute"] == 4
+        assert rows[0]["auxiliary"]["cpc"] == "1.25"
+
+
+def test_broad_comparison_direction_and_history_price():
+    endpoint, request = build_request(
+        kind="missing_keywords",
+        target=OWNED,
+        comparison=COMPETITOR,
+        location_code=2036,
+        language_code="en",
+        limit=100,
+        offset=0,
+        research_scope="domain_subdomains",
+    )
+    assert endpoint.endswith("domain_intersection/live")
+    assert request["target1"] == "rival.test"
+    assert request["target2"] == "example.com"
+    assert request["intersections"] is False
+    assert "include_subdomains" not in request
+    plan = {
+        "target": OWNED.public_dict(),
+        "comparison": COMPETITOR.public_dict(),
+        "research_scope": "domain_subdomains",
+    }
+    _, rows, _ = normalize_result(
+        "shared_keywords",
+        {
+            "items": [
+                {
+                    "keyword_data": {"keyword": "family"},
+                    "first_domain_serp_element": {
+                        "url": "https://shop.rival.test/x",
+                        "rank_group": 2,
+                    },
+                    "second_domain_serp_element": {
+                        "url": "https://example.com/x",
+                        "rank_group": 5,
+                    },
+                }
+            ]
+        },
+        plan,
+    )
+    assert (rows[0]["rank_group"], rows[0]["owned_rank_group"]) == (2, 5)
+    assert estimate_dataset("backlink_history", rows=13).estimated_usd == Decimal(
+        "0.024468"
+    )
 
 
 @pytest.mark.parametrize(

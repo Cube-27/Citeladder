@@ -65,6 +65,33 @@ const datasets = [
   dataset(4, 'missing_keywords', { comparison_origin: competitor.origin }),
   dataset(5, 'referring_domains', { location_code: null, language_code: '', provider_total: 0 }),
   dataset(6, 'backlink_summary', { location_code: null, language_code: '' }),
+  dataset(7, 'organic_pages', {
+    research_scope: 'domain_subdomains',
+    unique_rows_saved: 1,
+    provider_total: 200,
+    coverage: 'complete',
+  }),
+  dataset(8, 'backlinks', {
+    research_scope: 'domain_subdomains',
+    location_code: null,
+    language_code: '',
+    unique_rows_saved: 1,
+    provider_total: 800,
+    coverage: 'complete',
+  }),
+  dataset(9, 'backlink_history', {
+    research_scope: 'domain_subdomains',
+    location_code: null,
+    language_code: '',
+    unique_rows_saved: 2,
+    coverage: 'complete',
+  }),
+  dataset(10, 'backlink_summary', {
+    research_scope: 'domain_subdomains',
+    location_code: null,
+    language_code: '',
+    summary: { backlinks: 3000, referring_domains: 400, referring_main_domains: 250, rank: 60 },
+  }),
 ];
 const rows = Array.from({ length: 10 }, (_, index) => ({
   id: id(100 + index),
@@ -128,8 +155,9 @@ for (const viewport of [
     );
     await page.route(`${base}/datasets/*/rows*`, (route) => {
       const saved = datasets.find((item) => route.request().url().includes(item.id));
+      const details = newDatasetRows(saved);
       return route.fulfill({
-        json: { dataset: saved, rows: saved?.id === id(2) ? rows : [], next_cursor: null },
+        json: { dataset: saved, rows: saved?.id === id(2) ? rows : details, next_cursor: null },
       });
     });
     const writes: string[] = [];
@@ -157,13 +185,62 @@ for (const viewport of [
     await expect(page.getByRole('cell', { name: 'Kmart kmart.com.au' })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('competitors.png'), fullPage: true });
     await page.getByRole('tab', { name: 'Backlinks', exact: true }).click();
+    await page.getByRole('radio', { name: 'Referring domains', exact: true }).click();
     await expect(
       page.getByText('The provider returned no data for this saved scope.'),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Create content brief' })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath('backlinks.png'), fullPage: true });
+    await page.getByRole('combobox', { name: 'Saved scope' }).click();
+    await page.getByRole('option', { name: 'Domain + subdomains' }).click();
+    await page.getByRole('radio', { name: 'Backlinks', exact: true }).click();
+    await expect(page.getByText('https://publisher.test/story', { exact: true })).toBeVisible();
+    await expect(page.getByText('400', { exact: true })).toBeVisible();
+    await expect(page.getByText('250', { exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Saved backlink history' })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('broad-backlinks.png'), fullPage: true });
+    await page.getByRole('tab', { name: 'Keywords', exact: true }).click();
+    await page.getByRole('radio', { name: 'Top pages', exact: true }).click();
+    await expect(page.getByRole('cell', { name: '22', exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('organic-pages.png'), fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      viewport.width,
+    );
     await page.getByRole('button', { name: 'Analysis settings' }).click();
     await expect(page.getByRole('combobox', { name: 'Market' })).toHaveText('Australia');
     expect(writes).toEqual([]);
   });
+}
+
+function newDatasetRows(saved: SearchIntelligenceDataset | undefined) {
+  if (!saved) return [];
+  const common = { ...rows[0], dataset_id: saved.id, row_kind: saved.dataset_kind };
+  if (saved.dataset_kind === 'organic_pages')
+    return [{ ...common, url: 'https://shop.bestandless.com.au/family', organic_keywords: 22 }];
+  if (saved.dataset_kind === 'backlinks')
+    return [
+      {
+        ...common,
+        url_from: 'https://publisher.test/story',
+        anchor: 'Family collection',
+        dofollow: true,
+        dataforseo_rank: 55,
+      },
+    ];
+  if (saved.dataset_kind === 'backlink_history')
+    return [
+      {
+        ...common,
+        id: id(91),
+        backlinks: 2000,
+        auxiliary: { date: '2026-06-30 00:00:00 +00:00', new_backlinks: 200, lost_backlinks: 50 },
+      },
+      {
+        ...common,
+        id: id(92),
+        backlinks: 3000,
+        auxiliary: { date: '2026-08-31 00:00:00 +00:00', new_backlinks: 300, lost_backlinks: 100 },
+      },
+    ];
+  return [];
 }

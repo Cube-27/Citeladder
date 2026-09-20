@@ -198,10 +198,13 @@ async def get_dataset_rows(
     dataset_id: uuid.UUID,
     ctx: _Read,
     session: _Session,
-    cursor: Annotated[str | None, Query(max_length=512)] = None,
+    cursor: Annotated[str | None, Query(max_length=2048)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     sort: str = "id",
     direction: Literal["asc", "desc"] = "asc",
+    search: Annotated[str, Query(max_length=200)] = "",
+    min_volume: Annotated[int | None, Query(ge=0)] = None,
+    intent: Annotated[str, Query(max_length=100)] = "",
 ) -> DatasetPageResponse:
     try:
         dataset, rows, next_cursor = await dataset_page(
@@ -213,6 +216,9 @@ async def get_dataset_rows(
             limit=limit,
             sort=sort,
             direction=direction,
+            search=search.strip(),
+            min_volume=min_volume,
+            intent=intent.strip(),
         )
         return DatasetPageResponse(dataset=dataset, rows=rows, next_cursor=next_cursor)
     except SearchIntelligenceError as exc:

@@ -6,7 +6,7 @@ import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
 } from '@/lib/api/search-intelligence';
-import { formatSearchNumber } from './search-intelligence-format';
+import { formatEvidenceValue, formatSearchNumber } from './search-intelligence-format';
 import { SearchIntelligenceCompetitors } from './search-intelligence-competitors';
 
 export function SearchMetrics({
@@ -59,7 +59,7 @@ export function SearchIntelligenceOverview({
           ['Organic keywords', footprint?.summary.organic_keywords],
           ['Estimated monthly traffic', footprint?.summary.estimated_monthly_traffic],
           ['Top-10 keywords', footprint?.summary.top_10_keywords],
-          ['Referring domains', backlinks?.summary.referring_main_domains],
+          ['Referring domains', backlinks?.summary.referring_domains],
           ['Backlinks', backlinks?.summary.backlinks],
         ]}
       />
@@ -69,8 +69,44 @@ export function SearchIntelligenceOverview({
         onOpen={onOpen}
       />
       <p className={textRole('meta')}>
+        Top-10 share of the provider aggregate:{' '}
+        {footprint?.summary.top_10_percentage == null
+          ? 'Not measured'
+          : `${formatSearchNumber(footprint.summary.top_10_percentage, 2)}%`}
+      </p>
+      <SearchSummaryEvidence
+        datasets={datasets.filter((item) => item === footprint || item === backlinks)}
+      />
+      <p className={textRole('meta')}>
         Provider estimates and observed rankings are separate from first-party Search Demand data.
       </p>
     </Stack>
+  );
+}
+
+export function SearchSummaryEvidence({
+  datasets,
+}: Readonly<{ datasets: SearchIntelligenceDataset[] }>) {
+  return (
+    <details className={textRole('meta')}>
+      <summary>Metric definitions and saved evidence</summary>
+      <p>
+        Organic positions exclude other result types; absolute position includes them. Estimated
+        traffic and CPC (USD) are provider estimates. Difficulty is organic keyword difficulty.
+        DataForSEO Rank uses a 0–100 scale for the named object. Referring domains and referring
+        root domains are distinct totals.
+      </p>
+      {datasets.map((dataset) => (
+        <div key={dataset.id} className="grid gap-2">
+          <p>
+            {dataset.target_hostname} · Dataset {dataset.id} · Collected{' '}
+            {dataset.collection_ended_at ?? 'Unknown'}
+          </p>
+          <pre className="overflow-x-auto break-all whitespace-pre-wrap">
+            {formatEvidenceValue(dataset.summary)}
+          </pre>
+        </div>
+      ))}
+    </details>
   );
 }
