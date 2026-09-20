@@ -1021,6 +1021,9 @@ def upgrade() -> None:
         sa.Column(
             "site_health_reference", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
+        sa.Column(
+            "search_intelligence_reference", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
         sa.Column("user_instruction", sa.Text(), nullable=False),
         sa.Column("skill_id", sa.String(64), nullable=False),
         sa.Column("skill_version", sa.Integer(), nullable=False),

@@ -41,7 +41,14 @@ def _host(url: str) -> str:
 
 
 def _prefix_ok(url: str, origin: str) -> bool:
-    return url == origin or url.startswith(f"{origin}/")
+    parts = urlsplit(url)
+    expected = urlsplit(origin)
+    return (
+        parts.scheme in {"http", "https"}
+        and parts.hostname == expected.hostname
+        and (parts.path == "" or parts.path.startswith("/"))
+        and parts.port == expected.port
+    )
 
 
 def _stable_key(kind: str, values: tuple[object, ...]) -> str:

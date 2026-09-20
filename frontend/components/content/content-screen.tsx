@@ -14,6 +14,7 @@ import {
   CONTENT_INSTRUCTION_MAX_LEN,
   type SiteHealthReferenceInput,
 } from '@/lib/api/content';
+import type { SearchIntelligenceHandoff } from '@/lib/api/search-intelligence';
 import type { ContentGenerationDetail } from '@/lib/api/types';
 import {
   isTerminalContentStatus,
@@ -35,6 +36,10 @@ import { GenerationResult } from './content-screen-result';
 import { GenerationHistoryWorkspace } from './content-screen-history';
 import { opportunityTarget, useOriginSelections } from './content-screen-origins';
 import { textRole } from '@/components/ui/typography';
+import {
+  SearchIntelligenceEvidence,
+  takeSearchIntelligenceHandoff,
+} from './content-search-intelligence-evidence';
 
 const FALLBACK_SKILL_ID = 'content_page';
 
@@ -122,40 +127,6 @@ function NoProjectState() {
   );
 }
 
-function searchIntelligenceInstruction(projectId: string): string {
-  if (typeof window === 'undefined') return '';
-  const key = 'citeladder:search-intelligence-handoff';
-  try {
-    const raw = sessionStorage.getItem(key);
-    if (!raw) return '';
-    const handoff = JSON.parse(raw) as {
-      project_id?: string;
-      user_instructions?: string;
-      evidence?: Array<Record<string, unknown>>;
-    };
-    if (handoff.project_id !== projectId || !handoff.user_instructions) return '';
-    sessionStorage.removeItem(key);
-    const evidence = (handoff.evidence ?? [])
-      .slice(0, 30)
-      .map((row) =>
-        [row.keyword, row.domain, row.url, row.search_volume]
-          .filter((value) => value !== null && value !== undefined && value !== '')
-          .join(' · '),
-      )
-      .filter(Boolean);
-    return [
-      handoff.user_instructions,
-      '',
-      'Selected Search Intelligence evidence:',
-      ...evidence.map((line) => `- ${line}`),
-    ]
-      .join('\n')
-      .slice(0, CONTENT_INSTRUCTION_MAX_LEN);
-  } catch {
-    return '';
-  }
-}
-
 function ProjectContentScreen({
   projectId,
   opportunityId,
@@ -168,10 +139,11 @@ function ProjectContentScreen({
   siteHealthReference?: SiteHealthReferenceInput;
 }>) {
   const [instruction, setInstruction] = useState('');
+  const [searchHandoff, setSearchHandoff] = useState<SearchIntelligenceHandoff | null>(null);
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      const handoff = searchIntelligenceInstruction(projectId);
-      if (handoff) setInstruction(handoff);
+      const handoff = takeSearchIntelligenceHandoff(projectId);
+      if (handoff) setSearchHandoff(handoff);
     });
     return () => cancelAnimationFrame(frame);
   }, [projectId]);
@@ -199,6 +171,12 @@ function ProjectContentScreen({
     demandSignalId,
     target: resolvedTarget,
     siteHealthReference,
+    searchIntelligenceReference: searchHandoff
+      ? {
+          dataset_id: searchHandoff.dataset_id,
+          row_ids: searchHandoff.row_ids,
+        }
+      : undefined,
   });
   const detail = generation.detailQuery.data ?? null;
   const mutationError = firstMutationError(generation);
@@ -232,6 +210,7 @@ function ProjectContentScreen({
     <ContentWorkspace
       projectId={projectId}
       siteHealth={siteHealth}
+      searchHandoff={searchHandoff}
       instruction={instruction}
       instructionRef={instructionRef}
       opportunity={opportunity}
@@ -266,6 +245,7 @@ function ProjectContentScreen({
 function ContentWorkspace({
   projectId,
   siteHealth,
+  searchHandoff,
   instruction,
   instructionRef,
   opportunity,
@@ -294,6 +274,7 @@ function ContentWorkspace({
 }: Readonly<{
   projectId: string;
   siteHealth: ReturnType<typeof useSiteHealthHandoff>;
+  searchHandoff: SearchIntelligenceHandoff | null;
   instruction: string;
   instructionRef: React.RefObject<HTMLTextAreaElement | null>;
   opportunity: ReturnType<typeof useOpportunityContext>;
@@ -347,6 +328,7 @@ function ContentWorkspace({
     >
       <Stack gap="workspace" className="min-w-0">
         {siteHealthAlert}
+        {searchHandoff ? <SearchIntelligenceEvidence handoff={searchHandoff} /> : null}
         <ContentDifferentiationPanel projectId={projectId} />
         <ContentComposer
           instruction={instruction}

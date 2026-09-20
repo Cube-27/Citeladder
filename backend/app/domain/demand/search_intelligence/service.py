@@ -721,7 +721,6 @@ async def content_handoff(
     project_id: uuid.UUID,
     dataset_id: uuid.UUID,
     row_ids: list[uuid.UUID],
-    user_instructions: str,
 ) -> ContentHandoffResponse:
     dataset = await session.scalar(
         select(SearchIntelligenceDataset).where(
@@ -751,6 +750,7 @@ async def content_handoff(
         )
     return ContentHandoffResponse(
         project_id=project_id,
+        dataset_id=dataset_id,
+        row_ids=row_ids,
         evidence=[{**row_dict(row), "dataset": dataset_dict(dataset)} for row in rows],
-        user_instructions=user_instructions,
     )

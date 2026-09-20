@@ -233,7 +233,6 @@ async def post_content_handoff(
             project_id=project_id,
             dataset_id=payload.dataset_id,
             row_ids=payload.row_ids,
-            user_instructions=payload.user_instructions,
         )
     except SearchIntelligenceError as exc:
         _raise(exc)

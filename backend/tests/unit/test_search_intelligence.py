@@ -129,7 +129,15 @@ def test_request_contract_freezes_host_and_prefix_scope() -> None:
         "www.example.com",
     ]
     assert backlinks["backlinks_filters"] == [
-        ["url_to", "like", "https://www.example.com/%"],
+        [
+            ["url_to", "like", "https://www.example.com/%"],
+            "or",
+            ["url_to", "like", "http://www.example.com/%"],
+            "or",
+            ["url_to", "=", "https://www.example.com"],
+            "or",
+            ["url_to", "=", "http://www.example.com"],
+        ],
         "and",
         ["domain_from", "<>", "example.com"],
         "and",
@@ -152,6 +160,17 @@ def test_normalizer_rejects_provider_rows_outside_reviewed_scope() -> None:
         ]
     }
 
+    with pytest.raises(ValueError, match="canonical host scope"):
+        normalize_result("ranking_keywords", result, plan)
+
+    result["items"][0]["ranked_serp_element"]["serp_item"]["url"] = (
+        "http://www.example.com/page"
+    )
+    _, rows, _ = normalize_result("ranking_keywords", result, plan)
+    assert rows[0]["url"] == "http://www.example.com/page"
+    result["items"][0]["ranked_serp_element"]["serp_item"]["url"] = (
+        "https://www.example.com.evil.test/page"
+    )
     with pytest.raises(ValueError, match="canonical host scope"):
         normalize_result("ranking_keywords", result, plan)
 

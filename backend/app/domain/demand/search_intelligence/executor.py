@@ -230,8 +230,8 @@ async def _prepare_call(
     sequence: int,
 ) -> _PreparedCall:
     async with session_factory() as session:
-        run = await session.get(SearchIntelligenceRun, run_id)
-        if run is None or run.status == "cancelled":
+        run = await session.get(SearchIntelligenceRun, run_id, with_for_update=True)
+        if run is None or run.status != "running":
             return _PreparedCall("stop")
         connection = await _authorized_connection(session, run)
         if connection is None:
@@ -247,6 +247,9 @@ async def _prepare_call(
         if call.status == "succeeded":
             await session.commit()
             return _PreparedCall("skip")
+        if call.status == "dispatched" and call.sanitized_response is not None:
+            await session.commit()
+            return _PreparedCall("saved_response")
         if call.status == "dispatched":
             call.status = "uncertain"
             call.completed_at = _utcnow()
@@ -313,7 +316,12 @@ async def _mark_dispatched(
             )
             .with_for_update()
         )
-        if run is None or run.status == "cancelled" or call is None:
+        if (
+            run is None
+            or run.status != "running"
+            or call is None
+            or call.status != "intent"
+        ):
             await session.rollback()
             return False
         call.status = "dispatched"
@@ -370,8 +378,9 @@ def _record_provider_error(
     dataset.collection_ended_at = call.completed_at
     if uncertain:
         run.uncertain_calls += 1
-        run.status = "uncertain"
-        run.completed_at = call.completed_at
+        if run.status != "cancelled":
+            run.status = "uncertain"
+            run.completed_at = call.completed_at
     return uncertain
 
 
@@ -475,7 +484,11 @@ async def _persist_success(
     dataset.summary = {**(dataset.summary or {}), **summary}
     run.completed_calls += 1
     run.received_rows += len(normalized)
+    cancelled = run.status == "cancelled"
     stopped = _apply_reported_cost(run, response)
+    if cancelled:
+        run.status = "cancelled"
+        stopped = True
     _publish_complete_dataset(dataset, call, plan, later_plans, len(normalized))
     return False, stopped
 
@@ -520,13 +533,14 @@ async def _persist_outcome(
         if response is None:
             call_result.status = "uncertain"
             call_result.error_code = "provider_result_missing"
-            run.status = "uncertain"
             run.uncertain_calls += 1
-            run.error_code = call_result.error_code
-            run.error_detail = (
-                "Provider execution ended without a response or classified error"
-            )
-            run.completed_at = _utcnow()
+            if run.status != "cancelled":
+                run.status = "uncertain"
+                run.error_code = call_result.error_code
+                run.error_detail = (
+                    "Provider execution ended without a response or classified error"
+                )
+                run.completed_at = _utcnow()
             await session.commit()
             return False, True
         failed, stopped = await _persist_success(
@@ -534,6 +548,52 @@ async def _persist_outcome(
         )
         await session.commit()
         return failed, stopped
+
+
+async def _save_response(
+    session_factory: async_sessionmaker[AsyncSession],
+    run_id: uuid.UUID,
+    sequence: int,
+    response: ResearchResponse,
+) -> None:
+    """Commit provider evidence before normalization or another paid dispatch."""
+    async with session_factory() as session:
+        call = await session.scalar(
+            select(SearchIntelligenceCall)
+            .where(
+                SearchIntelligenceCall.run_id == run_id,
+                SearchIntelligenceCall.sequence == sequence,
+            )
+            .with_for_update()
+        )
+        if call is None or call.status != "dispatched":
+            return
+        call.sanitized_response = response.body
+        call.response_sha256 = response.response_sha256
+        call.provider_task_id = response.provider_task_id
+        call.provider_reported_cost_usd = response.cost_usd
+        await session.commit()
+
+
+async def _saved_response(
+    session_factory: async_sessionmaker[AsyncSession], run_id: uuid.UUID, sequence: int
+) -> ResearchResponse | None:
+    async with session_factory() as session:
+        call = await session.scalar(
+            select(SearchIntelligenceCall).where(
+                SearchIntelligenceCall.run_id == run_id,
+                SearchIntelligenceCall.sequence == sequence,
+            )
+        )
+        if call is None or call.sanitized_response is None:
+            return None
+        return ResearchResponse(
+            body=call.sanitized_response,
+            response_sha256=call.response_sha256,
+            provider_task_id=call.provider_task_id,
+            cost_usd=call.provider_reported_cost_usd,
+            cost_source=None,
+        )
 
 
 async def _finish_run(
@@ -559,34 +619,51 @@ async def execute_search_intelligence(
         return
     failed_datasets = False
     for sequence, plan in enumerate(run.call_plan):
-        prepared = await _prepare_call(session_factory, run_id, plan, sequence)
-        if prepared.action == "stop":
-            break
-        if prepared.action == "skip":
-            continue
-        request = _capacity_request(task, run, sequence)
-        decision = await acquire_provider_capacity(session_factory, request=request)
-        if not decision.acquired:
-            await _mark_capacity_wait(session_factory, run_id, sequence)
-            raise CapacityWaitError(decision.available_at or _utcnow())
-        if not await _mark_dispatched(session_factory, run_id, sequence):
-            await release_provider_capacity(
-                session_factory,
-                request=request,
-                outcome=CapacityOutcome(kind=CAPACITY_OUTCOME_FAILED),
-            )
-            break
-        response, error = await _send_once(session_factory, request, prepared, plan)
-        failed, stopped = await _persist_outcome(
-            session_factory,
-            run_id,
-            sequence,
-            plan,
-            run.call_plan[sequence + 1 :],
-            response,
-            error,
+        failed, stopped = await _execute_plan(
+            session_factory, task, run, sequence, plan
         )
         failed_datasets = failed_datasets or failed
         if stopped:
             break
     await _finish_run(session_factory, run_id, failed_datasets)
+
+
+async def _execute_plan(
+    session_factory: async_sessionmaker[AsyncSession],
+    task: AnalyticsTask,
+    run: SearchIntelligenceRun,
+    sequence: int,
+    plan: dict[str, Any],
+) -> tuple[bool, bool]:
+    run_id = run.id
+    prepared = await _prepare_call(session_factory, run_id, plan, sequence)
+    if prepared.action == "stop":
+        return False, True
+    if prepared.action == "skip":
+        return False, False
+    later_plans = run.call_plan[sequence + 1 :]
+    if prepared.action == "saved_response":
+        response = await _saved_response(session_factory, run_id, sequence)
+        if response is None:
+            return False, True
+        return await _persist_outcome(
+            session_factory, run_id, sequence, plan, later_plans, response, None
+        )
+    request = _capacity_request(task, run, sequence)
+    decision = await acquire_provider_capacity(session_factory, request=request)
+    if not decision.acquired:
+        await _mark_capacity_wait(session_factory, run_id, sequence)
+        raise CapacityWaitError(decision.available_at or _utcnow())
+    if not await _mark_dispatched(session_factory, run_id, sequence):
+        await release_provider_capacity(
+            session_factory,
+            request=request,
+            outcome=CapacityOutcome(kind=CAPACITY_OUTCOME_FAILED),
+        )
+        return False, True
+    response, error = await _send_once(session_factory, request, prepared, plan)
+    if response is not None:
+        await _save_response(session_factory, run_id, sequence, response)
+    return await _persist_outcome(
+        session_factory, run_id, sequence, plan, later_plans, response, error
+    )

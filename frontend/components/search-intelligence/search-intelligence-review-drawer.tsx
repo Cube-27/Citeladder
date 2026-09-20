@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { SEARCH_MAX_DEPTH } from '@/lib/config/search-intelligence';
+import { SEARCH_DEFAULT_DEPTHS, SEARCH_MAX_DEPTH } from '@/lib/config/search-intelligence';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -18,16 +18,6 @@ import type {
   SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
 
-const DEPTHS = {
-  footprint: 1,
-  ranking_keywords: 500,
-  keyword_suggestions: 500,
-  backlink_summary: 1,
-  referring_domains: 1000,
-  destination_pages: 1000,
-  missing_keywords: 500,
-  shared_keywords: 500,
-} as const;
 const LABELS: Record<string, string> = {
   footprint: 'Keyword footprint',
   ranking_keywords: 'Ranked keywords',
@@ -49,7 +39,9 @@ function availableSelections(data: SearchIntelligenceReadiness): DatasetSelectio
     'destination_pages',
   ].map((kind) => ({
     kind,
-    depth: data.preferences.depths[kind] ?? DEPTHS[kind as keyof typeof DEPTHS],
+    depth:
+      data.preferences.depths[kind] ??
+      SEARCH_DEFAULT_DEPTHS[kind as keyof typeof SEARCH_DEFAULT_DEPTHS],
   }));
   const competitorIds = data.preferences.competitor_ids.length
     ? data.preferences.competitor_ids
@@ -60,14 +52,21 @@ function availableSelections(data: SearchIntelligenceReadiness): DatasetSelectio
       ['footprint', 'missing_keywords', 'shared_keywords'].map((kind) => ({
         kind,
         competitor_id,
-        depth: data.preferences.depths[kind] ?? DEPTHS[kind as keyof typeof DEPTHS],
+        depth:
+          data.preferences.depths[kind] ??
+          SEARCH_DEFAULT_DEPTHS[kind as keyof typeof SEARCH_DEFAULT_DEPTHS],
       })),
     ),
   ];
 }
 
-function defaultSelections(data: SearchIntelligenceReadiness): DatasetSelection[] {
-  return availableSelections(data).filter(({ kind }) => kind !== 'keyword_suggestions');
+function defaultSelections(data: SearchIntelligenceReadiness, action: string): DatasetSelection[] {
+  const available = availableSelections(data);
+  return action === 'seed'
+    ? available.filter(
+        ({ kind, competitor_id }) => kind === 'keyword_suggestions' && !competitor_id,
+      )
+    : available.filter(({ kind }) => kind !== 'keyword_suggestions');
 }
 
 function reviewInputsValid(
@@ -103,7 +102,7 @@ export function SearchIntelligenceReviewDrawer({
   busy: boolean;
 }>) {
   const [selections, setSelections] = useState<DatasetSelection[]>(() =>
-    defaultSelections(readiness),
+    defaultSelections(readiness, action),
   );
   const [location, setLocation] = useState(String(readiness.preferences.location_code ?? 2840));
   const [language, setLanguage] = useState(readiness.preferences.language_code || 'en');

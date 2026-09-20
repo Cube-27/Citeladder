@@ -151,10 +151,10 @@ class CitationMatchRequest(BaseModel):
 class ContentHandoffRequest(BaseModel):
     dataset_id: uuid.UUID
     row_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
-    user_instructions: str = Field(min_length=1, max_length=4000)
 
 
 class ContentHandoffResponse(BaseModel):
     project_id: uuid.UUID
+    dataset_id: uuid.UUID
+    row_ids: list[uuid.UUID]
     evidence: list[dict]
-    user_instructions: str = ""

@@ -10,8 +10,6 @@
 # time from config (invariant 6).
 from __future__ import annotations
 
-import hashlib
-import json
 import uuid
 from datetime import UTC, datetime
 
@@ -50,11 +48,13 @@ from app.domain.content.context_builder import (
     build_content_context,
 )
 from app.domain.content.message_builder import build_messages
+from app.domain.content.request_identity import request_fingerprint
 from app.domain.content.schemas import (
     ContentContextSummary,
     ContentGenerationDetail,
     ContentGenerationListItem,
     ContentTargetPage,
+    SearchIntelligenceReference,
     SiteHealthReference,
     instruction_preview,
 )
@@ -112,39 +112,6 @@ async def _reserve_content_capacity(
         usage_limit=abuse_settings.content_jobs_per_workspace_daily,
         retry_after_seconds=abuse_settings.active_job_retry_after_seconds,
     )
-
-
-def request_fingerprint(
-    *,
-    project_id: uuid.UUID,
-    user_instruction: str,
-    skill_id: str = CONTENT_DEFAULT_SKILL,
-    target_site_url_id: uuid.UUID | None = None,
-    target_url: str | None = None,
-    opportunity_id: uuid.UUID | None = None,
-    demand_signal_id: uuid.UUID | None = None,
-    site_health_reference: dict | None = None,
-) -> str:
-    """Stable comparator for idempotency replay-vs-conflict decisions."""
-    canonical = "\x1f".join(
-        [
-            str(project_id),
-            user_instruction.strip(),
-            skill_id,
-            _optional_uuid(target_site_url_id),
-            (target_url or "").strip(),
-            _optional_uuid(opportunity_id),
-            _optional_uuid(demand_signal_id),
-            json.dumps(
-                site_health_reference or {}, sort_keys=True, separators=(",", ":")
-            ),
-        ]
-    )
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def _optional_uuid(value: uuid.UUID | None) -> str:
-    return "" if value is None else str(value)
 
 
 async def _project_in_workspace(
@@ -318,6 +285,7 @@ async def enqueue_generation(
     opportunity_id: uuid.UUID | None = None,
     demand_signal_id: uuid.UUID | None = None,
     site_health_reference: SiteHealthReference | None = None,
+    search_intelligence_reference: SearchIntelligenceReference | None = None,
 ) -> tuple[ContentGeneration, bool]:
     """Enqueue one generation. Returns ``(row, created)``.
 
@@ -333,6 +301,11 @@ async def enqueue_generation(
     reference_dict = (
         site_health_reference.model_dump(mode="json") if site_health_reference else None
     )
+    search_reference_dict = (
+        search_intelligence_reference.model_dump(mode="json")
+        if search_intelligence_reference
+        else None
+    )
     fingerprint = request_fingerprint(
         project_id=project_id,
         user_instruction=user_instruction,
@@ -342,6 +315,7 @@ async def enqueue_generation(
         opportunity_id=opportunity_id,
         demand_signal_id=demand_signal_id,
         site_health_reference=reference_dict,
+        search_intelligence_reference=search_reference_dict,
     )
     # A server-side key when the client sent none: the composite constraint is
     # always satisfied and keyless requests never collide with each other.
@@ -371,6 +345,7 @@ async def enqueue_generation(
             opportunity_id=opportunity_id,
             demand_signal_id=demand_signal_id,
             site_health_reference=site_health_reference,
+            search_intelligence_reference=search_intelligence_reference,
         )
     except ContentContextNotFoundError as exc:
         raise ContentGenerationNotFoundError(str(exc)) from exc
@@ -394,6 +369,7 @@ async def enqueue_generation(
             opportunity_id=opportunity_id,
             demand_signal_id=demand_signal_id,
             site_health_reference=reference_dict,
+            search_intelligence_reference=search_reference_dict,
             # `skill_version` is stamped by `_insert_generation`, from the same
             # registry read that renders the body. The skill catalog and the
             # generator version move independently: a reworded directive
@@ -695,6 +671,13 @@ async def regenerate(
             if source.site_health_reference
             else None
         ),
+        search_intelligence_reference=(
+            SearchIntelligenceReference.model_validate(
+                source.search_intelligence_reference
+            )
+            if source.search_intelligence_reference
+            else None
+        ),
     )
     return row
 
@@ -722,6 +705,7 @@ async def try_again(
         opportunity_id=source.opportunity_id,
         demand_signal_id=source.demand_signal_id,
         site_health_reference=source.site_health_reference,
+        search_intelligence_reference=source.search_intelligence_reference,
     )
     row = _insert_generation(
         session,
@@ -737,6 +721,7 @@ async def try_again(
             opportunity_id=source.opportunity_id,
             demand_signal_id=source.demand_signal_id,
             site_health_reference=source.site_health_reference,
+            search_intelligence_reference=source.search_intelligence_reference,
             # NOT copied from `source`: the retry is rendered from whatever
             # pack is deployed now, so `_insert_generation` stamps the version
             # that actually produced it.

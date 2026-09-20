@@ -9,9 +9,16 @@ from app.domain.demand.search_intelligence.targets import CanonicalTarget
 
 
 def backlink_filters(target: CanonicalTarget) -> list[Any]:
-    prefix = f"{target.origin}/%"
     return [
-        ["url_to", "like", prefix],
+        [
+            ["url_to", "like", f"https://{target.hostname}/%"],
+            "or",
+            ["url_to", "like", f"http://{target.hostname}/%"],
+            "or",
+            ["url_to", "=", f"https://{target.hostname}"],
+            "or",
+            ["url_to", "=", f"http://{target.hostname}"],
+        ],
         "and",
         ["domain_from", "<>", target.registrable_domain],
         "and",
@@ -23,6 +30,8 @@ def _backlink_request(
     kind: str, target: CanonicalTarget, limit: int, offset: int
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
+        # DataForSEO requires a domain target without www; the backlink
+        # filter below preserves the saved canonical host within that index.
         "target": target.registrable_domain,
         "include_subdomains": False,
         "include_indirect_links": False,

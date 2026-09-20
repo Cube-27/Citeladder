@@ -18,6 +18,10 @@ from app.core.config.content import (
     CONTENT_CONTEXT_VERSION,
 )
 from app.core.config.earned_actions import ACTION_PATH_EARNED
+from app.domain.content.search_intelligence_context import (
+    SearchIntelligenceEvidenceNotFound,
+    search_intelligence_context,
+)
 from app.domain.content.website_context import (
     CrawlFragmentSelection,
     normalized_target_url,
@@ -640,6 +644,7 @@ async def build_content_context(
     opportunity_id: uuid.UUID | None = None,
     demand_signal_id: uuid.UUID | None = None,
     site_health_reference: Any | None = None,
+    search_intelligence_reference: Any | None = None,
 ) -> ContentContext:
     """Build one context from authorized persisted sources; never fetches."""
     origins = await _resolve_content_origins(
@@ -665,10 +670,17 @@ async def build_content_context(
         project=origins.project,
     )
     target_page, related_pages = _target_and_related_pages(selection, origins)
+    try:
+        search_block = await search_intelligence_context(
+            session, workspace_id, project_id, search_intelligence_reference
+        )
+    except SearchIntelligenceEvidenceNotFound as exc:
+        raise ContentContextNotFoundError(str(exc)) from exc
     issue_blocks = [
         _render_opportunity(origins.opportunity),
         _render_site_health(origins.site_health_handoff),
         _render_demand(origins.demand_signal, origins.demand_snapshot),
+        search_block,
     ]
     related_blocks = [
         _render_page(page, heading="SOURCE").removeprefix("SOURCE\n\n")

@@ -161,8 +161,11 @@ describe('ContentScreen clean composer', () => {
       'citeladder:search-intelligence-handoff',
       JSON.stringify({
         project_id: PROJECT,
-        user_instructions: 'Write about analytics',
-        evidence: [{ keyword: 'analytics', search_volume: 0 }],
+        dataset_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        row_ids: ['bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'],
+        evidence: [
+          { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', keyword: 'analytics', search_volume: 0 },
+        ],
       }),
     );
 
@@ -174,11 +177,8 @@ describe('ContentScreen clean composer', () => {
       </StrictMode>,
     );
 
-    await waitFor(() =>
-      expect(screen.getByRole('textbox', { name: 'Your instruction' })).toHaveValue(
-        'Write about analytics\n\nSelected Search Intelligence evidence:\n- analytics · 0',
-      ),
-    );
+    await waitFor(() => expect(screen.getByText('analytics · Volume 0')).toBeInTheDocument());
+    expect(screen.getByRole('textbox', { name: 'Your instruction' })).toHaveValue('');
     expect(sessionStorage.getItem('citeladder:search-intelligence-handoff')).toBeNull();
     expect(generate).not.toHaveBeenCalled();
   });

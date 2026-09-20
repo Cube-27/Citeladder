@@ -290,6 +290,7 @@ async def enqueue_generation_endpoint(
             opportunity_id=payload.opportunity_id,
             demand_signal_id=payload.demand_signal_id,
             site_health_reference=payload.site_health_reference,
+            search_intelligence_reference=payload.search_intelligence_reference,
         )
     except ContentGenerationNotFoundError as exc:
         raise _not_found(exc) from exc

@@ -98,14 +98,16 @@ const pageSchema = z.strictObject({
 });
 const contentHandoffSchema = z.strictObject({
   project_id: z.uuid(),
+  dataset_id: z.uuid(),
+  row_ids: z.array(z.uuid()),
   evidence: z.array(z.record(z.string(), z.unknown())),
-  user_instructions: z.string(),
 });
 
 export type SearchIntelligenceReadiness = z.infer<typeof readinessSchema>;
 export type SearchIntelligenceRun = z.infer<typeof runSchema>;
 export type SearchIntelligenceDataset = z.infer<typeof datasetSchema>;
 export type SearchIntelligenceRow = z.infer<typeof rowSchema>;
+export type SearchIntelligenceHandoff = z.infer<typeof contentHandoffSchema>;
 export type DatasetSelection = {
   kind: string;
   competitor_id?: string | null;
@@ -143,6 +145,8 @@ export const searchIntelligenceApi = {
     runSchema.parse(
       await apiClient.post<unknown>(`${root(projectId)}/runs/${runId}/cancel`, {}, options),
     ),
+  runs: async (projectId: string, options?: ApiRequestOptions) =>
+    z.array(runSchema).parse(await apiClient.get<unknown>(`${root(projectId)}/runs`, options)),
   rows: async (
     projectId: string,
     datasetId: string,
@@ -177,13 +181,12 @@ export const searchIntelligenceApi = {
     projectId: string,
     datasetId: string,
     rowIds: string[],
-    userInstructions: string,
     options?: ApiRequestOptions,
   ) =>
     contentHandoffSchema.parse(
       await apiClient.post<unknown>(
         `${root(projectId)}/content-handoff`,
-        { dataset_id: datasetId, row_ids: rowIds, user_instructions: userInstructions },
+        { dataset_id: datasetId, row_ids: rowIds },
         options,
       ),
     ),

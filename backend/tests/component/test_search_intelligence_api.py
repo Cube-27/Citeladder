@@ -10,8 +10,14 @@ import httpx
 import pytest
 from sqlalchemy import select
 
+from app.connectors.search_intelligence_dataforseo import ResearchResponse
 from app.core.config.dataforseo import pack_credential
 from app.core.security import encrypt_secret
+from app.domain.content.schemas import SearchIntelligenceReference
+from app.domain.content.search_intelligence_context import (
+    SearchIntelligenceEvidenceNotFound,
+    search_intelligence_context,
+)
 from app.domain.demand.search_intelligence import executor as executor_module
 from app.models.analytics import AnalyticsTask
 from app.models.audit import Audit
@@ -32,6 +38,94 @@ async def _project(client: httpx.AsyncClient, name: str) -> dict[str, str]:
     )
     assert response.status_code == 201, response.text
     return response.json()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("response_missing", [False, True])
+async def test_cancellation_between_datasets_prevents_next_paid_call(
+    client: httpx.AsyncClient,
+    db_session,
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+    response_missing: bool,
+) -> None:
+    await register_and_login(client, f"search-cancel-{response_missing}@example.com")
+    project = await _project(client, "SearchCancel")
+    db_session.add(
+        ProviderConnection(
+            workspace_id=uuid.UUID(project["workspace_id"]),
+            label="DataForSEO",
+            transport_provider="dataforseo",
+            api_key_encrypted=encrypt_secret(
+                pack_credential(login="test@example.com", password="not-a-real-secret")
+            ),
+            active=True,
+            last_test_status="ok",
+        )
+    )
+    await db_session.commit()
+    base = f"/api/v1/projects/{project['id']}/search-intelligence"
+    review = await client.post(
+        f"{base}/reviews",
+        headers={"Idempotency-Key": "cancel-between"},
+        json={
+            "owned_target_id": "primary",
+            "reuse_recent": False,
+            "location_code": 2840,
+            "language_code": "en",
+            "datasets": [
+                {"kind": "ranking_keywords", "depth": 1},
+                {"kind": "backlink_summary", "depth": 1},
+            ],
+        },
+    )
+    assert review.status_code == 201, review.text
+    run_id = uuid.UUID(review.json()["id"])
+    assert (
+        await client.post(f"{base}/runs/{run_id}/confirm", json={})
+    ).status_code == 202
+    async with session_factory() as session:
+        run = await session.get(SearchIntelligenceRun, run_id)
+        assert run is not None
+        task = await session.get(AnalyticsTask, run.analytics_task_id)
+        assert task is not None
+    calls = 0
+
+    async def cancel_after_first_call(**_kwargs: object) -> ResearchResponse | None:
+        nonlocal calls
+        calls += 1
+        assert (
+            await client.post(f"{base}/runs/{run_id}/cancel", json={})
+        ).status_code == 200
+        if response_missing:
+            async with session_factory() as session:
+                cancelled = await session.get(SearchIntelligenceRun, run_id)
+                assert cancelled is not None
+                cancelled.error_code = "prior_error"
+                cancelled.error_detail = "Prior cancellation detail"
+                cancelled.completed_at = datetime(2025, 1, 1, tzinfo=UTC)
+                await session.commit()
+            return None
+        return ResearchResponse(
+            body={"tasks": [{"result": [{"items": [], "total_count": 0}]}]},
+            response_sha256="first-response",
+            provider_task_id="first-task",
+            cost_usd=Decimal("0.001"),
+            cost_source="task",
+        )
+
+    monkeypatch.setattr(executor_module, "execute_live", cancel_after_first_call)
+    await executor_module.execute_search_intelligence(session_factory, task)
+    async with session_factory() as session:
+        finished = await session.get(SearchIntelligenceRun, run_id)
+        assert finished is not None and finished.status == "cancelled"
+        assert finished.completed_calls == (0 if response_missing else 1)
+        if response_missing:
+            assert finished.uncertain_calls == 1
+            assert finished.error_code == "prior_error"
+            assert finished.error_detail == "Prior cancellation detail"
+            assert finished.completed_at == datetime(2025, 1, 1, tzinfo=UTC)
+    assert calls == 1
 
 
 @pytest.mark.asyncio
@@ -138,6 +232,61 @@ async def test_review_is_provider_free_and_reads_are_workspace_scoped(
         assert recovered.status == "uncertain"
         assert recovered.uncertain_calls == 1
 
+    saved_review = await client.post(
+        f"{base}/reviews",
+        headers={"Idempotency-Key": "saved-response-replay"},
+        json={
+            "action": "analysis",
+            "owned_target_id": "primary",
+            "reuse_recent": False,
+            "location_code": 2840,
+            "language_code": "en",
+            "datasets": [{"kind": "ranking_keywords", "depth": 1}],
+        },
+    )
+    assert saved_review.status_code == 201, saved_review.text
+    saved_id = uuid.UUID(saved_review.json()["id"])
+    assert (
+        await client.post(f"{base}/runs/{saved_id}/confirm", json={})
+    ).status_code == 202
+    async with session_factory() as saved_session:
+        saved_run = await saved_session.get(SearchIntelligenceRun, saved_id)
+        assert saved_run is not None
+        saved_task = await saved_session.get(AnalyticsTask, saved_run.analytics_task_id)
+        assert saved_task is not None
+        saved_plan = saved_run.call_plan[0]
+        saved_dataset = executor_module._dataset_from_plan(saved_run, saved_plan)
+        saved_session.add(saved_dataset)
+        await saved_session.flush()
+        saved_session.add(
+            SearchIntelligenceCall(
+                workspace_id=saved_run.workspace_id,
+                project_id=saved_run.project_id,
+                run_id=saved_run.id,
+                dataset_id=saved_dataset.id,
+                request_key=f"{saved_plan['dataset_key']}:{saved_plan['page']}",
+                sequence=0,
+                status="dispatched",
+                endpoint=saved_plan["endpoint"],
+                sanitized_request=saved_plan["request"],
+                sanitized_response={
+                    "tasks": [{"result": [{"items": [], "total_count": 0}]}]
+                },
+                response_sha256="saved-response",
+                provider_reported_cost_usd=Decimal("0.001"),
+                estimated_cost_usd=Decimal(saved_plan["estimated_cost_usd"]),
+            )
+        )
+        await saved_session.commit()
+    await executor_module.execute_search_intelligence(session_factory, saved_task)
+    async with session_factory() as verification_session:
+        saved_result = await verification_session.get(SearchIntelligenceRun, saved_id)
+        assert saved_result is not None and saved_result.status == "succeeded"
+        saved_projection = await verification_session.get(
+            SearchIntelligenceDataset, saved_dataset.id
+        )
+        assert saved_projection is not None and saved_projection.coverage == "empty"
+
     await db_session.rollback()
     reviewed_run = await db_session.get(SearchIntelligenceRun, uuid.UUID(body["id"]))
     assert reviewed_run is not None
@@ -231,6 +380,35 @@ async def test_review_is_provider_free_and_reads_are_workspace_scoped(
     ]
     db_session.add_all(rows)
     await db_session.commit()
+    handoff = await client.post(
+        f"{base}/content-handoff",
+        json={
+            "dataset_id": str(reusable.id),
+            "row_ids": [str(rows[1].id), str(rows[0].id)],
+        },
+    )
+    assert handoff.status_code == 200, handoff.text
+    assert handoff.json()["row_ids"] == [str(rows[1].id), str(rows[0].id)]
+    assert {item["id"] for item in handoff.json()["evidence"]} == {
+        str(rows[0].id),
+        str(rows[1].id),
+    }
+    assert "user_instructions" not in handoff.json()
+    evidence_context = await search_intelligence_context(
+        db_session,
+        reusable.workspace_id,
+        reusable.project_id,
+        SearchIntelligenceReference(dataset_id=reusable.id, row_ids=[rows[1].id]),
+    )
+    assert "keyword 1" in evidence_context
+    assert "keyword 0" not in evidence_context
+    with pytest.raises(SearchIntelligenceEvidenceNotFound):
+        await search_intelligence_context(
+            db_session,
+            uuid.uuid4(),
+            reusable.project_id,
+            SearchIntelligenceReference(dataset_id=reusable.id, row_ids=[rows[1].id]),
+        )
     rows_url = f"{base}/datasets/{reusable.id}/rows"
     first_page = await client.get(rows_url, params={"limit": 2})
     assert first_page.status_code == 200
