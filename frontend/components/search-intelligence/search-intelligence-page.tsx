@@ -27,6 +27,7 @@ import {
   type SearchIntelligenceRun,
 } from '@/lib/api/search-intelligence';
 import { searchIntelligenceKeys } from '@/lib/api/query-keys/search-intelligence';
+import { searchMarketLabel } from '@/lib/config/search-intelligence';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -347,7 +348,7 @@ function ScopeBand({
       <span className={textRole('meta')}>
         {tab === 'backlinks'
           ? 'Canonical website · all referring countries'
-          : `${data.preferences.location_code ?? 'Market not set'} · ${data.preferences.language_code || 'Language not set'}`}
+          : `${searchMarketLabel(data.preferences.location_code)} · ${data.preferences.language_code || 'Language not set'}`}
       </span>
       <span className={textRole('meta', 'ml-auto')}>
         {latest?.published_at
