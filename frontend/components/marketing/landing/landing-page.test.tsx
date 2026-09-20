@@ -8,9 +8,9 @@ describe('LandingPage', () => {
   it('shows four static monitored surfaces without provider attribution', () => {
     render(<LandingPage />);
 
-    const roster = screen.getByLabelText('ChatGPT, Gemini, Claude and Google AI Overviews');
+    const engines = screen.getByRole('region', { name: 'Monitored answer engines' });
     for (const name of ['ChatGPT', 'Gemini', 'Claude', 'Google AI Overviews']) {
-      expect(within(roster).getByText(name)).toBeVisible();
+      expect(within(engines).getByText(name)).toBeVisible();
     }
     expect(screen.queryByText(/dataforseo/i)).toBeNull();
   });
@@ -25,7 +25,7 @@ describe('LandingPage', () => {
     expect(sources).toHaveAttribute('aria-selected', 'true');
 
     const panel = screen.getByRole('tabpanel', { name: /sources/i });
-    const sourceView = within(panel).getByLabelText('Source view');
+    const sourceView = within(panel).getByRole('group', { name: 'Source view' });
     await user.click(within(sourceView).getByRole('button', { name: 'URLs' }));
     expect(within(panel).getByRole('columnheader', { name: 'URL' })).toBeVisible();
     expect(within(panel).getByText('URL usage across completed answers')).toBeVisible();

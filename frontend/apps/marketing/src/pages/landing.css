@@ -158,7 +158,7 @@
   margin-inline: auto;
 }
 .cl-hero h1 {
-  font-size: 48px;
+  font-size: 52px;
   line-height: 1.08;
   margin: 22px auto 0;
   max-width: 16ch;
@@ -254,7 +254,7 @@
   font-size: 11px;
   letter-spacing: 0.07em;
   padding: 9px 10px;
-  color: var(--cl-faint-text);
+  color: var(--cl-sidebar-text);
 }
 .cl-hero-preview-main {
   min-width: 0;

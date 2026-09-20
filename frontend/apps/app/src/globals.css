@@ -469,7 +469,6 @@
   --cl-window-text: #5e6c76;
   --cl-sidebar: #f0f0eb;
   --cl-sidebar-text: #59666d;
-  --cl-faint-text: #7f898b;
   --cl-blue-tint: #e7edf4;
   --cl-chart-secondary: #9cb6cf;
   --cl-chart-tertiary: #d6dfe7;
@@ -888,6 +887,17 @@ input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset;
   caret-color: var(--color-foreground);
   transition: background-color 9999s ease-out;
+}
+
+/* Plain fields draw their edge with a shadow; keep it alongside autofill paint. */
+input.focus-input:-webkit-autofill,
+input.focus-input:-webkit-autofill:hover {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--shadow-smudge);
+}
+
+input.focus-input:-webkit-autofill:focus-visible {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--focus-ring),
+    var(--shadow-smudge);
 }
 
 /* The public surface prints on white, not the app's tinted paper canvas. Its

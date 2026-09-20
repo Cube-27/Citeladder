@@ -71,7 +71,7 @@ function EngineStrip() {
           <br />
           MONITORING
         </p>
-        <div className="cl-engines" aria-label="ChatGPT, Gemini, Claude and Google AI Overviews">
+        <section className="cl-engines" aria-label="Monitored answer engines">
           <span>
             <EngineLogo engine="openai" className="cl-engine-icon" />
             ChatGPT
@@ -105,7 +105,7 @@ function EngineStrip() {
             </svg>
             Google AI Overviews
           </span>
-        </div>
+        </section>
       </div>
     </div>
   );

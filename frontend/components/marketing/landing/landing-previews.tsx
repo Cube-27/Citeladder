@@ -125,7 +125,7 @@ function SourcesPreview() {
               : 'Domain usage across completed answers'}
           </p>
         </div>
-        <div className="cl-segment" aria-label="Source view">
+        <fieldset className="cl-segment" aria-label="Source view">
           <button
             type="button"
             aria-pressed={view === 'domains'}
@@ -136,7 +136,7 @@ function SourcesPreview() {
           <button type="button" aria-pressed={view === 'urls'} onClick={() => setView('urls')}>
             URLs
           </button>
-        </div>
+        </fieldset>
       </div>
       <SourceSummary />
       <SourceTable view={view} />

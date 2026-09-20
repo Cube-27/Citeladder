@@ -4,9 +4,10 @@ import { ArrowRight, FileText, Link2, ShieldCheck } from 'lucide-react';
 import { Drawer } from '@/components/ui/drawer';
 
 export function Evidence() {
-  const [selected, setSelected] = useState<'owned' | 'editorial' | null>(null);
+  const [selected, setSelected] = useState<'owned' | 'editorial'>('owned');
+  const [open, setOpen] = useState(false);
   const source =
-    selected !== 'editorial'
+    selected === 'owned'
       ? {
           name: 'Platform documentation',
           url: 'zernovelle.example/platform',
@@ -79,7 +80,13 @@ export function Evidence() {
               <span>CITED SOURCES</span>
               <span>2 RECORDS</span>
             </div>
-            <button type="button" onClick={() => setSelected('owned')}>
+            <button
+              type="button"
+              onClick={() => {
+                setSelected('owned');
+                setOpen(true);
+              }}
+            >
               <span className="cl-favicon">Z</span>
               <span>
                 <b>Platform documentation</b>
@@ -88,7 +95,13 @@ export function Evidence() {
               <span>Owned</span>
               <ArrowRight size={16} aria-hidden />
             </button>
-            <button type="button" onClick={() => setSelected('editorial')}>
+            <button
+              type="button"
+              onClick={() => {
+                setSelected('editorial');
+                setOpen(true);
+              }}
+            >
               <span className="cl-favicon">F</span>
               <span>
                 <b>Workflow platform comparison</b>
@@ -101,10 +114,8 @@ export function Evidence() {
         </div>
       </div>
       <Drawer
-        open={selected !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelected(null);
-        }}
+        open={open}
+        onOpenChange={setOpen}
         title="Source record"
         closeLabel="Close source record"
         className="[&_header_button]:size-11"
