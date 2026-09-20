@@ -35,7 +35,7 @@ function onTabKeyDown(
 
 function SourceTable({ view }: Readonly<{ view: SourceView }>) {
   return (
-    <table className="cl-source-table">
+    <table className={`cl-source-table${view === 'urls' ? ' cl-source-table-urls' : ''}`}>
       <colgroup>
         <col className="cl-source-url-col" />
         <col className="cl-source-type-col" />
@@ -47,7 +47,7 @@ function SourceTable({ view }: Readonly<{ view: SourceView }>) {
           <th scope="col">{view === 'domains' ? 'Domain' : 'URL'}</th>
           <th scope="col">Source type</th>
           <th scope="col">Citations</th>
-          <th scope="col">Used in prompts</th>
+          <th scope="col">Used</th>
         </tr>
       </thead>
       <tbody>
@@ -71,7 +71,7 @@ function SourceTable({ view }: Readonly<{ view: SourceView }>) {
               {row.citations}
             </td>
             <td>
-              <span className="cl-cell-heading">Used in prompts</span>
+              <span className="cl-cell-heading">Used</span>
               <span className="cl-prompt-count">
                 <i style={{ width: `${(row.prompts / 18) * 45}%` }} />
                 {row.prompts}

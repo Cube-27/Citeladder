@@ -39,7 +39,7 @@ function Hero() {
           <h1>
             AI search intelligence.
             <br />
-            <em>Connected to action.</em>
+            <em>Shape how your brand shows up in AI.</em>
           </h1>
           <p>
             AI visibility, citation analysis, site readiness and content intelligence in one

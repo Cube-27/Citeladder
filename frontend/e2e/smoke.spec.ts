@@ -3,13 +3,13 @@ import { expect, test } from '@playwright/test';
 /**
  * Smoke: the public landing page renders at `/` with no backend running (the
  * session island stays inert when `/auth/me` fails), the hero owns the page's
- * single level-1 heading, and the Proof surface paints.
+ * single level-1 heading, and the monitored answer engines render.
  *
  * The previous version of this test clicked a theme toggle in the marketing
  * nav. There is no such control — the public surface is a fixed light identity
  * — so it could only ever have failed.
  */
-test('landing renders on the Proof surface without a backend', async ({ page }) => {
+test('landing renders monitored answer engines without a backend', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(String(error)));
 
@@ -19,7 +19,7 @@ test('landing renders on the Proof surface without a backend', async ({ page }) 
   await expect(h1).toBeVisible();
   await expect(h1).toHaveCount(1);
 
-  await expect(page.getByRole('img', { name: /ChatGPT, Grok, Gemini/i })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Monitored answer engines' })).toBeVisible();
 
   expect(pageErrors, pageErrors.join('\n')).toHaveLength(0);
 });

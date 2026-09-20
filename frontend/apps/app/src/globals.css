@@ -454,6 +454,8 @@
 }
 
 .cl-landing {
+  --cl-hero-gradient-start: #1b6b3c;
+  --cl-hero-gradient-end: #104627;
   --cl-paper: #f5f4ef;
   --cl-raised: #fffefa;
   --cl-stone: #ebe9e2;
