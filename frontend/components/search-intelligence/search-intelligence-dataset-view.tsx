@@ -1,11 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
+import { sortIndicator } from '@/components/ui/sort-indicator';
+import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
+import { formatEvidenceValue } from './search-intelligence-format';
+import { SEARCH_HANDOFF_MAX_ROWS } from '@/lib/config/search-intelligence';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Drawer } from '@/components/ui/drawer';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,7 +36,7 @@ import {
 import { searchIntelligenceKeys } from '@/lib/api/query-keys/search-intelligence';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
-import { Database } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Database } from 'lucide-react';
 
 const fields: Record<string, Array<[keyof SearchIntelligenceRow, string]>> = {
   footprint: [
@@ -99,6 +105,10 @@ export function SearchIntelligenceDatasetView({
   const [selected, setSelected] = useState<SearchIntelligenceRow | null>(null);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [instructions, setInstructions] = useState('');
+  const [sort, setSort] = useState('id');
+  const [direction, setDirection] = useState<'asc' | 'desc'>('asc');
+  const table = useCursorTable(`${activeProject?.id}:${dataset.id}:${sort}:${direction}`);
+  const params = { cursor: table.cursor, limit: table.pageSize, sort, direction };
   const handoff = useMutation({
     mutationFn: () =>
       searchIntelligenceApi.contentHandoff(
@@ -113,21 +123,18 @@ export function SearchIntelligenceDatasetView({
       navigate(projectHref('/content?source=search-intelligence'));
     },
   });
-  const query = useInfiniteQuery({
-    queryKey: searchIntelligenceKeys.dataset(
-      activeProject?.workspace_id,
-      activeProject?.id,
-      dataset.id,
-    ),
-    queryFn: ({ signal, pageParam }) =>
+  const query = useQuery({
+    queryKey: [
+      ...searchIntelligenceKeys.dataset(activeProject?.workspace_id, activeProject?.id, dataset.id),
+      params,
+    ],
+    queryFn: ({ signal }) =>
       searchIntelligenceApi.rows(
         activeProject!.id,
         dataset.id,
         { signal, workspaceId: activeProject!.workspace_id },
-        pageParam,
+        params,
       ),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (page) => page.next_cursor ?? undefined,
     enabled: Boolean(activeProject),
   });
   const columns = fields[dataset.dataset_kind] ?? fields.footprint;
@@ -140,7 +147,8 @@ export function SearchIntelligenceDatasetView({
         onRetry={() => void query.refetch()}
       />
     );
-  const rows = query.data.pages.flatMap((page) => page.rows);
+  const rows = query.data.rows;
+  const range = pageRange(table.page, table.pageSize, rows.length);
   if (!rows.length)
     return (
       <EmptyState
@@ -180,12 +188,23 @@ export function SearchIntelligenceDatasetView({
               </Button>
             </div>
           </div>
+          {handoff.isError ? <Alert>{handoff.error.message}</Alert> : null}
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Select</TableHead>
-                {columns.map(([, label]) => (
-                  <TableHead key={label}>{label}</TableHead>
+                {columns.map(([field, label]) => (
+                  <SortableHead
+                    key={field}
+                    label={label}
+                    active={sort === field}
+                    descending={direction === 'desc'}
+                    onSort={() => {
+                      setDirection(sort === field && direction === 'asc' ? 'desc' : 'asc');
+                      setSort(String(field));
+                      table.reset();
+                    }}
+                  />
                 ))}
                 <TableHead>Evidence</TableHead>
               </TableRow>
@@ -197,6 +216,10 @@ export function SearchIntelligenceDatasetView({
                     <Checkbox
                       aria-label={`Select evidence row ${row.id}`}
                       checked={selectedRows.includes(row.id)}
+                      disabled={
+                        selectedRows.length >= SEARCH_HANDOFF_MAX_ROWS &&
+                        !selectedRows.includes(row.id)
+                      }
                       onCheckedChange={() =>
                         setSelectedRows((current) =>
                           current.includes(row.id)
@@ -218,18 +241,18 @@ export function SearchIntelligenceDatasetView({
               ))}
             </TableBody>
           </Table>
-          {query.isFetchNextPageError ? (
-            <ReadError
-              error={query.error}
-              fallback="More rows could not be loaded."
-              onRetry={() => void query.fetchNextPage()}
-            />
-          ) : null}
-          {query.hasNextPage ? (
-            <Button disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
-              Load more rows
-            </Button>
-          ) : null}
+          <CursorTableFooter
+            {...range}
+            total={dataset.unique_rows_saved}
+            noun="evidence rows"
+            pageSize={table.pageSize}
+            onPageSizeChange={table.setPageSize}
+            canPrev={table.canPrev}
+            canNext={Boolean(query.data.next_cursor)}
+            onPrev={table.pop}
+            onNext={() => table.push(query.data.next_cursor)}
+            busy={query.isFetching}
+          />
         </CardContent>
       </Card>
       <EvidenceDrawer selected={selected} onClose={() => setSelected(null)} />
@@ -268,18 +291,38 @@ function EvidenceDrawer({
             {Object.entries(selected).map(([key, item]) => (
               <div key={key} className="border-border-subtle grid gap-1 border-b pb-2">
                 <dt className="text-muted">{key.replaceAll('_', ' ')}</dt>
-                <dd className="break-all">
-                  {item === null || item === ''
-                    ? 'Not measured'
-                    : typeof item === 'object'
-                      ? JSON.stringify(item, null, 2)
-                      : String(item)}
-                </dd>
+                <dd className="break-all">{formatEvidenceValue(item)}</dd>
               </div>
             ))}
           </dl>
         ) : null}
       </Stack>
     </Drawer>
+  );
+}
+
+function SortableHead({
+  label,
+  active,
+  descending,
+  onSort,
+}: Readonly<{
+  label: string;
+  active: boolean;
+  descending: boolean;
+  onSort: () => void;
+}>) {
+  const { ariaSort, icon: Icon } = sortIndicator(active, descending, {
+    ascending: ArrowUp,
+    descending: ArrowDown,
+    inactive: ArrowUpDown,
+  });
+  return (
+    <TableHead aria-sort={ariaSort}>
+      <Button variant="ghost" size="sm" onClick={onSort}>
+        {label}
+        <Icon className="size-4" aria-hidden />
+      </Button>
+    </TableHead>
   );
 }

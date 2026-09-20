@@ -10,7 +10,7 @@ from typing import Any
 
 import httpx
 
-from app.connectors.answer_engines.errors import ProviderError
+from app.connectors.answer_engines.errors import ProviderError, parse_retry_after
 from app.connectors.answer_engines.http_client import shared_client
 from app.core.config.dataforseo import DATAFORSEO_BASE_URL, STATUS_OK, unpack_credential
 from app.core.config.provider_catalog import (
@@ -90,6 +90,7 @@ def _response_body(response: httpx.Response) -> dict[str, Any]:
             "DataForSEO rate limited the request",
             error_code=ERROR_RATE_LIMIT,
             retryable=False,
+            retry_after_seconds=parse_retry_after(response.headers.get("Retry-After")),
         )
     try:
         body = response.json()

@@ -125,20 +125,22 @@ function NoProjectState() {
 function searchIntelligenceInstruction(projectId: string): string {
   if (typeof window === 'undefined') return '';
   const key = 'citeladder:search-intelligence-handoff';
-  const raw = sessionStorage.getItem(key);
-  if (!raw) return '';
-  sessionStorage.removeItem(key);
   try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return '';
     const handoff = JSON.parse(raw) as {
       project_id?: string;
       user_instructions?: string;
       evidence?: Array<Record<string, unknown>>;
     };
     if (handoff.project_id !== projectId || !handoff.user_instructions) return '';
+    sessionStorage.removeItem(key);
     const evidence = (handoff.evidence ?? [])
       .slice(0, 30)
       .map((row) =>
-        [row.keyword, row.domain, row.url, row.search_volume].filter(Boolean).join(' · '),
+        [row.keyword, row.domain, row.url, row.search_volume]
+          .filter((value) => value !== null && value !== undefined && value !== '')
+          .join(' · '),
       )
       .filter(Boolean);
     return [

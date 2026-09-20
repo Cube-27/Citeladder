@@ -136,6 +136,23 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('ContentScreen clean composer', () => {
+  it('retains a handoff intended for another project', async () => {
+    mockBase();
+    const handoff = JSON.stringify({
+      project_id: GENERATION,
+      user_instructions: 'Keep this draft',
+    });
+    sessionStorage.setItem('citeladder:search-intelligence-handoff', handoff);
+    const readStorage = vi.spyOn(Object.getPrototypeOf(sessionStorage), 'getItem');
+    renderScreen();
+    expect(await screen.findByRole('textbox', { name: 'Your instruction' })).toHaveValue('');
+    await waitFor(() =>
+      expect(readStorage).toHaveBeenCalledWith('citeladder:search-intelligence-handoff'),
+    );
+    expect(sessionStorage.getItem('citeladder:search-intelligence-handoff')).toBe(handoff);
+    sessionStorage.removeItem('citeladder:search-intelligence-handoff');
+  });
+
   it('consumes a Search Intelligence handoff once under Strict Mode without generating', async () => {
     mockBase();
     const generate = vi.fn(() => HttpResponse.json(generation(), { status: 202 }));
@@ -145,7 +162,7 @@ describe('ContentScreen clean composer', () => {
       JSON.stringify({
         project_id: PROJECT,
         user_instructions: 'Write about analytics',
-        evidence: [{ keyword: 'analytics', search_volume: 100 }],
+        evidence: [{ keyword: 'analytics', search_volume: 0 }],
       }),
     );
 
@@ -159,7 +176,7 @@ describe('ContentScreen clean composer', () => {
 
     await waitFor(() =>
       expect(screen.getByRole('textbox', { name: 'Your instruction' })).toHaveValue(
-        'Write about analytics\n\nSelected Search Intelligence evidence:\n- analytics · 100',
+        'Write about analytics\n\nSelected Search Intelligence evidence:\n- analytics · 0',
       ),
     );
     expect(sessionStorage.getItem('citeladder:search-intelligence-handoff')).toBeNull();

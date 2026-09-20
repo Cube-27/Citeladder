@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import uuid
 from datetime import UTC, datetime
@@ -13,6 +14,7 @@ from app.core.config.dataforseo import pack_credential
 from app.core.security import encrypt_secret
 from app.domain.demand.search_intelligence import executor as executor_module
 from app.models.analytics import AnalyticsTask
+from app.models.audit import Audit
 from app.models.provider import ProviderConnection
 from app.models.search_intelligence import (
     SearchIntelligenceCall,
@@ -103,7 +105,8 @@ async def test_review_is_provider_free_and_reads_are_workspace_scoped(
     assert confirmed.status_code == 202, confirmed.text
     async with session_factory() as state_session:
         run = await state_session.get(SearchIntelligenceRun, uuid.UUID(body["id"]))
-        assert run is not None and run.analytics_task_id is not None
+        assert run is not None
+        assert run.analytics_task_id is not None
         task = await state_session.scalar(
             select(AnalyticsTask).where(AnalyticsTask.id == run.analytics_task_id)
         )
@@ -185,6 +188,35 @@ async def test_review_is_provider_free_and_reads_are_workspace_scoped(
         }
     ]
 
+    repeated_reviews = await asyncio.gather(
+        *[
+            client.post(
+                f"{base}/reviews",
+                headers={"Idempotency-Key": "concurrent-review"},
+                json={
+                    "owned_target_id": "primary",
+                    "location_code": 2840,
+                    "language_code": "en",
+                    "datasets": [{"kind": "ranking_keywords", "depth": 10}],
+                },
+            )
+            for _ in range(2)
+        ]
+    )
+    assert [response.status_code for response in repeated_reviews] == [201, 201]
+    cancelled_id = repeated_reviews[0].json()["id"]
+    assert repeated_reviews[1].json()["id"] == cancelled_id
+    cancelled = await client.post(f"{base}/runs/{cancelled_id}/cancel", json={})
+    assert cancelled.status_code == 200
+    confirmation = await client.post(f"{base}/runs/{cancelled_id}/confirm", json={})
+    assert confirmation.status_code == 409
+    await executor_module._mark_capacity_wait(
+        session_factory, uuid.UUID(cancelled_id), 0
+    )
+    assert (await client.get(f"{base}/runs/{cancelled_id}")).json()[
+        "status"
+    ] == "cancelled"
+
     rows = [
         SearchIntelligenceRow(
             workspace_id=reusable.workspace_id,
@@ -193,17 +225,18 @@ async def test_review_is_provider_free_and_reads_are_workspace_scoped(
             provider_row_key=f"keyword:{index}",
             row_kind="ranking_keywords",
             keyword=f"keyword {index}",
+            search_volume=volume,
         )
-        for index in range(2)
+        for index, volume in enumerate([5, None, 5, 1])
     ]
     db_session.add_all(rows)
     await db_session.commit()
     rows_url = f"{base}/datasets/{reusable.id}/rows"
-    first_page = await client.get(rows_url, params={"limit": 1})
+    first_page = await client.get(rows_url, params={"limit": 2})
     assert first_page.status_code == 200
     first = first_page.json()
     second_page = await client.get(
-        rows_url, params={"limit": 1, "cursor": first["next_cursor"]}
+        rows_url, params={"limit": 2, "cursor": first["next_cursor"]}
     )
     assert second_page.status_code == 200
     second = second_page.json()
@@ -211,10 +244,59 @@ async def test_review_is_provider_free_and_reads_are_workspace_scoped(
     assert {row["id"] for row in first["rows"] + second["rows"]} == {
         str(row.id) for row in rows
     }
+    for direction, expected in [("asc", [1, 5, 5, None]), ("desc", [5, 5, 1, None])]:
+        observed = []
+        cursor = None
+        for _ in range(4):
+            params = {"sort": "search_volume", "direction": direction, "limit": 1}
+            if cursor:
+                params["cursor"] = cursor
+            response = await client.get(rows_url, params=params)
+            assert response.status_code == 200, response.text
+            observed.extend(response.json()["rows"])
+            cursor = response.json()["next_cursor"]
+        assert cursor is None
+        assert [row["search_volume"] for row in observed] == expected
+        assert len({row["id"] for row in observed}) == 4
+    mismatched = await client.get(
+        rows_url,
+        params={
+            "limit": 2,
+            "sort": "keyword",
+            "cursor": first["next_cursor"],
+        },
+    )
+    assert mismatched.status_code == 422
     for cursor in ("a", "!!!!", base64.urlsafe_b64encode(b"\xff").decode()):
         invalid = await client.get(rows_url, params={"cursor": cursor})
         assert invalid.status_code == 422
         assert invalid.json()["error"]["code"] == "invalid_cursor"
+
+    backlink = executor_module._dataset_from_plan(
+        run,
+        {
+            **first_plan,
+            "dataset_kind": "referring_domains",
+        },
+    )
+    backlink.status = "published"
+    audit = Audit(workspace_id=run.workspace_id, project_id=run.project_id)
+    db_session.add_all([backlink, audit])
+    await db_session.commit()
+    matches = await asyncio.gather(
+        *[
+            client.post(
+                f"{base}/citation-matches",
+                json={
+                    "backlink_dataset_id": str(backlink.id),
+                    "audit_ids": [str(audit.id)],
+                },
+            )
+            for _ in range(2)
+        ]
+    )
+    assert [response.status_code for response in matches] == [201, 201]
+    assert matches[0].json()["id"] == matches[1].json()["id"]
 
     client.cookies.clear()
     await register_and_login(client, "search-outsider@example.com")

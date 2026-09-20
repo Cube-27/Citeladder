@@ -19,6 +19,25 @@ def backlink_filters(target: CanonicalTarget) -> list[Any]:
     ]
 
 
+def _backlink_request(
+    kind: str, target: CanonicalTarget, limit: int, offset: int
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "target": target.registrable_domain,
+        "include_subdomains": False,
+        "include_indirect_links": False,
+        "backlinks_status_type": "live",
+        "rank_scale": "one_hundred",
+        "backlinks_filters": backlink_filters(target),
+    }
+    if kind != "backlink_summary":
+        field = "domain" if kind == "referring_domains" else "url"
+        payload.update(
+            limit=limit, offset=offset, order_by=["backlinks,desc", f"{field},asc"]
+        )
+    return payload
+
+
 def build_request(
     *,
     kind: str,
@@ -83,25 +102,7 @@ def build_request(
             "order_by": ["keyword_info.search_volume,desc", "keyword,asc"],
         }
     elif kind in {"backlink_summary", "referring_domains", "destination_pages"}:
-        payload = {
-            "target": target.registrable_domain,
-            "include_subdomains": False,
-            "include_indirect_links": False,
-            "backlinks_status_type": "live",
-            "rank_scale": "one_hundred",
-            "backlinks_filters": backlink_filters(target),
-        }
-        if kind != "backlink_summary":
-            payload.update(
-                {
-                    "limit": limit,
-                    "offset": offset,
-                    "order_by": [
-                        "backlinks,desc",
-                        "domain,asc" if kind == "referring_domains" else "url,asc",
-                    ],
-                }
-            )
+        payload = _backlink_request(kind, target, limit, offset)
     else:
         raise ValueError(f"unsupported dataset kind: {kind}")
     return ENDPOINTS[kind], payload

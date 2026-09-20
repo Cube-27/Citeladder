@@ -71,6 +71,34 @@ const reviewedRun: SearchIntelligenceRun = {
 };
 
 describe('SearchIntelligenceReviewDrawer', () => {
+  it('requires a positive location and a seed for keyword suggestions', async () => {
+    render(
+      <SearchIntelligenceReviewDrawer
+        open
+        action="analysis"
+        readiness={readiness}
+        onOpenChange={vi.fn()}
+        onReview={vi.fn()}
+        onConfirm={vi.fn()}
+        busy={false}
+      />,
+    );
+    const submit = screen.getByRole('button', { name: 'Review cost' });
+    const location = screen.getByRole('textbox', { name: 'Location code' });
+    await userEvent.clear(location);
+    await userEvent.type(location, 'invalid');
+    expect(submit).toBeDisabled();
+    await userEvent.clear(location);
+    await userEvent.type(location, '2840');
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Keyword suggestions' }));
+    expect(submit).toBeDisabled();
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Keyword suggestion seed' }),
+      'analytics',
+    );
+    expect(submit).toBeEnabled();
+  });
+
   it('shows review and confirmation failures and clears them when retried', async () => {
     const review = vi
       .fn()

@@ -36,13 +36,15 @@ async def _published_parent(
     dataset_id: uuid.UUID,
 ) -> SearchIntelligenceDataset:
     parent = await session.scalar(
-        select(SearchIntelligenceDataset).where(
+        select(SearchIntelligenceDataset)
+        .where(
             SearchIntelligenceDataset.workspace_id == workspace_id,
             SearchIntelligenceDataset.project_id == project_id,
             SearchIntelligenceDataset.id == dataset_id,
             SearchIntelligenceDataset.dataset_kind == "referring_domains",
             SearchIntelligenceDataset.status == "published",
         )
+        .with_for_update()
     )
     if parent is None:
         raise SearchIntelligenceError(
@@ -138,7 +140,10 @@ def _derived_dataset(
     matches: list[tuple[Citation, str]],
     now: datetime,
 ) -> SearchIntelligenceDataset:
-    selection = {"audit_ids": sorted(str(value) for value in audit_ids)}
+    selection = {
+        "audit_ids": sorted(str(value) for value in audit_ids),
+        "citation_ids": sorted(str(citation.id) for citation in citations),
+    }
     return SearchIntelligenceDataset(
         workspace_id=parent.workspace_id,
         project_id=parent.project_id,
@@ -230,6 +235,17 @@ async def derive_citation_matches(
         matches=matches,
         now=datetime.now(UTC),
     )
+    existing = await session.scalar(
+        select(SearchIntelligenceDataset).where(
+            SearchIntelligenceDataset.workspace_id == workspace_id,
+            SearchIntelligenceDataset.project_id == project_id,
+            SearchIntelligenceDataset.parent_dataset_id == parent.id,
+            SearchIntelligenceDataset.scope_hash == dataset.scope_hash,
+            SearchIntelligenceDataset.status == "published",
+        )
+    )
+    if existing is not None:
+        return dataset_dict(existing)
     session.add(dataset)
     await session.flush()
     session.add_all(

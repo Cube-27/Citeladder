@@ -26,6 +26,9 @@ _SITE_SNAPSHOT_FK = "site_health_snapshots.id"
 _SITE_CHANGE_SNAPSHOT_FK = "site_change_snapshots.id"
 _DEMAND_SNAPSHOT_FK = "demand_snapshots.id"
 _AGENT_TASK_RUN_FK = "agent_task_runs.id"
+_ANALYTICS_TASK_FK = "analytics_tasks.id"
+_SEARCH_RUN_FK = "search_intelligence_runs.id"
+_SEARCH_DATASET_FK = "search_intelligence_datasets.id"
 
 
 def _create_indexes(table: str, columns: tuple[str, ...]) -> None:
@@ -3064,7 +3067,7 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
-            ["analytics_task_id"], ["analytics_tasks.id"], ondelete="CASCADE"
+            ["analytics_task_id"], [_ANALYTICS_TASK_FK], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -5810,9 +5813,7 @@ def upgrade() -> None:
         sa.Column("validator_version", sa.String(length=64), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["task_id"], ["analytics_tasks.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["task_id"], [_ANALYTICS_TASK_FK], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
@@ -6861,11 +6862,11 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
-            ["analytics_task_id"], ["analytics_tasks.id"], ondelete="SET NULL"
+            ["analytics_task_id"], [_ANALYTICS_TASK_FK], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(
-            ["previous_run_id"], ["search_intelligence_runs.id"], ondelete="SET NULL"
+            ["previous_run_id"], [_SEARCH_RUN_FK], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(
             ["connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
@@ -6930,7 +6931,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
             ["parent_dataset_id"],
-            ["search_intelligence_datasets.id"],
+            [_SEARCH_DATASET_FK],
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
@@ -6938,7 +6939,7 @@ def upgrade() -> None:
             [
                 "search_intelligence_runs.workspace_id",
                 "search_intelligence_runs.project_id",
-                "search_intelligence_runs.id",
+                _SEARCH_RUN_FK,
             ],
             name="fk_si_dataset_run_scope",
             ondelete="CASCADE",
@@ -6988,7 +6989,7 @@ def upgrade() -> None:
             [
                 "search_intelligence_runs.workspace_id",
                 "search_intelligence_runs.project_id",
-                "search_intelligence_runs.id",
+                _SEARCH_RUN_FK,
             ],
             name="fk_si_call_run_scope",
             ondelete="CASCADE",
@@ -6998,7 +6999,7 @@ def upgrade() -> None:
             [
                 "search_intelligence_datasets.workspace_id",
                 "search_intelligence_datasets.project_id",
-                "search_intelligence_datasets.id",
+                _SEARCH_DATASET_FK,
             ],
             name="fk_si_call_dataset_scope",
             ondelete="CASCADE",
@@ -7041,7 +7042,7 @@ def upgrade() -> None:
             [
                 "search_intelligence_datasets.workspace_id",
                 "search_intelligence_datasets.project_id",
-                "search_intelligence_datasets.id",
+                _SEARCH_DATASET_FK,
             ],
             name="fk_si_row_dataset_scope",
             ondelete="CASCADE",

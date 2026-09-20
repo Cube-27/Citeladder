@@ -78,6 +78,8 @@ One acquisition may run per project, one request at a time. All DataForSEO workl
 
 The `/search-intelligence` UI separates Keywords, Competitor gaps, Backlinks, and Snapshots. Backlink detail is explicit rather than implied by the summary. Citation matching is a deterministic derivation from a selected backlink dataset and selected authorized Visibility audits. Selected dataset rows may be handed to Content with authored instructions; the handoff only pre-fills the editor and never starts generation.
 
+Dataset tables use shared cursor pagination with 10 rows per page by default and selectable page sizes. Column sorting applies to the complete persisted dataset, with stable UUID tie-breaking and unknown values last; changing the sort or page size resets the cursor. Repeated citation matching for the same parent dataset, audit selection, and citation evidence returns the existing projection.
+
 ## Query evidence and Demand
 
 [Demand service](../backend/app/domain/demand/service.py) builds immutable,

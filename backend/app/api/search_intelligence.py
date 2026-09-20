@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, NoReturn
+from typing import Annotated, Literal, NoReturn
 
 from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy import select
@@ -50,23 +50,21 @@ _Write = Annotated[WorkspaceContext, Depends(require_project_write)]
 
 
 def _raise(exc: SearchIntelligenceError) -> NoReturn:
-    status_code = (
-        status.HTTP_404_NOT_FOUND
-        if exc.code == "not_found"
-        else status.HTTP_409_CONFLICT
-        if exc.code
-        in {
-            "review_expired",
-            "pricing_changed",
-            "connection_changed",
-            "acquisition_in_progress",
-        }
-        else status.HTTP_422_UNPROCESSABLE_CONTENT
-    )
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+    if exc.code == "not_found":
+        status_code = status.HTTP_404_NOT_FOUND
+    elif exc.code in {
+        "review_expired",
+        "review_not_confirmable",
+        "pricing_changed",
+        "connection_changed",
+        "acquisition_in_progress",
+    }:
+        status_code = status.HTTP_409_CONFLICT
     raise ApiException.coded(status_code, exc.code, str(exc)) from exc
 
 
-@router.get("", response_model=ReadinessResponse)
+@router.get("")
 async def get_readiness(
     project_id: uuid.UUID, ctx: _Read, session: _Session
 ) -> ReadinessResponse:
@@ -78,7 +76,7 @@ async def get_readiness(
         _raise(exc)
 
 
-@router.put("/preferences", response_model=SearchIntelligencePreferences)
+@router.put("/preferences")
 async def put_preferences(
     project_id: uuid.UUID,
     payload: SearchIntelligencePreferences,
@@ -165,7 +163,10 @@ async def get_runs(
                     SearchIntelligenceRun.workspace_id == ctx.workspace_id,
                     SearchIntelligenceRun.project_id == project_id,
                 )
-                .order_by(SearchIntelligenceRun.created_at.desc())
+                .order_by(
+                    SearchIntelligenceRun.created_at.desc(),
+                    SearchIntelligenceRun.id.desc(),
+                )
                 .offset(offset)
                 .limit(limit)
             )
@@ -191,14 +192,16 @@ async def get_run(
     return row
 
 
-@router.get("/datasets/{dataset_id}/rows", response_model=DatasetPageResponse)
+@router.get("/datasets/{dataset_id}/rows")
 async def get_dataset_rows(
     project_id: uuid.UUID,
     dataset_id: uuid.UUID,
     ctx: _Read,
     session: _Session,
-    cursor: Annotated[str | None, Query(max_length=100)] = None,
+    cursor: Annotated[str | None, Query(max_length=512)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    sort: str = "id",
+    direction: Literal["asc", "desc"] = "asc",
 ) -> DatasetPageResponse:
     try:
         dataset, rows, next_cursor = await dataset_page(
@@ -208,13 +211,15 @@ async def get_dataset_rows(
             dataset_id=dataset_id,
             cursor=cursor,
             limit=limit,
+            sort=sort,
+            direction=direction,
         )
         return DatasetPageResponse(dataset=dataset, rows=rows, next_cursor=next_cursor)
     except SearchIntelligenceError as exc:
         _raise(exc)
 
 
-@router.post("/content-handoff", response_model=ContentHandoffResponse)
+@router.post("/content-handoff")
 async def post_content_handoff(
     project_id: uuid.UUID,
     payload: ContentHandoffRequest,
@@ -234,9 +239,7 @@ async def post_content_handoff(
         _raise(exc)
 
 
-@router.post(
-    "/citation-matches", response_model=dict, status_code=status.HTTP_201_CREATED
-)
+@router.post("/citation-matches", status_code=status.HTTP_201_CREATED)
 async def post_citation_matches(
     project_id: uuid.UUID, payload: CitationMatchRequest, ctx: _Write, session: _Session
 ) -> dict:

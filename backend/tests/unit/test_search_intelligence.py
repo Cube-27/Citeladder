@@ -1,13 +1,19 @@
+import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
+from unittest.mock import AsyncMock
 
+import httpx
 import pytest
 
+from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.search_intelligence_dataforseo import (
     ResearchResponse,
     _reported_cost,
+    _response_body,
 )
 from app.core.config.search_intelligence import estimate_dataset, page_sizes
+from app.domain.demand.search_intelligence import executor
 from app.domain.demand.search_intelligence.executor import _apply_reported_cost
 from app.domain.demand.search_intelligence.normalization import normalize_result
 from app.domain.demand.search_intelligence.requests import build_request
@@ -16,6 +22,7 @@ from app.domain.demand.search_intelligence.service import _save_review_defaults
 from app.domain.demand.search_intelligence.targets import CanonicalTarget
 from app.models.project import Project
 from app.models.search_intelligence import SearchIntelligenceRun
+from app.orchestration.provider_capacity import CapacityRequest
 
 OWNED = CanonicalTarget(
     "primary",
@@ -198,3 +205,36 @@ def test_review_defaults_keep_only_supported_expanded_depths() -> None:
     assert project.search_intelligence_preferences["depths"] == {
         "ranking_keywords": 500
     }
+
+
+@pytest.mark.asyncio
+async def test_provider_rate_limit_releases_shared_capacity_with_retry_hint(
+    monkeypatch,
+):
+    with pytest.raises(ProviderError) as raised:
+        _response_body(httpx.Response(429, headers={"Retry-After": "12"}))
+    release = AsyncMock()
+    monkeypatch.setattr(executor, "execute_live", AsyncMock(side_effect=raised.value))
+    monkeypatch.setattr(executor, "release_provider_capacity", release)
+    request = CapacityRequest(
+        task_id=None,
+        analytics_task_id=uuid.uuid4(),
+        attempt_number=1,
+        logical_engine="search_intelligence",
+        transport_provider="dataforseo",
+        credential_kind="byok",
+        connection_id=uuid.uuid4(),
+    )
+
+    response, error = await executor._send_once(
+        None,
+        request,
+        executor._PreparedCall("dispatch"),
+        {"endpoint": "/test", "request": {}},
+    )
+
+    assert response is None
+    assert error is raised.value
+    outcome = release.call_args.kwargs["outcome"]
+    assert outcome.kind == "rate_limited"
+    assert outcome.retry_after_seconds == 12

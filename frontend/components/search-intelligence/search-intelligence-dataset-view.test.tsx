@@ -1,7 +1,7 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, expect, it } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vite-plus/test';
 
 import type { SearchIntelligenceDataset } from '@/lib/api/search-intelligence';
 import { makeProject } from '@/test/fixtures/project';
@@ -55,18 +55,47 @@ function row(id: string, keyword: string) {
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => mswServer.resetHandlers());
+afterEach(() => {
+  mswServer.resetHandlers();
+  vi.restoreAllMocks();
+});
 afterAll(() => mswServer.close());
 
-it('loads the next cursor page while retaining existing rows', async () => {
+it('shows a storage failure instead of losing a content handoff', async () => {
+  mswServer.use(
+    http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
+      HttpResponse.json({
+        dataset,
+        rows: [row('33333333-3333-4333-8333-333333333333', 'Keyword')],
+        next_cursor: null,
+      }),
+    ),
+    http.post(`/api/v1/projects/${project.id}/search-intelligence/content-handoff`, () =>
+      HttpResponse.json({ project_id: project.id, evidence: [], user_instructions: 'Write this' }),
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  await userEvent.click(await screen.findByRole('checkbox'));
+  await userEvent.type(screen.getByRole('textbox', { name: 'Content instructions' }), 'Write this');
+  vi.spyOn(Object.getPrototypeOf(sessionStorage), 'setItem').mockImplementation(() => {
+    throw new Error('Storage is full');
+  });
+  await userEvent.click(screen.getByRole('button', { name: 'Write content from 1 selected row' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Storage is full');
+});
+
+it('uses shared pagination and resets its cursor when sorting or changing rows per page', async () => {
   const cursor = 'page+/=';
   const cursors: Array<string | null> = [];
+  const requests: URLSearchParams[] = [];
   mswServer.use(
     http.get(
       `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
       ({ request }) => {
         const params = new URL(request.url).searchParams;
-        expect(params.get('limit')).toBe('200');
+        requests.push(params);
         cursors.push(params.get('cursor'));
         return HttpResponse.json({
           dataset,
@@ -85,9 +114,25 @@ it('loads the next cursor page while retaining existing rows', async () => {
   });
 
   expect(await screen.findByText('First keyword')).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'Load more rows' }));
+  expect(requests[0].get('limit')).toBe('10');
+  await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
   expect(await screen.findByText('Later keyword')).toBeInTheDocument();
-  expect(screen.getByText('First keyword')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Load more rows' })).not.toBeInTheDocument();
+  expect(screen.queryByText('First keyword')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
   expect(cursors).toEqual([null, cursor]);
+  await userEvent.click(screen.getByRole('button', { name: 'Keyword' }));
+  await waitFor(() => expect(requests.at(-1)?.get('sort')).toBe('keyword'));
+  expect(requests.at(-1)?.has('cursor')).toBe(false);
+  expect(await screen.findByRole('columnheader', { name: 'Keyword' })).toHaveAttribute(
+    'aria-sort',
+    'ascending',
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Keyword' }));
+  await waitFor(() => expect(requests.at(-1)?.get('direction')).toBe('desc'));
+  await userEvent.click(
+    await screen.findByRole('combobox', { name: 'Rows per page for evidence rows' }),
+  );
+  await userEvent.click(await screen.findByRole('option', { name: '25' }));
+  await waitFor(() => expect(requests.at(-1)?.get('limit')).toBe('25'));
+  expect(requests.at(-1)?.has('cursor')).toBe(false);
 });

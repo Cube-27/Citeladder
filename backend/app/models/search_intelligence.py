@@ -27,6 +27,9 @@ from app.core.config.search_intelligence import PARSER_VERSION, PRICE_VERSION
 from app.core.database import Base
 from app.models.constants import CASCADE_ALL_DELETE_ORPHAN
 
+_RUN_FK = "search_intelligence_runs.id"
+_DATASET_FK = "search_intelligence_datasets.id"
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
@@ -76,7 +79,7 @@ class SearchIntelligenceRun(Base):
     )
     previous_run_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("search_intelligence_runs.id", ondelete="SET NULL"),
+        ForeignKey(_RUN_FK, ondelete="SET NULL"),
         nullable=True,
     )
     connection_id: Mapped[uuid.UUID] = mapped_column(
@@ -146,7 +149,7 @@ class SearchIntelligenceDataset(Base):
             [
                 "search_intelligence_runs.workspace_id",
                 "search_intelligence_runs.project_id",
-                "search_intelligence_runs.id",
+                _RUN_FK,
             ],
             ondelete="CASCADE",
             name="fk_si_dataset_run_scope",
@@ -164,11 +167,12 @@ class SearchIntelligenceDataset(Base):
     )
     workspace_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
     project_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
-    run_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True))
+    run_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
     parent_dataset_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("search_intelligence_datasets.id", ondelete="RESTRICT"),
+        ForeignKey(_DATASET_FK, ondelete="RESTRICT"),
         nullable=True,
+        index=True,
     )
     dataset_kind: Mapped[str] = mapped_column(String(32))
     scope_hash: Mapped[str] = mapped_column(String(64), index=True)
@@ -223,7 +227,7 @@ class SearchIntelligenceCall(Base):
             [
                 "search_intelligence_runs.workspace_id",
                 "search_intelligence_runs.project_id",
-                "search_intelligence_runs.id",
+                _RUN_FK,
             ],
             ondelete="CASCADE",
             name="fk_si_call_run_scope",
@@ -233,7 +237,7 @@ class SearchIntelligenceCall(Base):
             [
                 "search_intelligence_datasets.workspace_id",
                 "search_intelligence_datasets.project_id",
-                "search_intelligence_datasets.id",
+                _DATASET_FK,
             ],
             ondelete="CASCADE",
             name="fk_si_call_dataset_scope",
@@ -288,7 +292,7 @@ class SearchIntelligenceRow(Base):
             [
                 "search_intelligence_datasets.workspace_id",
                 "search_intelligence_datasets.project_id",
-                "search_intelligence_datasets.id",
+                _DATASET_FK,
             ],
             ondelete="CASCADE",
             name="fk_si_row_dataset_scope",
@@ -307,6 +311,7 @@ class SearchIntelligenceRow(Base):
         PGUUID(as_uuid=True),
         ForeignKey("search_intelligence_calls.id", ondelete="RESTRICT"),
         nullable=True,
+        index=True,
     )
     provider_row_key: Mapped[str] = mapped_column(String(64))
     row_kind: Mapped[str] = mapped_column(String(32))

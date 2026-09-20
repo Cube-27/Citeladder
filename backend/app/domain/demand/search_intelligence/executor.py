@@ -15,11 +15,13 @@ from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.search_intelligence_dataforseo import ResearchResponse, execute_live
 from app.core.config.audits import (
     CAPACITY_OUTCOME_FAILED,
+    CAPACITY_OUTCOME_RATE_LIMITED,
     CAPACITY_OUTCOME_SUCCEEDED,
     CREDENTIAL_KIND_BYOK,
 )
 from app.core.config.provider_catalog import (
     ERROR_CONNECTION,
+    ERROR_RATE_LIMIT,
     ERROR_TIMEOUT,
     SEARCH_INTELLIGENCE_CAPACITY_ENGINE,
     TRANSPORT_DATAFORSEO,
@@ -35,6 +37,7 @@ from app.models.search_intelligence import (
     SearchIntelligenceRun,
 )
 from app.models.workspace import WorkspaceMember
+from app.orchestration.executor_errors import CapacityWaitError
 from app.orchestration.provider_capacity import (
     CapacityOutcome,
     CapacityRequest,
@@ -279,7 +282,9 @@ async def _mark_capacity_wait(
     sequence: int,
 ) -> None:
     async with session_factory() as session:
-        run = await session.get(SearchIntelligenceRun, run_id)
+        run = await session.get(SearchIntelligenceRun, run_id, with_for_update=True)
+        if run is None or run.status != "running":
+            return
         call = await session.scalar(
             select(SearchIntelligenceCall).where(
                 SearchIntelligenceCall.run_id == run_id,
@@ -289,8 +294,7 @@ async def _mark_capacity_wait(
         if call is not None:
             call.status = "intent"
             call.dispatched_at = None
-        if run is not None:
-            run.status = "queued"
+        run.status = "queued"
         await session.commit()
 
 
@@ -336,11 +340,15 @@ async def _send_once(
     except ProviderError as exc:
         error = exc
     finally:
+        outcome = CAPACITY_OUTCOME_SUCCEEDED if response else CAPACITY_OUTCOME_FAILED
+        if error is not None and error.error_code == ERROR_RATE_LIMIT:
+            outcome = CAPACITY_OUTCOME_RATE_LIMITED
         await release_provider_capacity(
             session_factory,
             request=request,
             outcome=CapacityOutcome(
-                kind=CAPACITY_OUTCOME_SUCCEEDED if response else CAPACITY_OUTCOME_FAILED
+                kind=outcome,
+                retry_after_seconds=error.retry_after_seconds if error else None,
             ),
         )
     return response, error
@@ -560,7 +568,7 @@ async def execute_search_intelligence(
         decision = await acquire_provider_capacity(session_factory, request=request)
         if not decision.acquired:
             await _mark_capacity_wait(session_factory, run_id, sequence)
-            raise RuntimeError("provider capacity unavailable")
+            raise CapacityWaitError(decision.available_at or _utcnow())
         if not await _mark_dispatched(session_factory, run_id, sequence):
             await release_provider_capacity(
                 session_factory,

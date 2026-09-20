@@ -13,6 +13,23 @@ REUSE_DAYS: Final = 30
 REVIEW_TTL_SECONDS: Final = 600
 PROVIDER_PAGE_SIZE: Final = 1000
 MAX_SAFE_DEPTH: Final = 1_000_000
+ROW_SORT_FIELDS: Final = frozenset(
+    {
+        "id",
+        "keyword",
+        "domain",
+        "url",
+        "search_volume",
+        "difficulty",
+        "intent",
+        "rank_group",
+        "owned_rank_group",
+        "etv",
+        "backlinks",
+        "referring_main_domains",
+        "dataforseo_rank",
+    }
+)
 
 LABS_TASK_USD: Final = Decimal("0.012")
 LABS_ITEM_USD: Final = Decimal("0.00012")

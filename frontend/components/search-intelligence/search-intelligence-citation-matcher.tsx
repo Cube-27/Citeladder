@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ReadError } from '@/components/ui/read-error';
@@ -63,6 +64,7 @@ export function SearchIntelligenceCitationMatcher({
         </p>
       </CardHeader>
       <CardContent className="grid gap-3">
+        {derive.isError ? <Alert>{derive.error.message}</Alert> : null}
         <div className="grid max-h-44 gap-2 overflow-y-auto">
           {audits.data?.slice(0, 20).map((audit) => (
             <label

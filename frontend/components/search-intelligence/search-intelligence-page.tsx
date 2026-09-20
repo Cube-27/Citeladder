@@ -9,6 +9,7 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 import { SearchIntelligenceCitationMatcher } from '@/components/search-intelligence/search-intelligence-citation-matcher';
 import { SearchIntelligenceDatasetView } from '@/components/search-intelligence/search-intelligence-dataset-view';
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
+import { formatEvidenceValue } from './search-intelligence-format';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -92,9 +93,7 @@ function BacklinkSummary({ dataset }: Readonly<{ dataset: SearchIntelligenceData
           {Object.entries(dataset.summary).map(([label, value]) => (
             <div key={label} className="grid gap-1">
               <dt className="text-muted text-sm">{label.replaceAll('_', ' ')}</dt>
-              <dd className="text-xl tabular-nums">
-                {value === null ? 'Not measured' : String(value)}
-              </dd>
+              <dd className="text-xl tabular-nums">{formatEvidenceValue(value)}</dd>
             </div>
           ))}
         </dl>
@@ -145,7 +144,13 @@ export function SearchIntelligencePage() {
   const latestDatasets = useMemo(() => {
     const result = new Map<string, SearchIntelligenceDataset>();
     for (const dataset of readiness.data?.datasets ?? []) {
-      const key = `${dataset.dataset_kind}:${dataset.target_origin}:${dataset.comparison_origin}`;
+      const key = JSON.stringify([
+        dataset.dataset_kind,
+        dataset.target_origin,
+        dataset.comparison_origin,
+        dataset.location_code,
+        dataset.language_code,
+      ]);
       if (!result.has(key)) result.set(key, dataset);
     }
     return [...result.values()];
@@ -296,6 +301,7 @@ export function SearchIntelligencePage() {
             </div>
           </TabPanel>
           <SearchIntelligenceReviewDrawer
+            key={`${activeProject?.workspace_id}:${activeProject?.id}:${action}:${drawerOpen}`}
             open={drawerOpen}
             action={action}
             readiness={data}

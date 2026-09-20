@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { SEARCH_MAX_DEPTH } from '@/lib/config/search-intelligence';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -69,6 +70,21 @@ function defaultSelections(data: SearchIntelligenceReadiness): DatasetSelection[
   return availableSelections(data).filter(({ kind }) => kind !== 'keyword_suggestions');
 }
 
+function reviewInputsValid(
+  selections: DatasetSelection[],
+  ownedTarget: string,
+  location: string,
+  seed: string,
+) {
+  return Boolean(
+    selections.length &&
+    ownedTarget &&
+    Number.isInteger(Number(location)) &&
+    Number(location) > 0 &&
+    selections.every((item) => item.kind !== 'keyword_suggestions' || seed.trim()),
+  );
+}
+
 export function SearchIntelligenceReviewDrawer({
   open,
   action,
@@ -117,12 +133,15 @@ export function SearchIntelligenceReviewDrawer({
         ? current.filter((item) => selectedKey(item) !== selectedKey(candidate))
         : [...current, candidate],
     );
-  const updateDepth = (candidate: DatasetSelection, depth: number) =>
+  const updateDepth = (candidate: DatasetSelection, depth: number) => {
+    if (!Number.isInteger(depth) || depth < 1 || depth > SEARCH_MAX_DEPTH) return;
     setSelections((current) =>
       current.map((item) =>
         selectedKey(item) === selectedKey(candidate) ? { ...item, depth } : item,
       ),
     );
+  };
+  const canReview = reviewInputsValid(selections, ownedTarget, location, seed);
   const submitReview = async () => {
     setError('');
     try {
@@ -177,10 +196,7 @@ export function SearchIntelligenceReviewDrawer({
           </div>
         ) : (
           <div className="flex justify-end">
-            <Button
-              disabled={busy || !selections.length || !ownedTarget}
-              onClick={() => void submitReview()}
-            >
+            <Button disabled={busy || !canReview} onClick={() => void submitReview()}>
               Review cost
             </Button>
           </div>

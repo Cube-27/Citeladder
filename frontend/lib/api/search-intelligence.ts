@@ -147,14 +147,19 @@ export const searchIntelligenceApi = {
     projectId: string,
     datasetId: string,
     options?: ApiRequestOptions,
-    cursor?: string,
-  ) =>
-    pageSchema.parse(
+    params: { cursor?: string; limit?: number; sort?: string; direction?: 'asc' | 'desc' } = {},
+  ) => {
+    const query = new URLSearchParams({ limit: String(params.limit ?? 200) });
+    if (params.cursor) query.set('cursor', params.cursor);
+    if (params.sort) query.set('sort', params.sort);
+    if (params.direction) query.set('direction', params.direction);
+    return pageSchema.parse(
       await apiClient.get<unknown>(
-        `${root(projectId)}/datasets/${datasetId}/rows?limit=200${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+        `${root(projectId)}/datasets/${datasetId}/rows?${query}`,
         options,
       ),
-    ),
+    );
+  },
   deriveCitationMatches: async (
     projectId: string,
     backlinkDatasetId: string,

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import binascii
 import hashlib
 import json
 import uuid
@@ -28,6 +26,7 @@ from app.core.config.search_intelligence import (
 )
 from app.core.config.task_queue import TASK_STATUS_CANCELLED
 from app.domain.analytics.enqueue import enqueue_search_intelligence
+from app.domain.demand.search_intelligence.pagination import sorted_rows
 from app.domain.demand.search_intelligence.requests import build_request
 from app.domain.demand.search_intelligence.schemas import (
     ContentHandoffResponse,
@@ -189,6 +188,16 @@ def _selection_targets(
     return owned_target, None
 
 
+def _reused_dataset(snapshot: SearchIntelligenceDataset) -> dict[str, Any]:
+    return {
+        "dataset_id": str(snapshot.id),
+        "dataset_kind": snapshot.dataset_kind,
+        "published_at": snapshot.published_at.isoformat()
+        if snapshot.published_at
+        else None,
+    }
+
+
 async def _build_call_plan(
     session: AsyncSession,
     *,
@@ -200,11 +209,10 @@ async def _build_call_plan(
     location: int | None,
     language: str,
     now: datetime,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[QuoteLine], int]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[QuoteLine]]:
     call_plan: list[dict[str, Any]] = []
     reused: list[dict[str, Any]] = []
     quote_lines: list[QuoteLine] = []
-    planned_rows = 0
     for index, selection in enumerate(payload.datasets):
         dataset_target, comparison = _selection_targets(
             project, owned_target, selection
@@ -246,20 +254,9 @@ async def _build_call_plan(
             )
         quote = estimate_dataset(selection.kind, rows=depth)
         if snapshot is not None:
-            reused.append(
-                {
-                    "dataset_id": str(snapshot.id),
-                    "dataset_kind": selection.kind,
-                    "published_at": (
-                        snapshot.published_at.isoformat()
-                        if snapshot.published_at
-                        else None
-                    ),
-                }
-            )
+            reused.append(_reused_dataset(snapshot))
             continue
         quote_lines.append(quote)
-        planned_rows += depth
         sizes = (
             page_sizes(depth)
             if selection.kind not in {"footprint", "backlink_summary"}
@@ -290,7 +287,7 @@ async def _build_call_plan(
                     "estimated_cost_usd": str(quote.estimated_usd / quote.calls),
                 }
             )
-    return call_plan, reused, quote_lines, planned_rows
+    return call_plan, reused, quote_lines
 
 
 def _owned_target(project: Project, identity: str | None) -> CanonicalTarget:
@@ -330,7 +327,6 @@ def _new_review_run(
     call_plan: list[dict[str, Any]],
     reused: list[dict[str, Any]],
     quote_lines: list[QuoteLine],
-    planned_rows: int,
     now: datetime,
 ) -> SearchIntelligenceRun:
     return SearchIntelligenceRun(
@@ -357,7 +353,7 @@ def _new_review_run(
         pricing_version=PRICE_VERSION,
         estimated_cost_usd=quote_total(tuple(quote_lines)),
         planned_calls=len(call_plan),
-        planned_rows=planned_rows,
+        planned_rows=sum(line.requested_rows for line in quote_lines),
         expires_at=now + timedelta(seconds=REVIEW_TTL_SECONDS),
     )
 
@@ -390,6 +386,11 @@ async def create_review(
     idempotency_key: str,
     payload: ReviewCreate,
 ) -> SearchIntelligenceRun:
+    await session.scalar(
+        select(Project.id)
+        .where(Project.workspace_id == workspace_id, Project.id == project_id)
+        .with_for_update()
+    )
     existing = await session.scalar(
         select(SearchIntelligenceRun).where(
             SearchIntelligenceRun.workspace_id == workspace_id,
@@ -404,7 +405,7 @@ async def create_review(
     connection = await _connection(session, workspace_id, payload.connection_id)
     location, language = _market_scope(project, payload)
     now = _utcnow()
-    call_plan, reused, quote_lines, planned_rows = await _build_call_plan(
+    call_plan, reused, quote_lines = await _build_call_plan(
         session,
         workspace_id=workspace_id,
         project_id=project_id,
@@ -428,7 +429,6 @@ async def create_review(
         call_plan=call_plan,
         reused=reused,
         quote_lines=quote_lines,
-        planned_rows=planned_rows,
         now=now,
     )
     session.add(run)
@@ -437,6 +437,21 @@ async def create_review(
     await session.commit()
     await session.refresh(run)
     return run
+
+
+def _validate_confirmation(run: SearchIntelligenceRun, now: datetime) -> None:
+    if run.status != "reviewed":
+        raise SearchIntelligenceError(
+            "review_not_confirmable", "Review is no longer confirmable"
+        )
+    if run.expires_at <= now:
+        raise SearchIntelligenceError(
+            "review_expired", "Review expired; create a new cost review"
+        )
+    if run.pricing_version != PRICE_VERSION:
+        raise SearchIntelligenceError(
+            "pricing_changed", "Pricing changed; create a new cost review"
+        )
 
 
 async def confirm_review(
@@ -468,14 +483,7 @@ async def confirm_review(
     if run.confirmed_at is not None:
         return run
     now = _utcnow()
-    if run.expires_at <= now:
-        raise SearchIntelligenceError(
-            "review_expired", "Review expired; create a new cost review"
-        )
-    if run.pricing_version != PRICE_VERSION:
-        raise SearchIntelligenceError(
-            "pricing_changed", "Pricing changed; create a new cost review"
-        )
+    _validate_confirmation(run, now)
     connection = await session.get(ProviderConnection, run.connection_id)
     if (
         connection is None
@@ -562,6 +570,8 @@ async def readiness(
                     ProviderConnection.workspace_id == workspace_id,
                     ProviderConnection.transport_provider == TRANSPORT_DATAFORSEO,
                     ProviderConnection.active.is_(True),
+                    ProviderConnection.last_test_status == TEST_STATUS_OK,
+                    ProviderConnection.api_key_encrypted != "",
                 )
             )
         ).all()
@@ -660,6 +670,8 @@ async def dataset_page(
     dataset_id: uuid.UUID,
     cursor: str | None,
     limit: int,
+    sort: str = "id",
+    direction: str = "asc",
 ) -> tuple[dict, list[dict], str | None]:
     dataset = await session.scalar(
         select(SearchIntelligenceDataset).where(
@@ -671,32 +683,14 @@ async def dataset_page(
     )
     if dataset is None:
         raise SearchIntelligenceError("not_found", "Dataset not found")
-    after = None
-    if cursor:
-        try:
-            after = uuid.UUID(base64.urlsafe_b64decode(cursor.encode()).decode())
-        except (binascii.Error, ValueError, UnicodeError) as exc:
-            raise SearchIntelligenceError(
-                "invalid_cursor", "Dataset cursor is invalid"
-            ) from exc
-    query = select(SearchIntelligenceRow).where(
-        SearchIntelligenceRow.workspace_id == workspace_id,
-        SearchIntelligenceRow.project_id == project_id,
-        SearchIntelligenceRow.dataset_id == dataset_id,
-    )
-    if after:
-        query = query.where(SearchIntelligenceRow.id > after)
-    rows = list(
-        (
-            await session.scalars(
-                query.order_by(SearchIntelligenceRow.id).limit(limit + 1)
-            )
-        ).all()
-    )
-    next_cursor = None
-    if len(rows) > limit:
-        rows = rows[:limit]
-        next_cursor = base64.urlsafe_b64encode(str(rows[-1].id).encode()).decode()
+    try:
+        rows, next_cursor = await sorted_rows(
+            session, dataset, cursor=cursor, limit=limit, sort=sort, direction=direction
+        )
+    except ValueError as exc:
+        raise SearchIntelligenceError(
+            "invalid_cursor", "Dataset cursor is invalid"
+        ) from exc
     return dataset_dict(dataset), [row_dict(row) for row in rows], next_cursor
 
 

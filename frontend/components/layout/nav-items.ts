@@ -40,6 +40,7 @@ export const NAV_GROUPS = [
         queryMatch: { key: 'tab', values: ['pages'], defaultValue: 'pages' },
       },
       { label: 'Search Demand', href: '/demand', icon: ICONS.demand },
+      { label: 'Issues', href: '/issues', icon: ICONS.issues },
       { label: 'Search Intelligence', href: '/search-intelligence', icon: ICONS.analytics },
       { label: 'Performance', href: '/performance', icon: ICONS.performance },
       { label: 'Commerce Suite', href: '/products', icon: ICONS.products },

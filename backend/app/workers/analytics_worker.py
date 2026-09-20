@@ -75,7 +75,7 @@ from app.domain.traffic.service import (
     refresh_traffic_snapshot,
 )
 from app.models.analytics import AnalyticsTask
-from app.orchestration.executor_errors import TerminalExecutorError
+from app.orchestration.executor_errors import CapacityWaitError, TerminalExecutorError
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.drain import DrainableWorkerMixin
 from app.workers.source_pages.inspector import inspect_source_pages
@@ -234,7 +234,12 @@ class AnalyticsWorker(DrainableWorkerMixin):
             heartbeat.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await heartbeat
-        await self._finalize(task_id=claimed.id, owner=self.owner, error=error)
+        if isinstance(error, CapacityWaitError):
+            await self._queue.park_capacity_wait(
+                task_id=claimed.id, owner=self.owner, available_at=error.available_at
+            )
+        else:
+            await self._finalize(task_id=claimed.id, owner=self.owner, error=error)
 
     async def _heartbeat_loop(self, task_id: uuid.UUID) -> None:
         interval = max(1.0, analytics_settings.heartbeat_interval_seconds)
