@@ -21,14 +21,12 @@ The owner retained [shell/commercial follow-up](citeladder-authed-shell-and-comm
 for deferred sign-in selection and invitation delivery; it is not an active or
 additional queued assignment. Listed work is not authorization to execute it.
 
-## Drafts awaiting product decisions
-
-- [Search Intelligence with DataForSEO](citeladder-search-intelligence-dataforseo.md)
-  — requested implementation plan covering backend and frontend; product scope,
-  refresh/market policy and workflow handoffs remain open. This is separate from
-  the completed Search intelligence signals work and is not selected for execution.
-
 ## Last completed
+
+[Search Intelligence with DataForSEO](citeladder-search-intelligence-dataforseo.md)
+— follow-up implemented locally on 20 September 2026: explicit scope, richer
+saved datasets, filtering/export, acquisition controls and defect fixes.
+CI retains release validation; paid provider acceptance was not performed.
 
 [Search intelligence signals](citeladder-search-intelligence-signals.md)
 — completed across internal authority, significant content change, query

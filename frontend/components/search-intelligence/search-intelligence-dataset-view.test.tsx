@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vite-plus/test';
@@ -8,6 +8,7 @@ import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders, testProjectSelection } from '@/test/render';
 import { SearchIntelligenceDatasetView } from './search-intelligence-dataset-view';
+import * as csv from '@/lib/csv/download';
 
 const project = makeProject();
 const dataset: SearchIntelligenceDataset = {
@@ -60,6 +61,90 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 afterAll(() => mswServer.close());
+
+it('filters on the server and exports every saved matching page', async () => {
+  const download = vi.spyOn(csv, 'downloadCsv').mockImplementation(() => {});
+  const requests: URLSearchParams[] = [];
+  mswServer.use(
+    http.get(
+      `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
+      ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        requests.push(params);
+        const filtered = params.get('search') === 'needle';
+        const second = params.has('cursor');
+        return HttpResponse.json({
+          dataset: { ...dataset, filtered_saved_count: filtered ? 2 : 201 },
+          rows: [
+            row(
+              second
+                ? '55555555-5555-4555-8555-555555555555'
+                : '44444444-4444-4444-8444-444444444444',
+              filtered ? (second ? '=needle second' : 'needle first') : 'Unfiltered page',
+            ),
+          ],
+          next_cursor: filtered && !second ? 'next-matching-page' : null,
+        });
+      },
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  await screen.findByText('Unfiltered page');
+  await userEvent.type(screen.getByRole('searchbox', { name: 'Filter saved results' }), 'needle');
+  await screen.findByText('needle first');
+  await userEvent.click(screen.getByRole('button', { name: 'Export saved CSV' }));
+  await waitFor(() => expect(download).toHaveBeenCalledOnce());
+  const exported = download.mock.calls[0][2];
+  expect(exported).toHaveLength(2);
+  expect(exported[0]).toContain('needle first');
+  expect(exported[1]).toContain('=needle second');
+  expect(requests.at(-1)?.get('search')).toBe('needle');
+});
+
+it.each([
+  ['organic_pages', { organic_keywords: 22, etv: '7.5' }],
+  [
+    'backlinks',
+    { dofollow: false, dataforseo_rank: 42, backlinks_spam_score: 0, anchor: 'Read more' },
+  ],
+  [
+    'destination_pages',
+    { referring_domains: 400, referring_main_domains: 250, dataforseo_rank: 34 },
+  ],
+  ['missing_keywords', { owned_rank_group: null, rank_group: 3, search_volume: 100 }],
+  ['shared_keywords', { owned_rank_group: 5, rank_group: 2 }],
+] as const)(
+  'exports visible %s values without losing false, zero or unknown',
+  async (kind, values) => {
+    const download = vi.spyOn(csv, 'downloadCsv').mockImplementation(() => {});
+    const snapshot = { ...dataset, dataset_kind: kind };
+    mswServer.use(
+      http.get(
+        `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
+        () =>
+          HttpResponse.json({
+            dataset: snapshot,
+            rows: [{ ...row('33333333-3333-4333-8333-333333333333', 'Example'), ...values }],
+            next_cursor: null,
+          }),
+      ),
+    );
+    renderWithProviders(<SearchIntelligenceDatasetView dataset={snapshot} />, {
+      projectSelection: testProjectSelection({
+        activeProject: project,
+        activeProjectId: project.id,
+      }),
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Export saved CSV' }));
+    await waitFor(() => expect(download).toHaveBeenCalledOnce());
+    const [, headers, rows] = download.mock.calls[0];
+    const exported = Object.fromEntries(headers.map((header, index) => [header, rows[0][index]]));
+    for (const [key, value] of Object.entries(values))
+      expect(exported[key]).toBe(String(value ?? ''));
+  },
+);
 
 it('rounds estimated traffic in the table and opens evidence from the keyword', async () => {
   const result = {
@@ -183,7 +268,7 @@ it('uses shared pagination and resets its cursor when sorting or changing rows p
   expect(requests.at(-1)?.has('cursor')).toBe(false);
 });
 
-it('keeps the table and selected evidence visible while a sort read is pending', async () => {
+it('hides a previous page while a different sort is pending', async () => {
   mswServer.use(
     http.get(
       `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
@@ -206,18 +291,14 @@ it('keeps the table and selected evidence visible while a sort read is pending',
     projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
   });
   expect(await screen.findByText('First keyword')).toBeInTheDocument();
-  const table = screen.getByRole('table');
   await userEvent.click(screen.getByRole('checkbox', { name: /Select evidence row/ }));
   await userEvent.click(screen.getByRole('button', { name: 'Keyword' }));
-  expect(screen.getByRole('table')).toBe(table);
-  expect(screen.getByText('First keyword')).toBeInTheDocument();
-  expect(screen.getByText('1 evidence row selected')).toBeInTheDocument();
+  expect(screen.queryByText('First keyword')).not.toBeInTheDocument();
   expect(await screen.findByText('Sorted keyword')).toBeInTheDocument();
-  expect(screen.getByRole('table')).toBe(table);
   expect(screen.getByText('1 evidence row selected')).toBeInTheDocument();
 });
 
-it('retains the saved page and offers a read retry after a sort read fails', async () => {
+it('does not show a previous query page after a sort read fails', async () => {
   mswServer.use(
     http.get(
       `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
@@ -239,9 +320,36 @@ it('retains the saved page and offers a read retry after a sort read fails', asy
   });
   expect(await screen.findByText('First keyword')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Keyword' }));
-  expect(await screen.findByText(/Saved rows could not be updated/)).toBeInTheDocument();
-  expect(screen.getByText('First keyword')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Retry read' })).toBeInTheDocument();
+  expect(await screen.findByText('Read failed')).toBeInTheDocument();
+  expect(screen.queryByText('First keyword')).not.toBeInTheDocument();
+});
+
+it('sends only nonnegative integer minimum volumes', async () => {
+  const requests: URLSearchParams[] = [];
+  mswServer.use(
+    http.get(
+      `/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`,
+      ({ request }) => {
+        requests.push(new URL(request.url).searchParams);
+        return HttpResponse.json({
+          dataset,
+          rows: [row('44444444-4444-4444-8444-444444444444', 'First keyword')],
+          next_cursor: null,
+        });
+      },
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  await screen.findByText('First keyword');
+  const input = screen.getByRole('spinbutton', { name: 'Minimum search volume' });
+  fireEvent.change(input, { target: { value: '-1' } });
+  fireEvent.change(input, { target: { value: '1.5' } });
+  expect(input).toHaveValue(null);
+  expect(requests).toHaveLength(1);
+  fireEvent.change(input, { target: { value: '10' } });
+  await waitFor(() => expect(requests.at(-1)?.get('min_volume')).toBe('10'));
 });
 
 it('removes saved rows when access to a dataset is revoked', async () => {

@@ -26,7 +26,7 @@ from app.core.config.provider_catalog import (
     SEARCH_INTELLIGENCE_CAPACITY_ENGINE,
     TRANSPORT_DATAFORSEO,
 )
-from app.core.config.search_intelligence import PRICE_VERSION
+from app.core.config.search_intelligence import BACKLINK_KINDS, PRICE_VERSION
 from app.domain.demand.search_intelligence.normalization import normalize_response
 from app.models.analytics import AnalyticsTask
 from app.models.provider import ProviderConnection
@@ -56,11 +56,7 @@ def _dataset_from_plan(
     target = plan["target"]
     comparison = plan.get("comparison") or {}
     request = plan["request"]
-    backlink = plan["dataset_kind"] in {
-        "backlink_summary",
-        "referring_domains",
-        "destination_pages",
-    }
+    backlink = plan["dataset_kind"] in BACKLINK_KINDS
     return SearchIntelligenceDataset(
         workspace_id=run.workspace_id,
         project_id=run.project_id,
@@ -75,15 +71,8 @@ def _dataset_from_plan(
         language_code="" if backlink else str(request.get("language_code") or ""),
         requested_rows=plan["requested_rows"],
         provider_filters={
-            key: request.get(key)
-            for key in (
-                "filters",
-                "backlinks_filters",
-                "pages",
-                "exclude_pages",
-                "include_subdomains",
-            )
-            if key in request
+            **request,
+            "research_scope": plan.get("research_scope", "exact_host"),
         },
         collection_started_at=_utcnow(),
     )
@@ -434,13 +423,17 @@ def _publish_complete_dataset(
         dataset.coverage = "unknown"
     elif dataset.raw_rows_received == 0:
         dataset.coverage = "empty"
-    elif dataset.dataset_kind in {"footprint", "backlink_summary"}:
+    elif dataset.dataset_kind in {"footprint", "backlink_summary", "backlink_history"}:
         dataset.coverage = "complete"
     elif exhausted or dataset.unique_rows_saved >= dataset.requested_rows:
         dataset.coverage = "complete"
     else:
         dataset.coverage = "partial"
-    dataset.truncated = dataset.coverage == "partial"
+    dataset.truncated = dataset.coverage == "partial" or (
+        dataset.dataset_kind not in {"footprint", "backlink_summary"}
+        and dataset.provider_total is not None
+        and dataset.provider_total > dataset.unique_rows_saved
+    )
     dataset.collection_ended_at = call.completed_at
     dataset.published_at = call.completed_at
 
@@ -499,7 +492,14 @@ async def _persist_success(
     dataset.raw_rows_received += received
     dataset.unique_rows_saved = len(existing)
     dataset.provider_total = total if total is not None else dataset.provider_total
-    dataset.summary = {**(dataset.summary or {}), **summary}
+    dataset.summary = {
+        **(dataset.summary or {}),
+        **summary,
+        "source_call_ids": [
+            *(dataset.summary or {}).get("source_call_ids", []),
+            str(call.id),
+        ],
+    }
     run.completed_calls += 1
     run.received_rows += len(normalized)
     _publish_complete_dataset(dataset, call, plan, later_plans, received)

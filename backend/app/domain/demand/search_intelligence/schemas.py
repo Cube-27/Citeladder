@@ -9,7 +9,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.core.config.search_intelligence import DEFAULT_DEPTHS, MAX_SAFE_DEPTH
+from app.core.config.search_intelligence import (
+    BACKLINK_MAX_OFFSET,
+    DEFAULT_DEPTHS,
+    DEFAULT_RESEARCH_SCOPE,
+    MAX_SAFE_DEPTH,
+    ResearchScope,
+)
 
 DatasetKind = Literal[
     "footprint",
@@ -20,6 +26,9 @@ DatasetKind = Literal[
     "backlink_summary",
     "referring_domains",
     "destination_pages",
+    "organic_pages",
+    "backlinks",
+    "backlink_history",
 ]
 RunAction = Literal[
     "analysis", "refresh", "seed", "backlink_details", "increase_depth", "recovery"
@@ -27,6 +36,7 @@ RunAction = Literal[
 
 
 class SearchIntelligencePreferences(BaseModel):
+    research_scope: ResearchScope = DEFAULT_RESEARCH_SCOPE
     owned_target_id: str | None = None
     competitor_ids: list[uuid.UUID] = Field(default_factory=list)
     location_code: int | None = Field(default=None, gt=0)
@@ -50,6 +60,29 @@ class DatasetSelection(BaseModel):
     competitor_id: uuid.UUID | None = None
     depth: int = Field(default=1, ge=1, le=MAX_SAFE_DEPTH)
     seed: str = Field(default="", max_length=700)
+    grouping: Literal["as_is", "one_per_domain"] = "as_is"
+    order: Literal["volume", "traffic", "position", "difficulty", "cpc"] = "volume"
+    min_volume: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_acquisition(self) -> DatasetSelection:
+        keyword_kind = self.kind in {
+            "ranking_keywords",
+            "missing_keywords",
+            "shared_keywords",
+            "keyword_suggestions",
+        }
+        if not keyword_kind and (self.order != "volume" or self.min_volume is not None):
+            raise ValueError(
+                "acquisition order and minimum volume require a keyword dataset"
+            )
+        if self.kind == "keyword_suggestions" and self.order in {"traffic", "position"}:
+            raise ValueError(
+                "suggestions have no observed position or traffic ordering"
+            )
+        if self.kind == "backlinks" and self.depth > BACKLINK_MAX_OFFSET + 1000:
+            raise ValueError("backlinks depth exceeds the supported offset range")
+        return self
 
     @model_validator(mode="after")
     def validate_shape(self) -> DatasetSelection:
@@ -59,6 +92,9 @@ class DatasetSelection(BaseModel):
             "backlink_summary",
             "referring_domains",
             "destination_pages",
+            "organic_pages",
+            "backlinks",
+            "backlink_history",
         }
         if comparison and self.competitor_id is None:
             raise ValueError("comparison datasets require one competitor")
@@ -72,6 +108,7 @@ class DatasetSelection(BaseModel):
 
 
 class ReviewCreate(BaseModel):
+    research_scope: ResearchScope | None = None
     action: RunAction = "analysis"
     owned_target_id: str | None = None
     connection_id: uuid.UUID | None = None
@@ -90,16 +127,6 @@ class TargetResponse(BaseModel):
     hostname: str
     origin: str
     source_kind: str
-
-
-class QuoteLineResponse(BaseModel):
-    dataset_kind: str
-    target: str
-    requested_rows: int
-    calls: int
-    estimated_usd: str
-    reused_dataset_id: uuid.UUID | None = None
-    reused_collected_at: datetime | None = None
 
 
 class RunResponse(BaseModel):

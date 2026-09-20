@@ -11,6 +11,7 @@ const targetSchema = z.strictObject({
   source_kind: z.string(),
 });
 const preferencesSchema = z.strictObject({
+  research_scope: z.enum(['exact_host', 'domain_subdomains']).optional(),
   owned_target_id: z.string().nullable(),
   competitor_ids: z.array(z.uuid()),
   location_code: z.number().int().nullable(),
@@ -42,6 +43,7 @@ const runSchema = z.strictObject({
   created_at: z.string(),
 });
 const datasetSchema = z.looseObject({
+  research_scope: z.enum(['exact_host', 'domain_subdomains']).optional(),
   id: z.uuid(),
   run_id: z.uuid(),
   dataset_kind: z.string(),
@@ -113,8 +115,12 @@ export type DatasetSelection = {
   competitor_id?: string | null;
   depth: number;
   seed?: string;
+  grouping?: 'as_is' | 'one_per_domain';
+  order?: 'volume' | 'traffic' | 'position' | 'difficulty' | 'cpc';
+  min_volume?: number;
 };
 export type ReviewPayload = {
+  research_scope?: 'exact_host' | 'domain_subdomains';
   action: string;
   owned_target_id?: string | null;
   connection_id?: string | null;
@@ -151,12 +157,23 @@ export const searchIntelligenceApi = {
     projectId: string,
     datasetId: string,
     options?: ApiRequestOptions,
-    params: { cursor?: string; limit?: number; sort?: string; direction?: 'asc' | 'desc' } = {},
+    params: {
+      cursor?: string;
+      limit?: number;
+      sort?: string;
+      direction?: 'asc' | 'desc';
+      search?: string;
+      min_volume?: number;
+      intent?: string;
+    } = {},
   ) => {
     const query = new URLSearchParams({ limit: String(params.limit ?? 200) });
     if (params.cursor) query.set('cursor', params.cursor);
     if (params.sort) query.set('sort', params.sort);
     if (params.direction) query.set('direction', params.direction);
+    if (params.search) query.set('search', params.search);
+    if (params.min_volume !== undefined) query.set('min_volume', String(params.min_volume));
+    if (params.intent) query.set('intent', params.intent);
     return pageSchema.parse(
       await apiClient.get<unknown>(
         `${root(projectId)}/datasets/${datasetId}/rows?${query}`,

@@ -20,7 +20,7 @@
 function escapeCell(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
   const text = String(value);
-  const risky = /^[=+\-@\t\r]/.test(text);
+  const risky = /^\s*[=+\-@]|^[\t\r\n]/.test(text);
   const body = risky ? `'${text}` : text;
   return /[",\n\r]/.test(body) ? `"${body.replaceAll('"', '""')}"` : body;
 }

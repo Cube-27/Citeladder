@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import ROUND_CEILING, Decimal
+from decimal import Decimal
 from math import ceil
 from typing import Final, Literal
 
 PRICE_VERSION: Final = "dataforseo-standard-2026-09-20"
-PARSER_VERSION: Final = "2"
+ResearchScope = Literal["exact_host", "domain_subdomains"]
+DEFAULT_RESEARCH_SCOPE: Final = "domain_subdomains"
+HISTORY_DAYS: Final = 365
+HISTORY_MAX_OBSERVATIONS: Final = 13
+BACKLINK_MAX_OFFSET: Final = 20_000
+KEYWORD_ACQUISITION_FIELDS: Final = {
+    "volume": "keyword_info.search_volume",
+    "difficulty": "keyword_properties.keyword_difficulty",
+    "cpc": "keyword_info.cpc",
+}
+PARSER_VERSION: Final = "1"
 REUSE_DAYS: Final = 30
 REVIEW_TTL_SECONDS: Final = 600
 PROVIDER_PAGE_SIZE: Final = 1000
@@ -30,23 +40,23 @@ ROW_SORT_FIELDS: Final = frozenset(
         "dataforseo_rank",
     }
 )
+AUXILIARY_SORT_FIELDS: Final = frozenset(
+    {
+        "cpc",
+        "rank_absolute",
+        "organic_keywords",
+        "referring_domains",
+        "referring_pages",
+        "broken_backlinks",
+        "broken_pages",
+        "backlinks_spam_score",
+    }
+)
 
 LABS_TASK_USD: Final = Decimal("0.012")
 LABS_ITEM_USD: Final = Decimal("0.00012")
 BACKLINKS_REQUEST_USD: Final = Decimal("0.024")
 BACKLINKS_ROW_USD: Final = Decimal("0.000036")
-
-DatasetKind = Literal[
-    "footprint",
-    "ranking_keywords",
-    "missing_keywords",
-    "shared_keywords",
-    "keyword_suggestions",
-    "backlink_summary",
-    "referring_domains",
-    "destination_pages",
-    "citation_matches",
-]
 
 LIST_KINDS: Final = frozenset(
     {
@@ -56,6 +66,8 @@ LIST_KINDS: Final = frozenset(
         "keyword_suggestions",
         "referring_domains",
         "destination_pages",
+        "organic_pages",
+        "backlinks",
     }
 )
 LABS_KINDS: Final = frozenset(
@@ -65,6 +77,7 @@ LABS_KINDS: Final = frozenset(
         "missing_keywords",
         "shared_keywords",
         "keyword_suggestions",
+        "organic_pages",
     }
 )
 BACKLINK_KINDS: Final = frozenset(
@@ -72,6 +85,8 @@ BACKLINK_KINDS: Final = frozenset(
         "backlink_summary",
         "referring_domains",
         "destination_pages",
+        "backlinks",
+        "backlink_history",
     }
 )
 DEFAULT_DEPTHS: Final = {
@@ -81,6 +96,8 @@ DEFAULT_DEPTHS: Final = {
     "referring_domains": 100,
     "destination_pages": 100,
     "keyword_suggestions": 150,
+    "organic_pages": 100,
+    "backlinks": 100,
 }
 
 ENDPOINTS: Final = {
@@ -92,6 +109,14 @@ ENDPOINTS: Final = {
     "backlink_summary": "/v3/backlinks/summary/live",
     "referring_domains": "/v3/backlinks/referring_domains/live",
     "destination_pages": "/v3/backlinks/domain_pages_summary/live",
+    "organic_pages": "/v3/dataforseo_labs/google/relevant_pages/live",
+    "backlinks": "/v3/backlinks/backlinks/live",
+    "backlink_history": "/v3/backlinks/history/live",
+}
+BROAD_ENDPOINTS: Final = {
+    "footprint": "/v3/dataforseo_labs/google/domain_rank_overview/live",
+    "missing_keywords": "/v3/dataforseo_labs/google/domain_intersection/live",
+    "shared_keywords": "/v3/dataforseo_labs/google/domain_intersection/live",
 }
 
 
@@ -131,7 +156,9 @@ def estimate_dataset(kind: str, *, rows: int, targets: int = 1) -> QuoteLine:
         raise ValueError(f"unsupported dataset kind: {kind}")
     requested = validate_depth(rows)
     pages = page_count(requested) if kind in LIST_KINDS else 1
-    if kind in LABS_KINDS:
+    if kind == "backlink_history":
+        amount = BACKLINKS_REQUEST_USD + BACKLINKS_ROW_USD * HISTORY_MAX_OBSERVATIONS
+    elif kind in LABS_KINDS:
         amount = (LABS_TASK_USD * pages) + (LABS_ITEM_USD * requested)
     else:
         amount = (BACKLINKS_REQUEST_USD * pages) + (BACKLINKS_ROW_USD * requested)
@@ -142,8 +169,3 @@ def estimate_dataset(kind: str, *, rows: int, targets: int = 1) -> QuoteLine:
 
 def quote_total(lines: tuple[QuoteLine, ...]) -> Decimal:
     return sum((line.estimated_usd for line in lines), Decimal("0"))
-
-
-def display_upper_usd(value: Decimal) -> str:
-    """Round an estimate upward to four decimals without hiding fractional cents."""
-    return str(value.quantize(Decimal("0.0001"), rounding=ROUND_CEILING))
