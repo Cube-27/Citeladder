@@ -217,6 +217,11 @@
   max-height: 520px;
   mask-image: linear-gradient(to bottom, var(--cl-ink) 0%, var(--cl-ink) 80%, transparent 100%);
 }
+.cl-hero-preview.cl-hero-preview-sources {
+  max-height: none;
+  mask-image: none;
+  border-bottom: 1px solid var(--cl-preview-border);
+}
 .cl-preview-browser,
 .cl-window-bar {
   display: flex;

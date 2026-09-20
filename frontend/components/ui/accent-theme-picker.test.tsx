@@ -52,5 +52,18 @@ describe('AccentThemePicker', () => {
       'aria-checked',
       'true',
     );
+
+    const storageDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
+    try {
+      Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        get: () => {
+          throw new Error('Storage blocked');
+        },
+      });
+      expect(() => dispatchStorage(null, null, window.sessionStorage)).not.toThrow();
+    } finally {
+      if (storageDescriptor) Object.defineProperty(window, 'localStorage', storageDescriptor);
+    }
   });
 });

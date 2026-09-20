@@ -36,11 +36,13 @@ export function setAccentTheme(value: AccentTheme) {
 
 export function subscribeAccentTheme(callback: () => void) {
   const onStorage = (event: StorageEvent) => {
-    if (
-      event.storageArea !== window.localStorage ||
-      (event.key !== STORAGE_KEY && event.key !== null)
-    )
+    let storage: Storage;
+    try {
+      storage = window.localStorage;
+    } catch {
       return;
+    }
+    if (event.storageArea !== storage || (event.key !== STORAGE_KEY && event.key !== null)) return;
     if (isAccentTheme(event.newValue) && event.newValue !== 'emerald') {
       document.documentElement.dataset.accent = event.newValue;
     } else {

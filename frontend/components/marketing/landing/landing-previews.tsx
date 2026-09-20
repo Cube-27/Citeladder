@@ -426,7 +426,7 @@ export function HeroPreview() {
   ] as const;
   const selectTab = (id: string) => setSelected(id === ids[0] ? 'trends' : 'sources');
   return (
-    <div className="cl-hero-preview">
+    <div className={`cl-hero-preview${selected === 'sources' ? ' cl-hero-preview-sources' : ''}`}>
       <div className="cl-preview-browser">
         <span>
           <Grid2X2 size={13} aria-hidden />
