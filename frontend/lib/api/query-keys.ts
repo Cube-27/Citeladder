@@ -20,6 +20,7 @@ import { agentKeys } from './query-keys/agent';
 import { billingKeys } from './query-keys/billing';
 import { commerceKeys } from './query-keys/commerce';
 import { demandKeys } from './query-keys/demand';
+import { searchIntelligenceKeys } from './query-keys/search-intelligence';
 import {
   authKeys,
   contentKeys,
@@ -51,6 +52,7 @@ export const queryKeys = {
   integrations: integrationKeys,
   performance: performanceKeys,
   demand: demandKeys,
+  searchIntelligence: searchIntelligenceKeys,
   aiReferrals: aiReferralsKeys,
   opportunities: opportunityKeys,
   commerce: commerceKeys,

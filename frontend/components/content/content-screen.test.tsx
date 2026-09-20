@@ -1,4 +1,5 @@
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -135,6 +136,36 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('ContentScreen clean composer', () => {
+  it('consumes a Search Intelligence handoff once under Strict Mode without generating', async () => {
+    mockBase();
+    const generate = vi.fn(() => HttpResponse.json(generation(), { status: 202 }));
+    mswServer.use(http.post('/api/v1/content/generations', generate));
+    sessionStorage.setItem(
+      'citeladder:search-intelligence-handoff',
+      JSON.stringify({
+        project_id: PROJECT,
+        user_instructions: 'Write about analytics',
+        evidence: [{ keyword: 'analytics', search_volume: 100 }],
+      }),
+    );
+
+    renderWithProviders(
+      <StrictMode>
+        <ProjectProvider>
+          <ContentScreen />
+        </ProjectProvider>
+      </StrictMode>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Your instruction' })).toHaveValue(
+        'Write about analytics\n\nSelected Search Intelligence evidence:\n- analytics · 100',
+      ),
+    );
+    expect(sessionStorage.getItem('citeladder:search-intelligence-handoff')).toBeNull();
+    expect(generate).not.toHaveBeenCalled();
+  });
+
   it('shows persisted differentiation gaps and inspected denominators', async () => {
     mockBase();
     mswServer.use(

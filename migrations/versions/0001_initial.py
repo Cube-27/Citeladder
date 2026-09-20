@@ -454,6 +454,12 @@ def upgrade() -> None:
             server_default="desktop",
         ),
         sa.Column("default_repetitions", sa.Integer(), nullable=False),
+        sa.Column(
+            "search_intelligence_preferences",
+            postgresql.JSONB(astext_type=Text()),
+            server_default="{}",
+            nullable=False,
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
@@ -2996,6 +3002,12 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("pool_kind", sa.String(length=16), nullable=False),
         sa.Column("transport_provider", sa.String(length=32), nullable=False),
+        sa.Column(
+            "account_pool_identity",
+            sa.String(length=64),
+            server_default="",
+            nullable=False,
+        ),
         sa.Column("connection_id", sa.UUID(), nullable=True),
         sa.Column("billing_account_id", sa.UUID(), nullable=True),
         sa.Column("capacity", sa.Numeric(14, 4), nullable=False),
@@ -3016,6 +3028,7 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "pool_kind",
             "transport_provider",
+            "account_pool_identity",
             "connection_id",
             "billing_account_id",
             name="uq_provider_capacity_bucket_pool",
@@ -3032,7 +3045,8 @@ def upgrade() -> None:
         "provider_capacity_leases",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("bucket_id", sa.UUID(), nullable=False),
-        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=True),
+        sa.Column("analytics_task_id", sa.UUID(), nullable=True),
         sa.Column("attempt_number", sa.Integer(), nullable=False),
         sa.Column("lease_kind", sa.String(length=16), nullable=False),
         sa.Column("units", sa.Numeric(14, 4), nullable=False),
@@ -3040,36 +3054,37 @@ def upgrade() -> None:
         sa.Column("released_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint(
+            "(task_id IS NOT NULL)::integer + "
+            "(analytics_task_id IS NOT NULL)::integer = 1",
+            name="ck_provider_capacity_lease_one_parent",
+        ),
         sa.ForeignKeyConstraint(
             ["bucket_id"], ["provider_capacity_buckets.id"], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "bucket_id",
-            "task_id",
-            "attempt_number",
-            "lease_kind",
-            name="uq_provider_capacity_lease_slot",
+        sa.ForeignKeyConstraint(
+            ["analytics_task_id"], ["analytics_tasks.id"], ondelete="CASCADE"
         ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    _create_indexes(
+        "provider_capacity_leases",
+        ("bucket_id", "task_id", "analytics_task_id", "expires_at"),
     )
     op.create_index(
-        op.f("ix_provider_capacity_leases_bucket_id"),
+        "uq_provider_capacity_lease_audit_slot",
         "provider_capacity_leases",
-        ["bucket_id"],
-        unique=False,
+        ["bucket_id", "task_id", "attempt_number", "lease_kind"],
+        unique=True,
+        postgresql_where=sa.text("task_id IS NOT NULL"),
     )
     op.create_index(
-        op.f("ix_provider_capacity_leases_expires_at"),
+        "uq_provider_capacity_lease_analytics_slot",
         "provider_capacity_leases",
-        ["expires_at"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_provider_capacity_leases_task_id"),
-        "provider_capacity_leases",
-        ["task_id"],
-        unique=False,
+        ["bucket_id", "analytics_task_id", "attempt_number", "lease_kind"],
+        unique=True,
+        postgresql_where=sa.text("analytics_task_id IS NOT NULL"),
     )
     op.create_table(
         "integration_metric_rows",
@@ -6806,6 +6821,248 @@ def upgrade() -> None:
         "content_differentiation_reports",
         ("workspace_id", "project_id", "audit_id", "audit_task_id"),
     )
+    op.create_table(
+        "search_intelligence_runs",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("analytics_task_id", sa.UUID(), nullable=True),
+        sa.Column("actor_user_id", sa.UUID(), nullable=False),
+        sa.Column("previous_run_id", sa.UUID(), nullable=True),
+        sa.Column("connection_id", sa.UUID(), nullable=False),
+        sa.Column("connection_revision", sa.UUID(), nullable=False),
+        sa.Column("account_identity", sa.String(length=64), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("action", sa.String(length=32), nullable=False),
+        sa.Column("idempotency_key", sa.String(length=160), nullable=False),
+        sa.Column("frozen_scope", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("call_plan", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column(
+            "reused_datasets", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("pricing_version", sa.String(length=64), nullable=False),
+        sa.Column("estimated_cost_usd", sa.Numeric(20, 8), nullable=False),
+        sa.Column("provider_reported_cost_usd", sa.Numeric(20, 8), nullable=True),
+        sa.Column("planned_calls", sa.Integer(), nullable=False),
+        sa.Column("completed_calls", sa.Integer(), nullable=False),
+        sa.Column("planned_rows", sa.Integer(), nullable=False),
+        sa.Column("received_rows", sa.Integer(), nullable=False),
+        sa.Column("uncertain_calls", sa.Integer(), nullable=False),
+        sa.Column("error_code", sa.String(length=64), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("confirmed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("cancelled_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["analytics_task_id"], ["analytics_tasks.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["previous_run_id"], ["search_intelligence_runs.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("analytics_task_id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_si_runs_scope_id"
+        ),
+        sa.UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "idempotency_key",
+            name="uq_si_runs_idempotency",
+        ),
+    )
+    _create_indexes(
+        "search_intelligence_runs", ("workspace_id", "project_id", "connection_id")
+    )
+    op.create_index(
+        "ix_si_runs_project_created",
+        "search_intelligence_runs",
+        ["workspace_id", "project_id", "created_at"],
+    )
+    op.create_index(
+        "uq_si_runs_project_active",
+        "search_intelligence_runs",
+        ["workspace_id", "project_id"],
+        unique=True,
+        postgresql_where=sa.text("status IN ('queued', 'running')"),
+    )
+    op.create_table(
+        "search_intelligence_datasets",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("run_id", sa.UUID(), nullable=False),
+        sa.Column("parent_dataset_id", sa.UUID(), nullable=True),
+        sa.Column("dataset_kind", sa.String(length=32), nullable=False),
+        sa.Column("scope_hash", sa.String(length=64), nullable=False),
+        sa.Column("target_domain", sa.String(length=255), nullable=False),
+        sa.Column("target_hostname", sa.String(length=255), nullable=False),
+        sa.Column("target_origin", sa.String(length=1024), nullable=False),
+        sa.Column("comparison_origin", sa.String(length=1024), nullable=False),
+        sa.Column("location_code", sa.Integer(), nullable=True),
+        sa.Column("language_code", sa.String(length=16), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("coverage", sa.String(length=16), nullable=False),
+        sa.Column("requested_rows", sa.Integer(), nullable=False),
+        sa.Column("raw_rows_received", sa.Integer(), nullable=False),
+        sa.Column("unique_rows_saved", sa.Integer(), nullable=False),
+        sa.Column("provider_total", sa.Integer(), nullable=True),
+        sa.Column("truncated", sa.Boolean(), nullable=False),
+        sa.Column("summary", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column(
+            "provider_filters", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("parser_version", sa.String(length=32), nullable=False),
+        sa.Column("collection_started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("collection_ended_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["parent_dataset_id"],
+            ["search_intelligence_datasets.id"],
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "run_id"],
+            [
+                "search_intelligence_runs.workspace_id",
+                "search_intelligence_runs.project_id",
+                "search_intelligence_runs.id",
+            ],
+            name="fk_si_dataset_run_scope",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_si_datasets_scope_id"
+        ),
+    )
+    _create_indexes(
+        "search_intelligence_datasets",
+        ("workspace_id", "project_id", "run_id", "scope_hash", "parent_dataset_id"),
+    )
+    op.create_index(
+        "ix_si_datasets_latest",
+        "search_intelligence_datasets",
+        ["workspace_id", "project_id", "dataset_kind", "published_at"],
+    )
+    op.create_table(
+        "search_intelligence_calls",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("run_id", sa.UUID(), nullable=False),
+        sa.Column("dataset_id", sa.UUID(), nullable=False),
+        sa.Column("request_key", sa.String(length=128), nullable=False),
+        sa.Column("sequence", sa.Integer(), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("endpoint", sa.String(length=255), nullable=False),
+        sa.Column(
+            "sanitized_request", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column(
+            "sanitized_response", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("response_sha256", sa.String(length=64), nullable=False),
+        sa.Column("provider_task_id", sa.String(length=255), nullable=False),
+        sa.Column("estimated_cost_usd", sa.Numeric(20, 8), nullable=False),
+        sa.Column("provider_reported_cost_usd", sa.Numeric(20, 8), nullable=True),
+        sa.Column("error_code", sa.String(length=64), nullable=False),
+        sa.Column("error_detail", sa.Text(), nullable=False),
+        sa.Column("dispatched_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "run_id"],
+            [
+                "search_intelligence_runs.workspace_id",
+                "search_intelligence_runs.project_id",
+                "search_intelligence_runs.id",
+            ],
+            name="fk_si_call_run_scope",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "dataset_id"],
+            [
+                "search_intelligence_datasets.workspace_id",
+                "search_intelligence_datasets.project_id",
+                "search_intelligence_datasets.id",
+            ],
+            name="fk_si_call_dataset_scope",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("run_id", "request_key", name="uq_si_call_request"),
+    )
+    _create_indexes(
+        "search_intelligence_calls",
+        ("workspace_id", "project_id", "run_id", "dataset_id"),
+    )
+    op.create_table(
+        "search_intelligence_rows",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("dataset_id", sa.UUID(), nullable=False),
+        sa.Column("call_id", sa.UUID(), nullable=True),
+        sa.Column("provider_row_key", sa.String(length=64), nullable=False),
+        sa.Column("row_kind", sa.String(length=32), nullable=False),
+        sa.Column("keyword", sa.String(length=2048), nullable=False),
+        sa.Column("domain", sa.String(length=512), nullable=False),
+        sa.Column("url", sa.String(length=4096), nullable=False),
+        sa.Column("search_volume", sa.Integer(), nullable=True),
+        sa.Column("difficulty", sa.Integer(), nullable=True),
+        sa.Column("intent", sa.String(length=32), nullable=False),
+        sa.Column("rank_group", sa.Integer(), nullable=True),
+        sa.Column("owned_rank_group", sa.Integer(), nullable=True),
+        sa.Column("etv", sa.Numeric(20, 8), nullable=True),
+        sa.Column("backlinks", sa.Integer(), nullable=True),
+        sa.Column("referring_main_domains", sa.Integer(), nullable=True),
+        sa.Column("dataforseo_rank", sa.Integer(), nullable=True),
+        sa.Column("auxiliary", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["call_id"], ["search_intelligence_calls.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "dataset_id"],
+            [
+                "search_intelligence_datasets.workspace_id",
+                "search_intelligence_datasets.project_id",
+                "search_intelligence_datasets.id",
+            ],
+            name="fk_si_row_dataset_scope",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "dataset_id", "provider_row_key", name="uq_si_row_provider_key"
+        ),
+    )
+    _create_indexes(
+        "search_intelligence_rows",
+        ("workspace_id", "project_id", "dataset_id", "call_id"),
+    )
+    op.create_index(
+        "ix_si_rows_keyword", "search_intelligence_rows", ["dataset_id", "keyword"]
+    )
+    op.create_index(
+        "ix_si_rows_domain", "search_intelligence_rows", ["dataset_id", "domain"]
+    )
+    op.create_index("ix_si_rows_url", "search_intelligence_rows", ["dataset_id", "url"])
+
     # Added after both tables exist: a page points at its latest snapshot and
     # every snapshot points back at its page, so neither can carry the other's
     # constraint inline.
@@ -6825,6 +7082,10 @@ def downgrade() -> None:
     # installed, so replaying the generated reverse delta would recreate those
     # retired authorities. Drop the explicit final table set instead.
     final_tables = (
+        "search_intelligence_rows",
+        "search_intelligence_calls",
+        "search_intelligence_datasets",
+        "search_intelligence_runs",
         "content_differentiation_reports",
         "content_differentiation_candidates",
         "aio_entity_links",

@@ -88,7 +88,7 @@ class CapacityRequest:
     Carries opaque ids only — never a credential, prompt, or provider body.
     """
 
-    task_id: uuid.UUID
+    task_id: uuid.UUID | None
     attempt_number: int
     logical_engine: str
     transport_provider: str
@@ -96,8 +96,12 @@ class CapacityRequest:
     connection_id: uuid.UUID | None = None
     billing_account_id: uuid.UUID | None = None
     units: Decimal = _ONE
+    analytics_task_id: uuid.UUID | None = None
+    account_pool_identity: str = ""
 
     def __post_init__(self) -> None:
+        if (self.task_id is None) == (self.analytics_task_id is None):
+            raise ValueError("capacity request requires exactly one task parent")
         if self.credential_kind not in CREDENTIAL_KINDS:
             raise ValueError(
                 f"unknown credential_kind {self.credential_kind!r}; "
@@ -164,16 +168,14 @@ class _BucketSpec:
     pool_kind: str
     connection_id: uuid.UUID | None = None
     billing_account_id: uuid.UUID | None = None
+    account_pool_identity: str = ""
 
 
 def _bucket_specs(request: CapacityRequest) -> tuple[_BucketSpec, ...]:
-    """The pools one request draws on, in THE canonical lock order.
-
-    transport -> connection -> funded-global -> funded-account (BYOK stops
-    after connection). Every acquirer locks in this exact order, so two
-    workers can never hold inverted locks and deadlock.
-    """
-    transport = _BucketSpec(POOL_KIND_TRANSPORT)
+    """The pools one request draws on, in THE canonical lock order."""
+    transport = _BucketSpec(
+        POOL_KIND_TRANSPORT, account_pool_identity=request.account_pool_identity
+    )
     if request.credential_kind == CREDENTIAL_KIND_FUNDED:
         return (
             transport,
@@ -185,16 +187,25 @@ def _bucket_specs(request: CapacityRequest) -> tuple[_BucketSpec, ...]:
         )
     return (
         transport,
-        _BucketSpec(POOL_KIND_CONNECTION, connection_id=request.connection_id),
+        _BucketSpec(
+            POOL_KIND_CONNECTION,
+            connection_id=request.connection_id,
+            account_pool_identity=request.account_pool_identity,
+        ),
     )
 
 
-def _concurrency_ceiling(pool_kind: str) -> Decimal:
+def _concurrency_ceiling(pool_kind: str, route_policy: RouteCapacityPolicy) -> Decimal:
     """Config-owned concurrency ceiling for one pool kind (invariant 1).
 
     The connection pool shares the transport envelope: one credential may not
     exceed the per-transport concurrency bound.
     """
+    if route_policy.max_concurrency is not None and pool_kind in {
+        POOL_KIND_TRANSPORT,
+        POOL_KIND_CONNECTION,
+    }:
+        return Decimal(route_policy.max_concurrency)
     if pool_kind == POOL_KIND_FUNDED_GLOBAL:
         return Decimal(audit_settings.funded_pool_max_concurrency)
     if pool_kind == POOL_KIND_FUNDED_ACCOUNT:
@@ -214,6 +225,7 @@ def _identity_filter(request: CapacityRequest, spec: _BucketSpec) -> tuple:
     return (
         ProviderCapacityBucket.pool_kind == spec.pool_kind,
         ProviderCapacityBucket.transport_provider == request.transport_provider,
+        ProviderCapacityBucket.account_pool_identity == spec.account_pool_identity,
         ProviderCapacityBucket.connection_id.is_(None)
         if spec.connection_id is None
         else ProviderCapacityBucket.connection_id == spec.connection_id,
@@ -235,7 +247,7 @@ def _sync_bucket_policy(
     (invariant 1): a stale row re-syncs its ceiling/refill at acquire time
     rather than pacing by forgotten numbers.
     """
-    ceiling = _concurrency_ceiling(spec.pool_kind)
+    ceiling = _concurrency_ceiling(spec.pool_kind, route_policy)
     if bucket.capacity != ceiling:
         bucket.capacity = ceiling
         bucket.policy_version = CAPACITY_POLICY_VERSION
@@ -267,9 +279,10 @@ async def _lock_buckets(
                 id=uuid.uuid4(),
                 pool_kind=spec.pool_kind,
                 transport_provider=request.transport_provider,
+                account_pool_identity=spec.account_pool_identity,
                 connection_id=spec.connection_id,
                 billing_account_id=spec.billing_account_id,
-                capacity=_concurrency_ceiling(spec.pool_kind),
+                capacity=_concurrency_ceiling(spec.pool_kind, route_policy),
                 tokens=Decimal(str(route_policy.capacity))
                 if spec.pool_kind == POOL_KIND_TRANSPORT
                 and route_policy.capacity is not None
@@ -445,6 +458,7 @@ async def _consume(
             select(ProviderCapacityLease).where(
                 ProviderCapacityLease.bucket_id == bucket.id,
                 ProviderCapacityLease.task_id == request.task_id,
+                ProviderCapacityLease.analytics_task_id == request.analytics_task_id,
                 ProviderCapacityLease.attempt_number == request.attempt_number,
                 ProviderCapacityLease.lease_kind == LEASE_KIND_CONCURRENCY,
             )
@@ -453,6 +467,7 @@ async def _consume(
             lease = ProviderCapacityLease(
                 bucket_id=bucket.id,
                 task_id=request.task_id,
+                analytics_task_id=request.analytics_task_id,
                 attempt_number=request.attempt_number,
                 lease_kind=LEASE_KIND_CONCURRENCY,
                 units=request.units,
@@ -585,6 +600,8 @@ async def release_provider_capacity(
                 await session.scalars(
                     select(ProviderCapacityLease).where(
                         ProviderCapacityLease.task_id == request.task_id,
+                        ProviderCapacityLease.analytics_task_id
+                        == request.analytics_task_id,
                         ProviderCapacityLease.attempt_number == request.attempt_number,
                         ProviderCapacityLease.lease_kind == LEASE_KIND_CONCURRENCY,
                         ProviderCapacityLease.released_at.is_(None),

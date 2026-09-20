@@ -127,6 +127,12 @@ from app.models.provider import (
     ProviderConnectionTest,
     ProviderRoute,
 )
+from app.models.search_intelligence import (
+    SearchIntelligenceCall,
+    SearchIntelligenceDataset,
+    SearchIntelligenceRow,
+    SearchIntelligenceRun,
+)
 from app.models.search_surfaces import AioEntityLink, AioObservation
 from app.models.site_changes import SiteChangeObservation, SiteChangeSnapshot
 from app.models.site_health.acquisition import SiteFetchArtifact, SiteFetchAttempt
@@ -266,6 +272,10 @@ __all__ = [
     "ReferralClassification",
     "ReferralEvent",
     "ResponseAnalysis",
+    "SearchIntelligenceCall",
+    "SearchIntelligenceDataset",
+    "SearchIntelligenceRow",
+    "SearchIntelligenceRun",
     "SiteChangeObservation",
     "SiteChangeSnapshot",
     "SiteCrawl",

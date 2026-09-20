@@ -33,6 +33,7 @@
 @source '../../../components/prompts';
 @source '../../../components/runs';
 @source '../../../components/settings';
+@source '../../../components/search-intelligence';
 @source '../../../components/site-health';
 @source '../../../components/tour';
 @source '../../../components/ui';

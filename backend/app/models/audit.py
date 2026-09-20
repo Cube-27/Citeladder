@@ -21,6 +21,7 @@ from decimal import Decimal
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
@@ -30,6 +31,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -663,26 +665,14 @@ class AuditEvent(Base):
 
 
 class ProviderCapacityBucket(Base):
-    """One shared provider-capacity pool (T4): concurrency ceiling + pacing.
-
-    Bucket identity is ``(pool_kind, transport_provider, connection_id,
-    billing_account_id)`` with NULLS NOT DISTINCT semantics, so the transport
-    pool (``connection_id``/``billing_account_id`` NULL), one BYOK
-    per-credential pool, and the funded global/per-account pools each resolve
-    to exactly one row. ``capacity`` is the pool's concurrency ceiling (max
-    active lease units); ``tokens``/``refill_tokens_per_second``/
-    ``refilled_at`` are the route token-bucket pacing state (transport pool
-    only — concurrency-only pools leave the token fields inert);
-    ``blocked_until`` is the shared 429 cooldown every sibling acquisition
-    observes. Pacing/concurrency numbers only — never credentials, prompts, or
-    provider bodies (invariant 6).
-    """
+    """Shared, credential-free concurrency, pacing, and cooldown state."""
 
     __tablename__ = "provider_capacity_buckets"
     __table_args__ = (
         UniqueConstraint(
             "pool_kind",
             "transport_provider",
+            "account_pool_identity",
             "connection_id",
             "billing_account_id",
             name="uq_provider_capacity_bucket_pool",
@@ -696,6 +686,9 @@ class ProviderCapacityBucket(Base):
     # POOL_KIND_* vocabulary (owned by ``app.core.config.audits``).
     pool_kind: Mapped[str] = mapped_column(String(16))
     transport_provider: Mapped[str] = mapped_column(String(32))
+    account_pool_identity: Mapped[str] = mapped_column(
+        String(64), default="", server_default=""
+    )
     # SET NULL: removing a credential/account never destroys pool state.
     connection_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
@@ -736,25 +729,32 @@ class ProviderCapacityBucket(Base):
 
 
 class ProviderCapacityLease(Base):
-    """One checked-out concurrency slot on a capacity bucket (T4).
-
-    Acquired atomically with the bucket row lock and released at call end;
-    token starts are consumed from the bucket balance separately and are NEVER
-    returned here. A lease orphaned by a worker crash stops counting once
-    ``expires_at`` passes (effective concurrency is computed from non-expired,
-    non-released leases), so crashed workers never permanently leak pool
-    capacity. Unique per ``(bucket_id, task_id, attempt_number, lease_kind)``
-    so a re-acquire of the same attempt is idempotent.
-    """
+    """One expiring, owner-exclusive concurrency slot on a capacity bucket."""
 
     __tablename__ = "provider_capacity_leases"
     __table_args__ = (
-        UniqueConstraint(
+        CheckConstraint(
+            "(task_id IS NOT NULL)::integer + "
+            "(analytics_task_id IS NOT NULL)::integer = 1",
+            name="ck_provider_capacity_lease_one_parent",
+        ),
+        Index(
+            "uq_provider_capacity_lease_audit_slot",
             "bucket_id",
             "task_id",
             "attempt_number",
             "lease_kind",
-            name="uq_provider_capacity_lease_slot",
+            unique=True,
+            postgresql_where=text("task_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_provider_capacity_lease_analytics_slot",
+            "bucket_id",
+            "analytics_task_id",
+            "attempt_number",
+            "lease_kind",
+            unique=True,
+            postgresql_where=text("analytics_task_id IS NOT NULL"),
         ),
     )
 
@@ -766,9 +766,16 @@ class ProviderCapacityLease(Base):
         ForeignKey("provider_capacity_buckets.id", ondelete="CASCADE"),
         index=True,
     )
-    task_id: Mapped[uuid.UUID] = mapped_column(
+    task_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("audit_tasks.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    analytics_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("analytics_tasks.id", ondelete="CASCADE"),
+        nullable=True,
         index=True,
     )
     attempt_number: Mapped[int] = mapped_column(Integer)

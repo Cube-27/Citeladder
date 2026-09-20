@@ -122,6 +122,38 @@ function NoProjectState() {
   );
 }
 
+function searchIntelligenceInstruction(projectId: string): string {
+  if (typeof window === 'undefined') return '';
+  const key = 'citeladder:search-intelligence-handoff';
+  const raw = sessionStorage.getItem(key);
+  if (!raw) return '';
+  sessionStorage.removeItem(key);
+  try {
+    const handoff = JSON.parse(raw) as {
+      project_id?: string;
+      user_instructions?: string;
+      evidence?: Array<Record<string, unknown>>;
+    };
+    if (handoff.project_id !== projectId || !handoff.user_instructions) return '';
+    const evidence = (handoff.evidence ?? [])
+      .slice(0, 30)
+      .map((row) =>
+        [row.keyword, row.domain, row.url, row.search_volume].filter(Boolean).join(' · '),
+      )
+      .filter(Boolean);
+    return [
+      handoff.user_instructions,
+      '',
+      'Selected Search Intelligence evidence:',
+      ...evidence.map((line) => `- ${line}`),
+    ]
+      .join('\n')
+      .slice(0, CONTENT_INSTRUCTION_MAX_LEN);
+  } catch {
+    return '';
+  }
+}
+
 function ProjectContentScreen({
   projectId,
   opportunityId,
@@ -134,6 +166,13 @@ function ProjectContentScreen({
   siteHealthReference?: SiteHealthReferenceInput;
 }>) {
   const [instruction, setInstruction] = useState('');
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const handoff = searchIntelligenceInstruction(projectId);
+      if (handoff) setInstruction(handoff);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [projectId]);
   const instructionRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedInstruction = useRef(false);
   const [reasonOpen, setReasonOpen] = useState(false);

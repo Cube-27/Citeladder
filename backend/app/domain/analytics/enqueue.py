@@ -35,6 +35,7 @@ from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
     ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
     ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
+    ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
     analytics_settings,
@@ -90,6 +91,28 @@ async def _enqueue_task(
         .returning(AnalyticsTask.id)
     )
     return await session.scalar(stmt)
+
+
+async def enqueue_search_intelligence(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    run_id: uuid.UUID,
+    priority: int = 0,
+) -> uuid.UUID | None:
+    """Enqueue one confirmed finite Search Intelligence run."""
+    return await _enqueue_task(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        task_kind=ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
+        payload={"run_id": str(run_id)},
+        idempotency_key=_idempotency_key(
+            ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE, run_id
+        ),
+        priority=priority,
+    )
 
 
 # --- Per-kind helpers (the worker executors chain through these) -------------

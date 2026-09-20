@@ -70,6 +70,14 @@ the numerator; all sessions of that same report are the denominator. Alternate
 referrer reports retain provenance but are not added again. Public rows show
 AI sources only. Formula changes require explicit derived rebuilds, never reads.
 
+## Search Intelligence acquisition
+
+[Search Intelligence](../backend/app/domain/demand/search_intelligence/) acquires explicit, reviewed DataForSEO Labs and Backlinks Live datasets for one saved apex or www project target and saved competitor targets. The review endpoint is provider-free: it freezes canonical scope, exact request pages, endpoint/version pricing, credential revision, an opaque HMAC account identity, and the maximum cost. Only the separate confirmation action enqueues paid work. Reads render immutable published datasets and never call DataForSEO.
+
+One acquisition may run per project, one request at a time. All DataForSEO workloads share PostgreSQL account capacity at two concurrent calls and one call start per second. Every call persists intent before a single dispatch. A crash or connection loss after dispatch becomes `uncertain`; it is never sent automatically again. Missing provider cost, pricing drift, credential rotation, scope escape, and over-estimate cost stop remaining calls while preserving completed datasets. Snapshot reuse requires an exact scope hash and a complete, fresh published dataset; refresh and depth expansion always return to review.
+
+The `/search-intelligence` UI separates Keywords, Competitor gaps, Backlinks, and Snapshots. Backlink detail is explicit rather than implied by the summary. Citation matching is a deterministic derivation from a selected backlink dataset and selected authorized Visibility audits. Selected dataset rows may be handed to Content with authored instructions; the handoff only pre-fills the editor and never starts generation.
+
 ## Query evidence and Demand
 
 [Demand service](../backend/app/domain/demand/service.py) builds immutable,
