@@ -14,6 +14,7 @@ import { AgentSheet, AgentSheetTrigger } from './agent-sheet';
 import { CompactPageTitleContext } from './compact-page-title-context';
 import { ProjectSwitcher } from './project-switcher';
 import { SidebarNav } from './sidebar-nav';
+import { AccentThemePicker } from '@/components/ui/accent-theme-picker';
 import { UserMenuTrigger } from './user-menu';
 import { resolveTitle } from './page-titles';
 import { projectDestination } from '@/lib/navigation/project-destination';
@@ -127,6 +128,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               <div className="text-secondary min-w-0 truncate text-sm">{compactTitle}</div>
               <div className="flex items-center justify-end gap-2.5 justify-self-end">
                 <AgentSheetTrigger />
+                <AccentThemePicker />
                 <UserMenuTrigger presenter="compact" />
               </div>
             </header>
@@ -145,7 +147,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                     lines up with the actions beneath it. */}
               <div className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-[var(--page-band-identity)] min-[981px]:block">
                 <div className="mx-auto flex h-full w-full max-w-[var(--content-max-width)] items-center justify-end px-[var(--content-gutter)]">
-                  <div className="pointer-events-auto">
+                  <div className="pointer-events-auto flex items-center gap-1">
+                    <AccentThemePicker />
                     <UserMenuTrigger presenter="header" />
                   </div>
                 </div>

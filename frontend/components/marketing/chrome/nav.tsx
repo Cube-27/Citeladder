@@ -1,6 +1,7 @@
 'use client';
 
 import { LogoMark } from '@/components/ui/logo-mark';
+import { AccentThemePicker } from '@/components/ui/accent-theme-picker';
 import { Menu, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -466,6 +467,7 @@ function NavActions({
           email={email}
         />
       </div>
+      <AccentThemePicker />
       <button
         type="button"
         className="border-border-subtle text-foreground grid size-10 place-items-center rounded-[var(--radius-control)] border lg:hidden"

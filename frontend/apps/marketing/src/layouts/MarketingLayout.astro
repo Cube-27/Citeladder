@@ -60,6 +60,7 @@ const serializeJsonLd = (data: JsonLdObject) => JSON.stringify(data).replace(/</
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="color-scheme" content="light" />
+    <script is:inline src="/accent-theme-init.js"></script>
     <meta name="description" content={description} />
     {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
     <meta name="application-name" content={SITE_NAME} />

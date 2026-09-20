@@ -42,9 +42,18 @@ describe('LandingPage', () => {
       'aria-selected',
       'true',
     );
+    const comparison = within(screen.getByRole('tabpanel', { name: 'Trends' })).getByRole(
+      'region',
+      { name: 'Competitor comparison preview' },
+    );
+    expect(within(comparison).getByRole('cell', { name: 'Brelovanta' })).toBeVisible();
+    expect(within(comparison).getByRole('cell', { name: '58.2%' })).toBeVisible();
     expect(
-      within(screen.getByRole('tabpanel', { name: 'Overview' })).getByText(
-        /Brand visibility trends upward/,
+      screen.getByText(/Zernovelle up 12\.4 percentage points from 52\.0% to 64\.4%/),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Source mix preview' })).getByText(
+        '30% of citations',
       ),
     ).toBeInTheDocument();
   });
