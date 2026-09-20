@@ -118,7 +118,8 @@ async def test_cancellation_between_datasets_prevents_next_paid_call(
     await executor_module.execute_search_intelligence(session_factory, task)
     async with session_factory() as session:
         finished = await session.get(SearchIntelligenceRun, run_id)
-        assert finished is not None and finished.status == "cancelled"
+        assert finished is not None
+        assert finished.status == "cancelled"
         assert finished.completed_calls == (0 if response_missing else 1)
         if response_missing:
             assert finished.uncertain_calls == 1
@@ -281,11 +282,13 @@ async def test_review_is_provider_free_and_reads_are_workspace_scoped(
     await executor_module.execute_search_intelligence(session_factory, saved_task)
     async with session_factory() as verification_session:
         saved_result = await verification_session.get(SearchIntelligenceRun, saved_id)
-        assert saved_result is not None and saved_result.status == "succeeded"
+        assert saved_result is not None
+        assert saved_result.status == "succeeded"
         saved_projection = await verification_session.get(
             SearchIntelligenceDataset, saved_dataset.id
         )
-        assert saved_projection is not None and saved_projection.coverage == "empty"
+        assert saved_projection is not None
+        assert saved_projection.coverage == "empty"
 
     await db_session.rollback()
     reviewed_run = await db_session.get(SearchIntelligenceRun, uuid.UUID(body["id"]))
@@ -402,12 +405,13 @@ async def test_review_is_provider_free_and_reads_are_workspace_scoped(
     )
     assert "keyword 1" in evidence_context
     assert "keyword 0" not in evidence_context
+    other_workspace_id = uuid.uuid4()
+    reference = SearchIntelligenceReference(
+        dataset_id=reusable.id, row_ids=[rows[1].id]
+    )
     with pytest.raises(SearchIntelligenceEvidenceNotFound):
         await search_intelligence_context(
-            db_session,
-            uuid.uuid4(),
-            reusable.project_id,
-            SearchIntelligenceReference(dataset_id=reusable.id, row_ids=[rows[1].id]),
+            db_session, other_workspace_id, reusable.project_id, reference
         )
     rows_url = f"{base}/datasets/{reusable.id}/rows"
     first_page = await client.get(rows_url, params={"limit": 2})

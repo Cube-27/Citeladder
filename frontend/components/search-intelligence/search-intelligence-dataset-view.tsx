@@ -130,9 +130,8 @@ function useDatasetRows(
   });
   const accessFailure =
     query.isError && [401, 403, 404].includes(httpErrorStatus(query.error) ?? 0);
-  const page = accessFailure
-    ? undefined
-    : (query.data ?? (lastPage?.scopeKey === scopeKey ? lastPage.data : undefined));
+  const retainedPage = lastPage?.scopeKey === scopeKey ? lastPage.data : undefined;
+  const page = accessFailure ? undefined : (query.data ?? retainedPage);
   return { query, page };
 }
 
@@ -193,6 +192,10 @@ export function SearchIntelligenceDatasetView({
   );
   const range = pageRange(table.page, table.pageSize, rows.length);
   const selectedCount = Object.keys(selectedEvidence).length;
+  const selectedLabel = `${selectedCount} evidence ${selectedCount === 1 ? 'row' : 'rows'} selected`;
+  const selectionMessage = selectedCount
+    ? selectedLabel
+    : 'Select evidence rows to create a content brief.';
   return (
     <>
       <Card>
@@ -216,11 +219,7 @@ export function SearchIntelligenceDatasetView({
             />
           </div>
           <div className="border-border-subtle flex min-h-14 flex-wrap items-center justify-between gap-3 border-b px-[var(--table-cell-padding-x)] py-2">
-            <span className={textRole('body')}>
-              {selectedCount
-                ? `${selectedCount} evidence row${selectedCount === 1 ? '' : 's'} selected`
-                : 'Select evidence rows to create a content brief.'}
-            </span>
+            <span className={textRole('body')}>{selectionMessage}</span>
             <Button size="sm" disabled={!selectedCount} onClick={() => setReviewOpen(true)}>
               Create content brief
             </Button>

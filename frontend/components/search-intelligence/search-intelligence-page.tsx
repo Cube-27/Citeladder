@@ -397,6 +397,52 @@ function CostDetails({
   failed: boolean;
   onRetry: () => void;
 }>) {
+  let content = (
+    <p className={textRole('body')}>No Search Intelligence operation has been recorded.</p>
+  );
+  if (runs?.length) {
+    content = (
+      <div className="grid gap-3">
+        {runs.map((run) => (
+          <Card key={run.id}>
+            <CardContent className="grid gap-3">
+              <p className={textRole('bodyStrong', 'capitalize')}>
+                {run.action.replaceAll('_', ' ')} · {run.status.replaceAll('_', ' ')}
+              </p>
+              <p className={textRole('meta')}>{new Date(run.created_at).toLocaleString()}</p>
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className={textRole('label')}>Estimated</dt>
+                  <dd>${run.estimated_cost_usd}</dd>
+                </div>
+                <div>
+                  <dt className={textRole('label')}>Provider reported</dt>
+                  <dd>
+                    {run.provider_reported_cost_usd === null
+                      ? 'Unresolved'
+                      : `$${run.provider_reported_cost_usd}`}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={textRole('label')}>Calls completed</dt>
+                  <dd>{run.completed_calls}</dd>
+                </div>
+                <div>
+                  <dt className={textRole('label')}>Uncertain calls</dt>
+                  <dd>{run.uncertain_calls}</dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+  if (failed)
+    content = (
+      <ReadError error={null} fallback="Cost history could not be loaded." onRetry={onRetry} />
+    );
+  if (pending) content = <Skeleton className="h-32 w-full" />;
   return (
     <Drawer
       open={open}
@@ -404,48 +450,7 @@ function CostDetails({
       title="Cost details"
       description="Recorded Search Intelligence usage for recent operations."
     >
-      {pending ? (
-        <Skeleton className="h-32 w-full" />
-      ) : failed ? (
-        <ReadError error={null} fallback="Cost history could not be loaded." onRetry={onRetry} />
-      ) : runs?.length ? (
-        <div className="grid gap-3">
-          {runs.map((run) => (
-            <Card key={run.id}>
-              <CardContent className="grid gap-3">
-                <p className={textRole('bodyStrong', 'capitalize')}>
-                  {run.action.replaceAll('_', ' ')} · {run.status.replaceAll('_', ' ')}
-                </p>
-                <p className={textRole('meta')}>{new Date(run.created_at).toLocaleString()}</p>
-                <dl className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <dt className={textRole('label')}>Estimated</dt>
-                    <dd>${run.estimated_cost_usd}</dd>
-                  </div>
-                  <div>
-                    <dt className={textRole('label')}>Provider reported</dt>
-                    <dd>
-                      {run.provider_reported_cost_usd === null
-                        ? 'Unresolved'
-                        : `$${run.provider_reported_cost_usd}`}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className={textRole('label')}>Calls completed</dt>
-                    <dd>{run.completed_calls}</dd>
-                  </div>
-                  <div>
-                    <dt className={textRole('label')}>Uncertain calls</dt>
-                    <dd>{run.uncertain_calls}</dd>
-                  </div>
-                </dl>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <p className={textRole('body')}>No Search Intelligence operation has been recorded.</p>
-      )}
+      {content}
     </Drawer>
   );
 }
