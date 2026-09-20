@@ -25,6 +25,13 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await expect(page.getByRole('button', { name: 'Open menu' })).toBeHidden();
 
     await page.setViewportSize({ width: 375, height: 812 });
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('astro-island')].some(
+        (island) =>
+          island.getAttribute('component-url')?.includes('MarketingNavIsland') &&
+          !island.hasAttribute('ssr'),
+      ),
+    );
     const openMenu = page.getByRole('button', { name: 'Open menu' });
     await expect(openMenu).toBeVisible();
 

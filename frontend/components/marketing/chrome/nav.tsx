@@ -337,8 +337,6 @@ export function MarketingNav() {
  * still a link to assistive tech.
  */
 function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
-  const reduceMotion = useReducedMotion();
-
   return (
     <a
       href="/"
@@ -354,6 +352,7 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
         // to the browser rather than swallowing them into a scroll.
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
       }}
     >

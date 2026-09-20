@@ -1,45 +1,18 @@
 ---
-import { FinalCta } from '@/components/marketing/landing/final-cta';
-import { Hero } from '@/components/marketing/landing/hero';
-import { Packs } from '@/components/marketing/landing/packs';
-import { SeeIt } from '@/components/marketing/landing/see-it';
-import { Shift } from '@/components/marketing/landing/shift';
-import { Trust } from '@/components/marketing/landing/trust';
-import { Workflow } from '@/components/marketing/landing/workflow';
+import { LandingPage } from '@/components/marketing/landing/landing-page';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
+import './landing.css';
 
 const description =
-  'AI visibility software that records how ChatGPT, Gemini, and Claude describe your brand, then opens every score to the persisted answer. Runs on your provider keys.';
+  'AI visibility, citation analysis, site readiness and content intelligence in one connected workspace.';
 ---
 
 <MarketingLayout
-  title="AI visibility software for ChatGPT and Gemini | CiteLadder"
+  title="AI search intelligence | CiteLadder"
   description={description}
   canonical="/"
 >
   <main id="main">
-    <Hero />
-    <Shift />
-    <SeeIt />
-    <Workflow />
-    <Packs />
-    <Trust />
-    <FinalCta />
+    <LandingPage client:load />
   </main>
 </MarketingLayout>
-
-<script>
-  const roster = document.querySelector<HTMLElement>('.engine-roster');
-  if (roster && 'IntersectionObserver' in window) {
-    let visible = false;
-    const updateMotion = () => {
-      roster.dataset.motion = visible && !document.hidden ? 'running' : 'paused';
-    };
-    const observer = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
-      updateMotion();
-    });
-    observer.observe(roster);
-    document.addEventListener('visibilitychange', updateMotion);
-  }
-</script>
