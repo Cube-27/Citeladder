@@ -211,8 +211,9 @@ def test_review_defaults_keep_only_supported_expanded_depths() -> None:
 async def test_provider_rate_limit_releases_shared_capacity_with_retry_hint(
     monkeypatch,
 ):
+    rate_limited = httpx.Response(429, headers={"Retry-After": "12"})
     with pytest.raises(ProviderError) as raised:
-        _response_body(httpx.Response(429, headers={"Retry-After": "12"}))
+        _response_body(rate_limited)
     release = AsyncMock()
     monkeypatch.setattr(executor, "execute_live", AsyncMock(side_effect=raised.value))
     monkeypatch.setattr(executor, "release_provider_capacity", release)
