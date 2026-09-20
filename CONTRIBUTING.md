@@ -1,139 +1,82 @@
 # Contributing to CiteLadder
 
-Thanks for contributing. Read [`AGENTS.md`](AGENTS.md),
-[`docs/README.md`](docs/README.md), and [`docs/invariants.md`](docs/invariants.md) before making a
-change. `docs/archive/` is historical and is not an implementation authority.
+[AGENTS.md](AGENTS.md) owns the implementation workflow, test admission and
+validation policy for contributors and coding agents.
+[The documentation index](docs/README.md) routes to the smallest applicable
+feature owner and [invariants](docs/invariants.md). Read the affected contracts,
+not every document. Archived plans are history, not implementation instructions.
 
-## Before starting
+## Preparing a change
 
-1. Search for the current owner of the model, route, schema, config, industry entry, queue,
-   component, test, and documentation. One concept has one owner.
-2. Read only the current subsystem authority and, when applicable, the active
-   release plan listed by the documentation index.
-3. Confirm whether the requested behavior is shipped, planned, or an evaluation requirement.
-4. Preserve workspace authorization, evidence immutability, provenance/versioning, unknown-state
-   semantics, and approval boundaries in the design—not as cleanup after implementation.
+Create a scoped branch such as `feat/<description>`, `fix/<description>`,
+`docs/<description>` or `refactor/<description>`. Inspect the existing owner and
+its callers before proposing another abstraction. Extend that owner and apply
+[the replacement gate](docs/invariants.md#replacement-and-retirement) when
+superseding behavior. Stage explicit paths rather than `git add -A` when other
+work exists in the tree.
 
-## Development workflow
+[Backend architecture](docs/backend-architecture.md) and
+[frontend architecture](docs/frontend-architecture.md) own layering and contracts.
+Backend schemas are the wire-contract source; update affected frontend schemas,
+API functions, query keys, fixtures and UI states together. Browser API calls use
+same-origin `/api/v1`; proxy/runtime details belong to the frontend owner, not a
+second framework-specific recipe here.
 
-1. Create a scoped branch such as `feat/<description>`, `fix/<description>`,
-   `docs/<description>`, or `refactor/<description>`.
-2. Put code in the owning layer:
-   - backend: `api / core / models / schemas / domain / connectors / orchestration / analysis /
-     workers`;
-   - frontend: app shell/auth, API-contract layer, domain workspaces, shared primitives/tokens.
-3. Make the smallest complete change. Do not add parallel stores or hidden partial architecture.
-4. Add deterministic/unit, component/workspace-isolation, API/UI contract, and evaluation fixture
-   tests only when the changed behavior creates a credible regression path. A file edit alone does
-   not require a test.
-5. Update the current owner documentation when its contract changes. Mark
-   superseded plans as historical and repair inbound links instead of creating
-   a second authority.
-6. Open a pull request with a clear summary and exact `## Testing` evidence.
+Use [Development](docs/DEVELOPMENT.md) for setup and command examples. Its command
+catalog is not a checklist to execute after every edit. Follow
+[the documentation maintenance rules](docs/README.md#maintaining-documentation)
+when a contract or procedure changes; repair links when retiring a document.
 
 ## Configuration and industry knowledge
 
-Operational settings and product policy do not live in service code. Models, transports, limits,
-timeouts, retries, thresholds, page roles, classifier signals, entity/predicate registries,
-journeys, FAQ expectations, claim policies, context budgets, prompt archetypes, and creative brief
-constraints belong under `backend/app/core/config/*` or a documented frontend config owner.
+Tunable policy belongs to the config owners described in
+[the configuration invariant](docs/invariants.md#2-product-policy-is-configuration).
+The shared industry registry is reviewed product data; project/customer evidence
+never mutates it. A generalized change requires its registry version, any needed
+migration note, validation and labelled evaluation coverage. Do not create
+industry-specific tables or service branches when the shared core/profile can
+represent the concept.
 
-The shared industry registry is reviewed product data. Project/customer evidence never mutates it.
-A generalized change requires a registry version, migration note where needed, validation, and
-labelled evaluation coverage. Do not create industry-specific tables or service branches when the
-shared core and profile can represent the concept.
+For industry-profile work, retain registry validation, onboarding fallback,
+labelled classification/gap and FAQ fixture coverage, and before/after verification.
+Use the current owner and version policy; this is not permission to create another
+registry or migration history.
 
-## Evidence, knowledge, and generation
+## Evidence and migrations
 
-- Source artifacts are immutable and are not automatically true.
-- Every derived row records exact source IDs and relevant versions.
-- Reports and reads use persisted projections only.
-- Model output remains proposed/derived until deterministic validation and explicit user approval.
-- Approved memory requires an audited transition; raw chat and generated bodies are not memory.
-- FAQ or other generated content must use a frozen brief/context package and cannot invent unknown,
-  historical-as-current, conflicting, numeric, regulated, safety, price, fee, date, policy, or
-  availability claims.
-- `FAQPage` JSON-LD must match visible reviewed content.
+[Invariants](docs/invariants.md) own immutability, provenance, unknown states,
+authorization, bounded generation and approval boundaries. [Content](docs/content-generation.md)
+returns reviewable drafts, not automatically validated facts or published content.
+Raw chat and generated bodies are not approved memory; promotion requires its
+explicit, audited transition. Grounding instructions do not certify factual
+correctness; the Content owner defines the review boundary.
 
-## Database migrations
+The [single-baseline migration policy](docs/invariants.md#17-the-migration-baseline-remains-singular)
+remains in force. Follow [the migration procedure](docs/DEVELOPMENT.md#migrations-single-greenfield-baseline)
+only against explicitly authorized disposable data. Never downgrade or reset a
+shared, staging or production database.
 
-CiteLadder currently maintains one hand-written greenfield baseline at
-`migrations/versions/0001_initial.py`. Fold schema changes into it while this policy remains
-active and verify only against a disposable database:
+## Pull requests and verification
 
-```bash
-cd backend
-uv run alembic upgrade head
-uv run alembic check
-```
-
-Never downgrade or reset a shared, staging, or production database.
-
-## API and frontend contracts
-
-The backend is the wire-contract source of truth. Update matching Zod schemas, API functions,
-query keys, MSW fixtures, null/coverage states, and UI tests with a DTO change. The browser uses
-relative `/api/*` through same-origin Next.js rewrites; do not expose a browser-visible backend
-origin.
-
-## Verification
-
-After the complete intended executable diff is finished, the repository harness decides scope.
-Documentation edits, commits, sub-phases, handoffs, and intermediate milestones do not trigger
-these completion gates. From the repository root:
-
-```powershell
-.\scripts\check.ps1
-```
-
-`scripts/quality.mjs` owns the shared local/CI gate list. The PowerShell entry
-point runs all static and contract checks with formatting fixes; `-CheckOnly`
-is non-mutating. Run focused behavior tests directly with the native runner.
-Redirect test output to a log in the worktree Git directory and inspect only
-failure tails. See [Development](docs/DEVELOPMENT.md) for commands and
-[AGENTS.md](AGENTS.md) for validation rules.
-
-Documentation-only changes use cheap textual/reference checks. They do not invoke backend,
-frontend, browser, build, migration, or application test suites unless the documentation is
-executable or packaged input, such as a production Content skill.
-
-The commands below stay available for debugging one known failure while working:
-
-```bash
-# Backend, from backend/
-uv run pytest tests/unit/test_<area>.py tests/component/test_<area>.py -q
-uv run ruff check <changed paths>
-uv run alembic upgrade head
-uv run alembic check
-
-# Frontend, from frontend/
-pnpm test -- <file>
-pnpm check:contract
-pnpm check:policy
-pnpm exec tsc --noEmit
-pnpm build
-```
-
-Industry-profile work also runs the registry validator, onboarding fallback tests, labelled
-classification/gap fixtures, FAQ validation fixtures, and a before/after verification case.
-Live sites, provider APIs, and connected analytics are opt-in acceptance sources, not CI
-requirements.
+Use conventional, scoped commit messages. Include a concise change summary,
+removals or intentional coexistence, and a `## Testing` section with exact
+commands, exit results, checks not run and unresolved limitations.
+[AGENTS.md](AGENTS.md#validation) defines when validation is required;
+[Review.md](Review.md) defines the review procedure. A file edit alone does not
+justify a new test, and a passing happy path does not excuse an invariant violation.
+Live sites, provider APIs and connected analytics remain explicitly authorized
+acceptance sources, not ordinary CI prerequisites.
 
 ## Release preparation
 
-Releases are maintainer-owned and occur only after the change has merged. Do not create a tag,
-GitHub release, or package publication from a feature branch. Follow the clean-clone Compose and
-repository gates in [`docs/release-checklist.md`](docs/release-checklist.md), update
-[`CHANGELOG.md`](CHANGELOG.md), and obtain release-owner approval for the exact candidate commit
-before creating release artifacts.
+Releases are maintainer-owned and occur only after merge. Do not create a tag,
+GitHub release or package publication from a feature branch. Follow
+[release acceptance](docs/release-checklist.md), update [CHANGELOG.md](CHANGELOG.md),
+and obtain release-owner approval for the exact candidate commit before creating
+release artifacts.
 
-## Commits and review
+## Reporting issues
 
-Use conventional, scoped commit messages. When other work exists in the tree, stage explicit
-pathspecs rather than `git add -A`. A change fails review when it violates any current invariant,
-even if its happy path appears to work.
-
-Report bugs with reproduction, expected/actual behavior, versions, and safe logs or screenshots.
-Disclose secret-handling or other security issues privately.
-
+Include reproduction steps, expected/actual behavior, versions and safe logs or
+screenshots. Disclose secret-handling and other security issues privately.
 Contributions are licensed under the [MIT License](LICENSE).

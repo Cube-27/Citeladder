@@ -11,6 +11,24 @@ store, prompt resource, content queue, or memory store.
 
 `SitePageAnalysis` is the only page-understanding owner.
 
+### Replacement and retirement
+
+Before replacing, redesigning, consolidating or retiring behavior, inventory
+its routes, symbols, schemas, callers, tasks, flags, tests, fixtures, navigation
+and active documentation. Choose an atomic cutover or a behavior-preserving
+seam followed by cutover; keep one read/write authority throughout.
+
+Update every caller and delete superseded implementations, contracts, tests,
+fixtures and flags. Update or retire obsolete active instructions; preserve
+historical evidence deliberately, not as a second active specification.
+Search for old names afterward and inspect the changed/deleted paths. A
+replacement diff with no deletions merits re-checking, not automatic rejection.
+
+A compatibility bridge needs a current external contract, an identified caller,
+a focused test and a concrete deletion condition recorded in the change review.
+Split complex internals under the existing owner rather than creating parallel
+stores or policy authorities; do not relax repository gates to accommodate them.
+
 ## 2. Product policy is configuration
 
 Thresholds, transports, limits, schemas, page kinds, classifier signals,
@@ -153,6 +171,10 @@ Credentials are encrypted at rest, resolved only by the owning connector, and
 excluded from DTOs, logs, snapshots, context packages, and artifacts. Provider
 identity for measurement stays separate from analysis and generation provider
 identity.
+
+Tests disable dotenv, use deterministic configuration and exclude inherited live
+provider credentials. The isolation mechanism and commands belong to
+[Development](DEVELOPMENT.md#backend).
 
 ## 15. PostgreSQL is the durable queue
 

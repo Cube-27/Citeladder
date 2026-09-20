@@ -4,6 +4,14 @@ This is the single document-owner index. Current code and tests establish
 implemented behavior; accepted constraints remain binding when code disagrees.
 Historical records are evidence, not task authority.
 
+## Using the index
+
+Start with [AGENTS.md](../AGENTS.md) for workflow and test admission. Select the
+feature owner below and only the shared contracts affected by the task.
+[Invariants](invariants.md) define constraints; owner documents explain the
+behavior and implementation boundaries. Code/document disagreement is a finding
+to resolve within the authorized scope, not permission to weaken a constraint.
+
 ## Feature owners
 
 | Feature | Canonical document |
@@ -23,6 +31,8 @@ Historical records are evidence, not task authority.
 
 ## Shared contracts
 
+- [Agent workflow](../AGENTS.md): bootstrap, proportional validation and test admission.
+- [Contributing](../CONTRIBUTING.md): branch, PR and release participation.
 - [Product](../PRODUCT.md): users, purpose, positioning and non-goals.
 - [Architecture](architecture.md): cross-system ownership and evidence flow.
 - [Backend](backend-architecture.md) and [frontend](frontend-architecture.md):
@@ -37,7 +47,23 @@ Historical records are evidence, not task authority.
 
 [Plan status](plans/ACTIVE.md) is the only current-work index.
 [Decisions](decisions.md) records accepted cross-feature choices and rationale.
-An indexed plan is not authorization to run it.
+An indexed plan is not authorization to run it. Read a plan only for work
+assigned to that plan; completed plans retain evidence and limitations, not
+instructions to resume historical delivery checkpoints.
+
+## Maintaining documentation
+
+Update the existing owner when its shipped contract, setup command, procedure
+or approved decision changes. Update this index only when document ownership or
+routing changes. Keep detailed rules with their owner rather than copying them
+into agent skills, contributor guides or review checklists.
+
+Update `plans/ACTIVE.md` only when plan selection, queue, blocker or completion
+state changes, and `decisions.md` only for a qualifying cross-feature decision.
+Routine implementation/validation evidence belongs in the PR or CI record, not
+new summary, progress or evidence sidecars. There is no blanket multi-document
+checklist per edit. When retiring a document, repair inbound links and preserve
+historical evidence where it remains useful; archiving does not resolve a finding.
 
 ## Operations and retained evidence
 

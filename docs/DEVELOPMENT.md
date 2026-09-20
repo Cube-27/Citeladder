@@ -1,9 +1,10 @@
 # Development guide — CiteLadder
 
-Everything needed to run, test, and troubleshoot CiteLadder locally, including two
-environment gotchas that otherwise waste substantial time. Pair this with
-[`../AGENTS.md`](../AGENTS.md), [`README.md`](README.md), and
-[`invariants.md`](invariants.md).
+Setup, validation commands and local troubleshooting.
+[AGENTS.md](../AGENTS.md) owns workflow and test admission;
+[the index](README.md) routes feature owners, and [invariants](invariants.md)
+remain binding. The commands below are task-specific references, not a
+per-edit checklist. Preserve existing `.env` and `.env.local` files during setup.
 
 ## Toolchain
 
@@ -12,7 +13,7 @@ environment gotchas that otherwise waste substantial time. Pair this with
 | Python | 3.12+ | Backend |
 | [`uv`](https://docs.astral.sh/uv/) | latest | Backend dependency + venv manager |
 | Node.js | 22+ | Frontend. 22 is the SUPPORTED MINIMUM and the version CI validates; `engines.node` says `>=22` in `frontend/package.json`. The production frontend images pin Node 26 deliberately (`frontend/Dockerfile`, `frontend/apps/app/Dockerfile`) -- newer than CI, so treat a Node-26-only failure as a release-time finding, not a CI gap. Raise the minimum only by moving CI and `engines` together. |
-| pnpm | 11.9+ | Frontend package manager; pinned in `frontend/package.json` |
+| pnpm | Repository pin | Use the exact `packageManager` version in [`frontend/package.json`](../frontend/package.json). |
 | PostgreSQL | 15+ | Via Docker or local |
 | Docker + Compose | latest | Local stack |
 
@@ -138,6 +139,11 @@ The one-shot `migrate` service must have completed successfully. See
 
 ## Testing
 
+Select tests for the behavior at risk, following
+[AGENTS.md](../AGENTS.md#what-earns-a-test). Replace the quoted placeholder paths
+in the examples with real affected files or test identifiers. Full selected
+owner suites belong to CI; ordinary documentation edits do not launch them.
+
 ### Backend
 
 Backend tests use a real Postgres (each test runs against an isolated schema). The
@@ -170,15 +176,18 @@ as a fallback, and without either the localhost default is tried. Only the serve
 
 ```bash
 cd backend
-uv run pytest -q
-uv run ruff check .
+uv run pytest "tests/<area>/test_<behavior>.py" -q
 ```
 
 ### Frontend
 
+The first command runs selected tests. The remaining entries are a command
+reference for the relevant debugging or acceptance task; the repository harness
+already owns static/contract completion checks. Do not run this entire list per edit.
+
 ```bash
 cd frontend
-pnpm test             # Vitest via Vite+ (`vp test run`; network mocked with MSW)
+pnpm exec vp test run "<test-path>" # targeted Vitest via Vite+; network mocked with MSW
 pnpm lint             # Oxlint via Vite+ (`vp lint`; React/TypeScript/a11y rules)
 pnpm check            # vp check: format + lint; warnings and unused-disable directives fail
 pnpm check:policy     # architecture + design-token guards
@@ -198,7 +207,10 @@ explicit release work.
 
 ### Repository validation harness
 
-Run all static checks and formatting fixes after executable changes:
+After the intended executable diff is complete, run the mode appropriate to the
+task once. Choose the formatting/fix mode locally or the non-mutating alternative;
+do not run both by default. Follow [AGENTS.md](../AGENTS.md#validation) for scope,
+documentation/runtime-input exceptions and when changed evidence needs a rerun:
 
 ```powershell
 .\scripts\check.ps1
@@ -303,8 +315,10 @@ was enabled in one subpackage only.
 
 ## Project utility scripts
 
-Run these from `backend/`. Use `--help` before any operator script whose
-arguments are not shown here.
+These commands do not authorize an operation. Obtain explicit task authorization
+before resets, grants, billing changes, live-provider calls or external mutations,
+and verify the target/environment first. Run the commands below from `backend/`
+unless stated otherwise. Use `--help` when arguments are not shown here.
 
 Seed local demo data (**development or disposable database only**):
 
