@@ -98,7 +98,7 @@ export function DemoTextLink({
  * funnel; in-page anchors (e.g. the product section's jump to the loop) call
  * it directly — internal hrefs carry no `target`/`rel` contract.
  */
-export function TextLink({
+function TextLink({
   href,
   className,
   children,

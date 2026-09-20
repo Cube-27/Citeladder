@@ -27,24 +27,14 @@ export const NAV_DROPS: readonly NavDrop[] = [
       {
         items: [
           {
-            title: 'See it',
-            desc: 'Share of citations, recorded and inspectable',
-            href: '/#see-it',
-          },
-          {
             title: 'How it works',
-            desc: 'Collect, analyze, improve, verify',
+            desc: 'From discovery to verification',
             href: '/#how-it-works',
           },
           {
-            title: 'Use cases',
-            desc: 'Workflows for different business models',
-            href: '/#use-cases',
-          },
-          {
-            title: 'For enterprise teams',
-            desc: 'Your keys, scoped access, and a full audit trail',
-            href: '/#trust',
+            title: 'Integrations',
+            desc: 'The connected marketing stack',
+            href: '/#integrations',
           },
         ],
       },

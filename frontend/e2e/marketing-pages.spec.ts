@@ -24,41 +24,45 @@ test.describe('marketing routes', () => {
     expect(tagRequests[0]).toContain('id=G-CONSENTTEST');
   });
 
-  test('homepage clocks stop offscreen and reduced motion keeps the engine roster readable', async ({
+  test('four monitored surfaces stay visible with reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    const roster = page.getByRole('region', { name: 'Monitored answer engines' });
+    for (const name of ['ChatGPT', 'Gemini', 'Claude', 'Google AI Overviews']) {
+      await expect(roster.getByText(name, { exact: true })).toBeVisible();
+    }
+    await expect(roster.getByText('DataForSEO')).toHaveCount(0);
+  });
+
+  test('Sources URLs keep the preview width stable at desktop and phone widths', async ({
     page,
   }) => {
-    await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await page.goto('/');
-    const roster = page.getByRole('img', {
-      name: 'ChatGPT, Grok, Gemini, Copilot, Claude and Perplexity.',
-    });
-    const runningClocks = () =>
-      page.evaluate(
-        () =>
-          document
-            .getAnimations()
-            .filter(
-              (animation) =>
-                animation.playState === 'running' &&
-                animation.timeline === document.timeline &&
-                animation.effect?.getTiming().iterations === Infinity,
-            ).length,
+    for (const width of [1280, 760, 375]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll('astro-island')].some(
+          (island) =>
+            island.getAttribute('component-url')?.includes('landing-page') &&
+            !island.hasAttribute('ssr'),
+        ),
       );
-
-    await roster.scrollIntoViewIfNeeded();
-    await expect.poll(runningClocks).toBeGreaterThan(0);
-    expect(await runningClocks()).toBeLessThanOrEqual(3);
-    await page.getByRole('navigation', { name: 'Footer' }).scrollIntoViewIfNeeded();
-    await expect.poll(runningClocks).toBe(0);
-    await roster.scrollIntoViewIfNeeded();
-    await expect.poll(runningClocks).toBeGreaterThan(0);
-
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await expect.poll(runningClocks).toBe(0);
-    for (const engine of ['ChatGPT', 'Grok', 'Gemini', 'Copilot', 'Claude', 'Perplexity']) {
-      await expect(
-        roster.getByText(engine, { exact: true }).filter({ visible: true }),
-      ).toBeVisible();
+      const panel = page.getByRole('tabpanel', { name: /sources/i }).last();
+      const card = page.locator('.cl-platform .cl-product-card');
+      const before = await card.boundingBox();
+      await panel.getByRole('button', { name: 'URLs' }).click();
+      await expect(panel.getByText('zernovelle.example/platform')).toBeVisible();
+      const after = await card.boundingBox();
+      expect(Math.abs((after?.width ?? 0) - (before?.width ?? 0))).toBeLessThanOrEqual(1);
+      expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0))).toBeLessThanOrEqual(1);
+      const cardOverflow = await card.evaluate(
+        (element) => element.scrollWidth - element.clientWidth,
+      );
+      expect(cardOverflow, `${width}px card overflow`).toBeLessThanOrEqual(1);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `${width}px page overflow`).toBeLessThanOrEqual(1);
     }
   });
 

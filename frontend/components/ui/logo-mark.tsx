@@ -60,10 +60,24 @@ export function LogoMark({
             width="19.86"
             height="18.96"
             rx="1.1"
-            className="fill-primary"
+            className="fill-brand-forest"
           />
-          <rect x="53.95" y="28.1" width="19.86" height="32.28" rx="1.1" className="fill-primary" />
-          <rect x="78.1" y="14.11" width="19.76" height="46.27" rx="1.1" className="fill-primary" />
+          <rect
+            x="53.95"
+            y="28.1"
+            width="19.86"
+            height="32.28"
+            rx="1.1"
+            className="fill-brand-forest"
+          />
+          <rect
+            x="78.1"
+            y="14.11"
+            width="19.76"
+            height="46.27"
+            rx="1.1"
+            className="fill-brand-forest"
+          />
         </svg>
       </span>
     );

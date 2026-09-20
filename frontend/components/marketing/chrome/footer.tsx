@@ -119,12 +119,7 @@ function LegalStripLink({ link }: Readonly<{ link: LegalLink }>) {
   );
 }
 
-/**
- * Marketing footer — link columns plus a compact legal strip, on the light
- * canvas the three-canvas system closes with (docs/design.md §Marketing): the
- * teal band above carries the page's final action, and the footer resolves
- * back to white paper with a warm hairline.
- */
+/** Shared editorial footer; destinations and legal ownership stay unchanged. */
 export async function MarketingFooter() {
   'use cache';
 
@@ -132,36 +127,35 @@ export async function MarketingFooter() {
   const name = legalDisplayName();
 
   return (
-    <footer className="band-grain bg-background border-hairline-warm relative overflow-hidden border-t">
-      <Container className="py-12 sm:py-16">
-        <nav
-          aria-label="Footer"
-          className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.5fr_repeat(5,minmax(0,1fr))]"
-        >
-          <div className="col-span-2 space-y-5 sm:col-span-3 lg:col-span-1">
+    <footer className="bg-background border-border-subtle relative overflow-hidden border-t">
+      <Container className="pt-14 sm:pt-20">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] lg:gap-12">
+          <div className="space-y-5">
             <a href="/" aria-label="CiteLadder home" className="inline-block">
               <LogoMark />
             </a>
 
-            <p className="website-body text-muted max-w-[28ch]">
-              Verifiable AI visibility. Every metric opens to the answer it came from.
+            <p className="website-body text-muted max-w-[38ch]">
+              AI search intelligence with source-level context.
             </p>
           </div>
 
-          {FOOTER_COLUMNS.map((column) => (
-            <div key={column.key} className="space-y-4">
-              {/* Title-case headers: the small-heading role carries the
-                  weight and the foreground pin, so no call site hand-picks an
-                  ink for them. */}
-              <h2 className="website-small-heading text-foreground mb-4">{column.label}</h2>
-              <div className="grid justify-items-start gap-4">
-                {column.links.map((link) => (
-                  <FooterColumnLink key={link.label} link={link} />
-                ))}
+          <nav
+            aria-label="Footer"
+            className="grid grid-cols-2 gap-x-7 gap-y-9 sm:grid-cols-3 xl:grid-cols-5"
+          >
+            {FOOTER_COLUMNS.map((column) => (
+              <div key={column.key}>
+                <h2 className="website-small-heading text-foreground mb-5">{column.label}</h2>
+                <div className="grid justify-items-start gap-3.5">
+                  {column.links.map((link) => (
+                    <FooterColumnLink key={link.label} link={link} />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </nav>
+            ))}
+          </nav>
+        </div>
 
         <div className="border-border-subtle mt-12 flex flex-col gap-5 border-t pt-8 lg:flex-row lg:items-center lg:justify-between">
           {/* CiteLadder is a Cube27 product, so the parent company is named in
@@ -183,6 +177,9 @@ export async function MarketingFooter() {
               <LegalStripLink key={link.href} link={link} />
             ))}
           </nav>
+        </div>
+        <div aria-hidden="true" className="mt-4 overflow-hidden pb-7 sm:mt-5 sm:pb-8">
+          <LogoMark size={72} className="max-w-full opacity-20" />
         </div>
       </Container>
     </footer>

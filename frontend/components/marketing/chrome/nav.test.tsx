@@ -80,11 +80,31 @@ function NavWithCachedMarketingSession() {
  * file guards behaviour only.
  */
 describe('MarketingNav', () => {
+  it('scrolls home without animation when reduced motion is requested', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    const originalMatchMedia = window.matchMedia;
+    const matchMedia = vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      ...originalMatchMedia(query),
+      matches: query === '(prefers-reduced-motion: reduce)',
+    }));
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(<MarketingNav />);
+      await user.click(screen.getByRole('link', { name: 'CiteLadder home' }));
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+    } finally {
+      matchMedia.mockRestore();
+      scrollTo.mockRestore();
+    }
+  });
+
   it('gives every Platform menu row a distinct destination', () => {
     const platform = NAV_DROPS.find((drop) => drop.key === 'platform');
     const hrefs = platform?.groups.flatMap((group) => group.items.map((item) => item.href)) ?? [];
 
-    expect(hrefs).toHaveLength(4);
+    expect(hrefs).toEqual(['/#how-it-works', '/#integrations']);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
 
