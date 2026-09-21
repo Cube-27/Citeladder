@@ -49,9 +49,12 @@ function NavLink({
         // shared label weight rather than body regular — the destinations stay
         // scannable against the group titles above them. The role owns the
         // weight; 600 stays reserved for headings, and the active row is
-        // already carried by the accent surface and ink.
+        // carried by the paper surface, leading mark, and icon.
         active
-          ? textRole('label', 'border-transparent bg-accent-soft text-accent-text')
+          ? textRole(
+              'label',
+              'app-nav-current border-border bg-panel text-foreground before:bg-brand-forest before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full',
+            )
           : textRole(
               'label',
               'border-transparent text-secondary hover:bg-accent-soft hover:text-accent-text',
@@ -61,7 +64,7 @@ function NavLink({
       <Icon
         className={cn(
           'size-4 shrink-0 transition-colors duration-150',
-          active ? 'text-accent' : 'text-subtle group-hover:text-accent-text',
+          active ? 'text-brand-forest' : 'text-subtle group-hover:text-accent-text',
         )}
         aria-hidden
       />

@@ -360,12 +360,14 @@ export function PlatformExplorer({
                     {DEMO_CTA} <ArrowUpRight size={16} aria-hidden />
                   </a>
                 </div>
-                <div className="cl-product-card">
-                  <div className="cl-window-bar">
-                    <Grid2X2 size={14} aria-hidden />
-                    Zernovelle / {item.label}
+                <div className={`cl-product-stage cl-product-stage-${item.id}`}>
+                  <div className="cl-product-card">
+                    <div className="cl-window-bar">
+                      <Grid2X2 size={14} aria-hidden />
+                      Zernovelle / {item.label}
+                    </div>
+                    <Preview />
                   </div>
-                  <Preview />
                 </div>
               </TabPanel>
             );

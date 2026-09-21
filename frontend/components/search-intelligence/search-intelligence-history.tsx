@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
+import { Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
 import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
@@ -54,60 +54,86 @@ export function SearchIntelligenceHistory({
     );
   const data = fillMonths(observations);
   return (
-    <section className="grid gap-3" aria-label="Saved backlink history">
-      <p className={textRole('meta')}>
+    <section className="grid gap-4 md:grid-cols-2" aria-label="Saved backlink history">
+      <p className={textRole('meta', 'md:col-span-2')}>
         Monthly domain-level history for {dataset.target_domain}, {observations[0].date} to{' '}
         {observations.at(-1)?.date}. Coverage includes the provider’s historical link population and
         may differ from the live summary. Missing observations are gaps.
       </p>
-      <ChartContainer
-        config={{ backlinks: { label: 'Backlinks', color: 'var(--color-chart-1)' } }}
-        description="Saved monthly backlink totals; missing observations break the line."
-      >
-        <LineChart data={data}>
-          <CartesianGrid vertical={false} />
-          <XAxis dataKey="date" />
-          <YAxis />
-          <Tooltip />
-          <Line
-            dataKey="backlinks"
-            stroke="var(--color-backlinks)"
-            connectNulls={false}
-            isAnimationActive={false}
-          />
-        </LineChart>
-      </ChartContainer>
-      <ChartContainer
-        config={{
-          new: { label: 'New backlinks', color: 'var(--color-chart-2)' },
-          lost: { label: 'Lost backlinks', color: 'var(--color-chart-3)' },
-        }}
-        description="Saved monthly new and lost backlinks, shown as separate labelled lines."
-      >
-        <LineChart data={data}>
-          <CartesianGrid vertical={false} />
-          <XAxis dataKey="date" />
-          <YAxis />
-          <Tooltip />
-          <Line
-            name="New backlinks"
-            dataKey="new"
-            stroke="var(--color-new)"
-            connectNulls={false}
-            isAnimationActive={false}
-          />
-          <Line
-            name="Lost backlinks"
-            dataKey="lost"
-            stroke="var(--color-lost)"
-            strokeDasharray="5 3"
-            connectNulls={false}
-            isAnimationActive={false}
-          />
-        </LineChart>
-      </ChartContainer>
+      <div className="grid min-w-0 content-start gap-2">
+        <h3 className={textRole('bodyStrong', 'min-h-6 text-chart-1')}>Total backlinks</h3>
+        <ChartContainer
+          config={{ backlinks: { label: 'Backlinks', color: 'var(--color-chart-1)' } }}
+          height={200}
+          description="Saved monthly backlink totals; missing observations break the line."
+        >
+          <LineChart data={data}>
+            <XAxis {...historyAxis} dataKey="date" tickFormatter={shortMonth} />
+            <YAxis {...historyAxis} width={48} tickFormatter={compactCount} />
+            <Tooltip />
+            <Line
+              dataKey="backlinks"
+              stroke="var(--color-backlinks)"
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ChartContainer>
+      </div>
+      <div className="grid min-w-0 content-start gap-2">
+        <div className="flex min-h-6 flex-wrap items-center gap-x-4 gap-y-1">
+          <h3 className={textRole('bodyStrong')}>Monthly changes</h3>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span className="text-chart-2">New backlinks</span>
+            <span className="text-chart-3">Lost backlinks</span>
+          </div>
+        </div>
+        <ChartContainer
+          config={{
+            new: { label: 'New backlinks', color: 'var(--color-chart-2)' },
+            lost: { label: 'Lost backlinks', color: 'var(--color-chart-3)' },
+          }}
+          height={200}
+          description="Saved monthly new and lost backlinks, shown as separate labelled lines."
+        >
+          <LineChart data={data}>
+            <XAxis {...historyAxis} dataKey="date" tickFormatter={shortMonth} />
+            <YAxis {...historyAxis} width={48} tickFormatter={compactCount} />
+            <Tooltip />
+            <Line
+              name="New backlinks"
+              dataKey="new"
+              stroke="var(--color-new)"
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+            <Line
+              name="Lost backlinks"
+              dataKey="lost"
+              stroke="var(--color-lost)"
+              strokeDasharray="5 3"
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ChartContainer>
+      </div>
     </section>
   );
+}
+
+const historyAxis = {
+  axisLine: false,
+  tickLine: false,
+  tick: { fill: 'var(--color-foreground)', fontSize: 11 },
+} as const;
+
+function shortMonth(date: string): string {
+  return `${date.slice(5, 7)}/${date.slice(2, 4)}`;
+}
+
+function compactCount(value: number): string {
+  return Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 0 }).format(value);
 }
 
 function numeric(value: unknown): number | null {

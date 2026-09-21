@@ -50,7 +50,7 @@ function Hero() {
           </p>
           <div className="cl-hero-actions">
             <DemoLink />
-            <ButtonLink href="/register" variant="dark" size="marketing" className="cl-cta">
+            <ButtonLink href="/register" variant="soft" size="marketing" className="cl-cta">
               Start free trial <ArrowRight size={18} aria-hidden />
             </ButtonLink>
           </div>
@@ -59,7 +59,9 @@ function Hero() {
             connectivity
           </p>
         </div>
-        <HeroPreview />
+        <div className="cl-hero-stage">
+          <HeroPreview />
+        </div>
       </div>
     </header>
   );
@@ -108,61 +110,65 @@ function Intelligence({ selectModule }: Readonly<{ selectModule: (module: Module
         <div className="cl-capabilities">
           {CAPABILITIES.map((capability) => (
             <article className="cl-capability" key={capability.tab}>
-              <div className="cl-cap-top">
-                <span>{capability.label}</span>
+              <div className="cl-cap-well">
+                <div className="cl-cap-top">
+                  <span>{capability.label}</span>
+                </div>
+                <div className="cl-cap-graphic" aria-hidden>
+                  {capability.tab === 'visibility' ? (
+                    <>
+                      <strong>64.4%</strong>
+                      <span>Brand visibility</span>
+                      <div className="cl-stacked-bars">
+                        <i />
+                        <i />
+                        <i />
+                      </div>
+                    </>
+                  ) : capability.tab === 'sources' ? (
+                    <>
+                      <div>
+                        <span>Owned sources</span>
+                        <i style={{ width: '82%' }} />
+                      </div>
+                      <div>
+                        <span>Review sources</span>
+                        <i style={{ width: '64%' }} />
+                      </div>
+                      <div>
+                        <span>Editorial sources</span>
+                        <i style={{ width: '43%' }} />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <Check size={16} />
+                        Crawl access <span>Passed</span>
+                      </div>
+                      <div>
+                        <Check size={16} />
+                        Page structure <span>Passed</span>
+                      </div>
+                      <div>
+                        <ShieldCheck size={16} />
+                        Structured data <span>Review</span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="cl-cap-graphic" aria-hidden>
-                {capability.tab === 'visibility' ? (
-                  <>
-                    <strong>64.4%</strong>
-                    <span>Brand visibility</span>
-                    <div className="cl-stacked-bars">
-                      <i />
-                      <i />
-                      <i />
-                    </div>
-                  </>
-                ) : capability.tab === 'sources' ? (
-                  <>
-                    <div>
-                      <span>Owned sources</span>
-                      <i style={{ width: '82%' }} />
-                    </div>
-                    <div>
-                      <span>Review sources</span>
-                      <i style={{ width: '64%' }} />
-                    </div>
-                    <div>
-                      <span>Editorial sources</span>
-                      <i style={{ width: '43%' }} />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <Check size={16} />
-                      Crawl access <span>Passed</span>
-                    </div>
-                    <div>
-                      <Check size={16} />
-                      Page structure <span>Passed</span>
-                    </div>
-                    <div>
-                      <ShieldCheck size={16} />
-                      Structured data <span>Review</span>
-                    </div>
-                  </>
-                )}
+              <div className="cl-cap-body">
+                <h3>{capability.title}</h3>
+                <p>{capability.body}</p>
+                <a
+                  className="cl-text-link"
+                  href="/#see-it"
+                  onClick={() => selectModule(capability.tab)}
+                >
+                  {capability.action} <ArrowRight size={16} aria-hidden />
+                </a>
               </div>
-              <h3>{capability.title}</h3>
-              <p>{capability.body}</p>
-              <a
-                className="cl-text-link"
-                href="/#see-it"
-                onClick={() => selectModule(capability.tab)}
-              >
-                {capability.action} <ArrowRight size={16} aria-hidden />
-              </a>
             </article>
           ))}
         </div>

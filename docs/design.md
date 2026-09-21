@@ -50,6 +50,8 @@ Reading text must meet 4.5:1 contrast. `subtle` metadata belongs on reading surf
 
 Marketing subpages use the semantic public canvas, centred Geist hero, quiet surface bands, and the shared full-width dark footer. The homepage keeps a warmer neutral canvas than the product UI, with scoped aliases resolving to shared semantic roles. The owner-scoped `[data-public-surface]` rebind deepens light-mode inks and strengthens hairlines. Use divided hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews.
 
+The homepage may use marketing-only geometry roles: `--radius-marketing-card` (20px), `--radius-marketing-well` (16px), `--radius-marketing-preview` (24px), and `--radius-marketing-control` (10px). White capability and integration objects sit on warm hairlines; pastel decorative wells frame compact product details. Homepage headings use weight 500 at most. Product data and status colours retain their own meaning. These roles do not change the authenticated application's 8px `--radius-card` contract.
+
 ## Typography
 
 Use Geist exclusively; metrics, dates, ranks, and percentages use tabular numerals, not monospace. Body weight is 400, labels/navigation/actions 500, headings/metrics 600, subject to the documented role exceptions. Do not assemble page-local size/weight/ink hierarchies.
@@ -254,7 +256,7 @@ Confirmed first-use analytical states omit filters, charts, and table reservatio
 
 ### Navigation and overlays
 
-- **Navigation:** active app location uses an accent-soft pill; hover uses a neutral pill. Preserve icon/label contrast; no translation or leading rail.
+- **Navigation:** active app location uses a bordered paper pill with a contact shadow, dark label, brand-green icon, and 2px leading mark. Hover uses an accent-soft pill. Preserve icon/label contrast and avoid translation. Page controls sit on a tonal band; identity and tab navigation bands stay on paper. Selected tab underlines use brand green.
 - **Menus:** shared panel/item recipes, `shadow-elevated`, 12px overlay radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
 - **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal-value` and the shared overlay radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-elevated` and the same 12px radius. Features own no shadow recipes.
 - **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the shared bordered track for compact single-select changes; shared UI filter pills handle independent/multi-select filters.
