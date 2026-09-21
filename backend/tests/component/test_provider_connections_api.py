@@ -22,10 +22,13 @@ import httpx
 import pytest
 from sqlalchemy import func, select
 
+from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.audits import POOL_KIND_CONNECTION
 from app.core.config.provider_catalog import PROBE_PROMPT, provider_catalog_settings
 from app.core.security import decrypt_secret
+from app.domain.providers import service as provider_service
 from app.models.audit import ProviderCapacityBucket
+from app.models.provider import ProviderConnection
 from tests.component.auth_helpers import register_and_login as _register
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
@@ -425,6 +428,37 @@ async def test_test_endpoint_returns_status_success(
     assert body["transport_provider"] == "openai"
     assert body["logical_engine"] == "chatgpt"
     _assert_no_secret(body)
+
+
+@pytest.mark.asyncio
+async def test_probe_runs_after_read_transaction_is_closed(
+    client: httpx.AsyncClient, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _register(client, "prov-transaction@example.com")
+    created = await client.post(
+        "/api/v1/provider-connections", json=_connection_payload()
+    )
+    assert created.status_code == 201
+    connection_id = uuid.UUID(created.json()["id"])
+    connection = await db_session.get(ProviderConnection, connection_id)
+    assert connection is not None
+
+    class ProbeAdapter:
+        async def execute(self, _request):
+            assert not db_session.in_transaction()
+            raise ProviderError(
+                "probe failed", error_code="probe_error", retryable=False
+            )
+
+    monkeypatch.setattr(
+        provider_service, "build_adapter", lambda **_kwargs: ProbeAdapter()
+    )
+    result = await provider_service.run_connection_test(
+        db_session,
+        workspace_id=connection.workspace_id,
+        connection_id=connection_id,
+    )
+    assert (result.status, result.error_code) == ("failed", "probe_error")
 
 
 @pytest.mark.asyncio

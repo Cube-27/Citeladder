@@ -33,30 +33,57 @@ from app.models.provider import (
 )
 
 
+def _matches_revision(
+    route: ProviderAppRoute | None,
+    connection: ProviderConnection | None,
+    route_revision,
+    credential_revision,
+) -> bool:
+    return (
+        route is not None
+        and connection is not None
+        and route.revision == route_revision
+        and connection.credential_revision == credential_revision
+    )
+
+
 async def probe_app_routes(
     session: AsyncSession,
     *,
     connection: ProviderConnection,
     app_transport: AppModelJsonTransport,
 ) -> ProviderConnectionTestResponse | None:
-    responses = [
-        await _probe_one(
-            session,
-            connection=connection,
-            route=route,
-            app_transport=app_transport,
-        )
+    connection_id = connection.id
+    route_ids = [
+        route.id
         for route in sorted(connection.app_routes, key=lambda item: item.feature)
         if route.active
     ]
+    responses = []
+    for route_id in route_ids:
+        current_connection = await session.get(ProviderConnection, connection_id)
+        route = await session.get(ProviderAppRoute, route_id)
+        if current_connection is None or route is None or not route.active:
+            continue
+        responses.append(
+            await _probe_one(
+                session,
+                connection=current_connection,
+                route=route,
+                app_transport=app_transport,
+            )
+        )
     if not responses:
         return None
     failed = next(
         (response for response in responses if response.status != TEST_STATUS_OK), None
     )
     if failed is not None:
-        connection.last_test_status = TEST_STATUS_FAILED
-        connection.last_tested_at = failed.tested_at
+        current_connection = await session.get(ProviderConnection, connection_id)
+        if current_connection is None:
+            return failed
+        current_connection.last_test_status = TEST_STATUS_FAILED
+        current_connection.last_tested_at = failed.tested_at
         await session.commit()
         return failed
     return responses[-1]
@@ -71,20 +98,27 @@ async def _probe_one(
 ) -> ProviderConnectionTestResponse:
     tested_route_revision = route.revision
     tested_credential_revision = connection.credential_revision
+    route_id = route.id
+    connection_id = connection.id
+    workspace_id = connection.workspace_id
+    feature = route.feature
+    protocol = route.protocol
+    model = route.model
+    api_base_url = route.api_base_url
+    api_key = decrypt_secret(connection.api_key_encrypted)
+    await session.rollback()
     started = time.monotonic()
     status = TEST_STATUS_OK
     error_code = ""
     detail = APP_MODEL_SUCCESS_DETAIL
     latency_ms: int | None = None
     try:
-        target = await resolve_app_model_target(
-            chat_completions_url(route.api_base_url)
-        )
+        target = await resolve_app_model_target(chat_completions_url(api_base_url))
         response = await app_transport.post(
             target=target,
-            api_key=decrypt_secret(connection.api_key_encrypted),
+            api_key=api_key,
             payload={
-                "model": route.model,
+                "model": model,
                 "messages": [{"role": "user", "content": APP_MODEL_PROBE_PROMPT}],
                 "max_tokens": APP_MODEL_PROBE_MAX_OUTPUT_TOKENS,
                 "stream": False,
@@ -104,47 +138,57 @@ async def _probe_one(
         detail = f"Unexpected error: {type(exc).__name__}"
         latency_ms = int((time.monotonic() - started) * 1000)
     tested_at = datetime.now(UTC)
-    await session.refresh(connection)
-    await session.refresh(route)
-    current = (
-        route.revision == tested_route_revision
-        and connection.credential_revision == tested_credential_revision
+    current_connection = await session.get(
+        ProviderConnection, connection_id, with_for_update=True
     )
-    if status == TEST_STATUS_OK and current:
-        route.probed_revision = tested_route_revision
-        route.probed_credential_revision = tested_credential_revision
-        route.probed_at = tested_at
-        connection.last_test_status = TEST_STATUS_OK
-        connection.last_tested_at = tested_at
+    current_route = await session.get(ProviderAppRoute, route_id, with_for_update=True)
+    current = _matches_revision(
+        current_route,
+        current_connection,
+        tested_route_revision,
+        tested_credential_revision,
+    )
+    if (
+        status == TEST_STATUS_OK
+        and current
+        and current_route is not None
+        and current_connection is not None
+    ):
+        current_route.probed_revision = tested_route_revision
+        current_route.probed_credential_revision = tested_credential_revision
+        current_route.probed_at = tested_at
+        current_connection.last_test_status = TEST_STATUS_OK
+        current_connection.last_tested_at = tested_at
     elif status == TEST_STATUS_OK:
         status = TEST_STATUS_FAILED
         error_code = "revision_changed"
         detail = "Connection changed during probe"
-    if status != TEST_STATUS_OK:
-        connection.last_test_status = TEST_STATUS_FAILED
-        connection.last_tested_at = tested_at
-    session.add(
-        ProviderConnectionTest(
-            workspace_id=connection.workspace_id,
-            connection_id=connection.id,
-            status=status,
-            error_code=error_code,
-            detail=detail[:1024],
-            latency_ms=latency_ms,
-            logical_engine=route.feature,
-            transport_provider=route.protocol,
-            transport_model=route.model,
+    if status != TEST_STATUS_OK and current_connection is not None:
+        current_connection.last_test_status = TEST_STATUS_FAILED
+        current_connection.last_tested_at = tested_at
+    if current_connection is not None:
+        session.add(
+            ProviderConnectionTest(
+                workspace_id=workspace_id,
+                connection_id=connection_id,
+                status=status,
+                error_code=error_code,
+                detail=detail[:1024],
+                latency_ms=latency_ms,
+                logical_engine=feature,
+                transport_provider=protocol,
+                transport_model=model,
+            )
         )
-    )
     await session.commit()
     return ProviderConnectionTestResponse(
-        connection_id=connection.id,
+        connection_id=connection_id,
         status=status,
         error_code=error_code,
         detail=detail,
         latency_ms=latency_ms,
-        logical_engine=route.feature,
-        transport_provider=route.protocol,
-        transport_model=route.model,
+        logical_engine=feature,
+        transport_provider=protocol,
+        transport_model=model,
         tested_at=tested_at,
     )

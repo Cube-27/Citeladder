@@ -12,7 +12,13 @@ import httpx
 
 from app.connectors.answer_engines.errors import ProviderError, parse_retry_after
 from app.connectors.answer_engines.http_client import shared_client
-from app.core.config.dataforseo import DATAFORSEO_BASE_URL, STATUS_OK, unpack_credential
+from app.connectors.dataforseo_transport import authenticated_request, decode_json
+from app.core.config.dataforseo import (
+    DATAFORSEO_BASE_URL,
+    STATUS_OK,
+    DataForSeoCredential,
+    unpack_credential,
+)
 from app.core.config.provider_catalog import (
     ERROR_AUTH,
     ERROR_CONNECTION,
@@ -60,13 +66,18 @@ async def _post_once(
     client: httpx.AsyncClient,
     *,
     url: str,
-    auth: tuple[str, str],
+    credential: DataForSeoCredential,
     payload: dict[str, Any],
     timeout_seconds: float,
 ) -> httpx.Response:
     try:
-        return await client.post(
-            url, auth=auth, json=[payload], timeout=timeout_seconds
+        return await authenticated_request(
+            client,
+            "POST",
+            url,
+            credential=credential,
+            json=[payload],
+            timeout_seconds=timeout_seconds,
         )
     except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout) as exc:
         raise ProviderError(
@@ -92,14 +103,7 @@ def _response_body(response: httpx.Response) -> dict[str, Any]:
             retryable=False,
             retry_after_seconds=parse_retry_after(response.headers.get("Retry-After")),
         )
-    try:
-        body = response.json()
-    except ValueError as exc:
-        raise ProviderError(
-            "DataForSEO returned unreadable JSON",
-            error_code=ERROR_PARSE,
-            retryable=False,
-        ) from exc
+    body = decode_json(response, error_message="DataForSEO returned unreadable JSON")
     if not isinstance(body, dict) or body.get("status_code") != STATUS_OK:
         raise ProviderError(
             _safe_message(body if isinstance(body, dict) else {}),
@@ -144,7 +148,7 @@ async def execute_live(
     response = await _post_once(
         client or shared_client(),
         url=url,
-        auth=credential.basic_auth(),
+        credential=credential,
         payload=payload,
         timeout_seconds=timeout_seconds,
     )

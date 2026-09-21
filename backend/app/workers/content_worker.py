@@ -38,6 +38,7 @@ from app.core.config.content import (
     CONTENT_QUEUE_SPEC,
     content_settings,
 )
+from app.core.config.entitlements import KEY_AI_CREDITS
 from app.core.config.provider_catalog import ERROR_PARSE, ERROR_UNKNOWN
 from app.core.config.task_queue import (
     TASK_STATUS_CANCELLED,
@@ -48,18 +49,25 @@ from app.core.config.task_queue import (
 )
 from app.core.database import SessionLocal
 from app.core.telemetry import configure_logging, instrument_worker
+from app.domain.billing.accounts import billing_account_id_for
 from app.domain.billing.catalog_revisions import (
     CatalogUnavailableError,
     ai_credit_policy_for_revision,
 )
 from app.domain.content.context_builder import ContentContext
 from app.domain.content.message_builder import build_messages
+from app.domain.content.reconciliation import (
+    content_reclaim_accounting,
+    reconcile_generation_reservation,
+    reconcile_stale_cancelled_dispatches,
+    settle_platform_attempt,
+)
 from app.domain.entitlements.enforcement import (
     CapabilityNotGrantedError,
     require_workspace_capability,
 )
-from app.domain.entitlements.ledger import release_unused_reservation
-from app.domain.entitlements.metered import settle_metered_usage
+from app.domain.entitlements.ledger import FundedCreditsExhaustedError
+from app.domain.entitlements.metered import MeteredSubject, reserve_metered_usage
 from app.domain.providers.app_routes import (
     AppModelRouteUnavailableError,
     resolve_app_model_route,
@@ -104,56 +112,6 @@ def _usage_for_outcome(outcome: AttemptOutcome) -> dict | None:
     if outcome.response is not None:
         return dict(outcome.response.usage)
     return None
-
-
-async def _settle_platform_attempt(
-    session,
-    *,
-    row: ContentGeneration,
-    attempt: ContentGenerationAttempt,
-    outcome: AttemptOutcome,
-    now: datetime,
-) -> None:
-    if row.funding_source != "platform" or row.reservation_id is None:
-        attempt.settlement_status = "zero_debit"
-        return
-    if not row.policy_revision:
-        await release_unused_reservation(
-            session,
-            reservation_id=row.reservation_id,
-            idempotency_key=f"content:{row.id}:policy-unavailable",
-            at=now,
-        )
-        attempt.settlement_status = "policy_unavailable"
-        return
-    try:
-        policy = await ai_credit_policy_for_revision(session, row.policy_revision)
-    except CatalogUnavailableError:
-        attempt.settlement_status = "policy_unavailable"
-        return
-    rate = policy.rate(feature=APP_FEATURE_CONTENT, model=row.requested_model)
-    if rate is None:
-        await release_unused_reservation(
-            session,
-            reservation_id=row.reservation_id,
-            idempotency_key=f"content:{row.id}:rate-unavailable",
-            at=now,
-        )
-        attempt.settlement_status = "policy_unavailable"
-        return
-    settlement = await settle_metered_usage(
-        session,
-        reservation_id=row.reservation_id,
-        dispatch_key=str(attempt.dispatch_id),
-        attempt=attempt.attempt_number,
-        charged_units=rate.charge(_usage_for_outcome(outcome) or {}),
-        unknown_usage_charge=rate.unknown_usage_charge,
-        idempotency_key=f"content:{row.id}:settle",
-        at=now,
-    )
-    attempt.settled_units = settlement.charged_units
-    attempt.absorbed_units = settlement.absorbed_units
-    attempt.settlement_status = "settled"
 
 
 def _apply_attempt_outcome(
@@ -220,6 +178,79 @@ def _apply_failure(
     row.error_detail = str(error)[:2000] if error is not None else ""
 
 
+def _fail_retry_admission(row: ContentGeneration, code: str) -> None:
+    row.status = TASK_STATUS_FAILED
+    row.completed_at = _utcnow()
+    row.error_code = code
+    row.lease_owner = None
+    row.lease_expires_at = None
+
+
+async def _reserve_retry_hold(
+    session: AsyncSession, row: ContentGeneration, attempt_number: int
+) -> bool:
+    try:
+        policy = await ai_credit_policy_for_revision(session, row.policy_revision or "")
+    except CatalogUnavailableError:
+        _fail_retry_admission(row, "policy_unavailable")
+        return False
+    rate = policy.rate(feature=APP_FEATURE_CONTENT, model=row.requested_model)
+    account_id = await billing_account_id_for(session, row.workspace_id)
+    if rate is None or account_id is None:
+        _fail_retry_admission(row, "policy_unavailable")
+        return False
+    try:
+        reservation = await reserve_metered_usage(
+            session,
+            account_id=account_id,
+            capability_key=KEY_AI_CREDITS,
+            subject=MeteredSubject(
+                kind="content", subject_id=row.id, workspace_id=row.workspace_id
+            ),
+            hold_units=rate.call_credit_cap,
+            idempotency_key=f"content:{row.id}:hold:{attempt_number}",
+            at=_utcnow(),
+        )
+    except FundedCreditsExhaustedError:
+        _fail_retry_admission(row, "credits_exhausted")
+        return False
+    row.reservation_id = reservation.reservation_id
+    return True
+
+
+async def _locked_finalize_attempt(
+    session: AsyncSession,
+    row: ContentGeneration,
+    dispatch_id: uuid.UUID | None,
+) -> ContentGenerationAttempt | None:
+    attempt = (
+        await session.get(ContentGenerationAttempt, dispatch_id, with_for_update=True)
+        if dispatch_id is not None
+        else None
+    )
+    if dispatch_id is not None:
+        return (
+            attempt
+            if attempt is not None and attempt.status == ATTEMPT_STATUS_DISPATCHED
+            else None
+        )
+    attempt_number = row.attempt_count + 1
+    row.attempt_count = attempt_number
+    attempt = ContentGenerationAttempt(
+        content_generation_id=row.id,
+        attempt_number=attempt_number,
+        status=ATTEMPT_STATUS_DISPATCHED,
+        funding_source=row.funding_source,
+        route_id=row.route_id,
+        connection_id=row.connection_id,
+        route_revision=row.route_revision,
+        credential_revision=row.credential_revision,
+        requested_model=row.requested_model,
+    )
+    session.add(attempt)
+    return attempt
+
+
 class ContentWorker(DrainableWorkerMixin):
     """Claim/lease loop for ``ContentGeneration`` rows.
 
@@ -235,7 +266,11 @@ class ContentWorker(DrainableWorkerMixin):
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._session_factory = session_factory or SessionLocal
-        self._queue = PostgresTaskQueue(self._session_factory, CONTENT_QUEUE_SPEC)
+        self._queue = PostgresTaskQueue(
+            self._session_factory,
+            CONTENT_QUEUE_SPEC,
+            reclaim_accounting=content_reclaim_accounting,
+        )
         self._transport = transport
         self.owner = owner or f"content-worker-{uuid.uuid4().hex[:12]}"
 
@@ -244,6 +279,7 @@ class ContentWorker(DrainableWorkerMixin):
     async def run_once(self) -> int:
         """Sweep expired leases, claim one row, run it. Returns count run."""
         await self._queue.release_expired()
+        await reconcile_stale_cancelled_dispatches(self._session_factory)
         rows = await self._queue.claim(owner=self.owner, limit=1)
         for row in rows:
             await self._execute(row)
@@ -453,6 +489,10 @@ class ContentWorker(DrainableWorkerMixin):
                 await session.commit()
                 return None
             attempt_number = row.attempt_count + 1
+            if row.funding_source == "platform" and row.attempt_count:
+                if not await _reserve_retry_hold(session, row, attempt_number):
+                    await session.commit()
+                    return None
             attempt = ContentGenerationAttempt(
                 content_generation_id=row.id,
                 attempt_number=attempt_number,
@@ -503,6 +543,7 @@ class ContentWorker(DrainableWorkerMixin):
             row.error_detail = str(error)[:2000]
             row.lease_owner = None
             row.lease_expires_at = None
+            await reconcile_generation_reservation(session, row=row, now=_utcnow())
             await session.commit()
 
     async def finalize_attempt(
@@ -540,33 +581,18 @@ class ContentWorker(DrainableWorkerMixin):
                 await session.commit()
                 return False
 
-            attempt = (
-                await session.get(
-                    ContentGenerationAttempt, dispatch_id, with_for_update=True
-                )
-                if dispatch_id is not None
-                else None
-            )
+            attempt = await _locked_finalize_attempt(session, row, dispatch_id)
             if attempt is None:
-                attempt_number = row.attempt_count + 1
-                row.attempt_count = attempt_number
-                attempt = ContentGenerationAttempt(
-                    content_generation_id=row.id,
-                    attempt_number=attempt_number,
-                    status=ATTEMPT_STATUS_DISPATCHED,
-                    funding_source=row.funding_source,
-                    route_id=row.route_id,
-                    connection_id=row.connection_id,
-                    route_revision=row.route_revision,
-                    credential_revision=row.credential_revision,
-                    requested_model=row.requested_model,
-                )
-                session.add(attempt)
-            else:
-                attempt_number = attempt.attempt_number
+                await session.rollback()
+                return False
+            attempt_number = attempt.attempt_number
             _apply_attempt_outcome(attempt, outcome, now=now)
-            await _settle_platform_attempt(
-                session, row=row, attempt=attempt, outcome=outcome, now=now
+            await settle_platform_attempt(
+                session,
+                row=row,
+                attempt=attempt,
+                usage=_usage_for_outcome(outcome),
+                now=now,
             )
 
             if cancelled:

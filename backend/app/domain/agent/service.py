@@ -22,19 +22,21 @@ from app.core.config.agent import (
     AGENT_POLICY_VERSION,
     AGENT_TASK_POLICIES,
     TOOL_ATTEMPT_COMPLETED,
-    TOOL_ATTEMPT_FAILED,
     TOOL_ATTEMPT_UNAVAILABLE,
     default_agent_settings,
 )
+from app.domain.agent.leases import renew_lease
 from app.domain.agent.model_attempts import (
     NarrationUnavailableError,
     fallback_result,
     narrate,
+    reconcile_stale_model_attempts,
 )
 from app.domain.agent.projection import SOURCE_METADATA as _SOURCE_METADATA
 from app.domain.agent.projection import public_result as _public_result
 from app.domain.agent.projection import run_values as _run_values
 from app.domain.agent.schemas import AgentRoadmapItem, AgentTaskSubmit
+from app.domain.agent.tool_attempts import record_tool_failure
 from app.domain.agent.tools import TOOL_VERSION, ToolExecutionContext, execute_tool
 from app.models.agent import AgentTaskRun, AgentToolAttempt
 from app.models.project import Project
@@ -208,6 +210,8 @@ async def claim_task(
     if row is None:
         await session.rollback()
         return None
+    if row.status == "running":
+        await reconcile_stale_model_attempts(session, run_id=row.id, now=now)
     if row.attempt_count >= row.max_attempts:
         row.status = "failed"
         row.error_code = "attempts_exhausted"
@@ -236,62 +240,11 @@ async def execute_claimed_task(
     run_id = run.id
     task_type = run.task_type
     objective = run.objective
-    evidence: list[dict[str, Any]] = []
-    for ordinal, tool_name in enumerate(run.allowed_tools, start=1):
-        started = time.monotonic()
-        try:
-            output = await execute_tool(
-                tool_name,
-                ToolExecutionContext(
-                    session=session,
-                    workspace_id=run.workspace_id,
-                    project_id=run.project_id,
-                ),
-                {},
-            )
-        except Exception:  # noqa: BLE001 - tool backstop; every tool fault is recorded as one failed step
-            await _record_tool_failure(
-                session,
-                run=run,
-                ordinal=ordinal,
-                tool_name=tool_name,
-                latency_ms=int((time.monotonic() - started) * 1000),
-            )
-            await _fail_claimed_run(
-                session,
-                run_id=run_id,
-                owner=owner,
-                code="tool_failed",
-                detail="A bounded evidence read failed.",
-            )
-            return
-        evidence.append({"tool": tool_name, "evidence": output})
-        available = output.get("state") != "unavailable"
-        session.add(
-            AgentToolAttempt(
-                workspace_id=run.workspace_id,
-                project_id=run.project_id,
-                task_run_id=run_id,
-                run_attempt=run.attempt_count,
-                ordinal=ordinal,
-                tool_name=tool_name,
-                tool_version=TOOL_VERSION,
-                # A missing snapshot is its OWN outcome. Logging it as
-                # ``completed`` made "we read this source and it was fine"
-                # indistinguishable from "this source does not exist"
-                # (invariant 7). The row is always written — a skipped read is
-                # never an absent row.
-                status=(
-                    TOOL_ATTEMPT_COMPLETED if available else TOOL_ATTEMPT_UNAVAILABLE
-                ),
-                input={},
-                artifact_refs=list(output.get("artifact_refs") or []),
-                output_hash=_json_hash(output),
-                omissions=list(output.get("omissions") or []),
-                latency_ms=int((time.monotonic() - started) * 1000),
-            )
-        )
-        await session.commit()
+    if not await renew_lease(session, run_id=run_id, owner=owner):
+        return
+    evidence = await _collect_evidence(session, run=run, owner=owner)
+    if evidence is None:
+        return
     # Network I/O never holds a database transaction.
     artifact_refs = _artifact_refs(evidence)
     limitations = _limitations(evidence)
@@ -341,6 +294,8 @@ async def execute_claimed_task(
         )
         return
     try:
+        if not await renew_lease(session, run_id=run_id, owner=owner):
+            return None
         receipt = await narrate(
             session,
             run_id=run_id,
@@ -428,6 +383,71 @@ async def execute_claimed_task(
     )
 
 
+async def _collect_evidence(
+    session: AsyncSession, *, run: AgentTaskRun, owner: str
+) -> list[dict[str, Any]] | None:
+    evidence: list[dict[str, Any]] = []
+    run_id = run.id
+    for ordinal, tool_name in enumerate(run.allowed_tools, start=1):
+        started = time.monotonic()
+        try:
+            output = await execute_tool(
+                tool_name,
+                ToolExecutionContext(
+                    session=session,
+                    workspace_id=run.workspace_id,
+                    project_id=run.project_id,
+                ),
+                {},
+            )
+        except Exception:  # noqa: BLE001 - tool backstop; every tool fault is recorded as one failed step
+            await record_tool_failure(
+                session,
+                run=run,
+                ordinal=ordinal,
+                tool_name=tool_name,
+                latency_ms=int((time.monotonic() - started) * 1000),
+            )
+            await _fail_claimed_run(
+                session,
+                run_id=run_id,
+                owner=owner,
+                code="tool_failed",
+                detail="A bounded evidence read failed.",
+            )
+            return None
+        evidence.append({"tool": tool_name, "evidence": output})
+        available = output.get("state") != "unavailable"
+        session.add(
+            AgentToolAttempt(
+                workspace_id=run.workspace_id,
+                project_id=run.project_id,
+                task_run_id=run_id,
+                run_attempt=run.attempt_count,
+                ordinal=ordinal,
+                tool_name=tool_name,
+                tool_version=TOOL_VERSION,
+                # A missing snapshot is its OWN outcome. Logging it as
+                # ``completed`` made "we read this source and it was fine"
+                # indistinguishable from "this source does not exist"
+                # (invariant 7). The row is always written — a skipped read is
+                # never an absent row.
+                status=(
+                    TOOL_ATTEMPT_COMPLETED if available else TOOL_ATTEMPT_UNAVAILABLE
+                ),
+                input={},
+                artifact_refs=list(output.get("artifact_refs") or []),
+                output_hash=_json_hash(output),
+                omissions=list(output.get("omissions") or []),
+                latency_ms=int((time.monotonic() - started) * 1000),
+            )
+        )
+        await session.commit()
+        if not await renew_lease(session, run_id=run_id, owner=owner):
+            return None
+    return evidence
+
+
 async def _complete_claimed_run(
     session: AsyncSession,
     *,
@@ -489,35 +509,6 @@ async def _handle_provider_failure(
         run.error_detail = ""
         run.completed_at = _utcnow()
     _clear_lease(run)
-    await session.commit()
-
-
-async def _record_tool_failure(
-    session: AsyncSession,
-    *,
-    run: AgentTaskRun,
-    ordinal: int,
-    tool_name: str,
-    latency_ms: int,
-) -> None:
-    session.add(
-        AgentToolAttempt(
-            workspace_id=run.workspace_id,
-            project_id=run.project_id,
-            task_run_id=run.id,
-            run_attempt=run.attempt_count,
-            ordinal=ordinal,
-            tool_name=tool_name,
-            tool_version=TOOL_VERSION,
-            status=TOOL_ATTEMPT_FAILED,
-            input={},
-            artifact_refs=[],
-            output_hash="",
-            omissions=[],
-            error_code="tool_failed",
-            latency_ms=latency_ms,
-        )
-    )
     await session.commit()
 
 

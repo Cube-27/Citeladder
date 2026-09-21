@@ -15,9 +15,11 @@ from app.api.deps import (
     require_active_workspace_run,
     require_active_workspace_write,
 )
+from app.api.usage_limits import enforce_workspace_request
 from app.connectors.agent.client import AgentNotConfiguredError
 from app.connectors.agent.factory import create_model_gateway
 from app.connectors.agent.gateway import ModelGateway
+from app.core.config.abuse import abuse_settings
 from app.core.errors import ApiException
 from app.core.http_errors import raise_not_found
 from app.domain.commerce.competitors import (
@@ -232,6 +234,14 @@ async def buyer_prompts_generate_endpoint(
             "commerce_prompt_generation_unavailable",
             "No structured model is configured; manual prompt entry remains available.",
         ) from exc
+    await enforce_workspace_request(
+        session,
+        workspace_id=ctx.workspace_id,
+        operation="agent.provider_call",
+        limit=abuse_settings.agent_call_limit,
+        window_seconds=abuse_settings.agent_call_window_seconds,
+        amount=len(payload.targets),
+    )
     try:
         return await generate_buyer_prompts(
             session,

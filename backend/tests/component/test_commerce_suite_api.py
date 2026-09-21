@@ -12,10 +12,12 @@ from app.connectors.agent.gateway import FakeModelGateway
 from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.provider_catalog import ERROR_SERVER
 from app.domain.commerce.prompts import (
+    BuyerPromptGenerationUnavailable,
     _project_with_brand,
     _target_context,
     _target_vocabulary,
     add_manual_buyer_prompt,
+    generate_buyer_prompts,
 )
 from app.domain.commerce.schemas import CommerceTarget
 from app.domain.commerce.service import CommerceNotFoundError
@@ -415,3 +417,76 @@ async def test_buyer_prompt_provider_failure_is_service_unavailable(
 
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "commerce_prompt_generation_unavailable"
+
+
+@pytest.mark.asyncio
+async def test_buyer_prompt_generation_charges_each_target_and_bounds_fanout(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _register(client, "commerce-quota@example.com")
+    project = await _project(client)
+    calls: list[int] = []
+
+    async def capture_limit(*_args, **kwargs):
+        calls.append(kwargs["amount"])
+
+    async def generate(*_args, **_kwargs):
+        return []
+
+    monkeypatch.setattr(
+        "app.api.commerce.create_model_gateway", lambda: FakeModelGateway()
+    )
+    monkeypatch.setattr("app.api.commerce.enforce_workspace_request", capture_limit)
+    monkeypatch.setattr("app.api.commerce.generate_buyer_prompts", generate)
+    url = f"/api/v1/projects/{project['id']}/commerce/buyer-prompts/generate"
+    target = {"kind": "product", "id": str(uuid.uuid4())}
+    valid = await client.post(url, json={"targets": [target, target], "count": 2})
+    assert valid.status_code == 201
+    assert calls == [2]
+    rejected = await client.post(url, json={"targets": [target] * 11, "count": 2})
+    assert rejected.status_code == 422
+    assert calls == [2]
+
+
+@pytest.mark.asyncio
+async def test_buyer_prompt_model_call_has_no_open_read_transaction(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await _register(client, "commerce-transaction@example.com")
+    project = await _project(client)
+    imported = await client.post(
+        f"/api/v1/projects/{project['id']}/commerce/catalog/import",
+        json={
+            "filename": "catalog.csv",
+            "content_type": "text/csv",
+            "content": (
+                "canonical_url,name,brand,category\n"
+                "https://shop.example/products/one,Acme One,Acme,Shoes\n"
+            ),
+        },
+    )
+    assert imported.status_code == 201
+    target = CommerceTarget(
+        kind="product", id=uuid.UUID(imported.json()["row_outcomes"][0]["product_id"])
+    )
+    async with session_factory() as session:
+        project_row = await session.get(Project, uuid.UUID(project["id"]))
+        assert project_row is not None
+
+        class FailingGateway(FakeModelGateway):
+            async def complete_structured_json(self, **_kwargs):
+                assert not session.in_transaction()
+                raise ProviderError(
+                    "probe failed", error_code=ERROR_SERVER, retryable=True
+                )
+
+        with pytest.raises(BuyerPromptGenerationUnavailable):
+            await generate_buyer_prompts(
+                session,
+                workspace_id=project_row.workspace_id,
+                project_id=project_row.id,
+                targets=[target],
+                count=2,
+                gateway=FailingGateway(),
+            )

@@ -25,7 +25,6 @@ from app.connectors.app_model_transport import (
     AppModelJsonTransport,
     CurlAppModelJsonTransport,
 )
-from app.connectors.search_surfaces.dataforseo import probe_credential
 from app.core.config.provider_catalog import (
     CREDENTIAL_SOURCE_BYOK,
     ERROR_PARSE,
@@ -73,6 +72,7 @@ from app.domain.providers.schemas import (
     ProviderConnectionUpdate,
     ProviderRouteResponse,
 )
+from app.domain.providers.search_surface_probe import run_search_surface_test
 from app.models.audit import ProviderCapacityBucket
 from app.models.provider import (
     ProviderConnection,
@@ -369,77 +369,6 @@ async def delete_connection(
         ) from exc
 
 
-async def _run_search_surface_test(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    connection: ProviderConnection,
-    logical_engine: str,
-    model: str,
-) -> ProviderConnectionTestResponse:
-    """Probe an observed search surface instead of asking a question.
-
-    A search surface has no prompt to send, so the LLM probe's whole shape —
-    a neutral prompt, a tiny output cap, retrieval disabled — has nothing to
-    act on. The equivalent liveness check is an authenticated call to an
-    endpoint that creates NO billable task, and it returns connection state
-    only: never balance, quota or any other account detail.
-
-    Everything after the call is identical to the LLM path on purpose, so one
-    test history and one ``last_test_status`` vocabulary cover both surfaces.
-    """
-    status = TEST_STATUS_OK
-    error_code = ""
-    detail = "Connection succeeded"
-    latency_ms: int | None = None
-
-    started = time.monotonic()
-    try:
-        secret = decrypt_secret(connection.api_key_encrypted)
-        result = await probe_credential(secret=secret, base_url=connection.base_url)
-        latency_ms = result.latency_ms
-    except ProviderError as exc:
-        status = TEST_STATUS_FAILED
-        error_code = exc.error_code
-        detail = str(exc)
-        latency_ms = int((time.monotonic() - started) * 1000)
-    except Exception as exc:  # noqa: BLE001 - any transport fault is a failure
-        status = TEST_STATUS_FAILED
-        error_code = ERROR_PARSE
-        detail = f"Unexpected error: {type(exc).__name__}"
-        latency_ms = int((time.monotonic() - started) * 1000)
-
-    tested_at = datetime.now(UTC)
-    session.add(
-        ProviderConnectionTest(
-            workspace_id=workspace_id,
-            connection_id=connection.id,
-            status=status,
-            error_code=error_code,
-            detail=detail[:1024],
-            latency_ms=latency_ms,
-            logical_engine=logical_engine,
-            transport_provider=connection.transport_provider,
-            transport_model=model,
-        )
-    )
-    connection.last_tested_at = tested_at
-    connection.last_test_status = status
-    await session.commit()
-
-    return ProviderConnectionTestResponse(
-        connection_id=connection.id,
-        status=status,
-        error_code=error_code,
-        detail=detail,
-        latency_ms=latency_ms,
-        logical_engine=logical_engine,
-        transport_provider=connection.transport_provider,
-        transport_model=model,
-        tested_at=tested_at,
-    )
-
-
 async def run_connection_test(
     session: AsyncSession,
     *,
@@ -470,14 +399,13 @@ async def run_connection_test(
             "This connection uses a retired transport and is historical and "
             "read-only; create a new direct connection instead."
         )
-    if connection.app_routes:
-        app_result = await probe_app_routes(
-            session,
-            connection=connection,
-            app_transport=app_transport or CurlAppModelJsonTransport(),
-        )
-        if app_result is not None:
-            return app_result
+    app_result = await probe_app_routes(
+        session,
+        connection=connection,
+        app_transport=app_transport or CurlAppModelJsonTransport(),
+    )
+    if app_result is not None:
+        return app_result
     _require_approved_endpoint(transport, connection.base_url)
     # Connectivity probes use the exact approved route.
     logical_engine = default_probe_engine(transport)
@@ -488,7 +416,7 @@ async def run_connection_test(
         break
 
     if is_search_surface(logical_engine):
-        return await _run_search_surface_test(
+        return await run_search_surface_test(
             session,
             workspace_id=workspace_id,
             connection=connection,
@@ -496,6 +424,11 @@ async def run_connection_test(
             model=model,
         )
 
+    connection_id_value = connection.id
+    revision = connection.credential_revision
+    api_key = decrypt_secret(connection.api_key_encrypted)
+    base_url = connection.base_url
+    await session.rollback()
     status = TEST_STATUS_OK
     error_code = ""
     detail = "Connection succeeded"
@@ -504,12 +437,11 @@ async def run_connection_test(
 
     started = time.monotonic()
     try:
-        api_key = decrypt_secret(connection.api_key_encrypted)
         adapter = build_adapter(
             logical_engine=logical_engine,
             transport_provider=transport,
             api_key=api_key,
-            base_url=connection.base_url,
+            base_url=base_url,
         )
         response = await adapter.execute(
             AnswerEngineRequest(
@@ -542,9 +474,16 @@ async def run_connection_test(
         latency_ms = int((time.monotonic() - started) * 1000)
 
     tested_at = datetime.now(UTC)
+    current_connection = await session.get(
+        ProviderConnection, connection_id_value, with_for_update=True
+    )
+    if current_connection is None or current_connection.credential_revision != revision:
+        status = TEST_STATUS_FAILED
+        error_code = "revision_changed"
+        detail = "Connection changed during probe"
     test_row = ProviderConnectionTest(
         workspace_id=workspace_id,
-        connection_id=connection.id,
+        connection_id=connection_id_value,
         status=status,
         error_code=error_code,
         detail=detail[:1024],
@@ -553,13 +492,14 @@ async def run_connection_test(
         transport_provider=transport,
         transport_model=resolved_model,
     )
-    session.add(test_row)
-    connection.last_tested_at = tested_at
-    connection.last_test_status = status
+    if current_connection is not None:
+        session.add(test_row)
+        current_connection.last_tested_at = tested_at
+        current_connection.last_test_status = status
     await session.commit()
 
     return ProviderConnectionTestResponse(
-        connection_id=connection.id,
+        connection_id=connection_id_value,
         status=status,
         error_code=error_code,
         detail=detail,

@@ -29,6 +29,14 @@ Capability, cancellation, lease ownership and exact BYOK route/key revisions
 are rechecked before I/O. Transactions end before network calls. Failures and
 expired work follow the configured retry/terminalization policy, and cancellation
 does not erase attempt evidence.
+The worker renews its lease between evidence steps and before narration for the
+full model timeout plus a configured margin. Reclaim of an expired run closes
+an unresolved model dispatch with unknown usage settlement before another run
+attempt can dispatch.
+If the historical rate is unavailable after dispatch, recovery settles within
+the reserved cap rather than treating an unknown provider outcome as free.
+Cancelled runs with a committed dispatch get the same reconciliation after
+the bounded narration deadline and lease margin if no late receipt arrives.
 
 ## Result contract
 

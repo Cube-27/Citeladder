@@ -63,6 +63,12 @@ rechecks cancellation and the authorized route before dispatch. Provider calls
 do not hold database locks. [Billing and entitlements](billing-entitlements.md)
 own credit reservations, release and debit; BYOK does not silently fall back to
 platform funding. Failed and cancelled work must retain attempt provenance.
+Cancellation before dispatch releases the platform hold. A lost dispatch is
+counted once and settled as unknown usage under the published bounded rate;
+cancelled in-flight calls are given a bounded receipt window before the same
+reconciliation. A platform retry reserves a fresh per-call hold. Repeated
+recovery does not create another debit or release. If a historical rate cannot
+be resolved after dispatch, settlement uses the finite cap frozen at admission.
 
 Try again reuses frozen request context; regeneration rebuilds context from
 current authorized evidence. They are intentionally different operations.

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -39,6 +39,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUBMISSION_UNCERTAIN,
     TASK_STATUS_SUCCEEDED,
     PostgresQueueSpec,
+    ReclaimAccounting,
 )
 from app.models.abuse import QueueWorkspaceTurn
 
@@ -93,9 +94,16 @@ class PostgresTaskQueue[
         self,
         session_factory: async_sessionmaker[AsyncSession],
         spec: PostgresQueueSpec[T],
+        *,
+        reclaim_accounting: (
+            Callable[[AsyncSession, T, datetime], Awaitable[ReclaimAccounting]] | None
+        ) = None,
     ) -> None:
         self._session_factory = session_factory
         self._spec: PostgresQueueSpec[T] = spec
+        self._reclaim_accounting: (
+            Callable[[AsyncSession, T, datetime], Awaitable[ReclaimAccounting]] | None
+        ) = reclaim_accounting
 
     @property
     def _model(self) -> type[T]:
@@ -616,15 +624,10 @@ class PostgresTaskQueue[
                         },
                     )
                     continue
-                # A reclaim IS a consumed attempt. `attempt_count` was only
-                # ever incremented by a worker's finalize, so a task whose
-                # executor died mid-run (crash, OOM, container stop) came back
-                # with the count still at zero and cycled
-                # running -> retry_wait -> running forever, never reaching a
-                # terminal status and never clearing the UI's "is running".
-                task.attempt_count += 1
-                if task.attempt_count >= task.max_attempts:
+                if await self._reclaim_is_terminal(session, task, now):
                     self._terminalize_expired(task, now=now)
+                    if self._reclaim_accounting is not None:
+                        await self._reclaim_accounting(session, task, now)
                     failed_task_ids.append(task.id)
                     parent_id = (
                         getattr(task, parent_attr, None) if parent_attr else None
@@ -648,3 +651,19 @@ class PostgresTaskQueue[
                 failed_task_ids=tuple(failed_task_ids),
                 failed_parent_ids=tuple(dict.fromkeys(failed_parent_ids)),
             )
+
+    async def _reclaim_is_terminal(
+        self, session: AsyncSession, task: T, now: datetime
+    ) -> bool:
+        # Most queues count a lost attempt here. Content already counted its
+        # durable dispatch and may need an unknown-outcome settlement.
+        accounting = (
+            await self._reclaim_accounting(session, task, now)
+            if self._reclaim_accounting is not None
+            else None
+        )
+        if accounting is None or not accounting.already_counted:
+            task.attempt_count += 1
+        return task.attempt_count >= task.max_attempts or (
+            accounting is not None and accounting.terminalize
+        )
