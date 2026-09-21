@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.connectors.agent.gateway import FakeModelGateway
 from app.core.config.entitlements import KEY_AI_CREDITS
 from app.domain.agent import service as agent_service
+from app.domain.agent import tool_attempts
 from app.domain.agent.model_attempts import reconcile_stale_cancelled_model_attempts
 from app.domain.agent.service import (
     _public_result,
@@ -387,6 +388,62 @@ async def test_late_tool_result_cannot_write_after_lease_takeover(
             ).all()
         )
     assert tool_attempts == []
+
+
+@pytest.mark.asyncio
+async def test_failed_tool_restarts_transaction_before_lease_fence(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client, "agent-failed-tool@example.com")
+    project_id = await _project(client)
+    created = await client.post(
+        "/api/v1/agent/tasks",
+        json={
+            "project_id": project_id,
+            "task_type": "explain",
+            "objective": "Explain persisted evidence.",
+        },
+        headers={"Idempotency-Key": "failed-tool"},
+    )
+    assert created.status_code == 201
+    run_id = uuid.UUID(created.json()["id"])
+    original_lock = tool_attempts.lock_owned_lease
+
+    async def lock_after_rollback(session, **kwargs):
+        assert not session.in_transaction()
+        return await original_lock(session, **kwargs)
+
+    monkeypatch.setattr(tool_attempts, "lock_owned_lease", lock_after_rollback)
+    async with session_factory() as session:
+        claimed = await claim_task(
+            session, owner="failed-tool-worker", lease_seconds=60
+        )
+        assert claimed is not None
+
+        async def failing_tool(*_args, **_kwargs):
+            await session.scalar(
+                select(AgentTaskRun.id).where(AgentTaskRun.id == run_id)
+            )
+            raise RuntimeError("evidence read failed")
+
+        monkeypatch.setattr(agent_service, "execute_tool", failing_tool)
+        await execute_claimed_task(
+            session, run=claimed, owner="failed-tool-worker", gateway=None
+        )
+    async with session_factory() as session:
+        attempts = list(
+            (
+                await session.scalars(
+                    select(AgentToolAttempt).where(
+                        AgentToolAttempt.task_run_id == run_id
+                    )
+                )
+            ).all()
+        )
+    assert len(attempts) == 1
+    assert attempts[0].status == "failed"
 
 
 @pytest.mark.asyncio

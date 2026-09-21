@@ -303,6 +303,53 @@ async def test_cancel_before_dispatch_releases_platform_hold(
 
 
 @pytest.mark.asyncio
+async def test_terminal_reclaim_reconciles_undispatched_hold_once(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        _workspace_id, generation_id, account_id = await _funded_generation(session)
+        row = await session.get(ContentGeneration, generation_id)
+        assert row is not None
+        row.max_attempts = 1
+        await session.commit()
+
+    callbacks = 0
+
+    async def account_once(session, row, now):
+        nonlocal callbacks
+        callbacks += 1
+        return await content_reclaim_accounting(session, row, now)
+
+    queue = PostgresTaskQueue(
+        session_factory, CONTENT_QUEUE_SPEC, reclaim_accounting=account_once
+    )
+    await queue.claim(owner="lost-worker", limit=1)
+    assert await queue.mark_running(task_id=generation_id, owner="lost-worker")
+    async with session_factory() as session:
+        await session.execute(
+            update(ContentGeneration)
+            .where(ContentGeneration.id == generation_id)
+            .values(lease_expires_at=datetime.now(UTC) - timedelta(seconds=1))
+        )
+        await session.commit()
+
+    outcome = await queue.release_expired_detailed()
+    async with session_factory() as session:
+        row = await session.get(ContentGeneration, generation_id)
+        usage = await consumable_usage(
+            session,
+            account_id=account_id,
+            capability_key=KEY_AI_CREDITS,
+            at=datetime.now(UTC),
+        )
+    assert callbacks == 1
+    assert outcome.failed_task_ids == (generation_id,)
+    assert row is not None
+    assert row.status == TASK_STATUS_FAILED
+    assert (usage.reserved, usage.debited) == (0, 0)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("policy_available", "expected_debit", "legacy_without_deadline"),
     [(True, 3, False), (False, 10, False), (True, 3, True)],

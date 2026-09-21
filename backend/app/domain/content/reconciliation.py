@@ -124,7 +124,10 @@ async def content_reclaim_accounting(
         session,
         row=row,
         now=now,
-        release_without_dispatch=row.status in TASK_TERMINAL_STATUSES,
+        release_without_dispatch=(
+            row.status in TASK_TERMINAL_STATUSES
+            or row.attempt_count + 1 >= row.max_attempts
+        ),
     )
     return ReclaimAccounting(
         already_counted=already_counted,

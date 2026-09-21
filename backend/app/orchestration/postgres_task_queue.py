@@ -619,10 +619,11 @@ class PostgresTaskQueue[
                 if self._divert_unreconciled_submission(task, now=now):
                     reclaimed += 1
                     continue
-                if await self._reclaim_is_terminal(session, task, now):
+                exhausted, accounting = await self._reclaim_is_terminal(
+                    session, task, now
+                )
+                if exhausted or (accounting is not None and accounting.terminalize):
                     self._terminalize_expired(task, now=now)
-                    if self._reclaim_accounting is not None:
-                        await self._reclaim_accounting(session, task, now)
                     failed_task_ids.append(task.id)
                     parent_id = getattr(task, parent_attr, None)
                     if parent_id is not None:
@@ -647,7 +648,7 @@ class PostgresTaskQueue[
 
     async def _reclaim_is_terminal(
         self, session: AsyncSession, task: T, now: datetime
-    ) -> bool:
+    ) -> tuple[bool, ReclaimAccounting | None]:
         # Most queues count a lost attempt here. Content already counted its
         # durable dispatch and may need an unknown-outcome settlement.
         accounting = (
@@ -657,6 +658,4 @@ class PostgresTaskQueue[
         )
         if accounting is None or not accounting.already_counted:
             task.attempt_count += 1
-        return task.attempt_count >= task.max_attempts or (
-            accounting is not None and accounting.terminalize
-        )
+        return task.attempt_count >= task.max_attempts, accounting

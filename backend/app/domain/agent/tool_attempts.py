@@ -19,14 +19,19 @@ async def record_tool_failure(
     tool_name: str,
     latency_ms: int,
 ) -> bool:
-    if await lock_owned_lease(session, run_id=run.id, owner=owner) is None:
+    run_id = run.id
+    workspace_id = run.workspace_id
+    project_id = run.project_id
+    run_attempt = run.attempt_count
+    await session.rollback()
+    if await lock_owned_lease(session, run_id=run_id, owner=owner) is None:
         return False
     session.add(
         AgentToolAttempt(
-            workspace_id=run.workspace_id,
-            project_id=run.project_id,
-            task_run_id=run.id,
-            run_attempt=run.attempt_count,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            task_run_id=run_id,
+            run_attempt=run_attempt,
             ordinal=ordinal,
             tool_name=tool_name,
             tool_version=TOOL_VERSION,
