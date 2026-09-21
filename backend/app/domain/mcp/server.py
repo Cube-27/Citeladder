@@ -33,10 +33,8 @@ from app.core.config.mcp import MCP_READ_SCOPE, MCP_SERVER_VERSION, mcp_settings
 from app.core.database import SessionLocal
 from app.domain.auth.service import resolve_session_user
 from app.domain.mcp.data import (
-    fetch_business_record,
     list_account_projects,
     project_business_context,
-    read_growth_evidence,
     search_business_context,
     skill_catalog,
 )
@@ -47,6 +45,9 @@ from app.domain.mcp.oauth_provider import (
     consent_csrf_valid,
     public_base_url,
 )
+from app.domain.mcp.retrieval import fetch_business_record
+from app.domain.mcp.schemas import EvidenceResponse, RetrievalDocument, SearchEnvelope
+from app.domain.mcp.tool_registrations import register_evidence_tools
 from app.models.user import User
 
 _READ_ONLY = ToolAnnotations(
@@ -132,12 +133,19 @@ mcp_server = MCPServer(
 @mcp_server.tool(
     name="list_projects",
     title="List CiteLadder projects",
-    description="List every project visible to the connected CiteLadder account.",
+    description=(
+        "List a bounded page of projects visible to the connected CiteLadder "
+        "account; follow next_cursor to enumerate the rest."
+    ),
     annotations=_READ_ONLY,
 )
-async def list_projects() -> dict[str, Any]:
+async def list_projects(
+    cursor: str | None = None, limit: int | None = None
+) -> EvidenceResponse:
     async with SessionLocal() as session:
-        return await list_account_projects(session)
+        return EvidenceResponse.model_validate(
+            await list_account_projects(session, cursor=cursor, limit=limit)
+        )
 
 
 @mcp_server.tool(
@@ -149,9 +157,13 @@ async def list_projects() -> dict[str, Any]:
     ),
     annotations=_READ_ONLY,
 )
-async def get_project_business_context(project_id: str) -> dict[str, Any]:
+async def get_project_business_context(
+    project_id: str, sections: list[str] | None = None
+) -> EvidenceResponse:
     async with SessionLocal() as session:
-        return await project_business_context(session, project_id)
+        return EvidenceResponse.model_validate(
+            await project_business_context(session, project_id, sections)
+        )
 
 
 @mcp_server.tool(
@@ -165,9 +177,11 @@ async def get_project_business_context(project_id: str) -> dict[str, Any]:
 )
 async def search(
     query: str, project_id: str | None = None, limit: int = 10
-) -> dict[str, Any]:
+) -> SearchEnvelope:
     async with SessionLocal() as session:
-        return await search_business_context(session, query, project_id, limit)
+        return SearchEnvelope.model_validate(
+            await search_business_context(session, query, project_id, limit)
+        )
 
 
 @mcp_server.tool(
@@ -181,9 +195,11 @@ async def search(
 )
 async def fetch(
     id: str,
-) -> dict[str, Any]:
+) -> RetrievalDocument:
     async with SessionLocal() as session:
-        return await fetch_business_record(session, id)
+        return RetrievalDocument.model_validate(
+            await fetch_business_record(session, id)
+        )
 
 
 def _evidence_tool(
@@ -200,169 +216,14 @@ def _evidence_tool(
     return decorator
 
 
-@_evidence_tool(
-    "read_site_health",
-    "Read latest Site Health",
-    "Read the latest persisted Site Health score and coverage projection for "
-    "a project.",
-)
-async def read_site_health(project_id: str) -> dict[str, Any]:
-    async with SessionLocal() as session:
-        return await read_growth_evidence(session, project_id, "site.read_snapshot")
-
-
-@_evidence_tool(
-    "read_demand",
-    "Read latest demand intelligence",
-    "Read the latest persisted demand snapshot, coverage, and comparison for "
-    "a project.",
-)
-async def read_demand(project_id: str) -> dict[str, Any]:
-    async with SessionLocal() as session:
-        return await read_growth_evidence(session, project_id, "demand.read_snapshot")
-
-
-@_evidence_tool(
-    "read_opportunities",
-    "Read ranked opportunities",
-    "Read the highest-priority current opportunities and their persisted "
-    "evidence references.",
-)
-async def read_opportunities(project_id: str) -> dict[str, Any]:
-    async with SessionLocal() as session:
-        return await read_growth_evidence(
-            session, project_id, "opportunities.read_ranked"
-        )
-
-
-@_evidence_tool(
-    "read_visibility_audit",
-    "Read latest visibility audit",
-    "Read the latest persisted AI visibility audit status, summary, and "
-    "evidence reference.",
-)
-async def read_visibility_audit(project_id: str) -> dict[str, Any]:
-    async with SessionLocal() as session:
-        return await read_growth_evidence(session, project_id, "audits.read_latest")
-
-
-@_evidence_tool(
-    "read_performance",
-    "Read Search Console performance",
-    "Read the persisted Search Console/GA4 performance projection for a "
-    "project: clicks, impressions, CTR, average position and their series "
-    "for a range, with an optional comparison window. Ranges are day, week, "
-    "month, 3_months, 6_months, last_synced, or custom with start_date and "
-    "end_date (ISO YYYY-MM-DD).",
-)
-async def read_performance(
-    project_id: str,
-    range: str | None = None,
-    granularity: str | None = None,
-    compare: str | None = None,
-    start_date: str | None = None,
-    end_date: str | None = None,
-) -> dict[str, Any]:
-    # ``start_date``/``end_date`` rather than the REST surface's from/to:
-    # ``from`` is a Python keyword, so a parameter of that name cannot exist
-    # here, and a trailing-underscore spelling is one a client would have to
-    # guess from the signature rather than the description.
-    async with SessionLocal() as session:
-        return await read_growth_evidence(
-            session,
-            project_id,
-            "performance.read_snapshot",
-            {
-                "range": range,
-                "granularity": granularity,
-                "compare": compare,
-                "from": start_date,
-                "to": end_date,
-            },
-        )
-
-
-@_evidence_tool(
-    "read_performance_table",
-    "Read a performance breakdown",
-    "Read one paged breakdown of the persisted performance projection: "
-    "query, page, country, device, search_appearance, day, bing_query or "
-    "bing_page. Pass the snapshot_id a performance read returned, or a range "
-    "(with start_date/end_date when the range is custom) to resolve it.",
-)
-async def read_performance_table(
-    project_id: str,
-    dimension: str | None = None,
-    snapshot_id: str | None = None,
-    range: str | None = None,
-    start_date: str | None = None,
-    end_date: str | None = None,
-    sort: str | None = None,
-    cursor: str | None = None,
-) -> dict[str, Any]:
-    async with SessionLocal() as session:
-        return await read_growth_evidence(
-            session,
-            project_id,
-            "performance.read_table",
-            {
-                "dimension": dimension,
-                "snapshot_id": snapshot_id,
-                "range": range,
-                # Forwarded so a custom range resolves the window the caller
-                # asked for; without them the resolver falls back to the
-                # latest snapshot and answers a different question.
-                "from": start_date,
-                "to": end_date,
-                "sort": sort,
-                "cursor": cursor,
-            },
-        )
-
-
-@_evidence_tool(
-    "read_ai_referrals",
-    "Read AI referral traffic",
-    "Read the persisted AI-referral projection for a project: sessions "
-    "referred by AI answer engines, their share of traffic, and the sources "
-    "behind them. Pass start_date and end_date (ISO YYYY-MM-DD) for an "
-    "explicit window.",
-)
-async def read_ai_referrals(
-    project_id: str,
-    range: str | None = None,
-    start_date: str | None = None,
-    end_date: str | None = None,
-) -> dict[str, Any]:
-    async with SessionLocal() as session:
-        return await read_growth_evidence(
-            session,
-            project_id,
-            "referrals.read_snapshot",
-            {"range": range, "from": start_date, "to": end_date},
-        )
-
-
-@_evidence_tool(
-    "read_integration_status",
-    "Read data connection status",
-    "Read which providers are connected to a project, which properties are "
-    "mapped, how far the history import has progressed, and how far its "
-    "coverage reaches. This is the read that explains why a projection is "
-    "empty.",
-)
-async def read_integration_status(project_id: str) -> dict[str, Any]:
-    async with SessionLocal() as session:
-        return await read_growth_evidence(
-            session, project_id, "integrations.read_status"
-        )
+register_evidence_tools(_evidence_tool)
 
 
 @mcp_server.tool(
     name="list_skills",
     title="List CiteLadder skills",
     description=(
-        "List the versioned content skills and bounded Growth Agent read capabilities."
+        "Inspect metadata for native content formats and supported read capabilities."
     ),
     annotations=_READ_ONLY,
 )
@@ -375,7 +236,7 @@ def list_skills() -> dict[str, Any]:
     name="citeladder-skills",
     title="CiteLadder skill catalog",
     description=(
-        "Versioned instructions for CiteLadder content formats and agent reads."
+        "Metadata for native CiteLadder content formats and read capabilities."
     ),
     mime_type="application/json",
 )
@@ -468,13 +329,15 @@ code {{ background: #f4f4f1; padding: 0.1rem 0.3rem; border-radius: 4px;
 button {{ margin-top: 1.75rem; width: 100%; padding: 0.75rem 1rem; border: 0;
   border-radius: 8px; background: #c15f3c; color: #fff; font: inherit;
   font-weight: 500; cursor: pointer; }}
+.deny {{ margin-top: 0.75rem; background: #e8e7e2; color: #2b2b30; }}
 </style>
 </head>
 <body>
 <main>
 <h1>Authorize MCP access</h1>
 <p><strong>{escape(pending.client_name)}</strong> is asking for read-only access
-to your CiteLadder account.</p>
+to projects available through your CiteLadder account. Project access changes
+when your workspace memberships change.</p>
 <h2>Requested scopes</h2>
 <ul>{scopes}</ul>
 <h2>Redirects to</h2>
@@ -482,7 +345,8 @@ to your CiteLadder account.</p>
 <form method="post" action="{_CONSENT_PATH}">
 <input type="hidden" name="transaction" value="{escape(transaction)}">
 <input type="hidden" name="csrf_token" value="{escape(csrf)}">
-<button type="submit">Approve access</button>
+<button type="submit" name="decision" value="approve">Approve access</button>
+<button class="deny" type="submit" name="decision" value="deny">Deny access</button>
 </form>
 </main>
 </body>
@@ -520,10 +384,16 @@ async def complete_browser_authorization(request: Request) -> Response:
         session_token, transaction, str(form.get("csrf_token") or "")
     ):
         return PlainTextResponse("Invalid consent token.", status_code=403)
+    decision = str(form.get("decision") or "")
+    if decision not in {"approve", "deny"}:
+        return PlainTextResponse("Explicit consent decision required.", status_code=403)
     try:
-        destination = await mcp_oauth_provider.complete_authorization(
-            transaction, uuid.UUID(str(user.id))
-        )
+        if decision == "deny":
+            destination = await mcp_oauth_provider.deny_authorization(transaction)
+        else:
+            destination = await mcp_oauth_provider.complete_authorization(
+                transaction, uuid.UUID(str(user.id))
+            )
     except PermissionError as exc:
         return PlainTextResponse(str(exc), status_code=403)
     return RedirectResponse(

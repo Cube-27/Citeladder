@@ -1,0 +1,1069 @@
+{
+  "access": "read_only",
+  "server_version": "1.1.0",
+  "tools": [
+    {
+      "description": "Fetch a full account-authorized record by a citeladder:// URI returned by search.",
+      "input_schema": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": ["id"],
+        "title": "fetchArguments",
+        "type": "object"
+      },
+      "name": "fetch",
+      "read_only": true,
+      "title": "Fetch a CiteLadder record"
+    },
+    {
+      "description": "Read the project profile, active prompt portfolio, Site Health, demand, opportunities, and latest visibility audit from persisted CiteLadder data.",
+      "input_schema": {
+        "properties": {
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "sections": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sections"
+          }
+        },
+        "required": ["project_id"],
+        "title": "get_project_business_contextArguments",
+        "type": "object"
+      },
+      "name": "get_project_business_context",
+      "read_only": true,
+      "title": "Get complete project business context"
+    },
+    {
+      "description": "List a bounded page of projects visible to the connected CiteLadder account; follow next_cursor to enumerate the rest.",
+      "input_schema": {
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit"
+          }
+        },
+        "title": "list_projectsArguments",
+        "type": "object"
+      },
+      "name": "list_projects",
+      "read_only": true,
+      "title": "List CiteLadder projects"
+    },
+    {
+      "description": "Inspect metadata for native content formats and supported read capabilities.",
+      "input_schema": {
+        "properties": {},
+        "title": "list_skillsArguments",
+        "type": "object"
+      },
+      "name": "list_skills",
+      "read_only": true,
+      "title": "List CiteLadder skills"
+    },
+    {
+      "description": "Read the persisted AI-referral projection for a project: sessions referred by AI answer engines, their share of traffic, and the sources behind them. Pass start_date and end_date (ISO YYYY-MM-DD) for an explicit window.",
+      "input_schema": {
+        "properties": {
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "End Date"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "range": {
+            "anyOf": [
+              {
+                "enum": ["day", "week", "month", "3_months", "6_months", "last_synced", "custom"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Range"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Start Date"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_ai_referralsArguments",
+        "type": "object"
+      },
+      "name": "read_ai_referrals",
+      "read_only": true,
+      "title": "Read AI referral traffic"
+    },
+    {
+      "description": "Read the latest persisted demand snapshot, coverage, and comparison for a project.",
+      "input_schema": {
+        "properties": {
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_demandArguments",
+        "type": "object"
+      },
+      "name": "read_demand",
+      "read_only": true,
+      "title": "Read latest demand intelligence"
+    },
+    {
+      "description": "Read which providers are connected to a project, which properties are mapped, how far the history import has progressed, and how far its coverage reaches. This is the read that explains why a projection is empty.",
+      "input_schema": {
+        "properties": {
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_integration_statusArguments",
+        "type": "object"
+      },
+      "name": "read_integration_status",
+      "read_only": true,
+      "title": "Read data connection status"
+    },
+    {
+      "description": "Read the highest-priority current opportunities and their persisted evidence references.",
+      "input_schema": {
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Status"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_opportunitiesArguments",
+        "type": "object"
+      },
+      "name": "read_opportunities",
+      "read_only": true,
+      "title": "Read ranked opportunities"
+    },
+    {
+      "description": "Read the persisted Search Console/GA4 performance projection for a project: clicks, impressions, CTR, average position and their series for a range, with an optional comparison window. Ranges are day, week, month, 3_months, 6_months, last_synced, or custom with start_date and end_date (ISO YYYY-MM-DD).",
+      "input_schema": {
+        "properties": {
+          "compare": {
+            "anyOf": [
+              {
+                "enum": ["none", "previous", "year_over_year", "custom"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Compare"
+          },
+          "compare_end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Compare End Date"
+          },
+          "compare_start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Compare Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "End Date"
+          },
+          "granularity": {
+            "anyOf": [
+              {
+                "enum": ["day", "week", "month"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Granularity"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "range": {
+            "anyOf": [
+              {
+                "enum": ["day", "week", "month", "3_months", "6_months", "last_synced", "custom"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Range"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Start Date"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_performanceArguments",
+        "type": "object"
+      },
+      "name": "read_performance",
+      "read_only": true,
+      "title": "Read Search Console performance"
+    },
+    {
+      "description": "Read one paged breakdown of the persisted performance projection: query, page, country, device, search_appearance, day, bing_query or bing_page. Pass the snapshot_id a performance read returned, or a range (with start_date/end_date when the range is custom) to resolve it.",
+      "input_schema": {
+        "properties": {
+          "compare_snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Compare Snapshot Id"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "dimension": {
+            "anyOf": [
+              {
+                "enum": [
+                  "query",
+                  "page",
+                  "country",
+                  "device",
+                  "search_appearance",
+                  "day",
+                  "bing_query",
+                  "bing_page"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Dimension"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "End Date"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Page Size"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "range": {
+            "anyOf": [
+              {
+                "enum": ["day", "week", "month", "3_months", "6_months", "last_synced", "custom"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Range"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Snapshot Id"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sort"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Start Date"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_performance_tableArguments",
+        "type": "object"
+      },
+      "name": "read_performance_table",
+      "read_only": true,
+      "title": "Read a performance breakdown"
+    },
+    {
+      "description": "Enumerate the complete persisted prompt portfolio with stable pagination, cohort, status, and generation provenance.",
+      "input_schema": {
+        "properties": {
+          "cohort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cohort"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "prompt_set_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Prompt Set Id"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_prompt_portfolioArguments",
+        "type": "object"
+      },
+      "name": "read_prompt_portfolio",
+      "read_only": true,
+      "title": "Read the prompt portfolio"
+    },
+    {
+      "description": "Read an exact saved query/page/date window. Missing windows remain unavailable and never fall back to another range.",
+      "input_schema": {
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query"
+          },
+          "resolution_outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Resolution Outcome"
+          },
+          "site_url_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Site Url Id"
+          },
+          "window_end": {
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": ["project_id", "window_start", "window_end"],
+        "title": "read_query_evidenceArguments",
+        "type": "object"
+      },
+      "name": "read_query_evidence",
+      "read_only": true,
+      "title": "Read page-linked query evidence"
+    },
+    {
+      "description": "Read bounded rows from one published dataset using its dataset-specific persisted grain. Aggregate backlink datasets are never presented as backlink edges.",
+      "input_schema": {
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "direction": {
+            "default": "asc",
+            "enum": ["asc", "desc"],
+            "title": "Direction",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "sort": {
+            "default": "id",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "required": ["project_id", "dataset_id"],
+        "title": "read_search_datasetArguments",
+        "type": "object"
+      },
+      "name": "read_search_dataset",
+      "read_only": true,
+      "title": "Read a Search Intelligence dataset"
+    },
+    {
+      "description": "Enumerate saved published Search Intelligence datasets, exact target/market scope, coverage, and acquisition status without acquiring data.",
+      "input_schema": {
+        "properties": {
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_search_intelligenceArguments",
+        "type": "object"
+      },
+      "name": "read_search_intelligence",
+      "read_only": true,
+      "title": "Read Search Intelligence availability"
+    },
+    {
+      "description": "Read the latest persisted Site Health score and coverage projection for a project.",
+      "input_schema": {
+        "properties": {
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_site_healthArguments",
+        "type": "object"
+      },
+      "name": "read_site_health",
+      "read_only": true,
+      "title": "Read latest Site Health"
+    },
+    {
+      "description": "Read page-level internal-link metrics and bounded captured neighbours from one concrete crawl. Aggregate rows are not individual edges.",
+      "input_schema": {
+        "properties": {
+          "crawl_id": {
+            "title": "Crawl Id",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "site_url_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Site Url Id"
+          }
+        },
+        "required": ["project_id", "crawl_id"],
+        "title": "read_site_linksArguments",
+        "type": "object"
+      },
+      "name": "read_site_links",
+      "read_only": true,
+      "title": "Read persisted internal-link evidence"
+    },
+    {
+      "description": "Read bounded page facts, final analysis references, issues, coverage, and applicability from one persisted crawl.",
+      "input_schema": {
+        "properties": {
+          "crawl_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Crawl Id"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit"
+          },
+          "page_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Page Kind"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Status"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_site_pagesArguments",
+        "type": "object"
+      },
+      "name": "read_site_pages",
+      "read_only": true,
+      "title": "Read persisted Site Health pages"
+    },
+    {
+      "description": "Read the latest persisted AI visibility audit status, summary, and evidence reference.",
+      "input_schema": {
+        "properties": {
+          "audit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Audit Id"
+          },
+          "completed_baseline": {
+            "default": false,
+            "title": "Completed Baseline",
+            "type": "boolean"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": ["project_id"],
+        "title": "read_visibility_auditArguments",
+        "type": "object"
+      },
+      "name": "read_visibility_audit",
+      "read_only": true,
+      "title": "Read latest visibility audit"
+    },
+    {
+      "description": "Read persisted answers, entity observations, citations, and query-fanout evidence for one concrete audit without rerunning a provider.",
+      "input_schema": {
+        "properties": {
+          "audit_id": {
+            "title": "Audit Id",
+            "type": "string"
+          },
+          "cohort": {
+            "default": "core",
+            "enum": ["core", "comparison"],
+            "title": "Cohort",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Engine"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "prompt_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Prompt Id"
+          }
+        },
+        "required": ["project_id", "audit_id"],
+        "title": "read_visibility_resultsArguments",
+        "type": "object"
+      },
+      "name": "read_visibility_results",
+      "read_only": true,
+      "title": "Read frozen visibility answers"
+    },
+    {
+      "description": "Read owner-computed source usage and denominators for one audit, keeping citation occurrence separate from inspected publisher-page presence.",
+      "input_schema": {
+        "properties": {
+          "audit_id": {
+            "title": "Audit Id",
+            "type": "string"
+          },
+          "cohort": {
+            "default": "core",
+            "enum": ["core", "comparison"],
+            "title": "Cohort",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Engine"
+          },
+          "level": {
+            "default": "domain",
+            "enum": ["domain", "url"],
+            "title": "Level",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": ["project_id", "audit_id"],
+        "title": "read_visibility_sourcesArguments",
+        "type": "object"
+      },
+      "name": "read_visibility_sources",
+      "read_only": true,
+      "title": "Read frozen visibility sources"
+    },
+    {
+      "description": "Search account-authorized projects, opportunities, and prompts. Returns stable record URIs that can be passed to fetch.",
+      "input_schema": {
+        "properties": {
+          "limit": {
+            "default": 10,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Id"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": ["query"],
+        "title": "searchArguments",
+        "type": "object"
+      },
+      "name": "search",
+      "read_only": true,
+      "title": "Search CiteLadder business context"
+    }
+  ]
+}

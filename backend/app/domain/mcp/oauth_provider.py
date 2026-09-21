@@ -299,6 +299,32 @@ class CiteLadderOAuthProvider:
                 state=request.state or None,
             )
 
+    async def deny_authorization(self, transaction: str) -> str:
+        """Consume one validated pending request and return its fixed redirect."""
+
+        now = _utcnow()
+        async with self._session_factory() as session:
+            request = await session.scalar(
+                select(McpAuthorizationRequest)
+                .where(
+                    McpAuthorizationRequest.transaction_hash
+                    == _token_hash(transaction),
+                    McpAuthorizationRequest.consumed_at.is_(None),
+                    McpAuthorizationRequest.expires_at > now,
+                )
+                .with_for_update()
+            )
+            if request is None:
+                raise PermissionError("Authorization request is invalid or expired")
+            request.consumed_at = now
+            await session.commit()
+            return construct_redirect_uri(
+                request.redirect_uri,
+                error="access_denied",
+                error_description="The account owner denied access",
+                state=request.state or None,
+            )
+
     async def load_authorization_code(
         self,
         client: OAuthClientInformationFull,

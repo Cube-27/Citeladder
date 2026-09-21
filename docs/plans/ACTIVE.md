@@ -23,6 +23,13 @@ additional queued assignment. Listed work is not authorization to execute it.
 
 ## Last completed
 
+[CiteLadder MCP implementation](CiteLadder_MCP_Implementation_Plan_Revised.md)
+— completed locally on 21 September 2026: read-only OAuth consent and denial,
+workspace-authorized discovery and retrieval, bounded paginated evidence tools,
+generated public tool reference, and current protocol compatibility. Focused
+component tests and the repository quality gate passed; external client
+acceptance remains release validation.
+
 [Search Intelligence with DataForSEO](citeladder-search-intelligence-dataforseo.md)
 — follow-up implemented locally on 20 September 2026: explicit scope, richer
 saved datasets, filtering/export, acquisition controls and defect fixes.

@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Final
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.integrations_contracts import MAPPING_STATUS_ACTIVE
@@ -142,27 +142,25 @@ async def _demand_snapshot(
 
 
 async def _ranked_opportunities(
-    context: ToolExecutionContext, _payload: dict[str, Any]
+    context: ToolExecutionContext, payload: dict[str, Any]
 ) -> dict[str, Any]:
+    statement, requested_limit = await _opportunity_selection(context, payload)
     rows = list(
         (
             await context.session.scalars(
-                select(Opportunity)
-                .where(
-                    Opportunity.workspace_id == context.workspace_id,
-                    Opportunity.project_id == context.project_id,
-                    Opportunity.superseded_at.is_(None),
-                )
-                .order_by(Opportunity.priority_score.desc(), Opportunity.id.asc())
-                .limit(MAX_ROADMAP_ITEMS + 1)
+                statement.order_by(
+                    Opportunity.priority_score.desc(), Opportunity.id.asc()
+                ).limit(requested_limit + 1)
             )
         ).all()
     )
-    emitted = rows[:MAX_ROADMAP_ITEMS]
+    emitted = rows[:requested_limit]
     if not emitted:
         return _unavailable("no_opportunities")
     items = [
         {
+            "id": str(row.id),
+            "record_uri": f"citeladder://opportunity/{row.id}",
             "rank": rank,
             "priority_score": row.priority_score,
             "severity": row.severity,
@@ -174,7 +172,7 @@ async def _ranked_opportunities(
         for rank, row in enumerate(emitted, start=1)
     ]
     omissions = (
-        [{"reason": "roadmap_item_limit", "count": len(rows) - len(emitted)}]
+        [{"reason": "roadmap_item_limit", "count": None}]
         if len(rows) > len(emitted)
         else []
     )
@@ -185,24 +183,74 @@ async def _ranked_opportunities(
         "artifact_refs": [
             {"kind": "opportunity", "id": str(row.id)} for row in emitted
         ],
+        "pagination": {
+            "returned_count": len(items),
+            "has_more": len(rows) > requested_limit,
+            "next_cursor": str(emitted[-1].id) if len(rows) > requested_limit else None,
+            "total_count": None,
+        },
         "omissions": omissions,
     }
 
 
-async def _latest_audit(
-    context: ToolExecutionContext, _payload: dict[str, Any]
-) -> dict[str, Any]:
-    row = await context.session.scalar(
-        select(Audit)
-        .where(
-            Audit.workspace_id == context.workspace_id,
-            Audit.project_id == context.project_id,
+async def _opportunity_selection(
+    context: ToolExecutionContext, payload: dict[str, Any]
+) -> tuple[Any, int]:
+    parsed_limit = _count(payload, "limit")
+    requested_limit = MAX_ROADMAP_ITEMS if parsed_limit is None else parsed_limit
+    if requested_limit < 1 or requested_limit > 200:
+        raise ValueError("limit must be between 1 and 200")
+    statement = select(Opportunity).where(
+        Opportunity.workspace_id == context.workspace_id,
+        Opportunity.project_id == context.project_id,
+        Opportunity.superseded_at.is_(None),
+    )
+    status = _text(payload, "status")
+    if status:
+        statement = statement.where(Opportunity.status == status)
+    cursor = _identifier(payload, "cursor")
+    if cursor:
+        cursor_row = await context.session.scalar(
+            select(Opportunity).where(
+                Opportunity.id == cursor,
+                Opportunity.workspace_id == context.workspace_id,
+                Opportunity.project_id == context.project_id,
+                Opportunity.superseded_at.is_(None),
+            )
         )
-        .order_by(Audit.created_at.desc(), Audit.id.desc())
-        .limit(1)
+        if cursor_row is None or (status and cursor_row.status != status):
+            raise ValueError("cursor is invalid for this opportunity selection")
+        statement = statement.where(
+            or_(
+                Opportunity.priority_score < cursor_row.priority_score,
+                and_(
+                    Opportunity.priority_score == cursor_row.priority_score,
+                    Opportunity.id > cursor_row.id,
+                ),
+            )
+        )
+    return statement, requested_limit
+
+
+async def _latest_audit(
+    context: ToolExecutionContext, payload: dict[str, Any]
+) -> dict[str, Any]:
+    statement = select(Audit).where(
+        Audit.workspace_id == context.workspace_id,
+        Audit.project_id == context.project_id,
+    )
+    audit_id = _identifier(payload, "audit_id")
+    if audit_id:
+        statement = statement.where(Audit.id == audit_id)
+    elif payload.get("completed_baseline") is True:
+        statement = statement.where(
+            Audit.status.in_(("completed", "partially_completed"))
+        )
+    row = await context.session.scalar(
+        statement.order_by(Audit.created_at.desc(), Audit.id.desc()).limit(1)
     )
     if row is None:
-        return _unavailable("no_audit")
+        return _unavailable("audit_not_found" if audit_id else "no_audit")
     return {
         "state": "available",
         "status": row.status,
@@ -213,6 +261,14 @@ async def _latest_audit(
             "failed": row.failed_count,
         },
         "analyzer_version": row.analyzer_version,
+        "created_at": row.created_at,
+        "started_at": row.started_at,
+        "completed_at": row.completed_at,
+        "measurement_identity": row.configuration,
+        "continuations": {
+            "results": "read_visibility_results",
+            "sources": "read_visibility_sources",
+        },
         "artifact_refs": [{"kind": "audit", "id": str(row.id)}],
         "omissions": [],
     }

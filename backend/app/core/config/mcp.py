@@ -11,8 +11,12 @@ from app.core.config import settings
 from app.core.config.dotenv import dotenv_sources
 
 MCP_READ_SCOPE = "citeladder:read"
-MCP_SERVER_VERSION = "1.0.0"
+MCP_SERVER_VERSION = "1.1.0"
 MCP_MAX_SEARCH_RESULTS = 20
+MCP_DEFAULT_LIST_LIMIT = 50
+MCP_MAX_LIST_LIMIT = 200
+MCP_MAX_DOCUMENT_BYTES = 256_000
+MCP_MAX_VISIBILITY_SOURCE_OFFSET = 20_000
 
 
 class McpSettings(BaseSettings):
