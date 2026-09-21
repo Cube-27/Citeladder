@@ -700,9 +700,12 @@ export function landingThemeViolations(root) {
   const violations = [];
   if (/#[\da-f]{3,8}\b/i.test(css))
     violations.push(`${LANDING_CSS}: component colours must use semantic tokens`);
-  if (/font-size:\s*(?:1[01](?:\.\d+)?|[0-9](?:\.\d+)?|\.\d+)px\b/.test(css))
+  if (/font-size\s*:\s*(?:1[01](?:\.\d+)?|[0-9](?:\.\d+)?|\.\d+)px\b/i.test(css))
     violations.push(`${LANDING_CSS}: rendered text must be at least 12px`);
-  if (/transition:\s*all\b/.test(css))
+  const transitionDeclarations = css.matchAll(
+    /(?:^|[;{])\s*transition(?:-property)?\s*:\s*([^;{}]*)/gi,
+  );
+  if ([...transitionDeclarations].some(([, value]) => /(?:^|[\s,])all(?=$|[\s,])/i.test(value)))
     violations.push(`${LANDING_CSS}: transitions must name their properties`);
   return violations;
 }

@@ -321,8 +321,6 @@ export function PlatformExplorer({
   selected,
   selectModule,
 }: Readonly<{ selected: ModuleId; selectModule: (module: ModuleId) => void }>) {
-  const module = MODULES.find((item) => item.id === selected) ?? MODULES[1];
-  const Preview = PREVIEWS[selected];
   return (
     <section className="cl-section cl-platform" id="see-it">
       <span className="cl-anchor" id="platform" />
@@ -338,35 +336,40 @@ export function PlatformExplorer({
             className="cl-module-tabs"
             fill
           />
-          <TabPanel value={selected} className="cl-module-body">
-            <div className="cl-module-copy">
-              <span className="cl-overline">{module.eyebrow}</span>
-              <h3>{module.title}</h3>
-              <p>{module.body}</p>
-              <ul>
-                {module.points.map((point) => (
-                  <li key={point}>
-                    <Check size={16} aria-hidden />
-                    {point}
-                  </li>
-                ))}
-              </ul>
-              <a
-                className="cl-text-link"
-                href={DEMO_HREF}
-                {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
-              >
-                {DEMO_CTA} <ArrowUpRight size={16} aria-hidden />
-              </a>
-            </div>
-            <div className="cl-product-card">
-              <div className="cl-window-bar">
-                <Grid2X2 size={14} aria-hidden />
-                Zernovelle / {module.label}
-              </div>
-              <Preview />
-            </div>
-          </TabPanel>
+          {MODULES.map((item) => {
+            const Preview = PREVIEWS[item.id];
+            return (
+              <TabPanel key={item.id} value={item.id} forceMount className="cl-module-body">
+                <div className="cl-module-copy">
+                  <span className="cl-overline">{item.eyebrow}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                  <ul>
+                    {item.points.map((point) => (
+                      <li key={point}>
+                        <Check size={16} aria-hidden />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    className="cl-text-link"
+                    href={DEMO_HREF}
+                    {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
+                  >
+                    {DEMO_CTA} <ArrowUpRight size={16} aria-hidden />
+                  </a>
+                </div>
+                <div className="cl-product-card">
+                  <div className="cl-window-bar">
+                    <Grid2X2 size={14} aria-hidden />
+                    Zernovelle / {item.label}
+                  </div>
+                  <Preview />
+                </div>
+              </TabPanel>
+            );
+          })}
         </TabsRoot>
       </div>
     </section>
@@ -413,10 +416,10 @@ export function HeroPreview() {
           </div>
           <TabsRoot value={selected} onValueChange={setSelected}>
             <TabsBar items={tabs} ariaLabel="Preview view" className="cl-hero-preview-tabs" />
-            <TabPanel value="trends">
+            <TabPanel value="trends" forceMount>
               <HeroDashboardPreview />
             </TabPanel>
-            <TabPanel value="sources">
+            <TabPanel value="sources" forceMount>
               <SourcesPreview />
             </TabPanel>
           </TabsRoot>

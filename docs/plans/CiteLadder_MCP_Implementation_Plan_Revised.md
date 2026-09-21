@@ -98,6 +98,7 @@ Every evidence response must make the following inspectable:
 | Identity | Authorized project; snapshot/audit/crawl/dataset ID; each item’s own stable ID. |
 | Observation time | Capture/import/measurement time and actual data window. Distinct from request/retrieval time. |
 | Scope | Returned market, language, device, search type, engine/surface and cohort where relevant. Unsupported dimensions stay absent/unknown, not invented defaults. |
+| Applicability | Mark field groups as `applicable` or `not_applicable` for the selected tool and record kind. Applicability is schema-defined, not inferred from a missing value. |
 | State | Available, partial, unavailable or failed, with the product owner’s reason. Observed zero remains a number, not a missing-data state. |
 | Coverage | Population/eligible denominator when known; observed count; truncation and sampling limits. |
 | Pagination | `next_cursor`, `has_more`, returned count and exact total only when actually known. |
@@ -105,6 +106,8 @@ Every evidence response must make the following inspectable:
 | Follow-through | A resolvable `record_uri` or explicit `retrievable: false` with reason. A UUID alone is not a successful evidence fetch. |
 
 Use object results for broad client compatibility. Typed return models should drive output schemas; inspect the actual SDK’s wire result to confirm matching `structuredContent` and JSON text compatibility. A Python `dict[str, Any]` does not itself prove that structured content is missing, but it gives little schema guidance. [W01, W04]
+
+Define applicability explicitly in the typed responses for `get_project_business_context`, `read_integration_status` and the project form of `fetch_business_record`. For each tool, mark identity, coverage, pagination and follow-through groups as applicable or `not_applicable`; identity further declares which of snapshot, audit, crawl and dataset IDs apply. An applicable field whose evidence is missing remains `unavailable` with its reason, never `not_applicable`.
 
 Recommended transport bounds for new list adapters: default 50 rows, maximum 200, capped lower when the existing owner is stricter; configure these centrally. Use existing cursor owners where present. Add stable ID tie-breakers and freeze selection identities. Protect serialized responses with a configured byte bound; if a record exceeds it, return explicit completeness information and server-generated part references rather than silently cutting text or relying on client truncation. These are proposed engineering bounds, not SEO rules.
 

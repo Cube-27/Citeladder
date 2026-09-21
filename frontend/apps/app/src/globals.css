@@ -1062,7 +1062,7 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-danger-bg: rgb(243 151 158 / 13%);
   --color-danger-border: rgb(243 151 158 / 38%);
   --color-danger-text: #f6abb1;
-  --color-danger-fg: #fff;
+  --color-danger-fg: #350b10;
   --color-info: #8ad4e1;
   --color-info-bg: rgb(138 212 225 / 13%);
   --color-info-border: rgb(138 212 225 / 38%);
