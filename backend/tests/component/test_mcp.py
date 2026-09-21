@@ -122,12 +122,21 @@ async def test_oauth_grant_is_account_scoped_and_revocable(
         async with session_factory() as session:
             visible = await list_account_projects(session)
             context = await project_business_context(session, str(project.id))
+            empty_context = await project_business_context(
+                session, str(project.id), sections=[]
+            )
+            bounded_search = await search_business_context(
+                session, project.name, limit=1
+            )
             with pytest.raises(LookupError, match="not found"):
                 await project_business_context(session, str(outsider_project.id))
     finally:
         auth_context_var.reset(context_token)
     assert [item["id"] for item in visible["projects"]] == [str(project.id)]
     assert context["project"]["id"] == str(project.id)
+    assert empty_context["evidence"] == {}
+    assert empty_context["active_prompts"] == []
+    assert bounded_search["pagination"]["has_more"] is False
     assert set(context["evidence"]) == {
         "site.read_snapshot",
         "demand.read_snapshot",
@@ -429,9 +438,19 @@ async def test_browser_consent_requires_an_explicit_approval(
     csrf = re.search(r'name="csrf_token" value="([^"]+)"', page.text)
     assert csrf is not None
     assert csrf.group(1) == consent_csrf_token(session_token, transaction)
-    approved = await client.post(
+    missing_decision = await client.post(
         "/mcp/oauth/consent",
         data={"transaction": transaction, "csrf_token": csrf.group(1)},
+        follow_redirects=False,
+    )
+    assert missing_decision.status_code == 403
+    approved = await client.post(
+        "/mcp/oauth/consent",
+        data={
+            "transaction": transaction,
+            "csrf_token": csrf.group(1),
+            "decision": "approve",
+        },
         follow_redirects=False,
     )
     assert approved.status_code == 303

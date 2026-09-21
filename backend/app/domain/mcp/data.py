@@ -125,7 +125,7 @@ _CONTEXT_SECTIONS = {
 
 
 def _context_sections(sections: list[str] | None) -> set[str]:
-    selected = set(sections or _CONTEXT_SECTIONS)
+    selected = set(_CONTEXT_SECTIONS if sections is None else sections)
     unknown = selected - _CONTEXT_SECTIONS
     if unknown:
         raise ValueError(
@@ -515,7 +515,7 @@ async def search_business_context(
         "count": len(results),
         "pagination": {
             "returned_count": len(results),
-            "has_more": len(results) == bounded_limit,
+            "has_more": False,
             "next_cursor": None,
             "total_count": None,
         },

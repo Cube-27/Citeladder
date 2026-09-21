@@ -235,6 +235,21 @@ async def get_pages(
     return {"items": items, "next_cursor": next_cursor, "root_errors": root_errors}
 
 
+async def get_current_page_analysis_ids(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    crawl_id: uuid.UUID,
+    site_url_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, uuid.UUID]:
+    """Resolve current analysis identities using Site Health's own selection."""
+    await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
+    analyses = await _latest_analysis_by_site_url(
+        session, crawl_id=crawl_id, site_url_ids=site_url_ids
+    )
+    return {site_url_id: analysis.id for site_url_id, analysis in analyses.items()}
+
+
 # =========================================================================
 # Page detail (persisted facts/delivery/scores/issues/provenance; no network)
 # =========================================================================

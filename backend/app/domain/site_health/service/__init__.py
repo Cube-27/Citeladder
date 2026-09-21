@@ -65,6 +65,7 @@ from app.domain.site_health.service.lifecycle import (
     load_events,
 )
 from app.domain.site_health.service.overview import get_overview
+from app.domain.site_health.service.pages import get_current_page_analysis_ids
 from app.domain.site_health.service.presentation import (
     _score_summary,
     crawl_count_disclosure,
@@ -98,6 +99,7 @@ __all__ = [
     "get_changes_summary",
     "get_content_handoff",
     "get_crawl_summary",
+    "get_current_page_analysis_ids",
     "get_dashboard",
     "get_entitlement_view",
     "get_grouped_issue_history",

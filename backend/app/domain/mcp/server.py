@@ -381,8 +381,11 @@ async def complete_browser_authorization(request: Request) -> Response:
         session_token, transaction, str(form.get("csrf_token") or "")
     ):
         return PlainTextResponse("Invalid consent token.", status_code=403)
+    decision = str(form.get("decision") or "")
+    if decision not in {"approve", "deny"}:
+        return PlainTextResponse("Explicit consent decision required.", status_code=403)
     try:
-        if str(form.get("decision") or "approve") == "deny":
+        if decision == "deny":
             destination = await mcp_oauth_provider.deny_authorization(transaction)
         else:
             destination = await mcp_oauth_provider.complete_authorization(

@@ -55,7 +55,7 @@ const parameterNames = (schema: { properties?: Record<string, unknown> }) =>
               </div>
               <div class="grid gap-3">
                 <h3 class="text-foreground text-lg font-medium">Claude Code</h3>
-                <pre class="border-border-subtle bg-background-alt overflow-x-auto rounded-[var(--radius-control)] border p-4 text-sm"><code class="font-mono">{`claude mcp add --transport http citeladder ${mcpEndpoint}`}</code></pre>
+                <pre class="border-border-subtle bg-background-alt overflow-x-auto rounded-[var(--radius-control)] border p-4 text-sm"><code class="font-mono">{`claude mcp add --transport http --scope user citeladder ${mcpEndpoint}`}</code></pre>
                 <p>Run <code>/mcp</code> in Claude Code and complete the browser sign-in.</p>
               </div>
               <p>These commands describe the supported Streamable HTTP and OAuth setup. Client availability still depends on the version and policies installed in your environment.</p>

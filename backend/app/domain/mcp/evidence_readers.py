@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.mcp import MCP_MAX_VISIBILITY_SOURCE_OFFSET
 from app.domain.analysis.evidence import get_visibility_evidence
 from app.domain.analysis.source_projection import get_visibility_sources
 from app.domain.demand.query_evidence_reads import (
@@ -274,8 +275,14 @@ async def read_site_pages(
         sort="url",
     )
     items = result["items"]
+    analysis_ids = await site_health_service.get_current_page_analysis_ids(
+        session,
+        workspace_id=project.workspace_id,
+        crawl_id=crawl.id,
+        site_url_ids=[item["site_url_id"] for item in items],
+    )
     for item in items:
-        analysis_id = item.get("analysis_id")
+        analysis_id = analysis_ids.get(item["site_url_id"])
         item["id"] = str(analysis_id or item["site_url_id"])
         item["record_uri"] = (
             f"citeladder://site_page/{analysis_id}" if analysis_id else None
@@ -470,6 +477,8 @@ async def read_visibility_sources(
         offset = int(_cursor_decode(cursor, 1)[0]) if cursor else 0
     except ValueError as exc:
         raise ValueError("audit_id or cursor is invalid") from exc
+    if offset < 0 or offset > MCP_MAX_VISIBILITY_SOURCE_OFFSET:
+        raise ValueError("cursor offset is outside the supported range")
     response = await get_visibility_sources(
         session,
         workspace_id=project.workspace_id,

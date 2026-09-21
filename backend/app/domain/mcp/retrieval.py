@@ -247,7 +247,7 @@ async def _resolve_site_page(
             site_url_id=analysis.site_url_id,
         )
         for issue in record.get("issues", []):
-            issue_id = issue.get("id")
+            issue_id = issue.get("occurrence_id")
             if issue_id:
                 issue["record_uri"] = f"citeladder://site_issue/{issue_id}"
         title = record.get("title") or record.get("display_url") or title
