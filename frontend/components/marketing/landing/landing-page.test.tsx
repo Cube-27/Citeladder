@@ -20,6 +20,11 @@ describe('LandingPage', () => {
     render(<LandingPage />);
 
     const tabs = screen.getByRole('tablist', { name: 'CiteLadder capabilities' });
+    for (const tab of within(tabs).getAllByRole('tab')) {
+      const panelId = tab.getAttribute('aria-controls');
+      expect(panelId).toBeTruthy();
+      expect(document.getElementById(panelId!)).toBeInTheDocument();
+    }
     const sources = within(tabs).getByRole('tab', { name: /sources/i });
     expect(sources).toHaveTextContent('Sources');
     expect(sources).toHaveAttribute('aria-selected', 'true');

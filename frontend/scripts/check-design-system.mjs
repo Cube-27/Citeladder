@@ -6,6 +6,7 @@ import {
   nestedCardViolations,
   directRadixImportViolations,
   productContractViolations,
+  landingThemeViolations,
   productControlViolations,
   productUiSourceViolations,
   standalonePlaceholderViolations,
@@ -46,7 +47,6 @@ for (const path of files(root)) {
     ['search', 'ify'].join(''),
     ['--', 'ds-'].join(''),
     ['--', 'mkt-'].join(''),
-    ['data', '-theme'].join(''),
     ['Theme', 'Toggle'].join(''),
     ['Public', ' Sans'].join(''),
     ['Public', '_Sans'].join(''),
@@ -103,6 +103,7 @@ violations.push(
   ...websiteContractViolations(root),
   ...textContrastViolations(root),
   ...productContractViolations(root),
+  ...landingThemeViolations(root),
 );
 
 if (violations.length) {

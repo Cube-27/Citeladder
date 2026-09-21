@@ -54,31 +54,25 @@ export const HERO_SOURCE_MIX = [
 
 export const CAPABILITIES = [
   {
-    number: '01',
     label: 'BRAND PRESENCE',
     title: 'AI visibility',
     body: 'Brand mentions, positions and competitor presence across tracked prompts.',
     action: 'Visibility analysis',
     tab: 'visibility',
-    tone: 'blue',
   },
   {
-    number: '02',
     label: 'CITATION CONTEXT',
     title: 'Source intelligence',
     body: 'Cited domains, URLs and source patterns behind recorded AI answers.',
     action: 'Source analysis',
     tab: 'sources',
-    tone: 'sand',
   },
   {
-    number: '03',
     label: 'WEBSITE READINESS',
     title: 'Site Health',
     body: 'Technical and AEO findings supported by page-level crawl evidence.',
     action: 'Website analysis',
     tab: 'health',
-    tone: 'rose',
   },
 ] as const;
 
@@ -166,6 +160,27 @@ export const INTEGRATIONS = [
   ['KEY', 'Model providers', 'Configured OpenAI, Google and Anthropic accounts.'],
   ['MCP', 'MCP', 'Read-only project context in compatible AI assistants.'],
   ['↓', 'Reports & exports', 'Documented findings for analysis and team reporting.'],
+] as const;
+
+export const TEAMS = [
+  [
+    'Brand & growth',
+    'Brand presence, competitor comparisons and citation patterns across relevant buyer questions.',
+    'Brand performance',
+    'visibility',
+  ],
+  [
+    'Search & web',
+    'Technical findings, page readiness and search demand for prioritizing website improvements.',
+    'Website intelligence',
+    'health',
+  ],
+  [
+    'Content & editorial',
+    'Source-backed briefs, drafts and structured data informed by observed content gaps.',
+    'Content development',
+    'content',
+  ],
 ] as const;
 
 export const FAQS = [

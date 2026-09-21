@@ -1,38 +1,12 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useState } from 'react';
 import { ArrowUpRight, Check, Grid2X2, Search } from 'lucide-react';
 
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { MODULES, SOURCE_ROWS, type ModuleId } from './landing-data';
 import { HeroDashboardPreview } from './landing-hero-dashboard';
 
 type SourceView = 'domains' | 'urls';
-
-function onTabKeyDown(
-  event: KeyboardEvent<HTMLButtonElement>,
-  ids: readonly string[],
-  select: (id: string) => void,
-) {
-  const current = ids.indexOf(event.currentTarget.id);
-  let next = -1;
-  switch (event.key) {
-    case 'ArrowRight':
-      next = (current + 1) % ids.length;
-      break;
-    case 'ArrowLeft':
-      next = (current - 1 + ids.length) % ids.length;
-      break;
-    case 'Home':
-      next = 0;
-      break;
-    case 'End':
-      next = ids.length - 1;
-      break;
-  }
-  if (next < 0) return;
-  event.preventDefault();
-  select(ids[next]);
-  document.getElementById(ids[next])?.focus();
-}
 
 function SourceTable({ view }: Readonly<{ view: SourceView }>) {
   return (
@@ -347,71 +321,56 @@ export function PlatformExplorer({
   selected,
   selectModule,
 }: Readonly<{ selected: ModuleId; selectModule: (module: ModuleId) => void }>) {
-  const module = MODULES.find((item) => item.id === selected) ?? MODULES[1];
-  const Preview = PREVIEWS[selected];
-  const ids = MODULES.map((item) => `cl-module-tab-${item.id}`);
-  const select = (id: string) => selectModule(id.replace('cl-module-tab-', '') as ModuleId);
   return (
     <section className="cl-section cl-platform" id="see-it">
       <span className="cl-anchor" id="platform" />
       <div className="cl-wrap">
-        <span className="cl-eyebrow">The CiteLadder platform</span>
         <div className="cl-section-head">
           <h2>Connected capabilities. Consistent context.</h2>
           <p>Measurement, diagnosis and content work remain accessible within the same project.</p>
         </div>
-        <div className="cl-module-tabs" role="tablist" aria-label="CiteLadder capabilities">
-          {MODULES.map((item) => (
-            <button
-              type="button"
-              key={item.id}
-              id={`cl-module-tab-${item.id}`}
-              role="tab"
-              aria-controls="cl-module-panel"
-              aria-selected={selected === item.id}
-              tabIndex={selected === item.id ? 0 : -1}
-              onClick={() => selectModule(item.id)}
-              onKeyDown={(event) => onTabKeyDown(event, ids, select)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <div
-          id="cl-module-panel"
-          role="tabpanel"
-          aria-labelledby={`cl-module-tab-${selected}`}
-          tabIndex={0}
-          className="cl-module-body"
-        >
-          <div className="cl-module-copy">
-            <span className="cl-overline">{module.eyebrow}</span>
-            <h3>{module.title}</h3>
-            <p>{module.body}</p>
-            <ul>
-              {module.points.map((point) => (
-                <li key={point}>
-                  <Check size={16} aria-hidden />
-                  {point}
-                </li>
-              ))}
-            </ul>
-            <a
-              className="cl-text-link"
-              href={DEMO_HREF}
-              {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
-            >
-              {DEMO_CTA} <ArrowUpRight size={16} aria-hidden />
-            </a>
-          </div>
-          <div className="cl-product-card">
-            <div className="cl-window-bar">
-              <Grid2X2 size={14} aria-hidden />
-              Zernovelle / {module.label}
-            </div>
-            <Preview />
-          </div>
-        </div>
+        <TabsRoot value={selected} onValueChange={selectModule}>
+          <TabsBar
+            items={MODULES.map((item) => ({ value: item.id, label: item.label }))}
+            ariaLabel="CiteLadder capabilities"
+            className="cl-module-tabs"
+            fill
+          />
+          {MODULES.map((item) => {
+            const Preview = PREVIEWS[item.id];
+            return (
+              <TabPanel key={item.id} value={item.id} forceMount className="cl-module-body">
+                <div className="cl-module-copy">
+                  <span className="cl-overline">{item.eyebrow}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                  <ul>
+                    {item.points.map((point) => (
+                      <li key={point}>
+                        <Check size={16} aria-hidden />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    className="cl-text-link"
+                    href={DEMO_HREF}
+                    {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
+                  >
+                    {DEMO_CTA} <ArrowUpRight size={16} aria-hidden />
+                  </a>
+                </div>
+                <div className="cl-product-card">
+                  <div className="cl-window-bar">
+                    <Grid2X2 size={14} aria-hidden />
+                    Zernovelle / {item.label}
+                  </div>
+                  <Preview />
+                </div>
+              </TabPanel>
+            );
+          })}
+        </TabsRoot>
       </div>
     </section>
   );
@@ -419,12 +378,10 @@ export function PlatformExplorer({
 
 export function HeroPreview() {
   const [selected, setSelected] = useState<'trends' | 'sources'>('trends');
-  const ids = ['cl-hero-tab-trends', 'cl-hero-tab-sources'];
   const tabs = [
-    { id: ids[0], label: 'Trends', value: 'trends' },
-    { id: ids[1], label: 'Sources', value: 'sources' },
+    { label: 'Trends', value: 'trends' },
+    { label: 'Sources', value: 'sources' },
   ] as const;
-  const selectTab = (id: string) => setSelected(id === ids[0] ? 'trends' : 'sources');
   return (
     <div className={`cl-hero-preview${selected === 'sources' ? ' cl-hero-preview-sources' : ''}`}>
       <div className="cl-preview-browser">
@@ -457,31 +414,15 @@ export function HeroPreview() {
               <Search size={13} aria-hidden /> Last 30 days
             </span>
           </div>
-          <div className="cl-hero-preview-tabs" role="tablist" aria-label="Preview view">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                id={tab.id}
-                role="tab"
-                aria-controls="cl-hero-panel"
-                aria-selected={selected === tab.value}
-                tabIndex={selected === tab.value ? 0 : -1}
-                onClick={() => setSelected(tab.value)}
-                onKeyDown={(event) => onTabKeyDown(event, ids, selectTab)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div
-            id="cl-hero-panel"
-            role="tabpanel"
-            aria-labelledby={`cl-hero-tab-${selected}`}
-            tabIndex={0}
-          >
-            {selected === 'trends' ? <HeroDashboardPreview /> : <SourcesPreview />}
-          </div>
+          <TabsRoot value={selected} onValueChange={setSelected}>
+            <TabsBar items={tabs} ariaLabel="Preview view" className="cl-hero-preview-tabs" />
+            <TabPanel value="trends" forceMount>
+              <HeroDashboardPreview />
+            </TabPanel>
+            <TabPanel value="sources" forceMount>
+              <SourcesPreview />
+            </TabPanel>
+          </TabsRoot>
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav'
 import { cn } from '@/lib/utils';
 
 type Variant = 'primary' | 'dark' | 'nav' | 'ghost';
-type VisualProps = Readonly<{ variant?: Variant; className?: string }>;
+type VisualProps = Readonly<{ variant?: Variant; size?: 'lg' | 'marketing'; className?: string }>;
 
 /** `dark` and `nav` are marketing-only skins over the shared secondary. */
 const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'ghost'> = {
@@ -21,6 +21,7 @@ const sharedVariant = (variant: Variant) => SHARED_VARIANT[variant];
 export function ButtonLink({
   href,
   variant = 'primary',
+  size = 'lg',
   className,
   children,
   ...rest
@@ -32,7 +33,7 @@ export function ButtonLink({
     <SharedButton
       asChild
       variant={sharedVariant(variant)}
-      size="lg"
+      size={size}
       className={cn('[&_svg]:size-4 [&_svg]:shrink-0', className)}
     >
       <a href={href} {...rest}>

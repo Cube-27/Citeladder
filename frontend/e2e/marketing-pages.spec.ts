@@ -48,7 +48,7 @@ test.describe('marketing routes', () => {
         ),
       );
       const panel = page.getByRole('tabpanel', { name: /sources/i }).last();
-      const card = page.locator('.cl-platform .cl-product-card');
+      const card = panel.locator('.cl-product-card');
       const before = await card.boundingBox();
       await panel.getByRole('button', { name: 'URLs' }).click();
       await expect(panel.getByText('zernovelle.example/platform')).toBeVisible();

@@ -127,7 +127,7 @@ export async function MarketingFooter() {
   const name = legalDisplayName();
 
   return (
-    <footer className="marketing-footer relative px-[var(--site-gutter)] pb-5 sm:pb-8">
+    <footer className="marketing-footer relative">
       <div className="marketing-footer-card mx-auto w-full">
         <Container className="pt-14 sm:pt-20">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] lg:gap-12">
@@ -178,9 +178,6 @@ export async function MarketingFooter() {
                 <LegalStripLink key={link.href} link={link} />
               ))}
             </nav>
-          </div>
-          <div aria-hidden="true" className="mt-4 overflow-hidden pb-7 sm:mt-5 sm:pb-8">
-            <LogoMark size={72} className="max-w-full opacity-20" />
           </div>
         </Container>
       </div>
