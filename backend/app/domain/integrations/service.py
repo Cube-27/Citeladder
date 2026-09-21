@@ -501,15 +501,17 @@ async def run_connection_test(
     connection_id_value = connection.id
     grant_id_value = grant.id
     provider = connection.provider
+    account_ref = connection.account_ref
 
     status = TEST_STATUS_OK
     error_code = ""
     detail = "Connection succeeded"
     try:
         access_token = await fresh_access_token(session, grant=grant)
+        await session.commit()
         detail = await _probe_connection(
             provider=provider,
-            account_ref=connection.account_ref,
+            account_ref=account_ref,
             access_token=access_token,
         )
     except (
@@ -525,6 +527,8 @@ async def run_connection_test(
         error_code = ERROR_PROVIDER_API
         detail = f"Unexpected error: {type(exc).__name__}"
 
+    if session.in_transaction():
+        await session.commit()
     tested_at = _utcnow()
     session.add(
         IntegrationEvent(
@@ -578,10 +582,12 @@ async def list_available_properties(
     grant = await _get_grant(
         session, workspace_id=workspace_id, grant_id=connection.grant_id
     )
+    provider = connection.provider
     access_token = await fresh_access_token(session, grant=grant)
+    await session.commit()
     # The same config-owned dispatch the sync worker resolves its data
     # client through (invariant 1) — discovery is one more call on it.
-    client = INTEGRATION_CLIENT_BUILDERS[connection.provider]()
+    client = INTEGRATION_CLIENT_BUILDERS[provider]()
     properties = await client.list_properties(access_token=access_token)
     return [
         IntegrationPropertyResponse(property_ref=prop.property_ref, label=prop.label)

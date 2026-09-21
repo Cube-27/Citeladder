@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -39,6 +39,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUBMISSION_UNCERTAIN,
     TASK_STATUS_SUCCEEDED,
     PostgresQueueSpec,
+    ReclaimAccounting,
 )
 from app.models.abuse import QueueWorkspaceTurn
 
@@ -93,9 +94,16 @@ class PostgresTaskQueue[
         self,
         session_factory: async_sessionmaker[AsyncSession],
         spec: PostgresQueueSpec[T],
+        *,
+        reclaim_accounting: (
+            Callable[[AsyncSession, T, datetime], Awaitable[ReclaimAccounting]] | None
+        ) = None,
     ) -> None:
         self._session_factory = session_factory
         self._spec: PostgresQueueSpec[T] = spec
+        self._reclaim_accounting: (
+            Callable[[AsyncSession, T, datetime], Awaitable[ReclaimAccounting]] | None
+        ) = reclaim_accounting
 
     @property
     def _model(self) -> type[T]:
@@ -551,7 +559,7 @@ class PostgresTaskQueue[
         if not task.error_code:
             task.error_code = self._spec.max_attempts_error
             task.error_detail = "lease expired after max attempts exhausted"
-        parent_attr = self._spec.parent_id_attr
+        parent_attr = self._spec.parent_id_attr or ""
         logger.warning(
             "sweeper failed task at max attempts",
             extra={
@@ -563,6 +571,20 @@ class PostgresTaskQueue[
                 else None,
             },
         )
+
+    def _divert_unreconciled_submission(self, task: T, *, now: datetime) -> bool:
+        holds_submission = self._spec.unreconciled_submission
+        if holds_submission is None or not holds_submission(task):
+            return False
+        # A paid submission with no receipt must go to reconciliation; a
+        # retry could submit and charge for the same observation again.
+        task.status = TASK_STATUS_SUBMISSION_UNCERTAIN
+        task.available_at = now
+        logger.warning(
+            "sweeper diverted a task holding an unreconciled submission",
+            extra={"task_id": str(task.id), "queue": self._model.__tablename__},
+        )
+        return True
 
     async def release_expired_detailed(
         self, *, batch_size: int = 500
@@ -579,7 +601,7 @@ class PostgresTaskQueue[
         reclaimed = 0
         failed_task_ids: list[uuid.UUID] = []
         failed_parent_ids: list[uuid.UUID] = []
-        parent_attr = self._spec.parent_id_attr
+        parent_attr = self._spec.parent_id_attr or ""
         async with self._session_factory() as session:
             stmt = (
                 select(model)
@@ -591,44 +613,19 @@ class PostgresTaskQueue[
                 .with_for_update(skip_locked=True)
             )
             tasks = list((await session.scalars(stmt)).all())
-            holds_submission = self._spec.unreconciled_submission
             for task in tasks:
                 task.lease_owner = None
                 task.lease_expires_at = None
-                if holds_submission is not None and holds_submission(task):
-                    # This row died holding a PAID submission it never got to
-                    # record. Returning it to the retry set would submit — and
-                    # pay for — the same observation again, so it is diverted
-                    # to reconciliation instead, whatever killed it. That
-                    # closes the gap between a handled network timeout and a
-                    # process that died before it could handle anything.
-                    #
-                    # No attempt is spent: nothing here failed, and the
-                    # question of what happened is still open.
-                    task.status = TASK_STATUS_SUBMISSION_UNCERTAIN
-                    task.available_at = now
+                if self._divert_unreconciled_submission(task, now=now):
                     reclaimed += 1
-                    logger.warning(
-                        "sweeper diverted a task holding an unreconciled submission",
-                        extra={
-                            "task_id": str(task.id),
-                            "queue": model.__tablename__,
-                        },
-                    )
                     continue
-                # A reclaim IS a consumed attempt. `attempt_count` was only
-                # ever incremented by a worker's finalize, so a task whose
-                # executor died mid-run (crash, OOM, container stop) came back
-                # with the count still at zero and cycled
-                # running -> retry_wait -> running forever, never reaching a
-                # terminal status and never clearing the UI's "is running".
-                task.attempt_count += 1
-                if task.attempt_count >= task.max_attempts:
+                exhausted, accounting = await self._reclaim_is_terminal(
+                    session, task, now
+                )
+                if exhausted or (accounting is not None and accounting.terminalize):
                     self._terminalize_expired(task, now=now)
                     failed_task_ids.append(task.id)
-                    parent_id = (
-                        getattr(task, parent_attr, None) if parent_attr else None
-                    )
+                    parent_id = getattr(task, parent_attr, None)
                     if parent_id is not None:
                         failed_parent_ids.append(parent_id)
                 else:
@@ -648,3 +645,17 @@ class PostgresTaskQueue[
                 failed_task_ids=tuple(failed_task_ids),
                 failed_parent_ids=tuple(dict.fromkeys(failed_parent_ids)),
             )
+
+    async def _reclaim_is_terminal(
+        self, session: AsyncSession, task: T, now: datetime
+    ) -> tuple[bool, ReclaimAccounting | None]:
+        # Most queues count a lost attempt here. Content already counted its
+        # durable dispatch and may need an unknown-outcome settlement.
+        accounting = (
+            await self._reclaim_accounting(session, task, now)
+            if self._reclaim_accounting is not None
+            else None
+        )
+        if accounting is None or not accounting.already_counted:
+            task.attempt_count += 1
+        return task.attempt_count >= task.max_attempts, accounting

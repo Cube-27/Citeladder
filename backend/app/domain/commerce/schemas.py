@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.config.commerce_catalog import (
+    COMMERCE_GENERATION_TARGETS_MAX,
     COMMERCE_IMPORT_MAX_BYTES,
     COMMERCE_PROMPTS_DEFAULT,
     COMMERCE_PROMPTS_MAX,
@@ -131,7 +132,9 @@ class CompetitorDecisionRequest(BaseModel):
 
 
 class BuyerPromptGenerateRequest(BaseModel):
-    targets: list[CommerceTarget] = Field(min_length=1)
+    targets: list[CommerceTarget] = Field(
+        min_length=1, max_length=COMMERCE_GENERATION_TARGETS_MAX
+    )
     count: int = Field(
         default=COMMERCE_PROMPTS_DEFAULT,
         ge=COMMERCE_PROMPTS_MIN,

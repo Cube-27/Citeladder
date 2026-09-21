@@ -270,11 +270,20 @@ async def test_list_connections_excludes_other_workspaces(
 async def test_a_successful_probe_records_an_append_only_ok_event(
     db_session: AsyncSession,
     fake_data_client: _FakeDataClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mine = await _workspace(db_session, "Mine")
     grant = await _grant(db_session, mine)
     connection = await _connection(db_session, grant)
     await db_session.commit()
+
+    original_list = fake_data_client.list_properties
+
+    async def list_without_transaction(*, access_token: str):
+        assert not db_session.in_transaction()
+        return await original_list(access_token=access_token)
+
+    monkeypatch.setattr(fake_data_client, "list_properties", list_without_transaction)
 
     result = await run_connection_test(
         db_session, workspace_id=mine, connection_id=connection.id

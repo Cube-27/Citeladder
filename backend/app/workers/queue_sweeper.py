@@ -47,6 +47,8 @@ from app.core.config.site_health_runtime import SITE_CRAWL_QUEUE_SPEC
 from app.core.config.task_queue import PostgresQueueSpec
 from app.core.database import SessionLocal
 from app.core.telemetry import configure_logging, instrument_worker
+from app.domain.agent.model_attempts import reconcile_stale_cancelled_model_attempts
+from app.domain.content.reconciliation import content_reclaim_accounting
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.parent_reconcilers import PARENT_RECONCILERS
 from app.workers.terminal_compensation import TERMINAL_TASK_HOOKS
@@ -85,11 +87,29 @@ class QueueSweeper:
     ) -> None:
         self._session_factory = session_factory or SessionLocal
         self._queues = [
-            (spec, PostgresTaskQueue(self._session_factory, spec)) for spec in specs
+            (
+                spec,
+                PostgresTaskQueue(
+                    self._session_factory,
+                    spec,
+                    reclaim_accounting=(
+                        content_reclaim_accounting
+                        if spec is CONTENT_QUEUE_SPEC
+                        else None
+                    ),
+                ),
+            )
+            for spec in specs
         ]
 
     async def run_once(self) -> int:
         """One pass over every queue. Returns the total rows reclaimed."""
+        from app.domain.content.reconciliation import (
+            reconcile_stale_cancelled_dispatches,
+        )
+
+        await reconcile_stale_cancelled_dispatches(self._session_factory)
+        await reconcile_stale_cancelled_model_attempts(self._session_factory)
         reclaimed = 0
         for spec, queue in self._queues:
             name = spec.model.__tablename__

@@ -196,6 +196,14 @@ class DefaultAgentSettings(BaseSettings):
             "default_agent_execution_timeout_seconds",
         ),
     )
+    lease_margin_seconds: float = Field(
+        default=30.0,
+        gt=0,
+        validation_alias=AliasChoices(
+            "DEFAULT_AGENT_LEASE_MARGIN_SECONDS",
+            "default_agent_lease_margin_seconds",
+        ),
+    )
     context_limit: int = Field(
         default=32_000,
         ge=1_024,

@@ -305,6 +305,27 @@ async def _generate_target_texts(
     return texts
 
 
+async def validate_buyer_prompt_targets(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    targets: list[CommerceTarget],
+) -> None:
+    """Reject missing or foreign targets before charging provider-call quota."""
+    project = await _project_with_brand(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    for target in targets:
+        await _target_context(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            target=target,
+            project=project,
+        )
+
+
 async def generate_buyer_prompts(
     session: AsyncSession,
     *,
@@ -317,7 +338,7 @@ async def generate_buyer_prompts(
     project = await _project_with_brand(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    batches: list[tuple[CommerceTarget, dict, list[str]]] = []
+    contexts: list[tuple[CommerceTarget, dict]] = []
     for target in targets:
         context = await _target_context(
             session,
@@ -329,8 +350,25 @@ async def generate_buyer_prompts(
         context["locale"] = "-".join(
             value for value in (project.language_code, project.country_code) if value
         )
+        contexts.append((target, context))
+    # The provider phase uses only materialized input, never a live read
+    # transaction or a pooled connection held idle across model calls.
+    await session.rollback()
+    batches: list[tuple[CommerceTarget, dict, list[str]]] = []
+    for target, context in contexts:
         texts = await _generate_target_texts(context, count=count, gateway=gateway)
         batches.append((target, context, texts))
+    current_project = await _project_with_brand(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    for target, _context, _texts in batches:
+        await _target_context(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            target=target,
+            project=current_project,
+        )
     # Finish all provider calls before taking the transaction-scoped account lock.
     await _reserve_prompt_capacity(
         session, workspace_id, sum(len(b[2]) for b in batches)

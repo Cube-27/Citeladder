@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.gateway import ModelGateway, ModelResult
 from app.connectors.app_model_config import AppModelRouteConfig
@@ -26,7 +26,6 @@ from app.domain.entitlements.enforcement import (
     CapabilityNotGrantedError,
     require_workspace_capability,
 )
-from app.domain.entitlements.ledger import release_unused_reservation
 from app.domain.entitlements.metered import (
     MeteredSubject,
     reserve_metered_usage,
@@ -315,23 +314,11 @@ async def _settle_platform_attempt(
     try:
         policy = await ai_credit_policy_for_revision(session, attempt.pricing_revision)
     except CatalogUnavailableError:
-        await release_unused_reservation(
-            session,
-            reservation_id=attempt.reservation_id,
-            idempotency_key=f"agent:{attempt.dispatch_id}:policy-unavailable",
-            at=at,
-        )
-        attempt.settlement_status = "policy_unavailable"
+        await _settle_unknown_cap(session, attempt=attempt, at=at)
         return
     rate = policy.rate(feature=APP_FEATURE_GROWTH_AGENT, model=attempt.requested_model)
     if rate is None:
-        await release_unused_reservation(
-            session,
-            reservation_id=attempt.reservation_id,
-            idempotency_key=f"agent:{attempt.dispatch_id}:rate-unavailable",
-            at=at,
-        )
-        attempt.settlement_status = "policy_unavailable"
+        await _settle_unknown_cap(session, attempt=attempt, at=at)
         return
     complete_usage = {
         key: value for key, value in (usage or {}).items() if isinstance(value, int)
@@ -349,6 +336,82 @@ async def _settle_platform_attempt(
     )
     attempt.debited_credits = settlement.charged_units
     attempt.settlement_status = "settled"
+
+
+async def _settle_unknown_cap(
+    session: AsyncSession, *, attempt: AgentModelAttempt, at: datetime
+) -> None:
+    """Conservatively close a dispatched hold when its rate is unavailable."""
+    assert attempt.reservation_id is not None  # noqa: S101 - guarded by caller
+    settlement = await settle_metered_usage(
+        session,
+        reservation_id=attempt.reservation_id,
+        dispatch_key=str(attempt.dispatch_id),
+        attempt=attempt.run_attempt,
+        charged_units=None,
+        unknown_usage_charge=attempt.reserved_credits,
+        idempotency_key=f"agent:{attempt.id}:settle",
+        at=at,
+    )
+    attempt.debited_credits = settlement.charged_units
+    attempt.settlement_status = "unknown_policy"
+
+
+async def reconcile_stale_model_attempts(
+    session: AsyncSession, *, run_id: uuid.UUID, now: datetime
+) -> None:
+    """Close orphaned dispatches while the expired run is locked for reclaim."""
+    attempts = list(
+        (
+            await session.scalars(
+                select(AgentModelAttempt)
+                .where(
+                    AgentModelAttempt.task_run_id == run_id,
+                    AgentModelAttempt.outcome == "dispatched",
+                )
+                .with_for_update()
+            )
+        ).all()
+    )
+    for attempt in attempts:
+        attempt.outcome = "recovered_unknown"
+        attempt.error_code = "worker_lost_after_dispatch"
+        attempt.settled_at = now
+        attempt.usage_complete = False
+        await _settle_platform_attempt(session, attempt=attempt, usage=None, at=now)
+
+
+async def reconcile_stale_cancelled_model_attempts(
+    session_factory: async_sessionmaker[AsyncSession], *, batch_size: int = 100
+) -> None:
+    """Close cancelled dispatches whose final receipt never arrived."""
+    now = _utcnow()
+    cutoff = now - timedelta(seconds=default_agent_settings.lease_margin_seconds)
+    async with session_factory() as session:
+        run_ids = list(
+            (
+                await session.scalars(
+                    select(AgentModelAttempt.task_run_id)
+                    .join(
+                        AgentTaskRun,
+                        AgentTaskRun.id == AgentModelAttempt.task_run_id,
+                    )
+                    .where(
+                        AgentTaskRun.status == "cancelled",
+                        AgentModelAttempt.outcome == "dispatched",
+                        AgentModelAttempt.deadline_at <= cutoff,
+                    )
+                    .limit(batch_size)
+                )
+            ).all()
+        )
+        await session.rollback()
+    for run_id in dict.fromkeys(run_ids):
+        async with session_factory() as session:
+            run = await session.get(AgentTaskRun, run_id, with_for_update=True)
+            if run is not None and run.status == "cancelled":
+                await reconcile_stale_model_attempts(session, run_id=run_id, now=now)
+            await session.commit()
 
 
 async def record_model_receipt(

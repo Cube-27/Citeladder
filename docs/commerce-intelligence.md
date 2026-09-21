@@ -38,6 +38,10 @@ and cannot enter measurement before approval.
 Every Commerce prompt has a typed category or product target. Structured
 generation is bounded and rejects owned-name leakage. Generated and manual
 prompts use the shared Prompt owner and remain disabled until explicit approval.
+Generation bounds the target list in Commerce configuration and reserves one
+durable workspace model-call quota unit per target before dispatch. It closes
+the context read transaction before model I/O and revalidates targets and prompt
+capacity before writing the disabled prompts.
 For one selected target, the Buyer Prompts workspace opens the shared audit
 launcher over only its approved prompt IDs; provider selection, repetitions,
 provider-free estimate, capacity admission, and execution stay with the audit

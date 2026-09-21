@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -8,8 +9,22 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.gateway import FakeModelGateway
-from app.domain.agent.service import _public_result, claim_task, execute_claimed_task
-from app.models.agent import AgentModelAttempt, AgentTaskRun
+from app.core.config.entitlements import KEY_AI_CREDITS
+from app.domain.agent import service as agent_service
+from app.domain.agent import tool_attempts
+from app.domain.agent.model_attempts import reconcile_stale_cancelled_model_attempts
+from app.domain.agent.service import (
+    _public_result,
+    cancel_task,
+    claim_task,
+    execute_claimed_task,
+    renew_lease,
+)
+from app.domain.entitlements.ledger import consumable_usage
+from app.domain.entitlements.metered import MeteredSubject, reserve_metered_usage
+from app.domain.entitlements.types import GrantSpec
+from app.models.agent import AgentModelAttempt, AgentTaskRun, AgentToolAttempt
+from tests.component.occupancy_helpers import seed_occupancy_grants
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
@@ -252,6 +267,304 @@ async def test_worker_persists_canonical_attempts_and_minimal_result(
             )
         )
     assert attempt is None
+
+
+@pytest.mark.asyncio
+async def test_live_heartbeat_blocks_reclaim_and_expired_dispatch_is_recovered(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await _register(client, "agent-lease-recovery@example.com")
+    project_id = await _project(client)
+    created = await client.post(
+        "/api/v1/agent/tasks",
+        json={
+            "project_id": project_id,
+            "task_type": "explain",
+            "objective": "Explain persisted evidence.",
+        },
+        headers={"Idempotency-Key": "lease-recovery"},
+    )
+    assert created.status_code == 201
+    run_id = uuid.UUID(created.json()["id"])
+
+    async with session_factory() as session:
+        claimed = await claim_task(session, owner="worker-a", lease_seconds=1)
+        assert claimed is not None
+        assert claimed.id == run_id
+        assert await renew_lease(session, run_id=run_id, owner="worker-a")
+    async with session_factory() as session:
+        assert await claim_task(session, owner="worker-b", lease_seconds=60) is None
+
+    now = datetime.now(UTC)
+    async with session_factory() as session:
+        run = await session.get(AgentTaskRun, run_id)
+        assert run is not None
+        session.add(
+            AgentModelAttempt(
+                workspace_id=run.workspace_id,
+                project_id=run.project_id,
+                task_run_id=run_id,
+                dispatch_id=uuid.uuid4(),
+                run_attempt=1,
+                ordinal=1,
+                funding_source="customer_byok",
+                provider_adapter="fake",
+                endpoint_host="example.test",
+                requested_model="fake-model",
+                request_hash="0" * 64,
+                dispatched_at=now,
+                deadline_at=now + timedelta(seconds=60),
+            )
+        )
+        await session.execute(
+            update(AgentTaskRun)
+            .where(AgentTaskRun.id == run_id)
+            .values(lease_expires_at=now - timedelta(seconds=1))
+        )
+        await session.commit()
+    async with session_factory() as session:
+        successor = await claim_task(session, owner="worker-b", lease_seconds=60)
+        assert successor is not None
+        assert successor.attempt_count == 2
+        attempt = await session.scalar(
+            select(AgentModelAttempt).where(AgentModelAttempt.task_run_id == run_id)
+        )
+        assert attempt is not None
+        assert (attempt.outcome, attempt.settlement_status) == (
+            "recovered_unknown",
+            "zero_debit",
+        )
+
+
+@pytest.mark.asyncio
+async def test_late_tool_result_cannot_write_after_lease_takeover(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client, "agent-late-tool@example.com")
+    project_id = await _project(client)
+    created = await client.post(
+        "/api/v1/agent/tasks",
+        json={
+            "project_id": project_id,
+            "task_type": "explain",
+            "objective": "Explain persisted evidence.",
+        },
+        headers={"Idempotency-Key": "late-tool"},
+    )
+    assert created.status_code == 201
+    run_id = uuid.UUID(created.json()["id"])
+
+    async def tool_after_takeover(*_args, **_kwargs):
+        async with session_factory() as successor_session:
+            await successor_session.execute(
+                update(AgentTaskRun)
+                .where(AgentTaskRun.id == run_id)
+                .values(lease_expires_at=datetime.now(UTC) - timedelta(seconds=1))
+            )
+            await successor_session.commit()
+            successor = await claim_task(
+                successor_session, owner="worker-b", lease_seconds=60
+            )
+            assert successor is not None
+            assert successor.id == run_id
+        return {"state": "unavailable"}
+
+    monkeypatch.setattr(agent_service, "execute_tool", tool_after_takeover)
+    async with session_factory() as session:
+        claimed = await claim_task(session, owner="worker-a", lease_seconds=60)
+        assert claimed is not None
+        await execute_claimed_task(session, run=claimed, owner="worker-a", gateway=None)
+    async with session_factory() as session:
+        tool_attempts = list(
+            (
+                await session.scalars(
+                    select(AgentToolAttempt).where(
+                        AgentToolAttempt.task_run_id == run_id
+                    )
+                )
+            ).all()
+        )
+    assert tool_attempts == []
+
+
+@pytest.mark.asyncio
+async def test_failed_tool_restarts_transaction_before_lease_fence(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client, "agent-failed-tool@example.com")
+    project_id = await _project(client)
+    created = await client.post(
+        "/api/v1/agent/tasks",
+        json={
+            "project_id": project_id,
+            "task_type": "explain",
+            "objective": "Explain persisted evidence.",
+        },
+        headers={"Idempotency-Key": "failed-tool"},
+    )
+    assert created.status_code == 201
+    run_id = uuid.UUID(created.json()["id"])
+    original_lock = tool_attempts.lock_owned_lease
+
+    async def lock_after_rollback(session, **kwargs):
+        assert not session.in_transaction()
+        return await original_lock(session, **kwargs)
+
+    monkeypatch.setattr(tool_attempts, "lock_owned_lease", lock_after_rollback)
+    async with session_factory() as session:
+        claimed = await claim_task(
+            session, owner="failed-tool-worker", lease_seconds=60
+        )
+        assert claimed is not None
+
+        async def failing_tool(*_args, **_kwargs):
+            await session.scalar(
+                select(AgentTaskRun.id).where(AgentTaskRun.id == run_id)
+            )
+            raise RuntimeError("evidence read failed")
+
+        monkeypatch.setattr(agent_service, "execute_tool", failing_tool)
+        await execute_claimed_task(
+            session, run=claimed, owner="failed-tool-worker", gateway=None
+        )
+    async with session_factory() as session:
+        attempts = list(
+            (
+                await session.scalars(
+                    select(AgentToolAttempt).where(
+                        AgentToolAttempt.task_run_id == run_id
+                    )
+                )
+            ).all()
+        )
+    assert len(attempts) == 1
+    assert attempts[0].status == "failed"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cancelled", [False, True])
+async def test_expired_agent_dispatch_settles_platform_hold_before_reclaim(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+    cancelled: bool,
+) -> None:
+    from types import SimpleNamespace
+
+    await _register(client, "agent-funded-recovery@example.com")
+    project_id = await _project(client)
+    created = await client.post(
+        "/api/v1/agent/tasks",
+        json={
+            "project_id": project_id,
+            "task_type": "explain",
+            "objective": "Explain persisted evidence.",
+        },
+        headers={"Idempotency-Key": "funded-recovery"},
+    )
+    run_id = uuid.UUID(created.json()["id"])
+    now = datetime.now(UTC)
+    async with session_factory() as session:
+        claimed = await claim_task(session, owner="worker-a", lease_seconds=60)
+        assert claimed is not None
+        assert claimed.id == run_id
+        account = await seed_occupancy_grants(
+            session,
+            workspace_id=claimed.workspace_id,
+            grants=(GrantSpec(key=KEY_AI_CREDITS, value=100),),
+        )
+        reservation = await reserve_metered_usage(
+            session,
+            account_id=account.id,
+            capability_key=KEY_AI_CREDITS,
+            subject=MeteredSubject(
+                kind="agent", subject_id=run_id, workspace_id=claimed.workspace_id
+            ),
+            hold_units=10,
+            idempotency_key=f"agent:{run_id}:hold:test",
+            at=now,
+        )
+        session.add(
+            AgentModelAttempt(
+                workspace_id=claimed.workspace_id,
+                project_id=claimed.project_id,
+                task_run_id=run_id,
+                dispatch_id=uuid.uuid4(),
+                run_attempt=1,
+                ordinal=1,
+                funding_source="platform",
+                provider_adapter="fake",
+                endpoint_host="example.test",
+                requested_model="fake-model",
+                pricing_revision="test-policy",
+                reservation_id=reservation.reservation_id,
+                reserved_credits=10,
+                request_hash="0" * 64,
+                dispatched_at=now,
+                deadline_at=now + timedelta(seconds=60),
+                settlement_status="pending",
+            )
+        )
+        if cancelled:
+            await session.commit()
+            await cancel_task(
+                session,
+                workspace_id=claimed.workspace_id,
+                project_id=claimed.project_id,
+                run_id=run_id,
+            )
+            await session.execute(
+                update(AgentModelAttempt)
+                .where(AgentModelAttempt.task_run_id == run_id)
+                .values(deadline_at=now - timedelta(minutes=5))
+            )
+        else:
+            await session.execute(
+                update(AgentTaskRun)
+                .where(AgentTaskRun.id == run_id)
+                .values(lease_expires_at=now - timedelta(seconds=1))
+            )
+        await session.commit()
+        account_id = account.id
+
+    async def policy_for_revision(*_args):
+        return SimpleNamespace(
+            rate=lambda **_kwargs: SimpleNamespace(
+                charge=lambda _usage: None, unknown_usage_charge=3
+            )
+        )
+
+    monkeypatch.setattr(
+        "app.domain.agent.model_attempts.ai_credit_policy_for_revision",
+        policy_for_revision,
+    )
+    async with session_factory() as session:
+        if cancelled:
+            await reconcile_stale_cancelled_model_attempts(session_factory)
+        else:
+            successor = await claim_task(session, owner="worker-b", lease_seconds=60)
+            assert successor is not None
+            assert successor.attempt_count == 2
+        attempt = await session.scalar(
+            select(AgentModelAttempt).where(AgentModelAttempt.task_run_id == run_id)
+        )
+        usage = await consumable_usage(
+            session,
+            account_id=account_id,
+            capability_key=KEY_AI_CREDITS,
+            at=datetime.now(UTC),
+        )
+    assert attempt is not None
+    assert (attempt.outcome, attempt.settlement_status) == (
+        "recovered_unknown",
+        "settled",
+    )
+    assert (usage.reserved, usage.debited) == (0, 3)
 
 
 @pytest.mark.asyncio

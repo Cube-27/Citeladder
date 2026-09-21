@@ -48,6 +48,7 @@ from app.domain.content.context_builder import (
     build_content_context,
 )
 from app.domain.content.message_builder import build_messages
+from app.domain.content.reconciliation import reconcile_generation_reservation
 from app.domain.content.request_identity import request_fingerprint
 from app.domain.content.schemas import (
     ContentContextSummary,
@@ -578,6 +579,7 @@ async def cancel_generation(
     locked.completed_at = datetime.now(UTC)
     if not locked.error_code:
         locked.error_code = "cancelled"
+    await reconcile_generation_reservation(session, row=locked, now=locked.completed_at)
     await session.commit()
     await session.refresh(locked)
     return locked

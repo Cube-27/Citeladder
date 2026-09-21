@@ -37,7 +37,10 @@ class AgentWorker:
             run = await claim_task(
                 session,
                 owner=self._owner,
-                lease_seconds=default_agent_settings.execution_timeout_seconds + 30,
+                lease_seconds=(
+                    default_agent_settings.execution_timeout_seconds
+                    + default_agent_settings.lease_margin_seconds
+                ),
             )
             if run is None:
                 return 0

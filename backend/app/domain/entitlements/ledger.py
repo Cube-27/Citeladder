@@ -454,7 +454,7 @@ async def record_billable_attempt(
             subject_id=base.subject_id,
             workspace_id=base.workspace_id,
             audit_id=base.audit_id,
-            task_id=task_id,
+            task_id=base.task_id,
             content_generation_id=base.content_generation_id,
             agent_task_run_id=base.agent_task_run_id,
             dispatch_key=str(attempt),

@@ -23,6 +23,7 @@ import httpx
 
 from app.connectors.answer_engines.errors import ProviderError, classify_provider_status
 from app.connectors.answer_engines.http_client import shared_client
+from app.connectors.dataforseo_transport import authenticated_request, decode_json
 from app.connectors.search_surfaces.contracts import (
     SearchSurfaceRequest,
     SearchSurfaceSubmission,
@@ -104,7 +105,9 @@ async def probe_credential(
     http = client or shared_client()
     started = time.monotonic()
     try:
-        response = await http.get(url, auth=credential.basic_auth(), timeout=timeout)
+        response = await authenticated_request(
+            http, "GET", url, credential=credential, timeout_seconds=timeout
+        )
     except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout) as exc:
         raise ProviderError(
             "DataForSEO request timed out",
@@ -138,14 +141,7 @@ def _require_ok_envelope(response: httpx.Response) -> None:
     failure can arrive looking like a success at the transport layer. Reading
     the envelope is what makes a failed probe fail.
     """
-    try:
-        payload = response.json()
-    except ValueError as exc:
-        raise ProviderError(
-            _UNREADABLE_RESPONSE,
-            error_code=ERROR_PARSE,
-            retryable=False,
-        ) from exc
+    payload = decode_json(response, error_message=_UNREADABLE_RESPONSE)
     if not isinstance(payload, dict):
         raise ProviderError(
             _UNREADABLE_RESPONSE,
@@ -300,12 +296,13 @@ class DataForSeoSearchSurfaceAdapter:
         http = self._client or shared_client()
         url = _endpoint(self._base_url, path)
         try:
-            response = await http.request(
+            response = await authenticated_request(
+                http,
                 method,
                 url,
-                auth=self._credential.basic_auth(),
+                credential=self._credential,
                 json=json,
-                timeout=timeout_seconds,
+                timeout_seconds=timeout_seconds,
             )
         except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout) as exc:
             raise ProviderError(
@@ -327,14 +324,7 @@ class DataForSeoSearchSurfaceAdapter:
                 error_code=error_code,
                 retryable=retryable,
             )
-        try:
-            body = response.json()
-        except ValueError as exc:
-            raise ProviderError(
-                _UNREADABLE_RESPONSE,
-                error_code=ERROR_PARSE,
-                retryable=False,
-            ) from exc
+        body = decode_json(response, error_message=_UNREADABLE_RESPONSE)
         if not isinstance(body, dict):
             raise ProviderError(
                 _UNREADABLE_RESPONSE,

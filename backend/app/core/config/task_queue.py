@@ -106,6 +106,12 @@ DEFAULT_MAX_DRAIN_BATCHES: Final = 1000
 
 
 @dataclass(frozen=True)
+class ReclaimAccounting:
+    already_counted: bool = False
+    terminalize: bool = False
+
+
+@dataclass(frozen=True)
 class PostgresQueueSpec[
     T: (
         "AuditTask",

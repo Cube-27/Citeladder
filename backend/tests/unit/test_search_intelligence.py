@@ -1,3 +1,4 @@
+import json
 import uuid
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -14,6 +15,7 @@ from app.connectors.search_intelligence_dataforseo import (
     ResearchResponse,
     _reported_cost,
     _response_body,
+    execute_live,
 )
 from app.core.config import settings
 from app.core.config.dataforseo import pack_credential
@@ -520,3 +522,34 @@ async def test_provider_rate_limit_releases_shared_capacity_with_retry_hint(
     outcome = release.call_args.kwargs["outcome"]
     assert outcome.kind == "rate_limited"
     assert outcome.retry_after_seconds == 12
+
+
+@pytest.mark.asyncio
+async def test_live_acquisition_sends_one_authenticated_task() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "status_code": 20000,
+                "tasks": [{"id": "task-1", "status_code": 20000, "cost": "0.001"}],
+            },
+        )
+
+    secret = encrypt_secret(pack_credential(login="user@example.com", password="key"))
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        result = await execute_live(
+            encrypted_secret=secret,
+            endpoint="/v3/test/live",
+            payload={"target": "example.com"},
+            client=client,
+        )
+
+    assert len(seen) == 1
+    assert seen[0].method == "POST"
+    assert seen[0].headers["authorization"].startswith("Basic ")
+    assert json.loads(seen[0].content) == [{"target": "example.com"}]
+    assert result.provider_task_id == "task-1"
+    assert result.cost_usd == Decimal("0.001")

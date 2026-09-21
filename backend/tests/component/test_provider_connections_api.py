@@ -21,11 +21,17 @@ from typing import Any
 import httpx
 import pytest
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.connectors.answer_engines.errors import ProviderError
+from app.connectors.app_model_transport import AppModelTransportError
 from app.core.config.audits import POOL_KIND_CONNECTION
 from app.core.config.provider_catalog import PROBE_PROMPT, provider_catalog_settings
 from app.core.security import decrypt_secret
+from app.domain.providers import app_route_probes
+from app.domain.providers import service as provider_service
 from app.models.audit import ProviderCapacityBucket
+from app.models.provider import ProviderAppRoute, ProviderConnection
 from tests.component.auth_helpers import register_and_login as _register
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
@@ -425,6 +431,91 @@ async def test_test_endpoint_returns_status_success(
     assert body["transport_provider"] == "openai"
     assert body["logical_engine"] == "chatgpt"
     _assert_no_secret(body)
+
+
+@pytest.mark.asyncio
+async def test_probe_runs_after_read_transaction_is_closed(
+    client: httpx.AsyncClient, db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _register(client, "prov-transaction@example.com")
+    created = await client.post(
+        "/api/v1/provider-connections", json=_connection_payload()
+    )
+    assert created.status_code == 201
+    connection_id = uuid.UUID(created.json()["id"])
+    connection = await db_session.get(ProviderConnection, connection_id)
+    assert connection is not None
+
+    class ProbeAdapter:
+        async def execute(self, _request):
+            assert not db_session.in_transaction()
+            raise ProviderError(
+                "probe failed", error_code="probe_error", retryable=False
+            )
+
+    monkeypatch.setattr(
+        provider_service, "build_adapter", lambda **_kwargs: ProbeAdapter()
+    )
+    result = await provider_service.run_connection_test(
+        db_session,
+        workspace_id=connection.workspace_id,
+        connection_id=connection_id,
+    )
+    assert (result.status, result.error_code) == ("failed", "probe_error")
+
+
+@pytest.mark.asyncio
+async def test_stale_app_probe_failure_does_not_mark_new_route_unhealthy(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client, "stale-app-probe@example.com")
+    created = await client.post(
+        "/api/v1/provider-connections",
+        json=_connection_payload(
+            app_routes=[
+                {
+                    "feature": "content",
+                    "model": "customer-model",
+                    "api_base_url": "https://models.example.com/v1",
+                }
+            ]
+        ),
+    )
+    assert created.status_code == 201
+    connection_id = uuid.UUID(created.json()["id"])
+
+    async def resolved_target(_url):
+        return object()
+
+    monkeypatch.setattr(app_route_probes, "resolve_app_model_target", resolved_target)
+
+    class FailingTransport:
+        async def post(self, **_kwargs):
+            async with session_factory() as session:
+                route = await session.scalar(
+                    select(ProviderAppRoute).where(
+                        ProviderAppRoute.connection_id == connection_id
+                    )
+                )
+                assert route is not None
+                route.revision = uuid.uuid4()
+                await session.commit()
+            raise AppModelTransportError("connection_failed", "Probe failed")
+
+    async with session_factory() as session:
+        result = await provider_service.run_connection_test(
+            session,
+            workspace_id=uuid.UUID(created.json()["workspace_id"]),
+            connection_id=connection_id,
+            app_transport=FailingTransport(),
+        )
+    async with session_factory() as session:
+        connection = await session.get(ProviderConnection, connection_id)
+    assert result.error_code == "revision_changed"
+    assert connection is not None
+    assert connection.last_test_status != "failed"
 
 
 @pytest.mark.asyncio
