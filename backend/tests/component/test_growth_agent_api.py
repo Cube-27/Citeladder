@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.gateway import FakeModelGateway
 from app.core.config.entitlements import KEY_AI_CREDITS
+from app.domain.agent import service as agent_service
 from app.domain.agent.model_attempts import reconcile_stale_cancelled_model_attempts
 from app.domain.agent.service import (
     _public_result,
@@ -21,7 +22,7 @@ from app.domain.agent.service import (
 from app.domain.entitlements.ledger import consumable_usage
 from app.domain.entitlements.metered import MeteredSubject, reserve_metered_usage
 from app.domain.entitlements.types import GrantSpec
-from app.models.agent import AgentModelAttempt, AgentTaskRun
+from app.models.agent import AgentModelAttempt, AgentTaskRun, AgentToolAttempt
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
 
@@ -288,7 +289,8 @@ async def test_live_heartbeat_blocks_reclaim_and_expired_dispatch_is_recovered(
 
     async with session_factory() as session:
         claimed = await claim_task(session, owner="worker-a", lease_seconds=1)
-        assert claimed is not None and claimed.id == run_id
+        assert claimed is not None
+        assert claimed.id == run_id
         assert await renew_lease(session, run_id=run_id, owner="worker-a")
     async with session_factory() as session:
         assert await claim_task(session, owner="worker-b", lease_seconds=60) is None
@@ -322,7 +324,8 @@ async def test_live_heartbeat_blocks_reclaim_and_expired_dispatch_is_recovered(
         await session.commit()
     async with session_factory() as session:
         successor = await claim_task(session, owner="worker-b", lease_seconds=60)
-        assert successor is not None and successor.attempt_count == 2
+        assert successor is not None
+        assert successor.attempt_count == 2
         attempt = await session.scalar(
             select(AgentModelAttempt).where(AgentModelAttempt.task_run_id == run_id)
         )
@@ -331,6 +334,59 @@ async def test_live_heartbeat_blocks_reclaim_and_expired_dispatch_is_recovered(
             "recovered_unknown",
             "zero_debit",
         )
+
+
+@pytest.mark.asyncio
+async def test_late_tool_result_cannot_write_after_lease_takeover(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _register(client, "agent-late-tool@example.com")
+    project_id = await _project(client)
+    created = await client.post(
+        "/api/v1/agent/tasks",
+        json={
+            "project_id": project_id,
+            "task_type": "explain",
+            "objective": "Explain persisted evidence.",
+        },
+        headers={"Idempotency-Key": "late-tool"},
+    )
+    assert created.status_code == 201
+    run_id = uuid.UUID(created.json()["id"])
+
+    async def tool_after_takeover(*_args, **_kwargs):
+        async with session_factory() as successor_session:
+            await successor_session.execute(
+                update(AgentTaskRun)
+                .where(AgentTaskRun.id == run_id)
+                .values(lease_expires_at=datetime.now(UTC) - timedelta(seconds=1))
+            )
+            await successor_session.commit()
+            successor = await claim_task(
+                successor_session, owner="worker-b", lease_seconds=60
+            )
+            assert successor is not None
+            assert successor.id == run_id
+        return {"state": "unavailable"}
+
+    monkeypatch.setattr(agent_service, "execute_tool", tool_after_takeover)
+    async with session_factory() as session:
+        claimed = await claim_task(session, owner="worker-a", lease_seconds=60)
+        assert claimed is not None
+        await execute_claimed_task(session, run=claimed, owner="worker-a", gateway=None)
+    async with session_factory() as session:
+        tool_attempts = list(
+            (
+                await session.scalars(
+                    select(AgentToolAttempt).where(
+                        AgentToolAttempt.task_run_id == run_id
+                    )
+                )
+            ).all()
+        )
+    assert tool_attempts == []
 
 
 @pytest.mark.asyncio
@@ -358,7 +414,8 @@ async def test_expired_agent_dispatch_settles_platform_hold_before_reclaim(
     now = datetime.now(UTC)
     async with session_factory() as session:
         claimed = await claim_task(session, owner="worker-a", lease_seconds=60)
-        assert claimed is not None and claimed.id == run_id
+        assert claimed is not None
+        assert claimed.id == run_id
         account = await seed_occupancy_grants(
             session,
             workspace_id=claimed.workspace_id,
@@ -434,7 +491,8 @@ async def test_expired_agent_dispatch_settles_platform_hold_before_reclaim(
             await reconcile_stale_cancelled_model_attempts(session_factory)
         else:
             successor = await claim_task(session, owner="worker-b", lease_seconds=60)
-            assert successor is not None and successor.attempt_count == 2
+            assert successor is not None
+            assert successor.attempt_count == 2
         attempt = await session.scalar(
             select(AgentModelAttempt).where(AgentModelAttempt.task_run_id == run_id)
         )

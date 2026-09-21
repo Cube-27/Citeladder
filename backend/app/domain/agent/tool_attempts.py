@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.agent import TOOL_ATTEMPT_FAILED
+from app.domain.agent.leases import lock_owned_lease
 from app.domain.agent.tools import TOOL_VERSION
 from app.models.agent import AgentTaskRun, AgentToolAttempt
 
@@ -13,10 +14,13 @@ async def record_tool_failure(
     session: AsyncSession,
     *,
     run: AgentTaskRun,
+    owner: str,
     ordinal: int,
     tool_name: str,
     latency_ms: int,
-) -> None:
+) -> bool:
+    if await lock_owned_lease(session, run_id=run.id, owner=owner) is None:
+        return False
     session.add(
         AgentToolAttempt(
             workspace_id=run.workspace_id,
@@ -36,3 +40,4 @@ async def record_tool_failure(
         )
     )
     await session.commit()
+    return True

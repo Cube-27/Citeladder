@@ -35,6 +35,7 @@ from app.domain.commerce.prompts import (
     decide_buyer_prompt,
     generate_buyer_prompts,
     list_buyer_prompts,
+    validate_buyer_prompt_targets,
 )
 from app.domain.commerce.schemas import (
     BuyerPromptDecisionRequest,
@@ -234,15 +235,21 @@ async def buyer_prompts_generate_endpoint(
             "commerce_prompt_generation_unavailable",
             "No structured model is configured; manual prompt entry remains available.",
         ) from exc
-    await enforce_workspace_request(
-        session,
-        workspace_id=ctx.workspace_id,
-        operation="agent.provider_call",
-        limit=abuse_settings.agent_call_limit,
-        window_seconds=abuse_settings.agent_call_window_seconds,
-        amount=len(payload.targets),
-    )
     try:
+        await validate_buyer_prompt_targets(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=project_id,
+            targets=payload.targets,
+        )
+        await enforce_workspace_request(
+            session,
+            workspace_id=ctx.workspace_id,
+            operation="agent.provider_call",
+            limit=abuse_settings.agent_call_limit,
+            window_seconds=abuse_settings.agent_call_window_seconds,
+            amount=len(payload.targets),
+        )
         return await generate_buyer_prompts(
             session,
             workspace_id=ctx.workspace_id,

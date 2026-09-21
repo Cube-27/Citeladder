@@ -12,10 +12,16 @@ from app.core.config.agent import default_agent_settings
 from app.models.agent import AgentTaskRun
 
 
-async def renew_lease(session: AsyncSession, *, run_id: uuid.UUID, owner: str) -> bool:
+async def lock_owned_lease(
+    session: AsyncSession, *, run_id: uuid.UUID, owner: str
+) -> AgentTaskRun | None:
+    """Fence a write against cancellation, expiry, and another worker's claim."""
     now = datetime.now(UTC)
     row = await session.scalar(
-        select(AgentTaskRun).where(AgentTaskRun.id == run_id).with_for_update()
+        select(AgentTaskRun)
+        .where(AgentTaskRun.id == run_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     if (
         row is None
@@ -25,7 +31,15 @@ async def renew_lease(session: AsyncSession, *, run_id: uuid.UUID, owner: str) -
         or row.lease_expires_at <= now
     ):
         await session.rollback()
+        return None
+    return row
+
+
+async def renew_lease(session: AsyncSession, *, run_id: uuid.UUID, owner: str) -> bool:
+    row = await lock_owned_lease(session, run_id=run_id, owner=owner)
+    if row is None:
         return False
+    now = datetime.now(UTC)
     row.heartbeat_at = now
     row.lease_expires_at = now + timedelta(
         seconds=(

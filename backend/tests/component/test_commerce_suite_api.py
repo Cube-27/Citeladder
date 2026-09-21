@@ -439,7 +439,26 @@ async def test_buyer_prompt_generation_charges_each_target_and_bounds_fanout(
     monkeypatch.setattr("app.api.commerce.enforce_workspace_request", capture_limit)
     monkeypatch.setattr("app.api.commerce.generate_buyer_prompts", generate)
     url = f"/api/v1/projects/{project['id']}/commerce/buyer-prompts/generate"
-    target = {"kind": "product", "id": str(uuid.uuid4())}
+    missing_target = {"kind": "product", "id": str(uuid.uuid4())}
+    missing = await client.post(url, json={"targets": [missing_target], "count": 2})
+    assert missing.status_code == 404
+    assert calls == []
+    imported = await client.post(
+        f"/api/v1/projects/{project['id']}/commerce/catalog/import",
+        json={
+            "filename": "catalog.csv",
+            "content_type": "text/csv",
+            "content": (
+                "canonical_url,name,brand,category\n"
+                "https://shop.example/products/one,Acme One,Acme,Shoes\n"
+            ),
+        },
+    )
+    assert imported.status_code == 201
+    target = {
+        "kind": "product",
+        "id": imported.json()["row_outcomes"][0]["product_id"],
+    }
     valid = await client.post(url, json={"targets": [target, target], "count": 2})
     assert valid.status_code == 201
     assert calls == [2]
@@ -481,6 +500,7 @@ async def test_buyer_prompt_model_call_has_no_open_read_transaction(
                     "probe failed", error_code=ERROR_SERVER, retryable=True
                 )
 
+        gateway = FailingGateway()
         with pytest.raises(BuyerPromptGenerationUnavailable):
             await generate_buyer_prompts(
                 session,
@@ -488,5 +508,5 @@ async def test_buyer_prompt_model_call_has_no_open_read_transaction(
                 project_id=project_row.id,
                 targets=[target],
                 count=2,
-                gateway=FailingGateway(),
+                gateway=gateway,
             )

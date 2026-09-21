@@ -377,7 +377,8 @@ async def test_cancelled_lost_dispatch_settles_unknown_once(
                 )
             ).all()
         )
-    assert attempt is not None and attempt.status == "unknown_result"
+    assert attempt is not None
+    assert attempt.status == "unknown_result"
     assert (usage.reserved, usage.debited, len(debits)) == (0, expected_debit, 1)
 
 
@@ -442,8 +443,10 @@ async def test_cancelled_dispatch_accepts_one_late_receipt(
         )
         row = await session.get(ContentGeneration, generation_id)
         attempt = await session.get(ContentGenerationAttempt, dispatch_id)
-    assert row is not None and row.status == TASK_STATUS_CANCELLED
-    assert attempt is not None and attempt.status == "succeeded"
+    assert row is not None
+    assert row.status == TASK_STATUS_CANCELLED
+    assert attempt is not None
+    assert attempt.status == "succeeded"
     assert (usage.reserved, usage.debited) == (0, 2)
 
 

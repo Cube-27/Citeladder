@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,6 +48,31 @@ def _matches_revision(
     )
 
 
+async def _mark_aggregate_failure(
+    session: AsyncSession,
+    *,
+    connection_id: uuid.UUID,
+    credential_revision: uuid.UUID,
+    route_id: uuid.UUID,
+    route_revision: uuid.UUID,
+    response: ProviderConnectionTestResponse,
+) -> None:
+    current_connection = await session.get(
+        ProviderConnection, connection_id, with_for_update=True
+    )
+    current_route = await session.get(ProviderAppRoute, route_id, with_for_update=True)
+    if (
+        response.error_code != "revision_changed"
+        and _matches_revision(
+            current_route, current_connection, route_revision, credential_revision
+        )
+        and current_connection is not None
+    ):
+        current_connection.last_test_status = TEST_STATUS_FAILED
+        current_connection.last_tested_at = response.tested_at
+    await session.commit()
+
+
 async def probe_app_routes(
     session: AsyncSession,
     *,
@@ -54,6 +80,7 @@ async def probe_app_routes(
     app_transport: AppModelJsonTransport,
 ) -> ProviderConnectionTestResponse | None:
     connection_id = connection.id
+    credential_revision = connection.credential_revision
     route_ids = [
         route.id
         for route in sorted(connection.app_routes, key=lambda item: item.feature)
@@ -65,28 +92,30 @@ async def probe_app_routes(
         route = await session.get(ProviderAppRoute, route_id)
         if current_connection is None or route is None or not route.active:
             continue
-        responses.append(
-            await _probe_one(
-                session,
-                connection=current_connection,
-                route=route,
-                app_transport=app_transport,
-            )
+        response = await _probe_one(
+            session,
+            connection=current_connection,
+            route=route,
+            app_transport=app_transport,
         )
+        responses.append((route_id, route.revision, response))
     if not responses:
         return None
     failed = next(
-        (response for response in responses if response.status != TEST_STATUS_OK), None
+        (item for item in responses if item[2].status != TEST_STATUS_OK), None
     )
     if failed is not None:
-        current_connection = await session.get(ProviderConnection, connection_id)
-        if current_connection is None:
-            return failed
-        current_connection.last_test_status = TEST_STATUS_FAILED
-        current_connection.last_tested_at = failed.tested_at
-        await session.commit()
-        return failed
-    return responses[-1]
+        route_id, route_revision, response = failed
+        await _mark_aggregate_failure(
+            session,
+            connection_id=connection_id,
+            credential_revision=credential_revision,
+            route_id=route_id,
+            route_revision=route_revision,
+            response=response,
+        )
+        return response
+    return responses[-1][2]
 
 
 async def _probe_one(
@@ -148,9 +177,12 @@ async def _probe_one(
         tested_route_revision,
         tested_credential_revision,
     )
-    if (
+    if not current:
+        status = TEST_STATUS_FAILED
+        error_code = "revision_changed"
+        detail = "Connection changed during probe"
+    elif (
         status == TEST_STATUS_OK
-        and current
         and current_route is not None
         and current_connection is not None
     ):
@@ -159,11 +191,7 @@ async def _probe_one(
         current_route.probed_at = tested_at
         current_connection.last_test_status = TEST_STATUS_OK
         current_connection.last_tested_at = tested_at
-    elif status == TEST_STATUS_OK:
-        status = TEST_STATUS_FAILED
-        error_code = "revision_changed"
-        detail = "Connection changed during probe"
-    if status != TEST_STATUS_OK and current_connection is not None:
+    if status != TEST_STATUS_OK and current and current_connection is not None:
         current_connection.last_test_status = TEST_STATUS_FAILED
         current_connection.last_tested_at = tested_at
     if current_connection is not None:

@@ -25,7 +25,7 @@ from app.core.config.agent import (
     TOOL_ATTEMPT_UNAVAILABLE,
     default_agent_settings,
 )
-from app.domain.agent.leases import renew_lease
+from app.domain.agent.leases import lock_owned_lease, renew_lease
 from app.domain.agent.model_attempts import (
     NarrationUnavailableError,
     fallback_result,
@@ -401,13 +401,16 @@ async def _collect_evidence(
                 {},
             )
         except Exception:  # noqa: BLE001 - tool backstop; every tool fault is recorded as one failed step
-            await record_tool_failure(
+            recorded = await record_tool_failure(
                 session,
                 run=run,
+                owner=owner,
                 ordinal=ordinal,
                 tool_name=tool_name,
                 latency_ms=int((time.monotonic() - started) * 1000),
             )
+            if not recorded:
+                return None
             await _fail_claimed_run(
                 session,
                 run_id=run_id,
@@ -415,6 +418,8 @@ async def _collect_evidence(
                 code="tool_failed",
                 detail="A bounded evidence read failed.",
             )
+            return None
+        if await lock_owned_lease(session, run_id=run_id, owner=owner) is None:
             return None
         evidence.append({"tool": tool_name, "evidence": output})
         available = output.get("state") != "unavailable"

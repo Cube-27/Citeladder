@@ -572,6 +572,20 @@ class PostgresTaskQueue[
             },
         )
 
+    def _divert_unreconciled_submission(self, task: T, *, now: datetime) -> bool:
+        holds_submission = self._spec.unreconciled_submission
+        if holds_submission is None or not holds_submission(task):
+            return False
+        # A paid submission with no receipt must go to reconciliation; a
+        # retry could submit and charge for the same observation again.
+        task.status = TASK_STATUS_SUBMISSION_UNCERTAIN
+        task.available_at = now
+        logger.warning(
+            "sweeper diverted a task holding an unreconciled submission",
+            extra={"task_id": str(task.id), "queue": self._model.__tablename__},
+        )
+        return True
+
     async def release_expired_detailed(
         self, *, batch_size: int = 500
     ) -> ExpiredLeaseSweep:
@@ -599,30 +613,11 @@ class PostgresTaskQueue[
                 .with_for_update(skip_locked=True)
             )
             tasks = list((await session.scalars(stmt)).all())
-            holds_submission = self._spec.unreconciled_submission
             for task in tasks:
                 task.lease_owner = None
                 task.lease_expires_at = None
-                if holds_submission is not None and holds_submission(task):
-                    # This row died holding a PAID submission it never got to
-                    # record. Returning it to the retry set would submit — and
-                    # pay for — the same observation again, so it is diverted
-                    # to reconciliation instead, whatever killed it. That
-                    # closes the gap between a handled network timeout and a
-                    # process that died before it could handle anything.
-                    #
-                    # No attempt is spent: nothing here failed, and the
-                    # question of what happened is still open.
-                    task.status = TASK_STATUS_SUBMISSION_UNCERTAIN
-                    task.available_at = now
+                if self._divert_unreconciled_submission(task, now=now):
                     reclaimed += 1
-                    logger.warning(
-                        "sweeper diverted a task holding an unreconciled submission",
-                        extra={
-                            "task_id": str(task.id),
-                            "queue": model.__tablename__,
-                        },
-                    )
                     continue
                 if await self._reclaim_is_terminal(session, task, now):
                     self._terminalize_expired(task, now=now)

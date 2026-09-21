@@ -305,6 +305,27 @@ async def _generate_target_texts(
     return texts
 
 
+async def validate_buyer_prompt_targets(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    targets: list[CommerceTarget],
+) -> None:
+    """Reject missing or foreign targets before charging provider-call quota."""
+    project = await _project_with_brand(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    for target in targets:
+        await _target_context(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            target=target,
+            project=project,
+        )
+
+
 async def generate_buyer_prompts(
     session: AsyncSession,
     *,

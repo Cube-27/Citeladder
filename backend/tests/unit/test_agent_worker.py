@@ -45,6 +45,7 @@ def _install_settings(
     *,
     configured: bool = False,
     execution_timeout_seconds: float = 210.0,
+    lease_margin_seconds: float = 30.0,
     reconcile_poll_seconds: float = 0.01,
 ) -> None:
     monkeypatch.setattr(
@@ -53,6 +54,7 @@ def _install_settings(
         SimpleNamespace(
             configured=configured,
             execution_timeout_seconds=execution_timeout_seconds,
+            lease_margin_seconds=lease_margin_seconds,
             reconcile_poll_seconds=reconcile_poll_seconds,
         ),
     )
@@ -96,11 +98,13 @@ async def test_run_once_returns_zero_and_does_no_work_when_nothing_is_claimed(
 
 
 @pytest.mark.asyncio
-async def test_lease_budget_is_the_execution_timeout_plus_thirty_seconds(
+async def test_lease_budget_uses_configured_timeout_and_margin(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _install_session(monkeypatch)
-    _install_settings(monkeypatch, execution_timeout_seconds=120.0)
+    _install_settings(
+        monkeypatch, execution_timeout_seconds=120.0, lease_margin_seconds=37.0
+    )
     claims: list[dict[str, Any]] = []
 
     async def _claim(_session: object, **kwargs: Any) -> None:
@@ -113,7 +117,7 @@ async def test_lease_budget_is_the_execution_timeout_plus_thirty_seconds(
 
     # The lease has to outlive the longest permitted execution, or a task still
     # running gets stolen by a second worker mid-flight.
-    assert claims == [{"owner": "agent-lease", "lease_seconds": 150.0}]
+    assert claims == [{"owner": "agent-lease", "lease_seconds": 157.0}]
 
 
 @pytest.mark.asyncio

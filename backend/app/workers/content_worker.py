@@ -239,6 +239,7 @@ async def _locked_finalize_attempt(
     attempt = ContentGenerationAttempt(
         content_generation_id=row.id,
         attempt_number=attempt_number,
+        dispatch_id=uuid.uuid4(),
         status=ATTEMPT_STATUS_DISPATCHED,
         funding_source=row.funding_source,
         route_id=row.route_id,
