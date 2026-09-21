@@ -152,8 +152,8 @@ Overview sections, Website metric cards/page tables, Opportunities tables, and P
 
 | Region | Owns | Excludes |
 | --- | --- | --- |
-| Desktop sidebar | Project switcher (first row), Search, Agent, Overview/Analyze/Act/Track groups, Settings access, brand lockup (foot) | Duplicate navigation trees/registries; the account trigger |
-| Topbar | Account trigger at every width; below 981px also Menu, compact route title, Agent | Fixed bottom navigation |
+| Desktop sidebar | Project switcher (first row), Search, Agent, Overview/Analyze/Act/Track groups, Settings access, brand lockup and accent picker (foot) | Duplicate navigation trees/registries; the account trigger |
+| Topbar | Account trigger at every width; below 981px also Menu, compact route title, Agent and accent picker | Fixed bottom navigation |
 | Page header | One in-pane route H1 at `objectTitle`, existing description, route actions on the same row; entity heading is the sole H1 on detail routes | Metrics or duplicate route H1 |
 | Metric row | Three to five headline values, each with its change when one is comparable | More than five, unsupported metrics, or run bookkeeping |
 | Analytical surface | The page's primary chart, table, or comparison | Competing equal-weight surfaces |

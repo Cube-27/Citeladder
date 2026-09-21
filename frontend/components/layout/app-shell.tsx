@@ -99,7 +99,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               </div>
             </div>
 
-            <div className="border-border shrink-0 border-t p-[var(--sidebar-pad-x)]">
+            <div className="border-border flex shrink-0 items-center justify-between gap-2 border-t p-[var(--sidebar-pad-x)]">
               <Link
                 to={overviewHref}
                 className="focus-ring flex items-center rounded-xs px-2.5 py-1 transition-opacity hover:opacity-90"
@@ -107,6 +107,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               >
                 <LogoMark variant="sidebar" priority />
               </Link>
+              <AccentThemePicker />
             </div>
           </aside>
 
@@ -149,7 +150,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               <div className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-[var(--page-band-identity)] min-[981px]:block">
                 <div className="mx-auto flex h-full w-full max-w-[var(--content-max-width)] items-center justify-end px-[var(--content-gutter)]">
                   <div className="pointer-events-auto flex items-center gap-1">
-                    <AccentThemePicker />
                     <UserMenuTrigger presenter="header" />
                   </div>
                 </div>
