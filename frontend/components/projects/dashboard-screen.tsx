@@ -63,7 +63,10 @@ export function DashboardScreen({
 
 function DashboardLoading() {
   return (
-    <PageShell actions={<Skeleton className="h-8 w-44 rounded-[var(--radius-control)]" />}>
+    <PageShell
+      actions={<Skeleton className="h-8 w-44 rounded-[var(--radius-control)]" />}
+      className="pt-[var(--workspace-gap)]"
+    >
       <Stack gap="section" aria-busy="true">
         <div className="grid gap-[var(--workspace-gap)]">
           <output className="sr-only">Loading your command center…</output>
@@ -183,6 +186,7 @@ function DashboardData({
   const actions = useCommandCenterActions(data, activeProject);
   return (
     <PageShell
+      className="pt-[var(--workspace-gap)]"
       actions={
         <DashboardActions
           data={data}
