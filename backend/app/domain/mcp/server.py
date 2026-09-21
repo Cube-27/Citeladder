@@ -133,7 +133,10 @@ mcp_server = MCPServer(
 @mcp_server.tool(
     name="list_projects",
     title="List CiteLadder projects",
-    description="List every project visible to the connected CiteLadder account.",
+    description=(
+        "List a bounded page of projects visible to the connected CiteLadder "
+        "account; follow next_cursor to enumerate the rest."
+    ),
     annotations=_READ_ONLY,
 )
 async def list_projects(

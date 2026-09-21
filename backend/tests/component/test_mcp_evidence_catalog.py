@@ -109,7 +109,7 @@ async def test_prompt_portfolio_pages_without_skips_and_fetches_a_document(
             db_session, first["items"][0]["record_uri"]
         )
         monkeypatch.setattr(
-            "app.domain.mcp.retrieval_document.MCP_MAX_DOCUMENT_BYTES", 200
+            "app.domain.mcp.retrieval_document.MCP_MAX_DOCUMENT_BYTES", 800
         )
         first_part = await fetch_business_record(
             db_session, first["items"][0]["record_uri"]
@@ -117,6 +117,11 @@ async def test_prompt_portfolio_pages_without_skips_and_fetches_a_document(
         second_part = await fetch_business_record(
             db_session, first_part["metadata"]["part_uris"][1]
         )
+        with pytest.raises(LookupError, match="part was not found"):
+            await fetch_business_record(
+                db_session,
+                f"{first['items'][0]['record_uri']}?part=999",
+            )
     finally:
         auth_context_var.reset(token)
 
@@ -129,7 +134,7 @@ async def test_prompt_portfolio_pages_without_skips_and_fetches_a_document(
     assert document["url"].startswith("http")
     assert document["text"]
     assert first_part["metadata"]["complete"] is False
-    assert len(first_part["text"].encode()) <= 200
+    assert len(json.dumps(first_part).encode()) <= 800
     assert second_part["metadata"]["part"] == 1
 
 

@@ -23,32 +23,85 @@ def retrieval_document(
 ) -> dict[str, Any]:
     url = _application_record_url(kind, project_id, row_id, record)
     serialized = json_text(record)
-    parts = [
-        serialized[index : index + MCP_MAX_DOCUMENT_BYTES]
-        for index in range(0, len(serialized), MCP_MAX_DOCUMENT_BYTES)
-    ] or [""]
-    if requested_part >= len(parts):
-        raise LookupError("The requested evidence part was not found")
-    complete = len(parts) == 1
     base_uri = f"citeladder://{kind}/{row_id}"
-    part_uris = [f"{base_uri}?part={index}" for index in range(len(parts))]
+    complete_document = _document(
+        base_uri,
+        title,
+        serialized,
+        url,
+        kind,
+        project_id,
+        observed_at,
+        record=record,
+    )
+    if len(json_text(complete_document)) <= MCP_MAX_DOCUMENT_BYTES:
+        if requested_part:
+            raise LookupError("The requested evidence part was not found")
+        return complete_document
+
+    chunk_size = MCP_MAX_DOCUMENT_BYTES // 2
+    while chunk_size:
+        parts = [
+            serialized[index : index + chunk_size]
+            for index in range(0, len(serialized), chunk_size)
+        ]
+        part_uris = [f"{base_uri}?part={index}" for index in range(len(parts))]
+        selected: dict[str, Any] | None = None
+        for index, part_text in enumerate(parts):
+            document = _document(
+                part_uris[index],
+                title,
+                part_text,
+                url,
+                kind,
+                project_id,
+                observed_at,
+                part=index,
+                part_uris=part_uris,
+            )
+            if len(json_text(document)) > MCP_MAX_DOCUMENT_BYTES:
+                break
+            if index == requested_part:
+                selected = document
+        else:
+            if selected is not None:
+                return selected
+            raise LookupError("The requested evidence part was not found")
+        chunk_size //= 2
+    raise ValueError("Retrieval metadata exceeds the document size limit")
+
+
+def _document(
+    record_uri: str,
+    title: str,
+    text: str,
+    url: str,
+    kind: str,
+    project_id: uuid.UUID,
+    observed_at: datetime | date | None,
+    *,
+    record: dict[str, Any] | None = None,
+    part: int | None = None,
+    part_uris: list[str] | None = None,
+) -> dict[str, Any]:
+    complete = record is not None
     document = RetrievalDocument(
-        id=base_uri if complete else part_uris[requested_part],
+        id=record_uri,
         title=title,
-        text=parts[requested_part],
+        text=text,
         url=url,
         metadata=RetrievalMetadata(
             project_id=str(project_id),
             record_type=kind,
             observed_at=observed_at,
             complete=complete,
-            record=record if complete else {},
-            part=requested_part if not complete else None,
-            part_count=len(parts),
-            part_uris=part_uris if not complete else [],
+            record=record or {},
+            part=part,
+            part_count=len(part_uris) if part_uris else 1,
+            part_uris=part_uris or [],
         ),
     ).model_dump(mode="json")
-    return {**(record if complete else {}), **document}
+    return {**(record or {}), **document}
 
 
 def _application_record_url(

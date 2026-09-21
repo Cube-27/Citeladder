@@ -153,41 +153,45 @@ async def _load_project_context(
     # Prompt's are rendered below, and hydrating whole ORM instances to read
     # them costs identity-map bookkeeping and serialization for columns this
     # projection never touches.
-    profile = (
-        await session.execute(
-            select(
-                BrandProfile.description,
-                BrandProfile.positioning,
-                BrandProfile.products_services,
-                BrandProfile.target_audience,
-                BrandProfile.business_context,
-                BrandProfile.sources,
-                BrandProfile.source_artifact_ids,
-                BrandProfile.updated_at,
-            ).where(
-                BrandProfile.workspace_id == project.workspace_id,
-                BrandProfile.project_id == project.id,
+    profile = None
+    competitor_rows: list[Competitor] = []
+    owned_domains: list[str] = []
+    if "profile" in selected_sections:
+        profile = (
+            await session.execute(
+                select(
+                    BrandProfile.description,
+                    BrandProfile.positioning,
+                    BrandProfile.products_services,
+                    BrandProfile.target_audience,
+                    BrandProfile.business_context,
+                    BrandProfile.sources,
+                    BrandProfile.source_artifact_ids,
+                    BrandProfile.updated_at,
+                ).where(
+                    BrandProfile.workspace_id == project.workspace_id,
+                    BrandProfile.project_id == project.id,
+                )
             )
+        ).one_or_none()
+        competitor_rows = list(
+            (
+                await session.scalars(
+                    select(Competitor)
+                    .where(Competitor.project_id == project.id)
+                    .order_by(Competitor.name.asc(), Competitor.id.asc())
+                )
+            ).all()
         )
-    ).one_or_none()
-    competitor_rows = list(
-        (
-            await session.scalars(
-                select(Competitor)
-                .where(Competitor.project_id == project.id)
-                .order_by(Competitor.name.asc(), Competitor.id.asc())
-            )
-        ).all()
-    )
-    owned_domains = list(
-        (
-            await session.scalars(
-                select(OwnedDomain.domain)
-                .where(OwnedDomain.project_id == project.id)
-                .order_by(OwnedDomain.domain.asc())
-            )
-        ).all()
-    )
+        owned_domains = list(
+            (
+                await session.scalars(
+                    select(OwnedDomain.domain)
+                    .where(OwnedDomain.project_id == project.id)
+                    .order_by(OwnedDomain.domain.asc())
+                )
+            ).all()
+        )
     evidence: dict[str, Any] = {}
     context = ToolExecutionContext(
         session=session,
@@ -200,27 +204,29 @@ async def _load_project_context(
         evidence[tool_name] = _normalize_refs(
             await execute_tool(tool_name, context, {})
         )
-    prompt_rows = list(
-        (
-            await session.execute(
-                select(
-                    Prompt.id,
-                    Prompt.text,
-                    Prompt.theme,
-                    Prompt.intent,
-                    Prompt.buyer_stage,
-                    Prompt.origin,
-                    Prompt.cohort,
-                    Prompt.status,
+    prompt_rows: list[Any] = []
+    if "prompts" in selected_sections:
+        prompt_rows = list(
+            (
+                await session.execute(
+                    select(
+                        Prompt.id,
+                        Prompt.text,
+                        Prompt.theme,
+                        Prompt.intent,
+                        Prompt.buyer_stage,
+                        Prompt.origin,
+                        Prompt.cohort,
+                        Prompt.status,
+                    )
+                    .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
+                    .where(PromptSet.project_id == project.id, Prompt.enabled.is_(True))
+                    .order_by(Prompt.created_at.asc(), Prompt.id.asc())
+                    .limit(51)
                 )
-                .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
-                .where(PromptSet.project_id == project.id, Prompt.enabled.is_(True))
-                .order_by(Prompt.created_at.asc(), Prompt.id.asc())
-                .limit(51)
-            )
-        ).all()
-    )
-    prompts = prompt_rows[:50] if "prompts" in selected_sections else []
+            ).all()
+        )
+    prompts = prompt_rows[:50]
     search_readiness = (
         await search_intelligence_readiness(
             session, workspace_id=project.workspace_id, project_id=project.id
@@ -260,9 +266,9 @@ def _dataset_inventory(
         {
             "kind": "query_page_evidence",
             "read_tool": "read_query_evidence",
-            "state": "available"
-            if evidence.get("demand.read_snapshot", {}).get("state") == "available"
-            else "unavailable",
+            "state": evidence.get("demand.read_snapshot", {}).get(
+                "state", "not_requested"
+            ),
             "limitation": "exact saved windows only",
         },
         {
@@ -344,16 +350,22 @@ def _render_project_context(
             "language_code": project.language_code,
         },
         "brand_profile": brand_profile,
-        "owned_domains": owned_domains,
-        "accepted_competitors": [
+        **(
             {
-                "id": str(row.id),
-                "name": row.name,
-                "aliases": row.aliases,
-                "domains": row.domains,
+                "owned_domains": owned_domains,
+                "accepted_competitors": [
+                    {
+                        "id": str(row.id),
+                        "name": row.name,
+                        "aliases": row.aliases,
+                        "domains": row.domains,
+                    }
+                    for row in competitor_rows
+                ],
             }
-            for row in competitor_rows
-        ],
+            if "profile" in selected_sections
+            else {}
+        ),
         "active_prompts": [
             {
                 "id": str(prompt.id),

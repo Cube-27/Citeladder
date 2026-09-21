@@ -172,7 +172,7 @@ async def _ranked_opportunities(
         for rank, row in enumerate(emitted, start=1)
     ]
     omissions = (
-        [{"reason": "roadmap_item_limit", "count": len(rows) - len(emitted)}]
+        [{"reason": "roadmap_item_limit", "count": None}]
         if len(rows) > len(emitted)
         else []
     )
@@ -196,7 +196,8 @@ async def _ranked_opportunities(
 async def _opportunity_selection(
     context: ToolExecutionContext, payload: dict[str, Any]
 ) -> tuple[Any, int]:
-    requested_limit = _count(payload, "limit") or MAX_ROADMAP_ITEMS
+    parsed_limit = _count(payload, "limit")
+    requested_limit = MAX_ROADMAP_ITEMS if parsed_limit is None else parsed_limit
     if requested_limit < 1 or requested_limit > 200:
         raise ValueError("limit must be between 1 and 200")
     statement = select(Opportunity).where(

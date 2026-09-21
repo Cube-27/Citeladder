@@ -52,7 +52,7 @@
       "title": "Get complete project business context"
     },
     {
-      "description": "List every project visible to the connected CiteLadder account.",
+      "description": "List a bounded page of projects visible to the connected CiteLadder account; follow next_cursor to enumerate the rest.",
       "input_schema": {
         "properties": {
           "cursor": {

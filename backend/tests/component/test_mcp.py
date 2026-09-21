@@ -128,6 +128,13 @@ async def test_oauth_grant_is_account_scoped_and_revocable(
             bounded_search = await search_business_context(
                 session, project.name, limit=1
             )
+            with pytest.raises(ValueError, match="limit must be"):
+                await read_growth_evidence(
+                    session,
+                    str(project.id),
+                    "opportunities.read_ranked",
+                    {"limit": 0},
+                )
             with pytest.raises(LookupError, match="not found"):
                 await project_business_context(session, str(outsider_project.id))
     finally:
@@ -136,6 +143,9 @@ async def test_oauth_grant_is_account_scoped_and_revocable(
     assert context["project"]["id"] == str(project.id)
     assert empty_context["evidence"] == {}
     assert empty_context["active_prompts"] == []
+    assert "owned_domains" not in empty_context
+    assert "accepted_competitors" not in empty_context
+    assert empty_context["available_datasets"][1]["state"] == "not_requested"
     assert bounded_search["pagination"]["has_more"] is False
     assert set(context["evidence"]) == {
         "site.read_snapshot",
@@ -464,7 +474,11 @@ async def test_browser_consent_requires_an_explicit_approval(
     # One approval, one code: the consumed transaction cannot be replayed.
     replay = await client.post(
         "/mcp/oauth/consent",
-        data={"transaction": transaction, "csrf_token": csrf.group(1)},
+        data={
+            "transaction": transaction,
+            "csrf_token": csrf.group(1),
+            "decision": "approve",
+        },
         follow_redirects=False,
     )
     assert replay.status_code == 403
