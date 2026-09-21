@@ -477,7 +477,29 @@ async def post_subscription(
         )
         if replayed is not None:
             return replayed
-        await reject_existing_base(session, account)
+        try:
+            await reject_existing_base(session, account)
+        except BillingConflictError:
+            # A concurrent retry can miss its record just before the winner
+            # commits its pending row. Recheck the key before treating that
+            # row as a different checkout's pending slot.
+            replayed = await _replayed_activation(
+                session,
+                account=account,
+                operation=OPERATION_SUBSCRIPTION_CREATE,
+                catalog_key=payload.catalog_key,
+                quantity=1,
+                credential_mode=payload.credential_mode,
+                idempotency_key=idempotency_key,
+                response=response,
+                billing_context={
+                    "country_code": payload.country_code,
+                    "customer": identity.snapshot(),
+                },
+            )
+            if replayed is not None:
+                return replayed
+            raise
         intent = await resolve_base_intent(
             session,
             catalog_key=payload.catalog_key,

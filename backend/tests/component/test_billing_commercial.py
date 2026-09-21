@@ -640,12 +640,38 @@ async def test_concurrent_same_key_requests_never_500_or_double_call(
     }
     headers = {"Idempotency-Key": "race-key-api-0001"}
 
+    first_replay_missed = asyncio.Event()
+    winner_pending = asyncio.Event()
+    replay_attempts = 0
+    real_replay = billing_api._replayed_activation
+    real_create = provider.create_base_subscription
+
+    async def _gate_first_replay(*args: object, **kwargs: object):
+        nonlocal replay_attempts
+        replayed = await real_replay(*args, **kwargs)
+        if replayed is None:
+            replay_attempts += 1
+            if replay_attempts == 1:
+                first_replay_missed.set()
+                await winner_pending.wait()
+        return replayed
+
+    async def _signal_committed_pending(*args: object, **kwargs: object):
+        winner_pending.set()
+        return await real_create(*args, **kwargs)
+
+    monkeypatch.setattr(billing_api, "_replayed_activation", _gate_first_replay)
+    monkeypatch.setattr(provider, "create_base_subscription", _signal_committed_pending)
+
     async def _post() -> httpx.Response:
         return await client.post(
             "/api/v1/billing/subscriptions", json=payload, headers=headers
         )
 
-    first, second = await asyncio.gather(_post(), _post())
+    first_request = asyncio.create_task(_post())
+    await asyncio.wait_for(first_replay_missed.wait(), timeout=5)
+    second = await _post()
+    first = await first_request
     assert first.status_code == 202
     assert second.status_code == 202
     assert first.json()["activation_id"] == second.json()["activation_id"]

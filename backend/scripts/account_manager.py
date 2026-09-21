@@ -28,7 +28,7 @@ from app.domain.workspaces.policy import (
 )
 from app.domain.workspaces.service import get_membership
 from app.models.user import User
-from app.models.workspace import Workspace
+from app.models.workspace import Workspace, WorkspaceMember
 
 
 def _ask(label: str) -> str:
@@ -56,7 +56,9 @@ async def _list(session: AsyncSession, workspace_id: uuid.UUID) -> None:
         print(f"{user.email}  role={member.role}  active={user.is_active}")
 
 
-async def _invite(session: AsyncSession, workspace_id: uuid.UUID, actor: User) -> None:
+async def _invite(
+    session: AsyncSession, workspace_id: uuid.UUID, actor_id: uuid.UUID
+) -> None:
     email = normalize_email(_ask("Email"))
     if not email or "@" not in email:
         raise ValueError("email_invalid")
@@ -64,6 +66,7 @@ async def _invite(session: AsyncSession, workspace_id: uuid.UUID, actor: User) -
     if role not in ASSIGNABLE_WORKSPACE_ROLES:
         raise ValueError("role_not_assignable")
     user = await get_user_by_email(session, email)
+    password: str | None = None
     if user is None:
         password = getpass.getpass("New login password: ")
         if len(password) < 8 or len(password) > 128:
@@ -72,6 +75,10 @@ async def _invite(session: AsyncSession, workspace_id: uuid.UUID, actor: User) -
             return
     elif not _confirm(f"Invite existing user {email} as {role}"):
         return
+    actor = await _authorized_operator(
+        session, workspace_id, actor_id, lock_membership=True
+    )
+    user = await get_user_by_email(session, email)
     invitation, token = await create_invitation(
         session,
         workspace_id=workspace_id,
@@ -79,8 +86,13 @@ async def _invite(session: AsyncSession, workspace_id: uuid.UUID, actor: User) -
         role=role,
         invited_by=actor,
     )
-    if user is None and await register_user(session, email, password) is None:
-        raise ValueError("user_already_exists")
+    if user is None:
+        if (
+            password is None
+            or await register_user(session, email, password, provision_access=False)
+            is None
+        ):
+            raise ValueError("user_already_exists")
     await session.commit()
     print(f"Invitation expires at {invitation.expires_at.isoformat()}")
     print("Share this one-time token securely with the invited user:")
@@ -88,7 +100,9 @@ async def _invite(session: AsyncSession, workspace_id: uuid.UUID, actor: User) -
     print("The user must accept it while signed in to their own account.")
 
 
-async def _change_role(session: AsyncSession, workspace_id: uuid.UUID) -> None:
+async def _change_role(
+    session: AsyncSession, workspace_id: uuid.UUID, actor_id: uuid.UUID
+) -> None:
     email = _ask("Member email").lower()
     user, member_id = await _member_by_email(session, workspace_id, email)
     role = _ask("New role (admin/member/viewer)").lower()
@@ -96,6 +110,8 @@ async def _change_role(session: AsyncSession, workspace_id: uuid.UUID) -> None:
         raise ValueError("role_not_assignable")
     if not _confirm(f"Change {user.email} to {role}"):
         return
+    await _authorized_operator(session, workspace_id, actor_id, lock_membership=True)
+    _, member_id = await _member_by_email(session, workspace_id, email)
     await change_member_role(
         session, workspace_id=workspace_id, member_id=member_id, role=role
     )
@@ -103,7 +119,9 @@ async def _change_role(session: AsyncSession, workspace_id: uuid.UUID) -> None:
     print("Role updated.")
 
 
-async def _reset_password(session: AsyncSession, workspace_id: uuid.UUID) -> None:
+async def _reset_password(
+    session: AsyncSession, workspace_id: uuid.UUID, actor_id: uuid.UUID
+) -> None:
     email = _ask("Member email").lower()
     user, _ = await _member_by_email(session, workspace_id, email)
     if user.hashed_password is None:
@@ -113,6 +131,8 @@ async def _reset_password(session: AsyncSession, workspace_id: uuid.UUID) -> Non
         raise ValueError("password_length_invalid")
     if not _confirm(f"Reset password and end sessions for {user.email}"):
         return
+    await _authorized_operator(session, workspace_id, actor_id, lock_membership=True)
+    user, _ = await _member_by_email(session, workspace_id, email)
     user.hashed_password = hash_password(password)
     user.session_version += 1
     await session.commit()
@@ -145,11 +165,21 @@ async def _operator(
     return actor, workspace
 
 
-async def _choice(
-    session: AsyncSession, workspace_id: uuid.UUID, actor_id: uuid.UUID, choice: str
-) -> None:
+async def _authorized_operator(
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    actor_id: uuid.UUID,
+    *,
+    lock_membership: bool = False,
+) -> User:
     actor = await session.get(User, actor_id, populate_existing=True)
-    member = await get_membership(session, workspace_id, actor_id)
+    statement = select(WorkspaceMember).where(
+        WorkspaceMember.workspace_id == workspace_id,
+        WorkspaceMember.user_id == actor_id,
+    )
+    if lock_membership:
+        statement = statement.with_for_update()
+    member = await session.scalar(statement)
     if member is not None:
         await session.refresh(member)
     if (
@@ -159,14 +189,21 @@ async def _choice(
         or not role_allows(member.role, WorkspaceCapability.MANAGE_MEMBERS)
     ):
         raise PermissionError("workspace_admin_required")
+    return actor
+
+
+async def _choice(
+    session: AsyncSession, workspace_id: uuid.UUID, actor_id: uuid.UUID, choice: str
+) -> None:
+    await _authorized_operator(session, workspace_id, actor_id)
     if choice == "1":
         await _list(session, workspace_id)
     elif choice == "2":
-        await _invite(session, workspace_id, actor)
+        await _invite(session, workspace_id, actor_id)
     elif choice == "3":
-        await _change_role(session, workspace_id)
+        await _change_role(session, workspace_id, actor_id)
     elif choice == "4":
-        await _reset_password(session, workspace_id)
+        await _reset_password(session, workspace_id, actor_id)
     else:
         print("Choose 0-4.")
 

@@ -58,3 +58,52 @@ async def test_account_manager_rechecks_operator_before_next_choice(
 
         with pytest.raises(PermissionError, match="workspace_admin_required"):
             await account_manager._choice(operator, workspace_id, actor_id, "2")
+
+
+@pytest.mark.asyncio
+async def test_account_manager_rechecks_operator_after_invite_confirmation(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async with session_factory() as setup:
+        owner = await register_user(setup, "account-owner@example.com", "password123")
+        actor = await register_user(setup, "account-admin@example.com", "password123")
+        invitee = await register_user(
+            setup, "account-invitee@example.com", "password123"
+        )
+        assert owner is not None and actor is not None and invitee is not None
+        workspace, _ = (await list_workspaces_for_user(setup, owner))[0]
+        setup.add(
+            WorkspaceMember(workspace_id=workspace.id, user_id=actor.id, role="admin")
+        )
+        await setup.commit()
+        actor_id = actor.id
+        workspace_id = workspace.id
+
+    monkeypatch.setattr(
+        account_manager,
+        "_ask",
+        lambda _label: "account-invitee@example.com" if _label == "Email" else "member",
+    )
+    monkeypatch.setattr(account_manager, "_confirm", lambda _label: True)
+
+    async def authorization_lapsed(
+        _session: AsyncSession,
+        _workspace_id: object,
+        _actor_id: object,
+        *,
+        lock_membership: bool = False,
+    ) -> User:
+        if lock_membership:
+            raise PermissionError("workspace_admin_required")
+        raise AssertionError("invite flow must authorize only before the mutation")
+
+    async def unexpected_invitation(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("revoked operator reached account mutation")
+
+    monkeypatch.setattr(account_manager, "_authorized_operator", authorization_lapsed)
+    monkeypatch.setattr(account_manager, "create_invitation", unexpected_invitation)
+
+    async with session_factory() as operator:
+        with pytest.raises(PermissionError, match="workspace_admin_required"):
+            await account_manager._invite(operator, workspace_id, actor_id)
