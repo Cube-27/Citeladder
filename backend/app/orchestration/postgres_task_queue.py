@@ -559,7 +559,7 @@ class PostgresTaskQueue[
         if not task.error_code:
             task.error_code = self._spec.max_attempts_error
             task.error_detail = "lease expired after max attempts exhausted"
-        parent_attr = self._spec.parent_id_attr
+        parent_attr = self._spec.parent_id_attr or ""
         logger.warning(
             "sweeper failed task at max attempts",
             extra={
@@ -601,7 +601,7 @@ class PostgresTaskQueue[
         reclaimed = 0
         failed_task_ids: list[uuid.UUID] = []
         failed_parent_ids: list[uuid.UUID] = []
-        parent_attr = self._spec.parent_id_attr
+        parent_attr = self._spec.parent_id_attr or ""
         async with self._session_factory() as session:
             stmt = (
                 select(model)
@@ -624,9 +624,7 @@ class PostgresTaskQueue[
                     if self._reclaim_accounting is not None:
                         await self._reclaim_accounting(session, task, now)
                     failed_task_ids.append(task.id)
-                    parent_id = (
-                        getattr(task, parent_attr, None) if parent_attr else None
-                    )
+                    parent_id = getattr(task, parent_attr, None)
                     if parent_id is not None:
                         failed_parent_ids.append(parent_id)
                 else:
