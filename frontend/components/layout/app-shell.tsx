@@ -14,7 +14,6 @@ import { AgentSheet, AgentSheetTrigger } from './agent-sheet';
 import { CompactPageTitleContext } from './compact-page-title-context';
 import { ProjectSwitcher } from './project-switcher';
 import { SidebarNav } from './sidebar-nav';
-import { AccentThemePicker } from '@/components/ui/accent-theme-picker';
 import { UserMenuTrigger } from './user-menu';
 import { resolveTitle } from './page-titles';
 import { projectDestination } from '@/lib/navigation/project-destination';
@@ -107,7 +106,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               >
                 <LogoMark variant="sidebar" priority />
               </Link>
-              <AccentThemePicker />
             </div>
           </aside>
 
@@ -130,7 +128,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               <div className="text-secondary min-w-0 truncate text-sm">{compactTitle}</div>
               <div className="flex items-center justify-end gap-2.5 justify-self-end">
                 <AgentSheetTrigger />
-                <AccentThemePicker />
                 <UserMenuTrigger presenter="compact" />
               </div>
             </header>
