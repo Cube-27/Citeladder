@@ -39,17 +39,18 @@ from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.workspace import Workspace
 
-# Every MCP tool is a READ. Resolved from the shared policy at import time so
-# the MCP surface and the HTTP API can never disagree about who may read.
-_CONTEXT_TOOLS = (
-    "site.read_snapshot",
-    "demand.read_snapshot",
-    "opportunities.read_ranked",
-    "audits.read_latest",
-    "performance.read_snapshot",
-    "referrals.read_snapshot",
-    "integrations.read_status",
-)
+# Project context excludes paged performance tables. The mapping is also the
+# single authority for section selection in this projection.
+_INTEGRATIONS_READ = "integrations.read_status"
+_CONTEXT_SECTIONS_BY_TOOL = {
+    "site.read_snapshot": "site_health",
+    "demand.read_snapshot": "demand",
+    "opportunities.read_ranked": "opportunities",
+    "audits.read_latest": "visibility",
+    "performance.read_snapshot": "performance",
+    "referrals.read_snapshot": "referrals",
+    _INTEGRATIONS_READ: "integrations",
+}
 
 
 async def list_account_projects(
@@ -193,17 +194,8 @@ async def _load_project_context(
         workspace_id=project.workspace_id,
         project_id=project.id,
     )
-    section_tools = {
-        "site.read_snapshot": "site_health",
-        "demand.read_snapshot": "demand",
-        "opportunities.read_ranked": "opportunities",
-        "audits.read_latest": "visibility",
-        "performance.read_snapshot": "performance",
-        "referrals.read_snapshot": "referrals",
-        "integrations.read_status": "integrations",
-    }
-    for tool_name in _CONTEXT_TOOLS:
-        if section_tools[tool_name] not in selected_sections:
+    for tool_name, section in _CONTEXT_SECTIONS_BY_TOOL.items():
+        if section not in selected_sections:
             continue
         evidence[tool_name] = _normalize_refs(
             await execute_tool(tool_name, context, {})
@@ -250,6 +242,12 @@ async def _load_project_context(
 def _dataset_inventory(
     search_readiness: Any, evidence: dict[str, Any]
 ) -> list[dict[str, Any]]:
+    if search_readiness is None:
+        search_state = "not_requested"
+    elif search_readiness.datasets:
+        search_state = "available"
+    else:
+        search_state = "unavailable"
     dataset_inventory = [
         {
             "kind": "site_health",
@@ -278,13 +276,7 @@ def _dataset_inventory(
         {
             "kind": "search_intelligence",
             "read_tool": "read_search_intelligence",
-            "state": (
-                "available"
-                if search_readiness and search_readiness.datasets
-                else "not_requested"
-                if search_readiness is None
-                else "unavailable"
-            ),
+            "state": search_state,
             "observed_at": max(
                 (
                     item.published_at
@@ -317,6 +309,26 @@ def _render_project_context(
         prompts,
         _search_readiness,
     ) = loaded
+    if "profile" not in selected_sections:
+        brand_profile: dict[str, Any] = {"state": "not_requested"}
+    elif profile is None:
+        brand_profile = {"state": "unavailable", "reason": "no_brand_profile"}
+    else:
+        brand_profile = {
+            "description": profile.description,
+            "positioning": profile.positioning,
+            "products_services": profile.products_services,
+            "target_audience": profile.target_audience,
+            "business_context": profile.business_context,
+            "sources": profile.sources,
+            "source_artifact_ids": profile.source_artifact_ids,
+            "review_state_by_field": {
+                field: source.get("review_state", "unavailable")
+                for field, source in (profile.sources or {}).items()
+                if isinstance(source, dict)
+            },
+            "updated_at": profile.updated_at,
+        }
     return {
         "scope": "project",
         "project": {
@@ -331,27 +343,7 @@ def _render_project_context(
             "country_code": project.country_code,
             "language_code": project.language_code,
         },
-        "brand_profile": (
-            {
-                "description": profile.description,
-                "positioning": profile.positioning,
-                "products_services": profile.products_services,
-                "target_audience": profile.target_audience,
-                "business_context": profile.business_context,
-                "sources": profile.sources,
-                "source_artifact_ids": profile.source_artifact_ids,
-                "review_state_by_field": {
-                    field: source.get("review_state", "unavailable")
-                    for field, source in (profile.sources or {}).items()
-                    if isinstance(source, dict)
-                },
-                "updated_at": profile.updated_at,
-            }
-            if profile and "profile" in selected_sections
-            else {"state": "not_requested"}
-            if "profile" not in selected_sections
-            else {"state": "unavailable", "reason": "no_brand_profile"}
-        ),
+        "brand_profile": brand_profile,
         "owned_domains": owned_domains,
         "accepted_competitors": [
             {
@@ -562,7 +554,7 @@ async def read_growth_evidence(
             "crawl_id": "not_applicable",
             "dataset_id": "not_applicable",
         }
-        if tool_name == "integrations.read_status"
+        if tool_name == _INTEGRATIONS_READ
         else "applicable"
     )
     result.setdefault(
@@ -576,9 +568,7 @@ async def read_growth_evidence(
                 else "not_applicable"
             ),
             "follow_through": (
-                "not_applicable"
-                if tool_name == "integrations.read_status"
-                else "applicable"
+                "not_applicable" if tool_name == _INTEGRATIONS_READ else "applicable"
             ),
         },
     )

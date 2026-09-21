@@ -65,7 +65,6 @@ async def _resolve_project(
     session: AsyncSession, row_id: uuid.UUID
 ) -> _ResolvedRecord | None:
     record: dict[str, Any] | None = None
-    title = "Project"
     project_id: uuid.UUID | None = None
     observed_at: datetime | date | None = None
     record = await project_business_context(session, str(row_id))

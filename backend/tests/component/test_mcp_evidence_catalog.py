@@ -32,7 +32,10 @@ from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 
 TOOL_REFERENCE = json.loads(
-    Path("frontend/apps/marketing/src/data/mcp-tools.json").read_text(encoding="utf-8")
+    (
+        Path(__file__).resolve().parents[3]
+        / "frontend/apps/marketing/src/data/mcp-tools.json"
+    ).read_text(encoding="utf-8")
 )
 
 

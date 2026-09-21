@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-import argparse
 import asyncio
 import json
 from pathlib import Path
 
 from app.core.config.mcp import MCP_SERVER_VERSION
 from app.domain.mcp.server import mcp_server
+
+TOOL_REFERENCE_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "frontend/apps/marketing/src/data/mcp-tools.json"
+)
 
 
 async def reference() -> dict[str, object]:
@@ -30,11 +34,8 @@ async def reference() -> dict[str, object]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("output", type=Path)
-    args = parser.parse_args()
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
+    TOOL_REFERENCE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    TOOL_REFERENCE_PATH.write_text(
         json.dumps(asyncio.run(reference()), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )

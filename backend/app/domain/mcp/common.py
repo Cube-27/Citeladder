@@ -23,20 +23,6 @@ from app.models.workspace import Workspace, WorkspaceMember
 # the MCP surface and the HTTP API can never disagree about who may read.
 _MCP_READER_ROLES = roles_with(WorkspaceCapability.READ)
 
-# The reads that describe a project as a whole. ``performance.read_table`` is
-# deliberately absent: it is a paged drill-down into one dimension, and a
-# context resource that carried a page of it would be answering a question the
-# caller has not asked yet.
-_CONTEXT_TOOLS = (
-    "site.read_snapshot",
-    "demand.read_snapshot",
-    "opportunities.read_ranked",
-    "audits.read_latest",
-    "performance.read_snapshot",
-    "referrals.read_snapshot",
-    "integrations.read_status",
-)
-
 
 def _limit(value: int | None) -> int:
     if value is None:
