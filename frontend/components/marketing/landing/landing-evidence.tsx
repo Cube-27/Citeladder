@@ -26,7 +26,6 @@ export function Evidence() {
     <section className="cl-section cl-evidence" id="evidence">
       <div className="cl-wrap cl-evidence-grid">
         <div>
-          <span className="cl-eyebrow">Inspectable evidence</span>
           <h2>Analysis with a documented record.</h2>
           <p>
             Recorded answers, source references and crawl findings provide the context behind

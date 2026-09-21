@@ -34,7 +34,7 @@
   --color-border-subtle: var(--marketing-footer-line);
   background: var(--marketing-footer-background);
   color: var(--color-foreground);
-  border-radius: 24px;
+  border-radius: 0;
   overflow: hidden;
 }
 

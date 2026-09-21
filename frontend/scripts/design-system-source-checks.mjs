@@ -9,6 +9,7 @@ const EDITORIAL_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']);
 const EDITORIAL_SIZE = /\btext-(?:2xs|xs|sm|base|lg|xl|2xl|3xl|4xl|5xl)\b/;
 const WEBSITE_CSS = 'apps/app/src/website-type.css';
 const TOKEN_CSS = 'apps/app/src/globals.css';
+const LANDING_CSS = 'apps/marketing/src/pages/landing.css';
 const MINIMUM_NORMAL_TEXT_CONTRAST = 4.5;
 const LIGHT_SURFACE_TOKENS = [
   '--color-background',
@@ -691,6 +692,21 @@ export function productContractViolations(root) {
   return violations;
 }
 
+export function landingThemeViolations(root) {
+  const css = readFileSync(join(root, ...LANDING_CSS.split('/')), 'utf8').replace(
+    /\/\*[\s\S]*?\*\//g,
+    '',
+  );
+  const violations = [];
+  if (/#[\da-f]{3,8}\b/i.test(css))
+    violations.push(`${LANDING_CSS}: component colours must use semantic tokens`);
+  if (/font-size:\s*(?:1[01](?:\.\d+)?|[0-9](?:\.\d+)?|\.\d+)px\b/.test(css))
+    violations.push(`${LANDING_CSS}: rendered text must be at least 12px`);
+  if (/transition:\s*all\b/.test(css))
+    violations.push(`${LANDING_CSS}: transitions must name their properties`);
+  return violations;
+}
+
 function cssRules(source) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const rules = [];
@@ -780,6 +796,38 @@ export function textContrastViolations(root) {
             `${MINIMUM_NORMAL_TEXT_CONTRAST}:1 is required`,
         );
       }
+    }
+  }
+
+  const darkScope = source.split(":root[data-theme='dark'] {")[1]?.split('\n}')[0];
+  if (!darkScope) {
+    violations.push(`${cssLabel}: dark theme token mapping is missing`);
+    return violations;
+  }
+  const darkSurfaces = [
+    '--color-background',
+    '--color-background-alt',
+    '--color-panel',
+    '--color-well',
+  ];
+  const darkText = ['--color-foreground', '--color-secondary', '--color-muted', '--color-subtle'];
+  for (const textToken of darkText) {
+    for (const surfaceToken of darkSurfaces) {
+      const ink = tokenHex(darkScope, textToken);
+      const surface = tokenHex(darkScope, surfaceToken);
+      if (!ink || !surface) {
+        violations.push(`${cssLabel}: dark ${textToken} and ${surfaceToken} need hex mappings`);
+      } else if (contrastRatio(ink, surface) < MINIMUM_NORMAL_TEXT_CONTRAST) {
+        violations.push(`${cssLabel}: dark ${textToken} on ${surfaceToken} needs 4.5:1 contrast`);
+      }
+    }
+  }
+  for (let index = 1; index <= 8; index += 1) {
+    const chartToken = `--color-chart-${index}`;
+    const mark = tokenHex(darkScope, chartToken);
+    const surface = tokenHex(darkScope, '--color-panel');
+    if (!mark || !surface || contrastRatio(mark, surface) < 3) {
+      violations.push(`${cssLabel}: dark ${chartToken} needs 3:1 contrast on the product panel`);
     }
   }
 

@@ -434,7 +434,7 @@
   /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
   --radius-control: 6px;
   --radius-card: 8px;
-  --radius-overlay: 10px;
+  --radius-overlay: 12px;
   --radius-workspace: 12px;
   /* Public-surface rhythm. Marketing consumes these directly; the phone values
      are the base and the media queries below step them up. */
@@ -454,54 +454,44 @@
 }
 
 .cl-landing {
-  --cl-hero-gradient-start: var(--color-accent-text);
-  --cl-hero-gradient-end: var(--color-accent);
-  --cl-paper: #f5f4ef;
-  --cl-raised: #fffefa;
-  --cl-stone: #ebe9e2;
-  --cl-sand: #f0e9dc;
-  --cl-rose: #f4e8e5;
-  --cl-ink: #252b30;
-  --cl-muted: #626b70;
-  --cl-line: #d8d9d3;
-  --cl-button-hover: #f4f8fc;
-  --cl-preview-border: #cfd5d7;
-  --cl-hero-shadow: #1d33401c;
-  --cl-window-bar: #e9edf0;
-  --cl-window-text: #5e6c76;
-  --cl-sidebar: #f0f0eb;
-  --cl-sidebar-text: #59666d;
-  --cl-blue-tint: #e7edf4;
-  --cl-chart-secondary: #9cb6cf;
-  --cl-chart-tertiary: #d6dfe7;
-  --cl-faint-edge: #0001;
-  --cl-bar: #9cabb8;
-  --cl-paper-alt: #f8f7f2;
-  --cl-platform: #e9eae7;
-  --cl-platform-line: #c6cbd0;
-  --cl-card-border: #cbd2d5;
-  --cl-shadow-near: #1d33400a;
-  --cl-shadow-far: #1d334013;
-  --cl-shadow-control: #0002;
-  --cl-source-review: #bca274;
-  --cl-source-editorial: #bb9791;
-  --cl-source-community: #aeb8ba;
-  --cl-source-competitor: #777f83;
-  --cl-table-head: #f1f1ec;
-  --cl-favicon-owned: #dce8f2;
-  --cl-favicon-owned-ink: #315876;
-  --cl-favicon-review: #efdfd8;
-  --cl-favicon-review-ink: #805b53;
-  --cl-favicon-editorial: #eee3cf;
-  --cl-favicon-editorial-ink: #80672e;
-  --cl-favicon-community: #e1e5e5;
-  --cl-favicon-community-ink: #526365;
-  --cl-favicon-competitor: #e5dfdf;
-  --cl-favicon-competitor-ink: #66585e;
-  --cl-mini-bar: #9bb2c5;
-  --cl-row-hover: #f5f8fa;
-  --cl-enterprise: #edf0f2;
-  --cl-governance-line: #cdd5d9;
+  --cl-paper: var(--color-canvas-soft);
+  --cl-raised: var(--color-panel);
+  --cl-stone: var(--color-background-alt);
+  --cl-ink: var(--color-foreground);
+  --cl-muted: var(--color-muted);
+  --cl-line: var(--color-border);
+  --cl-preview-border: var(--color-border-strong);
+  --cl-window-bar: var(--color-background-alt);
+  --cl-window-text: var(--color-muted);
+  --cl-sidebar: var(--color-shell);
+  --cl-sidebar-text: var(--color-muted);
+  --cl-chart-secondary: var(--color-chart-2);
+  --cl-chart-tertiary: var(--color-chart-3);
+  --cl-faint-edge: var(--color-border-subtle);
+  --cl-bar: var(--color-chart-2);
+  --cl-paper-alt: var(--color-background-alt);
+  --cl-platform: var(--color-background-alt);
+  --cl-platform-line: var(--color-border);
+  --cl-card-border: var(--color-border);
+  --cl-source-review: var(--color-chart-3);
+  --cl-source-editorial: var(--color-chart-4);
+  --cl-source-community: var(--color-chart-2);
+  --cl-source-competitor: var(--color-chart-8);
+  --cl-table-head: var(--color-background-alt);
+  --cl-favicon-owned: var(--color-accent-soft);
+  --cl-favicon-owned-ink: var(--color-accent-text);
+  --cl-favicon-review: var(--color-warning-bg);
+  --cl-favicon-review-ink: var(--color-warning-text);
+  --cl-favicon-editorial: var(--color-info-bg);
+  --cl-favicon-editorial-ink: var(--color-info-text);
+  --cl-favicon-community: var(--color-neutral-bg);
+  --cl-favicon-community-ink: var(--color-secondary);
+  --cl-favicon-competitor: var(--color-danger-bg);
+  --cl-favicon-competitor-ink: var(--color-danger-text);
+  --cl-mini-bar: var(--color-chart-2);
+  --cl-row-hover: var(--color-active);
+  --cl-enterprise: var(--color-background-alt);
+  --cl-governance-line: var(--color-border);
 }
 
 @media (min-width: 981px) and (max-width: 1200px) {
@@ -923,7 +913,7 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-muted: #475569;
   --color-subtle: #64748b;
   --color-background-alt: #f8fafc;
-  --color-canvas-soft: #f8fafc;
+  --color-canvas-soft: #fafaf8;
   --color-active: #f1f5f9;
   --color-border: #e2e8f0;
   --color-border-subtle: #f1f5f9;
@@ -1008,6 +998,253 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-action-active: #451a03;
   --color-chart-1: #d97706;
   --color-surface-inverse: #92400e;
+}
+
+/* Light remains the shipped default. Setting data-theme is a deterministic
+   developer preview until a persisted user preference is introduced. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-background: #111820;
+  --color-background-alt: #18222d;
+  --color-canvas-soft: #151d25;
+  --color-panel: #1c2732;
+  --color-panel-tonal: #202d39;
+  --color-elevated: #263440;
+  --color-well: #15202a;
+  --color-active: #293a46;
+  --color-input: #1c2732;
+  --color-sidebar: #111820;
+  --color-shell: #111820;
+  --color-shell-alt: #18222d;
+  --color-foreground: #f2f6f8;
+  --color-secondary: #dce5e9;
+  --color-muted: #afbec8;
+  --color-subtle: #a3b3bf;
+  --color-disabled: #80919e;
+  --color-border-subtle: #31404c;
+  --color-border: #455562;
+  --color-border-strong: #61717d;
+  --color-border-bold: #8999a5;
+  --color-hairline-warm: var(--color-border);
+  --color-accent: #76df9c;
+  --color-accent-hover: #94ebb0;
+  --color-accent-active: #b2f4c6;
+  --color-accent-fg: #0d2618;
+  --color-accent-text: #86e5a6;
+  --color-accent-subtle: rgb(118 223 156 / 18%);
+  --color-accent-soft: rgb(118 223 156 / 12%);
+  --color-accent-border: rgb(118 223 156 / 45%);
+  --color-focus: #94ebb0;
+  --color-focus-ring: rgb(148 235 176 / 35%);
+  --color-selection: rgb(118 223 156 / 35%);
+  --color-selection-fg: #f2f6f8;
+  --color-action: var(--color-accent);
+  --color-action-hover: var(--color-accent-hover);
+  --color-action-active: var(--color-accent-active);
+  --color-action-fg: var(--color-accent-fg);
+  --color-recommendation: var(--color-accent-soft);
+  --color-surface-inverse: #76df9c;
+  --color-success: #80dfa2;
+  --color-success-bg: rgb(128 223 162 / 13%);
+  --color-success-border: rgb(128 223 162 / 38%);
+  --color-success-text: #a4edbd;
+  --color-warning: #f2c879;
+  --color-warning-bg: rgb(242 200 121 / 13%);
+  --color-warning-border: rgb(242 200 121 / 38%);
+  --color-warning-text: #f7d99e;
+  --color-danger: #f3979e;
+  --color-danger-solid: #d95767;
+  --color-danger-solid-hover: #eb7481;
+  --color-danger-bg: rgb(243 151 158 / 13%);
+  --color-danger-border: rgb(243 151 158 / 38%);
+  --color-danger-text: #f6abb1;
+  --color-danger-fg: #fff;
+  --color-info: #8ad4e1;
+  --color-info-bg: rgb(138 212 225 / 13%);
+  --color-info-border: rgb(138 212 225 / 38%);
+  --color-info-text: #a5e2eb;
+  --color-neutral-bg: #293743;
+  --color-sentiment-positive: var(--color-chart-5);
+  --color-sentiment-positive-bg: var(--color-success-bg);
+  --color-sentiment-positive-text: var(--color-success-text);
+  --color-sentiment-neutral: var(--color-chart-8);
+  --color-sentiment-neutral-bg: var(--color-neutral-bg);
+  --color-sentiment-neutral-text: var(--color-secondary);
+  --color-sentiment-negative: var(--color-chart-4);
+  --color-sentiment-negative-bg: var(--color-danger-bg);
+  --color-sentiment-negative-text: var(--color-danger-text);
+  --color-citation-owned: var(--color-chart-4);
+  --color-citation-owned-bg: var(--color-danger-bg);
+  --color-citation-owned-border: var(--color-danger-border);
+  --color-citation-owned-text: var(--color-danger-text);
+  --color-citation-competitor: var(--color-chart-2);
+  --color-citation-competitor-bg: var(--color-info-bg);
+  --color-citation-competitor-border: var(--color-info-border);
+  --color-citation-competitor-text: var(--color-info-text);
+  --color-citation-third-party: var(--color-chart-8);
+  --color-citation-third-party-bg: var(--color-neutral-bg);
+  --color-citation-third-party-border: var(--color-border);
+  --color-citation-third-party-text: var(--color-secondary);
+  --color-run-draft-bg: var(--color-neutral-bg);
+  --color-run-draft: var(--color-chart-8);
+  --color-run-queued: var(--color-chart-8);
+  --color-run-running: var(--color-chart-2);
+  --color-run-analyzing: var(--color-chart-3);
+  --color-run-completed: var(--color-chart-5);
+  --color-run-partial: var(--color-chart-3);
+  --color-run-failed: var(--color-chart-4);
+  --color-run-cancelled: var(--color-chart-8);
+  --color-run-queued-bg: var(--color-neutral-bg);
+  --color-run-running-bg: var(--color-info-bg);
+  --color-run-analyzing-bg: var(--color-warning-bg);
+  --color-run-completed-bg: var(--color-success-bg);
+  --color-run-partial-bg: var(--color-warning-bg);
+  --color-run-failed-bg: var(--color-danger-bg);
+  --color-run-cancelled-bg: var(--color-neutral-bg);
+  --color-score-low-bg: var(--color-danger-bg);
+  --color-score-low: var(--color-chart-4);
+  --color-score-low-ring: var(--color-chart-4);
+  --color-score-low-border: var(--color-danger-border);
+  --color-score-low-text: var(--color-danger-text);
+  --color-score-mid-bg: var(--color-warning-bg);
+  --color-score-mid: var(--color-chart-3);
+  --color-score-mid-ring: var(--color-chart-3);
+  --color-score-mid-border: var(--color-warning-border);
+  --color-score-mid-text: var(--color-warning-text);
+  --color-score-good-bg: var(--color-info-bg);
+  --color-score-good: var(--color-chart-2);
+  --color-score-good-ring: var(--color-chart-2);
+  --color-score-good-border: var(--color-info-border);
+  --color-score-good-text: var(--color-info-text);
+  --color-score-high-bg: var(--color-success-bg);
+  --color-score-high: var(--color-chart-5);
+  --color-score-high-ring: var(--color-chart-5);
+  --color-score-high-border: var(--color-success-border);
+  --color-score-high-text: var(--color-success-text);
+  --color-chart-1: #76df9c;
+  --color-chart-2: #75cee1;
+  --color-chart-3: #efc676;
+  --color-chart-4: #f49a8b;
+  --color-chart-5: #b8db73;
+  --color-chart-6: #bca4f6;
+  --color-chart-7: #9ce5ba;
+  --color-chart-8: #a5b6c2;
+  --color-chart-tooltip: #263440;
+  --color-chart-tooltip-fg: #f2f6f8;
+  --color-overlay-scrim: rgb(3 8 13 / 70%);
+  --skeleton-base: #293743;
+  --skeleton-highlight: #344551;
+  --cl-closing: #202d39;
+  --marketing-footer-background: #0c1218;
+  --marketing-footer-foreground: #f2f6f8;
+  --marketing-footer-muted: #afbec8;
+  --marketing-footer-line: #455562;
+  --shadow-smudge: 0 0 0 1px rgb(180 202 216 / 24%), 0 1px 2px rgb(0 0 0 / 25%);
+  --shadow-smudge-hover: 0 0 0 1px rgb(180 202 216 / 35%), 0 1px 2px rgb(0 0 0 / 35%);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 16%);
+  --shadow-elevated: 0 12px 32px rgb(0 0 0 / 40%);
+  --shadow-modal-value: var(--shadow-elevated);
+}
+
+:root[data-theme='dark'][data-public-surface] {
+  --color-background: #141b22;
+  --color-canvas-soft: #1d211f;
+}
+
+:root[data-theme='dark'][data-accent='chili'] {
+  --color-accent: #f5a19a;
+  --color-accent-hover: #f7b9b3;
+  --color-accent-active: #fbd1cd;
+  --color-accent-text: #f5a19a;
+  --color-accent-subtle: rgb(245 161 154 / 18%);
+  --color-accent-soft: rgb(245 161 154 / 12%);
+  --color-accent-border: rgb(245 161 154 / 45%);
+  --color-accent-fg: #351210;
+  --color-focus: #f7b9b3;
+  --color-focus-ring: rgb(247 185 179 / 35%);
+  --color-action: var(--color-accent);
+  --color-action-hover: var(--color-accent-hover);
+  --color-action-active: var(--color-accent-active);
+  --color-action-fg: var(--color-accent-fg);
+  --color-chart-1: #f5a19a;
+}
+
+:root[data-theme='dark'][data-accent='blue'] {
+  --color-accent: #91b9ff;
+  --color-accent-hover: #accbff;
+  --color-accent-active: #c8dcff;
+  --color-accent-text: #9fc2ff;
+  --color-accent-subtle: rgb(145 185 255 / 18%);
+  --color-accent-soft: rgb(145 185 255 / 12%);
+  --color-accent-border: rgb(145 185 255 / 45%);
+  --color-accent-fg: #102542;
+  --color-focus: #accbff;
+  --color-focus-ring: rgb(172 203 255 / 35%);
+  --color-action: var(--color-accent);
+  --color-action-hover: var(--color-accent-hover);
+  --color-action-active: var(--color-accent-active);
+  --color-action-fg: var(--color-accent-fg);
+  --color-chart-1: #91b9ff;
+}
+
+:root[data-theme='dark'][data-accent='violet'] {
+  --color-accent: #c3a7f7;
+  --color-accent-hover: #d3bdf9;
+  --color-accent-active: #e3d6fc;
+  --color-accent-text: #d0b8fb;
+  --color-accent-subtle: rgb(195 167 247 / 18%);
+  --color-accent-soft: rgb(195 167 247 / 12%);
+  --color-accent-border: rgb(195 167 247 / 45%);
+  --color-accent-fg: #28183f;
+  --color-focus: #d3bdf9;
+  --color-focus-ring: rgb(211 189 249 / 35%);
+  --color-action: var(--color-accent);
+  --color-action-hover: var(--color-accent-hover);
+  --color-action-active: var(--color-accent-active);
+  --color-action-fg: var(--color-accent-fg);
+  --color-chart-1: #c3a7f7;
+}
+
+:root[data-theme='dark'][data-accent='amber'] {
+  --color-accent: #edc27b;
+  --color-accent-hover: #f3d39c;
+  --color-accent-active: #f8e2bb;
+  --color-accent-text: #f1ce94;
+  --color-accent-subtle: rgb(237 194 123 / 18%);
+  --color-accent-soft: rgb(237 194 123 / 12%);
+  --color-accent-border: rgb(237 194 123 / 45%);
+  --color-accent-fg: #33230f;
+  --color-focus: #f3d39c;
+  --color-focus-ring: rgb(243 211 156 / 35%);
+  --color-action: var(--color-accent);
+  --color-action-hover: var(--color-accent-hover);
+  --color-action-active: var(--color-accent-active);
+  --color-action-fg: var(--color-accent-fg);
+  --color-chart-1: #edc27b;
+}
+
+:root[data-theme='dark'] img[src='/citeladder-logo.svg'] {
+  filter: brightness(0) invert(1);
+}
+
+/* Tailwind shadow utilities inline @theme values at build time. Rebind their
+   rendered properties as well as the variables used by hand-written rules. */
+:root[data-theme='dark'] .shadow-smudge {
+  box-shadow: var(--shadow-smudge);
+}
+:root[data-theme='dark'] .shadow-smudge-hover,
+:root[data-theme='dark'] .hover\:shadow-smudge-hover:hover {
+  box-shadow: var(--shadow-smudge-hover);
+}
+:root[data-theme='dark'] .shadow-card {
+  box-shadow: var(--shadow-card);
+}
+:root[data-theme='dark'] .shadow-elevated {
+  box-shadow: var(--shadow-elevated);
 }
 
 .accent-theme-swatch {
@@ -1384,7 +1621,7 @@ samp {
 /* Two public sections of the same tone read as one band, so they share a single
    rhythm rather than stacking both paddings. This is the rule the
    data-citeladder-section hook in marketing/primitives/section.tsx was written for. */
-[data-citeladder-section="paper"] + [data-citeladder-section="paper"] {
+[data-citeladder-section="paper"] + [data-citeladder-section="paper"]:not(.marketing-closing-band) {
   padding-top: 0;
 }
 

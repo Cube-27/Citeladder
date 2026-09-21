@@ -8,12 +8,12 @@ Tests verify shared ownership, accessibility, and product correctness—not exac
 
 ## Direction and identity
 
-CiteLadder (`citeladder.com`) is a light-only, evidence-led enterprise system. Its **Prism Evidence Workspace** puts neutral ground behind the chrome and white paper behind the work, using navy ink, Emerald actions by default, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
+CiteLadder (`citeladder.com`) is an evidence-led enterprise system. Its **Prism Evidence Workspace** puts neutral ground behind the chrome and a distinct work surface behind the content, using navy ink in light mode, Emerald actions by default, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
 - **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup: `frontend/public/citeladder-logo.svg` for the wordmark and the matching inline glyph for mark-only mode. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts. The mark inherits `currentColor`; non-empty `alt` supplies either rendering's accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same black silhouette across frames.
 - **Typography:** self-hosted Geist Variable, weight axis 100–900, on every surface; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
-- **Surface identity:** no dark theme. A local accent preference offers Chili, Blue, Emerald, Violet, and Amber on public and product surfaces; Emerald is the default. The logo and provider marks retain their fixed brand colours. Marketing uses the shared light editorial system; the homepage may use the scoped neutral palette in `globals.css` for its sections and preview. Auth/onboarding use centred light-ground task flows, never a decorative brand rail.
+- **Surface identity:** Light is the shipped default. Semantic tokens support `[data-theme='dark']` for developer inspection; there is no public theme control or automatic system-theme following yet. A local accent preference offers Chili, Blue, Emerald, Violet, and Amber on public and product surfaces; Emerald is the default. The logo and provider marks retain their fixed brand colours. Marketing keeps a warmer canvas than the cooler product workspace. Auth/onboarding use centred task flows.
 
 ## Source of truth and implementation rules
 
@@ -48,11 +48,11 @@ Hierarchy is carried by boundary and tone, not by elevation: a box is separated 
 
 Reading text must meet 4.5:1 contrast. `subtle` metadata belongs on reading surfaces; active/tonal surfaces use `muted` or `ink` to retain contrast. Cyan, coral, lime, and amber express evidence/status, not route decoration. Never communicate meaning through colour alone.
 
-Marketing subpages use a white root, centred Geist hero, quiet `surface` bands, and the shared inset dark footer. The homepage uses its scoped neutral ground and section tones, with the selected action ramp and the same footer. The owner-scoped `[data-public-surface]` rebind deepens inks (`#0F172A` foreground through `#64748B` subtle) and strengthens hairlines. Use `divided` hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews. No dark teal/indigo bands, grain, or decorative icon-tile families.
+Marketing subpages use the semantic public canvas, centred Geist hero, quiet surface bands, and the shared full-width dark footer. The homepage keeps a warmer neutral canvas than the product UI, with scoped aliases resolving to shared semantic roles. The owner-scoped `[data-public-surface]` rebind deepens light-mode inks and strengthens hairlines. Use divided hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews.
 
 ## Typography
 
-Use Geist exclusively; metrics, dates, ranks, and percentages use tabular numerals, not monospace. Body weight is 400, labels/navigation 500, actions 550, headings/metrics 600, subject to the documented role exceptions. Do not assemble page-local size/weight/ink hierarchies.
+Use Geist exclusively; metrics, dates, ranks, and percentages use tabular numerals, not monospace. Body weight is 400, labels/navigation/actions 500, headings/metrics 600, subject to the documented role exceptions. Do not assemble page-local size/weight/ink hierarchies.
 
 ### Website and focused-flow ladder
 
@@ -66,7 +66,7 @@ Roles own all typography properties. The general ladder is mobile-first: base be
 | Lead | 18/26px | 400 | 0 | `ink` |
 | Large body | 16/22px | 400 | 0 | `ink` |
 | Body baseline | 14/20px | 400 | 0 | `ink` |
-| Navigation/actions | 14/20px | 500–550 | 0 | `ink` or inverse |
+| Navigation/actions | 14/20px | 500 | 0 | `ink` or inverse |
 | Label/caption/eyebrow | 13/18px | 400–500 | 0 | `muted` or `subtle` |
 
 `website-data-display` is pricing-only: Geist 500, tabular, 30/36px → 40/46px at 768px. Never apply it to prose or headings.
@@ -111,7 +111,7 @@ Content caps at 1392px; sidebar content shares an 18px inset. Compact gutters ar
 | --- | --- | --- |
 | `--radius-control` | 6px | Controls and fields |
 | `--radius-card` | 8px | Semantic objects |
-| `--radius-overlay` | 10px | Menus, tooltips, dialogs, drawers |
+| `--radius-overlay` | 12px | Menus, tooltips, dialogs, drawers |
 | `rounded-xs` | 4px | Chart bars, skeletons, inline code |
 | `rounded-full` | Full | Pills, badges, dots, counts, filter toggles |
 
@@ -210,11 +210,15 @@ The same insight retains its server ID/cache identity everywhere. No resolvable 
 
 ### Marketing and auth
 
-Marketing is an editorial stack of full-width sections with centred content. The home hero uses a neutral ground, centred value proposition, sign-up and demo actions, and a compact interactive dashboard preview that fades into the ground at its lower edge. The separate product explorer retains its full preview cards. The main heading is 48px and lead is 16px at desktop widths; the homepage's editorial type ladder steps down by 2px below 540px. Four static surface logos follow the hero: ChatGPT, Gemini, Claude, and Google AI Overviews. The landing uses the selected action accent against neutral section backgrounds, with a subtle accent text gradient limited to the emphasized hero headline. Subpages keep their white opener above a hairline. Closing calls to action centre their message and place actions below it on the light closing ground. The shared footer sits in a dark rounded panel with visible side and bottom gutters on that ground, retaining its logo, destinations, and legal options.
+Marketing is an editorial stack of full-width sections with centred content. The home hero uses a neutral ground, centred value proposition, sign-up and demo actions, and a compact interactive dashboard preview. The separate product explorer retains its full preview cards. The main heading is 48px and lead is 16px at desktop widths; the mobile display is 36/40px. Four static surface logos follow the hero: ChatGPT, Gemini, Claude, and Google AI Overviews. The landing uses the selected action accent against neutral section backgrounds, with accent text in the emphasized hero headline. Closing calls to action centre their message and place actions below it. The shared footer is a full-width dark band retaining its logo, destinations, and legal options.
 
 Use optional eyebrow → heading → short lead → evidence/media or focused grid → at most one primary CTA per band. Secondary intents belong in navigation or another band. Prefer asymmetric text/media, proof ledgers, and concise grids over feature-card walls. The operating loop uses open numbered stages with quiet separators and named steps. Body measure is about 60–70 characters; one H1 per page; spacing follows the surface's section rhythm.
 
-Marketing navigation retains Log in at every width and Sign up from `sm` up. On phones, sign-up/account links are pinned in the full-screen menu sheet. Navigation is transparent over the hero and frosted white on scroll, without shadow.
+Marketing navigation retains Log in at every width and Sign up from `sm` up. On phones, sign-up/account links are pinned in the full-screen menu sheet. Its scrolled surface is opaque.
+
+### Patterns
+
+Capability modules are peer surfaces with one neutral treatment; status and data carry the colour. Number only an actual sequence, such as Discover → Observe → Diagnose → Act → Verify. Use eyebrows sparingly at major transitions. Marketing previews show a focused, readable product state on phones, hiding secondary navigation and details. Keep one shared horizontal grid for navigation, hero, and sections, and use equal heading and description columns when a section has both.
 
 Cookie consent is a compact bottom-right floating panel with equal-width Reject and Accept actions. On phones it expands only to the viewport gutters and respects the bottom safe area; it never becomes a full-width page banner.
 
@@ -251,8 +255,8 @@ Confirmed first-use analytical states omit filters, charts, and table reservatio
 ### Navigation and overlays
 
 - **Navigation:** active app location uses an accent-soft pill; hover uses a neutral pill. Preserve icon/label contrast; no translation or leading rail.
-- **Menus:** shared panel/item recipes, `shadow-elevated`, 10px overlay radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
-- **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal-value` and the shared overlay radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-elevated` and the same 10px radius. Features own no shadow recipes.
+- **Menus:** shared panel/item recipes, `shadow-elevated`, 12px overlay radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
+- **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal-value` and the shared overlay radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-elevated` and the same 12px radius. Features own no shadow recipes.
 - **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the shared bordered track for compact single-select changes; shared UI filter pills handle independent/multi-select filters.
 - **Analytical loading:** interval changes retain prior analytical content while the new persisted projection loads. Mark the region busy with compact feedback; no replacement skeleton or labels describing data not yet received.
 
