@@ -89,3 +89,33 @@ The [role tests](../backend/tests/component/test_workspace_roles.py) and
 [workspace authorization tests](../backend/tests/unit/test_workspace_auth.py)
 cover the central boundaries. Accepted rationale is in
 [decisions](decisions.md); the retained shell plan tracks only remaining work.
+
+## Operator account management
+
+Trusted workspace operators can run the interactive
+[account manager](../backend/scripts/account_manager.py) from a backend terminal.
+It requires an active Owner or Admin of the explicit target workspace. It lists
+members, creates or invites a user, changes
+an existing member's assignable role, and resets a member's password while
+invalidating existing sessions. Invitation tokens are shown once for secure
+delivery to the invitee; the invitee accepts while signed in. The tool does not
+issue grants or set project or prompt limits.
+
+```bash
+cd backend
+uv run python -m scripts.account_manager \
+  --actor <workspace-owner-or-admin-email> --workspace-id <workspace-uuid>
+```
+
+After deploying an image that includes the script, run it on the GCP VM with
+the backend container's interactive terminal:
+
+```bash
+sudo docker compose --env-file /opt/citeladder/runtime.env \
+  -f /opt/citeladder/compose.gcp.yml exec web \
+  python -m scripts.account_manager \
+  --actor kerry@citeladder.com \
+  --workspace-id fe2ce60f-906d-4285-afd6-17b5ea51e510
+```
+
+Passwords are prompted without echo and are never command-line arguments.

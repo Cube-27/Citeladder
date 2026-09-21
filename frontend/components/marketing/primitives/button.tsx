@@ -5,7 +5,7 @@ import { Button as SharedButton } from '@/components/ui/button';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
-type Variant = 'primary' | 'dark' | 'nav' | 'ghost';
+type Variant = 'primary' | 'dark' | 'nav' | 'ghost' | 'soft';
 type VisualProps = Readonly<{ variant?: Variant; size?: 'lg' | 'marketing'; className?: string }>;
 
 /** `dark` and `nav` are marketing-only skins over the shared secondary. */
@@ -14,6 +14,7 @@ const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'ghost'> = {
   ghost: 'ghost',
   dark: 'secondary',
   nav: 'secondary',
+  soft: 'secondary',
 };
 
 const sharedVariant = (variant: Variant) => SHARED_VARIANT[variant];
@@ -34,7 +35,11 @@ export function ButtonLink({
       asChild
       variant={sharedVariant(variant)}
       size={size}
-      className={cn('[&_svg]:size-4 [&_svg]:shrink-0', className)}
+      className={cn(
+        '[&_svg]:size-4 [&_svg]:shrink-0',
+        variant === 'soft' && 'marketing-soft-button',
+        className,
+      )}
     >
       <a href={href} {...rest}>
         {children}

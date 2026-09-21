@@ -113,7 +113,10 @@ export function TabsBar<T extends string>({
           {item.label}
           {item.value === value ? (
             <span
-              className={cn('bg-accent absolute bottom-0 h-0.5', fill ? 'inset-x-0' : 'inset-x-2')}
+              className={cn(
+                'bg-brand-forest absolute bottom-0 h-0.5',
+                fill ? 'inset-x-0' : 'inset-x-2',
+              )}
             />
           ) : null}
         </TabsPrimitive.Trigger>

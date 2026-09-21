@@ -436,6 +436,11 @@
   --radius-card: 8px;
   --radius-overlay: 12px;
   --radius-workspace: 12px;
+  /* Public marketing objects have their own geometry; app cards stay at 8px. */
+  --radius-marketing-card: 20px;
+  --radius-marketing-well: 16px;
+  --radius-marketing-preview: 24px;
+  --radius-marketing-control: 10px;
   /* Public-surface rhythm. Marketing consumes these directly; the phone values
      are the base and the media queries below step them up. */
   --site-gutter: 20px;
@@ -459,6 +464,8 @@
   --cl-stone: var(--color-background-alt);
   --cl-ink: var(--color-foreground);
   --cl-muted: var(--color-muted);
+  --cl-body: var(--color-secondary);
+  --cl-warm-line: var(--color-hairline-warm);
   --cl-line: var(--color-border);
   --cl-preview-border: var(--color-border-strong);
   --cl-window-bar: var(--color-background-alt);
@@ -1213,6 +1220,10 @@ html[data-returning-visitor] [data-session-returning] {
    a notch instead of softening anything. */
 .app-pane-workspace {
   border-radius: var(--radius-workspace) 0 0;
+}
+
+.app-nav-current {
+  box-shadow: var(--shadow-card);
 }
 
 /* A 16px corner against the viewport edge reads as a rendering artefact rather

@@ -55,60 +55,62 @@ export function Evidence() {
             </div>
           </div>
         </div>
-        <div className="cl-record">
-          <div className="cl-window-bar">
-            <FileText size={14} aria-hidden /> Answer record
-          </div>
-          <div className="cl-record-body">
-            <div className="cl-record-label">
-              <span>TRACKED PROMPT</span>
-              <span>ChatGPT · Sep 19</span>
+        <div className="cl-record-stage">
+          <div className="cl-record">
+            <div className="cl-window-bar">
+              <FileText size={14} aria-hidden /> Answer record
             </div>
-            <h3>Which workflow platforms support multi-team operations?</h3>
-            <p className="cl-answer">
-              Platforms in this category include <mark>Zernovelle</mark>, Brelovanta and Flevorynth.
-              Zernovelle’s documentation describes shared workflows and configurable approval
-              stages.<sup>[1]</sup> An independent comparison also lists cross-team coordination as
-              an evaluation criterion.<sup>[2]</sup>
-            </p>
-            <div className="cl-record-tags">
-              <span>Brand mentioned</span>
-              <span>Owned source cited</span>
+            <div className="cl-record-body">
+              <div className="cl-record-label">
+                <span>TRACKED PROMPT</span>
+                <span>ChatGPT · Sep 19</span>
+              </div>
+              <h3>Which workflow platforms support multi-team operations?</h3>
+              <p className="cl-answer">
+                Platforms in this category include <mark>Zernovelle</mark>, Brelovanta and
+                Flevorynth. Zernovelle’s documentation describes shared workflows and configurable
+                approval stages.<sup>[1]</sup> An independent comparison also lists cross-team
+                coordination as an evaluation criterion.<sup>[2]</sup>
+              </p>
+              <div className="cl-record-tags">
+                <span>Brand mentioned</span>
+                <span>Owned source cited</span>
+              </div>
+              <div className="cl-record-divider">
+                <span>CITED SOURCES</span>
+                <span>2 RECORDS</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelected('owned');
+                  setOpen(true);
+                }}
+              >
+                <span className="cl-favicon">Z</span>
+                <span>
+                  <b>Platform documentation</b>
+                  <small>zernovelle.example/platform</small>
+                </span>
+                <span>Owned</span>
+                <ArrowRight size={16} aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelected('editorial');
+                  setOpen(true);
+                }}
+              >
+                <span className="cl-favicon">F</span>
+                <span>
+                  <b>Workflow platform comparison</b>
+                  <small>fieldnotes.example/automation-guide</small>
+                </span>
+                <span>Editorial</span>
+                <ArrowRight size={16} aria-hidden />
+              </button>
             </div>
-            <div className="cl-record-divider">
-              <span>CITED SOURCES</span>
-              <span>2 RECORDS</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSelected('owned');
-                setOpen(true);
-              }}
-            >
-              <span className="cl-favicon">Z</span>
-              <span>
-                <b>Platform documentation</b>
-                <small>zernovelle.example/platform</small>
-              </span>
-              <span>Owned</span>
-              <ArrowRight size={16} aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelected('editorial');
-                setOpen(true);
-              }}
-            >
-              <span className="cl-favicon">F</span>
-              <span>
-                <b>Workflow platform comparison</b>
-                <small>fieldnotes.example/automation-guide</small>
-              </span>
-              <span>Editorial</span>
-              <ArrowRight size={16} aria-hidden />
-            </button>
           </div>
         </div>
       </div>

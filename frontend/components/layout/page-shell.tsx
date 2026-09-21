@@ -119,7 +119,10 @@ function PageBand({
   children: ReactNode;
 }>) {
   return (
-    <div data-page-band={kind} className="border-border border-b">
+    <div
+      data-page-band={kind}
+      className={cn('border-border border-b', kind === 'control' && 'bg-panel-tonal')}
+    >
       <div className={cn(pageGutterClasses, 'flex', className)}>{children}</div>
     </div>
   );
