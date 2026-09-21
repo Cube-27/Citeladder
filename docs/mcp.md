@@ -15,7 +15,9 @@ HTTP at /mcp through the application factory. Its
 dynamic registration, PKCE authorization codes, rotating refresh tokens and
 revocation. Dynamic registration uses /mcp/register to avoid the browser signup
 route. Browser login establishes identity; /mcp/oauth/consent requires explicit
-approval of the one-time transaction and protects consent against CSRF.
+approval or denial of the one-time transaction and protects both decisions
+against CSRF. A denial consumes only that validated transaction and returns the
+standard OAuth `access_denied` result to its previously validated redirect.
 
 [Configuration](../backend/app/core/config/mcp.py) owns enablement and bounds.
 An enabled server requires a safe public origin; disabled MCP must not break
@@ -37,26 +39,48 @@ System workspaces remain excluded even if a stray membership exists.
 Project/object IDs never authorize themselves. Revoking membership changes
 what an existing grant may read without copying business data into MCP.
 
-The catalog exposes project discovery, business context, bounded search/fetch,
-Content/task catalog metadata and shared growth-evidence reads. It delegates
-to [Growth Agent tools](../backend/app/domain/agent/tools.py) and existing domain
-read services. Search is bounded persisted retrieval; it is not a web search or
-provider request. Missing projections remain unavailable and cannot be repaired
-by reading them.
+The catalog exposes bounded project and prompt enumeration, business context,
+citation-compatible search/fetch documents, query-page evidence, Site Health
+pages/link projections, visibility results/sources, Search Intelligence
+datasets, Content/task catalog metadata and shared growth-evidence reads. It
+delegates to [Growth Agent tools](../backend/app/domain/agent/tools.py) and the
+existing domain read services. Search is bounded persisted retrieval; it is not
+a web search or provider request. Missing projections remain unavailable and
+cannot be repaired by reading them. Search Intelligence summaries retain their
+dataset grain: referring-domain and destination-page aggregates are not exposed
+as individual backlink edges.
+
+Every retrievable evidence reference uses an allowlisted `citeladder://` record
+type. `fetch` reauthorizes the owning workspace and returns the normalized
+`id`/`title`/`text`/`url`/`metadata` document while preserving the structured
+record for established callers. Raw provider transports, credentials, arbitrary
+URLs, tables, SQL and filesystem paths are not resolvers.
 
 ## Client experience and limits
 
-Clients discover authorized projects, request project context, then fetch
-specific evidence. The browser account menu links to public setup instructions;
-there is no separate MCP Settings editor. OAuth return paths are restricted to
-the internal consent transaction and cannot become arbitrary redirects.
+Clients discover authorized projects, inspect the available-dataset inventory,
+then page through or fetch specific evidence. The browser account menu links to
+public setup instructions; there is no separate MCP Settings editor. OAuth
+return paths are restricted to the internal consent transaction and cannot
+become arbitrary redirects. Grant revocation is available through the OAuth
+revocation endpoint and supporting clients; membership removal blocks affected
+reads immediately.
+
+The locked SDK is `mcp==2.2.0`. Component acceptance covers the legacy
+`2025-11-25` initialize lifecycle and the `2026-07-28` per-request lifecycle
+(`server/discover`, protocol/method headers and reserved request metadata).
+This proves the repository wire contract, not acceptance in every client build
+or the deployed origin.
 
 A tool response does not authorize publishing, prompt activation, a crawl,
 model generation or any other mutation. Streamable HTTP delivery has no
 authority to rerun a product acquisition when a client retries.
 [Workspace access](workspace-access.md) remains the shared role/identity owner.
 
-[Protocol and authorization tests](../backend/tests/component/test_mcp.py)
-cover consent, rotation/revocation, disabled-server behavior, request limits
-and exclusion of system-workspace data. These tests do not establish that a
-particular public client or deployed origin has passed external acceptance.
+[Protocol and authorization tests](../backend/tests/component/test_mcp.py) and
+[evidence catalog tests](../backend/tests/component/test_mcp_evidence_catalog.py)
+cover consent denial, rotation/revocation, both supported protocol lifecycles,
+generated catalog parity, bounded enumeration, retrieval documents, disabled
+server behavior, request limits and tenant isolation. These tests do not
+establish that a particular public client or deployed origin has passed
+external acceptance.

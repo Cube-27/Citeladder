@@ -3,24 +3,13 @@ import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { Section } from '@/components/marketing/primitives/section';
 import { absoluteUrl } from '@/lib/seo/site';
 import MarketingLayout from '../../layouts/MarketingLayout.astro';
+import toolReference from '../../data/mcp-tools.json';
 
 const description =
-  'Connect ChatGPT, Claude, Codex, or Perplexity to read persisted CiteLadder business context through a hosted, read-only MCP server.';
+  'Connect Codex or Claude Code to CiteLadder’s hosted, account-authorized, read-only MCP server.';
 const mcpEndpoint = absoluteUrl('/mcp') ?? 'https://<your-citeladder-host>/mcp';
-const tools = [
-  ['list_projects', 'Discover every project available to the signed-in account.'],
-  [
-    'get_project_business_context',
-    'Read the brand profile, prompt portfolio, Site Health, demand, opportunities, and visibility.',
-  ],
-  ['search', 'Search projects, opportunities, and prompts across the account.'],
-  ['fetch', 'Open a complete record returned by search.'],
-  ['read_site_health', 'Read the latest persisted Site Health scores and coverage.'],
-  ['read_demand', 'Read the latest persisted demand snapshot and comparison.'],
-  ['read_opportunities', 'Read the current priority-ranked opportunity roadmap.'],
-  ['read_visibility_audit', 'Read the latest AI visibility audit.'],
-  ['list_skills', 'Inspect CiteLadder content skills and Growth Agent capabilities.'],
-] as const;
+const parameterNames = (schema: { properties?: Record<string, unknown> }) =>
+  Object.keys(schema.properties ?? {});
 ---
 
 <MarketingLayout title="MCP server setup · CiteLadder" description={description} canonical="/docs/mcp">
@@ -29,7 +18,7 @@ const tools = [
       eyebrow="Developer access"
       title="Connect your AI assistant to"
       accent="CiteLadder"
-      lead="A hosted, read-only MCP server. Supported assistants can read the persisted business context already visible to your CiteLadder account. They cannot publish."
+      lead="Use your company’s saved search, Site Health, Search Intelligence, and AI visibility evidence to research opportunities, draft content, and build action plans. The connection is read-only."
     >
       <div class="mt-8 max-w-3xl">
         <pre class="border-border-subtle bg-background-alt overflow-x-auto rounded-[var(--radius-control)] border p-4 text-sm"><code class="font-mono">{mcpEndpoint}</code></pre>
@@ -42,13 +31,13 @@ const tools = [
           <p class="website-eyebrow text-foreground mb-4">On this page</p>
           <div class="grid gap-2 text-sm">
             {[
-              ['overview', 'What it exposes'],
-              ['chatgpt', 'ChatGPT'],
-              ['claude', 'Claude'],
-              ['codex', 'Codex'],
-              ['perplexity', 'Perplexity'],
-              ['security', 'Security'],
-              ['examples', 'Example prompts'],
+              ['connect', 'Connect'],
+              ['check', 'Check the connection'],
+              ['examples', 'Example requests'],
+              ['tools', 'Data and tools'],
+              ['semantics', 'Understand the data'],
+              ['privacy', 'Access and privacy'],
+              ['troubleshooting', 'Troubleshooting'],
             ].map(([id, label]) => (
               <a href={`#${id}`} class="text-muted hover:text-foreground rounded-[var(--radius-control)] py-1 transition-colors">{label}</a>
             ))}
@@ -56,44 +45,99 @@ const tools = [
         </nav>
 
         <div class="grid gap-12">
-          <section id="overview" class="border-border-subtle scroll-mt-24 border-t pt-8">
-            <h2 class="website-feature-heading text-foreground">What it exposes</h2>
+          <section id="connect" class="border-border-subtle scroll-mt-24 border-t pt-8">
+            <h2 class="website-feature-heading text-foreground">Connect</h2>
+            <div class="website-body text-muted mt-4 grid max-w-3xl gap-6">
+              <div class="grid gap-3">
+                <h3 class="text-foreground text-lg font-medium">Codex CLI</h3>
+                <pre class="border-border-subtle bg-background-alt overflow-x-auto rounded-[var(--radius-control)] border p-4 text-sm"><code class="font-mono">{`codex mcp add citeladder --url ${mcpEndpoint}\ncodex mcp login citeladder`}</code></pre>
+                <p>Your browser opens CiteLadder. Sign in, review the account-wide read grant, then approve or deny it.</p>
+              </div>
+              <div class="grid gap-3">
+                <h3 class="text-foreground text-lg font-medium">Claude Code</h3>
+                <pre class="border-border-subtle bg-background-alt overflow-x-auto rounded-[var(--radius-control)] border p-4 text-sm"><code class="font-mono">{`claude mcp add --transport http citeladder ${mcpEndpoint}`}</code></pre>
+                <p>Run <code>/mcp</code> in Claude Code and complete the browser sign-in.</p>
+              </div>
+              <p>These commands describe the supported Streamable HTTP and OAuth setup. Client availability still depends on the version and policies installed in your environment.</p>
+            </div>
+          </section>
+
+          <section id="check" class="border-border-subtle scroll-mt-24 border-t pt-8">
+            <h2 class="website-feature-heading text-foreground">Check the connection</h2>
             <div class="website-body text-muted mt-4 grid max-w-3xl gap-4">
-              <p>Access is account-scoped: after signing in, an assistant can discover every project available through that account&apos;s current workspace memberships. All responses come from persisted CiteLadder projections; an MCP read never starts a crawl, audit, sync, model call, publication, or external mutation.</p>
+              <p>Send this as an ordinary request after connecting:</p>
+              <pre class="border-border-subtle bg-background-alt overflow-x-auto whitespace-pre-wrap rounded-[var(--radius-control)] border p-4 text-sm"><code class="font-mono">Check my CiteLadder connection only. Discover the exposed tools and list my projects. For the project I choose, inventory the available saved datasets with their observation dates and limitations. If Search Intelligence is available, use read_search_intelligence to enumerate its saved datasets. Do not start research or draft content yet.</code></pre>
+            </div>
+          </section>
+
+          <section id="examples" class="border-border-subtle scroll-mt-24 border-t pt-8">
+            <h2 class="website-feature-heading text-foreground">Example requests</h2>
+            <div class="website-body text-muted mt-4 grid max-w-3xl gap-4">
+              <ul class="list-disc space-y-3 pl-5">
+                <li>Review the saved search performance for this project. Show the actual date window, compare it with the previous compatible period, and cite the query-page evidence behind your recommendations.</li>
+                <li>Find technical and internal-link opportunities in the latest completed crawl. Separate measured issues from unknown or inapplicable checks.</li>
+                <li>Review the latest AI visibility audit. Show which answers mention us, which pages were cited, and keep answer co-occurrence separate from inspected publisher-page presence.</li>
+                <li>Use the saved business context and evidence to draft a brief. Label every unavailable fact and do not imply that the draft was saved or published.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section id="tools" class="border-border-subtle scroll-mt-24 border-t pt-8">
+            <h2 class="website-feature-heading text-foreground">Data and tools</h2>
+            <div class="website-body text-muted mt-4 grid max-w-4xl gap-4">
+              <p>This reference is generated from the registered server metadata for release <code>{toolReference.server_version}</code>. Every listed tool is read-only. <code>list_skills</code> returns native format and capability metadata; it does not distribute instruction bodies.</p>
               <div class="border-border-subtle divide-border-subtle divide-y rounded-[var(--radius-control)] border">
-                {tools.map(([name, toolDescription]) => (
-                  <div class="grid gap-1 p-4 sm:grid-cols-[15rem_1fr] sm:gap-5">
-                    <code class="text-foreground font-mono text-xs">{name}</code>
-                    <p>{toolDescription}</p>
+                {toolReference.tools.map((tool) => (
+                  <div class="grid gap-2 p-4 sm:grid-cols-[15rem_1fr] sm:gap-5">
+                    <div class="grid content-start gap-1">
+                      <code class="text-foreground font-mono text-xs">{tool.name}</code>
+                      <span class="text-xs">{parameterNames(tool.input_schema).join(', ') || 'No inputs'}</span>
+                    </div>
+                    <p>{tool.description}</p>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          <section id="chatgpt" class="border-border-subtle scroll-mt-24 border-t pt-8">
-            <h2 class="website-feature-heading text-foreground">ChatGPT</h2>
+          <section id="semantics" class="border-border-subtle scroll-mt-24 border-t pt-8">
+            <h2 class="website-feature-heading text-foreground">Understand the data</h2>
             <div class="website-body text-muted mt-4 grid max-w-3xl gap-4">
-              <ol class="list-decimal space-y-2 pl-5"><li>Open ChatGPT settings and add a custom remote MCP server or connector.</li><li>Enter the endpoint shown above.</li><li>Select OAuth when prompted, then sign in with the CiteLadder demo account.</li><li>Start with “List my CiteLadder projects.”</li></ol>
-              <p>Connector availability depends on your ChatGPT plan and workspace administrator settings. No OpenAI API key is required by CiteLadder.</p>
+              <p>MCP reads saved CiteLadder evidence, not a live search engine. Dataset availability depends on completed runs and connected sources. Reading never starts a crawl, sync, model call, paid acquisition, repair, or publication.</p>
+              <p>A summary does not imply access to every raw provider record. Separate GSC query and page breakdowns are not a page-linked query report. Referring-domain and destination-page summaries are not individual backlink edges. AI citations, answer-level brand co-occurrence, and inspected publisher-page presence are distinct observations.</p>
+              <p>Unavailable, partial, failed, unknown, not applicable, and observed zero remain separate states. Exact date-window requests do not silently fall back to another range.</p>
             </div>
           </section>
 
-          <section id="claude" class="border-border-subtle scroll-mt-24 border-t pt-8">
-            <h2 class="website-feature-heading text-foreground">Claude and Claude Code</h2>
-            <div class="website-body text-muted mt-4 grid max-w-3xl gap-4"><p>In Claude, add a custom connector and use the endpoint above. Claude will open the CiteLadder OAuth login when it first connects.</p><p>For Claude Code:</p><pre class="border-border-subtle bg-background-alt overflow-x-auto rounded-[var(--radius-control)] border p-4 text-sm"><code class="font-mono">{`claude mcp add --transport http citeladder ${mcpEndpoint}`}</code></pre><p>Then run <code>/mcp</code> in Claude Code and complete the browser sign-in.</p></div>
+          <section id="privacy" class="border-border-subtle scroll-mt-24 border-t pt-8">
+            <h2 class="website-feature-heading text-foreground">Access, privacy, and revocation</h2>
+            <div class="website-body text-muted mt-4 grid max-w-3xl gap-4">
+              <p>The connection requests <code>citeladder:read</code>. Each protected read rechecks the account’s current workspace memberships, so adding or removing membership changes project access without waiting for token expiry. System workspaces are excluded.</p>
+              <p>The hosted tools do not return provider credentials. Your AI client receives the records you ask it to read; review that client’s data policies and your company’s rules before using sensitive information.</p>
+              <p>Removing or disconnecting CiteLadder from an MCP client may only remove the local connection. To revoke the server-side OAuth grant and invalidate its access and refresh tokens, use a client action that calls CiteLadder’s OAuth revocation endpoint. Workspace membership removal blocks project reads immediately.</p>
+            </div>
           </section>
 
-          <section id="codex" class="border-border-subtle scroll-mt-24 border-t pt-8">
-            <h2 class="website-feature-heading text-foreground">Codex</h2>
-            <div class="website-body text-muted mt-4 grid max-w-3xl gap-4"><p>Add the server, then start its OAuth login:</p><pre class="border-border-subtle bg-background-alt overflow-x-auto rounded-[var(--radius-control)] border p-4 text-sm"><code class="font-mono">{`codex mcp add citeladder --url ${mcpEndpoint}\ncodex mcp login citeladder`}</code></pre></div>
+          <section id="troubleshooting" class="border-border-subtle scroll-mt-24 border-t pt-8">
+            <h2 class="website-feature-heading text-foreground">Troubleshooting</h2>
+            <div class="website-body text-muted mt-4 max-w-4xl overflow-x-auto">
+              <table class="w-full border-collapse text-left">
+                <thead><tr class="border-border-subtle border-b"><th class="py-3 pr-6">Symptom</th><th class="py-3">What to do</th></tr></thead>
+                <tbody>
+                  {[
+                    ['Authentication expired or denied', 'Reconnect from the client and complete the browser approval. A denial consumes only that pending request.'],
+                    ['A project is missing', 'Confirm that the signed-in account still has a read-capable role in the project’s workspace.'],
+                    ['Data is missing or stale', 'Refresh or acquire it in CiteLadder, then retry. MCP reads never trigger that work.'],
+                    ['An exact date window is unavailable', 'Choose a persisted window reported by the dataset inventory; do not substitute another period.'],
+                    ['A requested tool is unavailable', 'Use the runtime catalog and produce a supported partial analysis. Never invent the missing evidence.'],
+                    ['The client cannot complete OAuth', 'Update the client and confirm that its current mode supports remote Streamable HTTP MCP with OAuth.'],
+                  ].map(([symptom, action]) => (
+                    <tr class="border-border-subtle border-b align-top"><td class="py-3 pr-6 font-medium text-foreground">{symptom}</td><td class="py-3">{action}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
-
-          <section id="perplexity" class="border-border-subtle scroll-mt-24 border-t pt-8"><h2 class="website-feature-heading text-foreground">Perplexity</h2><div class="website-body text-muted mt-4 grid max-w-3xl gap-4"><ol class="list-decimal space-y-2 pl-5"><li>Open Connectors and choose a custom remote connector.</li><li>Use the endpoint above and select OAuth authentication.</li><li>Complete the CiteLadder sign-in to authorize the connection.</li></ol><p>Custom remote connectors may require a paid plan or administrator enablement.</p></div></section>
-
-          <section id="security" class="border-border-subtle scroll-mt-24 border-t pt-8"><h2 class="website-feature-heading text-foreground">Security and demo access</h2><div class="website-body text-muted mt-4 grid max-w-3xl gap-4"><ul class="list-disc space-y-2 pl-5"><li>The server requests only the <code>citeladder:read</code> scope.</li><li>Each client receives its own revocable OAuth grant. API keys are not used.</li><li>Every project read verifies a current workspace membership.</li><li>Credentials and provider secrets are never returned through MCP.</li><li>This preview currently authorizes only the configured CiteLadder demo account.</li></ul></div></section>
-
-          <section id="examples" class="border-border-subtle scroll-mt-24 border-t pt-8"><h2 class="website-feature-heading text-foreground">Example prompts</h2><div class="website-body text-muted mt-4 grid max-w-3xl gap-4"><ul class="list-disc space-y-2 pl-5"><li>List every company and project available in my CiteLadder account.</li><li>Give me the full business context for this project before making recommendations.</li><li>What are the highest-priority opportunities, and which evidence supports them?</li><li>Compare observed demand with the latest AI visibility audit.</li><li>Which CiteLadder content skills are available for this company?</li></ul></div></section>
         </div>
       </div>
     </Section>

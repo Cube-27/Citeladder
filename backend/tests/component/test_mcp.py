@@ -21,7 +21,6 @@ from app.core.config.opportunities import OPPORTUNITY_TYPE_SITE
 from app.core.security import create_access_token
 from app.domain.mcp import server as mcp_server_module
 from app.domain.mcp.data import (
-    fetch_business_record,
     list_account_projects,
     project_business_context,
     read_growth_evidence,
@@ -32,6 +31,7 @@ from app.domain.mcp.oauth_provider import (
     consent_csrf_token,
     resource_url,
 )
+from app.domain.mcp.retrieval import fetch_business_record
 from app.domain.mcp.server import MCP_REGISTRATION_PATH, mcp_oauth_provider
 from app.models.opportunity import Opportunity
 from app.models.project import Project
@@ -175,6 +175,38 @@ async def test_oauth_grant_is_account_scoped_and_revocable(
                 "params": {"name": "list_projects", "arguments": {}},
             },
         )
+        modern_headers = {
+            **protocol_headers,
+            "MCP-Protocol-Version": "2026-07-28",
+        }
+        modern_meta = {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientInfo": {
+                "name": "test-modern",
+                "version": "1",
+            },
+            "io.modelcontextprotocol/clientCapabilities": {},
+        }
+        discovered = await client.post(
+            "/mcp",
+            headers={**modern_headers, "MCP-Method": "server/discover"},
+            json={
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "server/discover",
+                "params": {"_meta": modern_meta},
+            },
+        )
+        modern_tools = await client.post(
+            "/mcp",
+            headers={**modern_headers, "MCP-Method": "tools/list"},
+            json={
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "tools/list",
+                "params": {"_meta": modern_meta},
+            },
+        )
     assert initialized.status_code == 200
     assert initialized.json()["result"]["serverInfo"]["name"] == "citeladder"
     assert listed.status_code == 200
@@ -188,6 +220,11 @@ async def test_oauth_grant_is_account_scoped_and_revocable(
     assert called.status_code == 200
     assert called.json()["result"]["isError"] is False
     assert str(project.id) in called.text
+    assert discovered.status_code == 200
+    assert "2026-07-28" in discovered.json()["result"]["supportedVersions"]
+    assert discovered.json()["result"]["resultType"] == "complete"
+    assert modern_tools.status_code == 200
+    assert modern_tools.json()["result"]["resultType"] == "complete"
 
     refresh = await provider.load_refresh_token(
         oauth_client, tokens.refresh_token or ""
@@ -229,6 +266,36 @@ async def test_demo_allowlist_rejects_another_account(
     transaction = parse_qs(urlsplit(authorization_url).query)["transaction"][0]
     with pytest.raises(PermissionError, match="not enabled"):
         await provider.complete_authorization(transaction, user.id)
+
+
+@pytest.mark.asyncio
+async def test_denied_authorization_is_consumed_and_returns_standard_error(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mcp_settings, "enabled", True)
+    provider = CiteLadderOAuthProvider(session_factory)
+    oauth_client = _client_info()
+    await provider.register_client(oauth_client)
+    authorization_url = await provider.authorize(
+        oauth_client,
+        AuthorizationParams(
+            state="denial-state",
+            scopes=[MCP_READ_SCOPE],
+            code_challenge="B" * 43,
+            redirect_uri=AnyUrl("http://127.0.0.1/callback"),
+            redirect_uri_provided_explicitly=True,
+            resource=resource_url(),
+        ),
+    )
+    transaction = parse_qs(urlsplit(authorization_url).query)["transaction"][0]
+
+    destination = await provider.deny_authorization(transaction)
+    params = parse_qs(urlsplit(destination).query)
+    assert params["error"] == ["access_denied"]
+    assert params["state"] == ["denial-state"]
+    with pytest.raises(PermissionError, match="invalid or expired"):
+        await provider.deny_authorization(transaction)
 
 
 @pytest.mark.asyncio
@@ -348,6 +415,7 @@ async def test_browser_consent_requires_an_explicit_approval(
     assert "MCP test client" in page.text
     assert MCP_READ_SCOPE in page.text
     assert "http://127.0.0.1/callback" in page.text
+    assert "Deny access" in page.text
     assert page.headers["cache-control"] == "no-store"
 
     forged = await client.post(

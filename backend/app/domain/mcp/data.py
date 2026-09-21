@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import quote
 
-from mcp.server.auth.middleware.auth_context import get_access_token
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.agent import AGENT_TASK_POLICIES
@@ -15,23 +15,32 @@ from app.core.config.content import (
     CONTENT_SKILL_CATALOG_VERSION,
     CONTENT_SKILL_REGISTRY,
 )
-from app.core.config.mcp import MCP_MAX_SEARCH_RESULTS
+from app.core.config.mcp import (
+    MCP_MAX_SEARCH_RESULTS,
+    mcp_public_origin,
+)
 from app.domain.agent.tools import ToolExecutionContext, execute_tool
-from app.domain.workspaces.policy import WorkspaceCapability, roles_with
-from app.models.brand import BrandProfile
+from app.domain.demand.search_intelligence.service import (
+    readiness as search_intelligence_readiness,
+)
+from app.domain.mcp.common import (
+    _authorized_project,
+    _caller_is_member_of,
+    _cursor_decode,
+    _cursor_encode,
+    _limit,
+    _normalize_refs,
+    current_user_id,
+)
+from app.domain.mcp.schemas import page
+from app.models.brand import BrandProfile, Competitor, OwnedDomain
 from app.models.opportunity import Opportunity
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
-from app.models.workspace import Workspace, WorkspaceMember
+from app.models.workspace import Workspace
 
 # Every MCP tool is a READ. Resolved from the shared policy at import time so
 # the MCP surface and the HTTP API can never disagree about who may read.
-_MCP_READER_ROLES = roles_with(WorkspaceCapability.READ)
-
-# The reads that describe a project as a whole. ``performance.read_table`` is
-# deliberately absent: it is a paged drill-down into one dimension, and a
-# context resource that carried a page of it would be answering a question the
-# caller has not asked yet.
 _CONTEXT_TOOLS = (
     "site.read_snapshot",
     "demand.read_snapshot",
@@ -43,63 +52,43 @@ _CONTEXT_TOOLS = (
 )
 
 
-def current_user_id() -> uuid.UUID:
-    token = get_access_token()
-    if token is None or not token.subject:
-        raise PermissionError("An authenticated CiteLadder account is required")
-    try:
-        return uuid.UUID(token.subject)
-    except ValueError as exc:
-        raise PermissionError("The MCP grant has an invalid account identity") from exc
-
-
-def _caller_is_member_of(workspace_column: Any) -> Any:
-    """The predicate authorizing the caller to read rows in a workspace.
-
-    Every read below is workspace-scoped, and each one used to spell its own
-    ``WorkspaceMember`` join out inline. Six of the seven omitted
-    ``Workspace.is_system``, so MCP was the one reader where a stray
-    system-workspace membership row would have authorized — while
-    ``list_account_projects``, which did filter it, hid the same project. Two
-    halves of one boundary disagreeing is the shape of bug that never shows up
-    in tests.
-
-    Stated once here, mirroring ``get_membership`` (T11: system workspaces
-    cannot have memberships, so even a stray row stays inert). An EXISTS
-    subquery rather than a join, so adding it can neither duplicate rows for a
-    caller holding several memberships nor collide with a query's own joins —
-    it drops into any ``where`` unchanged.
-
-    The role filter comes from the ONE workspace policy
-    (``app.domain.workspaces.policy``), not from a list spelled here: MCP is a
-    separate entry point into the same data, and §2.3 of the account-management
-    plan requires it to reuse the policy rather than define a second matrix.
-    Every MCP tool is read-only, so the set is ``roles_with(READ)`` — but a row
-    carrying an unrecognised role authorizes nothing, and if a future role
-    loses READ it loses MCP with it, in one edit.
-    """
-    return (
-        select(WorkspaceMember.id)
-        .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
-        .where(
-            WorkspaceMember.workspace_id == workspace_column,
-            WorkspaceMember.user_id == current_user_id(),
-            WorkspaceMember.role.in_(_MCP_READER_ROLES),
-            Workspace.is_system.is_(False),
-        )
-        .exists()
+async def list_account_projects(
+    session: AsyncSession, *, cursor: str | None = None, limit: int | None = None
+) -> dict[str, Any]:
+    bounded = _limit(limit)
+    statement = (
+        select(Project, Workspace)
+        .join(Workspace, Workspace.id == Project.workspace_id)
+        .where(_caller_is_member_of(Project.workspace_id))
     )
-
-
-async def list_account_projects(session: AsyncSession) -> dict[str, Any]:
-    rows = (
-        await session.execute(
-            select(Project, Workspace)
-            .join(Workspace, Workspace.id == Project.workspace_id)
-            .where(_caller_is_member_of(Project.workspace_id))
-            .order_by(Workspace.created_at.asc(), Project.created_at.asc())
+    if cursor:
+        created_at, row_id = _cursor_decode(cursor, 2)
+        try:
+            cursor_at = datetime.fromisoformat(created_at)
+            cursor_id = uuid.UUID(row_id)
+        except ValueError as exc:
+            raise ValueError("cursor is invalid") from exc
+        statement = statement.where(
+            or_(
+                Project.created_at > cursor_at,
+                and_(Project.created_at == cursor_at, Project.id > cursor_id),
+            )
         )
-    ).all()
+    rows = list(
+        (
+            await session.execute(
+                statement.order_by(Project.created_at.asc(), Project.id.asc()).limit(
+                    bounded + 1
+                )
+            )
+        ).all()
+    )
+    emitted = rows[:bounded]
+    next_cursor = (
+        _cursor_encode(emitted[-1][0].created_at.isoformat(), emitted[-1][0].id)
+        if len(rows) > bounded
+        else None
+    )
     return {
         "scope": "account",
         "projects": [
@@ -113,15 +102,52 @@ async def list_account_projects(session: AsyncSession) -> dict[str, Any]:
                 "industry": project.industry,
                 "primary_market": project.primary_market,
             }
-            for project, workspace in rows
+            for project, workspace in emitted
         ],
+        "pagination": page(items=[], next_cursor=next_cursor)
+        | {"returned_count": len(emitted)},
     }
 
 
+_CONTEXT_SECTIONS = {
+    "profile",
+    "prompts",
+    "site_health",
+    "demand",
+    "opportunities",
+    "visibility",
+    "performance",
+    "referrals",
+    "integrations",
+    "search_intelligence",
+}
+
+
+def _context_sections(sections: list[str] | None) -> set[str]:
+    selected = set(sections or _CONTEXT_SECTIONS)
+    unknown = selected - _CONTEXT_SECTIONS
+    if unknown:
+        raise ValueError(
+            f"unsupported context section(s): {', '.join(sorted(unknown))}"
+        )
+    return selected
+
+
 async def project_business_context(
-    session: AsyncSession, project_id: str
+    session: AsyncSession, project_id: str, sections: list[str] | None = None
 ) -> dict[str, Any]:
     project = await _authorized_project(session, project_id)
+    selected_sections = _context_sections(sections)
+    loaded = await _load_project_context(session, project, selected_sections)
+    dataset_inventory = _dataset_inventory(loaded[6], loaded[3])
+    return _render_project_context(
+        project, selected_sections, loaded, dataset_inventory
+    )
+
+
+async def _load_project_context(
+    session: AsyncSession, project: Project, selected_sections: set[str]
+) -> tuple[Any, list[Any], list[str], dict[str, Any], list[Any], list[Any], Any]:
     # Column selects, not entity loads: six of BrandProfile's fields and six of
     # Prompt's are rendered below, and hydrating whole ORM instances to read
     # them costs identity-map bookkeeping and serialization for columns this
@@ -135,37 +161,162 @@ async def project_business_context(
                 BrandProfile.target_audience,
                 BrandProfile.business_context,
                 BrandProfile.sources,
+                BrandProfile.source_artifact_ids,
+                BrandProfile.updated_at,
             ).where(
                 BrandProfile.workspace_id == project.workspace_id,
                 BrandProfile.project_id == project.id,
             )
         )
     ).one_or_none()
+    competitor_rows = list(
+        (
+            await session.scalars(
+                select(Competitor)
+                .where(Competitor.project_id == project.id)
+                .order_by(Competitor.name.asc(), Competitor.id.asc())
+            )
+        ).all()
+    )
+    owned_domains = list(
+        (
+            await session.scalars(
+                select(OwnedDomain.domain)
+                .where(OwnedDomain.project_id == project.id)
+                .order_by(OwnedDomain.domain.asc())
+            )
+        ).all()
+    )
     evidence: dict[str, Any] = {}
     context = ToolExecutionContext(
         session=session,
         workspace_id=project.workspace_id,
         project_id=project.id,
     )
+    section_tools = {
+        "site.read_snapshot": "site_health",
+        "demand.read_snapshot": "demand",
+        "opportunities.read_ranked": "opportunities",
+        "audits.read_latest": "visibility",
+        "performance.read_snapshot": "performance",
+        "referrals.read_snapshot": "referrals",
+        "integrations.read_status": "integrations",
+    }
     for tool_name in _CONTEXT_TOOLS:
-        evidence[tool_name] = await execute_tool(tool_name, context, {})
-    prompt_rows = (
-        await session.execute(
-            select(
-                Prompt.id,
-                Prompt.text,
-                Prompt.theme,
-                Prompt.intent,
-                Prompt.buyer_stage,
-                Prompt.origin,
-            )
-            .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
-            .where(PromptSet.project_id == project.id, Prompt.enabled.is_(True))
-            .order_by(Prompt.created_at.asc(), Prompt.id.asc())
-            .limit(51)
+        if section_tools[tool_name] not in selected_sections:
+            continue
+        evidence[tool_name] = _normalize_refs(
+            await execute_tool(tool_name, context, {})
         )
-    ).all()
-    prompts = prompt_rows[:50]
+    prompt_rows = list(
+        (
+            await session.execute(
+                select(
+                    Prompt.id,
+                    Prompt.text,
+                    Prompt.theme,
+                    Prompt.intent,
+                    Prompt.buyer_stage,
+                    Prompt.origin,
+                    Prompt.cohort,
+                    Prompt.status,
+                )
+                .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
+                .where(PromptSet.project_id == project.id, Prompt.enabled.is_(True))
+                .order_by(Prompt.created_at.asc(), Prompt.id.asc())
+                .limit(51)
+            )
+        ).all()
+    )
+    prompts = prompt_rows[:50] if "prompts" in selected_sections else []
+    search_readiness = (
+        await search_intelligence_readiness(
+            session, workspace_id=project.workspace_id, project_id=project.id
+        )
+        if "search_intelligence" in selected_sections
+        else None
+    )
+    return (
+        profile,
+        competitor_rows,
+        owned_domains,
+        evidence,
+        prompt_rows,
+        prompts,
+        search_readiness,
+    )
+
+
+def _dataset_inventory(
+    search_readiness: Any, evidence: dict[str, Any]
+) -> list[dict[str, Any]]:
+    dataset_inventory = [
+        {
+            "kind": "site_health",
+            "read_tool": "read_site_health",
+            "state": evidence.get("site.read_snapshot", {}).get(
+                "state", "not_requested"
+            ),
+            "limitation": "bounded normalized page facts; not raw HTML",
+        },
+        {
+            "kind": "query_page_evidence",
+            "read_tool": "read_query_evidence",
+            "state": "available"
+            if evidence.get("demand.read_snapshot", {}).get("state") == "available"
+            else "unavailable",
+            "limitation": "exact saved windows only",
+        },
+        {
+            "kind": "visibility",
+            "read_tool": "read_visibility_results",
+            "state": evidence.get("audits.read_latest", {}).get(
+                "state", "not_requested"
+            ),
+            "limitation": "saved answers and citations only; no reruns",
+        },
+        {
+            "kind": "search_intelligence",
+            "read_tool": "read_search_intelligence",
+            "state": (
+                "available"
+                if search_readiness and search_readiness.datasets
+                else "not_requested"
+                if search_readiness is None
+                else "unavailable"
+            ),
+            "observed_at": max(
+                (
+                    item.published_at
+                    for item in (search_readiness.datasets if search_readiness else [])
+                    if item.published_at is not None
+                ),
+                default=None,
+            ),
+            "limitation": (
+                "dataset-specific saved grain; aggregate backlink datasets "
+                "are not backlink edges"
+            ),
+        },
+    ]
+    return dataset_inventory
+
+
+def _render_project_context(
+    project: Project,
+    selected_sections: set[str],
+    loaded: tuple[Any, list[Any], list[str], dict[str, Any], list[Any], list[Any], Any],
+    dataset_inventory: list[dict[str, Any]],
+) -> dict[str, Any]:
+    (
+        profile,
+        competitor_rows,
+        owned_domains,
+        evidence,
+        prompt_rows,
+        prompts,
+        _search_readiness,
+    ) = loaded
     return {
         "scope": "project",
         "project": {
@@ -188,10 +339,29 @@ async def project_business_context(
                 "target_audience": profile.target_audience,
                 "business_context": profile.business_context,
                 "sources": profile.sources,
+                "source_artifact_ids": profile.source_artifact_ids,
+                "review_state_by_field": {
+                    field: source.get("review_state", "unavailable")
+                    for field, source in (profile.sources or {}).items()
+                    if isinstance(source, dict)
+                },
+                "updated_at": profile.updated_at,
             }
-            if profile
+            if profile and "profile" in selected_sections
+            else {"state": "not_requested"}
+            if "profile" not in selected_sections
             else {"state": "unavailable", "reason": "no_brand_profile"}
         ),
+        "owned_domains": owned_domains,
+        "accepted_competitors": [
+            {
+                "id": str(row.id),
+                "name": row.name,
+                "aliases": row.aliases,
+                "domains": row.domains,
+            }
+            for row in competitor_rows
+        ],
         "active_prompts": [
             {
                 "id": str(prompt.id),
@@ -200,14 +370,36 @@ async def project_business_context(
                 "intent": prompt.intent,
                 "buyer_stage": prompt.buyer_stage,
                 "origin": prompt.origin,
+                "cohort": prompt.cohort,
+                "status": prompt.status,
+                "record_uri": f"citeladder://prompt/{prompt.id}",
             }
             for prompt in prompts
         ],
         "prompt_omissions": (
-            [{"reason": "active_prompt_limit", "limit": 50}]
-            if len(prompt_rows) > len(prompts)
+            [
+                {
+                    "reason": "active_prompt_limit",
+                    "limit": 50,
+                    "continuation_tool": "read_prompt_portfolio",
+                }
+            ]
+            if "prompts" in selected_sections and len(prompt_rows) > len(prompts)
             else []
         ),
+        "available_datasets": dataset_inventory,
+        "applicability": {
+            "identity": {
+                "state": "applicable",
+                "snapshot_id": "applicable",
+                "audit_id": "applicable",
+                "crawl_id": "applicable",
+                "dataset_id": "applicable",
+            },
+            "coverage": "applicable",
+            "pagination": "applicable",
+            "follow_through": "applicable",
+        },
         "evidence": evidence,
     }
 
@@ -325,66 +517,17 @@ async def search_business_context(
             _result("prompt", row.id, row.theme or "Prompt", row.text)
             for row in prompts
         )
-    return {"query": normalized, "results": results, "count": len(results)}
-
-
-async def fetch_business_record(
-    session: AsyncSession, record_id: str
-) -> dict[str, Any]:
-    kind, row_id = _parse_record_id(record_id)
-    # Reject an unauthenticated caller before any query work; the predicates
-    # below re-resolve the same identity.
-    current_user_id()
-    if kind == "project":
-        return await project_business_context(session, str(row_id))
-    if kind == "opportunity":
-        row = await session.scalar(
-            select(Opportunity).where(
-                Opportunity.id == row_id,
-                _caller_is_member_of(Opportunity.workspace_id),
-            )
-        )
-        if row:
-            return {
-                "id": record_id,
-                "type": kind,
-                "project_id": str(row.project_id),
-                "title": row.title,
-                "remediation": row.remediation,
-                "status": row.status,
-                "severity": row.severity,
-                "priority_score": row.priority_score,
-                "target_url": row.target_url,
-                "evidence": row.evidence,
-                "provenance": {
-                    "analyzer_version": row.analyzer_version,
-                    "rule_version": row.rule_version,
-                    "formula_version": row.formula_version,
-                },
-            }
-    elif kind == "prompt":
-        row = await session.scalar(
-            select(Prompt)
-            .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
-            .join(Project, Project.id == PromptSet.project_id)
-            .where(
-                Prompt.id == row_id,
-                _caller_is_member_of(Project.workspace_id),
-            )
-        )
-        if row:
-            return {
-                "id": record_id,
-                "type": kind,
-                "text": row.text,
-                "theme": row.theme,
-                "intent": row.intent,
-                "buyer_stage": row.buyer_stage,
-                "status": row.status,
-                "origin": row.origin,
-                "generation_evidence": row.generation_evidence,
-            }
-    raise LookupError("The requested record was not found in this account")
+    return {
+        "query": normalized,
+        "results": results,
+        "count": len(results),
+        "pagination": {
+            "returned_count": len(results),
+            "has_more": len(results) == bounded_limit,
+            "next_cursor": None,
+            "total_count": None,
+        },
+    }
 
 
 async def read_growth_evidence(
@@ -399,7 +542,7 @@ async def read_growth_evidence(
     MCP client, and on its own it grants nothing (invariant 5).
     """
     project = await _authorized_project(session, project_id)
-    return await execute_tool(
+    result = await execute_tool(
         tool_name,
         ToolExecutionContext(
             session=session,
@@ -408,22 +551,38 @@ async def read_growth_evidence(
         ),
         payload or {},
     )
-
-
-async def _authorized_project(session: AsyncSession, project_id: str) -> Project:
-    try:
-        parsed_id = uuid.UUID(project_id)
-    except ValueError as exc:
-        raise ValueError("project_id must be a UUID") from exc
-    row = await session.scalar(
-        select(Project).where(
-            Project.id == parsed_id,
-            _caller_is_member_of(Project.workspace_id),
-        )
+    _normalize_refs(result)
+    result.setdefault("project_id", str(project.id))
+    identity_applicability = (
+        {
+            "state": "applicable",
+            "connection_id": "applicable",
+            "snapshot_id": "not_applicable",
+            "audit_id": "not_applicable",
+            "crawl_id": "not_applicable",
+            "dataset_id": "not_applicable",
+        }
+        if tool_name == "integrations.read_status"
+        else "applicable"
     )
-    if row is None:
-        raise LookupError("Project was not found in this account")
-    return row
+    result.setdefault(
+        "applicability",
+        {
+            "identity": identity_applicability,
+            "coverage": "applicable",
+            "pagination": (
+                "applicable"
+                if tool_name in {"opportunities.read_ranked", "performance.read_table"}
+                else "not_applicable"
+            ),
+            "follow_through": (
+                "not_applicable"
+                if tool_name == "integrations.read_status"
+                else "applicable"
+            ),
+        },
+    )
+    return result
 
 
 async def _optional_project_filter(
@@ -436,22 +595,11 @@ async def _optional_project_filter(
 
 
 def _result(kind: str, row_id: uuid.UUID, title: str, text: str) -> dict[str, str]:
+    record_uri = f"citeladder://{kind}/{row_id}"
     return {
-        "id": f"citeladder://{kind}/{row_id}",
+        "id": record_uri,
         "type": kind,
         "title": title,
+        "url": f"{mcp_public_origin()}/dashboard?record={quote(record_uri, safe='')}",
         "text": text[:500],
     }
-
-
-def _parse_record_id(record_id: str) -> tuple[str, uuid.UUID]:
-    parsed = urlsplit(record_id)
-    if parsed.scheme != "citeladder" or not parsed.netloc:
-        raise ValueError("id must be a citeladder:// record URI returned by search")
-    kind = parsed.netloc
-    if kind not in {"project", "opportunity", "prompt"}:
-        raise ValueError("Unsupported CiteLadder record type")
-    try:
-        return kind, uuid.UUID(parsed.path.lstrip("/"))
-    except ValueError as exc:
-        raise ValueError("Record id must contain a UUID") from exc
