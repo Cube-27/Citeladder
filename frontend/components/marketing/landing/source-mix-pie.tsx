@@ -29,7 +29,8 @@ export function SourceMixPie() {
         {HERO_SOURCE_MIX.map((source) => (
           <li key={source.name}>
             <span>{source.name}</span>
-            <strong>{source.percent}%</strong>
+            <strong aria-hidden="true">{source.percent}%</strong>
+            <span className="sr-only">{source.percent}% of citations</span>
           </li>
         ))}
       </ul>
