@@ -1130,22 +1130,6 @@ input.focus-input:-webkit-autofill:focus-visible {
   animation: citeladder-loading-appear 120ms ease-out 300ms forwards;
 }
 
-[data-session-anon] {
-  display: contents;
-}
-
-[data-session-returning] {
-  display: none;
-}
-
-html[data-returning-visitor] [data-session-anon] {
-  display: none;
-}
-
-html[data-returning-visitor] [data-session-returning] {
-  display: contents;
-}
-
 /* Paper, not screen. A fractal-noise tile at a few percent over the marketing
    planes, so large light grounds don't read as flat voids (the reference
    system's grain). Sections are `relative` and their content sits above it. */

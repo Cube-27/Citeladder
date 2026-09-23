@@ -12,7 +12,7 @@ per-edit checklist. Preserve existing `.env` and `.env.local` files during setup
 |------|---------|-------|
 | Python | 3.12+ | Backend |
 | [`uv`](https://docs.astral.sh/uv/) | latest | Backend dependency + venv manager |
-| Node.js | 22+ | Frontend. 22 is the SUPPORTED MINIMUM and the version CI validates; `engines.node` says `>=22` in `frontend/package.json`. The production frontend images pin Node 26 deliberately (`frontend/Dockerfile`, `frontend/apps/app/Dockerfile`) -- newer than CI, so treat a Node-26-only failure as a release-time finding, not a CI gap. Raise the minimum only by moving CI and `engines` together. |
+| Node.js | 22+ | Frontend. 22 is the supported minimum and CI version. The local Compose marketing Worker image uses Node 26 to run Wrangler; protected production delivery uses Cloudflare Workers. |
 | pnpm | Repository pin | Use the exact `packageManager` version in [`frontend/package.json`](../frontend/package.json). |
 | PostgreSQL | 15+ | Via Docker or local |
 | Docker + Compose | latest | Local stack |
@@ -51,7 +51,7 @@ configuration/secrets required by its owner.
 cd frontend
 echo "BACKEND_ORIGIN=http://localhost:8000" > .env.local
 pnpm install
-pnpm dev                    # Astro marketing SSR: http://127.0.0.1:3000
+pnpm dev                    # Local marketing Worker: http://127.0.0.1:3000
 pnpm dev:vite               # Vite authenticated SPA: http://127.0.0.1:3001/login
 ```
 
@@ -65,6 +65,9 @@ They share dependencies, API client, styles, public assets, and the server-only
 
 ```bash
 pnpm build                  # Astro marketing SSR build
+pnpm build:marketing        # Astro Worker build and static-output check
+pnpm types:marketing-worker # Regenerate checked-in marketing bindings
+pnpm dev:marketing-worker   # Rebuild and run local Workerd with a disposable upstream
 pnpm build:vite             # Vite authenticated SPA build
 pnpm preview:vite           # production bundle preview on port 3001
 ```
@@ -98,7 +101,7 @@ from, and does not replace, the Playwright Test runner used by `pnpm test:e2e`.
 
 The Compose path is the clean-clone workflow. From the repository root, it builds and starts
 PostgreSQL, applies the migration baseline once, then starts FastAPI, the
-Astro marketing frontend, Vite application, Caddy ingress, and the workers. Do not run host-side migrations or
+local marketing Worker, Vite application, Caddy ingress, and the workers. Do not run host-side migrations or
 `pnpm dev` alongside this stack.
 
 ```bash
@@ -116,10 +119,13 @@ curl -fsS http://localhost:8000/health
 ```
 
 The default stack includes both frontend runtimes; no migration profile is needed.
-Only Caddy ingress exposes browser port 3000. It shares the production route table
-in `infra/gcp/runtime/frontend-routes.caddy`: account/product routes (including
-`/login`) and `/app-assets/*` go to Vite, backend API/MCP/OAuth paths go to FastAPI,
-and public routes go to Astro. The internal Vite and Astro ports are not published.
+Only Caddy ingress exposes browser port 3000. Visit `http://127.0.0.1:3000`
+for marketing and `http://app.localhost:3000` for the app. The former retains
+the legacy path table in `infra/gcp/runtime/frontend-routes.caddy`; the app host
+serves the Vite application and its same-origin API. The internal Vite and
+marketing ports are not published. Local Compose uses disposable Worker-to-`web`
+HTTP transport enabled only by Compose for its `web:8000` upstream; production always
+requires HTTPS ingress authentication.
 The Vite runtime serves direct SPA refreshes from its built `index.html` with
 `no-store`; missing chunks return 404 instead of application HTML.
 

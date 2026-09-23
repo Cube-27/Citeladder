@@ -23,6 +23,8 @@ node_modules/
 frontend/.playwright-cli/
 frontend/apps/app/.wrangler/
 frontend/apps/app/.dev.vars*
+frontend/apps/marketing/.wrangler/
+frontend/apps/marketing/.dev.vars*
 /.playwright-cli/
 
 # The root package.json only delegates to frontend/ and backend/; it declares

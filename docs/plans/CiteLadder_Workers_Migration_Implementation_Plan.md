@@ -1,21 +1,22 @@
 # CiteLadder Workers migration: four sequential PRs
 
 Prepared 23 September 2026. Planning baseline: `07cb74fb`.
-Status: PR 1 merged as #133 (`7dffa2ef`); PR 2 implementation in progress.
+Status: PR 1 merged as #133 (`7dffa2ef`); PR 2 merged as #134 (`f9f1ad16`);
+PR 3 implementation in progress.
 No deployment or production acceptance claimed.
 
 This is the delivery plan for
 [Workers Migration Architecture](CiteLadder_Workers_Migration_Architecture.md).
 That specification owns the target contracts; this document owns the four-PR
 boundaries, fresh-chat entry points and handoffs. Read both for an assigned PR.
-The supplied recommendation is incorporated as: prepare, deploy alongside the
-existing site, cut over, verify immediately, then remove the superseded infrastructure.
+The current owner sequence is: implement PRs 1–4, remove superseded deployment
+code in PR 4, then authorize and verify one fresh production release.
 
 **Owner clarification, 23 September 2026:** there are currently no customers;
 complete the four PRs in sequence today. There is no seven-day observation window,
 minimum elapsed-time gate or separate stabilization phase. Run focused automated
-checks and immediate deployment smoke checks, fix failures, then proceed to PR 4
-once PR 3 is merged and cutover works. Do not turn this into a customer migration
+checks in the PRs, then deploy and run immediate production smoke checks after
+PR 4 merges. Do not turn this into a customer migration
 exercise or require artificial waiting. Account access and actual failures can
 still block a dependent action; record those concretely.
 
@@ -65,20 +66,21 @@ release, changes, checks and rollback reviewable before asking for approval.
 | PR | Deliverable | Starting prerequisite | Public traffic at merge |
 |---|---|---|---|
 | 1 | Origin contracts, compatible backend/MCP, protected ingress | Baseline reconciliation within PR 1 | Existing apex unchanged |
-| 2 | Product Worker, app pricing continuation and independent delivery | PR 1 merged | Existing apex unchanged; app can be staged/prepared |
+| 2 | Product Worker, app pricing continuation and independent delivery | PR 1 merged | Existing apex unchanged; app is not deployed |
 | 3 | Marketing Worker, public SSR pricing/handoff, cutover/recovery automation | PR 2 merged | Apex remains on captured old frontend until separately approved cutover |
-| 4 | Remove superseded frontend infrastructure | PR 3 merged and immediate post-cutover checks pass | Workers already own frontend traffic |
+| 4 | Remove superseded frontend infrastructure and finalize fresh-release automation | PR 3 merged with CI green | Existing public deployment remains until separately authorized release |
 
-There is no fifth coding PR for cutover. PR 3 must deliver all code, configuration
-interfaces and procedures needed to execute cutover after its merge. Its release
-record owns cutover and immediate verification evidence. PR 4 must not manufacture that
-evidence or start deleting infrastructure merely because PR 3 merged.
+There is no fifth coding PR for cutover. The owner deferred deployment until
+after PR 4. PR 3 supplies Worker behavior and transition compatibility; PR 4
+must remove the old GCP frontend runtime and finish a production-only greenfield
+release packet before its merge. The release record owns deployment and immediate
+verification evidence. PR 4 must not manufacture that evidence or delete live
+infrastructure merely because PR 3 merged.
 
-PR 2/3 repository work can proceed after predecessor merge even when an
-independent staging/account step remains pending. Carry the gate explicitly;
-no dependent deployment or production acceptance can proceed without it.
-If PR 4 is requested too early, inspect readiness and name the missing evidence,
-but leave rollback infrastructure intact.
+PR 2/3 repository work can proceed after predecessor merge even when manual
+account setup remains pending. There is no staging environment, staging Worker,
+or staging acceptance gate. Production deployment and acceptance require PR 4,
+manual setup, protected approval and the final production release procedure.
 
 ## Shared implementation and handoff contract
 
@@ -95,8 +97,8 @@ Every PR description/final handoff must contain this compact record:
 |---|---|
 | Identity | Workers migration PR number, base/head commits, PR link when available; predecessor PR/merge reference |
 | Delivered | Actual behavior and owner paths changed, removals and deviations from this plan |
-| Verification | Exact commands, exit results, CI links; distinguish local, staging and production checks |
-| Operational state | Not deployed / staged / production accepted / migration closed, separately from merged status |
+| Verification | Exact commands, exit results, CI links; distinguish local and production checks |
+| Operational state | Not deployed / production accepted / migration closed, separately from merged status |
 | Release | Compatible backend revision, artifact digests, public-config fingerprint, Worker deployment/version IDs when deployed |
 | Outstanding | Each unexecuted gate, reason, responsible operator and exact next action |
 | Compatibility | Retained bridge/artifact, consumer, owner, expiration/removal condition and target date |
@@ -284,9 +286,8 @@ auth navigation before extracting the shared purchase/selection contracts.
    and access owners for this implemented continuation contract.
 7. Keep deployment artifacts needed for ordinary rollback. Do not build a generic
    release-asset archive or retain old apex chunks for hypothetical consumers.
-8. Document tested local Worker commands, isolated staging and product rollback.
-   Staging uses its own backend/data/secrets and exact callback/host allowlists.
-   Protect previews, prevent indexing and disable unnecessary public preview URLs.
+8. Document local Worker commands and production recovery. Disable unnecessary
+   public preview URLs; do not create unprovisioned staging domains or secrets.
 
 ### Verification and exit
 
@@ -294,7 +295,7 @@ Exercise real Worker asset routing for fetch and `Sec-Fetch-Mode: navigate`, API
 errors, protocol rejection, consent, missing assets, HEAD/non-GET and SPA refresh.
 Test transport cookies, redirects, auth headers, upload/download bytes, streaming
 and cancellation. Confirm host policy and private-response isolation. Verify
-staging login/callback/consent with the matching staging backend browser origin.
+local Worker login/callback/consent with a disposable backend where available.
 Test selection through login/confirmation, malformed/tampered selection, stale
 catalog, unavailable quote and uncertain retry without live charges. Assert that
 APEX-OWNED webhooks are rejected here; raw webhook signature tests belong to PR 3
@@ -309,7 +310,7 @@ backend still generates apex callbacks. Production activation belongs to PR 3.
 its validated selection contract are implemented. Marketing runtime, SSR public
 pricing/link integration and coordinated cutover remain unfinished.
 
-**Manual packet:** available staging/app domains, preview protection, Worker
+**Manual packet:** app Custom Domain, preview protection, Worker
 secrets, account capacity/CPU limits and alerts, protected workflow approval.
 Keep public apex routing and links unchanged. Validate actual forwarded client
 identity through Worker/Cloudflare/Caddy rather than relying only on local mocks.
@@ -394,24 +395,27 @@ Exercise marketing selection through app login/confirmation and public-catalog
 unavailability without making live charges. Reuse PR 2's purchase-boundary tests.
 Verify raw webhook bytes/signatures and duplicate handling at their actual apex
 endpoints, rejection on the app, narrow apex API access and absence of default
-product redirects/aliases. Verify the architecture Section 12 matrix in isolated
-staging, including both rollback
-rehearsals, existing/new MCP clients and enabled OAuth integrations. Record any
-unavailable external checks as blocking production, not blocking unrelated code.
+product redirects/aliases. CI and local Worker checks cover executable behavior;
+record external OAuth, MCP and deployed recovery checks as production release
+gates. No staging environment is assumed or required.
 
 **Merge result:** both targets and all cutover software are ready. Old apex remains
 recoverable on captured artifacts. Merge is not production acceptance.
-**Next agent may assume:** implementation is complete; PR 4 still requires actual
-post-merge cutover and immediate verification below, with no observation period.
+**Next agent may assume:** implementation is complete; the owner has revised the
+sequence so PR 4 follows merge before a fresh release. The old deployment remains
+until a separately authorized release. PR 4 must update the release packet for
+the final topology; no data deletion is authorized by this implementation plan.
 
-### Post-merge operations owned by the PR 3 release
+### Release requirements to carry into PR 4
 
-Execute through the tested runbook after explicit operator authorization. These
-are release steps, not another implementation PR. An agent can resume this
-release from its record without the original chat.
+The owner deferred deployment until after PR 4. The steps below record the
+compatibility and acceptance requirements, but their workflow sequence is
+superseded. PR 4 must replace them with an executable fresh-release packet
+before any deployment. External mutation and any stale-data deletion require
+separate explicit authorization.
 
-1. Verify PRs 1–3, exact compatible backend/Worker artifacts, origin protection,
-   tested rollback, certificates, capacity and all staging gates. Record current
+1. Verify PRs 1–4, exact compatible backend/Worker artifacts, origin protection,
+   recovery commands, certificates and capacity. Record current
    DNS/route associations, image digests, public configuration and secret-version
    references. Set concrete approved rollback thresholds/owners before traffic.
 2. Add app callbacks alongside existing apex callbacks in the existing provider
@@ -443,8 +447,8 @@ release from its record without the original chat.
 7. Monitor by host/route: exceptions, CPU limits, origin errors, auth/consent/
    callback failures, missing chunks, redirects and catalog/checkout failures.
    Inspect these signals during the immediate smoke checks and record results.
-   Fix and recheck failures; once checks pass, PR 4 can start the same day. No
-   multi-day monitoring period or timer is required.
+   Fix and recheck failures during the fresh release. No multi-day monitoring
+   period or timer is required.
 8. On failure use the narrowest recovery: accepted Worker version, or first-cutover
    restoration of captured DNS/routes, frontend images/Caddy and compatible
    backend browser settings. Restore direct links/configuration instead of adding
@@ -460,11 +464,11 @@ temporary contract only for its verified consumer and documented lifetime.
 
 ## PR 4 — Retire the old frontend runtime and close the migration
 
-**Starting gate:** PR 3 merged, cutover completed and immediate checks passed.
-Verify deployed IDs and results from the release record. The user's request to
-implement PR 4 authorizes its repository cleanup under this same-day plan; do not
-ask for a separate stabilization sign-off. Live deployment follows the existing
-authorized workflow/account approvals. No minimum elapsed time is required.
+**Starting gate:** PR 3 merged with CI green. The owner directed repository
+cleanup before a fresh deployment. Verify that the old deployed runtime and its
+rollback artifacts remain intact until the separately authorized release. PR 4
+must update the release workflow and packet for this order. Its repository work
+does not authorize data deletion or live deployment.
 
 ### Read and inspect
 
@@ -499,10 +503,19 @@ Include local Compose, CI smoke tests, tooling, fixtures and active docs.
    rollback approval. Set explicit follow-up owners/dates for compatibility that
    legitimately outlives PR 4. Do not keep old/new aliases indefinitely or remove
    long-lived public MCP/webhook endpoints as “migration debt.”
-6. Update canonical topology/setup/operations/recovery instructions to the actual
-   deployed state. Archive recoverable legacy artifacts under release retention;
+6. Update canonical topology/setup/operations/recovery instructions to the
+   final production-only design. Remove staging Worker definitions, deploy
+   scripts, generated types and workflow choices introduced by PRs 2–3;
+   remove GCP legacy image pins and `browser_origin=apex` from the final release
+   interface. Archive recoverable legacy artifacts under release retention;
    current recovery restores accepted Workers rather than requiring old Node
    builds. Update `ACTIVE.md` to completed only when closure evidence exists.
+7. Reconcile the [Workers runbook](../operations/WORKERS_RUNBOOK.md) manual setup
+   checklist against final workflows. Make the backend-only deployment order,
+   exact production commands, domain attachment, acceptance and first-release
+   recovery executable without a staging environment or old frontend service.
+   List each account-only action, destination and expected result. Leave data
+   cleanup pending an explicitly authorized target and operation.
 
 ### Verification and exit
 
@@ -520,8 +533,9 @@ the cleanup deployment/verification and operator acceptance; code merge alone is
 insufficient. List exact removals, retained compatibility/removal dates, tests
 and any remaining operational work in the final handoff.
 
-**Manual packet:** approved cleanup deployment and removal of only verified obsolete
-Cloudflare rules/provider registrations; confirm post-cleanup ingress and rollback.
+**Manual packet:** confirm the [Workers runbook](../operations/WORKERS_RUNBOOK.md)
+production checklist and separately approve the fresh deployment. Remove only
+verified obsolete Cloudflare rules/provider registrations; confirm ingress and recovery.
 Do not remove origin DNS, backend protections or retained public protocol routes.
 
 ## Platform references for implementation

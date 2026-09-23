@@ -8,12 +8,12 @@
 
 Delivery is assigned through the [four-PR implementation plan](CiteLadder_Workers_Migration_Implementation_Plan.md),
 which defines sequential fresh-chat entry points, predecessor evidence, manual
-operations and the immediate verification gate before retirement.
+operations and the immediate verification gate after PR 4 retirement code ships.
 
 **Owner clarification, 23 September 2026:** there are no current customers.
-Execute the four sequential PRs the same day, subject to working implementation
-and immediate cutover checks. The previous seven-day stabilization policy is
-removed; no elapsed-time observation window is required before PR 4 cleanup.
+Execute the four sequential PRs, then an explicitly authorized fresh release.
+The previous seven-day stabilization policy is removed; no elapsed-time
+observation window is required before PR 4 cleanup.
 This is a clean origin cutover: update product navigation, marketing links and
 OAuth configuration directly to the app origin. Do not create apex-to-app product
 redirects or maintain legacy product-route aliases unless a verified external
@@ -444,9 +444,8 @@ Deliver bounded, reviewable phases. Do not combine DNS cutover, authentication c
 | 1. Prepare contracts | Add explicit website/app/protocol origins, protected origin ingress and shared proxy behavior. Make backend browser-origin changes backward-compatible until cutover configuration changes. | Existing apex deployment still works; unauthorized origin access fails. |
 | 2. Build both targets | Product Worker and app pricing continuation in PR 2; Astro Worker, public SSR catalog, direct handoff and exact apex public endpoints in PR 3. | Both builds and runtime tests pass without changing product business rules. |
 | 3. Separate deployment | Add independent protected Worker deployment jobs and release records. Keep GCP backend delivery intact. | Reproducible artifacts, explicit environments and no duplicate production deployer. |
-| 4. Validate staging | Deploy to isolated staging hosts and backend/test data. Exercise the full route/auth/billing/MCP matrix. | Automated and external gates are separately recorded; unresolved gates block production. |
-| 5. Cut over | Execute Section 11 with operator approval. Update direct links/configuration and keep rollback artifacts. | Production acceptance and working rollback path. |
-| 6. Remove superseded runtime | Remove frontend containers, stale CI/configuration and duplicate routing after immediate cutover checks pass. Update canonical docs. | No remaining production dependency on the old frontend-serving layer. |
+| 4. Remove superseded runtime | In PR 4, remove frontend containers, stale CI/configuration, duplicate routing and staging-only Worker configuration. Finalize backend-only deployment and production recovery instructions. | CI passes and no new release depends on the old frontend-serving layer. |
+| 5. Cut over | After PR 4, execute Section 11 with operator approval. Update direct links/configuration and record rollback artifacts. | Production acceptance and working rollback path. |
 
 ### Build and deployment rules
 
@@ -488,15 +487,21 @@ Create a deployment record in the protected release/PR system containing:
 3. Existing OAuth callback registrations, explicit redirect overrides, active payment/webhook endpoints, MCP discovery/issuer/resource metadata and an authorized client’s successful baseline read. Do not put live tokens in the record.
 4. Baseline status/error checks and representative frontend timing/SSR CPU measurements where available; approved capacity and rollback triggers. Confirm that the normal backend backup is healthy, without treating this frontend change as a database migration.
 
-Retain recoverable previous frontend artifacts through immediate cutover verification. PR 4 can retire the old serving layer the same day once those checks pass. Preserve the artifact versions required by the subsequent rollback policy as well. A source commit alone is not a rollback artifact when the old build may no longer reproduce.
+Record recoverable previous frontend artifacts before PR 4 removes the old
+serving layer from the next deployment. PR 4 must define recovery for the final
+backend-only topology; it must not require rebuilding a retired Node frontend.
+A source commit alone is not a rollback artifact when the old build may no
+longer reproduce.
 
-### 11.2 Prepare origin and staging before public cutover
+### 11.2 Prepare origin before public cutover
 
 Provision and validate the protected origin hostname while the existing apex deployment remains live. Confirm that an unauthenticated origin request is rejected, an authenticated Worker request succeeds, forwarded public host/client identity is correct and database/backend ports remain inaccessible externally.
 
-Create isolated staging deployments. Suggested names `staging.citeladder.com` and `staging-app.citeladder.com` are proposed only; verify their availability and certificate coverage. Use staging secrets, callback registrations, backend data and host allowlists. Protect previews, prevent indexing and disable unnecessary public `workers.dev`/version-preview access. Do not point an unprotected preview at production sessions, customer data or payment credentials.
-
-Run the acceptance matrix in Section 12 through deployed Workers, not only local Vite or Node. Verify the effective configuration and all generated bindings before approving them.
+There is no staging environment or staging Worker target. Verify effective
+production configuration and generated bindings in CI and exercise Worker
+behavior locally with disposable inputs. After PR 4 and protected approval,
+run Section 12 through deployed production Workers with safe test accounts.
+Disable public `workers.dev` and version-preview access.
 
 ### 11.3 Prepare provider registrations and production app
 
@@ -514,7 +519,7 @@ With explicit operator approval:
 2. Activate the app browser origin in backend configuration and effective provider overrides; keep `MCP_PUBLIC_BASE_URL` fixed. Ensure the new app-host login/callback/consent flow works before marketing links point to it.
 3. Attach the marketing Worker to the apex Custom Domain with only its exact verified public/protocol endpoints. Use a Custom Domain for the product Worker as well; do not implement either as Worker Routes. Inspect existing DNS and overlapping routes before attachment; keep the origin hostname excluded. Domain association is a separate operation from uploading a Worker version. [C9]
 4. Switch marketing links, application navigation, OAuth configuration, catalog handoff and metadata directly to their intended origins. Do not create default product redirects/aliases, redirect protocol/API/webhook POSTs or serve old apex chunks for hypothetical consumers. Any exception needs the evidence and removal condition in Section 4.3.
-5. Run the production acceptance gate immediately. Keep the old frontend services and their rollback files intact until those checks pass; they must not receive normal new frontend traffic. PR 4 may then remove the old services without an observation delay.
+5. Run the production acceptance gate immediately. PR 4 has already removed the old frontend services from the new deployment; use the recorded first-release recovery procedure for the final topology.
 
 Do not edit MX, SPF, DKIM, DMARC or unrelated Cloudflare settings as part of this cutover. Do not disable a security control globally to repair one failing path.
 
@@ -524,7 +529,7 @@ Check unauthenticated raw HTML, app login, directly updated links with project c
 
 Monitor by hostname and route family: Worker exceptions, CPU limit failures, origin errors, auth/callback failures, consent failures, missing chunks and incorrect redirects. Use redacted request IDs to correlate Worker and origin failures. Compare frontend delivery with the baseline; do not present backend latency as a frontend-hosting improvement without evidence.
 
-After immediate checks pass, decommission the superseded serving layer in PR 4. No seven-day wait or permanent product redirects are required for this pre-customer migration. A failed security, checkout or enabled-integration check still needs repair before claiming completion.
+PR 4 decommissions the superseded serving layer before the fresh release. No seven-day wait or permanent product redirects are required for this pre-customer migration. A failed security, checkout or enabled-integration check still needs repair before claiming completion.
 
 ### 11.6 Rollback: choose the narrowest safe action
 
@@ -541,9 +546,13 @@ During first-migration rollback, restore direct navigation/configuration and res
 
 **Do not restore a database backup to undo a frontend deployment.** This plan introduces no required schema change. Any separate schema migration and possible data-loss restore needs its own approved recovery procedure.
 
-Rehearse both a Worker-version rollback and the first-migration route/configuration rollback in staging. Record the actual commands and identifiers. Do not issue permanent product redirects as part of this migration; verified temporary exceptions do not become permanent merely because cleanup completes.
+Record Worker-version rollback and first-release route/configuration recovery
+commands and identifiers before deployment. Exercise the recovery during the
+approved production release when safe. Do not issue permanent product redirects;
+verified temporary exceptions do not become permanent merely because cleanup
+completes.
 
-### 11.7 Decommission only after the rollback gate
+### 11.7 Decommission in PR 4 before the fresh release
 
 Remove the old marketing Node and app Caddy **frontend** containers from normal production deployment, their image-build/push jobs, frontend health dependencies, runtime ports and frontend-only configuration. Remove dead package dependencies and commands once no supported workflow needs them.
 
@@ -626,14 +635,14 @@ If this specification is added to the repository, a suitable **proposed** path i
 
 Do not infer live infrastructure, account permissions, enabled providers or successful deployment from source files. Do not downgrade Astro for Pages, replace the product framework, share authentication cookies across all subdomains, move MCP identity implicitly, redirect protocol POSTs, blanket-cache SSR/API responses, or introduce a second authentication/billing/database layer.
 
-Do not publish production automatically merely because the document contains a runbook. Implementation, staging validation, production cutover and destructive cleanup are separate gates. Missing operational permissions block the operational step, not the ability to finish a reviewable implementation.
+Do not publish production automatically merely because the document contains a runbook. Implementation, production cutover and destructive cleanup are separate gates. Missing operational permissions block the operational step, not the ability to finish a reviewable implementation.
 
 ### Completion is four distinct states
 
 | State | Required result |
 |---|---|
 | **Implementation ready** | Reviewed code, both builds, scoped regression coverage, updated configuration contracts and tested operator commands. |
-| **Staging accepted** | Deployed Worker runtime and integration tests demonstrate the new boundaries; remaining external gates are explicit. |
+| **Release ready** | PR 4 has removed the legacy frontend deployment, CI has passed, manual production setup is confirmed and protected recovery instructions are recorded. |
 | **Production accepted** | Operator-approved cutover, production route/auth/crawlability/MCP/billing checks and recoverable prior artifacts. |
 | **Migration closed** | Immediate cutover checks passed, old production frontend runtime/debt removed and canonical documentation matches what is actually deployed. |
 

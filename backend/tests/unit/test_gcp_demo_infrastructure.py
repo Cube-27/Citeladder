@@ -180,8 +180,6 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
         assert f'"{secret_id}"' in locals_tf
         assert f"sync_optional_value {secret_id}" in workflow
         assert f"write_env {variable}" in deploy
-    assert any("vars.LOGO_DEV_PUBLISHABLE" in value for value in references)
-    assert "--build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=" in workflow
     assert "citeladder-logo" not in locals_tf
     # An unwired Google pair leaves sign-in and the GSC/GA4 connect buttons
     # 503ing, so the secret -> runtime.env chain is asserted end to end.
@@ -244,14 +242,12 @@ def test_public_access_is_the_default_and_demo_mode_stays_switchable() -> None:
     compose = _document(RUNTIME / "compose.gcp.yml")
     deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
     deploy_workflow = _document(WORKFLOWS / "gcp-demo-deploy.yml")
-    workflow = _shell(deploy_workflow)
     services = compose["services"]
     assert services["web"]["environment"]["DEMO_MODE"] == "${DEMO_MODE:-false}"
     assert 'DEMO_MODE="${DEMO_MODE:-false}"' in deploy
     assert '[[ "$DEMO_MODE" =~ ^(true|false)$ ]]' in deploy
     assert "write_env DEMO_MODE" in deploy
     assert any("vars.DEMO_MODE || 'false'" in v for v in _values(deploy_workflow))
-    assert '--build-arg NEXT_PUBLIC_DEMO_MODE="$DEMO_MODE"' in workflow
     # The bootstrap owns the single demo account or the configured public dev
     # account, depending on the explicit mode.
     assert "alembic upgrade head && python -m app.demo.bootstrap" in " ".join(
@@ -272,7 +268,7 @@ def test_deploy_rotates_configured_secrets_and_verifies_dev_login() -> None:
         in workflow
     )
     assert "gcloud secrets versions disable" in workflow
-    assert '"https://$DOMAIN_NAME/api/v1/auth/login"' in workflow
+    assert '"$FRONTEND_URL/api/v1/auth/login"' in workflow
     assert "Configured live dev login returned HTTP" in workflow
 
 
@@ -304,24 +300,17 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
         {"group": "gcp-demo-deploy", "cancel-in-progress": False}
     ]
     deploy = _shell(deploy_workflow)
-    # All three images are resolved to a digest before they are deployed, and a
-    # lookup that returns nothing fails the job rather than building an
-    # `image@` reference with an empty digest.
-    #
-    # This asserts the digest RESOLUTION, not the command that performs it:
-    # the previous assertion pinned `images describe`, which was replaced by
-    # `images list --filter` because `describe` additionally reads Container
-    # Analysis occurrences — a separate API the deploy account cannot read.
-    # The property being protected survived that change; the string did not.
+    # Backend is built from source; rollback frontends are selected from
+    # protected full-digest variables and verified against Artifact Registry.
+    inputs = deploy_workflow["jobs"]["deploy"]["env"]
+    assert inputs["LEGACY_FRONTEND_IMAGE"] == "${{ vars.LEGACY_FRONTEND_IMAGE }}"
+    assert inputs["LEGACY_VITE_APP_IMAGE"] == "${{ vars.LEGACY_VITE_APP_IMAGE }}"
     assert "image_digest()" in deploy
     assert deploy.count('gcloud artifacts docker images list "$registry/$1"') == 1
     assert deploy.count("image_digest backend") >= 1
-    assert deploy.count("image_digest frontend") >= 1
-    assert deploy.count("image_digest vite-app") >= 1
     assert 'test -n "$backend_digest"' in deploy
-    assert 'test -n "$frontend_digest"' in deploy
-    assert 'test -n "$vite_app_digest"' in deploy
-    assert 'test "$backend_digest" != "$frontend_digest"' in deploy
+    assert 'frontend="$LEGACY_FRONTEND_IMAGE"' in deploy
+    assert 'vite_app="$LEGACY_VITE_APP_IMAGE"' in deploy
     assert "if grep -Fxq '0.0.0.0/0'" in deploy
     assert "if grep -Fxq '::/0'" in deploy
     assert "bash /tmp/citeladder-deploy/deploy-vm.sh" in deploy

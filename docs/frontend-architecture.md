@@ -10,10 +10,13 @@ interactions and presentation; the backend owns authorization, measurement and
 lifecycle truth. [Design](design.md) is the sole visual contract. Feature
 behavior is routed through [the documentation index](README.md).
 
-The product SPA also has a prepared Cloudflare Worker delivery at
-`frontend/apps/app/worker.ts`: Static Assets serve the Vite build, and the
-Worker handles app-host API, browser MCP consent, health and guarded navigation
-fallback. This is not the active production route until the Workers cutover.
+The prepared product Worker at `frontend/apps/app/worker.ts` serves Vite assets,
+app-host API, browser MCP consent and guarded navigation. The prepared marketing
+Worker uses Astro SSR at `frontend/apps/marketing`, proxies only exact apex
+protocol/webhook paths and reads the public catalog through protected origin
+transport without visitor credentials. Production route ownership changes only
+after the approved Workers cutover; the pinned GCP frontend images remain its
+first-cutover rollback target.
 
 ## Routes and shared shell
 
@@ -55,13 +58,13 @@ app build and defaults to 8 seconds per request attempt.
 
 ## Server, URL and local state
 
-Browser APIs use relative `/api/v1`. Vite's development proxy and production
-Caddy routing send backend-owned paths to the server-only `BACKEND_ORIGIN`.
-Caddy sends explicit authenticated routes and `/app-assets/*` to Vite, then
-falls through to Astro for public routes; no browser CORS configuration is
-required. Local and production ingress share
-`infra/gcp/runtime/frontend-routes.caddy`; application documents use `no-store`
-and missing fingerprinted assets return 404.
+Browser APIs use relative `/api/v1`. After cutover, the product Worker sends
+these requests through the shared authenticated origin transport. Marketing
+navigation uses direct app-origin links; the public pricing HTML is rendered
+from a validated catalog response and selection links carry only bounded public
+fields. Local Compose still exercises the legacy Caddy route table during the
+rollback window. Application documents use `no-store` and missing fingerprinted
+assets return 404.
 Each domain has one API module and query-key owner. Workspace/project identity
 belongs in both requests and cache keys. Retained placeholder data may survive
 filter/pagination changes only within the same owning project/crawl.

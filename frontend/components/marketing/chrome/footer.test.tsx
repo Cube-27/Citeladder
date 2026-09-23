@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { render, screen, within } from '@testing-library/react';
 
 import { COMPETITORS } from '@/lib/marketing-content/compare';
@@ -40,10 +40,15 @@ describe('MarketingFooter', () => {
   });
 
   it('points the company column at the demo funnel and login', async () => {
+    vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
     render(await MarketingFooter());
 
     expect(screen.getByRole('link', { name: /book a demo/i })).toHaveAttribute('href', DEMO_HREF);
-    expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
+    expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute(
+      'href',
+      'https://app.citeladder.com/login',
+    );
+    vi.unstubAllEnvs();
   });
 
   it('carries no GitHub or documentation links (the repo is private)', async () => {

@@ -38,7 +38,7 @@ function parsePublicOrigin(
 export function publicOrigins(
   website = process.env.PUBLIC_WEBSITE_ORIGIN,
   app = process.env.PUBLIC_APP_ORIGIN,
-  production = process.env.NODE_ENV === 'production',
+  production = process.env.NODE_ENV === 'production' && process.env.LOCAL_COMPOSE_BUILD !== 'true',
 ): { website: URL | null; app: URL | null } {
   return {
     website: parsePublicOrigin(website, 'PUBLIC_WEBSITE_ORIGIN', production),

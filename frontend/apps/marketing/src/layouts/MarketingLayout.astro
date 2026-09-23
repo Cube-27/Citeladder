@@ -3,7 +3,6 @@ import { GoogleAnalytics } from '@/components/analytics/google-analytics';
 import { CookieBanner } from '@/components/marketing/chrome/cookie-banner';
 import { MarketingFooter } from '@/components/marketing/chrome/footer';
 import { MarketingNavIsland } from '../components/MarketingNavIsland';
-import { ReturningVisitorHint } from '@/components/marketing/chrome/returning-visitor-hint';
 import { organizationJsonLd, softwareApplicationJsonLd, websiteJsonLd, type JsonLdObject } from '@/lib/seo/json-ld';
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
 import '@/apps/marketing/src/marketing.css';
@@ -156,7 +155,6 @@ const serializeJsonLd = (data: JsonLdObject) => JSON.stringify(data).replace(/</
   </head>
   <body class="bg-background text-foreground relative isolate min-h-dvh">
     {gaMeasurementId && <GoogleAnalytics measurementId={gaMeasurementId} client:load />}
-    <ReturningVisitorHint />
     <a href="#main" class="skip-link">Skip to main content</a>
     <MarketingNavIsland client:load />
     <div class="relative z-1 pt-[var(--marketing-nav-offset)]"><slot /></div>

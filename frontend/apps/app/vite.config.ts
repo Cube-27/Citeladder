@@ -17,7 +17,7 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
     publicOrigins(
       process.env.PUBLIC_WEBSITE_ORIGIN ?? environment.PUBLIC_WEBSITE_ORIGIN,
       process.env.PUBLIC_APP_ORIGIN ?? environment.PUBLIC_APP_ORIGIN,
-      true,
+      process.env.LOCAL_COMPOSE_BUILD !== 'true',
     );
   }
   // Every public value is BAKED into the bundle here, so an empty one is a
@@ -66,6 +66,7 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
       'process.env.NEXT_PUBLIC_DEMO_MODE': publicValue('NEXT_PUBLIC_DEMO_MODE'),
       'process.env.PUBLIC_WEBSITE_ORIGIN': publicValue('PUBLIC_WEBSITE_ORIGIN'),
       'process.env.PUBLIC_APP_ORIGIN': publicValue('PUBLIC_APP_ORIGIN'),
+      'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),
     },
     resolve: {
       alias: {

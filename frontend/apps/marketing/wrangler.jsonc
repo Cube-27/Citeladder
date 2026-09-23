@@ -1,11 +1,12 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "citeladder-app",
-  "main": "./worker.ts",
+  "name": "citeladder-marketing",
+  "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [{ "pattern": "app.citeladder.com", "custom_domain": true }],
+  "routes": [{ "pattern": "citeladder.com", "custom_domain": true }],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
@@ -14,6 +15,7 @@
   "secrets": { "required": ["ORIGIN_TOKEN"] },
   "vars": {
     "ORIGIN_UPSTREAM": "https://origin.citeladder.com",
-    "PUBLIC_APP_HOST": "app.citeladder.com",
+    "PUBLIC_WEBSITE_HOST": "citeladder.com",
+    "PUBLIC_APP_ORIGIN": "https://app.citeladder.com",
   },
 }

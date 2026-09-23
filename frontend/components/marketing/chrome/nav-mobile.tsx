@@ -2,15 +2,13 @@ import { ChevronDown } from 'lucide-react';
 import { Fragment } from 'react';
 
 import { NAV_DROPS, NAV_LINKS, type NavDropKey } from '@/lib/marketing-content/nav';
+import { appHref } from '@/lib/config/app-link';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
 import { NavItemLink } from './nav-items';
 
 type MobileNavigationProps = {
-  isAuthenticated: boolean;
-  sessionPending: boolean;
-  dashboardHref: string;
   openAcc: NavDropKey | null;
   setOpenAcc: (
     key: NavDropKey | null | ((current: NavDropKey | null) => NavDropKey | null),
@@ -20,9 +18,6 @@ type MobileNavigationProps = {
 
 /** Mobile accordion navigation, rendered only while the menu is open. */
 export function MobileNavigation({
-  isAuthenticated,
-  sessionPending,
-  dashboardHref,
   openAcc,
   setOpenAcc,
   closeMenu,
@@ -88,30 +83,16 @@ export function MobileNavigation({
             {label}
           </a>
         ))}
-        {!isAuthenticated &&
-          !sessionPending && (
-            // The sign-up CTA leaves the topbar on phones; the sheet is where it
-            // lives, pinned with the account links it accompanies.
-            <ButtonLink href="/register" className="w-full" onClick={closeMenu}>
-              Sign up
-            </ButtonLink>
-          )}
-        {sessionPending ? (
-          // Same rule as the header actions: a returning visitor waits rather
-          // than being offered "Log in" for the moment before `me` resolves.
-          <span
-            aria-hidden
-            className="bg-background-alt my-3.5 h-5 w-24 animate-pulse rounded-[var(--radius-control)]"
-          />
-        ) : (
-          <a
-            href={isAuthenticated ? dashboardHref : '/login'}
-            className="text-muted py-3.5 text-lg font-medium"
-            onClick={closeMenu}
-          >
-            {isAuthenticated ? 'Dashboard' : 'Log in'}
-          </a>
-        )}
+        <ButtonLink href={appHref('/register')} className="w-full" onClick={closeMenu}>
+          Sign up
+        </ButtonLink>
+        <a
+          href={appHref('/login')}
+          className="text-muted py-3.5 text-lg font-medium"
+          onClick={closeMenu}
+        >
+          Log in
+        </a>
       </div>
     </div>
   );

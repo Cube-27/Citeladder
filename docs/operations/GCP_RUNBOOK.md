@@ -152,6 +152,17 @@ firewall permits web traffic only from current Cloudflare address ranges.
 
 ## 5. First deployment and acceptance
 
+For Workers migration PR 3 and later, [the Workers runbook](WORKERS_RUNBOOK.md)
+owns the coordinated cutover. Before a GCP deployment, capture the running old
+frontend image digests and set protected `gcp-demo` variables
+`LEGACY_FRONTEND_IMAGE` and `LEGACY_VITE_APP_IMAGE`. The workflow keeps those
+images pinned while building only the backend. Select `browser_origin=apex` for
+pre-cutover delivery or recovery and `browser_origin=app` only for the approved
+cutover; the selection sets `FRONTEND_URL`, `FRONTEND_ORIGINS` and the app link
+origin together while pinning MCP identity to the apex. The provider callback
+table above describes the old apex registration; add app callbacks through the
+Workers cutover packet before selecting `app`.
+
 Merge the intended commit to `main` and wait for required CI. Run **GCP Demo -
 Deploy** from `main` and approve `gcp-demo`. It serializes deployments, safely
 reuses immutable images when retrying the same commit, applies Terraform,
@@ -168,8 +179,9 @@ Set Cloudflare's A record to the static IP in the workflow summary. If DNS was
 not ready for the final smoke test, correct DNS and rerun the same workflow.
 
 ```powershell
-curl.exe --fail --show-error https://citeladder.com/health
-curl.exe --fail --show-error https://citeladder.com/api/v1/auth/oauth/providers
+$browserOrigin = 'https://citeladder.com' # Use https://app.citeladder.com when browser_origin=app.
+curl.exe --fail --show-error "$browserOrigin/health"
+curl.exe --fail --show-error "$browserOrigin/api/v1/auth/oauth/providers"
 ```
 
 Health must succeed and the provider catalog must report Google as

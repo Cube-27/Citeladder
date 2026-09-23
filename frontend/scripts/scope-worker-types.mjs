@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
-const path = new URL('../apps/app/worker-configuration.d.ts', import.meta.url);
+const target = process.argv[2] === 'marketing' ? 'marketing' : 'app';
+const path = new URL(`../apps/${target}/worker-configuration.d.ts`, import.meta.url);
 const generated = await readFile(path, 'utf8');
 if (!generated.includes('interface Env extends __BaseEnv_Env {}')) {
   throw new Error('Wrangler environment type shape changed.');

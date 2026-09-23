@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import {
   PENDING_PRICING_INTENT_MAX_AGE_MS,
-  PRICING_BYOK_DEFAULT_ON,
   USAGE_METER_CRITICAL_RATIO,
   USAGE_METER_WARNING_RATIO,
 } from './billing';
@@ -56,7 +55,6 @@ describe('billing config', () => {
 
   it('keeps a captured pricing intent short-lived', () => {
     expect(PENDING_PRICING_INTENT_MAX_AGE_MS).toBeGreaterThan(0);
-    expect(PRICING_BYOK_DEFAULT_ON).toBe(true);
   });
 });
 

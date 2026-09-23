@@ -1,13 +1,19 @@
 ---
 import { PricingCta } from '@/components/marketing/pages/pricing';
 import { PricingComingSoonStrip } from '@/components/marketing/pricing/pricing-coming-soon-strip';
+import { PublicPricingCatalog } from '@/components/marketing/pricing/public-pricing-catalog';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
-import { PricingCatalogIsland } from '../components/pricing-catalog-island';
+import { publicCatalog } from '../public-catalog';
+import { workerApexEnv } from '../worker-env';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 
 const description =
   'Self-serve CiteLadder plans plus Enterprise. You pay for the workspace and the evidence. Model usage bills to your own provider keys, never marked up.';
+const env = workerApexEnv();
+const catalog = await publicCatalog(env);
+const initialByok = Astro.url.searchParams.get('byok') !== '0';
+Astro.response.headers.set('Cache-Control', 'no-store');
 ---
 
 <MarketingLayout
@@ -26,7 +32,14 @@ const description =
       <TrustStrip className="mt-8 justify-center" />
     </PageHero>
     <PricingComingSoonStrip />
-    <PricingCatalogIsland client:visible />
+    {catalog ? (
+      <PublicPricingCatalog catalog={catalog} appOrigin={env.PUBLIC_APP_ORIGIN} initialByok={initialByok} client:load />
+    ) : (
+      <section aria-label="Plans" class="mx-auto max-w-5xl p-8">
+        <h2 class="website-section-heading">Plans are temporarily unavailable.</h2>
+        <p class="website-body text-muted">Please try again shortly. No price is shown while the public catalog is unavailable.</p>
+      </section>
+    )}
     <PricingCta />
   </main>
 </MarketingLayout>

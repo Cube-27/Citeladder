@@ -1,4 +1,4 @@
-name: Product Worker delivery
+name: Marketing Worker delivery
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: workers-app-production
+  group: workers-marketing-production
   cancel-in-progress: false
 
 jobs:
@@ -32,29 +32,23 @@ jobs:
       - run: pnpm --dir frontend install --frozen-lockfile --ignore-scripts
       - name: Check generated Worker bindings
         run: |
-          pnpm --dir frontend types:app-worker
-          git diff --exit-code -- frontend/apps/app/worker-configuration.d.ts
+          pnpm --dir frontend types:marketing-worker
+          git diff --exit-code -- frontend/apps/marketing/worker-configuration.d.ts
       - name: Set baked public origins
         id: config
         shell: bash
-        env:
-          LOGO_DEV_PUBLISHABLE: ${{ vars.LOGO_DEV_PUBLISHABLE }}
         run: |
-          test -n "$LOGO_DEV_PUBLISHABLE"
-          echo 'NEXT_PUBLIC_DEMO_MODE=false' >> "$GITHUB_ENV"
-          echo "NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=$LOGO_DEV_PUBLISHABLE" >> "$GITHUB_ENV"
           echo 'PUBLIC_WEBSITE_ORIGIN=https://citeladder.com' >> "$GITHUB_ENV"
           echo 'PUBLIC_APP_ORIGIN=https://app.citeladder.com' >> "$GITHUB_ENV"
           values=$'https://citeladder.com\nhttps://app.citeladder.com'
-          echo "fingerprint=$(printf 'origins=%s\ndemo=false\nlogo=%s\n' "$values" "$LOGO_DEV_PUBLISHABLE" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
-      - run: pnpm --dir frontend build:app
-      - run: pnpm --dir frontend check:bundle
-      - name: Upload immutable product artifact
+          echo "fingerprint=$(printf '%s' "$values" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - run: pnpm --dir frontend build:marketing
+      - name: Upload immutable marketing artifact
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: app-${{ github.sha }}-${{ steps.config.outputs.fingerprint }}
-          path: frontend/apps/app/dist/
+          name: marketing-${{ github.sha }}-${{ steps.config.outputs.fingerprint }}
+          path: frontend/apps/marketing/dist/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
@@ -62,7 +56,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    environment: workers-app-production
+    environment: workers-marketing-production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -78,9 +72,9 @@ jobs:
       - run: pnpm --dir frontend install --frozen-lockfile --ignore-scripts
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: app-${{ github.sha }}-${{ needs.build.outputs.fingerprint }}
-          path: frontend/apps/app/dist/
-      - name: Deploy product Worker
+          name: marketing-${{ github.sha }}-${{ needs.build.outputs.fingerprint }}
+          path: frontend/apps/marketing/dist/
+      - name: Deploy marketing Worker
         working-directory: frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -89,15 +83,15 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          pnpm deploy:app
+          pnpm deploy:marketing
       - name: Release record
         shell: bash
         run: |
           {
-            echo '## Product Worker release'
+            echo '## Marketing Worker release'
             echo 'Target: production'
             echo 'Source: ${{ github.sha }}'
             echo 'Artifact digest: ${{ needs.build.outputs.artifact_digest }}'
             echo 'Public configuration fingerprint: ${{ needs.build.outputs.fingerprint }}'
-            echo 'Compatible backend and ingress verification: operator release record required'
+            echo 'Domain association, backend compatibility, and cutover acceptance: operator release record required'
           } >> "$GITHUB_STEP_SUMMARY"
