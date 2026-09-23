@@ -46,6 +46,15 @@ async function privateRouter() {
 }
 
 describe('application route recovery', () => {
+  it('enters the existing product bootstrap from the app root', async () => {
+    const { appRoutes } = await import('./router');
+    const router = createMemoryRouter(appRoutes, { initialEntries: ['/'] });
+    render(<RouterProvider router={router} />);
+    expect(await screen.findByRole('button', { name: 'Finish session' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/projects');
+    router.dispose();
+  });
+
   it('downloads the route alongside session bootstrap and keeps the shell through the content wait', async () => {
     let finish!: (module: { IssuesRoute: () => React.JSX.Element }) => void;
     const downloaded = new Promise<{ IssuesRoute: () => React.JSX.Element }>((resolve) => {

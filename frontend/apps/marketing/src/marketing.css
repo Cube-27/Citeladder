@@ -14,6 +14,7 @@
    at-rule, and putting the `@source` list above this one silently shipped a
    stylesheet with no design system in it at all. */
 @import 'tailwindcss' source(none);
+@import '../../app/src/website-type.css';
 @import '../../app/src/globals.css';
 
 @source '../../marketing/src';

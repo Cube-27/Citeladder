@@ -53,7 +53,7 @@ function originRequest(request: Request, config: WorkerOriginConfig, incoming: U
     if (!HOP_HEADERS.has(lower) && !INTERNAL_HEADERS.has(lower)) headers.append(name, value);
   }
   headers.set('X-CiteLadder-Origin-Token', config.originToken);
-  headers.set('X-CiteLadder-Public-Host', incoming.host);
+  headers.set('X-CiteLadder-Public-Host', config.publicHost);
   return new Request(upstream, {
     method: request.method,
     headers,
@@ -88,7 +88,7 @@ export async function proxyWorkerRequest(
   transport: WorkerTransport = fetch,
 ): Promise<Response> {
   const incoming = new URL(request.url);
-  if (incoming.protocol !== 'https:' || incoming.host !== config.publicHost) {
+  if (incoming.protocol !== 'https:' || incoming.hostname !== config.publicHost) {
     return new Response('Invalid public host.', { status: 403 });
   }
   if (!config.originToken || config.originToken.length < 32) {

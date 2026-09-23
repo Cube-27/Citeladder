@@ -39,6 +39,7 @@ import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { useByokPricing } from './use-byok-pricing';
 import { PricingBillingDialog } from './pricing-billing-dialog';
+import { PricingResumePrompt } from './pricing-resume-prompt';
 import { hrefWithQuery } from '@/lib/navigation/url-state';
 
 const STALE_INTENT_MESSAGE = 'That pricing option is no longer available. Please choose again.';
@@ -91,6 +92,7 @@ export function PricingCatalog() {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [earlyAccessOpen, setEarlyAccessOpen] = useState(false);
   const [selectedCheckout, setSelectedCheckout] = useState<PendingPricingIntentV1 | null>(null);
+  const [resumableOther, setResumableOther] = useState<PendingPricingIntentV1 | null>(null);
 
   /**
    * Is anyone signed in? This is a PUBLIC page, so there is no SessionGuard
@@ -161,7 +163,10 @@ export function PricingCatalog() {
       // Retain pending intent identity for dismissal and uncertain-result
       // recovery; terminal outcomes allow a fresh selection.
       setPendingKey(null);
-      if (result.status !== 'pending') clearPendingIntent();
+      if (result.status !== 'pending') {
+        clearPendingIntent();
+        setResumableOther(null);
+      }
       // Add-ons and top-ups settle entitlements on the response, so the catalog
       // and early-access reads have to be refetched before the buttons they
       // gate are shown again. The subscription branch invalidates the same
@@ -198,18 +203,6 @@ export function PricingCatalog() {
     activation.mutate({ ...intent, country_code: countryCode, billing_details: details });
   };
 
-  /**
-   * Resume after authentication.
-   *
-   * Modelled as ONE mutation that can fail rather than as effect-driven
-   * branching: revalidation, the purchase, and the "choose again" message are
-   * three outcomes of a single operation, so the effect only starts it and
-   * every state change lands in a mutation callback.
-   *
-   * Revalidation is the point of the whole flow — a stored key that vanished,
-   * changed availability, or whose quantity no longer fits its bounds is
-   * rejected before any request is made.
-   */
   const resume = useMutation({
     mutationFn: async () => {
       const stored = readPendingIntent();
@@ -217,14 +210,21 @@ export function PricingCatalog() {
         clearPendingIntent();
         throw new Error(STALE_INTENT_MESSAGE);
       }
-      return activation.mutateAsync(stored);
+      return stored;
+    },
+    onSuccess: (stored) => {
+      if (stored.kind === 'checkout') {
+        setCountry(stored.country_code ?? '');
+        setBillingDetails(stored.billing_details ?? emptyBillingCustomerDetails());
+        setSelectedCheckout(stored);
+      } else {
+        setResumableOther(stored);
+      }
     },
     onError: () => setNotice(STALE_INTENT_MESSAGE),
   });
-
-  // `mutate` is referentially stable across renders, so it is a safe dep and
-  // needs no ref to dodge the lint.
   const startResume = resume.mutate;
+  const resumeValid = Boolean(resumableOther && catalog && isStillValid(resumableOther, catalog));
   useEffect(() => {
     if (!catalog || !isAuthenticated) return;
     const params = new URLSearchParams(window.location.search);
@@ -265,6 +265,17 @@ export function PricingCatalog() {
         ) : null}
         <CheckoutStatus checkout={checkout} />
         <PricingFeedback notice={notice} error={activation.error} />
+        <PricingResumePrompt
+          intent={resumableOther}
+          catalog={catalog}
+          valid={resumeValid}
+          pending={activation.isPending}
+          onConfirm={runOrCapture}
+          onDismiss={() => {
+            clearPendingIntent();
+            setResumableOther(null);
+          }}
+        />
         <PlansGrid
           catalog={catalog}
           failed={catalogQuery.isError}

@@ -13,6 +13,7 @@
     "apps/marketing/src/pages/**/*.{astro,ts}",
     "apps/app/vite.config.ts",
     "apps/app/src/main.tsx",
+    "apps/app/worker.ts",
     // Invoked explicitly as the real-stack content-integration Playwright entry point.
     "e2e/content-integration.config.ts",
   ],

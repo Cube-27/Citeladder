@@ -310,7 +310,7 @@ describe('PricingCatalog', () => {
     expect(stored).not.toHaveProperty('amount');
   });
 
-  it('resumes a captured intent after auth and issues one idempotent mutation', async () => {
+  it('requires confirmation after auth and reuses the captured idempotency key', async () => {
     const bodies: unknown[] = [];
     const keys: string[] = [];
     mswServer.use(
@@ -356,6 +356,9 @@ describe('PricingCatalog', () => {
 
     renderPricingPage();
 
+    await screen.findByRole('dialog', { name: 'Complete your billing details' });
+    expect(bodies).toHaveLength(0);
+    await userEvent.click(screen.getByRole('button', { name: 'Continue to checkout' }));
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual(EXPORT_CHECKOUT_BODY);
     // The stored key is REUSED so a first attempt that did reach the backend
@@ -400,6 +403,51 @@ describe('PricingCatalog', () => {
     ).toBeInTheDocument();
     expect(posted).toBe(0);
     expect(globalThis.sessionStorage.getItem(PENDING_PRICING_INTENT_KEY)).toBeNull();
+  });
+
+  it('shows the current add-on terms and keeps a failed resume available with the same key', async () => {
+    const keys: string[] = [];
+    mswServer.use(
+      catalogHandler(),
+      authenticated(),
+      noOfferHandler(),
+      http.post('/api/v1/billing/addons', ({ request }) => {
+        keys.push(request.headers.get('Idempotency-Key') ?? '');
+        return keys.length === 1
+          ? HttpResponse.json({ detail: 'temporary outage' }, { status: 503 })
+          : HttpResponse.json({ ...activation('addon', 'addon_seats'), status: 'activated' });
+      }),
+    );
+    globalThis.sessionStorage.setItem(
+      PENDING_PRICING_INTENT_KEY,
+      JSON.stringify({
+        version: 1,
+        kind: 'addon',
+        catalog_key: 'addon_seats',
+        quantity: 2,
+        byok: true,
+        country_code: null,
+        billing_details: null,
+        idempotency_key: 'resume-addon-key',
+        return_path: '/pricing',
+        created_at_ms: Date.now(),
+      }),
+    );
+    window.history.replaceState(null, '', '/pricing?resumeActivation=1');
+    renderPricingPage();
+
+    expect(await screen.findByText(/Extra seats, quantity 2.*\$38 before tax/)).toBeInTheDocument();
+    expect(keys).toHaveLength(0);
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm purchase' }));
+    await waitFor(() => expect(keys).toHaveLength(1));
+    expect(screen.getByText(/Extra seats, quantity 2/)).toBeInTheDocument();
+    expect(globalThis.sessionStorage.getItem(PENDING_PRICING_INTENT_KEY)).not.toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm purchase' }));
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys).toEqual(['resume-addon-key', 'resume-addon-key']);
+    await waitFor(() =>
+      expect(screen.queryByText(/Extra seats, quantity 2/)).not.toBeInTheDocument(),
+    );
   });
 
   it('renders add-ons and top-ups generically, with unpriced entries unavailable', async () => {

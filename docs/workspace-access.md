@@ -79,6 +79,10 @@ its workspace.
 Login enters Overview; the application gate decides whether onboarding is
 appropriate. An empty workspace retains access to billing/members/settings.
 Failed reads are retryable errors, not empty lists or exhausted allowances.
+The app `/pricing` continuation is also workspace-only: it resolves the
+selected workspace without requiring a project, and only Owner/Admin billing
+capability can start a purchase. Its selection URL is captured before the
+sign-in redirect; the server still authorizes every billing mutation.
 
 ## Dependencies and evidence
 

@@ -46,4 +46,18 @@ describe('Worker origin transport', () => {
     expect(response.status).toBe(403);
     expect(transport).not.toHaveBeenCalled();
   });
+
+  it('accepts a local HTTPS port while forwarding the configured public hostname', async () => {
+    const transport = vi.fn(async (request: Request) => {
+      expect(request.headers.get('x-citeladder-public-host')).toBe(config.publicHost);
+      return new Response('ok');
+    });
+    const response = await proxyWorkerRequest(
+      new Request('https://app.citeladder.com:8787/api/v1/items'),
+      config,
+      transport,
+    );
+    expect(response.status).toBe(200);
+    expect(transport).toHaveBeenCalledOnce();
+  });
 });

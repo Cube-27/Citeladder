@@ -1,7 +1,6 @@
 import { Suspense, type ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 
-import { OnboardingPageClient } from '@/components/onboarding/onboarding-page-client';
 import { AppShell } from '@/components/layout/app-shell';
 import { OnboardingGate } from '@/components/layout/onboarding-gate';
 import { ShellFallback } from '@/components/layout/shell-fallback';
@@ -60,11 +59,6 @@ export function ApplicationRouteLayout() {
       </ToastProvider>
     </ProductTourProvider>
   );
-}
-
-/** `/onboarding` creation flow and its workspace/entitlement precondition gate. */
-export function OnboardingRoute() {
-  return <OnboardingPageClient />;
 }
 
 /** `/projects` workspace project management screen. */

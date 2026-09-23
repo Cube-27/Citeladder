@@ -79,6 +79,14 @@ Public pricing reads the published catalog without a hardcoded fallback.
 usage, intent and subscription state. The checkout controller polls persisted
 activation; only confirmed activation refreshes access caches. Unavailable
 checkout is shown honestly. Pricing remains usable before project creation.
+The prepared app `/pricing` continuation captures only a bounded catalog
+selection from its URL before sign-in. The app stores its own pending intent;
+after sign-in it resolves the selected workspace and fresh catalog, requires
+billing permission and explicit confirmation, and uses the existing
+workspace-scoped checkout controller. A base-plan checkout shows the
+backend-resolved quote before the separate payment confirmation. No purchase
+starts from a GET, login or reload. The current apex pricing page remains
+active until the marketing cutover; it also requires confirmation on resume.
 
 The no-card introductory offer is separate from checkout: explicit consent,
 once-per-account eligibility and idempotent activation are catalog-controlled.

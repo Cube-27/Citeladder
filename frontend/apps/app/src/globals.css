@@ -7,7 +7,6 @@
  * entry point would mean the app shipping the marketing site's utilities and
  * the marketing site shipping the app's.
  */
-@import "./website-type.css";
 @import "./ui-motion.css";
 
 /* CiteLadder's single design-system owner across product, public, auth, and
@@ -513,11 +512,6 @@
   :root {
     --content-gutter: 16px;
   }
-}
-
-.preview-grid {
-  background-image: var(--preview-grid-image);
-  background-size: var(--preview-grid-size);
 }
 
 /* The one-place rebinds for the two dark feature surfaces (the reference
@@ -1166,42 +1160,11 @@ html[data-returning-visitor] [data-session-returning] {
   background-size: 180px 180px;
 }
 
-/* Chrome takes the texture at a lower strength than an editorial band. At
-   product density the marketing value reads as dirt rather than as stock. */
-.grain-soft {
-  --grain-opacity: 0.01;
-}
-
 /* A tinted band takes a little more grain than paper does, so the fill reads as
    stock rather than as a flat wash; the indigo and teal canvases take more
    again, because noise all but disappears into a dark ground. */
 [data-citeladder-section="sunken"] {
   --grain-opacity: 0.015;
-}
-
-/* The blog photography takes the same noise as the bands, but blended into the
-   picture instead of laid over a flat ground, so a shot reads as a printed
-   plate rather than a flat digital crop. The saturation and contrast lift keeps
-   the grain from greying the image; the overlay blend rides the photo's own
-   light and dark, so the texture is loudest where the eye already is. */
-.photo-grain {
-  position: relative;
-}
-
-.photo-grain::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0.16;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)'/%3E%3C/svg%3E");
-  background-size: 120px 120px;
-}
-
-.photo-grain > img {
-  filter: saturate(1.08) contrast(1.05);
 }
 
 /* The white paper. One recipe, shared by the app's content region and the
@@ -1575,61 +1538,6 @@ samp {
   .activity-dot::after,
   .activity-check::before {
     display: none;
-  }
-}
-
-/* Hero on-load entrance — one beat per direct child of .hero-entrance, in
-   markup order. `both` fill holds the from-state through each delay; the
-   global reduced-motion rule collapses every animation to 1ms, which lands on
-   the settled frame. */
-@keyframes hero-beat-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-}
-
-/* The headline rises but is NEVER transparent, and it carries no delay.
-   Chrome does not accept an `opacity: 0` element as an LCP candidate, so
-   while the h1 faded in, LCP could not be reported before the beat finished:
-   the 0.19s delay plus a 0.85s duration put the landing page's LCP a full
-   second behind its actual paint. It is the largest text block on the first
-   screen and therefore the LCP element on nearly every visit — it has to be
-   opaque in the first frame. Movement alone still reads as an entrance. */
-@keyframes hero-beat-in-opaque {
-  from {
-    transform: translateY(16px);
-  }
-}
-
-/* Keep the hero entrance short enough that the full sequence settles quickly;
-   the heading itself remains opaque from first paint for LCP. */
-.hero-entrance > *:nth-child(1) {
-  animation: hero-beat-in 0.42s var(--ease-standard) 0.04s both;
-}
-.hero-entrance > *:nth-child(2) {
-  animation: hero-beat-in-opaque 0.42s var(--ease-standard) both;
-}
-.hero-entrance > *:nth-child(3) {
-  animation: hero-beat-in 0.42s var(--ease-standard) 0.08s both;
-}
-.hero-entrance > *:nth-child(4) {
-  animation: hero-beat-in 0.42s var(--ease-standard) 0.12s both;
-}
-.hero-entrance > *:nth-child(5) {
-  animation: hero-beat-in 0.42s var(--ease-standard) 0.16s both;
-}
-.hero-entrance > *:nth-child(6) {
-  animation: hero-beat-in 0.42s var(--ease-standard) 0.2s both;
-}
-
-/* The global reduced-motion rule above collapses animation DURATION, but the
-   per-beat delays survive it: a `both`-filled child would hold its opacity-0
-   from-state for up to 550ms, so the reader who asked for less motion is the
-   one who gets a blank hero. Zero the delays so every beat lands settled. */
-@media (prefers-reduced-motion: reduce) {
-  .hero-entrance > * {
-    animation-delay: 0ms !important;
   }
 }
 
