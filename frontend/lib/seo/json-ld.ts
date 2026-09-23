@@ -13,9 +13,13 @@ export function organizationJsonLd(): JsonLdObject | null {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    // Google's organization-logo feature requires `logo` alongside `url`, and
+    // the `@id` gives every publisher reference below one entity to reconcile.
+    '@id': new URL('#organization', url).toString(),
     name: SITE_NAME,
     description: SITE_TAGLINE,
     url,
+    logo: absoluteUrl('/citeladder-logo.svg'),
     email: PARENT_COMPANY.email,
     parentOrganization: {
       '@type': 'Organization',
@@ -54,7 +58,12 @@ export function websiteJsonLd(): JsonLdObject | null {
     name: SITE_NAME,
     description: SITE_TAGLINE,
     url,
-    publisher: { '@type': 'Organization', name: SITE_NAME, url },
+    publisher: {
+      '@type': 'Organization',
+      '@id': new URL('#organization', url).toString(),
+      name: SITE_NAME,
+      url,
+    },
   };
 }
 
@@ -76,7 +85,12 @@ export function softwareApplicationJsonLd(): JsonLdObject | null {
     browserRequirements: 'Requires JavaScript.',
     url,
     description: SITE_DESCRIPTION,
-    publisher: { '@type': 'Organization', name: SITE_NAME, url },
+    publisher: {
+      '@type': 'Organization',
+      '@id': new URL('#organization', url).toString(),
+      name: SITE_NAME,
+      url,
+    },
   };
 }
 
@@ -111,7 +125,14 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
       : {}),
     ...(url ? { url, mainEntityOfPage: { '@type': 'WebPage', '@id': url } } : {}),
     ...(organizationUrl
-      ? { publisher: { '@type': 'Organization', name: SITE_NAME, url: organizationUrl } }
+      ? {
+          publisher: {
+            '@type': 'Organization',
+            '@id': new URL('#organization', organizationUrl).toString(),
+            name: SITE_NAME,
+            url: organizationUrl,
+          },
+        }
       : {}),
     ...(post.date
       ? { datePublished: post.date, dateModified: post.dateModified ?? post.date }

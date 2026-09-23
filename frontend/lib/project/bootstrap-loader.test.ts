@@ -1,4 +1,5 @@
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse, type DefaultBodyType } from 'msw';
+import { waitFor } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 
 import { createAppQueryClient, setAppQueryClient } from '@/lib/api/query-client';
@@ -119,6 +120,45 @@ describe('bootstrapPrivateRoutes', () => {
   it('sends an empty workspace to project setup, carrying the workspace', async () => {
     stub({ projects: [] });
     expect(await run('/projects')).toBe(`/onboarding?workspace=${WORKSPACE}`);
+  });
+
+  it('starts the session and membership reads together rather than in series', async () => {
+    // A degraded network multiplies every serialized round trip, and both
+    // reads need only the session cookie, so the membership list must not
+    // queue behind `me`. Prove both are in flight before either has answered.
+    const entered: string[] = [];
+    let answerMe!: (response: HttpResponse<DefaultBodyType>) => void;
+    let answerWorkspaces!: (response: HttpResponse<DefaultBodyType>) => void;
+    const me = new Promise<HttpResponse<DefaultBodyType>>((resolve) => {
+      answerMe = resolve;
+    });
+    const memberships = new Promise<HttpResponse<DefaultBodyType>>((resolve) => {
+      answerWorkspaces = resolve;
+    });
+    mswServer.use(
+      http.get('/api/v1/auth/me', () => {
+        entered.push('me');
+        return me;
+      }),
+      http.get('/api/v1/workspaces', () => {
+        entered.push('workspaces');
+        return memberships;
+      }),
+      http.get('/api/v1/projects', () => HttpResponse.json([])),
+      http.get(`/api/v1/workspaces/${WORKSPACE}/entitlements`, () =>
+        HttpResponse.json(entitlement(1)),
+      ),
+    );
+
+    const pending = run('/projects');
+    await waitFor(() => expect(entered).toContain('workspaces'));
+    // `me` is still unanswered (its deferred is pending by construction), so
+    // the membership read can only have started alongside it.
+    expect(entered).toContain('me');
+
+    answerMe(HttpResponse.json({ user: USER }));
+    answerWorkspaces(HttpResponse.json([WORKSPACE_ROW]));
+    expect(await pending).toBe(`/onboarding?workspace=${WORKSPACE}`);
   });
 
   it('puts the resolved project in the address instead of rewriting it a frame later', async () => {

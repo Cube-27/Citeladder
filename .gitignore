@@ -63,3 +63,4 @@ auth.json
 # rest is per-developer — a personal output style, a local launch profile.
 .claude/*
 !.claude/settings.json
+.agents/skills/cashfree-skills/

@@ -14,10 +14,12 @@ import { getLogoDevPublishable, getSiteUrl } from './env';
 import {
   API_BASE_URL,
   DEFAULT_API_REQUEST_TIMEOUT_MS,
+  DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS,
   MAX_REPETITIONS,
   MIN_REPETITIONS,
   DEFAULT_REPETITIONS,
   getApiRequestTimeoutMs,
+  getBootstrapReadTimeoutMs,
 } from './operational';
 import {
   RUN_STREAM_RECONNECT_BASE_MS,
@@ -103,6 +105,29 @@ describe('operational config', () => {
       // an unusable value must not be honoured.
       process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS = value;
       expect(getApiRequestTimeoutMs()).toBe(DEFAULT_API_REQUEST_TIMEOUT_MS);
+    },
+  );
+
+  it('keeps the bootstrap read bound under the ordinary request timeout', () => {
+    delete process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS;
+    delete process.env.NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS;
+    // The shell's opening reads exist to reach the gate's retry path while a
+    // stall is still news; a bootstrap bound at or above the ordinary request
+    // timeout would bound nothing.
+    expect(getBootstrapReadTimeoutMs()).toBe(DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS);
+    expect(getBootstrapReadTimeoutMs()).toBeLessThan(getApiRequestTimeoutMs());
+  });
+
+  it('uses a valid positive bootstrap override', () => {
+    process.env.NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS = '4000';
+    expect(getBootstrapReadTimeoutMs()).toBe(4_000);
+  });
+
+  it.each(['0', '-1', 'soon', '', 'NaN'])(
+    'ignores the unusable bootstrap override %j and keeps the default',
+    (value) => {
+      process.env.NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS = value;
+      expect(getBootstrapReadTimeoutMs()).toBe(DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS);
     },
   );
 

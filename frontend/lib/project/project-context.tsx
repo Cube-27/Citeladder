@@ -8,6 +8,7 @@ import { httpErrorStatus } from '@/lib/api/client';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Project } from '@/lib/api/types';
+import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import {
   readStoredActiveProjectId,
   readStoredActiveWorkspaceId,
@@ -48,7 +49,8 @@ function useRequestedScope() {
 function useWorkspaceProjects(workspaceId: string | null, allowed: boolean) {
   return useQuery({
     queryKey: queryKeys.projects.list(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) => projectsApi.listProjects({ signal, workspaceId }),
+    queryFn: ({ signal }) =>
+      projectsApi.listProjects({ signal, workspaceId, timeoutMs: getBootstrapReadTimeoutMs() }),
     enabled: workspaceId !== null && allowed,
   });
 }
@@ -72,9 +74,17 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   // The membership authority. Needs only the session cookie, so it loads
   // alongside `me` rather than after it, and it is deliberately NOT scoped by
   // a workspace header — it is what decides which workspaces exist.
+  // These are the loader's bootstrap reads; they carry its bounded timeout so
+  // a stall reaches the gate's retry notice in seconds, on either creation
+  // path (loader-seeded or provider-issued).
   const workspacesQuery = useQuery({
     queryKey: queryKeys.workspaces.list(),
-    queryFn: ({ signal }) => projectsApi.listWorkspaces({ signal, workspaceId: null }),
+    queryFn: ({ signal }) =>
+      projectsApi.listWorkspaces({
+        signal,
+        workspaceId: null,
+        timeoutMs: getBootstrapReadTimeoutMs(),
+      }),
   });
 
   // The narrow resolution read for an explicit id. Authorized from the path,
@@ -83,7 +93,11 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   const detailQuery = useQuery({
     queryKey: queryKeys.projects.detail(requestedProjectId ?? 'none'),
     queryFn: ({ signal }) =>
-      projectsApi.getProject(String(requestedProjectId), { signal, workspaceId: null }),
+      projectsApi.getProject(String(requestedProjectId), {
+        signal,
+        workspaceId: null,
+        timeoutMs: getBootstrapReadTimeoutMs(),
+      }),
     enabled: requestedProjectId !== null,
   });
 
