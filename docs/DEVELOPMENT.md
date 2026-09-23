@@ -51,7 +51,7 @@ configuration/secrets required by its owner.
 cd frontend
 echo "BACKEND_ORIGIN=http://localhost:8000" > .env.local
 pnpm install
-pnpm dev                    # Astro marketing SSR: http://127.0.0.1:3000
+pnpm dev                    # Local marketing Worker: http://127.0.0.1:3000
 pnpm dev:vite               # Vite authenticated SPA: http://127.0.0.1:3001/login
 ```
 
@@ -67,7 +67,7 @@ They share dependencies, API client, styles, public assets, and the server-only
 pnpm build                  # Astro marketing SSR build
 pnpm build:marketing        # Astro Worker build and static-output check
 pnpm types:marketing-worker # Regenerate checked-in marketing bindings
-pnpm dev:marketing-worker   # Workerd after a build, with isolated origin setup
+pnpm dev:marketing-worker   # Rebuild and run local Workerd with a disposable upstream
 pnpm build:vite             # Vite authenticated SPA build
 pnpm preview:vite           # production bundle preview on port 3001
 ```

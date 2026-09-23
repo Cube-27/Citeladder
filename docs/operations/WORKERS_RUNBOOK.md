@@ -2,8 +2,10 @@
 
 This is the operator procedure for the four-PR
 [Workers migration plan](../plans/CiteLadder_Workers_Migration_Implementation_Plan.md).
-PRs 1–3 prepare protected ingress and two Workers. Repository availability does
-not establish DNS, provider registration, deployment or production acceptance.
+PRs 1–3 prepare protected ingress and two Workers. PR 4 removes the superseded
+frontend serving layer before the owner authorizes a fresh production release.
+There is no staging environment or staging Worker target. Repository availability
+does not establish DNS, provider registration, deployment or production acceptance.
 
 ## Baseline and release record
 
@@ -122,24 +124,11 @@ tested. No repository commit alone establishes that operational gate.
 
 ## Product Worker preparation (PR 2)
 
-The product Worker is configured by `frontend/apps/app/wrangler.jsonc`. Its
-production Custom Domain is `app.citeladder.com`; the isolated staging target
-is `staging-app.citeladder.com`. Neither is an apex Worker Route. Both disable
-`workers.dev` and public preview URLs. A protected Cloudflare Access policy must
-cover staging before it is reachable by testers; keep its robots response
-`Disallow: /` and its HTML `noindex`. Disable dashboard Git deployment for
-these Workers so the protected GitHub workflow is the only deployment writer.
-
-The checked-in staging upstream is `https://staging-origin.citeladder.com`.
-Provision it with its own backend, database, ingress credential, certificate and
-exact Caddy public-host allowlist before staging deployment. Configure that
-backend's `FRONTEND_URL` and browser `FRONTEND_ORIGINS` for
-`https://staging-app.citeladder.com`, and register the exact staging Google and
-integration OAuth callback URLs if those flows are tested. Do not point staging
-at production data or reuse the production ingress token. The staging website
-origin `https://staging.citeladder.com` is a build input; do not publish links
-to it until that host is provisioned. Verify the actual DNS and Cloudflare
-account/zone availability before attaching either Custom Domain.
+The product Worker is configured by `frontend/apps/app/wrangler.jsonc` for the
+`app.citeladder.com` Custom Domain. It disables `workers.dev` and public preview
+URLs. Disable dashboard Git deployment so the protected GitHub workflow is the
+only deployment writer. Verify account, zone and DNS ownership before attaching
+the domain.
 
 For local Worker verification after `pnpm --dir frontend install --frozen-lockfile`:
 
@@ -164,13 +153,13 @@ headers; HTML is `no-store`, app responses are `noindex`, and hashed assets are
 immutable.
 
 `Product Worker delivery` (`.github/workflows/workers-app-deploy.yml`) is a
-manual, per-target workflow. Its build job uses no Cloudflare credentials and
+manual production workflow. Its build job uses no Cloudflare credentials and
 uploads the product asset artifact with a public-configuration fingerprint.
-The deploy job requires the protected `workers-app-staging` or
-`workers-app-production` GitHub environment. Put the least-privilege
+The deploy job requires the protected `workers-app-production` GitHub
+environment. Put the least-privilege
 `CLOUDFLARE_API_TOKEN` in that environment's secrets and the non-secret
 `CLOUDFLARE_ACCOUNT_ID` in its variables. Store the matching dedicated
-`ORIGIN_TOKEN` as a Cloudflare Worker secret for each named Worker before
+`ORIGIN_TOKEN` as a Cloudflare Worker secret before
 deployment. Set the repository variable `LOGO_DEV_PUBLISHABLE` to the same
 non-secret publishable key used by the GCP app build; the workflow refuses to
 bake an empty key. Set protected environment reviewers and main-only deployment
@@ -179,14 +168,11 @@ fingerprint, compatible backend revision and secret version reference in the
 protected release record. The workflow summary does not claim backend or
 account acceptance.
 
-Before a staging release, verify the PR 1 ingress provisioning and compatible
-backend are actually deployed. Then deploy staging through the protected
-workflow and test real login, workspace isolation, callbacks, consent and
-pricing confirmation against staging data. Observe forwarded client identity
-through Worker, Cloudflare and Caddy. Do not enable a payment provider merely
-to test this migration. Production app deployment can prepare the Custom
-Domain, but production sign-in is not accepted until PR 3 changes the backend
-browser origin and callbacks and runs its coordinated cutover checks.
+After PR 4 and the separately authorized release, verify compatible backend
+ingress and observe forwarded client identity through Worker, Cloudflare and
+Caddy. Test login, workspace isolation, callbacks, consent and pricing with
+safe production test accounts. Do not enable a payment provider merely to test
+this migration.
 
 To roll back only the product Worker, select the last known-good Worker version
 in Cloudflare Workers & Pages and deploy that version to the same Custom
@@ -199,32 +185,22 @@ coordinated PR 3 procedure for those. PR 2 leaves the apex deployment untouched.
 ## Marketing Worker and cutover preparation (PR 3)
 
 The marketing Worker uses `frontend/apps/marketing/wrangler.jsonc` and the
-generated `dist/server/wrangler.json` from its Astro build. Its production
-Custom Domain is `citeladder.com`; isolated staging uses
-`staging.citeladder.com`. Neither uses a Worker Route. Disable dashboard Git
-deployment. Keep staging behind Cloudflare Access and out of search results.
+generated `dist/server/wrangler.json` from its Astro build. Its Custom Domain
+is `citeladder.com`, with no Worker Route. Disable dashboard Git deployment.
 The build requires explicit `PUBLIC_WEBSITE_ORIGIN` and `PUBLIC_APP_ORIGIN`.
-Build staging with `CLOUDFLARE_ENV=staging`; the protected **Marketing Worker
-delivery** workflow selects these inputs and uploads an immutable artifact.
-The checked-in staging upstream is `https://staging-origin.citeladder.com` and
-must be provisioned with its own backend, data and ingress token. The marketing
-Worker secret `ORIGIN_TOKEN` belongs in each named Worker, with the matching
-isolated value. The public catalog read sends no visitor cookies to that
-upstream. Record the artifact digest, public-config fingerprint, deployment ID
-and matching backend/secret revisions in the protected release record.
+The protected **Marketing Worker delivery** workflow bakes production origins
+and uploads an immutable artifact. The marketing Worker secret `ORIGIN_TOKEN`
+matches the protected origin token. The public catalog read sends no visitor
+cookies upstream. Record artifact digest, public-config fingerprint, deployment
+ID and matching backend/secret revisions in the protected release record.
 
-Before merging PR 3, capture the **actual running** pre-cutover frontend and
-Vite image digests from the protected GCP release record/VM. Set protected
-`gcp-demo` environment variables `LEGACY_FRONTEND_IMAGE` and
-`LEGACY_VITE_APP_IMAGE` to their full Artifact Registry `@sha256:` references.
-Verify the referenced images still exist. The GCP workflow refuses missing or
-unresolvable digests and builds only the backend from new source. Retain the
-matching Caddy/Compose configuration and VM `.previous` copies through the
-first-cutover rollback gate. A source SHA is not a substitute for those digests.
+PR 3 temporarily pins the old frontend images for backend-only releases before
+PR 4. The owner will make no such release in that interval. PR 4 must delete
+the legacy image inputs, frontend services and related recovery dependency
+before the first fresh deployment. Existing deployed artifacts remain available
+for an operator-recorded emergency recovery until the release is accepted.
 
-For local Worker verification, set both public origins and run
-`pnpm --dir frontend build:marketing`, then
-`pnpm --dir frontend exec wrangler dev -c apps/marketing/dist/server/wrangler.json --local --ip 127.0.0.1 --port 8788 --var ORIGIN_UPSTREAM:https://127.0.0.1:9443 --var ORIGIN_TOKEN:local-dev-only-token-32-characters --var LOCAL_WORKER_ORIGIN:true`.
+For local Worker verification, run `pnpm --dir frontend dev:marketing-worker`.
 Use only a disposable local token; never use the production token. Map
 `citeladder.com:8788` to `127.0.0.1` in a local HTTP client. Without an isolated
 protected upstream, pricing explicitly reports catalog unavailability and
@@ -235,59 +211,93 @@ legacy consent POST, exact webhook proxy and MCP discovery. Local Compose uses
 a fixed disposable HTTP exception only through its `web:8000`
 service; production config cannot select it.
 
-### Approved cutover sequence
+### Fresh release after PR 4
 
-All actions below require the separately approved release. The PR merge alone
-must leave the old apex serving traffic. Record the operator, source SHA, exact
-Worker and backend artifacts, old DNS/domain associations, certificate, secret
-versions, callback registrations, rollback target and concrete failure
-thresholds before attaching either Custom Domain.
+The owner deferred deployment until after PR 4 and intends a fresh release.
+PR 4 must remove the old GCP frontend-dependent steps and verify the final
+topology before any dispatch. The manual setup checklist below is the release
+prerequisite; PR 4 must update it to match its final workflows. Deleting stale
+data requires separate explicit authorization and an identified target.
 
-1. In the existing Google OAuth client, add
+### Manual setup checklist for the first production release
+
+Confirm each item in the named console and record its result in the protected
+release record. Local `.env` values do not populate GitHub Actions or Cloudflare
+Worker secrets. Do not paste secret values into a PR, issue or chat.
+
+1. **GitHub → Settings → Environments:** keep `gcp-demo` and create/protect
+   `workers-app-production` and `workers-marketing-production`. Restrict each
+   deployment to `main` and require the release reviewer. In each Worker
+   environment, set secret `CLOUDFLARE_API_TOKEN` and variable
+   `CLOUDFLARE_ACCOUNT_ID`. The token needs permissions to publish Workers and
+   attach the two Custom Domains in the correct Cloudflare account/zone. Set
+   repository variable `LOGO_DEV_PUBLISHABLE` for the product build. Check
+   names/presence without exposing values. Disable dashboard Git deployment.
+2. **Cloudflare → DNS / Workers & Pages:** verify `citeladder.com` and
+   `app.citeladder.com` can be attached as Custom Domains to their named Workers.
+   Remove conflicting records/routes only during the approved cutover. Keep
+   `origin.citeladder.com` as a proxied DNS record to the GCP static IP with no
+   Worker association. Keep MX, SPF, DKIM and DMARC untouched. Confirm Full
+   (strict) TLS and the certificate's hostname coverage. Turn off public
+   `workers.dev` and version preview URLs, as checked-in configuration requires.
+3. **Cloudflare → Worker secrets:** put `ORIGIN_TOKEN` on `citeladder-app` and
+   `citeladder-marketing`, matching the dedicated ingress token in GCP Secret
+   Manager. In `gcp-demo`, set `CITELADDER_ORIGIN_TOKEN`, certificate/key
+   secrets, `ORIGIN_DOMAIN_NAME=origin.citeladder.com` and
+   `APP_DOMAIN_NAME=app.citeladder.com` as the final backend workflow requires.
+   Verify Caddy rejects unauthenticated direct origin requests. Rotate the
+   token using the overlap procedure above; never use local `.env` as delivery.
+4. **Google / enabled integrations:** register the exact app-host OAuth
+   callbacks and approved browser origin in the existing Google client:
    `https://app.citeladder.com/api/v1/auth/oauth/google/callback`, plus
    `/api/v1/integrations/oauth/gsc/callback` and
-   `/api/v1/integrations/oauth/ga4/callback` on that host. Add the Bing
-   `/api/v1/integrations/oauth/bing/callback` only if enabled. Preserve the
-   existing apex registrations during the immediate rollback window. Review
-   enabled payment return/approved-origin settings, but leave webhook paths on
-   the apex. Record actual provider-console results without copying secrets.
-2. Verify the protected origin DNS/certificate/token and the isolated staging
-   matrix. Deploy the production product Worker through **Product Worker
-   delivery** using `workers-app-production` approval. Confirm its Custom
-   Domain, `/health`, assets, login, same-origin API and consent against the
-   compatible backend. Do not switch marketing links yet.
-3. Dispatch **GCP Demo - Deploy** from `main` with
-   `browser_origin=app`, approve `gcp-demo`, and verify
+   `/api/v1/integrations/oauth/ga4/callback` on that host when enabled. Register
+   Bing's app callback only if enabled. Check payment return origins if enabled;
+   keep signed billing webhooks on `https://citeladder.com` and MCP identity on
+   the apex. Record provider-console acceptance; no provider is enabled just
+   for this migration.
+5. **GCP / release:** verify the retained backend VM, static IP, Cloudflare-only
+   firewall, IAP, PostgreSQL, backups and Secret Manager access. PR 4 must make
+   `gcp-demo` deploy backend/ingress only with
    `FRONTEND_URL=FRONTEND_ORIGINS=https://app.citeladder.com` and
-   `MCP_PUBLIC_BASE_URL=https://citeladder.com` in the protected release
-   record. The workflow reuses the pinned old frontend digests. Verify fresh
-   app-host login and enabled callbacks, consent, host-only cookie behavior and
-   existing apex MCP metadata before attaching the apex Worker.
-4. Check for conflicting apex DNS records, Worker Routes and wildcard routes;
-   keep `origin.citeladder.com` untouched. Dispatch **Marketing Worker
-   delivery** with `target=production`, approve `workers-marketing-production`,
-   and attach/verify the `citeladder.com` Custom Domain. Preserve MX, SPF,
-   DKIM and DMARC. Check the direct app links, public pricing handoff, 404s,
-   sitemap and canonicals. Domain association is distinct from version upload.
+   `MCP_PUBLIC_BASE_URL=https://citeladder.com`. Record the exact disposable
+   data target before requesting any stale-data deletion. No database reset is
+   implied by this checklist.
+6. **Release approval:** after PR 4 is merged and CI is green, record immutable
+   Worker/backend artifacts, DNS and config baseline, secret version references,
+   callback registrations, rollback target and failure thresholds. Approve the
+   protected backend/app/marketing dispatches separately. Check the architecture
+   acceptance matrix on the deployed production topology with safe accounts.
+
+### Release order after PR 4
+
+The PR 4 agent must reconcile this procedure against the final backend-only GCP
+workflow before merge. Until then, the following is the required order, not
+authorization to dispatch a workflow or change DNS.
+
+1. Record operator, main SHA, exact backend/Worker artifacts, existing DNS and
+   Custom Domain associations, certificate and secret version references,
+   callbacks, rollback target and failure thresholds. Confirm the manual setup
+   checklist and the protected approvals.
+2. Deploy the compatible backend and protected origin through `gcp-demo` from
+   `main`. Verify direct origin rejection and the app browser-origin/MCP apex
+   configuration. PR 4 must remove `browser_origin=apex` and pinned legacy
+   frontend images from this final deployment interface.
+3. Deploy the product Worker through **Product Worker delivery** and approve
+   `workers-app-production`. Attach `app.citeladder.com`; verify `/health`,
+   assets, login, same-origin API, consent and enabled callbacks with safe test
+   accounts. Observe client identity through Worker, Cloudflare and Caddy.
+4. Check conflicting apex DNS, Worker Routes and wildcard routes; preserve
+   `origin.citeladder.com` and email records. Deploy **Marketing Worker
+   delivery**, approve `workers-marketing-production` and attach
+   `citeladder.com`. Verify initial HTML, direct app links, public pricing,
+   genuine 404s, sitemap, canonicals and apex MCP/webhook ownership.
 5. Run [the architecture acceptance matrix](../plans/CiteLadder_Workers_Migration_Architecture.md#12-acceptance-matrix-evidence-required-before-completion)
-   immediately using safe accounts and data: initial HTML without JavaScript,
-   missing assets and methods, two-session isolation and CSRF, enabled OAuth,
-   old and new MCP clients, catalog failure and selection/confirmation, signed
-   sandbox webhook bytes and duplicate receipt when the provider is enabled,
-   ingress rejection, caches, CPU/errors and recovery references. Do not
-   activate a payment provider for this migration. Mark unavailable external
-   checks unexecuted. Fix and recheck actual failures before PR 4.
+   on the deployed topology. Record unavailable external checks as unexecuted.
+   Fix actual failures before accepting the release.
 
-### First-cutover recovery
-
-For an isolated Worker defect, redeploy its last accepted version to the same
-Custom Domain and verify its health, HTML and assets. For a coordinated
-rollback, restore the captured apex DNS/domain association to the old Caddy
-frontend, dispatch **GCP Demo - Deploy** with `browser_origin=apex` using the
-same pinned image digests, and verify apex login, callbacks, MCP, marketing and
-pricing before reopening traffic. Keep exact existing provider callback
-registrations through this gate. Restart incompatible OAuth/consent transactions
-safely; never redirect a submitted POST, copy cookies across hosts, restore the
-database, bypass protected ingress, or add a product redirect bridge. Record
-the accepted rollback versions and smoke results. Once immediate acceptance
-passes, PR 4 may retire the old runtime the same day; no waiting period applies.
+For a later isolated Worker regression, redeploy its last accepted version and
+repeat affected checks. PR 4 must give exact first-release recovery commands
+for the final backend-only topology and recorded DNS/domain state. Do not depend
+on rebuilding the retired Node frontend, restore a database to undo frontend
+deployment, bypass protected ingress or add a broad product redirect bridge.

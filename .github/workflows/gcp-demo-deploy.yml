@@ -55,12 +55,6 @@ jobs:
       MCP_PUBLIC_BASE_URL: ${{ format('https://{0}', vars.DOMAIN_NAME) }}
       PUBLIC_WEBSITE_ORIGIN: ${{ format('https://{0}', vars.DOMAIN_NAME) }}
       PUBLIC_APP_ORIGIN: ${{ inputs.browser_origin == 'app' && format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') || format('https://{0}', vars.DOMAIN_NAME) }}
-      # A VARIABLE, deliberately: this key is publishable and ships in the
-      # client bundle, so storing it as a secret would only make it write-only
-      # and mask it to `***` in the logs you would debug from. `vars.` does not
-      # fall back to `secrets.`, so a token filed under the wrong one resolves
-      # to the empty string and bakes '' into the bundle silently.
-      LOGO_DEV_PUBLISHABLE: ${{ vars.LOGO_DEV_PUBLISHABLE }}
       # Captured immutable PR 2 images keep the first-cutover rollback runnable.
       LEGACY_FRONTEND_IMAGE: ${{ vars.LEGACY_FRONTEND_IMAGE }}
       LEGACY_VITE_APP_IMAGE: ${{ vars.LEGACY_VITE_APP_IMAGE }}

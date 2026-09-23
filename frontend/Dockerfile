@@ -61,4 +61,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok ? 0 : 1)).catch(()=>process.exit(1))"
 
+# Wrangler local maps inbound 127.0.0.1 requests to the configured Custom
+# Domain URL (citeladder.com); keep PUBLIC_WEBSITE_HOST at that domain.
 CMD ["./node_modules/.bin/wrangler", "dev", "-c", "apps/marketing/dist/server/wrangler.json", "--local", "--ip", "0.0.0.0", "--port", "3000", "--var", "ORIGIN_UPSTREAM:http://web:8000", "--var", "ORIGIN_TOKEN:local-dev-only-token-32-characters", "--var", "PUBLIC_APP_ORIGIN:http://app.localhost:3000", "--var", "LOCAL_WORKER_ORIGIN:true", "--var", "LOCAL_COMPOSE_BUILD:true"]

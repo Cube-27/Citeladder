@@ -2,12 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 const e2ePort = 3100;
 const marketingPort = 3101;
-const marketingSpecs = [
-  '**/billing.spec.ts',
-  '**/marketing-pages.spec.ts',
-  '**/landing-nav.spec.ts',
-  '**/smoke.spec.ts',
-];
+const marketingSpecs = ['**/marketing-pages.spec.ts', '**/landing-nav.spec.ts', '**/smoke.spec.ts'];
 
 export default defineConfig({
   testDir: './e2e',
@@ -36,14 +31,21 @@ export default defineConfig({
       // `vp dev` is the Vite+ dev command; the standalone `vite` binary no
       // longer exists once the toolchain is bundled by vite-plus.
       command: `pnpm exec vp dev -c apps/app/vite.config.ts --port ${e2ePort}`,
+      env: {
+        PUBLIC_WEBSITE_ORIGIN: `http://127.0.0.1:${marketingPort}`,
+        PUBLIC_APP_ORIGIN: `http://127.0.0.1:${e2ePort}`,
+      },
       url: `http://127.0.0.1:${e2ePort}`,
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: `pnpm exec astro dev --root apps/marketing --host 127.0.0.1 --port ${marketingPort}`,
-      // Playwright owns the process lifecycle. Prevent Astro's agent detection
-      // from spawning a detached background server outside that lifecycle.
-      env: { ASTRO_DEV_BACKGROUND: '1', NEXT_PUBLIC_GA_MEASUREMENT_ID: 'G-CONSENTTEST' },
+      command: `pnpm build:marketing && pnpm exec wrangler dev -c apps/marketing/dist/server/wrangler.json --local --ip 127.0.0.1 --port ${marketingPort} --var ORIGIN_UPSTREAM:https://127.0.0.1:9443 --var ORIGIN_TOKEN:local-dev-only-token-32-characters --var LOCAL_WORKER_ORIGIN:true`,
+      env: {
+        LOCAL_COMPOSE_BUILD: 'true',
+        PUBLIC_WEBSITE_ORIGIN: `http://127.0.0.1:${marketingPort}`,
+        PUBLIC_APP_ORIGIN: `http://127.0.0.1:${e2ePort}`,
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: 'G-CONSENTTEST',
+      },
       url: `http://127.0.0.1:${marketingPort}`,
       reuseExistingServer: !process.env.CI,
     },

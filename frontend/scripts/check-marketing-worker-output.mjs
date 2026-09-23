@@ -2,12 +2,23 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 
 const root = new URL('../apps/marketing/dist/', import.meta.url);
 const files = await readdir(new URL('client/', root), { recursive: true });
+const privateNames = new Set([
+  '.env',
+  '.dev.vars',
+  'wrangler.json',
+  'wrangler.jsonc',
+  'worker-configuration.d.ts',
+]);
 for (const file of files) {
-  if (
-    /(^|[/\\])(?:\.env(?:\.[^/\\]+)?|\.dev\.vars(?:\.[^/\\]+)?|wrangler\.jsonc?|worker-configuration\.d\.ts)(?:$|[/\\])/.test(
-      file,
-    )
-  ) {
+  const privateSegment = file
+    .split(/[/\\]/)
+    .some(
+      (segment) =>
+        privateNames.has(segment) ||
+        segment.startsWith('.env.') ||
+        segment.startsWith('.dev.vars.'),
+    );
+  if (privateSegment) {
     throw new Error(`Private file in marketing output: ${file}`);
   }
 }

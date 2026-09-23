@@ -31,8 +31,13 @@ const INTERNAL_HEADERS = new Set([
 
 function upstreamOrigin(value: string, allowDevelopmentHttp = false): URL {
   const url = new URL(value);
+  const localComposeUpstream =
+    allowDevelopmentHttp &&
+    url.protocol === 'http:' &&
+    url.hostname === 'web' &&
+    url.port === '8000';
   if (
-    (url.protocol !== 'https:' && !(allowDevelopmentHttp && url.href === 'http://web:8000/')) ||
+    (url.protocol !== 'https:' && !localComposeUpstream) ||
     url.username ||
     url.password ||
     url.pathname !== '/' ||

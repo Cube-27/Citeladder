@@ -117,9 +117,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     env:
-      # Explicit pre-cutover browser origins for production-mode quality builds.
+      # Production-mode quality builds use the two accepted public origins.
       PUBLIC_WEBSITE_ORIGIN: https://citeladder.com
-      PUBLIC_APP_ORIGIN: https://citeladder.com
+      PUBLIC_APP_ORIGIN: https://app.citeladder.com
     permissions:
       contents: read
     runs-on: ubuntu-latest

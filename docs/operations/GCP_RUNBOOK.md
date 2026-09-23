@@ -179,8 +179,9 @@ Set Cloudflare's A record to the static IP in the workflow summary. If DNS was
 not ready for the final smoke test, correct DNS and rerun the same workflow.
 
 ```powershell
-curl.exe --fail --show-error https://citeladder.com/health
-curl.exe --fail --show-error https://citeladder.com/api/v1/auth/oauth/providers
+$browserOrigin = 'https://citeladder.com' # Use https://app.citeladder.com when browser_origin=app.
+curl.exe --fail --show-error "$browserOrigin/health"
+curl.exe --fail --show-error "$browserOrigin/api/v1/auth/oauth/providers"
 ```
 
 Health must succeed and the provider catalog must report Google as

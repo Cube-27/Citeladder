@@ -7,6 +7,7 @@ import type {
   CatalogTopup,
   CredentialMode,
 } from '@/lib/api/billing';
+import type { HeadlinePrice } from '@/lib/billing/catalog';
 import {
   checkoutSelection,
   formatMoney,
@@ -24,6 +25,35 @@ import {
 
 import { Section, SectionHeader } from '../primitives/section';
 import { PricingComparison } from './pricing-comparison';
+
+function priceLabel(price: HeadlinePrice, minorUnits: number): string {
+  if (price.kind === 'price') return formatMoney(price.money, minorUnits);
+  return price.kind === 'contact' ? 'Contact sales' : 'Not yet priced';
+}
+
+function PlanAction({ plan, href }: Readonly<{ plan: CatalogPlan; href: string | null }>) {
+  if (href) {
+    return (
+      <a
+        className="bg-accent text-accent-fg mt-auto rounded-[var(--radius-control)] px-5 py-3 text-center font-medium"
+        href={href}
+      >
+        Choose {plan.name}
+      </a>
+    );
+  }
+  if (plan.contact_only) {
+    return (
+      <a
+        className="border-border-subtle mt-auto rounded-[var(--radius-control)] border px-5 py-3 text-center font-medium"
+        href={plan.contact_url ?? CONTACT_SALES_HREF}
+      >
+        Contact sales
+      </a>
+    );
+  }
+  return <p className="website-body text-muted mt-auto">Checkout unavailable</p>;
+}
 
 function PlanCard({
   plan,
@@ -50,32 +80,12 @@ function PlanCard({
       <h3 className="website-feature-heading text-foreground">{plan.name}</h3>
       <p className="website-body text-muted mt-3">{presentation?.blurb ?? plan.description}</p>
       <p className="website-data-display text-foreground mt-6">
-        {price.kind === 'price'
-          ? formatMoney(price.money, catalog.currency_minor_units)
-          : price.kind === 'contact'
-            ? 'Contact sales'
-            : 'Not yet priced'}
+        {priceLabel(price, catalog.currency_minor_units)}
       </p>
       {price.kind === 'price' && (
         <p className="website-label text-muted">per month · taxes calculated at checkout</p>
       )}
-      {href ? (
-        <a
-          className="bg-accent text-accent-fg mt-auto rounded-[var(--radius-control)] px-5 py-3 text-center font-medium"
-          href={href}
-        >
-          Choose {plan.name}
-        </a>
-      ) : plan.contact_only ? (
-        <a
-          className="border-border-subtle mt-auto rounded-[var(--radius-control)] border px-5 py-3 text-center font-medium"
-          href={plan.contact_url ?? CONTACT_SALES_HREF}
-        >
-          Contact sales
-        </a>
-      ) : (
-        <p className="website-body text-muted mt-auto">Checkout unavailable</p>
-      )}
+      <PlanAction plan={plan} href={href} />
     </article>
   );
 }

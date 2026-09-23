@@ -2,18 +2,12 @@ name: Product Worker delivery
 
 on:
   workflow_dispatch:
-    inputs:
-      target:
-        description: Isolated staging or production app Custom Domain
-        required: true
-        type: choice
-        options: [staging, production]
 
 permissions:
   contents: read
 
 concurrency:
-  group: workers-app-${{ inputs.target }}
+  group: workers-app-production
   cancel-in-progress: false
 
 jobs:
@@ -40,7 +34,7 @@ jobs:
         run: |
           pnpm --dir frontend types:app-worker
           git diff --exit-code -- frontend/apps/app/worker-configuration.d.ts
-      - name: Select baked public origins
+      - name: Set baked public origins
         id: config
         shell: bash
         env:
@@ -49,15 +43,9 @@ jobs:
           test -n "$LOGO_DEV_PUBLISHABLE"
           echo 'NEXT_PUBLIC_DEMO_MODE=false' >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=$LOGO_DEV_PUBLISHABLE" >> "$GITHUB_ENV"
-          if [[ '${{ inputs.target }}' == 'production' ]]; then
-            echo 'PUBLIC_WEBSITE_ORIGIN=https://citeladder.com' >> "$GITHUB_ENV"
-            echo 'PUBLIC_APP_ORIGIN=https://app.citeladder.com' >> "$GITHUB_ENV"
-            values=$'https://citeladder.com\nhttps://app.citeladder.com'
-          else
-            echo 'PUBLIC_WEBSITE_ORIGIN=https://staging.citeladder.com' >> "$GITHUB_ENV"
-            echo 'PUBLIC_APP_ORIGIN=https://staging-app.citeladder.com' >> "$GITHUB_ENV"
-            values=$'https://staging.citeladder.com\nhttps://staging-app.citeladder.com'
-          fi
+          echo 'PUBLIC_WEBSITE_ORIGIN=https://citeladder.com' >> "$GITHUB_ENV"
+          echo 'PUBLIC_APP_ORIGIN=https://app.citeladder.com' >> "$GITHUB_ENV"
+          values=$'https://citeladder.com\nhttps://app.citeladder.com'
           echo "fingerprint=$(printf 'origins=%s\ndemo=false\nlogo=%s\n' "$values" "$LOGO_DEV_PUBLISHABLE" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
       - run: pnpm --dir frontend build:app
       - run: pnpm --dir frontend check:bundle
@@ -74,7 +62,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    environment: workers-app-${{ inputs.target }}
+    environment: workers-app-production
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -92,7 +80,7 @@ jobs:
         with:
           name: app-${{ github.sha }}-${{ needs.build.outputs.fingerprint }}
           path: frontend/apps/app/dist/
-      - name: Deploy selected app target
+      - name: Deploy product Worker
         working-directory: frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -101,17 +89,13 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          if [[ '${{ inputs.target }}' == 'production' ]]; then
-            pnpm deploy:app
-          else
-            pnpm deploy:app:staging
-          fi
+          pnpm deploy:app
       - name: Release record
         shell: bash
         run: |
           {
             echo '## Product Worker release'
-            echo 'Target: ${{ inputs.target }}'
+            echo 'Target: production'
             echo 'Source: ${{ github.sha }}'
             echo 'Artifact digest: ${{ needs.build.outputs.artifact_digest }}'
             echo 'Public configuration fingerprint: ${{ needs.build.outputs.fingerprint }}'

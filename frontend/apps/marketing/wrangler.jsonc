@@ -18,18 +18,4 @@
     "PUBLIC_WEBSITE_HOST": "citeladder.com",
     "PUBLIC_APP_ORIGIN": "https://app.citeladder.com",
   },
-  "env": {
-    "staging": {
-      "name": "citeladder-marketing-staging",
-      "workers_dev": false,
-      "preview_urls": false,
-      "routes": [{ "pattern": "staging.citeladder.com", "custom_domain": true }],
-      "secrets": { "required": ["ORIGIN_TOKEN"] },
-      "vars": {
-        "ORIGIN_UPSTREAM": "https://staging-origin.citeladder.com",
-        "PUBLIC_WEBSITE_HOST": "staging.citeladder.com",
-        "PUBLIC_APP_ORIGIN": "https://staging-app.citeladder.com",
-      },
-    },
-  },
 }
