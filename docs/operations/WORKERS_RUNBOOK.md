@@ -105,12 +105,13 @@ redeploy ingress. Record version references and test results, never values.
 
 ## Recovery and handoff
 
-The GCP deploy retains `.previous` copies of the last running release's
+An ordinary GCP deploy retains `.previous` copies of the last running release's
 `runtime.env`, Compose file, Caddy file, optional legacy route file,
 `ingress.env`, and origin certificate/key on the host. Keep these and the
 recorded old image digests through first-release acceptance. The exact
-first-release recovery commands appear below. Do not restore a database backup
-for this frontend change. A Worker version rollback alone does not restore
+first-release recovery commands appear below. An explicit database reset removes
+those copies after the new backend passes its checks; the old VM frontend and
+database cannot be restored through this procedure. A Worker version rollback alone does not restore
 DNS, provider registrations, GCP secrets or backend configuration.
 
 ## Product Worker preparation (PR 2)
@@ -267,11 +268,14 @@ procedure itself does not authorize dispatch or DNS changes.
    Custom Domain associations, certificate and secret version references,
    callbacks, rollback target and failure thresholds. Confirm the manual setup
    checklist and the protected approvals.
-2. Dispatch `gh workflow run gcp-demo-deploy.yml --ref main`, approve `gcp-demo`,
+2. For the authorized fresh database release, run `./reset-gcp-db.ps1` from
+   synced local `main`; otherwise dispatch `gh workflow run gcp-demo-deploy.yml
+   --ref main`. Approve `gcp-demo`,
    and wait for its successful backend digest and origin 403 summary. Verify
    app browser-origin and MCP apex configuration. This release removes the old
-   VM frontend containers; retain their captured artifacts and `.previous`
-   files for first-release recovery.
+   VM frontend containers. An ordinary deploy retains their captured artifacts
+   and `.previous` files for first-release recovery; an explicit reset discards
+   that recovery path.
 3. Dispatch `gh workflow run workers-app-deploy.yml --ref main`, deploy the
    product Worker through **Product Worker delivery**, and approve
    `workers-app-production`. Attach `app.citeladder.com`; verify `/health`,
@@ -294,7 +298,8 @@ redirect bridge.
 
 ### First-release recovery before acceptance
 
-Use this only against the VM and DNS/domain baseline captured in step 1. If a
+Use this only when the database was not explicitly reset and against the VM and
+DNS/domain baseline captured in step 1. If a
 single Worker regresses after acceptance, restore that Worker's last accepted
 version in Cloudflare instead. Before first-release acceptance, detach the new
 apex Custom Domain or restore its captured association and DNS in Cloudflare;

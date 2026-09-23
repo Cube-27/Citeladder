@@ -302,7 +302,9 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     assert "vars.DOMAIN_NAME" in inputs["MCP_PUBLIC_BASE_URL"]
     assert not {"LEGACY_FRONTEND_IMAGE", "LEGACY_VITE_APP_IMAGE"} & inputs.keys()
     dispatch = deploy_workflow.get("on", deploy_workflow.get(True))["workflow_dispatch"]
-    assert not dispatch or not dispatch.get("inputs")
+    assert dispatch["inputs"]["reset_database"]["type"] == "boolean"
+    assert dispatch["inputs"]["reset_database"]["default"] is False
+    assert dispatch["inputs"]["confirm_project"]["type"] == "string"
     assert "image_digest()" in deploy
     assert deploy.count('gcloud artifacts docker images list "$registry/$1"') == 1
     assert deploy.count("image_digest backend") >= 1
