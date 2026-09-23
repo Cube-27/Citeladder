@@ -172,7 +172,8 @@ export function useSubscriptionCheckout() {
     const user = await authApi.me();
     if (user.id !== started.userId) throw new Error('Sign in again before checkout.');
     const current = await refresh();
-    if (current?.status !== 'pending') return current;
+    if (!current) throw new Error('Payment status is unavailable. Refresh status before retrying.');
+    if (current.status !== 'pending') return current;
     const workspaceId = started.workspaceId;
     const checkout = await billingApi.checkout(id, { workspaceId });
     setTestMode(checkout.provider_mode === 'test');

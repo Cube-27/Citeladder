@@ -87,6 +87,7 @@ describe('app pricing continuation', () => {
   it('shows the server quote before opening payment checkout', async () => {
     let created = 0;
     let opened = 0;
+    let activationReads = 0;
     const money = (amount_minor: number) => ({ currency: 'USD', amount_minor });
     const quote = {
       quote_id: 'q1',
@@ -161,8 +162,12 @@ describe('app pricing continuation', () => {
           failure_code: null,
         });
       }),
-      http.get('/api/v1/billing/activations/11111111-1111-4111-8111-111111111111', () =>
-        HttpResponse.json({
+      http.get('/api/v1/billing/activations/11111111-1111-4111-8111-111111111111', () => {
+        activationReads += 1;
+        if (activationReads === 1) {
+          return HttpResponse.json({ detail: 'temporarily unavailable' }, { status: 503 });
+        }
+        return HttpResponse.json({
           activation_id: '11111111-1111-4111-8111-111111111111',
           kind: 'base',
           catalog_key: 'tier_1',
@@ -172,8 +177,8 @@ describe('app pricing continuation', () => {
           checkout_url: null,
           expires_at: '2026-12-01T12:00:00Z',
           failure_code: null,
-        }),
-      ),
+        });
+      }),
       http.get(
         '/api/v1/billing/subscriptions/11111111-1111-4111-8111-111111111111/checkout',
         () => {
@@ -218,6 +223,10 @@ describe('app pricing continuation', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Review current quote' }));
     expect(await screen.findByRole('region', { name: 'Current quote' })).toBeInTheDocument();
     expect(created).toBe(2);
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm and continue to payment' }));
+    await waitFor(() => expect(activationReads).toBe(1));
+    expect(opened).toBe(0);
+    expect(screen.getByRole('region', { name: 'Current quote' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Confirm and continue to payment' }));
     await waitFor(() => expect(opened).toBe(1));
   });

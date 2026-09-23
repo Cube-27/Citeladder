@@ -3,7 +3,11 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 const root = new URL('../apps/app/dist/', import.meta.url);
 const files = await readdir(root, { recursive: true });
 for (const file of files) {
-  if (/(^|[/\\])(?:\.env|\.dev\.vars|worker\.ts|wrangler\.jsonc?|server)(?:$|[/\\])/.test(file)) {
+  if (
+    /(^|[/\\])(?:\.env(?:\.[^/\\]+)?|\.dev\.vars(?:\.[^/\\]+)?|worker\.ts|wrangler\.jsonc?|server)(?:$|[/\\])/.test(
+      file,
+    )
+  ) {
     throw new Error(`Private file in app static output: ${file}`);
   }
 }
