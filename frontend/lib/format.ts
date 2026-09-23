@@ -113,6 +113,19 @@ export function formatDisplayDate(timestamp: string, timeZone: string): string {
   }
 }
 
+/** Compact chart label for a persisted instant. */
+export function formatDisplayShortDate(timestamp: string, timeZone: string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp;
+  try {
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone }).format(
+      date,
+    );
+  } catch {
+    return timeZone === 'UTC' ? timestamp : formatDisplayShortDate(timestamp, 'UTC');
+  }
+}
+
 export function formatScore(score: number | null): string {
   return score === null || Number.isNaN(score)
     ? availabilityLabel('not_measured')

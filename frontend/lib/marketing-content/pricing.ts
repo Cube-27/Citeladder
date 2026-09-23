@@ -7,6 +7,7 @@
  *
  * A component that cannot reach the catalog renders a loading or error shell.
  */
+import { formatCount } from '@/lib/format';
 
 /** Where the contact-only tier sends people when the catalog gives no URL. */
 /** The backend's plan keys, as the presentation layer refers to them. */
@@ -110,7 +111,7 @@ export function launchPlanCardFeatures(
     { label: 'Monitored URLs', value: String(plan.monitoredUrls) },
     {
       label: mode === 'funded' ? 'Managed answers' : 'Visibility runs',
-      value: mode === 'funded' ? `${plan.answers.toLocaleString()}/month` : 'Your keys',
+      value: mode === 'funded' ? `${formatCount(plan.answers)}/month` : 'Your keys',
     },
     {
       label: 'Content + Growth Agent',

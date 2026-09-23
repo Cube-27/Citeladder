@@ -4,6 +4,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
@@ -246,6 +247,7 @@ function MeasurementHistory({
   onClearFocus: () => void;
   brandName: string | null;
 }) {
+  const timeZone = useDisplayTimeZone();
   const points = query.data ?? [];
   const metricLabel =
     VISIBILITY_METRICS.find((item) => item.value === metric)?.label ?? 'Visibility';
@@ -255,13 +257,13 @@ function MeasurementHistory({
   const focusedIsBrand = focused !== null && focused === brandName;
   const base =
     focused === null || focusedIsBrand
-      ? toChartPoints(points, metric)
-      : toNamedChartPoints(points, metric, focused);
+      ? toChartPoints(points, metric, timeZone)
+      : toNamedChartPoints(points, metric, focused, timeZone);
   const chartPoints = base.map((point, index) => ({
     ...point,
     // The plotted values are already whole percent, so `formatRate` — which
     // scales a 0–1 rate — turned 38% into "3800%" in every hover label.
-    label: `${formatPointDate(points[index].completed_at)} · ${formatPercent(point.value)}`,
+    label: `${formatPointDate(points[index].completed_at, timeZone)} · ${formatPercent(point.value)}`,
     // The full date is the hover; the axis tick gets the short form the
     // series was built with, so the ticks stay readable at three across.
     axisLabel: point.label,

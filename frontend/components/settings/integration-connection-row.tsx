@@ -19,7 +19,7 @@ import {
 } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
-import { formatShortDate } from '@/lib/format';
+import { formatCount, formatShortDate } from '@/lib/format';
 import { DisplayTime } from '@/components/ui/display-time';
 import { isActiveSyncRun, SYNC_RUN_BADGE, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
 import { textRole } from '@/components/ui/typography';
@@ -145,7 +145,7 @@ function ConnectionMetadata({
           </Badge>
           <span className="text-muted font-mono text-xs whitespace-nowrap">
             {activeRun.status === 'running' ? (
-              `${activeRun.row_count.toLocaleString('en-US')} rows · window ${formatShortDate(activeRun.window_start)}–${formatShortDate(activeRun.window_end)}`
+              `${formatCount(activeRun.row_count)} rows · window ${formatShortDate(activeRun.window_start)}–${formatShortDate(activeRun.window_end)}`
             ) : (
               <>
                 Enqueued <DisplayTime value={activeRun.created_at} /> · waiting for a worker

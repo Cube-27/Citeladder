@@ -7,7 +7,12 @@ import {
   resolveServerDisplayTimeZone,
   saveTimeZonePreference,
 } from './display-timezone';
-import { formatDisplayDate, formatDisplayTimestamp, formatWindowDate } from './format';
+import {
+  formatDisplayDate,
+  formatDisplayShortDate,
+  formatDisplayTimestamp,
+  formatWindowDate,
+} from './format';
 
 afterEach(() => {
   document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=; Path=/; Max-Age=0`;
@@ -48,6 +53,7 @@ describe('display timezone', () => {
     expect(before).toContain('1:30');
     expect(after).toContain('3:30');
     expect(formatDisplayDate('2026-01-01T00:30:00Z', 'America/New_York')).toContain('Dec 31, 2025');
+    expect(formatDisplayShortDate('2026-01-01T00:30:00Z', 'America/New_York')).toBe('Dec 31');
     expect(formatWindowDate('2026-01-01')).toBe('Jan 1, 2026');
   });
 });
