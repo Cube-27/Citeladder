@@ -4,7 +4,7 @@ export const DISPLAY_TIME_ZONE_COOKIE = 'citeladder-display-timezone';
 const CHANGE_EVENT = 'citeladder:display-timezone-change';
 const COOKIE_AGE_SECONDS = 60 * 60 * 24 * 365;
 
-export function validTimeZone(value: string): boolean {
+function validTimeZone(value: string): boolean {
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: value });
     return true;
