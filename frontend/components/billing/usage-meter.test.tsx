@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
 
 import type { UsageItem } from '@/lib/api/billing';
+import { DISPLAY_TIME_ZONE_COOKIE } from '@/lib/display-timezone';
 
 import { UsageMeter } from './usage-meter';
 
@@ -34,6 +35,12 @@ function item(overrides: Partial<UsageItem> = {}): UsageItem {
 }
 
 describe('UsageMeter', () => {
+  beforeEach(() => {
+    document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=UTC; Path=/`;
+  });
+  afterEach(() => {
+    document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=; Path=/; Max-Age=0`;
+  });
   it('humanises the backend key into a label', () => {
     render(<UsageMeter item={item({ key: 'prompt_slots' })} />);
 
@@ -102,7 +109,11 @@ describe('UsageMeter', () => {
   it('shows a reset date when the window resets', () => {
     render(<UsageMeter item={item({ resets_at: '2026-09-01T00:00:00Z' })} />);
 
-    expect(screen.getByText(/Resets Sep 1, 2026/)).toBeVisible();
+    expect(screen.getByText('Sep 1, 2026').closest('time')).toHaveAttribute(
+      'datetime',
+      '2026-09-01T00:00:00Z',
+    );
+    expect(screen.getByText(/Resets/)).toBeVisible();
   });
 
   it('warns that unused credits are forfeited at the earliest expiry', () => {
@@ -110,7 +121,10 @@ describe('UsageMeter', () => {
 
     // A consumable balance that silently disappears is the surprise this line
     // exists to prevent.
-    expect(screen.getByText(/Earliest expiry Sep 15, 2026/)).toBeVisible();
+    expect(screen.getByText('Sep 15, 2026').closest('time')).toHaveAttribute(
+      'datetime',
+      '2026-09-15T00:00:00Z',
+    );
     expect(screen.getByText(/forfeited/)).toBeVisible();
   });
 
@@ -121,7 +135,7 @@ describe('UsageMeter', () => {
       />,
     );
 
-    expect(screen.getByText(/Resets Sep 1, 2026/)).toBeVisible();
+    expect(screen.getByText('Sep 1, 2026')).toBeVisible();
     expect(screen.queryByText(/Earliest expiry/)).not.toBeInTheDocument();
   });
 

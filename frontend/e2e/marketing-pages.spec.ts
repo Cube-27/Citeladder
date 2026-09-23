@@ -86,10 +86,13 @@ test.describe('marketing routes', () => {
     for (const width of [375, 760, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll('astro-island')].some(
+          (island) =>
+            island.getAttribute('component-url')?.includes('landing-page') &&
+            !island.hasAttribute('ssr'),
+        ),
       );
-      expect(overflow, `${width}px landing overflow`).toBeLessThanOrEqual(1);
       const hero = page.locator('.cl-hero-scaled-preview > div');
       const product = page
         .getByRole('tabpanel', { name: /sources/i })
@@ -106,6 +109,10 @@ test.describe('marketing routes', () => {
             .toBeLessThan(1);
         }
       }
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `${width}px landing overflow`).toBeLessThanOrEqual(1);
       expect(
         await page.locator('.cl-record').evaluate((element) => getComputedStyle(element).transform),
       ).toBe('none');

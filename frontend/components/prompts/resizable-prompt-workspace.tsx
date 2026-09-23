@@ -43,20 +43,24 @@ export function ResizablePromptWorkspace({
     shiftStep: 48,
     onBoundsChange: ({ max }) => setMaxRailWidth(max),
   });
+  const refreshBoundsRef = useRef(resize.refreshBounds);
+  useEffect(() => {
+    refreshBoundsRef.current = resize.refreshBounds;
+  }, [resize.refreshBounds]);
 
   useEffect(() => {
     const container = containerRef.current;
     const observer =
       container && typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(() => {
-            resize.refreshBounds();
+            refreshBoundsRef.current();
           })
         : null;
     if (container) observer?.observe(container);
     return () => {
       observer?.disconnect();
     };
-  }, [resize]);
+  }, []);
 
   const workspaceStyle = {
     '--topic-rail-width': `${railWidth}px`,

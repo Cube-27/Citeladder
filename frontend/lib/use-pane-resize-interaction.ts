@@ -10,6 +10,7 @@ export function usePaneResizeInteraction({
   bounds,
   onResize,
   onCommit,
+  onCancel,
   defaultWidth,
   homeWidth,
   endKey = false,
@@ -20,6 +21,7 @@ export function usePaneResizeInteraction({
   bounds: () => Bounds;
   onResize: (width: number) => void;
   onCommit: (width: number) => void;
+  onCancel?: () => void;
   defaultWidth: number;
   homeWidth: number;
   endKey?: boolean;
@@ -67,12 +69,22 @@ export function usePaneResizeInteraction({
     onCommit(widthRef.current);
     restoreDocument();
   };
+  const cancelDrag = () => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    dragRef.current = null;
+    widthRef.current = drag.startWidth;
+    onResize(drag.startWidth);
+    onCancel?.();
+    setDragging(false);
+    restoreDocument();
+  };
   const nudge = (delta: number) => onCommit(apply(widthRef.current + delta));
   const reset = () => onCommit(apply(defaultWidth));
   const refreshBounds = () => apply(widthRef.current);
 
   const onPointerDown = (event: PointerEvent<HTMLElement>) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || dragRef.current) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
     beginDrag(event.clientX, event.pointerId);
@@ -82,9 +94,16 @@ export function usePaneResizeInteraction({
   const finishPointer = (event: PointerEvent<HTMLElement>) => {
     if (dragRef.current?.pointerId !== event.pointerId) return;
     const handle = event.currentTarget;
+    endDrag();
     if (handle.hasPointerCapture?.(event.pointerId))
       handle.releasePointerCapture?.(event.pointerId);
-    endDrag();
+  };
+  const cancelPointer = (event: PointerEvent<HTMLElement>) => {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    const handle = event.currentTarget;
+    cancelDrag();
+    if (handle.hasPointerCapture?.(event.pointerId))
+      handle.releasePointerCapture?.(event.pointerId);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     const step = event.shiftKey ? shiftStep : 16;
@@ -107,8 +126,10 @@ export function usePaneResizeInteraction({
     onPointerDown,
     onPointerMove,
     onPointerUp: finishPointer,
-    onPointerCancel: finishPointer,
-    onLostPointerCapture: endDrag,
+    onPointerCancel: cancelPointer,
+    onLostPointerCapture: (event: PointerEvent<HTMLElement>) => {
+      if (dragRef.current?.pointerId === event.pointerId) cancelDrag();
+    },
     onDoubleClick: reset,
     onKeyDown,
   };

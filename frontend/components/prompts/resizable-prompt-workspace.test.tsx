@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { ResizablePromptWorkspace } from './resizable-prompt-workspace';
 
@@ -25,6 +25,29 @@ function renderWorkspace() {
 }
 
 describe('ResizablePromptWorkspace', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('keeps one resize observer while the rail width changes', () => {
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    const createObserver = vi.fn();
+    class MockResizeObserver {
+      constructor() {
+        createObserver();
+      }
+      observe = observe;
+      disconnect = disconnect;
+    }
+    vi.stubGlobal('ResizeObserver', MockResizeObserver);
+    const rendered = renderWorkspace();
+    expect(createObserver).toHaveBeenCalledOnce();
+    fireEvent.keyDown(screen.getByRole('separator', { name: 'Resize topics panel' }), {
+      key: 'ArrowRight',
+    });
+    expect(createObserver).toHaveBeenCalledOnce();
+    rendered.unmount();
+    expect(disconnect).toHaveBeenCalledOnce();
+  });
   it('exposes an accessible bounded separator', () => {
     renderWorkspace();
     const separator = screen.getByRole('separator', { name: 'Resize topics panel' });
@@ -113,7 +136,7 @@ describe('ResizablePromptWorkspace', () => {
     fireEvent.pointerDown(separator, { button: 0, pointerId: 9, clientX: 300 });
     fireEvent.pointerMove(separator, { pointerId: 9, clientX: 348 });
     fireEvent.pointerCancel(separator, { pointerId: 9 });
-    expect(separator).toHaveAttribute('aria-valuenow', '288');
+    expect(separator).toHaveAttribute('aria-valuenow', '240');
     expect(document.body.style.cursor).toBe('');
     expect(separator.releasePointerCapture).toHaveBeenCalledWith(9);
     rendered.unmount();

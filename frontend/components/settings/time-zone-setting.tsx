@@ -22,23 +22,28 @@ const CHOICES: readonly { value: Choice; label: string }[] = [
 export function TimeZoneSetting() {
   const preference = useTimeZonePreference();
   const displayZone = useDisplayTimeZone();
-  const [choice, setChoice] = useState<Choice>(
-    preference === 'auto' || preference === 'UTC' ? preference : 'custom',
-  );
-  const [namedZone, setNamedZone] = useState(
-    preference === 'auto' || preference === 'UTC' ? '' : preference,
-  );
+  const [edit, setEdit] = useState<{ choice: Choice; namedZone: string } | null>(null);
+  const savedChoice = preference === 'auto' || preference === 'UTC' ? preference : 'custom';
+  const savedNamedZone = savedChoice === 'custom' ? preference : '';
+  const choice = edit?.choice ?? savedChoice;
+  const namedZone = edit?.namedZone ?? savedNamedZone;
   const [error, setError] = useState('');
 
   const choose = (next: Choice) => {
-    setChoice(next);
     setError('');
-    if (next !== 'custom' && !saveTimeZonePreference(next))
+    if (next === 'custom') {
+      setEdit({ choice: next, namedZone });
+    } else if (saveTimeZonePreference(next)) {
+      setEdit(null);
+    } else {
+      setEdit({ choice: next, namedZone });
       setError('The timezone preference could not be saved on this device.');
+    }
   };
 
   const saveNamedZone = () => {
     if (saveTimeZonePreference(namedZone.trim())) {
+      setEdit(null);
       setError('');
     } else {
       setError('Enter a valid IANA timezone, such as Asia/Kolkata.');
@@ -68,7 +73,9 @@ export function TimeZoneSetting() {
             <Input
               id="named-display-timezone"
               value={namedZone}
-              onChange={(event) => setNamedZone(event.target.value)}
+              onChange={(event) => {
+                setEdit({ choice: 'custom', namedZone: event.target.value });
+              }}
               placeholder="Asia/Kolkata"
               className="min-w-56 flex-1"
               aria-invalid={Boolean(error)}

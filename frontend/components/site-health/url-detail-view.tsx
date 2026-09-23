@@ -100,15 +100,21 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
           />
           <DeliveryMetrics delivery={detail.delivery} />
         </section>
-        {detail.internal_links ? (
-          <section className="border-border-subtle grid gap-4 border-y py-4">
+        <section className="border-border-subtle grid gap-4 border-y py-4">
+          {detail.internal_links ? (
             <EditorialSectionHeader
               title="Internal Links"
               description={`Modelled over ${detail.internal_links.source_page_count} observed crawl page${detail.internal_links.source_page_count === 1 ? '' : 's'}${detail.internal_links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
             />
+          ) : (
+            <EditorialSectionHeader title="Internal Links" />
+          )}
+          {detail.internal_links ? (
             <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
-          </section>
-        ) : null}
+          ) : (
+            <p className={textRole('body')}>Internal links not measured for this page.</p>
+          )}
+        </section>
       </div>
     );
   }

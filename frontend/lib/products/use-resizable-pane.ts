@@ -97,6 +97,7 @@ export function useResizablePane(): ResizablePane {
     width,
     bounds: () => ({ min: MIN_PANE_WIDTH, max: MAX_PANE_WIDTH }),
     onResize: setDragWidth,
+    onCancel: () => setDragWidth(null),
     onCommit: (next) => {
       setDragWidth(null);
       storeWidth(next);

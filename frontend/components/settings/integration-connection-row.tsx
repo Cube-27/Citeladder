@@ -148,7 +148,12 @@ function ConnectionMetadata({
               `${formatCount(activeRun.row_count)} rows · window ${formatShortDate(activeRun.window_start)}–${formatShortDate(activeRun.window_end)}`
             ) : (
               <>
-                Enqueued <DisplayTime value={activeRun.created_at} /> · waiting for a worker
+                Enqueued <DisplayTime value={activeRun.created_at} /> ·{' '}
+                {activeRun.status === 'leased'
+                  ? 'assigned to a worker'
+                  : activeRun.status === 'retry_wait'
+                    ? 'awaiting retry'
+                    : 'waiting for a worker'}
               </>
             )}
           </span>

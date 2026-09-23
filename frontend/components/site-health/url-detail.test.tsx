@@ -632,4 +632,18 @@ describe('UrlDetail', () => {
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Internal Links' }));
     expect(screen.getByText('Internal links not measured for this page.')).toBeInTheDocument();
   });
+
+  it('explains unavailable internal links in the phone layout', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 980px)',
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    mswServer.use(...handlers(detail({ internal_links: null })));
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+    expect(screen.getByRole('heading', { name: 'Internal Links' })).toBeInTheDocument();
+    expect(screen.getByText('Internal links not measured for this page.')).toBeVisible();
+  });
 });
