@@ -727,7 +727,6 @@ async def test_free_sample_stops_at_ten_across_two_projects(
 
 
 @pytest.mark.asyncio
-@pytest.mark.anyio
 async def test_free_discovery_maps_past_the_sample_budget_without_analyzing(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
@@ -835,7 +834,7 @@ async def test_free_discovery_maps_past_the_sample_budget_without_analyzing(
         ) >= observed
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_discover_robots_denied_short_circuits_and_records_site_facts(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
