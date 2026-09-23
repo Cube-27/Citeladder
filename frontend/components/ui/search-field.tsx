@@ -4,6 +4,7 @@ import type { InputHTMLAttributes } from 'react';
 import { Search, X } from 'lucide-react';
 
 import { Input } from './input';
+import type { ComponentProps } from 'react';
 import { Pressable } from './pressable';
 import { Spinner } from './spinner';
 
@@ -15,6 +16,7 @@ export type SearchFieldProps = Omit<
   onValueChange: (value: string) => void;
   pending?: boolean;
   onClear?: () => void;
+  size?: ComponentProps<typeof Input>['size'];
 };
 
 export function SearchField({
@@ -23,6 +25,7 @@ export function SearchField({
   pending = false,
   onClear,
   className,
+  size,
   'aria-label': ariaLabel = 'Search',
   ...props
 }: Readonly<SearchFieldProps>) {
@@ -30,6 +33,7 @@ export function SearchField({
     <Input
       {...props}
       type="search"
+      size={size}
       value={value}
       onChange={(event) => onValueChange(event.target.value)}
       aria-label={ariaLabel}

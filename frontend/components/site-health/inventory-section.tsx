@@ -3,8 +3,10 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
+import { FileText } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Label, textRole } from '@/components/ui/typography';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -55,9 +57,12 @@ export function InventorySection({
   let content: ReactNode;
   if (mode === 'none' || !crawl) {
     content = (
-      <p className={textRole('body', 'py-[var(--empty-state-padding)]')}>
-        Pages appear here as discovery finds them.
-      </p>
+      <EmptyState
+        variant="compact"
+        icon={FileText}
+        heading="Pages appear here as discovery finds them."
+        headingLevel={3}
+      />
     );
   } else if (mode === 'discovering') {
     content = <DiscoveringInventory crawl={crawl} />;
@@ -209,9 +214,12 @@ function ScoredInventoryBody({
     );
   if (rows.length === 0 && rootErrors.length === 0)
     return (
-      <p className={textRole('body', 'py-[var(--empty-state-padding)]')}>
-        {active ? 'Pages appear here as the audit reaches them.' : 'No pages in this view.'}
-      </p>
+      <EmptyState
+        variant="compact"
+        icon={FileText}
+        heading={active ? 'Pages appear here as the audit reaches them.' : 'No pages in this view.'}
+        headingLevel={3}
+      />
     );
   return (
     <div className="grid gap-3">

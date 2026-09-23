@@ -36,6 +36,8 @@ const raisedClasses = 'shadow-raised hover:shadow-raised';
  */
 const inputSizes = {
   md: '',
+  compact:
+    'h-[var(--field-height-lg)] leading-[calc(var(--field-height-lg)_-_2px)] min-[701px]:pointer-fine:h-[var(--control-height-sm)] min-[701px]:pointer-fine:leading-[calc(var(--control-height-sm)_-_2px)]',
   lg: 'h-[var(--field-height-lg)] px-3 leading-[calc(var(--field-height-lg)_-_2px)]',
 } as const;
 
@@ -77,6 +79,8 @@ export function Input({
       className={cn(
         'focus-frame bg-input has-[[aria-invalid=true]]:shadow-smudge-danger flex h-[var(--field-height)] w-full items-center gap-2 rounded-[var(--radius-control)] px-2.5 shadow-smudge transition-[box-shadow] hover:shadow-smudge-hover',
         size === 'lg' && 'h-[var(--field-height-lg)] px-3',
+        size === 'compact' &&
+          'h-[var(--field-height-lg)] min-[701px]:pointer-fine:h-[var(--control-height-sm)]',
         raised && raisedClasses,
         props.disabled && 'cursor-not-allowed opacity-50',
         containerClassName,
@@ -92,7 +96,9 @@ export function Input({
           // Match the frame's control height so selections fill the pill.
           size === 'lg'
             ? 'leading-[calc(var(--field-height-lg)_-_2px)]'
-            : 'leading-[calc(var(--field-height)_-_2px)]',
+            : size === 'compact'
+              ? 'leading-[calc(var(--field-height-lg)_-_2px)] min-[701px]:pointer-fine:leading-[calc(var(--control-height-sm)_-_2px)]'
+              : 'leading-[calc(var(--field-height)_-_2px)]',
           className,
         )}
         {...props}

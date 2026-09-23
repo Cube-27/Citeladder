@@ -50,6 +50,7 @@ export function PageShell({
   controls,
   children,
   className,
+  measure = 'analytical',
 }: Readonly<{
   /** Overrides the route-derived title (rare — prefer `page-titles.ts`). */
   title?: string;
@@ -61,6 +62,8 @@ export function PageShell({
   controls?: ReactNode;
   children?: ReactNode;
   className?: string;
+  /** Content measure; page bands retain the analytical alignment. */
+  measure?: 'analytical' | 'workflow';
 }>) {
   return (
     <>
@@ -71,7 +74,15 @@ export function PageShell({
           {controls}
         </PageBand>
       ) : null}
-      <div className={cn(pageGutterClasses, 'pt-[var(--page-section-gap)]', className)}>
+      <div
+        data-page-measure={measure}
+        className={cn(
+          pageGutterClasses,
+          measure === 'workflow' && 'max-w-[var(--workflow-max-width)]',
+          'pt-[var(--page-section-gap)]',
+          className,
+        )}
+      >
         {children}
       </div>
     </>

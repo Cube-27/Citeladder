@@ -107,7 +107,7 @@ Twelve pixels is reserved for short metadata, provenance, badges, and table head
 
 Data columns and their headers are centre-aligned and tabular; text columns stay left-aligned. The header centres with its values so a column reads as one block — a sort glyph pushed to the padding edge leaves the label sitting off the numbers by its own width. This resolves the table-header precedence question previously recorded as unresolved: the shared `numeric` flag on `TableHead`/`TableCell` owns both alignment and tabular figures, and call sites do not re-declare either.
 
-Content caps at 1392px; sidebar content shares an 18px inset. Compact gutters are 16px; dialogs/drawers use 20px. Internal groups use 16–24px. The source's conflicting major-section spacing is recorded below.
+Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Sidebar content shares an 18px inset. Compact gutters are 16px; dialogs/drawers use 20px. Internal groups use 16–24px.
 
 | Geometry role | Value | Use |
 | --- | --- | --- |
@@ -117,7 +117,7 @@ Content caps at 1392px; sidebar content shares an 18px inset. Compact gutters ar
 | `rounded-xs` | 4px | Chart bars, skeletons, inline code |
 | `rounded-full` | Full | Pills, badges, dots, counts, filter toggles |
 
-Vertical rhythm belongs to the container: `Stack` from `components/ui/layout.tsx` or container `gap`, not child `mt-*`. Its rungs are `section` 32px, `workspace` 16px, `compact` 12px, and `tight` 4px. A 2px optical nudge, sized glyph, or negative-margin overlap remains allowed. See unresolved section-spacing precedence below.
+Vertical rhythm belongs to the container: `Stack` from `components/ui/layout.tsx` or container `gap`, not child `mt-*`. Its rungs are `section` 24px, `workspace` 16px, `compact` 12px, and `tight` 4px. A 2px optical nudge, sized glyph, or negative-margin overlap remains allowed.
 
 Marketing subpages use `--section-y`: 56px base, 80px from 981px, 96px from 1280px. The homepage owns its section rhythm in `landing.css`. Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: 56px bar, centred task measure, 16px mobile gutter, shared control radius, and selection chips 36px desktop/44px touch. The flow shell owns its scrolling main region and action bar.
 
@@ -283,11 +283,3 @@ Before merging a visual change, verify:
 - Affected text, focus, status, loading, error, empty, keyboard, touch, mobile, reduced-motion, and forced-colours states remain usable; zero remains distinct from absence.
 - Factual content, claims, data, product behavior, transactions, and confirmation gates remain unchanged unless explicitly approved.
 - Repository-owned static, test, and appropriate visual commands pass under the existing workflow. External/manual tools are not acceptance gates unless a deterministic repository command owns them. Tests do not become a second visual authority.
-
-## Unresolved source instructions
-
-These are ambiguities in the supplied contract, not verified implementation defects. Preserve current implementation until the relevant choice is explicitly resolved; this consolidation supplies no replacement values or behavior.
-
-| Topic | Instructions retained from the source | Decision still needed |
-| --- | --- | --- |
-| Major-section spacing | `Stack` names `section` as 32px; Data and geometry says major sections separate by 24px. | Which governs major route sections, or how their scopes differ |

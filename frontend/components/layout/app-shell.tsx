@@ -71,7 +71,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <CompactPageTitleContext.Provider value={setCompactTitleOverride}>
       <TooltipProvider>
-        <div className="bg-shell relative flex min-h-dvh">
+        <div data-app-surface className="bg-shell relative flex min-h-dvh">
           <aside className="sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col min-[981px]:flex">
             {/* The project selector is the sidebar's first row, at the same
                   height as the header beside it. The rail reads project →

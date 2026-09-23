@@ -5,6 +5,7 @@ import { SkillPicker } from '@/components/content/skill-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Spinner } from '@/components/ui/spinner';
@@ -65,14 +66,10 @@ export function ContentComposer({
   onGenerate: () => void;
 }>) {
   return (
-    // A deliberate working width, rather than either a narrow column stranded
-    // in a wide canvas or a full-bleed row. The composer's controls are short
-    // and its instruction field is the only wide thing in it, so 840px left a
-    // visibly empty right half on a desktop pane while the fields themselves
-    // stayed cramped.
-    <section data-component-id="content-composer" className="max-w-[1040px] min-w-0">
+    // PageShell owns the working width for every Content region.
+    <section data-component-id="content-composer" className="min-w-0">
       <div className="flex flex-col gap-[var(--workspace-gap)]">
-        <div className="flex min-h-[var(--tab-height)] flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className={textRole('sectionTitle', 'tracking-tight')}>
             What can I help you create?
           </h2>
@@ -87,27 +84,22 @@ export function ContentComposer({
           onTargetUrlChange={onTargetUrlChange}
           onChange={onTargetChange}
         />
-        <label
-          id="content-user-instruction-label"
-          htmlFor="content-user-instruction"
-          className={textRole('label')}
-        >
-          Your instruction
-        </label>
-        <Textarea
-          id="content-user-instruction"
-          ref={instructionRef}
-          value={instruction}
-          onChange={(event) => onInstructionChange(event.target.value)}
-          disabled={generating}
-          maxLength={CONTENT_INSTRUCTION_MAX_LEN}
-          rows={opportunity ? 10 : 4}
-          aria-label="Your instruction"
-          aria-labelledby="content-user-instruction-label"
-          placeholder="Describe the website content you want to create…"
-          raised
-          className="p-4 leading-relaxed"
-        />
+        <Field label="Your instruction">
+          {({ id }) => (
+            <Textarea
+              id={id}
+              ref={instructionRef}
+              value={instruction}
+              onChange={(event) => onInstructionChange(event.target.value)}
+              disabled={generating}
+              maxLength={CONTENT_INSTRUCTION_MAX_LEN}
+              rows={opportunity ? 10 : 4}
+              placeholder="Describe the website content you want to create…"
+              raised
+              className="p-4 leading-relaxed"
+            />
+          )}
+        </Field>
         <SkillPicker
           skills={skills}
           value={skillId}

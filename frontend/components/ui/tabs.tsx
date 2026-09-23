@@ -106,7 +106,7 @@ export function TabsBar<T extends string>({
           onMouseEnter={() => onIntent?.(item.value)}
           onFocus={() => onIntent?.(item.value)}
           className={cn(
-            'focus-ring text-secondary hover:text-foreground data-[state=active]:text-accent-text relative inline-flex h-[var(--tab-height)] items-center px-0 text-sm font-medium whitespace-nowrap transition-colors disabled:opacity-50',
+            'focus-ring text-secondary hover:text-foreground data-[state=active]:text-foreground relative inline-flex h-[var(--tab-height)] items-center px-0 text-sm font-medium whitespace-nowrap transition-colors disabled:opacity-50',
             fill ? 'flex-1 basis-0 justify-center px-3' : 'shrink-0',
           )}
         >

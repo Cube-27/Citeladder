@@ -35,6 +35,7 @@ export function EmptyState({
   footnote,
   className,
   headingLevel = 2,
+  variant = 'page',
 }: Readonly<{
   icon: LucideIcon;
   heading: string;
@@ -46,17 +47,40 @@ export function EmptyState({
   className?: string;
   /** Route boundaries use their one truthful screen heading. */
   headingLevel?: 1 | 2 | 3;
+  /** Compact states belong inside an otherwise useful section. */
+  variant?: 'page' | 'compact';
 }>) {
   const Heading = HEADING_TAG[headingLevel];
   return (
-    <div className={cn('grid gap-3 py-[var(--empty-state-padding)]', className)}>
+    <div
+      data-empty-state={variant}
+      className={cn(
+        'grid',
+        variant === 'compact'
+          ? 'gap-1 py-[var(--compact-gap)]'
+          : 'gap-3 py-[var(--empty-state-padding)]',
+        className,
+      )}
+    >
       <div className="flex items-center gap-2">
         <Icon className="text-subtle size-4 shrink-0" aria-hidden />
-        <Heading className={textRole(headingLevel === 1 ? 'pageTitle' : 'sectionTitle')}>
+        <Heading
+          className={textRole(
+            variant === 'compact'
+              ? 'bodyStrong'
+              : headingLevel === 1
+                ? 'pageTitle'
+                : 'sectionTitle',
+          )}
+        >
           {heading}
         </Heading>
       </div>
-      {description ? <p className="text-secondary max-w-[52ch] text-sm">{description}</p> : null}
+      {description ? (
+        <p className={cn('text-secondary max-w-[52ch] text-sm', variant === 'compact' && 'pl-6')}>
+          {description}
+        </p>
+      ) : null}
       {action ? <div className="flex items-center gap-2">{action}</div> : null}
       {footnote ? <div className="text-muted text-xs">{footnote}</div> : null}
     </div>

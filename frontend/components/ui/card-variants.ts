@@ -24,5 +24,5 @@ export const cardClasses = (tone: CardTone = 'default') =>
   cn(
     cardVariants({}),
     tone === 'danger' && 'border-danger-border',
-    tone === 'recommendation' && 'bg-recommendation border-accent-border',
+    tone === 'recommendation' && 'bg-recommendation',
   );

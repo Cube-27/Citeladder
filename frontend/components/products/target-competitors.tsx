@@ -1,8 +1,10 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Users } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -112,11 +114,13 @@ function CompetitorRows({
   if (query.isPending) return <Skeleton className="h-24 w-full" />;
   if (!rows.length) {
     return (
-      <p className="text-muted py-[var(--card-padding)] text-center text-sm">
-        {running
-          ? 'Looking for competitors…'
-          : 'No candidates yet for this target. Run Find competitors.'}
-      </p>
+      <EmptyState
+        variant="compact"
+        icon={Users}
+        heading={running ? 'Looking for competitors…' : 'No candidates yet for this target'}
+        description={running ? undefined : 'Run Find competitors.'}
+        headingLevel={3}
+      />
     );
   }
   return (

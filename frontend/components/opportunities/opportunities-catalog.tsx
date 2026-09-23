@@ -70,13 +70,13 @@ function FeaturedRecommendation({
   // The backend owns target presentation (target_label) — no client helper.
   const target = detail.target_label;
   return (
-    <Card className="bg-accent-soft">
+    <Card tone="recommendation">
       {/* The panel keeps every part of the recommendation — title, status
           metadata, the recommendation itself, its target, and the action — and
           shortens by tightening the rungs between them rather than by dropping
           any of them. It was four `gap-4` rows tall, which made the pale blue
           rectangle, not the recommendation, the biggest thing on the screen. */}
-      <CardContent className="grid gap-3">
+      <CardContent className="grid gap-3 p-[var(--card-padding)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid min-w-0 gap-1.5">
             <AccentEyebrow>Next best action</AccentEyebrow>
@@ -288,7 +288,7 @@ function FeaturedSection({
   const { detail, isLoading } = featured;
   if (!isLoading && !detail) return null;
   return (
-    <section aria-label="Next best action" aria-busy={isLoading} className="min-h-44">
+    <section aria-label="Next best action" aria-busy={isLoading}>
       {detail ? (
         <FeaturedRecommendation detail={detail} onOpen={() => onOpen(detail.id)} />
       ) : (

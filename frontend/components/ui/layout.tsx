@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
  * once, so the rhythm is a token edit.
  *
  * The three rungs are the section ladder:
- *   `section`   — between top-level sections of a screen (32px)
+ *   `section`   — between top-level sections of a screen (24px)
  *   `workspace` — between peers inside a section (16px)
  *   `compact`   — between elements inside one component (12px)
  *   `tight`     — a label and the value it belongs to (4px)

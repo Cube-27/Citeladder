@@ -25,6 +25,7 @@ import { useCommandCenterActions } from './use-command-center-actions';
 
 const DASHBOARD_METRIC_PLACEHOLDERS = ['metric-a', 'metric-b', 'metric-c'] as const;
 const DASHBOARD_ACTION_PLACEHOLDERS = ['action-a', 'action-b', 'action-c'] as const;
+const overviewInset = 'pt-[var(--content-gutter)]';
 
 export function DashboardScreen({
   onEditProject,
@@ -43,10 +44,10 @@ export function DashboardScreen({
   if (context.isLoading || (context.activeProject && commandCenter.isLoading)) {
     return <DashboardLoading />;
   }
-  if (!context.activeProject) return <PageShell />;
+  if (!context.activeProject) return <PageShell className={overviewInset} />;
   if (commandCenter.isError || !commandCenter.data)
     return (
-      <PageShell>
+      <PageShell className={overviewInset}>
         <LoadError onRetry={commandCenter.refetch} />
       </PageShell>
     );
@@ -65,7 +66,7 @@ function DashboardLoading() {
   return (
     <PageShell
       actions={<Skeleton className="h-8 w-44 rounded-[var(--radius-control)]" />}
-      className="pt-[var(--workspace-gap)]"
+      className={overviewInset}
     >
       <Stack gap="section" aria-busy="true">
         <div className="grid gap-[var(--workspace-gap)]">
@@ -186,7 +187,7 @@ function DashboardData({
   const actions = useCommandCenterActions(data, activeProject);
   return (
     <PageShell
-      className="pt-[var(--workspace-gap)]"
+      className={overviewInset}
       actions={
         <DashboardActions
           data={data}

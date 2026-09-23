@@ -101,7 +101,7 @@ export function VisibilityTrends({
         <Card>
           <CardHeader>
             <CardTitle>Brand and competitors</CardTitle>
-            <p className={textRole('meta', 'text-secondary')}>
+            <p className={textRole('meta')}>
               How often each brand is named, across the same answers. Select a row to plot it on its
               own.
             </p>
@@ -339,7 +339,7 @@ function SeriesKey({ label, swatchClass }: Readonly<{ label: string; swatchClass
   return (
     <li className="flex items-center gap-1.5">
       <span className={`inline-block size-2 rounded-full ${swatchClass}`} aria-hidden />
-      <span className={textRole('meta', 'text-secondary')}>{label}</span>
+      <span className={textRole('meta')}>{label}</span>
     </li>
   );
 }

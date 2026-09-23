@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Filter, Search, Sparkles, Upload } from 'lucide-react';
+import { Check, Filter, Sparkles, Upload } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +11,7 @@ import {
   DropdownSeparator,
   DropdownTrigger,
 } from '@/components/ui/dropdown';
-import { Input } from '@/components/ui/input';
+import { SearchField } from '@/components/ui/search-field';
 import { intentLabels, intentValues } from '@/lib/prompts/forms';
 import type { EnabledFilter, PromptFilters } from '@/lib/prompts/filter';
 import { textRole } from '@/components/ui/typography';
@@ -70,18 +70,13 @@ export function PromptFilterControls({
   return (
     // `contents`: the control band owns the row, its height and its rule.
     <div className="contents">
-      <div className="relative max-w-sm min-w-55 flex-1">
-        <Search
-          className="text-muted pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2"
-          aria-hidden
-        />
-        <Input
-          type="search"
+      <div className="max-w-sm min-w-55 flex-1">
+        <SearchField
+          size="compact"
           value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
+          onValueChange={onSearchChange}
           placeholder="Search prompts"
           aria-label="Search prompts"
-          className="h-[var(--control-height-sm)] pl-8"
         />
       </div>
 
