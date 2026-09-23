@@ -18,6 +18,12 @@ transport without visitor credentials. Production delivery and acceptance remain
 operator gated. The first release retains captured prior VM artifacts for a
 bounded rollback; later frontend releases use accepted Worker versions.
 
+Cloudflare serves matching static assets directly on both hosts. The product
+Worker still handles the root HTML shell and API routes before asset matching;
+its generated `_headers` file preserves static security and cache headers.
+Unmatched app routes reach the Worker for guarded SPA navigation, while unmatched
+marketing routes reach Astro SSR.
+
 ## Routes and shared shell
 
 | Surface | Browser location | Feature owner |
