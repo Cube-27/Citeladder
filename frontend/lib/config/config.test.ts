@@ -123,7 +123,7 @@ describe('operational config', () => {
     expect(getBootstrapReadTimeoutMs()).toBe(4_000);
   });
 
-  it.each(['0', '-1', 'soon', '', 'NaN'])(
+  it.each(['0', '-1', 'soon', '', 'NaN', '8s', '1.5', '1e3'])(
     'ignores the unusable bootstrap override %j and keeps the default',
     (value) => {
       process.env.NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS = value;

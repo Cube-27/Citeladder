@@ -39,8 +39,9 @@ export const DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS = 8_000;
 
 export function getBootstrapReadTimeoutMs(): number {
   const raw = process.env.NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS;
-  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS;
+  if (!raw || !/^[1-9]\d*$/u.test(raw)) return DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS;
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) ? parsed : DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS;
 }
 
 /**

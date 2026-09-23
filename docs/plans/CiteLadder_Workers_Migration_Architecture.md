@@ -372,7 +372,7 @@ GET/HEAD HTML browser navigation         -> SPA entry
 unsupported method                       -> appropriate 404/405, never SPA
 ```
 
-Use supported selective Worker-first routing for reserved paths where necessary. If valid files bypass Worker code, build checks must prevent a public asset from shadowing an API/protocol path. Test both ordinary fetch requests and `Sec-Fetch-Mode: navigate`; do not test only XHR.
+Require Worker-first routing, or an equivalent precedence safeguard, for product `/api/*`, the exact browser-consent path, reserved protocol and discovery paths, and `/health`. This includes every callback path that needs Worker handling. Build checks must also prevent a public asset from shadowing a reserved path. Test both ordinary fetch requests and `Sec-Fetch-Mode: navigate`; do not test only XHR. Apply an equivalent safeguard to marketing routes if the selected asset settings could bypass its Worker.
 
 Serving the SPA entry must not loop back into the same Worker or apply its own fallback recursively. Unknown app document routes may reach the existing React not-found experience; unknown marketing routes and missing assets must still return real HTTP errors.
 
