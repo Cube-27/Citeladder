@@ -87,15 +87,6 @@ PROVIDER_API_ERRORS = (GscApiError, Ga4ApiError, BingApiError)
 
 
 @dataclass(frozen=True)
-class WorkerPage:
-    """A worker-sanitized provider page ready for immutable persistence."""
-
-    payload: dict
-    rows: tuple[dict, ...]
-    raw_row_count: int
-
-
-@dataclass(frozen=True)
 class DatasetResume:
     """A dataset's durable resume position reconstructed from artifacts."""
 

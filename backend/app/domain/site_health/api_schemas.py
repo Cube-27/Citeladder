@@ -719,15 +719,6 @@ class GroupedIssueHistoryPage(_Model):
 # =========================================================================
 # Events + dashboard
 # =========================================================================
-class CrawlEvent(_Model):
-    id: uuid.UUID
-    crawl_id: uuid.UUID
-    event_type: str
-    message: str
-    payload: dict[str, object]
-    created_at: str
-
-
 class DashboardResponse(_Model):
     project_id: uuid.UUID
     crawl: CrawlResponse | None
@@ -744,12 +735,3 @@ class DashboardResponse(_Model):
     # B3: same root-failure projection as the pages response, so the failed
     # crawl's dashboard can render the failure block without a second fetch.
     root_errors: list[RootError] = []
-
-
-class SiteHealthError(_Model):
-    code: str
-    message: str
-    limit: int | None = None
-    currently_used: int | None = None
-    expected_selection_version: int | None = None
-    current_selection_version: int | None = Field(default=None)

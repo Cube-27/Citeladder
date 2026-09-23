@@ -353,7 +353,6 @@ class AuditSettings(BaseSettings):
     audit_timeout_seconds: float = 60.0
     audit_repetitions: int = 3
     # Days of history folded into a trend series by the reporting projection.
-    trend_smoothing_days: int = 7
     # Hard ceiling on a single frozen prompt's length (validated by the planner).
     max_prompt_chars: int = 300
     # Max number of selected active prompts one audit may run on the FUNDED

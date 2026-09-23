@@ -9,10 +9,9 @@ Site Health's config-versioned extractor, analyzer and classifier emit generic c
 CSV imports and explicit edits are append-only observations. Current product rows are read projections whose `field_sources` identify the exact observation and version controlling every field. CSV and edit authority is not silently overwritten by later crawl projection. Imports are content-hash idempotent and expose bounded, row-level outcomes.
 
 Catalog surfaces persisted Site Health crawl and Commerce projection progress,
-category hub/leaf roles and counts, product memberships, explicit product
-correction/reassignment, and category rename/role correction. Category edits
-also create append-only observations and retain field-level authority over later
-projection refreshes. The Commerce rail renders products beneath every category
+category hub/leaf roles and counts, product memberships, and explicit product
+correction/reassignment. Category rename and role correction are not exposed yet;
+the reserved category observation table has no writer. The Commerce rail renders products beneath every category
 they belong to, keeps products without a projected category under
 `Uncategorized`, and keeps catalog search pinned as an opaque first row while
 the list scrolls. Categories are ordered by descending persisted product count,

@@ -47,11 +47,6 @@ class Settings(BaseSettings):
         default="development",
         validation_alias=AliasChoices("APP_ENV", "app_env"),
     )
-    backend_host: str = "127.0.0.1"
-    backend_port: int = Field(
-        default=8000,
-        validation_alias=AliasChoices("BACKEND_PORT", "backend_port"),
-    )
     frontend_url: str = Field(
         default="http://127.0.0.1:3000",
         validation_alias=AliasChoices("FRONTEND_URL", "frontend_url"),
