@@ -385,8 +385,12 @@ jobs:
             exit 1
           fi
           for response in authorized anonymous exact; do
-            if ! grep -qi '^cache-control:.*no-store' "$headers/$response" \
-              || grep -Eqi '^cf-cache-status: *(HIT|STALE|UPDATING|REVALIDATED)' "$headers/$response"; then
+            # curl appends a header block for each retry. Inspect only the
+            # final transfer, which produced the status checked above.
+            awk '/^HTTP\// { block = "" } { block = block $0 ORS } END { printf "%s", block }' \
+              "$headers/$response" > "$headers/$response.final"
+            if ! grep -Eqi '^cache-control: *private, *no-store[[:space:]]*$' "$headers/$response.final" \
+              || ! grep -Eqi '^cf-cache-status: *(BYPASS|DYNAMIC)[[:space:]]*$' "$headers/$response.final"; then
               echo "::error::Protected origin $response response is cacheable or came from cache"
               exit 1
             fi

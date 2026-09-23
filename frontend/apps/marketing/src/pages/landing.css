@@ -403,8 +403,8 @@
   height: 34px;
   padding: 9px;
   border-radius: var(--radius-full);
-  background: var(--cl-hue-well);
-  color: var(--cl-hue-ink);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
 }
 .cl-workflow {
   background: var(--cl-paper-alt);
