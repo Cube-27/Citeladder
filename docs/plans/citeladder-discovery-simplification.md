@@ -1,8 +1,7 @@
 # Simplify onboarding competitor and prompt discovery
 
-**Status: active, selected by the owner on 19 September 2026.** Saving and
-activation authorize planning only, not implementation or provider execution.
-Scope execution explicitly before starting an implementation slice.
+**Status: completed per owner confirmation on 23 September 2026.** The
+implementation scope and historical plan remain below.
 
 [Onboarding](../onboarding.md), [Prompts and Visibility](../visibility-prompt.md),
 [Content](../content-generation.md), and [AGENTS.md](../../AGENTS.md) remain the
@@ -10,10 +9,8 @@ owners of shipped contracts and engineering constraints.
 
 ## Summary and plan registration
 
-This is the sole active plan in [ACTIVE.md](ACTIVE.md). Google AI Overview and
-Earned-source intelligence are completed per owner confirmation; retain their
-documents and recorded limitations. Search Intelligence is next queued, with
-the other queued work preserved.
+This plan is retained as implementation history. Current work is indexed in
+[ACTIVE.md](ACTIVE.md).
 
 **Priority:** improve initial buyer-demand topics and prompts, preserve useful
 business context, then simplify competitor suggestions. Success means fewer

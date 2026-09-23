@@ -1,13 +1,8 @@
-import { getSiteUrl } from '@/lib/config/env';
+import { publicOrigins } from '@/lib/config/public-origins';
 
 /**
- * Canonical public origin. `NEXT_PUBLIC_SITE_URL` wins wherever it is set; a
- * production build without it falls back to the approved apex so canonicals,
- * `metadataBase`, the `sitemap:` directive and the JSON-LD blocks are always
- * emitted on the live site. Dev and test still resolve to null, so every
- * consumer keeps degrading instead of guessing a localhost origin.
- * Validation mirrors the demo page's `safeBookingUrl`: `new URL()` in a try,
- * https-only, no credentials.
+ * Canonical website origin for metadata, sitemap and JSON-LD. Production
+ * requires an explicit configured origin; development may omit it.
  */
 
 export const SITE_NAME = 'CiteLadder';
@@ -16,18 +11,9 @@ export const SITE_TAGLINE = 'AI visibility with evidence you can open';
 export const SITE_DESCRIPTION =
   'Connect site and demand evidence, act on grounded opportunities, and track observed answer-engine citation share.';
 
-const CANONICAL_SITE_URL = 'https://citeladder.com';
-
-/** Parses NEXT_PUBLIC_SITE_URL, falling back to the canonical apex in production. */
+/** Canonical website origin supplied by the public-origin config owner. */
 export function siteOrigin(): URL | null {
-  const value = getSiteUrl() || (process.env.NODE_ENV === 'production' ? CANONICAL_SITE_URL : null);
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && !url.username && !url.password ? url : null;
-  } catch {
-    return null;
-  }
+  return publicOrigins().website;
 }
 
 /** Absolute URL for a site path, or null while no canonical origin is configured. */

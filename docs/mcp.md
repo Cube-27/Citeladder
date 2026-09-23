@@ -18,6 +18,11 @@ route. Browser login establishes identity; /mcp/oauth/consent requires explicit
 approval or denial of the one-time transaction and protects both decisions
 against CSRF. A denial consumes only that validated transaction and returns the
 standard OAuth `access_denied` result to its previously validated redirect.
+The MCP issuer, resource, discovery and token endpoints remain on the configured
+protocol origin. Browser consent and login use `FRONTEND_URL`, including when
+the browser moves to the app hostname. A stale consent submission on the old
+host receives an explicit restart response; no cross-host POST redirect is
+permitted.
 
 [Configuration](../backend/app/core/config/mcp.py) owns enablement and bounds.
 An enabled server requires a safe public origin; disabled MCP must not break

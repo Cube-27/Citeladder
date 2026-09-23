@@ -23,3 +23,49 @@ https://__DOMAIN_NAME__ {
 
   import /etc/caddy/frontend-routes.caddy
 }
+
+# Worker subrequests only. The secret is a dedicated GCP/Worker credential;
+# the public host is independently allowlisted before being used upstream.
+https://__ORIGIN_DOMAIN_NAME__ {
+  tls /etc/caddy/tls/origin.crt /etc/caddy/tls/origin.key
+  @authorized {
+    header X-CiteLadder-Origin-Token {$CITELADDER_ORIGIN_TOKEN}
+    header X-CiteLadder-Origin-Token {$CITELADDER_ORIGIN_TOKEN_PREVIOUS}
+  }
+  @apex header X-CiteLadder-Public-Host __DOMAIN_NAME__
+  @app header X-CiteLadder-Public-Host __APP_DOMAIN_NAME__
+  route {
+    handle @authorized {
+      handle @apex {
+        reverse_proxy 127.0.0.1:8000 {
+          header_up Host __DOMAIN_NAME__
+          header_up X-Forwarded-Host __DOMAIN_NAME__
+          header_up X-Forwarded-Proto https
+          header_up X-Forwarded-For {client_ip}
+          header_up -Forwarded
+          header_up -X-Forwarded-Port
+          header_up -X-Real-IP
+          header_up -CF-Connecting-IP
+          header_up -X-CiteLadder-Origin-Token
+          header_up -X-CiteLadder-Public-Host
+        }
+      }
+      handle @app {
+        reverse_proxy 127.0.0.1:8000 {
+          header_up Host __APP_DOMAIN_NAME__
+          header_up X-Forwarded-Host __APP_DOMAIN_NAME__
+          header_up X-Forwarded-Proto https
+          header_up X-Forwarded-For {client_ip}
+          header_up -Forwarded
+          header_up -X-Forwarded-Port
+          header_up -X-Real-IP
+          header_up -CF-Connecting-IP
+          header_up -X-CiteLadder-Origin-Token
+          header_up -X-CiteLadder-Public-Host
+        }
+      }
+      respond 403
+    }
+    respond 403
+  }
+}

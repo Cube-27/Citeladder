@@ -16,7 +16,7 @@ x-backend: &backend
     DEMO_MONITORED_URL_LIMIT: "50000"
     DEV_LOGIN_EMAIL: ${DEV_LOGIN_EMAIL:?DEV_LOGIN_EMAIL is required}
     MCP_ENABLED: "true"
-    MCP_PUBLIC_BASE_URL: https://${DOMAIN_NAME:?DOMAIN_NAME is required}
+    MCP_PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:?MCP_PUBLIC_BASE_URL is required}
     # Pinned to the provisioned account in demo mode, empty (every account) in
     # a public one. deploy-vm.sh derives it from DEMO_MODE.
     MCP_ALLOWED_ACCOUNT_EMAIL: ${MCP_ALLOWED_ACCOUNT_EMAIL-}
@@ -28,8 +28,8 @@ x-backend: &backend
     SITE_HEALTH_GLOBAL_CONCURRENCY: "8"
     SITE_HEALTH_PER_HOST_CONCURRENCY: "6"
     SITE_HEALTH_AUTOMATIC_PAGE_LIMIT: "200"
-    FRONTEND_URL: https://${DOMAIN_NAME:?DOMAIN_NAME is required}
-    FRONTEND_ORIGINS: https://${DOMAIN_NAME}
+    FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
+    FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:?FRONTEND_ORIGINS is required}
     # Google sign-in, ON here unless the host explicitly overrides it.
     # The application default is OFF (OAuthSettings.google_enabled = False),
     # which is why the deployed app served a catalog without Google before
@@ -131,7 +131,8 @@ services:
       BACKEND_ORIGIN: http://127.0.0.1:8000
       CITELADDER_TASK_LOCAL_BACKEND: "true"
       # Astro renders canonical metadata, sitemap, and robots at request time.
-      NEXT_PUBLIC_SITE_URL: https://${DOMAIN_NAME}
+      PUBLIC_WEBSITE_ORIGIN: ${PUBLIC_WEBSITE_ORIGIN:?PUBLIC_WEBSITE_ORIGIN is required}
+      PUBLIC_APP_ORIGIN: ${PUBLIC_APP_ORIGIN:?PUBLIC_APP_ORIGIN is required}
     depends_on:
       web:
         condition: service_healthy
@@ -194,6 +195,9 @@ services:
     image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     network_mode: host
     restart: unless-stopped
+    env_file:
+      - path: ingress.env
+        required: ${RUNTIME_ENV_REQUIRED:-true}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./frontend-routes.caddy:/etc/caddy/frontend-routes.caddy:ro

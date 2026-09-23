@@ -7,7 +7,3 @@
 export function getLogoDevPublishable(): string | undefined {
   return process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE || undefined;
 }
-
-export function getSiteUrl(): string | undefined {
-  return process.env.NEXT_PUBLIC_SITE_URL || undefined;
-}

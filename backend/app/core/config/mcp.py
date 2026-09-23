@@ -43,9 +43,16 @@ mcp_settings = McpSettings()
 
 def mcp_public_origin() -> str:
     """Return the canonical public origin or fail closed on an unsafe shape."""
-    candidate = (mcp_settings.public_base_url.strip() or settings.frontend_url).rstrip(
-        "/"
-    )
+    configured = mcp_settings.public_base_url.strip()
+    if (
+        mcp_settings.enabled
+        and settings.app_env.casefold() == "production"
+        and not configured
+    ):
+        raise RuntimeError(
+            "MCP_PUBLIC_BASE_URL is required when MCP is enabled in production"
+        )
+    candidate = (configured or settings.frontend_url).rstrip("/")
     parsed = urlsplit(candidate)
     if _invalid_origin(parsed):
         raise RuntimeError("MCP_PUBLIC_BASE_URL must be an HTTP(S) origin")

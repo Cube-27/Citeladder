@@ -489,6 +489,15 @@ def _frontend_url_problems(candidate: Settings) -> list[str]:
         return ["frontend_url must be an absolute http(s) URL"]
     if _is_loopback_host(parts.hostname):
         return ["frontend_url must not be a loopback address outside development"]
+    if (
+        parts.scheme != "https"
+        or parts.username is not None
+        or parts.password is not None
+        or parts.path not in {"", "/"}
+        or parts.query
+        or parts.fragment
+    ):
+        return ["frontend_url must be a credential-free HTTPS origin in production"]
     return []
 
 

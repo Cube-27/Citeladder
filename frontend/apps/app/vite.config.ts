@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, type ViteUserConfig, loadEnv } from 'vite-plus';
 
 import { createServerProxy } from './server-proxy.ts';
+import { publicOrigins } from '../../lib/config/public-origins.ts';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -12,6 +13,13 @@ const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 // every defineConfig overload and dies with TS2321 "Excessive stack depth".
 export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
   const environment = loadEnv(mode, frontendRoot, '');
+  if (command === 'build') {
+    publicOrigins(
+      process.env.PUBLIC_WEBSITE_ORIGIN ?? environment.PUBLIC_WEBSITE_ORIGIN,
+      process.env.PUBLIC_APP_ORIGIN ?? environment.PUBLIC_APP_ORIGIN,
+      true,
+    );
+  }
   // Every public value is BAKED into the bundle here, so an empty one is a
   // permanent property of the image -- and it fails silently. A missing
   // Logo.dev token simply made `logoDevUrl` answer null, and every brand mark
@@ -56,7 +64,8 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
         'NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE',
       ),
       'process.env.NEXT_PUBLIC_DEMO_MODE': publicValue('NEXT_PUBLIC_DEMO_MODE'),
-      'process.env.NEXT_PUBLIC_SITE_URL': publicValue('NEXT_PUBLIC_SITE_URL'),
+      'process.env.PUBLIC_WEBSITE_ORIGIN': publicValue('PUBLIC_WEBSITE_ORIGIN'),
+      'process.env.PUBLIC_APP_ORIGIN': publicValue('PUBLIC_APP_ORIGIN'),
     },
     resolve: {
       alias: {

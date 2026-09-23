@@ -324,6 +324,7 @@ async def test_mcp_discovery_registration_and_bearer_challenge(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(mcp_settings, "enabled", True)
+    client.headers["Host"] = "127.0.0.1:3000"
     monkeypatch.setattr(mcp_oauth_provider, "_session_factory", session_factory)
     authorization = await client.get("/.well-known/oauth-authorization-server")
     assert authorization.status_code == 200
@@ -397,6 +398,7 @@ async def test_browser_consent_requires_an_explicit_approval(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(mcp_settings, "enabled", True)
+    client.headers["Host"] = "127.0.0.1:3000"
     monkeypatch.setattr(mcp_settings, "allowed_account_email", "consent@example.test")
     monkeypatch.setattr(mcp_oauth_provider, "_session_factory", session_factory)
     monkeypatch.setattr(mcp_server_module, "SessionLocal", session_factory)
@@ -423,6 +425,7 @@ async def test_browser_consent_requires_an_explicit_approval(
         str(user.id), token_version=user.session_version
     )
     client.cookies.set(settings.session_cookie_name, session_token)
+    client.headers["Cookie"] = f"{settings.session_cookie_name}={session_token}"
 
     # A GET only describes the grant; it must not mint a code.
     page = await client.get(
@@ -490,6 +493,7 @@ async def test_browser_consent_without_a_session_bounces_through_login(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(mcp_settings, "enabled", True)
+    client.headers["Host"] = "127.0.0.1:3000"
     response = await client.get(
         "/mcp/oauth/consent",
         params={"transaction": "anonymous-transaction"},

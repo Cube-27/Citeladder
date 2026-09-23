@@ -10,7 +10,8 @@ import {
   USAGE_METER_CRITICAL_RATIO,
   USAGE_METER_WARNING_RATIO,
 } from './billing';
-import { getLogoDevPublishable, getSiteUrl } from './env';
+import { getLogoDevPublishable } from './env';
+import { publicOrigins } from './public-origins';
 import {
   API_BASE_URL,
   DEFAULT_API_REQUEST_TIMEOUT_MS,
@@ -60,23 +61,28 @@ describe('billing config', () => {
 });
 
 describe('env config', () => {
-  it('reads public variables lazily so a test can change them', () => {
-    process.env.NEXT_PUBLIC_SITE_URL = 'https://example.test';
-    expect(getSiteUrl()).toBe('https://example.test');
-  });
-
-  it('treats an empty variable as absent rather than an empty string', () => {
-    // An empty string is falsy but would still be *set*; returning it would
-    // produce URLs like `/pricing` prefixed with nothing.
-    process.env.NEXT_PUBLIC_SITE_URL = '';
+  it('treats an empty publishable token as absent', () => {
     process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE = '';
-    expect(getSiteUrl()).toBeUndefined();
     expect(getLogoDevPublishable()).toBeUndefined();
   });
+});
 
-  it('is undefined when the variable is not set at all', () => {
-    delete process.env.NEXT_PUBLIC_SITE_URL;
-    expect(getSiteUrl()).toBeUndefined();
+describe('public origins', () => {
+  it('requires explicit HTTPS origins in production', () => {
+    expect(() => publicOrigins('', 'https://app.example.test', true)).toThrow();
+    expect(() => publicOrigins('http://example.test', 'https://app.example.test', true)).toThrow();
+    expect(() =>
+      publicOrigins('https://example.test/path', 'https://app.example.test', true),
+    ).toThrow();
+    expect(() =>
+      publicOrigins('https://example.test', 'https://app.example.test', true),
+    ).not.toThrow();
+  });
+
+  it('permits explicit local HTTP origins during development', () => {
+    expect(publicOrigins('http://localhost:3000', 'http://localhost:3001', false).app?.origin).toBe(
+      'http://localhost:3001',
+    );
   });
 });
 
