@@ -109,7 +109,7 @@ export function ContentScreen({
 
 function NoProjectState() {
   return (
-    <PageShell>
+    <PageShell measure="workflow">
       <Card>
         <CardContent className="flex flex-col items-start gap-3 py-[var(--empty-state-padding)]">
           <p className={textRole('body')}>
@@ -319,6 +319,7 @@ function ContentWorkspace({
   }
   return (
     <PageShell
+      measure="workflow"
       actions={
         <Button variant="secondary" size="sm" onClick={() => setHistoryOpen(true)}>
           <History className="size-4" aria-hidden />

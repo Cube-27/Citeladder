@@ -98,7 +98,10 @@ export function UserMenuTrigger({
       <Dropdown open={open} onOpenChange={(next) => setOpen(presenter, next)}>
         <DropdownTrigger
           aria-label={compact ? `Account menu for ${email}` : undefined}
-          className="focus-ring hover:bg-accent-soft hover:text-accent-text flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1 text-left transition-colors"
+          className={cn(
+            'focus-ring hover:bg-active hover:text-foreground flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 text-left transition-colors',
+            compact ? 'min-h-11' : 'py-1',
+          )}
         >
           {/* A solid filled accent disc, not a tinted box. At 24px with two
               letters in it the glyphs reached the edges and the shape read as

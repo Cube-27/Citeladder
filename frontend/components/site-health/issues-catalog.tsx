@@ -224,6 +224,7 @@ function IssueSearch({
       }}
     >
       <SearchField
+        size="compact"
         value={draft}
         onValueChange={setDraft}
         placeholder="Search issues…"
@@ -277,7 +278,7 @@ function IssueSummary({
   const typeCount =
     findingView === 'defect' ? summary.defect_issue_type_count : summary.advisory_issue_type_count;
   return (
-    <div className="border-border-subtle flex flex-wrap gap-x-8 gap-y-3 border-b pb-3">
+    <div className="flex flex-wrap gap-x-8 gap-y-3">
       <SummaryMeasure value={typeCount} label={`${findingView} issue types`} />
       <SummaryMeasure value={summary.occurrence_count} label={`${findingView} occurrences`} />
       <SummaryMeasure value={summary.affected_url_count} label="affected URLs" />

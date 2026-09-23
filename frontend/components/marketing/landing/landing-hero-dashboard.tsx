@@ -1,4 +1,5 @@
-import { HERO_COMPETITORS, HERO_SOURCE_MIX, SOURCE_ROWS } from './landing-data';
+import { HERO_COMPETITORS, SOURCE_ROWS } from './landing-data';
+import { SourceMixPie } from './source-mix-pie';
 
 const chartY = (value: number) => 5 + (75 - value) * 3;
 const chartPoints = (history: readonly number[]) =>
@@ -108,7 +109,7 @@ export function HeroDashboardPreview() {
             </tr>
           </thead>
           <tbody>
-            {SOURCE_ROWS.map((row) => (
+            {SOURCE_ROWS.slice(0, 3).map((row) => (
               <tr key={row.domain}>
                 <td>{row.domain}</td>
                 <td>{row.type}</td>
@@ -126,18 +127,7 @@ export function HeroDashboardPreview() {
           <h3>Source mix</h3>
           <span>130 citations</span>
         </div>
-        <div className="cl-source-track" aria-hidden="true">
-          {HERO_SOURCE_MIX.map((source) => (
-            <i key={source.name} style={{ width: `${source.percent}%` }} />
-          ))}
-        </div>
-        <div className="cl-source-legend">
-          {HERO_SOURCE_MIX.map((source) => (
-            <span key={source.name}>
-              {source.name} <span className="sr-only">{source.percent}% of citations</span>
-            </span>
-          ))}
-        </div>
+        <SourceMixPie />
       </section>
     </div>
   );

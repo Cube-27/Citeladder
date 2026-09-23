@@ -81,7 +81,9 @@ function ResultBody({ detail }: Readonly<{ detail: ContentGenerationDetail }>) {
         data-component-id="content-result-body"
         className="max-h-[60vh] max-w-full min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain py-2 pe-2"
       >
-        <ContentMarkdown markdown={detail.output_text ?? ''} />
+        <div className="max-w-[72ch]">
+          <ContentMarkdown markdown={detail.output_text ?? ''} />
+        </div>
       </div>
       <p data-component-id="content-ai-disclaimer" className="text-muted text-sm leading-relaxed">
         AI-generated {detail.skill_id} — review and revise before publishing. Generated prose never

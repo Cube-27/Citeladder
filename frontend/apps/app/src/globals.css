@@ -133,7 +133,7 @@
   --color-accent-subtle: #dcfce7;
   --color-accent-soft: #f0fdf4;
   --color-accent-border: #86efac;
-  --color-recommendation: var(--color-accent-soft);
+  --color-recommendation: var(--color-surface);
   --color-accent-text: #14532d;
   --color-focus: var(--color-brand-forest);
   --color-focus-ring: rgb(22 163 74 / 20%);
@@ -391,6 +391,7 @@
   --sidebar-item-gap: 2px;
   --content-gutter: 28px;
   --content-max-width: 1392px;
+  --workflow-max-width: 1040px;
   /* The two sanctioned two-column splits. A screen picks a role, never a ratio. */
   --pane-main-rail: minmax(0, 2fr) minmax(0, 1fr);
   --pane-list-detail: minmax(18rem, 0.9fr) minmax(0, 2fr);
@@ -978,7 +979,7 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-action-hover: var(--color-accent-hover);
   --color-action-active: var(--color-accent-active);
   --color-action-fg: var(--color-accent-fg);
-  --color-recommendation: var(--color-accent-soft);
+  --color-recommendation: var(--color-surface);
   --color-surface-inverse: #76df9c;
   --color-success: #80dfa2;
   --color-success-bg: rgb(128 223 162 / 13%);
@@ -1110,8 +1111,8 @@ input.focus-input:-webkit-autofill:focus-visible {
 /* The marketing pages are static, so their HTML is written before anyone knows
    who is asking. While `me` is unanswered the nav emits BOTH answers and this
    picks one before paint: `ReturningVisitorHint` marks the document when the
-   browser holds a stored project, so someone coming back sees Dashboard in the
-   first paint and everyone else sees "Log in" in theirs. `display` rather than
+   browser holds a session hint, so someone coming back sees the reserved account
+   glyph in the first paint and everyone else sees "Log in" in theirs. `display` rather than
    `visibility`, so the row is never sized by the branch it is not showing.
    React takes over once `me` answers and the hook drops the mark, which is
    what lets a trace that has outlived its session fall back to "Log in". */
@@ -1238,6 +1239,20 @@ html[data-returning-visitor] [data-session-returning] {
   .app-pane-workspace {
     border-radius: 0;
     box-shadow: none;
+  }
+}
+
+:root:not([data-theme='dark']) [data-app-surface] {
+  --color-info: #24476b;
+  --color-info-bg: #eef5fa;
+  --color-info-border: #c8d9e8;
+  --color-info-text: #24476b;
+}
+
+@media (min-width: 701px) and (pointer: fine) {
+  [data-page-band='control'] {
+    --control-height: var(--control-height-sm);
+    --field-height: var(--control-height-sm);
   }
 }
 

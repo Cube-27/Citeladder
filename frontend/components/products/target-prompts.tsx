@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { MessageSquare } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -143,9 +145,13 @@ function PromptRows({
     // Centring one sentence inside full card padding made an absent list look
     // like a large deliberate panel.
     return (
-      <p className="text-muted py-3 text-sm">
-        No prompts yet for this target. Generate a set, or add one manually.
-      </p>
+      <EmptyState
+        variant="compact"
+        icon={MessageSquare}
+        heading="No prompts yet for this target"
+        description="Generate a set, or add one manually."
+        headingLevel={3}
+      />
     );
   }
   return (

@@ -14,6 +14,7 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
 import { MarketingNav } from './nav';
+import { MarketingAccountMenu } from './marketing-account-menu';
 import {
   RETURNING_VISITOR_ATTRIBUTE,
   SESSION_HINT_COOKIE,
@@ -464,9 +465,7 @@ describe('MarketingNav', () => {
     try {
       renderWithProviders(<MarketingNav />);
 
-      await waitFor(() =>
-        expect(screen.getAllByRole('link', { name: /dashboard/i })).not.toHaveLength(0),
-      );
+      expect(await screen.findByRole('button', { name: /account menu/i })).toBeVisible();
       expect(hasSessionHintCookie()).toBe(true);
     } finally {
       clearSessionHintCookie();
@@ -504,11 +503,11 @@ describe('MarketingNav', () => {
     expect(container.querySelector('[data-session-returning]')).not.toBeNull();
 
     releaseMe();
-    await waitFor(() =>
-      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
-        'href',
-        '/onboarding',
-      ),
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /account menu/i }));
+    expect(await screen.findByRole('menuitem', { name: 'Dashboard' })).toHaveAttribute(
+      'href',
+      '/onboarding',
     );
     expect(document.documentElement).not.toHaveAttribute(RETURNING_VISITOR_ATTRIBUTE);
   });
@@ -553,25 +552,34 @@ describe('MarketingNav', () => {
 
     const returning = container.querySelector('[data-session-returning]');
     expect(container.querySelector('[data-session-anon]')).not.toBeNull();
-    expect(returning?.querySelector('a')).toHaveAttribute('href', '/projects');
+    expect(returning?.querySelector('a')).toBeNull();
 
     releaseMe();
     await waitFor(() => expect(container.querySelector('[data-session-returning]')).toBeNull());
     expect(screen.getByRole('link', { name: /log in/i })).toBeInTheDocument();
   });
 
-  it('swaps the CTA for a dashboard link once the session resolves', async () => {
+  it('offers Dashboard in the account menu without a duplicate header button', async () => {
     stubSignedIn();
     document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
     renderWithProviders(<MarketingNav />);
 
+    const user = userEvent.setup();
+    const trigger = await screen.findByRole('button', { name: /account menu/i });
+    expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull();
+    await user.click(trigger);
     // No projects yet, so the dashboard link routes into first-run onboarding.
-    await waitFor(() =>
-      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
-        'href',
-        '/onboarding',
-      ),
+    expect(await screen.findByRole('menuitem', { name: 'Dashboard' })).toHaveAttribute(
+      'href',
+      '/onboarding',
     );
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    expect(
+      within(document.querySelector('#mobile-menu') as HTMLElement).getByRole('link', {
+        name: 'Dashboard',
+      }),
+    ).toHaveAttribute('href', '/onboarding');
     expect(screen.queryByRole('link', { name: /book a demo/i })).toBeNull();
   });
 
@@ -601,8 +609,30 @@ describe('MarketingNav', () => {
     document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
     renderWithProviders(<MarketingNav />);
 
-    await waitFor(() =>
-      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/projects'),
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /account menu/i }));
+    expect(await screen.findByRole('menuitem', { name: 'Dashboard' })).toHaveAttribute(
+      'href',
+      '/projects',
     );
+  });
+
+  it('keeps outside pointer focus outside the account menu and restores it on Escape', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <MarketingAccountMenu email="evaluator@example.com" dashboardHref="/projects" />,
+    );
+    const trigger = screen.getByRole('button', { name: /account menu/i });
+
+    await user.click(trigger);
+    expect(await screen.findByRole('menu')).toBeVisible();
+    await user.click(document.documentElement);
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    expect(trigger).not.toHaveFocus();
+
+    await user.click(trigger);
+    expect(await screen.findByRole('menu')).toBeVisible();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 });

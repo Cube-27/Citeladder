@@ -57,14 +57,14 @@ function NavLink({
             )
           : textRole(
               'label',
-              'border-transparent text-secondary hover:bg-accent-soft hover:text-accent-text',
+              'border-transparent text-secondary hover:bg-active hover:text-foreground',
             ),
       )}
     >
       <Icon
         className={cn(
           'size-4 shrink-0 transition-colors duration-150',
-          active ? 'text-brand-forest' : 'text-subtle group-hover:text-accent-text',
+          active ? 'text-foreground' : 'text-subtle group-hover:text-foreground',
         )}
         aria-hidden
       />

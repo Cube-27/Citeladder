@@ -1,6 +1,6 @@
 'use client';
 
-import type { InputHTMLAttributes } from 'react';
+import type { ComponentProps, InputHTMLAttributes } from 'react';
 import { Search, X } from 'lucide-react';
 
 import { Input } from './input';
@@ -15,6 +15,7 @@ export type SearchFieldProps = Omit<
   onValueChange: (value: string) => void;
   pending?: boolean;
   onClear?: () => void;
+  size?: ComponentProps<typeof Input>['size'];
 };
 
 export function SearchField({
@@ -23,6 +24,7 @@ export function SearchField({
   pending = false,
   onClear,
   className,
+  size,
   'aria-label': ariaLabel = 'Search',
   ...props
 }: Readonly<SearchFieldProps>) {
@@ -30,6 +32,7 @@ export function SearchField({
     <Input
       {...props}
       type="search"
+      size={size}
       value={value}
       onChange={(event) => onValueChange(event.target.value)}
       aria-label={ariaLabel}
@@ -46,7 +49,7 @@ export function SearchField({
       endContent={
         value ? (
           <Pressable
-            className="text-muted hover:bg-well hover:text-foreground -mr-1 grid size-6 w-6 place-items-center rounded-[var(--radius-control)]"
+            className="text-muted hover:bg-well hover:text-foreground -mr-1 grid size-11 place-items-center rounded-[var(--radius-control)] min-[701px]:pointer-fine:size-6"
             disabled={props.disabled}
             onClick={() => (onClear ? onClear() : onValueChange(''))}
             aria-label="Clear search"

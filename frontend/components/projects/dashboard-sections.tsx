@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { SectionTitle, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { AccentEyebrow, eyebrowClasses } from '@/components/ui/eyebrow';
@@ -71,7 +72,7 @@ export function DashboardHeader({
               ) : null}
             </div>
             {data.measurement ? (
-              <p className="text-muted text-xs">
+              <p className={textRole('meta')}>
                 Tracked {formatUtcTimestamp(data.measurement.completed_at)} ·{' '}
                 {data.measurement.logical_engines.join(', ')}
               </p>
@@ -342,10 +343,12 @@ export function ActionsAndProof({
             ))}
           </ol>
         ) : (
-          <div className="grid gap-1 py-[var(--empty-state-padding)]">
-            <p className={textRole('bodyStrong')}>No open actions</p>
-            <p className="text-muted text-xs">Run another audit to look for new opportunities.</p>
-          </div>
+          <EmptyState
+            variant="compact"
+            icon={ArrowRight}
+            heading="No open actions"
+            description="Run another audit to look for new opportunities."
+          />
         )}
       </section>
       <section

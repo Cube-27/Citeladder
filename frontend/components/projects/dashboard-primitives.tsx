@@ -46,7 +46,7 @@ export function StateMetric({
 }>) {
   const positive = delta !== null && (inverse ? delta < 0 : delta > 0);
   return (
-    <div className={cn(hairlineBandItemClasses, 'flex min-h-[104px] flex-col justify-between')}>
+    <div className={cn(hairlineBandItemClasses, 'grid content-start gap-1')}>
       <p className={eyebrowClasses}>{label}</p>
       <div>
         {value === null ? (
@@ -66,6 +66,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
   if (movements.length === 0)
     return (
       <EmptyState
+        variant="compact"
         icon={TrendingUp}
         heading="No comparable measurement yet"
         description="Needs a second run with the same prompts and engines."

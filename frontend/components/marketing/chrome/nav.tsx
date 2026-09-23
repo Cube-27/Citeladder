@@ -259,7 +259,7 @@ export function MarketingNav() {
         // As a flex row they were centred in whatever space the actions left
         // over, and the actions change width twice on a returning visitor's
         // refresh (the anonymous pair, then the pending placeholder, then
-        // Dashboard) — which slid the whole navigation sideways each time. The
+        // the account menu) — which slid the whole navigation sideways each time. The
         // side tracks are `minmax(0,1fr)` so they stay exactly equal regardless
         // of what either one holds.
         //
@@ -385,8 +385,8 @@ function AnonymousActions() {
  * choose without guessing. It emits BOTH answers and lets CSS pick before
  * paint: `ReturningVisitorHint` marks the document when this browser holds a
  * live session hint and `globals.css` shows the matching branch. The anonymous
- * majority get "Log in" in the first paint; someone returning gets Dashboard
- * in the first paint, instead of an empty row that fills in a moment later.
+ * majority get "Log in" in the first paint; someone returning gets a reserved
+ * account glyph until the session resolves.
  */
 function DesktopSessionActions({
   sessionPending,
@@ -406,32 +406,15 @@ function DesktopSessionActions({
           <AnonymousActions />
         </span>
         <span data-session-returning>
-          <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
-            Dashboard
-          </ButtonLink>
-          {/* The account circle is reserved here, not deferred until `me`
-              answers. Its initials need the round trip, but its BOX does not —
-              and rendering only "Dashboard" first meant the circle appeared a
-              beat later and pushed the button sideways on every refresh and
-              every page change. Holding the space makes the arrival a fade of
-              two letters into a circle that was already there. */}
+          {/* The account circle is reserved here while `me` is in flight so
+              its initials arrive without shifting the header. */}
           <MarketingAccountGlyphPlaceholder />
         </span>
       </>
     );
   }
   if (!isAuthenticated) return <AnonymousActions />;
-  // The topbar CTA runs one step smaller than the page CTAs — chrome, not a
-  // section action. The account sits beside it rather than replacing it:
-  // leaving is a menu item, arriving is the button.
-  return (
-    <>
-      <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
-        Dashboard
-      </ButtonLink>
-      <MarketingAccountMenu email={email} dashboardHref={dashboardHref} />
-    </>
-  );
+  return <MarketingAccountMenu email={email} dashboardHref={dashboardHref} />;
 }
 
 function NavActions({
@@ -452,9 +435,8 @@ function NavActions({
   return (
     <div className="flex shrink-0 items-center gap-3 justify-self-end">
       {/* While the sheet is open it owns the account actions — it carries its
-          own "Log in" / "Dashboard" row at the bottom. Leaving these in the bar
-          too put the same call to action on screen twice, a few hundred pixels
-          apart, with the close button wedged beside the duplicate. Hidden in
+          own "Log in" / "Dashboard" row at the bottom. Hiding the header account
+          control keeps the close button clear of a second account affordance. Hidden in
           CSS rather than unmounted so a phone-width menu left open across a
           resize to desktop, where the sheet itself is `lg:hidden`, does not
           take the desktop actions down with it. */}

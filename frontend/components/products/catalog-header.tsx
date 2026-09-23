@@ -78,7 +78,7 @@ function CatalogStats({
   projecting: string;
 }>) {
   return (
-    <div className="border-border-subtle flex flex-wrap items-center gap-x-[var(--page-section-gap)] gap-y-4 border-b pb-[var(--workspace-gap)]">
+    <div className="flex flex-wrap items-center gap-x-[var(--page-section-gap)] gap-y-4">
       <Stat label="Products" value={counts ? `${counts.products.length}` : PLACEHOLDER} />
       <Stat label="Categories" value={counts ? `${counts.categories.length}` : PLACEHOLDER} />
       <Stat label="Pages analyzed" value={analyzedLabel(crawl)} />

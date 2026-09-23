@@ -58,7 +58,7 @@ export function ScopeBand({
   marketControl?: ReactNode;
 }>) {
   return (
-    <div className="flex w-full flex-wrap items-center gap-3 py-2">
+    <div className="flex w-full flex-wrap items-center gap-3">
       <span className={textRole('bodyStrong')}>
         {latest?.target_hostname ?? data.owned_targets[0]?.hostname}
       </span>

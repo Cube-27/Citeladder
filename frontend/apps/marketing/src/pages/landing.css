@@ -200,12 +200,9 @@
   box-shadow: 0 12px 28px rgb(21 53 39 / 8%);
   overflow: hidden;
   text-align: left;
-  max-height: 520px;
   mask-image: none;
 }
 .cl-hero-preview.cl-hero-preview-sources {
-  max-height: none;
-  mask-image: none;
   border-bottom: 1px solid var(--cl-preview-border);
 }
 .cl-preview-browser,
@@ -526,9 +523,6 @@
 }
 .cl-hero-dashboard-sources td:first-child {
   overflow-wrap: anywhere;
-}
-.cl-hero-dashboard-mix .cl-source-track {
-  margin-top: 16px;
 }
 .cl-preview-foot {
   padding: 12px 20px;
@@ -919,39 +913,56 @@
 .cl-hero-preview .cl-source-summary {
   margin-inline: 0;
 }
-.cl-source-track {
+.cl-source-mix {
   display: flex;
-  gap: 3px;
-  height: 8px;
-  margin-top: 11px;
+  align-items: center;
+  gap: 18px;
+  margin-top: 10px;
 }
-.cl-source-track i:nth-child(1) {
-  width: 30%;
-  background: var(--color-accent);
-}
-.cl-source-track i:nth-child(2) {
-  width: 25%;
-  background: var(--cl-source-review);
-}
-.cl-source-track i:nth-child(3) {
-  width: 23%;
-  background: var(--cl-source-editorial);
-}
-.cl-source-track i:nth-child(4) {
-  width: 14%;
-  background: var(--cl-source-community);
-}
-.cl-source-track i:nth-child(5) {
-  width: 8%;
-  background: var(--cl-source-competitor);
+.cl-source-pie {
+  display: block;
+  width: 88px;
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 50%;
 }
 .cl-source-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px 15px;
-  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 14px;
+  min-width: 0;
   color: var(--cl-muted);
   font-size: 12px;
+}
+.cl-source-legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.cl-source-legend li::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+.cl-source-legend li:nth-child(2)::before {
+  background: var(--cl-source-review);
+}
+.cl-source-legend li:nth-child(3)::before {
+  background: var(--cl-source-editorial);
+}
+.cl-source-legend li:nth-child(4)::before {
+  background: var(--cl-source-community);
+}
+.cl-source-legend li:nth-child(5)::before {
+  background: var(--cl-source-competitor);
+}
+.cl-source-legend strong {
+  color: var(--cl-ink);
+  font-weight: 500;
 }
 .cl-citation-count {
   border-left: 1px solid var(--cl-line);
@@ -1014,9 +1025,6 @@
   padding: 10px 13px;
   line-height: 1.35;
   min-width: 0;
-}
-.cl-cell-heading {
-  display: none;
 }
 .cl-source-table tbody tr:last-child td {
   border-bottom: 0;
@@ -1473,7 +1481,7 @@
   .cl-module-copy .cl-text-link {
     margin-top: 0;
   }
-  .cl-product-stage {
+  .cl-product-preview {
     margin-top: 10px;
   }
   .cl-engines span {
@@ -1561,33 +1569,11 @@
   .cl-module-copy .cl-text-link {
     margin-top: 24px;
   }
-  .cl-product-stage {
+  .cl-product-preview {
     margin-top: 25px;
   }
   .cl-integration-grid article {
     min-height: 165px;
-  }
-  .cl-hero-preview-layout {
-    grid-template-columns: 1fr;
-  }
-  .cl-hero-preview {
-    max-height: none;
-  }
-  .cl-hero-dashboard {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .cl-hero-trend-chart {
-    height: 110px;
-  }
-  .cl-hero-dashboard-sources,
-  .cl-hero-dashboard-mix {
-    display: none;
-  }
-  .cl-hero-preview aside {
-    display: none;
-  }
-  .cl-hero-preview-main {
-    padding: 16px;
   }
   .cl-hero {
     padding-top: calc(var(--marketing-nav-offset) + 45px);
@@ -1597,7 +1583,6 @@
   .cl-hero-stage {
     padding: 10px 10px 0;
   }
-  .cl-product-stage,
   .cl-record-stage {
     padding: 10px;
   }
@@ -1617,97 +1602,6 @@
     padding: 10px;
     gap: 7px;
     font-size: 14px;
-  }
-  .cl-hero-preview {
-    margin-top: 0;
-  }
-  .cl-preview-browser span:last-child {
-    display: none;
-  }
-  .cl-hero-preview-title .cl-pill {
-    display: none;
-  }
-  .cl-hero-preview-main {
-    padding: 13px;
-  }
-  .cl-preview-heading {
-    padding: 17px 14px;
-    flex-wrap: wrap;
-  }
-  .cl-source-summary {
-    grid-template-columns: 1fr;
-    gap: 13px;
-    margin: 0 14px 15px;
-  }
-  .cl-hero-preview .cl-source-summary {
-    margin-inline: 0;
-  }
-  .cl-citation-count {
-    border-left: 0;
-    border-top: 1px solid var(--cl-line);
-    padding: 12px 0 0;
-    flex-direction: row;
-    align-items: baseline;
-    gap: 9px;
-  }
-  .cl-source-table,
-  .cl-source-table tbody,
-  .cl-source-table tr,
-  .cl-source-table td {
-    display: block;
-    width: 100%;
-  }
-  .cl-source-table thead,
-  .cl-source-table colgroup {
-    display: none;
-  }
-  .cl-source-table tr {
-    padding: 8px 14px;
-    border-top: 1px solid var(--cl-line);
-  }
-  .cl-source-table td {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    border: 0;
-    padding: 5px 0;
-    text-align: right;
-  }
-  .cl-cell-heading {
-    display: inline;
-    color: var(--cl-muted);
-    text-align: left;
-    flex: none;
-  }
-  .cl-source-table td:first-child {
-    display: block;
-    text-align: left;
-  }
-  .cl-source-table td:first-child .cl-cell-heading {
-    display: none;
-  }
-  .cl-source-name {
-    font-size: 14px;
-  }
-  .cl-source-table-urls .cl-source-name > span:last-child {
-    white-space: normal;
-  }
-  .cl-prompt-count {
-    min-width: 50px;
-  }
-  .cl-metric-grid {
-    gap: 8px;
-    padding-inline: 14px;
-  }
-  .cl-metric-grid strong {
-    font-size: 25px;
-  }
-  .cl-metric-grid small,
-  .cl-metric-grid span {
-    font-size: 12px;
-  }
-  .cl-chart {
-    height: 110px;
   }
   .cl-engine-inner {
     display: block;
@@ -1753,18 +1647,6 @@
   .cl-module-body {
     gap: 0;
   }
-  .cl-product-card {
-    min-height: 0;
-  }
-  .cl-product-card .cl-preview-content {
-    min-height: 0;
-  }
-  .cl-brief {
-    grid-template-columns: 1fr;
-  }
-  .cl-brief-nav {
-    display: none;
-  }
   .cl-record-body {
     padding: 20px;
   }
@@ -1782,26 +1664,6 @@
   }
   .cl-closing-actions .cl-cta {
     width: 100%;
-  }
-  .cl-hero-preview-layout {
-    min-height: 0;
-  }
-  .cl-hero-dashboard {
-    display: block;
-  }
-  .cl-hero-dashboard-panel:not(:first-child) {
-    display: none;
-  }
-  .cl-hero-trend-chart {
-    height: 160px;
-  }
-  .cl-hero-preview .cl-source-summary > :not(:first-child),
-  .cl-product-card .cl-metric-grid > :not(:first-child),
-  .cl-product-card .cl-simple-list > :nth-child(n + 3) {
-    display: none;
-  }
-  .cl-product-card .cl-metric-grid {
-    grid-template-columns: 1fr;
   }
   .cl-hero h1 {
     font-size: 36px;

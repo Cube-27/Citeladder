@@ -52,11 +52,7 @@ export function OverviewMetricCards({
   ];
   return (
     <div
-      className={cn(
-        cardClasses(),
-        hairlineBandClasses,
-        'overflow-hidden border-y-0 sm:grid-cols-4',
-      )}
+      className={cn(cardClasses(), hairlineBandClasses, 'overflow-hidden sm:grid-cols-4')}
       data-testid="overview-metrics"
     >
       {metrics.map((metric) => (
