@@ -35,6 +35,9 @@ PostgreSQL work, commit before I/O, persist append-only import artifacts and
 derive versioned metric rows. Dataset configuration owns provider report grains,
 compatibility, coverage and truncation. Provider errors, expired credentials and
 partial data remain distinguishable from an observed zero.
+Interactive probes and workers share a fenced grant refresh claim: the claim
+commits before OAuth I/O, concurrent callers wait within a bound, and a rotated
+token is saved only while the claim and credential revision still match.
 
 resync_seq increases across overlapping windows, with a target-identity floor
 so a remapped property remains comparable across connections. Readers select the
@@ -84,7 +87,7 @@ Organic top pages, individual backlinks and bounded monthly backlink history use
 
 Response availability and received provider items are persisted separately from normalized table rows: summaries can be complete without table rows, an observed empty result is distinct from a missing result, and paid costs remain recorded if normalization fails. The UI displays the saved market, rounded traffic estimates, comparison tables and compact dataset selectors. Zero-row snapshots explain that requests can incur charges without returning data; missing values are never displayed as measured zero.
 
-One acquisition may run per project, one request at a time. All DataForSEO workloads share PostgreSQL account capacity at two concurrent calls and one call start per second. Every call persists intent before a single dispatch. A crash or connection loss after dispatch becomes `uncertain`; it is never sent automatically again. Missing provider cost, pricing drift, credential rotation, scope escape, and over-estimate cost stop remaining calls while preserving completed datasets. Snapshot reuse requires an exact scope hash and a complete, fresh published dataset; refresh and depth expansion always return to review.
+One acquisition may run per project, one request at a time. All DataForSEO workloads share PostgreSQL account capacity at two concurrent calls and one call start per second. Every send persists append-only dispatch evidence before provider I/O and a separate outcome record after it. An explicit HTTP 429 may retry twice after the bounded provider capacity delay; each rejection remains recorded. A crash or connection loss after dispatch becomes `uncertain`; it is never sent automatically again. Missing provider cost, pricing drift, credential rotation, scope escape, and over-estimate cost stop remaining calls while preserving completed datasets. Snapshot reuse requires an exact scope hash and a complete, fresh published dataset; refresh and depth expansion always return to review.
 
 The `/search-intelligence` UI separates Overview, Keywords, Competitors, and Backlinks. Acquisition scope and cost are reviewed in a drawer before explicit confirmation. Backlink detail is explicit rather than implied by the summary. Citation matching is a deterministic derivation from a selected backlink dataset and selected authorized Visibility audits. Selected immutable row IDs open a read-only handoff preview; Content resolves those IDs under workspace and project scope, while its instruction field starts empty. Opening the handoff never starts generation.
 

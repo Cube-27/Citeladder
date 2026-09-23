@@ -10,21 +10,16 @@ from typing import Any
 
 import httpx
 
-from app.connectors.answer_engines.errors import ProviderError, parse_retry_after
+from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.answer_engines.http_client import shared_client
-from app.connectors.dataforseo_transport import authenticated_request, decode_json
+from app.connectors.dataforseo_transport import request_json
 from app.core.config.dataforseo import (
     DATAFORSEO_BASE_URL,
     STATUS_OK,
-    DataForSeoCredential,
     unpack_credential,
 )
 from app.core.config.provider_catalog import (
-    ERROR_AUTH,
-    ERROR_CONNECTION,
     ERROR_PARSE,
-    ERROR_RATE_LIMIT,
-    ERROR_TIMEOUT,
 )
 
 
@@ -62,57 +57,6 @@ def _safe_message(body: dict[str, Any]) -> str:
     return message[:300]
 
 
-async def _post_once(
-    client: httpx.AsyncClient,
-    *,
-    url: str,
-    credential: DataForSeoCredential,
-    payload: dict[str, Any],
-    timeout_seconds: float,
-) -> httpx.Response:
-    try:
-        return await authenticated_request(
-            client,
-            "POST",
-            url,
-            credential=credential,
-            json=[payload],
-            timeout_seconds=timeout_seconds,
-        )
-    except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout) as exc:
-        raise ProviderError(
-            "DataForSEO request timed out", error_code=ERROR_TIMEOUT, retryable=False
-        ) from exc
-    except httpx.HTTPError as exc:
-        raise ProviderError(
-            "DataForSEO connection failed",
-            error_code=ERROR_CONNECTION,
-            retryable=False,
-        ) from exc
-
-
-def _response_body(response: httpx.Response) -> dict[str, Any]:
-    if response.status_code in {401, 403}:
-        raise ProviderError(
-            "DataForSEO authentication failed", error_code=ERROR_AUTH, retryable=False
-        )
-    if response.status_code == 429:
-        raise ProviderError(
-            "DataForSEO rate limited the request",
-            error_code=ERROR_RATE_LIMIT,
-            retryable=False,
-            retry_after_seconds=parse_retry_after(response.headers.get("Retry-After")),
-        )
-    body = decode_json(response, error_message="DataForSEO returned unreadable JSON")
-    if not isinstance(body, dict) or body.get("status_code") != STATUS_OK:
-        raise ProviderError(
-            _safe_message(body if isinstance(body, dict) else {}),
-            error_code=ERROR_PARSE,
-            retryable=False,
-        )
-    return body
-
-
 def _single_task(body: dict[str, Any]) -> dict[str, Any]:
     tasks = body.get("tasks")
     if not isinstance(tasks, list) or len(tasks) != 1 or not isinstance(tasks[0], dict):
@@ -145,14 +89,20 @@ async def execute_live(
 
     credential = unpack_credential(decrypt_secret(encrypted_secret))
     url = f"{(base_url or DATAFORSEO_BASE_URL).rstrip('/')}/{endpoint.lstrip('/')}"
-    response = await _post_once(
+    body = await request_json(
         client or shared_client(),
-        url=url,
+        "POST",
+        url,
         credential=credential,
-        payload=payload,
+        json=[payload],
         timeout_seconds=timeout_seconds,
+        transport_retryable=False,
+        error_message="DataForSEO returned unreadable JSON",
     )
-    body = _response_body(response)
+    if body.get("status_code") != STATUS_OK:
+        raise ProviderError(
+            _safe_message(body), error_code=ERROR_PARSE, retryable=False
+        )
     task = _single_task(body)
     canonical = json.dumps(
         body, sort_keys=True, separators=(",", ":"), ensure_ascii=False

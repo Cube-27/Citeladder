@@ -369,6 +369,9 @@ def upgrade() -> None:
         sa.Column("access_token_encrypted", sa.Text(), nullable=False),
         sa.Column("refresh_token_encrypted", sa.Text(), nullable=False),
         sa.Column("token_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("token_revision", sa.Integer(), nullable=False),
+        sa.Column("refresh_claim_id", sa.UUID(), nullable=True),
+        sa.Column("refresh_claim_expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "granted_scopes", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
@@ -6109,7 +6112,6 @@ def upgrade() -> None:
         sa.Column("normalized_name", sa.String(length=255), nullable=False),
         sa.Column("role", sa.String(length=16), nullable=False),
         sa.Column("canonical_url", sa.Text(), nullable=False),
-        sa.Column("editable", sa.Boolean(), nullable=False),
         sa.Column(
             "field_sources", postgresql.JSONB(astext_type=sa.Text()), nullable=False
         ),
@@ -6138,44 +6140,6 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_commerce_categories_workspace_id"),
         "commerce_categories",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
-        "commerce_category_observations",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("category_id", sa.UUID(), nullable=False),
-        sa.Column(
-            "observed_fields", postgresql.JSONB(astext_type=sa.Text()), nullable=False
-        ),
-        sa.Column("edit_version", sa.String(length=64), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["category_id"], ["commerce_categories.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_commerce_category_observations_category_id"),
-        "commerce_category_observations",
-        ["category_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_commerce_category_observations_project_id"),
-        "commerce_category_observations",
-        ["project_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_commerce_category_observations_workspace_id"),
-        "commerce_category_observations",
         ["workspace_id"],
         unique=False,
     )
@@ -7008,11 +6972,57 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_si_call_scope_id"
+        ),
         sa.UniqueConstraint("run_id", "request_key", name="uq_si_call_request"),
     )
     _create_indexes(
         "search_intelligence_calls",
         ("workspace_id", "project_id", "run_id", "dataset_id"),
+    )
+    op.create_table(
+        "search_intelligence_dispatch_attempts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("call_id", sa.UUID(), nullable=False),
+        sa.Column("ordinal", sa.Integer(), nullable=False),
+        sa.Column("phase", sa.String(length=16), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("error_code", sa.String(length=64), nullable=False),
+        sa.Column("retry_after_seconds", sa.Float(), nullable=True),
+        sa.Column("dispatched_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "call_id"],
+            [
+                "search_intelligence_calls.workspace_id",
+                "search_intelligence_calls.project_id",
+                "search_intelligence_calls.id",
+            ],
+            name="fk_si_dispatch_call_scope",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "call_id", "ordinal", "phase", name="uq_si_dispatch_phase"
+        ),
+    )
+    op.create_index(
+        op.f("ix_search_intelligence_dispatch_attempts_call_id"),
+        "search_intelligence_dispatch_attempts",
+        ["call_id"],
+    )
+    op.create_index(
+        op.f("ix_search_intelligence_dispatch_attempts_workspace_id"),
+        "search_intelligence_dispatch_attempts",
+        ["workspace_id"],
+    )
+    op.create_index(
+        op.f("ix_search_intelligence_dispatch_attempts_project_id"),
+        "search_intelligence_dispatch_attempts",
+        ["project_id"],
     )
     op.create_table(
         "search_intelligence_rows",
@@ -7087,6 +7097,7 @@ def downgrade() -> None:
     # retired authorities. Drop the explicit final table set instead.
     final_tables = (
         "search_intelligence_rows",
+        "search_intelligence_dispatch_attempts",
         "search_intelligence_calls",
         "search_intelligence_datasets",
         "search_intelligence_runs",
@@ -7113,7 +7124,6 @@ def downgrade() -> None:
         "content_generation_attempts",
         "competitor_mentions",
         "commerce_product_observations",
-        "commerce_category_observations",
         "commerce_categories",
         "citations",
         "brand_mentions",

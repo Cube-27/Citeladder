@@ -337,7 +337,6 @@ class BrandDiscoverySettings(BaseSettings):
     reaper_batch_size: int = Field(default=100, ge=1)
     failure_backoff_max_seconds: float = Field(default=30.0, gt=0)
     maximum_attempts: int = Field(default=5, ge=1)
-    minimum_evidence_words: int = Field(default=20, ge=1)
     maximum_competitors: int = Field(
         default=MAX_PROJECT_COMPETITORS, ge=1, le=MAX_PROJECT_COMPETITORS
     )

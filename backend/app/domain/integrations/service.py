@@ -25,6 +25,7 @@ from __future__ import annotations
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from urllib.parse import urlencode
 
 from sqlalchemy import func, select
@@ -80,7 +81,7 @@ from app.domain.integrations.state import (
     consume_state,
     prepare_connect_callback,
 )
-from app.domain.integrations.tokens import fresh_access_token
+from app.domain.integrations.tokens import fresh_access_token, invalidate_token_claim
 from app.models.integrations import (
     IntegrationConnection,
     IntegrationEvent,
@@ -297,6 +298,7 @@ async def _persist_connected_grant(
     if bundle.granted_scopes:
         grant.granted_scopes = list(bundle.granted_scopes)
     grant.status = GRANT_STATUS_CONNECTED
+    invalidate_token_claim(grant)
     attached = await _attach_connections(
         session,
         workspace_id=workspace_id,
@@ -595,6 +597,14 @@ async def list_available_properties(
     ]
 
 
+def _revoke_fence_matches(grant: IntegrationOAuthGrant | None, revision: int) -> bool:
+    return (
+        grant is not None
+        and grant.status == GRANT_STATUS_PENDING_REVOCATION
+        and grant.token_revision == revision
+    )
+
+
 async def delete_connection(
     session: AsyncSession,
     *,
@@ -632,6 +642,7 @@ async def delete_connection(
     )
     is_last = siblings.scalar_one() == 0
     provider = connection.provider
+    grant_id = grant.id
     await session.delete(connection)
     if not is_last:
         # Other connections still use the shared grant: its tokens are
@@ -651,22 +662,37 @@ async def delete_connection(
         )
         await session.commit()
         return
+    locked_grant = await session.scalar(
+        select(IntegrationOAuthGrant)
+        .where(
+            IntegrationOAuthGrant.id == grant_id,
+            IntegrationOAuthGrant.workspace_id == workspace_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if locked_grant is None:
+        await session.rollback()
+        raise IntegrationConnectionNotFoundError(str(grant_id))
+    grant = locked_grant
+    revoke_transport = grant.transport
+    revoke_url = INTEGRATION_OAUTH_REVOKE_URLS[revoke_transport]
+    revoke_credential = grant.refresh_token_encrypted or grant.access_token_encrypted
+    invalidate_token_claim(grant)
+    grant.status = GRANT_STATUS_PENDING_REVOCATION
+    revoke_revision = grant.token_revision
     # Commit the local disconnect BEFORE the remote revoke call so no
     # transaction is held open across provider I/O (invariant 8).
     await session.commit()
 
-    revoke_url = INTEGRATION_OAUTH_REVOKE_URLS[grant.transport]
     remote_ok = True
     remote_error_code = ""
     if revoke_url:
-        client = integration_oauth.build_oauth_client(grant.transport)
+        client = integration_oauth.build_oauth_client(revoke_transport)
         try:
             # The refresh token is the long-lived credential — revoking it
             # revokes the whole grant at the provider.
-            token = decrypt_secret(
-                grant.refresh_token_encrypted or grant.access_token_encrypted
-            )
-            await client.revoke(token=token)
+            await client.revoke(token=decrypt_secret(revoke_credential))
         except integration_oauth.IntegrationOAuthError as exc:
             remote_ok = False
             remote_error_code = exc.error_code
@@ -674,7 +700,43 @@ async def delete_connection(
             remote_ok = False
             remote_error_code = ERROR_PROVIDER_API
 
+    current_grant = await session.scalar(
+        select(IntegrationOAuthGrant)
+        .where(
+            IntegrationOAuthGrant.id == grant_id,
+            IntegrationOAuthGrant.workspace_id == workspace_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if not _revoke_fence_matches(current_grant, revoke_revision):
+        event_grant_id = grant_id if current_grant is not None else None
+        payload = {
+            "provider": provider,
+            "transport": revoke_transport,
+            "connection_id": str(connection_id),
+            "grant_id": str(grant_id),
+            "remote_revoke": bool(revoke_url),
+            "remote_revoke_succeeded": remote_ok,
+            "fenced": True,
+        }
+        if remote_error_code:
+            payload["error_code"] = remote_error_code
+        await session.rollback()
+        session.add(
+            IntegrationEvent(
+                workspace_id=workspace_id,
+                grant_id=event_grant_id,
+                event_type=EVENT_INTEGRATION_REVOKE_FAILED,
+                message="Revoke outcome not applied because the grant changed",
+                payload=payload,
+            )
+        )
+        await session.commit()
+        return
+    grant = cast(IntegrationOAuthGrant, current_grant)
     if remote_ok:
+        invalidate_token_claim(grant)
         grant.status = GRANT_STATUS_REVOKED
         grant.access_token_encrypted = ""
         grant.refresh_token_encrypted = ""

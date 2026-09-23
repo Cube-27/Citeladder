@@ -25,12 +25,14 @@ import json
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import pytest
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.connectors.integrations.oauth import IntegrationOAuthError, OAuthTokenBundle
 from app.core.config import settings
 from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
@@ -78,6 +80,7 @@ from app.core.config.task_queue import (
 )
 from app.core.security import decrypt_secret, encrypt_secret
 from app.domain.integrations.sync import SyncTargetUnmappedError, enqueue_sync_run
+from app.domain.integrations.tokens import fresh_access_token, invalidate_token_claim
 from app.models.analytics import AnalyticsTask
 from app.models.brand import OwnedDomain
 from app.models.integrations import (
@@ -92,6 +95,9 @@ from app.models.integrations import (
 from app.models.project import Project
 from app.models.workspace import Workspace
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
+from app.workers.integration.tokens import (
+    fresh_access_token as worker_fresh_access_token,
+)
 from app.workers.integration_worker import IntegrationWorker
 from tests.component.integration_worker_helpers import (
     artifacts_for_run as _artifacts,
@@ -535,6 +541,149 @@ async def test_empty_result_page_writes_empty_artifact(
 
 
 # --- Serialized-per-grant refresh -------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("rotate_consent", [False, True])
+async def test_refresh_releases_transaction_and_fences_consent_rotation(
+    session_factory, db_session, monkeypatch, rotate_consent
+) -> None:
+    seed = await _seed_graph(
+        db_session, token_expires_at=datetime.now(UTC) - timedelta(minutes=5)
+    )
+
+    class RefreshClient:
+        async def refresh(self, *, refresh_token: str) -> OAuthTokenBundle:
+            assert refresh_token == "refresh-token-1"
+            assert not reader.in_transaction()
+            async with session_factory() as writer:
+                grant = await writer.scalar(
+                    select(IntegrationOAuthGrant)
+                    .where(IntegrationOAuthGrant.id == seed.grant_id)
+                    .with_for_update(nowait=True)
+                )
+                assert grant is not None
+                if rotate_consent:
+                    grant.access_token_encrypted = encrypt_secret("new-consent-token")
+                    grant.token_expires_at = datetime.now(UTC) + timedelta(hours=1)
+                    invalidate_token_claim(grant)
+                await writer.commit()
+            return OAuthTokenBundle("refreshed-token", "rotated-refresh", 3600)
+
+    monkeypatch.setattr(
+        "app.domain.integrations.tokens.integration_oauth.build_oauth_client",
+        lambda *_args, **_kwargs: RefreshClient(),
+    )
+    async with session_factory() as reader:
+        grant = await reader.get(IntegrationOAuthGrant, seed.grant_id)
+        assert grant is not None
+        assert await fresh_access_token(reader, grant=grant) == (
+            "new-consent-token" if rotate_consent else "refreshed-token"
+        )
+    async with session_factory() as session:
+        persisted = await session.get(IntegrationOAuthGrant, seed.grant_id)
+        assert persisted is not None
+        assert decrypt_secret(persisted.access_token_encrypted) == (
+            "new-consent-token" if rotate_consent else "refreshed-token"
+        )
+        assert persisted.refresh_claim_id is None
+
+
+@pytest.mark.asyncio
+async def test_refresh_contention_exhaustion_is_retryable(
+    session_factory, db_session, monkeypatch
+) -> None:
+    seed = await _seed_graph(
+        db_session, token_expires_at=datetime.now(UTC) - timedelta(minutes=5)
+    )
+    async with session_factory() as session:
+        grant = await session.get(IntegrationOAuthGrant, seed.grant_id)
+        assert grant is not None
+        grant.refresh_claim_id = uuid.uuid4()
+        grant.refresh_claim_expires_at = datetime.now(UTC) + timedelta(minutes=1)
+        await session.commit()
+    monkeypatch.setattr(integration_settings, "token_refresh_wait_seconds", 0.01)
+    monkeypatch.setattr(integration_settings, "token_refresh_poll_seconds", 0.005)
+    async with session_factory() as session:
+        grant = await session.get(IntegrationOAuthGrant, seed.grant_id)
+        assert grant is not None
+        with pytest.raises(IntegrationOAuthError) as raised:
+            await fresh_access_token(session, grant=grant)
+    assert raised.value.error_code == ERROR_PROVIDER_API
+    assert raised.value.retryable is True
+
+
+@pytest.mark.asyncio
+async def test_expired_refresh_claim_is_recovered(
+    session_factory, db_session, monkeypatch
+) -> None:
+    seed = await _seed_graph(
+        db_session, token_expires_at=datetime.now(UTC) - timedelta(minutes=5)
+    )
+    async with session_factory() as session:
+        grant = await session.get(IntegrationOAuthGrant, seed.grant_id)
+        assert grant is not None
+        grant.refresh_claim_id = uuid.uuid4()
+        grant.refresh_claim_expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        await session.commit()
+
+    class RefreshClient:
+        async def refresh(self, *, refresh_token: str) -> OAuthTokenBundle:
+            return OAuthTokenBundle("recovered-token", refresh_token, 3600)
+
+    monkeypatch.setattr(
+        "app.domain.integrations.tokens.integration_oauth.build_oauth_client",
+        lambda *_args, **_kwargs: RefreshClient(),
+    )
+    async with session_factory() as session:
+        grant = await session.get(IntegrationOAuthGrant, seed.grant_id)
+        assert grant is not None
+        assert await fresh_access_token(session, grant=grant) == "recovered-token"
+        assert not session.in_transaction()
+
+
+@pytest.mark.asyncio
+async def test_request_and_worker_share_one_refresh(
+    session_factory, db_session, monkeypatch
+) -> None:
+    seed = await _seed_graph(
+        db_session, token_expires_at=datetime.now(UTC) - timedelta(minutes=5)
+    )
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    refresh_count = 0
+
+    class RefreshClient:
+        async def refresh(self, *, refresh_token: str) -> OAuthTokenBundle:
+            nonlocal refresh_count
+            refresh_count += 1
+            entered.set()
+            await release.wait()
+            return OAuthTokenBundle("shared-token", refresh_token, 3600)
+
+    monkeypatch.setattr(
+        "app.domain.integrations.tokens.integration_oauth.build_oauth_client",
+        lambda *_args, **_kwargs: RefreshClient(),
+    )
+    worker_task = asyncio.create_task(
+        worker_fresh_access_token(
+            SimpleNamespace(grant_id=seed.grant_id),
+            session_factory=session_factory,
+            transport=None,
+        )
+    )
+    await entered.wait()
+    async with session_factory() as request_session:
+        grant = await request_session.get(IntegrationOAuthGrant, seed.grant_id)
+        assert grant is not None
+        request_task = asyncio.create_task(
+            fresh_access_token(request_session, grant=grant)
+        )
+        await asyncio.sleep(0.05)
+        release.set()
+        assert await worker_task == "shared-token"
+        assert await request_task == "shared-token"
+    assert refresh_count == 1
 
 
 @pytest.mark.asyncio

@@ -23,7 +23,6 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config.commerce_catalog import (
-    COMMERCE_CATEGORY_EDIT_VERSION,
     COMMERCE_COMPETITOR_PROVIDER_VERSION,
     COMMERCE_COMPETITOR_VALIDATOR_VERSION,
     COMMERCE_EDIT_VERSION,
@@ -42,7 +41,7 @@ def _utcnow() -> datetime:
 
 
 class CommerceCategory(Base):
-    """Current editable category projection for one project."""
+    """Current category projection for one project."""
 
     __tablename__ = "commerce_categories"
     __table_args__ = (
@@ -66,7 +65,6 @@ class CommerceCategory(Base):
     normalized_name: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(16), default="unknown")
     canonical_url: Mapped[str] = mapped_column(Text, default="")
-    editable: Mapped[bool] = mapped_column(Boolean, default=True)
     field_sources: Mapped[dict] = mapped_column(JSONB, default=dict)
     source_analysis_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
@@ -81,36 +79,6 @@ class CommerceCategory(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
-
-
-class CommerceCategoryObservation(Base):
-    """Append-only explicit correction evidence for a category projection."""
-
-    __tablename__ = "commerce_category_observations"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
-        index=True,
-    )
-    project_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True
-    )
-    category_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("commerce_categories.id", ondelete="CASCADE"),
-        index=True,
-    )
-    observed_fields: Mapped[dict] = mapped_column(JSONB, default=dict)
-    edit_version: Mapped[str] = mapped_column(
-        String(64), default=COMMERCE_CATEGORY_EDIT_VERSION
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
     )
 
 

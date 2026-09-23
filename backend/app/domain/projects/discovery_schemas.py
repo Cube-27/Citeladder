@@ -16,7 +16,6 @@ from app.core.config.brand_discovery import (
     KNOWLEDGE_STRENGTHS,
     MARKET_SCOPES,
     PRICE_TIERS,
-    brand_discovery_settings,
 )
 from app.core.config.brand_profile import (
     BRAND_PROFILE_PRODUCT_MAX_CHARS,
@@ -199,13 +198,6 @@ class BrandDiscoveryProgress(BaseModel):
     competitors_found: int = Field(default=0, ge=0)
     prompts_prepared: int = Field(default=0, ge=0)
     updated_at: datetime
-
-
-class DiscoveryCompetitorCandidates(BaseModel):
-    competitors: list[DiscoveryCompetitorSuggestion] = Field(
-        default_factory=list,
-        max_length=brand_discovery_settings.competitor_suggestion_maximum,
-    )
 
 
 class BrandDiscoveryComplete(BaseModel):

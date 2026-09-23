@@ -222,6 +222,9 @@ class SearchIntelligenceCall(Base):
     __tablename__ = "search_intelligence_calls"
     __table_args__ = (
         UniqueConstraint("run_id", "request_key", name="uq_si_call_request"),
+        UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_si_call_scope_id"
+        ),
         ForeignKeyConstraint(
             ["workspace_id", "project_id", "run_id"],
             [
@@ -278,6 +281,43 @@ class SearchIntelligenceCall(Base):
     )
     dataset: Mapped[SearchIntelligenceDataset] = relationship(
         "SearchIntelligenceDataset", back_populates="calls", overlaps="calls,run"
+    )
+
+
+class SearchIntelligenceDispatchAttempt(Base):
+    """Append-only dispatch and outcome evidence for each Live send."""
+
+    __tablename__ = "search_intelligence_dispatch_attempts"
+    __table_args__ = (
+        UniqueConstraint("call_id", "ordinal", "phase", name="uq_si_dispatch_phase"),
+        ForeignKeyConstraint(
+            ["workspace_id", "project_id", "call_id"],
+            [
+                "search_intelligence_calls.workspace_id",
+                "search_intelligence_calls.project_id",
+                "search_intelligence_calls.id",
+            ],
+            name="fk_si_dispatch_call_scope",
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
+    project_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
+    call_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
+    ordinal: Mapped[int] = mapped_column(Integer)
+    phase: Mapped[str] = mapped_column(String(16))
+    status: Mapped[str] = mapped_column(String(24), default="dispatched")
+    error_code: Mapped[str] = mapped_column(String(64), default="")
+    retry_after_seconds: Mapped[float | None] = mapped_column(nullable=True)
+    dispatched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
 

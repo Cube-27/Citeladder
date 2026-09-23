@@ -293,7 +293,6 @@ class IntegrationWorker(DrainableWorkerMixin):
                 ctx,
                 session_factory=self._session_factory,
                 transport=self._transport,
-                now=_utcnow,
             )
         except integration_oauth.IntegrationOAuthError as exc:
             await self._handle_classified_error(

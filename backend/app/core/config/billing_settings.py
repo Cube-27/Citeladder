@@ -106,7 +106,6 @@ class BillingSettings(BaseSettings):
     http_max_connections: int = 20
     http_max_keepalive_connections: int = 10
     http_keepalive_expiry_seconds: float = 60.0
-    checkout_expiry_minutes: int = 60
     # Validity of a server-resolved quote and of the pending activation that
     # stores it. A pending row older than this is eligible for abandonment.
     quote_validity_minutes: int = 60
@@ -121,14 +120,12 @@ class BillingSettings(BaseSettings):
     reconciliation_abandon_after_seconds: int = 86_400
     reconciliation_list_count: int = Field(default=100, ge=1, le=100)
     reconciliation_max_pages: int = Field(default=5, ge=1, le=20)
-    reconciliation_lookback_seconds: int = 86_400
     reconciliation_lease_seconds: int = 120
     reconciliation_max_attempts: int = 8
     reconciliation_backoff_base_seconds: int = 60
     webhook_lease_seconds: int = 120
     webhook_max_attempts: int = 8
     subscription_total_cycles: int = 1200
-    past_due_grace_days: int = 3
     max_webhook_body_bytes: int = 262_144
 
     @field_validator("seller_email")

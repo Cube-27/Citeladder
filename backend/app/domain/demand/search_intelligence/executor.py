@@ -1,10 +1,10 @@
-"""Finite, non-retrying Search Intelligence acquisition executor."""
+"""Finite Search Intelligence acquisition executor."""
 
 from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -26,13 +26,25 @@ from app.core.config.provider_catalog import (
     SEARCH_INTELLIGENCE_CAPACITY_ENGINE,
     TRANSPORT_DATAFORSEO,
 )
-from app.core.config.search_intelligence import BACKLINK_KINDS, PRICE_VERSION
+from app.core.config.search_intelligence import (
+    BACKLINK_KINDS,
+    PRICE_VERSION,
+    RATE_LIMIT_DEFAULT_WAIT_SECONDS,
+    RATE_LIMIT_MAX_WAIT_SECONDS,
+    RATE_LIMIT_RETRIES,
+)
+from app.domain.demand.search_intelligence.dispatch_evidence import (
+    latest_dispatch_attempt,
+    next_dispatch_ordinal,
+    record_dispatch_outcome,
+)
 from app.domain.demand.search_intelligence.normalization import normalize_response
 from app.models.analytics import AnalyticsTask
 from app.models.provider import ProviderConnection
 from app.models.search_intelligence import (
     SearchIntelligenceCall,
     SearchIntelligenceDataset,
+    SearchIntelligenceDispatchAttempt,
     SearchIntelligenceRow,
     SearchIntelligenceRun,
 )
@@ -168,6 +180,7 @@ class _PreparedCall:
     action: str
     encrypted_secret: str = ""
     base_url: str = ""
+    next_attempt_number: int = 1
 
 
 async def _start_run(
@@ -240,26 +253,39 @@ async def _prepare_call(
             await session.commit()
             return _PreparedCall("saved_response")
         if call.status == "dispatched":
-            call.status = "uncertain"
-            call.completed_at = _utcnow()
-            run.uncertain_calls += 1
-            run.status = "uncertain"
-            run.completed_at = call.completed_at
+            await _recover_lost_dispatch(session, run, call)
             await session.commit()
             return _PreparedCall("stop")
+        next_ordinal = await next_dispatch_ordinal(session, call)
         await session.commit()
         return _PreparedCall(
-            "dispatch", connection.api_key_encrypted, connection.base_url
+            "dispatch",
+            connection.api_key_encrypted,
+            connection.base_url,
+            next_ordinal,
         )
 
 
+async def _recover_lost_dispatch(
+    session: AsyncSession, run: SearchIntelligenceRun, call: SearchIntelligenceCall
+) -> None:
+    call.status = "uncertain"
+    call.completed_at = _utcnow()
+    attempt = await latest_dispatch_attempt(session, call)
+    if attempt is not None:
+        record_dispatch_outcome(session, attempt, "uncertain")
+    run.uncertain_calls += 1
+    run.status = "uncertain"
+    run.completed_at = call.completed_at
+
+
 def _capacity_request(
-    task: AnalyticsTask, run: SearchIntelligenceRun, sequence: int
+    task: AnalyticsTask, run: SearchIntelligenceRun, sequence: int, ordinal: int
 ) -> CapacityRequest:
     return CapacityRequest(
         task_id=None,
         analytics_task_id=task.id,
-        attempt_number=sequence + 1,
+        attempt_number=sequence * (RATE_LIMIT_RETRIES + 1) + ordinal,
         logical_engine=SEARCH_INTELLIGENCE_CAPACITY_ENGINE,
         transport_provider=TRANSPORT_DATAFORSEO,
         credential_kind=CREDENTIAL_KIND_BYOK,
@@ -315,6 +341,17 @@ async def _mark_dispatched(
             return False
         call.status = "dispatched"
         call.dispatched_at = _utcnow()
+        ordinal = await next_dispatch_ordinal(session, call)
+        session.add(
+            SearchIntelligenceDispatchAttempt(
+                workspace_id=call.workspace_id,
+                project_id=call.project_id,
+                call_id=call.id,
+                ordinal=ordinal,
+                phase="dispatch",
+                dispatched_at=call.dispatched_at,
+            )
+        )
         await session.commit()
         return True
 
@@ -540,27 +577,78 @@ async def _persist_outcome(
             await session.commit()
             return False, True
         if error is not None:
-            stopped = _record_provider_error(run, call_result, dataset_result, error)
-            await session.commit()
-            return True, stopped
+            return await _persist_provider_error(
+                session, run, call_result, dataset_result, error
+            )
         if response is None:
-            call_result.status = "uncertain"
-            call_result.error_code = "provider_result_missing"
-            run.uncertain_calls += 1
-            if run.status != "cancelled":
-                run.status = "uncertain"
-                run.error_code = call_result.error_code
-                run.error_detail = (
-                    "Provider execution ended without a response or classified error"
-                )
-                run.completed_at = _utcnow()
-            await session.commit()
-            return False, True
+            return await _persist_missing_response(session, run, call_result)
         failed, stopped = await _persist_success(
             session, run, call_result, dataset_result, response, plan, later_plans
         )
         await session.commit()
         return failed, stopped
+
+
+async def _persist_provider_error(
+    session: AsyncSession,
+    run: SearchIntelligenceRun,
+    call: SearchIntelligenceCall,
+    dataset: SearchIntelligenceDataset,
+    error: ProviderError,
+) -> tuple[bool, bool]:
+    attempt = await latest_dispatch_attempt(session, call)
+    if attempt is not None:
+        status = {
+            ERROR_RATE_LIMIT: "rate_limited",
+            ERROR_CONNECTION: "uncertain",
+            ERROR_TIMEOUT: "uncertain",
+        }.get(error.error_code, "failed")
+        record_dispatch_outcome(session, attempt, status, error)
+    if _can_retry_rate_limit(run, attempt, error):
+        wait = error.retry_after_seconds
+        wait = RATE_LIMIT_DEFAULT_WAIT_SECONDS if wait is None else wait
+        wait = min(max(wait, 0.0), RATE_LIMIT_MAX_WAIT_SECONDS)
+        call.status = "intent"
+        call.dispatched_at = None
+        run.status = "queued"
+        await session.commit()
+        raise CapacityWaitError(_utcnow() + timedelta(seconds=wait))
+    stopped = _record_provider_error(run, call, dataset, error)
+    await session.commit()
+    return True, stopped
+
+
+def _can_retry_rate_limit(
+    run: SearchIntelligenceRun,
+    attempt: SearchIntelligenceDispatchAttempt | None,
+    error: ProviderError,
+) -> bool:
+    return (
+        error.error_code == ERROR_RATE_LIMIT
+        and attempt is not None
+        and attempt.ordinal <= RATE_LIMIT_RETRIES
+        and run.status == "running"
+    )
+
+
+async def _persist_missing_response(
+    session: AsyncSession, run: SearchIntelligenceRun, call: SearchIntelligenceCall
+) -> tuple[bool, bool]:
+    attempt = await latest_dispatch_attempt(session, call)
+    if attempt is not None:
+        record_dispatch_outcome(session, attempt, "uncertain")
+    call.status = "uncertain"
+    call.error_code = "provider_result_missing"
+    run.uncertain_calls += 1
+    if run.status != "cancelled":
+        run.status = "uncertain"
+        run.error_code = call.error_code
+        run.error_detail = (
+            "Provider execution ended without a response or classified error"
+        )
+        run.completed_at = _utcnow()
+    await session.commit()
+    return False, True
 
 
 async def _save_response(
@@ -569,7 +657,6 @@ async def _save_response(
     sequence: int,
     response: ResearchResponse,
 ) -> None:
-    """Commit provider evidence before normalization or another paid dispatch."""
     async with session_factory() as session:
         call = await session.scalar(
             select(SearchIntelligenceCall)
@@ -585,6 +672,9 @@ async def _save_response(
         call.response_sha256 = response.response_sha256
         call.provider_task_id = response.provider_task_id
         call.provider_reported_cost_usd = response.cost_usd
+        attempt = await latest_dispatch_attempt(session, call)
+        if attempt is not None:
+            record_dispatch_outcome(session, attempt, "succeeded")
         await session.commit()
 
 
@@ -662,7 +752,7 @@ async def _execute_plan(
         return await _persist_outcome(
             session_factory, run_id, sequence, plan, later_plans, response, None
         )
-    request = _capacity_request(task, run, sequence)
+    request = _capacity_request(task, run, sequence, prepared.next_attempt_number)
     decision = await acquire_provider_capacity(session_factory, request=request)
     if not decision.acquired:
         await _mark_capacity_wait(session_factory, run_id, sequence)
