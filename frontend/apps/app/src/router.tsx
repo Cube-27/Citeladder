@@ -5,13 +5,7 @@ import { PageLoading } from '@/components/layout/page-loading';
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { bootstrapPrivateRoutes } from '@/lib/project/bootstrap-loader';
 import { RouteError } from './route-error';
-import { LoginRoute, RegisterRoute } from './auth-routes';
-import {
-  ApplicationRouteLayout,
-  OnboardingRoute,
-  PrivateRouteLayout,
-  ProjectsRoute,
-} from './private-routes';
+import { ApplicationRouteLayout, PrivateRouteLayout, ProjectsRoute } from './private-routes';
 
 /**
  * Begin the route download at matching time, alongside session bootstrap.
@@ -41,8 +35,18 @@ function productRoute(
 
 export const appRoutes: RouteObject[] = [
   { path: '/', loader: () => redirect('/projects') },
-  { path: '/login', element: <LoginRoute />, ErrorBoundary: RouteError },
-  { path: '/register', element: <RegisterRoute />, ErrorBoundary: RouteError },
+  {
+    ...productRoute('/login', () =>
+      import('./auth-routes').then(({ LoginRoute }) => ({ default: LoginRoute })),
+    ),
+    ErrorBoundary: RouteError,
+  },
+  {
+    ...productRoute('/register', () =>
+      import('./auth-routes').then(({ RegisterRoute }) => ({ default: RegisterRoute })),
+    ),
+    ErrorBoundary: RouteError,
+  },
   {
     element: <PrivateRouteLayout />,
     // Resolve session, workspace and project BEFORE the shell mounts, so an
@@ -57,7 +61,13 @@ export const appRoutes: RouteObject[] = [
     hydrateFallbackElement: <ShellFallback />,
     ErrorBoundary: RouteError,
     children: [
-      { path: '/onboarding', element: <OnboardingRoute /> },
+      productRoute('/onboarding', () =>
+        import('@/components/onboarding/onboarding-page-client').then(
+          ({ OnboardingPageClient }) => ({
+            default: OnboardingPageClient,
+          }),
+        ),
+      ),
       {
         element: <ApplicationRouteLayout />,
         children: [

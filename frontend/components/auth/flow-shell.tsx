@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useId, type ReactNode } from 'react';
+import '@/apps/app/src/website-type.css';
 
 import { cn } from '@/lib/utils';
 

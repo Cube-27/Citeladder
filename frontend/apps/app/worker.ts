@@ -8,6 +8,7 @@ const SECURITY_HEADERS = {
   'X-Robots-Tag': 'noindex, nofollow',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
 };
+const FINGERPRINTED_EXTENSIONS = new Set(['js', 'css', 'woff', 'woff2', 'png', 'webp', 'svg']);
 
 function response(body: string | null, status: number, contentType = 'text/plain'): Response {
   return new Response(body, {
@@ -104,7 +105,16 @@ async function staticOrNavigation(
   const asset = await env.ASSETS.fetch(request);
   if (asset.status !== 404) {
     const html = asset.headers.get('content-type')?.includes('text/html') ?? false;
-    const fingerprinted = /-[A-Za-z0-9_-]{8,}\.(?:js|css|woff2?|png|webp|svg)$/.test(path);
+    const filename = path.slice(path.lastIndexOf('/') + 1);
+    const dot = filename.lastIndexOf('.');
+    const hyphen = filename.indexOf('-');
+    const fingerprint = filename.slice(hyphen + 1, dot);
+    const fingerprinted =
+      dot > hyphen &&
+      hyphen >= 0 &&
+      FINGERPRINTED_EXTENSIONS.has(filename.slice(dot + 1)) &&
+      fingerprint.length >= 8 &&
+      /^[A-Za-z0-9_-]+$/.test(fingerprint);
     return decorate(asset, html, !html && fingerprinted);
   }
   if (isResource(path) || !request.headers.get('accept')?.includes('text/html')) {
@@ -116,7 +126,7 @@ async function staticOrNavigation(
 
 export async function handleAppRequest(request: Request, env: WorkerEnv): Promise<Response> {
   const url = new URL(request.url);
-  if (url.protocol !== 'https:' || url.host !== env.PUBLIC_APP_HOST) {
+  if (url.protocol !== 'https:' || url.hostname !== env.PUBLIC_APP_HOST) {
     return decorate(response('Not found.', 404));
   }
   let path: string;

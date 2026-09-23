@@ -210,6 +210,14 @@ describe('app pricing continuation', () => {
     expect(await screen.findByRole('region', { name: 'Current quote' })).toBeInTheDocument();
     expect(created).toBe(1);
     expect(opened).toBe(0);
+    await userEvent.clear(screen.getByRole('textbox', { name: 'Billing name' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Billing name' }), 'Updated buyer');
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Current quote' })).not.toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Review current quote' }));
+    expect(await screen.findByRole('region', { name: 'Current quote' })).toBeInTheDocument();
+    expect(created).toBe(2);
     await userEvent.click(screen.getByRole('button', { name: 'Confirm and continue to payment' }));
     await waitFor(() => expect(opened).toBe(1));
   });

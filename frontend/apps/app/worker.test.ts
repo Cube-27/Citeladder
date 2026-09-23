@@ -9,7 +9,9 @@ const env: Parameters<typeof handleAppRequest>[1] = {
     fetch: async (request: Request) =>
       new URL(request.url).pathname === '/index.html'
         ? new Response('<html>app</html>', { headers: { 'Content-Type': 'text/html' } })
-        : new Response('missing', { status: 404 }),
+        : new URL(request.url).pathname === '/app-assets/page-DqDZ7Zs-.js'
+          ? new Response('export {};', { headers: { 'Content-Type': 'text/javascript' } })
+          : new Response('missing', { status: 404 }),
   },
 };
 
@@ -27,9 +29,24 @@ describe('product Worker routing', () => {
       await handleAppRequest(request('/app-assets/missing.js'), env).then((r) => r.status),
     ).toBe(404);
     expect(await handleAppRequest(request('/.assetsignore'), env).then((r) => r.status)).toBe(404);
+    expect(
+      (await handleAppRequest(request('/app-assets/page-DqDZ7Zs-.js'), env)).headers.get(
+        'cache-control',
+      ),
+    ).toContain('immutable');
     expect(await handleAppRequest(request('/projects', 'POST'), env).then((r) => r.status)).toBe(
       405,
     );
+  });
+
+  it('accepts the documented local HTTPS port for app navigation', async () => {
+    const result = await handleAppRequest(
+      new Request('https://app.citeladder.com:8787/projects', {
+        headers: { accept: 'text/html' },
+      }),
+      env,
+    );
+    expect(result.status).toBe(200);
   });
 
   it('rejects apex-owned and machine-facing endpoints on the app host', async () => {

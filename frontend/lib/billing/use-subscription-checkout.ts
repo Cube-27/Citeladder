@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { authApi } from '@/lib/api/auth';
 import { billingApi, type SubscriptionCheckoutInput } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -204,6 +204,14 @@ export function useSubscriptionCheckout() {
     mutationFn: continueCheckout,
     onError: (error) => setNotice(error instanceof Error ? error.message : 'Checkout unavailable.'),
   });
+  const prepareReset = prepareMutation.reset;
+  const confirmReset = confirmMutation.reset;
+  const resetPrepared = useCallback(() => {
+    prepareReset();
+    confirmReset();
+    activationId.current = null;
+    attempt.current = null;
+  }, [prepareReset, confirmReset]);
   const mutation = useMutation({
     mutationFn: async (input: { input: SubscriptionCheckoutInput; key?: string }) => {
       const activation = await prepareCheckout(input);
@@ -226,5 +234,6 @@ export function useSubscriptionCheckout() {
     preparing: prepareMutation.isPending,
     confirmPrepared: confirmMutation.mutateAsync,
     confirming: confirmMutation.isPending,
+    resetPrepared,
   };
 }

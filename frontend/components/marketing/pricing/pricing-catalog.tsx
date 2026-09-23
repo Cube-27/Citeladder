@@ -39,6 +39,7 @@ import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { useByokPricing } from './use-byok-pricing';
 import { PricingBillingDialog } from './pricing-billing-dialog';
+import { PricingResumePrompt } from './pricing-resume-prompt';
 import { hrefWithQuery } from '@/lib/navigation/url-state';
 
 const STALE_INTENT_MESSAGE = 'That pricing option is no longer available. Please choose again.';
@@ -162,7 +163,10 @@ export function PricingCatalog() {
       // Retain pending intent identity for dismissal and uncertain-result
       // recovery; terminal outcomes allow a fresh selection.
       setPendingKey(null);
-      if (result.status !== 'pending') clearPendingIntent();
+      if (result.status !== 'pending') {
+        clearPendingIntent();
+        setResumableOther(null);
+      }
       // Add-ons and top-ups settle entitlements on the response, so the catalog
       // and early-access reads have to be refetched before the buttons they
       // gate are shown again. The subscription branch invalidates the same
@@ -220,6 +224,7 @@ export function PricingCatalog() {
     onError: () => setNotice(STALE_INTENT_MESSAGE),
   });
   const startResume = resume.mutate;
+  const resumeValid = Boolean(resumableOther && catalog && isStillValid(resumableOther, catalog));
   useEffect(() => {
     if (!catalog || !isAuthenticated) return;
     const params = new URLSearchParams(window.location.search);
@@ -260,20 +265,17 @@ export function PricingCatalog() {
         ) : null}
         <CheckoutStatus checkout={checkout} />
         <PricingFeedback notice={notice} error={activation.error} />
-        {resumableOther ? (
-          <div className="mb-6 flex items-center gap-3">
-            <p>Review your {resumableOther.kind} selection before continuing.</p>
-            <button
-              type="button"
-              onClick={() => {
-                runOrCapture(resumableOther);
-                setResumableOther(null);
-              }}
-            >
-              Confirm purchase
-            </button>
-          </div>
-        ) : null}
+        <PricingResumePrompt
+          intent={resumableOther}
+          catalog={catalog}
+          valid={resumeValid}
+          pending={activation.isPending}
+          onConfirm={runOrCapture}
+          onDismiss={() => {
+            clearPendingIntent();
+            setResumableOther(null);
+          }}
+        />
         <PlansGrid
           catalog={catalog}
           failed={catalogQuery.isError}

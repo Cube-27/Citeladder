@@ -11,7 +11,7 @@ export type PublicPricingSelection = Pick<
   PendingPricingIntentV1,
   'kind' | 'catalog_key' | 'quantity' | 'byok'
 >;
-const KINDS: readonly string[] = ['checkout', 'addon', 'topup'];
+const KINDS = new Set<string>(['checkout', 'addon', 'topup']);
 
 function singleFields(params: URLSearchParams): boolean {
   return ['kind', 'catalog_key', 'quantity', 'byok'].every(
@@ -31,7 +31,7 @@ export function parsePublicPricingSelection(
   const quantity = Number(params.get('quantity'));
   const byok = params.get('byok');
   if (!singleFields(params)) return null;
-  if (!kind || !KINDS.includes(kind) || !validKey(key)) return null;
+  if (!kind || !KINDS.has(kind) || !validKey(key)) return null;
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) return null;
   if (byok !== '0' && byok !== '1') return null;
   return { kind: kind as PendingIntentKind, catalog_key: key, quantity, byok: byok === '1' };
@@ -53,7 +53,9 @@ export function publicPricingSelectionHref(
 
 /** Capture before the login redirect; the URL carries no account data. */
 export function capturePublicPricingSelection(url: URL): boolean {
-  if (!url.searchParams.has('kind')) return false;
+  if (!['kind', 'catalog_key', 'quantity', 'byok'].some((key) => url.searchParams.has(key))) {
+    return false;
+  }
   const selection = parsePublicPricingSelection(url.searchParams);
   if (selection) {
     writePendingIntent({

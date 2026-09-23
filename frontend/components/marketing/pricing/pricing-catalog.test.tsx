@@ -405,6 +405,51 @@ describe('PricingCatalog', () => {
     expect(globalThis.sessionStorage.getItem(PENDING_PRICING_INTENT_KEY)).toBeNull();
   });
 
+  it('shows the current add-on terms and keeps a failed resume available with the same key', async () => {
+    const keys: string[] = [];
+    mswServer.use(
+      catalogHandler(),
+      authenticated(),
+      noOfferHandler(),
+      http.post('/api/v1/billing/addons', ({ request }) => {
+        keys.push(request.headers.get('Idempotency-Key') ?? '');
+        return keys.length === 1
+          ? HttpResponse.json({ detail: 'temporary outage' }, { status: 503 })
+          : HttpResponse.json({ ...activation('addon', 'addon_seats'), status: 'activated' });
+      }),
+    );
+    globalThis.sessionStorage.setItem(
+      PENDING_PRICING_INTENT_KEY,
+      JSON.stringify({
+        version: 1,
+        kind: 'addon',
+        catalog_key: 'addon_seats',
+        quantity: 2,
+        byok: true,
+        country_code: null,
+        billing_details: null,
+        idempotency_key: 'resume-addon-key',
+        return_path: '/pricing',
+        created_at_ms: Date.now(),
+      }),
+    );
+    window.history.replaceState(null, '', '/pricing?resumeActivation=1');
+    renderPricingPage();
+
+    expect(await screen.findByText(/Extra seats, quantity 2.*\$38 before tax/)).toBeInTheDocument();
+    expect(keys).toHaveLength(0);
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm purchase' }));
+    await waitFor(() => expect(keys).toHaveLength(1));
+    expect(screen.getByText(/Extra seats, quantity 2/)).toBeInTheDocument();
+    expect(globalThis.sessionStorage.getItem(PENDING_PRICING_INTENT_KEY)).not.toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm purchase' }));
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys).toEqual(['resume-addon-key', 'resume-addon-key']);
+    await waitFor(() =>
+      expect(screen.queryByText(/Extra seats, quantity 2/)).not.toBeInTheDocument(),
+    );
+  });
+
   it('renders add-ons and top-ups generically, with unpriced entries unavailable', async () => {
     mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
     renderPricingPage();

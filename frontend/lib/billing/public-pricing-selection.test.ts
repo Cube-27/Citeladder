@@ -41,4 +41,20 @@ describe('public pricing handoff', () => {
     capturePublicPricingSelection(new URL('https://app.citeladder.com/pricing?kind=refund'));
     expect(readPendingIntent()).toBeNull();
   });
+
+  it('clears a pending selection for an incomplete handoff but preserves it for an ordinary URL', () => {
+    capturePublicPricingSelection(
+      new URL(
+        'https://app.citeladder.com/pricing?kind=checkout&catalog_key=tier_2&quantity=1&byok=1',
+      ),
+    );
+    expect(
+      capturePublicPricingSelection(new URL('https://app.citeladder.com/pricing?utm=ad')),
+    ).toBe(false);
+    expect(readPendingIntent()?.catalog_key).toBe('tier_2');
+    expect(
+      capturePublicPricingSelection(new URL('https://app.citeladder.com/pricing?quantity=2')),
+    ).toBe(true);
+    expect(readPendingIntent()).toBeNull();
+  });
 });

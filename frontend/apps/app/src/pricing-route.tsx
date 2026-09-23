@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
 import { BillingDetailsForm } from '@/components/billing/billing-details-form';
@@ -65,7 +65,6 @@ function prepareBase(input: PurchaseInput) {
       country_code: country,
       ...details,
     },
-    key: selection.idempotency_key,
   });
 }
 
@@ -107,16 +106,14 @@ function PurchaseButton({
   priceUnavailable: boolean;
   onPurchase: () => void;
 }>) {
+  let label = selection.kind === 'checkout' ? 'Review current quote' : 'Confirm purchase';
+  if (pending) label = 'Preparing…';
   return (
     <Button
       disabled={!canBuy || !workspaceId || pending || quoted || priceUnavailable}
       onClick={onPurchase}
     >
-      {pending
-        ? 'Preparing…'
-        : selection.kind === 'checkout'
-          ? 'Review current quote'
-          : 'Confirm purchase'}
+      {label}
     </Button>
   );
 }
@@ -163,17 +160,18 @@ function PriceInfo({
 }
 
 function selectedOffer(catalog: BillingCatalog, selection: Selection) {
+  let extra: BillingCatalog['addons'][number] | BillingCatalog['topups'][number] | null = null;
+  if (selection.kind === 'addon') {
+    extra = catalog.addons.find((entry) => entry.key === selection.catalog_key) ?? null;
+  } else if (selection.kind === 'topup') {
+    extra = catalog.topups.find((entry) => entry.key === selection.catalog_key) ?? null;
+  }
   return {
     plan:
       selection.kind === 'checkout'
         ? catalog.plans.find((entry) => entry.key === selection.catalog_key)
         : null,
-    extra:
-      selection.kind === 'addon'
-        ? catalog.addons.find((entry) => entry.key === selection.catalog_key)
-        : selection.kind === 'topup'
-          ? catalog.topups.find((entry) => entry.key === selection.catalog_key)
-          : null,
+    extra,
   };
 }
 
@@ -347,10 +345,15 @@ export default function PricingRoute() {
     staleTime: 0,
   });
   const checkout = useSubscriptionCheckout();
+  const resetPrepared = checkout.resetPrepared;
+  useEffect(() => {
+    resetPrepared();
+  }, [activeWorkspaceId, country, details, selection, resetPrepared]);
   const confirm = useMutation({
     mutationFn: () => checkout.confirmPrepared(),
     onSuccess: (result) => {
       if (result?.status && result.status !== 'pending') {
+        resetPrepared();
         clearPendingIntent();
         setSelection(null);
       }
