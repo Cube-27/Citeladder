@@ -20,6 +20,7 @@ set -euo pipefail
 # "true" restores the single-account demo: no registration, no third-party
 # sign-up, MCP limited to DEV_LOGIN_EMAIL.
 DEMO_MODE="${DEMO_MODE:-false}"
+RESET_DATABASE="${RESET_DATABASE:-false}"
 
 [[ "$PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
 [[ "$REGION" =~ ^[a-z]+-[a-z]+[0-9]+$ ]]
@@ -36,10 +37,16 @@ DEMO_MODE="${DEMO_MODE:-false}"
 [[ "$FRONTEND_ORIGINS" == "https://$APP_DOMAIN_NAME" ]]
 [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
+[[ "$RESET_DATABASE" =~ ^(true|false)$ ]]
+if [[ "$RESET_DATABASE" == true && "$DEMO_MODE" != false ]]; then
+  echo 'Database reset is limited to the disposable public demo.' >&2
+  exit 1
+fi
 [[ "$BACKEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
 expected_registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
 [[ "$BACKEND_IMAGE" == "$expected_registry/backend@sha256:"* ]]
 had_previous=false
+reset_started=false
 running_services=""
 if [[ -f /opt/citeladder/runtime.env ]] && [[ -f /opt/citeladder/compose.gcp.yml ]]; then
   running_services="$(docker compose --env-file /opt/citeladder/runtime.env \
@@ -70,6 +77,20 @@ restore_previous_deployment() {
   local status=$?
   trap - ERR
   set +e
+  if $reset_started; then
+    echo 'The database reset started; the old runtime cannot be restored against the new schema.' >&2
+    docker compose --env-file /opt/citeladder/runtime.env \
+      -f /opt/citeladder/compose.gcp.yml up -d --wait --wait-timeout 300 db || true
+    docker compose --env-file /opt/citeladder/runtime.env \
+      -f /opt/citeladder/compose.gcp.yml exec -T db \
+      psql -v ON_ERROR_STOP=1 -U citeladder -d postgres <<'SQL' || true
+SELECT 'CREATE DATABASE citeladder OWNER citeladder' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'citeladder')
+\gexec
+SQL
+    docker compose --env-file /opt/citeladder/runtime.env \
+      -f /opt/citeladder/compose.gcp.yml up -d --force-recreate --remove-orphans || true
+    exit "$status"
+  fi
   if $had_previous; then
     echo 'Deployment failed; restoring the previous runtime and services' >&2
     cp -p /opt/citeladder/runtime.env.previous /opt/citeladder/runtime.env
@@ -237,7 +258,22 @@ stopped_services=(caddy web audit-worker audit-scheduler site-health-worker \
   queue-sweeper integration-worker integration-dispatcher)
 
 docker compose --env-file runtime.env -f compose.gcp.yml pull
-if $had_previous; then
+if [[ "$RESET_DATABASE" == true ]]; then
+  if $had_previous; then
+    # The old Compose file can still include frontend/vite-app. Stop and
+    # remove every old container, while preserving the PostgreSQL volume.
+    docker compose --env-file runtime.env.previous \
+      -f compose.gcp.yml.previous down --remove-orphans
+  fi
+  docker compose --env-file runtime.env -f compose.gcp.yml up -d --wait --wait-timeout 300 db
+  reset_started=true
+  docker compose --env-file runtime.env -f compose.gcp.yml exec -T db \
+    psql -v ON_ERROR_STOP=1 -U citeladder -d postgres \
+      -c 'DROP DATABASE citeladder WITH (FORCE);' \
+      -c 'CREATE DATABASE citeladder OWNER citeladder;'
+  docker compose --env-file runtime.env -f compose.gcp.yml run --rm --no-deps migrate
+  docker compose --env-file runtime.env -f compose.gcp.yml run --rm --no-deps migrate alembic check
+elif $had_previous; then
   # A folded pre-launch baseline cannot upgrade an already-stamped database.
   # Detect drift with the candidate image before stopping the serving revision.
   if ! docker compose --env-file runtime.env -f compose.gcp.yml run --rm --no-deps migrate alembic check; then
@@ -286,6 +322,13 @@ done
 migrate_id="$(docker compose --env-file runtime.env -f compose.gcp.yml ps -aq migrate)"
 [[ -n "$migrate_id" ]]
 [[ "$(docker inspect --format '{{.State.ExitCode}}' "$migrate_id")" = 0 ]]
+if [[ "$RESET_DATABASE" == true ]]; then
+  # A reset deliberately abandons the old schema and its VM frontend. The
+  # previous runtime is not a usable rollback after that point.
+  rm -f runtime.env.previous compose.gcp.yml.previous Caddyfile.previous \
+    frontend-routes.caddy.previous ingress.env.previous \
+    tls/origin.crt.previous tls/origin.key.previous
+fi
 # Keep the last running release's exact configuration for post-deploy smoke rollback.
 # The next deployment replaces this snapshot before changing the live files.
 trap - ERR

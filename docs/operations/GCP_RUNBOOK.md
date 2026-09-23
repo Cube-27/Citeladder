@@ -284,26 +284,20 @@ commit, public health, password login, Google sign-in configuration, and numeric
 in terminal output or bypass Google consent to claim a completed Google login.
 
 
-Reusable operator command (authenticated `gcloud` with IAP/SSH access):
+Reusable operator command (authenticated GitHub CLI with workflow dispatch access):
 
 ```powershell
 .\reset-gcp-db.ps1
 ```
 
-The root PowerShell script reads `PROJECT_ID` and `ZONE` from the repository
-`.env`, uploads its embedded reset operation to the VM over IAP, and
-irreversibly replaces the fixed `citeladder` database, including users and
-sessions. It verifies that the local
-checkout is `main` synchronized with `origin/main`, verifies its backend image
-inputs have no local changes, resolves that commit's immutable backend image
-from Artifact Registry, and builds and pushes the image when it does not exist
-yet. It requires the installed backend-only Compose layout and rejects an older
-runtime that still contains frontend services. The VM then rebuilds the database
-with the candidate backend image's migration baseline, starts the backend stack,
-and verifies FastAPI readiness.
-It does not create a backup. It refuses a mismatched project
-or single-account demo mode, and the existing configured credentials provision
-the new dev account. Run the normal **GCP Demo - Deploy** workflow immediately
-afterward to reconcile the complete backend runtime configuration; verify the
-Workers separately. Optional `-Instance` defaults to
-`citeladder-demo`.
+The root PowerShell script reads `PROJECT_ID` from `.env`, requires local `main`
+to match `origin/main`, and dispatches **GCP Demo - Deploy** with the explicit
+database-reset input and project confirmation. Approve the protected `gcp-demo`
+environment and wait for the workflow to succeed. The workflow verifies the
+project labels and single auto-deleting VM boot disk before changing the VM.
+It builds the exact main backend image if needed, reconciles secrets and runtime
+configuration, stops and removes the installed Compose containers (including
+older `frontend` and `vite-app` services), preserves the PostgreSQL volume,
+irreversibly replaces the fixed `citeladder` database and sessions without a
+backup, applies the current migration baseline, and starts the backend-only
+stack. It refuses single-account demo mode. Verify both Workers separately.
