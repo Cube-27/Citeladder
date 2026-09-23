@@ -10,8 +10,8 @@ CSV imports and explicit edits are append-only observations. Current product row
 
 Catalog surfaces persisted Site Health crawl and Commerce projection progress,
 category hub/leaf roles and counts, product memberships, and explicit product
-correction/reassignment. Category rename and role correction are not exposed yet;
-the reserved category observation table has no writer. The Commerce rail renders products beneath every category
+correction/reassignment. Category names and roles come from catalog projection;
+there is no category editing flow. The Commerce rail renders products beneath every category
 they belong to, keeps products without a projected category under
 `Uncategorized`, and keeps catalog search pinned as an opaque first row while
 the list scrolls. Categories are ordered by descending persisted product count,

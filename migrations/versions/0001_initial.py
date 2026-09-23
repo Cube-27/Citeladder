@@ -6112,7 +6112,6 @@ def upgrade() -> None:
         sa.Column("normalized_name", sa.String(length=255), nullable=False),
         sa.Column("role", sa.String(length=16), nullable=False),
         sa.Column("canonical_url", sa.Text(), nullable=False),
-        sa.Column("editable", sa.Boolean(), nullable=False),
         sa.Column(
             "field_sources", postgresql.JSONB(astext_type=sa.Text()), nullable=False
         ),
@@ -6141,44 +6140,6 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_commerce_categories_workspace_id"),
         "commerce_categories",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
-        "commerce_category_observations",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("category_id", sa.UUID(), nullable=False),
-        sa.Column(
-            "observed_fields", postgresql.JSONB(astext_type=sa.Text()), nullable=False
-        ),
-        sa.Column("edit_version", sa.String(length=64), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["category_id"], ["commerce_categories.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_commerce_category_observations_category_id"),
-        "commerce_category_observations",
-        ["category_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_commerce_category_observations_project_id"),
-        "commerce_category_observations",
-        ["project_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_commerce_category_observations_workspace_id"),
-        "commerce_category_observations",
         ["workspace_id"],
         unique=False,
     )
@@ -7163,7 +7124,6 @@ def downgrade() -> None:
         "content_generation_attempts",
         "competitor_mentions",
         "commerce_product_observations",
-        "commerce_category_observations",
         "commerce_categories",
         "citations",
         "brand_mentions",

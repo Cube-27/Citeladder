@@ -575,13 +575,11 @@ async def _category_from_analysis(
         "source_id": str(analysis.id),
         "version": COMMERCE_PROJECTOR_VERSION,
     }
-    if _dict_value(sources.get("name")).get("kind") != "edit":
-        category.name = safe_title[:255]
-        category.normalized_name = normalized[:255]
-        sources["name"] = source
-    if _dict_value(sources.get("role")).get("kind") != "edit":
-        category.role = role if role in {"hub", "leaf"} else "unknown"
-        sources["role"] = source
+    category.name = safe_title[:255]
+    category.normalized_name = normalized[:255]
+    sources["name"] = source
+    category.role = role if role in {"hub", "leaf"} else "unknown"
+    sources["role"] = source
     category.field_sources = sources
     category.source_analysis_id = analysis.id
     category.projector_version = COMMERCE_PROJECTOR_VERSION

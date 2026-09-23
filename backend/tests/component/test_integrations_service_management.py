@@ -637,6 +637,33 @@ async def test_an_unexpected_revoke_fault_also_retains_the_tokens(
 
 
 @pytest.mark.asyncio
+async def test_revoke_decryption_failure_keeps_pending_grant_and_records_event(
+    db_session: AsyncSession,
+    fake_oauth_client: _FakeOAuthClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mine = await _workspace(db_session, "Mine")
+    grant = await _grant(db_session, mine)
+    connection = await _connection(db_session, grant)
+    await db_session.commit()
+
+    def fail_decrypt(_credential: str) -> str:
+        raise ValueError("invalid ciphertext")
+
+    monkeypatch.setattr(integrations_service, "decrypt_secret", fail_decrypt)
+    await delete_connection(db_session, workspace_id=mine, connection_id=connection.id)
+
+    await db_session.refresh(grant)
+    assert grant.status == GRANT_STATUS_PENDING_REVOCATION
+    assert decrypt_secret(grant.refresh_token_encrypted) == _REFRESH_TOKEN
+    assert fake_oauth_client.revoked == []
+    assert await list_connections(db_session, workspace_id=mine) == []
+    events = await _events(db_session, grant.id)
+    assert [event.event_type for event in events] == [EVENT_INTEGRATION_REVOKE_FAILED]
+    assert events[0].payload["error_code"] == ERROR_PROVIDER_API
+
+
+@pytest.mark.asyncio
 async def test_a_transport_with_no_revoke_endpoint_revokes_locally(
     db_session: AsyncSession,
     fake_oauth_client: _FakeOAuthClient,

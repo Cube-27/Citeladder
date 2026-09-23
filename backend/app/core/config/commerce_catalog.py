@@ -10,7 +10,6 @@ from app.core.config.dotenv import dotenv_sources
 COMMERCE_PROJECTOR_VERSION: Final = "commerce-projector-1"
 COMMERCE_IMPORTER_VERSION: Final = "commerce-catalog-importer-1"
 COMMERCE_EDIT_VERSION: Final = "commerce-catalog-edit-1"
-COMMERCE_CATEGORY_EDIT_VERSION: Final = "commerce-category-edit-1"
 COMMERCE_COMPETITOR_PROVIDER_VERSION: Final = "tavily-commerce-1"
 COMMERCE_COMPETITOR_VALIDATOR_VERSION: Final = "commerce-competitor-validator-1"
 COMMERCE_PROMPT_TEMPLATE_VERSION: Final = "commerce-buyer-prompts-1"
