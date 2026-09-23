@@ -42,6 +42,11 @@ export default defineConfig({
     },
     define: {
       'process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS': apiRequestTimeout,
+      'process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID': JSON.stringify(
+        process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ??
+          environment.NEXT_PUBLIC_GA_MEASUREMENT_ID ??
+          '',
+      ),
       'process.env.PUBLIC_WEBSITE_ORIGIN': JSON.stringify(
         process.env.PUBLIC_WEBSITE_ORIGIN ?? environment.PUBLIC_WEBSITE_ORIGIN ?? '',
       ),
