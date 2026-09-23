@@ -391,6 +391,40 @@ async def test_a_near_expiry_token_is_refreshed_before_the_probe(
 
 
 @pytest.mark.asyncio
+async def test_failed_refresh_records_connection_test_and_releases_claim(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mine = await _workspace(db_session, "Mine")
+    grant = await _grant(
+        db_session, mine, token_expires_at=datetime.now(UTC) - timedelta(minutes=5)
+    )
+    connection = await _connection(db_session, grant)
+    await db_session.commit()
+
+    class FailingRefresh:
+        async def refresh(self, *, refresh_token: str):
+            assert refresh_token == _REFRESH_TOKEN
+            assert not db_session.in_transaction()
+            raise integration_oauth.IntegrationOAuthError(
+                "refresh unavailable", error_code=ERROR_TOKEN_REFRESH_FAILED
+            )
+
+    monkeypatch.setattr(
+        "app.domain.integrations.tokens.integration_oauth.build_oauth_client",
+        lambda *_args, **_kwargs: FailingRefresh(),
+    )
+    result = await run_connection_test(
+        db_session, workspace_id=mine, connection_id=connection.id
+    )
+    assert result.status == TEST_STATUS_FAILED
+    assert result.error_code == ERROR_TOKEN_REFRESH_FAILED
+    events = await _events(db_session, grant.id)
+    assert [event.event_type for event in events] == [EVENT_INTEGRATION_TESTED]
+    await db_session.refresh(grant)
+    assert grant.refresh_claim_id is None
+
+
+@pytest.mark.asyncio
 async def test_an_inaccessible_property_does_not_pass(
     db_session: AsyncSession,
     fake_data_client: _FakeDataClient,

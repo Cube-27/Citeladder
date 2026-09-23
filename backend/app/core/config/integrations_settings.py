@@ -66,6 +66,9 @@ class IntegrationSettings(BaseSettings):
     # (The OAuth state-nonce TTL lives with the OAuth transport settings in
     # ``config/oauth.py`` — ``oauth_settings.state_ttl_seconds``.)
     token_refresh_skew_seconds: float = Field(default=300.0, ge=0)
+    token_refresh_claim_seconds: float = Field(default=75.0, gt=0)
+    token_refresh_wait_seconds: float = Field(default=70.0, gt=0)
+    token_refresh_poll_seconds: float = Field(default=0.2, gt=0)
 
     # --- Import payload cap ------------------------------------------------------
     # Payloads are inline JSONB this pass (S3 offload keyed by payload_hash is
@@ -101,6 +104,8 @@ class IntegrationSettings(BaseSettings):
             raise ValueError(
                 "retry_max_delay_seconds must not be below retry_base_delay_seconds"
             )
+        if self.token_refresh_claim_seconds <= self.sync_request_timeout_seconds:
+            raise ValueError("token refresh claim must outlive the provider timeout")
         return self
 
     def requests_per_minute(self, provider: str) -> int:

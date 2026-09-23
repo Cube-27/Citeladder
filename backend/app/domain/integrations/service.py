@@ -80,7 +80,7 @@ from app.domain.integrations.state import (
     consume_state,
     prepare_connect_callback,
 )
-from app.domain.integrations.tokens import fresh_access_token
+from app.domain.integrations.tokens import fresh_access_token, invalidate_token_claim
 from app.models.integrations import (
     IntegrationConnection,
     IntegrationEvent,
@@ -297,6 +297,7 @@ async def _persist_connected_grant(
     if bundle.granted_scopes:
         grant.granted_scopes = list(bundle.granted_scopes)
     grant.status = GRANT_STATUS_CONNECTED
+    invalidate_token_claim(grant)
     attached = await _attach_connections(
         session,
         workspace_id=workspace_id,
@@ -651,22 +652,24 @@ async def delete_connection(
         )
         await session.commit()
         return
+    revoke_transport = grant.transport
+    revoke_url = INTEGRATION_OAUTH_REVOKE_URLS[revoke_transport]
+    revoke_credential = grant.refresh_token_encrypted or grant.access_token_encrypted
+    invalidate_token_claim(grant)
+    grant.status = GRANT_STATUS_PENDING_REVOCATION
+    revoke_revision = grant.token_revision
     # Commit the local disconnect BEFORE the remote revoke call so no
     # transaction is held open across provider I/O (invariant 8).
     await session.commit()
 
-    revoke_url = INTEGRATION_OAUTH_REVOKE_URLS[grant.transport]
     remote_ok = True
     remote_error_code = ""
     if revoke_url:
-        client = integration_oauth.build_oauth_client(grant.transport)
+        client = integration_oauth.build_oauth_client(revoke_transport)
         try:
             # The refresh token is the long-lived credential — revoking it
             # revokes the whole grant at the provider.
-            token = decrypt_secret(
-                grant.refresh_token_encrypted or grant.access_token_encrypted
-            )
-            await client.revoke(token=token)
+            await client.revoke(token=decrypt_secret(revoke_credential))
         except integration_oauth.IntegrationOAuthError as exc:
             remote_ok = False
             remote_error_code = exc.error_code
@@ -674,7 +677,25 @@ async def delete_connection(
             remote_ok = False
             remote_error_code = ERROR_PROVIDER_API
 
+    current_grant = await session.scalar(
+        select(IntegrationOAuthGrant)
+        .where(
+            IntegrationOAuthGrant.id == grant.id,
+            IntegrationOAuthGrant.workspace_id == workspace_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if (
+        current_grant is None
+        or current_grant.status != GRANT_STATUS_PENDING_REVOCATION
+        or current_grant.token_revision != revoke_revision
+    ):
+        await session.rollback()
+        return
+    grant = current_grant
     if remote_ok:
+        invalidate_token_claim(grant)
         grant.status = GRANT_STATUS_REVOKED
         grant.access_token_encrypted = ""
         grant.refresh_token_encrypted = ""

@@ -128,6 +128,13 @@ class IntegrationOAuthGrant(Base):
     token_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    token_revision: Mapped[int] = mapped_column(Integer, default=0)
+    refresh_claim_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    refresh_claim_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     granted_scopes: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     # connected | needs_reauth | pending_revocation | revoked | error.
     status: Mapped[str] = mapped_column(

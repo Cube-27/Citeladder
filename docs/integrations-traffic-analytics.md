@@ -35,6 +35,9 @@ PostgreSQL work, commit before I/O, persist append-only import artifacts and
 derive versioned metric rows. Dataset configuration owns provider report grains,
 compatibility, coverage and truncation. Provider errors, expired credentials and
 partial data remain distinguishable from an observed zero.
+Interactive probes and workers share a fenced grant refresh claim: the claim
+commits before OAuth I/O, concurrent callers wait within a bound, and a rotated
+token is saved only while the claim and credential revision still match.
 
 resync_seq increases across overlapping windows, with a target-identity floor
 so a remapped property remains comparable across connections. Readers select the

@@ -369,6 +369,9 @@ def upgrade() -> None:
         sa.Column("access_token_encrypted", sa.Text(), nullable=False),
         sa.Column("refresh_token_encrypted", sa.Text(), nullable=False),
         sa.Column("token_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("token_revision", sa.Integer(), nullable=False),
+        sa.Column("refresh_claim_id", sa.UUID(), nullable=True),
+        sa.Column("refresh_claim_expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "granted_scopes", postgresql.JSONB(astext_type=Text()), nullable=True
         ),

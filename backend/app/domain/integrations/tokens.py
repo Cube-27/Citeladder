@@ -1,45 +1,115 @@
-"""Grant access-token resolution for the REQUEST path (spec §2).
-
-A stored Google access token lives about an hour, so any interactive call
-that touches a provider — the connection test, the property picker — must
-be able to refresh before it reaches the API, or a grant connected
-yesterday fails with ``grant_auth_failed`` even though it is perfectly
-healthy.
-
-Relationship to the sync worker: ``IntegrationWorker._fresh_access_token``
-implements the same near-expiry protocol for the BACKGROUND path. The two
-are deliberately separate rather than one shared function because their
-concurrency contracts differ — the worker owns its own session factory and
-holds the grant row lock across the exchange to serialize refreshes between
-worker PROCESSES sharing one grant, whereas this helper runs inside a
-request's existing session and unit of work. The near-expiry rule itself
-(``token_refresh_skew_seconds`` + ``INTEGRATION_OAUTH_REFRESHABLE``) is
-config-owned and read by both (invariant 1), so the policy has one owner
-even though the transaction mechanics do not.
-
-Tokens are decrypted here and returned to the immediate caller only; they
-never enter a DTO, a log line, or an event payload (invariant 6).
-"""
+"""Fenced OAuth refresh shared by request and sync worker callers."""
 
 from __future__ import annotations
 
+import asyncio
+import time
+import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import cast
 
 import httpx
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.integrations import oauth as integration_oauth
 from app.core.config.integrations_contracts import (
     ERROR_GRANT_AUTH_FAILED,
+    ERROR_PROVIDER_API,
+    GRANT_STATUS_CONNECTED,
 )
-from app.core.config.integrations_settings import (
-    integration_settings,
-)
-from app.core.config.integrations_transport import (
-    INTEGRATION_OAUTH_REFRESHABLE,
-)
+from app.core.config.integrations_settings import integration_settings
+from app.core.config.integrations_transport import INTEGRATION_OAUTH_REFRESHABLE
 from app.core.security import decrypt_secret, encrypt_secret
 from app.models.integrations import IntegrationOAuthGrant
+
+
+@dataclass(frozen=True, slots=True)
+class _RefreshClaim:
+    grant_id: uuid.UUID
+    workspace_id: uuid.UUID
+    claim_id: uuid.UUID
+    revision: int
+    transport_kind: str
+    refresh_token: str
+
+
+def invalidate_token_claim(grant: IntegrationOAuthGrant) -> None:
+    """Fence refresh when consent or revocation changes a grant."""
+    grant.token_revision += 1
+    grant.refresh_claim_id = None
+    grant.refresh_claim_expires_at = None
+
+
+async def _locked_grant(
+    session: AsyncSession, grant_id: uuid.UUID, workspace_id: uuid.UUID
+) -> IntegrationOAuthGrant | None:
+    return await session.scalar(
+        select(IntegrationOAuthGrant)
+        .where(
+            IntegrationOAuthGrant.id == grant_id,
+            IntegrationOAuthGrant.workspace_id == workspace_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+
+
+def _token_is_fresh(grant: IntegrationOAuthGrant, now: datetime) -> bool:
+    return (
+        grant.token_expires_at is not None
+        and grant.token_expires_at
+        > now + timedelta(seconds=integration_settings.token_refresh_skew_seconds)
+    )
+
+
+def _claim_is_active(grant: IntegrationOAuthGrant, now: datetime) -> bool:
+    return (
+        grant.refresh_claim_id is not None
+        and grant.refresh_claim_expires_at is not None
+        and grant.refresh_claim_expires_at > now
+    )
+
+
+async def _claim_once(
+    session: AsyncSession, grant_id: uuid.UUID, workspace_id: uuid.UUID
+) -> str | _RefreshClaim | None:
+    grant = await _locked_grant(session, grant_id, workspace_id)
+    if grant is None or grant.status != GRANT_STATUS_CONNECTED:
+        await session.rollback()
+        raise integration_oauth.IntegrationOAuthError(
+            "grant is unavailable", error_code=ERROR_GRANT_AUTH_FAILED
+        )
+    now = datetime.now(UTC)
+    if not INTEGRATION_OAUTH_REFRESHABLE.get(grant.transport, True) or _token_is_fresh(
+        grant, now
+    ):
+        token = decrypt_secret(grant.access_token_encrypted)
+        await session.commit()
+        return token
+    if not grant.refresh_token_encrypted:
+        await session.rollback()
+        raise integration_oauth.IntegrationOAuthError(
+            "grant has no refresh token", error_code=ERROR_GRANT_AUTH_FAILED
+        )
+    if _claim_is_active(grant, now):
+        await session.rollback()
+        return None
+    claim = _RefreshClaim(
+        grant_id=grant.id,
+        workspace_id=grant.workspace_id,
+        claim_id=uuid.uuid4(),
+        revision=grant.token_revision,
+        transport_kind=grant.transport,
+        refresh_token=decrypt_secret(grant.refresh_token_encrypted),
+    )
+    grant.refresh_claim_id = claim.claim_id
+    grant.refresh_claim_expires_at = now + timedelta(
+        seconds=integration_settings.token_refresh_claim_seconds
+    )
+    await session.commit()
+    return claim
 
 
 async def fresh_access_token(
@@ -48,73 +118,89 @@ async def fresh_access_token(
     grant: IntegrationOAuthGrant,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> str:
-    """Return a usable access token, refreshing it when near expiry.
+    """Resolve a grant token without holding a transaction during OAuth I/O."""
+    grant_id = grant.id
+    workspace_id = grant.workspace_id
+    deadline = time.monotonic() + integration_settings.token_refresh_wait_seconds
+    while True:
+        claimed = await _claim_once(session, grant_id, workspace_id)
+        if isinstance(claimed, str):
+            return claimed
+        if claimed is not None:
+            bundle = await _exchange_claim(session, claimed, transport)
+            return await _persist_refresh(session, claimed, bundle)
+        if time.monotonic() >= deadline:
+            raise integration_oauth.IntegrationOAuthError(
+                "grant refresh is busy", error_code=ERROR_GRANT_AUTH_FAILED
+            )
+        await asyncio.sleep(integration_settings.token_refresh_poll_seconds)
 
-    The grant row is re-read ``FOR UPDATE`` and the expiry re-checked
-    inside that lock, so two concurrent requests on one grant perform at
-    most one remote refresh. A non-refreshable transport returns its stored
-    token directly; a ``None`` expiry is not near-expiry for those.
 
-    Raises ``IntegrationOAuthError`` when the grant cannot yield a usable
-    token (missing row, no refresh token, or a failed exchange) — callers
-    map that to their own surface rather than falling back to a stale one.
-    """
-    refreshable = INTEGRATION_OAUTH_REFRESHABLE.get(grant.transport, True)
-    if not refreshable:
-        return decrypt_secret(grant.access_token_encrypted)
-
-    # Re-read under a row lock so the expiry check and the rotation are
-    # atomic against a concurrent request on the same grant.
-    locked = await session.get(IntegrationOAuthGrant, grant.id, with_for_update=True)
-    if locked is None:
-        raise integration_oauth.IntegrationOAuthError(
-            "grant row is missing",
-            error_code=ERROR_GRANT_AUTH_FAILED,
-        )
-    now = datetime.now(UTC)
-    skew = timedelta(seconds=integration_settings.token_refresh_skew_seconds)
-    if locked.token_expires_at is not None and locked.token_expires_at > now + skew:
-        return decrypt_secret(locked.access_token_encrypted)
-    if not locked.refresh_token_encrypted:
-        raise integration_oauth.IntegrationOAuthError(
-            "grant has no refresh token",
-            error_code=ERROR_GRANT_AUTH_FAILED,
-        )
-    refresh_token = decrypt_secret(locked.refresh_token_encrypted)
-    client = integration_oauth.build_oauth_client(locked.transport, transport=transport)
+async def _exchange_claim(
+    session: AsyncSession,
+    claim: _RefreshClaim,
+    transport: httpx.AsyncBaseTransport | None,
+) -> integration_oauth.OAuthTokenBundle:
     try:
-        bundle = await client.refresh(refresh_token=refresh_token)
+        client = integration_oauth.build_oauth_client(
+            claim.transport_kind, transport=transport
+        )
+        return await asyncio.wait_for(
+            client.refresh(refresh_token=claim.refresh_token),
+            timeout=integration_settings.sync_request_timeout_seconds,
+        )
+    except TimeoutError as exc:
+        await _clear_claim(session, claim)
+        raise integration_oauth.IntegrationOAuthError(
+            "grant refresh timed out", error_code=ERROR_PROVIDER_API
+        ) from exc
     except BaseException:
-        # Never hold the grant row lock across a failed exchange — the
-        # request would propagate the error with the row still locked and
-        # the transaction open, blocking every other caller on this grant.
-        await session.rollback()
+        await _clear_claim(session, claim)
         raise
-    _store_rotated_bundle(locked, bundle, now=now)
-    await session.commit()
-    return bundle.access_token
 
 
-def _store_rotated_bundle(
-    grant: IntegrationOAuthGrant,
+def _claim_matches(grant: IntegrationOAuthGrant | None, claim: _RefreshClaim) -> bool:
+    return (
+        grant is not None
+        and grant.status == GRANT_STATUS_CONNECTED
+        and grant.refresh_claim_id == claim.claim_id
+        and grant.token_revision == claim.revision
+        and grant.refresh_claim_expires_at is not None
+        and grant.refresh_claim_expires_at > datetime.now(UTC)
+    )
+
+
+async def _persist_refresh(
+    session: AsyncSession,
+    claim: _RefreshClaim,
     bundle: integration_oauth.OAuthTokenBundle,
-    *,
-    now: datetime,
-) -> None:
-    """Persist a refreshed bundle onto the locked grant (encrypted).
-
-    Each field is written only when the provider actually returned it: a
-    refresh response may omit the refresh token (the existing one stays
-    valid) and the scope list (the grant keeps its recorded scopes), so
-    overwriting unconditionally would erase working credentials.
-    """
+) -> str:
+    grant = await _locked_grant(session, claim.grant_id, claim.workspace_id)
+    if not _claim_matches(grant, claim):
+        await session.rollback()
+        raise integration_oauth.IntegrationOAuthError(
+            "grant changed during refresh", error_code=ERROR_GRANT_AUTH_FAILED
+        )
+    grant = cast(IntegrationOAuthGrant, grant)
     grant.access_token_encrypted = encrypt_secret(bundle.access_token)
     if bundle.refresh_token:
         grant.refresh_token_encrypted = encrypt_secret(bundle.refresh_token)
     grant.token_expires_at = (
-        now + timedelta(seconds=bundle.expires_in)
+        datetime.now(UTC) + timedelta(seconds=bundle.expires_in)
         if bundle.expires_in is not None
         else None
     )
     if bundle.granted_scopes:
         grant.granted_scopes = list(bundle.granted_scopes)
+    invalidate_token_claim(grant)
+    await session.commit()
+    return bundle.access_token
+
+
+async def _clear_claim(session: AsyncSession, claim: _RefreshClaim) -> None:
+    await session.rollback()
+    grant = await _locked_grant(session, claim.grant_id, claim.workspace_id)
+    if grant is not None and grant.refresh_claim_id == claim.claim_id:
+        grant.refresh_claim_id = None
+        grant.refresh_claim_expires_at = None
+    await session.commit()
