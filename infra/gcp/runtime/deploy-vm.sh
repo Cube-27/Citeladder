@@ -269,7 +269,7 @@ if [[ "$RESET_DATABASE" == true ]]; then
   reset_started=true
   docker compose --env-file runtime.env -f compose.gcp.yml exec -T db \
     psql -v ON_ERROR_STOP=1 -U citeladder -d postgres \
-      -c 'DROP DATABASE citeladder WITH (FORCE);' \
+      -c 'DROP DATABASE IF EXISTS citeladder WITH (FORCE);' \
       -c 'CREATE DATABASE citeladder OWNER citeladder;'
   docker compose --env-file runtime.env -f compose.gcp.yml run --rm --no-deps migrate
   docker compose --env-file runtime.env -f compose.gcp.yml run --rm --no-deps migrate alembic check
