@@ -220,7 +220,7 @@ Marketing navigation retains Log in at every width and Sign up from `sm` up. On 
 
 ### Patterns
 
-Capability modules are peer surfaces with one neutral treatment; status and data carry the colour. Number only an actual sequence, such as Discover → Observe → Diagnose → Act → Verify. Use eyebrows sparingly at major transitions. Marketing previews show a focused, readable product state on phones, hiding secondary navigation and details. Keep one shared horizontal grid for navigation, hero, and sections, and use equal heading and description columns when a section has both.
+Capability modules are peer surfaces with one neutral treatment; status and data carry the colour. Number only an actual sequence, such as Discover → Observe → Diagnose → Act → Verify. Use eyebrows sparingly at major transitions. On phones, only the landing hero product image, the landing product explorer's tab images, and the Solutions product images scale their desktop illustrations inside their own frames. The surrounding sections and authenticated app keep responsive mobile layouts, readable type, and touch targets. Keep one shared horizontal grid for navigation, hero, and sections, and use equal heading and description columns when a section has both.
 
 Cookie consent is a compact bottom-right floating panel with equal-width Reject and Accept actions. On phones it expands only to the viewport gutters and respects the bottom safe area; it never becomes a full-width page banner.
 

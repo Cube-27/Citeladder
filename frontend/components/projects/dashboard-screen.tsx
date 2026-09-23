@@ -25,7 +25,7 @@ import { useCommandCenterActions } from './use-command-center-actions';
 
 const DASHBOARD_METRIC_PLACEHOLDERS = ['metric-a', 'metric-b', 'metric-c'] as const;
 const DASHBOARD_ACTION_PLACEHOLDERS = ['action-a', 'action-b', 'action-c'] as const;
-const overviewInset = 'pt-[var(--content-gutter)]';
+const overviewInset = 'pt-[var(--workspace-gap)] min-[981px]:pt-[var(--content-gutter)]';
 
 export function DashboardScreen({
   onEditProject,

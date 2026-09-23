@@ -58,7 +58,7 @@ export function InternalLinksCard({
   ];
   return (
     <div className="grid min-w-0 gap-4">
-      <p className={textRole('meta')}>
+      <p className={textRole('meta', 'max-[980px]:hidden')}>
         {`Modelled over ${links.source_page_count} observed crawl page${links.source_page_count === 1 ? '' : 's'}${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
       </p>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">

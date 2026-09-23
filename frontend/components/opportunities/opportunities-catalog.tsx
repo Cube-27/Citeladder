@@ -288,7 +288,11 @@ function FeaturedSection({
   const { detail, isLoading } = featured;
   if (!isLoading && !detail) return null;
   return (
-    <section aria-label="Next best action" aria-busy={isLoading}>
+    <section
+      aria-label="Next best action"
+      aria-busy={isLoading}
+      className="min-h-44 min-[981px]:min-h-0"
+    >
       {detail ? (
         <FeaturedRecommendation detail={detail} onOpen={() => onOpen(detail.id)} />
       ) : (

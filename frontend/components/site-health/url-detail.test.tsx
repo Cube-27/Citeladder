@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -196,6 +196,7 @@ function detail(overrides: Partial<PageDetail> = {}): PageDetail {
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
+  vi.unstubAllGlobals();
 });
 afterAll(() => mswServer.close());
 
@@ -604,6 +605,22 @@ describe('UrlDetail', () => {
     links.focus();
     await user.keyboard('{ArrowLeft}');
     expect(delivery).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('shows both measurement sections on a phone without requiring a tab switch', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 980px)',
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    mswServer.use(...handlers(detail()));
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+    expect(screen.getByRole('heading', { name: 'Delivery Metrics' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Internal Links' })).toBeInTheDocument();
+    expect(screen.getByText('Main-content inbound')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Internal Links' })).not.toBeInTheDocument();
   });
 
   it('distinguishes unmeasured internal links from an observed zero', async () => {

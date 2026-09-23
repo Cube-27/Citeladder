@@ -66,6 +66,51 @@ test.describe('marketing routes', () => {
     }
   });
 
+  test('phone scaling stays inside the three product illustration surfaces', async ({ page }) => {
+    for (const width of [375, 760, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `${width}px landing overflow`).toBeLessThanOrEqual(1);
+      const hero = page.locator('.cl-hero-scaled-preview > div');
+      const product = page
+        .getByRole('tabpanel', { name: /sources/i })
+        .last()
+        .locator('.cl-product-preview > div');
+      await expect(hero).toBeVisible();
+      await expect(product).toBeVisible();
+      if (width === 375) {
+        for (const image of [hero, product]) {
+          await expect
+            .poll(() =>
+              image.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a),
+            )
+            .toBeLessThan(1);
+        }
+      }
+      expect(
+        await page.locator('.cl-record').evaluate((element) => getComputedStyle(element).transform),
+      ).toBe('none');
+
+      await page.goto('/solutions');
+      const solution = page.locator('.cl-solution-preview > div').first();
+      await expect(solution).toBeVisible();
+      if (width === 375) {
+        await expect
+          .poll(() =>
+            solution.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a),
+          )
+          .toBeLessThan(1);
+      }
+      const solutionOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(solutionOverflow, `${width}px Solutions overflow`).toBeLessThanOrEqual(1);
+    }
+  });
+
   test('published content slugs return 200 and unknown slugs return 404', async ({ page }) => {
     for (const path of [
       '/blog/connecting-owned-evidence-ai-search',

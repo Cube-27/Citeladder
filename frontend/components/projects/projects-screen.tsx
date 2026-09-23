@@ -72,7 +72,7 @@ export function ProjectsScreen() {
   }
 
   return (
-    <>
+    <div className="grid gap-[var(--page-section-gap)] min-[981px]:block">
       <DashboardScreen onEditProject={(project) => setEditing(project)} />
 
       {editing ? (
@@ -85,6 +85,6 @@ export function ProjectsScreen() {
           }}
         />
       ) : null}
-    </>
+    </div>
   );
 }
