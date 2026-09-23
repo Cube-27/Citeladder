@@ -309,11 +309,11 @@ Connect through IAP with `gcloud compute ssh <VM_NAME> --project <PROJECT_ID>
 sudo bash <<'BASH'
 set -euo pipefail
 cd /opt/citeladder
-for file in runtime.env compose.gcp.yml Caddyfile frontend-routes.caddy; do
+for file in runtime.env compose.gcp.yml Caddyfile; do
   test -f "$file.previous"
   cp -p "$file.previous" "$file"
 done
-for file in ingress.env tls/origin.crt tls/origin.key; do
+for file in frontend-routes.caddy ingress.env tls/origin.crt tls/origin.key; do
   if test -f "$file.previous"; then cp -p "$file.previous" "$file"; else rm -f "$file"; fi
 done
 docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate --remove-orphans
