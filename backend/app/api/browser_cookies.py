@@ -17,20 +17,6 @@ from app.core.config.oauth import (
 
 _INSECURE_ENVS = {"", "development", "dev", "local", "test", "testing"}
 
-# A non-secret companion to the HttpOnly session cookie, deliberately readable
-# by browser JavaScript. It carries no token and no identity — only the fact
-# that a session was issued — and the browser expires it on exactly the same
-# schedule as the session it shadows.
-#
-# It exists because the marketing pages are statically rendered: their HTML
-# always carries the anonymous "Log in" actions, so a signed-in visitor saw
-# those swap to "Dashboard" after hydration. The session cookie is HttpOnly and
-# cannot answer "is there a session?" before paint; a localStorage trace can,
-# but outlives the session it stands for, which turns the flash around into
-# "Dashboard" swapping to "Log in". Only a cookie shares the session's own
-# lifetime, so only a cookie can be right at first paint.
-SESSION_HINT_COOKIE = "citeladder_session_hint"
-
 
 def browser_cookie_secure() -> bool:
     return str(settings.app_env or "").strip().lower() not in _INSECURE_ENVS
@@ -63,7 +49,7 @@ def set_session_cookie(response: Response, token: str) -> None:
 
     Documented policy: HttpOnly so browser JS can never read the token
     (XSS hardening); SameSite=Lax because the browser reaches the backend
-    same-origin through the Next ``rewrites()`` proxy, so the cookie is
+    same-origin through the app Worker proxy, so the cookie is
     first-party and no cross-site POST flow needs None; Secure outside local
     dev; Path=/ so it is sent to the whole same-origin API surface.
 
@@ -80,28 +66,11 @@ def set_session_cookie(response: Response, token: str) -> None:
         path="/",
         max_age=max_age,
     )
-    # Same max_age, so the browser drops the hint at the same instant the
-    # session stops being honoured. `httponly=False` is the whole point.
-    response.set_cookie(
-        SESSION_HINT_COOKIE,
-        "1",
-        httponly=False,
-        samesite="lax",
-        secure=browser_cookie_secure(),
-        path="/",
-        max_age=max_age,
-    )
 
 
 def clear_session_cookie(response: Response) -> None:
-    """Drop the session and the hint together, so neither can outlive the other."""
+    """Drop the app-host session."""
     response.delete_cookie(settings.session_cookie_name, path="/")
-    response.delete_cookie(
-        SESSION_HINT_COOKIE,
-        path="/",
-        samesite="lax",
-        secure=browser_cookie_secure(),
-    )
 
 
 def set_auth_oauth_cookie(response: Response, nonce: str) -> None:

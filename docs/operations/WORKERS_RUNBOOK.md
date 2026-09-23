@@ -2,8 +2,8 @@
 
 This is the operator procedure for the four-PR
 [Workers migration plan](../plans/CiteLadder_Workers_Migration_Implementation_Plan.md).
-PRs 1–3 prepare protected ingress and two Workers. PR 4 removes the superseded
-frontend serving layer before the owner authorizes a fresh production release.
+PRs 1–3 prepared protected ingress and two Workers. PR 4 removes the superseded
+production frontend serving layer before the owner authorizes a fresh release.
 There is no staging environment or staging Worker target. Repository availability
 does not establish DNS, provider registration, deployment or production acceptance.
 
@@ -44,10 +44,9 @@ currently deployed revision, DNS or enabled provider state.
 | `PUBLIC_WEBSITE_ORIGIN` | `https://citeladder.com` | same |
 | `PUBLIC_APP_ORIGIN` | `https://citeladder.com` | `https://app.citeladder.com` |
 
-`PUBLIC_*` values are baked into frontend images. Changing either requires a
-new artifact, including on a repeated source SHA. The GCP workflow keys image
-tags by source SHA and a public-input fingerprint and prints that fingerprint
-in its protected summary. `FRONTEND_URL` is the browser
+`PUBLIC_*` values are baked into Worker artifacts. Changing either requires a
+new Worker build and deployment, including on a repeated source SHA. The GCP
+workflow publishes only the backend image. `FRONTEND_URL` is the browser
 origin for OAuth, invitations and application returns. The MCP protocol origin
 is separate and must be explicit in production. Never point browser config at
 `origin.citeladder.com` or expose the ingress credential to a client bundle.
@@ -87,12 +86,12 @@ method, owner, focused test and removal condition in the release record.
    receive it.
 4. Set the non-secret `ORIGIN_DOMAIN_NAME` and `APP_DOMAIN_NAME` GitHub
    environment variables; set the origin matrix above explicitly. Confirm the
-   `gcp-demo` environment remains main-only with its owner reviewer. Future
-   Worker deploy environments need least-privilege Cloudflare credentials and
-   protected approval, but PR 1 does not attach those domains.
-5. Run the existing protected GCP deploy only with release authorization.
-   Check the apex frontend, login, callback, MCP discovery and existing grant.
-   Check unauthenticated `https://origin.citeladder.com/health` returns 403.
+   `gcp-demo` environment remains main-only with its owner reviewer. The two
+   production Worker environments use least-privilege Cloudflare credentials
+   and protected approval.
+5. Run the protected GCP deploy only with release authorization and the
+   coordinated order below. Check unauthenticated
+   `https://origin.citeladder.com/health` returns 403.
    An authenticated test from a controlled Worker/isolated setup must reach
    backend health, preserve redirect status and separate cookies, and reject
    spoofed public-host and forwarding headers. Do not put the ingress token in
@@ -107,20 +106,12 @@ redeploy ingress. Record version references and test results, never values.
 ## Recovery and handoff
 
 The GCP deploy retains `.previous` copies of the last running release's
-`runtime.env`, Compose file, Caddy files, optional `ingress.env`, and optional
-origin certificate and key on the host. Keep these through post-deploy smoke
-and ingress checks. If the new backend/ingress fails after the deploy script
-exits, restore those copies (remove files with no previous copy), run
-`docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate`
-from `/opt/citeladder`, then recheck apex login, callback and MCP. Do not
-restore a database backup for this frontend change. A Worker version rollback
-alone does not restore DNS, provider registrations, GCP secrets or backend
-configuration.
-
-PR 2 may assume only that the code and configuration contracts exist after PR 1
-merges. It must inspect the protected release record to learn whether origin
-DNS, certificate, secret and compatible backend were actually deployed and
-tested. No repository commit alone establishes that operational gate.
+`runtime.env`, Compose file, Caddy file, optional legacy route file,
+`ingress.env`, and origin certificate/key on the host. Keep these and the
+recorded old image digests through first-release acceptance. The exact
+first-release recovery commands appear below. Do not restore a database backup
+for this frontend change. A Worker version rollback alone does not restore
+DNS, provider registrations, GCP secrets or backend configuration.
 
 ## Product Worker preparation (PR 2)
 
@@ -168,7 +159,7 @@ fingerprint, compatible backend revision and secret version reference in the
 protected release record. The workflow summary does not claim backend or
 account acceptance.
 
-After PR 4 and the separately authorized release, verify compatible backend
+After the separately authorized release, verify compatible backend
 ingress and observe forwarded client identity through Worker, Cloudflare and
 Caddy. Test login, workspace isolation, callbacks, consent and pricing with
 safe production test accounts. Do not enable a payment provider merely to test
@@ -179,7 +170,7 @@ in Cloudflare Workers & Pages and deploy that version to the same Custom
 Domain. Confirm its `/health`, navigation and asset response, then record the
 version transition. Keep the prior immutable artifact and fingerprint in the
 GitHub release record. This does not roll back DNS, OAuth registrations,
-backend browser origins, ingress secrets or the old apex frontend; use the
+backend browser origins, ingress secrets or the prior apex routing; use the
 coordinated PR 3 procedure for those. PR 2 leaves the apex deployment untouched.
 
 ## Marketing Worker and cutover preparation (PR 3)
@@ -194,11 +185,9 @@ matches the protected origin token. The public catalog read sends no visitor
 cookies upstream. Record artifact digest, public-config fingerprint, deployment
 ID and matching backend/secret revisions in the protected release record.
 
-PR 3 temporarily pins the old frontend images for backend-only releases before
-PR 4. The owner will make no such release in that interval. PR 4 must delete
-the legacy image inputs, frontend services and related recovery dependency
-before the first fresh deployment. Existing deployed artifacts remain available
-for an operator-recorded emergency recovery until the release is accepted.
+The old frontend images and files remain captured in the prior release record
+and VM `.previous` copies until the first fresh release is accepted. Normal
+GCP delivery has no frontend image inputs or services.
 
 For local Worker verification, run `pnpm --dir frontend dev:marketing-worker`.
 Use only a disposable local token; never use the production token. Map
@@ -214,18 +203,18 @@ service; production config cannot select it.
 ### Fresh release after PR 4
 
 The owner deferred deployment until after PR 4 and intends a fresh release.
-PR 4 must remove the old GCP frontend-dependent steps and verify the final
-topology before any dispatch. The manual setup checklist below is the release
-prerequisite; PR 4 must update it to match its final workflows. Deleting stale
+The GCP workflow now deploys only backend and protected ingress. The manual
+setup checklist below is the release prerequisite. Deleting stale
 data requires separate explicit authorization and an identified target.
 
 ### Manual setup checklist for the first production release
 
-Confirm each item in the named console and record its result in the protected
-release record. Local `.env` values do not populate GitHub Actions or Cloudflare
+The owner reports required infrastructure setup complete. Verify each existing
+setting in the named console and record its result in the protected release
+record. Local `.env` values do not populate GitHub Actions or Cloudflare
 Worker secrets. Do not paste secret values into a PR, issue or chat.
 
-1. **GitHub → Settings → Environments:** keep `gcp-demo` and create/protect
+1. **GitHub → Settings → Environments:** verify `gcp-demo`,
    `workers-app-production` and `workers-marketing-production`. Restrict each
    deployment to `main` and require the release reviewer. In each Worker
    environment, set secret `CLOUDFLARE_API_TOKEN` and variable
@@ -257,8 +246,8 @@ Worker secrets. Do not paste secret values into a PR, issue or chat.
    the apex. Record provider-console acceptance; no provider is enabled just
    for this migration.
 5. **GCP / release:** verify the retained backend VM, static IP, Cloudflare-only
-   firewall, IAP, PostgreSQL, backups and Secret Manager access. PR 4 must make
-   `gcp-demo` deploy backend/ingress only with
+   firewall, IAP, PostgreSQL, backups and Secret Manager access. `gcp-demo`
+   deploys backend/ingress only with
    `FRONTEND_URL=FRONTEND_ORIGINS=https://app.citeladder.com` and
    `MCP_PUBLIC_BASE_URL=https://citeladder.com`. Record the exact disposable
    data target before requesting any stale-data deletion. No database reset is
@@ -271,25 +260,27 @@ Worker secrets. Do not paste secret values into a PR, issue or chat.
 
 ### Release order after PR 4
 
-The PR 4 agent must reconcile this procedure against the final backend-only GCP
-workflow before merge. Until then, the following is the required order, not
-authorization to dispatch a workflow or change DNS.
+The following is the required order after protected release approval. This
+procedure itself does not authorize dispatch or DNS changes.
 
 1. Record operator, main SHA, exact backend/Worker artifacts, existing DNS and
    Custom Domain associations, certificate and secret version references,
    callbacks, rollback target and failure thresholds. Confirm the manual setup
    checklist and the protected approvals.
-2. Deploy the compatible backend and protected origin through `gcp-demo` from
-   `main`. Verify direct origin rejection and the app browser-origin/MCP apex
-   configuration. PR 4 must remove `browser_origin=apex` and pinned legacy
-   frontend images from this final deployment interface.
-3. Deploy the product Worker through **Product Worker delivery** and approve
+2. Dispatch `gh workflow run gcp-demo-deploy.yml --ref main`, approve `gcp-demo`,
+   and wait for its successful backend digest and origin 403 summary. Verify
+   app browser-origin and MCP apex configuration. This release removes the old
+   VM frontend containers; retain their captured artifacts and `.previous`
+   files for first-release recovery.
+3. Dispatch `gh workflow run workers-app-deploy.yml --ref main`, deploy the
+   product Worker through **Product Worker delivery**, and approve
    `workers-app-production`. Attach `app.citeladder.com`; verify `/health`,
    assets, login, same-origin API, consent and enabled callbacks with safe test
    accounts. Observe client identity through Worker, Cloudflare and Caddy.
 4. Check conflicting apex DNS, Worker Routes and wildcard routes; preserve
    `origin.citeladder.com` and email records. Deploy **Marketing Worker
-   delivery**, approve `workers-marketing-production` and attach
+   delivery** with `gh workflow run workers-marketing-deploy.yml --ref main`,
+   approve `workers-marketing-production` and attach
    `citeladder.com`. Verify initial HTML, direct app links, public pricing,
    genuine 404s, sitemap, canonicals and apex MCP/webhook ownership.
 5. Run [the architecture acceptance matrix](../plans/CiteLadder_Workers_Migration_Architecture.md#12-acceptance-matrix-evidence-required-before-completion)
@@ -297,7 +288,50 @@ authorization to dispatch a workflow or change DNS.
    Fix actual failures before accepting the release.
 
 For a later isolated Worker regression, redeploy its last accepted version and
-repeat affected checks. PR 4 must give exact first-release recovery commands
-for the final backend-only topology and recorded DNS/domain state. Do not depend
-on rebuilding the retired Node frontend, restore a database to undo frontend
-deployment, bypass protected ingress or add a broad product redirect bridge.
+repeat affected checks. Do not rebuild the retired frontend, restore a database
+to undo frontend deployment, bypass protected ingress or add a broad product
+redirect bridge.
+
+### First-release recovery before acceptance
+
+Use this only against the VM and DNS/domain baseline captured in step 1. If a
+single Worker regresses after acceptance, restore that Worker's last accepted
+version in Cloudflare instead. Before first-release acceptance, detach the new
+apex Custom Domain or restore its captured association and DNS in Cloudflare;
+keep the origin record and email records untouched. Restore the previous
+provider callback registration/override combination and direct links. App-host
+sessions do not transfer to the apex; restart affected browser transactions.
+
+Connect through IAP with `gcloud compute ssh <VM_NAME> --project <PROJECT_ID>
+--zone <ZONE> --tunnel-through-iap`. On the VM, restore the captured files:
+
+```bash
+sudo bash <<'BASH'
+set -euo pipefail
+cd /opt/citeladder
+for file in runtime.env compose.gcp.yml Caddyfile; do
+  test -f "$file.previous"
+  cp -p "$file.previous" "$file"
+done
+for file in frontend-routes.caddy ingress.env tls/origin.crt tls/origin.key; do
+  if test -f "$file.previous"; then cp -p "$file.previous" "$file"; else rm -f "$file"; fi
+done
+docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate --remove-orphans
+docker compose --env-file runtime.env -f compose.gcp.yml ps
+BASH
+```
+
+Recheck old apex navigation, app/API health, login, callbacks and stable MCP
+identity against the restored route/configuration. Record the DNS/domain and
+provider actions, image digests, previous-file identifiers and probe results.
+This recovery uses the prior immutable frontend images still retained in
+Artifact Registry; it neither restores the database nor bypasses origin TLS.
+After acceptance, archive those references under release retention and use
+accepted Worker versions for ordinary frontend recovery.
+
+The apex `GET /mcp/oauth/consent` redirect and safe `POST` rejection remain for
+transactions started on the previous origin. The release operator owns their
+removal review by 1 October 2026. Remove them only after the first release is
+accepted, prior transactions have expired or been restarted, and a real MCP
+client confirms the app consent path. The stable apex MCP protocol endpoints
+and signed webhook URL remain long-lived contracts.

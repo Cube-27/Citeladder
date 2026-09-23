@@ -85,17 +85,14 @@ test('root governance and product prose avoid implementation suites', () => {
 });
 
 test('packaged Content skills remain backend production inputs', () => {
-  assert.deepEqual(
-    classifyPaths(['backend/app/core/config/content_skills/packs/blog/SKILL.md']),
-    {
-      backend: true,
-      frontend: false,
-      contract: false,
-      e2e: false,
-      security: false,
-      compose: false,
-    },
-  );
+  assert.deepEqual(classifyPaths(['backend/app/core/config/content_skills/packs/blog/SKILL.md']), {
+    backend: true,
+    frontend: false,
+    contract: false,
+    e2e: false,
+    security: false,
+    compose: false,
+  });
 });
 
 test('Compose selects container-shaped changes only, on every push of a PR', () => {
@@ -128,7 +125,7 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
     'frontend/apps/app/vite.config.ts',
     'frontend/apps/marketing/astro.config.mjs',
     'frontend/Caddyfile',
-    'infra/gcp/runtime/frontend-routes.caddy',
+    'frontend/local-compose-routes.caddy',
     'scripts/frontend-ingress-smoke.mjs',
     '.github/workflows/compose-smoke.yml',
   ]) {

@@ -6,11 +6,13 @@
   — implementation plan requested; PRs 1–4 run in separate chats after each
   predecessor merges. Follows the [architecture specification](CiteLadder_Workers_Migration_Architecture.md).
   PR 1 merged as #133 (`7dffa2ef`); PR 2 merged as #134 (`f9f1ad16`);
-  PR 3 implementation is in progress.
+  PR 3 merged as #136 (`afd81602`); PR 4 implementation is in progress.
   No deployment or production acceptance is claimed. The owner now wants PR 4
   after PR 3 merges, followed by a separately authorized fresh deployment.
   PR 4 must finalize backend-only deployment and production-only recovery before
-  release. There is no staging environment; do not create staging Workers,
+  release. The owner reports required infrastructure setup complete; verify it
+  in the protected release record before dispatch. There is no staging
+  environment; do not create staging Workers,
   domains, GitHub environments or release gates. The Workers runbook lists the
   manual production setup. No data deletion is authorized by this plan; no
   current customers.

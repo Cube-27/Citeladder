@@ -132,12 +132,6 @@ export const COOKIE_POLICY: LegalDocument = {
           category: 'Essential cookie',
         },
         {
-          name: 'citeladder_session_hint',
-          purpose: 'Shows signed-in navigation without exposing the session token.',
-          duration: 'Same lifetime as the session cookie',
-          category: 'Essential cookie',
-        },
-        {
           name: 'citeladder_auth_oauth, citeladder_integration_oauth',
           purpose: 'Protects a sign-in or integration connection while it completes.',
           duration: 'Up to 10 minutes; cleared after completion',

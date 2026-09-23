@@ -221,7 +221,6 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
         assert f"write_env {runtime_var}" in deploy
     assert 'has_version "$required" ||' in workflow
     assert 'has_version "$optional" ||' in workflow
-    assert "/api/v1/auth/oauth/providers" in workflow
     # Content and the default agent are each a provider-neutral trio
     # (key + url + model): neither may silently inherit a baked-in default.
     for variable in (
@@ -256,7 +255,7 @@ def test_public_access_is_the_default_and_demo_mode_stays_switchable() -> None:
     assert 'write_env MCP_ALLOWED_ACCOUNT_EMAIL ""' in deploy
 
 
-def test_deploy_rotates_configured_secrets_and_verifies_dev_login() -> None:
+def test_deploy_rotates_configured_secrets() -> None:
     workflow = _shell(_document(WORKFLOWS / "gcp-demo-deploy.yml"))
     assert "sync_value()" in workflow
     assert "gcloud secrets versions access latest" in workflow
@@ -268,16 +267,12 @@ def test_deploy_rotates_configured_secrets_and_verifies_dev_login() -> None:
         in workflow
     )
     assert "gcloud secrets versions disable" in workflow
-    assert '"$FRONTEND_URL/api/v1/auth/login"' in workflow
-    assert "Configured live dev login returned HTTP" in workflow
 
 
 def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     variables = (GCP / "variables.tf").read_text(encoding="utf-8")
-    assert variables.count("@sha256:[0-9a-f]{64}$") == 3
+    assert variables.count("@sha256:[0-9a-f]{64}$") == 1
     assert variables.count("citeladder-demo/backend@sha256:") == 1
-    assert variables.count("citeladder-demo/frontend@sha256:") == 1
-    assert variables.count("citeladder-demo/vite-app@sha256:") == 1
     assert "immutable_tags = true" in (GCP / "storage.tf").read_text(encoding="utf-8")
     paths = sorted(WORKFLOWS.glob("gcp-demo-*.yml"))
     assert paths
@@ -300,17 +295,18 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
         {"group": "gcp-demo-deploy", "cancel-in-progress": False}
     ]
     deploy = _shell(deploy_workflow)
-    # Backend is built from source; rollback frontends are selected from
-    # protected full-digest variables and verified against Artifact Registry.
+    # Backend is the sole GCP image; frontend artifacts deploy independently.
     inputs = deploy_workflow["jobs"]["deploy"]["env"]
-    assert inputs["LEGACY_FRONTEND_IMAGE"] == "${{ vars.LEGACY_FRONTEND_IMAGE }}"
-    assert inputs["LEGACY_VITE_APP_IMAGE"] == "${{ vars.LEGACY_VITE_APP_IMAGE }}"
+    assert "vars.APP_DOMAIN_NAME" in inputs["FRONTEND_URL"]
+    assert inputs["FRONTEND_ORIGINS"] == inputs["FRONTEND_URL"]
+    assert "vars.DOMAIN_NAME" in inputs["MCP_PUBLIC_BASE_URL"]
+    assert not {"LEGACY_FRONTEND_IMAGE", "LEGACY_VITE_APP_IMAGE"} & inputs.keys()
+    dispatch = deploy_workflow.get("on", deploy_workflow.get(True))["workflow_dispatch"]
+    assert not dispatch or not dispatch.get("inputs")
     assert "image_digest()" in deploy
     assert deploy.count('gcloud artifacts docker images list "$registry/$1"') == 1
     assert deploy.count("image_digest backend") >= 1
     assert 'test -n "$backend_digest"' in deploy
-    assert 'frontend="$LEGACY_FRONTEND_IMAGE"' in deploy
-    assert 'vite_app="$LEGACY_VITE_APP_IMAGE"' in deploy
     assert "if grep -Fxq '0.0.0.0/0'" in deploy
     assert "if grep -Fxq '::/0'" in deploy
     assert "bash /tmp/citeladder-deploy/deploy-vm.sh" in deploy
@@ -357,12 +353,12 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     )
     assert web_environment["TRUSTED_PROXY_CIDRS"].startswith("${TRUSTED_PROXY_CIDRS")
 
-    frontend_environment = services["frontend"]["environment"]
-    assert frontend_environment["HOST"] == "127.0.0.1"
-    assert frontend_environment["CITELADDER_TASK_LOCAL_BACKEND"] == "true"
-
-    vite_environment = services["vite-app"]["environment"]
-    assert vite_environment["BACKEND_ORIGIN"] == "http://127.0.0.1:8000"
+    assert "frontend" not in services
+    assert "vite-app" not in services
+    assert services["caddy"]["depends_on"] == {"web": {"condition": "service_healthy"}}
+    assert all(
+        "frontend-routes.caddy" not in mount for mount in services["caddy"]["volumes"]
+    )
 
     settings = {
         key: value
@@ -383,32 +379,6 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert len(workers) == 10
     caddy = (RUNTIME / "Caddyfile").read_text(encoding="utf-8")
     assert "trusted_proxies static __CLOUDFLARE_CIDRS__" in caddy
-    routing = (RUNTIME / "frontend-routes.caddy").read_text(encoding="utf-8")
-    backend_matcher = next(
-        line for line in routing.splitlines() if line.startswith("@backend path ")
-    )
-    # /register is absent on purpose: it is the frontend's signup page, and
-    # proxying it to the backend 405s every GET. MCP's RFC 7591 registration
-    # endpoint moved to /mcp/register, which /mcp/* already covers.
-    assert backend_matcher.split()[2:] == [
-        "/api",
-        "/api/*",
-        "/mcp",
-        "/mcp/*",
-        "/authorize",
-        "/token",
-        "/revoke",
-        "/.well-known/oauth-authorization-server",
-        "/.well-known/oauth-protected-resource/mcp",
-    ]
-    assert "reverse_proxy @backend {$BACKEND_ORIGIN:127.0.0.1:8000}" in routing
-    # The frontend is a public surface: it gets no env_file and no backend
-    # secret. Reading the parsed service means a key added at the end of the
-    # block, past where the old text slice stopped, is still caught.
-    frontend = services["frontend"]
-    assert "env_file" not in frontend
-    assert "JWT_SECRET_KEY" not in frontend_environment
-    assert "DEV_LOGIN_PASSWORD" not in frontend_environment
     tls_init = (RUNTIME / "init-postgres-tls.sh").read_text(encoding="utf-8")
     assert "chown 70:70" in tls_init
 

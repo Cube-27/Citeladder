@@ -69,27 +69,6 @@ variable "backend_image" {
   }
 }
 
-variable "frontend_image" {
-  type = string
-  validation {
-    condition = startswith(
-      var.frontend_image,
-      "${var.region}-docker.pkg.dev/${var.project_id}/citeladder-demo/frontend@sha256:"
-    ) && can(regex("@sha256:[0-9a-f]{64}$", var.frontend_image))
-    error_message = "frontend_image must be an immutable Artifact Registry digest."
-  }
-}
-
-variable "vite_app_image" {
-  type = string
-  validation {
-    condition = startswith(
-      var.vite_app_image,
-      "${var.region}-docker.pkg.dev/${var.project_id}/citeladder-demo/vite-app@sha256:",
-    ) && can(regex("@sha256:[0-9a-f]{64}$", var.vite_app_image))
-    error_message = "vite_app_image must be an immutable Artifact Registry digest."
-  }
-}
 variable "cloudflare_ipv4_cidrs" {
   type = set(string)
   validation {

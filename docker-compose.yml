@@ -97,7 +97,7 @@ services:
       web:
         condition: service_healthy
   # The apex-style ingress and app.localhost share one exposed port locally.
-  # Reuse the production route table for legacy apex paths.
+  # Keep a local-only route table for legacy combined-origin smoke.
   ingress:
     image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     restart: unless-stopped
@@ -107,7 +107,7 @@ services:
       MARKETING_ORIGIN: frontend:3000
     volumes:
       - ./frontend/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./infra/gcp/runtime/frontend-routes.caddy:/etc/caddy/frontend-routes.caddy:ro
+      - ./frontend/local-compose-routes.caddy:/etc/caddy/frontend-routes.caddy:ro
     depends_on:
       frontend:
         condition: service_healthy

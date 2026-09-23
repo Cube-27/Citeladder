@@ -1,22 +1,22 @@
 # Frontend architecture
 
-The frontend has two runtime owners: Astro SSR serves marketing and public
-routes; the Vite/React Router SPA serves authenticated product routes. The
-two shipped frontend containers are the Astro server on port 3000 and the
-Vite/Caddy SPA server on port 3001. Local Compose exposes only its Caddy ingress
-on browser port 3000; both runtimes start by default. Together they project workspace-authorized
+The frontend has two runtime owners: the marketing Worker serves Astro SSR and
+public routes at `citeladder.com`; the product Worker serves the Vite/React
+Router SPA at `app.citeladder.com`. Local Compose retains frontend containers
+and a Caddy ingress on browser port 3000 for development and clean-clone smoke.
+Together they project workspace-authorized
 backend contracts. The frontend owns navigation, ephemeral state, accessible
 interactions and presentation; the backend owns authorization, measurement and
 lifecycle truth. [Design](design.md) is the sole visual contract. Feature
 behavior is routed through [the documentation index](README.md).
 
-The prepared product Worker at `frontend/apps/app/worker.ts` serves Vite assets,
-app-host API, browser MCP consent and guarded navigation. The prepared marketing
+The product Worker at `frontend/apps/app/worker.ts` serves Vite assets,
+app-host API, browser MCP consent and guarded navigation. The marketing
 Worker uses Astro SSR at `frontend/apps/marketing`, proxies only exact apex
 protocol/webhook paths and reads the public catalog through protected origin
-transport without visitor credentials. Production route ownership changes only
-after the approved Workers cutover; the pinned GCP frontend images remain its
-first-cutover rollback target.
+transport without visitor credentials. Production delivery and acceptance remain
+operator gated. The first release retains captured prior VM artifacts for a
+bounded rollback; later frontend releases use accepted Worker versions.
 
 ## Routes and shared shell
 

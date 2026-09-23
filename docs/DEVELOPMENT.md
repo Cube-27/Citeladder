@@ -121,7 +121,7 @@ curl -fsS http://localhost:8000/health
 The default stack includes both frontend runtimes; no migration profile is needed.
 Only Caddy ingress exposes browser port 3000. Visit `http://127.0.0.1:3000`
 for marketing and `http://app.localhost:3000` for the app. The former retains
-the legacy path table in `infra/gcp/runtime/frontend-routes.caddy`; the app host
+the local-only path table in `frontend/local-compose-routes.caddy`; the app host
 serves the Vite application and its same-origin API. The internal Vite and
 marketing ports are not published. Local Compose uses disposable Worker-to-`web`
 HTTP transport enabled only by Compose for its `web:8000` upstream; production always

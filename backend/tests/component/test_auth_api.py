@@ -15,7 +15,6 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.browser_cookies import SESSION_HINT_COOKIE
 from app.core.config import settings
 from app.core.config.abuse import abuse_settings
 from app.core.config.entitlements import (
@@ -214,15 +213,10 @@ def _set_cookie_directives(response: httpx.Response, name: str) -> dict[str, str
 
 
 @pytest.mark.asyncio
-async def test_login_issues_a_readable_session_hint_beside_the_session(
+async def test_login_issues_host_only_httponly_session(
     client: httpx.AsyncClient,
 ) -> None:
-    """The hint the statically rendered marketing nav reads before hydration.
-
-    It must be readable by JavaScript (no HttpOnly) and must expire on exactly
-    the session's schedule — a hint that outlives its session is what made the
-    marketing header paint "Dashboard" and then take it away.
-    """
+    """App sessions cannot be read by scripts or sent to a sibling host."""
     await _register(client, "hint@example.com")
     client.cookies.clear()
     response = await client.post(
@@ -232,26 +226,9 @@ async def test_login_issues_a_readable_session_hint_beside_the_session(
 
     assert response.status_code == 200
     session = _set_cookie_directives(response, COOKIE)
-    hint = _set_cookie_directives(response, SESSION_HINT_COOKIE)
     assert "httponly" in session
-    assert "httponly" not in hint
-    assert hint["max-age"] == session["max-age"]
-    assert hint["path"] == session["path"] == "/"
-    assert client.cookies[SESSION_HINT_COOKIE] == "1"
-
-
-@pytest.mark.asyncio
-async def test_logout_clears_the_session_hint_with_the_session(
-    client: httpx.AsyncClient,
-) -> None:
-    await _register(client, "hint-logout@example.com")
-    assert client.cookies.get(SESSION_HINT_COOKIE) == "1"
-
-    logout = await client.post("/api/v1/auth/logout")
-
-    assert logout.status_code == 204
-    assert _set_cookie_directives(logout, SESSION_HINT_COOKIE)["max-age"] == "0"
-    assert client.cookies.get(SESSION_HINT_COOKIE) is None
+    assert "domain" not in session
+    assert session["path"] == "/"
 
 
 @pytest.mark.asyncio
