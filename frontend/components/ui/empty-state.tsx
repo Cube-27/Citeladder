@@ -51,6 +51,9 @@ export function EmptyState({
   variant?: 'page' | 'compact';
 }>) {
   const Heading = HEADING_TAG[headingLevel];
+  let headingRole: Parameters<typeof textRole>[0] = 'sectionTitle';
+  if (headingLevel === 1) headingRole = 'pageTitle';
+  if (variant === 'compact') headingRole = 'bodyStrong';
   return (
     <div
       data-empty-state={variant}
@@ -64,17 +67,7 @@ export function EmptyState({
     >
       <div className="flex items-center gap-2">
         <Icon className="text-subtle size-4 shrink-0" aria-hidden />
-        <Heading
-          className={textRole(
-            variant === 'compact'
-              ? 'bodyStrong'
-              : headingLevel === 1
-                ? 'pageTitle'
-                : 'sectionTitle',
-          )}
-        >
-          {heading}
-        </Heading>
+        <Heading className={textRole(headingRole)}>{heading}</Heading>
       </div>
       {description ? (
         <p className={cn('text-secondary max-w-[52ch] text-sm', variant === 'compact' && 'pl-6')}>

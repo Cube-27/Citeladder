@@ -524,9 +524,6 @@
 .cl-hero-dashboard-sources td:first-child {
   overflow-wrap: anywhere;
 }
-.cl-hero-dashboard-mix .cl-source-track {
-  margin-top: 16px;
-}
 .cl-preview-foot {
   padding: 12px 20px;
   font-size: 13px;
@@ -916,39 +913,56 @@
 .cl-hero-preview .cl-source-summary {
   margin-inline: 0;
 }
-.cl-source-track {
+.cl-source-mix {
   display: flex;
-  gap: 3px;
-  height: 8px;
-  margin-top: 11px;
+  align-items: center;
+  gap: 18px;
+  margin-top: 10px;
 }
-.cl-source-track i:nth-child(1) {
-  width: 30%;
-  background: var(--color-accent);
-}
-.cl-source-track i:nth-child(2) {
-  width: 25%;
-  background: var(--cl-source-review);
-}
-.cl-source-track i:nth-child(3) {
-  width: 23%;
-  background: var(--cl-source-editorial);
-}
-.cl-source-track i:nth-child(4) {
-  width: 14%;
-  background: var(--cl-source-community);
-}
-.cl-source-track i:nth-child(5) {
-  width: 8%;
-  background: var(--cl-source-competitor);
+.cl-source-pie {
+  display: block;
+  width: 88px;
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 50%;
 }
 .cl-source-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px 15px;
-  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 14px;
+  min-width: 0;
   color: var(--cl-muted);
   font-size: 12px;
+}
+.cl-source-legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.cl-source-legend li::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+.cl-source-legend li:nth-child(2)::before {
+  background: var(--cl-source-review);
+}
+.cl-source-legend li:nth-child(3)::before {
+  background: var(--cl-source-editorial);
+}
+.cl-source-legend li:nth-child(4)::before {
+  background: var(--cl-source-community);
+}
+.cl-source-legend li:nth-child(5)::before {
+  background: var(--cl-source-competitor);
+}
+.cl-source-legend strong {
+  color: var(--cl-ink);
+  font-weight: 500;
 }
 .cl-citation-count {
   border-left: 1px solid var(--cl-line);

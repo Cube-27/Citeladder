@@ -64,6 +64,12 @@ export function Input({
     ref?: Ref<HTMLInputElement>;
   }
 >) {
+  let adornedLeading = 'leading-[calc(var(--field-height)_-_2px)]';
+  if (size === 'lg') adornedLeading = 'leading-[calc(var(--field-height-lg)_-_2px)]';
+  if (size === 'compact') {
+    adornedLeading =
+      'leading-[calc(var(--field-height-lg)_-_2px)] min-[701px]:pointer-fine:leading-[calc(var(--control-height-sm)_-_2px)]';
+  }
   if (!startContent && !endContent) {
     return (
       <input
@@ -94,11 +100,7 @@ export function Input({
         className={cn(
           'placeholder:text-muted min-w-0 flex-1 self-stretch bg-transparent text-sm text-foreground outline-none disabled:cursor-not-allowed',
           // Match the frame's control height so selections fill the pill.
-          size === 'lg'
-            ? 'leading-[calc(var(--field-height-lg)_-_2px)]'
-            : size === 'compact'
-              ? 'leading-[calc(var(--field-height-lg)_-_2px)] min-[701px]:pointer-fine:leading-[calc(var(--control-height-sm)_-_2px)]'
-              : 'leading-[calc(var(--field-height)_-_2px)]',
+          adornedLeading,
           className,
         )}
         {...props}

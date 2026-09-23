@@ -1,7 +1,7 @@
 'use client';
 
 import { LogOut, LayoutDashboard } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import {
   Dropdown,
@@ -61,9 +61,9 @@ function AccountGlyph({ children }: Readonly<{ children?: React.ReactNode }>) {
  * The nav knows from the hint cookie that a session exists, but not whose — the
  * cookie deliberately carries no identity — so the initials cannot be known
  * before the round trip. Rendering nothing until they are is what produced the
- * reported flicker: the circle appeared late and shoved "Dashboard" sideways as
- * it arrived. Painting the empty circle at its final size turns that into the
- * two letters fading up inside a box that never moves.
+ * reported flicker: the circle appeared late and shifted the account control.
+ * Painting the empty circle at its final size lets the initials appear without
+ * moving the header.
  *
  * Inert on purpose: it has no trigger and no menu, because there is nothing yet
  * to put in one. It is a reserved seat, not a disabled control, so it is hidden
@@ -85,6 +85,7 @@ export function MarketingAccountMenu({
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
   const [pending, setPending] = useState(false);
+  const dismissedByPointer = useRef(false);
 
   async function signOut() {
     if (pending) return;
@@ -101,7 +102,7 @@ export function MarketingAccountMenu({
       return;
     }
     // The hint outlives the cookie it describes, so it is dropped by hand —
-    // otherwise the next load paints "Dashboard" for a session that is gone.
+    // otherwise the next load paints a returning account glyph for a session that is gone.
     clearSessionHintCookie();
     // A full load, not a client transition: the session cookie changed, and
     // every cached answer on this document was read under the old one.
@@ -117,7 +118,18 @@ export function MarketingAccountMenu({
         <AccountGlyph>{emailInitials(email)}</AccountGlyph>
       </DropdownTrigger>
       {open ? (
-        <DropdownContent align="end" side="bottom" className="w-56">
+        <DropdownContent
+          align="end"
+          side="bottom"
+          className="w-56"
+          onPointerDownOutside={() => {
+            dismissedByPointer.current = true;
+          }}
+          onCloseAutoFocus={(event) => {
+            if (dismissedByPointer.current) event.preventDefault();
+            dismissedByPointer.current = false;
+          }}
+        >
           <DropdownLabel>{email}</DropdownLabel>
           <DropdownSeparator />
           <DropdownItem asChild>

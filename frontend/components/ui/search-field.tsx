@@ -1,10 +1,9 @@
 'use client';
 
-import type { InputHTMLAttributes } from 'react';
+import type { ComponentProps, InputHTMLAttributes } from 'react';
 import { Search, X } from 'lucide-react';
 
 import { Input } from './input';
-import type { ComponentProps } from 'react';
 import { Pressable } from './pressable';
 import { Spinner } from './spinner';
 

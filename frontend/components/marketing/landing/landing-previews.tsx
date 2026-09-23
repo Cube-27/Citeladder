@@ -5,6 +5,7 @@ import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav'
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { MODULES, SOURCE_ROWS, type ModuleId } from './landing-data';
 import { HeroDashboardPreview } from './landing-hero-dashboard';
+import { SourceMixPie } from './source-mix-pie';
 import { ScaledPreview } from '../primitives/scaled-preview';
 
 type SourceView = 'domains' | 'urls';
@@ -27,7 +28,7 @@ function SourceTable({ view }: Readonly<{ view: SourceView }>) {
         </tr>
       </thead>
       <tbody>
-        {SOURCE_ROWS.map((row, index) => (
+        {SOURCE_ROWS.slice(0, 3).map((row, index) => (
           <tr key={row.domain}>
             <td aria-label={view === 'domains' ? row.domain : row.url}>
               <span className="cl-source-name">
@@ -57,20 +58,7 @@ function SourceSummary() {
     <div className="cl-source-summary">
       <div>
         <span className="cl-overline">Source mix</span>
-        <div className="cl-source-track">
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-        </div>
-        <div className="cl-source-legend">
-          <span>Owned</span>
-          <span>Review</span>
-          <span>Editorial</span>
-          <span>Community</span>
-          <span>Competitor</span>
-        </div>
+        <SourceMixPie />
       </div>
       <div className="cl-citation-count">
         <strong>130</strong>
