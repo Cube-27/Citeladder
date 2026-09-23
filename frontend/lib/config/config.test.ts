@@ -98,6 +98,11 @@ describe('operational config', () => {
     expect(getApiRequestTimeoutMs()).toBe(5_000);
   });
 
+  it('caps a valid override at the supported timer delay', () => {
+    process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS = '2147483648';
+    expect(getApiRequestTimeoutMs()).toBe(2_147_483_647);
+  });
+
   it.each(['0', '-1', 'soon', '', 'NaN', '8s', '1.5', '1e3', 'Infinity', '9007199254740992'])(
     'ignores the unusable override %j and keeps the default',
     (value) => {
