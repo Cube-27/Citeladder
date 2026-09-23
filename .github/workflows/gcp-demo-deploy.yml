@@ -2,12 +2,6 @@ name: GCP Demo - Deploy
 
 on:
   workflow_dispatch:
-    inputs:
-      browser_origin:
-        description: Apex before cutover or for recovery; app for approved cutover
-        required: true
-        type: choice
-        options: [apex, app]
 
 permissions:
   contents: read
@@ -50,14 +44,12 @@ jobs:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       ORIGIN_DOMAIN_NAME: ${{ vars.ORIGIN_DOMAIN_NAME || 'origin.citeladder.com' }}
       APP_DOMAIN_NAME: ${{ vars.APP_DOMAIN_NAME || 'app.citeladder.com' }}
-      FRONTEND_URL: ${{ inputs.browser_origin == 'app' && format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') || format('https://{0}', vars.DOMAIN_NAME) }}
-      FRONTEND_ORIGINS: ${{ inputs.browser_origin == 'app' && format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') || format('https://{0}', vars.DOMAIN_NAME) }}
+      FRONTEND_URL: ${{ format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') }}
+      FRONTEND_ORIGINS: ${{ format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') }}
       MCP_PUBLIC_BASE_URL: ${{ format('https://{0}', vars.DOMAIN_NAME) }}
+      # The repository gate builds both Workers; this workflow publishes only backend.
       PUBLIC_WEBSITE_ORIGIN: ${{ format('https://{0}', vars.DOMAIN_NAME) }}
-      PUBLIC_APP_ORIGIN: ${{ inputs.browser_origin == 'app' && format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') || format('https://{0}', vars.DOMAIN_NAME) }}
-      # Captured immutable PR 2 images keep the first-cutover rollback runnable.
-      LEGACY_FRONTEND_IMAGE: ${{ vars.LEGACY_FRONTEND_IMAGE }}
-      LEGACY_VITE_APP_IMAGE: ${{ vars.LEGACY_VITE_APP_IMAGE }}
+      PUBLIC_APP_ORIGIN: ${{ format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') }}
       DEMO_LOGIN_EMAIL: ${{ vars.DEMO_LOGIN_EMAIL }}
       DEV_LOGIN_COUNTER_ALLOWANCE: ${{ vars.DEV_LOGIN_COUNTER_ALLOWANCE || '200' }}
     steps:
@@ -145,19 +137,17 @@ jobs:
             --arg budget_currency "$BUDGET_CURRENCY_CODE" --argjson budget_units "$BUDGET_UNITS" \
             --arg region "$REGION" --arg zone "$ZONE" --arg domain "$DOMAIN_NAME" \
             --arg backend "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/backend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
-            --arg frontend "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" \
-            --arg vite_app "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/vite-app@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" \
             --argjson v4 "$(jq -Rsc 'split("\n")|map(select(length>0))' /tmp/cf-v4)" \
             --argjson v6 "$(jq -Rsc 'split("\n")|map(select(length>0))' /tmp/cf-v6)" \
             '{project_id:$project,billing_account:$billing,budget_currency_code:$budget_currency,
               budget_units:$budget_units,region:$region,zone:$zone,domain_name:$domain,
-              backend_image:$backend,frontend_image:$frontend,vite_app_image:$vite_app,
+              backend_image:$backend,
               cloudflare_ipv4_cidrs:$v4,cloudflare_ipv6_cidrs:$v6}' > demo.auto.tfvars.json
           terraform apply -input=false -auto-approve \
             -target=google_artifact_registry_repository.images \
             -target=google_secret_manager_secret.runtime \
             -target=google_storage_bucket.backups
-      - name: Build and push immutable images
+      - name: Build and push immutable backend image
         id: images
         working-directory: infra/gcp
         shell: bash
@@ -165,9 +155,6 @@ jobs:
           set -euo pipefail
           registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
           gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-          echo "Pinned legacy frontend images: $LEGACY_FRONTEND_IMAGE $LEGACY_VITE_APP_IMAGE" >> "$GITHUB_STEP_SUMMARY"
-          [[ "$LEGACY_FRONTEND_IMAGE" =~ ^$registry/frontend@sha256:[0-9a-f]{64}$ ]]
-          [[ "$LEGACY_VITE_APP_IMAGE" =~ ^$registry/vite-app@sha256:[0-9a-f]{64}$ ]]
 
           # `images describe` reads Container Analysis occurrences alongside the
           # digest, so it needs containeranalysis.occurrences.list — a separate
@@ -186,16 +173,9 @@ jobs:
           backend_digest="$(image_digest backend)"
           test -n "$backend_digest"
           backend="$registry/backend@$backend_digest"
-          frontend="$LEGACY_FRONTEND_IMAGE"
-          vite_app="$LEGACY_VITE_APP_IMAGE"
-          gcloud artifacts docker images list "$registry/frontend" --format='value(version)' --quiet | grep -Fx "${frontend##*@}"
-          gcloud artifacts docker images list "$registry/vite-app" --format='value(version)' --quiet | grep -Fx "${vite_app##*@}"
-          jq --arg backend "$backend" --arg frontend "$frontend" --arg vite_app "$vite_app" \
-            '.backend_image=$backend|.frontend_image=$frontend|.vite_app_image=$vite_app' demo.auto.tfvars.json > /tmp/tfvars
+          jq --arg backend "$backend" '.backend_image=$backend' demo.auto.tfvars.json > /tmp/tfvars
           mv /tmp/tfvars demo.auto.tfvars.json
           echo "backend=$backend" >> "$GITHUB_OUTPUT"
-          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
-          echo "vite_app=$vite_app" >> "$GITHUB_OUTPUT"
       - name: Synchronize runtime secret versions
         shell: bash
         env:
@@ -320,8 +300,6 @@ jobs:
           VM_NAME: ${{ steps.terraform.outputs.vm }}
           BACKUP_BUCKET: ${{ steps.terraform.outputs.backup_bucket }}
           BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
-          FRONTEND_IMAGE: ${{ steps.images.outputs.frontend }}
-          VITE_APP_IMAGE: ${{ steps.images.outputs.vite_app }}
           DEFAULT_AGENT_BASE_URL: ${{ vars.DEFAULT_AGENT_BASE_URL }}
           DEFAULT_AGENT_MODEL: ${{ vars.DEFAULT_AGENT_MODEL }}
           CONTENT_PROVIDER: ${{ vars.CONTENT_PROVIDER }}
@@ -347,52 +325,28 @@ jobs:
             test "$attempt" -lt 3
             sleep 5
           done
-          printf -v remote 'sudo env PROJECT_ID=%q REGION=%q BACKEND_IMAGE=%q FRONTEND_IMAGE=%q VITE_APP_IMAGE=%q BACKUP_BUCKET=%q DOMAIN_NAME=%q ORIGIN_DOMAIN_NAME=%q APP_DOMAIN_NAME=%q FRONTEND_URL=%q FRONTEND_ORIGINS=%q MCP_PUBLIC_BASE_URL=%q PUBLIC_WEBSITE_ORIGIN=%q PUBLIC_APP_ORIGIN=%q SOURCE_COMMIT=%q DEMO_MODE=%q DEMO_EXPIRES_AT=%q DEV_LOGIN_EMAIL=%q DEV_LOGIN_COUNTER_ALLOWANCE=%q DEFAULT_AGENT_BASE_URL=%q DEFAULT_AGENT_MODEL=%q CONTENT_PROVIDER=%q CONTENT_PROVIDER_ENDPOINT=%q CONTENT_MODEL=%q bash /tmp/citeladder-deploy/deploy-vm.sh' \
-            "$PROJECT_ID" "$REGION" "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$VITE_APP_IMAGE" "$BACKUP_BUCKET" \
-            "$DOMAIN_NAME" "$ORIGIN_DOMAIN_NAME" "$APP_DOMAIN_NAME" "$FRONTEND_URL" "$FRONTEND_ORIGINS" "$MCP_PUBLIC_BASE_URL" "$PUBLIC_WEBSITE_ORIGIN" "$PUBLIC_APP_ORIGIN" "$GITHUB_SHA" "$DEMO_MODE" "$DEMO_EXPIRES_AT" \
+          printf -v remote 'sudo env PROJECT_ID=%q REGION=%q BACKEND_IMAGE=%q BACKUP_BUCKET=%q DOMAIN_NAME=%q ORIGIN_DOMAIN_NAME=%q APP_DOMAIN_NAME=%q FRONTEND_URL=%q FRONTEND_ORIGINS=%q MCP_PUBLIC_BASE_URL=%q SOURCE_COMMIT=%q DEMO_MODE=%q DEMO_EXPIRES_AT=%q DEV_LOGIN_EMAIL=%q DEV_LOGIN_COUNTER_ALLOWANCE=%q DEFAULT_AGENT_BASE_URL=%q DEFAULT_AGENT_MODEL=%q CONTENT_PROVIDER=%q CONTENT_PROVIDER_ENDPOINT=%q CONTENT_MODEL=%q bash /tmp/citeladder-deploy/deploy-vm.sh' \
+            "$PROJECT_ID" "$REGION" "$BACKEND_IMAGE" "$BACKUP_BUCKET" \
+            "$DOMAIN_NAME" "$ORIGIN_DOMAIN_NAME" "$APP_DOMAIN_NAME" "$FRONTEND_URL" "$FRONTEND_ORIGINS" "$MCP_PUBLIC_BASE_URL" "$GITHUB_SHA" "$DEMO_MODE" "$DEMO_EXPIRES_AT" \
             "${DEMO_LOGIN_EMAIL:-dev@citeladder.com}" \
             "$DEV_LOGIN_COUNTER_ALLOWANCE" \
             "$DEFAULT_AGENT_BASE_URL" "$DEFAULT_AGENT_MODEL" \
             "$CONTENT_PROVIDER" "$CONTENT_PROVIDER_ENDPOINT" "$CONTENT_MODEL"
           gcloud compute ssh "$VM_NAME" --project "$PROJECT_ID" --zone "$ZONE" --tunnel-through-iap --quiet --command="$remote"
-      - name: Smoke test and deployment summary
+      - name: Protected origin smoke and deployment summary
         shell: bash
         env:
           BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
-          FRONTEND_IMAGE: ${{ steps.images.outputs.frontend }}
-          VITE_APP_IMAGE: ${{ steps.images.outputs.vite_app }}
           STATIC_IP: ${{ steps.terraform.outputs.static_ip }}
-          DEMO_LOGIN_PASSWORD: ${{ secrets.DEMO_LOGIN_PASSWORD }}
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --retry 12 --retry-delay 5 "$FRONTEND_URL/health" >/dev/null
-          login_payload="$(jq -nc --arg email "${DEMO_LOGIN_EMAIL:-dev@citeladder.com}" --arg password "$DEMO_LOGIN_PASSWORD" '{email:$email,password:$password}')"
-          login_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            -X POST -H 'content-type: application/json' --data "$login_payload" \
-            "$FRONTEND_URL/api/v1/auth/login")"
-          if test "$login_status" != 200; then
-            echo "::error::Configured live dev login returned HTTP $login_status"
-            exit 1
-          fi
-          # A dead "Continue with Google" is a 503 behind a button, not a failed
-          # deploy, so assert the catalog reports Google usable.
-          curl --fail --silent --show-error "$FRONTEND_URL/api/v1/auth/oauth/providers" \
-            | jq -e '[.providers[] | select(.provider == "google" and .configured)] | length == 1' >/dev/null
-          # The Vite document is client-rendered; verify the deploy serves its shell.
-          register_page="$(curl --fail --silent --show-error "$FRONTEND_URL/register")"
-          grep -q '<div id="root"></div>' <<<"$register_page"
-          if test "$DEMO_MODE" = "true"; then
-            registration_payload="$(jq -nc --arg email "$DEMO_LOGIN_EMAIL" --arg password "$(openssl rand -hex 16)" \
-              '{email:$email,password:$password}')"
-            status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-              -X POST -H 'content-type: application/json' --data "$registration_payload" \
-              "$FRONTEND_URL/api/v1/auth/register")
-            test "$status" = 403
-          fi
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --retry 12 --retry-delay 5 "https://$ORIGIN_DOMAIN_NAME/health")"
+          test "$status" = 403
           {
             echo '### GCP demo deployment'
             echo "- Source commit: \`$GITHUB_SHA\`"
             echo "- Backend: \`$BACKEND_IMAGE\`"
-            echo "- Frontend: \`$FRONTEND_IMAGE\`"
+            echo "- Direct unauthenticated origin: HTTP $status"
             echo "- Static IP: \`$STATIC_IP\`"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -61,6 +61,17 @@ Publishing, prompt activation, external mutation, billing changes and future
 durable-memory promotion retain their explicit user-decision boundaries.
 [Invariants](invariants.md) is the correctness authority.
 
+## Delivery topology
+
+The marketing Worker serves `citeladder.com` with Astro SSR and keeps public
+MCP and signed webhook paths on their established apex identity. The product
+Worker serves `app.citeladder.com`, including same-origin `/api/v1`, browser
+login, callbacks and consent. Each Worker reaches FastAPI through authenticated
+`origin.citeladder.com` ingress. GCP retains Caddy, FastAPI, PostgreSQL, durable
+workers, secrets and backups; its deployment publishes only the backend image.
+The [Workers runbook](operations/WORKERS_RUNBOOK.md) owns the approved release,
+production acceptance and recovery order.
+
 Current work is only in [plan status](plans/ACTIVE.md); an architecture document
 does not assign a historical delivery wave.
 

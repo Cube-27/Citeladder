@@ -6,7 +6,7 @@
   — implementation plan requested; PRs 1–4 run in separate chats after each
   predecessor merges. Follows the [architecture specification](CiteLadder_Workers_Migration_Architecture.md).
   PR 1 merged as #133 (`7dffa2ef`); PR 2 merged as #134 (`f9f1ad16`);
-  PR 3 implementation is in progress.
+  PR 3 merged as #136 (`afd81602`); PR 4 implementation is in progress.
   No deployment or production acceptance is claimed. The owner now wants PR 4
   after PR 3 merges, followed by a separately authorized fresh deployment.
   PR 4 must finalize backend-only deployment and production-only recovery before

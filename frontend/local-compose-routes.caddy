@@ -1,5 +1,5 @@
-# Shared by local Compose and production ingress. Caddy preserves the original
-# host and supplies X-Forwarded-Host/Proto for each upstream automatically.
+# Local Compose only. Browser port 3000 combines both frontend containers for
+# clean-clone smoke; production routing belongs to the two Workers.
 # /register is a browser route; dynamic MCP registration is /mcp/register.
 @backend path /api /api/* /mcp /mcp/* /authorize /token /revoke /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource/mcp
 reverse_proxy @backend {$BACKEND_ORIGIN:127.0.0.1:8000}

@@ -173,15 +173,6 @@ expected_backend_prefix="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/
 [[ "$candidate_backend_image" == "$expected_backend_prefix"* ]]
 [[ "${candidate_backend_image#"$expected_backend_prefix"}" =~ ^[0-9a-f]{64}$ ]]
 
-# The reset uses the installed Compose layout. An older deployment may have
-# runtime.env updated by a failed deploy while its Compose file is still legacy.
-# In that case, rebuild the database and restore only the services it defines;
-# the normal deploy installs the current frontend afterward.
-expected_frontend_prefix="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/frontend@sha256:"
-expected_vite_app_prefix="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/vite-app@sha256:"
-[[ "$FRONTEND_IMAGE" == "$expected_frontend_prefix"* ]]
-[[ "${FRONTEND_IMAGE#"$expected_frontend_prefix"}" =~ ^[0-9a-f]{64}$ ]]
-
 compose=(docker compose --env-file runtime.env -f compose.gcp.yml)
 reset_compose=(env BACKEND_IMAGE="$candidate_backend_image" "${compose[@]}")
 mapfile -t installed_services < <("${compose[@]}" config --services)
@@ -189,20 +180,12 @@ if (( ${#installed_services[@]} == 0 )); then
   echo 'Installed Compose runtime has no services.' >&2
   exit 1
 fi
-has_vite_app=false
 for service in "${installed_services[@]}"; do
-  if [[ "$service" == vite-app ]]; then has_vite_app=true; fi
-done
-if $has_vite_app; then
-  if [[ -z "${VITE_APP_IMAGE:-}" ]]; then
-    echo 'Installed Compose runtime requires VITE_APP_IMAGE.' >&2
+  if [[ "$service" == frontend || "$service" == vite-app ]]; then
+    echo 'The installed runtime still serves frontend containers; use its recorded recovery procedure before the Workers cutover.' >&2
     exit 1
   fi
-  [[ "$VITE_APP_IMAGE" == "$expected_vite_app_prefix"* ]]
-  [[ "${VITE_APP_IMAGE#"$expected_vite_app_prefix"}" =~ ^[0-9a-f]{64}$ ]]
-else
-  echo 'Installed Compose runtime has no vite-app service; the current frontend must be installed by GCP Demo - Deploy after this reset.' >&2
-fi
+done
 db_id="$("${compose[@]}" ps -q db)"
 test -n "$db_id"
 "${compose[@]}" exec -T db psql -v ON_ERROR_STOP=1 -U citeladder -d citeladder -c \
@@ -211,9 +194,7 @@ printf 'Installed source commit: %s\n' "$SOURCE_COMMIT"
 printf 'Reset source commit: %s\n' "$candidate_source_commit"
 
 docker pull "$candidate_backend_image"
-images=("$candidate_backend_image" "$FRONTEND_IMAGE")
-if $has_vite_app; then images+=("$VITE_APP_IMAGE"); fi
-docker image inspect "${images[@]}" >/dev/null
+docker image inspect "$candidate_backend_image" >/dev/null
 services=()
 for service in "${installed_services[@]}"; do
   case "$service" in db|db-tls-init) ;; *) services+=("$service") ;; esac
@@ -221,8 +202,7 @@ done
 
 wait_for_health() {
   for attempt in $(seq 1 60); do
-    if curl --fail --silent http://127.0.0.1:3000/health >/dev/null &&
-      ( ! $has_vite_app || curl --fail --silent http://127.0.0.1:3001/health >/dev/null ); then
+    if curl --fail --silent http://127.0.0.1:8000/ready >/dev/null; then
       return 0
     fi
     echo "Application health probe attempt $attempt failed" >&2
@@ -299,11 +279,7 @@ persist_candidate
 phase='starting application services'
 start_application
 trap - ERR
-if $has_vite_app; then
-  echo 'Database rebuilt from latest main, development login provisioned, application healthy.'
-else
-  echo 'Database rebuilt from latest main and installed services are healthy. Run GCP Demo - Deploy now to install the current frontend.'
-fi
+echo 'Database rebuilt from latest main; backend is ready. Verify both Workers separately.'
 '@
 
 $remoteScriptPath = Join-Path ([IO.Path]::GetTempPath()) (

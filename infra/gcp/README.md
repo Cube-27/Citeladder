@@ -33,11 +33,11 @@ payloads never enter state, command arguments, logs, or workflow outputs.
 
 ## Runtime
 
-`runtime/compose.gcp.yml` uses host networking while PostgreSQL, FastAPI, and
-Astro bind loopback; Vite serves the app on port 3001 behind the same firewall.
-Caddy alone exposes ports 80/443 and waits for both frontend health checks.
-Local Compose and production use `runtime/frontend-routes.caddy` for route ownership.
-The deployer uploads the runtime files through IAP, pulls backend/frontend images by digest, takes a
+`runtime/compose.gcp.yml` uses host networking while PostgreSQL and FastAPI
+bind loopback. Caddy exposes only protected Worker origin ingress on 443;
+the marketing and product Workers own browser delivery. Local Compose retains
+its own frontend route table for development and smoke tests.
+The deployer uploads the runtime files through IAP, pulls the backend image by digest, takes a
 quiesced pre-deploy backup, migrates, and installs the nightly-backup systemd
 timer. The host never tears itself down; use the destroy workflow. `DEMO_MODE`
 defaults to `false` (public sign-up) and bootstraps the single demo account

@@ -6,7 +6,7 @@ design is fixed to `asia-south1`, defaults to `asia-south1-a`, and uses one
 GitHub environment. Never place a long-lived Google service-account key in
 GitHub.
 
-For the staged Workers migration, use the
+For the Workers release, use the
 [Workers runbook](WORKERS_RUNBOOK.md) for the separate protected origin,
 split-origin variables, secret rotation and release record. The existing apex
 frontend remains the serving baseline until an approved cutover.
@@ -65,6 +65,8 @@ Add these environment variables:
 | `GCP_BUDGET_CURRENCY_CODE` | Billing-account ISO 4217 currency code; currently `INR` |
 | `GCP_BUDGET_UNITS` | Positive whole-unit amount; currently `2400` (about USD 25 at review) |
 | `DOMAIN_NAME` | Lower-case public DNS hostname |
+| `ORIGIN_DOMAIN_NAME` | `origin.citeladder.com` protected ingress hostname |
+| `APP_DOMAIN_NAME` | `app.citeladder.com` product Worker hostname |
 | `DEMO_MODE` | Optional; `false` (public sign-up) unless set to `true` |
 | `DEMO_EXPIRES_AT` | Optional RFC3339 expiry; required only when `DEMO_MODE` is `true` |
 | `DEMO_LOGIN_EMAIL` | Optional; defaults to `dev@citeladder.com` |
@@ -81,27 +83,6 @@ Add these environment secrets:
 - `KEENABLE_API_KEY`: required for external brand-discovery research;
 - `TAVILY_API_KEY`: required for commerce-catalog web research;
 - `CONTENT_API_KEY`: required for the configured Content generation provider;
-- `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE`: optional Logo.dev publishable token. It
-  is injected only while building the frontend and becomes public client
-  configuration; do not use a Logo.dev secret key here. It reaches the deploy
-  as the `gcp-demo` environment **variable** `LOGO_DEV_PUBLISHABLE` — a
-  variable and not a secret on purpose, because the token is published in the
-  client bundle anyway and filing it as a secret only makes it write-only and
-  masks it to `***` in the logs you would debug from. Without it every brand
-  mark in the app falls back to initials. Three consequences worth knowing:
-  - `vars.` and `secrets.` are separate namespaces and neither falls back to
-    the other, so a token filed under the wrong one reads as the empty string
-    however carefully it was set. This is not hypothetical: the value sat as a
-    secret named `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE` while the workflow read
-    `vars.LOGO_DEV_PUBLISHABLE`, and every logo in the deployed app was
-    initials for it. Use the variable, under exactly that name.
-  - The value is baked into the image, not read at runtime. The frontend build
-    now logs `Building with empty public values: ...` when one is missing, so
-    check the build step's log before chasing the app.
-  - The deploy workflow now keys the app image tag by source commit and a
-    fingerprint of its baked public inputs. Changing the value on the same
-    commit produces a new image; verify the public configuration fingerprint
-    in the protected workflow summary.
 - `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`: required. One Google
   OAuth client serves both sign-in and the Search Console / Analytics connect.
 - `BING_OAUTH_CLIENT_ID` / `BING_OAUTH_CLIENT_SECRET`: optional. They are issued
@@ -152,36 +133,36 @@ firewall permits web traffic only from current Cloudflare address ranges.
 
 ## 5. First deployment and acceptance
 
-For Workers migration PR 3 and later, [the Workers runbook](WORKERS_RUNBOOK.md)
-owns the coordinated cutover. Before a GCP deployment, capture the running old
-frontend image digests and set protected `gcp-demo` variables
-`LEGACY_FRONTEND_IMAGE` and `LEGACY_VITE_APP_IMAGE`. The workflow keeps those
-images pinned while building only the backend. Select `browser_origin=apex` for
-pre-cutover delivery or recovery and `browser_origin=app` only for the approved
-cutover; the selection sets `FRONTEND_URL`, `FRONTEND_ORIGINS` and the app link
-origin together while pinning MCP identity to the apex. The provider callback
-table above describes the old apex registration; add app callbacks through the
-Workers cutover packet before selecting `app`.
+For the first Workers release, [the Workers runbook](WORKERS_RUNBOOK.md)
+owns the coordinated cutover and recovery. Capture the running old frontend
+digests, files and route associations in the protected release record before
+dispatch. The final `gcp-demo` workflow builds and deploys only the backend
+image. It fixes `FRONTEND_URL` and `FRONTEND_ORIGINS` to the app host while
+pinning MCP identity to the apex; app callback registration is a release
+prerequisite. The prior VM runtime files remain in `.previous` copies for
+first-release recovery, not as inputs to normal deployment.
 
 Merge the intended commit to `main` and wait for required CI. Run **GCP Demo -
 Deploy** from `main` and approve `gcp-demo`. It serializes deployments, safely
 reuses immutable images when retrying the same commit, applies Terraform,
-installs secrets once, deploys exact digests over IAP, and migrates. With
+installs secrets once, deploys the backend digest over IAP, and migrates. With
 `DEMO_MODE` unset the deployment is public: visitors register or sign in with
 Google and own their own accounts. Set `DEMO_MODE` to `true` to bootstrap the
 single development account instead. Project slots remain unprovisioned, which
 is the pre-commercial unlimited-project behavior. Each project crawl is capped
 at 200 URLs. The crawler runs with eight global and six per-host slots.
-Deployment then validates every long-running service and performs smoke
-tests.
+Deployment validates every long-running backend service and checks that direct
+unauthenticated origin access returns 403. Product and marketing acceptance
+follows the Worker deployments in the Workers runbook.
 
-Set Cloudflare's A record to the static IP in the workflow summary. If DNS was
-not ready for the final smoke test, correct DNS and rerun the same workflow.
+Keep `origin.citeladder.com` proxied to the static IP without a Worker route.
+The backend workflow's final smoke requires that DNS and Full (strict) TLS
+already work. The apex and app Custom Domains are attached separately.
 
 ```powershell
-$browserOrigin = 'https://citeladder.com' # Use https://app.citeladder.com when browser_origin=app.
-curl.exe --fail --show-error "$browserOrigin/health"
-curl.exe --fail --show-error "$browserOrigin/api/v1/auth/oauth/providers"
+$appOrigin = 'https://app.citeladder.com'
+curl.exe --fail --show-error "$appOrigin/health"
+curl.exe --fail --show-error "$appOrigin/api/v1/auth/oauth/providers"
 ```
 
 Health must succeed and the provider catalog must report Google as
@@ -208,7 +189,7 @@ On the VM:
 ```bash
 cd /opt/citeladder
 sudo docker compose --env-file runtime.env -f compose.gcp.yml ps
-sudo docker compose --env-file runtime.env -f compose.gcp.yml logs --tail=200 web frontend caddy
+sudo docker compose --env-file runtime.env -f compose.gcp.yml logs --tail=200 web caddy
 sudo systemctl status citeladder-backup.timer
 sudo journalctl -u citeladder-backup.service --since '24 hours ago'
 df -h /
@@ -224,11 +205,11 @@ missing nightly backup as an incident before presenting.
 
 Merge an update to `main`, wait for CI, and rerun **GCP Demo - Deploy**. The VM
 stops write-capable services, takes a `predeploy` dump, pulls exact digests,
-migrates, and validates the frontend, API, database, migration, Caddy, and all
+migrates, and validates the API, database, migration, Caddy, and all
 ten workers. A failed backup restores the old runtime; a later deployment
 failure also attempts to restore prior digests and services.
 
-Record the previous backend/frontend digests and `predeploy` object. If a
+Record the previous backend digest and `predeploy` object. If a
 migration makes an image-only rollback unsafe, stop write-capable services,
 explicitly accept loss of writes after the dump, restore the dump to a clean
 schema, restore prior digests in `runtime.env`, recreate the stack, and repeat
@@ -238,7 +219,7 @@ Example database restore on the VM (replace the object exactly):
 
 ```bash
 cd /opt/citeladder
-services=(caddy frontend vite-app web audit-worker audit-scheduler site-health-worker brand-discovery-worker content-worker agent-worker analytics-worker queue-sweeper integration-worker integration-dispatcher)
+services=(caddy web audit-worker audit-scheduler site-health-worker brand-discovery-worker content-worker agent-worker analytics-worker queue-sweeper integration-worker integration-dispatcher)
 sudo docker compose --env-file runtime.env -f compose.gcp.yml stop "${services[@]}"
 bucket=$(sudo sed -n "s/^BACKUP_BUCKET='\(.*\)'$/\1/p" runtime.env)
 gcloud storage cp "gs://${bucket}/predeploy/<TIMESTAMP>.sql.gz" /tmp/citeladder-restore.sql.gz
@@ -316,16 +297,13 @@ sessions. It verifies that the local
 checkout is `main` synchronized with `origin/main`, verifies its backend image
 inputs have no local changes, resolves that commit's immutable backend image
 from Artifact Registry, and builds and pushes the image when it does not exist
-yet. It reuses the installed Compose layout and immutable frontend images. A
-legacy layout without `vite-app` can be reset after a deploy was blocked by
-schema drift; the script reports that the current frontend still needs to be
-installed. A layout with `vite-app` must have its immutable `VITE_APP_IMAGE`.
-The VM then rebuilds the database with that image's migration baseline, starts
-the application with the candidate backend and currently installed frontend
-images, and verifies the health endpoints for the installed frontend services.
+yet. It requires the installed backend-only Compose layout and rejects an older
+runtime that still contains frontend services. The VM then rebuilds the database
+with the candidate backend image's migration baseline, starts the backend stack,
+and verifies FastAPI readiness.
 It does not create a backup. It refuses a mismatched project
 or single-account demo mode, and the existing configured credentials provision
 the new dev account. Run the normal **GCP Demo - Deploy** workflow immediately
-afterward to install the frontend images that match the reset backend and
-reconcile the complete runtime configuration. Optional `-Instance` defaults to
+afterward to reconcile the complete backend runtime configuration; verify the
+Workers separately. Optional `-Instance` defaults to
 `citeladder-demo`.

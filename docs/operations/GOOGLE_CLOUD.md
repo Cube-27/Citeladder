@@ -11,12 +11,12 @@ This document remains the deployment design and security contract.
 
 ## Summary
 
-Deploy the existing application unchanged on one Compute Engine VM:
+The VM retains backend compute and data; frontend delivery uses two Workers:
 
 ```text
-Cloudflare → Caddy → Astro marketing SSR container (marketing and public routes)
-                    ├─ Vite/Caddy container (authenticated SPA routes)
-                    └─ FastAPI → PostgreSQL 16, workers, and schedulers
+Marketing Worker (citeladder.com) ─┐
+                                    ├─ protected origin → Caddy → FastAPI → PostgreSQL 16
+Product Worker (app.citeladder.com) ┘                       └─ workers and schedulers
 ```
 
 - Repository: `Cube-27/Citeladder`, temporarily public for code review and made
@@ -25,7 +25,7 @@ Cloudflare → Caddy → Astro marketing SSR container (marketing and public rou
   selected by deployment configuration so capacity failures can use another
   zone in the same region.
 - Runtime: one on-demand `e2-standard-2` VM, 2 vCPU/8 GiB, 30 GiB balanced disk.
-- URL: `https://citeladder.com`.
+- URLs: `https://citeladder.com` for marketing and MCP; `https://app.citeladder.com` for product.
 - Lifetime: runs until torn down deliberately. Public sign-up is on by default; `DEMO_MODE=true` restores the one-account restriction.
 - Expected GCP cost: approximately USD $15–25 for seven continuously running days; set an equivalent alert in the billing-account currency. The reviewed INR account uses INR 2,400. Provider/API usage is separate.
 - Do not use Cloud Run, Cloud SQL, a load balancer, Kubernetes, Redis, or Spot VMs for this temporary demo.
@@ -47,18 +47,15 @@ Cloudflare → Caddy → Astro marketing SSR container (marketing and public rou
   - Artifact Registry, Secret Manager, private backup bucket, budget alerts, and the VM;
   - Terraform state in a versioned, uniform-access GCS bucket within the disposable project.
 - Add a production Compose overlay that:
-  - runs the existing API, frontend, migration/bootstrap, PostgreSQL, and all ten background processes;
-  - uses host networking but binds PostgreSQL, FastAPI, Astro, and Vite to `127.0.0.1`; only Caddy binds 80/443;
+  - runs the API, migration/bootstrap, PostgreSQL, and all ten background processes;
+  - uses host networking but binds PostgreSQL and FastAPI to `127.0.0.1`; only Caddy binds protected origin ingress;
   - enables PostgreSQL TLS and keeps `DB_SSL_MODE=require`;
   - runs `alembic upgrade head && python -m app.demo.bootstrap`;
-  - builds the frontend with `BACKEND_ORIGIN=http://127.0.0.1:8000`, `CITELADDER_TASK_LOCAL_BACKEND=true`, and demo mode;
   - throttles demo concurrency to `AUDIT_WORKER_CONCURRENCY=2`, `DB_POOL_SIZE=8`, `DB_MAX_OVERFLOW=0`, and Site Health global/per-host concurrency of 2.
-  - enables the read-only MCP server at the public origin and admits only
-    `DEV_LOGIN_EMAIL`; Caddy routes `/mcp`, its OAuth endpoints, and both
-    discovery documents directly to FastAPI; Caddy sends authenticated SPA
-    paths to Vite and all remaining public/UI routes to Astro.
-- Build backend and frontend images in GitHub Actions, push immutable digests to Artifact Registry, deploy those exact digests over IAP, and record the source commit and digests in the GitHub deployment summary.
-- Keep core credentials, database password, demo password, provider keys, and Cloudflare origin private key in Secret Manager. The frontend receives only public/demo configuration.
+  - enables the read-only MCP server with stable apex identity; Caddy admits
+    authenticated Worker subrequests only and forwards the allowlisted public host.
+- Build the backend image in GitHub Actions, push its immutable digest to Artifact Registry and deploy it over IAP. Publish each frontend Worker independently through its protected workflow.
+- Keep core credentials, database password, demo password, provider keys, and Cloudflare origin private key in Secret Manager. Worker secrets hold the matching dedicated ingress token.
 - Create a nightly compressed PostgreSQL dump with a ten-day bucket lifecycle. Before each update, take an additional pre-deploy dump. The VM can create, list, and read backup objects for monitoring and restore, but cannot delete or overwrite them; lifecycle policy owns routine deletion.
 - Do not install any self-teardown timer. Stopping and destroying the host are deliberate acts run through the protected control and destroy workflows.
 
@@ -116,32 +113,25 @@ JWT, encryption, and referral secrets directly in Secret Manager on first use.
    - preserve all MX, SPF, DKIM, and DMARC records;
    - create an Origin CA certificate covering `citeladder.com` and `*.citeladder.com`;
    - store its certificate and private key in Secret Manager;
-   - use Full (strict), proxy the apex `@` record, disable caching for `/api/*` and authentication responses, and point that A record to the provisioned static IP;
-   - send `www` to the apex with a proxied CNAME plus a redirect rule, so only `citeladder.com` reaches the origin (the origin serves exactly one host); Origin CA supports this proxied/strict configuration. [Cloudflare Origin CA](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/)
+   - use Full (strict), proxy `origin.citeladder.com` to the static IP and leave it free of Worker routes;
+   - attach the apex and app Custom Domains to their respective Workers during the approved release, preserving email DNS records. [Cloudflare Origin CA](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/)
 
 ### First deployment
 
 1. Run the repository gates on the exact `main` commit.
-2. Approve the `gcp-demo` workflow. It must build images, push digests, apply Terraform, deploy Compose, migrate, bootstrap exactly one account, and verify health.
-3. Confirm:
-   - `https://citeladder.com` is valid HTTPS;
-   - `/api/v1/auth/register` returns 403;
-   - the configured account can log in;
-   - the database contains exactly one user;
-   - API, database, and worker ports are unreachable publicly;
-   - Cloudflare proxying is enabled and the origin IP does not answer non-Cloudflare traffic.
+2. Follow the [Workers runbook](WORKERS_RUNBOOK.md) release order and protected approvals for backend, product Worker, then marketing Worker.
+3. Confirm protected origin rejects unauthenticated traffic, both public hosts have valid HTTPS, app login and workspace isolation work, apex MCP identity remains stable, and internal ports are unreachable publicly. `DEMO_MODE=true` alone enables the single-account restriction.
 4. Create the few required demo projects and run representative crawls before the live presentation.
 
 ### Daily operation
 
 - Check VM status, disk usage, container health, failed worker logs, last successful backup, and the GCP billing report.
 - Start or stop the VM through the protected control workflow. Stopped VMs do not incur VM usage charges, though their disk and static IP remain billable. [Google Compute Engine stop behavior](https://docs.cloud.google.com/compute/docs/reference/rest/v1/instances/stop)
-- After starting, wait for `/ready`, confirm workers are running, and perform one login before presenting.
-- For updates, merge the selected upstream commit and run CI, then quiesce writes
-  by stopping Caddy, the API, workers, and schedulers (or by enforcing an
-  equivalent read-only maintenance mode). Take the pre-deploy dump only after
-  writes are quiesced, deploy the pinned digests, run migrations, restart the
-  stack, and perform the smoke test.
+- After starting, wait for backend `/ready`, confirm workers are running, and perform one app-host login before presenting.
+- For backend updates, merge the selected commit and run CI, then use the
+  protected GCP workflow to quiesce writes, take a pre-deploy dump, deploy the
+  pinned backend digest and validate the stack. Worker updates do not restart
+  the database or backend writers.
 - For rollback, quiesce writes again before changing images or data. Restore the
   recorded prior digests and, when a migration makes application rollback
   unsafe, restore the pre-deploy dump before reopening Caddy, the API, workers,
@@ -165,10 +155,10 @@ JWT, encryption, and referral secrets directly in Secret Manager on first use.
   - exact WIF repository/environment claims;
   - no service-account key files or secret payloads in Git, Terraform, outputs, logs, or workflow arguments;
   - immutable image digests, Shielded VM controls, no self-teardown timer, and least-privilege service accounts.
-- Validate rendered Compose configuration, PostgreSQL TLS, demo-mode bootstrap idempotency, frontend secret isolation, and Caddy routing.
+- Validate rendered backend Compose configuration, PostgreSQL TLS, demo-mode bootstrap idempotency, and protected Caddy routing.
 - Run `.\scripts\check.ps1` and focused native-runner tests; CI runs the full selected suites.
 - On the deployed stack, verify registration, Google sign-in, Search Console and Bing connect, persisted data after VM restart, two or more representative site crawls reaching terminal state, worker recovery, backup/restore, and spoofed forwarded-header handling.
-- Acceptance requires a successful fresh deployment and a successful disposable-project teardown rehearsal.
+- Production acceptance follows the Workers runbook; teardown needs separate authorization.
 
 ## Assumptions
 

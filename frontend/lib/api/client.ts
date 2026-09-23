@@ -2,8 +2,8 @@
  * Typed HTTP transport (F2).
  *
  * Same-origin only: the browser always calls a **relative** base (`/api/v1`);
- * Next.js `rewrites()` proxies `/api/:path*` to the server-only `BACKEND_ORIGIN`
- * (invariant 12). The browser never sees a cross-origin backend URL, so there is
+ * The app Worker proxies `/api/v1` through protected origin transport.
+ * The browser never sees a cross-origin backend URL, so there is
  * no CORS preflight and no cross-origin cookie handling.
  *
  * Guarantees:
@@ -28,7 +28,7 @@ import {
 } from '@/lib/config/operational';
 import { ApiError, isAbortError, isTimeoutError } from './errors';
 
-/** Relative API base. Same-origin; proxied to BACKEND_ORIGIN by Next rewrites. */
+/** Relative API base on the app origin. */
 export { API_BASE_URL } from '@/lib/config/operational';
 
 export type ApiRequestOptions = {
