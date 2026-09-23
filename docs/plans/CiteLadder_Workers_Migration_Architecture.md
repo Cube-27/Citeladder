@@ -1,10 +1,24 @@
 # CiteLadder: Cloudflare Workers Migration Architecture
 
-- **Version:** 1.0
+- **Version:** 1.1
 - **Prepared:** 22 September 2026
 - **Scope:** Marketing website, product frontend, public-origin separation, migration-related debt removal, deployment and documentation.
 - **Audience:** Sol and the implementing/reviewing engineering agents.
 - **Status:** Implementation specification. Production cutover remains an explicitly approved operator action.
+
+Delivery is assigned through the [four-PR implementation plan](CiteLadder_Workers_Migration_Implementation_Plan.md),
+which defines sequential fresh-chat entry points, predecessor evidence, manual
+operations and the immediate verification gate before retirement.
+
+**Owner clarification, 23 September 2026:** there are no current customers.
+Execute the four sequential PRs the same day, subject to working implementation
+and immediate cutover checks. The previous seven-day stabilization policy is
+removed; no elapsed-time observation window is required before PR 4 cleanup.
+This is a clean origin cutover: update product navigation, marketing links and
+OAuth configuration directly to the app origin. Do not create apex-to-app product
+redirects or maintain legacy product-route aliases unless a verified external
+consumer requires an exact exception. There is no default legacy redirect map,
+permanent-redirect conversion or 90-day compatibility requirement.
 
 ## 1. Outcome and fixed decisions
 
@@ -16,8 +30,10 @@ Move frontend delivery to Cloudflare Workers without migrating CiteLadder’s ba
 | Marketing rendering | Keep `output: 'server'`. Request-time SSR for the homepage, commercial/product pages and pricing. Selectively prerender deterministic documentation, articles and legal pages. Every indexable page must contain its substantive content in the initial HTML response. |
 | Product origin | Introduce `https://app.citeladder.com`. This hostname is a migration deliverable, not an existing deployment. |
 | Product rendering | Keep the existing Vite/React SPA. Deploy its static build plus a small routing/proxy Worker. Do not migrate the product to Astro, Next.js or a new router. |
+| Cloudflare hostname binding | Marketing and product use Worker **Custom Domains**, not Worker Routes. `origin.citeladder.com` remains proxied DNS to GCP with no Worker Custom Domain or Worker Route, including wildcard capture. |
 | Backend | Keep the existing GCP deployment. Repository infrastructure currently describes a Compute Engine VM running Docker Compose, not Cloud Run. Verify the live deployment before executing the runbook. |
 | Browser APIs | Product browser requests remain relative `/api/...` requests on `app.citeladder.com`. Do not introduce a browser-facing `api.citeladder.com`. |
+| Apex APIs | Only exact verified public/external endpoints remain on apex; no permanent blanket `/api/*` proxy or duplicate browser API origin. Marketing SSR catalog access is server-to-server. |
 | Public MCP identity | Preserve the existing apex MCP endpoint, issuer and resource identity. Explicitly configure `MCP_PUBLIC_BASE_URL=https://citeladder.com`; do not let it change implicitly with the frontend URL. |
 | Browser identity | Login, account interactions and MCP browser consent move to the app origin. Keep host-only session cookies; accept a fresh login after the origin change. |
 | Public pricing | Marketing displays crawlable public catalog data. Authenticated purchase, billing details and checkout continuation belong to the app origin. Reuse the existing billing implementation. |
@@ -42,7 +58,7 @@ The following was checked in the repository’s default-branch files. This is a 
 | Verified observation | Source and migration consequence |
 |---|---|
 | GCP infrastructure describes a VM, Docker Compose, Caddy ingress, loopback backend/database services, IAP administration and Cloudflare-restricted web ingress. | `infra/gcp/README.md`, `docs/operations/GCP_RUNBOOK.md`. Do not write a Cloud Run removal plan or promise a Cloud Run service saving. [R1] [R14] |
-| Caddy switches between Astro, Vite and FastAPI on one public hostname. | `infra/gcp/runtime/frontend-routes.caddy`. Its exact route contract is the starting point for legacy redirects and protocol preservation. [R2] |
+| Caddy switches between Astro, Vite and FastAPI on one public hostname. | `infra/gcp/runtime/frontend-routes.caddy`. Inventory current ownership before moving product routes and preserving verified protocol contracts; a route's existence does not justify a legacy alias. [R2] |
 | Marketing uses Astro server output with the standalone Node adapter. | `frontend/apps/marketing/astro.config.mjs`. Replace the runtime adapter, not the site’s content or layout. [R3] |
 | The homepage uses a React component with `client:load`. | `frontend/apps/marketing/src/pages/index.astro`. Hydration is not itself evidence of missing server-rendered HTML; inspect the actual response. [R16] |
 | Vite emits `frontend/apps/app/dist`, uses `/app-assets/`, and has deliberate vendor chunking and bundle-budget support. | `frontend/apps/app/vite.config.ts`. Preserve these properties. [R4] |
@@ -66,8 +82,8 @@ Public visitor or crawler                     Signed-in product user
   Marketing Worker                             Product Worker
   Astro SSR + selected prerendered pages       Vite static assets + thin proxy
           |                                            |
-          | public API / MCP / OAuth                   | /api/*
-          | compatibility routes                       | browser MCP consent
+          | exact public endpoints / MCP / OAuth       | product /api/*
+          | server-side public catalog                 | browser MCP consent
           +---------------------+----------------------+
                                 |
                         authenticated HTTPS
@@ -83,7 +99,9 @@ Public visitor or crawler                     Signed-in product user
 
 There are **two application Workers**, not a new gateway service, not a microfrontend platform, and not two implementations of backend logic.
 
-The marketing Worker owns public HTML, public metadata, bounded old-app redirects and the retained apex protocol/API routes. The product Worker owns delivery of the SPA, its response policy, same-origin API proxying and browser consent routing. FastAPI remains the only owner of authentication, authorization, tenant boundaries, billing, integration state and MCP grants.
+The marketing Worker owns public HTML, public metadata and exact verified apex protocol/API endpoints. The product Worker owns delivery of the SPA, its response policy, same-origin product API proxying and browser consent routing. Product pages exist at the app origin; update callers directly instead of building an apex alias layer. FastAPI remains the only owner of authentication, authorization, tenant boundaries, billing, integration state and MCP grants.
+
+Use Cloudflare Worker Custom Domains for `citeladder.com` and `app.citeladder.com`, because these Workers are the frontend origins. Do not substitute Worker Routes without an explicit architecture change. Exclude the GCP origin hostname from both mechanisms. [C9]
 
 Use one small shared server-only proxy helper where both Workers need identical transport behavior. Do not share a giant route switch, React runtime or marketing dependency graph between deployments. A separate hostname permits independent deployment; independent deployment does not require another repository or workspace.
 
@@ -112,12 +130,12 @@ Apply routing in this order. Server-owned endpoints must take precedence over As
 
 | Request family | Required behavior |
 |---|---|
-| Existing `/api` and `/api/*` | Proxy to FastAPI without changing method, body or endpoint identity. Retain existing webhooks, callbacks and public catalog reads. Do not turn these into app-host redirects. |
+| Exact verified apex API endpoints | Proxy only the inventoried public/external contracts and their supported methods, such as an enabled provider's existing webhook. Preserve body and endpoint identity. Other `/api` paths return non-cacheable 404; no blanket browser API proxy or app-host redirect. |
 | `/mcp`, `/mcp/*`, `/authorize`, `/token`, `/revoke`, and the existing OAuth discovery endpoints | Preserve the public protocol contract. Apply the special browser-consent rule below before the general MCP rule. |
 | `GET /mcp/oauth/consent?transaction=...` | Redirect to the same bounded consent path on the app origin. New authorization requests should already generate that app URL. |
-| An in-flight legacy consent `POST` | Preserve safe legacy handling during the transaction-drain window. Do not redirect a submitted approval form across origins. Expired or incompatible transactions must restart explicitly, not bypass CSRF. |
-| Verified old product page paths | Redirect browser GET/HEAD requests to the same path on the app origin, retaining query parameters. |
-| Old `/app-assets/*` URLs during compatibility | Serve the retained, exact fingerprinted artifact or return a genuine missing-asset response. Never return an Astro page or SPA document for a missing chunk. |
+| An in-flight legacy consent `POST` | Fail safely and restart, or complete under original session/CSRF binding if a verified transaction requires handling. Never redirect submitted approval across origins. |
+| Former product page paths | Genuine 404 unless an explicitly owned marketing page exists there. No automatic apex-to-app redirect or alias; Section 4.3 defines the verified-consumer exception. |
+| Old `/app-assets/*` URLs | Genuine missing-asset response by default. Only a verified consumer can justify serving its exact pre-cutover artifact temporarily; never return an Astro page or SPA document. |
 | `/_astro/*` and public static assets | Serve the marketing build’s assets. |
 | Public marketing, legal, blog and documentation routes | Astro rendering according to Section 5. |
 | Unknown public URL | A real HTTP 404, not a success response containing a generic landing page. |
@@ -131,11 +149,20 @@ Preserve these existing discovery paths exactly:
 
 Do not infer that every `/.well-known/*` route belongs to MCP. Inventory any other actual discovery, verification or validation endpoints before cutover and preserve their existing owners.
 
+PR 1 classifies each API/callback/webhook as **APP-OWNED**, **APEX-OWNED**,
+**TEMPORARY LEGACY** or **INTERNAL ONLY**, recording methods and consumers.
+TEMPORARY LEGACY requires a verified external consumer, focused test, owner and
+removal condition; no generic old-tab bridge is presumed for this pre-customer
+cutover. Any exceptional broad apex API bridge must be removed by PR 4, leaving
+only exact justified endpoints. Public catalog SSR reads through the protected
+origin do not themselves justify a browser-accessible apex catalog endpoint.
+
 ### 4.2 Product origin: `app.citeladder.com`
 
 | Request family | Required behavior |
 |---|---|
-| `/api` and `/api/*` | Same-origin proxy to FastAPI, including the app-host OAuth callbacks. |
+| APEX-OWNED or INTERNAL ONLY API endpoints | Reject before the general API proxy; an apex webhook must not silently become valid on the app host. |
+| `/api` and `/api/*` | Same-origin product API proxy to FastAPI, including app-host OAuth callbacks, subject to the ownership exclusions above. |
 | Exact `/mcp/oauth/consent`, GET and POST | Proxy the backend-owned browser consent flow. It is not a React SPA route. |
 | Other `/mcp`, `/mcp/*`, `/authorize`, `/token`, `/revoke` and OAuth discovery requests | Return a non-cacheable 404, not the SPA shell and not a second MCP issuer/resource. The exact browser-consent path above is the sole app-host exception. The canonical machine-facing endpoint remains the apex. |
 | `/health` | Small non-sensitive Worker liveness response; no database or provider details. |
@@ -147,7 +174,7 @@ Do not infer that every `/.well-known/*` route belongs to MCP. Inventory any oth
 
 `/register` remains browser registration. MCP dynamic registration remains `/mcp/register` at the apex. Do not “simplify” them into one route.
 
-### 4.3 Legacy application redirects
+### 4.3 Clean product-origin cutover
 
 The verified current exact path set is:
 
@@ -165,15 +192,15 @@ The current bounded dynamic families are:
 /site/crawls/{one-segment-id}/pages/{one-segment-id}
 ```
 
-Preserve existing trailing-slash handling. Recheck the route owner and React route definitions at the implementation commit; this list is evidence, not permission to ignore newly shipped routes.
+Preserve existing trailing-slash handling on the app host. Recheck React route definitions at the implementation commit; this list inventories routes to move, not aliases or redirects to generate on apex.
 
-Use one finite compatibility map. It must not grow every time a new app page is introduced. New app pages belong only to the app hostname. Preserve `project`, workspace, invitation and other required query context. Validate redirect destinations against the fixed app origin; reject protocol-relative and attacker-controlled redirect targets.
+Update marketing links, app navigation, invitation destinations, OAuth configuration and billing return URLs directly to their intended origin. Preserve required project/workspace/invitation context in newly generated app links. Do not copy the former product route table into the marketing Worker or add a blanket apex-to-app fallback.
 
-Start with **302, `Cache-Control: no-store`** while rollback remains possible. After seven consecutive stable days and operator sign-off, change eligible old-page GET/HEAD redirects to 301. Retain the legacy map for at least 90 days, and longer where observed use warrants it. These are migration policy defaults, not measured traffic facts.
+An exact product-path exception is allowed only for a verified external consumer. Record evidence, owner, focused test and removal condition; use GET/HEAD-only **302, `Cache-Control: no-store`**, preserve required query context and fix the destination to the app origin. Reject attacker-controlled destinations. Do not convert exceptions to 301/308 in PR 4 or retain them for an invented minimum period. Source-code routes, hypothetical bookmarks and agent test tabs are not external-consumer evidence.
 
-Do not reclaim old product paths such as apex `/visibility` as marketing pages during this migration. Existing customer links take priority. Reclaiming one later requires a separate URL decision and removal of the conflicting redirect.
+Do not add new marketing pages at former product paths as incidental migration work. Without an existing marketing owner or a verified exception, former apex product paths return 404. MCP consent redirects and protocol endpoints have their own explicit contracts; they do not justify product aliases.
 
-URL fragments do not reach the server. Do not claim a server redirect reads or rewrites them; test browser fragment behavior where an existing flow relies on it.
+URL fragments do not reach the server. Preserve them in directly updated links where required; if an exceptional redirect is needed, test actual browser fragment behavior rather than claiming the server reads fragments.
 
 ## 5. Marketing rendering and crawlability
 
@@ -304,15 +331,15 @@ At the app, validate the schema and supported choices, capture the pending inten
 
 After login, resolve the actual workspace and authorization, reload the live catalog and obtain the current quote. A link, a GET, login completion or browser reload must not authorize a charge. Require deliberate purchase confirmation. Reuse the existing idempotency key for an uncertain attempt; do not mint a new key on every retry. Maintain existing tax, country, provider-mode and entitlement guards.
 
-Old apex pending intents are not migrated magically. Preserve enough legacy behavior to avoid breaking an in-flight payment; otherwise ask the user to select again. Do not serialize the old pending object into a URL, because it can contain billing information. [R11]
+Old apex pending intents are not migrated. Select again on the app; only a verified in-flight payment justifies special completion handling. Do not serialize the old pending object into a URL, because it can contain billing information. [R11]
 
-Keep actual webhook URLs at their existing apex paths, with the same raw request bodies, signature checks and response semantics. Provider webhooks are not browser navigation and must not redirect to the app. Review return URLs and approved frontend domains only for enabled providers; this migration does not activate or replace a payment provider.
+Keep verified webhook URLs for enabled providers at their existing apex paths, with the same raw request bodies, signature checks and response semantics. Provider webhooks are not browser navigation and must not redirect to the app or gain a second valid app-host URL through the general API proxy. Review return URLs and approved frontend domains only for enabled providers; this migration does not activate or replace a payment provider.
 
 ## 8. Worker-to-GCP ingress and proxy contract
 
 ### 8.1 Authenticated origin, not an open backend
 
-Provision the proposed `origin.citeladder.com` as a dedicated, Cloudflare-proxied origin hostname pointing to the existing VM. Check for an existing record before creating it. Neither application Worker may be attached to this hostname. Do not use a wildcard Worker route that captures it and recurses.
+Provision the proposed `origin.citeladder.com` as a dedicated, Cloudflare-proxied DNS hostname pointing to the existing VM. Check for an existing record before creating it. It must have no Worker Custom Domain or Worker Route. Do not use a wildcard Worker route that captures it and recurses.
 
 Keep the existing Cloudflare-only web firewall, IAP administration and loopback database/backend exposure. Add Worker-to-origin authentication at Caddy or the established ingress owner. A Cloudflare source IP alone does not establish that a request came from one of CiteLadder’s Workers.
 
@@ -349,7 +376,7 @@ Use an Astro-compatible, locked `@astrojs/cloudflare` version; check its peer de
 
 Current adapter guidance uses its server entrypoint or supported custom handler, rather than the old `dist/_worker.js/index.js` convention. It also replaces the old `Astro.locals.runtime` API. Use the chosen version’s actual exports and generated configuration; do not combine snippets from different adapter generations. [C2]
 
-Wrap the supported Astro handler only as needed for protocol routes and legacy redirects. Do not create an independent HTML server around it. Replace the existing Node-specific marketing proxy with the shared Worker transport implementation. Keep backend credentials out of client imports.
+Wrap the supported Astro handler only as needed for exact public/protocol contracts and any verified-consumer exceptions. Do not create an independent HTML server or default product redirect map around it. Replace the existing Node-specific marketing proxy with the shared Worker transport implementation. Keep backend credentials out of client imports.
 
 Inspect generated bindings before deployment. The adapter can provision image/session resources. Do not introduce an Astro session store alongside backend authentication or silently activate paid image transformation. Select an explicit image strategy that preserves current output; preoptimized/static assets and build-time transformations are sufficient unless actual runtime image needs are established. Any unavoidable adapter-owned resource needs an explicit recorded purpose, not a fake disable option or an unused application dependency. [C2]
 
@@ -364,7 +391,8 @@ Prefer asset-first delivery with a small Worker fallback. **Do not enable an unc
 The product handler must follow this decision order:
 
 ```text
-reserved API / exact browser-consent path -> backend proxy
+wrong-host/internal-only API endpoint     -> non-cacheable 404
+product API / exact browser-consent path  -> backend proxy
 other reserved protocol / health route    -> explicit handler or real error
 existing static asset                    -> asset response
 missing asset or non-document request    -> real 404
@@ -372,11 +400,13 @@ GET/HEAD HTML browser navigation         -> SPA entry
 unsupported method                       -> appropriate 404/405, never SPA
 ```
 
-Require Worker-first routing, or an equivalent precedence safeguard, for product `/api/*`, the exact browser-consent path, reserved protocol and discovery paths, and `/health`. This includes every callback path that needs Worker handling. Build checks must also prevent a public asset from shadowing a reserved path. Test both ordinary fetch requests and `Sec-Fetch-Mode: navigate`; do not test only XHR. Apply an equivalent safeguard to marketing routes if the selected asset settings could bypass its Worker.
+Set `assets.run_worker_first` explicitly for at least `/api`, `/api/*`, `/mcp`, `/mcp/*` (including exact consent), `/authorize`, `/token`, `/revoke`, the reserved discovery paths and `/health`. Include all callback and rejected endpoint paths. Add resource patterns or use `true` if required to preserve genuine errors under navigation requests. Prevent public assets from shadowing reserved paths; test ordinary fetch and `Sec-Fetch-Mode: navigate`. Apply the corresponding safeguard to marketing public/protocol endpoints. [C4]
+
+Native `not_found_handling: "single-page-application"` can be combined with selective Worker-first handling, but adopt it only if the tested effective configuration preserves every error/method contract above. A navigation to `/api/typo`, `/mcp/foo` or a missing JS file must not become HTML success, and neither may `POST /projects`. If native handling fails these checks, use a small guarded SPA entry fallback, not a new router. [C4] [C6]
 
 Serving the SPA entry must not loop back into the same Worker or apply its own fallback recursively. Unknown app document routes may reach the existing React not-found experience; unknown marketing routes and missing assets must still return real HTTP errors.
 
-Retain the existing bundle manifest, vendor chunking, browser targets and bundle budget. Keep a small retained set of prior fingerprinted assets for old tabs and the migration’s apex asset URLs. Each retained file must be immutable and traceable to a release, not a second maintained frontend build.
+Retain the existing bundle manifest, vendor chunking, browser targets and bundle budget. Keep the exact pre-cutover build as a rollback artifact; this does not require publicly serving old apex chunks. Only a verified external consumer justifies a temporary copy of that build's exact fingerprinted assets, with hashes and a removal condition. Do not create a generic release-asset archive, database, KV catalog, cleanup daemon or registry.
 
 ### 9.3 Response/cache matrix
 
@@ -388,7 +418,7 @@ Retain the existing bundle manifest, vendor chunking, browser targets and bundle
 | Public pricing | Fresh backend-owned catalog for SSR; `no-store` initially. No shared cache of a country/user-specific quote. |
 | Sessions, consent, authenticated APIs and checkout | `private, no-store` or the equivalent stricter existing policy. Never cache `Set-Cookie` responses as public content. |
 | Public metadata/static documents | Correct content type, canonical origin and an explicitly chosen freshness policy. |
-| Temporary legacy redirects | `302` and `no-store` until migration acceptance. |
+| Verified-consumer product redirect exception, if any | `302` and `no-store`, with an explicit removal condition; no automatic permanent conversion. |
 
 Apply headers in the correct owner: `_headers` affects static assets, not Worker/SSR-generated responses. Add generated-response headers in the handler/middleware as well. Do not assume a shared `_headers` file covers both. [C5]
 
@@ -412,11 +442,11 @@ Deliver bounded, reviewable phases. Do not combine DNS cutover, authentication c
 |---|---|---|
 | 0. Reconcile baseline | Record commit, deployed topology, route families, public origins, callback overrides, enabled providers and current build commands. Classify every affected URL/config consumer. | No guessed production facts or unclassified origin consumers. |
 | 1. Prepare contracts | Add explicit website/app/protocol origins, protected origin ingress and shared proxy behavior. Make backend browser-origin changes backward-compatible until cutover configuration changes. | Existing apex deployment still works; unauthorized origin access fails. |
-| 2. Build both targets | Astro Worker, app Worker, legacy redirects, app consent routing, crawlable catalog presentation and purchase handoff. | Both builds and runtime tests pass without changing product business rules. |
+| 2. Build both targets | Product Worker and app pricing continuation in PR 2; Astro Worker, public SSR catalog, direct handoff and exact apex public endpoints in PR 3. | Both builds and runtime tests pass without changing product business rules. |
 | 3. Separate deployment | Add independent protected Worker deployment jobs and release records. Keep GCP backend delivery intact. | Reproducible artifacts, explicit environments and no duplicate production deployer. |
 | 4. Validate staging | Deploy to isolated staging hosts and backend/test data. Exercise the full route/auth/billing/MCP matrix. | Automated and external gates are separately recorded; unresolved gates block production. |
-| 5. Cut over | Execute Section 11 with operator approval. Keep rollback artifacts and temporary redirects. | Production acceptance and working rollback path. |
-| 6. Remove superseded runtime | Remove frontend containers, stale CI/configuration and duplicate routing after the stability gate. Update canonical docs. | No remaining production dependency on the old frontend-serving layer. |
+| 5. Cut over | Execute Section 11 with operator approval. Update direct links/configuration and keep rollback artifacts. | Production acceptance and working rollback path. |
+| 6. Remove superseded runtime | Remove frontend containers, stale CI/configuration and duplicate routing after immediate cutover checks pass. Update canonical docs. | No remaining production dependency on the old frontend-serving layer. |
 
 ### Build and deployment rules
 
@@ -458,7 +488,7 @@ Create a deployment record in the protected release/PR system containing:
 3. Existing OAuth callback registrations, explicit redirect overrides, active payment/webhook endpoints, MCP discovery/issuer/resource metadata and an authorized client’s successful baseline read. Do not put live tokens in the record.
 4. Baseline status/error checks and representative frontend timing/SSR CPU measurements where available; approved capacity and rollback triggers. Confirm that the normal backend backup is healthy, without treating this frontend change as a database migration.
 
-Retain recoverable previous frontend artifacts for at least the seven-day stabilization window and until the operator accepts decommissioning. Preserve the versions required by the subsequent rollback policy as well. A source commit alone is not a rollback artifact when the old build may no longer reproduce.
+Retain recoverable previous frontend artifacts through immediate cutover verification. PR 4 can retire the old serving layer the same day once those checks pass. Preserve the artifact versions required by the subsequent rollback policy as well. A source commit alone is not a rollback artifact when the old build may no longer reproduce.
 
 ### 11.2 Prepare origin and staging before public cutover
 
@@ -482,36 +512,36 @@ With explicit operator approval:
 
 1. Confirm the protected origin and both production artifacts are ready. Record the exact prior routing/configuration immediately before the change.
 2. Activate the app browser origin in backend configuration and effective provider overrides; keep `MCP_PUBLIC_BASE_URL` fixed. Ensure the new app-host login/callback/consent flow works before marketing links point to it.
-3. Attach the marketing Worker to the apex with its preserved protocol/API routes and temporary old-page redirects. Inspect existing DNS and overlapping Worker routes when using Custom Domains; do not delete the old apex record or attach a wildcard blindly. Custom-domain setup is a separate routing operation, not merely uploading a Worker version. [C9]
-4. Switch public app links, catalog handoff and metadata to their intended origins. Do not redirect webhook, token, API or OAuth callback POSTs. Keep old fingerprinted asset URLs available during the transition.
-5. Run the production acceptance gate immediately. Keep the old frontend services and their rollback files intact until the stabilization/decommission gate; they must not receive normal new frontend traffic.
+3. Attach the marketing Worker to the apex Custom Domain with only its exact verified public/protocol endpoints. Use a Custom Domain for the product Worker as well; do not implement either as Worker Routes. Inspect existing DNS and overlapping routes before attachment; keep the origin hostname excluded. Domain association is a separate operation from uploading a Worker version. [C9]
+4. Switch marketing links, application navigation, OAuth configuration, catalog handoff and metadata directly to their intended origins. Do not create default product redirects/aliases, redirect protocol/API/webhook POSTs or serve old apex chunks for hypothetical consumers. Any exception needs the evidence and removal condition in Section 4.3.
+5. Run the production acceptance gate immediately. Keep the old frontend services and their rollback files intact until those checks pass; they must not receive normal new frontend traffic. PR 4 may then remove the old services without an observation delay.
 
 Do not edit MX, SPF, DKIM, DMARC or unrelated Cloudflare settings as part of this cutover. Do not disable a security control globally to repair one failing path.
 
-### 11.5 Acceptance and stabilization
+### 11.5 Immediate acceptance
 
-Check unauthenticated raw HTML, app login, legacy links with project context, OAuth sign-in/integrations, MCP existing and new clients, catalog handoff, authorized purchase continuation and webhook handling. Use approved sandbox/fixture methods for payment validation; do not initiate an unapproved real charge.
+Check unauthenticated raw HTML, app login, directly updated links with project context, OAuth sign-in/integrations, MCP existing and new clients where applicable, catalog handoff, authorized purchase continuation and verified webhook handling. Confirm former apex product paths return 404 without redirect aliases, except for documented consumer exceptions. Check narrow apex API access and rejection of apex-only webhooks on app. Use approved sandbox/fixture methods for payment validation; do not initiate an unapproved real charge.
 
 Monitor by hostname and route family: Worker exceptions, CPU limit failures, origin errors, auth/callback failures, consent failures, missing chunks and incorrect redirects. Use redacted request IDs to correlate Worker and origin failures. Compare frontend delivery with the baseline; do not present backend latency as a frontend-hosting improvement without evidence.
 
-After seven stable days and owner acceptance, finalize eligible legacy browser redirects and decommission the superseded serving layer. A failed security, checkout or integration gate blocks completion even when the homepage looks correct.
+After immediate checks pass, decommission the superseded serving layer in PR 4. No seven-day wait or permanent product redirects are required for this pre-customer migration. A failed security, checkout or enabled-integration check still needs repair before claiming completion.
 
 ### 11.6 Rollback: choose the narrowest safe action
 
 | Failure | Rollback action |
 |---|---|
 | A later release of one Worker regresses | Restore that Worker’s last accepted version/artifact and repeat the affected acceptance checks. Keep the other Worker and GCP services unchanged. |
-| First migration fails before acceptance | Restore the captured apex routing and the exact previous Caddy/frontend runtime artifacts; restore the compatible backend browser-origin configuration. Keep the app host available as needed to handle active app-host API requests and safely return browser GET/HEAD navigation to the old site. |
+| First migration fails before acceptance | Restore captured apex routing, exact previous Caddy/frontend artifacts and compatible browser-origin configuration/direct links. Keep app-host APIs available only if a verified in-flight transaction requires them; otherwise restart test sessions on the restored origin. No default reverse product-redirect bridge. |
 | A callback/configuration change fails | Restore the previous verified origin/override and provider registration combination. Do not bypass nonce/CSRF validation or send callbacks across hosts indiscriminately. |
 | Origin credentials or forwarding fails | Restore the previously accepted credential/header configuration using version references. Do not expose the backend or disable TLS validation. |
 
 A Worker rollback does not restore DNS associations, secrets, provider settings, GCP configuration or database state. Track and restore these separately where required. [C10]
 
-During first-migration rollback, disable the opposite redirect direction before adding an app-to-apex browser bridge; prevent redirect loops. Never redirect `/api` mutations as a generic fallback. App-host sessions do not become apex sessions; a fresh login may be required again. Preserve payment/MCP identities and existing backend records.
+During first-migration rollback, restore direct navigation/configuration and restart browser sessions as needed; do not introduce a blanket app-to-apex redirect bridge. If a verified exception exists, inspect both directions to prevent loops. Never redirect `/api` mutations as a generic fallback. App-host sessions do not become apex sessions. Preserve payment/MCP identities and existing backend records.
 
 **Do not restore a database backup to undo a frontend deployment.** This plan introduces no required schema change. Any separate schema migration and possible data-loss restore needs its own approved recovery procedure.
 
-Rehearse both a Worker-version rollback and the first-migration route/configuration rollback in staging. Record the actual commands and identifiers. After permanent browser redirects have been issued, cached redirects make a full hostname reversal less predictable; prefer restoring a working Worker implementation rather than relying on clients to forget a permanent redirect.
+Rehearse both a Worker-version rollback and the first-migration route/configuration rollback in staging. Record the actual commands and identifiers. Do not issue permanent product redirects as part of this migration; verified temporary exceptions do not become permanent merely because cleanup completes.
 
 ### 11.7 Decommission only after the rollback gate
 
@@ -519,7 +549,7 @@ Remove the old marketing Node and app Caddy **frontend** containers from normal 
 
 Keep the GCP VM, backend Caddy ingress, FastAPI, PostgreSQL, jobs, secrets, backup timers, Artifact Registry entries still needed for rollback, firewall and IAP administration. Do not run Terraform destroy, delete persistent disks, remove database volumes or dismantle the existing backend deployment pipeline.
 
-Remove the old Astro-versus-Vite Caddy dispatcher from production after its compatibility duties have moved to the Workers. Retain only one finite legacy redirect map and the required release assets. Archive rollback artifacts rather than keeping two indefinitely maintained production frontend implementations.
+Remove the old Astro-versus-Vite Caddy dispatcher from production after frontend ownership moves to Workers. Remove any temporary broad apex API bridge and expired compatibility exceptions; retain only exact verified external contracts. No default product redirect map or publicly served old asset set remains. Archive the pre-cutover rollback artifacts rather than maintaining two production frontend implementations.
 
 ## 12. Acceptance matrix: evidence required before completion
 
@@ -531,7 +561,8 @@ Reuse existing tests where they already own a contract. Add focused regression c
 | Public catalog | SSR includes real public catalog data, with a deterministic country/currency treatment and matching hydrated initial state. Unavailability is explicit; no invented prices. |
 | Status and asset integrity | Unknown public routes return 404; missing JS/CSS/font/image requests never return a 200 HTML document. MIME types are correct. |
 | Reserved routing | `/api`, callbacks, consent, token/discovery and webhook paths remain server-owned for fetch, browser navigation and supported POSTs. Test navigation headers as well as XHR. |
-| Legacy links | Exact and dynamic old app links reach the right app page with project/workspace/invitation context; unknown descendants do not accidentally redirect. No app/apex loop. |
+| Direct product links | Marketing/navigation/invitation links target app directly with required project/workspace/token context. Former apex product paths return 404 unless explicitly marketing-owned or covered by a verified-consumer exception. No default aliases or redirect loop. |
+| API host ownership | App serves product APIs/callbacks; apex exposes only exact verified public/external endpoints. Unknown apex APIs and app requests to apex-only webhooks are rejected; SSR catalog access does not expose a second browser API. |
 | Browser sessions | Fresh app login, reload, logout and session invalidation work. Cookies remain host-only and HttpOnly where intended. The apex cannot read an app session. |
 | Authorization and CSRF | Two users/workspaces remain isolated. Invalid Origin/CSRF/return paths fail closed. Changing a hostname does not change backend authorization. |
 | OAuth | Google sign-in and each enabled integration complete through registered app callbacks with transaction binding intact. Disabled/unimplemented providers remain disabled. |
@@ -556,7 +587,7 @@ The paths below are existing owners to inspect, not an instruction to delete eve
 |---|---|---|
 | Marketing runtime | `frontend/apps/marketing/astro.config.mjs`, its middleware, `frontend/Dockerfile`, `frontend/package.json` | Replace Node runtime/proxy assumptions; remove `@astrojs/node` and standalone Node start/build delivery when unused. Keep marketing rendering/content intact. |
 | App delivery | `frontend/apps/app/Dockerfile`, `frontend/apps/app/Caddyfile`, `server-proxy.ts`, `vite.config.ts` | Remove superseded production container serving. Keep local development proxy behavior or replace it with the tested equivalent; preserve chunk/bundle controls. |
-| Shared ingress | `frontend/Caddyfile`, `infra/gcp/runtime/frontend-routes.caddy`, production `Caddyfile` | Remove duplicated Astro/Vite route switching after cutover; retain secured backend ingress. One legacy redirect map only. |
+| Shared ingress | `frontend/Caddyfile`, `infra/gcp/runtime/frontend-routes.caddy`, production `Caddyfile` | Remove duplicated Astro/Vite route switching after cutover; retain secured backend ingress. No default product redirect map; only verified external endpoint exceptions. |
 | VM deployment | `infra/gcp/runtime/compose.gcp.yml`, `deploy-vm.sh` | Remove frontend services, image variables, frontend-only health dependencies and ports without breaking backend recovery, backups or worker startup. |
 | CI | `.github/workflows/gcp-demo-deploy.yml`, `ci.yml`, `compose-smoke.yml` | Split frontend deployment from GCP; update affected smoke tests/path filters. Do not delete backend deployment or general quality gates. |
 | Origins and links | Frontend configuration/navigation owners; backend callback/configuration owners | Remove ambiguous touched origin aliases and stale absolute app URLs. Distinguish website, app, MCP and backend origins explicitly. |
@@ -604,7 +635,7 @@ Do not publish production automatically merely because the document contains a r
 | **Implementation ready** | Reviewed code, both builds, scoped regression coverage, updated configuration contracts and tested operator commands. |
 | **Staging accepted** | Deployed Worker runtime and integration tests demonstrate the new boundaries; remaining external gates are explicit. |
 | **Production accepted** | Operator-approved cutover, production route/auth/crawlability/MCP/billing checks and recoverable prior artifacts. |
-| **Migration closed** | Stability gate passed, old production frontend runtime/debt removed and canonical documentation matches what is actually deployed. |
+| **Migration closed** | Immediate cutover checks passed, old production frontend runtime/debt removed and canonical documentation matches what is actually deployed. |
 
 Sol’s handoff must state the achieved state, changed ownership boundaries, actual test commands/results, unexecuted external checks, required configuration names without secret values, release/rollback references and temporary compatibility items still retained. “Frontend migration complete” is not an acceptable substitute for these distinctions.
 

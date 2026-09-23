@@ -6,6 +6,11 @@ design is fixed to `asia-south1`, defaults to `asia-south1-a`, and uses one
 GitHub environment. Never place a long-lived Google service-account key in
 GitHub.
 
+For the staged Workers migration, use the
+[Workers runbook](WORKERS_RUNBOOK.md) for the separate protected origin,
+split-origin variables, secret rotation and release record. The existing apex
+frontend remains the serving baseline until an approved cutover.
+
 ## 1. Prerequisites and fixed values
 
 Install Git, Google Cloud CLI, Terraform 1.10.5 or later, and PowerShell 7.3 or
@@ -93,10 +98,10 @@ Add these environment secrets:
   - The value is baked into the image, not read at runtime. The frontend build
     now logs `Building with empty public values: ...` when one is missing, so
     check the build step's log before chasing the app.
-  - `deploy-vite-app` reuses any image already tagged with the current
-    `GITHUB_SHA`. Setting the value and re-running the workflow **on the same
-    commit** therefore redeploys the old token-less image; push a new commit,
-    or delete the existing tag, to force the rebuild.
+  - The deploy workflow now keys the app image tag by source commit and a
+    fingerprint of its baked public inputs. Changing the value on the same
+    commit produces a new image; verify the public configuration fingerprint
+    in the protected workflow summary.
 - `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`: required. One Google
   OAuth client serves both sign-in and the Search Console / Analytics connect.
 - `BING_OAUTH_CLIENT_ID` / `BING_OAUTH_CLIENT_SECRET`: optional. They are issued

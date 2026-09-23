@@ -346,6 +346,7 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
         "--host",
         "127.0.0.1",
     ]
+    assert services["caddy"]["env_file"][0]["path"] == "ingress.env"
 
     db_command = " ".join(_values(services["db"].get("command", [])))
     assert "listen_addresses=127.0.0.1" in db_command
@@ -356,7 +357,13 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert web_environment["DB_POOL_SIZE"] == "8"
     assert web_environment["DB_MAX_OVERFLOW"] == "0"
     assert web_environment["MCP_ENABLED"] == "true"
-    assert web_environment["MCP_PUBLIC_BASE_URL"].startswith("https://${DOMAIN_NAME")
+    assert (
+        web_environment["MCP_PUBLIC_BASE_URL"]
+        == "${MCP_PUBLIC_BASE_URL:?MCP_PUBLIC_BASE_URL is required}"
+    )
+    assert (
+        web_environment["FRONTEND_URL"] == "${FRONTEND_URL:?FRONTEND_URL is required}"
+    )
     assert (
         web_environment["MCP_ALLOWED_ACCOUNT_EMAIL"] == "${MCP_ALLOWED_ACCOUNT_EMAIL-}"
     )

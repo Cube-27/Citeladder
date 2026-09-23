@@ -2,10 +2,15 @@
 
 ## Active
 
-- [Discovery simplification](citeladder-discovery-simplification.md)
-  — selected by the owner; prioritize buyer-demand topic/prompt discovery,
-  shared business context and simpler competitor selection. Four ordered
-  implementation slices. Registration does not authorize execution.
+- [Workers migration — four sequential PRs](CiteLadder_Workers_Migration_Implementation_Plan.md)
+  — implementation plan requested; PRs 1–4 run in separate chats after each
+  predecessor merges. Follows the [architecture specification](CiteLadder_Workers_Migration_Architecture.md).
+  PR 1 implementation is in progress; no deployment or production acceptance
+  is claimed. PR 3 owns the post-merge cutover
+  procedure; PR 4 follows successful immediate cutover checks. Owner requests
+  same-day delivery: no seven-day observation window; no current customers.
+  Clean origin cutover: update links/configuration directly; no default legacy
+  product redirects or aliases. App pricing continuation belongs to PR 2.
 
 ## Queued
 
@@ -22,6 +27,10 @@ for deferred sign-in selection and invitation delivery; it is not an active or
 additional queued assignment. Listed work is not authorization to execute it.
 
 ## Last completed
+
+[Discovery simplification](citeladder-discovery-simplification.md)
+— completion confirmed by the owner on 23 September 2026. This index update
+does not establish new validation.
 
 [CiteLadder MCP implementation](CiteLadder_MCP_Implementation_Plan_Revised.md)
 — completed locally on 21 September 2026: read-only OAuth consent and denial,

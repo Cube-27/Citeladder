@@ -4,11 +4,19 @@ import node from '@astrojs/node';
 import react from '@astrojs/react';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
+import { publicOrigins } from '../../lib/config/public-origins.ts';
 
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
 const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
 const environment = loadEnv(mode, frontendRoot, '');
+if (mode === 'production') {
+  publicOrigins(
+    process.env.PUBLIC_WEBSITE_ORIGIN ?? environment.PUBLIC_WEBSITE_ORIGIN,
+    process.env.PUBLIC_APP_ORIGIN ?? environment.PUBLIC_APP_ORIGIN,
+    true,
+  );
+}
 const apiRequestTimeout = JSON.stringify(
   process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS ??
     environment.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS ??
@@ -30,6 +38,12 @@ export default defineConfig({
     },
     define: {
       'process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS': apiRequestTimeout,
+      'process.env.PUBLIC_WEBSITE_ORIGIN': JSON.stringify(
+        process.env.PUBLIC_WEBSITE_ORIGIN ?? environment.PUBLIC_WEBSITE_ORIGIN ?? '',
+      ),
+      'process.env.PUBLIC_APP_ORIGIN': JSON.stringify(
+        process.env.PUBLIC_APP_ORIGIN ?? environment.PUBLIC_APP_ORIGIN ?? '',
+      ),
     },
     resolve: {
       alias: {

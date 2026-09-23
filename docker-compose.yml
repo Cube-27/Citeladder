@@ -82,15 +82,17 @@ services:
       dockerfile: frontend/Dockerfile
       args:
         NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS: ${NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS:-}
+        PUBLIC_WEBSITE_ORIGIN: ${PUBLIC_WEBSITE_ORIGIN:-https://citeladder.com}
+        PUBLIC_APP_ORIGIN: ${PUBLIC_APP_ORIGIN:-https://citeladder.com}
     restart: unless-stopped
     environment:
-      # Astro reads the canonical origin on every request so metadata, robots,
-      # and the sitemap remain correct after a restart without an image rebuild.
+      # Canonical website URLs are baked into the build; rebuild after changes.
       # BACKEND_ORIGIN stays server-only and lets the local marketing server
       # preserve the same-origin API proxy. No env_file: the service must not
       # receive backend secrets.
       BACKEND_ORIGIN: http://web:8000
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+      PUBLIC_WEBSITE_ORIGIN: ${PUBLIC_WEBSITE_ORIGIN:-https://citeladder.com}
+      PUBLIC_APP_ORIGIN: ${PUBLIC_APP_ORIGIN:-https://citeladder.com}
       DEMO_BOOKING_URL: ${DEMO_BOOKING_URL:-}
       PUBLIC_SALES_EMAIL: ${PUBLIC_SALES_EMAIL:-}
     depends_on:
@@ -125,7 +127,8 @@ services:
         NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS: ${NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS:-}
         NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS: ${NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS:-}
         NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE: ${NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE:-}
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+        PUBLIC_WEBSITE_ORIGIN: ${PUBLIC_WEBSITE_ORIGIN:-https://citeladder.com}
+        PUBLIC_APP_ORIGIN: ${PUBLIC_APP_ORIGIN:-https://citeladder.com}
     restart: unless-stopped
     environment:
       # Caddy consumes this only at runtime; it is never bundled for browsers.

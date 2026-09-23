@@ -70,6 +70,8 @@ historical evidence where it remains useful; archiving does not resolve a findin
 [Release acceptance](release-checklist.md) retains manual and external gates.
 [Billing provider readiness](billing-provider-readiness.md) separates implemented
 adapters from accepted payment operation.
+[Workers migration operations](operations/WORKERS_RUNBOOK.md) owns protected
+origin provisioning, configuration and cutover release records.
 [Operations](operations/) contains live deployment, billing and recovery
 procedures; use the procedure relevant to the requested operation.
 

@@ -8,6 +8,13 @@ set -euo pipefail
 : "${VITE_APP_IMAGE:?VITE_APP_IMAGE is required}"
 : "${BACKUP_BUCKET:?BACKUP_BUCKET is required}"
 : "${DOMAIN_NAME:?DOMAIN_NAME is required}"
+: "${ORIGIN_DOMAIN_NAME:?ORIGIN_DOMAIN_NAME is required}"
+: "${APP_DOMAIN_NAME:?APP_DOMAIN_NAME is required}"
+: "${FRONTEND_URL:?FRONTEND_URL is required}"
+: "${FRONTEND_ORIGINS:?FRONTEND_ORIGINS is required}"
+: "${MCP_PUBLIC_BASE_URL:?MCP_PUBLIC_BASE_URL is required}"
+: "${PUBLIC_WEBSITE_ORIGIN:?PUBLIC_WEBSITE_ORIGIN is required}"
+: "${PUBLIC_APP_ORIGIN:?PUBLIC_APP_ORIGIN is required}"
 : "${SOURCE_COMMIT:?SOURCE_COMMIT is required}"
 : "${DEFAULT_AGENT_BASE_URL:?DEFAULT_AGENT_BASE_URL is required}"
 : "${DEFAULT_AGENT_MODEL:?DEFAULT_AGENT_MODEL is required}"
@@ -21,6 +28,23 @@ DEMO_MODE="${DEMO_MODE:-false}"
 [[ "$PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
 [[ "$REGION" =~ ^[a-z]+-[a-z]+[0-9]+$ ]]
 [[ "$DOMAIN_NAME" =~ ^[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
+[[ "$ORIGIN_DOMAIN_NAME" =~ ^[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
+[[ "$APP_DOMAIN_NAME" =~ ^[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
+[[ "$FRONTEND_URL" =~ ^https://[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
+[[ "$MCP_PUBLIC_BASE_URL" =~ ^https://[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
+[[ "$PUBLIC_WEBSITE_ORIGIN" =~ ^https://[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
+[[ "$PUBLIC_APP_ORIGIN" =~ ^https://[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
+[[ "$FRONTEND_ORIGINS" =~ ^https://[a-z0-9.,:/-]+$ ]]
+[[ "$ORIGIN_DOMAIN_NAME" != "$DOMAIN_NAME" && "$ORIGIN_DOMAIN_NAME" != "$APP_DOMAIN_NAME" ]]
+[[ "$APP_DOMAIN_NAME" != "$DOMAIN_NAME" ]]
+[[ "$MCP_PUBLIC_BASE_URL" == "https://$DOMAIN_NAME" ]]
+[[ "$PUBLIC_WEBSITE_ORIGIN" == "https://$DOMAIN_NAME" ]]
+[[ "$FRONTEND_URL" == "https://$DOMAIN_NAME" || "$FRONTEND_URL" == "https://$APP_DOMAIN_NAME" ]]
+[[ "$PUBLIC_APP_ORIGIN" == "https://$DOMAIN_NAME" || "$PUBLIC_APP_ORIGIN" == "https://$APP_DOMAIN_NAME" ]]
+[[ "$FRONTEND_ORIGINS" == "https://$DOMAIN_NAME" || \
+   "$FRONTEND_ORIGINS" == "https://$APP_DOMAIN_NAME" || \
+   "$FRONTEND_ORIGINS" == "https://$DOMAIN_NAME,https://$APP_DOMAIN_NAME" || \
+   "$FRONTEND_ORIGINS" == "https://$APP_DOMAIN_NAME,https://$DOMAIN_NAME" ]]
 [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
 [[ "$BACKEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
@@ -38,8 +62,36 @@ if [[ -f /opt/citeladder/runtime.env ]] && [[ -f /opt/citeladder/compose.gcp.yml
 fi
 if [[ -n "$running_services" ]]; then
   cp /opt/citeladder/runtime.env /opt/citeladder/runtime.env.previous
+  cp /opt/citeladder/compose.gcp.yml /opt/citeladder/compose.gcp.yml.previous
+  cp /opt/citeladder/Caddyfile /opt/citeladder/Caddyfile.previous
+  cp /opt/citeladder/frontend-routes.caddy /opt/citeladder/frontend-routes.caddy.previous
+  if [[ -f /opt/citeladder/ingress.env ]]; then
+    cp /opt/citeladder/ingress.env /opt/citeladder/ingress.env.previous
+  fi
   had_previous=true
 fi
+
+restore_previous_deployment() {
+  local status=$?
+  trap - ERR
+  set +e
+  if $had_previous; then
+    echo 'Deployment failed; restoring the previous runtime and services' >&2
+    cp /opt/citeladder/runtime.env.previous /opt/citeladder/runtime.env
+    cp /opt/citeladder/compose.gcp.yml.previous /opt/citeladder/compose.gcp.yml
+    cp /opt/citeladder/Caddyfile.previous /opt/citeladder/Caddyfile
+    cp /opt/citeladder/frontend-routes.caddy.previous /opt/citeladder/frontend-routes.caddy
+    if [[ -f /opt/citeladder/ingress.env.previous ]]; then
+      cp /opt/citeladder/ingress.env.previous /opt/citeladder/ingress.env
+    else
+      rm -f /opt/citeladder/ingress.env
+    fi
+    docker compose --env-file /opt/citeladder/runtime.env \
+      -f /opt/citeladder/compose.gcp.yml up -d --force-recreate
+  fi
+  exit "$status"
+}
+trap restore_previous_deployment ERR
 
 # Remove the retired inactivity and expiry shutdowns from hosts deployed by
 # older revisions. Teardown is manual now: run the destroy workflow.
@@ -66,6 +118,8 @@ cloudflare_ipv4_space="$(paste -sd' ' /tmp/citeladder-deploy/cf-v4)"
 cloudflare_ipv6_space="$(paste -sd' ' /tmp/citeladder-deploy/cf-v6)"
 cloudflare_cidrs="$cloudflare_ipv4_space $cloudflare_ipv6_space"
 sed -e "s/__DOMAIN_NAME__/$DOMAIN_NAME/g" \
+  -e "s/__ORIGIN_DOMAIN_NAME__/$ORIGIN_DOMAIN_NAME/g" \
+  -e "s/__APP_DOMAIN_NAME__/$APP_DOMAIN_NAME/g" \
   -e "s|__CLOUDFLARE_CIDRS__|$cloudflare_cidrs|g" \
   /tmp/citeladder-deploy/Caddyfile > /opt/citeladder/Caddyfile
 
@@ -79,6 +133,8 @@ referral_salt="$(secret citeladder-referral-salt)"
 demo_password="$(secret citeladder-demo-password)"
 origin_cert="$(secret citeladder-cloudflare-origin-cert)"
 origin_key="$(secret citeladder-cloudflare-origin-key)"
+origin_token="$(secret citeladder-worker-origin-token)"
+origin_token_previous="$(secret citeladder-worker-origin-token-previous 2>/dev/null || true)"
 agent_key="$(secret citeladder-default-agent-api-key 2>/dev/null || true)"
 content_key="$(secret citeladder-content-api-key 2>/dev/null || true)"
 keenable_key="$(secret citeladder-keenable-api-key 2>/dev/null || true)"
@@ -94,6 +150,8 @@ bing_client_secret="$(secret citeladder-bing-oauth-client-secret 2>/dev/null || 
 for value in "$db_password" "$jwt_secret" "$encryption_key" "$referral_salt"; do
   [[ "${#value}" -ge 32 ]]
 done
+[[ "${#origin_token}" -ge 32 ]]
+[[ -z "$origin_token_previous" || "${#origin_token_previous}" -ge 32 ]]
 [[ "${#demo_password}" -ge 8 ]]
 [[ "${#demo_password}" -le 128 ]]
 for value in "$google_client_id" "$google_client_secret"; do
@@ -126,6 +184,13 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env VITE_APP_IMAGE "$VITE_APP_IMAGE"
   write_env BACKUP_BUCKET "$BACKUP_BUCKET"
   write_env DOMAIN_NAME "$DOMAIN_NAME"
+  write_env ORIGIN_DOMAIN_NAME "$ORIGIN_DOMAIN_NAME"
+  write_env APP_DOMAIN_NAME "$APP_DOMAIN_NAME"
+  write_env FRONTEND_URL "$FRONTEND_URL"
+  write_env FRONTEND_ORIGINS "$FRONTEND_ORIGINS"
+  write_env MCP_PUBLIC_BASE_URL "$MCP_PUBLIC_BASE_URL"
+  write_env PUBLIC_WEBSITE_ORIGIN "$PUBLIC_WEBSITE_ORIGIN"
+  write_env PUBLIC_APP_ORIGIN "$PUBLIC_APP_ORIGIN"
   write_env SOURCE_COMMIT "$SOURCE_COMMIT"
   write_env TRUSTED_PROXY_CIDRS "$trusted_proxy_cidrs"
   # Only demo mode reads an expiry; the host itself no longer self-terminates.
@@ -161,24 +226,17 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env INTEGRATION_MICROSOFT_CLIENT_SECRET "$bing_client_secret"
 } > /opt/citeladder/runtime.env.new
 mv /opt/citeladder/runtime.env.new /opt/citeladder/runtime.env
+{
+  write_env CITELADDER_ORIGIN_TOKEN "$origin_token"
+  write_env CITELADDER_ORIGIN_TOKEN_PREVIOUS "${origin_token_previous:-$origin_token}"
+} > /opt/citeladder/ingress.env.new
+mv /opt/citeladder/ingress.env.new /opt/citeladder/ingress.env
 
 cd /opt/citeladder
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 stopped_services=(caddy frontend vite-app web audit-worker audit-scheduler site-health-worker \
   brand-discovery-worker content-worker agent-worker analytics-worker \
   queue-sweeper integration-worker integration-dispatcher)
-restore_previous_deployment() {
-  local status=$?
-  trap - ERR
-  set +e
-  if $had_previous; then
-    echo 'Deployment failed; restoring the previous runtime and services' >&2
-    cp runtime.env.previous runtime.env
-    docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate
-  fi
-  exit "$status"
-}
-trap restore_previous_deployment ERR
 
 docker compose --env-file runtime.env -f compose.gcp.yml pull
 if $had_previous; then
@@ -267,5 +325,6 @@ done
 migrate_id="$(docker compose --env-file runtime.env -f compose.gcp.yml ps -aq migrate)"
 [[ -n "$migrate_id" ]]
 [[ "$(docker inspect --format '{{.State.ExitCode}}' "$migrate_id")" = 0 ]]
-rm -f runtime.env.previous
+rm -f runtime.env.previous compose.gcp.yml.previous Caddyfile.previous \
+  frontend-routes.caddy.previous ingress.env.previous
 trap - ERR

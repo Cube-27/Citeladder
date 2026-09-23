@@ -71,6 +71,20 @@ def test_valid_independent_production_secrets_pass() -> None:
     assert validate_production_security(_production_settings()) == []
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://app.example.com",
+        "https://app.example.com/path",
+        "https://user:pass@app.example.com",
+    ],
+)
+def test_production_browser_url_must_be_an_https_origin(url: str) -> None:
+    assert "frontend_url must be a credential-free HTTPS origin in production" in (
+        validate_production_security(_production_settings(frontend_url=url))
+    )
+
+
 def test_dev_login_password_uses_the_normal_login_length_policy() -> None:
     assert (
         validate_production_security(

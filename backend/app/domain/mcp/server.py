@@ -292,8 +292,9 @@ async def _consent_principal(
         )
     if user is None or session_token is None:
         return_path = f"{_CONSENT_PATH}?transaction={quote(transaction, safe='')}"
+        browser_origin = settings.frontend_url.rstrip("/")
         return RedirectResponse(
-            f"{public_base_url()}/login?return_to={quote(return_path, safe='')}",
+            f"{browser_origin}/login?return_to={quote(return_path, safe='')}",
             status_code=302,
             headers={"Cache-Control": "no-store"},
         )
@@ -403,13 +404,16 @@ async def complete_browser_authorization(request: Request) -> Response:
 
 def _transport_security() -> TransportSecuritySettings:
     parsed = urlsplit(_STARTUP_ORIGIN)
-    allowed_hosts = [parsed.netloc, parsed.hostname or ""]
+    browser = urlsplit(settings.frontend_url)
+    allowed_hosts = [parsed.netloc, parsed.hostname or "", browser.netloc]
     if parsed.hostname in {"127.0.0.1", "localhost", "::1"}:
         allowed_hosts.extend(["127.0.0.1:*", "localhost:*", "[::1]:*"])
     return TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=list(dict.fromkeys(host for host in allowed_hosts if host)),
-        allowed_origins=[_STARTUP_ORIGIN],
+        allowed_origins=list(
+            dict.fromkeys([_STARTUP_ORIGIN, settings.frontend_url.rstrip("/")])
+        ),
     )
 
 
@@ -419,6 +423,31 @@ mcp_app = mcp_server.streamable_http_app(
     stateless_http=True,
     transport_security=_transport_security(),
 )
+
+
+def _mcp_origin_error(scope: Scope) -> Response | None:
+    headers = {key.lower(): value for key, value in scope.get("headers", [])}
+    host = headers.get(b"host", b"").decode("ascii", errors="ignore").lower()
+    origin = headers.get(b"origin", b"").decode("ascii", errors="ignore")
+    protocol_host = urlsplit(_STARTUP_ORIGIN).netloc.lower()
+    browser_host = urlsplit(settings.frontend_url).netloc.lower()
+    consent = scope.get("path") == _CONSENT_PATH
+    if (
+        consent
+        and host == protocol_host
+        and browser_host != protocol_host
+        and scope.get("method") == "POST"
+    ):
+        return PlainTextResponse(
+            "Consent moved. Restart the MCP authorization request.",
+            status_code=409,
+            headers={"Cache-Control": "no-store"},
+        )
+    allowed_host = browser_host if consent else protocol_host
+    allowed_origin = settings.frontend_url.rstrip("/") if consent else _STARTUP_ORIGIN
+    if host != allowed_host or (origin and origin != allowed_origin):
+        return PlainTextResponse("Invalid MCP request origin.", status_code=403)
+    return None
 
 
 class McpDispatchMiddleware:
@@ -453,6 +482,10 @@ class McpDispatchMiddleware:
             and mcp_settings.enabled
             and scope.get("path") in self._EXACT_PATHS
         ):
+            error = _mcp_origin_error(scope)
+            if error is not None:
+                await error(scope, receive, send)
+                return
             await self._protocol_app(scope, receive, send)
             return
         await self._app(scope, receive, send)

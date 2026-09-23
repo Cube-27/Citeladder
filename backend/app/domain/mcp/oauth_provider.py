@@ -223,7 +223,8 @@ class CiteLadderOAuthProvider:
                 )
             )
             await session.commit()
-        return f"{public_base_url()}/mcp/oauth/consent?transaction={transaction}"
+        browser_origin = settings.frontend_url.rstrip("/")
+        return f"{browser_origin}/mcp/oauth/consent?transaction={transaction}"
 
     async def describe_authorization_request(
         self, transaction: str

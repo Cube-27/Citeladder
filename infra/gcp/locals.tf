@@ -13,6 +13,8 @@ locals {
     "citeladder-demo-password",
     "citeladder-cloudflare-origin-cert",
     "citeladder-cloudflare-origin-key",
+    "citeladder-worker-origin-token",
+    "citeladder-worker-origin-token-previous",
     "citeladder-content-api-key",
     "citeladder-default-agent-api-key",
     "citeladder-keenable-api-key",
