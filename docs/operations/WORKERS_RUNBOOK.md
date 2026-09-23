@@ -104,12 +104,16 @@ redeploy ingress. Record version references and test results, never values.
 
 ## Recovery and handoff
 
-Capture the previous `runtime.env`, Caddy file, image digests and routing before
-the deployment. If the new backend/ingress fails, restore the previous exact
-runtime and frontend images through the GCP rollback procedure, then recheck
-apex login, callback and MCP. Do not restore a database backup for this frontend
-change. A Worker version rollback alone does not restore DNS, provider
-registrations, GCP secrets or backend configuration.
+The GCP deploy retains `.previous` copies of the last running release's
+`runtime.env`, Compose file, Caddy files, optional `ingress.env`, and optional
+origin certificate and key on the host. Keep these through post-deploy smoke
+and ingress checks. If the new backend/ingress fails after the deploy script
+exits, restore those copies (remove files with no previous copy), run
+`docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate`
+from `/opt/citeladder`, then recheck apex login, callback and MCP. Do not
+restore a database backup for this frontend change. A Worker version rollback
+alone does not restore DNS, provider registrations, GCP secrets or backend
+configuration.
 
 PR 2 may assume only that the code and configuration contracts exist after PR 1
 merges. It must inspect the protected release record to learn whether origin

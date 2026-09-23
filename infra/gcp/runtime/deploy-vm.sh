@@ -61,12 +61,20 @@ if [[ -f /opt/citeladder/runtime.env ]] && [[ -f /opt/citeladder/compose.gcp.yml
     -f /opt/citeladder/compose.gcp.yml ps --status running --quiet)"
 fi
 if [[ -n "$running_services" ]]; then
-  cp /opt/citeladder/runtime.env /opt/citeladder/runtime.env.previous
-  cp /opt/citeladder/compose.gcp.yml /opt/citeladder/compose.gcp.yml.previous
-  cp /opt/citeladder/Caddyfile /opt/citeladder/Caddyfile.previous
-  cp /opt/citeladder/frontend-routes.caddy /opt/citeladder/frontend-routes.caddy.previous
+  cp -p /opt/citeladder/runtime.env /opt/citeladder/runtime.env.previous
+  cp -p /opt/citeladder/compose.gcp.yml /opt/citeladder/compose.gcp.yml.previous
+  cp -p /opt/citeladder/Caddyfile /opt/citeladder/Caddyfile.previous
+  cp -p /opt/citeladder/frontend-routes.caddy /opt/citeladder/frontend-routes.caddy.previous
+  if [[ -f /opt/citeladder/tls/origin.crt && -f /opt/citeladder/tls/origin.key ]]; then
+    cp -p /opt/citeladder/tls/origin.crt /opt/citeladder/tls/origin.crt.previous
+    cp -p /opt/citeladder/tls/origin.key /opt/citeladder/tls/origin.key.previous
+  else
+    rm -f /opt/citeladder/tls/origin.crt.previous /opt/citeladder/tls/origin.key.previous
+  fi
   if [[ -f /opt/citeladder/ingress.env ]]; then
-    cp /opt/citeladder/ingress.env /opt/citeladder/ingress.env.previous
+    cp -p /opt/citeladder/ingress.env /opt/citeladder/ingress.env.previous
+  else
+    rm -f /opt/citeladder/ingress.env.previous
   fi
   had_previous=true
 fi
@@ -77,12 +85,18 @@ restore_previous_deployment() {
   set +e
   if $had_previous; then
     echo 'Deployment failed; restoring the previous runtime and services' >&2
-    cp /opt/citeladder/runtime.env.previous /opt/citeladder/runtime.env
-    cp /opt/citeladder/compose.gcp.yml.previous /opt/citeladder/compose.gcp.yml
-    cp /opt/citeladder/Caddyfile.previous /opt/citeladder/Caddyfile
-    cp /opt/citeladder/frontend-routes.caddy.previous /opt/citeladder/frontend-routes.caddy
+    cp -p /opt/citeladder/runtime.env.previous /opt/citeladder/runtime.env
+    cp -p /opt/citeladder/compose.gcp.yml.previous /opt/citeladder/compose.gcp.yml
+    cp -p /opt/citeladder/Caddyfile.previous /opt/citeladder/Caddyfile
+    cp -p /opt/citeladder/frontend-routes.caddy.previous /opt/citeladder/frontend-routes.caddy
+    if [[ -f /opt/citeladder/tls/origin.crt.previous && -f /opt/citeladder/tls/origin.key.previous ]]; then
+      cp -p /opt/citeladder/tls/origin.crt.previous /opt/citeladder/tls/origin.crt
+      cp -p /opt/citeladder/tls/origin.key.previous /opt/citeladder/tls/origin.key
+    else
+      rm -f /opt/citeladder/tls/origin.crt /opt/citeladder/tls/origin.key
+    fi
     if [[ -f /opt/citeladder/ingress.env.previous ]]; then
-      cp /opt/citeladder/ingress.env.previous /opt/citeladder/ingress.env
+      cp -p /opt/citeladder/ingress.env.previous /opt/citeladder/ingress.env
     else
       rm -f /opt/citeladder/ingress.env
     fi
@@ -325,6 +339,6 @@ done
 migrate_id="$(docker compose --env-file runtime.env -f compose.gcp.yml ps -aq migrate)"
 [[ -n "$migrate_id" ]]
 [[ "$(docker inspect --format '{{.State.ExitCode}}' "$migrate_id")" = 0 ]]
-rm -f runtime.env.previous compose.gcp.yml.previous Caddyfile.previous \
-  frontend-routes.caddy.previous ingress.env.previous
+# Keep the last running release's exact configuration for post-deploy smoke rollback.
+# The next deployment replaces this snapshot before changing the live files.
 trap - ERR

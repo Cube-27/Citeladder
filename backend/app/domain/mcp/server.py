@@ -406,14 +406,26 @@ def _transport_security() -> TransportSecuritySettings:
     parsed = urlsplit(_STARTUP_ORIGIN)
     browser = urlsplit(settings.frontend_url)
     allowed_hosts = [parsed.netloc, parsed.hostname or "", browser.netloc]
+    allowed_origins = [_STARTUP_ORIGIN, settings.frontend_url.rstrip("/")]
+    for origin in allowed_origins.copy():
+        candidate = urlsplit(origin)
+        default_port = 443 if candidate.scheme == "https" else 80
+        if candidate.port in {None, default_port}:
+            hostname = candidate.hostname or ""
+            host = f"[{hostname}]" if ":" in hostname else hostname
+            allowed_hosts.extend([host, f"{host}:{default_port}"])
+            allowed_origins.extend(
+                [
+                    f"{candidate.scheme}://{host}",
+                    f"{candidate.scheme}://{host}:{default_port}",
+                ]
+            )
     if parsed.hostname in {"127.0.0.1", "localhost", "::1"}:
         allowed_hosts.extend(["127.0.0.1:*", "localhost:*", "[::1]:*"])
     return TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=list(dict.fromkeys(host for host in allowed_hosts if host)),
-        allowed_origins=list(
-            dict.fromkeys([_STARTUP_ORIGIN, settings.frontend_url.rstrip("/")])
-        ),
+        allowed_origins=list(dict.fromkeys(allowed_origins)),
     )
 
 
@@ -425,17 +437,47 @@ mcp_app = mcp_server.streamable_http_app(
 )
 
 
+def _origin_identity(value: str) -> tuple[str, str, int] | None:
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError:
+        return None
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        return None
+    default_port = 443 if parsed.scheme == "https" else 80
+    host = parsed.hostname
+    serialized_host = f"[{host}]" if ":" in host else host
+    effective_port = port or default_port
+    if parsed.netloc.lower() not in {
+        serialized_host,
+        f"{serialized_host}:{effective_port}",
+    }:
+        return None
+    return parsed.scheme, host, effective_port
+
+
 def _mcp_origin_error(scope: Scope) -> Response | None:
     headers = {key.lower(): value for key, value in scope.get("headers", [])}
     host = headers.get(b"host", b"").decode("ascii", errors="ignore").lower()
     origin = headers.get(b"origin", b"").decode("ascii", errors="ignore")
-    protocol_host = urlsplit(_STARTUP_ORIGIN).netloc.lower()
-    browser_host = urlsplit(settings.frontend_url).netloc.lower()
+    protocol_origin = _origin_identity(_STARTUP_ORIGIN)
+    browser_origin = _origin_identity(settings.frontend_url)
+    protocol_host = _origin_identity(f"{urlsplit(_STARTUP_ORIGIN).scheme}://{host}")
+    browser_host = _origin_identity(
+        f"{urlsplit(settings.frontend_url).scheme}://{host}"
+    )
     consent = scope.get("path") == _CONSENT_PATH
     if (
         consent
-        and host == protocol_host
-        and browser_host != protocol_host
+        and protocol_host == protocol_origin
+        and browser_origin != protocol_origin
         and scope.get("method") == "POST"
     ):
         return PlainTextResponse(
@@ -444,8 +486,12 @@ def _mcp_origin_error(scope: Scope) -> Response | None:
             headers={"Cache-Control": "no-store"},
         )
     allowed_host = browser_host if consent else protocol_host
-    allowed_origin = settings.frontend_url.rstrip("/") if consent else _STARTUP_ORIGIN
-    if host != allowed_host or (origin and origin != allowed_origin):
+    allowed_origin = browser_origin if consent else protocol_origin
+    if (
+        allowed_origin is None
+        or allowed_host != allowed_origin
+        or (origin and _origin_identity(origin) != allowed_origin)
+    ):
         return PlainTextResponse("Invalid MCP request origin.", status_code=403)
     return None
 

@@ -66,7 +66,9 @@ async def test_split_origin_admits_only_browser_consent_on_app_host(
 ) -> None:
     monkeypatch.setattr(settings, "frontend_url", "https://app.example.test")
     monkeypatch.setattr(mcp_settings, "enabled", True)
-    assert "app.example.test" in _transport_security().allowed_hosts
+    transport_security = _transport_security()
+    assert "app.example.test:443" in transport_security.allowed_hosts
+    assert "https://app.example.test:443" in transport_security.allowed_origins
 
     async def protocol(scope, receive, send):  # type: ignore[no-untyped-def]
         await PlainTextResponse("protocol")(scope, receive, send)
@@ -78,12 +80,35 @@ async def test_split_origin_admits_only_browser_consent_on_app_host(
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         consent = await client.get(
             "https://app.example.test/mcp/oauth/consent",
-            headers={"Origin": "https://app.example.test"},
+            headers={
+                "Host": "app.example.test:443",
+                "Origin": "https://app.example.test",
+            },
+        )
+        explicit_origin = await client.get(
+            "https://app.example.test/mcp/oauth/consent",
+            headers={"Origin": "https://app.example.test:443"},
+        )
+        wrong_port = await client.get(
+            "https://app.example.test/mcp/oauth/consent",
+            headers={"Host": "app.example.test:444"},
+        )
+        wrong_origin = await client.get(
+            "https://app.example.test/mcp/oauth/consent",
+            headers={"Origin": "https://app.example.test:444"},
+        )
+        credentialed_origin = await client.get(
+            "https://app.example.test/mcp/oauth/consent",
+            headers={"Origin": "https://someone@app.example.test"},
         )
         app_token = await client.post("https://app.example.test/token")
         apex_consent = await client.post("http://127.0.0.1:3000/mcp/oauth/consent")
         apex_token = await client.post("http://127.0.0.1:3000/token")
     assert consent.status_code == 200
+    assert explicit_origin.status_code == 200
+    assert wrong_port.status_code == 403
+    assert wrong_origin.status_code == 403
+    assert credentialed_origin.status_code == 403
     assert app_token.status_code == 403
     assert apex_consent.status_code == 409
     assert apex_token.status_code == 200

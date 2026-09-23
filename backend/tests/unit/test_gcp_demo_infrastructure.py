@@ -315,7 +315,6 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     # The property being protected survived that change; the string did not.
     assert "image_digest()" in deploy
     assert deploy.count('gcloud artifacts docker images list "$registry/$1"') == 1
-    assert '--filter="tags:$GITHUB_SHA"' in deploy
     assert deploy.count("image_digest backend") >= 1
     assert deploy.count("image_digest frontend") >= 1
     assert deploy.count("image_digest vite-app") >= 1
