@@ -16,7 +16,8 @@ import {
   signalTarget,
   signalTargetKind,
 } from '@/lib/demand/signals';
-import { formatWindowDate } from '@/lib/format';
+import { DisplayTime } from '@/components/ui/display-time';
+import { formatCount } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -104,7 +105,7 @@ function DemandEvidenceContent({
               <span className="text-muted text-xs">Impressions</span>
               <p className={textRole('metricSm')}>
                 {typeof details.metrics.impressions === 'number' ? (
-                  details.metrics.impressions.toLocaleString()
+                  formatCount(details.metrics.impressions)
                 ) : (
                   <UnavailableValue state="not_measured" />
                 )}
@@ -114,7 +115,7 @@ function DemandEvidenceContent({
               <span className="text-muted text-xs">Clicks</span>
               <p className={textRole('metricSm')}>
                 {typeof details.metrics.clicks === 'number' ? (
-                  details.metrics.clicks.toLocaleString()
+                  formatCount(details.metrics.clicks)
                 ) : (
                   <UnavailableValue state="not_measured" />
                 )}
@@ -157,7 +158,7 @@ function DemandEvidenceContent({
                     {page.url}
                   </div>
                   <div className="text-muted flex items-center justify-between text-xs">
-                    <span>{page.impressions.toLocaleString('en-US')} impressions</span>
+                    <span>{formatCount(page.impressions)} impressions</span>
                     <span className={textRole('emphasis', 'text-foreground tabular-nums')}>
                       {(page.share * 100).toFixed(0)}% query share
                     </span>
@@ -233,7 +234,9 @@ function DemandEvidenceContent({
             </div>
             <div className="flex justify-between">
               <span>Evaluated:</span>
-              <span className="text-foreground">{formatWindowDate(signal.created_at)}</span>
+              <span className="text-foreground">
+                <DisplayTime value={signal.created_at} dateOnly />
+              </span>
             </div>
           </div>
         </section>

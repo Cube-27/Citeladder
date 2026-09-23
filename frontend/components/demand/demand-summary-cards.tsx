@@ -5,6 +5,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import type { DemandSnapshot } from '@/lib/api/demand';
 import { countByTab, detectorStates, isActionableGap, numericMetric } from '@/lib/demand/signals';
+import { formatCount } from '@/lib/format';
 
 function KpiSegment({
   label,
@@ -66,7 +67,7 @@ export function DemandSummaryCards({ snapshot }: Readonly<{ snapshot: DemandSnap
     <MetricGroup className="lg:grid-cols-5">
       <KpiSegment
         label="Latent Search Demand"
-        value={latentImpressions.toLocaleString('en-US')}
+        value={formatCount(latentImpressions)}
         caption="Impressions in ranking gaps"
         icon={Zap}
         iconClassName="text-accent"

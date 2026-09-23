@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
 import type { DeliveryFacts, IssueOccurrence, PageDetail } from '@/lib/api/types';
 import {
@@ -138,6 +139,7 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
 }
 
 function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
+  const timeZone = useDisplayTimeZone();
   return (
     <section className="border-border-subtle min-w-0 border-b pb-4">
       <dl className="grid min-w-0 gap-x-6 gap-y-4 min-[701px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
@@ -158,7 +160,9 @@ function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
           <PageKindBadge pageKind={detail.page_kind} />
         </DetailFact>
         <DetailFact label="Last Audit">
-          <span className={textRole('bodyStrong')}>{formatAudited(detail.last_audited)}</span>
+          <span className={textRole('bodyStrong')}>
+            {formatAudited(detail.last_audited, timeZone)}
+          </span>
         </DetailFact>
         <DetailFact label="Status">
           <Badge variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>

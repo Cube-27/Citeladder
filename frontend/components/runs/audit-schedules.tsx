@@ -15,7 +15,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { AuditScheduleCadence, LogicalEngine, PromptSet } from '@/lib/api/types';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { formatUtcTimestamp } from '@/lib/format';
+import { DisplayTime } from '@/components/ui/display-time';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
@@ -120,7 +120,7 @@ function WorkspaceSchedules({
                 <span className="text-secondary">
                   {schedule.engines.join(', ')} · next{' '}
                   {schedule.next_run_at ? (
-                    formatUtcTimestamp(schedule.next_run_at)
+                    <DisplayTime value={schedule.next_run_at} />
                   ) : (
                     <UnavailableValue state="not_set" />
                   )}

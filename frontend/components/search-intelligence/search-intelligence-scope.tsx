@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Select } from '@/components/ui/select';
+import { DisplayTime } from '@/components/ui/display-time';
 import { textRole } from '@/components/ui/typography';
 import type {
   SearchIntelligenceDataset,
@@ -67,9 +68,13 @@ export function ScopeBand({
       </span>
       {marketControl}
       <span className={textRole('meta', 'ml-auto')}>
-        {latest?.published_at
-          ? `Saved ${new Date(latest.published_at).toLocaleString()}`
-          : 'No saved analysis'}
+        {latest?.published_at ? (
+          <>
+            Saved <DisplayTime value={latest.published_at} />
+          </>
+        ) : (
+          'No saved analysis'
+        )}
       </span>
     </div>
   );

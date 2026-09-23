@@ -30,6 +30,7 @@ import {
 } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
+import { DisplayTime } from '@/components/ui/display-time';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { catalogPlanByKey } from '@/lib/billing/catalog';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
@@ -306,12 +307,8 @@ function CurrentPlan({
       ) : null}
       {entitlement?.trial_grant ? (
         <Alert tone="info">
-          Temporary access ends{' '}
-          {new Date(entitlement.trial_grant.deadline).toLocaleDateString('en-US', {
-            dateStyle: 'medium',
-            timeZone: 'UTC',
-          })}
-          . No card is on file, nothing renews, and access returns to free at expiry.
+          Temporary access ends <DisplayTime value={entitlement.trial_grant.deadline} dateOnly />.
+          No card is on file, nothing renews, and access returns to free at expiry.
         </Alert>
       ) : null}
       {entitlement === null ? (

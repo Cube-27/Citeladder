@@ -25,7 +25,7 @@ import type {
   SiteHealthEntitlement,
 } from '@/lib/api/types';
 import type { RunStatusValue, StatusValue } from '@/components/ui/badge-variants';
-import { availabilityLabel } from '@/lib/format';
+import { availabilityLabel, formatDisplayTimestamp } from '@/lib/format';
 import { titleCaseStatus } from '@/lib/utils';
 
 /** The not-yet-analysed / not-applicable placeholder (matches visibility UI). */
@@ -334,10 +334,7 @@ export function statusLabel(status: string): string {
  * score surface goes through here, so a raw `{score}` in JSX is a bug — that
  * is how a readiness table came to print `27.210884353741495`.
  */
-export function formatScore(score: number | null): string {
-  if (score === null || Number.isNaN(score)) return PLACEHOLDER;
-  return `${Math.round(score)}`;
-}
+export { formatScore } from '@/lib/format';
 
 /**
  * The one thing worth saying about how complete a measurement was — or null.
@@ -400,17 +397,9 @@ export function formatIssueCount(count: number | null): string {
 }
 
 /** Short, stable date/time label for a timestamp (or the placeholder). */
-export function formatAudited(timestamp: string | null): string {
+export function formatAudited(timestamp: string | null, timeZone = 'UTC'): string {
   if (!timestamp) return PLACEHOLDER;
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  return date.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatDisplayTimestamp(timestamp, timeZone);
 }
 
 function pluralize(n: number, word: string): string {

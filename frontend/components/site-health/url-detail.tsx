@@ -21,6 +21,7 @@ import {
   severityLabel,
 } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { cn } from '@/lib/utils';
 
 import { UrlDetailView } from './url-detail-view';
@@ -205,13 +206,16 @@ function HistorySkeleton() {
 }
 
 function HistoryRows({ rows }: Readonly<{ rows: IssueHistoryPage['items'] }>) {
+  const timeZone = useDisplayTimeZone();
   return (
     <ul className={ledgerClasses()}>
       {rows.map((row) => (
         <li key={row.id} className="flex items-center justify-between gap-3 py-2">
           <span className="flex min-w-0 flex-col">
             <span className="text-foreground truncate text-sm">{issueTitle(row)}</span>
-            <span className="text-muted font-mono text-xs">{formatAudited(row.created_at)}</span>
+            <span className="text-muted font-mono text-xs">
+              {formatAudited(row.created_at, timeZone)}
+            </span>
           </span>
           <span className="flex shrink-0 items-center gap-2">
             <Badge className={cn(row.dimension === 'aeo' ? 'text-accent-text' : 'text-info-text')}>

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
+import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -82,7 +83,7 @@ export function CursorTableFooter({
           {total === undefined ? null : (
             <>
               {' of '}
-              <span className="mono">{total.toLocaleString()}</span>
+              <span className="mono">{formatCount(total)}</span>
             </>
           )}{' '}
           {noun}

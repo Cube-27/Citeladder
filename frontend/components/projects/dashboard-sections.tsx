@@ -16,7 +16,7 @@ import { SectionTitle, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { AccentEyebrow, eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Project } from '@/lib/api/types';
-import { formatUtcTimestamp } from '@/lib/format';
+import { DisplayTime } from '@/components/ui/display-time';
 import { cn } from '@/lib/utils';
 
 import { FactsDrawer, ProjectControls } from './dashboard-controls';
@@ -73,7 +73,7 @@ export function DashboardHeader({
             </div>
             {data.measurement ? (
               <p className={textRole('meta')}>
-                Tracked {formatUtcTimestamp(data.measurement.completed_at)} ·{' '}
+                Tracked <DisplayTime value={data.measurement.completed_at} /> ·{' '}
                 {data.measurement.logical_engines.join(', ')}
               </p>
             ) : null}

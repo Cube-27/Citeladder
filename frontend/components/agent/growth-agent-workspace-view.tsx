@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { Pressable } from '@/components/ui/pressable';
 import type { AgentTaskRun, AgentTaskRunSummary, AgentTaskType } from '@/lib/api/agent';
-import { formatUtcTimestamp } from '@/lib/format';
+import { DisplayTime } from '@/components/ui/display-time';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
@@ -63,10 +63,6 @@ function sourceCoverage(coverage: AgentResult['sources'][number]['coverage']): s
       return parts;
     }, [])
     .join(' · ');
-}
-
-function formatDate(value: string): string {
-  return formatUtcTimestamp(value);
 }
 
 function badgeStatus(status: string): RunStatusValue {
@@ -126,7 +122,9 @@ export function TaskHistory({
             <span className={textRole('label', 'block truncate')}>{run.objective}</span>
             <span className={textRole('meta', 'flex items-center justify-between gap-2')}>
               <span>{taskLabel(run.task_type)}</span>
-              <span>{formatDate(run.created_at)}</span>
+              <span>
+                <DisplayTime value={run.created_at} />
+              </span>
             </span>
           </Pressable>
         ))}
@@ -300,7 +298,9 @@ function RunDetailHeader({
       <Stack gap="tight">
         <p className={textRole('meta')}>{taskLabel(run.task_type)}</p>
         <h2 className={textRole('sectionTitle')}>{run.objective}</h2>
-        <p className={textRole('meta')}>Started {formatDate(run.created_at)}</p>
+        <p className={textRole('meta')}>
+          Started <DisplayTime value={run.created_at} />
+        </p>
       </Stack>
       <div className="flex items-center gap-2">
         <RunBadge status={run.status} />

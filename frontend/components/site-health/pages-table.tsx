@@ -32,6 +32,7 @@ import {
 import { textRole } from '@/components/ui/typography';
 import { sortIndicator } from '@/components/ui/sort-indicator';
 import { useProjectHref } from '@/lib/navigation/project-destination';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 
 /**
  * Analyzed-pages table (Slice 7, mockups 712 + 713).
@@ -114,6 +115,7 @@ export function PagesTable({
   onSortChange?: (sort: PagesSort) => void;
 }>) {
   const router = useNavigate();
+  const timeZone = useDisplayTimeZone();
   const projectHref = useProjectHref();
   const openPage = (siteUrlId: string) => {
     const page = pages.find((row) => row.site_url_id === siteUrlId);
@@ -267,7 +269,7 @@ export function PagesTable({
               )}
             </TableCell>
             <TableCell className="text-secondary text-xs whitespace-nowrap">
-              <Measured value={formatAudited(page.last_audited)} />
+              <Measured value={formatAudited(page.last_audited, timeZone)} />
             </TableCell>
             <TableCell>
               <ProjectLink

@@ -7,6 +7,7 @@
  * place and over the selection in another.
  */
 import type { z } from 'zod';
+import { formatCount } from '@/lib/format';
 
 import type {
   visibilitySourceSeriesSchema,
@@ -185,7 +186,7 @@ export function ratio(value: number | null | undefined): string | null {
 
 /** A count, grouped. */
 export function count(value: number | null | undefined): string | null {
-  return value === null || value === undefined ? null : value.toLocaleString();
+  return value === null || value === undefined ? null : formatCount(value);
 }
 
 /**

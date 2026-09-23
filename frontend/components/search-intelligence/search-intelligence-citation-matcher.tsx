@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatDisplayTimestamp } from '@/lib/format';
 import { ReadError } from '@/components/ui/read-error';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
@@ -21,6 +23,7 @@ export function SearchIntelligenceCitationMatcher({
   onDerived,
 }: Readonly<{ datasets: SearchIntelligenceDataset[]; onDerived: () => Promise<void> }>) {
   const { activeProject } = useProjectContext();
+  const timeZone = useDisplayTimeZone();
   const [selectedAudits, setSelectedAudits] = useState<string[]>([]);
   const referring = datasets.find((dataset) => dataset.dataset_kind === 'referring_domains');
   const audits = useQuery({
@@ -74,7 +77,7 @@ export function SearchIntelligenceCitationMatcher({
               <Checkbox
                 checked={selectedAudits.includes(audit.id)}
                 onCheckedChange={() => toggle(audit.id)}
-                label={new Date(audit.created_at).toLocaleString()}
+                label={formatDisplayTimestamp(audit.created_at, timeZone)}
               />
               <span className="text-muted">{audit.status}</span>
             </label>

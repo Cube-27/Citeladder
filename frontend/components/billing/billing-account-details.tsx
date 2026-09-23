@@ -3,6 +3,7 @@ import type { BillingEntitlement } from '@/lib/api/billing';
 import { Input } from '@/components/ui/input';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
+import { DisplayTime } from '@/components/ui/display-time';
 
 export function BillingCountryInput({
   country,
@@ -50,11 +51,7 @@ export function SubscriptionDetail({
         <>
           {' · '}
           {subscription.cancel_at_period_end ? 'Access scheduled to end ' : 'Current period ends '}
-          {new Date(periodEnd).toLocaleDateString('en-US', {
-            dateStyle: 'medium',
-            timeZone: 'UTC',
-          })}
-          .
+          <DisplayTime value={periodEnd} dateOnly />.
         </>
       ) : null}
     </p>

@@ -4,6 +4,7 @@ import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row'
 import { Label, textRole } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@/lib/api/types';
 import { formatAudited } from '@/lib/site-health/status';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { ledgerClasses } from '@/components/ui/workspace';
 
 function asString(value: unknown): string | null {
@@ -34,6 +35,7 @@ function SourceLink({
  * in the API for auditability but is not product copy.
  */
 export function OpportunitySummarySection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
+  const timeZone = useDisplayTimeZone();
   const evidence = detail.evidence;
   const auditId = asString(evidence.audit_id);
   const crawlId = asString(evidence.crawl_id);
@@ -43,7 +45,7 @@ export function OpportunitySummarySection({ detail }: Readonly<{ detail: Opportu
     <section className="grid gap-2">
       <Label>Supporting result</Label>
       <div className={ledgerClasses()}>
-        <OpportunityKvRow label="Found" value={formatAudited(detail.created_at)} />
+        <OpportunityKvRow label="Found" value={formatAudited(detail.created_at, timeZone)} />
         {auditId ? (
           <SourceLink label="Visibility review" href={`/runs/${auditId}`} linkText="View result" />
         ) : null}

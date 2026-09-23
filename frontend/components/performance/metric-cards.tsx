@@ -8,7 +8,7 @@ import { panelClasses } from '@/components/ui/panel';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import type { PerformanceWindow } from '@/lib/api/performance';
-import { availabilityLabel } from '@/lib/format';
+import { availabilityLabel, formatCount } from '@/lib/format';
 import {
   METRIC_CARDS,
   formatMetric,
@@ -311,7 +311,7 @@ export function Ga4SummaryRow({
             <dd>
               <MetricValue
                 size="metricSm"
-                value={value === null ? null : value.toLocaleString()}
+                value={value === null ? null : formatCount(value)}
                 label={NOT_MEASURED}
                 loading={loading}
               />
@@ -320,7 +320,7 @@ export function Ga4SummaryRow({
               <dd className="text-muted mono text-xs">
                 {comparisonValue === null || comparisonValue === undefined
                   ? `${compareLabel}: ${NOT_MEASURED.toLowerCase()}`
-                  : `${compareLabel}: ${comparisonValue.toLocaleString()}`}
+                  : `${compareLabel}: ${formatCount(comparisonValue)}`}
               </dd>
             ) : null}
           </div>

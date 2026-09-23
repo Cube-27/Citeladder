@@ -13,6 +13,7 @@ import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-no
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
 import { saveBlob } from '@/lib/download';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 import {
   auditBadgeValue,
   auditStatusLabel,
@@ -120,6 +121,7 @@ function ProgressBar({
 }
 
 function ProgressMetrics({ audit }: Readonly<{ audit: Audit }>) {
+  const timeZone = useDisplayTimeZone();
   const failedColor = audit.failed_count > 0 ? 'text-run-failed' : 'text-muted';
 
   return (
@@ -138,7 +140,7 @@ function ProgressMetrics({ audit }: Readonly<{ audit: Audit }>) {
       </div>
       <div className="grid gap-1">
         <Label>Created</Label>
-        <span className={textRole('bodyStrong')}>{formatDateTime(audit.created_at)}</span>
+        <span className={textRole('bodyStrong')}>{formatDateTime(audit.created_at, timeZone)}</span>
       </div>
     </dl>
   );

@@ -14,6 +14,7 @@ import { IntegrationSettings } from '@/components/settings/integration-settings'
 import { BillingSettings } from '@/components/settings/billing-settings';
 import { MemberSettings } from '@/components/settings/member-settings';
 import { ProviderSettings } from '@/components/settings/provider-settings';
+import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { PageShell } from '@/components/layout/page-shell';
 import { projectsApi } from '@/lib/api/projects';
@@ -28,23 +29,8 @@ import { useSelectProject, workspaceDestination } from '@/lib/navigation/project
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
-
-/** Human-readable label for a timestamp (falls back to the raw value).
- * Explicit locale + UTC keep server and client output identical, so the
- * SSR markup matches during hydration. */
-function formatTimestamp(timestamp: string | undefined): string | undefined {
-  if (!timestamp) return undefined;
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-  });
-}
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatDisplayTimestamp } from '@/lib/format';
 
 /** One read-only account detail row: label + value. */
 function DetailRow({
@@ -223,8 +209,13 @@ function ProjectDeletionControls() {
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this owns tab focus; billing, providers, and integrations are extracted.
 export function SettingsScreen() {
   const user = useSessionUser();
-  const createdLabel = formatTimestamp(user.created_at);
-  const updatedLabel = formatTimestamp(user.updated_at);
+  const timeZone = useDisplayTimeZone();
+  const createdLabel = user.created_at
+    ? formatDisplayTimestamp(user.created_at, timeZone)
+    : undefined;
+  const updatedLabel = user.updated_at
+    ? formatDisplayTimestamp(user.updated_at, timeZone)
+    : undefined;
   // Deep-linkable initial tab (`/settings?tab=providers` from the onboarding
   // card); invalid/absent values fall back to Account.
   const [requestedTab, setActiveTab] = useUrlState('tab', SETTINGS_TAB_CODEC);
@@ -305,6 +296,8 @@ export function SettingsScreen() {
               </dl>
             </section>
           </div>
+
+          <TimeZoneSetting />
 
           <ProjectDeletionControls />
         </TabPanel>

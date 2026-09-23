@@ -10,7 +10,7 @@
  * control is offered.
  */
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
-import { availabilityLabel } from '@/lib/format';
+import { availabilityLabel, formatDisplayTimestamp } from '@/lib/format';
 import { shouldPollAudit } from '@/lib/runs/status';
 import type {
   AuditStatus,
@@ -79,6 +79,7 @@ export function toRunOptions(
     completed_at: string | null;
     created_at: string;
   }>,
+  timeZone = 'UTC',
 ): RunOption[] {
   return audits
     .filter((audit) => isDashboardStatus(audit.status))
@@ -92,7 +93,7 @@ export function toRunOptions(
       id: audit.id,
       status: audit.status,
       completedAt: audit.completed_at,
-      label: formatRunLabel(audit.completed_at ?? audit.created_at),
+      label: formatDisplayTimestamp(audit.completed_at ?? audit.created_at, timeZone),
     }));
 }
 
@@ -119,19 +120,6 @@ export function findActiveRun(
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
   const newest = active[0];
   return newest ? { id: newest.id, status: newest.status, createdAt: newest.created_at } : null;
-}
-
-/** Short, stable label for a run — the completion date/time. */
-function formatRunLabel(timestamp: string): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  return date.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export { engineLabel } from '@/lib/providers/catalog';
@@ -182,10 +170,7 @@ export function formatPercent(value: number | null): string {
 }
 
 /** Format a 0–100 score as a whole number, or the placeholder. */
-export function formatScore(score: number | null): string {
-  if (score === null || Number.isNaN(score)) return PLACEHOLDER;
-  return `${Math.round(score)}`;
-}
+export { formatScore } from '@/lib/format';
 
 /**
  * A rank, rendered as a rank.
@@ -220,9 +205,7 @@ export const PLACEHOLDER = availabilityLabel('not_measured');
  * of the string is what makes that possible: a bare dash in a formatter's
  * output reaches the screen with nothing to announce it.
  */
-export function measured(value: string): string | null {
-  return value === PLACEHOLDER ? null : value;
-}
+export { measured } from '@/lib/format';
 
 /**
  * A prompt option for the Query Fanout evidence prompt selector. This is

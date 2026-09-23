@@ -13,6 +13,7 @@ import {
 import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
 import type { Audit } from '@/lib/api/types';
 import { auditBadgeValue, auditStatusLabel, formatDateTime } from '@/lib/runs/status';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { textRole } from '@/components/ui/typography';
 
 /** Rows per page on the runs table (client-side; the list arrives whole). */
@@ -27,6 +28,7 @@ const PAGE_SIZE = 10;
  * runs frame.
  */
 export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
+  const timeZone = useDisplayTimeZone();
   const { page, setPage, pageCount, from, to } = useTablePage(audits.length, PAGE_SIZE);
   const pagedAudits = audits.slice(from - 1, to);
 
@@ -69,7 +71,9 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
               <TableCell numeric className="mono">
                 {audit.failed_count}
               </TableCell>
-              <TableCell className="text-secondary">{formatDateTime(audit.created_at)}</TableCell>
+              <TableCell className="text-secondary">
+                {formatDateTime(audit.created_at, timeZone)}
+              </TableCell>
               <TableCell>
                 <ProjectLink
                   href={`/runs/${audit.id}`}
