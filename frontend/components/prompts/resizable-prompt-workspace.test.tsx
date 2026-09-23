@@ -101,4 +101,26 @@ describe('ResizablePromptWorkspace', () => {
     fireEvent.doubleClick(separator);
     expect(separator).toHaveAttribute('aria-valuenow', '240');
   });
+
+  it('ends a cancelled drag and does not persist the prompt width', () => {
+    const rendered = renderWorkspace();
+    const separator = screen.getByRole('separator', {
+      name: 'Resize topics panel',
+    }) as HTMLButtonElement;
+    separator.setPointerCapture = vi.fn();
+    separator.hasPointerCapture = vi.fn(() => true);
+    separator.releasePointerCapture = vi.fn();
+    fireEvent.pointerDown(separator, { button: 0, pointerId: 9, clientX: 300 });
+    fireEvent.pointerMove(separator, { pointerId: 9, clientX: 348 });
+    fireEvent.pointerCancel(separator, { pointerId: 9 });
+    expect(separator).toHaveAttribute('aria-valuenow', '288');
+    expect(document.body.style.cursor).toBe('');
+    expect(separator.releasePointerCapture).toHaveBeenCalledWith(9);
+    rendered.unmount();
+    renderWorkspace();
+    expect(screen.getByRole('separator', { name: 'Resize topics panel' })).toHaveAttribute(
+      'aria-valuenow',
+      '240',
+    );
+  });
 });

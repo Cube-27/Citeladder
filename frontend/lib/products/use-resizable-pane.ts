@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
+import { usePaneResizeInteraction } from '@/lib/use-pane-resize-interaction';
 
 /**
  * Width state for a drag-resizable pane, in pixels.
@@ -85,53 +86,34 @@ export type ResizablePane = {
   nudge: (delta: number) => void;
   reset: () => void;
   keyboardStep: number;
+  interaction: ReturnType<typeof usePaneResizeInteraction>;
 };
 
 export function useResizablePane(): ResizablePane {
   const storedWidth = useSyncExternalStore(subscribe, getStoredWidth, getServerWidth);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
-  // The pointer's origin and the width it started from. A delta needs no
-  // measurement of the container, so nothing here is read during render.
-  const origin = useRef({ clientX: 0, width: DEFAULT_PANE_WIDTH });
   const width = dragWidth ?? storedWidth;
-
-  const beginDrag = useCallback(
-    (clientX: number) => {
-      origin.current = { clientX, width };
-      setDragWidth(width);
+  const interaction = usePaneResizeInteraction({
+    width,
+    bounds: () => ({ min: MIN_PANE_WIDTH, max: MAX_PANE_WIDTH }),
+    onResize: setDragWidth,
+    onCommit: (next) => {
+      setDragWidth(null);
+      storeWidth(next);
     },
-    [width],
-  );
-
-  const dragTo = useCallback((clientX: number) => {
-    setDragWidth(clampWidth(origin.current.width + (clientX - origin.current.clientX)));
-  }, []);
-
-  // Written once the drag ends rather than on every pointer move: a drag is
-  // one decision, not sixty.
-  const endDrag = useCallback(() => {
-    setDragWidth(null);
-    if (dragWidth !== null) storeWidth(dragWidth);
-  }, [dragWidth]);
-
-  const nudge = useCallback(
-    (delta: number) => storeWidth(clampWidth(getStoredWidth() + delta)),
-    [],
-  );
-
-  const reset = useCallback(() => {
-    setDragWidth(null);
-    storeWidth(DEFAULT_PANE_WIDTH);
-  }, []);
+    defaultWidth: DEFAULT_PANE_WIDTH,
+    homeWidth: DEFAULT_PANE_WIDTH,
+  });
 
   return {
     width,
-    dragging: dragWidth !== null,
-    beginDrag,
-    dragTo,
-    endDrag,
-    nudge,
-    reset,
+    dragging: interaction.dragging,
+    beginDrag: interaction.beginDrag,
+    dragTo: interaction.dragTo,
+    endDrag: interaction.endDrag,
+    nudge: interaction.nudge,
+    reset: interaction.reset,
     keyboardStep: KEYBOARD_STEP,
+    interaction,
   };
 }
