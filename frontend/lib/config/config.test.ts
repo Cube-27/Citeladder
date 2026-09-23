@@ -98,7 +98,7 @@ describe('operational config', () => {
     expect(getApiRequestTimeoutMs()).toBe(5_000);
   });
 
-  it.each(['0', '-1', 'soon', '', 'NaN'])(
+  it.each(['0', '-1', 'soon', '', 'NaN', '8s', '1.5', '1e3', 'Infinity', '9007199254740992'])(
     'ignores the unusable override %j and keeps the default',
     (value) => {
       // A zero or negative timeout would abort every request immediately, so

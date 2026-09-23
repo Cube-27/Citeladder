@@ -78,7 +78,18 @@ describe('CommandPalette', () => {
     renderPalette(<Palette />);
     const trigger = screen.getByRole('button', { name: /search or jump to/i });
     expect(trigger).toHaveAttribute('aria-keyshortcuts', 'Meta+K Control+K');
+    expect(screen.getByText('Ctrl K')).toBeInTheDocument();
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('shows the Mac shortcut on macOS', () => {
+    const platform = vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('MacIntel');
+    try {
+      renderPalette(<CommandPaletteTrigger />);
+      expect(screen.getByText('⌘K')).toBeInTheDocument();
+    } finally {
+      platform.mockRestore();
+    }
   });
 
   it('opens on Ctrl+K and closes on a second press', async () => {

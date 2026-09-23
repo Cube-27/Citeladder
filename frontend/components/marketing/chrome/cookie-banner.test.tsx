@@ -1,8 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { COOKIE_CONSENT_STORAGE_KEY, hasAnalyticsConsent } from '@/lib/consent/cookie-consent';
+import {
+  COOKIE_CONSENT_STORAGE_KEY,
+  hasAnalyticsConsent,
+  readConsent,
+  writeConsent,
+} from '@/lib/consent/cookie-consent';
 
 import { CookieBanner } from './cookie-banner';
 
@@ -52,6 +57,44 @@ describe('CookieBanner', () => {
     expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
     expect(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).toBe('rejected');
     expect(hasAnalyticsConsent()).toBe(false);
+  });
+
+  it.each(['Accept', 'Reject'] as const)(
+    'keeps the %s decision for this page when storage writes fail',
+    async (choice) => {
+      const user = userEvent.setup();
+      const setItem = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+        throw new DOMException('Storage unavailable');
+      });
+      try {
+        render(<CookieBanner />);
+        await user.click(await screen.findByRole('button', { name: choice }));
+        expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
+        expect(readConsent()).toBe(choice === 'Accept' ? 'accepted' : 'rejected');
+        expect(hasAnalyticsConsent()).toBe(choice === 'Accept');
+      } finally {
+        setItem.mockRestore();
+        writeConsent('rejected');
+      }
+    },
+  );
+
+  it('clears prior acceptance when persisting rejection fails', async () => {
+    window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, 'accepted');
+    const setItem = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('Storage unavailable');
+    });
+    try {
+      writeConsent('rejected');
+      expect(readConsent()).toBe('rejected');
+      expect(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).toBeNull();
+      vi.resetModules();
+      const reloaded = await import('@/lib/consent/cookie-consent');
+      expect(reloaded.hasAnalyticsConsent()).toBe(false);
+    } finally {
+      setItem.mockRestore();
+      writeConsent('rejected');
+    }
   });
 
   it('stays hidden once the visitor has already answered', () => {

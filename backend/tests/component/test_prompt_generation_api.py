@@ -1007,17 +1007,18 @@ async def test_concurrent_generation_keeps_all_validated_rows_active(
                 fallback_discriminator=self._discriminator,
             ).complete_json(system=system, user=user)
 
-    async def _run(topic: str, n: int) -> None:
+    async def _run(topic: str, n: int) -> int:
         async with session_factory() as session:
-            await generate_prompts(
+            inserted, _, _ = await generate_prompts(
                 session,
                 workspace_id=workspace_id,
                 prompt_set_id=uuid.UUID(prompt_set_id),
                 payload=PromptGenerateRequest(count=n, confirm_send_evidence=True),
                 agent=cast(DefaultAgentClient, _CountingAgent(topic, n)),
             )
+            return len(inserted)
 
-    await asyncio.gather(_run("Alpha", 15), _run("Beta", 15))
+    alpha_count, beta_count = await asyncio.gather(_run("Alpha", 15), _run("Beta", 15))
 
     async with session_factory() as session:
         active = (
@@ -1034,6 +1035,7 @@ async def test_concurrent_generation_keeps_all_validated_rows_active(
         )
     texts = [prompt.text for prompt in active]
     # Both portfolios survive, and neither run's rows collide with the other's.
+    assert len(active) == alpha_count + beta_count
     assert len(texts) == len(set(texts))
     assert any("Alpha" in text for text in texts)
     assert any("Beta" in text for text in texts)

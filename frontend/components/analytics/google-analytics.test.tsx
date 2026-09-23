@@ -122,6 +122,28 @@ describe('GoogleAnalytics', () => {
     ]);
   });
 
+  it('preserves other consent defaults when revoking a pending tag', async () => {
+    writeConsent('accepted');
+    render(<GoogleAnalytics measurementId="G-TEST" />);
+    const dataLayer = (window as Window & { dataLayer?: unknown[] }).dataLayer ?? [];
+    const ownDefault = dataLayer[0] as unknown[];
+    ownDefault[2] = { analytics_storage: 'granted', ad_storage: 'denied' };
+    const otherDefault = [
+      'consent',
+      'default',
+      { analytics_storage: 'granted', ad_storage: 'granted' },
+    ];
+    const adOnlyDefault = ['consent', 'default', { ad_storage: 'granted' }];
+    const pendingEvent = ['event', 'page_view'];
+    dataLayer.push(otherDefault, adOnlyDefault, pendingEvent);
+
+    await act(async () => writeConsent('rejected'));
+
+    expect(ownDefault[2]).toEqual({ analytics_storage: 'denied', ad_storage: 'denied' });
+    expect(otherDefault[2]).toEqual({ analytics_storage: 'denied', ad_storage: 'granted' });
+    expect(adOnlyDefault[2]).toEqual({ ad_storage: 'granted' });
+  });
+
   it('reuses the document tag after remount without configuring twice', () => {
     writeConsent('accepted');
     const first = render(<GoogleAnalytics measurementId="G-TEST" />);

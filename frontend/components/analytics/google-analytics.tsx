@@ -15,6 +15,21 @@ type GtagWindow = Window & {
 
 const SCRIPT_ID = 'citeladder-google-analytics';
 
+function denyPendingAnalyticsDefaults(dataLayer: unknown[] | undefined) {
+  for (const entry of dataLayer ?? []) {
+    if (!Array.isArray(entry) || entry[0] !== 'consent' || entry[1] !== 'default') continue;
+    const fields = entry[2];
+    if (
+      !fields ||
+      typeof fields !== 'object' ||
+      Array.isArray(fields) ||
+      !('analytics_storage' in fields)
+    )
+      continue;
+    entry[2] = { ...fields, analytics_storage: 'denied' };
+  }
+}
+
 function configureLoadedTag(script: HTMLScriptElement, measurementId: string) {
   if (script.dataset.loaded !== 'true' || script.dataset.configured || !hasAnalyticsConsent())
     return;
@@ -35,11 +50,7 @@ export function GoogleAnalytics({ measurementId }: Readonly<{ measurementId: str
       if (!existing) return;
       // A pending tag must never replay an old granted default on load.
       if (existing.dataset.loaded !== 'true') {
-        for (const entry of withGtag.dataLayer ?? []) {
-          if (Array.isArray(entry) && entry[0] === 'consent' && entry[1] === 'default') {
-            entry[2] = { analytics_storage: 'denied' };
-          }
-        }
+        denyPendingAnalyticsDefaults(withGtag.dataLayer);
       }
       withGtag.gtag?.('consent', 'update', { analytics_storage: 'denied' });
       return;

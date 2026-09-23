@@ -20,8 +20,9 @@ export const DEFAULT_API_REQUEST_TIMEOUT_MS = 30_000;
 
 export function getApiRequestTimeoutMs(): number {
   const raw = process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS;
-  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_API_REQUEST_TIMEOUT_MS;
+  if (!raw || !/^[1-9]\d*$/u.test(raw)) return DEFAULT_API_REQUEST_TIMEOUT_MS;
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) ? parsed : DEFAULT_API_REQUEST_TIMEOUT_MS;
 }
 
 /**
