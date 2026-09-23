@@ -123,16 +123,21 @@ async def fresh_access_token(
     workspace_id = grant.workspace_id
     deadline = time.monotonic() + integration_settings.token_refresh_wait_seconds
     while True:
+        if time.monotonic() >= deadline:
+            raise integration_oauth.IntegrationOAuthError(
+                "grant refresh is busy",
+                error_code=ERROR_PROVIDER_API,
+                retryable=True,
+            )
         claimed = await _claim_once(session, grant_id, workspace_id)
         if isinstance(claimed, str):
             return claimed
         if claimed is not None:
             bundle = await _exchange_claim(session, claimed, transport)
-            return await _persist_refresh(session, claimed, bundle)
-        if time.monotonic() >= deadline:
-            raise integration_oauth.IntegrationOAuthError(
-                "grant refresh is busy", error_code=ERROR_GRANT_AUTH_FAILED
-            )
+            token = await _persist_refresh(session, claimed, bundle)
+            if token is not None:
+                return token
+            continue
         await asyncio.sleep(integration_settings.token_refresh_poll_seconds)
 
 
@@ -174,10 +179,13 @@ async def _persist_refresh(
     session: AsyncSession,
     claim: _RefreshClaim,
     bundle: integration_oauth.OAuthTokenBundle,
-) -> str:
+) -> str | None:
     grant = await _locked_grant(session, claim.grant_id, claim.workspace_id)
     if not _claim_matches(grant, claim):
+        still_connected = grant is not None and grant.status == GRANT_STATUS_CONNECTED
         await session.rollback()
+        if still_connected:
+            return None
         raise integration_oauth.IntegrationOAuthError(
             "grant changed during refresh", error_code=ERROR_GRANT_AUTH_FAILED
         )

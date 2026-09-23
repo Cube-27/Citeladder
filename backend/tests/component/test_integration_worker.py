@@ -565,6 +565,7 @@ async def test_refresh_releases_transaction_and_fences_consent_rotation(
                 assert grant is not None
                 if rotate_consent:
                     grant.access_token_encrypted = encrypt_secret("new-consent-token")
+                    grant.token_expires_at = datetime.now(UTC) + timedelta(hours=1)
                     invalidate_token_claim(grant)
                 await writer.commit()
             return OAuthTokenBundle("refreshed-token", "rotated-refresh", 3600)
@@ -576,11 +577,9 @@ async def test_refresh_releases_transaction_and_fences_consent_rotation(
     async with session_factory() as reader:
         grant = await reader.get(IntegrationOAuthGrant, seed.grant_id)
         assert grant is not None
-        if rotate_consent:
-            with pytest.raises(IntegrationOAuthError, match="changed during refresh"):
-                await fresh_access_token(reader, grant=grant)
-        else:
-            assert await fresh_access_token(reader, grant=grant) == "refreshed-token"
+        assert await fresh_access_token(reader, grant=grant) == (
+            "new-consent-token" if rotate_consent else "refreshed-token"
+        )
     async with session_factory() as session:
         persisted = await session.get(IntegrationOAuthGrant, seed.grant_id)
         assert persisted is not None
@@ -588,6 +587,30 @@ async def test_refresh_releases_transaction_and_fences_consent_rotation(
             "new-consent-token" if rotate_consent else "refreshed-token"
         )
         assert persisted.refresh_claim_id is None
+
+
+@pytest.mark.asyncio
+async def test_refresh_contention_exhaustion_is_retryable(
+    session_factory, db_session, monkeypatch
+) -> None:
+    seed = await _seed_graph(
+        db_session, token_expires_at=datetime.now(UTC) - timedelta(minutes=5)
+    )
+    async with session_factory() as session:
+        grant = await session.get(IntegrationOAuthGrant, seed.grant_id)
+        assert grant is not None
+        grant.refresh_claim_id = uuid.uuid4()
+        grant.refresh_claim_expires_at = datetime.now(UTC) + timedelta(minutes=1)
+        await session.commit()
+    monkeypatch.setattr(integration_settings, "token_refresh_wait_seconds", 0.01)
+    monkeypatch.setattr(integration_settings, "token_refresh_poll_seconds", 0.005)
+    async with session_factory() as session:
+        grant = await session.get(IntegrationOAuthGrant, seed.grant_id)
+        assert grant is not None
+        with pytest.raises(IntegrationOAuthError) as raised:
+            await fresh_access_token(session, grant=grant)
+    assert raised.value.error_code == ERROR_PROVIDER_API
+    assert raised.value.retryable is True
 
 
 @pytest.mark.asyncio

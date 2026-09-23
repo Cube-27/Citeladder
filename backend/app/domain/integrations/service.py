@@ -25,6 +25,7 @@ from __future__ import annotations
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from urllib.parse import urlencode
 
 from sqlalchemy import func, select
@@ -596,6 +597,14 @@ async def list_available_properties(
     ]
 
 
+def _revoke_fence_matches(grant: IntegrationOAuthGrant | None, revision: int) -> bool:
+    return (
+        grant is not None
+        and grant.status == GRANT_STATUS_PENDING_REVOCATION
+        and grant.token_revision == revision
+    )
+
+
 async def delete_connection(
     session: AsyncSession,
     *,
@@ -633,6 +642,7 @@ async def delete_connection(
     )
     is_last = siblings.scalar_one() == 0
     provider = connection.provider
+    grant_id = grant.id
     await session.delete(connection)
     if not is_last:
         # Other connections still use the shared grant: its tokens are
@@ -652,6 +662,19 @@ async def delete_connection(
         )
         await session.commit()
         return
+    locked_grant = await session.scalar(
+        select(IntegrationOAuthGrant)
+        .where(
+            IntegrationOAuthGrant.id == grant_id,
+            IntegrationOAuthGrant.workspace_id == workspace_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if locked_grant is None:
+        await session.rollback()
+        raise IntegrationConnectionNotFoundError(str(grant_id))
+    grant = locked_grant
     revoke_transport = grant.transport
     revoke_url = INTEGRATION_OAUTH_REVOKE_URLS[revoke_transport]
     revoke_credential = grant.refresh_token_encrypted or grant.access_token_encrypted
@@ -680,20 +703,38 @@ async def delete_connection(
     current_grant = await session.scalar(
         select(IntegrationOAuthGrant)
         .where(
-            IntegrationOAuthGrant.id == grant.id,
+            IntegrationOAuthGrant.id == grant_id,
             IntegrationOAuthGrant.workspace_id == workspace_id,
         )
         .with_for_update()
         .execution_options(populate_existing=True)
     )
-    if (
-        current_grant is None
-        or current_grant.status != GRANT_STATUS_PENDING_REVOCATION
-        or current_grant.token_revision != revoke_revision
-    ):
+    if not _revoke_fence_matches(current_grant, revoke_revision):
+        event_grant_id = grant_id if current_grant is not None else None
+        payload = {
+            "provider": provider,
+            "transport": revoke_transport,
+            "connection_id": str(connection_id),
+            "grant_id": str(grant_id),
+            "remote_revoke": bool(revoke_url),
+            "remote_revoke_succeeded": remote_ok,
+            "fenced": True,
+        }
+        if remote_error_code:
+            payload["error_code"] = remote_error_code
         await session.rollback()
+        session.add(
+            IntegrationEvent(
+                workspace_id=workspace_id,
+                grant_id=event_grant_id,
+                event_type=EVENT_INTEGRATION_REVOKE_FAILED,
+                message="Revoke outcome not applied because the grant changed",
+                payload=payload,
+            )
+        )
+        await session.commit()
         return
-    grant = current_grant
+    grant = cast(IntegrationOAuthGrant, current_grant)
     if remote_ok:
         invalidate_token_claim(grant)
         grant.status = GRANT_STATUS_REVOKED

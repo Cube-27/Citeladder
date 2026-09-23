@@ -575,6 +575,36 @@ async def test_deleting_the_last_connection_revokes_the_grant_and_drops_tokens(
 
 
 @pytest.mark.asyncio
+async def test_revoke_uses_latest_grant_credentials_before_local_disconnect(
+    db_session: AsyncSession,
+    session_factory,
+    fake_oauth_client: _FakeOAuthClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mine = await _workspace(db_session, "Mine")
+    grant = await _grant(db_session, mine)
+    connection = await _connection(db_session, grant)
+    await db_session.commit()
+    original_get_grant = integrations_service._get_grant
+
+    async def rotate_after_read(*args, **kwargs):
+        loaded = await original_get_grant(*args, **kwargs)
+        async with session_factory() as writer:
+            current = await writer.get(IntegrationOAuthGrant, loaded.id)
+            assert current is not None
+            current.refresh_token_encrypted = encrypt_secret("replacement-refresh")
+            await writer.commit()
+        return loaded
+
+    monkeypatch.setattr(integrations_service, "_get_grant", rotate_after_read)
+    await delete_connection(db_session, workspace_id=mine, connection_id=connection.id)
+
+    assert fake_oauth_client.revoked == ["replacement-refresh"]
+    await db_session.refresh(grant)
+    assert grant.status == GRANT_STATUS_REVOKED
+
+
+@pytest.mark.asyncio
 async def test_the_access_token_is_revoked_when_there_is_no_refresh_token(
     db_session: AsyncSession,
     fake_oauth_client: _FakeOAuthClient,
@@ -661,6 +691,64 @@ async def test_revoke_decryption_failure_keeps_pending_grant_and_records_event(
     events = await _events(db_session, grant.id)
     assert [event.event_type for event in events] == [EVENT_INTEGRATION_REVOKE_FAILED]
     assert events[0].payload["error_code"] == ERROR_PROVIDER_API
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("delete_grant", [False, True])
+async def test_revoke_fence_records_outcome_without_overwriting_changed_grant(
+    db_session: AsyncSession,
+    session_factory,
+    fake_oauth_client: _FakeOAuthClient,
+    monkeypatch: pytest.MonkeyPatch,
+    delete_grant: bool,
+) -> None:
+    mine = await _workspace(db_session, "Mine")
+    grant = await _grant(db_session, mine)
+    connection = await _connection(db_session, grant)
+    grant_id = grant.id
+    await db_session.commit()
+
+    async def revoke_and_change(*, token: str) -> None:
+        fake_oauth_client.revoked.append(token)
+        async with session_factory() as writer:
+            current = await writer.get(IntegrationOAuthGrant, grant_id)
+            assert current is not None
+            if delete_grant:
+                await writer.delete(current)
+            else:
+                current.access_token_encrypted = encrypt_secret("new-consent-token")
+                current.status = GRANT_STATUS_CONNECTED
+                integrations_service.invalidate_token_claim(current)
+            await writer.commit()
+
+    monkeypatch.setattr(fake_oauth_client, "revoke", revoke_and_change)
+    await delete_connection(db_session, workspace_id=mine, connection_id=connection.id)
+
+    async with session_factory() as reader:
+        persisted = await reader.get(IntegrationOAuthGrant, grant_id)
+        if delete_grant:
+            assert persisted is None
+        else:
+            assert persisted is not None
+            assert persisted.status == GRANT_STATUS_CONNECTED
+            assert (
+                decrypt_secret(persisted.access_token_encrypted) == "new-consent-token"
+            )
+        events = list(
+            (
+                await reader.scalars(
+                    select(IntegrationEvent).where(
+                        IntegrationEvent.workspace_id == mine,
+                        IntegrationEvent.event_type == EVENT_INTEGRATION_REVOKE_FAILED,
+                    )
+                )
+            ).all()
+        )
+    assert len(events) == 1
+    assert events[0].grant_id == (None if delete_grant else grant_id)
+    assert events[0].payload["grant_id"] == str(grant_id)
+    assert events[0].payload["remote_revoke_succeeded"] is True
+    assert await list_connections(db_session, workspace_id=mine) == []
 
 
 @pytest.mark.asyncio

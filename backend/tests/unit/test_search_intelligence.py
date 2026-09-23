@@ -539,6 +539,25 @@ async def test_provider_rate_limit_releases_shared_capacity_with_retry_hint(
 
 
 @pytest.mark.asyncio
+async def test_write_timeout_is_uncertain_for_live_acquisition() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.WriteTimeout("send stalled", request=request)
+
+    secret = encrypt_secret(pack_credential(login="user@example.com", password="key"))
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(ProviderError) as raised:
+            await execute_live(
+                encrypted_secret=secret,
+                endpoint="/v3/test/live",
+                payload={"target": "example.com"},
+                client=client,
+            )
+
+    assert raised.value.error_code == "timeout"
+    assert raised.value.retryable is False
+
+
+@pytest.mark.asyncio
 async def test_live_acquisition_sends_one_authenticated_task() -> None:
     seen: list[httpx.Request] = []
 

@@ -67,7 +67,12 @@ async def request_json(
             json=json,
             timeout_seconds=timeout_seconds,
         )
-    except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout) as exc:
+    except (
+        httpx.ConnectTimeout,
+        httpx.ReadTimeout,
+        httpx.WriteTimeout,
+        httpx.PoolTimeout,
+    ) as exc:
         raise ProviderError(
             "DataForSEO request timed out",
             error_code=ERROR_TIMEOUT,
