@@ -28,7 +28,6 @@ export function ScaledPreview({
   }, []);
 
   const scale = Math.min(1, frame.available / width);
-  const screenWidth = Math.max(width, frame.available);
   return (
     <div
       ref={frameRef}
@@ -42,7 +41,11 @@ export function ScaledPreview({
     >
       <div
         ref={screenRef}
-        style={{ width: screenWidth, transform: `scale(${scale})`, transformOrigin: 'top left' }}
+        style={{
+          width: `max(100%, ${width}px)`,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+        }}
       >
         {children}
       </div>
