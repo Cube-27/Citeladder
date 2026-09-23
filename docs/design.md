@@ -50,7 +50,7 @@ Reading text must meet 4.5:1 contrast. `subtle` metadata belongs on reading surf
 
 Marketing subpages use the semantic public canvas, centred Geist hero, quiet surface bands, and the shared full-width dark footer. The homepage keeps a warmer neutral canvas than the product UI, with scoped aliases resolving to shared semantic roles. The owner-scoped `[data-public-surface]` rebind deepens light-mode inks and strengthens hairlines. Use divided hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews.
 
-The homepage may use marketing-only geometry roles: `--radius-marketing-card` (20px), `--radius-marketing-well` (16px), `--radius-marketing-preview` (24px), and `--radius-marketing-control` (10px). White capability and integration objects sit on warm hairlines; pastel decorative wells frame compact product details. Homepage headings use weight 500 at most. Product data and status colours retain their own meaning. These roles do not change the authenticated application's 8px `--radius-card` contract.
+The homepage may use marketing-only geometry roles: `--radius-marketing-card` (20px), `--radius-marketing-well` (16px), `--radius-marketing-preview` (24px), and `--radius-marketing-control` (10px). The homepage shares the public container measure (`max-w-7xl` plus `--site-gutter`) with the navigation and footer. White capability and integration objects sit on warm hairlines; each capability owns one identity hue (`--cl-hue-*`: visibility blue, sources green, site health indigo, demand teal, content orange, MCP pink) that `landing.css` derives into a tint for its wells and an ink for its labels, icons and bars; everything else uses the accent-tinted `--cl-well`. Identity hues never carry actions, which stay Emerald. Section heads stack a single-line heading over the lead; embedded sub-headings stay a rung below the section heading. Homepage headings use weight 500 at most. Product data and status colours retain their own meaning. These roles do not change the authenticated application's 8px `--radius-card` contract.
 
 ## Typography
 
@@ -119,7 +119,7 @@ Analytical content caps at 1392px; form-first workflow content caps at 1040px wh
 
 Vertical rhythm belongs to the container: `Stack` from `components/ui/layout.tsx` or container `gap`, not child `mt-*`. Its rungs are `section` 24px, `workspace` 16px, `compact` 12px, and `tight` 4px. A 2px optical nudge, sized glyph, or negative-margin overlap remains allowed.
 
-Marketing subpages use `--section-y`: 56px base, 80px from 981px, 96px from 1280px. The homepage owns its section rhythm in `landing.css`. Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: 56px bar, centred task measure, 16px mobile gutter, shared control radius, and selection chips 36px desktop/44px touch. The flow shell owns its scrolling main region and action bar.
+Marketing subpages and the homepage use `--section-y`: 56px base, 80px from 768px, 96px from 1280px. Adjacent homepage sections of the same tone share one rhythm rather than stacking both paddings. Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: 56px bar, centred task measure, 16px mobile gutter, shared control radius, and selection chips 36px desktop/44px touch. The flow shell owns its scrolling main region and action bar.
 
 ### Availability vocabulary
 

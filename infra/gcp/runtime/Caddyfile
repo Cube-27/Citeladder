@@ -11,6 +11,9 @@
 # the public host is independently allowlisted before being used upstream.
 https://__ORIGIN_DOMAIN_NAME__ {
   tls /etc/caddy/tls/origin.crt /etc/caddy/tls/origin.key
+  # This host carries authenticated Worker traffic. No edge or browser cache
+  # may reuse a response for a different caller or ingress token.
+  header Cache-Control "private, no-store"
   @authorized {
     header X-CiteLadder-Origin-Token {$CITELADDER_ORIGIN_TOKEN}
     header X-CiteLadder-Origin-Token {$CITELADDER_ORIGIN_TOKEN_PREVIOUS}

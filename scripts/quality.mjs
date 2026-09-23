@@ -111,18 +111,28 @@ function step(name, command, commandArgs, cwd, env = process.env) {
   process.stderr.write(`Full output: ${logPath}\n`);
 }
 
-function pnpm(name, commandArgs) {
+function pnpm(name, commandArgs, env = process.env) {
   if (process.platform === 'win32') {
     step(
       name,
       process.env.ComSpec ?? 'cmd.exe',
       ['/d', '/s', '/c', 'pnpm', ...commandArgs],
       frontendRoot,
+      env,
     );
     return;
   }
-  step(name, 'pnpm', commandArgs, frontendRoot);
+  step(name, 'pnpm', commandArgs, frontendRoot, env);
 }
+
+// Production-mode quality builds require both public origins. CI sets the
+// accepted values on the frontend job; a local check falls back to the same
+// ones so it builds the artifact CI builds, while an explicit value still wins.
+const QUALITY_BUILD_ENV = {
+  ...process.env,
+  PUBLIC_WEBSITE_ORIGIN: process.env.PUBLIC_WEBSITE_ORIGIN || 'https://citeladder.com',
+  PUBLIC_APP_ORIGIN: process.env.PUBLIC_APP_ORIGIN || 'https://app.citeladder.com',
+};
 
 function policyDiffArgs() {
   const base = process.env.COMPLEXITY_BASE_SHA;
@@ -167,8 +177,8 @@ function backendChecks() {
 }
 
 function frontendChecks() {
-  pnpm('Astro marketing build', ['build']);
-  pnpm('Vite product-app build', ['build:vite']);
+  pnpm('Astro marketing build', ['build'], QUALITY_BUILD_ENV);
+  pnpm('Vite product-app build', ['build:vite'], QUALITY_BUILD_ENV);
   // Single static-check step: `vp check` (format + lint) reads its strict
   // policy — denyWarnings, unused-disable-directives-as-errors — from the
   // `lint.options` block shared by frontend/vite.config.ts and the root

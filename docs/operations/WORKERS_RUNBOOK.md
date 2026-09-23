@@ -70,7 +70,10 @@ method, owner, focused test and removal condition in the release record.
    overlapping Worker route. Point a proxied A record to the existing GCP
    static IP. Do not attach a Worker Custom Domain or Worker Route to this
    hostname, including via wildcard capture. Keep the Cloudflare-only GCP
-   firewall, IAP and loopback backend/database bindings.
+   firewall, IAP and loopback backend/database bindings. Bypass Cloudflare
+   caching for this entire hostname, including extensionless paths and static
+   assets, and purge any previously cached origin responses. Broad path or file
+   extension cache rules must not override this bypass.
 2. In Cloudflare Origin CA, issue a certificate covering both
    `citeladder.com` and `origin.citeladder.com`. Put the PEM pair into the
    existing `gcp-demo` GitHub environment secrets `CLOUDFLARE_ORIGIN_CERT` and
@@ -91,7 +94,8 @@ method, owner, focused test and removal condition in the release record.
    and protected approval.
 5. Run the protected GCP deploy only with release authorization and the
    coordinated order below. Check unauthenticated
-   `https://origin.citeladder.com/health` returns 403.
+   `https://origin.citeladder.com/health` returns 403 with `Cache-Control:
+   private, no-store` and no Cloudflare cache hit.
    An authenticated test from a controlled Worker/isolated setup must reach
    backend health, preserve redirect status and separate cookies, and reject
    spoofed public-host and forwarding headers. Do not put the ingress token in

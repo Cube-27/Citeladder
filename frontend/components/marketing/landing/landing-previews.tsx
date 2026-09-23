@@ -320,7 +320,12 @@ export function PlatformExplorer({
           {MODULES.map((item) => {
             const Preview = PREVIEWS[item.id];
             return (
-              <TabPanel key={item.id} value={item.id} forceMount className="cl-module-body">
+              <TabPanel
+                key={item.id}
+                value={item.id}
+                forceMount
+                className={`cl-module-body cl-hue-${item.id}`}
+              >
                 <div className="cl-module-copy">
                   <span className="cl-overline">{item.eyebrow}</span>
                   <h3>{item.title}</h3>
