@@ -49,12 +49,28 @@ test.describe('marketing routes', () => {
       );
       const panel = page.getByRole('tabpanel', { name: /sources/i }).last();
       const card = panel.locator('.cl-product-card');
+      if (width < 640) {
+        await expect
+          .poll(() =>
+            panel
+              .locator('.cl-product-preview > div')
+              .evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a),
+          )
+          .toBeLessThan(1);
+      }
+      await expect(card).toBeVisible();
       const before = await card.boundingBox();
       await panel.getByRole('button', { name: 'URLs' }).click();
       await expect(panel.getByText('zernovelle.example/platform')).toBeVisible();
       const after = await card.boundingBox();
-      expect(Math.abs((after?.width ?? 0) - (before?.width ?? 0))).toBeLessThanOrEqual(1);
-      expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0))).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs((after?.width ?? 0) - (before?.width ?? 0)),
+        `${width}px width`,
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs((after?.x ?? 0) - (before?.x ?? 0)),
+        `${width}px position`,
+      ).toBeLessThanOrEqual(1);
       const cardOverflow = await card.evaluate(
         (element) => element.scrollWidth - element.clientWidth,
       );
