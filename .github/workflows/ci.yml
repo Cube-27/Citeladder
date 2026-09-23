@@ -108,9 +108,25 @@ jobs:
           .venv/bin/radon cc app -s -n C
           .venv/bin/radon mi app -s -n B
       - name: Pytest with measured coverage
-        run: >-
-          .venv/bin/python -m pytest -vv -o faulthandler_timeout=120
-          --cov --cov-report=xml --cov-report=term
+        run: |
+          log="$RUNNER_TEMP/backend-pytest.log"
+          if .venv/bin/python -m pytest -q -o faulthandler_timeout=120 \
+            --cov --cov-report=xml > "$log" 2>&1; then
+            echo 'Backend pytest passed.'
+          else
+            status=$?
+            echo "Backend pytest failed (exit $status); last 120 log lines:"
+            tail -n 120 "$log"
+            exit "$status"
+          fi
+      - name: Publish failed backend test log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: backend-pytest-log
+          path: ${{ runner.temp }}/backend-pytest.log
+          if-no-files-found: warn
+          retention-days: 7
 
   frontend:
     name: Frontend (quality, coverage, build)
@@ -147,7 +163,24 @@ jobs:
           COMPLEXITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: pnpm quality:check -- --scope frontend
       - name: Vitest with measured coverage
-        run: pnpm test:coverage
+        run: |
+          log="$RUNNER_TEMP/frontend-vitest.log"
+          if pnpm test:coverage > "$log" 2>&1; then
+            echo 'Frontend Vitest passed.'
+          else
+            status=$?
+            echo "Frontend Vitest failed (exit $status); last 120 log lines:"
+            tail -n 120 "$log"
+            exit "$status"
+          fi
+      - name: Publish failed frontend test log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-vitest-log
+          path: ${{ runner.temp }}/frontend-vitest.log
+          if-no-files-found: warn
+          retention-days: 7
       - name: Publish frontend coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -230,7 +263,17 @@ jobs:
           E2E_FILES: ${{ needs.changes.outputs.e2e_args }}
         run: |
           read -r -a e2e_files <<< "$E2E_FILES"
-          pnpm exec playwright test --config playwright.config.ts "${e2e_files[@]}"
+          log="$RUNNER_TEMP/playwright.log"
+          if pnpm exec playwright test --config playwright.config.ts "${e2e_files[@]}" > "$log" 2>&1; then
+            echo 'Playwright passed.'
+          else
+            status=$?
+            echo "Playwright failed (exit $status); first server errors:"
+            rg -m 5 '\[WebServer\].*\[ERROR\]' "$log" || true
+            echo 'Last 120 log lines:'
+            tail -n 120 "$log"
+            exit "$status"
+          fi
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
@@ -238,6 +281,7 @@ jobs:
           path: |
             frontend/playwright-report/
             frontend/test-results/
+            ${{ runner.temp }}/playwright.log
           if-no-files-found: warn
           retention-days: 7
 
