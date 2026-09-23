@@ -10,7 +10,9 @@
   No deployment or production acceptance is claimed. The owner now wants PR 4
   after PR 3 merges, followed by a separately authorized fresh deployment.
   PR 4 must finalize backend-only deployment and production-only recovery before
-  release. There is no staging environment; do not create staging Workers,
+  release. The owner reports required infrastructure setup complete; verify it
+  in the protected release record before dispatch. There is no staging
+  environment; do not create staging Workers,
   domains, GitHub environments or release gates. The Workers runbook lists the
   manual production setup. No data deletion is authorized by this plan; no
   current customers.

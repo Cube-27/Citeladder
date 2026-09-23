@@ -86,9 +86,9 @@ method, owner, focused test and removal condition in the release record.
    receive it.
 4. Set the non-secret `ORIGIN_DOMAIN_NAME` and `APP_DOMAIN_NAME` GitHub
    environment variables; set the origin matrix above explicitly. Confirm the
-   `gcp-demo` environment remains main-only with its owner reviewer. Future
-   Worker deploy environments need least-privilege Cloudflare credentials and
-   protected approval, but PR 1 does not attach those domains.
+   `gcp-demo` environment remains main-only with its owner reviewer. The two
+   production Worker environments use least-privilege Cloudflare credentials
+   and protected approval.
 5. Run the protected GCP deploy only with release authorization and the
    coordinated order below. Check unauthenticated
    `https://origin.citeladder.com/health` returns 403.
@@ -209,11 +209,12 @@ data requires separate explicit authorization and an identified target.
 
 ### Manual setup checklist for the first production release
 
-Confirm each item in the named console and record its result in the protected
-release record. Local `.env` values do not populate GitHub Actions or Cloudflare
+The owner reports required infrastructure setup complete. Verify each existing
+setting in the named console and record its result in the protected release
+record. Local `.env` values do not populate GitHub Actions or Cloudflare
 Worker secrets. Do not paste secret values into a PR, issue or chat.
 
-1. **GitHub → Settings → Environments:** keep `gcp-demo` and create/protect
+1. **GitHub → Settings → Environments:** verify `gcp-demo`,
    `workers-app-production` and `workers-marketing-production`. Restrict each
    deployment to `main` and require the release reviewer. In each Worker
    environment, set secret `CLOUDFLARE_API_TOKEN` and variable
