@@ -11,14 +11,14 @@ import pytest
 from pydantic import ValidationError
 
 from app.connectors.answer_engines.errors import ProviderError
+from app.connectors.dataforseo_transport import request_json
 from app.connectors.search_intelligence_dataforseo import (
     ResearchResponse,
     _reported_cost,
-    _response_body,
     execute_live,
 )
 from app.core.config import settings
-from app.core.config.dataforseo import pack_credential
+from app.core.config.dataforseo import pack_credential, unpack_credential
 from app.core.config.search_intelligence import estimate_dataset, page_sizes
 from app.core.security import encrypt_secret
 from app.domain.demand.search_intelligence import executor, targets
@@ -495,8 +495,22 @@ async def test_provider_rate_limit_releases_shared_capacity_with_retry_hint(
     monkeypatch,
 ):
     rate_limited = httpx.Response(429, headers={"Retry-After": "12"})
-    with pytest.raises(ProviderError) as raised:
-        _response_body(rate_limited)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: rate_limited)
+    ) as client:
+        with pytest.raises(ProviderError) as raised:
+            await request_json(
+                client,
+                "POST",
+                "https://api.dataforseo.com/test",
+                credential=unpack_credential(
+                    pack_credential(login="user@example.com", password="key")
+                ),
+                timeout_seconds=1,
+                transport_retryable=False,
+                error_message="unreadable",
+                json=[{}],
+            )
     release = AsyncMock()
     monkeypatch.setattr(executor, "execute_live", AsyncMock(side_effect=raised.value))
     monkeypatch.setattr(executor, "release_provider_capacity", release)

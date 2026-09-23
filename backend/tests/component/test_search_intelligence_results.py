@@ -8,9 +8,16 @@ from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
+from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.search_intelligence_dataforseo import ResearchResponse
 from app.core.config.dataforseo import pack_credential
+from app.core.config.provider_catalog import (
+    ERROR_CONNECTION,
+    ERROR_RATE_LIMIT,
+    ERROR_TIMEOUT,
+)
 from app.core.security import encrypt_secret
 from app.domain.demand.search_intelligence import executor, service
 from app.models.analytics import AnalyticsTask
@@ -20,9 +27,12 @@ from app.models.provider import ProviderConnection
 from app.models.search_intelligence import (
     SearchIntelligenceCall,
     SearchIntelligenceDataset,
+    SearchIntelligenceDispatchAttempt,
     SearchIntelligenceRun,
 )
 from app.orchestration import provider_capacity
+from app.orchestration.executor_errors import CapacityWaitError
+from app.orchestration.provider_capacity import CapacityDecision
 from tests.component.auth_helpers import register_and_login
 
 
@@ -48,6 +58,183 @@ async def connected_project(client, db_session):
     )
     await db_session.commit()
     return project, f"/api/v1/projects/{project['id']}/search-intelligence"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("rate_limits", [1, 3])
+async def test_explicit_429_retries_with_durable_attempts(
+    client, db_session, session_factory, monkeypatch, rate_limits
+):
+    _, base = await connected_project(client, db_session)
+    review = await client.post(
+        f"{base}/reviews",
+        headers={"Idempotency-Key": f"429-{rate_limits}"},
+        json={
+            "location_code": 2036,
+            "language_code": "en",
+            "reuse_recent": False,
+            "datasets": [{"kind": "ranking_keywords", "depth": 1}],
+        },
+    )
+    assert review.status_code == 201, review.text
+    run_id = uuid.UUID(review.json()["id"])
+    assert (
+        await client.post(f"{base}/runs/{run_id}/confirm", json={})
+    ).status_code == 202
+    async with session_factory() as session:
+        run = await session.get(SearchIntelligenceRun, run_id)
+        assert run is not None
+        task = await session.get(AnalyticsTask, run.analytics_task_id)
+        assert task is not None
+
+    rate_error = ProviderError(
+        "rate limited",
+        error_code=ERROR_RATE_LIMIT,
+        retryable=True,
+        retry_after_seconds=12,
+    )
+    result = ResearchResponse(
+        {"tasks": [{"result": [{"items": [], "total_count": 0}]}]},
+        "retry-response",
+        "task",
+        Decimal("0.01"),
+        "task",
+    )
+    paid = AsyncMock(side_effect=[*[rate_error] * rate_limits, result])
+    monkeypatch.setattr(executor, "execute_live", paid)
+    acquire = AsyncMock(return_value=CapacityDecision(True))
+    monkeypatch.setattr(executor, "acquire_provider_capacity", acquire)
+    monkeypatch.setattr(executor, "release_provider_capacity", AsyncMock())
+    for index in range(rate_limits):
+        if index < 2:
+            with pytest.raises(CapacityWaitError):
+                await executor.execute_search_intelligence(session_factory, task)
+        else:
+            await executor.execute_search_intelligence(session_factory, task)
+    if rate_limits == 1:
+        await executor.execute_search_intelligence(session_factory, task)
+    async with session_factory() as session:
+        run = await session.get(SearchIntelligenceRun, run_id)
+        call = await session.scalar(
+            select(SearchIntelligenceCall).where(
+                SearchIntelligenceCall.run_id == run_id
+            )
+        )
+        evidence = list(
+            (
+                await session.scalars(
+                    select(SearchIntelligenceDispatchAttempt)
+                    .where(
+                        SearchIntelligenceDispatchAttempt.call_id == call.id,
+                        SearchIntelligenceDispatchAttempt.workspace_id
+                        == call.workspace_id,
+                        SearchIntelligenceDispatchAttempt.project_id == call.project_id,
+                    )
+                    .order_by(SearchIntelligenceDispatchAttempt.ordinal)
+                )
+            ).all()
+        )
+    if rate_limits == 1:
+        assert run.status == "succeeded"
+        assert run.provider_reported_cost_usd == Decimal("0.01")
+        assert [(a.ordinal, a.status) for a in evidence if a.phase == "dispatch"] == [
+            (1, "dispatched"),
+            (2, "dispatched"),
+        ]
+        assert [(a.ordinal, a.status) for a in evidence if a.phase == "outcome"] == [
+            (1, "rate_limited"),
+            (2, "succeeded"),
+        ]
+        async with session_factory() as session:
+            session.add(
+                SearchIntelligenceDispatchAttempt(
+                    workspace_id=uuid.uuid4(),
+                    project_id=call.project_id,
+                    call_id=call.id,
+                    ordinal=99,
+                    phase="dispatch",
+                )
+            )
+            with pytest.raises(IntegrityError):
+                await session.commit()
+    else:
+        assert run.status == "partial"
+        assert run.provider_reported_cost_usd is None
+        assert [a.status for a in evidence if a.phase == "dispatch"] == [
+            "dispatched"
+        ] * 3
+        assert [a.status for a in evidence if a.phase == "outcome"] == [
+            "rate_limited"
+        ] * 3
+        assert paid.await_count == 3
+    assert [
+        call.kwargs["request"].attempt_number for call in acquire.await_args_list
+    ] == list(range(1, len(evidence) // 2 + 1))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [ERROR_CONNECTION, ERROR_TIMEOUT, "crash"])
+async def test_lost_live_call_stays_uncertain_without_resend(
+    client, db_session, session_factory, monkeypatch, failure
+):
+    _, base = await connected_project(client, db_session)
+    review = await client.post(
+        f"{base}/reviews",
+        headers={"Idempotency-Key": "lost-call"},
+        json={
+            "location_code": 2036,
+            "language_code": "en",
+            "reuse_recent": False,
+            "datasets": [{"kind": "ranking_keywords", "depth": 1}],
+        },
+    )
+    run_id = uuid.UUID(review.json()["id"])
+    assert (
+        await client.post(f"{base}/runs/{run_id}/confirm", json={})
+    ).status_code == 202
+    async with session_factory() as session:
+        run = await session.get(SearchIntelligenceRun, run_id)
+        assert run is not None
+        task = await session.get(AnalyticsTask, run.analytics_task_id)
+        assert task is not None
+    monkeypatch.setattr(
+        executor,
+        "acquire_provider_capacity",
+        AsyncMock(return_value=CapacityDecision(True)),
+    )
+    monkeypatch.setattr(executor, "release_provider_capacity", AsyncMock())
+    error = (
+        RuntimeError("worker crashed")
+        if failure == "crash"
+        else ProviderError("send failed", error_code=failure, retryable=False)
+    )
+    sent = AsyncMock(side_effect=error)
+    monkeypatch.setattr(executor, "execute_live", sent)
+    if failure == "crash":
+        with pytest.raises(RuntimeError, match="worker crashed"):
+            await executor.execute_search_intelligence(session_factory, task)
+    else:
+        await executor.execute_search_intelligence(session_factory, task)
+    await executor.execute_search_intelligence(session_factory, task)
+    async with session_factory() as session:
+        run = await session.get(SearchIntelligenceRun, run_id)
+        call = await session.scalar(
+            select(SearchIntelligenceCall).where(
+                SearchIntelligenceCall.run_id == run_id
+            )
+        )
+        attempt = await session.scalar(
+            select(SearchIntelligenceDispatchAttempt).where(
+                SearchIntelligenceDispatchAttempt.call_id == call.id,
+                SearchIntelligenceDispatchAttempt.workspace_id == call.workspace_id,
+                SearchIntelligenceDispatchAttempt.project_id == call.project_id,
+                SearchIntelligenceDispatchAttempt.phase == "outcome",
+            )
+        )
+    assert run.status == "uncertain"
+    assert call.status == "uncertain"
+    assert attempt.status == "uncertain"
+    sent.assert_awaited_once()
 
 
 @pytest.mark.asyncio

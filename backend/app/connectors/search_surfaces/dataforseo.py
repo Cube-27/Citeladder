@@ -21,9 +21,9 @@ from typing import Any, Final
 
 import httpx
 
-from app.connectors.answer_engines.errors import ProviderError, classify_provider_status
+from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.answer_engines.http_client import shared_client
-from app.connectors.dataforseo_transport import authenticated_request, decode_json
+from app.connectors.dataforseo_transport import request_json
 from app.connectors.search_surfaces.contracts import (
     SearchSurfaceRequest,
     SearchSurfaceSubmission,
@@ -40,9 +40,7 @@ from app.core.config.dataforseo import (
 from app.core.config.provider_catalog import (
     ERROR_AUTH,
     ERROR_CLIENT,
-    ERROR_CONNECTION,
     ERROR_PARSE,
-    ERROR_TIMEOUT,
 )
 
 # DataForSEO answers with its own status code INSIDE a 200 response body. A
@@ -104,50 +102,27 @@ async def probe_credential(
     )
     http = client or shared_client()
     started = time.monotonic()
-    try:
-        response = await authenticated_request(
-            http, "GET", url, credential=credential, timeout_seconds=timeout
-        )
-    except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout) as exc:
-        raise ProviderError(
-            "DataForSEO request timed out",
-            error_code=ERROR_TIMEOUT,
-            retryable=True,
-        ) from exc
-    except httpx.HTTPError as exc:
-        raise ProviderError(
-            "Could not reach DataForSEO",
-            error_code=ERROR_CONNECTION,
-            retryable=True,
-        ) from exc
+    payload = await request_json(
+        http,
+        "GET",
+        url,
+        credential=credential,
+        timeout_seconds=timeout,
+        transport_retryable=True,
+        error_message=_UNREADABLE_RESPONSE,
+    )
     latency_ms = int((time.monotonic() - started) * 1000)
-
-    if response.status_code != httpx.codes.OK:
-        error_code, retryable = classify_provider_status(response.status_code)
-        raise ProviderError(
-            f"DataForSEO returned HTTP {response.status_code}",
-            error_code=error_code,
-            retryable=retryable,
-        )
-
-    _require_ok_envelope(response)
+    _require_ok_envelope(payload)
     return DataForSeoProbeResult(latency_ms=latency_ms)
 
 
-def _require_ok_envelope(response: httpx.Response) -> None:
+def _require_ok_envelope(payload: dict[str, Any]) -> None:
     """Fail unless the response-level status says the request was accepted.
 
     DataForSEO returns HTTP 200 with an in-body status code, so an auth
     failure can arrive looking like a success at the transport layer. Reading
     the envelope is what makes a failed probe fail.
     """
-    payload = decode_json(response, error_message=_UNREADABLE_RESPONSE)
-    if not isinstance(payload, dict):
-        raise ProviderError(
-            _UNREADABLE_RESPONSE,
-            error_code=ERROR_PARSE,
-            retryable=False,
-        )
     status_code = payload.get("status_code")
     if status_code == RESPONSE_STATUS_OK:
         return
@@ -295,43 +270,16 @@ class DataForSeoSearchSurfaceAdapter:
         """One authenticated call, classified with the shared vocabulary."""
         http = self._client or shared_client()
         url = _endpoint(self._base_url, path)
-        try:
-            response = await authenticated_request(
-                http,
-                method,
-                url,
-                credential=self._credential,
-                json=json,
-                timeout_seconds=timeout_seconds,
-            )
-        except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout) as exc:
-            raise ProviderError(
-                "DataForSEO request timed out",
-                error_code=ERROR_TIMEOUT,
-                retryable=True,
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise ProviderError(
-                "Could not reach DataForSEO",
-                error_code=ERROR_CONNECTION,
-                retryable=True,
-            ) from exc
-
-        if response.status_code != httpx.codes.OK:
-            error_code, retryable = classify_provider_status(response.status_code)
-            raise ProviderError(
-                f"DataForSEO returned HTTP {response.status_code}",
-                error_code=error_code,
-                retryable=retryable,
-            )
-        body = decode_json(response, error_message=_UNREADABLE_RESPONSE)
-        if not isinstance(body, dict):
-            raise ProviderError(
-                _UNREADABLE_RESPONSE,
-                error_code=ERROR_PARSE,
-                retryable=False,
-            )
-        return body
+        return await request_json(
+            http,
+            method,
+            url,
+            credential=self._credential,
+            json=json,
+            timeout_seconds=timeout_seconds,
+            transport_retryable=True,
+            error_message=_UNREADABLE_RESPONSE,
+        )
 
 
 def _task_payload(request: SearchSurfaceRequest) -> dict[str, Any]:

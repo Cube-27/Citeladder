@@ -130,6 +130,7 @@ from app.models.provider import (
 from app.models.search_intelligence import (
     SearchIntelligenceCall,
     SearchIntelligenceDataset,
+    SearchIntelligenceDispatchAttempt,
     SearchIntelligenceRow,
     SearchIntelligenceRun,
 )
@@ -274,6 +275,7 @@ __all__ = [
     "ResponseAnalysis",
     "SearchIntelligenceCall",
     "SearchIntelligenceDataset",
+    "SearchIntelligenceDispatchAttempt",
     "SearchIntelligenceRow",
     "SearchIntelligenceRun",
     "SiteChangeObservation",

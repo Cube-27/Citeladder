@@ -7011,11 +7011,57 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_id", "project_id", "id", name="uq_si_call_scope_id"
+        ),
         sa.UniqueConstraint("run_id", "request_key", name="uq_si_call_request"),
     )
     _create_indexes(
         "search_intelligence_calls",
         ("workspace_id", "project_id", "run_id", "dataset_id"),
+    )
+    op.create_table(
+        "search_intelligence_dispatch_attempts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("call_id", sa.UUID(), nullable=False),
+        sa.Column("ordinal", sa.Integer(), nullable=False),
+        sa.Column("phase", sa.String(length=16), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("error_code", sa.String(length=64), nullable=False),
+        sa.Column("retry_after_seconds", sa.Float(), nullable=True),
+        sa.Column("dispatched_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "call_id"],
+            [
+                "search_intelligence_calls.workspace_id",
+                "search_intelligence_calls.project_id",
+                "search_intelligence_calls.id",
+            ],
+            name="fk_si_dispatch_call_scope",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "call_id", "ordinal", "phase", name="uq_si_dispatch_phase"
+        ),
+    )
+    op.create_index(
+        op.f("ix_search_intelligence_dispatch_attempts_call_id"),
+        "search_intelligence_dispatch_attempts",
+        ["call_id"],
+    )
+    op.create_index(
+        op.f("ix_search_intelligence_dispatch_attempts_workspace_id"),
+        "search_intelligence_dispatch_attempts",
+        ["workspace_id"],
+    )
+    op.create_index(
+        op.f("ix_search_intelligence_dispatch_attempts_project_id"),
+        "search_intelligence_dispatch_attempts",
+        ["project_id"],
     )
     op.create_table(
         "search_intelligence_rows",
@@ -7090,6 +7136,7 @@ def downgrade() -> None:
     # retired authorities. Drop the explicit final table set instead.
     final_tables = (
         "search_intelligence_rows",
+        "search_intelligence_dispatch_attempts",
         "search_intelligence_calls",
         "search_intelligence_datasets",
         "search_intelligence_runs",
