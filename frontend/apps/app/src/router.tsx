@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ComponentType } from 'react';
-import type { RouteObject } from 'react-router-dom';
+import { redirect, type RouteObject } from 'react-router-dom';
 
 import { PageLoading } from '@/components/layout/page-loading';
 import { ShellFallback } from '@/components/layout/shell-fallback';
@@ -40,6 +40,7 @@ function productRoute(
 }
 
 export const appRoutes: RouteObject[] = [
+  { path: '/', loader: () => redirect('/projects') },
   { path: '/login', element: <LoginRoute />, ErrorBoundary: RouteError },
   { path: '/register', element: <RegisterRoute />, ErrorBoundary: RouteError },
   {
@@ -60,6 +61,7 @@ export const appRoutes: RouteObject[] = [
       {
         element: <ApplicationRouteLayout />,
         children: [
+          productRoute('/pricing', () => import('./pricing-route')),
           { path: '/projects', element: <ProjectsRoute /> },
           productRoute('/site', () =>
             import('./product-routes-site-issues').then(({ WebsiteRoute }) => ({

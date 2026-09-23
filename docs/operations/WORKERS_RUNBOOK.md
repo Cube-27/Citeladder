@@ -119,3 +119,79 @@ PR 2 may assume only that the code and configuration contracts exist after PR 1
 merges. It must inspect the protected release record to learn whether origin
 DNS, certificate, secret and compatible backend were actually deployed and
 tested. No repository commit alone establishes that operational gate.
+
+## Product Worker preparation (PR 2)
+
+The product Worker is configured by `frontend/apps/app/wrangler.jsonc`. Its
+production Custom Domain is `app.citeladder.com`; the isolated staging target
+is `staging-app.citeladder.com`. Neither is an apex Worker Route. Both disable
+`workers.dev` and public preview URLs. A protected Cloudflare Access policy must
+cover staging before it is reachable by testers; keep its robots response
+`Disallow: /` and its HTML `noindex`. Disable dashboard Git deployment for
+these Workers so the protected GitHub workflow is the only deployment writer.
+
+The checked-in staging upstream is `https://staging-origin.citeladder.com`.
+Provision it with its own backend, database, ingress credential, certificate and
+exact Caddy public-host allowlist before staging deployment. Configure that
+backend's `FRONTEND_URL` and browser `FRONTEND_ORIGINS` for
+`https://staging-app.citeladder.com`, and register the exact staging Google and
+integration OAuth callback URLs if those flows are tested. Do not point staging
+at production data or reuse the production ingress token. The staging website
+origin `https://staging.citeladder.com` is a build input; do not publish links
+to it until that host is provisioned. Verify the actual DNS and Cloudflare
+account/zone availability before attaching either Custom Domain.
+
+For local Worker verification after `pnpm --dir frontend install --frozen-lockfile`:
+
+```powershell
+$env:PUBLIC_WEBSITE_ORIGIN='https://citeladder.com'
+$env:PUBLIC_APP_ORIGIN='https://app.citeladder.com'
+pnpm --dir frontend build:app
+pnpm --dir frontend types:app-worker
+pnpm --dir frontend dev:app-worker -- --local-protocol https --ip 127.0.0.1 --port 8787
+```
+
+Provide a disposable, 32-character `ORIGIN_TOKEN` through
+`frontend/apps/app/.dev.vars` (ignored by Git) for proxy-path testing; never
+use a production credential.
+Map `app.citeladder.com:8787` to `127.0.0.1` in a local HTTPS client and use
+the actual hostname in the request. A local `/api` or consent request returns
+502 until an isolated protected backend is available. Check `/health`, `/`,
+`/pricing`, an existing `/app-assets/` file, missing JS/image, unsupported
+`POST /projects`, webhook rejection and reserved OAuth/MCP rejection with
+ordinary fetch and `Sec-Fetch-Mode: navigate`. Also check HEAD and response
+headers; HTML is `no-store`, app responses are `noindex`, and hashed assets are
+immutable.
+
+`Product Worker delivery` (`.github/workflows/workers-app-deploy.yml`) is a
+manual, per-target workflow. Its build job uses no Cloudflare credentials and
+uploads the product asset artifact with a public-configuration fingerprint.
+The deploy job requires the protected `workers-app-staging` or
+`workers-app-production` GitHub environment. Put the least-privilege
+`CLOUDFLARE_API_TOKEN` in that environment's secrets and the non-secret
+`CLOUDFLARE_ACCOUNT_ID` in its variables. Store the matching dedicated
+`ORIGIN_TOKEN` as a Cloudflare Worker secret for each named Worker before
+deployment. Set the repository variable `LOGO_DEV_PUBLISHABLE` to the same
+non-secret publishable key used by the GCP app build; the workflow refuses to
+bake an empty key. Set protected environment reviewers and main-only deployment
+rules. Record the resulting Worker version/deployment ID, artifact digest,
+fingerprint, compatible backend revision and secret version reference in the
+protected release record. The workflow summary does not claim backend or
+account acceptance.
+
+Before a staging release, verify the PR 1 ingress provisioning and compatible
+backend are actually deployed. Then deploy staging through the protected
+workflow and test real login, workspace isolation, callbacks, consent and
+pricing confirmation against staging data. Observe forwarded client identity
+through Worker, Cloudflare and Caddy. Do not enable a payment provider merely
+to test this migration. Production app deployment can prepare the Custom
+Domain, but production sign-in is not accepted until PR 3 changes the backend
+browser origin and callbacks and runs its coordinated cutover checks.
+
+To roll back only the product Worker, select the last known-good Worker version
+in Cloudflare Workers & Pages and deploy that version to the same Custom
+Domain. Confirm its `/health`, navigation and asset response, then record the
+version transition. Keep the prior immutable artifact and fingerprint in the
+GitHub release record. This does not roll back DNS, OAuth registrations,
+backend browser origins, ingress secrets or the old apex frontend; use the
+coordinated PR 3 procedure for those. PR 2 leaves the apex deployment untouched.

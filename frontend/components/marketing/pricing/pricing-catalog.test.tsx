@@ -310,7 +310,7 @@ describe('PricingCatalog', () => {
     expect(stored).not.toHaveProperty('amount');
   });
 
-  it('resumes a captured intent after auth and issues one idempotent mutation', async () => {
+  it('requires confirmation after auth and reuses the captured idempotency key', async () => {
     const bodies: unknown[] = [];
     const keys: string[] = [];
     mswServer.use(
@@ -356,6 +356,9 @@ describe('PricingCatalog', () => {
 
     renderPricingPage();
 
+    await screen.findByRole('dialog', { name: 'Complete your billing details' });
+    expect(bodies).toHaveLength(0);
+    await userEvent.click(screen.getByRole('button', { name: 'Continue to checkout' }));
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual(EXPORT_CHECKOUT_BODY);
     // The stored key is REUSED so a first attempt that did reach the backend

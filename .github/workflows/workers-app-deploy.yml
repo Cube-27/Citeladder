@@ -1,0 +1,119 @@
+name: Product Worker delivery
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Isolated staging or production app Custom Domain
+        required: true
+        type: choice
+        options: [staging, production]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workers-app-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      fingerprint: ${{ steps.config.outputs.fingerprint }}
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm --dir frontend install --frozen-lockfile --ignore-scripts
+      - name: Check generated Worker bindings
+        run: |
+          pnpm --dir frontend types:app-worker
+          git diff --exit-code -- frontend/apps/app/worker-configuration.d.ts
+      - name: Select baked public origins
+        id: config
+        shell: bash
+        env:
+          LOGO_DEV_PUBLISHABLE: ${{ vars.LOGO_DEV_PUBLISHABLE }}
+        run: |
+          test -n "$LOGO_DEV_PUBLISHABLE"
+          echo 'NEXT_PUBLIC_DEMO_MODE=false' >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=$LOGO_DEV_PUBLISHABLE" >> "$GITHUB_ENV"
+          if [[ '${{ inputs.target }}' == 'production' ]]; then
+            echo 'PUBLIC_WEBSITE_ORIGIN=https://citeladder.com' >> "$GITHUB_ENV"
+            echo 'PUBLIC_APP_ORIGIN=https://app.citeladder.com' >> "$GITHUB_ENV"
+            values=$'https://citeladder.com\nhttps://app.citeladder.com'
+          else
+            echo 'PUBLIC_WEBSITE_ORIGIN=https://staging.citeladder.com' >> "$GITHUB_ENV"
+            echo 'PUBLIC_APP_ORIGIN=https://staging-app.citeladder.com' >> "$GITHUB_ENV"
+            values=$'https://staging.citeladder.com\nhttps://staging-app.citeladder.com'
+          fi
+          echo "fingerprint=$(printf 'origins=%s\ndemo=false\nlogo=%s\n' "$values" "$LOGO_DEV_PUBLISHABLE" | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - run: pnpm --dir frontend build:app
+      - run: pnpm --dir frontend check:bundle
+      - name: Upload immutable product artifact
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-${{ github.sha }}-${{ steps.config.outputs.fingerprint }}
+          path: frontend/apps/app/dist/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: workers-app-${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm --dir frontend install --frozen-lockfile --ignore-scripts
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: app-${{ github.sha }}-${{ needs.build.outputs.fingerprint }}
+          path: frontend/apps/app/dist/
+      - name: Deploy selected app target
+        working-directory: frontend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          if [[ '${{ inputs.target }}' == 'production' ]]; then
+            pnpm deploy:app
+          else
+            pnpm deploy:app:staging
+          fi
+      - name: Release record
+        shell: bash
+        run: |
+          {
+            echo '## Product Worker release'
+            echo 'Target: ${{ inputs.target }}'
+            echo 'Source: ${{ github.sha }}'
+            echo 'Artifact digest: ${{ needs.build.outputs.artifact_digest }}'
+            echo 'Public configuration fingerprint: ${{ needs.build.outputs.fingerprint }}'
+            echo 'Compatible backend and ingress verification: operator release record required'
+          } >> "$GITHUB_STEP_SUMMARY"

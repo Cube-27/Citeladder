@@ -10,6 +10,11 @@ interactions and presentation; the backend owns authorization, measurement and
 lifecycle truth. [Design](design.md) is the sole visual contract. Feature
 behavior is routed through [the documentation index](README.md).
 
+The product SPA also has a prepared Cloudflare Worker delivery at
+`frontend/apps/app/worker.ts`: Static Assets serve the Vite build, and the
+Worker handles app-host API, browser MCP consent, health and guarded navigation
+fallback. This is not the active production route until the Workers cutover.
+
 ## Routes and shared shell
 
 | Surface | Browser location | Feature owner |

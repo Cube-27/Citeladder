@@ -206,6 +206,11 @@ function resolveSelection(scope: Scope, listed: Project[]) {
 export async function bootstrapPrivateRoutes({ request }: { request: Request }) {
   const client = getAppQueryClient();
   const url = new URL(request.url);
+  if (url.pathname === '/pricing') {
+    const { capturePublicPricingSelection } =
+      await import('@/lib/billing/public-pricing-selection');
+    if (capturePublicPricingSelection(url)) throw redirect('/pricing');
+  }
 
   // `me` and the membership list need only the session cookie — the tree's own
   // providers already issue them in parallel, and the loader pays for every

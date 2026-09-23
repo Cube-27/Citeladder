@@ -91,6 +91,7 @@ export function PricingCatalog() {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [earlyAccessOpen, setEarlyAccessOpen] = useState(false);
   const [selectedCheckout, setSelectedCheckout] = useState<PendingPricingIntentV1 | null>(null);
+  const [resumableOther, setResumableOther] = useState<PendingPricingIntentV1 | null>(null);
 
   /**
    * Is anyone signed in? This is a PUBLIC page, so there is no SessionGuard
@@ -198,18 +199,6 @@ export function PricingCatalog() {
     activation.mutate({ ...intent, country_code: countryCode, billing_details: details });
   };
 
-  /**
-   * Resume after authentication.
-   *
-   * Modelled as ONE mutation that can fail rather than as effect-driven
-   * branching: revalidation, the purchase, and the "choose again" message are
-   * three outcomes of a single operation, so the effect only starts it and
-   * every state change lands in a mutation callback.
-   *
-   * Revalidation is the point of the whole flow — a stored key that vanished,
-   * changed availability, or whose quantity no longer fits its bounds is
-   * rejected before any request is made.
-   */
   const resume = useMutation({
     mutationFn: async () => {
       const stored = readPendingIntent();
@@ -217,13 +206,19 @@ export function PricingCatalog() {
         clearPendingIntent();
         throw new Error(STALE_INTENT_MESSAGE);
       }
-      return activation.mutateAsync(stored);
+      return stored;
+    },
+    onSuccess: (stored) => {
+      if (stored.kind === 'checkout') {
+        setCountry(stored.country_code ?? '');
+        setBillingDetails(stored.billing_details ?? emptyBillingCustomerDetails());
+        setSelectedCheckout(stored);
+      } else {
+        setResumableOther(stored);
+      }
     },
     onError: () => setNotice(STALE_INTENT_MESSAGE),
   });
-
-  // `mutate` is referentially stable across renders, so it is a safe dep and
-  // needs no ref to dodge the lint.
   const startResume = resume.mutate;
   useEffect(() => {
     if (!catalog || !isAuthenticated) return;
@@ -265,6 +260,20 @@ export function PricingCatalog() {
         ) : null}
         <CheckoutStatus checkout={checkout} />
         <PricingFeedback notice={notice} error={activation.error} />
+        {resumableOther ? (
+          <div className="mb-6 flex items-center gap-3">
+            <p>Review your {resumableOther.kind} selection before continuing.</p>
+            <button
+              type="button"
+              onClick={() => {
+                runOrCapture(resumableOther);
+                setResumableOther(null);
+              }}
+            >
+              Confirm purchase
+            </button>
+          </div>
+        ) : null}
         <PlansGrid
           catalog={catalog}
           failed={catalogQuery.isError}

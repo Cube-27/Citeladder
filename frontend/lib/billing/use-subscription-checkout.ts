@@ -120,67 +120,111 @@ export function useSubscriptionCheckout() {
     return attempt.current;
   };
 
-  const mutation = useMutation({
-    mutationFn: async ({ input, key }: { input: SubscriptionCheckoutInput; key?: string }) => {
-      const workspaceId = purchaseWorkspace(scope);
-      const user = await authApi.me();
-      const started = beginAttempt(user.id, workspaceId, input, key);
-      const activation = await billingApi.createSubscription(input, started.key, {
-        workspaceId,
-      });
-      activationId.current = activation.activation_id;
-      const current = await refresh();
-      if (!current) return activation;
-      if (current.status !== 'pending') return current;
-      const checkout = await billingApi.checkout(activation.activation_id, {
-        workspaceId,
-      });
-      setTestMode(checkout.provider_mode === 'test');
-      const outcome = await startCheckoutFlow(checkout, user.email, setNotice);
-      if (outcome.kind !== 'callback') {
-        // A redirect hands the browser to the provider and this tab is done;
-        // the other two are settled non-outcomes the reader is told about.
-        const message = INCOMPLETE_CHECKOUT[outcome.kind];
-        if (message) setNotice(message);
-        return activation;
-      }
-      setNotice('Payment verification pending');
-      try {
-        await billingApi.verifyCheckout(activation.activation_id, outcome.callback, {
-          workspaceId,
+  const prepareCheckout = async ({
+    input,
+    key,
+  }: {
+    input: SubscriptionCheckoutInput;
+    key?: string;
+  }) => {
+    const workspaceId = purchaseWorkspace(scope);
+    const user = await authApi.me();
+    const started = beginAttempt(user.id, workspaceId, input, key);
+    const activation = await billingApi.createSubscription(input, started.key, {
+      workspaceId,
+    });
+    activationId.current = activation.activation_id;
+    return activation;
+  };
+
+  const pollActivation = async (current: Awaited<ReturnType<typeof billingApi.activation>>) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      CHECKOUT_POLL_ATTEMPTS * CHECKOUT_POLL_INTERVAL_MS,
+    );
+    let settled = current;
+    try {
+      for (
+        let index = 0;
+        index < CHECKOUT_POLL_ATTEMPTS && !controller.signal.aborted;
+        index += 1
+      ) {
+        const state = await refresh(controller.signal);
+        if (state) settled = state;
+        if (state?.status !== 'pending') break;
+        await new Promise((resolve) => {
+          setTimeout(resolve, CHECKOUT_POLL_INTERVAL_MS);
         });
-      } catch {
-        setNotice('Payment verification is uncertain. Refresh status before retrying.');
-        return activation;
       }
-      const controller = new AbortController();
-      const timeout = setTimeout(
-        () => controller.abort(),
-        CHECKOUT_POLL_ATTEMPTS * CHECKOUT_POLL_INTERVAL_MS,
-      );
-      let settled = current;
-      try {
-        for (
-          let index = 0;
-          index < CHECKOUT_POLL_ATTEMPTS && !controller.signal.aborted;
-          index += 1
-        ) {
-          const state = await refresh(controller.signal);
-          if (state) settled = state;
-          if (state?.status !== 'pending') break;
-          await new Promise((resolve) => {
-            setTimeout(resolve, CHECKOUT_POLL_INTERVAL_MS);
-          });
-        }
-      } finally {
-        clearTimeout(timeout);
-      }
-      return settled;
+    } finally {
+      clearTimeout(timeout);
+    }
+    return settled;
+  };
+
+  const continueCheckout = async () => {
+    const started = attempt.current;
+    const id = activationId.current;
+    if (!started || !id || purchaseWorkspace(scope) !== started.workspaceId) {
+      throw new Error('Review the quote again for the selected workspace.');
+    }
+    const user = await authApi.me();
+    if (user.id !== started.userId) throw new Error('Sign in again before checkout.');
+    const current = await refresh();
+    if (current?.status !== 'pending') return current;
+    const workspaceId = started.workspaceId;
+    const checkout = await billingApi.checkout(id, { workspaceId });
+    setTestMode(checkout.provider_mode === 'test');
+    const outcome = await startCheckoutFlow(checkout, user.email, setNotice);
+    if (outcome.kind !== 'callback') {
+      // A redirect hands the browser to the provider and this tab is done;
+      // the other two are settled non-outcomes the reader is told about.
+      const message = INCOMPLETE_CHECKOUT[outcome.kind];
+      if (message) setNotice(message);
+      return current;
+    }
+    setNotice('Payment verification pending');
+    try {
+      await billingApi.verifyCheckout(id, outcome.callback, {
+        workspaceId,
+      });
+    } catch {
+      setNotice('Payment verification is uncertain. Refresh status before retrying.');
+      return current;
+    }
+    return pollActivation(current);
+  };
+
+  const prepareMutation = useMutation({
+    mutationFn: prepareCheckout,
+    onError: (error) => setNotice(error instanceof Error ? error.message : 'Quote unavailable.'),
+  });
+  const confirmMutation = useMutation({
+    mutationFn: continueCheckout,
+    onError: (error) => setNotice(error instanceof Error ? error.message : 'Checkout unavailable.'),
+  });
+  const mutation = useMutation({
+    mutationFn: async (input: { input: SubscriptionCheckoutInput; key?: string }) => {
+      const activation = await prepareCheckout(input);
+      if (activation.status !== 'pending') return (await refresh()) ?? activation;
+      return (await continueCheckout()) ?? activation;
     },
     onError: (error) =>
       setNotice(
         error instanceof Error ? error.message : 'Checkout could not complete. Please retry.',
       ),
   });
-  return { ...mutation, notice, testMode, refresh, start: mutation.mutateAsync };
+  return {
+    ...mutation,
+    notice,
+    testMode,
+    refresh,
+    start: mutation.mutateAsync,
+    prepare: prepareMutation.mutateAsync,
+    prepared: prepareMutation.data ?? null,
+    preparing: prepareMutation.isPending,
+    confirmPrepared: confirmMutation.mutateAsync,
+    confirming: confirmMutation.isPending,
+  };
 }
