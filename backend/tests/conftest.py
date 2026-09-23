@@ -77,6 +77,7 @@ _TEST_ENVIRONMENT = {
     # independent of that inherited allow-list before app middleware is built.
     "FRONTEND_URL": "http://127.0.0.1:3000",
     "FRONTEND_ORIGINS": "http://127.0.0.1:3000,http://localhost:3000",
+    "MCP_PUBLIC_BASE_URL": "http://127.0.0.1:3000",
     "JWT_SECRET_KEY": "citeladder-test-jwt-secret-key-not-a-real-secret",
     "ENCRYPTION_KEY": "citeladder-test-encryption-key-not-a-real-secret",
     "REFERRAL_HASH_SALT": "citeladder-test-referral-salt-not-a-real-secret",
