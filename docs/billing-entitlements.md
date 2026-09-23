@@ -85,8 +85,11 @@ after sign-in it resolves the selected workspace and fresh catalog, requires
 billing permission and explicit confirmation, and uses the existing
 workspace-scoped checkout controller. A base-plan checkout shows the
 backend-resolved quote before the separate payment confirmation. No purchase
-starts from a GET, login or reload. The current apex pricing page remains
-active until the marketing cutover; it also requires confirmation on resume.
+starts from a GET, login or reload. The prepared marketing Worker renders the
+validated public catalog in initial HTML and links bounded selections to app
+`/pricing`. It sends no visitor credentials on the catalog read and performs no
+billing mutation. The captured old apex runtime remains available for
+first-cutover recovery.
 
 The no-card introductory offer is separate from checkout: explicit consent,
 once-per-account eligibility and idempotent activation are catalog-controlled.

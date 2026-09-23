@@ -2,6 +2,12 @@ name: GCP Demo - Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      browser_origin:
+        description: Apex before cutover or for recovery; app for approved cutover
+        required: true
+        type: choice
+        options: [apex, app]
 
 permissions:
   contents: read
@@ -44,17 +50,20 @@ jobs:
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       ORIGIN_DOMAIN_NAME: ${{ vars.ORIGIN_DOMAIN_NAME || 'origin.citeladder.com' }}
       APP_DOMAIN_NAME: ${{ vars.APP_DOMAIN_NAME || 'app.citeladder.com' }}
-      FRONTEND_URL: ${{ vars.FRONTEND_URL || format('https://{0}', vars.DOMAIN_NAME) }}
-      FRONTEND_ORIGINS: ${{ vars.FRONTEND_ORIGINS || format('https://{0}', vars.DOMAIN_NAME) }}
-      MCP_PUBLIC_BASE_URL: ${{ vars.MCP_PUBLIC_BASE_URL || format('https://{0}', vars.DOMAIN_NAME) }}
-      PUBLIC_WEBSITE_ORIGIN: ${{ vars.PUBLIC_WEBSITE_ORIGIN || format('https://{0}', vars.DOMAIN_NAME) }}
-      PUBLIC_APP_ORIGIN: ${{ vars.PUBLIC_APP_ORIGIN || format('https://{0}', vars.DOMAIN_NAME) }}
+      FRONTEND_URL: ${{ inputs.browser_origin == 'app' && format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') || format('https://{0}', vars.DOMAIN_NAME) }}
+      FRONTEND_ORIGINS: ${{ inputs.browser_origin == 'app' && format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') || format('https://{0}', vars.DOMAIN_NAME) }}
+      MCP_PUBLIC_BASE_URL: ${{ format('https://{0}', vars.DOMAIN_NAME) }}
+      PUBLIC_WEBSITE_ORIGIN: ${{ format('https://{0}', vars.DOMAIN_NAME) }}
+      PUBLIC_APP_ORIGIN: ${{ inputs.browser_origin == 'app' && format('https://{0}', vars.APP_DOMAIN_NAME || 'app.citeladder.com') || format('https://{0}', vars.DOMAIN_NAME) }}
       # A VARIABLE, deliberately: this key is publishable and ships in the
       # client bundle, so storing it as a secret would only make it write-only
       # and mask it to `***` in the logs you would debug from. `vars.` does not
       # fall back to `secrets.`, so a token filed under the wrong one resolves
       # to the empty string and bakes '' into the bundle silently.
       LOGO_DEV_PUBLISHABLE: ${{ vars.LOGO_DEV_PUBLISHABLE }}
+      # Captured immutable PR 2 images keep the first-cutover rollback runnable.
+      LEGACY_FRONTEND_IMAGE: ${{ vars.LEGACY_FRONTEND_IMAGE }}
+      LEGACY_VITE_APP_IMAGE: ${{ vars.LEGACY_VITE_APP_IMAGE }}
       DEMO_LOGIN_EMAIL: ${{ vars.DEMO_LOGIN_EMAIL }}
       DEV_LOGIN_COUNTER_ALLOWANCE: ${{ vars.DEV_LOGIN_COUNTER_ALLOWANCE || '200' }}
     steps:
@@ -162,14 +171,9 @@ jobs:
           set -euo pipefail
           registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
           gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-          frontend_config="$(printf 'website=%s\napp=%s\n' \
-            "$PUBLIC_WEBSITE_ORIGIN" "$PUBLIC_APP_ORIGIN" | sha256sum | cut -c1-16)"
-          app_config="$(printf 'website=%s\napp=%s\ndemo=%s\nlogo=%s\n' \
-            "$PUBLIC_WEBSITE_ORIGIN" "$PUBLIC_APP_ORIGIN" "$DEMO_MODE" \
-            "$LOGO_DEV_PUBLISHABLE" | sha256sum | cut -c1-16)"
-          frontend_tag="$GITHUB_SHA-$frontend_config"
-          app_tag="$GITHUB_SHA-$app_config"
-          echo "Public frontend config fingerprints: marketing=$frontend_config app=$app_config" >> "$GITHUB_STEP_SUMMARY"
+          echo "Pinned legacy frontend images: $LEGACY_FRONTEND_IMAGE $LEGACY_VITE_APP_IMAGE" >> "$GITHUB_STEP_SUMMARY"
+          [[ "$LEGACY_FRONTEND_IMAGE" =~ ^$registry/frontend@sha256:[0-9a-f]{64}$ ]]
+          [[ "$LEGACY_VITE_APP_IMAGE" =~ ^$registry/vite-app@sha256:[0-9a-f]{64}$ ]]
 
           # `images describe` reads Container Analysis occurrences alongside the
           # digest, so it needs containeranalysis.occurrences.list — a separate
@@ -185,32 +189,13 @@ jobs:
             docker build --build-arg BUILD_REVISION="$GITHUB_SHA" -t "$registry/backend:$GITHUB_SHA" ../..
             docker push "$registry/backend:$GITHUB_SHA"
           fi
-          if [ -z "$(image_digest frontend "$frontend_tag")" ]; then
-            docker build --build-arg BUILD_REVISION="$GITHUB_SHA" \
-              --build-arg PUBLIC_WEBSITE_ORIGIN="$PUBLIC_WEBSITE_ORIGIN" \
-              --build-arg PUBLIC_APP_ORIGIN="$PUBLIC_APP_ORIGIN" \
-              -t "$registry/frontend:$frontend_tag" -f ../../frontend/Dockerfile ../..
-            docker push "$registry/frontend:$frontend_tag"
-          fi
-          if [ -z "$(image_digest vite-app "$app_tag")" ]; then
-            docker build \
-              --build-arg NEXT_PUBLIC_DEMO_MODE="$DEMO_MODE" \
-              --build-arg PUBLIC_WEBSITE_ORIGIN="$PUBLIC_WEBSITE_ORIGIN" \
-              --build-arg PUBLIC_APP_ORIGIN="$PUBLIC_APP_ORIGIN" \
-              --build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE="$LOGO_DEV_PUBLISHABLE" \
-              -t "$registry/vite-app:$app_tag" -f ../../frontend/apps/app/Dockerfile ../..
-            docker push "$registry/vite-app:$app_tag"
-          fi
           backend_digest="$(image_digest backend)"
-          frontend_digest="$(image_digest frontend "$frontend_tag")"
-          vite_app_digest="$(image_digest vite-app "$app_tag")"
           test -n "$backend_digest"
-          test -n "$frontend_digest"
-          test -n "$vite_app_digest"
-          test "$backend_digest" != "$frontend_digest"
           backend="$registry/backend@$backend_digest"
-          frontend="$registry/frontend@$frontend_digest"
-          vite_app="$registry/vite-app@$vite_app_digest"
+          frontend="$LEGACY_FRONTEND_IMAGE"
+          vite_app="$LEGACY_VITE_APP_IMAGE"
+          gcloud artifacts docker images list "$registry/frontend" --format='value(version)' --quiet | grep -Fx "${frontend##*@}"
+          gcloud artifacts docker images list "$registry/vite-app" --format='value(version)' --quiet | grep -Fx "${vite_app##*@}"
           jq --arg backend "$backend" --arg frontend "$frontend" --arg vite_app "$vite_app" \
             '.backend_image=$backend|.frontend_image=$frontend|.vite_app_image=$vite_app' demo.auto.tfvars.json > /tmp/tfvars
           mv /tmp/tfvars demo.auto.tfvars.json
@@ -386,28 +371,28 @@ jobs:
           DEMO_LOGIN_PASSWORD: ${{ secrets.DEMO_LOGIN_PASSWORD }}
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --retry 12 --retry-delay 5 "https://$DOMAIN_NAME/health" >/dev/null
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 "$FRONTEND_URL/health" >/dev/null
           login_payload="$(jq -nc --arg email "${DEMO_LOGIN_EMAIL:-dev@citeladder.com}" --arg password "$DEMO_LOGIN_PASSWORD" '{email:$email,password:$password}')"
           login_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
             -X POST -H 'content-type: application/json' --data "$login_payload" \
-            "https://$DOMAIN_NAME/api/v1/auth/login")"
+            "$FRONTEND_URL/api/v1/auth/login")"
           if test "$login_status" != 200; then
             echo "::error::Configured live dev login returned HTTP $login_status"
             exit 1
           fi
           # A dead "Continue with Google" is a 503 behind a button, not a failed
           # deploy, so assert the catalog reports Google usable.
-          curl --fail --silent --show-error "https://$DOMAIN_NAME/api/v1/auth/oauth/providers" \
+          curl --fail --silent --show-error "$FRONTEND_URL/api/v1/auth/oauth/providers" \
             | jq -e '[.providers[] | select(.provider == "google" and .configured)] | length == 1' >/dev/null
           # The Vite document is client-rendered; verify the deploy serves its shell.
-          register_page="$(curl --fail --silent --show-error "https://$DOMAIN_NAME/register")"
+          register_page="$(curl --fail --silent --show-error "$FRONTEND_URL/register")"
           grep -q '<div id="root"></div>' <<<"$register_page"
           if test "$DEMO_MODE" = "true"; then
             registration_payload="$(jq -nc --arg email "$DEMO_LOGIN_EMAIL" --arg password "$(openssl rand -hex 16)" \
               '{email:$email,password:$password}')"
             status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
               -X POST -H 'content-type: application/json' --data "$registration_payload" \
-              "https://$DOMAIN_NAME/api/v1/auth/register")
+              "$FRONTEND_URL/api/v1/auth/register")
             test "$status" = 403
           fi
           {

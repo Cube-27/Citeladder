@@ -42,6 +42,10 @@ curl -fsS http://localhost:8000/health
       healthy or running as designed.
 - [ ] Marketing, `/login`, direct app refreshes, and their CSS/JS load through port 3000;
       missing routes/assets return 404. Browser requests use relative `/api/*` routes.
+- [ ] The local Workerd marketing runtime serves initial HTML and the public
+      catalog through the disposable Compose upstream. Production Worker Custom
+      Domains and split-origin callbacks are verified separately through the
+      [Workers runbook](operations/WORKERS_RUNBOOK.md).
 - [ ] The API health endpoint responds at port 8000.
 - [ ] Smoke-test the appropriate authenticated and worker-backed flows with non-production data.
 - [ ] Stop the evidence stack when finished: `env -u POSTGRES_PASSWORD -u POSTGRES_USER

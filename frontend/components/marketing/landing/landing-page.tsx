@@ -15,6 +15,7 @@ import {
 import { EngineLogo } from '../primitives/engine-logo';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
+import { appHref } from '@/lib/config/app-link';
 import {
   CAPABILITIES,
   FAQS,
@@ -50,7 +51,12 @@ function Hero() {
           </p>
           <div className="cl-hero-actions">
             <DemoLink />
-            <ButtonLink href="/register" variant="soft" size="marketing" className="cl-cta">
+            <ButtonLink
+              href={appHref('/register')}
+              variant="soft"
+              size="marketing"
+              className="cl-cta"
+            >
               Start free trial <ArrowRight size={18} aria-hidden />
             </ButtonLink>
           </div>
@@ -348,7 +354,12 @@ function Closing() {
         </div>
         <div className="cl-closing-actions">
           <DemoLink />
-          <ButtonLink href="/register" variant="dark" size="marketing" className="cl-cta">
+          <ButtonLink
+            href={appHref('/register')}
+            variant="dark"
+            size="marketing"
+            className="cl-cta"
+          >
             Start free trial <ArrowRight size={18} aria-hidden />
           </ButtonLink>
         </div>

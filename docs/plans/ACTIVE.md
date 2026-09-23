@@ -5,7 +5,8 @@
 - [Workers migration — four sequential PRs](CiteLadder_Workers_Migration_Implementation_Plan.md)
   — implementation plan requested; PRs 1–4 run in separate chats after each
   predecessor merges. Follows the [architecture specification](CiteLadder_Workers_Migration_Architecture.md).
-  PR 1 merged as #133 (`7dffa2ef`); PR 2 implementation is in progress.
+  PR 1 merged as #133 (`7dffa2ef`); PR 2 merged as #134 (`f9f1ad16`);
+  PR 3 implementation is in progress.
   No deployment or production acceptance is claimed. PR 3 owns the post-merge cutover
   procedure; PR 4 follows successful immediate cutover checks. Owner requests
   same-day delivery: no seven-day observation window; no current customers.

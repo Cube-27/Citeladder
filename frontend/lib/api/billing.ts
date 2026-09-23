@@ -40,7 +40,6 @@ export type BillingUsage = z.infer<typeof billingUsageSchema>;
 export type BillingQuote = z.infer<typeof resolvedQuoteSchema>;
 export type BillingInvoice = z.infer<typeof billingInvoiceSchema>;
 export type WorkspaceEntitlement = z.infer<typeof workspaceEntitlementSchema>;
-export type NoCardOffer = z.infer<typeof noCardOfferSchema>;
 export type UsageItem = BillingUsage['items'][number];
 export type CredentialMode = 'byok' | 'funded';
 export type SelfServePlanKey = 'tier_1' | 'tier_2' | 'tier_3';

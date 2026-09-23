@@ -3,6 +3,7 @@ export interface WorkerOriginConfig {
   upstream: string;
   publicHost: string;
   originToken: string;
+  allowDevelopmentHttp?: boolean;
 }
 type WorkerTransport = (request: Request) => Promise<Response>;
 
@@ -28,10 +29,10 @@ const INTERNAL_HEADERS = new Set([
   'x-citeladder-public-host',
 ]);
 
-function upstreamOrigin(value: string): URL {
+function upstreamOrigin(value: string, allowDevelopmentHttp = false): URL {
   const url = new URL(value);
   if (
-    url.protocol !== 'https:' ||
+    (url.protocol !== 'https:' && !(allowDevelopmentHttp && url.href === 'http://web:8000/')) ||
     url.username ||
     url.password ||
     url.pathname !== '/' ||
@@ -44,7 +45,7 @@ function upstreamOrigin(value: string): URL {
 }
 
 function originRequest(request: Request, config: WorkerOriginConfig, incoming: URL): Request {
-  const upstream = upstreamOrigin(config.upstream);
+  const upstream = upstreamOrigin(config.upstream, config.allowDevelopmentHttp);
   upstream.pathname = incoming.pathname;
   upstream.search = incoming.search;
   const headers = new Headers();
@@ -61,7 +62,8 @@ function originRequest(request: Request, config: WorkerOriginConfig, incoming: U
     cache: 'no-store',
     redirect: 'manual',
     signal: request.signal,
-  });
+    duplex: 'half',
+  } as RequestInit & { duplex: 'half' });
 }
 
 function originResponse(upstreamResponse: Response): Response {
@@ -88,7 +90,7 @@ export async function proxyWorkerRequest(
   transport: WorkerTransport = fetch,
 ): Promise<Response> {
   const incoming = new URL(request.url);
-  if (incoming.protocol !== 'https:' || incoming.hostname !== config.publicHost) {
+  if (!validPublicRequest(incoming, config)) {
     return new Response('Invalid public host.', { status: 403 });
   }
   if (!config.originToken || config.originToken.length < 32) {
@@ -104,4 +106,12 @@ export async function proxyWorkerRequest(
       headers: { 'Cache-Control': 'no-store' },
     });
   }
+}
+
+function validPublicRequest(incoming: URL, config: WorkerOriginConfig): boolean {
+  const localHttp =
+    config.allowDevelopmentHttp &&
+    incoming.protocol === 'http:' &&
+    incoming.hostname === config.publicHost;
+  return (localHttp || incoming.protocol === 'https:') && incoming.hostname === config.publicHost;
 }

@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
-import node from '@astrojs/node';
+import cloudflare from '@astrojs/cloudflare';
 import react from '@astrojs/react';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
@@ -14,7 +14,7 @@ if (mode === 'production') {
   publicOrigins(
     process.env.PUBLIC_WEBSITE_ORIGIN ?? environment.PUBLIC_WEBSITE_ORIGIN,
     process.env.PUBLIC_APP_ORIGIN ?? environment.PUBLIC_APP_ORIGIN,
-    true,
+    process.env.LOCAL_COMPOSE_BUILD !== 'true',
   );
 }
 const apiRequestTimeout = JSON.stringify(
@@ -25,7 +25,11 @@ const apiRequestTimeout = JSON.stringify(
 
 export default defineConfig({
   output: 'server',
-  adapter: node({ mode: 'standalone' }),
+  session: false,
+  // External webhook and MCP POSTs reach exact routes; the backend verifies
+  // signatures, OAuth transactions and CSRF at their owning endpoints.
+  security: { checkOrigin: false },
+  adapter: cloudflare({ imageService: 'compile' }),
   integrations: [react()],
   publicDir: fileURLToPath(new URL('../../public', import.meta.url)),
   server: {

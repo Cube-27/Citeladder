@@ -152,6 +152,17 @@ firewall permits web traffic only from current Cloudflare address ranges.
 
 ## 5. First deployment and acceptance
 
+For Workers migration PR 3 and later, [the Workers runbook](WORKERS_RUNBOOK.md)
+owns the coordinated cutover. Before a GCP deployment, capture the running old
+frontend image digests and set protected `gcp-demo` variables
+`LEGACY_FRONTEND_IMAGE` and `LEGACY_VITE_APP_IMAGE`. The workflow keeps those
+images pinned while building only the backend. Select `browser_origin=apex` for
+pre-cutover delivery or recovery and `browser_origin=app` only for the approved
+cutover; the selection sets `FRONTEND_URL`, `FRONTEND_ORIGINS` and the app link
+origin together while pinning MCP identity to the apex. The provider callback
+table above describes the old apex registration; add app callbacks through the
+Workers cutover packet before selecting `app`.
+
 Merge the intended commit to `main` and wait for required CI. Run **GCP Demo -
 Deploy** from `main` and approve `gcp-demo`. It serializes deployments, safely
 reuses immutable images when retrying the same commit, applies Terraform,

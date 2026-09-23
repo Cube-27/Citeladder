@@ -9,10 +9,9 @@ import { type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
-import { MarketingAccountGlyphPlaceholder, MarketingAccountMenu } from './marketing-account-menu';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
-import { useMarketingSession } from './use-marketing-session';
+import { appHref } from '@/lib/config/app-link';
 
 /** What asked for a dropdown: a resting pointer, or an explicit focus move. */
 export type OpenSource = 'hover' | 'focus';
@@ -181,8 +180,6 @@ function useDesktopDropdown() {
 /** Fixed marketing chrome with accessible desktop dropdowns and mobile accordions. */
 export function MarketingNav() {
   const reduceMotion = useReducedMotion();
-  const { isAuthenticated, sessionPending, dashboardHref, email, hasSessionHint } =
-    useMarketingSession();
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<NavDropKey | null>(null);
@@ -293,29 +290,11 @@ export function MarketingNav() {
           clearLens={clearLens}
         />
 
-        <NavActions
-          isAuthenticated={isAuthenticated}
-          sessionPending={sessionPending}
-          dashboardHref={dashboardHref}
-          email={email}
-          mobileOpen={mobileOpen}
-          onToggleMenu={() => setMobileOpen((open) => !open)}
-        />
+        <NavActions mobileOpen={mobileOpen} onToggleMenu={() => setMobileOpen((open) => !open)} />
       </nav>
 
       {mobileOpen && (
-        <MobileNavigation
-          isAuthenticated={isAuthenticated}
-          // The sheet has no static HTML to match, so it can read the hint
-          // cookie directly: only a visitor who actually holds a session waits
-          // on the skeleton. Everyone else is offered "Log in" immediately,
-          // which is the same rule the header actions follow in CSS.
-          sessionPending={sessionPending && hasSessionHint}
-          dashboardHref={dashboardHref}
-          openAcc={openAcc}
-          setOpenAcc={setOpenAcc}
-          closeMenu={closeMenu}
-        />
+        <MobileNavigation openAcc={openAcc} setOpenAcc={setOpenAcc} closeMenu={closeMenu} />
       )}
     </div>
   );
@@ -361,92 +340,39 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
   );
 }
 
-/** Log in and sign up: what a visitor with no session is offered. */
-function AnonymousActions() {
+/** Direct links to the app's account entry points. */
+function ProductActions() {
   return (
     <>
       <a
-        href="/login"
+        href={appHref('/login')}
         className="website-nav text-muted hover:text-accent-text inline-flex px-4 transition-colors"
       >
         Log in
       </a>
-      <ButtonLink href="/register" className="hidden min-h-10 px-4 sm:inline-flex">
+      <ButtonLink href={appHref('/register')} className="hidden min-h-10 px-4 sm:inline-flex">
         Sign up
       </ButtonLink>
     </>
   );
 }
 
-/**
- * The desktop session row, which has three answers rather than two.
- *
- * Before `me` answers, this render is also the STATIC HTML, so React cannot
- * choose without guessing. It emits BOTH answers and lets CSS pick before
- * paint: `ReturningVisitorHint` marks the document when this browser holds a
- * live session hint and `globals.css` shows the matching branch. The anonymous
- * majority get "Log in" in the first paint; someone returning gets a reserved
- * account glyph until the session resolves.
- */
-function DesktopSessionActions({
-  sessionPending,
-  isAuthenticated,
-  dashboardHref,
-  email,
-}: Readonly<{
-  sessionPending: boolean;
-  isAuthenticated: boolean;
-  dashboardHref: string;
-  email: string;
-}>) {
-  if (sessionPending) {
-    return (
-      <>
-        <span data-session-anon>
-          <AnonymousActions />
-        </span>
-        <span data-session-returning>
-          {/* The account circle is reserved here while `me` is in flight so
-              its initials arrive without shifting the header. */}
-          <MarketingAccountGlyphPlaceholder />
-        </span>
-      </>
-    );
-  }
-  if (!isAuthenticated) return <AnonymousActions />;
-  return <MarketingAccountMenu email={email} dashboardHref={dashboardHref} />;
-}
-
 function NavActions({
-  isAuthenticated,
-  sessionPending,
-  dashboardHref,
-  email,
   mobileOpen,
   onToggleMenu,
 }: Readonly<{
-  isAuthenticated: boolean;
-  sessionPending: boolean;
-  dashboardHref: string;
-  email: string;
   mobileOpen: boolean;
   onToggleMenu: () => void;
 }>) {
   return (
     <div className="flex shrink-0 items-center gap-3 justify-self-end">
-      {/* While the sheet is open it owns the account actions — it carries its
-          own "Log in" / "Dashboard" row at the bottom. Hiding the header account
+      {/* While the sheet is open it owns the account actions. Hiding the header account
           control keeps the close button clear of a second account affordance. Hidden in
           CSS rather than unmounted so a phone-width menu left open across a
           resize to desktop, where the sheet itself is `lg:hidden`, does not
           take the desktop actions down with it. */}
       <div className={cn('flex items-center gap-3', mobileOpen && 'max-lg:hidden')}>
-        <DesktopSessionActions
-          sessionPending={sessionPending}
-          isAuthenticated={isAuthenticated}
-          dashboardHref={dashboardHref}
-          email={email}
-        />
+        <ProductActions />
       </div>
       <button
         type="button"

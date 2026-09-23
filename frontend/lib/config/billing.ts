@@ -5,25 +5,10 @@
  * Checkout prices, limits, and availability come only from `GET /billing/catalog`.
  */
 
-/**
- * BYOK is ON by default in this release because `base_price` is the only
- * measured, available price: funded inputs are deliberately unset, so
- * `credit_price` is null and funded checkout cannot start. Frozen §7.1's
- * "default OFF shows funded, BYOK animates downward" behaviour is deferred
- * until the funded catalog values are measured (PR3).
- */
-export const PRICING_BYOK_DEFAULT_ON = true;
-
 export const PROJECT_SLOTS_CAPABILITY = 'project_slots';
 export const CONTENT_CREATION_CAPABILITY = 'content_creation';
 export const GROWTH_AGENT_CAPABILITY = 'growth_agent';
 export const PROJECT_DELETION_CAPABILITY = 'project_deletion';
-
-/** Duration of the numeric price tween. Only real number-to-number changes animate. */
-export const PRICING_PRICE_TWEEN_MS = 275;
-
-/** The query parameter that mirrors BYOK selection into the URL. */
-export const PRICING_BYOK_QUERY_PARAM = 'byok';
 
 /** Set on return from auth when a captured pricing intent should be resumed. */
 export const PRICING_RESUME_QUERY_PARAM = 'resumeActivation';

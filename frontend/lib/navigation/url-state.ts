@@ -159,11 +159,10 @@ export function setUrlParams(
 /**
  * A same-document href, dropping the `?` when the query is empty.
  *
- * Three call sites rebuilt this string by hand — here, and the two pricing
- * hooks that clear their intent parameters — and a stray `?` on an otherwise
- * identical URL is enough to make a history entry look like a navigation.
+ * A stray `?` on an otherwise identical URL is enough to make a history entry
+ * look like a navigation.
  */
-export function hrefWithQuery(
+function hrefWithQuery(
   location: Readonly<{ pathname: string; hash: string }>,
   query: string,
 ): string {

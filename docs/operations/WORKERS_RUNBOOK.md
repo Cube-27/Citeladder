@@ -2,8 +2,8 @@
 
 This is the operator procedure for the four-PR
 [Workers migration plan](../plans/CiteLadder_Workers_Migration_Implementation_Plan.md).
-PR 1 prepares a second, authenticated GCP ingress. It does not change apex
-traffic, attach a Worker Custom Domain, or activate app-host sessions.
+PRs 1–3 prepare protected ingress and two Workers. Repository availability does
+not establish DNS, provider registration, deployment or production acceptance.
 
 ## Baseline and release record
 
@@ -195,3 +195,99 @@ version transition. Keep the prior immutable artifact and fingerprint in the
 GitHub release record. This does not roll back DNS, OAuth registrations,
 backend browser origins, ingress secrets or the old apex frontend; use the
 coordinated PR 3 procedure for those. PR 2 leaves the apex deployment untouched.
+
+## Marketing Worker and cutover preparation (PR 3)
+
+The marketing Worker uses `frontend/apps/marketing/wrangler.jsonc` and the
+generated `dist/server/wrangler.json` from its Astro build. Its production
+Custom Domain is `citeladder.com`; isolated staging uses
+`staging.citeladder.com`. Neither uses a Worker Route. Disable dashboard Git
+deployment. Keep staging behind Cloudflare Access and out of search results.
+The build requires explicit `PUBLIC_WEBSITE_ORIGIN` and `PUBLIC_APP_ORIGIN`.
+Build staging with `CLOUDFLARE_ENV=staging`; the protected **Marketing Worker
+delivery** workflow selects these inputs and uploads an immutable artifact.
+The checked-in staging upstream is `https://staging-origin.citeladder.com` and
+must be provisioned with its own backend, data and ingress token. The marketing
+Worker secret `ORIGIN_TOKEN` belongs in each named Worker, with the matching
+isolated value. The public catalog read sends no visitor cookies to that
+upstream. Record the artifact digest, public-config fingerprint, deployment ID
+and matching backend/secret revisions in the protected release record.
+
+Before merging PR 3, capture the **actual running** pre-cutover frontend and
+Vite image digests from the protected GCP release record/VM. Set protected
+`gcp-demo` environment variables `LEGACY_FRONTEND_IMAGE` and
+`LEGACY_VITE_APP_IMAGE` to their full Artifact Registry `@sha256:` references.
+Verify the referenced images still exist. The GCP workflow refuses missing or
+unresolvable digests and builds only the backend from new source. Retain the
+matching Caddy/Compose configuration and VM `.previous` copies through the
+first-cutover rollback gate. A source SHA is not a substitute for those digests.
+
+For local Worker verification, set both public origins and run
+`pnpm --dir frontend build:marketing`, then
+`pnpm --dir frontend exec wrangler dev -c apps/marketing/dist/server/wrangler.json --local --ip 127.0.0.1 --port 8788 --var ORIGIN_UPSTREAM:https://127.0.0.1:9443 --var ORIGIN_TOKEN:local-dev-only-token-32-characters --var LOCAL_WORKER_ORIGIN:true`.
+Use only a disposable local token; never use the production token. Map
+`citeladder.com:8788` to `127.0.0.1` in a local HTTP client. Without an isolated
+protected upstream, pricing explicitly reports catalog unavailability and
+protocol proxy paths return 502. Check initial HTML for home, pricing,
+commercial, docs, article and legal pages, plus canonical and sitemap URLs.
+Check real 404s for old product/API/asset paths, GET consent redirect, safe
+legacy consent POST, exact webhook proxy and MCP discovery. Local Compose uses
+a fixed disposable HTTP exception only through its `web:8000`
+service; production config cannot select it.
+
+### Approved cutover sequence
+
+All actions below require the separately approved release. The PR merge alone
+must leave the old apex serving traffic. Record the operator, source SHA, exact
+Worker and backend artifacts, old DNS/domain associations, certificate, secret
+versions, callback registrations, rollback target and concrete failure
+thresholds before attaching either Custom Domain.
+
+1. In the existing Google OAuth client, add
+   `https://app.citeladder.com/api/v1/auth/oauth/google/callback`, plus
+   `/api/v1/integrations/oauth/gsc/callback` and
+   `/api/v1/integrations/oauth/ga4/callback` on that host. Add the Bing
+   `/api/v1/integrations/oauth/bing/callback` only if enabled. Preserve the
+   existing apex registrations during the immediate rollback window. Review
+   enabled payment return/approved-origin settings, but leave webhook paths on
+   the apex. Record actual provider-console results without copying secrets.
+2. Verify the protected origin DNS/certificate/token and the isolated staging
+   matrix. Deploy the production product Worker through **Product Worker
+   delivery** using `workers-app-production` approval. Confirm its Custom
+   Domain, `/health`, assets, login, same-origin API and consent against the
+   compatible backend. Do not switch marketing links yet.
+3. Dispatch **GCP Demo - Deploy** from `main` with
+   `browser_origin=app`, approve `gcp-demo`, and verify
+   `FRONTEND_URL=FRONTEND_ORIGINS=https://app.citeladder.com` and
+   `MCP_PUBLIC_BASE_URL=https://citeladder.com` in the protected release
+   record. The workflow reuses the pinned old frontend digests. Verify fresh
+   app-host login and enabled callbacks, consent, host-only cookie behavior and
+   existing apex MCP metadata before attaching the apex Worker.
+4. Check for conflicting apex DNS records, Worker Routes and wildcard routes;
+   keep `origin.citeladder.com` untouched. Dispatch **Marketing Worker
+   delivery** with `target=production`, approve `workers-marketing-production`,
+   and attach/verify the `citeladder.com` Custom Domain. Preserve MX, SPF,
+   DKIM and DMARC. Check the direct app links, public pricing handoff, 404s,
+   sitemap and canonicals. Domain association is distinct from version upload.
+5. Run [the architecture acceptance matrix](../plans/CiteLadder_Workers_Migration_Architecture.md#12-acceptance-matrix-evidence-required-before-completion)
+   immediately using safe accounts and data: initial HTML without JavaScript,
+   missing assets and methods, two-session isolation and CSRF, enabled OAuth,
+   old and new MCP clients, catalog failure and selection/confirmation, signed
+   sandbox webhook bytes and duplicate receipt when the provider is enabled,
+   ingress rejection, caches, CPU/errors and recovery references. Do not
+   activate a payment provider for this migration. Mark unavailable external
+   checks unexecuted. Fix and recheck actual failures before PR 4.
+
+### First-cutover recovery
+
+For an isolated Worker defect, redeploy its last accepted version to the same
+Custom Domain and verify its health, HTML and assets. For a coordinated
+rollback, restore the captured apex DNS/domain association to the old Caddy
+frontend, dispatch **GCP Demo - Deploy** with `browser_origin=apex` using the
+same pinned image digests, and verify apex login, callbacks, MCP, marketing and
+pricing before reopening traffic. Keep exact existing provider callback
+registrations through this gate. Restart incompatible OAuth/consent transactions
+safely; never redirect a submitted POST, copy cookies across hosts, restore the
+database, bypass protected ingress, or add a product redirect bridge. Record
+the accepted rollback versions and smoke results. Once immediate acceptance
+passes, PR 4 may retire the old runtime the same day; no waiting period applies.

@@ -32,7 +32,7 @@ export function catalogPlanByKey(catalog: BillingCatalog, key: string): CatalogP
   return catalog.plans.find((plan) => plan.key === key);
 }
 
-export function isSelfServeKey(key: string): key is SelfServePlanKey {
+function isSelfServeKey(key: string): key is SelfServePlanKey {
   return key === 'tier_1' || key === 'tier_2' || key === 'tier_3';
 }
 
@@ -157,9 +157,4 @@ export function formatMoney(money: Money, minorUnits: number): string {
     minimumFractionDigits: value % 1 === 0 ? 0 : minorUnits,
     maximumFractionDigits: minorUnits,
   }).format(value);
-}
-
-/** The major-unit number an animated price tweens between. */
-export function majorUnits(money: Money, minorUnits: number): number {
-  return money.amount_minor / 10 ** minorUnits;
 }

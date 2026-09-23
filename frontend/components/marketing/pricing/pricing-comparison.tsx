@@ -2,23 +2,20 @@
 
 import { Check } from 'lucide-react';
 
-import type { BillingCatalog, CredentialMode } from '@/lib/api/billing';
+import type { BillingCatalog } from '@/lib/api/billing';
 import { formatCount } from '@/lib/format';
-import { launchComparisonRows } from '@/lib/marketing-content/pricing';
+import { comparisonRows } from '@/lib/billing/catalog';
+import { capabilityLabel } from '@/lib/marketing-content/pricing';
 import { cn } from '@/lib/utils';
 
 /**
  * Compact plan comparison grid.
  *
- * Rows mirror the approved launch plan and switch the managed-answer allowance
- * with the selected funding mode. Dense padding, a sticky capability column,
- * and semantic check/dash cells keep the table scannable.
+ * Rows and values come from the published catalog. Dense padding, a sticky
+ * capability column, and semantic check/dash cells keep the table scannable.
  */
-export function PricingComparison({
-  catalog,
-  mode,
-}: Readonly<{ catalog: BillingCatalog; mode: CredentialMode }>) {
-  const rows = launchComparisonRows(mode);
+export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalog }>) {
+  const rows = comparisonRows(catalog);
   const comparedPlans = catalog.plans.filter((plan) => plan.key !== 'enterprise');
   if (rows.length === 0) return null;
 
@@ -52,7 +49,7 @@ export function PricingComparison({
           <tbody>
             {rows.map((row, index) => (
               <tr
-                key={row.label}
+                key={row.key}
                 className={cn(
                   'border-border-subtle border-b last:border-b-0',
                   index % 2 === 1 && 'bg-background-alt/60',
@@ -65,11 +62,11 @@ export function PricingComparison({
                     index % 2 === 1 ? 'bg-background-alt' : 'bg-panel',
                   )}
                 >
-                  {row.label}
+                  {capabilityLabel(row.key)}
                 </th>
                 {comparedPlans.map((plan) => (
                   <td key={plan.key} className="text-muted px-4 py-2.5 text-sm whitespace-nowrap">
-                    {renderCell(row.values[plan.key as keyof typeof row.values])}
+                    {renderCell(row.values[plan.key]?.value)}
                   </td>
                 ))}
               </tr>

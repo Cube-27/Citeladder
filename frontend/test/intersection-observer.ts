@@ -46,8 +46,3 @@ export function installIntersectionObserver() {
   globalThis.IntersectionObserver ??=
     IntersectionObserverStub as unknown as typeof IntersectionObserver;
 }
-
-/** Tell every live observer whether its targets are on screen. */
-export function emitIntersection(isIntersecting: boolean) {
-  for (const observer of IntersectionObserverStub.instances) observer.emit(isIntersecting);
-}

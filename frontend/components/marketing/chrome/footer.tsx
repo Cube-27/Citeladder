@@ -10,10 +10,11 @@ import {
   legalDisplayName,
 } from '@/lib/marketing-content/legal';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { appHref } from '@/lib/config/app-link';
 
 import { Container } from '../primitives/section';
 
-type FooterLink = { label: string; href: string; external?: boolean };
+type FooterLink = { label: string; href: string; external?: boolean; app?: boolean };
 type FooterColumn = { key: string; label: string; links: readonly FooterLink[] };
 
 const FOOTER_COLUMNS: readonly FooterColumn[] = [
@@ -77,7 +78,7 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
         href: PARENT_COMPANY.linkedin,
         external: true,
       },
-      { label: 'Log in', href: '/login' },
+      { label: 'Log in', href: '/login', app: true },
     ],
   },
 ];
@@ -95,7 +96,7 @@ function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
     );
   }
   return (
-    <a className={LINK} href={link.href}>
+    <a className={LINK} href={link.app ? appHref(link.href as `/${string}`) : link.href}>
       {link.label}
     </a>
   );

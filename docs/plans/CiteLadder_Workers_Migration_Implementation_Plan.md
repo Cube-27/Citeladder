@@ -1,7 +1,8 @@
 # CiteLadder Workers migration: four sequential PRs
 
 Prepared 23 September 2026. Planning baseline: `07cb74fb`.
-Status: PR 1 merged as #133 (`7dffa2ef`); PR 2 implementation in progress.
+Status: PR 1 merged as #133 (`7dffa2ef`); PR 2 merged as #134 (`f9f1ad16`);
+PR 3 implementation in progress.
 No deployment or production acceptance claimed.
 
 This is the delivery plan for
