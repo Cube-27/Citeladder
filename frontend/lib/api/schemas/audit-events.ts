@@ -74,5 +74,3 @@ export const auditEventSchema = z.discriminatedUnion('event_type', [
     }),
   ),
 ]);
-
-export const auditEventListSchema = z.array(auditEventSchema);

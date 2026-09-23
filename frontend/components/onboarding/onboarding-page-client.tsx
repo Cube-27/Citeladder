@@ -5,10 +5,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 
 import { PageLoading } from '@/components/layout/page-loading';
+import { GateNoticeFrame } from '@/components/layout/gate-notice-frame';
 import { ShellFallback } from '@/components/layout/shell-fallback';
-import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { textRole } from '@/components/ui/typography';
 import { queryKeys } from '@/lib/api/query-keys';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
@@ -140,20 +139,17 @@ function ProjectSetupBlocked({
       id="main"
       className="bg-shell grid min-h-dvh place-items-center p-[var(--page-section-gap)]"
     >
-      <Alert tone="warning" className="max-w-lg">
-        <div className="grid gap-4">
-          <h1 className={textRole('sectionTitle')}>{title}</h1>
-          <p>{children}</p>
-          {onRetry && (
-            <Button onClick={onRetry} className="w-fit">
-              Retry
-            </Button>
-          )}
-          <Button asChild variant="secondary" className="w-fit">
-            <Link to={projectsHref}>Back to projects</Link>
+      <GateNoticeFrame title={title}>
+        <p>{children}</p>
+        {onRetry && (
+          <Button onClick={onRetry} className="w-fit">
+            Retry
           </Button>
-        </div>
-      </Alert>
+        )}
+        <Button asChild variant="secondary" className="w-fit">
+          <Link to={projectsHref}>Back to projects</Link>
+        </Button>
+      </GateNoticeFrame>
     </main>
   );
 }

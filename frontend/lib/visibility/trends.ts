@@ -11,6 +11,7 @@
 import type { TrendPoint } from '@/components/ui/trend-chart';
 import type { LogicalEngine, VisibilityTrendPoint } from '@/lib/api/types';
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
+import { TREND_COMPARISON_STROKES } from '@/lib/visibility/chart-tokens';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
 export type TrendGranularity = 'run' | 'day' | 'week' | 'month';
@@ -134,15 +135,6 @@ function versionChangeNote(point: VisibilityTrendPoint): string {
  * or period, and drawn from the design system's own chart ramp rather than a
  * palette invented here.
  */
-const SERIES_STROKES = [
-  'stroke-chart-2',
-  'stroke-chart-3',
-  'stroke-chart-4',
-  'stroke-chart-5',
-  'stroke-chart-6',
-  'stroke-chart-7',
-] as const;
-
 /**
  * Comparison lines drawn by default.
  *
@@ -220,7 +212,7 @@ export function toCompetitorSeries(
     .map((row) => row.name);
   return names.map((name, index) => ({
     label: name,
-    strokeClass: SERIES_STROKES[index % SERIES_STROKES.length],
+    strokeClass: TREND_COMPARISON_STROKES[index % TREND_COMPARISON_STROKES.length],
     values: points.map((point) => {
       const row = point.rankings.find((entry) => entry.name === name);
       return row ? rankingMetricValue(row, metric) : null;

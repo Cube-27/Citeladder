@@ -5,9 +5,8 @@ import { useEffect, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { PageLoading } from '@/components/layout/page-loading';
-import { Alert } from '@/components/ui/alert';
+import { GateNoticeFrame } from '@/components/layout/gate-notice-frame';
 import { Button } from '@/components/ui/button';
-import { textRole } from '@/components/ui/typography';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useCanonicalProjectUrl, workspaceDestination } from '@/lib/navigation/project-destination';
@@ -204,12 +203,7 @@ function NoticeLink({ href, children }: Readonly<{ href: string; children: React
 function NoticeShell({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
     <section className="grid min-h-[60vh] place-items-center py-[var(--page-section-gap)]">
-      <Alert tone="warning" className="max-w-lg">
-        <div className="grid gap-4">
-          <h1 className={textRole('sectionTitle')}>{title}</h1>
-          {children}
-        </div>
-      </Alert>
+      <GateNoticeFrame title={title}>{children}</GateNoticeFrame>
     </section>
   );
 }
