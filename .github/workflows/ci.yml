@@ -110,15 +110,18 @@ jobs:
       - name: Pytest with measured coverage
         run: |
           log="$RUNNER_TEMP/backend-pytest.log"
-          if .venv/bin/python -m pytest -q -o faulthandler_timeout=120 \
-            --cov --cov-report=xml > "$log" 2>&1; then
-            echo 'Backend pytest passed.'
-          else
-            status=$?
-            echo "Backend pytest failed (exit $status); last 120 log lines:"
-            tail -n 120 "$log"
+          # Keep progress and faulthandler stacks visible even if the runner
+          # cancels a timed-out job before the failure artifact can upload.
+          set +e
+          .venv/bin/python -u -m pytest -vv -x -o faulthandler_timeout=120 \
+            --cov --cov-report=xml 2>&1 | tee "$log"
+          status="${PIPESTATUS[0]}"
+          set -e
+          if test "$status" -ne 0; then
+            echo "Backend pytest failed (exit $status); full log: $log"
             exit "$status"
           fi
+          echo 'Backend pytest passed.'
       - name: Publish failed backend test log
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

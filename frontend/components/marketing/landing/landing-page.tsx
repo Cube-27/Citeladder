@@ -115,7 +115,7 @@ function Intelligence({ selectModule }: Readonly<{ selectModule: (module: Module
         </div>
         <div className="cl-capabilities">
           {CAPABILITIES.map((capability) => (
-            <article className="cl-capability" key={capability.tab}>
+            <article className={`cl-capability cl-hue-${capability.tab}`} key={capability.tab}>
               <div className="cl-cap-well">
                 <div className="cl-cap-top">
                   <span>{capability.label}</span>

@@ -1,0 +1,784 @@
+/*
+ * Sample product UI for the homepage: the hero workspace, the capability
+ * explorer windows and the answer record. These are illustrations of the app,
+ * so they speak the compact app ladder (16px titles, 28px metrics, 12px
+ * labels) rather than the editorial ladder in landing.css. Imported first by
+ * landing.css, so its section and responsive rules still take precedence.
+ */
+.cl-hero-preview {
+  position: relative;
+  width: min(1184px, 100%);
+  margin: 0 auto;
+  background: var(--cl-raised);
+  border: 1px solid var(--cl-card-border);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 4%),
+    0 24px 48px -16px rgb(15 23 42 / 16%);
+  overflow: hidden;
+  text-align: left;
+  mask-image: none;
+}
+.cl-hero-preview.cl-hero-preview-sources {
+  border-bottom: 1px solid var(--cl-preview-border);
+}
+.cl-preview-browser,
+.cl-window-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cl-raised);
+  color: var(--cl-window-text);
+  border-bottom: 1px solid var(--cl-faint-edge);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.cl-preview-browser {
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 16px;
+}
+.cl-preview-browser span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cl-window-bar {
+  min-height: 40px;
+  padding: 8px 16px;
+}
+.cl-hero-preview-layout {
+  display: grid;
+  grid-template-columns: 146px minmax(0, 1fr);
+  min-height: 520px;
+}
+.cl-hero-preview aside {
+  background: var(--cl-sidebar);
+  border-right: 1px solid var(--cl-line);
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  color: var(--cl-sidebar-text);
+}
+.cl-hero-preview aside > span:not(.cl-sidebar-label) {
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+.cl-hero-preview aside .cl-sidebar-active {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+.cl-workspace-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--cl-ink);
+  padding: 0 8px 12px;
+}
+.cl-sidebar-label {
+  font-size: 12px;
+  letter-spacing: 0.07em;
+  padding: 9px 10px;
+  color: var(--cl-sidebar-text);
+}
+.cl-hero-preview-main {
+  min-width: 0;
+  padding: 16px 22px 0;
+}
+.cl-hero-preview-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cl-hero-preview-title h2 {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.cl-hero-preview-title p {
+  color: var(--cl-muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+.cl-pill {
+  border: 1px solid var(--cl-faint-edge);
+  border-radius: var(--radius-full);
+  background: var(--cl-stone);
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cl-muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.cl-hero-preview-tabs {
+  display: flex;
+  gap: 25px;
+  border-bottom: 1px solid var(--cl-line);
+  margin-top: 12px;
+}
+.cl-hero-preview-tabs button {
+  background: none;
+  border: 0;
+  color: var(--cl-muted);
+  font: inherit;
+}
+.cl-hero-preview-tabs button {
+  min-height: 44px;
+  padding: 0 0 10px;
+  font-size: 14px;
+}
+.cl-hero-preview-tabs button[data-state='active'] {
+  color: var(--cl-ink);
+  font-weight: 500;
+}
+.cl-preview-content {
+  min-width: 0;
+}
+.cl-preview-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 21px 20px 18px;
+}
+.cl-preview-heading h4 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.cl-preview-heading p {
+  color: var(--cl-muted);
+  margin-top: 2px;
+  font-size: 13px;
+}
+.cl-hero-preview .cl-preview-heading {
+  padding-inline: 0;
+}
+.cl-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 4px 20px 17px;
+}
+.cl-visibility-metrics {
+  padding-top: 22px;
+}
+.cl-hero-preview .cl-visibility-metrics {
+  padding-top: 16px;
+}
+.cl-hero-preview .cl-metric-grid {
+  padding-inline: 0;
+}
+.cl-metric-grid > div {
+  border: 1px solid var(--cl-faint-edge);
+  border-radius: 10px;
+  background: var(--cl-raised);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.cl-metric-grid small,
+.cl-metric-grid span {
+  font-size: 12px;
+  color: var(--cl-muted);
+}
+.cl-metric-grid strong {
+  color: var(--cl-ink);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.cl-chart {
+  height: 140px;
+  position: relative;
+  border-top: 1px solid var(--cl-line);
+  border-bottom: 1px solid var(--cl-line);
+  overflow: hidden;
+}
+.cl-chart-lines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 33px,
+    var(--cl-line) 34px
+  );
+}
+.cl-chart svg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.cl-chart path {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 3;
+}
+.cl-hero-preview .cl-chart {
+  height: 105px;
+  border-top: 0;
+}
+.cl-hero-preview .cl-metric-grid strong {
+  font-size: 26px;
+}
+.cl-hero-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.cl-hero-dashboard-panel {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--cl-faint-edge);
+  border-radius: 11px;
+  background: var(--cl-raised);
+}
+.cl-hero-panel-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cl-hero-panel-heading h3 {
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+.cl-hero-panel-heading span {
+  color: var(--cl-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.cl-hero-trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+}
+.cl-hero-trend-legend span::before,
+.cl-hero-brand-name::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: currentColor;
+}
+.cl-hero-series-1 {
+  color: var(--color-chart-1);
+}
+.cl-hero-series-2 {
+  color: var(--color-chart-2);
+}
+.cl-hero-series-3 {
+  color: var(--color-chart-3);
+}
+.cl-hero-trend-chart {
+  height: 145px;
+  margin-top: 4px;
+}
+.cl-hero-trend-chart svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.cl-hero-trend-chart line {
+  stroke: var(--cl-line);
+  stroke-width: 1;
+}
+.cl-hero-trend-chart text {
+  fill: var(--cl-muted);
+  font-size: 12px;
+}
+.cl-hero-trend-chart polyline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cl-hero-trend-chart circle {
+  fill: currentColor;
+}
+.cl-hero-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px 0 32px;
+  color: var(--cl-muted);
+  font-size: 12px;
+}
+.cl-hero-dashboard table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.cl-hero-dashboard th,
+.cl-hero-dashboard td {
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--cl-line);
+  text-align: left;
+}
+.cl-hero-dashboard th {
+  color: var(--cl-muted);
+  font-weight: 500;
+}
+.cl-hero-dashboard th:not(:first-child),
+.cl-hero-dashboard td:not(:first-child) {
+  text-align: right;
+}
+.cl-hero-dashboard-brands .cl-hero-own-brand {
+  background: var(--color-accent-soft);
+}
+.cl-hero-brand-name {
+  white-space: nowrap;
+}
+.cl-hero-dashboard-sources td:first-child {
+  overflow-wrap: anywhere;
+}
+.cl-preview-foot {
+  padding: 12px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cl-preview-foot span {
+  font-weight: 400;
+  color: var(--cl-muted);
+}
+/* The window always reaches the stage's lower edge, so a short tab reads as
+   a window that continues rather than a card floating in an empty well. */
+.cl-product-card {
+  height: 100%;
+  background: var(--cl-raised);
+  border: 1px solid var(--cl-card-border);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 4%),
+    0 24px 48px -16px rgb(15 23 42 / 16%);
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+.cl-product-card .cl-preview-content {
+  min-height: 0;
+}
+.cl-product-card .cl-preview-heading {
+  padding-block: 16px;
+}
+.cl-product-card .cl-preview-heading h4 {
+  font-size: 16px;
+}
+.cl-product-card .cl-simple-list > div {
+  padding-block: 12px;
+}
+.cl-product-card .cl-chart {
+  margin-inline: 20px;
+}
+.cl-product-card .cl-preview-foot {
+  padding-inline: 20px;
+}
+.cl-segment {
+  display: flex;
+  gap: 2px;
+  background: var(--cl-stone);
+  padding: 4px;
+  border-radius: 5px;
+  flex: none;
+}
+.cl-segment button {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.cl-segment button[aria-pressed='true'] {
+  background: var(--cl-raised);
+  box-shadow: var(--shadow-card);
+}
+.cl-hero-preview .cl-segment {
+  padding: 2px;
+}
+.cl-hero-preview .cl-segment button {
+  min-height: 32px;
+  padding: 4px 9px;
+  font-size: 12px;
+}
+.cl-source-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  align-items: center;
+  gap: 24px;
+  margin: 0 20px 20px;
+}
+.cl-hero-preview .cl-source-summary {
+  margin-inline: 0;
+}
+.cl-source-mix {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 10px;
+}
+.cl-source-pie {
+  display: block;
+  width: 88px;
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 50%;
+}
+.cl-source-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 14px;
+  min-width: 0;
+  color: var(--cl-muted);
+  font-size: 12px;
+}
+.cl-source-legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.cl-source-legend li::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+.cl-source-legend li:nth-child(2)::before {
+  background: var(--cl-source-review);
+}
+.cl-source-legend li:nth-child(3)::before {
+  background: var(--cl-source-editorial);
+}
+.cl-source-legend li:nth-child(4)::before {
+  background: var(--cl-source-community);
+}
+.cl-source-legend li:nth-child(5)::before {
+  background: var(--cl-source-competitor);
+}
+.cl-source-legend strong {
+  color: var(--cl-ink);
+  font-weight: 500;
+}
+.cl-citation-count {
+  border-left: 1px solid var(--cl-line);
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--cl-muted);
+  font-size: 15px;
+}
+.cl-citation-count strong {
+  color: var(--cl-ink);
+  font-variant-numeric: tabular-nums;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1;
+}
+.cl-source-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.cl-source-url-col {
+  width: 52%;
+}
+.cl-source-type-col {
+  width: 19%;
+}
+.cl-source-citations-col {
+  width: 13%;
+}
+.cl-source-prompts-col {
+  width: 16%;
+}
+.cl-source-table-urls .cl-source-url-col {
+  width: 59%;
+}
+.cl-source-table-urls .cl-source-type-col {
+  width: 17%;
+}
+.cl-source-table-urls .cl-source-citations-col {
+  width: 12%;
+}
+.cl-source-table-urls .cl-source-prompts-col {
+  width: 12%;
+}
+.cl-source-table th {
+  text-align: left;
+  color: var(--cl-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  background: var(--cl-table-head);
+  border-block: 1px solid var(--cl-line);
+  padding: 12px 13px;
+  white-space: normal;
+}
+.cl-source-table td {
+  border-bottom: 1px solid var(--cl-line);
+  padding: 10px 13px;
+  line-height: 1.35;
+  min-width: 0;
+}
+.cl-source-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.cl-source-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.cl-source-name > span:last-child {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.cl-source-table-urls .cl-source-name > span:last-child {
+  white-space: nowrap;
+}
+.cl-favicon {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 5px;
+  background: var(--cl-favicon-owned);
+  color: var(--cl-favicon-owned-ink);
+  font-weight: 600;
+}
+.cl-favicon-1 {
+  background: var(--cl-favicon-review);
+  color: var(--cl-favicon-review-ink);
+}
+.cl-favicon-2 {
+  background: var(--cl-favicon-editorial);
+  color: var(--cl-favicon-editorial-ink);
+}
+.cl-favicon-3 {
+  background: var(--cl-favicon-community);
+  color: var(--cl-favicon-community-ink);
+}
+.cl-favicon-4 {
+  background: var(--cl-favicon-competitor);
+  color: var(--cl-favicon-competitor-ink);
+}
+.cl-prompt-count {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  justify-content: space-between;
+}
+.cl-prompt-count i {
+  display: inline-block;
+  height: 4px;
+  background: var(--cl-mini-bar);
+  min-width: 8px;
+}
+.cl-simple-list {
+  border-top: 1px solid var(--cl-line);
+}
+.cl-simple-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--cl-line);
+  font-size: 14px;
+}
+.cl-simple-list b {
+  font-weight: 500;
+  white-space: nowrap;
+}
+.cl-brief {
+  display: grid;
+  grid-template-columns: 165px minmax(0, 1fr);
+  gap: 24px;
+  padding: 8px 20px 20px;
+}
+.cl-brief-nav {
+  border-right: 1px solid var(--cl-line);
+  display: grid;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--cl-muted);
+}
+.cl-brief-nav b {
+  color: var(--cl-ink);
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.cl-brief h5 {
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 600;
+  margin: 12px 0 8px;
+}
+.cl-brief p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.cl-brief dl {
+  margin-top: 16px;
+}
+.cl-brief dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--cl-line);
+  font-size: 13px;
+}
+.cl-brief dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+}
+.cl-mcp-list {
+  margin-top: 10px;
+}
+.cl-mcp-list b {
+  white-space: normal;
+  text-align: right;
+}
+.cl-product-card .cl-text-link {
+  margin: 18px 20px;
+}
+.cl-record {
+  background: var(--cl-raised);
+  border: 1px solid var(--cl-card-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 4%),
+    0 24px 48px -16px rgb(15 23 42 / 16%);
+}
+.cl-record-body {
+  padding: 30px;
+}
+.cl-record-label,
+.cl-record-divider {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--cl-muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.cl-record h3 {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 12px 0;
+}
+.cl-answer {
+  font-size: 14px;
+  line-height: 1.75;
+}
+.cl-answer mark {
+  background: var(--color-accent-soft);
+  color: var(--cl-ink);
+  padding-inline: 2px;
+}
+.cl-answer sup {
+  font-size: 12px;
+  color: var(--color-accent-text);
+}
+.cl-record-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+}
+.cl-record-tags span {
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 3px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+.cl-record-divider {
+  border-top: 1px solid var(--cl-line);
+  margin-top: 25px;
+  padding: 18px 0 8px;
+}
+.cl-record-body button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--cl-line);
+  background: none;
+  padding: 12px 0;
+}
+.cl-record-body button:hover {
+  background: var(--cl-row-hover);
+}
+.cl-record-body button > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.cl-record-body button small {
+  color: var(--cl-muted);
+  overflow-wrap: anywhere;
+}
+.cl-record-body button > span:nth-child(3) {
+  font-size: 12px;
+  color: var(--color-accent-text);
+}
+.cl-drawer-body h3 {
+  font-size: 22px;
+  line-height: 28px;
+  margin: 16px 0;
+}
+.cl-drawer-body p {
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+.cl-drawer-body dl {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 16px;
+  margin-top: 30px;
+}
+.cl-drawer-body dt {
+  color: var(--color-muted);
+}
+.cl-drawer-body dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

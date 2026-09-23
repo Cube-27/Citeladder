@@ -127,8 +127,10 @@ missing, rather than accepting an API key that no feature can use.
 
 Create an Origin CA certificate for the demo hostname. Set SSL/TLS to **Full
 (strict)**. Preserve MX, SPF, DKIM, and DMARC records. After Terraform reports
-the static IP, create or update the proxied A record. Bypass caching for
-`/api/*` and authentication responses. Keep proxying enabled because the origin
+the static IP, create or update the proxied A record. Bypass Cloudflare caching
+for the entire `origin.citeladder.com` hostname and purge any responses cached
+there before accepting protected ingress. Path or extension based rules do not
+cover every authenticated route. Keep proxying enabled because the origin
 firewall permits web traffic only from current Cloudflare address ranges.
 
 ## 5. First deployment and acceptance
@@ -151,9 +153,11 @@ Google and own their own accounts. Set `DEMO_MODE` to `true` to bootstrap the
 single development account instead. Project slots remain unprovisioned, which
 is the pre-commercial unlimited-project behavior. Each project crawl is capped
 at 200 URLs. The crawler runs with eight global and six per-host slots.
-Deployment validates every long-running backend service and checks that direct
-unauthenticated origin access returns 403. Product and marketing acceptance
-follows the Worker deployments in the Workers runbook.
+Deployment validates every long-running backend service and checks that an
+authenticated origin health request succeeds, while anonymous requests to both
+the same unique URL and the exact `/health` URL return 403 without cached
+responses. Product and marketing acceptance follows the Worker deployments in
+the Workers runbook.
 
 Keep `origin.citeladder.com` proxied to the static IP without a Worker route.
 The backend workflow's final smoke requires that DNS and Full (strict) TLS

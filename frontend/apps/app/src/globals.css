@@ -476,8 +476,21 @@
   --cl-chart-tertiary: var(--color-chart-3);
   --cl-faint-edge: var(--color-border-subtle);
   --cl-bar: var(--color-chart-2);
-  --cl-paper-alt: var(--color-background-alt);
-  --cl-platform: var(--color-background-alt);
+  /* One warm band tone, derived from the warm hairline so it tracks the theme.
+     The former cool alt read as a near-invisible stripe beside warm paper. */
+  --cl-paper-alt: color-mix(in srgb, var(--color-hairline-warm) 45%, var(--color-canvas-soft));
+  --cl-platform: var(--cl-paper);
+  /* Every decorative well shares one accent-tinted surface, so the accent is the
+     only hue on the page that is not evidence. */
+  --cl-well: color-mix(in srgb, var(--color-accent-soft) 70%, var(--cl-paper-alt));
+  /* One hue per capability, applied through `.cl-hue-*` in landing.css. Each
+     hue derives its own tint and ink there, so the pair tracks the theme. */
+  --cl-hue-visibility: #0284c7;
+  --cl-hue-sources: #16a34a;
+  --cl-hue-health: #4f46e5;
+  --cl-hue-demand: #0d9488;
+  --cl-hue-content: #ea580c;
+  --cl-hue-mcp: #db2777;
   --cl-platform-line: var(--color-border);
   --cl-card-border: var(--color-border);
   --cl-source-review: var(--color-chart-3);
@@ -497,7 +510,7 @@
   --cl-favicon-competitor-ink: var(--color-danger-text);
   --cl-mini-bar: var(--color-chart-2);
   --cl-row-hover: var(--color-active);
-  --cl-enterprise: var(--color-background-alt);
+  --cl-enterprise: var(--cl-paper-alt);
   --cl-governance-line: var(--color-border);
 }
 

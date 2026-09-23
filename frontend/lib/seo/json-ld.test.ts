@@ -17,6 +17,7 @@ describe('organizationJsonLd', () => {
   it('emits the entity anchor on the configured website origin', () => {
     process.env.PUBLIC_WEBSITE_ORIGIN = 'https://citeladder.com';
     vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
     const data = organizationJsonLd();
     expect(data).not.toBeNull();
     expect(data?.['@type']).toBe('Organization');

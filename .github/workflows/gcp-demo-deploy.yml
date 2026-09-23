@@ -364,15 +364,41 @@ jobs:
         env:
           BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
           STATIC_IP: ${{ steps.terraform.outputs.static_ip }}
+          ORIGIN_TOKEN: ${{ secrets.CITELADDER_ORIGIN_TOKEN }}
         run: |
           set -euo pipefail
-          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-            --retry 12 --retry-delay 5 "https://$ORIGIN_DOMAIN_NAME/health")"
-          test "$status" = 403
+          test -n "$ORIGIN_TOKEN"
+          headers="$(mktemp -d)"
+          trap 'rm -rf "$headers"' EXIT
+          origin="https://$ORIGIN_DOMAIN_NAME/health"
+          probe="$origin?ingress_smoke=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          authorized="$(curl --silent --show-error --output /dev/null --dump-header "$headers/authorized" \
+            --write-out '%{http_code}' --retry 12 --retry-delay 5 \
+            --header "X-CiteLadder-Origin-Token: $ORIGIN_TOKEN" \
+            --header "X-CiteLadder-Public-Host: $DOMAIN_NAME" "$probe")"
+          anonymous="$(curl --silent --show-error --output /dev/null --dump-header "$headers/anonymous" \
+            --write-out '%{http_code}' --retry 12 --retry-delay 5 "$probe")"
+          exact="$(curl --silent --show-error --output /dev/null --dump-header "$headers/exact" \
+            --write-out '%{http_code}' --retry 12 --retry-delay 5 "$origin")"
+          if [[ "$authorized" != 200 || "$anonymous" != 403 || "$exact" != 403 ]]; then
+            echo "::error::Protected origin smoke failed: authorized=$authorized, anonymous=$anonymous, exact=$exact"
+            exit 1
+          fi
+          for response in authorized anonymous exact; do
+            # curl appends a header block for each retry. Inspect only the
+            # final transfer, which produced the status checked above.
+            awk '/^HTTP\// { block = "" } { block = block $0 ORS } END { printf "%s", block }' \
+              "$headers/$response" > "$headers/$response.final"
+            if ! grep -Eqi '^cache-control: *private, *no-store[[:space:]]*$' "$headers/$response.final" \
+              || ! grep -Eqi '^cf-cache-status: *(BYPASS|DYNAMIC)[[:space:]]*$' "$headers/$response.final"; then
+              echo "::error::Protected origin $response response is cacheable or came from cache"
+              exit 1
+            fi
+          done
           {
             echo '### GCP demo deployment'
             echo "- Source commit: \`$GITHUB_SHA\`"
             echo "- Backend: \`$BACKEND_IMAGE\`"
-            echo "- Direct unauthenticated origin: HTTP $status"
+            echo "- Protected origin: authenticated HTTP $authorized; anonymous HTTP $anonymous; exact-path HTTP $exact; no-store"
             echo "- Static IP: \`$STATIC_IP\`"
           } >> "$GITHUB_STEP_SUMMARY"
