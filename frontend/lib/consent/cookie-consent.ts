@@ -52,8 +52,14 @@ export function writeConsent(decision: ConsentDecision) {
     window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, decision);
     inMemoryDecision = null;
   } catch {
-    // Private mode or quota. The banner still closes for this page view; the
-    // visitor is re-asked next time, which is the safe direction to fail.
+    // A failed rejection must not leave an older acceptance for the next load.
+    if (decision === 'rejected') {
+      try {
+        window.localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
+      } catch {
+        // This page still uses the in-memory rejection.
+      }
+    }
   }
   for (const listener of consentListeners) listener();
 }

@@ -169,7 +169,6 @@ def _admit(names: list[str], **kwargs) -> list[str]:
         [_candidate(name) for name in names],
         known_refs=kwargs.get("known_refs", {"nav-1"}),
         forbidden_terms=kwargs.get("forbidden_terms", ["Acme"]),
-        business_terms=kwargs.get("business_terms", []),
     )
     return [topic.name for topic in topics]
 
@@ -235,7 +234,6 @@ def test_topics_require_supplied_evidence_references() -> None:
             ],
             known_refs=set(),
             forbidden_terms=[],
-            business_terms=[],
         )
         == []
     )
@@ -257,20 +255,16 @@ def test_admission_drops_brand_and_unbound_evidence_without_padding() -> None:
         ],
         known_refs={"nav-1"},
         forbidden_terms=[],
-        business_terms=[],
     )
     assert [topic.name for topic in topics] == ["Bags", "Hats"]
 
 
-def test_category_restatement_rule_yields_to_a_single_offering_business() -> None:
-    """A mattress brand whose category IS mattresses must keep the topic."""
-    assert _admit(["Mattresses"], business_terms=["mattresses"]) == ["Mattresses"]
-    # When a specific topic survives, the provider-category restatement drops.
-    names = _admit(
-        ["Mattresses", "Pillows", "Bed Frames"],
-        business_terms=["mattresses"],
-    )
-    assert "Mattresses" not in names
+def test_category_offering_remains_when_other_offerings_exist() -> None:
+    assert _admit(["Mattresses", "Pillows", "Bed Frames"]) == [
+        "Mattresses",
+        "Pillows",
+        "Bed Frames",
+    ]
 
 
 def test_confirmed_offerings_are_a_simple_provenanced_recovery_path() -> None:

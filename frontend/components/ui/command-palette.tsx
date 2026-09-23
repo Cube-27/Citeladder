@@ -3,7 +3,15 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { CornerDownLeft, Search, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 
 import { resolveCommandGroups } from '@/components/layout/nav-items';
 import { BrandLogo } from '@/components/ui/brand-logo';
@@ -50,6 +58,14 @@ type Command = {
 const ROW =
   'flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-3 text-left text-sm h-9';
 
+function subscribeToPlatform() {
+  return () => {};
+}
+
+function isMacPlatform() {
+  return /Mac/i.test(navigator.platform);
+}
+
 type CommandPaletteLaunch = { trigger: HTMLElement };
 
 export function CommandPaletteTrigger({
@@ -60,6 +76,7 @@ export function CommandPaletteTrigger({
   /** Lets a transient presenter close before the persistent palette opens. */
   onOpen?: (trigger: HTMLElement) => void;
 }>) {
+  const isMac = useSyncExternalStore(subscribeToPlatform, isMacPlatform, () => false);
   return (
     <Button
       variant="secondary"
@@ -82,7 +99,7 @@ export function CommandPaletteTrigger({
       <Search className="text-muted size-4 shrink-0" aria-hidden />
       <span className="min-w-0 truncate text-sm font-normal">Search or jump to…</span>
       <kbd className="bg-background-alt border-border/60 text-muted ms-auto hidden shrink-0 rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs font-medium sm:inline">
-        Ctrl K
+        {isMac ? '⌘K' : 'Ctrl K'}
       </kbd>
     </Button>
   );

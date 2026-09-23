@@ -240,7 +240,6 @@ def _admit(
     brand_name: str,
     brand_terms: list[str],
     competitor_terms: list[str],
-    category_terms: list[str],
     known_refs: set[str],
 ) -> PortfolioResult:
     intents = _validate_links(envelope, known_refs)
@@ -255,7 +254,6 @@ def _admit(
         ],
         known_refs=known_refs,
         forbidden_terms=[brand_name, *competitor_terms],
-        business_terms=category_terms,
     )
     admission = _Admission(
         intents=intents,
@@ -313,10 +311,6 @@ async def generate_portfolio(
             brand_name=brand_name,
             brand_terms=brand_terms,
             competitor_terms=competitor_terms,
-            category_terms=[
-                profile.get("category") or "",
-                *(profile.get("category_aliases") or []),
-            ],
             known_refs=known_refs,
         )
 

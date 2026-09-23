@@ -35,8 +35,8 @@ Topic distinctness uses singular-normalized token identity, not character
 similarity: men's and women's departments must not merge because their spellings
 are close. The provider-restatement rule rejects a name only when every token
 is provider vocabulary; containment would incorrectly reject School Uniforms.
-Category-restatement filtering is soft when it would remove all supported
-topics. Configuration and [onboarding topic admission](../backend/app/domain/projects/onboarding/topic_admission.py)
+An offer matching the business category stays eligible alongside other offers;
+provider-only labels are rejected. Configuration and [onboarding topic admission](../backend/app/domain/projects/onboarding/topic_admission.py)
 own these decisions, not a copied vocabulary list in documentation.
 
 Generation assigns canonical topics and short slot IDs, requested count and

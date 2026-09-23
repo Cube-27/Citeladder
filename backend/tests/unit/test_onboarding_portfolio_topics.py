@@ -78,7 +78,6 @@ def _admit(response: dict) -> pg.PortfolioResult:
         brand_name="Acme",
         brand_terms=["Acme"],
         competitor_terms=["Beta"],
-        category_terms=["analytics software"],
         known_refs={pg.CONFIRMED_CONTEXT_REF, "research-1"},
     )
 
@@ -97,6 +96,17 @@ def test_intent_topic_prompt_links_and_evidence_are_admitted() -> None:
         "comparison",
     }
     assert all(item["topic_id"] for item in result.prompts if item["cohort"] == "core")
+
+
+def test_category_named_offer_keeps_its_core_prompt_beside_other_offers() -> None:
+    response = _response()
+    response["topics"][0]["name"] = "Analytics Software"
+    result = _admit(response)
+    assert {topic.name for topic in result.topics} == {
+        "Analytics Software",
+        "Process Mining",
+    }
+    assert len([prompt for prompt in result.prompts if prompt["cohort"] == "core"]) == 2
 
 
 @pytest.mark.parametrize(

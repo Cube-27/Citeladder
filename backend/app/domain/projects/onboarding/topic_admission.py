@@ -79,11 +79,6 @@ def _is_unsplit_bundle(name: str) -> bool:
     return any(f" {connector} " in normalized for connector in TOPIC_BUNDLE_CONNECTORS)
 
 
-def _restates_business(name: str, *, business_terms: list[str]) -> bool:
-    key = _key(name)
-    return bool(key) and any(key == _key(term) for term in business_terms if term)
-
-
 def _structural_failure(
     *,
     name: str,
@@ -152,18 +147,12 @@ def admit_topics(
     *,
     known_refs: set[str],
     forbidden_terms: list[str],
-    business_terms: list[str],
 ) -> list[DiscoveryTopic]:
     """Admit distinct, evidence-backed topics that name what customers want.
 
-    ``forbidden_terms`` are the brand, its aliases and confirmed competitors;
-    ``business_terms`` are the resolved category, its aliases and the sector.
-
-    The business-restatement rule is deliberately SOFT -- it is skipped when
-    applying it would leave no topics. A business that genuinely sells one
-    thing, a mattress brand whose category is "mattresses", must be allowed to
-    keep it. The provider-phrase rule is unconditional: nobody shops for those
-    under any circumstances.
+    ``forbidden_terms`` are the brand, its aliases and confirmed competitors.
+    An exact category match can still be a distinct buyer need: a mattress
+    business selling pillows should retain Mattresses as well as Pillows.
     """
     structural = [
         row
@@ -178,14 +167,7 @@ def admit_topics(
         is not None
     ]
 
-    strict = [
-        row
-        for row in structural
-        if not _restates_business(row[0], business_terms=business_terms)
-    ]
-    retained = strict or structural
-
-    return _distinct_topics(retained)
+    return _distinct_topics(structural)
 
 
 def confirmed_offering_topics(offerings: list[str]) -> list[DiscoveryTopic]:

@@ -1,10 +1,43 @@
-import { beforeEach, describe, expect, it } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { COOKIE_CONSENT_STORAGE_KEY, hasAnalyticsConsent } from '@/lib/consent/cookie-consent';
+import {
+  COOKIE_CONSENT_STORAGE_KEY,
+  hasAnalyticsConsent,
+  readConsent,
+  writeConsent,
+} from '@/lib/consent/cookie-consent';
 
 import { CookieBanner } from './cookie-banner';
+
+function failStorageWrites() {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
+  const storage = window.localStorage;
+  const setItem = vi.fn(() => {
+    throw new DOMException('Storage unavailable');
+  });
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: storage.getItem.bind(storage),
+      setItem,
+      removeItem: storage.removeItem.bind(storage),
+      clear: storage.clear.bind(storage),
+      key: storage.key.bind(storage),
+      get length() {
+        return storage.length;
+      },
+    } satisfies Storage,
+  });
+  return {
+    setItem,
+    restore: () => {
+      if (descriptor) Object.defineProperty(window, 'localStorage', descriptor);
+      else Reflect.deleteProperty(window, 'localStorage');
+    },
+  };
+}
 
 /**
  * What is worth pinning is the consent contract, not the layout: the banner
@@ -52,6 +85,45 @@ describe('CookieBanner', () => {
     expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
     expect(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).toBe('rejected');
     expect(hasAnalyticsConsent()).toBe(false);
+  });
+
+  it.each(['Accept', 'Reject'] as const)(
+    'keeps the %s decision for this page when storage writes fail',
+    async (choice) => {
+      const user = userEvent.setup();
+      const failingStorage = failStorageWrites();
+      try {
+        render(<CookieBanner />);
+        await user.click(await screen.findByRole('button', { name: choice }));
+        expect(failingStorage.setItem).toHaveBeenCalledWith(
+          COOKIE_CONSENT_STORAGE_KEY,
+          choice === 'Accept' ? 'accepted' : 'rejected',
+        );
+        expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
+        expect(readConsent()).toBe(choice === 'Accept' ? 'accepted' : 'rejected');
+        expect(hasAnalyticsConsent()).toBe(choice === 'Accept');
+      } finally {
+        failingStorage.restore();
+        writeConsent('rejected');
+      }
+    },
+  );
+
+  it('clears prior acceptance when persisting rejection fails', async () => {
+    window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, 'accepted');
+    const failingStorage = failStorageWrites();
+    try {
+      writeConsent('rejected');
+      expect(failingStorage.setItem).toHaveBeenCalledWith(COOKIE_CONSENT_STORAGE_KEY, 'rejected');
+      expect(readConsent()).toBe('rejected');
+      expect(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).toBeNull();
+      vi.resetModules();
+      const reloaded = await import('@/lib/consent/cookie-consent');
+      expect(reloaded.hasAnalyticsConsent()).toBe(false);
+    } finally {
+      failingStorage.restore();
+      writeConsent('rejected');
+    }
   });
 
   it('stays hidden once the visitor has already answered', () => {
