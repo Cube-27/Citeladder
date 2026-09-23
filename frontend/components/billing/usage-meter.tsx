@@ -3,6 +3,7 @@
 import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/config/billing';
 import type { UsageItem } from '@/lib/api/billing';
 import { textRole } from '@/components/ui/typography';
+import { DisplayTime } from '@/components/ui/display-time';
 
 /**
  * One usage counter.
@@ -101,20 +102,21 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
  */
 function ExpiryLine({ item }: Readonly<{ item: UsageItem }>) {
   if (item.resets_at) {
-    return <p className="text-muted text-xs">Resets {formatDate(item.resets_at)}.</p>;
+    return (
+      <p className="text-muted text-xs">
+        Resets <DisplayTime value={item.resets_at} dateOnly />.
+      </p>
+    );
   }
   if (item.earliest_expiry) {
     return (
       <p className="text-muted text-xs">
-        Earliest expiry {formatDate(item.earliest_expiry)} — unused credits are forfeited then.
+        Earliest expiry <DisplayTime value={item.earliest_expiry} dateOnly /> — unused credits are
+        forfeited then.
       </p>
     );
   }
   return null;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { dateStyle: 'medium', timeZone: 'UTC' });
 }
 
 /** `prompt_slots` → `Prompt slots`. The key is the backend's, the label is ours. */

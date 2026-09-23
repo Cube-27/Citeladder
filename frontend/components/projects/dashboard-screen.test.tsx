@@ -2,7 +2,7 @@ import { render as raw, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 const { project, downloadExecutiveReport, queryResult } = vi.hoisted(() => ({
   project: {
     id: '00000000-0000-4000-8000-000000000001',
@@ -156,6 +156,10 @@ function renderDashboard(ui: ReactElement) {
   return raw(ui, { wrapper: RouterTestWrapper });
 }
 describe('DashboardScreen', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
   beforeEach(() => {
     queryResult.data = commandCenter;
     queryResult.error = null;
@@ -213,7 +217,13 @@ describe('DashboardScreen', () => {
     const user = userEvent.setup();
     const createObjectURL = vi.fn(() => 'blob:report');
     const revokeObjectURL = vi.fn();
-    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+    vi.stubGlobal(
+      'URL',
+      class extends URL {
+        static createObjectURL = createObjectURL;
+        static revokeObjectURL = revokeObjectURL;
+      },
+    );
     const click = vi
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
@@ -230,15 +240,17 @@ describe('DashboardScreen', () => {
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(click).toHaveBeenCalledOnce();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:report');
-    click.mockRestore();
-    vi.unstubAllGlobals();
   });
   it('shows a recoverable error when report download fails', async () => {
     downloadExecutiveReport.mockRejectedValueOnce(new Error('download failed'));
-    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:report'), revokeObjectURL: vi.fn() });
-    const click = vi
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(() => undefined);
+    vi.stubGlobal(
+      'URL',
+      class extends URL {
+        static createObjectURL = vi.fn(() => 'blob:report');
+        static revokeObjectURL = vi.fn();
+      },
+    );
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     const user = userEvent.setup();
     renderDashboard(
       <TooltipProvider>
@@ -253,8 +265,6 @@ describe('DashboardScreen', () => {
         screen.queryByText('The report could not be downloaded. Try again.'),
       ).not.toBeInTheDocument(),
     );
-    click.mockRestore();
-    vi.unstubAllGlobals();
   });
   it('renders facts and a real next action before the first audit', () => {
     queryResult.data = {

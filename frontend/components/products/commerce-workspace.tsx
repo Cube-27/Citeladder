@@ -90,26 +90,13 @@ function PaneResizer({ pane }: Readonly<{ pane: ResizablePane }>) {
       aria-valuemax={MAX_PANE_WIDTH}
       aria-valuenow={pane.width}
       className="group focus-ring hidden min-h-24 cursor-col-resize touch-none items-stretch justify-center self-stretch rounded-full px-1 lg:flex"
-      onPointerDown={(event) => {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        pane.beginDrag(event.clientX);
-      }}
-      onPointerMove={(event) => {
-        if (pane.dragging) pane.dragTo(event.clientX);
-      }}
-      onPointerUp={(event) => {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-        pane.endDrag();
-      }}
-      onPointerCancel={() => pane.endDrag()}
-      onDoubleClick={() => pane.reset()}
-      onKeyDown={(event) => {
-        if (event.key === 'ArrowLeft') pane.nudge(-pane.keyboardStep);
-        else if (event.key === 'ArrowRight') pane.nudge(pane.keyboardStep);
-        else if (event.key === 'Home') pane.reset();
-        else return;
-        event.preventDefault();
-      }}
+      onPointerDown={pane.interaction.onPointerDown}
+      onPointerMove={pane.interaction.onPointerMove}
+      onPointerUp={pane.interaction.onPointerUp}
+      onPointerCancel={pane.interaction.onPointerCancel}
+      onLostPointerCapture={pane.interaction.onLostPointerCapture}
+      onDoubleClick={pane.interaction.onDoubleClick}
+      onKeyDown={pane.interaction.onKeyDown}
     >
       <span
         aria-hidden

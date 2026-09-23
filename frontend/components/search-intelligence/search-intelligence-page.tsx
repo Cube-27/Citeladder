@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Settings2, Unplug } from 'lucide-react';
 
 import { PageShell } from '@/components/layout/page-shell';
+import { DisplayTime } from '@/components/ui/display-time';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { SearchIntelligenceCitationMatcher } from '@/components/search-intelligence/search-intelligence-citation-matcher';
 import { SearchIntelligenceCollection } from './search-intelligence-collection';
@@ -394,7 +395,9 @@ function CostDetails({
               <p className={textRole('bodyStrong', 'capitalize')}>
                 {run.action.replaceAll('_', ' ')} · {run.status.replaceAll('_', ' ')}
               </p>
-              <p className={textRole('meta')}>{new Date(run.created_at).toLocaleString()}</p>
+              <p className={textRole('meta')}>
+                <DisplayTime value={run.created_at} />
+              </p>
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <dt className={textRole('label')}>Estimated</dt>

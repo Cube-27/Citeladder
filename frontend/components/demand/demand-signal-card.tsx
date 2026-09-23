@@ -28,7 +28,7 @@ import {
   signalTarget,
   signalTargetKind,
 } from '@/lib/demand/signals';
-import { availabilityLabel } from '@/lib/format';
+import { availabilityLabel, formatCount as groupedCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
@@ -97,7 +97,7 @@ function formatCtr(signal: DemandSignal): string {
 }
 
 function formatCount(value: number | null): string {
-  return value === null ? availabilityLabel('not_measured') : value.toLocaleString('en-US');
+  return value === null ? availabilityLabel('not_measured') : groupedCount(value);
 }
 
 function DemandMetricValue({ value }: Readonly<{ value: string }>) {
@@ -151,7 +151,7 @@ function strikingDistanceInsight(signal: DemandSignal): DiagnosticInsight {
   const impressions = numericMetric(signal, 'impressions');
   const observed = [
     position !== null ? `ranks #${position.toFixed(1)}` : null,
-    impressions !== null ? `${impressions.toLocaleString('en-US')} impressions` : null,
+    impressions !== null ? `${groupedCount(impressions)} impressions` : null,
   ].filter(Boolean);
   return {
     headline: 'Within reach of the top results',
@@ -280,7 +280,7 @@ function emergingInsight(signal: DemandSignal): DiagnosticInsight {
   return {
     headline: 'Surging search momentum',
     detail: quotable
-      ? `Impressions grew ${Math.round(((recent - prior) / prior) * 100)}% (+${(recent - prior).toLocaleString('en-US')}) across the last two 14-day windows.`
+      ? `Impressions grew ${Math.round(((recent - prior) / prior) * 100)}% (+${groupedCount(recent - prior)}) across the last two 14-day windows.`
       : 'Impressions rose across the last two 14-day windows. A strong candidate for dedicated coverage.',
     tone: 'success',
   };
@@ -414,8 +414,7 @@ export function DemandSignalCard({
                   <div key={page.url} className="flex items-center justify-between gap-2 text-xs">
                     <span className="truncate opacity-90">{page.url}</span>
                     <span className={textRole('emphasis', 'shrink-0 tabular-nums')}>
-                      {page.impressions.toLocaleString('en-US')} imp (
-                      {(page.share * 100).toFixed(0)}%)
+                      {groupedCount(page.impressions)} imp ({(page.share * 100).toFixed(0)}%)
                     </span>
                   </div>
                 ))}

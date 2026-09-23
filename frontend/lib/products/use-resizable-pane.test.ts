@@ -55,6 +55,34 @@ describe('useResizablePane', () => {
     act(() => result.current.reset());
   });
 
+  it('keeps one active pointer and discards an interrupted width', () => {
+    const { result } = renderHook(() => useResizablePane());
+    const handle = {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn(() => true),
+      releasePointerCapture: vi.fn(),
+    };
+    const pointer = (pointerId: number, clientX = 400) =>
+      ({ button: 0, pointerId, clientX, currentTarget: handle, preventDefault: vi.fn() }) as never;
+
+    act(() => result.current.interaction.onPointerDown(pointer(7)));
+    act(() => result.current.interaction.onPointerDown(pointer(8, 500)));
+    expect(handle.setPointerCapture).toHaveBeenCalledTimes(1);
+    act(() => result.current.interaction.onPointerMove(pointer(7, 460)));
+    expect(result.current.width).toBe(DEFAULT_PANE_WIDTH + 60);
+    act(() => result.current.interaction.onLostPointerCapture(pointer(8)));
+    expect(result.current.dragging).toBe(true);
+    act(() => result.current.interaction.onPointerCancel(pointer(7)));
+    expect(result.current.dragging).toBe(false);
+    expect(result.current.width).toBe(DEFAULT_PANE_WIDTH);
+    expect(window.localStorage.getItem('citeladder:commerce:catalog-pane-width')).toBeNull();
+    act(() => {
+      window.localStorage.setItem('citeladder:commerce:catalog-pane-width', '352');
+      window.dispatchEvent(new Event('storage'));
+    });
+    expect(result.current.width).toBe(352);
+  });
+
   it('nudges by keyboard and remembers the result', () => {
     const { result } = renderHook(() => useResizablePane());
     act(() => result.current.nudge(result.current.keyboardStep));

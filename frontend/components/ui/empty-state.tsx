@@ -60,7 +60,7 @@ export function EmptyState({
       className={cn(
         'grid',
         variant === 'compact'
-          ? 'gap-1 py-[var(--compact-gap)]'
+          ? 'gap-3 py-[var(--empty-state-padding)] min-[981px]:gap-1 min-[981px]:py-[var(--compact-gap)]'
           : 'gap-3 py-[var(--empty-state-padding)]',
         className,
       )}
@@ -70,7 +70,12 @@ export function EmptyState({
         <Heading className={textRole(headingRole)}>{heading}</Heading>
       </div>
       {description ? (
-        <p className={cn('text-secondary max-w-[52ch] text-sm', variant === 'compact' && 'pl-6')}>
+        <p
+          className={cn(
+            'text-secondary max-w-[52ch] text-sm',
+            variant === 'compact' && 'min-[981px]:pl-6',
+          )}
+        >
           {description}
         </p>
       ) : null}

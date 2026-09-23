@@ -11,6 +11,8 @@
 import type { TrendPoint } from '@/components/ui/trend-chart';
 import type { LogicalEngine, VisibilityTrendPoint } from '@/lib/api/types';
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
+import { formatDisplayDate, formatDisplayShortDate } from '@/lib/format';
+import { TREND_COMPARISON_STROKES } from '@/lib/visibility/chart-tokens';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
 export type TrendGranularity = 'run' | 'day' | 'week' | 'month';
@@ -60,17 +62,13 @@ export function rangeToFrom(range: TrendRange, now: Date = new Date()): string |
 export type TrendMetric = 'sov' | 'brand_mention_rate' | 'owned_citation_rate';
 
 /** Short x-axis label for a point's completion timestamp. */
-function formatPointLabel(timestamp: string): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+function formatPointLabel(timestamp: string, timeZone: string): string {
+  return formatDisplayShortDate(timestamp, timeZone);
 }
 
 /** Full date label (used for the start/latest ranking card subtitles). */
-export function formatPointDate(timestamp: string): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+export function formatPointDate(timestamp: string, timeZone = 'UTC'): string {
+  return formatDisplayDate(timestamp, timeZone);
 }
 
 /** A metric's 0–100 value for a point (percentages scaled to whole percent). */
@@ -94,6 +92,7 @@ function metricValue(point: VisibilityTrendPoint, metric: TrendMetric): number |
 export function toChartPoints(
   points: readonly VisibilityTrendPoint[],
   metric: TrendMetric,
+  timeZone = 'UTC',
 ): TrendPoint[] {
   let prevVersions: string | null = null;
   let previousIdentity: string | null | undefined = undefined;
@@ -109,7 +108,7 @@ export function toChartPoints(
     return {
       // Preserve unavailable metrics as null — the chart renders a GAP and an
       // "unavailable" label rather than coercing to a misleading zero.
-      label: formatPointLabel(point.completed_at),
+      label: formatPointLabel(point.completed_at, timeZone),
       value,
       timestamp: new Date(point.completed_at).getTime(),
       breakBefore: changed || identityChanged || !point.comparison_key,
@@ -134,15 +133,6 @@ function versionChangeNote(point: VisibilityTrendPoint): string {
  * or period, and drawn from the design system's own chart ramp rather than a
  * palette invented here.
  */
-const SERIES_STROKES = [
-  'stroke-chart-2',
-  'stroke-chart-3',
-  'stroke-chart-4',
-  'stroke-chart-5',
-  'stroke-chart-6',
-  'stroke-chart-7',
-] as const;
-
 /**
  * Comparison lines drawn by default.
  *
@@ -190,8 +180,9 @@ export function toNamedChartPoints(
   points: readonly VisibilityTrendPoint[],
   metric: TrendMetric,
   name: string,
+  timeZone = 'UTC',
 ): TrendPoint[] {
-  return toChartPoints(points, metric).map((point, index) => ({
+  return toChartPoints(points, metric, timeZone).map((point, index) => ({
     ...point,
     value: (() => {
       const row = points[index].rankings.find((entry) => entry.name === name);
@@ -220,7 +211,7 @@ export function toCompetitorSeries(
     .map((row) => row.name);
   return names.map((name, index) => ({
     label: name,
-    strokeClass: SERIES_STROKES[index % SERIES_STROKES.length],
+    strokeClass: TREND_COMPARISON_STROKES[index % TREND_COMPARISON_STROKES.length],
     values: points.map((point) => {
       const row = point.rankings.find((entry) => entry.name === name);
       return row ? rankingMetricValue(row, metric) : null;

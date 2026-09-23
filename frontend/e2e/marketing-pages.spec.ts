@@ -49,12 +49,28 @@ test.describe('marketing routes', () => {
       );
       const panel = page.getByRole('tabpanel', { name: /sources/i }).last();
       const card = panel.locator('.cl-product-card');
+      if (width < 640) {
+        await expect
+          .poll(() =>
+            panel
+              .locator('.cl-product-preview > div')
+              .evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a),
+          )
+          .toBeLessThan(1);
+      }
+      await expect(card).toBeVisible();
       const before = await card.boundingBox();
       await panel.getByRole('button', { name: 'URLs' }).click();
       await expect(panel.getByText('zernovelle.example/platform')).toBeVisible();
       const after = await card.boundingBox();
-      expect(Math.abs((after?.width ?? 0) - (before?.width ?? 0))).toBeLessThanOrEqual(1);
-      expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0))).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs((after?.width ?? 0) - (before?.width ?? 0)),
+        `${width}px width`,
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs((after?.x ?? 0) - (before?.x ?? 0)),
+        `${width}px position`,
+      ).toBeLessThanOrEqual(1);
       const cardOverflow = await card.evaluate(
         (element) => element.scrollWidth - element.clientWidth,
       );
@@ -63,6 +79,58 @@ test.describe('marketing routes', () => {
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
       expect(overflow, `${width}px page overflow`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test('phone scaling stays inside the three product illustration surfaces', async ({ page }) => {
+    for (const width of [375, 760, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll('astro-island')].some(
+          (island) =>
+            island.getAttribute('component-url')?.includes('landing-page') &&
+            !island.hasAttribute('ssr'),
+        ),
+      );
+      const hero = page.locator('.cl-hero-scaled-preview > div');
+      const product = page
+        .getByRole('tabpanel', { name: /sources/i })
+        .last()
+        .locator('.cl-product-preview > div');
+      await expect(hero).toBeVisible();
+      await expect(product).toBeVisible();
+      if (width === 375) {
+        for (const image of [hero, product]) {
+          await expect
+            .poll(() =>
+              image.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a),
+            )
+            .toBeLessThan(1);
+        }
+      }
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `${width}px landing overflow`).toBeLessThanOrEqual(1);
+      expect(
+        await page.locator('.cl-record').evaluate((element) => getComputedStyle(element).transform),
+      ).toBe('none');
+
+      await page.goto('/solutions');
+      const solution = page.locator('.cl-solution-preview > div').first();
+      await expect(solution).toBeVisible();
+      if (width === 375) {
+        await expect
+          .poll(() =>
+            solution.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a),
+          )
+          .toBeLessThan(1);
+      }
+      const solutionOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(solutionOverflow, `${width}px Solutions overflow`).toBeLessThanOrEqual(1);
     }
   });
 

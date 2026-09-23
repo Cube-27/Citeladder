@@ -3,6 +3,7 @@
 import { useId, useState } from 'react';
 
 import { textRole } from '@/components/ui/typography';
+import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -162,7 +163,7 @@ export function DonutChart({
             </div>
           ) : (
             <div className="grid gap-0.5">
-              <span className={textRole('metric', 'tabular-nums')}>{total.toLocaleString()}</span>
+              <span className={textRole('metric', 'tabular-nums')}>{formatCount(total)}</span>
               <span className={textRole('meta', 'text-secondary')}>{totalLabel}</span>
             </div>
           )}

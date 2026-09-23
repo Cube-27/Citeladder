@@ -246,9 +246,7 @@ export function metricDifference(
  * cards above this table, the mark belongs in its cells. See `measured` in
  * `lib/visibility/dashboard.ts`.
  */
-export function measured(value: string): string | null {
-  return value === NOT_MEASURED ? null : value;
-}
+export { measured } from '@/lib/format';
 
 /** A difference rendered with an explicit sign (`+2`, `−3`, `0`). */
 export function formatDifference(key: PerformanceMetricKey, difference: number | null): string {

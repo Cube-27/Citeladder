@@ -221,7 +221,7 @@ function SummaryStrip({ summary }: Readonly<{ summary: OpportunitySummary }>) {
   const mix = summary.source_mix;
 
   return (
-    <div className="grid gap-3">
+    <div className="border-border-subtle grid gap-3 border-b pb-3 min-[981px]:border-b-0 min-[981px]:pb-0">
       <MetricGroup>
         <MetricItem label="Open" value={String(openCount)} />
         <MetricItem label="High impact" value={String(highImpactCount)} />

@@ -7,9 +7,9 @@
  * `lib/ai-referrals/series`) re-export these under their local names so
  * domain import sites stay local; new code should import from here.
  *
- * Everything is pure and framework-free; explicit locales + UTC keep SSR/CSR
- * output identical. Unparseable input passes through untouched — never a
- * fabricated value (invariant 9).
+ * Everything is pure and framework-free. Calendar bucket dates are fixed to
+ * UTC; timestamp displays receive an explicit resolved timezone. Unparseable
+ * input passes through untouched — never a fabricated value (invariant 9).
  */
 import type { z } from 'zod';
 
@@ -83,35 +83,58 @@ export function formatWindowDate(isoDay: string): string {
   });
 }
 
-/** `2026-07-23T18:14:00Z` → `Jul 23, 2026` (date-only label for a full timestamp). */
-export function formatTimestampDate(timestamp: string): string {
+/** A persisted instant, rendered in the selected display timezone. */
+export function formatDisplayTimestamp(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone,
+      timeZoneName: 'short',
+    }).format(date);
+  } catch {
+    return timeZone === 'UTC' ? timestamp : formatDisplayTimestamp(timestamp, 'UTC');
+  }
 }
 
-/** Mono timestamp in the F5 idiom (`Jul 23, 2026 · 18:14 UTC`). */
-export function formatUtcTimestamp(timestamp: string): string {
+/** Date portion of a persisted instant, using the same display timezone. */
+export function formatDisplayDate(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
-  const datePart = date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-  const timePart = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'UTC',
-  });
-  return `${datePart} · ${timePart} UTC`;
+  try {
+    return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone }).format(date);
+  } catch {
+    return timeZone === 'UTC' ? timestamp : formatDisplayDate(timestamp, 'UTC');
+  }
+}
+
+/** Compact chart label for a persisted instant. */
+export function formatDisplayShortDate(timestamp: string, timeZone: string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp;
+  try {
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone }).format(
+      date,
+    );
+  } catch {
+    return timeZone === 'UTC' ? timestamp : formatDisplayShortDate(timestamp, 'UTC');
+  }
+}
+
+export function formatScore(score: number | null): string {
+  return score === null || Number.isNaN(score)
+    ? availabilityLabel('not_measured')
+    : `${Math.round(score)}`;
+}
+
+/** Convert the shared unavailable sentinel to a nullable display value. */
+export function measured(value: string): string | null {
+  return value === availabilityLabel('not_measured') ? null : value;
 }
 
 const numberFormat = new Intl.NumberFormat('en-US');

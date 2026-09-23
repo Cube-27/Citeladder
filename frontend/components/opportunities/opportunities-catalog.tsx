@@ -50,6 +50,7 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import type { Opportunity, OpportunitiesPage, OpportunityDetail } from '@/lib/api/types';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import { setUrlParams, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
@@ -288,7 +289,11 @@ function FeaturedSection({
   const { detail, isLoading } = featured;
   if (!isLoading && !detail) return null;
   return (
-    <section aria-label="Next best action" aria-busy={isLoading}>
+    <section
+      aria-label="Next best action"
+      aria-busy={isLoading}
+      className="min-h-44 min-[981px]:min-h-0"
+    >
       {detail ? (
         <FeaturedRecommendation detail={detail} onOpen={() => onOpen(detail.id)} />
       ) : (
@@ -385,6 +390,7 @@ function RecommendationsTable({
   rows: Opportunity[];
   onOpen: (id: string) => void;
 }>) {
+  const timeZone = useDisplayTimeZone();
   return (
     <Table className="min-w-[48rem] table-fixed">
       <TableHeader>
@@ -425,7 +431,7 @@ function RecommendationsTable({
             </TableCell>
             <TableCell>
               <span className="text-secondary text-xs whitespace-nowrap">
-                {formatAudited(row.created_at)}
+                {formatAudited(row.created_at, timeZone)}
               </span>
             </TableCell>
             <TableCell>

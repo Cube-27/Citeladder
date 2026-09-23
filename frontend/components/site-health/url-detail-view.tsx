@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 
 import { PageShell } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { ledgerClasses } from '@/components/ui/workspace';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
 import type { DeliveryFacts, IssueOccurrence, PageDetail } from '@/lib/api/types';
 import {
   dimensionLabel,
@@ -66,8 +67,57 @@ export function UrlDetailView({
   );
 }
 
+const mobileMeasurementsQuery = '(max-width: 980px)';
+
+function subscribeMobileMeasurements(notify: () => void): () => void {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function')
+    return () => undefined;
+  const media = window.matchMedia(mobileMeasurementsQuery);
+  media.addEventListener('change', notify);
+  return () => media.removeEventListener('change', notify);
+}
+
+function isMobileMeasurementsViewport(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia(mobileMeasurementsQuery).matches
+    : false;
+}
+
 function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
   const [selected, setSelected] = useState<'delivery' | 'links'>('delivery');
+  const isMobile = useSyncExternalStore(
+    subscribeMobileMeasurements,
+    isMobileMeasurementsViewport,
+    () => false,
+  );
+  if (isMobile) {
+    return (
+      <div className="grid min-w-0 gap-[var(--workspace-gap)]">
+        <section className="border-border-subtle grid gap-4 border-y py-4">
+          <EditorialSectionHeader
+            title="Delivery Metrics"
+            description="Static HTTP-level measurements"
+          />
+          <DeliveryMetrics delivery={detail.delivery} />
+        </section>
+        <section className="border-border-subtle grid gap-4 border-y py-4">
+          {detail.internal_links ? (
+            <EditorialSectionHeader
+              title="Internal Links"
+              description={`Modelled over ${detail.internal_links.source_page_count} observed crawl page${detail.internal_links.source_page_count === 1 ? '' : 's'}${detail.internal_links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
+            />
+          ) : (
+            <EditorialSectionHeader title="Internal Links" />
+          )}
+          {detail.internal_links ? (
+            <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
+          ) : (
+            <p className={textRole('body')}>Internal links not measured for this page.</p>
+          )}
+        </section>
+      </div>
+    );
+  }
   return (
     <section className="min-w-0">
       <Tabs
@@ -95,6 +145,7 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
 }
 
 function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
+  const timeZone = useDisplayTimeZone();
   return (
     <section className="border-border-subtle min-w-0 border-b pb-4">
       <dl className="grid min-w-0 gap-x-6 gap-y-4 min-[701px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
@@ -115,7 +166,9 @@ function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
           <PageKindBadge pageKind={detail.page_kind} />
         </DetailFact>
         <DetailFact label="Last Audit">
-          <span className={textRole('bodyStrong')}>{formatAudited(detail.last_audited)}</span>
+          <span className={textRole('bodyStrong')}>
+            {formatAudited(detail.last_audited, timeZone)}
+          </span>
         </DetailFact>
         <DetailFact label="Status">
           <Badge variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
@@ -165,7 +218,7 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
   ];
   return (
     <div className="grid gap-3">
-      <p className={textRole('meta')}>Static HTTP-level measurements</p>
+      <p className={textRole('meta', 'max-[980px]:hidden')}>Static HTTP-level measurements</p>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
         {items.map((item) => (
           <div key={item.label} className="grid gap-0.5">

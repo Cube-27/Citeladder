@@ -3,6 +3,7 @@
 import { Check, ExternalLink, Minus } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { DisplayTime } from '@/components/ui/display-time';
 import { panelClasses } from '@/components/ui/panel';
 import { Label, textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -197,12 +198,6 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
   );
 }
 
-function formatTimestamp(value: string | null): string {
-  if (!value) return 'Not recorded';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-}
-
 /**
  * When Google captured the page, kept apart from when we collected it.
  *
@@ -212,8 +207,12 @@ function formatTimestamp(value: string | null): string {
 function SurfaceFooter({ evidence }: Readonly<{ evidence: SearchSurfaceEvidence }>) {
   return (
     <footer className="border-border-subtle text-muted flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 text-xs">
-      <span>Captured {formatTimestamp(evidence.observed_at)}</span>
-      <span>Retrieved {formatTimestamp(evidence.retrieved_at)}</span>
+      <span>
+        Captured <DisplayTime value={evidence.observed_at} fallback="Not recorded" />
+      </span>
+      <span>
+        Retrieved <DisplayTime value={evidence.retrieved_at} fallback="Not recorded" />
+      </span>
       <span>Location {evidence.location_code}</span>
       <span>{evidence.language_code}</span>
       <span>{evidence.device}</span>

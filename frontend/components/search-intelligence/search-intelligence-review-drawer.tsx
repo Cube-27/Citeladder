@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { textRole } from '@/components/ui/typography';
+import { formatCount } from '@/lib/format';
 import type {
   DatasetSelection,
   ReviewPayload,
@@ -288,7 +289,7 @@ export function SearchIntelligenceReviewDrawer({
               </div>
               <div>
                 <dt className="text-muted">Maximum rows</dt>
-                <dd className="text-xl tabular-nums">{review.planned_rows.toLocaleString()}</dd>
+                <dd className="text-xl tabular-nums">{formatCount(review.planned_rows)}</dd>
               </div>
               <div>
                 <dt className="text-muted">Estimated total</dt>

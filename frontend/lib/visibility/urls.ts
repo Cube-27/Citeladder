@@ -6,12 +6,8 @@
  * `href`; anything else (a `javascript:` token, a malformed string) renders as
  * plain text rather than as a link nobody vetted.
  */
+import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
+
 export function safeExternalUrl(value: string | null | undefined): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null;
-  } catch {
-    return null;
-  }
+  return parseAbsoluteHttpUrl(value)?.toString() ?? null;
 }

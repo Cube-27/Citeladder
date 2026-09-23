@@ -60,8 +60,6 @@ export const siteHealthKeys = {
   crawls: (projectId: string, filters: ListFilters = {}) =>
     ['site-health', 'crawls', projectId, filters] as const,
   crawl: (crawlId: string) => ['site-health', 'crawl', crawlId] as const,
-  preview: (projectId: string, content: string) =>
-    ['site-health', 'preview', projectId, content] as const,
   inventory: (crawlId: string, filters: ListFilters = {}) =>
     ['site-health', 'inventory', crawlId, filters] as const,
   monitored: (projectId: string) => ['site-health', 'monitored', projectId] as const,
@@ -75,5 +73,4 @@ export const siteHealthKeys = {
     ['site-health', 'issues', crawlId, filters] as const,
   issue: (crawlId: string, groupId: string, filters: ListFilters = {}) =>
     ['site-health', 'issue', crawlId, groupId, filters] as const,
-  events: (crawlId: string) => ['site-health', 'events', crawlId] as const,
 };

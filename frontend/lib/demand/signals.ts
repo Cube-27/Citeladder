@@ -6,6 +6,7 @@
  * label, and metric read now derives from the maps here.
  */
 import type { DemandSignal } from '@/lib/api/demand';
+import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 
 type SignalType =
   | 'striking_distance'
@@ -88,17 +89,7 @@ export function signalTargetKind(signal: DemandSignal): 'Page' | 'Query' {
  * put in an `href` unvalidated.
  */
 export function safePageUrl(pageUrl: string | null | undefined): string | null {
-  if (!pageUrl) return null;
-  const trimmed = pageUrl.trim();
-  // Protocol-relative URLs must be rejected before parsing: `//evil.example`
-  // inherits the app's scheme and would pass a post-parse protocol check.
-  if (trimmed === '' || trimmed.startsWith('//')) return null;
-  try {
-    const { protocol } = new URL(trimmed);
-    return protocol === 'http:' || protocol === 'https:' ? trimmed : null;
-  } catch {
-    return null;
-  }
+  return parseAbsoluteHttpUrl(pageUrl) ? pageUrl!.trim() : null;
 }
 
 export type CompetingPage = { url: string; impressions: number; share: number };

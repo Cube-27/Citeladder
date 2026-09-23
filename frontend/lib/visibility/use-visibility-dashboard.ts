@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope, warmQuery } from '@/lib/api/query-client';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { resolveProjectRequestScope, type ProjectRequestScope } from '@/lib/project/request-scope';
 import { runsQueries } from '@/lib/api/runs';
 import { visibilityApi, visibilityQueries } from '@/lib/api/visibility';
@@ -381,6 +382,7 @@ function useSurfaceRates({
 
 function useVisibilityRuns(requestScope: ProjectRequestScope) {
   const { workspaceId, projectId } = requestScope;
+  const timeZone = useDisplayTimeZone();
   const queryClient = useQueryClient();
   const auditsQuery = useQuery({
     ...runsQueries.list(workspaceId, projectId),
@@ -388,7 +390,10 @@ function useVisibilityRuns(requestScope: ProjectRequestScope) {
     refetchInterval: (query) =>
       query.state.data?.some((audit) => shouldPollAudit(audit.status)) ? ACTIVE_RUN_POLL_MS : false,
   });
-  const runOptions = useMemo(() => toRunOptions(auditsQuery.data ?? []), [auditsQuery.data]);
+  const runOptions = useMemo(
+    () => toRunOptions(auditsQuery.data ?? [], timeZone),
+    [auditsQuery.data, timeZone],
+  );
   const activeRun = useMemo(() => findActiveRun(auditsQuery.data ?? []), [auditsQuery.data]);
   // Both halves matter. Keying on the latest run alone missed a project's FIRST
   // run — it stayed one id from queued to completed, so nothing invalidated and

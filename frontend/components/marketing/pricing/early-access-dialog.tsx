@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { DisplayTime } from '@/components/ui/display-time';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog } from '@/components/ui/dialog';
@@ -106,12 +107,8 @@ export function EarlyAccessDialog({
         ) : null}
         {claim.isSuccess ? (
           <Alert tone="success">
-            Early access ends{' '}
-            {new Date(claim.data.expires_at).toLocaleDateString('en-US', {
-              dateStyle: 'medium',
-              timeZone: 'UTC',
-            })}
-            . Nothing renews and nothing will be charged.
+            Early access ends <DisplayTime value={claim.data.expires_at} dateOnly />. Nothing renews
+            and nothing will be charged.
           </Alert>
         ) : null}
       </div>

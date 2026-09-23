@@ -16,6 +16,7 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
+import { DISPLAY_TIME_ZONE_COOKIE } from '@/lib/display-timezone';
 
 // Callback routes are mounted at their actual query-bearing React Router locations.
 let search = '';
@@ -155,7 +156,10 @@ function mockMappings() {
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => mockMappings());
-afterEach(() => mswServer.resetHandlers());
+afterEach(() => {
+  mswServer.resetHandlers();
+  document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=; Path=/; Max-Age=0`;
+});
 afterAll(() => mswServer.close());
 
 describe('IntegrationSettings — empty state + OAuth navigation', () => {
@@ -193,6 +197,7 @@ describe('IntegrationSettings — grant cards', () => {
   });
 
   it('groups connections onto one card per grant with sub-rows and mono last-synced', async () => {
+    document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=Asia%2FKolkata; Path=/`;
     mockList([gscConnection, ga4Connection, bingConnection]);
     renderSettings();
 
@@ -207,8 +212,8 @@ describe('IntegrationSettings — grant cards', () => {
     // is a second fetch — hence findBy rather than getBy.
     expect(await within(googleCard).findByText('sc-domain:example.com')).toBeInTheDocument();
     expect(within(googleCard).getByText('properties/123456789')).toBeInTheDocument();
-    // Mono last-synced timestamps.
-    expect(within(googleCard).getByText('Jul 23, 2026 · 04:12 UTC')).toBeInTheDocument();
+    const lastSynced = googleCard.querySelector('time[datetime="2026-07-23T04:12:00Z"]');
+    expect(lastSynced).toHaveTextContent(/Jul 23, 2026.*09:42/);
 
     const msCard = screen.getByTestId('grant-card-microsoft');
     expect(within(msCard).getByText('Bing Webmaster Tools')).toBeInTheDocument();

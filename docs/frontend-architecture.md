@@ -67,6 +67,14 @@ state owns ephemeral drafts and interactions. Read-mostly queries use the
 configured freshness/retention policy; explicit polling remains authoritative
 for active operations. Events accelerate projection invalidation, never replace
 persisted truth. No screen substitutes mock data or computes a backend metric.
+
+User-facing timestamps use a resolved display timezone passed to the shared
+formatter in `frontend/lib/format.ts`; API values remain UTC, and date-only
+measurement buckets retain their calendar day. Account settings store a
+device-local choice (Auto, UTC, or a named IANA zone) in a same-origin preference
+cookie. Auto resolves the browser zone once per app load and falls back to UTC
+when unavailable. Server rendering uses UTC unless an explicit cookie zone is
+available; it never infers a browser zone.
 Opportunities owns its `type`, `severity`, `status`, `action_path`, and
 `selected` URL contract; default filters are omitted, filter commits clear the
 selection, and `opportunity` remains a read-only legacy alias normalized with

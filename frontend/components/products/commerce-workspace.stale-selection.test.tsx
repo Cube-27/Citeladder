@@ -51,6 +51,15 @@ vi.mock('@/lib/products/use-resizable-pane', () => ({
     endDrag: vi.fn(),
     nudge: vi.fn(),
     reset: vi.fn(),
+    interaction: {
+      onPointerDown: vi.fn(),
+      onPointerMove: vi.fn(),
+      onPointerUp: vi.fn(),
+      onPointerCancel: vi.fn(),
+      onLostPointerCapture: vi.fn(),
+      onDoubleClick: vi.fn(),
+      onKeyDown: vi.fn(),
+    },
   }),
 }));
 

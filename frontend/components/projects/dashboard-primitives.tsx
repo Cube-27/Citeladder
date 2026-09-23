@@ -46,7 +46,12 @@ export function StateMetric({
 }>) {
   const positive = delta !== null && (inverse ? delta < 0 : delta > 0);
   return (
-    <div className={cn(hairlineBandItemClasses, 'grid content-start gap-1')}>
+    <div
+      className={cn(
+        hairlineBandItemClasses,
+        'flex min-h-[104px] flex-col justify-between min-[981px]:grid min-[981px]:min-h-0 min-[981px]:content-start min-[981px]:gap-1',
+      )}
+    >
       <p className={eyebrowClasses}>{label}</p>
       <div>
         {value === null ? (

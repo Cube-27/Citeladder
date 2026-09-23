@@ -7,6 +7,8 @@
  * place and over the selection in another.
  */
 import type { z } from 'zod';
+import { formatCount } from '@/lib/format';
+import { CHART_TOKENS } from '@/lib/visibility/chart-tokens';
 
 import type {
   visibilitySourceSeriesSchema,
@@ -22,40 +24,6 @@ import {
 export type SourcesData = z.infer<typeof visibilitySourcesSchema>;
 export type SourceItem = SourcesData['items'][number];
 export type SeriesData = z.infer<typeof visibilitySourceSeriesSchema>;
-
-/**
- * The categorical chart ramp, paired so a line and its legend swatch cannot
- * drift apart. Eight, because that is how many the design tokens define — and
- * a chart needing a ninth is a chart that has stopped being readable.
- */
-/**
- * Spelled out rather than generated from the index.
- *
- * Tailwind finds classes by scanning source text, so a `stroke-chart-${n}`
- * built at runtime emits no CSS and every line draws unstyled. The literals
- * have to survive; only the repetition around them does not.
- */
-const CHART_TOKEN_CLASSES = [
-  ['stroke-chart-1', 'bg-chart-1', 'var(--color-chart-1)'],
-  ['stroke-chart-2', 'bg-chart-2', 'var(--color-chart-2)'],
-  ['stroke-chart-3', 'bg-chart-3', 'var(--color-chart-3)'],
-  ['stroke-chart-4', 'bg-chart-4', 'var(--color-chart-4)'],
-  ['stroke-chart-5', 'bg-chart-5', 'var(--color-chart-5)'],
-  ['stroke-chart-6', 'bg-chart-6', 'var(--color-chart-6)'],
-  ['stroke-chart-7', 'bg-chart-7', 'var(--color-chart-7)'],
-  ['stroke-chart-8', 'bg-chart-8', 'var(--color-chart-8)'],
-] as const;
-
-const CHART_TOKENS: readonly {
-  strokeClass: string;
-  swatchClass: string;
-  /** The same token as a value, for charts that take a colour prop. */
-  color: string;
-}[] = CHART_TOKEN_CLASSES.map(([strokeClass, swatchClass, color]) => ({
-  strokeClass,
-  swatchClass,
-  color,
-}));
 
 const chartToken = (index: number) => CHART_TOKENS[index % CHART_TOKENS.length];
 
@@ -185,7 +153,7 @@ export function ratio(value: number | null | undefined): string | null {
 
 /** A count, grouped. */
 export function count(value: number | null | undefined): string | null {
-  return value === null || value === undefined ? null : value.toLocaleString();
+  return value === null || value === undefined ? null : formatCount(value);
 }
 
 /**

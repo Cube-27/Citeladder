@@ -19,7 +19,8 @@ import {
 } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
-import { formatShortDate, formatUtcTimestamp } from '@/lib/format';
+import { formatCount, formatShortDate } from '@/lib/format';
+import { DisplayTime } from '@/components/ui/display-time';
 import { isActiveSyncRun, SYNC_RUN_BADGE, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
@@ -132,7 +133,7 @@ function ConnectionMetadata({
         <div className="flex items-center gap-2">
           <span className={eyebrowClasses}>Last synced</span>
           <span className="text-secondary font-mono text-xs tabular-nums">
-            {connection.last_synced_at ? formatUtcTimestamp(connection.last_synced_at) : 'Never'}
+            <DisplayTime value={connection.last_synced_at} fallback="Never" />
           </span>
         </div>
         <BackfillProgress workspaceId={connection.workspace_id} connectionId={connection.id} />
@@ -143,9 +144,18 @@ function ConnectionMetadata({
             {activeRun.status.replace('_', ' ')}
           </Badge>
           <span className="text-muted font-mono text-xs whitespace-nowrap">
-            {activeRun.status === 'running'
-              ? `${activeRun.row_count.toLocaleString('en-US')} rows · window ${formatShortDate(activeRun.window_start)}–${formatShortDate(activeRun.window_end)}`
-              : `Enqueued ${formatUtcTimestamp(activeRun.created_at)} · waiting for a worker`}
+            {activeRun.status === 'running' ? (
+              `${formatCount(activeRun.row_count)} rows · window ${formatShortDate(activeRun.window_start)}–${formatShortDate(activeRun.window_end)}`
+            ) : (
+              <>
+                Enqueued <DisplayTime value={activeRun.created_at} /> ·{' '}
+                {activeRun.status === 'leased'
+                  ? 'assigned to a worker'
+                  : activeRun.status === 'retry_wait'
+                    ? 'awaiting retry'
+                    : 'waiting for a worker'}
+              </>
+            )}
           </span>
         </div>
       ) : null}
