@@ -5,7 +5,7 @@ import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageDetail } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
-import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 /**
  * Internal links — the crawl's persisted link-graph projection for this page.
@@ -16,14 +16,12 @@ import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace
  * and a zero second one is in the menu and nowhere else. `Depth from home` is
  * shortest path over all followable links, because a nav link is a real click.
  *
- * The whole section is absent — not zeroed — when the crawl persisted no metric
- * for the URL, since "not measured" and "nothing links here" are different facts.
+ * The caller distinguishes absent crawl measurements from an observed zero.
  */
 export function InternalLinksCard({
   links,
   crawlId,
-}: Readonly<{ links: PageDetail['internal_links']; crawlId: string }>) {
-  if (links === null) return null;
+}: Readonly<{ links: NonNullable<PageDetail['internal_links']>; crawlId: string }>) {
   const diagnosticCounts = {
     generic: links.anchor_diagnostics.filter((item) => item.kind === 'generic').length,
     repeated_destination: links.anchor_diagnostics.filter(
@@ -59,12 +57,11 @@ export function InternalLinksCard({
     },
   ];
   return (
-    <section className="border-border-subtle grid min-w-0 gap-4 border-y py-4">
-      <EditorialSectionHeader
-        title="Internal Links"
-        description={`Modelled over ${links.source_page_count} observed crawl page${links.source_page_count === 1 ? '' : 's'}${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
-      />
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3">
+    <div className="grid min-w-0 gap-4">
+      <p className={textRole('meta')}>
+        {`Modelled over ${links.source_page_count} observed crawl page${links.source_page_count === 1 ? '' : 's'}${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
+      </p>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
         {metrics.map((metric) => (
           <div key={metric.label} className="grid gap-0.5">
             <Label>{metric.label}</Label>
@@ -78,7 +75,7 @@ export function InternalLinksCard({
           </div>
         ))}
       </dl>
-      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <NeighbourList
           heading="Top linking pages"
           neighbours={links.top_inbound}
@@ -92,7 +89,7 @@ export function InternalLinksCard({
           emptyMessage="This page links to no other crawled page."
         />
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -117,27 +114,27 @@ function NeighbourList({
           {neighbours.map((neighbour) => (
             <li
               key={`${neighbour.site_url_id ?? neighbour.url}`}
-              className="flex min-w-0 items-baseline justify-between gap-3 py-1.5 first:pt-0"
+              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-1.5 first:pt-0"
             >
               {/* An off-crawl target is counted but was never a node, so it has
                   no detail route to link to. */}
               {neighbour.site_url_id ? (
                 <ProjectLink
                   href={`/site/crawls/${crawlId}/pages/${neighbour.site_url_id}`}
-                  className="text-accent-text mono min-w-0 text-xs leading-4 break-all hover:underline"
+                  className="text-accent-text mono min-w-0 text-xs leading-4 [overflow-wrap:anywhere] hover:underline"
                   title={neighbour.url}
                 >
                   {neighbour.url}
                 </ProjectLink>
               ) : (
                 <span
-                  className="mono text-secondary min-w-0 text-xs leading-4 break-all"
+                  className="mono text-secondary min-w-0 text-xs leading-4 [overflow-wrap:anywhere]"
                   title={neighbour.url}
                 >
                   {neighbour.url}
                 </span>
               )}
-              <span className="flex shrink-0 items-center gap-2">
+              <span className="flex shrink-0 items-center gap-1.5">
                 {neighbour.main_content ? <Badge>Main</Badge> : null}
                 {neighbour.nofollow ? <Badge className="text-muted">nofollow</Badge> : null}
                 <span className="mono text-muted text-xs">×{neighbour.anchor_count}</span>

@@ -581,13 +581,18 @@ describe('UrlDetail', () => {
     expect(getCallCount).toBeGreaterThanOrEqual(statuses.length);
   }, 20_000);
 
-  it('renders the internal-links section with linked neighbours', async () => {
+  it('switches page measurements without losing internal-link evidence', async () => {
     mswServer.use(...handlers(detail()));
 
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.getByRole('heading', { name: 'Internal Links' })).toBeInTheDocument();
+    const user = userEvent.setup();
+    const delivery = screen.getByRole('tab', { name: 'Delivery Metrics' });
+    const links = screen.getByRole('tab', { name: 'Internal Links' });
+    expect(delivery).toHaveAttribute('aria-selected', 'true');
+    await user.click(links);
+    expect(links).toHaveAttribute('aria-selected', 'true');
     // Inbound and main-content inbound are different facts and both are shown.
     expect(screen.getByText('Main-content inbound')).toBeInTheDocument();
     expect(screen.getByText('Modelled over 7 observed crawl pages')).toBeInTheDocument();
@@ -596,15 +601,18 @@ describe('UrlDetail', () => {
       `/site/crawls/${CRAWL}/pages/dddddddd-1111-4111-8111-111111111111`,
     );
     expect(screen.getByText('This page links to no other crawled page.')).toBeInTheDocument();
+    links.focus();
+    await user.keyboard('{ArrowLeft}');
+    expect(delivery).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('omits the internal-links section entirely when the crawl measured none', async () => {
+  it('distinguishes unmeasured internal links from an observed zero', async () => {
     mswServer.use(...handlers(detail({ internal_links: null })));
 
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    // Absent, not zeroed: "not measured" and "nothing links here" differ.
-    expect(screen.queryByRole('heading', { name: 'Internal Links' })).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Internal Links' }));
+    expect(screen.getByText('Internal links not measured for this page.')).toBeInTheDocument();
   });
 });

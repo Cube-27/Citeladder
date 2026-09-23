@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { LogoMark } from '@/components/ui/logo-mark';
 
 import { WallpaperPanel } from './wallpaper-panel';
+import { ScaledPreview } from '../primitives/scaled-preview';
 
 /**
  * Product windows, one per audience segment — the same instrument the landing
@@ -451,15 +452,17 @@ export function SolutionEvidencePanel({
   className?: string;
 }>) {
   return (
-    <WallpaperPanel className={cn('p-3 sm:p-5', TINT_CLASSES[tint], className)}>
-      <div className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border shadow-[0_2px_8px_rgb(12_16_36/0.06),0_24px_56px_-24px_rgb(12_16_36/0.18)]">
-        <WindowChrome label={PANEL_LABELS[scene]} />
-        {/* The illustrative rows stay hidden from assistive technology so they
+    <ScaledPreview width={640} className={cn('cl-solution-preview', className)}>
+      <WallpaperPanel className={cn('p-5', TINT_CLASSES[tint])}>
+        <div className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border shadow-[0_2px_8px_rgb(12_16_36/0.06),0_24px_56px_-24px_rgb(12_16_36/0.18)]">
+          <WindowChrome label={PANEL_LABELS[scene]} />
+          {/* The illustrative rows stay hidden from assistive technology so they
             are never announced as persisted customer evidence. */}
-        <div aria-hidden className="px-4 py-5 sm:px-5">
-          {PANELS[scene](tint)}
+          <div aria-hidden className="px-4 py-5 sm:px-5">
+            {PANELS[scene](tint)}
+          </div>
         </div>
-      </div>
-    </WallpaperPanel>
+      </WallpaperPanel>
+    </ScaledPreview>
   );
 }

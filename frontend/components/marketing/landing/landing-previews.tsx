@@ -5,6 +5,7 @@ import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav'
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { MODULES, SOURCE_ROWS, type ModuleId } from './landing-data';
 import { HeroDashboardPreview } from './landing-hero-dashboard';
+import { ScaledPreview } from '../primitives/scaled-preview';
 
 type SourceView = 'domains' | 'urls';
 
@@ -28,8 +29,7 @@ function SourceTable({ view }: Readonly<{ view: SourceView }>) {
       <tbody>
         {SOURCE_ROWS.map((row, index) => (
           <tr key={row.domain}>
-            <td>
-              <span className="cl-cell-heading">{view === 'domains' ? 'Domain' : 'URL'}</span>
+            <td aria-label={view === 'domains' ? row.domain : row.url}>
               <span className="cl-source-name">
                 <span className={`cl-favicon cl-favicon-${index}`}>
                   {row.domain[0].toUpperCase()}
@@ -37,16 +37,9 @@ function SourceTable({ view }: Readonly<{ view: SourceView }>) {
                 <span>{view === 'domains' ? row.domain : row.url}</span>
               </span>
             </td>
+            <td>{row.type}</td>
+            <td>{row.citations}</td>
             <td>
-              <span className="cl-cell-heading">Source type</span>
-              {row.type}
-            </td>
-            <td>
-              <span className="cl-cell-heading">Citations</span>
-              {row.citations}
-            </td>
-            <td>
-              <span className="cl-cell-heading">Used</span>
               <span className="cl-prompt-count">
                 <i style={{ width: `${(row.prompts / 18) * 45}%` }} />
                 {row.prompts}
@@ -360,15 +353,17 @@ export function PlatformExplorer({
                     {DEMO_CTA} <ArrowUpRight size={16} aria-hidden />
                   </a>
                 </div>
-                <div className={`cl-product-stage cl-product-stage-${item.id}`}>
-                  <div className="cl-product-card">
-                    <div className="cl-window-bar">
-                      <Grid2X2 size={14} aria-hidden />
-                      Zernovelle / {item.label}
+                <ScaledPreview width={640} className="cl-product-preview">
+                  <div className={`cl-product-stage cl-product-stage-${item.id}`}>
+                    <div className="cl-product-card">
+                      <div className="cl-window-bar">
+                        <Grid2X2 size={14} aria-hidden />
+                        Zernovelle / {item.label}
+                      </div>
+                      <Preview />
                     </div>
-                    <Preview />
                   </div>
-                </div>
+                </ScaledPreview>
               </TabPanel>
             );
           })}
@@ -385,48 +380,50 @@ export function HeroPreview() {
     { label: 'Sources', value: 'sources' },
   ] as const;
   return (
-    <div className={`cl-hero-preview${selected === 'sources' ? ' cl-hero-preview-sources' : ''}`}>
-      <div className="cl-preview-browser">
-        <span>
-          <Grid2X2 size={13} aria-hidden />
-          zernovelle.example / AI Visibility
-        </span>
-        <span>Workspace overview</span>
-      </div>
-      <div className="cl-hero-preview-layout">
-        <aside>
-          <strong className="cl-workspace-name">
-            <span className="cl-favicon">Z</span>Zernovelle
-          </strong>
-          <span className="cl-sidebar-label">WORKSPACE</span>
-          <span>Overview</span>
-          <span className="cl-sidebar-active">AI Visibility</span>
-          <span>Sources</span>
-          <span>Site Health</span>
-          <span>Demand</span>
-          <span>Content</span>
-        </aside>
-        <div className="cl-hero-preview-main">
-          <div className="cl-hero-preview-title">
-            <div>
-              <h2>AI Visibility</h2>
-              <p>Brand performance across tracked prompts</p>
+    <ScaledPreview width={1184} className="cl-hero-scaled-preview">
+      <div className={`cl-hero-preview${selected === 'sources' ? ' cl-hero-preview-sources' : ''}`}>
+        <div className="cl-preview-browser">
+          <span>
+            <Grid2X2 size={13} aria-hidden />
+            zernovelle.example / AI Visibility
+          </span>
+          <span>Workspace overview</span>
+        </div>
+        <div className="cl-hero-preview-layout">
+          <aside>
+            <strong className="cl-workspace-name">
+              <span className="cl-favicon">Z</span>Zernovelle
+            </strong>
+            <span className="cl-sidebar-label">WORKSPACE</span>
+            <span>Overview</span>
+            <span className="cl-sidebar-active">AI Visibility</span>
+            <span>Sources</span>
+            <span>Site Health</span>
+            <span>Demand</span>
+            <span>Content</span>
+          </aside>
+          <div className="cl-hero-preview-main">
+            <div className="cl-hero-preview-title">
+              <div>
+                <h2>AI Visibility</h2>
+                <p>Brand performance across tracked prompts</p>
+              </div>
+              <span className="cl-pill">
+                <Search size={13} aria-hidden /> Last 30 days
+              </span>
             </div>
-            <span className="cl-pill">
-              <Search size={13} aria-hidden /> Last 30 days
-            </span>
+            <TabsRoot value={selected} onValueChange={setSelected}>
+              <TabsBar items={tabs} ariaLabel="Preview view" className="cl-hero-preview-tabs" />
+              <TabPanel value="trends" forceMount>
+                <HeroDashboardPreview />
+              </TabPanel>
+              <TabPanel value="sources" forceMount>
+                <SourcesPreview />
+              </TabPanel>
+            </TabsRoot>
           </div>
-          <TabsRoot value={selected} onValueChange={setSelected}>
-            <TabsBar items={tabs} ariaLabel="Preview view" className="cl-hero-preview-tabs" />
-            <TabPanel value="trends" forceMount>
-              <HeroDashboardPreview />
-            </TabPanel>
-            <TabPanel value="sources" forceMount>
-              <SourcesPreview />
-            </TabPanel>
-          </TabsRoot>
         </div>
       </div>
-    </div>
+    </ScaledPreview>
   );
 }

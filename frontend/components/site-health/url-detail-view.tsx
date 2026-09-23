@@ -1,5 +1,8 @@
+import { useState } from 'react';
+
 import { PageShell } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
+import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
@@ -9,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
+import { ledgerClasses } from '@/components/ui/workspace';
 import type { DeliveryFacts, IssueOccurrence, PageDetail } from '@/lib/api/types';
 import {
   dimensionLabel,
@@ -56,11 +59,38 @@ export function UrlDetailView({
       <Stack gap="workspace">
         <PageMetadata detail={detail} />
         <UrlScoreSummary detail={detail} />
-        <DeliveryMetrics delivery={detail.delivery} />
-        <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
+        <PageMeasurements detail={detail} />
         <IssuesList issues={detail.issues} />
       </Stack>
     </PageShell>
+  );
+}
+
+function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
+  const [selected, setSelected] = useState<'delivery' | 'links'>('delivery');
+  return (
+    <section className="min-w-0">
+      <Tabs
+        value={selected}
+        onValueChange={setSelected}
+        items={[
+          { value: 'delivery', label: 'Delivery Metrics' },
+          { value: 'links', label: 'Internal Links' },
+        ]}
+        ariaLabel="Page measurements"
+      >
+        <TabPanel value="delivery" forceMount className="pt-4">
+          <DeliveryMetrics delivery={detail.delivery} />
+        </TabPanel>
+        <TabPanel value="links" forceMount className="pt-4">
+          {detail.internal_links ? (
+            <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
+          ) : (
+            <p className={textRole('body')}>Internal links not measured for this page.</p>
+          )}
+        </TabPanel>
+      </Tabs>
+    </section>
   );
 }
 
@@ -134,12 +164,9 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
     { label: 'Wire Size', value: formatBytes(delivery.wire_bytes) },
   ];
   return (
-    <section className="border-border-subtle grid gap-4 border-y py-4">
-      <EditorialSectionHeader
-        title="Delivery Metrics"
-        description="Static HTTP-level measurements"
-      />
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+    <div className="grid gap-3">
+      <p className={textRole('meta')}>Static HTTP-level measurements</p>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
         {items.map((item) => (
           <div key={item.label} className="grid gap-0.5">
             <Label>{item.label}</Label>
@@ -149,7 +176,7 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
           </div>
         ))}
       </dl>
-    </section>
+    </div>
   );
 }
 
