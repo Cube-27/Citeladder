@@ -6,6 +6,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { billingApi, type BillingUsage, type WorkspaceEntitlement } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { CONTENT_CREATION_CAPABILITY, GROWTH_AGENT_CAPABILITY } from '@/lib/config/billing';
+import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { useProjectContext } from '@/lib/project/project-context';
 
 const PAID_WORK_CAPABILITIES = new Set([CONTENT_CREATION_CAPABILITY, GROWTH_AGENT_CAPABILITY]);
@@ -57,8 +58,15 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
   const canReadBilling = activeWorkspace?.capabilities.includes('manage_billing') ?? false;
   const entitlementQuery = useQuery({
     queryKey: queryKeys.billing.workspaceEntitlement(workspaceId),
+    // The empty-workspace gate blocks on this read; it carries the bounded
+    // bootstrap timeout so a stall reaches the retry notice in seconds. The
+    // usage read below is not a gate input and keeps the ordinary default.
     queryFn: ({ signal }) =>
-      billingApi.workspaceEntitlement(String(workspaceId), { signal, workspaceId }),
+      billingApi.workspaceEntitlement(String(workspaceId), {
+        signal,
+        workspaceId,
+        timeoutMs: getBootstrapReadTimeoutMs(),
+      }),
     enabled: workspaceId !== null,
   });
   const usageQuery = useQuery({

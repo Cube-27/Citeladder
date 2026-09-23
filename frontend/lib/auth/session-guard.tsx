@@ -18,6 +18,7 @@ import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { SessionUser } from '@/lib/api/types';
 import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
+import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -83,7 +84,10 @@ export function SessionGuard({
     refetch,
   } = useQuery({
     queryKey: queryKeys.auth.me(),
-    queryFn: ({ signal }) => authApi.me({ signal }),
+    // The session read is the one every protected route blocks on; the bounded
+    // bootstrap timeout keeps a stalled connection on this notice-and-retry
+    // path instead of the full request timeout.
+    queryFn: ({ signal }) => authApi.me({ signal, timeoutMs: getBootstrapReadTimeoutMs() }),
     enabled: !isRedirecting,
   });
 

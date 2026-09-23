@@ -27,6 +27,7 @@ import { projectsApi } from '@/lib/api/projects';
 import { getAppQueryClient } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { Project, Workspace } from '@/lib/api/types';
+import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { projectDestination, workspaceDestination } from '@/lib/navigation/project-destination';
 import {
   readStoredActiveProjectId,
@@ -67,7 +68,7 @@ async function requireSession(client: QueryClient): Promise<boolean> {
   try {
     await client.ensureQueryData({
       queryKey: queryKeys.auth.me(),
-      queryFn: ({ signal }) => authApi.me({ signal }),
+      queryFn: ({ signal }) => authApi.me({ signal, timeoutMs: getBootstrapReadTimeoutMs() }),
     });
     return true;
   } catch (error) {
@@ -95,23 +96,36 @@ async function resolveScope(client: QueryClient, url: URL): Promise<Scope | null
   const requestedProjectId = url.searchParams.get('project') || null;
   const urlWorkspaceId = url.searchParams.get('workspace') || null;
 
-  const workspaces = await settle<Workspace[]>(
+  // A membership list needs only the session cookie and a project detail only
+  // its id; neither depends on the other's answer. Sent together they cost one
+  // round trip instead of two — and one place to stall instead of two.
+  const workspacesPending = settle<Workspace[]>(
     client.ensureQueryData({
       queryKey: queryKeys.workspaces.list(),
-      queryFn: ({ signal }) => projectsApi.listWorkspaces({ signal, workspaceId: null }),
+      queryFn: ({ signal }) =>
+        projectsApi.listWorkspaces({
+          signal,
+          workspaceId: null,
+          timeoutMs: getBootstrapReadTimeoutMs(),
+        }),
     }),
   );
-  if (!workspaces) return null;
-
-  const resolvedProject = requestedProjectId
-    ? await settle<Project>(
+  const projectPending = requestedProjectId
+    ? settle<Project>(
         client.ensureQueryData({
           queryKey: queryKeys.projects.detail(requestedProjectId),
           queryFn: ({ signal }) =>
-            projectsApi.getProject(requestedProjectId, { signal, workspaceId: null }),
+            projectsApi.getProject(requestedProjectId, {
+              signal,
+              workspaceId: null,
+              timeoutMs: getBootstrapReadTimeoutMs(),
+            }),
         }),
       )
     : null;
+  const workspaces = await workspacesPending;
+  if (!workspaces) return null;
+  const resolvedProject = await projectPending;
 
   // A URL naming both a workspace and a project from a DIFFERENT workspace is
   // rejected rather than reconciled, and the gate says so.
@@ -136,13 +150,22 @@ function readWorkspaceState(client: QueryClient, workspaceId: string) {
     settle<Project[]>(
       client.ensureQueryData({
         queryKey: queryKeys.projects.list(workspaceId),
-        queryFn: ({ signal }) => projectsApi.listProjects({ signal, workspaceId }),
+        queryFn: ({ signal }) =>
+          projectsApi.listProjects({
+            signal,
+            workspaceId,
+            timeoutMs: getBootstrapReadTimeoutMs(),
+          }),
       }),
     ),
     settle(
       client.ensureQueryData({
         queryKey: queryKeys.billing.workspaceEntitlement(workspaceId),
-        queryFn: ({ signal }) => billingApi.workspaceEntitlement(workspaceId, { signal }),
+        queryFn: ({ signal }) =>
+          billingApi.workspaceEntitlement(workspaceId, {
+            signal,
+            timeoutMs: getBootstrapReadTimeoutMs(),
+          }),
       }),
     ),
   ]);
@@ -184,9 +207,16 @@ export async function bootstrapPrivateRoutes({ request }: { request: Request }) 
   const client = getAppQueryClient();
   const url = new URL(request.url);
 
-  if (!(await requireSession(client))) return null;
-  const scope = await resolveScope(client, url);
-  if (!scope) return null;
+  // `me` and the membership list need only the session cookie — the tree's own
+  // providers already issue them in parallel, and the loader pays for every
+  // round trip it serializes. A 401 still rejects first: Promise.all settles
+  // on the earliest rejection, so the sign-in redirect is not held up by the
+  // reads it makes moot.
+  const [sessionResolved, scope] = await Promise.all([
+    requireSession(client),
+    resolveScope(client, url),
+  ]);
+  if (!sessionResolved || !scope) return null;
 
   const { workspaceId, workspaces, requestedProjectId } = scope;
   const [listed, entitlement] = await readWorkspaceState(client, workspaceId);

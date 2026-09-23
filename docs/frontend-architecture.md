@@ -43,6 +43,10 @@ inside the persistent shell. Route failures offer a document reload, including
 recovery from replaced build chunks. Once a project is authorized, its screen reads start without waiting for
 entitlement. Empty-workspace onboarding still waits for the allowance decision,
 and capability-specific controls retain their own entitlement gates.
+The session, membership, selected-project and entitlement reads use a shorter
+configurable browser timeout so stalled bootstrap requests reach the existing
+retry notices. `NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS` is baked into the Vite
+app build and defaults to 8 seconds per request attempt.
 
 ## Server, URL and local state
 

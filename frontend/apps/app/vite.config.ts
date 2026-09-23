@@ -49,6 +49,9 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
       'process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS': publicValue(
         'NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS',
       ),
+      'process.env.NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS': publicValue(
+        'NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS',
+      ),
       'process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE': publicValue(
         'NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE',
       ),

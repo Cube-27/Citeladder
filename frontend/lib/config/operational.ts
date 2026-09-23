@@ -25,6 +25,26 @@ export function getApiRequestTimeoutMs(): number {
 }
 
 /**
+ * Bounded timeout for the shell's opening reads: session, memberships, the
+ * workspace's project list (and an explicitly requested project detail), and
+ * the workspace entitlement projection. These are tiny payloads a
+ * healthy-but-distant network still serves in well under a second; letting one
+ * ride the full 30-second request timeout meant a stalled connection painted
+ * nothing but a loader for minutes while the gate's retry notice waited on an
+ * answer that never came. An expiry still surfaces through the ordinary
+ * retryable `request_timeout` path, so recovery stays with the existing
+ * notices and retries. Env-overridable via `NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS`.
+ */
+export const DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS = 8_000;
+
+export function getBootstrapReadTimeoutMs(): number {
+  const raw = process.env.NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS;
+  if (!raw || !/^[1-9]\d*$/u.test(raw)) return DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS;
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) ? parsed : DEFAULT_BOOTSTRAP_READ_TIMEOUT_MS;
+}
+
+/**
  * Commerce buyer-prompt generation performs one structured model call. Keep
  * its browser request alive for the backend model gateway's 180-second bound
  * plus response/persistence overhead instead of applying the ordinary
