@@ -11,6 +11,34 @@ import {
 
 import { CookieBanner } from './cookie-banner';
 
+function failStorageWrites() {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
+  const storage = window.localStorage;
+  const setItem = vi.fn(() => {
+    throw new DOMException('Storage unavailable');
+  });
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: storage.getItem.bind(storage),
+      setItem,
+      removeItem: storage.removeItem.bind(storage),
+      clear: storage.clear.bind(storage),
+      key: storage.key.bind(storage),
+      get length() {
+        return storage.length;
+      },
+    } satisfies Storage,
+  });
+  return {
+    setItem,
+    restore: () => {
+      if (descriptor) Object.defineProperty(window, 'localStorage', descriptor);
+      else Reflect.deleteProperty(window, 'localStorage');
+    },
+  };
+}
+
 /**
  * What is worth pinning is the consent contract, not the layout: the banner
  * appears only while undecided, both answers are one click, and — the part a
@@ -63,17 +91,19 @@ describe('CookieBanner', () => {
     'keeps the %s decision for this page when storage writes fail',
     async (choice) => {
       const user = userEvent.setup();
-      const setItem = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
-        throw new DOMException('Storage unavailable');
-      });
+      const failingStorage = failStorageWrites();
       try {
         render(<CookieBanner />);
         await user.click(await screen.findByRole('button', { name: choice }));
+        expect(failingStorage.setItem).toHaveBeenCalledWith(
+          COOKIE_CONSENT_STORAGE_KEY,
+          choice === 'Accept' ? 'accepted' : 'rejected',
+        );
         expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
         expect(readConsent()).toBe(choice === 'Accept' ? 'accepted' : 'rejected');
         expect(hasAnalyticsConsent()).toBe(choice === 'Accept');
       } finally {
-        setItem.mockRestore();
+        failingStorage.restore();
         writeConsent('rejected');
       }
     },
@@ -81,18 +111,17 @@ describe('CookieBanner', () => {
 
   it('clears prior acceptance when persisting rejection fails', async () => {
     window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, 'accepted');
-    const setItem = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
-      throw new DOMException('Storage unavailable');
-    });
+    const failingStorage = failStorageWrites();
     try {
       writeConsent('rejected');
+      expect(failingStorage.setItem).toHaveBeenCalledWith(COOKIE_CONSENT_STORAGE_KEY, 'rejected');
       expect(readConsent()).toBe('rejected');
       expect(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).toBeNull();
       vi.resetModules();
       const reloaded = await import('@/lib/consent/cookie-consent');
       expect(reloaded.hasAnalyticsConsent()).toBe(false);
     } finally {
-      setItem.mockRestore();
+      failingStorage.restore();
       writeConsent('rejected');
     }
   });
