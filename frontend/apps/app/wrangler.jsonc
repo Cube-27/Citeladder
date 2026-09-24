@@ -16,4 +16,8 @@
     "ORIGIN_UPSTREAM": "https://origin.citeladder.com",
     "PUBLIC_APP_HOST": "app.citeladder.com",
   },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "invocation_logs": true },
+  },
 }

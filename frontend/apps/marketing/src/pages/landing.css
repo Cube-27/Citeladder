@@ -182,7 +182,7 @@
   margin-inline: auto;
 }
 .cl-hero h1 {
-  font-size: clamp(2.5rem, 1.5rem + 3vw, 3.5rem);
+  font-size: clamp(2.375rem, 1.5rem + 3vw, 3rem);
   line-height: 1.08;
   margin: 0 auto;
   max-width: none;
@@ -949,10 +949,16 @@
     font-size: 16px;
   }
   .cl-closing-actions {
-    display: grid;
+    flex-wrap: nowrap;
+    width: 100%;
+    gap: 10px;
   }
   .cl-closing-actions .cl-cta {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
+    min-height: 48px;
+    padding: 10px;
+    gap: 7px;
   }
   .cl-section-head p,
   .cl-evidence-grid > div > p,

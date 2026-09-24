@@ -170,12 +170,12 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
           <p className="website-body-lg text-muted mx-auto max-w-[52ch]">
             Your category, your prompts, raw answers behind every score.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <DemoButtonLink className="w-full sm:w-auto">
+          <div className="mt-8 flex items-stretch justify-center gap-3 sm:items-center sm:gap-4">
+            <DemoButtonLink className="min-w-0 flex-1 sm:flex-none">
               {DEMO_CTA}
               <ArrowRight aria-hidden />
             </DemoButtonLink>
-            <ButtonLink href="/faq" variant="ghost" className="w-full sm:w-auto">
+            <ButtonLink href="/faq" variant="ghost" className="min-w-0 flex-1 sm:flex-none">
               Read the FAQ
             </ButtonLink>
           </div>
