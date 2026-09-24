@@ -89,8 +89,8 @@ async def test_paid_receipt_list_download_and_account_isolation(
     invoice = BillingInvoice(
         billing_account_id=account.id,
         payment_id=payment.id,
-        invoice_number="CL/2026-27/000001",
-        receipt_number="CL-R/2026-27/000001",
+        invoice_number="CL/2627/000001",
+        receipt_number="CLR/2627/000001",
         financial_year="2026-27",
         document_kind="gst_tax_receipt",
         invoice_date=paid_at.date(),
@@ -161,7 +161,8 @@ async def test_paid_receipt_list_download_and_account_isolation(
         select(BillingInvoice).where(BillingInvoice.payment_id == first.id)
     )
     assert credit is not None
-    assert credit.invoice_number.startswith("CL-CN/")
+    assert credit.invoice_number.startswith("CLC/")
+    assert len(credit.invoice_number) <= 16
     assert credit.payload["amounts"]["taxable_minor"] == 50_000
     assert credit.payload["amounts"]["igst_minor"] == 9_000
     listed = (await client.get("/api/v1/billing/invoices")).json()["invoices"]

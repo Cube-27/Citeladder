@@ -16,7 +16,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.entitlements import (
@@ -24,6 +24,8 @@ from app.core.config.entitlements import (
     KEY_SITE_HEALTH_PAGE_FETCHES,
     LEDGER_ENTRY_RESERVATION,
 )
+from app.core.config.site_health_contracts import TASK_KIND_ANALYZE
+from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.ledger import (
     _active_grants_in_draw_order,
@@ -36,6 +38,7 @@ from app.domain.entitlements.metered import (
 )
 from app.models.billing import ConsumableLedger
 from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.queue import SiteCrawlTask
 
 _SUBJECT_KIND = "site_crawl"
 
@@ -104,6 +107,26 @@ async def reserve_crawl_fetches(
     )
 
 
+async def _analyzed_pages(session: AsyncSession, crawl_id: uuid.UUID) -> int:
+    """Pages analyzed, from the durable task rows rather than a cached counter.
+
+    A cancel can land before the worker refreshes ``analyzed_url_count``; the
+    succeeded analyze tasks are the authority either way.
+    """
+    return int(
+        await session.scalar(
+            select(func.count())
+            .select_from(SiteCrawlTask)
+            .where(
+                SiteCrawlTask.crawl_id == crawl_id,
+                SiteCrawlTask.task_kind == TASK_KIND_ANALYZE,
+                SiteCrawlTask.status == TASK_STATUS_SUCCEEDED,
+            )
+        )
+        or 0
+    )
+
+
 async def settle_crawl_fetches(
     session: AsyncSession, *, crawl: SiteCrawl, at: datetime
 ) -> None:
@@ -127,7 +150,7 @@ async def settle_crawl_fetches(
         reservation_id=reservation_id,
         dispatch_key="crawl",
         attempt=1,
-        charged_units=max(int(crawl.analyzed_url_count or 0), 0),
+        charged_units=await _analyzed_pages(session, crawl.id),
         unknown_usage_charge=0,
         idempotency_key=f"site-crawl-fetches:{crawl.id}:settle",
         at=at,

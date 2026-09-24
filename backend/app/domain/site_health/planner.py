@@ -486,8 +486,9 @@ async def create_crawl(
     # against a 500 it was never going to reach.
     page_limit = _allowance_discovery_budget(page_limit, runtime=runtime)
     # Scheduled and manual crawls share one metered page-fetch allowance.
+    budget_at = datetime.now(UTC)
     page_limit, metered = await budgeted_page_limit(
-        session, workspace_id=workspace_id, requested=page_limit, at=datetime.now(UTC)
+        session, workspace_id=workspace_id, requested=page_limit, at=budget_at
     )
 
     profile = await _upsert_profile(
@@ -568,7 +569,7 @@ async def create_crawl(
     )
     if metered:
         await reserve_crawl_fetches(
-            session, crawl=crawl, units=page_limit, at=datetime.now(UTC)
+            session, crawl=crawl, units=page_limit, at=budget_at
         )
 
     # Re-seed the persistent monitored set: on a recrawl the active monitored
@@ -693,13 +694,14 @@ async def create_page_rerun_crawl(
         admitted_url_count=1,
         inventory_complete=True,
     )
+    budget_at = datetime.now(UTC)
     _, metered = await budgeted_page_limit(
-        session, workspace_id=workspace_id, requested=1, at=datetime.now(UTC)
+        session, workspace_id=workspace_id, requested=1, at=budget_at
     )
     session.add(crawl)
     await session.flush()  # assign crawl.id
     if metered:
-        await reserve_crawl_fetches(session, crawl=crawl, units=1, at=datetime.now(UTC))
+        await reserve_crawl_fetches(session, crawl=crawl, units=1, at=budget_at)
 
     # Record the target URL's observation so the page-detail projection (which
     # scopes URLs to a crawl's observed set) resolves it on this fresh crawl.

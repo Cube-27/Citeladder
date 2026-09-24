@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.entitlements import (
@@ -21,6 +21,7 @@ from app.domain.site_health.fetch_budget import (
 )
 from app.models.billing import BillingAccount
 from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.queue import SiteCrawlTask
 from tests.component.auth_helpers import register_and_login
 
 pytestmark = pytest.mark.asyncio
@@ -63,7 +64,7 @@ async def _grant_fetches(db_session: AsyncSession, units: int) -> None:
         ),
         catalog_revision="test",
         idempotency_key="test-fetch-allowance",
-        valid_from=datetime(2026, 1, 1, tzinfo=UTC),
+        valid_from=datetime.now(UTC) - timedelta(days=1),
         valid_until=None,
     )
     await db_session.commit()
@@ -99,12 +100,30 @@ async def test_crawls_share_one_allowance_and_pay_only_for_analyzed_pages(
     # a repeat settlement changes nothing.
     crawl = await db_session.get(SiteCrawl, crawl_id)
     assert crawl is not None
-    crawl.analyzed_url_count = 2
+    for task in list(
+        await db_session.scalars(
+            select(SiteCrawlTask).where(
+                SiteCrawlTask.crawl_id == crawl_id,
+                SiteCrawlTask.task_kind == "analyze",
+            )
+        )
+    )[:2]:
+        task.status = "succeeded"
+    analyzed = int(
+        await db_session.scalar(
+            select(func.count())
+            .select_from(SiteCrawlTask)
+            .where(
+                SiteCrawlTask.crawl_id == crawl_id, SiteCrawlTask.status == "succeeded"
+            )
+        )
+        or 0
+    )
     now = datetime.now(UTC)
     await settle_crawl_fetches(db_session, crawl=crawl, at=now)
     await settle_crawl_fetches(db_session, crawl=crawl, at=now)
     await db_session.commit()
-    assert await _available(db_session, workspace_id) == 1
+    assert await _available(db_session, workspace_id) == 3 - analyzed
 
 
 async def test_accounts_without_a_fetch_grant_are_not_metered(

@@ -97,6 +97,14 @@ class BillingSettings(BaseSettings):
     subscription_total_cycles: int = 1200
     max_webhook_body_bytes: int = 262_144
 
+    @field_validator("india_gst_rate", mode="before")
+    @classmethod
+    def blank_gst_rate_is_unset(cls, value: object) -> object:
+        # An empty ``BILLING_INDIA_GST_RATE=`` means "not approved", not an error.
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
     @field_validator("seller_email")
     @classmethod
     def validate_seller_email(cls, value: str) -> str:
@@ -111,10 +119,10 @@ class BillingSettings(BaseSettings):
     @classmethod
     def validate_invoice_prefix(cls, value: str) -> str:
         normalized = value.strip().upper()
-        if not re.fullmatch(r"[A-Z0-9-]{1,16}", normalized):
-            raise ValueError(
-                "invoice_prefix must be 1-16 uppercase letters, digits, or hyphens"
-            )
+        # GST caps a document number at 16 characters; with the compact
+        # "C/2627/000001" suffix a prefix may use at most three.
+        if not re.fullmatch(r"[A-Z0-9]{1,3}", normalized):
+            raise ValueError("invoice_prefix must be 1-3 uppercase letters or digits")
         return normalized
 
 

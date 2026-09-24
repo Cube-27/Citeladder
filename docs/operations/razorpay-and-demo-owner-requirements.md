@@ -75,8 +75,8 @@ Customer communications handled by Razorpay? yes/no:
 Why this is a live-plan gate: Razorpay requires a concrete amount and currency.
 The catalog author (`billing_admin catalog-seed`) derives each India price once
 with the published rule at the recorded authoring rate and freezes the
-**GST-inclusive final charge** into the revision; the Razorpay plan carries that
-total. CiteLadder never reprices an active recurring mandate from an exchange
+**GST-exclusive INR price and its GST amount** in the revision; the Razorpay
+plan carries their sum as the final charge. CiteLadder never reprices an active recurring mandate from an exchange
 rate. GST is calculated from the frozen INR base with the approved rate and
 rounded once to paise with `ROUND_HALF_UP`.
 Razorpay collects that final total but does not determine the tax allocation.

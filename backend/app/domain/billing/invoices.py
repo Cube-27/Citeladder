@@ -34,6 +34,8 @@ _INDIA_ZONE = ZoneInfo("Asia/Kolkata")
 # Credit notes are numbered in their own consecutive series.
 _CREDIT_NOTE_SERIES = "CN"
 DOCUMENT_CREDIT_NOTE = "credit_note"
+# Indian GST caps an invoice/credit-note serial at 16 characters.
+_GST_DOCUMENT_NUMBER_MAX = 16
 
 
 class InvoiceEvidenceError(ValueError):
@@ -43,6 +45,18 @@ class InvoiceEvidenceError(ValueError):
 def financial_year(day: date) -> str:
     start = day.year if day.month >= 4 else day.year - 1
     return f"{start:04d}-{(start + 1) % 100:02d}"
+
+
+def document_number(prefix: str, series: str, year: str, serial: int) -> str:
+    """A GST document number of at most 16 characters.
+
+    ``CL/2627/000001`` (invoice), ``CLR/…`` (receipt), ``CLC/…`` (credit
+    note): the financial year ``2026-27`` is written as ``2627``.
+    """
+    number = f"{prefix}{series}/{year[2:4]}{year[-2:]}/{serial:06d}"
+    if len(number) > _GST_DOCUMENT_NUMBER_MAX:
+        raise InvoiceEvidenceError("invoice_number_too_long")
+    return number
 
 
 def _object(value: object, field: str) -> dict[str, Any]:
@@ -218,8 +232,8 @@ async def issue_paid_invoice(
     snapshot = _object(pending.tax_snapshot, "tax_snapshot")
     seller = _object(snapshot.get("seller"), "seller")
     prefix = _text(seller.get("invoice_prefix"), "invoice_prefix")
-    invoice_number = f"{prefix}/{year}/{serial:06d}"
-    receipt_number = f"{prefix}-R/{year}/{serial:06d}"
+    invoice_number = document_number(prefix, "", year, serial)
+    receipt_number = document_number(prefix, "R", year, serial)
     payload = _invoice_payload(
         pending=pending,
         payment=payment,
@@ -254,38 +268,89 @@ async def issue_paid_invoice(
     return invoice
 
 
-def _credit_amounts(original: dict[str, Any], refunded: int) -> dict[str, object]:
-    """Split a refund into taxable value and tax in the original's proportion."""
-    total = _integer(original.get("total_minor"), "total")
-    taxable = _integer(original.get("taxable_minor"), "taxable")
-    if not 0 < refunded <= total:
-        raise InvoiceEvidenceError("credit_note_amount_invalid")
-    credit_taxable = int(
-        (Decimal(refunded) * taxable / total).quantize(Decimal("1"), ROUND_HALF_UP)
-    )
-    credit_tax = refunded - credit_taxable
-    treatment = _text(original.get("tax_treatment"), "tax_treatment")
-    cgst = sgst = igst = 0
-    if treatment == "CGST_SGST":
-        cgst = credit_tax // 2
-        sgst = credit_tax - cgst
-    elif treatment == "IGST":
-        igst = credit_tax
-    elif credit_tax:
-        raise InvoiceEvidenceError("credit_note_tax_invalid")
+_AMOUNT_KEYS = ("taxable_minor", "cgst_minor", "sgst_minor", "igst_minor")
+
+
+def _remaining(original: dict[str, Any], credited: dict[str, int]) -> dict[str, int]:
+    """Components of the original receipt not yet reversed by credit notes."""
     return {
-        "subtotal_minor": credit_taxable,
+        key: _integer(original.get(key), key) - credited.get(key, 0)
+        for key in _AMOUNT_KEYS
+    }
+
+
+def _split_tax(treatment: str, tax: int, remaining: dict[str, int]) -> dict[str, int]:
+    """Split a credit's tax by treatment without exceeding what is left."""
+    if treatment == "IGST":
+        return {"cgst_minor": 0, "sgst_minor": 0, "igst_minor": tax}
+    if treatment != "CGST_SGST":
+        if tax:
+            raise InvoiceEvidenceError("credit_note_tax_invalid")
+        return {"cgst_minor": 0, "sgst_minor": 0, "igst_minor": 0}
+    cgst = min(tax // 2, remaining["cgst_minor"])
+    sgst = min(tax - cgst, remaining["sgst_minor"])
+    return {"cgst_minor": tax - sgst, "sgst_minor": sgst, "igst_minor": 0}
+
+
+def _credit_amounts(
+    original: dict[str, Any], credited: dict[str, int], refunded: int
+) -> dict[str, object]:
+    """Reverse ``refunded`` against what the receipt still has un-credited.
+
+    Each credit is allocated in proportion to the REMAINING taxable value and
+    tax, and a refund that exhausts the receipt reverses the exact remainder,
+    so cumulative credit notes always sum to the original components.
+    """
+    remaining = _remaining(original, credited)
+    remaining_tax = (
+        remaining["cgst_minor"] + remaining["sgst_minor"] + remaining["igst_minor"]
+    )
+    remaining_total = remaining["taxable_minor"] + remaining_tax
+    if not 0 < refunded <= remaining_total:
+        raise InvoiceEvidenceError("credit_note_amount_invalid")
+    treatment = _text(original.get("tax_treatment"), "tax_treatment")
+    if refunded == remaining_total:
+        taxable = remaining["taxable_minor"]
+        split = {key: remaining[key] for key in _AMOUNT_KEYS[1:]}
+    else:
+        proportional = Decimal(refunded) * remaining["taxable_minor"] / remaining_total
+        taxable = int(proportional.quantize(Decimal("1"), ROUND_HALF_UP))
+        taxable = max(taxable, refunded - remaining_tax)
+        split = _split_tax(treatment, refunded - taxable, remaining)
+    tax = refunded - taxable
+    return {
+        "subtotal_minor": taxable,
         "discount_minor": 0,
-        "taxable_minor": credit_taxable,
-        "cgst_minor": cgst,
-        "sgst_minor": sgst,
-        "igst_minor": igst,
-        "tax_minor": credit_tax,
+        "taxable_minor": taxable,
+        **split,
+        "tax_minor": tax,
         "total_minor": refunded,
         "currency": _text(original.get("currency"), "currency"),
         "tax_rate": _text(original.get("tax_rate"), "tax_rate"),
         "tax_treatment": treatment,
     }
+
+
+async def _credited_so_far(
+    session: AsyncSession, original: BillingInvoice
+) -> dict[str, int]:
+    """Sum the components already reversed by earlier credit notes."""
+    notes = (
+        await session.scalars(
+            select(BillingInvoice).where(
+                BillingInvoice.billing_account_id == original.billing_account_id,
+                BillingInvoice.document_kind == DOCUMENT_CREDIT_NOTE,
+                BillingInvoice.payload["original_invoice_number"].astext
+                == original.invoice_number,
+            )
+        )
+    ).all()
+    totals = dict.fromkeys(_AMOUNT_KEYS, 0)
+    for note in notes:
+        amounts = _object(note.payload.get("amounts"), "amounts")
+        for key in _AMOUNT_KEYS:
+            totals[key] += _integer(amounts.get(key), key)
+    return totals
 
 
 async def issue_credit_note(
@@ -310,7 +375,9 @@ async def issue_credit_note(
         raise InvoiceEvidenceError("credit_note_invoice_missing")
     source = _object(original.payload, "invoice")
     amounts = _credit_amounts(
-        _object(source.get("amounts"), "amounts"), refund.amount_minor
+        _object(source.get("amounts"), "amounts"),
+        await _credited_so_far(session, original),
+        refund.amount_minor,
     )
     issued_at = at or datetime.now(UTC)
     issued_day = issued_at.astimezone(_INDIA_ZONE).date()
@@ -318,7 +385,7 @@ async def issue_credit_note(
     serial = await _next_serial(session, f"{_CREDIT_NOTE_SERIES}:{year}")
     seller = _object(source.get("seller"), "seller")
     prefix = _text(seller.get("invoice_prefix"), "invoice_prefix")
-    number = f"{prefix}-{_CREDIT_NOTE_SERIES}/{year}/{serial:06d}"
+    number = document_number(prefix, "C", year, serial)
     original_line = _object(source.get("line"), "line")
     payload: dict[str, object] = {
         "schema_version": 1,

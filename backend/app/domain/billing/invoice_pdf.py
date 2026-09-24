@@ -7,6 +7,7 @@ from decimal import Decimal
 from html import escape
 from io import BytesIO
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_RIGHT
@@ -25,6 +26,8 @@ from reportlab.platypus import (
 
 from app.models.billing_invoice import BillingInvoice
 
+_INDIA_ZONE = ZoneInfo("Asia/Kolkata")
+
 
 def _dict(value: object) -> dict[str, Any]:
     return cast(dict[str, Any], value) if isinstance(value, dict) else {}
@@ -39,6 +42,9 @@ def _date(value: object) -> str:
         return ""
     try:
         parsed = datetime.fromisoformat(value)
+        # Documents are dated in India time, matching the stored invoice date.
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(_INDIA_ZONE)
         return f"{parsed.strftime('%B')} {parsed.day}, {parsed.year}"
     except ValueError:
         return value
