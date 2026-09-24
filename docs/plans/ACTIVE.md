@@ -22,7 +22,8 @@
 - [Razorpay activation](citeladder-razorpay-activation.md) — owner-approved
   on 24 September 2026. PR A (commercial core) and PR B (payment paths)
   implemented; the B8 test-mode smoke run is still to be performed. PR C
-  (customer surfaces) follows, then test-mode acceptance and the live sign-off.
+  (customer surfaces) implemented. Test-mode acceptance and the live sign-off
+  follow.
   Payments stay disabled until that sign-off.
 
 ## Queued
