@@ -44,8 +44,9 @@ from app.core.config.billing_contracts import (
     ACTIVATION_ACTIVATED,
     ACTIVATION_AUTHORITY_RECONCILIATION,
     ACTIVATION_FAILED,
-    ACTIVATION_KIND_TOPUP,
+    ACTIVATION_KIND_BASE,
     ACTIVATION_PENDING,
+    ONE_TIME_ACTIVATION_KINDS,
     PAYMENT_FAILED,
     PAYMENT_PAID,
     REASON_ACTIVATION_EXPIRED,
@@ -132,7 +133,12 @@ class _Claim:
 
 
 async def _claim_batch(
-    session: AsyncSession, *, now: datetime, stale_after: timedelta, batch_size: int
+    session: AsyncSession,
+    *,
+    now: datetime,
+    stale_after: timedelta,
+    abandon_after: timedelta,
+    batch_size: int,
 ) -> tuple[_Claim, ...]:
     """Claim a bounded batch with SKIP LOCKED and COMMIT the read boundary."""
     rows = (
@@ -154,8 +160,13 @@ async def _claim_batch(
                     | (PendingActivation.reconciliation_next_at <= now),
                     (PendingActivation.reconciliation_lease_expires_at.is_(None))
                     | (PendingActivation.reconciliation_lease_expires_at <= now),
-                    PendingActivation.reconciliation_attempts
-                    < billing_settings.reconciliation_max_attempts,
+                    (
+                        PendingActivation.reconciliation_attempts
+                        < billing_settings.reconciliation_max_attempts
+                    )
+                    # One final probe after the abandon window settles an
+                    # abandoned checkout instead of leaving it pending.
+                    | (PendingActivation.created_at <= now - abandon_after),
                 )
                 .order_by(PendingActivation.created_at)
                 .limit(batch_size)
@@ -200,13 +211,14 @@ async def _fetch_provider_record(
     provider: BillingProvider, claim: _Claim
 ) -> ProviderRecord | None:
     """The provider's authoritative record, or None when it has none."""
+    one_time = claim.activation_kind in ONE_TIME_ACTIVATION_KINDS
     if not claim.external_reference:
-        if claim.activation_kind == ACTIVATION_KIND_TOPUP:
+        if one_time:
             return None
         return await provider.find_subscription(
             str(claim.pending_id), str(claim.account_id)
         )
-    if claim.activation_kind == ACTIVATION_KIND_TOPUP:
+    if one_time:
         return await provider.fetch_payment(claim.external_reference)
     return await provider.fetch_subscription(claim.external_reference)
 
@@ -346,6 +358,48 @@ async def _settle_absent_record(
     return ReconciliationSummary(claimed=1, still_pending=1)
 
 
+async def _settle_unpaid_record(
+    session: AsyncSession,
+    provider: BillingProvider,
+    claim: _Claim,
+    *,
+    now: datetime,
+    abandon_after: timedelta,
+) -> ReconciliationSummary:
+    """The provider has the intent but it is not paid yet.
+
+    An abandoned or interrupted checkout would otherwise stay pending forever,
+    holding the one-pending purchase slot, so after the abandon window it is
+    abandoned. The claim query admits such a row once more after the window
+    even when its bounded probes are exhausted. An abandoned recurring
+    subscription is also cancelled at the provider, after the commit, so it
+    can no longer be authorised and charge an intent that no longer grants
+    anything. An order cannot be cancelled;
+    checkout initialization already refuses it once the quote has expired.
+    """
+    if claim.created_at > now - abandon_after:
+        return ReconciliationSummary(claimed=1, still_pending=1)
+    await _mark_terminal(
+        session,
+        claim.pending_id,
+        status=ACTIVATION_ABANDONED,
+        failure_code=REASON_ACTIVATION_EXPIRED,
+        now=now,
+    )
+    if claim.activation_kind == ACTIVATION_KIND_BASE and claim.external_reference:
+        try:
+            await provider.cancel_subscription(
+                claim.external_reference, at_cycle_end=False
+            )
+        except BillingProviderError as exc:
+            logger.warning(
+                "billing.abandoned_subscription_cancel_failed activation_id=%s code=%s",
+                claim.pending_id,
+                exc.code,
+            )
+    return ReconciliationSummary(claimed=1, abandoned=1)
+
+
 async def _settle_claim(
     session: AsyncSession,
     provider: BillingProvider | None,
@@ -388,7 +442,9 @@ async def _settle_claim(
         )
         return ReconciliationSummary(claimed=1, failed=1)
     if status != ACTIVATION_ACTIVATED:
-        return ReconciliationSummary(claimed=1, still_pending=1)
+        return await _settle_unpaid_record(
+            session, adapter, claim, now=now, abandon_after=abandon_after
+        )
     try:
         result = await activate_pending(
             session,
@@ -441,7 +497,11 @@ async def reconcile_pending_activations(
     summary = ReconciliationSummary()
     async with session_factory() as session:
         claims = await _claim_batch(
-            session, now=now, stale_after=stale, batch_size=limit
+            session,
+            now=now,
+            stale_after=stale,
+            abandon_after=abandon,
+            batch_size=limit,
         )
         for claim in claims:
             summary = summary.merge(

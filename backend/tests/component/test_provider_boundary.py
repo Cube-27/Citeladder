@@ -194,6 +194,7 @@ def _registration(name: str, mode: str | None) -> ProviderRegistration:
         # real adapter does: the shared settlement code reads neither.
         normalize_subscription_status=_DOUBLE_STATUS_MAP.get,
         is_payment_event=lambda event_type: event_type.startswith("payment."),
+        is_refund_event=lambda event_type: event_type.startswith("refund."),
         webhook=_Webhook(name, mode or "disabled"),
         checkout=_Checkout(name),
     )

@@ -59,7 +59,14 @@ RAZORPAY_EVENT_TYPES: Final = frozenset(
     }
 )
 
-RAZORPAY_PAYMENT_EVENT_TYPES: Final = frozenset({"payment.captured", "payment.failed"})
+# One-time orders settle on either event; both resolve to the same intent and
+# the shared activation claim makes the pair grant exactly once.
+RAZORPAY_PAYMENT_EVENT_TYPES: Final = frozenset(
+    {"payment.captured", "payment.failed", "order.paid"}
+)
+
+# A processed refund issues a credit note (and revokes on a full refund).
+RAZORPAY_REFUND_EVENT_TYPES: Final = frozenset({"refund.processed"})
 
 PAYMENT_PENDING: Final = "payment_pending"
 
@@ -181,6 +188,11 @@ ACTIVATION_KIND_TOPUP: Final = "topup"
 
 ACTIVATION_KINDS: Final[frozenset[str]] = frozenset(
     {ACTIVATION_KIND_BASE, ACTIVATION_KIND_ADDON, ACTIVATION_KIND_TOPUP}
+)
+
+# Intents settled by a one-time provider order rather than a subscription.
+ONE_TIME_ACTIVATION_KINDS: Final[frozenset[str]] = frozenset(
+    {ACTIVATION_KIND_ADDON, ACTIVATION_KIND_TOPUP}
 )
 
 ACTIVATION_PENDING: Final = "pending"

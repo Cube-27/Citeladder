@@ -12,7 +12,6 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import urlsplit
 
 import httpx
 
@@ -26,6 +25,8 @@ from app.connectors.billing.base import (
     ProviderSubscription,
 )
 from app.core.config.billing_contracts import (
+    PAYMENT_PAID,
+    PAYMENT_PENDING,
     RAZORPAY_PAYMENT_STATUS_MAP,
 )
 
@@ -37,6 +38,9 @@ from app.core.config.razorpay_settings import RazorpaySettings, razorpay_setting
 _SECONDS_PER_DAY = 86_400
 #: Razorpay's subscriptions collection, used for create, fetch and list.
 _SUBSCRIPTIONS_PATH = "/subscriptions"
+#: Razorpay caps an order ``receipt`` at 40 characters.
+_ORDER_RECEIPT_MAX = 40
+_HTTP_TOO_MANY_REQUESTS = 429
 
 _NOTE_INTENT = "citeladder_intent_id"
 _NOTE_ACCOUNT = "citeladder_account_ref"
@@ -92,6 +96,9 @@ class RazorpayBillingProvider:
             raise BillingProviderError("provider_unavailable", retryable=True) from exc
         if 300 <= response.status_code < 400:
             raise BillingProviderError("provider_redirect_rejected")
+        if response.status_code == _HTTP_TOO_MANY_REQUESTS:
+            # Throttled: nothing was created, and a later read will succeed.
+            raise BillingProviderError("provider_rate_limited", retryable=True)
         if response.status_code >= 400:
             code = (
                 "provider_rejected"
@@ -127,20 +134,6 @@ class RazorpayBillingProvider:
             provider_mode=self.settings.require_provider_mode(),
             catalog_revision=_optional_str(notes.get("citeladder_catalog_revision")),
         )
-
-    def _validated_checkout_url(self, value: object) -> str:
-        if not isinstance(value, str) or len(value) > 2048:
-            raise BillingProviderError("provider_invalid_checkout_url")
-        parsed = urlsplit(value)
-        if (
-            parsed.scheme.lower() != "https"
-            or not parsed.hostname
-            or parsed.hostname.lower() not in self.settings.checkout_host_set()
-            or parsed.username
-            or parsed.password
-        ):
-            raise BillingProviderError("provider_invalid_checkout_url")
-        return value
 
     def _hosted_subscription(
         self, data: dict[str, Any], *, expected_price_ref: str
@@ -190,6 +183,7 @@ class RazorpayBillingProvider:
             ),
             provider_mode=self.settings.require_provider_mode(),
             external_invoice_id=_optional_str(data.get("invoice_id")),
+            external_order_id=_optional_str(data.get("order_id")),
             intent_id=_optional_str(notes.get(_NOTE_INTENT)),
             account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
             payment_method=_optional_str(data.get("method")),
@@ -307,45 +301,113 @@ class RazorpayBillingProvider:
         account_ref: str,
         metadata: ProviderMetadata,
     ) -> HostedPayment:
+        """Create the Razorpay Order a Standard Checkout payment settles."""
         data = await self._request(
             "POST",
-            "/payment_links",
+            "/orders",
             payload={
                 "amount": amount_minor,
                 "currency": currency,
-                "accept_partial": False,
-                "reference_id": intent_id,
+                "receipt": intent_id[:_ORDER_RECEIPT_MAX],
                 "notes": metadata.as_notes(),
             },
         )
-        payment = self._payment(data)
-        if payment.amount_minor != amount_minor or payment.currency != currency.upper():
-            raise BillingProviderError("provider_amount_mismatch")
+        order_id = data.get("id")
+        if not isinstance(order_id, str) or not order_id.startswith("order_"):
+            raise BillingProviderError("provider_invalid_response")
+        _require_order_amount(data, amount_minor, currency)
         return HostedPayment(
-            external_payment_id=payment.external_payment_id,
-            checkout_url=self._validated_checkout_url(data.get("short_url")),
-            status=payment.status,
-            amount_minor=payment.amount_minor,
-            currency=payment.currency,
+            external_order_id=order_id,
+            checkout_url="",
+            status=_optional_str(data.get("status")),
+            amount_minor=amount_minor,
+            currency=currency.upper(),
         )
 
     async def fetch_payment(self, external_payment_id: str) -> ProviderPayment:
-        if external_payment_id.startswith("plink_"):
-            link = await self._request("GET", f"/payment_links/{external_payment_id}")
-            payments = link.get("payments")
-            if not isinstance(payments, list) or len(payments) != 1:
-                raise BillingProviderError("provider_payment_unavailable")
-            raw_payment = payments[0]
-            if not isinstance(raw_payment, dict):
-                raise BillingProviderError("provider_invalid_response")
-            if "notes" not in raw_payment:
-                raw_payment = {**raw_payment, "notes": link.get("notes")}
-            return replace(
-                self._payment(raw_payment),
-                external_payment_link_id=external_payment_id,
-            )
+        if external_payment_id.startswith("order_"):
+            return await self._order_payment(external_payment_id)
         return self._payment(
             await self._request("GET", f"/payments/{external_payment_id}")
+        )
+
+    async def _order_payment(self, order_id: str) -> ProviderPayment:
+        """The authoritative payment state of one order.
+
+        Exactly one captured payment settles the order. Failed attempts are
+        ignored because the buyer may retry inside the same checkout; with no
+        captured payment the order reads as still pending, never failed, and
+        the reconciliation window decides when it is abandoned.
+        """
+        order = await self._request("GET", f"/orders/{order_id}")
+        amount = _optional_int(order.get("amount"))
+        currency = order.get("currency")
+        if (
+            order.get("id") != order_id
+            or amount is None
+            or not isinstance(currency, str)
+        ):
+            raise BillingProviderError("provider_invalid_response")
+        attempts = (await self._request("GET", f"/orders/{order_id}/payments")).get(
+            "items"
+        )
+        if not isinstance(attempts, list):
+            raise BillingProviderError("provider_invalid_response")
+        captured = [
+            payment
+            for payment in (
+                self._payment(
+                    {**item, "notes": item.get("notes") or order.get("notes")}
+                )
+                for item in attempts
+                if isinstance(item, dict)
+            )
+            if payment.status == PAYMENT_PAID
+        ]
+        if len(captured) > 1:
+            raise BillingProviderError("provider_payment_ambiguous")
+        if captured:
+            payment = captured[0]
+            if payment.amount_minor != amount or payment.currency != currency.upper():
+                raise BillingProviderError("provider_amount_mismatch")
+            return replace(payment, external_order_id=order_id)
+        notes = _notes_map(order.get("notes"))
+        return ProviderPayment(
+            external_payment_id=order_id,
+            external_order_id=order_id,
+            status=PAYMENT_PENDING,
+            amount_minor=amount,
+            currency=currency.upper(),
+            updated_at=_optional_int(order.get("created_at")) or 0,
+            intent_id=_optional_str(notes.get(_NOTE_INTENT)),
+            account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
+            provider_mode=self.settings.require_provider_mode(),
+        )
+
+    async def fetch_refund(self, external_refund_id: str) -> ProviderRefund:
+        return self._refund(
+            await self._request("GET", f"/refunds/{external_refund_id}"),
+            expected_amount=None,
+        )
+
+    async def schedule_plan_change(
+        self, external_subscription_id: str, *, price_ref: str
+    ) -> ProviderSubscription:
+        """Move the subscription to ``price_ref`` from its next cycle.
+
+        ``cycle_end`` keeps the current paid period on its authorised plan;
+        the new plan's amount is charged from the next renewal.
+        """
+        return self._subscription(
+            await self._request(
+                "PATCH",
+                f"/subscriptions/{external_subscription_id}",
+                payload={
+                    "plan_id": price_ref,
+                    "schedule_change_at": "cycle_end",
+                    "customer_notify": 1,
+                },
+            )
         )
 
     async def refund_payment(
@@ -361,6 +423,11 @@ class RazorpayBillingProvider:
             payload={"amount": amount_minor},
             headers={"X-Refund-Idempotency": idempotency_key},
         )
+        return self._refund(data, expected_amount=amount_minor)
+
+    def _refund(
+        self, data: dict[str, Any], *, expected_amount: int | None
+    ) -> ProviderRefund:
         refund_id = data.get("id")
         payment_id = data.get("payment_id")
         status = data.get("status")
@@ -376,7 +443,7 @@ class RazorpayBillingProvider:
             or not isinstance(currency, str)
             or not currency
             or amount is None
-            or amount != amount_minor
+            or (expected_amount is not None and amount != expected_amount)
         ):
             raise BillingProviderError("provider_invalid_response")
         return ProviderRefund(
@@ -386,11 +453,21 @@ class RazorpayBillingProvider:
             amount_minor=amount,
             currency=currency.upper(),
             updated_at=_optional_int(data.get("created_at")) or 0,
+            provider_mode=self.settings.require_provider_mode(),
         )
 
 
 def _notes_map(value: object) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _require_order_amount(data: dict[str, Any], amount: int, currency: str) -> None:
+    """Reject an order whose echoed amount/currency is not what we asked for."""
+    if (
+        _optional_int(data.get("amount")) != amount
+        or _optional_str(data.get("currency")).upper() != currency.upper()
+    ):
+        raise BillingProviderError("provider_amount_mismatch")
 
 
 def _require_price_ref(subscription: ProviderSubscription, expected: str) -> None:

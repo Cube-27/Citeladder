@@ -4797,7 +4797,7 @@ def upgrade() -> None:
         sa.Column("provider", sa.String(length=24), nullable=False),
         sa.Column("receipt_kind", sa.String(length=16), nullable=False),
         sa.Column("external_payment_id", sa.String(length=255), nullable=False),
-        sa.Column("external_payment_link_id", sa.String(length=255), nullable=True),
+        sa.Column("external_order_id", sa.String(length=255), nullable=True),
         sa.Column("external_invoice_id", sa.String(length=255), nullable=True),
         sa.Column("external_refund_id", sa.String(length=255), nullable=True),
         sa.Column("amount_minor", sa.Integer(), nullable=False),

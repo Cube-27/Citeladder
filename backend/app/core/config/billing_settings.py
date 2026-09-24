@@ -94,7 +94,10 @@ class BillingSettings(BaseSettings):
     reconciliation_backoff_base_seconds: int = 60
     webhook_lease_seconds: int = 120
     webhook_max_attempts: int = 8
-    subscription_total_cycles: int = 1200
+    # Monthly cycles a new subscription authorises (Razorpay ``total_count``).
+    # Bounded so a typo can neither create a one-cycle subscription that
+    # silently completes nor an unbounded mandate.
+    subscription_total_cycles: int = Field(default=1200, ge=12, le=1200)
     max_webhook_body_bytes: int = 262_144
 
     @field_validator("india_gst_rate", mode="before")

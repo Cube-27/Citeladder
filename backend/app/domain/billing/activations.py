@@ -36,7 +36,11 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.connectors.billing.base import ProviderPayment, ProviderSubscription
+from app.connectors.billing.base import (
+    ProviderPayment,
+    ProviderSubscription,
+    payment_reference,
+)
 from app.connectors.billing.registry import status_normalizer
 from app.core.config.billing_catalog import scale_grant_specs
 from app.core.config.billing_contracts import (
@@ -46,6 +50,7 @@ from app.core.config.billing_contracts import (
     ACTIVATION_PENDING,
     CADENCE_MONTHLY,
     IDEMPOTENCY_COMPLETED,
+    ONE_TIME_ACTIVATION_KINDS,
     PAYMENT_PAID,
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCEL_SCHEDULED,
@@ -105,7 +110,7 @@ def _activation_key(pending_id: uuid.UUID, provider_reference: str) -> str:
 def _provider_reference(record: ProviderRecord) -> str:
     if isinstance(record, ProviderSubscription):
         return record.external_subscription_id
-    return record.external_payment_id
+    return payment_reference(record)
 
 
 def _verify_identity(pending: PendingActivation, record: ProviderRecord) -> None:
@@ -235,7 +240,6 @@ async def _upsert_subscription(
     return subscription
 
 
-_ONE_TIME_KINDS = frozenset({ACTIVATION_KIND_ADDON, ACTIVATION_KIND_TOPUP})
 _ONE_TIME_SOURCES = {
     ACTIVATION_KIND_ADDON: GRANT_SOURCE_ADDON,
     ACTIVATION_KIND_TOPUP: GRANT_SOURCE_TOPUP,
@@ -377,7 +381,7 @@ async def _settle(
     provider_record: ProviderRecord,
 ) -> int:
     """Verify the record kind and write the subscription/grant side effects."""
-    if pending.activation_kind in _ONE_TIME_KINDS:
+    if pending.activation_kind in ONE_TIME_ACTIVATION_KINDS:
         if not isinstance(provider_record, ProviderPayment):
             raise ActivationRejectedError("provider_record_kind_mismatch")
         paid_at = _verify_payment(pending, provider_record)

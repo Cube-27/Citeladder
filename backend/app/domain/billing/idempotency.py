@@ -267,7 +267,7 @@ def _apply_hosted_result(pending: PendingActivation, result: HostedResult) -> No
     if isinstance(result, HostedSubscription):
         pending.external_reference = result.external_subscription_id
     else:
-        pending.external_reference = result.external_payment_id
+        pending.external_reference = result.external_order_id
     pending.checkout_url = (
         result.checkout_url if isinstance(result, HostedPayment) else None
     )

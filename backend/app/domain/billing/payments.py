@@ -50,7 +50,7 @@ def _payment_payload(
         "account": str(pending.billing_account_id),
         "intent": str(pending.id),
         "payment": payment.external_payment_id,
-        "payment_link": payment.external_payment_link_id
+        "order": payment.external_order_id
         or (pending.external_reference if subscription is None else ""),
         "invoice": payment.external_invoice_id,
         "subscription": str(subscription.id) if subscription else None,
@@ -92,7 +92,7 @@ async def record_payment_receipt(
     payment: ProviderPayment,
     subscription: BillingSubscription | None = None,
 ) -> BillingPayment:
-    """Normalize one captured transaction independently of its Payment Link."""
+    """Normalize one captured transaction independently of its order."""
     _reject_foreign_environment(pending, payment)
     # Receipt identity is (provider, ENVIRONMENT, external id), matching the
     # unique index: a test payment id must never be mistaken for a live one.
@@ -126,7 +126,7 @@ async def record_payment_receipt(
         provider=pending.provider,
         receipt_kind="payment",
         external_payment_id=payment.external_payment_id,
-        external_payment_link_id=payment.external_payment_link_id
+        external_order_id=payment.external_order_id
         or (pending.external_reference if subscription is None else None),
         external_invoice_id=payment.external_invoice_id or None,
         amount_minor=payment.amount_minor,
@@ -215,6 +215,34 @@ async def record_refund_receipt(
         await issue_credit_note(session, refund=receipt)
         await _revoke_if_fully_refunded(session, payment)
     return receipt
+
+
+async def settle_provider_refund(
+    session: AsyncSession,
+    *,
+    provider: str,
+    provider_mode: str,
+    refund: ProviderRefund,
+) -> BillingPayment | None:
+    """Record a provider-reported refund against ITS original payment receipt.
+
+    ``None`` when this environment holds no receipt for the refunded payment
+    (a refund of something CiteLadder never settled). A refund the provider
+    positively reports from another environment is refused.
+    """
+    if refund.provider_mode not in {"", PROVIDER_MODE_UNSET, provider_mode}:
+        raise PaymentReceiptConflictError("refund_provider_mode_mismatch")
+    payment_id = await session.scalar(
+        select(BillingPayment.id).where(
+            BillingPayment.provider == provider,
+            BillingPayment.provider_mode == provider_mode,
+            BillingPayment.external_payment_id == refund.external_payment_id,
+            BillingPayment.receipt_kind == "payment",
+        )
+    )
+    if payment_id is None:
+        return None
+    return await record_refund_receipt(session, payment_id=payment_id, refund=refund)
 
 
 async def _revoke_if_fully_refunded(

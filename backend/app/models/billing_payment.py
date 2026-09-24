@@ -79,9 +79,8 @@ class BillingPayment(Base):
     provider: Mapped[str] = mapped_column(String(24), default=PROVIDER_RAZORPAY)
     receipt_kind: Mapped[str] = mapped_column(String(16), default="payment")
     external_payment_id: Mapped[str] = mapped_column(String(255))
-    external_payment_link_id: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
+    # The provider order a one-time payment settled (its purchase container).
+    external_order_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     external_invoice_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     external_refund_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     amount_minor: Mapped[int] = mapped_column(Integer)

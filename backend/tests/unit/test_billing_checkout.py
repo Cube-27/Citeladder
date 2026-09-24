@@ -11,8 +11,9 @@ import httpx
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from app.connectors.billing.base import BillingProviderError
+from app.connectors.billing.base import BillingProviderError, CheckoutCallbackError
 from app.connectors.billing.razorpay import RazorpayBillingProvider
+from app.connectors.billing.razorpay_checkout import RazorpayCheckoutAdapter
 from app.connectors.billing.razorpay_webhook import verify_signature
 from app.core.config.billing_settings import BillingSettings, billing_settings
 from app.core.config.razorpay_settings import RazorpaySettings, razorpay_settings
@@ -303,3 +304,44 @@ async def test_subscription_lookup_pages_and_rejects_truncated_search(
         ) as failure:
             await provider.find_subscription("intent", "account")
         assert failure.value.retryable
+
+
+def test_order_callback_is_signed_over_the_stored_order_id() -> None:
+    """A one-time order uses Razorpay's ``order_id|payment_id`` scheme.
+
+    The signature is computed over the order the INTENT persisted, so a
+    browser naming another order (even one it holds a valid signature for)
+    is refused, and a subscription-shaped callback cannot satisfy an order.
+    """
+    adapter = RazorpayCheckoutAdapter(settings=configured())
+    init = adapter.initialization(
+        external_reference="order_fixture", provider_mode="test"
+    )
+    assert (init.reference, init.reference_kind) == ("order_fixture", "order")
+
+    def signed(order_id: str) -> dict[str, str]:
+        message = f"{order_id}|pay_fixture".encode()
+        return {
+            "razorpay_payment_id": "pay_fixture",
+            "razorpay_order_id": order_id,
+            "razorpay_signature": hmac.new(
+                b"synthetic-api-secret", message, hashlib.sha256
+            ).hexdigest(),
+        }
+
+    adapter.verify_callback(
+        external_reference="order_fixture", fields=signed("order_fixture")
+    )
+    with pytest.raises(CheckoutCallbackError, match="callback_reference_mismatch"):
+        adapter.verify_callback(
+            external_reference="order_fixture", fields=signed("order_foreign")
+        )
+    subscription_shaped = {
+        "razorpay_payment_id": "pay_fixture",
+        "razorpay_subscription_id": "sub_fixture",
+        "razorpay_signature": "0" * 64,
+    }
+    with pytest.raises(CheckoutCallbackError, match="invalid_callback_fields"):
+        adapter.verify_callback(
+            external_reference="order_fixture", fields=subscription_shaped
+        )
