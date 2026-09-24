@@ -16,7 +16,7 @@ export function SettingsRouteContent() {
   if (search.get('tab') === 'billing') {
     search.delete('tab');
     const query = search.toString();
-    return <Navigate replace to={`/billing${query ? `?${query}` : ''}`} />;
+    return <Navigate replace to={query ? `/billing?${query}` : '/billing'} />;
   }
   return (
     <Suspense>

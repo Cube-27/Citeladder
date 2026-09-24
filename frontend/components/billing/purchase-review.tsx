@@ -5,7 +5,9 @@ import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { Button } from '@/components/ui/button';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
+import { DisplayTime } from '@/components/ui/display-time';
 import type { BillingCatalog } from '@/lib/api/billing';
+import { catalogPlanByKey, formatMoney } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 
 type Checkout = ReturnType<typeof useSubscriptionCheckout>;
@@ -26,9 +28,18 @@ export function PurchaseReview({
   checkout,
   catalog,
   itemName,
-}: Readonly<{ checkout: Checkout; catalog: BillingCatalog; itemName: (key: string) => string }>) {
+  renewsOn = null,
+}: Readonly<{
+  checkout: Checkout;
+  catalog: BillingCatalog;
+  itemName: (key: string) => string;
+  /** When an upgraded subscription next renews, at the new plan's price. */
+  renewsOn?: string | null;
+}>) {
   const prepared = checkout.prepared;
-  if (!prepared || prepared.status !== 'pending') return null;
+  if (prepared?.status !== 'pending') return null;
+  const upgradedPlan =
+    prepared.kind === 'upgrade' ? catalogPlanByKey(catalog, prepared.catalog_key) : undefined;
   return (
     <section className={panelClasses({}, 'grid gap-3')} aria-labelledby="purchase-review-title">
       <div className="grid gap-0.5">
@@ -45,6 +56,20 @@ export function PurchaseReview({
         quote={prepared.quote}
         currencyMinorUnits={catalog.currency_minor_units}
       />
+      {upgradedPlan?.base_price ? (
+        <p className={textRole('body')}>
+          After this charge, your subscription renews at{' '}
+          {formatMoney(upgradedPlan.base_price, catalog.currency_minor_units)} a month before tax
+          {renewsOn ? (
+            <>
+              , starting <DisplayTime value={renewsOn} dateOnly />
+            </>
+          ) : (
+            ' from your next renewal'
+          )}
+          .
+        </p>
+      ) : null}
       <CheckoutConsent recurring={prepared.kind === 'base'} />
       <div className="flex flex-wrap gap-2">
         <Button

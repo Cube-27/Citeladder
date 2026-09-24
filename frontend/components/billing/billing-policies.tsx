@@ -59,7 +59,7 @@ export function BillingSupport({
         <a className={LINK} href={url} target="_blank" rel="noreferrer">
           contact form
         </a>
-        . Include your workspace name and the invoice number; never send card details.
+        {'. '}Include your workspace name and the invoice number; never send card details.
       </p>
       <p className={textRole('meta')}>
         <PolicyLink path="/refund-policy">Refund Policy</PolicyLink> ·{' '}

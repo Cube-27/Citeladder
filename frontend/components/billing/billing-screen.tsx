@@ -108,6 +108,35 @@ function usePlanChangeControls(workspaceId: string | null, checkout: Checkout): 
   };
 }
 
+/** Quote requests for a new subscription and for one-time extras. */
+function purchaseActions(checkout: Checkout, country: string) {
+  const buyExtra: ExtraPurchase = (kind, catalogKey, quantity) =>
+    void checkout
+      .prepare({ purchase: { kind, catalog_key: catalogKey, quantity } })
+      .catch(() => undefined);
+  const subscribe = (key: SelfServePlanKey, billingDetails: BillingCustomerDetails) =>
+    void checkout
+      .prepare({
+        purchase: {
+          kind: 'base',
+          input: {
+            catalog_key: key,
+            credential_mode: 'byok',
+            country_code: country,
+            ...billingDetails,
+          },
+        },
+      })
+      .catch(() => undefined);
+  return { buyExtra, subscribe };
+}
+
+function currentPlanOf(catalog: BillingCatalog | null, entitlement: BillingEntitlement | null) {
+  const subscription = entitlement?.subscription;
+  if (!catalog || !subscription) return null;
+  return catalogPlanByKey(catalog, subscription.catalog_key) ?? null;
+}
+
 /** The dedicated billing section: plan, changes, extras, usage and documents. */
 export function BillingScreen() {
   const { isLoading: entitlementLoading } = useEntitlement();
@@ -128,26 +157,19 @@ export function BillingScreen() {
   if (entitlementLoading || entitlementQuery.isLoading) {
     return <PageLoading label="Loading billing…" />;
   }
+  if (entitlementQuery.isError) {
+    return (
+      <PageShell>
+        <Alert tone="danger">
+          Your entitlement could not be resolved, so no billing change is offered. No paid
+          capability is active until it does; reload the page or contact support.
+        </Alert>
+      </PageShell>
+    );
+  }
   const entitlement = entitlementQuery.data ?? null;
   const catalog = catalogQuery.data ?? null;
-  const buyExtra: ExtraPurchase = (kind, catalogKey, quantity) =>
-    void checkout
-      .prepare({ purchase: { kind, catalog_key: catalogKey, quantity } })
-      .catch(() => undefined);
-  const subscribe = (key: SelfServePlanKey, billingDetails: BillingCustomerDetails) =>
-    void checkout
-      .prepare({
-        purchase: {
-          kind: 'base',
-          input: {
-            catalog_key: key,
-            credential_mode: 'byok',
-            country_code: country,
-            ...billingDetails,
-          },
-        },
-      })
-      .catch(() => undefined);
+  const { buyExtra, subscribe } = purchaseActions(checkout, country);
 
   return (
     <PageShell>
@@ -160,11 +182,7 @@ export function BillingScreen() {
         )}
         <CurrentPlan
           entitlement={entitlement}
-          currentPlan={
-            catalog && entitlement?.subscription
-              ? (catalogPlanByKey(catalog, entitlement.subscription.catalog_key) ?? null)
-              : null
-          }
+          currentPlan={currentPlanOf(catalog, entitlement)}
           planName={(key) => (catalog ? itemName(catalog, key) : key)}
           canManage={canManage}
           cancellation={cancellation}
@@ -174,6 +192,7 @@ export function BillingScreen() {
             checkout={checkout}
             catalog={catalog}
             itemName={(key) => itemName(catalog, key)}
+            renewsOn={entitlement?.subscription?.current_period_end ?? null}
           />
         ) : null}
         <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-12 lg:items-start">
@@ -292,6 +311,7 @@ function ChoosePlan({
 }: Readonly<
   NewSubscription & { catalog: BillingCatalog; canManage: boolean; pending: boolean }
 >): ReactNode {
+  const [chosen, setChosen] = useState<SelfServePlanKey | null>(null);
   return (
     <section className={panelClasses({}, 'grid gap-4')} aria-labelledby="choose-plan-title">
       <div className="grid gap-0.5">
@@ -318,9 +338,12 @@ function ChoosePlan({
             currencyMinorUnits={catalog.currency_minor_units}
             country={country}
             billingDetails={details}
-            pending={pending}
-            locked={!canManage}
-            onCheckout={subscribe}
+            pending={pending && chosen === plan.key}
+            locked={!canManage || pending}
+            onCheckout={(key, billingDetails) => {
+              setChosen(key);
+              subscribe(key, billingDetails);
+            }}
           />
         ))}
       </div>

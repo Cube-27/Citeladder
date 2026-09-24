@@ -185,6 +185,6 @@ export function extrasForPlan(
   planKey: string,
 ): { addons: CatalogAddon[]; topups: CatalogTopup[] } {
   const eligible = (entry: CatalogAddon | CatalogTopup) =>
-    entry.eligible_plan_keys.some((key) => key === planKey);
+    (entry.eligible_plan_keys as readonly string[]).includes(planKey);
   return { addons: catalog.addons.filter(eligible), topups: catalog.topups.filter(eligible) };
 }

@@ -373,7 +373,9 @@ describe('legal content', () => {
     // placeholder reaching a public policy would be a published guess.
     for (const document of ALL_LEGAL) {
       const text = stringsIn(document.sections).join(' ');
-      expect(text, document.slug).not.toMatch(/\[[A-Z_]{3,}\]|to be completed/);
+      expect(text, document.slug).not.toMatch(
+        /\[[A-Z_]{3,}\]|to be completed|\bpending\b|\bTBD\b/i,
+      );
       for (const path of text.match(/(?<=\s)\/[a-z][a-z-]*(?=[\s.,]|$)/g) ?? []) {
         expect(marketingRouteExists(path), `${document.slug} → ${path}`).toBe(true);
       }

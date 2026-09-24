@@ -120,7 +120,9 @@ export function PlanChanges({
           </div>
         ))}
       </div>
-      {!options.some((option) => option.plan.checkout_available) ? (
+      {options.some(
+        (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
+      ) ? (
         <p className="text-muted text-xs">Upgrades are unavailable while checkout is closed.</p>
       ) : null}
       {controls.downgradeError ? (

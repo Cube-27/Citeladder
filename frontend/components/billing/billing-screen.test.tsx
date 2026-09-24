@@ -278,6 +278,7 @@ describe('BillingScreen', () => {
     renderWithProviders(<BillingScreen />);
 
     expect(await screen.findByText(/entitlement could not be resolved/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Choose a plan' })).not.toBeInTheDocument();
   });
 
   it('shows the BYOK base price and blocks checkout until a country is supplied', async () => {

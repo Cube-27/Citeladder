@@ -213,7 +213,7 @@ export const AI_POLICY: LegalDocument = {
         'We do not sell Customer Data.',
         'We do not use Customer Data to train third-party foundation models.',
         'We do not fabricate scores when evidence is missing — unavailable metrics render as an em dash.',
-        'Generation alone never publishes content, spends money, or changes an external system.',
+        'Generation alone never publishes content, makes a purchase from CiteLadder, or changes an external system.',
       ],
     },
     {
