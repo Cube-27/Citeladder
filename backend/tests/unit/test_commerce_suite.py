@@ -23,6 +23,7 @@ from app.domain.commerce.competitors import (
     _validated_results,
 )
 from app.domain.commerce.projector import (
+    _breadcrumb_categories,
     _catalog_identity,
     _category_from_analysis,
     _category_title,
@@ -1011,3 +1012,47 @@ async def test_a_shelf_with_no_internal_links_writes_nothing() -> None:
         artifact=SimpleNamespace(normalized_facts={"commerce": {"product_cards": []}}),
         category=SimpleNamespace(id=uuid.uuid4()),  # type: ignore[arg-type]
     )
+
+
+def test_breadcrumb_categories_keep_a_linked_leaf_and_drop_the_index() -> None:
+    """A trail that ends at the parent shelf must not lose that shelf."""
+    page = "https://shop.test/Categories/Men/Singlets/Basic-Singlet/SCW18300"
+    ancestor_trail = {
+        "breadcrumbs": ["Home", "/", "Categories", "Men's  Clothing", "Singlets"],
+        "breadcrumb_links": [
+            {"url": "https://shop.test/", "title": "Home"},
+            {"url": "https://shop.test/categories", "title": "Categories"},
+            {"url": "https://shop.test/men", "title": "Men's  Clothing"},
+            {"url": "https://shop.test/singlets", "title": "Singlets"},
+        ],
+    }
+    assert _breadcrumb_categories(ancestor_trail, page_url=page) == [
+        "Men's Clothing",
+        "Singlets",
+    ]
+
+    # The conventional trail ends at the product itself, unlinked.
+    product_trail = {"breadcrumbs": ["Home", "/", "Dresses", "/", "Linen Dress"]}
+    assert _breadcrumb_categories(product_trail, page_url=page) == ["Dresses"]
+
+    # An earlier linked crumb does not vouch for a later, unlinked namesake.
+    repeated_trail = {
+        "breadcrumbs": ["Home", "DRESSES", "Dresses"],
+        "breadcrumb_links": [{"url": "https://shop.test/dresses", "title": "DRESSES"}],
+    }
+    assert _breadcrumb_categories(repeated_trail, page_url=page) == ["DRESSES"]
+
+    # A current crumb linked through the collection alias is still this page.
+    alias_trail = {
+        "breadcrumbs": ["Home", "Dresses", "Linen Dress"],
+        "breadcrumb_links": [
+            {"url": "https://shop.test/collections/dresses", "title": "Dresses"},
+            {
+                "url": "https://shop.test/collections/dresses/products/linen",
+                "title": "Linen Dress",
+            },
+        ],
+    }
+    assert _breadcrumb_categories(
+        alias_trail, page_url="https://shop.test/products/linen"
+    ) == ["Dresses"]

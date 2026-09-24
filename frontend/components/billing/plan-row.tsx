@@ -14,6 +14,7 @@ import {
   headlinePrice,
   type HeadlinePrice,
 } from '@/lib/billing/catalog';
+import { billingReasonMessage } from '@/lib/billing/reason-copy';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
 
 import { Button } from '@/components/ui/button';
@@ -60,7 +61,7 @@ export function PlanRow({
         </div>
         {plan.description ? <p className="text-muted text-xs">{plan.description}</p> : null}
         {!selection.ok && !plan.contact_only && selection.reason ? (
-          <p className="text-muted text-xs">{selection.reason}</p>
+          <p className="text-muted text-xs">{billingReasonMessage(selection.reason)}</p>
         ) : null}
       </div>
       <div className="shrink-0">

@@ -95,6 +95,39 @@ describe('app pricing continuation', () => {
     expect(writes[0]).toEqual({ workspace: workspaceId, key: 'captured-key' });
   });
 
+  it('reports a refused purchase once, in reader copy', async () => {
+    mswServer.use(
+      http.get('/api/v1/billing/catalog', () => HttpResponse.json(catalog)),
+      http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
+      http.post('/api/v1/billing/addons', () =>
+        HttpResponse.json({ detail: 'checkout_unavailable' }, { status: 409 }),
+      ),
+    );
+    globalThis.sessionStorage.setItem(
+      PENDING_PRICING_INTENT_KEY,
+      JSON.stringify({
+        version: 1,
+        kind: 'addon',
+        catalog_key: 'addon_seats',
+        quantity: 1,
+        byok: true,
+        country_code: null,
+        billing_details: null,
+        idempotency_key: 'refused-key',
+        return_path: '/pricing',
+        created_at_ms: Date.now(),
+      }),
+    );
+
+    renderWithProviders(<PricingRoute />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Review current quote' }));
+    expect(
+      await screen.findByText('Checkout is not available for this purchase yet.'),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Checkout is not available for this purchase yet.')).toHaveLength(1);
+    expect(screen.queryByText('checkout_unavailable')).not.toBeInTheDocument();
+  });
+
   it('shows the server quote before opening payment checkout', async () => {
     let created = 0;
     let opened = 0;

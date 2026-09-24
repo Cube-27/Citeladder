@@ -55,6 +55,19 @@ COMMERCE_COMPETITOR_PAGE_KINDS_BY_TARGET: Final[dict[str, frozenset[str]]] = {
     "category": frozenset({"category"}),
     "product": frozenset({"product"}),
 }
+# Breadcrumb crumbs that name a site's category INDEX rather than a shelf
+# ("Home / Categories / Women"), compared casefolded and whitespace-collapsed.
+COMMERCE_BREADCRUMB_INDEX_NAMES: Final = frozenset(
+    {
+        "categories",
+        "category",
+        "collections",
+        "collection",
+        "catalog",
+        "shop",
+        "shop all",
+    }
+)
 COMMERCE_CATEGORY_ROLES: Final = frozenset({"hub", "leaf", "unknown"})
 COMMERCE_LIFECYCLE_STATES: Final = frozenset({"active", "archived"})
 COMMERCE_COMPETITOR_STATES: Final = frozenset(

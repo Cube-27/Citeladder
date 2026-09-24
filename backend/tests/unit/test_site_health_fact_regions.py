@@ -592,6 +592,24 @@ def test_product_detail_heading_is_scoped_to_primary_content() -> None:
     ]
 
 
+def test_product_description_toggle_classifies_a_categories_route_pdp() -> None:
+    # Best&Less serves product pages under /Categories/ with no JSON-LD and a
+    # client-rendered buy box; the section toggle (with its icon ligature) is
+    # the page's own product-detail header, and must outrank the route.
+    url = "https://shop.test/Categories/Men/Singlets/Basic-Singlet/SCW18300_WHITE"
+    page = (
+        "<html><body><main><h1>White Mens Basic Singlet</h1><p>$6.00</p>"
+        "<button>Product Description <i>south</i></button></main></body></html>"
+    )
+    facts = extract_page_facts(page.encode(), final_url=url, content_type="text/html")
+    assert classify(url, facts).page_kind == "product"
+
+    # The same toggle without a price of the page's own is not a product.
+    shelf = page.replace("<p>$6.00</p>", "")
+    facts = extract_page_facts(shelf.encode(), final_url=url, content_type="text/html")
+    assert classify(url, facts).page_kind == "category"
+
+
 @pytest.mark.parametrize("tag", ["script", "style", "noscript", "template"])
 def test_product_price_ignores_non_rendered_subtrees(tag: str) -> None:
     tree = lxml_html.fromstring(

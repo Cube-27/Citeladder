@@ -157,7 +157,7 @@ export function ProjectEditPanel({
         </>
       }
     >
-      <div className="grid max-h-[var(--dialog-scroll)] gap-[var(--workspace-gap)] overflow-y-auto pe-1">
+      <div className="grid gap-[var(--workspace-gap)]">
         {save.isError ? <Alert tone="danger">{onboardingErrorMessage(save.error)}</Alert> : null}
 
         <div className="grid gap-4">

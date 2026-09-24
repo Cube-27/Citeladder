@@ -14,6 +14,7 @@ export function CsvImportTrigger({
   pending = false,
   onSelect,
   variant = 'secondary',
+  size,
 }: Readonly<{
   label?: ReactNode;
   pendingLabel?: ReactNode;
@@ -21,11 +22,17 @@ export function CsvImportTrigger({
   pending?: boolean;
   onSelect: (file: File) => void;
   variant?: ComponentProps<typeof Button>['variant'];
+  size?: ComponentProps<typeof Button>['size'];
 }>) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <span className="inline-flex">
-      <Button variant={variant} disabled={pending} onClick={() => inputRef.current?.click()}>
+      <Button
+        variant={variant}
+        size={size}
+        disabled={pending}
+        onClick={() => inputRef.current?.click()}
+      >
         {pending ? pendingLabel : label}
       </Button>
       <input

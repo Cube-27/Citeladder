@@ -1,16 +1,12 @@
 'use client';
 
-import { ChevronDown } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ProjectLink } from '@/components/layout/scoped-link';
-import { buttonVariants } from '@/components/ui/button-variants';
 import { CsvImportTrigger } from '@/components/ui/csv-import';
-import { menuPanelClasses } from '@/components/ui/menu-variants';
 import { Label, Metric, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { commerceApi } from '@/lib/api/commerce';
@@ -24,7 +20,6 @@ import {
 } from '@/lib/site-health/status';
 
 import type { SiteCrawl } from '@/lib/api/types';
-import { cn } from '@/lib/utils';
 
 import type { CommerceQueries } from './commerce-queries';
 
@@ -212,28 +207,12 @@ function CatalogActions({
 }>) {
   return (
     <>
-      <details className="relative">
-        <summary className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'list-none')}>
-          More actions <ChevronDown className="size-3.5" aria-hidden />
-        </summary>
-        <div
-          className={cn(
-            menuPanelClasses,
-            'absolute top-[calc(100%+0.375rem)] right-0 z-10 grid min-w-48 gap-1',
-          )}
-        >
-          <CsvImportTrigger
-            accessibleLabel="Import catalog CSV"
-            pending={importing}
-            onSelect={onImport}
-          />
-          <Button asChild variant="ghost" className="justify-start">
-            <ProjectLink href="/site" target="_blank" rel="noreferrer">
-              Open Site Health
-            </ProjectLink>
-          </Button>
-        </div>
-      </details>
+      <CsvImportTrigger
+        accessibleLabel="Import catalog CSV"
+        size="sm"
+        pending={importing}
+        onSelect={onImport}
+      />
       <Button size="sm" disabled={refreshing} onClick={onRefresh}>
         {crawl ? 'Refresh from Site Health' : 'Run Site Health crawl'}
       </Button>

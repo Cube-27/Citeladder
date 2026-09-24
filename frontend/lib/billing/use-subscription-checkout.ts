@@ -13,6 +13,7 @@ import { CHECKOUT_POLL_ATTEMPTS, CHECKOUT_POLL_INTERVAL_MS } from '@/lib/config/
 import { useOptionalProjectContext } from '@/lib/project/project-context';
 import { checkoutAttempt, clearCheckoutAttempt } from './checkout-attempt';
 import { startCheckoutFlow } from './checkout-flow';
+import { billingErrorMessage } from './reason-copy';
 
 /** Copy for a checkout that ended without a provider callback. */
 const INCOMPLETE_CHECKOUT: Record<string, string | null> = {
@@ -230,11 +231,11 @@ export function useSubscriptionCheckout() {
 
   const prepareMutation = useMutation({
     mutationFn: prepareCheckout,
-    onError: (error) => setNotice(error instanceof Error ? error.message : 'Quote unavailable.'),
+    onError: (error) => setNotice(billingErrorMessage(error, 'Quote unavailable.')),
   });
   const confirmMutation = useMutation({
     mutationFn: continueCheckout,
-    onError: (error) => setNotice(error instanceof Error ? error.message : 'Checkout unavailable.'),
+    onError: (error) => setNotice(billingErrorMessage(error, 'Checkout unavailable.')),
   });
   const prepareReset = prepareMutation.reset;
   const confirmReset = confirmMutation.reset;
@@ -251,9 +252,7 @@ export function useSubscriptionCheckout() {
       return (await continueCheckout()) ?? activation;
     },
     onError: (error) =>
-      setNotice(
-        error instanceof Error ? error.message : 'Checkout could not complete. Please retry.',
-      ),
+      setNotice(billingErrorMessage(error, 'Checkout could not complete. Please retry.')),
   });
   return {
     ...mutation,
