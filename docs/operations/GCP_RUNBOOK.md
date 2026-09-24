@@ -152,8 +152,9 @@ installs secrets once, deploys the backend digest over IAP, and migrates. With
 `backend/scripts/account_manager.py`. Self-serve sign-up and Google sign-in
 stay off until the public policies are cleared: `PUBLIC_SIGNUP_ENABLED` and
 `OAUTH_GOOGLE_ENABLED` default to `false` on the host, and the Worker builds
-leave `NEXT_PUBLIC_SELF_SERVE_SIGNUP` unset. Turn all three on together to
-open sign-up. Set `DEMO_MODE` to `true` to bootstrap the single development
+bake `NEXT_PUBLIC_SELF_SERVE_SIGNUP` from the `SELF_SERVE_SIGNUP` repository
+variable (unset means `false`). To open sign-up, set all three to `true`, then
+redeploy the backend and both Workers. Set `DEMO_MODE` to `true` to bootstrap the single development
 account instead. Project slots remain unprovisioned, which
 is the pre-commercial unlimited-project behavior. Each project crawl is capped
 at 200 URLs. The crawler runs with eight global and six per-host slots.

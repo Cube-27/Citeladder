@@ -1,14 +1,18 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vite-plus/test';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { AuthWordmark } from './brand-panel';
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe('AuthWordmark', () => {
-  it('is a named link back to the public home page', () => {
+  it('links to the website home, not the product origin', () => {
+    vi.stubEnv('PUBLIC_WEBSITE_ORIGIN', 'https://citeladder.com');
+    vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
     render(<AuthWordmark />);
 
     const link = screen.getByRole('link', { name: 'CiteLadder home' });
-    expect(link).toHaveAttribute('href', '/');
+    expect(link).toHaveAttribute('href', 'https://citeladder.com/');
   });
 
   it('renders the official brand logo image', () => {
