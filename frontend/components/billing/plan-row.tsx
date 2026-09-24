@@ -26,6 +26,7 @@ export function PlanRow({
   country,
   billingDetails,
   pending,
+  locked = false,
   onCheckout,
 }: Readonly<{
   plan: CatalogPlan;
@@ -33,6 +34,8 @@ export function PlanRow({
   country: string;
   billingDetails: BillingCustomerDetails;
   pending: boolean;
+  /** The reader's role may not buy; the screen says why once, above. */
+  locked?: boolean;
   onCheckout: (key: SelfServePlanKey, details: BillingCustomerDetails) => void;
 }>) {
   const { priceLabel, selection, canCheckout } = planCheckoutState(
@@ -70,7 +73,7 @@ export function PlanRow({
         ) : (
           <Button
             size="sm"
-            disabled={!canCheckout}
+            disabled={!canCheckout || locked}
             onClick={() => selection.ok && onCheckout(selection.catalog_key, billingDetails)}
           >
             <CreditCard className="size-3.5" aria-hidden />
@@ -92,7 +95,7 @@ function byokPriceLabel(price: HeadlinePrice, currencyMinorUnits: number, countr
 
 /** A plan the caller cannot check out still names itself, then says why not. */
 function planCheckoutLabel(pending: boolean, available: boolean, planName: string): string {
-  if (pending) return 'Opening checkout…';
+  if (pending) return 'Preparing quote…';
   if (available) return `Choose ${planName}`;
   return `Choose ${planName} — checkout unavailable`;
 }

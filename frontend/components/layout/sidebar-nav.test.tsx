@@ -93,7 +93,13 @@ describe('station navigation', () => {
 
     expect(sidebarLabels).not.toContain('Content');
     expect(commandLabels).not.toContain('Content');
-    expect(commandLabels).toEqual([...sidebarLabels, 'Integrations', 'Providers', 'Settings']);
+    expect(commandLabels).toEqual([
+      ...sidebarLabels,
+      'Integrations',
+      'Providers',
+      'Billing',
+      'Settings',
+    ]);
   });
 
   it('uses query-aware active state for station destinations', () => {

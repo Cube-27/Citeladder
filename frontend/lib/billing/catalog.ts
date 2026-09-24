@@ -32,7 +32,7 @@ export function catalogPlanByKey(catalog: BillingCatalog, key: string): CatalogP
   return catalog.plans.find((plan) => plan.key === key);
 }
 
-function isSelfServeKey(key: string): key is SelfServePlanKey {
+export function isSelfServeKey(key: string): key is SelfServePlanKey {
   return key === 'tier_1' || key === 'tier_2' || key === 'tier_3';
 }
 
@@ -157,4 +157,34 @@ export function formatMoney(money: Money, minorUnits: number): string {
     minimumFractionDigits: value % 1 === 0 ? 0 : minorUnits,
     maximumFractionDigits: minorUnits,
   }).format(value);
+}
+
+export type PlanChangeDirection = 'upgrade' | 'downgrade';
+
+/**
+ * Which way a move between two self-serve plans goes, for LABELLING only.
+ *
+ * Both prices come from the same catalog response, so they share a currency.
+ * The server still decides the direction and prices an upgrade's prorated
+ * charge; this only chooses which control the reader is offered. Equal or
+ * missing prices answer `null`: no change is offered rather than a guess.
+ */
+export function planChangeDirection(
+  current: CatalogPlan,
+  target: CatalogPlan,
+): PlanChangeDirection | null {
+  if (current.key === target.key || !current.base_price || !target.base_price) return null;
+  const delta = target.base_price.amount_minor - current.base_price.amount_minor;
+  if (delta === 0) return null;
+  return delta > 0 ? 'upgrade' : 'downgrade';
+}
+
+/** The add-ons and top-ups a subscriber on `planKey` may buy. */
+export function extrasForPlan(
+  catalog: BillingCatalog,
+  planKey: string,
+): { addons: CatalogAddon[]; topups: CatalogTopup[] } {
+  const eligible = (entry: CatalogAddon | CatalogTopup) =>
+    entry.eligible_plan_keys.some((key) => key === planKey);
+  return { addons: catalog.addons.filter(eligible), topups: catalog.topups.filter(eligible) };
 }

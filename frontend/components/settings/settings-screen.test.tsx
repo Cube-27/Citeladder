@@ -2,7 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 import { createAppQueryClient } from '@/lib/api/query-client';
 import type { SessionUser } from '@/lib/api/types';
@@ -85,11 +85,13 @@ vi.mock('@/components/settings/integration-settings', () => ({
   IntegrationSettings: () => <div data-testid="integration-settings-panel">integrations</div>,
 }));
 
-vi.mock('@/components/settings/billing-settings', () => ({
-  BillingSettings: () => <div data-testid="billing-settings-panel">billing</div>,
-}));
-
+import { SettingsRouteContent } from './settings-route-content';
 import { SettingsScreen } from './settings-screen';
+
+function BillingLocation() {
+  const location = useLocation();
+  return <p data-testid="billing-location">{location.pathname + location.search}</p>;
+}
 
 function renderScreen() {
   return render(
@@ -120,7 +122,6 @@ describe('SettingsScreen', () => {
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       'Account',
       'Members',
-      'Billing',
       'Providers',
       'Integrations',
     ]);
@@ -181,11 +182,17 @@ describe('SettingsScreen', () => {
     expect(screen.getByTestId('provider-settings-panel')).toBeVisible();
   });
 
-  it('opens Billing from a ?tab=billing deep link', () => {
-    window.history.replaceState(null, '', '/settings?tab=billing');
-    renderScreen();
-    expect(screen.getByRole('tab', { name: 'Billing' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByTestId('billing-settings-panel')).toBeVisible();
+  it('sends a former ?tab=billing link to the billing section, keeping the workspace', () => {
+    window.history.replaceState(null, '', '/settings?tab=billing&workspace=w1');
+    render(
+      <BrowserRouter>
+        <Routes>
+          <Route path="/settings" element={<SettingsRouteContent />} />
+          <Route path="/billing" element={<BillingLocation />} />
+        </Routes>
+      </BrowserRouter>,
+    );
+    expect(screen.getByTestId('billing-location')).toHaveTextContent('/billing?workspace=w1');
   });
 
   it('opens the Integrations tab from a ?tab=integrations deep link (the C2 OAuth-callback landing)', () => {

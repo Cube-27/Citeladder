@@ -11,7 +11,6 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
-import { BillingSettings } from '@/components/settings/billing-settings';
 import { MemberSettings } from '@/components/settings/member-settings';
 import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
@@ -51,7 +50,6 @@ function DetailRow({
 const SETTINGS_TABS = [
   { id: 'account', label: 'Account' },
   { id: 'members', label: 'Members' },
-  { id: 'billing', label: 'Billing' },
   { id: 'providers', label: 'Providers' },
   { id: 'integrations', label: 'Integrations' },
 ] as const;
@@ -189,7 +187,7 @@ function ProjectDeletionControls() {
 }
 
 /**
- * SettingsScreen — tabbed settings (Account / Billing / Providers / Integrations),
+ * SettingsScreen — tabbed settings (Account / Members / Providers / Integrations),
  * following the WAI-ARIA tabs idiom used by the Visibility
  * workspace (roving tabindex, Arrow/Home/End navigation, `aria-selected`,
  * labelled panels).
@@ -206,7 +204,7 @@ function ProjectDeletionControls() {
  *   `IntegrationSettings`. `?tab=integrations` is the OAuth-callback landing
  *   surface (contract C2).
  */
-// react-doctor-disable-next-line react-doctor/no-giant-component -- this owns tab focus; billing, providers, and integrations are extracted.
+// react-doctor-disable-next-line react-doctor/no-giant-component -- this owns tab focus; members, providers, and integrations are extracted.
 export function SettingsScreen() {
   const user = useSessionUser();
   const timeZone = useDisplayTimeZone();
@@ -237,10 +235,6 @@ export function SettingsScreen() {
           />
         }
       >
-        <TabPanel value="billing" forceMount className="focus-ring data-[state=inactive]:hidden">
-          <BillingSettings enabled={activeTab === 'billing'} />
-        </TabPanel>
-
         <TabPanel
           value="account"
           forceMount

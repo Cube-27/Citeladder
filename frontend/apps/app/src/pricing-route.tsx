@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
 import { BillingDetailsForm } from '@/components/billing/billing-details-form';
+import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { PageShell } from '@/components/layout/page-shell';
@@ -266,6 +267,7 @@ function QuoteConfirmation({
         quote={checkout.prepared.quote}
         currencyMinorUnits={catalog.currency_minor_units}
       />
+      <CheckoutConsent recurring={checkout.prepared.kind === 'base'} />
       <Button disabled={pending} onClick={onConfirm}>
         {pending ? 'Opening checkout…' : 'Confirm and continue to payment'}
       </Button>

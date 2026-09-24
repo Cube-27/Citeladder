@@ -46,7 +46,7 @@ type LegalSection = {
   storage?: readonly { name: string; purpose: string; duration: string; category: string }[];
 };
 
-export type LegalSlug =
+type LegalSlug =
   | 'terms'
   | 'privacy'
   | 'refund-policy'
