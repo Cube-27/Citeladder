@@ -1,4 +1,5 @@
 import { LogoMark, type BrandLogoVariant } from '@/components/ui/logo-mark';
+import { websiteHref } from '@/lib/config/app-link';
 
 /**
  * The wordmark in the auth/onboarding flow bar.
@@ -17,8 +18,10 @@ export function AuthWordmark({
   priority?: boolean;
 }>) {
   return (
+    // The public home lives on the website origin; "/" on the app origin is
+    // the product root, which a signed-out visitor cannot use.
     <a
-      href="/"
+      href={websiteHref('/')}
       aria-label="CiteLadder home"
       className="group inline-flex items-center no-underline transition-opacity hover:opacity-90"
     >

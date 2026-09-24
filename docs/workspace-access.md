@@ -11,7 +11,10 @@ The designation is distinct from platform/operator administration.
 
 [Auth API](../backend/app/api/auth.py) and
 [auth service](../backend/app/domain/auth/service.py) own session establishment.
-Registration returns a generic acknowledgement rather than a session.
+Registration returns a generic acknowledgement rather than a session, and is
+refused unless `PUBLIC_SIGNUP_ENABLED` is set; operators otherwise create
+accounts with `backend/scripts/account_manager.py`. Google sign-in, which
+creates an account on first use, is separately gated by `OAUTH_GOOGLE_ENABLED`.
 Email/password login and Google sign-in establish the HttpOnly session;
 session-version checks invalidate stale sessions. The frontend crosses the
 identity boundary with full-document navigation so a prefetched anonymous

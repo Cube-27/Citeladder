@@ -16,6 +16,7 @@ import { EngineLogo } from '../primitives/engine-logo';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 import { appHref } from '@/lib/config/app-link';
+import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import {
   CAPABILITIES,
   FAQS,
@@ -51,14 +52,16 @@ function Hero() {
           </p>
           <div className="cl-hero-actions">
             <DemoLink />
-            <ButtonLink
-              href={appHref('/register')}
-              variant="soft"
-              size="marketing"
-              className="cl-cta"
-            >
-              Start free trial <ArrowRight size={18} aria-hidden />
-            </ButtonLink>
+            {selfServeSignupOpen() ? (
+              <ButtonLink
+                href={appHref('/register')}
+                variant="soft"
+                size="marketing"
+                className="cl-cta"
+              >
+                Start free trial <ArrowRight size={18} aria-hidden />
+              </ButtonLink>
+            ) : null}
           </div>
           <p className="cl-hero-note">
             Source-level evidence &nbsp; · &nbsp; Provider-key control &nbsp; · &nbsp; MCP
@@ -354,14 +357,16 @@ function Closing() {
         </div>
         <div className="cl-closing-actions">
           <DemoLink />
-          <ButtonLink
-            href={appHref('/register')}
-            variant="dark"
-            size="marketing"
-            className="cl-cta"
-          >
-            Start free trial <ArrowRight size={18} aria-hidden />
-          </ButtonLink>
+          {selfServeSignupOpen() ? (
+            <ButtonLink
+              href={appHref('/register')}
+              variant="dark"
+              size="marketing"
+              className="cl-cta"
+            >
+              Start free trial <ArrowRight size={18} aria-hidden />
+            </ButtonLink>
+          ) : null}
         </div>
       </div>
     </section>

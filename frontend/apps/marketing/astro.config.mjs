@@ -47,6 +47,11 @@ export default defineConfig({
           environment.NEXT_PUBLIC_GA_MEASUREMENT_ID ??
           '',
       ),
+      'process.env.NEXT_PUBLIC_SELF_SERVE_SIGNUP': JSON.stringify(
+        process.env.NEXT_PUBLIC_SELF_SERVE_SIGNUP ??
+          environment.NEXT_PUBLIC_SELF_SERVE_SIGNUP ??
+          '',
+      ),
       'process.env.PUBLIC_WEBSITE_ORIGIN': JSON.stringify(
         process.env.PUBLIC_WEBSITE_ORIGIN ?? environment.PUBLIC_WEBSITE_ORIGIN ?? '',
       ),

@@ -3,6 +3,7 @@ allowBuilds:
   msw: true
   sharp: true
   unrs-resolver: true
+  workerd: false
 
 # Supply-chain hardening: refuse packages whose trust signals (provenance,
 # signatures) weaken between updates.
@@ -50,9 +51,9 @@ overrides:
 # (marketing) must be re-verified when bumping this pin. `vitest` stays at
 # the exact version vite-plus bundles so there is exactly one Vitest copy.
 catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@0.3.1
+  vite: npm:@voidzero-dev/vite-plus-core@0.3.3
   vitest: 4.1.11
-  vite-plus: 0.3.1
+  vite-plus: 0.3.3
   '@vitest/coverage-v8': 4.1.11
 peerDependencyRules:
   allowAny:

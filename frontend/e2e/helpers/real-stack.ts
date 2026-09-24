@@ -356,6 +356,8 @@ export async function startRealStack(): Promise<RealStack> {
       ...process.env,
       DATABASE_URL: appDatabaseUrl,
       APP_ENV: 'development',
+      // The spec creates its user through self-serve registration.
+      PUBLIC_SIGNUP_ENABLED: 'true',
       CONTENT_PROVIDER: 'mistral',
       CONTENT_MODEL: 'mistral-small-latest',
       CONTENT_API_KEY: MOCK_API_KEY,

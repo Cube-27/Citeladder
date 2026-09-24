@@ -63,10 +63,16 @@ async def test_register_is_generic_and_does_not_create_session(
 
 
 @pytest.mark.asyncio
-async def test_demo_mode_rejects_registration_server_side(
-    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("setting", "value"), [("demo_mode", True), ("public_signup_enabled", False)]
+)
+async def test_closed_registration_is_rejected_server_side(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    setting: str,
+    value: bool,
 ) -> None:
-    monkeypatch.setattr(settings, "demo_mode", True)
+    monkeypatch.setattr(settings, setting, value)
     response = await client.post(
         "/api/v1/auth/register",
         json={"email": "blocked@example.com", "password": "password123"},

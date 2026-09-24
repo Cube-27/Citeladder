@@ -79,6 +79,13 @@ class Settings(BaseSettings):
     )
     # Session cookie name for the HttpOnly JWT (set by B2).
     session_cookie_name: str = "citeladder_session"
+    # Self-serve password registration. Off by default so accounts exist only
+    # when an operator creates them (``scripts/account_manager.py``) until the
+    # public policies are cleared for open sign-up.
+    public_signup_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("PUBLIC_SIGNUP_ENABLED", "public_signup_enabled"),
+    )
     demo_mode: bool = Field(
         default=False,
         validation_alias=AliasChoices("DEMO_MODE", "demo_mode"),

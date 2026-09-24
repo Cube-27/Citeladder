@@ -18,9 +18,12 @@ type SearchParams = Pick<URLSearchParams, 'get'>;
 
 export function LoginScreen({
   demoMode,
+  signupOpen,
   searchParams,
 }: Readonly<{
   demoMode: boolean;
+  /** Self-serve sign-up, including Google, whose first sign-in creates an account. */
+  signupOpen: boolean;
   searchParams: SearchParams;
 }>) {
   const returnTo = safeMcpReturnPath(searchParams.get('return_to'));
@@ -59,7 +62,8 @@ export function LoginScreen({
       footerHref={withMcpReturnPath('/register', returnTo)}
       footerLabel="Sign up"
       footerLinkVariant="emphasis"
-      showFooter={!demoMode}
+      showOAuth={signupOpen}
+      showFooter={!demoMode && signupOpen}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />
       <AuthPasswordField

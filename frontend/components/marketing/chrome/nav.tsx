@@ -12,6 +12,7 @@ import { ButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
 import { appHref } from '@/lib/config/app-link';
+import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 
 /** What asked for a dropdown: a resting pointer, or an explicit focus move. */
 export type OpenSource = 'hover' | 'focus';
@@ -350,9 +351,11 @@ function ProductActions() {
       >
         Log in
       </a>
-      <ButtonLink href={appHref('/register')} className="hidden min-h-10 px-4 sm:inline-flex">
-        Sign up
-      </ButtonLink>
+      {selfServeSignupOpen() ? (
+        <ButtonLink href={appHref('/register')} className="hidden min-h-10 px-4 sm:inline-flex">
+          Sign up
+        </ButtonLink>
+      ) : null}
     </>
   );
 }
