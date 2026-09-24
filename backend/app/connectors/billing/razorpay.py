@@ -341,16 +341,34 @@ class RazorpayBillingProvider:
         """
         order = await self._request("GET", f"/orders/{order_id}")
         amount = _optional_int(order.get("amount"))
-        currency = order.get("currency")
-        if (
-            order.get("id") != order_id
-            or amount is None
-            or not isinstance(currency, str)
-        ):
+        currency = _optional_str(order.get("currency")).upper()
+        if order.get("id") != order_id or amount is None or not currency:
             raise BillingProviderError("provider_invalid_response")
         attempts = (await self._request("GET", f"/orders/{order_id}/payments")).get(
             "items"
         )
+        captured = self._captured_payment(order, attempts)
+        if captured is not None:
+            if (captured.amount_minor, captured.currency) != (amount, currency):
+                raise BillingProviderError("provider_amount_mismatch")
+            return replace(captured, external_order_id=order_id)
+        notes = _notes_map(order.get("notes"))
+        return ProviderPayment(
+            external_payment_id=order_id,
+            external_order_id=order_id,
+            status=PAYMENT_PENDING,
+            amount_minor=amount,
+            currency=currency,
+            updated_at=_optional_int(order.get("created_at")) or 0,
+            intent_id=_optional_str(notes.get(_NOTE_INTENT)),
+            account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
+            provider_mode=self.settings.require_provider_mode(),
+        )
+
+    def _captured_payment(
+        self, order: dict[str, Any], attempts: object
+    ) -> ProviderPayment | None:
+        """The order's one captured payment, carrying the order's notes."""
         if not isinstance(attempts, list):
             raise BillingProviderError("provider_invalid_response")
         captured = [
@@ -366,23 +384,7 @@ class RazorpayBillingProvider:
         ]
         if len(captured) > 1:
             raise BillingProviderError("provider_payment_ambiguous")
-        if captured:
-            payment = captured[0]
-            if payment.amount_minor != amount or payment.currency != currency.upper():
-                raise BillingProviderError("provider_amount_mismatch")
-            return replace(payment, external_order_id=order_id)
-        notes = _notes_map(order.get("notes"))
-        return ProviderPayment(
-            external_payment_id=order_id,
-            external_order_id=order_id,
-            status=PAYMENT_PENDING,
-            amount_minor=amount,
-            currency=currency.upper(),
-            updated_at=_optional_int(order.get("created_at")) or 0,
-            intent_id=_optional_str(notes.get(_NOTE_INTENT)),
-            account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
-            provider_mode=self.settings.require_provider_mode(),
-        )
+        return captured[0] if captured else None
 
     async def fetch_refund(self, external_refund_id: str) -> ProviderRefund:
         return self._refund(
@@ -428,22 +430,13 @@ class RazorpayBillingProvider:
     def _refund(
         self, data: dict[str, Any], *, expected_amount: int | None
     ) -> ProviderRefund:
-        refund_id = data.get("id")
-        payment_id = data.get("payment_id")
-        status = data.get("status")
+        refund_id, payment_id, status, currency = (
+            _required_str(data, key)
+            for key in ("id", "payment_id", "status", "currency")
+        )
         amount = _optional_int(data.get("amount"))
-        currency = data.get("currency")
-        if (
-            not isinstance(refund_id, str)
-            or not refund_id
-            or not isinstance(payment_id, str)
-            or not payment_id
-            or not isinstance(status, str)
-            or not status
-            or not isinstance(currency, str)
-            or not currency
-            or amount is None
-            or (expected_amount is not None and amount != expected_amount)
+        if amount is None or (
+            expected_amount is not None and amount != expected_amount
         ):
             raise BillingProviderError("provider_invalid_response")
         return ProviderRefund(
@@ -455,6 +448,13 @@ class RazorpayBillingProvider:
             updated_at=_optional_int(data.get("created_at")) or 0,
             provider_mode=self.settings.require_provider_mode(),
         )
+
+
+def _required_str(data: dict[str, Any], key: str) -> str:
+    value = data.get(key)
+    if not isinstance(value, str) or not value:
+        raise BillingProviderError("provider_invalid_response")
+    return value
 
 
 def _notes_map(value: object) -> dict[str, Any]:

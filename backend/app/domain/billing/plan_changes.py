@@ -285,23 +285,21 @@ async def settle_upgrade(
         )
         .with_for_update()
     )
-    period_end = (
-        subscription.current_period_end
-        if subscription is not None and subscription.is_current
-        else None
-    )
-    if subscription is None or period_end is None or period_end <= paid_at:
+    period_end = _remaining_period_end(subscription, paid_at)
+    if subscription is None or period_end is None:
         # Paid after the period it upgrades had ended: nothing left to grant.
         # The receipt stands; an operator reviews the payment for a refund.
         logger.warning("billing.upgrade_paid_after_period activation_id=%s", pending.id)
         return 0
-    specs = tuple((str(key), int(value)) for key, value in terms["grant_specs"])
     rows = await issue_grant_bundle(
         session,
         account_id=pending.billing_account_id,
         source_kind=GRANT_SOURCE_PLAN,
         source_ref=f"activation:{pending.id}",
-        grants=tuple(GrantSpec(key=key, value=value) for key, value in specs),
+        grants=tuple(
+            GrantSpec(key=str(key), value=int(value))
+            for key, value in terms["grant_specs"]
+        ),
         catalog_revision=str(terms["catalog_revision"]),
         idempotency_key=f"upgrade:{pending.id}",
         valid_from=paid_at,
@@ -319,6 +317,16 @@ async def settle_upgrade(
         # Let the next subscription sweep make the provider call promptly.
         subscription.reconciliation_next_at = paid_at - timedelta(seconds=1)
     return len(rows)
+
+
+def _remaining_period_end(
+    subscription: BillingSubscription | None, paid_at: datetime
+) -> datetime | None:
+    """The current period end, if the upgraded subscription still has one."""
+    if subscription is None or not subscription.is_current:
+        return None
+    end = subscription.current_period_end
+    return end if end is not None and end > paid_at else None
 
 
 async def push_scheduled_change(
