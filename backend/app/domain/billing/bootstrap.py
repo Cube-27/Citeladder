@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from hashlib import sha256
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -32,7 +33,7 @@ from app.domain.billing.accounts import billing_account_for
 from app.domain.entitlements.grants import issue_grant_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.workspaces.policy import WORKSPACE_ROLE_OWNER
-from app.models.billing import BillingAccount, BillingCatalogRevision
+from app.models.billing import AccountGrant, BillingAccount, BillingCatalogRevision
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 
@@ -178,13 +179,9 @@ async def _ensure_baseline_access(
     )
 
 
-async def provision_development_access(
-    session: AsyncSession, *, user: User, account: BillingAccount, allowance: int
-) -> None:
-    """Explicit bootstrap only; the audited grant is bound to the persisted UUID."""
-    from app.domain.entitlements.grants import issue_override_bundle
-
-    grants = tuple(
+def development_access_grants(allowance: int) -> tuple[GrantSpec, ...]:
+    """Every issuable capability at full strength, counters at ``allowance``."""
+    return tuple(
         GrantSpec(
             key=capability.key,
             value=(
@@ -198,15 +195,92 @@ async def provision_development_access(
         for capability in CAPABILITY_REGISTRY.entries
         if capability.issuable
     )
+
+
+async def issue_development_access(
+    session: AsyncSession,
+    *,
+    user: User,
+    account_id: uuid.UUID,
+    grants: tuple[GrantSpec, ...],
+    reason: str,
+    key_family: str,
+    initial_key: str,
+) -> None:
+    """Raise a development account to ``grants``, topping up what is missing.
+
+    Grants are append-only and counters sum across bundles, so a re-run can
+    neither replay a changed bundle (``grant_bundle_conflict``) nor issue a
+    fresh full one (doubled allowances). Every earlier bundle under
+    ``key_family`` counts toward the target: a counter gets the difference, a
+    flag or level only a higher value. Lowering a value needs a revocation and
+    is left alone. The account row lock serialises concurrent bootstraps.
+    """
+    from app.domain.entitlements.grants import issue_override_bundle
+
+    await session.execute(
+        select(BillingAccount.id)
+        .where(BillingAccount.id == account_id)
+        .with_for_update()
+    )
+    granted: dict[str, list[int]] = {}
+    for key, value in (
+        await session.execute(
+            select(AccountGrant.key, AccountGrant.value).where(
+                AccountGrant.billing_account_id == account_id,
+                AccountGrant.idempotency_key.startswith(key_family, autoescape=True),
+            )
+        )
+    ).all():
+        granted.setdefault(key, []).append(value)
+    top_up: list[GrantSpec] = []
+    transitions: list[str] = []
+    for spec in grants:
+        values = granted.get(spec.key, [])
+        summed = CAPABILITY_REGISTRY.require(spec.key).capability_type not in {
+            CapabilityType.FLAG,
+            CapabilityType.LEVEL,
+        }
+        current = sum(values) if summed else max(values, default=0)
+        if values and spec.value <= current:
+            continue
+        top_up.append(
+            GrantSpec(
+                key=spec.key,
+                value=spec.value - current if summed and values else spec.value,
+            )
+        )
+        transitions.append(f"{spec.key}:{current}->{spec.value}")
+    if not top_up:
+        return
+    idempotency_key = initial_key
+    if granted:
+        digest = sha256("\n".join(transitions).encode()).hexdigest()[:16]
+        idempotency_key = f"{key_family.rstrip(':')}:+{digest}"
     await issue_override_bundle(
         session,
         operator_user=user,
-        account_id=account.id,
-        grants=grants,
-        reason="explicit configured development bootstrap",
+        account_id=account_id,
+        grants=tuple(top_up),
+        reason=reason,
         valid_from=datetime.now(UTC),
         valid_until=None,
-        idempotency_key=f"development-bootstrap:{user.id}:{allowance}",
+        idempotency_key=idempotency_key,
+    )
+
+
+async def provision_development_access(
+    session: AsyncSession, *, user: User, account: BillingAccount, allowance: int
+) -> None:
+    """Explicit bootstrap only; the audited grant is bound to the persisted UUID."""
+    await issue_development_access(
+        session,
+        user=user,
+        account_id=account.id,
+        grants=development_access_grants(allowance),
+        reason="explicit configured development bootstrap",
+        key_family=f"development-bootstrap:{user.id}:",
+        initial_key=f"development-bootstrap:{user.id}:{allowance}",
     )
 
 

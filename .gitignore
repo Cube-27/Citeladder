@@ -68,3 +68,7 @@ auth.json
 .claude/*
 !.claude/settings.json
 .agents/skills/cashfree-skills/
+
+# Fonts: pulled from the private Cube-27/cube27-fonts repo by
+# `pnpm fonts:pull`, never committed (some licences forbid redistribution).
+frontend/public/fonts/

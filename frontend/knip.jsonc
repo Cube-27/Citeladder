@@ -27,6 +27,8 @@
     "scripts/**/*.{js,mjs,ts,mts}",
     "**/*.css",
   ],
+  // Wrangler writes generated dev bundles under .wrangler/tmp (gitignored).
+  "ignore": ["**/.wrangler/**"],
   "ignoreDependencies": [
     // Resolved through a computed path in check-jscpd.mjs, which static analysis cannot follow.
     "jscpd",

@@ -11,7 +11,7 @@ Tests verify shared ownership, accessibility, and product correctness—not exac
 CiteLadder (`citeladder.com`) is an evidence-led enterprise system. Its **Prism Evidence Workspace** puts neutral ground behind the chrome and a distinct work surface behind the content, using navy ink in light mode, Emerald actions by default, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
 - **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup: `frontend/public/citeladder-logo.svg` for the wordmark and the matching inline glyph for mark-only mode. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts. The mark inherits `currentColor`; non-empty `alt` supplies either rendering's accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same black silhouette across frames.
-- **Typography:** self-hosted Geist Variable, weight axis 100–900, on every surface; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together.
+- **Typography:** self-hosted variable faces on every surface: Inter for body, UI and data type, General Sans for headings and display roles, both capped at weight 600 by their `@font-face` ranges; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together.
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
 - **Surface identity:** Light is the shipped default. Semantic tokens support `[data-theme='dark']` for developer inspection; there is no public theme control or automatic system-theme following yet. Emerald is the sole action accent on public and product surfaces. The logo and provider marks retain their fixed brand colours. Marketing keeps a warmer canvas than the cooler product workspace. Auth/onboarding use centred task flows.
 
@@ -20,7 +20,8 @@ CiteLadder (`citeladder.com`) is an evidence-led enterprise system. Its **Prism 
 | Owner | Responsibility |
 | --- | --- |
 | `frontend/apps/app/src/globals.css` | Global tokens, shared geometry, interaction rules, animations, and the single `@theme` definition |
-| `frontend/apps/app/src/runtime.css` and `frontend/apps/marketing/src/layouts/MarketingLayout.astro` | Self-hosted Geist loading with swap display in each runtime |
+| `frontend/apps/app/index.html` and `frontend/apps/marketing/src/layouts/MarketingLayout.astro` | Self-hosted Inter/General Sans loading (`--font-text`, `--font-heading`) and metric-matched fallbacks in each runtime |
+| `frontend/scripts/pull-licensed-fonts.mjs` | The licensed font list; copies the binaries from the private `Cube-27/cube27-fonts` repo, which the public repo must never contain |
 | `frontend/apps/app/src/website-type.css` | Imported public/auth/onboarding type roles and focused-flow geometry; same font and semantic palette |
 | `frontend/components/ui/` | Shared controls, typography, layout, panels, and overlays |
 | `frontend/components/marketing/` | Existing marketing primitives |
@@ -48,13 +49,13 @@ Hierarchy is carried by boundary and tone, not by elevation: a box is separated 
 
 Reading text must meet 4.5:1 contrast. `subtle` metadata belongs on reading surfaces; active/tonal surfaces use `muted` or `ink` to retain contrast. Cyan, coral, lime, and amber express evidence/status, not route decoration. Never communicate meaning through colour alone.
 
-Marketing subpages use the semantic public canvas, centred Geist hero, quiet surface bands, and the shared full-width dark footer. The homepage keeps a warmer neutral canvas than the product UI, with scoped aliases resolving to shared semantic roles. The owner-scoped `[data-public-surface]` rebind deepens light-mode inks and strengthens hairlines. Use divided hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews.
+Marketing subpages use the semantic public canvas, centred General Sans hero, quiet surface bands, and the shared full-width dark footer. The homepage keeps a warmer neutral canvas than the product UI, with scoped aliases resolving to shared semantic roles. The owner-scoped `[data-public-surface]` rebind deepens light-mode inks and strengthens hairlines. Use divided hairlines unless a tonal band's edge provides meaningful separation. Functional evidence colours stay in product data and previews.
 
 The homepage may use marketing-only geometry roles: `--radius-marketing-card` (20px), `--radius-marketing-well` (16px), `--radius-marketing-preview` (24px), and `--radius-marketing-control` (10px). The homepage shares the public container measure (`max-w-7xl` plus `--site-gutter`) with the navigation and footer. White capability and integration objects sit on warm hairlines; each capability owns one identity hue (`--cl-hue-*`: visibility blue, sources green, site health indigo, demand teal, content orange, MCP pink) that `landing.css` derives into a tint for its wells and an ink for its labels, icons and bars; everything else uses the accent-tinted `--cl-well`. Identity hues never carry actions, which stay Emerald. Section heads stack a single-line heading over the lead; embedded sub-headings stay a rung below the section heading. Homepage headings use weight 500 at most. Product data and status colours retain their own meaning. These roles do not change the authenticated application's 8px `--radius-card` contract.
 
 ## Typography
 
-Use Geist exclusively; metrics, dates, ranks, and percentages use tabular numerals, not monospace. Body weight is 400, labels/navigation/actions 500, headings/metrics 600, subject to the documented role exceptions. Do not assemble page-local size/weight/ink hierarchies.
+Use Inter for text and General Sans for headings (`font-display` and `h1`–`h6`) exclusively; metrics, dates, ranks, and percentages use tabular numerals, not monospace. Body weight is 400, labels/navigation/actions and product headings 500, metrics 600 (the ceiling), subject to the documented role exceptions. Do not assemble page-local size/weight/ink hierarchies.
 
 ### Website and focused-flow ladder
 
@@ -71,7 +72,7 @@ Roles own all typography properties. The general ladder is mobile-first: base be
 | Navigation/actions | 14/20px | 500 | 0 | `ink` or inverse |
 | Label/caption/eyebrow | 13/18px | 400–500 | 0 | `muted` or `subtle` |
 
-`website-data-display` is pricing-only: Geist 500, tabular, 30/36px → 40/46px at 768px. Never apply it to prose or headings.
+`website-data-display` is pricing-only: Inter 500, tabular, 30/36px → 40/46px at 768px. Never apply it to prose or headings.
 
 ### Product app ladder
 
@@ -79,9 +80,9 @@ Call `textRole(role, layoutClasses?)` from `components/ui/typography.tsx`; name 
 
 | Role | Job | Size / line height | Weight | Ink |
 | --- | --- | --- | --- | --- |
-| `pageTitle` | Reserved; no longer the route H1 | 26/32px | 600 | `ink-strong` |
-| `sectionTitle` | Section H2 | 16/24px | 600 | `ink-strong` |
-| `objectTitle` | Entity heading; the in-pane route H1 | 18/26px | 600 | `ink-strong` |
+| `pageTitle` | Reserved; no longer the route H1 | 26/32px | 500 | `ink-strong` |
+| `sectionTitle` | Section H2 | 16/24px | 500 | `ink-strong` |
+| `objectTitle` | Entity heading; the in-pane route H1 | 18/26px | 500 | `ink-strong` |
 | `bodyStrong` | Leading copy | 14/20px | 500 | `ink` |
 | `body` | Reading copy, descriptions, cells | 14/20px | 400 | `ink` |
 | `label` | Field/column labels | 14/20px | 500 | `muted` |

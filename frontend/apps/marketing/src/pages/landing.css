@@ -3,7 +3,7 @@
 .cl-landing {
   color: var(--cl-ink);
   background: var(--cl-paper);
-  font-family: var(--font-geist), Arial, sans-serif;
+  font-family: var(--font-text), Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 .cl-landing * {

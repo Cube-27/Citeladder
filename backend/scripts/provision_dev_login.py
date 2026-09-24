@@ -16,21 +16,19 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
-from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
 
 from app.core.config import settings
-from app.core.config.entitlements import CAPABILITY_REGISTRY, CapabilityType
 from app.core.database import SessionLocal, dispose_engine
 from app.domain.auth.service import authenticate_user, get_user_by_email, register_user
 from app.domain.billing.bootstrap import (
+    development_access_grants,
     ensure_initial_catalog,
     ensure_workspace_billing,
+    issue_development_access,
 )
-from app.domain.entitlements.grants import issue_override_bundle
-from app.domain.entitlements.types import GrantSpec
 from app.domain.workspaces.service import ensure_personal_workspace
 from app.models.workspace import Workspace, WorkspaceMember
 
@@ -46,21 +44,6 @@ def _require_local_development_target() -> None:
             "Refusing to provision a fixed dev login outside a local "
             "development database"
         )
-
-
-def _full_access_grants(counter_allowance: int) -> tuple[GrantSpec, ...]:
-    grants: list[GrantSpec] = []
-    for capability in CAPABILITY_REGISTRY.entries:
-        if not capability.issuable:
-            continue
-        if capability.capability_type is CapabilityType.FLAG:
-            value = 1
-        elif capability.capability_type is CapabilityType.LEVEL:
-            value = len(capability.ordered_values) - 1
-        else:
-            value = counter_allowance
-        grants.append(GrantSpec(key=capability.key, value=value))
-    return tuple(grants)
 
 
 async def _run(email: str, password: str, counter_allowance: int) -> None:
@@ -97,15 +80,14 @@ async def _run(email: str, password: str, counter_allowance: int) -> None:
                 provisioning_user=user,
                 provision_access=False,
             )
-            await issue_override_bundle(
+            await issue_development_access(
                 session,
-                operator_user=user,
+                user=user,
                 account_id=account.id,
-                grants=_full_access_grants(counter_allowance),
+                grants=development_access_grants(counter_allowance),
                 reason="local development full-access account",
-                valid_from=datetime.now(UTC),
-                valid_until=None,
-                idempotency_key=f"dev-full-access:{user.id}",
+                key_family=f"dev-full-access:{user.id}",
+                initial_key=f"dev-full-access:{user.id}",
             )
             await ensure_initial_catalog(session, operator=user)
             await session.commit()
