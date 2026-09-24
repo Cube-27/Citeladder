@@ -1041,3 +1041,18 @@ def test_breadcrumb_categories_keep_a_linked_leaf_and_drop_the_index() -> None:
         "breadcrumb_links": [{"url": "https://shop.test/dresses", "title": "DRESSES"}],
     }
     assert _breadcrumb_categories(repeated_trail, page_url=page) == ["DRESSES"]
+
+    # A current crumb linked through the collection alias is still this page.
+    alias_trail = {
+        "breadcrumbs": ["Home", "Dresses", "Linen Dress"],
+        "breadcrumb_links": [
+            {"url": "https://shop.test/collections/dresses", "title": "Dresses"},
+            {
+                "url": "https://shop.test/collections/dresses/products/linen",
+                "title": "Linen Dress",
+            },
+        ],
+    }
+    assert _breadcrumb_categories(
+        alias_trail, page_url="https://shop.test/products/linen"
+    ) == ["Dresses"]

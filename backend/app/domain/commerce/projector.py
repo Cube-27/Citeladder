@@ -23,6 +23,7 @@ from app.domain.commerce.catalog_membership import (
     _identity_base_url,
     _link_product_to_projected_shelves,
     _link_shelf_products,
+    _shelf_scoped_alias_identity,
 )
 from app.domain.commerce.facts import _dict_value, _list_value
 from app.domain.commerce.price import normalized_price_value
@@ -487,7 +488,9 @@ async def _merge_projected_categories(
     names = [str(value) for value in _list_value(structured.get("category"))]
     names.extend(
         _breadcrumb_categories(
-            _dict_value(facts.get("commerce")), page_url=product.canonical_url
+            _dict_value(facts.get("commerce")),
+            page_url=product.canonical_url,
+            aliases=(str(artifact.final_url or ""), str(artifact.requested_url or "")),
         )
     )
     named = [name for name in dict.fromkeys(names) if _is_named(name)]
@@ -513,7 +516,9 @@ def _crumb_key(value: str) -> str:
     return " ".join(value.casefold().split())
 
 
-def _breadcrumb_categories(commerce: dict[str, Any], *, page_url: str) -> list[str]:
+def _breadcrumb_categories(
+    commerce: dict[str, Any], *, page_url: str, aliases: tuple[str, ...] = ()
+) -> list[str]:
     """The shelves a product page's breadcrumb trail places it on.
 
     Separators are dropped first. Themes mark a trail up as one node per crumb
@@ -536,7 +541,10 @@ def _breadcrumb_categories(commerce: dict[str, Any], *, page_url: str) -> list[s
     ancestors = crumbs[1:]
     last = len(crumbs) - 1
     if ancestors and last not in _crumbs_linked_elsewhere(
-        crumbs, _list_value(commerce.get("breadcrumb_links")), page_url=page_url
+        crumbs,
+        _list_value(commerce.get("breadcrumb_links")),
+        page_url=page_url,
+        aliases=aliases,
     ):
         ancestors = ancestors[:-1]
     return [
@@ -546,34 +554,53 @@ def _breadcrumb_categories(commerce: dict[str, Any], *, page_url: str) -> list[s
     ]
 
 
+def _next_crumb_position(crumbs: list[str], key: str, *, start: int) -> int | None:
+    """The first crumb at or after ``start`` carrying this title key."""
+    return next(
+        (
+            index
+            for index in range(start, len(crumbs))
+            if _crumb_key(crumbs[index]) == key
+        ),
+        None,
+    )
+
+
 def _crumbs_linked_elsewhere(
-    crumbs: list[str], links: list[Any], *, page_url: str
+    crumbs: list[str],
+    links: list[Any],
+    *,
+    page_url: str,
+    aliases: tuple[str, ...] = (),
 ) -> set[int]:
     """Positions of the crumbs the trail links to a page other than this one.
 
     Links are recorded in document order, so each is paired with the next
     crumb occurrence carrying its title. Matching on title alone let an
     earlier "Dresses" link vouch for a later, unlinked "Dresses" leaf.
+
+    "This page" is every address it was reached at, not only its canonical
+    identity: a theme links the current crumb to the collection-scoped alias
+    it was fetched through (`/collections/x/products/y`), which is still this
+    product rather than a shelf above it.
     """
-    page = _canonical_or_blank(page_url)
+    base = next((alias for alias in aliases if alias), page_url)
+    page = {
+        url
+        for candidate in (page_url, *aliases)
+        if (url := _canonical_or_blank(candidate))
+    }
     linked: set[int] = set()
     cursor = 0
     for link in links:
         entry = _dict_value(link)
         key = _crumb_key(str(entry.get("title") or ""))
-        position = next(
-            (
-                index
-                for index in range(cursor, len(crumbs))
-                if _crumb_key(crumbs[index]) == key
-            ),
-            None,
-        )
+        position = _next_crumb_position(crumbs, key, start=cursor)
         if position is None:
             continue
         cursor = position + 1
-        target = _canonical_or_blank(str(entry.get("url") or ""), page_url)
-        if target and target != page:
+        target = _canonical_or_blank(str(entry.get("url") or ""), base)
+        if target and not {target, _shelf_scoped_alias_identity(target)} & page:
             linked.add(position)
     return linked
 

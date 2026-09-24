@@ -427,7 +427,7 @@ export default function PricingRoute() {
           onConfirm={() => void confirm.mutate()}
         />
         <CheckoutStatus checkout={checkout} />
-        <Notice error={purchase.error} fallback="Purchase unavailable." shown={checkout.notice} />
+        <Notice error={purchase.error} fallback="Quote unavailable." shown={checkout.notice} />
         <Notice error={confirm.error} fallback="Checkout unavailable." shown={checkout.notice} />
       </Stack>
     </PageShell>
