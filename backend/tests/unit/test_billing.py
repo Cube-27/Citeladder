@@ -381,7 +381,15 @@ async def test_razorpay_order_settles_only_on_its_captured_payment(
         "currency": "USD",
         "order_id": "order_test",
     }
-    captured = {**failed, "id": "pay_ok", "status": "captured", "method": "upi"}
+    # Checkout lets the browser set payment notes; they must never name the
+    # intent or account.
+    captured = {
+        **failed,
+        "id": "pay_ok",
+        "status": "captured",
+        "method": "upi",
+        "notes": {"citeladder_intent_id": "spoofed", "citeladder_account_ref": "x"},
+    }
     transport = httpx.MockTransport(_order_handler([failed]))
     async with httpx.AsyncClient(transport=transport) as client:
         pending = await RazorpayBillingProvider(client=client).fetch_payment(
@@ -396,15 +404,15 @@ async def test_razorpay_order_settles_only_on_its_captured_payment(
         paid = await RazorpayBillingProvider(client=client).fetch_payment("order_test")
     assert (paid.status, paid.external_payment_id) == ("paid", "pay_ok")
     assert paid.external_order_id == "order_test"
-    # Payment notes are empty on a Standard Checkout payment; the order's
-    # opaque identity is carried over for the activation checks.
-    assert paid.account_ref == "acct"
+    # Only the server-set order notes identify the purchase.
+    assert (paid.intent_id, paid.account_ref) == ("intent-1", "acct")
 
     underpaid = {**captured, "amount": 999}
     transport = httpx.MockTransport(_order_handler([underpaid]))
     async with httpx.AsyncClient(transport=transport) as client:
+        provider = RazorpayBillingProvider(client=client)
         with pytest.raises(BillingProviderError, match="provider_amount_mismatch"):
-            await RazorpayBillingProvider(client=client).fetch_payment("order_test")
+            await provider.fetch_payment("order_test")
 
 
 @pytest.mark.asyncio
@@ -419,8 +427,9 @@ async def test_razorpay_throttling_is_retryable(
         return httpx.Response(429, json={"error": {}})
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = RazorpayBillingProvider(client=client)
         with pytest.raises(BillingProviderError, match="provider_rate_limited") as exc:
-            await RazorpayBillingProvider(client=client).fetch_payment("pay_x")
+            await provider.fetch_payment("pay_x")
     assert exc.value.retryable is True
 
 

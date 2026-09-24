@@ -61,6 +61,15 @@ def verify_plan(actual: dict, price: dict) -> None:
         raise ValueError("CiteLadder GST policy remains operator-unverified")
 
 
+def workspace_path(value: str) -> Path:
+    """A CLI-supplied file path, refused outside the working directory."""
+    workspace = Path.cwd().resolve()
+    resolved = (workspace / value).resolve()
+    if not resolved.is_relative_to(workspace):
+        raise ValueError(f"Path must stay within {workspace}")
+    return resolved
+
+
 def _require_plan_reference(reference: str) -> None:
     if (
         not reference
@@ -164,7 +173,9 @@ def main() -> int:
     if args.operation == "bind" and not (args.plans and args.output):
         parser.error("bind requires --plans and --output")
     refs = (
-        json.loads(Path(args.plans).read_text(encoding="utf-8")) if args.plans else None
+        json.loads(workspace_path(args.plans).read_text(encoding="utf-8"))
+        if args.plans
+        else None
     )
 
     async def run() -> dict[str, object] | None:
@@ -175,7 +186,7 @@ def main() -> int:
 
     bound = asyncio.run(run())
     if bound is not None:
-        Path(args.output).write_text(
+        workspace_path(args.output).write_text(
             json.dumps(bound, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
         print(f"wrote the bound payload for a new revision to {args.output}")

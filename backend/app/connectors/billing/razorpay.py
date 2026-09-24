@@ -351,7 +351,8 @@ class RazorpayBillingProvider:
         if captured is not None:
             if (captured.amount_minor, captured.currency) != (amount, currency):
                 raise BillingProviderError("provider_amount_mismatch")
-            return replace(captured, external_order_id=order_id)
+            settled: ProviderPayment = replace(captured, external_order_id=order_id)
+            return settled
         notes = _notes_map(order.get("notes"))
         return ProviderPayment(
             external_payment_id=order_id,
@@ -374,9 +375,9 @@ class RazorpayBillingProvider:
         captured = [
             payment
             for payment in (
-                self._payment(
-                    {**item, "notes": item.get("notes") or order.get("notes")}
-                )
+                # Identity comes only from the server-set ORDER notes: a
+                # Standard Checkout payment's own notes are browser-supplied.
+                self._payment({**item, "notes": order.get("notes")})
                 for item in attempts
                 if isinstance(item, dict)
             )

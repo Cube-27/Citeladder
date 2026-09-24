@@ -379,6 +379,14 @@ async def _settle_unpaid_record(
     """
     if claim.created_at > now - abandon_after:
         return ReconciliationSummary(claimed=1, still_pending=1)
+    if claim.activation_kind == ACTIVATION_KIND_BASE and claim.external_reference:
+        # Close the read transaction before provider I/O (invariant 8).
+        await session.rollback()
+        if not await _cancel_abandoned_subscription(provider, claim):
+            return ReconciliationSummary(claimed=1, still_pending=1)
+        if not await _lock_owned_claim(session, claim):
+            await session.rollback()
+            return ReconciliationSummary(claimed=1, still_pending=1)
     await _mark_terminal(
         session,
         claim.pending_id,
@@ -386,18 +394,27 @@ async def _settle_unpaid_record(
         failure_code=REASON_ACTIVATION_EXPIRED,
         now=now,
     )
-    if claim.activation_kind == ACTIVATION_KIND_BASE and claim.external_reference:
-        try:
-            await provider.cancel_subscription(
-                claim.external_reference, at_cycle_end=False
-            )
-        except BillingProviderError as exc:
-            logger.warning(
-                "billing.abandoned_subscription_cancel_failed activation_id=%s code=%s",
-                claim.pending_id,
-                exc.code,
-            )
     return ReconciliationSummary(claimed=1, abandoned=1)
+
+
+async def _cancel_abandoned_subscription(
+    provider: BillingProvider, claim: _Claim
+) -> bool:
+    """Cancel an abandoned subscription; False when the next sweep must retry.
+
+    An authoritative refusal (for example one already cancelled) is final and
+    lets the intent close; only an uncertain failure keeps it pending.
+    """
+    try:
+        await provider.cancel_subscription(claim.external_reference, at_cycle_end=False)
+    except BillingProviderError as exc:
+        logger.warning(
+            "billing.abandoned_subscription_cancel_failed activation_id=%s code=%s",
+            claim.pending_id,
+            exc.code,
+        )
+        return not exc.retryable
+    return True
 
 
 async def _settle_claim(

@@ -332,10 +332,9 @@ def test_order_callback_is_signed_over_the_stored_order_id() -> None:
     adapter.verify_callback(
         external_reference="order_fixture", fields=signed("order_fixture")
     )
+    foreign = signed("order_foreign")
     with pytest.raises(CheckoutCallbackError, match="callback_reference_mismatch"):
-        adapter.verify_callback(
-            external_reference="order_fixture", fields=signed("order_foreign")
-        )
+        adapter.verify_callback(external_reference="order_fixture", fields=foreign)
     subscription_shaped = {
         "razorpay_payment_id": "pay_fixture",
         "razorpay_subscription_id": "sub_fixture",

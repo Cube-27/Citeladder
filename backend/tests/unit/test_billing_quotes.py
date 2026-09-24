@@ -333,13 +333,16 @@ async def test_checkout_refuses_a_quote_the_provider_plan_would_not_charge(
         return provisioned
 
     monkeypatch.setattr("app.domain.billing.service.published_commercial_catalog", load)
+    arguments = {
+        "catalog_key": "tier_1",
+        "credential_mode": "byok",
+        "country_code": "IN",
+        "billing_identity": _identity(state_code="27"),
+        "at": datetime.now(UTC),
+    }
+    # Positive control: at the provisioned rate the same intent resolves.
+    assert (await resolve_base_intent(_CatalogSession(), **arguments)).price_ref
     monkeypatch.setattr(billing_settings, "india_gst_rate", Decimal("0.12"))
+    session = _CatalogSession()
     with pytest.raises(BillingConflictError, match="checkout_unavailable"):
-        await resolve_base_intent(
-            _CatalogSession(),
-            catalog_key="tier_1",
-            credential_mode="byok",
-            country_code="IN",
-            billing_identity=_identity(state_code="27"),
-            at=datetime.now(UTC),
-        )
+        await resolve_base_intent(session, **arguments)

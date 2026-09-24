@@ -127,13 +127,19 @@ def prorated_minor(
     return int(share.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
+def change_in_flight(subscription: BillingSubscription) -> bool:
+    """A scheduled change still pending; a provider-refused one is replaceable."""
+    change = subscription.scheduled_change
+    return bool(change) and (change or {}).get("state") != PLAN_CHANGE_REJECTED
+
+
 def _changeable_period(
     subscription: BillingSubscription, at: datetime
 ) -> tuple[datetime, datetime]:
     """The current paid period of a renewing subscription with no change in
     flight; anything else cannot change plan now.
     """
-    if subscription.scheduled_change:
+    if change_in_flight(subscription):
         raise BillingConflictError(REASON_PLAN_CHANGE_PENDING)
     start, end = subscription.current_period_start, subscription.current_period_end
     if (
@@ -256,8 +262,22 @@ def _scheduled(
 async def request_downgrade(
     session: AsyncSession, subscription: BillingSubscription, change: PlanChange
 ) -> None:
-    """Commit the downgrade BEFORE the provider is asked to schedule it."""
-    subscription.scheduled_change = _scheduled(
+    """Commit the downgrade BEFORE the provider is asked to schedule it.
+
+    The subscription row is locked and both one-change guards re-checked, so
+    a concurrent upgrade or downgrade cannot be overwritten.
+    """
+    locked = await session.scalar(
+        select(BillingSubscription)
+        .where(BillingSubscription.id == subscription.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if locked is None or change_in_flight(locked):
+        await session.rollback()
+        raise BillingConflictError(REASON_PLAN_CHANGE_PENDING)
+    await reject_pending_upgrade(session, locked.billing_account_id)
+    locked.scheduled_change = _scheduled(
         PLAN_CHANGE_DOWNGRADE, change.terms, change.effective_at, "request"
     )
     await session.commit()
@@ -310,7 +330,7 @@ async def settle_upgrade(
         profile_key=pending.catalog_key,
         profile_priority=UPGRADE_BUNDLE_PRIORITY,
     )
-    if subscription.scheduled_change is None and not subscription.cancel_at_period_end:
+    if not change_in_flight(subscription) and not subscription.cancel_at_period_end:
         subscription.scheduled_change = _scheduled(
             PLAN_CHANGE_UPGRADE, terms, period_end, f"activation:{pending.id}"
         )
@@ -329,6 +349,19 @@ def _remaining_period_end(
     return end if end is not None and end > paid_at else None
 
 
+def _awaits_provider(
+    subscription: BillingSubscription, change: dict[str, object]
+) -> bool:
+    """A requested change on a renewing subscription; an ending subscription
+    never renews onto the new plan, so its change is never pushed.
+    """
+    return (
+        change.get("state") == PLAN_CHANGE_REQUESTED
+        and subscription.is_current
+        and not subscription.cancel_at_period_end
+    )
+
+
 async def push_scheduled_change(
     session: AsyncSession, subscription_id: uuid.UUID, provider: BillingProvider
 ) -> str | None:
@@ -343,7 +376,7 @@ async def push_scheduled_change(
     if subscription is None or not change:
         await session.rollback()
         return None
-    if change.get("state") != PLAN_CHANGE_REQUESTED:
+    if not _awaits_provider(subscription, change):
         await session.rollback()
         return str(change.get("state"))
     reference = subscription.external_subscription_id

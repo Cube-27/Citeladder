@@ -219,10 +219,12 @@ def test_binding_provider_plans_covers_every_recurring_sku_exactly_once() -> Non
         not price["provider_price_ref"] for _, _, price in recurring_prices(payload)
     )
 
+    partial = dict(list(refs.items())[:2])
     with pytest.raises(ValueError, match="cover exactly"):
-        bind_plan_refs(payload, dict(list(refs.items())[:2]))
+        bind_plan_refs(payload, partial)
+    malformed = {**refs, "tier_1:international": "price_x"}
     with pytest.raises(ValueError, match="malformed"):
-        bind_plan_refs(payload, {**refs, "tier_1:international": "price_x"})
+        bind_plan_refs(payload, malformed)
     shared = dict.fromkeys(refs, "plan_shared")
     with pytest.raises(ValidationError, match="only one SKU"):
         bind_plan_refs(payload, shared)

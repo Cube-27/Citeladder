@@ -61,8 +61,9 @@ Base plans are recurring provider subscriptions. Add-ons, top-ups and an
 upgrade's prorated charge are one-time provider orders: the intent persists the
 order, and the single captured payment on it settles the purchase, so both
 order-paid and payment-captured deliveries converge on one activation. An
-unpaid checkout is abandoned after the reconciliation window (its subscription
-is cancelled at the provider) instead of holding the one-pending slot.
+unpaid checkout is abandoned after the reconciliation window instead of holding
+the one-pending slot; for a base-plan intent the provider subscription is
+cancelled first, and a failed cancellation keeps the intent pending for retry.
 [Plan changes](../backend/app/domain/billing/plan_changes.py) edit the one base
 subscription: an upgrade charges the prorated base-price difference for the rest
 of the paid period and, once paid, issues the higher plan's bundle for that

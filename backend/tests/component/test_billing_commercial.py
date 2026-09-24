@@ -1722,6 +1722,96 @@ async def test_reconciliation_abandons_unpaid_checkouts_after_the_window(
     assert cancelled == [("sub_old", False)]
 
 
+@pytest.mark.asyncio
+async def test_abandonment_retries_a_failed_subscription_cancellation(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The intent closes only once its provider subscription is cancelled."""
+    await _register(client, "sweep-cancel@example.com")
+    account = await _account(db_session)
+    now = datetime.now(UTC)
+    base = await _seed_pending(
+        db_session,
+        account,
+        kind="base",
+        catalog_key="tier_1",
+        external_reference="sub_stuck",
+        created_at=now - timedelta(days=2),
+    )
+    base_id = base.id
+
+    class _Provider:
+        fail = True
+
+        async def fetch_subscription(self, reference: str) -> ProviderSubscription:
+            return ProviderSubscription(
+                external_subscription_id=reference,
+                status="created",
+                current_start=None,
+                current_end=None,
+                updated_at=0,
+                cancel_at_period_end=False,
+            )
+
+        async def cancel_subscription(self, reference: str, *, at_cycle_end: bool):
+            if self.fail:
+                raise BillingProviderError("provider_unavailable", retryable=True)
+
+    provider = _Provider()
+    sweep = {
+        "now": now,
+        "stale_after": timedelta(minutes=5),
+        "abandon_after": timedelta(days=1),
+    }
+    first = await reconcile_pending_activations(session_factory, provider, **sweep)
+    assert (first.abandoned, first.still_pending) == (0, 1)
+    db_session.expire_all()
+    row = await db_session.get(PendingActivation, base_id)
+    assert row is not None and row.status == "pending"
+
+    # Time passes: the backoff and the first sweep's lease both lapse.
+    provider.fail = False
+    row.reconciliation_next_at = None
+    row.reconciliation_lease_expires_at = None
+    await db_session.commit()
+    second = await reconcile_pending_activations(session_factory, provider, **sweep)
+    assert second.abandoned == 1
+
+
+@pytest.mark.asyncio
+async def test_refund_before_its_payment_receipt_stays_retryable(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
+    raw = json.dumps(
+        {
+            "event": "refund.processed",
+            "created_at": 1_700_000_000,
+            "payload": {
+                "refund": {
+                    "entity": {
+                        "id": "rfnd_early",
+                        "payment_id": "pay_not_settled_yet",
+                        "amount": 100,
+                        "currency": "USD",
+                        "status": "processed",
+                    }
+                }
+            },
+        },
+        separators=(",", ":"),
+    ).encode()
+    assert (await _post_webhook(client, raw, event_id="evt_early")).status_code == 204
+    db_session.expire_all()
+    event = (await db_session.scalars(select(BillingWebhookEvent))).one()
+    # Not completed as unmatched: bounded recovery tries it again later.
+    assert event.processing_state == "pending"
+
+
 # --- Deleted legacy routes ------------------------------------------------------
 @pytest.mark.asyncio
 async def test_deleted_legacy_routes_return_404(client: httpx.AsyncClient) -> None:

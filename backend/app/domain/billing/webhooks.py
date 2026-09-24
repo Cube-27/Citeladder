@@ -212,9 +212,13 @@ async def apply_refund_event(
         if refreshed is not None:
             await _finish(session, refreshed, RESULT_REJECTED)
         return RESULT_REJECTED
-    return await _finish(
-        session, event, RESULT_APPLIED if receipt is not None else RESULT_UNMATCHED
-    )
+    if receipt is None:
+        # The refunded payment may not be settled yet: leave the receipt
+        # pending so bounded recovery retries it (up to its attempt cap)
+        # instead of completing it as unmatched.
+        await session.rollback()
+        return RESULT_UNMATCHED
+    return await _finish(session, event, RESULT_APPLIED)
 
 
 async def _activate_from_event(
