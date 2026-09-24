@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.entitlements import (
+    CODE_SITE_HEALTH_FETCHES_EXHAUSTED,
     KEY_SITE_HEALTH_PAGE_FETCHES,
     LEDGER_ENTRY_RESERVATION,
 )
@@ -39,6 +40,12 @@ from app.models.site_health.crawl import SiteCrawl
 _SUBJECT_KIND = "site_crawl"
 
 
+class SiteHealthFetchesExhaustedError(RuntimeError):
+    """A metered account has no page fetches left this period."""
+
+    code = CODE_SITE_HEALTH_FETCHES_EXHAUSTED
+
+
 async def available_page_fetches(
     session: AsyncSession, *, workspace_id: uuid.UUID, at: datetime
 ) -> int | None:
@@ -56,6 +63,23 @@ async def available_page_fetches(
         return None
     balances = await _grant_balances(session, grants)
     return sum(max(balance, 0) for balance in balances.values())
+
+
+async def budgeted_page_limit(
+    session: AsyncSession, *, workspace_id: uuid.UUID, requested: int, at: datetime
+) -> tuple[int, bool]:
+    """``(page limit, metered)`` for a new crawl, refusing an empty allowance.
+
+    A metered crawl never plans more pages than the allowance has left.
+    """
+    budget = await available_page_fetches(session, workspace_id=workspace_id, at=at)
+    if budget is None:
+        return requested, False
+    if budget <= 0:
+        raise SiteHealthFetchesExhaustedError(
+            "No Site Health page fetches remain this period"
+        )
+    return min(requested, budget), True
 
 
 async def reserve_crawl_fetches(
@@ -111,7 +135,9 @@ async def settle_crawl_fetches(
 
 
 __all__ = [
+    "SiteHealthFetchesExhaustedError",
     "available_page_fetches",
+    "budgeted_page_limit",
     "reserve_crawl_fetches",
     "settle_crawl_fetches",
 ]

@@ -164,11 +164,12 @@ class PlanPayload(BaseModel):
             raise ValueError("self-serve plan requires a BYOK price")
         if len({grant.key for grant in self.grants}) != len(self.grants):
             raise ValueError("plan capability keys must be unique")
-        if (
-            self.byok_price is not None
-            and self.funded_price is not None
-            and self.funded_price.amount_minor < self.byok_price.amount_minor
-        ):
+        return self
+
+    @model_validator(mode="after")
+    def funded_not_below_byok(self) -> PlanPayload:
+        byok, funded = self.byok_price, self.funded_price
+        if byok and funded and funded.amount_minor < byok.amount_minor:
             raise ValueError("funded price cannot be below the BYOK price")
         return self
 

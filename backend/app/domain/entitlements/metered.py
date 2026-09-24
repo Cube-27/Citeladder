@@ -35,7 +35,7 @@ class MeteredSubject:
     workspace_id: uuid.UUID
 
     def __post_init__(self) -> None:
-        if self.kind not in {"content", "agent", "site_crawl"}:
+        if self.kind not in _TYPED_SUBJECT_COLUMNS:
             raise LedgerError(f"unsupported metered subject: {self.kind}")
 
 
@@ -44,6 +44,21 @@ class MeteredSettlement:
     charged_units: int
     absorbed_units: int
     usage_complete: bool
+
+
+_TYPED_SUBJECT_COLUMNS = {
+    "content": "content_generation_id",
+    "agent": "agent_task_run_id",
+    "site_crawl": "site_crawl_id",
+}
+
+
+def _typed_subject_ids(subject: MeteredSubject) -> dict[str, uuid.UUID | None]:
+    """The typed parent FK columns: only the subject's own column is set."""
+    return {
+        column: subject.subject_id if kind == subject.kind else None
+        for kind, column in _TYPED_SUBJECT_COLUMNS.items()
+    }
 
 
 async def reserve_metered_usage(
@@ -106,13 +121,7 @@ async def reserve_metered_usage(
             capability_key=capability_key,
         )
     reservation_id = uuid.uuid4()
-    typed_ids = {
-        "content_generation_id": (
-            subject.subject_id if subject.kind == "content" else None
-        ),
-        "agent_task_run_id": subject.subject_id if subject.kind == "agent" else None,
-        "site_crawl_id": subject.subject_id if subject.kind == "site_crawl" else None,
-    }
+    typed_ids = _typed_subject_ids(subject)
     for index, allocation in enumerate(allocations):
         key = (
             idempotency_key

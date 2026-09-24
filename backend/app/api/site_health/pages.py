@@ -23,6 +23,7 @@ from app.domain.site_health.api_schemas import (
     SiteIssueDetail,
     SiteIssuesPage,
 )
+from app.domain.site_health.fetch_budget import SiteHealthFetchesExhaustedError
 from app.domain.site_health.rerun import (
     RerunNotAllowedError,
     rerun_page,
@@ -137,6 +138,9 @@ async def rerun_page_endpoint(
     except MonitoringNotAllowedError as exc:
         await session.rollback()
         raise ApiException.coded(status.HTTP_403_FORBIDDEN, exc.code, str(exc)) from exc
+    except SiteHealthFetchesExhaustedError as exc:
+        await session.rollback()
+        raise ApiException.coded(status.HTTP_409_CONFLICT, exc.code, str(exc)) from exc
     except RerunNotAllowedError as exc:
         await session.rollback()
         raise ApiException.coded(status.HTTP_409_CONFLICT, exc.code, str(exc)) from exc
