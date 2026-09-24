@@ -90,7 +90,7 @@ export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnaps
               <Stack gap="tight" className="max-w-xs p-1 text-xs">
                 <p className={textRole('emphasis')}>{meta.label}</p>
                 <p className="opacity-90">{meta.description}</p>
-                <p className="border-t border-white/20 pt-1.5 text-xs opacity-75">
+                <p className="border-t border-current/20 pt-1.5 text-xs opacity-75">
                   {meta.requirements}
                 </p>
                 {detectorLimitations.length > 0 && (

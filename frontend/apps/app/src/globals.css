@@ -361,6 +361,17 @@
   --text-preview-status--line-height: 0.875rem;
   --text-preview-code: 0.65625rem;
   --text-preview-code--line-height: 0.875rem;
+  /* Role sizes. These defaults are the public surfaces' values; the product
+     document rebinds them (see the product type ladder below). */
+  --text-role-meta: 0.75rem;
+  --text-role-meta--line-height: 1rem;
+  --text-role-body: 0.875rem;
+  --text-role-body--line-height: 1.25rem;
+  --text-role-section: 1rem;
+  --text-role-section--line-height: 1.5rem;
+  --text-field: 0.875rem;
+  --text-field--line-height: 1.25rem;
+  --font-weight-overlay-title: 600;
 
   --leading-tight: 1.25;
 
@@ -941,35 +952,84 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-band-teal-mid: #114747;
 }
 
-/* Light remains the shipped default. Setting data-theme is a deterministic
-   developer preview until a persisted user preference is introduced. */
+/* The product's light palette: warm paper neutrals in the Claude register.
+   Scoped to the app document — the marketing <html> carries
+   data-public-surface and keeps its own canvas. Controls (inputs, secondary
+   buttons) fill with --color-input, one step brighter than the paper, so
+   every action item reads as lifted. Declared before the dark block, which
+   rebinds every token set here. */
+:root:not([data-public-surface]) {
+  --color-background: #f5f4ed;
+  --color-background-alt: #f0eee6;
+  --color-canvas-soft: #faf9f5;
+  --color-panel: #faf9f5;
+  --color-panel-tonal: #f5f4ed;
+  --color-elevated: #ffffff;
+  --color-well: #f0eee6;
+  --color-active: #ebe9df;
+  --color-input: #ffffff;
+  --color-sidebar: #f5f4ed;
+  --color-shell: #f5f4ed;
+  --color-shell-alt: #efede4;
+  --color-foreground: #141413;
+  --color-secondary: #3d3d3a;
+  --color-muted: #6a6862;
+  --color-subtle: #6b6a65;
+  --color-disabled: #8a8880;
+  --color-border-subtle: #ebe9e1;
+  --color-border: #dedcd1;
+  --color-border-strong: #c7c4b8;
+  --color-border-bold: #8f8d85;
+  --color-neutral-bg: #f0eee6;
+  --skeleton-base: #efede6;
+  --skeleton-highlight: #faf9f5;
+}
+
+/* The product type ladder: weights stop at 500 and hierarchy comes from size.
+   Captions step up to 13px so they sit one rung under 14px body, body copy
+   opens to a 22px line, section headings step above card titles (18 vs 16),
+   and field text is 16px (which also stops iOS zooming on focus). Scoped like
+   the palette above so the public surfaces keep their own sizes. */
+:root:not([data-public-surface]) {
+  --text-role-meta: 0.8125rem;
+  --text-role-meta--line-height: 1.125rem;
+  --text-role-body--line-height: 1.375rem;
+  --text-role-section: 1.125rem;
+  --text-role-section--line-height: 1.625rem;
+  --text-field: 1rem;
+  --text-field--line-height: 1.5rem;
+  --font-weight-overlay-title: 500;
+}
+
+/* Light is the default. Dark is a per-device reader preference applied to the
+   app document only (lib/theme/theme.ts); the marketing site never sets it. */
 :root[data-theme='light'] {
   color-scheme: light;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --color-background: #111820;
-  --color-background-alt: #18222d;
-  --color-canvas-soft: #151d25;
-  --color-panel: #1c2732;
-  --color-panel-tonal: #202d39;
-  --color-elevated: #263440;
-  --color-well: #15202a;
-  --color-active: #293a46;
-  --color-input: #1c2732;
-  --color-sidebar: #111820;
-  --color-shell: #111820;
-  --color-shell-alt: #18222d;
-  --color-foreground: #f2f6f8;
-  --color-secondary: #dce5e9;
-  --color-muted: #afbec8;
-  --color-subtle: #a3b3bf;
-  --color-disabled: #80919e;
-  --color-border-subtle: #31404c;
-  --color-border: #455562;
-  --color-border-strong: #61717d;
-  --color-border-bold: #8999a5;
+  --color-background: #1f1e1d;
+  --color-background-alt: #33322f;
+  --color-canvas-soft: #262624;
+  --color-panel: #262624;
+  --color-panel-tonal: #2b2a28;
+  --color-elevated: #30302e;
+  --color-well: #222120;
+  --color-active: #3a3936;
+  --color-input: #30302e;
+  --color-sidebar: #1f1e1d;
+  --color-shell: #1f1e1d;
+  --color-shell-alt: #262624;
+  --color-foreground: #faf9f5;
+  --color-secondary: #e5e3dc;
+  --color-muted: #c2c0b6;
+  --color-subtle: #a6a49c;
+  --color-disabled: #85837c;
+  --color-border-subtle: #33322f;
+  --color-border: #403f3c;
+  --color-border-strong: #76746c;
+  --color-border-bold: #8f8d85;
   --color-hairline-warm: var(--color-border);
   --color-accent: #76df9c;
   --color-accent-hover: #94ebb0;
@@ -982,13 +1042,14 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-focus: #94ebb0;
   --color-focus-ring: rgb(148 235 176 / 35%);
   --color-selection: rgb(118 223 156 / 35%);
-  --color-selection-fg: #f2f6f8;
+  --color-selection-fg: #faf9f5;
   --color-action: var(--color-accent);
   --color-action-hover: var(--color-accent-hover);
   --color-action-active: var(--color-accent-active);
   --color-action-fg: var(--color-accent-fg);
   --color-recommendation: var(--color-surface);
   --color-surface-inverse: #76df9c;
+  --color-on-inverse: #0d2618;
   --color-success: #80dfa2;
   --color-success-bg: rgb(128 223 162 / 13%);
   --color-success-border: rgb(128 223 162 / 38%);
@@ -1008,7 +1069,7 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-info-bg: rgb(138 212 225 / 13%);
   --color-info-border: rgb(138 212 225 / 38%);
   --color-info-text: #a5e2eb;
-  --color-neutral-bg: #293743;
+  --color-neutral-bg: #353432;
   --color-sentiment-positive: var(--color-chart-5);
   --color-sentiment-positive-bg: var(--color-success-bg);
   --color-sentiment-positive-text: var(--color-success-text);
@@ -1073,19 +1134,23 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-chart-5: #b8db73;
   --color-chart-6: #bca4f6;
   --color-chart-7: #9ce5ba;
-  --color-chart-8: #a5b6c2;
-  --color-chart-tooltip: #263440;
-  --color-chart-tooltip-fg: #f2f6f8;
-  --color-overlay-scrim: rgb(3 8 13 / 70%);
-  --skeleton-base: #293743;
-  --skeleton-highlight: #344551;
+  --color-chart-8: #a6a49c;
+  --color-gsc-clicks: #8ab4f8;
+  --color-gsc-impressions: #c58af9;
+  --color-gsc-ctr: #4db6ac;
+  --color-gsc-position: #ff8a65;
+  --color-chart-tooltip: #30302e;
+  --color-chart-tooltip-fg: #faf9f5;
+  --color-overlay-scrim: rgb(0 0 0 / 60%);
+  --skeleton-base: #30302e;
+  --skeleton-highlight: #3a3936;
   --cl-closing: #202d39;
   --marketing-footer-background: #0c1218;
   --marketing-footer-foreground: #f2f6f8;
   --marketing-footer-muted: #afbec8;
   --marketing-footer-line: #455562;
-  --shadow-smudge: 0 0 0 1px rgb(180 202 216 / 24%), 0 1px 2px rgb(0 0 0 / 25%);
-  --shadow-smudge-hover: 0 0 0 1px rgb(180 202 216 / 35%), 0 1px 2px rgb(0 0 0 / 35%);
+  --shadow-smudge: 0 0 0 1px rgb(222 220 209 / 14%), 0 1px 2px rgb(0 0 0 / 25%);
+  --shadow-smudge-hover: 0 0 0 1px rgb(222 220 209 / 22%), 0 1px 2px rgb(0 0 0 / 35%);
   --shadow-card: 0 1px 2px rgb(0 0 0 / 16%);
   --shadow-elevated: 0 12px 32px rgb(0 0 0 / 40%);
   --shadow-modal-value: var(--shadow-elevated);

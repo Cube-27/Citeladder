@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * Eyebrow (kicker) recipes — sans micro-labels at the product secondary rung
- * (12px / 16px line-height, medium, muted, sentence case).
+ * (the `text-role-meta` size — 13/18 in the product, 12/16 on public
+ * surfaces — medium, muted, sentence case).
  *
  * What does **not** come back is the mono face — mono stays reserved for
  * values, so a call site must never re-add `font-mono` here (see the
@@ -15,7 +16,7 @@ import { cn } from '@/lib/utils';
  * element is semantic at the call site. <AccentEyebrow> is the accent-toned
  * variant used atop setup and status pages.
  */
-export const eyebrowClasses = 'font-sans text-xs leading-4 font-medium tracking-normal text-muted';
+export const eyebrowClasses = 'font-sans text-role-meta font-medium tracking-normal text-muted';
 
 export function AccentEyebrow({
   children,

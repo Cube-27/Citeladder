@@ -20,9 +20,15 @@ const twMerge = extendTailwindMerge({
             'heading-xs',
             'heading-sm',
             'page-title',
+            'role-meta',
+            'role-body',
+            'role-section',
+            'field',
           ],
         },
       ],
+      // `font-*` otherwise reads as a font family.
+      'font-weight': [{ font: ['overlay-title'] }],
     },
   },
 });

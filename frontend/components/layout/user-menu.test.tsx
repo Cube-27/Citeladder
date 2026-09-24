@@ -38,6 +38,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 
 import { createAppQueryClient } from '@/lib/api/query-client';
+import { THEME_STORAGE_KEY } from '@/lib/theme/theme';
 
 import { UserMenuController, UserMenuTrigger } from './user-menu';
 
@@ -74,6 +75,8 @@ function renderSplitMenu() {
 
 describe('UserMenu', () => {
   afterEach(() => {
+    window.localStorage.clear();
+    delete document.documentElement.dataset.theme;
     clearSession.mockClear();
     logoutMock.mockReset().mockResolvedValue(undefined);
   });
@@ -104,6 +107,26 @@ describe('UserMenu', () => {
     expect(items[billingIndex]).toHaveAttribute('href', `/billing?workspace=${WORKSPACE}`);
     expect(items[mcpIndex]).toHaveAttribute('href', '/docs/mcp');
     expect(items[mcpIndex]).toHaveAttribute('target', '_blank');
+  });
+
+  it('switches the app to dark and back, remembering the choice on this device', async () => {
+    const user = userEvent.setup();
+    renderMenu();
+
+    await user.click(screen.getByRole('button', { name: /test\.user@example\.test/i }));
+    const toggle = await screen.findByRole('menuitemcheckbox', { name: /dark theme/i });
+    expect(toggle).not.toBeChecked();
+
+    await user.click(toggle);
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    // The menu stays open so the reader can flip straight back.
+    expect(toggle).toBeChecked();
+
+    await user.click(toggle);
+    expect(document.documentElement).not.toHaveAttribute('data-theme');
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
+    expect(toggle).not.toBeChecked();
   });
 
   it('keeps settings and sign out reachable from the compact mobile trigger', async () => {

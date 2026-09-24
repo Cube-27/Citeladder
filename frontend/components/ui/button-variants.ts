@@ -29,7 +29,7 @@ export const buttonVariants = cva(
         accent:
           'bg-accent-soft text-accent-text shadow-smudge hover:bg-accent hover:text-accent-fg active:bg-accent-hover',
         secondary:
-          'bg-panel text-foreground shadow-smudge hover:bg-background-alt hover:shadow-smudge-hover active:bg-well',
+          'bg-input text-foreground shadow-smudge hover:bg-background-alt hover:shadow-smudge-hover active:bg-well',
         tonal:
           'bg-accent-subtle text-accent-text shadow-smudge hover:bg-accent-border active:bg-accent-border',
         neutral: 'bg-background-alt text-foreground shadow-none hover:bg-well active:bg-active',

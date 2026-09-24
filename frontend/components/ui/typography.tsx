@@ -18,24 +18,24 @@ import { cn } from '@/lib/utils';
 const TEXT_ROLES = {
   /** The route `h1`. 26/500/foreground. */
   pageTitle: 'font-display text-page-title font-medium tracking-[-0.65px] text-foreground',
-  /** A screen section `h2`. 16/500/foreground. */
-  sectionTitle: 'font-display text-base font-medium tracking-[-0.0125em] text-foreground',
+  /** A screen section `h2`. 18/500/foreground in the product (16 on public surfaces). */
+  sectionTitle: 'font-display text-role-section font-medium tracking-[-0.0125em] text-foreground',
   /** A card or object `h3`. 16/500/foreground. */
   objectTitle: 'font-display text-base font-medium tracking-[-0.0125em] text-foreground',
-  /** Reading copy — descriptions, prose, table cell text. 14/400/ink. */
-  body: 'text-sm font-normal text-secondary',
+  /** Reading copy — descriptions, prose, table cell text. 14/22/400/ink in the product. */
+  body: 'text-role-body font-normal text-secondary',
   /** Copy that genuinely leads its block. Use sparingly. 14/500/foreground. */
   bodyStrong: 'text-sm font-medium text-foreground',
-  /** Timestamps, counts, help text, footnotes. 12/500/muted. */
-  meta: 'text-xs font-medium text-muted',
+  /** Timestamps, counts, help text, footnotes. 13/500/muted in the product (12 on public surfaces). */
+  meta: 'text-role-meta font-medium text-muted',
   /** A field label. 14/500/ink. */
   label: 'text-sm font-medium text-foreground',
   /** Shared metadata label. */
   eyebrow: eyebrowClasses,
-  /** A primary numeral. 24/600/foreground, tabular. */
-  metric: 'font-sans text-2xl font-semibold tracking-[-0.5px] text-foreground tabular-nums',
+  /** A primary numeral. 24/500/foreground, tabular. Size, not weight, carries it. */
+  metric: 'font-sans text-2xl font-medium tracking-[-0.5px] text-foreground tabular-nums',
   /** A secondary numeral inside a dense row. 16/500/foreground, tabular. */
-  metricSm: 'font-sans text-base font-semibold text-foreground tabular-nums',
+  metricSm: 'font-sans text-base font-medium text-foreground tabular-nums',
   /**
    * A change indicator. Deliberately ink-less: the caller supplies the tone
    * role (`text-success-text`, `text-danger-text`), because the sign of the

@@ -157,7 +157,7 @@ function MetricCard({
         // Selected is a quiet accent wash, not a filled tile. Unselected is
         // plain paper, so the strip reads as four controls rather than four
         // competing statements.
-        isActive ? 'bg-accent-soft' : 'bg-panel hover:bg-panel-hover',
+        isActive ? 'bg-accent-soft' : 'bg-panel hover:bg-background-alt',
       )}
     >
       <div className="flex items-center gap-2">
@@ -166,7 +166,7 @@ function MetricCard({
           className={cn(
             'inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border transition-colors',
             isActive
-              ? 'border-accent bg-accent text-inverse'
+              ? 'border-accent bg-accent text-accent-fg'
               : 'border-border-strong bg-panel text-transparent',
           )}
         >

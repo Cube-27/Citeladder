@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef, Ref } from 'react';
 import { cn } from '@/lib/utils';
 
 const textareaClasses =
-  'focus-input min-h-[var(--textarea-min-height)] w-full resize-y rounded-[var(--radius-control)] shadow-smudge bg-input p-2.5 text-sm leading-[22px] text-foreground transition-[box-shadow] placeholder:text-muted hover:shadow-smudge-hover aria-invalid:shadow-smudge-danger disabled:cursor-not-allowed disabled:opacity-50';
+  'focus-input min-h-[var(--textarea-min-height)] w-full resize-y rounded-[var(--radius-control)] shadow-smudge bg-input p-2.5 text-field leading-[22px] text-foreground transition-[box-shadow] placeholder:text-muted hover:shadow-smudge-hover aria-invalid:shadow-smudge-danger disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
  * The composer lift — see `Input`. A brief box or agent prompt keeps its deeper
