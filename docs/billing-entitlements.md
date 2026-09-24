@@ -18,7 +18,13 @@ private billing records.
 
 [Catalog revisions](../backend/app/domain/billing/catalog_revisions.py) is the
 runtime commercial authority. Validated revisions are immutable, and publication
-retires the former published revision. Subscriptions and periods freeze catalog
+retires the former published revision. [Launch catalog](../backend/app/domain/billing/launch_catalog.py)
+authors `launch-pricing-v1`; regional amounts are frozen at authoring by the
+[currency rule](../backend/app/core/config/billing_pricing.py) and never
+converted at runtime. India is charged in INR plus GST; every other country in
+USD. Add-ons and top-ups are one-time catalog items: their grants last
+`expiry_days` after purchase or until the base subscription ends, whichever is
+earlier, and require an eligible live plan. Subscriptions and periods freeze catalog
 identity, credential mode, price, quantity and terms. Corrections use reviewed
 forward-publication, never rewriting historical terms.
 
@@ -45,6 +51,10 @@ provider.
 payment/subscription evidence, period identity and stable grant keys make
 settlement idempotent. Duplicate event IDs with conflicting digests quarantine.
 Normalized refunds cannot exceed payment value. Redirects grant nothing.
+[Invoices](../backend/app/domain/billing/invoices.py) issue one receipt per
+captured payment and one credit note per processed refund, each series
+consecutive per financial year. A full refund revokes the purchase's remaining
+grants; consumed units are not clawed back.
 
 The provider registry fails closed for unknown or unconfigured adapters.
 Subscription checkout initialization exposes only safe public identity. Callback
@@ -66,6 +76,9 @@ hold and attempt evidence before provider I/O; settle through the owning
 transaction. Successful-answer charging and actual provider cost are distinct
 quantities. Finite persisted rate/cap policy bounds funded work and unknown
 usage. Customer BYOK consumes no platform credits and never silently falls back.
+[Site Health fetch budget](../backend/app/domain/site_health/fetch_budget.py)
+reserves a crawl's page budget at creation and settles analyzed pages on every
+terminal path; accounts without a page-fetch grant are not metered there.
 
 The shared transaction lock order remains in [architecture](architecture.md).
 Never acquire project/domain locks after billing locks or hold a transaction
@@ -98,8 +111,8 @@ Provider keys are write-only; neither UI nor logs receive their plaintext.
 
 ## Acceptance limits
 
-Razorpay work is pending, with execution still subject to its
-[retained plan](plans/citeladder-razorpay-local-test-integration.md).
+Razorpay activation follows its
+[activation plan](plans/citeladder-razorpay-activation.md).
 Provider selection, sandbox captures, recurring methods, tax parity and live
 payment enablement are not established by local tests. The
 [release checklist](release-checklist.md) retains external acceptance gates.

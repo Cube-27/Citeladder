@@ -16,6 +16,33 @@ provisioning compatibility context and do not override the published catalog or
 API contracts. Follow the tested command and incident procedures in
 [`billing-operator-guide.md`](billing-operator-guide.md).
 
+## 0. Recorded owner decisions (24 September 2026)
+
+Non-secret values only. The full decision table lives in the
+[activation plan](../plans/citeladder-razorpay-activation.md).
+
+```text
+Catalog version: launch-pricing-v1
+Enabled self-serve plans: Starter (tier_1), Growth (tier_2), Scale (tier_3), BYOK only
+Monthly BYOK USD: 49 / 99 / 199; funded prices published, not sold
+INR rule: INR = ceil(USD x 90 / 100) x 100 - 1, GST-exclusive, frozen per revision
+Add-ons/top-ups: one-time; 30 days or plan end, whichever is earlier; INR and USD
+Plan change: upgrade immediate with prorated charge; downgrade at renewal
+Cancellation: end of period
+Refunds: full refund revokes remaining grants (no clawback); partial keeps access;
+         every refund issues a credit note
+Razorpay approvals: all approved by the owner (Subscriptions, international)
+Enabled methods: <record from the Razorpay Dashboard>
+Support email: contact@cube27.com
+Support phone: none yet (optional field)
+Contact URL: https://www.cube27.com/contact/
+Seller GSTIN: 27AAJCC0427H1ZU (Maharashtra, state code 27)
+Refund and cancellation policy URL: <to be created in PR C>
+```
+
+Razorpay's own GSTIN appears only on Razorpay's fee invoices to Cube27, never
+on CiteLadder customer documents.
+
 ## 1. Blocking commercial decisions
 
 Record the approved values in a dated decision record (amounts are examples of
@@ -41,15 +68,12 @@ Customer communications handled by Razorpay? yes/no:
 ```
 
 Why this is a live-plan gate: Razorpay requires a concrete amount and currency.
-For each enabled catalog item, CiteLadder derives the India price once from the
-operator-supplied USD/INR rate and freezes the **GST-inclusive final charge** into
-the Razorpay plan. It will
-not reprice an active recurring mandate from a live exchange rate. Calculate in
-this order using decimal arithmetic: convert the approved USD base amount to INR,
-round the plan base once to paise with `ROUND_HALF_UP`; calculate GST from that
-rounded base and the approved rate, then round GST once to paise with
-`ROUND_HALF_UP`; for quantity greater than one, multiply the rounded base and GST
-minor-unit values separately, then add them for the provider plan total.
+The catalog author (`billing_admin catalog-seed`) derives each India price once
+with the published rule at the recorded authoring rate and freezes the
+**GST-inclusive final charge** into the revision; the Razorpay plan carries that
+total. CiteLadder never reprices an active recurring mandate from an exchange
+rate. GST is calculated from the frozen INR base with the approved rate and
+rounded once to paise with `ROUND_HALF_UP`.
 Razorpay collects that final total but does not determine the tax allocation.
 Non-India launch checkout is USD; a
 cardholder's issuer may convert that charge into the card account currency.
@@ -134,9 +158,8 @@ Non-secret but environment-specific values:
 ```text
 BILLING_RAZORPAY_KEY_ID
 BILLING_RAZORPAY_MODE=disabled
-BILLING_CATALOG_VERSION
-BILLING_USD_INR_RATE
-BILLING_INDIA_GST_RATE=<approved-decimal-rate> # required; no live default/example approval
+BILLING_INDIA_GST_RATE=<approved-decimal-rate> # required; no source default
+BILLING_INDIA_GST_APPROVAL_REFERENCE=<approval record reference> # required with the rate
 BILLING_SELLER_LEGAL_NAME=<registered supplier name>
 BILLING_SELLER_LEGAL_ADDRESS=<registered supplier address>
 BILLING_SELLER_EMAIL=<billing contact>

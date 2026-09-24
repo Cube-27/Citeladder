@@ -19,15 +19,17 @@
   Clean origin cutover: update links/configuration directly; no default legacy
   product redirects or aliases. App pricing continuation belongs to PR 2.
 
+- [Razorpay activation](citeladder-razorpay-activation.md) — owner-approved
+  on 24 September 2026. PR A (commercial core) implemented; PR B (payment
+  paths) and PR C (customer surfaces) follow, then test-mode acceptance and
+  the live sign-off. Payments stay disabled until that sign-off.
+
 ## Queued
 
 - [Subsequent prompt grounding](citeladder-subsequent-prompt-grounding.md)
   — pending; relevance-ranked persisted GSC evidence for later Generate prompts.
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
   — pending; remaining evidence/action and selected-query generation work.
-- [Razorpay local test integration](citeladder-razorpay-local-test-integration.md)
-  — pending; provider execution remains paused pending an explicit resumption
-  task and applicable acceptance. No payment enablement is authorized.
 
 The owner retained [shell/commercial follow-up](citeladder-authed-shell-and-commercial-architecture.md)
 for deferred sign-in selection and invitation delivery; it is not an active or

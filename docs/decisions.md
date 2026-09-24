@@ -33,9 +33,9 @@ commercial accounting to change a payment transport.
 
 Source: owner-confirmed section 0 of the
 [original shell plan](archive/plans/citeladder-authed-shell-and-commercial-architecture.md),
-implemented in #61 (44fc0d22). The current documentation cleanup retains
-[Razorpay as pending work](plans/citeladder-razorpay-local-test-integration.md);
-that queue choice does not resume provider execution or enable payments.
+implemented in #61 (44fc0d22). On 24 September 2026 the owner resumed
+Razorpay under the [activation plan](plans/citeladder-razorpay-activation.md);
+payments stay disabled until that plan's sign-off.
 
 Real sandbox captures, recurring-method acceptance and GST parity remain
 unverified. [Provider readiness](billing-provider-readiness.md) owns the

@@ -5,6 +5,15 @@
 - Repository: `Cube-27/Citeladder`
 
 Sections 1–6 are the implementation contract. Section 7 is reference-only economics.
+
+> **Owner amendments, 24 September 2026** (recorded in the
+> [activation plan](../plans/citeladder-razorpay-activation.md)):
+> launch sells **BYOK plans only**; funded prices stay published but not
+> purchasable. INR prices for add-ons and top-ups follow the catalog rule
+> `ceil(USD × 90 / 100) × 100 − 1` (GST-exclusive), replacing `INR: null`.
+> Add-ons and top-ups are one-time and last 30 days or until the plan ends,
+> whichever is earlier. The Managed answer top-up is published but not sold
+> until managed execution exists.
 These are target settings, not a claim that the current deployment already supports them.
 Map these settings to the existing schemas and entitlement registry; the YAML is not an existing API payload.
 Preserve existing functionality except for the pricing, entitlements, metering, and billing behavior explicitly specified here.

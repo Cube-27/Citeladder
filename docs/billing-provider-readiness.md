@@ -1,36 +1,23 @@
 # Payment provider readiness
 
-Status as of 11 September 2026.
+Status as of 24 September 2026.
 
-**Payments are not enabled.** `BILLING_CHECKOUT_ENABLED` is false, no provider
-is configured, and no real payment has ever been taken. Nothing in this
-document says otherwise, and nothing in this repository has been verified
-against a live payment network.
+**Payments are not enabled.** `BILLING_CHECKOUT_ENABLED` and
+`BILLING_RAZORPAY_LIVE_READY` are false and no real payment has been taken.
+Nothing in this repository has been verified against a live payment network.
 
-What shipped is the provider-NEUTRAL architecture of the plan's Phase 3: the
-commercial core no longer depends on any one vendor, so selecting a provider
-later is an adapter and a configuration block rather than a rewrite. This is a
-boundary, proved locally with test doubles. It is not an integration.
+## Razorpay: approved, being activated
 
-## Razorpay: PAUSED, code-complete in parts, externally unverified
+Razorpay approved the merchant, including Subscriptions and international
+payments. Activation follows the
+[Razorpay activation plan](plans/citeladder-razorpay-activation.md): PR A
+(commercial core) implements the launch catalog, currency rule, tax,
+documents and entitlements with checkout still off; PR B connects the payment
+paths; PR C builds the customer surfaces; test-mode acceptance and the live
+sign-off come last. Enablement still requires that plan's recorded sign-off.
 
-Razorpay rejected CiteLadder; discussions continue. Its working integration
-code is preserved behind its adapter so returning to it costs a configuration
-change, not a re-implementation. **Its outstanding integration work is
-deliberately NOT done and must not be picked up without a separate task and
-separate authorization:**
-
-- hosted checkout completion and its browser acceptance;
-- GST / provider tax-parity work;
-- international payment support;
-- recurring payment methods;
-- merchant-account approval;
-- the callback tunnel for local development;
-- merchant provisioning;
-- any sandbox transaction.
-
-Everything below that is marked "verified" is verified by LOCAL tests only.
-None of it is evidence that money can be taken correctly.
+Everything below marked "verified" is verified by LOCAL tests only. None of it
+is evidence that money can be taken correctly.
 
 ## What the boundary guarantees today
 
@@ -57,16 +44,19 @@ Shared, provider-independent (`core/config/billing_settings.py`):
   An identity with no registered, configured adapter makes new checkout
   unavailable; it never falls back to another provider.
 - `BILLING_QUOTE_SIGNING_SECRET` — independent, with no gateway fallback.
-- the commercial catalog inputs, the HTTP pool, and the sweep bounds.
+- `BILLING_INDIA_GST_RATE` and `BILLING_INDIA_GST_APPROVAL_REFERENCE` —
+  required together; there is no source default.
+- the seller identity, the HTTP pool, and the sweep bounds.
+
+Commercial terms (prices, grants, add-ons, top-ups, support contact) are never
+environment settings: they live in the published `BillingCatalogRevision`.
 
 Razorpay-owned (`core/config/razorpay_settings.py`): `BILLING_RAZORPAY_MODE`,
 `BILLING_RAZORPAY_KEY_ID`, `BILLING_RAZORPAY_KEY_SECRET`,
 `BILLING_RAZORPAY_WEBHOOK_SECRET`, the readiness flags, the fixed API origin
-and the checkout hosts. **The variable names are unchanged** — the block moved,
-nothing was renamed into a generic name whose meaning would shift if a
-different provider were selected.
+and the checkout hosts.
 
-## Adding a provider (when one is actually selected)
+## Adding another provider
 
 1. Write its settings module beside `razorpay_settings.py`, keeping its
    variable names its own.
@@ -76,9 +66,6 @@ different provider were selected.
    including its own status map and payment-event predicate.
 4. Point `BILLING_CHECKOUT_PROVIDER` at it.
 
-Then, and only then: verify its commercial and tax role for the regions it will
-sell in, pass its sandbox acceptance, and **seek separate authorization before
-enabling payments**. That applies equally to returning to Razorpay.
-
-There is no live customer data and no live subscription, so no migration
-tooling is needed or should be built.
+Then verify its commercial and tax role for the regions it will sell in, pass
+its sandbox acceptance, and seek separate authorization before enabling
+payments.
