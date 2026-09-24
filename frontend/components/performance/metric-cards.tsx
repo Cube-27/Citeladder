@@ -166,7 +166,7 @@ function MetricCard({
           className={cn(
             'inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border transition-colors',
             isActive
-              ? 'border-accent bg-accent text-inverse'
+              ? 'border-accent bg-accent text-accent-fg'
               : 'border-border-strong bg-panel text-transparent',
           )}
         >

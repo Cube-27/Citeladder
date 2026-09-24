@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
@@ -28,17 +28,25 @@ import { cn } from '@/lib/utils';
 
 import type { CommerceQueries } from './commerce-queries';
 
-/** One metric: micro-label above a tabular value. The row's only unit. */
-function Stat({ label, value }: Readonly<{ label: string; value: string }>) {
+/**
+ * One metric: micro-label above its value. Every value sits on the same
+ * fixed-height line (the tabular metric's), so labels share a top edge and a
+ * dash or badge centres where a number would stand.
+ */
+function Stat({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col items-start gap-0.5">
       <Label>{label}</Label>
-      {value === PLACEHOLDER ? (
-        <UnavailableValue state="not_measured" />
-      ) : (
-        <Metric className="text-2xl">{value}</Metric>
-      )}
+      <div className="flex min-h-8 items-center">{children}</div>
     </div>
+  );
+}
+
+function StatValue({ value }: Readonly<{ value: string }>) {
+  return value === PLACEHOLDER ? (
+    <UnavailableValue state="not_measured" />
+  ) : (
+    <Metric className="text-2xl">{value}</Metric>
   );
 }
 
@@ -78,12 +86,17 @@ function CatalogStats({
   projecting: string;
 }>) {
   return (
-    <div className="border-border-subtle flex flex-wrap items-center gap-x-[var(--page-section-gap)] gap-y-4 border-b pb-[var(--workspace-gap)] min-[981px]:border-b-0 min-[981px]:pb-0">
-      <Stat label="Products" value={counts ? `${counts.products.length}` : PLACEHOLDER} />
-      <Stat label="Categories" value={counts ? `${counts.categories.length}` : PLACEHOLDER} />
-      <Stat label="Pages analyzed" value={analyzedLabel(crawl)} />
-      <div className="flex flex-col items-start gap-0.5">
-        <Label>Site Health</Label>
+    <div className="border-border-subtle flex flex-wrap items-start gap-x-10 gap-y-4 border-b pb-[var(--workspace-gap)] min-[981px]:border-b-0 min-[981px]:pb-0">
+      <Stat label="Products">
+        <StatValue value={counts ? `${counts.products.length}` : PLACEHOLDER} />
+      </Stat>
+      <Stat label="Categories">
+        <StatValue value={counts ? `${counts.categories.length}` : PLACEHOLDER} />
+      </Stat>
+      <Stat label="Pages analyzed">
+        <StatValue value={analyzedLabel(crawl)} />
+      </Stat>
+      <Stat label="Site Health">
         {crawl ? (
           <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
             {statusLabel(crawl.status)}
@@ -91,14 +104,13 @@ function CatalogStats({
         ) : (
           <Badge>No crawl yet</Badge>
         )}
-      </div>
+      </Stat>
       {projecting ? (
-        <div className="flex flex-col items-start gap-0.5">
-          <Label>Projection</Label>
+        <Stat label="Projection">
           <Badge variant="status" value="info">
             {projecting}
           </Badge>
-        </div>
+        </Stat>
       ) : null}
     </div>
   );
