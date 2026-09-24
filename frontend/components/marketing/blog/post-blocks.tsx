@@ -204,7 +204,7 @@ function DiagramArchitecture({
       </div>
       {data.destination && (
         <div className="border-accent-border/60 bg-accent-soft/30 rounded-[var(--radius-control)] border p-4 text-center">
-          <h4 className="website-small-heading origin-centre text-foreground font-bold tracking-wide">
+          <h4 className="website-small-heading origin-centre text-foreground font-semibold tracking-wide">
             {data.destination.title}
           </h4>
           <p className="website-body text-muted mt-1 leading-relaxed">
@@ -271,7 +271,7 @@ function DiagramFlow({
           className="border-border-subtle bg-panel-tonal relative flex flex-col justify-between rounded-[var(--radius-control)] border p-4"
         >
           <div>
-            <span className="bg-accent-soft text-accent-text mb-2.5 flex size-6 items-center justify-center rounded-full text-xs font-bold">
+            <span className="bg-accent-soft text-accent-text mb-2.5 flex size-6 items-center justify-center rounded-full text-xs font-semibold">
               {step.step}
             </span>
             <h4 className="website-body text-foreground font-semibold">{step.title}</h4>

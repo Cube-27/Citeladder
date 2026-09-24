@@ -1,6 +1,12 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { resolve, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
-const root = new URL('../apps/marketing/dist/', import.meta.url);
+// The build output to check: production's apps/marketing/dist by default, or
+// the directory passed by scripts/dev-marketing-worker.mjs.
+const root = process.argv[2]
+  ? pathToFileURL(`${resolve(process.argv[2])}${sep}`)
+  : new URL('../apps/marketing/dist/', import.meta.url);
 const files = await readdir(new URL('client/', root), { recursive: true });
 const privateNames = new Set([
   '.env',

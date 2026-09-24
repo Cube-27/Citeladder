@@ -15,6 +15,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.entitlements import (
@@ -22,6 +23,10 @@ from app.core.config.entitlements import (
     KEY_EXPORTS,
     KEY_MONITORED_URLS,
     KEY_PROVIDER_COPILOT,
+)
+from app.domain.billing.bootstrap import (
+    development_access_grants,
+    issue_development_access,
 )
 from app.domain.entitlements.grants import (
     GrantWriteError,
@@ -228,6 +233,39 @@ async def test_revocation_is_visible_to_the_resolver_in_the_same_transaction(
         assert after.status == STATUS_RESOLVED
         assert after.capability_value(KEY_MONITORED_URLS) == 0
         await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_development_access_tops_up_keys_added_to_the_registry(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    # A local database bootstrapped before the registry gained a capability
+    # must neither conflict on re-run nor re-issue (and so double) counters.
+    full = development_access_grants(100)
+    older = tuple(spec for spec in full if spec.key != full[-1].key)
+    async with session_factory() as session:
+        account, _workspace, user = await _account_with_workspace(session)
+        for grants in (older, full, full):
+            async with session_factory() as write:
+                await issue_development_access(
+                    write,
+                    user=user,
+                    account_id=account.id,
+                    grants=grants,
+                    reason="test development bootstrap",
+                    idempotency_key=f"development-bootstrap:{user.id}:100",
+                )
+                await write.commit()
+
+        rows = (
+            await session.scalars(
+                select(AccountGrant).where(
+                    AccountGrant.billing_account_id == account.id
+                )
+            )
+        ).all()
+        assert sorted(row.key for row in rows) == sorted(spec.key for spec in full)
+        assert len({row.idempotency_key for row in rows}) == 2
 
 
 @pytest.mark.asyncio

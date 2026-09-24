@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from hashlib import sha256
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,7 +33,7 @@ from app.domain.billing.accounts import billing_account_for
 from app.domain.entitlements.grants import issue_grant_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.workspaces.policy import WORKSPACE_ROLE_OWNER
-from app.models.billing import BillingAccount, BillingCatalogRevision
+from app.models.billing import AccountGrant, BillingAccount, BillingCatalogRevision
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 
@@ -178,13 +179,9 @@ async def _ensure_baseline_access(
     )
 
 
-async def provision_development_access(
-    session: AsyncSession, *, user: User, account: BillingAccount, allowance: int
-) -> None:
-    """Explicit bootstrap only; the audited grant is bound to the persisted UUID."""
-    from app.domain.entitlements.grants import issue_override_bundle
-
-    grants = tuple(
+def development_access_grants(allowance: int) -> tuple[GrantSpec, ...]:
+    """Every issuable capability at full strength, counters at ``allowance``."""
+    return tuple(
         GrantSpec(
             key=capability.key,
             value=(
@@ -198,14 +195,73 @@ async def provision_development_access(
         for capability in CAPABILITY_REGISTRY.entries
         if capability.issuable
     )
+
+
+async def issue_development_access(
+    session: AsyncSession,
+    *,
+    user: User,
+    account_id: uuid.UUID,
+    grants: tuple[GrantSpec, ...],
+    reason: str,
+    idempotency_key: str,
+) -> None:
+    """Issue a development override bundle, topping up keys added since.
+
+    Grants are append-only and counters sum across bundles, so a re-run after
+    the registry gains an issuable capability can neither replay the original
+    key (``grant_bundle_conflict``) nor issue a fresh full bundle (doubled
+    allowances). Keys already granted under ``idempotency_key`` are left as
+    they are; only the missing ones are issued, keyed by exactly that set so
+    re-runs stay idempotent.
+    """
+    from app.domain.entitlements.grants import issue_override_bundle
+
+    granted = set(
+        (
+            await session.execute(
+                select(AccountGrant.key).where(
+                    AccountGrant.billing_account_id == account_id,
+                    or_(
+                        AccountGrant.idempotency_key == idempotency_key,
+                        AccountGrant.idempotency_key.startswith(
+                            f"{idempotency_key}:+", autoescape=True
+                        ),
+                    ),
+                )
+            )
+        ).scalars()
+    )
+    missing = tuple(spec for spec in grants if spec.key not in granted)
+    if not missing:
+        return
+    if granted:
+        digest = sha256(
+            "\n".join(sorted(spec.key for spec in missing)).encode()
+        ).hexdigest()[:16]
+        idempotency_key = f"{idempotency_key}:+{digest}"
     await issue_override_bundle(
         session,
         operator_user=user,
-        account_id=account.id,
-        grants=grants,
-        reason="explicit configured development bootstrap",
+        account_id=account_id,
+        grants=missing,
+        reason=reason,
         valid_from=datetime.now(UTC),
         valid_until=None,
+        idempotency_key=idempotency_key,
+    )
+
+
+async def provision_development_access(
+    session: AsyncSession, *, user: User, account: BillingAccount, allowance: int
+) -> None:
+    """Explicit bootstrap only; the audited grant is bound to the persisted UUID."""
+    await issue_development_access(
+        session,
+        user=user,
+        account_id=account.id,
+        grants=development_access_grants(allowance),
+        reason="explicit configured development bootstrap",
         idempotency_key=f"development-bootstrap:{user.id}:{allowance}",
     )
 

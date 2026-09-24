@@ -225,7 +225,11 @@ Worker secrets. Do not paste secret values into a PR, issue or chat.
    environment, set secret `CLOUDFLARE_API_TOKEN` and variable
    `CLOUDFLARE_ACCOUNT_ID`. The token needs permissions to publish Workers and
    attach the two Custom Domains in the correct Cloudflare account/zone. Set
-   repository variable `LOGO_DEV_PUBLISHABLE` for the product build. Check
+   repository variable `LOGO_DEV_PUBLISHABLE` for the product build. In each
+   Worker environment also set secret `FONTS_REPO_TOKEN`: a fine-grained
+   token with read-only Contents access to `Cube-27/cube27-fonts` only. The
+   deploy job pulls the licensed fonts into the downloaded output, so they
+   never enter the public build artifact. Check
    names/presence without exposing values. Disable dashboard Git deployment.
 2. **Cloudflare → DNS / Workers & Pages:** verify `citeladder.com` and
    `app.citeladder.com` can be attached as Custom Domains to their named Workers.

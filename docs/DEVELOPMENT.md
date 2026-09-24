@@ -51,6 +51,7 @@ configuration/secrets required by its owner.
 cd frontend
 echo "BACKEND_ORIGIN=http://localhost:8000" > .env.local
 pnpm install
+pnpm fonts:pull             # Inter/General Sans from the private font repo
 pnpm dev                    # Local marketing Worker: http://127.0.0.1:3000
 pnpm dev:vite               # Vite authenticated SPA: http://127.0.0.1:3001/login
 ```
@@ -58,6 +59,12 @@ pnpm dev:vite               # Vite authenticated SPA: http://127.0.0.1:3001/logi
 `BACKEND_ORIGIN` is **server-only**. The browser calls relative `/api/*`.
 Astro and Vite development proxies keep those requests same-origin (see gotcha
 2 below).
+
+Fonts come only from the private `Cube-27/cube27-fonts` repo (some faces there
+are licensed for self-hosting, not redistribution). `pnpm fonts:pull` uses your
+`gh` login to copy the ones in use into the gitignored `public/fonts/`, and
+`check:policy` fails if any font file is ever tracked. Without them the UI
+renders in metric-matched system fallbacks.
 
 Astro owns marketing and public routes; Vite owns authenticated product routes.
 They share dependencies, API client, styles, public assets, and the server-only

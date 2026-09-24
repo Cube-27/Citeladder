@@ -57,6 +57,8 @@ export const lintConfig: OxlintConfig = {
     '**/build/**',
     '**/dist/**',
     '**/.astro/**',
+    // Wrangler's generated dev bundles and local state (gitignored).
+    '**/.wrangler/**',
     '**/node_modules/**',
     '**/coverage/**',
     '**/playwright-report/**',

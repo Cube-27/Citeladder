@@ -16,6 +16,7 @@
     "dev:vite": "vp dev -c apps/app/vite.config.ts",
     "build:vite": "vp build -c apps/app/vite.config.ts",
     "build:app": "pnpm build:vite && node scripts/check-app-worker-output.mjs",
+    "fonts:pull": "node scripts/pull-licensed-fonts.mjs",
     "dev:app-worker": "wrangler dev -c apps/app/wrangler.jsonc --local",
     "types:app-worker": "wrangler types -c apps/app/wrangler.jsonc --no-include-runtime apps/app/worker-configuration.d.ts && node scripts/scope-worker-types.mjs && vp fmt --write apps/app/worker-configuration.d.ts",
     "deploy:app": "wrangler deploy -c apps/app/wrangler.jsonc",

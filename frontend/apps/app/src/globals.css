@@ -13,11 +13,11 @@
    onboarding surfaces. */
 @theme {
   --font-sans:
-    var(--font-geist), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    var(--font-text), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono:
-    var(--font-geist), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    var(--font-text), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display:
-    var(--font-geist), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    var(--font-heading), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* Palette layer. Product code consumes the semantic aliases below. */
   --color-gray-0: #ffffff;
@@ -113,11 +113,12 @@
   --color-border-strong: #c3ccd9;
   --color-border-bold: #94a3b8;
 
-  /* Neutral ink roles match the frozen working-text hierarchy. */
+  /* Neutral ink roles step with the type ladder: headings foreground, body
+     secondary, small meta/labels muted, rare de-emphasis subtle. */
   --color-foreground: #1a1f36;
   --color-secondary: #30313d;
-  --color-muted: #596579;
-  --color-subtle: #667085;
+  --color-muted: #475467;
+  --color-subtle: #525e70;
   --color-disabled: #8793a3;
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
@@ -702,7 +703,7 @@ body {
   h6 {
     margin: 0;
     font-family:
-      var(--font-geist),
+      var(--font-heading),
       -apple-system,
       BlinkMacSystemFont,
       "Segoe UI",
@@ -925,8 +926,8 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-background: #ffffff;
   --color-foreground: #0f172a;
   --color-secondary: #1e293b;
-  --color-muted: #475569;
-  --color-subtle: #64748b;
+  --color-muted: #3a4658;
+  --color-subtle: #4b5a6e;
   --color-background-alt: #f8fafc;
   --color-canvas-soft: #fafaf8;
   --color-active: #f1f5f9;
@@ -1234,7 +1235,7 @@ pre,
 kbd,
 samp {
   font-family:
-    var(--font-geist),
+    var(--font-text),
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
@@ -1246,7 +1247,7 @@ samp {
 .value-placeholder {
   color: var(--value-placeholder);
   font-family:
-    var(--font-geist),
+    var(--font-text),
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",

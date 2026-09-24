@@ -16,12 +16,12 @@ import { cn } from '@/lib/utils';
  * the call site keeps whichever element is semantic.
  */
 const TEXT_ROLES = {
-  /** The route `h1`. 26/600/foreground. */
-  pageTitle: 'font-display text-page-title font-semibold tracking-[-0.65px] text-foreground',
-  /** A screen section `h2`. 16/600/foreground. */
-  sectionTitle: 'font-display text-base font-semibold tracking-[-0.0125em] text-foreground',
-  /** A card or object `h3`. 16/600/foreground. */
-  objectTitle: 'font-display text-base font-semibold tracking-[-0.0125em] text-foreground',
+  /** The route `h1`. 26/500/foreground. */
+  pageTitle: 'font-display text-page-title font-medium tracking-[-0.65px] text-foreground',
+  /** A screen section `h2`. 16/500/foreground. */
+  sectionTitle: 'font-display text-base font-medium tracking-[-0.0125em] text-foreground',
+  /** A card or object `h3`. 16/500/foreground. */
+  objectTitle: 'font-display text-base font-medium tracking-[-0.0125em] text-foreground',
   /** Reading copy — descriptions, prose, table cell text. 14/400/ink. */
   body: 'text-sm font-normal text-secondary',
   /** Copy that genuinely leads its block. Use sparingly. 14/500/foreground. */

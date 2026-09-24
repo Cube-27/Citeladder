@@ -3,10 +3,10 @@
    this scope changes type scale only. */
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
-     Geist Variable carries body, UI, data, and display type. */
-  --font-sans: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+     Inter carries body, UI and data type; General Sans carries display type. */
+  --font-sans: var(--font-text), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-text), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-heading), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   /* One ladder, one ratio. Each rung is ~1.2x its neighbour (the minor third
      the display rungs already used), so the steps are even instead of the old
      mix of 1.14x at the bottom and 1.27x at the top. The bottom three rungs are
@@ -125,9 +125,9 @@
    travel as one contract. The low-specificity colour defaults let explicit
    semantic utilities override them for warnings and evidence states.
 
-   Display rungs use the shared Geist family at the display role's natural
+   Display rungs use General Sans at the display role's natural
    medium weight, without faux-bold browser synthesis.
-   Body rungs render in Geist at 400/500/600. */
+   Body rungs render in Inter at 400/500/600. */
 .website-hero-display,
 .website-page-title,
 .website-section-heading,
@@ -876,8 +876,8 @@
 
 /* A coded product preview is product UI, not oversized marketing copy. */
 .app-type-scale {
-  --font-display: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-sans: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-heading), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-text), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;

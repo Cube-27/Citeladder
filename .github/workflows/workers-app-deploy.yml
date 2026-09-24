@@ -80,6 +80,15 @@ jobs:
         with:
           name: app-${{ github.sha }}-${{ needs.build.outputs.fingerprint }}
           path: frontend/apps/app/dist/
+      # Fontshare-licensed faces come from the private font repo straight into
+      # the deployed output, never into the uploaded build artifact.
+      - name: Pull licensed fonts
+        env:
+          GH_TOKEN: ${{ secrets.FONTS_REPO_TOKEN }}
+        shell: bash
+        run: |
+          test -n "$GH_TOKEN"
+          node frontend/scripts/pull-licensed-fonts.mjs frontend/apps/app/dist/fonts
       - name: Deploy product Worker
         working-directory: frontend
         env:
