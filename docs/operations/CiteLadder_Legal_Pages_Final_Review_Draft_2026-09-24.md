@@ -22,8 +22,20 @@ The owner asked for a minimum set of CiteLadder policy pages to go live now, usi
 | `/cancellation-policy` | Part D §6 | The 30-day export and deletion schedule (D5). The page points to the Privacy Policy instead. |
 | `/contact` | Part D §10 | Registration number, telephone and named grievance contact. Each renders automatically once its `LEGAL_ENTITY` field in `legal.ts` is filled. The 48-hour and 30-day targets are also left out (D4). |
 | `/cookies`, `/ai-policy` | Existing pages | Now reference the local Privacy Policy and Terms and name Cube27 IT Private Limited. The cookie inventory is unchanged. |
+| `/dpa` | Part D §3 | Built from the draft, with the owner's go-ahead on 24 September 2026. It includes the D8 positions: **30 days' notice** of a new subprocessor, a **15-day** objection window, and breach notice "without undue delay". Retention periods refer to the Privacy Policy, since D5 is still open. It adds a clause that the customer is solely responsible for the lawfulness of its instructions and data, and for use of the outputs. |
+| `/subprocessors` | Code and production-config audit (24 September 2026) | Only services the product actually calls: Google Cloud (India, Mumbai region), Cloudflare, OpenAI (platform AI assistance), Keenable and Tavily (research). Customer-connected providers are listed separately: BYOK AI engines, DataForSEO, GSC, GA4, Bing, Google sign-in and MCP/API clients. Razorpay and Google Analytics are listed as independent providers. Keenable and Tavily locations say "as set out in the provider's terms" because they could not be verified. Logfire (not enabled), and Apple and GitHub sign-in (not configured) are left out. |
 
-Not published: `/dpa` (needs D5–D8), `/subprocessors` (needs the approved provider list, C9) and `/crawler` (see 0.2).
+**Misuse and liability (owner request, 24 September 2026):**
+- A new Terms section, "Your responsibility for use of the Service", states that:
+  - the Service provides data and outputs, not professional advice;
+  - the customer is solely responsible for how it, its users, its clients and any API or MCP client use the Service;
+  - Cube27 is not liable for misuse, or for data once it is delivered to an external client;
+  - third-party data is provided as received.
+- The indemnity now covers misuse of outputs and of API or MCP data.
+- Matching lines were added to the AI Policy, the Privacy Policy (external clients), the DPA and `/docs/mcp`.
+- **Not published:** "we do not save any user data". It is untrue: workspaces store projects, crawl evidence, AI answers and invoices, and a false statement increases liability. The pages instead state what is actually not done: no sale, no model training, and no responsibility for copies held by external clients.
+
+Not published: `/crawler` (see 0.2, item 6).
 
 The pages show "Last updated 24 September 2026", which is the revision date. They show no "Effective date" until you approve one.
 
@@ -34,10 +46,22 @@ The pages show "Last updated 24 September 2026", which is the revision date. The
 3. **Effective date:** approve a legal effective date for the documents.
 4. **Terms acceptance record (C2):** checkout now shows recurring or one-time payment consent and links the Terms, Refund Policy and Cancellation Policy. It does **not** yet store the accepted Terms revision, user, workspace, time and order. That needs a backend change.
 5. **Cookie preferences control (C7):** there is no persistent "Cookie preferences" footer control. To change a choice, visitors clear site data, and the Cookie Policy says so.
-6. **Crawler identity (C3):** the configured user agent is `CiteLadderSiteHealthBot/1.0 (+https://citeladder)`, which does not match the proposed `(+https://citeladder.com/crawler)`. Correct it, and verify the robots behaviour against RFC 9309, before publishing `/crawler`.
+6. **Crawler (C3), held by owner decision on 24 September 2026.** An audit found that the draft `/crawler` copy is untrue on three points:
+   - **Identity:** every Site Health request uses `curl_cffi` browser impersonation (`curl_cffi_impersonation_profile = "chrome"`, `backend/app/core/config/site_health_runtime.py`). The transport drops any caller User-Agent (`curl_transport.py`, `_request_headers`). Sites therefore see Chrome, never `CiteLadderSiteHealthBot`. That name is only matched against robots.txt rules, and it is currently misconfigured as `(+https://citeladder)`.
+   - **Unreachable robots.txt:** a network failure fetching robots.txt is treated as allow-all (`robots_cache.py`, `RobotsCache._fetch` returns no status). A 5xx response is correctly treated as a temporary full disallow.
+   - **Crawl-delay:** a declared Crawl-delay is silently capped at `max_crawl_delay_seconds` (30 seconds) rather than honoured, or the host paused.
+
+   **Agreed future fix (the recommended option), before `/crawler` is published:**
+   - send `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)` as the real User-Agent;
+   - pause crawling when robots.txt cannot be fetched;
+   - skip a host whose Crawl-delay exceeds the supported maximum;
+   - verify against RFC 9309, then publish the draft Part D §8 copy.
+
+   Expect more blocks from bot-protected hosts, such as Akamai, once the browser profile is gone. The Terms and Privacy Policy do not describe the crawler's identity, so nothing published today contradicts the current behaviour.
 7. **Google Limited Use (C4):** verify the controls, then add the statement to `/privacy`.
-8. **DPA and subprocessors (C8, C9):** approve the provider list and the notice and objection process.
-9. **Final legal review** of the published pages. They were built from this draft, not reviewed by counsel.
+8. **Content-drafting model before deploy:** production content generation is set to `mimo-v2.5:free` through TokenHarbor (`CONTENT_PROVIDER_ENDPOINT=https://tokenharbor.ai/...`, environment `gcp-demo`). The owner will replace it before deploying. Free aggregator models may log prompts or train on them, which would breach the published no-training promise. `/subprocessors` lists OpenAI as the platform AI provider, so the replacement should be OpenAI. If it is another provider, add that provider's row to `SUBPROCESSORS` in `frontend/lib/marketing-content/legal-dpa.ts` first. Customers can already set their own content and Growth Agent models in Providers settings.
+9. **Subprocessor operations:** the DPA now commits to 30 days' notice of a new subprocessor, through the page and an email to workspace owners. Keep this list in step with production configuration. Also confirm whether Cloudflare Zaraz injects Google Tag Manager or Analytics before consent. It is configured in the Cloudflare dashboard and cannot be seen in the repository. The Cookie Policy says Analytics loads only after acceptance.
+10. **Final legal review** of every published page, including `/dpa` and `/subprocessors`. They were built from this draft and the code audit, not reviewed by counsel.
 
 Parts A–C are internal and must not appear on the public website. Part D contains the proposed public page copy. All bracketed placeholders must be completed before publication. The proposed commitments in Part D are subject to the decisions and implementation requirements below.
 
