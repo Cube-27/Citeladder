@@ -17,7 +17,7 @@ export const TERMS_OF_SERVICE: LegalDocument = {
         `CiteLadder is operated by ${PARENT_COMPANY.legalName}, with its principal business address at ${PARENT_COMPANY.address} (“Cube27”, “CiteLadder”, “we”, “us” or “our”).`,
         'These Terms govern the CiteLadder website, hosted application, APIs, MCP interfaces, reports and related services (the “Service”). By accepting these Terms or placing an order that incorporates them, you enter into an agreement with Cube27. A person accepting for an organisation represents that they are authorised to bind it; “Customer” and “you” then mean that organisation.',
         'The Service is intended for business and professional use by people aged 18 or over who can enter into a binding agreement. Nothing in these Terms excludes a mandatory consumer or other statutory right.',
-        'A signed enterprise agreement or order takes precedence where it expressly differs. Our Refund Policy at /refund-policy and Cancellation Policy at /cancellation-policy form part of these Terms. Our Privacy Policy at /privacy explains how we handle personal data.',
+        'A signed enterprise agreement or order takes precedence where it expressly differs. Our Refund Policy at /refund-policy, Cancellation Policy at /cancellation-policy and, where we process personal data on your behalf, our Data Processing Agreement at /dpa form part of these Terms. Our Privacy Policy at /privacy explains how we handle personal data.',
       ],
     },
     {
@@ -81,6 +81,16 @@ export const TERMS_OF_SERVICE: LegalDocument = {
         'Do not use the Service unlawfully; infringe privacy, confidentiality or intellectual-property rights; submit malware or stolen credentials; bypass access or usage restrictions; carry out unauthorised scraping or security testing; overload systems; or access another workspace without permission.',
         'Do not intentionally submit payment-card secrets, government identifiers, sensitive health information or other highly sensitive personal data. Do not reverse engineer proprietary Service components except where applicable law permits it.',
         'We may restrict activity reasonably necessary to address abuse, security risks, legal requirements or overdue undisputed fees.',
+      ],
+    },
+    {
+      id: 'responsibility',
+      title: 'Your responsibility for use of the Service',
+      paragraphs: [
+        'CiteLadder provides data, measurements, analysis and generated material for your own evaluation. It is not legal, financial, marketing or other professional advice, and you decide what to do with it.',
+        'You are solely responsible for how the Service and anything obtained from it are used by you, your users, your clients, and any external client you authorise, including AI assistants connected through the API or MCP. That covers the decisions you make, the content you publish, and where you share data.',
+        'To the extent permitted by law, Cube27 is not responsible or liable for any misuse of the Service or its outputs by you or by anyone using your account, credentials, tokens or authorised clients. It is also not responsible for data once it has been delivered to an external client, or for how that client or its provider handles it.',
+        'Search results, AI answers, crawled web content and other third-party data are provided as received from their sources, without any warranty of accuracy, completeness or lawfulness. Cube27 does not endorse third-party content that appears in the Service.',
       ],
     },
     {
@@ -148,7 +158,7 @@ export const TERMS_OF_SERVICE: LegalDocument = {
       id: 'claims',
       title: 'Third-party claims',
       paragraphs: [
-        'To the extent permitted by law, you will defend and indemnify Cube27 against third-party claims arising from your unlawful Customer Data, unauthorised crawling or connected-account access, or material violation of another person’s rights, except to the extent caused by Cube27’s breach or misconduct.',
+        'To the extent permitted by law, you will defend and indemnify Cube27 against third-party claims arising from your unlawful Customer Data; unauthorised crawling or connected-account access; the use or misuse of the Service, its outputs or data obtained through the API or MCP by you, your users or your authorised clients; or material violation of another person’s rights. This does not apply to the extent a claim is caused by Cube27’s breach or misconduct.',
       ],
     },
     {

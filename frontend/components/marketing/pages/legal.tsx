@@ -79,17 +79,19 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
                 {section.bullets && section.bullets.length > 0 ? (
                   <ul className="text-muted mt-4 grid list-disc gap-2 pl-5 text-base leading-relaxed">
                     {section.bullets.map((item, index) => (
-                      <li key={`${section.id}-b-${index}`}>{item}</li>
+                      <li key={`${section.id}-b-${index}`}>
+                        <Linkify text={item} />
+                      </li>
                     ))}
                   </ul>
                 ) : null}
-                {section.storage && section.storage.length > 0 ? (
+                {section.table ? (
                   <div className="mt-5 overflow-x-auto">
                     <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
-                      <caption className="sr-only">Cookie and browser storage details</caption>
+                      <caption className="sr-only">{section.table.caption}</caption>
                       <thead>
                         <tr className="border-border-strong border-b">
-                          {['Name', 'Purpose', 'Duration', 'Category'].map((heading) => (
+                          {section.table.headings.map((heading) => (
                             <th key={heading} scope="col" className="px-3 py-3 font-semibold">
                               {heading}
                             </th>
@@ -97,17 +99,16 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
                         </tr>
                       </thead>
                       <tbody>
-                        {section.storage.map((item) => (
-                          <tr key={item.name} className="border-border-subtle border-b align-top">
-                            <th
-                              scope="row"
-                              className="px-3 py-3 font-mono text-xs font-medium break-all"
-                            >
-                              {item.name}
+                        {section.table.rows.map(([header, ...cells]) => (
+                          <tr key={header} className="border-border-subtle border-b align-top">
+                            <th scope="row" className="px-3 py-3 font-medium break-words">
+                              {header}
                             </th>
-                            <td className="px-3 py-3">{item.purpose}</td>
-                            <td className="px-3 py-3">{item.duration}</td>
-                            <td className="px-3 py-3">{item.category}</td>
+                            {cells.map((cell, index) => (
+                              <td key={`${header}-${index}`} className="px-3 py-3">
+                                {cell}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>

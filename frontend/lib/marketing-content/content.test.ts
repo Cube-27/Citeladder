@@ -14,6 +14,7 @@ import { COMPETITORS, FACT_ROWS, FAIRNESS_POINTS } from './compare';
 import { FAQ_GROUPS } from './faq';
 import { AI_POLICY, COOKIE_POLICY, FOOTER_LEGAL_LINKS, type LegalDocument } from './legal';
 import { CANCELLATION_POLICY, CONTACT_PAGE, REFUND_POLICY } from './legal-billing';
+import { DATA_PROCESSING_AGREEMENT, SUBPROCESSORS } from './legal-dpa';
 import { PRIVACY_POLICY } from './legal-privacy';
 import { TERMS_OF_SERVICE } from './legal-terms';
 import { LLMS_TXT } from './llms';
@@ -41,6 +42,8 @@ const ALL_LEGAL: readonly LegalDocument[] = [
   CANCELLATION_POLICY,
   COOKIE_POLICY,
   AI_POLICY,
+  DATA_PROCESSING_AGREEMENT,
+  SUBPROCESSORS,
   CONTACT_PAGE,
 ];
 
@@ -386,6 +389,7 @@ describe('legal content', () => {
         const hasContent =
           (section.paragraphs?.length ?? 0) > 0 ||
           (section.bullets?.length ?? 0) > 0 ||
+          (section.table?.rows.length ?? 0) > 0 ||
           Boolean(section.note?.trim());
         expect(hasContent, `${document.slug}/${section.id}`).toBe(true);
       }
@@ -442,5 +446,21 @@ describe('entity and llms.txt', () => {
     expect(LLMS_TXT).toContain('Arpan Jain');
     expect(LLMS_TXT).toContain('https://citeladder.com/faq');
     expect(LLMS_TXT.toLowerCase()).toContain('not an open-source');
+  });
+});
+
+describe('legal tables', () => {
+  it('gives every table row one cell per heading', () => {
+    // A short row renders as a shifted table: a provider's location would sit
+    // under "Data processed" and read as a different commitment.
+    for (const document of ALL_LEGAL) {
+      for (const section of document.sections) {
+        for (const row of section.table?.rows ?? []) {
+          expect(row.length, `${document.slug}/${section.id}/${row[0]}`).toBe(
+            section.table?.headings.length,
+          );
+        }
+      }
+    }
   });
 });

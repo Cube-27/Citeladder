@@ -114,6 +114,7 @@ const parameterNames = (schema: { properties?: Record<string, unknown> }) =>
             <div class="website-body text-muted mt-4 grid max-w-3xl gap-4">
               <p>The connection requests <code>citeladder:read</code>. Each protected read rechecks the account’s current workspace memberships, so adding or removing membership changes project access without waiting for token expiry. System workspaces are excluded.</p>
               <p>The hosted tools do not return provider credentials. Your AI client receives the records you ask it to read; review that client’s data policies and your company’s rules before using sensitive information.</p>
+              <p>CiteLadder provides the data; what your AI client, its provider and your users do with it is your responsibility. Once data is delivered to a client, CiteLadder cannot recall it, and Cube27 is not liable for its use or misuse. See the <a class="text-accent-text underline underline-offset-2" href="/terms">Terms of Service</a>.</p>
               <p>Removing or disconnecting CiteLadder from an MCP client may only remove the local connection. To revoke the server-side OAuth grant and invalidate its access and refresh tokens, use a client action that calls CiteLadder’s OAuth revocation endpoint. Workspace membership removal blocks project reads immediately.</p>
             </div>
           </section>

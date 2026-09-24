@@ -43,7 +43,12 @@ type LegalSection = {
   paragraphs?: readonly string[];
   bullets?: readonly string[];
   note?: string;
-  storage?: readonly { name: string; purpose: string; duration: string; category: string }[];
+  /** A reference table; the first cell of each row is its row header. */
+  table?: {
+    caption: string;
+    headings: readonly string[];
+    rows: readonly (readonly string[])[];
+  };
 };
 
 type LegalSlug =
@@ -53,6 +58,8 @@ type LegalSlug =
   | 'cancellation-policy'
   | 'cookies'
   | 'ai-policy'
+  | 'dpa'
+  | 'subprocessors'
   | 'contact';
 
 export type LegalDocument = {
@@ -73,6 +80,8 @@ export const FOOTER_LEGAL_LINKS: readonly LegalLink[] = [
   { label: 'Cancellation Policy', href: '/cancellation-policy' },
   { label: 'Cookies', href: '/cookies' },
   { label: 'AI Policy', href: '/ai-policy' },
+  { label: 'Data Processing Agreement', href: '/dpa' },
+  { label: 'Subprocessors', href: '/subprocessors' },
   { label: 'Contact', href: '/contact' },
 ];
 
@@ -106,38 +115,42 @@ export const COOKIE_POLICY: LegalDocument = {
       paragraphs: [
         'The following first-party cookies and browser storage are used by CiteLadder. Google Analytics cookies appear only when analytics is configured and you accept. Browser limits can shorten the stated lifetimes.',
       ],
-      storage: [
-        {
-          name: 'citeladder_session',
-          purpose: 'Keeps you signed in; contains the protected session token.',
-          duration: 'Up to 24 hours by default (server setting may differ)',
-          category: 'Essential cookie',
-        },
-        {
-          name: 'citeladder_auth_oauth, citeladder_integration_oauth',
-          purpose: 'Protects a sign-in or integration connection while it completes.',
-          duration: 'Up to 10 minutes; cleared after completion',
-          category: 'Essential cookies',
-        },
-        {
-          name: 'citeladder.cookie-consent',
-          purpose: 'Remembers your accept or reject choice.',
-          duration: 'Until you clear site data',
-          category: 'Essential local storage',
-        },
-        {
-          name: '_ga',
-          purpose: 'Distinguishes visitors for Google Analytics.',
-          duration: 'Up to 2 years by default',
-          category: 'Optional analytics cookie',
-        },
-        {
-          name: '_ga_<measurement-id>',
-          purpose: 'Keeps Google Analytics session state.',
-          duration: 'Up to 2 years by default',
-          category: 'Optional analytics cookie',
-        },
-      ],
+      table: {
+        caption: 'Cookie and browser storage details',
+        headings: ['Name', 'Purpose', 'Duration', 'Category'],
+        rows: [
+          [
+            'citeladder_session',
+            'Keeps you signed in; contains the protected session token.',
+            'Up to 24 hours by default (server setting may differ)',
+            'Essential cookie',
+          ],
+          [
+            'citeladder_auth_oauth, citeladder_integration_oauth',
+            'Protects a sign-in or integration connection while it completes.',
+            'Up to 10 minutes; cleared after completion',
+            'Essential cookies',
+          ],
+          [
+            'citeladder.cookie-consent',
+            'Remembers your accept or reject choice.',
+            'Until you clear site data',
+            'Essential local storage',
+          ],
+          [
+            '_ga',
+            'Distinguishes visitors for Google Analytics.',
+            'Up to 2 years by default',
+            'Optional analytics cookie',
+          ],
+          [
+            '_ga_<measurement-id>',
+            'Keeps Google Analytics session state.',
+            'Up to 2 years by default',
+            'Optional analytics cookie',
+          ],
+        ],
+      },
     },
     {
       id: 'manage',
@@ -209,6 +222,7 @@ export const AI_POLICY: LegalDocument = {
       paragraphs: [
         'CiteLadder is a measurement and evidence tool for professional teams. Review generated recommendations and drafts before relying on or publishing them. You remain responsible for decisions you make using the outputs. Raw answers and rule versions are available so you can verify scores.',
         'CiteLadder does not guarantee a search ranking, citation, AI recommendation, traffic increase or commercial result. Provider models, data and availability can change independently of CiteLadder.',
+        'AI outputs and third-party data are provided as received, for your own evaluation, and are not professional advice. You are responsible for how you, your users and any AI assistant you connect through the API or MCP use them. Cube27 is not liable for decisions, publications or other use based on them, or for their misuse. Our Terms of Service at /terms set out these limits in full.',
       ],
     },
     {
