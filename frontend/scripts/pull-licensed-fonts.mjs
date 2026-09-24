@@ -17,6 +17,8 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, isAbsolute } from 'node:path';
 
+const GH_EXECUTABLE =
+  process.platform === 'win32' ? String.raw`C:\Program Files\GitHub CLI\gh.exe` : '/usr/bin/gh';
 const repository = 'Cube-27/cube27-fonts';
 // Pinned so every deploy ships the same bytes; bump it to adopt a font change.
 const revision = 'ca1156f70b5490137afa0910d560702b8cd87191';
@@ -31,7 +33,7 @@ if (!withinFrontend || withinFrontend.startsWith('..') || isAbsolute(withinFront
 mkdirSync(target, { recursive: true });
 for (const name of licensedFonts) {
   const bytes = execFileSync(
-    'gh',
+    GH_EXECUTABLE,
     [
       'api',
       '-H',

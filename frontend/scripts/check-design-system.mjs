@@ -110,7 +110,9 @@ violations.push(
 // Fonts live in the private Cube-27/cube27-fonts repo (some are licensed for
 // self-hosting, not redistribution) and reach public/fonts only through
 // `pnpm fonts:pull`. Git's index, not the disk, is what gets published.
-const trackedFiles = execFileSync('git', ['-C', root, 'ls-files', '--', ':(top)'], {
+const GIT_EXECUTABLE =
+  process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
+const trackedFiles = execFileSync(GIT_EXECUTABLE, ['-C', root, 'ls-files', '--', ':(top)'], {
   encoding: 'utf8',
 }).split('\n');
 for (const path of trackedFiles) {
