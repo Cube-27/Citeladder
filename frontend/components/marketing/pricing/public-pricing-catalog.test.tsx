@@ -49,3 +49,22 @@ describe('public pricing handoff', () => {
     );
   });
 });
+
+describe('public pricing display region', () => {
+  it('labels INR prices as exclusive of GST', () => {
+    render(
+      <PublicPricingCatalog
+        catalog={{
+          ...catalog,
+          country_code: 'IN',
+          region: 'india',
+          currency: 'INR',
+          plans: [{ ...catalog.plans[0]!, base_price: { currency: 'INR', amount_minor: 449900 } }],
+        }}
+        appOrigin="https://app.citeladder.com"
+        initialByok
+      />,
+    );
+    expect(screen.getByText(/per month · excl\. GST/)).toBeInTheDocument();
+  });
+});
