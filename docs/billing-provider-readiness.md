@@ -53,8 +53,7 @@ environment settings: they live in the published `BillingCatalogRevision`.
 
 Razorpay-owned (`core/config/razorpay_settings.py`): `BILLING_RAZORPAY_MODE`,
 `BILLING_RAZORPAY_KEY_ID`, `BILLING_RAZORPAY_KEY_SECRET`,
-`BILLING_RAZORPAY_WEBHOOK_SECRET`, the readiness flags, the fixed API origin
-and the checkout hosts.
+`BILLING_RAZORPAY_WEBHOOK_SECRET`, the readiness flags and the fixed API origin.
 
 ## Adding another provider
 

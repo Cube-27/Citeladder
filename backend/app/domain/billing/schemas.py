@@ -47,7 +47,7 @@ BillingRegion = Literal["india", "international"]
 EntitlementStatus = Literal["resolved", "entitlement_unresolved"]
 PlanCatalogKey = Literal["tier_1", "tier_2", "tier_3", "enterprise"]
 SelfServePlanCatalogKey = Literal["tier_1", "tier_2", "tier_3"]
-ActivationKind = Literal["base", "addon", "topup"]
+ActivationKind = Literal["base", "addon", "topup", "upgrade"]
 ActivationStatus = Literal["pending", "activated", "failed", "abandoned"]
 LimitState = Literal["finite", "unlimited", "unknown"]
 ProviderConnectionState = Literal["connected", "missing", "failed", "unavailable"]
@@ -235,6 +235,19 @@ class ResolvedCapabilityResponse(_StrictResponse):
     ordered_draw_grant_ids: list[uuid.UUID]
 
 
+class ScheduledPlanChangeResponse(_StrictResponse):
+    """The one plan change waiting for the next renewal.
+
+    ``state`` is ``requested`` until the provider accepts the switch,
+    ``scheduled`` once it has, and ``provider_rejected`` if it refused.
+    """
+
+    direction: Literal["upgrade", "downgrade"]
+    catalog_key: str
+    effective_at: datetime
+    state: Literal["requested", "scheduled", "provider_rejected"]
+
+
 class SubscriptionSummaryResponse(_StrictResponse):
     """Null on the parent when no current base subscription exists."""
 
@@ -242,6 +255,7 @@ class SubscriptionSummaryResponse(_StrictResponse):
     status: str
     current_period_end: datetime | None
     cancel_at_period_end: bool
+    scheduled_change: ScheduledPlanChangeResponse | None
 
 
 class TrialGrantSummaryResponse(_StrictResponse):
@@ -532,6 +546,27 @@ class CardTrialUnavailableResponse(_StrictResponse):
     reason: Literal["provider_evidence_required"] = "provider_evidence_required"
 
 
+class PlanChangeRequest(_StrictRequest):
+    """The target plan only: direction, amount and timing are server-decided."""
+
+    catalog_key: SelfServePlanCatalogKey
+
+
+class PlanChangeResponse(_StrictResponse):
+    """One accepted plan change.
+
+    An upgrade answers ``payment_required`` with the pending prorated charge
+    in ``activation``; it takes effect once that payment settles. A downgrade
+    answers ``requested``/``scheduled`` and takes effect at ``effective_at``.
+    """
+
+    direction: Literal["upgrade", "downgrade"]
+    catalog_key: str
+    status: Literal["payment_required", "requested", "scheduled"]
+    effective_at: datetime
+    activation: ActivationResponse | None
+
+
 class SubscriptionChangeResponse(_StrictResponse):
     """A scheduled cancellation. Deliberately NOT ``ActivationResponse``: it has
     no pending/activated/failed/abandoned vocabulary.
@@ -593,12 +628,15 @@ __all__ = [
     "LimitState",
     "MoneyResponse",
     "PlanCatalogKey",
+    "PlanChangeRequest",
+    "PlanChangeResponse",
     "ProviderConnectionState",
     "ProviderConnectionStateResponse",
     "ProviderConnectionStatesResponse",
     "ProviderProbeResponse",
     "ResolvedCapabilityResponse",
     "ResolvedQuoteResponse",
+    "ScheduledPlanChangeResponse",
     "SelfServePlanCatalogKey",
     "SubscriptionChangeResponse",
     "SubscriptionCreateRequest",

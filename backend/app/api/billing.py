@@ -37,15 +37,12 @@ provider argument.
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterator
-from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import (
     APIRouter,
     Depends,
-    Header,
     Query,
     Request,
     Response,
@@ -56,6 +53,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.billing_checkout import router as checkout_router
 from app.api.billing_guards import (
+    IdempotencyKey,
     base_provider_call,
     one_time_provider_call,
     purchase_country,
@@ -63,49 +61,41 @@ from app.api.billing_guards import (
     reject_existing_base,
     reject_unsettled_addon,
     require_live_base,
+    safe_commercial_errors,
 )
 from app.api.billing_invoices import router as invoices_router
+from app.api.billing_plan_changes import router as plan_changes_router
 from app.api.deps import (
     WorkspaceContext,
     get_db,
     require_active_workspace_billing,
     require_workspace_member,
 )
-from app.connectors.billing.base import (
-    BillingProviderError,
-)
 from app.connectors.billing.factory import get_billing_provider
-from app.connectors.billing.registry import ProviderUnavailableError
 from app.core.config.billing_contracts import (
     ACTIVATION_PENDING,
     CREDENTIAL_MODE_BYOK,
     OPERATION_ADDON_ACTIVATE,
     OPERATION_SUBSCRIPTION_CREATE,
     OPERATION_TOPUP_PURCHASE,
-    REASON_CHECKOUT_UNAVAILABLE,
 )
 from app.core.config.billing_settings import (
     billing_settings,
 )
-from app.core.config.billing_tax import BillingIdentity, TaxPolicyError
+from app.core.config.billing_tax import BillingIdentity
 from app.core.http_errors import raise_api_error
 from app.domain.billing.accounts import billing_account_id_for
 from app.domain.billing.catalog import public_catalog
-from app.domain.billing.catalog_revisions import CatalogUnavailableError
 from app.domain.billing.commercial_journeys import (
-    IntroductoryAccessError,
     claim_introductory_access,
     end_introductory_access,
     offer_state,
 )
 from app.domain.billing.idempotency import (
-    IdempotencyConflictError,
     ProviderCall,
-    TrialUnavailableError,
     execute_intent,
     reject_deferred_trial,
     replay_intent,
-    validate_idempotency_key,
 )
 from app.domain.billing.reads import (
     account_entitlement,
@@ -151,23 +141,9 @@ from app.models.billing import BillingAccount
 router = APIRouter(tags=["billing"])
 router.include_router(checkout_router)
 router.include_router(invoices_router)
+router.include_router(plan_changes_router)
 
 
-def _idempotency_key(
-    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
-) -> str:
-    """Require a well-formed ``Idempotency-Key`` on every commercial mutation.
-
-    A missing or malformed key REJECTS with 400: without it a browser retry
-    could double-charge.
-    """
-    try:
-        return validate_idempotency_key(idempotency_key)
-    except ValueError as exc:
-        raise_api_error(400, str(exc), cause=exc)
-
-
-IdempotencyKey = Annotated[str, Depends(_idempotency_key)]
 Session = Annotated[AsyncSession, Depends(get_db)]
 #: Every private billing route. Resolves the ACTIVE workspace and refuses any
 #: role without ``manage_billing`` before the handler body runs.
@@ -181,35 +157,6 @@ async def _account(session: AsyncSession, ctx: WorkspaceContext) -> BillingAccou
     return await workspace_account(
         session, workspace_id=ctx.workspace_id, user=ctx.user
     )
-
-
-@contextmanager
-def _safe_commercial_errors() -> Iterator[None]:
-    """Map domain refusals onto safe HTTP statuses (never a provider message)."""
-    try:
-        yield
-    except ProviderUnavailableError as exc:
-        # No provider is configured, or not in this record's environment. That
-        # is a commercial refusal the caller can act on, not a server fault —
-        # and it is decided before any provider I/O.
-        raise_api_error(409, REASON_CHECKOUT_UNAVAILABLE, cause=exc)
-    except (
-        TrialUnavailableError,
-        IdempotencyConflictError,
-        BillingConflictError,
-        IntroductoryAccessError,
-        TaxPolicyError,
-    ) as exc:
-        raise_api_error(409, str(exc), cause=exc)
-    except BillingProviderError as exc:
-        raise_api_error(502, exc.code, cause=exc)
-    except CatalogUnavailableError as exc:
-        raise_api_error(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            "Commercial catalog unavailable",
-            code=str(exc),
-            cause=exc,
-        )
 
 
 def _activation_status_code(activation: ActivationResponse) -> int:
@@ -293,7 +240,7 @@ async def get_catalog(
     config-owned international preview region, and a purchase must still submit
     its own ISO country.
     """
-    with _safe_commercial_errors():
+    with safe_commercial_errors():
         return await public_catalog(session, country)
 
 
@@ -386,7 +333,7 @@ async def post_early_access_claim(
     session: Session,
     idempotency_key: IdempotencyKey,
 ) -> NoCardClaimResponse:
-    with _safe_commercial_errors():
+    with safe_commercial_errors():
         account = await _account(session, ctx)
         result = await claim_introductory_access(
             session,
@@ -410,7 +357,7 @@ async def post_early_access_claim(
 async def delete_early_access(
     ctx: BillingWorkspace, session: Session, idempotency_key: IdempotencyKey
 ) -> IntroductoryEndResponse:
-    with _safe_commercial_errors():
+    with safe_commercial_errors():
         account = await _account(session, ctx)
         ended_at = await end_introductory_access(
             session,
@@ -446,7 +393,7 @@ async def post_subscription(
     ``/billing/profile`` deleted this is the single writer of the persisted
     billing country.
     """
-    with _safe_commercial_errors():
+    with safe_commercial_errors():
         reject_deferred_trial(payload.trial_requested)
         account = await _account(session, ctx)
         identity = BillingIdentity(
@@ -534,7 +481,7 @@ async def post_addon(
     """Buy one add-on once. It needs a live, eligible base plan; a coming-soon
     add-on refuses with ``provider_unavailable`` before any provider I/O.
     """
-    with _safe_commercial_errors():
+    with safe_commercial_errors():
         account = await _account(session, ctx)
         identity = purchase_identity(account)
         replayed = await _replayed_activation(
@@ -592,7 +539,7 @@ async def post_topup(
     A top-up funds nothing without a readable live base subscription, so the
     purchase is refused here — before any provider I/O.
     """
-    with _safe_commercial_errors():
+    with safe_commercial_errors():
         account = await _account(session, ctx)
         identity = purchase_identity(account)
         replayed = await _replayed_activation(
@@ -649,7 +596,7 @@ async def delete_subscription(
     across every commercial mutation.
     """
     del idempotency_key
-    with _safe_commercial_errors():
+    with safe_commercial_errors():
         # No provider is resolved here: cancellation binds to the adapter that
         # CREATED the subscription, which the domain reads off the row.
         account = await _account(session, ctx)

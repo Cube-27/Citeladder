@@ -34,7 +34,7 @@ export const counterCapabilityTypeSchema = z.enum([
  * must branch on this, never on nullability.
  */
 export const limitStateSchema = z.enum(['finite', 'unlimited', 'unknown']);
-export const activationKindSchema = z.enum(['base', 'addon', 'topup']);
+export const activationKindSchema = z.enum(['base', 'addon', 'topup', 'upgrade']);
 export const activationStatusSchema = z.enum(['pending', 'activated', 'failed', 'abandoned']);
 
 export const moneySchema = responseObject({
@@ -230,11 +230,20 @@ export const resolvedCapabilitySchema = responseObject({
   ordered_draw_grant_ids: z.array(uuid()),
 });
 
+/** The one plan change waiting for the next renewal. */
+export const scheduledPlanChangeSchema = responseObject({
+  direction: z.enum(['upgrade', 'downgrade']),
+  catalog_key: z.string(),
+  effective_at: z.string(),
+  state: z.enum(['requested', 'scheduled', 'provider_rejected']),
+});
+
 export const subscriptionSummarySchema = responseObject({
   catalog_key: z.string(),
   status: z.string(),
   current_period_end: z.string().nullable(),
   cancel_at_period_end: z.boolean(),
+  scheduled_change: scheduledPlanChangeSchema.nullable(),
 });
 
 export const trialGrantSummarySchema = responseObject({
@@ -308,6 +317,19 @@ export const activationSchema = responseObject({
 });
 
 /**
+ * A base-plan change. An upgrade answers `payment_required` with its pending
+ * prorated charge in `activation`; a downgrade is `requested`/`scheduled` for
+ * `effective_at` and carries no activation.
+ */
+export const planChangeSchema = responseObject({
+  direction: z.enum(['upgrade', 'downgrade']),
+  catalog_key: z.string(),
+  status: z.enum(['payment_required', 'requested', 'scheduled']),
+  effective_at: z.string(),
+  activation: activationSchema.nullable(),
+});
+
+/**
  * Deactivation has its OWN vocabulary — deliberately not the activation state
  * machine. Parsing a DELETE through `activationSchema` would invent a
  * pending/failed lifecycle the backend never reports.
@@ -363,6 +385,8 @@ export const subscriptionCheckoutSchema = responseObject({
   sdk_name: z.string(),
   public_key: z.string(),
   reference: z.string(),
+  /** A recurring `subscription` or a one-time `order` (add-on, top-up, upgrade). */
+  reference_kind: z.enum(['subscription', 'order', '']),
   expires_at: z.string(),
   quote: resolvedQuoteSchema,
 });

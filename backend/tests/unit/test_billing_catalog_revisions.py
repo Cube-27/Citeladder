@@ -18,6 +18,7 @@ from app.domain.billing.catalog_revisions import (
 )
 from app.domain.billing.launch_catalog import launch_pricing_v1_payload
 from app.models.user import User
+from scripts.provision_razorpay_plans import bind_plan_refs, recurring_prices
 
 
 @pytest.mark.parametrize(
@@ -196,3 +197,34 @@ def test_inclusive_regional_price_rejects_additional_tax() -> None:
             tax_rate="0",
             metadata="reviewed",
         )
+
+
+def test_binding_provider_plans_covers_every_recurring_sku_exactly_once() -> None:
+    """A new revision binds one immutable provider plan per SKU x region."""
+    payload = launch_pricing_v1_payload(provider_mode="test")
+    keys = {f"{key}:{region}" for key, region, _ in recurring_prices(payload)}
+    assert keys == {
+        "tier_1:international",
+        "tier_2:international",
+        "tier_3:international",
+    }
+    refs = {key: f"plan_{index}abc" for index, key in enumerate(sorted(keys))}
+    bound = bind_plan_refs(payload, refs)
+    assert {
+        f"{key}:{region}": price["provider_price_ref"]
+        for key, region, price in recurring_prices(bound)
+    } == refs
+    # The source revision is untouched: revisions are immutable.
+    assert all(
+        not price["provider_price_ref"] for _, _, price in recurring_prices(payload)
+    )
+
+    partial = dict(list(refs.items())[:2])
+    with pytest.raises(ValueError, match="cover exactly"):
+        bind_plan_refs(payload, partial)
+    malformed = {**refs, "tier_1:international": "price_x"}
+    with pytest.raises(ValueError, match="malformed"):
+        bind_plan_refs(payload, malformed)
+    shared = dict.fromkeys(refs, "plan_shared")
+    with pytest.raises(ValidationError, match="only one SKU"):
+        bind_plan_refs(payload, shared)

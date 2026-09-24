@@ -180,6 +180,7 @@ describe('BillingSettings', () => {
       status: 'active',
       current_period_end: '2026-09-01T00:00:00Z',
       cancel_at_period_end: false,
+      scheduled_change: null,
     });
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
@@ -318,6 +319,7 @@ describe('BillingSettings', () => {
       status: 'active',
       current_period_end: '2026-09-01T00:00:00Z',
       cancel_at_period_end: false,
+      scheduled_change: null,
     });
     let deleted = 0;
     mswServer.use(

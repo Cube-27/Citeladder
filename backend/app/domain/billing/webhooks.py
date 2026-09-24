@@ -14,15 +14,19 @@ event never suppresses a live one and two providers cannot collide on an
 equivalent id. A valid but unmatched event is recorded safely and grants
 NOTHING.
 
-``payment.captured`` activates a pending top-up only after the amount, the
-currency, and the external metadata match that pending intent (the
-verification lives in the shared activation transaction, which both this path
-and the manual reconciliation sweep call).
+``payment.captured`` and ``order.paid`` activate a pending one-time purchase
+only after the amount, the currency, and the external metadata match that
+pending intent (the verification lives in the shared activation transaction,
+which both this path and the manual reconciliation sweep call). Both events
+name the same provider ORDER, so a delivery of each settles the purchase
+once. ``refund.processed`` appends a refund receipt to the payment it
+refunds, which issues its credit note.
 """
 
 from __future__ import annotations
 
 import hashlib
+import logging
 from collections.abc import Mapping
 from datetime import UTC, datetime
 
@@ -32,9 +36,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import (
     ProviderPayment,
+    ProviderRefund,
     ProviderSubscription,
     WebhookAuthenticationError,
     WebhookEnvelope,
+    payment_reference,
 )
 from app.connectors.billing.registry import (
     ProviderUnavailableError,
@@ -49,13 +55,18 @@ from app.domain.billing.activations import (
     ProviderRecord,
     activate_pending,
 )
-from app.domain.billing.payments import PaymentReceiptConflictError
+from app.domain.billing.payments import (
+    PaymentReceiptConflictError,
+    settle_provider_refund,
+)
 from app.domain.billing.service import apply_subscription_state
 from app.models.billing import (
     BillingSubscription,
     BillingWebhookEvent,
     PendingActivation,
 )
+
+logger = logging.getLogger("app.billing")
 
 RESULT_IGNORED = "ignored"
 RESULT_DUPLICATE = "duplicate"
@@ -158,6 +169,58 @@ async def _pending_for_reference(
     )
 
 
+async def _warn_if_closed_intent_paid(
+    session: AsyncSession, event: BillingWebhookEvent, reference: str
+) -> None:
+    """Flag money captured for an intent that was already abandoned or failed.
+
+    Nothing is granted automatically (the quote and its terms have lapsed);
+    the operator reviews the payment and refunds it.
+    """
+    closed = await session.scalar(
+        select(PendingActivation.id).where(
+            PendingActivation.provider == event.provider,
+            PendingActivation.provider_mode == event.provider_mode,
+            PendingActivation.external_reference == reference,
+            PendingActivation.status != ACTIVATION_PENDING,
+            PendingActivation.activated_at.is_(None),
+        )
+    )
+    if closed is not None:
+        logger.warning(
+            "billing.payment_for_closed_intent activation_id=%s webhook_receipt_id=%s",
+            closed,
+            event.id,
+        )
+
+
+async def apply_refund_event(
+    session: AsyncSession, *, event: BillingWebhookEvent, refund: ProviderRefund
+) -> str:
+    """Record one authoritative refund, which issues its credit note."""
+    event_row_id = event.id
+    try:
+        receipt = await settle_provider_refund(
+            session,
+            provider=event.provider,
+            provider_mode=event.provider_mode,
+            refund=refund,
+        )
+    except PaymentReceiptConflictError:
+        await session.rollback()
+        refreshed = await session.get(BillingWebhookEvent, event_row_id)
+        if refreshed is not None:
+            await _finish(session, refreshed, RESULT_REJECTED)
+        return RESULT_REJECTED
+    if receipt is None:
+        # The refunded payment may not be settled yet: leave the receipt
+        # pending so bounded recovery retries it (up to its attempt cap)
+        # instead of completing it as unmatched.
+        await session.rollback()
+        return RESULT_UNMATCHED
+    return await _finish(session, event, RESULT_APPLIED)
+
+
 async def _activate_from_event(
     session: AsyncSession,
     *,
@@ -169,6 +232,8 @@ async def _activate_from_event(
     """Settle the matching pending activation through the SHARED transaction."""
     pending = await _pending_for_reference(session, event, reference)
     if pending is None:
+        if isinstance(record, ProviderPayment) and record.status == "paid":
+            await _warn_if_closed_intent_paid(session, event, reference)
         return RESULT_UNMATCHED
     pending_id = pending.id
     event_row_id = event.id
@@ -250,6 +315,17 @@ async def _process_subscription_event(
     return await _finish(session, event, RESULT_APPLIED if applied else RESULT_STALE)
 
 
+def _event_reference(
+    record: ProviderSubscription | ProviderPayment | ProviderRefund,
+) -> str:
+    """The provider reference recovery re-reads for this delivery."""
+    if isinstance(record, ProviderPayment):
+        return payment_reference(record)
+    if isinstance(record, ProviderRefund):
+        return record.external_refund_id
+    return record.external_subscription_id
+
+
 def authenticate_webhook(
     provider: str, *, raw_body: bytes, headers: Mapping[str, str]
 ) -> WebhookEnvelope:
@@ -287,11 +363,7 @@ async def process_webhook_envelope(
     record = envelope.record
     if record is None:
         return RESULT_IGNORED
-    reference = (
-        record.external_payment_id
-        if isinstance(record, ProviderPayment)
-        else record.external_subscription_id
-    )
+    reference = _event_reference(record)
     event = await _record_event(
         session,
         envelope=envelope,

@@ -2,7 +2,7 @@
 
 Plan §3.4: the kill switch, the quote-signing secret, the HTTP pool and the
 commercial catalog are SHARED and stay in ``billing_settings``; credentials,
-the fixed API origin, checkout hosts, readiness flags and webhook secrets
+the fixed API origin, readiness flags and webhook secrets
 belong to this vendor and live here.
 
 The variable NAMES are deliberately unchanged. ``BILLING_`` + ``razorpay_mode``
@@ -65,7 +65,6 @@ class RazorpaySettings(BaseSettings):
     webhook_previous_secret_expires_at: datetime | None = None
     webhook_previous_secret_started_at: datetime | None = None
     api_base_url: str = RAZORPAY_API_ORIGIN
-    checkout_hosts: str = "rzp.io,razorpay.com"
 
     deployment_env: str = Field(
         default="development", validation_alias="APP_ENV", exclude=True
@@ -142,13 +141,6 @@ class RazorpaySettings(BaseSettings):
             if start <= at < end <= start + timedelta(hours=24):
                 secrets += (previous,)
         return secrets
-
-    def checkout_host_set(self) -> frozenset[str]:
-        return frozenset(
-            host.strip().lower()
-            for host in self.checkout_hosts.split(",")
-            if host.strip()
-        )
 
     def secret_values(self) -> tuple[str, ...]:
         """Every gateway secret this vendor holds, for separation checks.

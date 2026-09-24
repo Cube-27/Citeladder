@@ -36,16 +36,22 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.connectors.billing.base import ProviderPayment, ProviderSubscription
+from app.connectors.billing.base import (
+    ProviderPayment,
+    ProviderSubscription,
+    payment_reference,
+)
 from app.connectors.billing.registry import status_normalizer
 from app.core.config.billing_catalog import scale_grant_specs
 from app.core.config.billing_contracts import (
     ACTIVATION_ACTIVATED,
     ACTIVATION_KIND_ADDON,
     ACTIVATION_KIND_TOPUP,
+    ACTIVATION_KIND_UPGRADE,
     ACTIVATION_PENDING,
     CADENCE_MONTHLY,
     IDEMPOTENCY_COMPLETED,
+    ONE_TIME_ACTIVATION_KINDS,
     PAYMENT_PAID,
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCEL_SCHEDULED,
@@ -58,6 +64,7 @@ from app.domain.billing.catalog_revisions import (
     item_terms_from_row,
 )
 from app.domain.billing.payments import record_payment_receipt
+from app.domain.billing.plan_changes import PlanChangeEvidenceError, settle_upgrade
 from app.domain.billing.schemas import ActivationResponse
 from app.domain.billing.service import (
     apply_subscription_state,
@@ -105,7 +112,7 @@ def _activation_key(pending_id: uuid.UUID, provider_reference: str) -> str:
 def _provider_reference(record: ProviderRecord) -> str:
     if isinstance(record, ProviderSubscription):
         return record.external_subscription_id
-    return record.external_payment_id
+    return payment_reference(record)
 
 
 def _verify_identity(pending: PendingActivation, record: ProviderRecord) -> None:
@@ -224,7 +231,10 @@ async def _upsert_subscription(
                 "catalog_key": pending.catalog_key,
                 "credential_mode": pending.credential_mode,
                 "quantity": pending.quantity,
+                "price_ref": pending.external_price_id or "",
+                "currency": (quote.get("total_price") or {}).get("currency", ""),
                 "quote": quote,
+                "tax_snapshot": pending.tax_snapshot,
                 "grant_specs": [list(spec) for spec in frozen_specs],
             },
             quantity=pending.quantity,
@@ -235,7 +245,6 @@ async def _upsert_subscription(
     return subscription
 
 
-_ONE_TIME_KINDS = frozenset({ACTIVATION_KIND_ADDON, ACTIVATION_KIND_TOPUP})
 _ONE_TIME_SOURCES = {
     ACTIVATION_KIND_ADDON: GRANT_SOURCE_ADDON,
     ACTIVATION_KIND_TOPUP: GRANT_SOURCE_TOPUP,
@@ -377,11 +386,16 @@ async def _settle(
     provider_record: ProviderRecord,
 ) -> int:
     """Verify the record kind and write the subscription/grant side effects."""
-    if pending.activation_kind in _ONE_TIME_KINDS:
+    if pending.activation_kind in ONE_TIME_ACTIVATION_KINDS:
         if not isinstance(provider_record, ProviderPayment):
             raise ActivationRejectedError("provider_record_kind_mismatch")
         paid_at = _verify_payment(pending, provider_record)
         await record_payment_receipt(session, pending=pending, payment=provider_record)
+        if pending.activation_kind == ACTIVATION_KIND_UPGRADE:
+            try:
+                return await settle_upgrade(session, pending, paid_at)
+            except PlanChangeEvidenceError as exc:
+                raise ActivationRejectedError(str(exc)) from exc
         return await _issue_item_bundle(session, pending, paid_at)
     if not isinstance(provider_record, ProviderSubscription):
         raise ActivationRejectedError("provider_record_kind_mismatch")

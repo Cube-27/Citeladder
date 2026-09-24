@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -301,25 +302,25 @@ async def test_razorpay_adapter_rejects_an_echoed_price_ref_mismatch(
 
 
 @pytest.mark.asyncio
-async def test_razorpay_one_time_payment_validates_the_echoed_amount(
+async def test_razorpay_one_time_payment_creates_an_order_for_the_exact_amount(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(razorpay_settings, "mode", "test")
     monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_key")
     monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("test-secret"))
-    bodies: list[str] = []
+    bodies: list[dict[str, object]] = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
-        bodies.append(request.content.decode())
+        assert request.url.path == "/v1/orders"
+        bodies.append(json.loads(request.content))
         amount = 1_000 if len(bodies) == 1 else 500
         return httpx.Response(
             200,
             json={
-                "id": "plink_test",
+                "id": "order_test",
                 "status": "created",
                 "amount": amount,
                 "currency": "USD",
-                "short_url": "https://rzp.io/i/pay-test",
             },
         )
 
@@ -332,12 +333,9 @@ async def test_razorpay_one_time_payment_validates_the_echoed_amount(
             account_ref="account-1",
             metadata=_metadata(),
         )
-        assert hosted.external_payment_id == "plink_test"
-        assert hosted.amount_minor == 1_000
-        # The intent id is the provider-side reference; partial payments are
-        # never accepted.
-        assert '"reference_id":"intent-1"' in bodies[0]
-        assert '"accept_partial":false' in bodies[0]
+        assert hosted.external_order_id == "order_test"
+        assert hosted.checkout_url == ""
+        assert bodies[0]["receipt"] == "intent-1"
         with pytest.raises(BillingProviderError, match="provider_amount_mismatch"):
             await provider.create_one_time_payment(
                 amount_minor=1_000,
@@ -346,6 +344,93 @@ async def test_razorpay_one_time_payment_validates_the_echoed_amount(
                 account_ref="account-1",
                 metadata=_metadata(),
             )
+
+
+def _order_handler(attempts: list[dict[str, object]]):
+    notes = {"citeladder_intent_id": "intent-1", "citeladder_account_ref": "acct"}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/orders/order_test":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "order_test",
+                    "amount": 1_000,
+                    "currency": "USD",
+                    "notes": notes,
+                    "created_at": 1_700_000_000,
+                },
+            )
+        assert request.url.path == "/v1/orders/order_test/payments"
+        return httpx.Response(200, json={"items": attempts})
+
+    return handler
+
+
+@pytest.mark.asyncio
+async def test_razorpay_order_settles_only_on_its_captured_payment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_key")
+    monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("test-secret"))
+    failed = {
+        "id": "pay_failed",
+        "status": "failed",
+        "amount": 1_000,
+        "currency": "USD",
+        "order_id": "order_test",
+    }
+    # Checkout lets the browser set payment notes; they must never name the
+    # intent or account.
+    captured = {
+        **failed,
+        "id": "pay_ok",
+        "status": "captured",
+        "method": "upi",
+        "notes": {"citeladder_intent_id": "spoofed", "citeladder_account_ref": "x"},
+    }
+    transport = httpx.MockTransport(_order_handler([failed]))
+    async with httpx.AsyncClient(transport=transport) as client:
+        pending = await RazorpayBillingProvider(client=client).fetch_payment(
+            "order_test"
+        )
+    # A failed attempt is not a failed purchase: the buyer may retry.
+    assert pending.status == "payment_pending"
+    assert pending.intent_id == "intent-1"
+
+    transport = httpx.MockTransport(_order_handler([failed, captured]))
+    async with httpx.AsyncClient(transport=transport) as client:
+        paid = await RazorpayBillingProvider(client=client).fetch_payment("order_test")
+    assert (paid.status, paid.external_payment_id) == ("paid", "pay_ok")
+    assert paid.external_order_id == "order_test"
+    # Only the server-set order notes identify the purchase.
+    assert (paid.intent_id, paid.account_ref) == ("intent-1", "acct")
+
+    underpaid = {**captured, "amount": 999}
+    transport = httpx.MockTransport(_order_handler([underpaid]))
+    async with httpx.AsyncClient(transport=transport) as client:
+        provider = RazorpayBillingProvider(client=client)
+        with pytest.raises(BillingProviderError, match="provider_amount_mismatch"):
+            await provider.fetch_payment("order_test")
+
+
+@pytest.mark.asyncio
+async def test_razorpay_throttling_is_retryable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_key")
+    monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("test-secret"))
+
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json={"error": {}})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = RazorpayBillingProvider(client=client)
+        with pytest.raises(BillingProviderError, match="provider_rate_limited") as exc:
+            await provider.fetch_payment("pay_x")
+    assert exc.value.retryable is True
 
 
 @pytest.mark.asyncio

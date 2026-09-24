@@ -1,7 +1,9 @@
 # Razorpay activation — three PRs, then acceptance
 
-Status: approved 24 September 2026. PR A (commercial core) implemented;
-PR B and PR C not started. The owner approved this scope. Payments stay
+Status: approved 24 September 2026. PR A (commercial core) implemented.
+PR B (payment paths) implemented except slice B8: the real test-mode smoke run
+needs a browser payment and has not been performed, so it moves to the start of
+the acceptance phase. PR C not started. The owner approved this scope. Payments stay
 disabled: `BILLING_CHECKOUT_ENABLED` and `BILLING_RAZORPAY_LIVE_READY` remain
 false until the go-live sign-off in the acceptance phase. Testing against Razorpay is the last phase, after
 everything is implemented.

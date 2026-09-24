@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import uuid
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, cast
@@ -25,7 +27,7 @@ from app.domain.billing.catalog_revisions import (
     catalog_revision,
     commercial_catalog_from_row,
 )
-from app.models.billing import BillingAccount, PendingActivation
+from app.models.billing import BillingAccount, BillingSubscription, PendingActivation
 from app.models.billing_invoice import BillingInvoice, BillingInvoiceCounter
 from app.models.billing_payment import BillingPayment
 from app.models.user import User
@@ -96,7 +98,53 @@ async def _next_serial(session: AsyncSession, series: str) -> int:
     return serial
 
 
-async def _catalog_name(session: AsyncSession, pending: PendingActivation) -> str:
+@dataclass(frozen=True, slots=True)
+class _DocumentTerms:
+    """The frozen purchase evidence one receipt is built from."""
+
+    billing_account_id: uuid.UUID
+    activation_kind: str
+    catalog_key: str
+    catalog_revision: str
+    quantity: int
+    country_code: str
+    quote: dict[str, Any] | None
+    tax_snapshot: dict[str, Any] | None
+
+
+def _document_terms(
+    pending: PendingActivation, subscription: BillingSubscription | None
+) -> _DocumentTerms:
+    """A subscription charge is invoiced on the subscription's CURRENT terms.
+
+    They equal the originating intent's until a plan change swaps a new
+    plan's frozen terms in at renewal; every other payment uses its intent.
+    """
+    terms = subscription.frozen_terms if subscription is not None else None
+    if not terms or not isinstance(terms.get("tax_snapshot"), dict):
+        return _DocumentTerms(
+            billing_account_id=pending.billing_account_id,
+            activation_kind=pending.activation_kind,
+            catalog_key=pending.catalog_key,
+            catalog_revision=pending.catalog_revision,
+            quantity=pending.quantity,
+            country_code=pending.country_code,
+            quote=pending.quote,
+            tax_snapshot=pending.tax_snapshot,
+        )
+    return _DocumentTerms(
+        billing_account_id=pending.billing_account_id,
+        activation_kind=pending.activation_kind,
+        catalog_key=str(terms["catalog_key"]),
+        catalog_revision=str(terms["catalog_revision"]),
+        quantity=int(terms.get("quantity", 1)),
+        country_code=pending.country_code,
+        quote=terms.get("quote"),
+        tax_snapshot=terms["tax_snapshot"],
+    )
+
+
+async def _catalog_name(session: AsyncSession, pending: _DocumentTerms) -> str:
     """The display name frozen in the purchase's catalog revision."""
     try:
         row = await catalog_revision(session, pending.catalog_revision)
@@ -111,9 +159,11 @@ async def _catalog_name(session: AsyncSession, pending: PendingActivation) -> st
     return entry.name if entry is not None else pending.catalog_key
 
 
-def _description(pending: PendingActivation, label: str) -> str:
+def _description(pending: _DocumentTerms, label: str) -> str:
     if pending.activation_kind == "base":
         return f"CiteLadder {label} subscription"
+    if pending.activation_kind == "upgrade":
+        return f"CiteLadder upgrade to {label} (prorated for the current period)"
     if pending.activation_kind == "addon":
         return f"CiteLadder {label} add-on"
     return f"CiteLadder {label} top-up"
@@ -121,7 +171,7 @@ def _description(pending: PendingActivation, label: str) -> str:
 
 def _invoice_payload(
     *,
-    pending: PendingActivation,
+    pending: _DocumentTerms,
     payment: BillingPayment,
     owner_email: str,
     invoice_number: str,
@@ -208,6 +258,7 @@ async def issue_paid_invoice(
     *,
     pending: PendingActivation,
     payment: BillingPayment,
+    subscription: BillingSubscription | None = None,
 ) -> BillingInvoice:
     """Issue exactly one immutable receipt for one accepted payment."""
     existing = await session.scalar(
@@ -226,22 +277,23 @@ async def issue_paid_invoice(
     )
     if owner_email is None:
         raise InvoiceEvidenceError("invoice_customer_email_missing")
+    terms = _document_terms(pending, subscription)
     invoice_day = payment.paid_at.astimezone(_INDIA_ZONE).date()
     year = financial_year(invoice_day)
     serial = await _next_serial(session, year)
-    snapshot = _object(pending.tax_snapshot, "tax_snapshot")
+    snapshot = _object(terms.tax_snapshot, "tax_snapshot")
     seller = _object(snapshot.get("seller"), "seller")
     prefix = _text(seller.get("invoice_prefix"), "invoice_prefix")
     invoice_number = document_number(prefix, "", year, serial)
     receipt_number = document_number(prefix, "R", year, serial)
     payload = _invoice_payload(
-        pending=pending,
+        pending=terms,
         payment=payment,
         owner_email=owner_email,
         invoice_number=invoice_number,
         receipt_number=receipt_number,
         invoice_day=invoice_day,
-        label=await _catalog_name(session, pending),
+        label=await _catalog_name(session, terms),
     )
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     amounts = _object(payload["amounts"], "amounts")

@@ -23,6 +23,7 @@ from typing import Any
 
 from app.connectors.billing.base import (
     ProviderPayment,
+    ProviderRefund,
     ProviderSubscription,
     WebhookAuthenticationError,
     WebhookEnvelope,
@@ -32,6 +33,7 @@ from app.core.config.billing_contracts import (
     RAZORPAY_EVENT_TYPES,
     RAZORPAY_PAYMENT_EVENT_TYPES,
     RAZORPAY_PAYMENT_STATUS_MAP,
+    RAZORPAY_REFUND_EVENT_TYPES,
 )
 from app.core.config.razorpay_settings import RazorpaySettings, razorpay_settings
 
@@ -77,10 +79,11 @@ class RazorpayWebhookVerifier:
         payload, event_type = _parse_payload(raw_body)
         # The ENVIRONMENT comes from trusted configuration, never the body.
         provider_mode = self._settings.require_provider_mode()
-        is_payment = event_type in RAZORPAY_PAYMENT_EVENT_TYPES
-        record: ProviderSubscription | ProviderPayment | None
-        if is_payment:
+        record: ProviderSubscription | ProviderPayment | ProviderRefund | None
+        if event_type in RAZORPAY_PAYMENT_EVENT_TYPES:
             record = parse_payment_event(payload, provider_mode=provider_mode)
+        elif event_type in RAZORPAY_REFUND_EVENT_TYPES:
+            record = parse_refund_event(payload, provider_mode=provider_mode)
         elif event_type in RAZORPAY_EVENT_TYPES:
             record = parse_subscription_event(payload, provider_mode=provider_mode)
         else:
@@ -180,6 +183,34 @@ def parse_payment_event(
         provider_mode=provider_mode,
         payment_method=_optional_bounded_str(entity.get("method"), 24),
         external_invoice_id=_optional_str(entity.get("invoice_id")),
+        external_order_id=_optional_str(entity.get("order_id")),
+    )
+
+
+def parse_refund_event(
+    payload: dict[str, Any], *, provider_mode: str
+) -> ProviderRefund:
+    """Translate ``refund.processed`` into the provider refund DTO."""
+    entity = _entity(payload, "refund")
+    amount = _bounded_int(entity.get("amount"))
+    currency = entity.get("currency")
+    status = entity.get("status")
+    if (
+        amount is None
+        or not isinstance(currency, str)
+        or len(currency) != 3
+        or not isinstance(status, str)
+        or len(status) > 32
+    ):
+        raise InvalidWebhookPayloadError("invalid_refund")
+    return ProviderRefund(
+        external_refund_id=_bounded_ref(entity.get("id"), "invalid_refund"),
+        external_payment_id=_bounded_ref(entity.get("payment_id"), "invalid_refund"),
+        status=status,
+        amount_minor=amount,
+        currency=currency.upper(),
+        updated_at=_bounded_int(entity.get("created_at")) or 0,
+        provider_mode=provider_mode,
     )
 
 
@@ -251,6 +282,7 @@ __all__ = [
     "InvalidWebhookPayloadError",
     "RazorpayWebhookVerifier",
     "parse_payment_event",
+    "parse_refund_event",
     "parse_subscription_event",
     "verify_signature",
 ]

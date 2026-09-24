@@ -63,9 +63,15 @@ class ProviderSubscription:
 
 @dataclass(frozen=True, slots=True)
 class HostedPayment:
-    """A created hosted one-time payment awaiting the buyer."""
+    """A created one-time provider order awaiting the buyer.
 
-    external_payment_id: str
+    ``external_order_id`` is the provider's container for the charge, which
+    the intent persists as its reference. ``checkout_url`` is only for a
+    provider whose one-time flow is a validated hosted redirect; an SDK-driven
+    provider leaves it empty.
+    """
+
+    external_order_id: str
     checkout_url: str
     status: str
     amount_minor: int
@@ -84,9 +90,10 @@ class ProviderPayment:
     paid_at: int | None = None
     intent_id: str = ""
     account_ref: str = ""
-    # A Payment Link is an intent/container, not the captured transaction.
-    # Settlement identity always uses external_payment_id.
-    external_payment_link_id: str = ""
+    # The provider order this payment settled: the one-time purchase
+    # container, not the captured transaction. Settlement identity always uses
+    # external_payment_id; the intent is matched by the order.
+    external_order_id: str = ""
     tax_minor: int | None = None
     external_invoice_id: str = ""
     external_subscription_id: str = ""
@@ -106,6 +113,20 @@ class ProviderRefund:
     amount_minor: int
     currency: str
     updated_at: int
+    provider_mode: str = "disabled"
+
+
+def payment_reference(payment: ProviderPayment) -> str:
+    """The provider reference a one-time intent persists for this payment.
+
+    A one-time purchase commits the provider ORDER as its external reference,
+    so every payment on that order (and ``payment.captured``/``order.paid``
+    alike) resolves to the same intent. A subscription invoice charge is
+    matched through its subscription instead and keeps its payment id.
+    """
+    if payment.external_order_id and not payment.external_invoice_id:
+        return payment.external_order_id
+    return payment.external_payment_id
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,10 +177,15 @@ class CheckoutInitialization:
     sdk_name: str = ""
     public_key: str = ""
     reference: str = ""
+    #: What ``reference`` names: a recurring ``subscription`` or a one-time
+    #: ``order``. The browser SDK opens the two differently.
+    reference_kind: str = ""
 
 
 CHECKOUT_FLOW_REDIRECT = "hosted_redirect"
 CHECKOUT_FLOW_SDK = "provider_sdk"
+CHECKOUT_REFERENCE_SUBSCRIPTION = "subscription"
+CHECKOUT_REFERENCE_ORDER = "order"
 
 
 class CheckoutCallbackError(ValueError):
@@ -208,15 +234,16 @@ class WebhookEnvelope:
     ``event_id`` and ``event_type`` are the provider's own, kept for dedupe
     and dispatch. ``provider_mode`` comes from trusted SERVER configuration,
     never from an unsigned field in the body. ``record`` is the neutral
-    subscription/payment evidence the shared settlement checks read; ``None``
-    means the event is valid but carries nothing this application acts on.
+    subscription/payment/refund evidence the shared settlement checks read;
+    ``None`` means the event is valid but carries nothing this application
+    acts on.
     """
 
     provider: str
     provider_mode: str
     event_id: str
     event_type: str
-    record: ProviderSubscription | ProviderPayment | None
+    record: ProviderSubscription | ProviderPayment | ProviderRefund | None
 
 
 class BillingWebhookVerifier(Protocol):
@@ -283,6 +310,14 @@ class BillingProvider(Protocol):
 
     async def fetch_payment(self, external_payment_id: str) -> ProviderPayment: ...
 
+    async def fetch_refund(self, external_refund_id: str) -> ProviderRefund: ...
+
+    async def schedule_plan_change(
+        self, external_subscription_id: str, *, price_ref: str
+    ) -> ProviderSubscription:
+        """Move a subscription to ``price_ref`` from its NEXT cycle."""
+        ...
+
     async def refund_payment(
         self,
         external_payment_id: str,
@@ -295,6 +330,8 @@ class BillingProvider(Protocol):
 __all__ = [
     "CHECKOUT_FLOW_REDIRECT",
     "CHECKOUT_FLOW_SDK",
+    "CHECKOUT_REFERENCE_ORDER",
+    "CHECKOUT_REFERENCE_SUBSCRIPTION",
     "BillingCheckoutAdapter",
     "BillingProvider",
     "BillingProviderError",
@@ -309,4 +346,5 @@ __all__ = [
     "ProviderSubscription",
     "WebhookAuthenticationError",
     "WebhookEnvelope",
+    "payment_reference",
 ]

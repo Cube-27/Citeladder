@@ -161,11 +161,14 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
           start: (key, details) =>
             void checkoutMutation
               .start({
-                input: {
-                  catalog_key: key,
-                  credential_mode: 'byok',
-                  country_code: state.country,
-                  ...details,
+                purchase: {
+                  kind: 'base',
+                  input: {
+                    catalog_key: key,
+                    credential_mode: 'byok',
+                    country_code: state.country,
+                    ...details,
+                  },
                 },
               })
               .catch(() => undefined),

@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, tuple_
@@ -20,21 +21,33 @@ from app.connectors.billing.base import (
     BillingProvider,
     BillingProviderError,
     ProviderPayment,
+    ProviderRefund,
 )
 from app.connectors.billing.registry import (
     adapter_for_record,
     configured_pairs,
     payment_event_predicate,
+    refund_event_predicate,
 )
 from app.core.config.billing_settings import billing_settings
+from app.domain.billing.activations import ProviderRecord
 from app.domain.billing.payments import PaymentReceiptConflictError
 from app.domain.billing.service import BillingConflictError
 from app.domain.billing.webhooks import (
     _activate_from_event,
     _finish,
     _process_subscription_event,
+    apply_refund_event,
 )
 from app.models.billing import BillingWebhookEvent
+
+
+@dataclass(frozen=True, slots=True)
+class _EventKinds:
+    """The originating vendor's own answer to "which record does this name?"."""
+
+    is_payment: Callable[[str], bool]
+    is_refund: Callable[[str], bool]
 
 
 async def recover_webhook_receipts(
@@ -98,7 +111,7 @@ async def recover_webhook_receipts(
             token,
             event_type,
             reference,
-            payment_event_predicate(name),
+            _EventKinds(payment_event_predicate(name), refund_event_predicate(name)),
         )
     return len(claims)
 
@@ -110,7 +123,7 @@ async def _recover_one(
     token: uuid.UUID,
     event_type: str,
     reference: str,
-    is_payment: Callable[[str], bool],
+    kinds: _EventKinds,
 ) -> None:
     try:
         if not reference:
@@ -124,14 +137,19 @@ async def _recover_one(
             return
         # Which KIND of record this event names is the originating vendor's
         # own vocabulary, so the question goes to that vendor's adapter.
-        record = (
-            await provider.fetch_payment(reference)
-            if is_payment(event_type)
-            else await provider.fetch_subscription(reference)
-        )
+        record: ProviderRecord | ProviderRefund
+        if kinds.is_refund(event_type):
+            record = await provider.fetch_refund(reference)
+        elif kinds.is_payment(event_type):
+            record = await provider.fetch_payment(reference)
+        else:
+            record = await provider.fetch_subscription(reference)
         event = await _claimed_event(session, event_id, token)
         if event is None:
             await session.rollback()
+            return
+        if isinstance(record, ProviderRefund):
+            await apply_refund_event(session, event=event, refund=record)
             return
         if isinstance(record, ProviderPayment):
             result = await _activate_from_event(

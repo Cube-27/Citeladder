@@ -5,10 +5,9 @@ explicit mapping, evaluated at import: there is no discovery, no plugin path,
 and no fallback. A provider that is not configured produces a safe unavailable
 result before any provider I/O — it never silently becomes Razorpay.
 
-Razorpay itself is PAUSED, not removed: its working integration code stays
-behind this adapter so returning to it, or adding a different provider beside
-it, is a configuration and adapter change rather than a rewrite of the
-commercial core.
+Razorpay is the approved provider being activated. Its integration stays
+behind this adapter, so adding a different provider beside it is a
+configuration and adapter change rather than a rewrite of the commercial core.
 """
 
 from __future__ import annotations
@@ -29,6 +28,7 @@ from app.connectors.billing.registry import (
 from app.core.config.billing_contracts import (
     PROVIDER_RAZORPAY,
     RAZORPAY_PAYMENT_EVENT_TYPES,
+    RAZORPAY_REFUND_EVENT_TYPES,
     RAZORPAY_STATUS_MAP,
     REGION_INTERNATIONAL,
 )
@@ -60,6 +60,7 @@ register_provider(
         # shared settlement code never has to know either of them.
         normalize_subscription_status=RAZORPAY_STATUS_MAP.get,
         is_payment_event=lambda event_type: event_type in RAZORPAY_PAYMENT_EVENT_TYPES,
+        is_refund_event=lambda event_type: event_type in RAZORPAY_REFUND_EVENT_TYPES,
         webhook=RazorpayWebhookVerifier(),
         checkout=RazorpayCheckoutAdapter(),
     )

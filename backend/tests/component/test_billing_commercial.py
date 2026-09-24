@@ -30,7 +30,6 @@ from app.connectors.billing.base import (
     HostedPayment,
     HostedSubscription,
     ProviderPayment,
-    ProviderRefund,
     ProviderSubscription,
 )
 from app.core.config.billing_contracts import (
@@ -48,7 +47,6 @@ from app.core.config.razorpay_settings import razorpay_settings
 from app.domain.billing import idempotency as idempotency_module
 from app.domain.billing.activations import activate_pending
 from app.domain.billing.idempotency import IntentResult, execute_intent
-from app.domain.billing.payments import record_refund_receipt
 from app.domain.billing.reconciliation import reconcile_pending_activations
 from app.domain.billing.service import BillingConflictError, resolve_base_intent
 from app.models.billing import (
@@ -82,7 +80,7 @@ def _provider_environment(monkeypatch):
 
 _SECRET = "commercial-webhook-secret"
 _PLAN_REF = "plan_test_private"
-_TOPUP_REF = "plink_test_private"
+_TOPUP_REF = "order_test_private"
 _TOPUP_KEY = "topup_audit_credits"
 _US_BILLING_IDENTITY = {
     "billing_name": "Fixture Buyer",
@@ -187,9 +185,11 @@ def _payment_payload(
     intent_id: str = "",
     account_ref: str = "",
     currency: str = "USD",
+    event: str = "payment.captured",
 ) -> bytes:
     entity: dict[str, object] = {
         "id": external_id,
+        "order_id": _order_for(external_id),
         "status": "captured",
         "amount": amount,
         "currency": currency,
@@ -199,14 +199,18 @@ def _payment_payload(
             "citeladder_account_ref": account_ref,
         },
     }
+    payload: dict[str, object] = {"payment": {"entity": entity}}
+    if event == "order.paid":
+        payload["order"] = {"entity": {"id": entity["order_id"], "status": "paid"}}
     return json.dumps(
-        {
-            "event": "payment.captured",
-            "created_at": paid_at,
-            "payload": {"payment": {"entity": entity}},
-        },
+        {"event": event, "created_at": paid_at, "payload": payload},
         separators=(",", ":"),
     ).encode()
+
+
+def _order_for(payment_id: str) -> str:
+    """The order a fixture payment settles (one order per fixture payment)."""
+    return payment_id.replace("pay_", "order_", 1)
 
 
 class _FakeProvider:
@@ -251,9 +255,9 @@ class _FakeProvider:
         await self._assert_pending_committed(intent_id)
         self.payment_calls.append({"amount_minor": amount_minor, "currency": currency})
         return HostedPayment(
-            external_payment_id=self.payment_id,
-            checkout_url=f"https://rzp.io/i/{self.payment_id}",
-            status="payment_pending",
+            external_order_id=_order_for(self.payment_id),
+            checkout_url="",
+            status="created",
             amount_minor=amount_minor,
             currency=currency,
         )
@@ -1259,6 +1263,7 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     await _register(client, "topup@example.com")
     baseline_grants = await _total_grant_count(db_session)
     account = await _account(db_session)
+    account_id = str(account.id)
     base = await _seed_live_base(db_session, account, period_days=10)
     base_period_end = base.current_period_end
 
@@ -1270,6 +1275,15 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     # The server quote controls the provider charge: 2 packs x $99.
     assert body["quote"]["total_price"] == {"currency": "USD", "amount_minor": 19_800}
     assert provider.payment_calls == [{"amount_minor": 19_800, "currency": "USD"}]
+    # The same checkout opens the one-time ORDER the intent committed.
+    init = await client.get(
+        f"/api/v1/billing/activations/{body['activation_id']}/checkout"
+    )
+    assert init.status_code == 200, init.text
+    assert (init.json()["reference"], init.json()["reference_kind"]) == (
+        "order_topup",
+        "order",
+    )
     # Nothing is granted in the intent path.
     assert await _commercial_grant_count(db_session) == 0
     assert await _total_grant_count(db_session) == baseline_grants
@@ -1280,7 +1294,7 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
         amount=19_800,
         paid_at=paid_at,
         intent_id=body["activation_id"],
-        account_ref=str(account.id),
+        account_ref=account_id,
     )
     webhook = await _post_webhook(client, raw, event_id="evt_topup_1")
     assert webhook.status_code == 204
@@ -1312,31 +1326,54 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     effective = datetime.fromisoformat(grant_row["effective_valid_until"])
     assert effective == base_period_end
 
-    # A duplicate payment webhook grants nothing twice.
+    # A duplicate payment webhook grants nothing twice, and neither does the
+    # order.paid event Razorpay also sends for the same purchase.
     duplicate = await _post_webhook(client, raw, event_id="evt_topup_2")
     assert duplicate.status_code == 204
+    order_paid = _payment_payload(
+        external_id="pay_topup",
+        amount=19_800,
+        paid_at=paid_at,
+        intent_id=body["activation_id"],
+        account_ref=account_id,
+        event="order.paid",
+    )
+    assert (
+        await _post_webhook(client, order_paid, event_id="evt_order_1")
+    ).status_code == 204
     db_session.expire_all()
     assert await _commercial_grant_count(db_session, source_kind="topup") == 1
+    receipts = (
+        await db_session.scalars(
+            select(BillingPayment).where(BillingPayment.receipt_kind == "payment")
+        )
+    ).all()
+    assert [receipt.external_order_id for receipt in receipts] == ["order_topup"]
+    assert len((await client.get("/api/v1/billing/invoices")).json()["invoices"]) == 1
 
-    # A full refund revokes what is left of the purchase; consumed units
-    # would stay consumed, and the refund issues one credit note.
-    payment = await db_session.scalar(
-        select(BillingPayment).where(BillingPayment.receipt_kind == "payment")
-    )
-    assert payment is not None
-    await record_refund_receipt(
-        db_session,
-        payment_id=payment.id,
-        refund=ProviderRefund(
-            external_refund_id="rfnd_full",
-            external_payment_id="pay_topup",
-            status="processed",
-            amount_minor=19_800,
-            currency="USD",
-            updated_at=paid_at,
-        ),
-    )
-    await db_session.commit()
+    # A full refund (reported by refund.processed) revokes what is left of
+    # the purchase; consumed units would stay consumed, and the refund issues
+    # one credit note.
+    refund = {
+        "event": "refund.processed",
+        "created_at": paid_at,
+        "payload": {
+            "refund": {
+                "entity": {
+                    "id": "rfnd_full",
+                    "payment_id": "pay_topup",
+                    "amount": 19_800,
+                    "currency": "USD",
+                    "status": "processed",
+                    "created_at": paid_at,
+                }
+            }
+        },
+    }
+    raw_refund = json.dumps(refund, separators=(",", ":")).encode()
+    assert (
+        await _post_webhook(client, raw_refund, event_id="evt_refund_1")
+    ).status_code == 204
     usage = await client.get("/api/v1/billing/usage")
     items = {item["key"]: item for item in usage.json()["items"]}
     assert items.get("audit_credits", {}).get("allowance", 0) == 0
@@ -1603,6 +1640,178 @@ async def test_reconciliation_leaves_retryable_errors_pending(
     assert row.status == "pending"
 
 
+@pytest.mark.asyncio
+async def test_reconciliation_abandons_unpaid_checkouts_after_the_window(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """An interrupted checkout must not hold the purchase slot forever."""
+    await _register(client, "sweep-abandon@example.com")
+    account = await _account(db_session)
+    now = datetime.now(UTC)
+    recent = await _seed_pending(
+        db_session,
+        account,
+        external_reference="order_recent",
+        created_at=now - timedelta(minutes=10),
+    )
+    old_order = await _seed_pending(
+        db_session,
+        account,
+        external_reference="order_old",
+        created_at=now - timedelta(days=2),
+    )
+    old_base = await _seed_pending(
+        db_session,
+        account,
+        kind="base",
+        catalog_key="tier_1",
+        external_reference="sub_old",
+        created_at=now - timedelta(days=2),
+    )
+    # Probes already exhausted: the window still admits one final probe.
+    old_base.reconciliation_attempts = 99
+    await db_session.commit()
+    ids = {
+        row.id: name
+        for row, name in ((recent, "recent"), (old_order, "order"), (old_base, "base"))
+    }
+    cancelled: list[tuple[str, bool]] = []
+
+    class _UnpaidProvider:
+        async def fetch_payment(self, reference: str) -> ProviderPayment:
+            return ProviderPayment(
+                external_payment_id=reference,
+                external_order_id=reference,
+                status="payment_pending",
+                amount_minor=1_000,
+                currency="USD",
+                updated_at=0,
+            )
+
+        async def fetch_subscription(self, reference: str) -> ProviderSubscription:
+            return ProviderSubscription(
+                external_subscription_id=reference,
+                status="created",
+                current_start=None,
+                current_end=None,
+                updated_at=0,
+                cancel_at_period_end=False,
+            )
+
+        async def cancel_subscription(self, reference: str, *, at_cycle_end: bool):
+            cancelled.append((reference, at_cycle_end))
+
+    summary = await reconcile_pending_activations(
+        session_factory,
+        _UnpaidProvider(),
+        now=now,
+        stale_after=timedelta(minutes=5),
+        abandon_after=timedelta(days=1),
+    )
+    assert (summary.claimed, summary.abandoned, summary.still_pending) == (3, 2, 1)
+    db_session.expire_all()
+    statuses = {
+        ids[row.id]: row.status
+        for row in (await db_session.scalars(select(PendingActivation))).all()
+        if row.id in ids
+    }
+    assert statuses == {"recent": "pending", "order": "abandoned", "base": "abandoned"}
+    # The abandoned subscription can no longer be authorised and charged.
+    assert cancelled == [("sub_old", False)]
+
+
+@pytest.mark.asyncio
+async def test_abandonment_retries_a_failed_subscription_cancellation(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The intent closes only once its provider subscription is cancelled."""
+    await _register(client, "sweep-cancel@example.com")
+    account = await _account(db_session)
+    now = datetime.now(UTC)
+    base = await _seed_pending(
+        db_session,
+        account,
+        kind="base",
+        catalog_key="tier_1",
+        external_reference="sub_stuck",
+        created_at=now - timedelta(days=2),
+    )
+    base_id = base.id
+
+    class _Provider:
+        fail = True
+
+        async def fetch_subscription(self, reference: str) -> ProviderSubscription:
+            return ProviderSubscription(
+                external_subscription_id=reference,
+                status="created",
+                current_start=None,
+                current_end=None,
+                updated_at=0,
+                cancel_at_period_end=False,
+            )
+
+        async def cancel_subscription(self, reference: str, *, at_cycle_end: bool):
+            if self.fail:
+                raise BillingProviderError("provider_unavailable", retryable=True)
+
+    provider = _Provider()
+    sweep = {
+        "now": now,
+        "stale_after": timedelta(minutes=5),
+        "abandon_after": timedelta(days=1),
+    }
+    first = await reconcile_pending_activations(session_factory, provider, **sweep)
+    assert (first.abandoned, first.still_pending) == (0, 1)
+    db_session.expire_all()
+    row = await db_session.get(PendingActivation, base_id)
+    assert row is not None and row.status == "pending"
+
+    # Time passes: the backoff and the first sweep's lease both lapse.
+    provider.fail = False
+    row.reconciliation_next_at = None
+    row.reconciliation_lease_expires_at = None
+    await db_session.commit()
+    second = await reconcile_pending_activations(session_factory, provider, **sweep)
+    assert second.abandoned == 1
+
+
+@pytest.mark.asyncio
+async def test_refund_before_its_payment_receipt_stays_retryable(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
+    raw = json.dumps(
+        {
+            "event": "refund.processed",
+            "created_at": 1_700_000_000,
+            "payload": {
+                "refund": {
+                    "entity": {
+                        "id": "rfnd_early",
+                        "payment_id": "pay_not_settled_yet",
+                        "amount": 100,
+                        "currency": "USD",
+                        "status": "processed",
+                    }
+                }
+            },
+        },
+        separators=(",", ":"),
+    ).encode()
+    assert (await _post_webhook(client, raw, event_id="evt_early")).status_code == 204
+    db_session.expire_all()
+    event = (await db_session.scalars(select(BillingWebhookEvent))).one()
+    # Not completed as unmatched: bounded recovery tries it again later.
+    assert event.processing_state == "pending"
+
+
 # --- Deleted legacy routes ------------------------------------------------------
 @pytest.mark.asyncio
 async def test_deleted_legacy_routes_return_404(client: httpx.AsyncClient) -> None:
@@ -1613,6 +1822,9 @@ async def test_deleted_legacy_routes_return_404(client: httpx.AsyncClient) -> No
         ("POST", "/api/v1/billing/checkout"),
         ("POST", "/api/v1/billing/cancel"),
         ("POST", "/api/v1/billing/manage"),
+        # Checkout serves every activation kind under /billing/activations.
+        ("GET", f"/api/v1/billing/subscriptions/{uuid.uuid4()}/checkout"),
+        ("POST", f"/api/v1/billing/subscriptions/{uuid.uuid4()}/verify"),
         ("GET", f"/api/v1/workspaces/{uuid.uuid4()}/entitlements"),
     ):
         response = await client.request(method, path)

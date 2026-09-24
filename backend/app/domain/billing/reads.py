@@ -29,6 +29,7 @@ from app.domain.billing.schemas import (
     BillingUsageResponse,
     GrantProvenanceResponse,
     ResolvedCapabilityResponse,
+    ScheduledPlanChangeResponse,
     SubscriptionSummaryResponse,
     TrialGrantSummaryResponse,
     UsageGrantBalanceResponse,
@@ -107,11 +108,20 @@ def _subscription_summary(
 ) -> SubscriptionSummaryResponse | None:
     if subscription is None:
         return None
+    change = subscription.scheduled_change
     return SubscriptionSummaryResponse(
         catalog_key=subscription.catalog_key,
         status=subscription.status,
         current_period_end=subscription.current_period_end,
         cancel_at_period_end=subscription.cancel_at_period_end,
+        scheduled_change=ScheduledPlanChangeResponse(
+            direction=change["direction"],
+            catalog_key=change["catalog_key"],
+            effective_at=change["effective_at"],
+            state=change["state"],
+        )
+        if change
+        else None,
     )
 
 

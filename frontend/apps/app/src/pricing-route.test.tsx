@@ -43,6 +43,15 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 
+const signedInUser = {
+  id: '00000000-0000-4000-8000-000000000001',
+  email: 'test.user@example.test',
+  role: 'user',
+  is_active: true,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+};
+
 describe('app pricing continuation', () => {
   it('waits for confirmation, refreshes the catalog, and scopes the mutation to the selected workspace', async () => {
     const writes: Array<{ workspace: string | null; key: string | null }> = [];
@@ -52,6 +61,7 @@ describe('app pricing continuation', () => {
         reads += 1;
         return HttpResponse.json(catalog);
       }),
+      http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
       http.post('/api/v1/billing/addons', ({ request }) => {
         writes.push({
           workspace: request.headers.get('X-Workspace-Id'),
@@ -79,7 +89,7 @@ describe('app pricing continuation', () => {
     renderWithProviders(<PricingRoute />);
     expect(await screen.findByRole('heading', { name: 'Extra seats' })).toBeInTheDocument();
     expect(writes).toHaveLength(0);
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm purchase' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Review current quote' }));
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(reads).toBeGreaterThan(1);
     expect(writes[0]).toEqual({ workspace: workspaceId, key: 'captured-key' });
@@ -137,18 +147,7 @@ describe('app pricing continuation', () => {
     };
     mswServer.use(
       http.get('/api/v1/billing/catalog', () => HttpResponse.json(planCatalog)),
-      http.get('/api/v1/auth/me', () =>
-        HttpResponse.json({
-          user: {
-            id: '00000000-0000-4000-8000-000000000001',
-            email: 'test.user@example.test',
-            role: 'user',
-            is_active: true,
-            created_at: '2026-01-01T00:00:00Z',
-            updated_at: '2026-01-01T00:00:00Z',
-          },
-        }),
-      ),
+      http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
       http.post('/api/v1/billing/subscriptions', () => {
         created += 1;
         return HttpResponse.json({
@@ -180,13 +179,10 @@ describe('app pricing continuation', () => {
           failure_code: null,
         });
       }),
-      http.get(
-        '/api/v1/billing/subscriptions/11111111-1111-4111-8111-111111111111/checkout',
-        () => {
-          opened += 1;
-          return HttpResponse.json({ detail: 'unavailable' }, { status: 503 });
-        },
-      ),
+      http.get('/api/v1/billing/activations/11111111-1111-4111-8111-111111111111/checkout', () => {
+        opened += 1;
+        return HttpResponse.json({ detail: 'unavailable' }, { status: 503 });
+      }),
     );
     globalThis.sessionStorage.setItem(
       PENDING_PRICING_INTENT_KEY,

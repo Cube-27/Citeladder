@@ -230,6 +230,10 @@ class BillingSubscription(Base):
     # Complete immutable purchased bundle/price evidence. Renewals never read
     # the current catalog: they replay this accepted subscription evidence.
     frozen_terms: Mapped[dict] = mapped_column(JSONB, default=dict)
+    # At most one plan change waiting for the next renewal: the complete
+    # frozen terms it will swap in, its direction, the provider state of the
+    # scheduling call, and when it takes effect. Null when none is scheduled.
+    scheduled_change: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Purchased units for an add-on subscription (always 1 for a base plan).
     # The period grant bundle scales the per-unit template by this quantity.
     quantity: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
@@ -656,6 +660,12 @@ class PendingActivation(Base):
             unique=True,
             postgresql_where=text("activation_kind = 'addon' AND status = 'pending'"),
         ),
+        Index(
+            "uq_pending_activation_one_pending_upgrade",
+            "billing_account_id",
+            unique=True,
+            postgresql_where=text("activation_kind = 'upgrade' AND status = 'pending'"),
+        ),
         CheckConstraint("quantity > 0", name="ck_pending_activation_quantity_positive"),
         Index("ix_pending_activation_status_created", "status", "created_at"),
     )
@@ -689,6 +699,9 @@ class PendingActivation(Base):
     # projected through an activation DTO and becomes the immutable receipt
     # source after captured-payment evidence is accepted.
     tax_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # An upgrade intent's frozen target: the subscription it upgrades and the
+    # full renewal terms of the higher plan. Null for every other kind.
+    change_terms: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # ISO alpha-2 country and resolved region this intent was priced for; the
     # purchase re-resolves and LOCKS the submitted country server-side.
     country_code: Mapped[str] = mapped_column(String(2), default="")

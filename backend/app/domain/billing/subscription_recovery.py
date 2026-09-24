@@ -1,4 +1,8 @@
-"""Lease existing subscriptions to recover missed renewal and cancellation evidence."""
+"""Lease existing subscriptions to recover missed renewal and cancellation evidence.
+
+The same sweep performs a scheduled plan change's provider call once its
+intent has committed, so the call never runs inside a settlement transaction.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +17,7 @@ from app.connectors.billing.base import BillingProvider, BillingProviderError
 from app.connectors.billing.registry import adapter_for_record, configured_pairs
 from app.core.config.billing_settings import billing_settings
 from app.domain.billing.payments import PaymentReceiptConflictError
+from app.domain.billing.plan_changes import push_scheduled_change
 from app.domain.billing.service import BillingConflictError, apply_subscription_state
 from app.domain.billing.subscription_payments import record_subscription_payment
 from app.models.billing import BillingSubscription, PendingActivation
@@ -80,6 +85,7 @@ async def reconcile_current_subscriptions(
             continue
         claimed += 1
         await _recover(session, adapter, row_id, token, reference)
+        await push_scheduled_change(session, row_id, adapter)
     return claimed
 
 

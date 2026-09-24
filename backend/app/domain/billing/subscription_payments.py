@@ -9,6 +9,7 @@ from app.domain.billing.payments import (
     PaymentReceiptConflictError,
     record_payment_receipt,
 )
+from app.domain.billing.plan_changes import promote_scheduled_change
 from app.models.billing import BillingSubscription, PendingActivation
 
 
@@ -20,16 +21,22 @@ async def record_subscription_payment(
     record: ProviderSubscription,
 ) -> None:
     payment = record.payment
-    total = (pending.quote or {}).get("total_price", {})
     if payment is None:
         raise PaymentReceiptConflictError("subscription_payment_missing")
+    # A renewal billed on a scheduled plan change's provider plan swaps that
+    # plan's frozen terms in BEFORE the charge is checked against them.
+    promote_scheduled_change(subscription, record)
+    quote = (subscription.frozen_terms or {}).get("quote") or pending.quote or {}
+    total = quote.get("total_price", {})
     expected = (
         "paid",
         subscription.external_subscription_id,
         subscription.external_price_id,
         str(pending.id),
         str(subscription.billing_account_id),
-        subscription.catalog_revision,
+        # The notes identify the ORIGINAL intent, whose revision they carry
+        # even after a plan change moved the terms to a newer revision.
+        pending.catalog_revision,
         subscription.provider_mode,
         subscription.provider_mode,
         total.get("amount_minor"),

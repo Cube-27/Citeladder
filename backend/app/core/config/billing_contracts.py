@@ -59,7 +59,14 @@ RAZORPAY_EVENT_TYPES: Final = frozenset(
     }
 )
 
-RAZORPAY_PAYMENT_EVENT_TYPES: Final = frozenset({"payment.captured", "payment.failed"})
+# One-time orders settle on either event; both resolve to the same intent and
+# the shared activation claim makes the pair grant exactly once.
+RAZORPAY_PAYMENT_EVENT_TYPES: Final = frozenset(
+    {"payment.captured", "payment.failed", "order.paid"}
+)
+
+# A processed refund issues a credit note (and revokes on a full refund).
+RAZORPAY_REFUND_EVENT_TYPES: Final = frozenset({"refund.processed"})
 
 PAYMENT_PENDING: Final = "payment_pending"
 
@@ -179,9 +186,40 @@ ACTIVATION_KIND_ADDON: Final = "addon"
 
 ACTIVATION_KIND_TOPUP: Final = "topup"
 
+# The prorated charge that makes an immediate plan upgrade effective.
+ACTIVATION_KIND_UPGRADE: Final = "upgrade"
+
 ACTIVATION_KINDS: Final[frozenset[str]] = frozenset(
-    {ACTIVATION_KIND_BASE, ACTIVATION_KIND_ADDON, ACTIVATION_KIND_TOPUP}
+    {
+        ACTIVATION_KIND_BASE,
+        ACTIVATION_KIND_ADDON,
+        ACTIVATION_KIND_TOPUP,
+        ACTIVATION_KIND_UPGRADE,
+    }
 )
+
+# Intents settled by a one-time provider order rather than a subscription.
+ONE_TIME_ACTIVATION_KINDS: Final[frozenset[str]] = frozenset(
+    {ACTIVATION_KIND_ADDON, ACTIVATION_KIND_TOPUP, ACTIVATION_KIND_UPGRADE}
+)
+
+PLAN_CHANGE_UPGRADE: Final = "upgrade"
+
+PLAN_CHANGE_DOWNGRADE: Final = "downgrade"
+
+# Provider-side state of a scheduled plan change: committed and waiting for
+# the provider call, accepted by the provider, or refused by it.
+PLAN_CHANGE_REQUESTED: Final = "requested"
+
+PLAN_CHANGE_SCHEDULED: Final = "scheduled"
+
+PLAN_CHANGE_REJECTED: Final = "provider_rejected"
+
+# Primary-bundle priorities: a paid upgrade's remainder-of-period bundle
+# outranks the plan bundle it replaces until that period ends.
+PLAN_BUNDLE_PRIORITY: Final = 200
+
+UPGRADE_BUNDLE_PRIORITY: Final = 210
 
 ACTIVATION_PENDING: Final = "pending"
 
@@ -222,6 +260,8 @@ OPERATION_ADDON_ACTIVATE: Final = "addon.activate"
 
 OPERATION_TOPUP_PURCHASE: Final = "topup.purchase"
 
+OPERATION_PLAN_CHANGE: Final = "subscription.change"
+
 REASON_TRIAL_REQUESTED_UNAVAILABLE: Final = "trial_unavailable"
 
 REASON_IDEMPOTENCY_KEY_REQUIRED: Final = "idempotency_key_required"
@@ -237,6 +277,15 @@ REASON_SUBSCRIPTION_EXISTS: Final = "subscription_already_active"
 REASON_SUBSCRIPTION_PENDING: Final = "subscription_pending"
 
 REASON_ADDON_PENDING: Final = "addon_pending"
+
+# One plan change at a time: a scheduled change or an unsettled upgrade.
+REASON_PLAN_CHANGE_PENDING: Final = "plan_change_pending"
+
+REASON_PLAN_CHANGE_SAME_PLAN: Final = "plan_change_same_plan"
+
+# The subscription cannot change plan now (cancellation scheduled, a different
+# currency or environment, or a prorated charge below the provider minimum).
+REASON_PLAN_CHANGE_UNAVAILABLE: Final = "plan_change_unavailable"
 
 REASON_NO_CURRENT_SUBSCRIPTION: Final = "no_current_subscription"
 

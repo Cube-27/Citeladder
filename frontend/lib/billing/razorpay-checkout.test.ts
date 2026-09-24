@@ -30,6 +30,7 @@ describe('subscription modal', () => {
         // provider's own reference for the intent. No secret, no amount.
         public_key: 'rzp_test_fixture',
         reference: 'sub_fixture',
+        reference_kind: 'subscription',
         expires_at: '2099-01-01',
         quote: {},
       } as Parameters<typeof openRazorpay>[0],
@@ -43,6 +44,31 @@ describe('subscription modal', () => {
     });
     expect(options).not.toHaveProperty('amount');
     expect(options).not.toHaveProperty('order_id');
+  });
+
+  it('opens a one-time purchase by its server order, never a browser amount', async () => {
+    let options: Record<string, unknown> = {};
+    window.Razorpay = class {
+      constructor(value: unknown) {
+        options = value as Record<string, unknown>;
+      }
+      on() {}
+      open() {
+        (options.modal as { ondismiss: () => void }).ondismiss();
+      }
+    };
+    await openRazorpay(
+      {
+        public_key: 'rzp_test_fixture',
+        reference: 'order_fixture',
+        reference_kind: 'order',
+        provider_mode: 'live',
+      } as Parameters<typeof openRazorpay>[0],
+      'payer@example.test',
+    );
+    expect(options).toMatchObject({ key: 'rzp_test_fixture', order_id: 'order_fixture' });
+    expect(options).not.toHaveProperty('subscription_id');
+    expect(options).not.toHaveProperty('amount');
   });
 
   it('fails on blocked script loading and permits a fresh attempt', async () => {

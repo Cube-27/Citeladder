@@ -12,6 +12,7 @@ from sqlalchemy import select
 from app.connectors.billing.base import ProviderPayment, ProviderSubscription
 from app.connectors.billing.razorpay_webhook import (
     parse_payment_event,
+    parse_refund_event,
     parse_subscription_event,
 )
 from app.core.database import get_session
@@ -58,6 +59,9 @@ async def drain_webhook(payload: dict) -> None:
     class FixtureProvider:
         async def fetch_payment(self, _reference):
             return parse_payment_event(payload, provider_mode="test")
+
+        async def fetch_refund(self, _reference):
+            return parse_refund_event(payload, provider_mode="test")
 
         async def fetch_subscription(self, _reference):
             record = parse_subscription_event(payload, provider_mode="test")

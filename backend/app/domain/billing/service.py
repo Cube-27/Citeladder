@@ -485,6 +485,9 @@ async def _schedule_cancellation(
     result = await provider.cancel_subscription(
         subscription.external_subscription_id, at_cycle_end=True
     )
+    # A subscription that ends at this period never renews onto a scheduled
+    # plan, so the pending change is dropped rather than shown as upcoming.
+    subscription.scheduled_change = None
     await apply_subscription_state(
         session,
         subscription,

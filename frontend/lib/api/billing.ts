@@ -23,6 +23,7 @@ import {
   billingUsageSchema,
   noCardClaimSchema,
   noCardOfferSchema,
+  planChangeSchema,
   resolvedQuoteSchema,
   subscriptionChangeSchema,
   subscriptionCheckoutSchema,
@@ -126,7 +127,7 @@ export const billingApi = {
   checkout: async (activationId: string, options?: ApiRequestOptions) =>
     strictValidate(
       subscriptionCheckoutSchema,
-      await apiClient.get<unknown>(`/billing/subscriptions/${activationId}/checkout`, options),
+      await apiClient.get<unknown>(`/billing/activations/${activationId}/checkout`, options),
       'billing.checkout',
     ),
   activation: async (activationId: string, options?: ApiRequestOptions) =>
@@ -143,7 +144,7 @@ export const billingApi = {
     strictValidate(
       activationSchema,
       await apiClient.post<unknown>(
-        `/billing/subscriptions/${activationId}/verify`,
+        `/billing/activations/${activationId}/verify`,
         callback,
         options,
       ),
@@ -256,6 +257,23 @@ export const billingApi = {
       { ...options, idempotencyKey },
     );
     return strictValidate(activationSchema, response, 'billing.purchaseTopup');
+  },
+
+  /**
+   * Change the base plan. The server decides the direction and prices an
+   * upgrade's prorated charge; the browser names only the target plan.
+   */
+  changePlan: async (
+    catalogKey: SelfServePlanKey,
+    idempotencyKey: string,
+    options?: ApiRequestOptions,
+  ) => {
+    const response = await apiClient.post<unknown>(
+      '/billing/subscription/change',
+      { catalog_key: catalogKey },
+      { ...options, idempotencyKey },
+    );
+    return strictValidate(planChangeSchema, response, 'billing.changePlan');
   },
 
   cancelSubscription: async (options?: ApiRequestOptions) => {

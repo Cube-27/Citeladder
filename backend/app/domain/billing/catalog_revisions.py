@@ -414,6 +414,23 @@ def _validate_items(
                     raise ValueError("top-ups may only grant consumable credits")
 
 
+def _validate_provider_plans(plans: tuple[PlanPayload, ...]) -> None:
+    """One provider plan per (plan, region): a plan ref is never shared.
+
+    A provider plan is an immutable artifact with one amount and currency, so
+    two catalog prices naming the same ref would charge one of them the
+    other's amount.
+    """
+    refs = [
+        price.provider_price_ref
+        for plan in plans
+        for price in plan.regional_byok_prices.values()
+        if price.provider_price_ref
+    ]
+    if len(refs) != len(set(refs)):
+        raise ValueError("each provider plan reference may price only one SKU")
+
+
 class CatalogPayload(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     schema_version: Literal[1]
@@ -432,6 +449,7 @@ class CatalogPayload(BaseModel):
         _validate_agent_capabilities(by_key)
         _validate_platform_routes(self.platform_routes)
         _validate_items(self.addons, self.topups)
+        _validate_provider_plans(self.plans)
         if self.campaign.enabled and not by_key[self.campaign.plan_key].grants:
             raise ValueError("enabled campaign plan requires a grant bundle")
         return self

@@ -72,6 +72,8 @@ class ProviderRegistration:
     #: Whether one of THIS vendor's event type names denotes a PAYMENT rather
     #: than a subscription lifecycle change.
     is_payment_event: Callable[[str], bool]
+    #: Whether one of THIS vendor's event type names denotes a REFUND.
+    is_refund_event: Callable[[str], bool]
     #: Raw-request authentication + parsing for this vendor's webhooks.
     webhook: BillingWebhookVerifier
     #: Public browser-checkout initialization + callback authentication.
@@ -253,6 +255,15 @@ def payment_event_predicate(provider: str) -> Callable[[str], bool]:
     return registration.is_payment_event
 
 
+def refund_event_predicate(provider: str) -> Callable[[str], bool]:
+    """Whether an event type of this provider denotes a refund."""
+    _ensure_registered()
+    registration = _REGISTRY.get(provider)
+    if registration is None:
+        return lambda _event_type: False
+    return registration.is_refund_event
+
+
 __all__ = [
     "CODE_PROVIDER_MODE_MISMATCH",
     "CODE_PROVIDER_NOT_CONFIGURED",
@@ -268,6 +279,7 @@ __all__ = [
     "known_providers",
     "payment_event_predicate",
     "provider_secret_values",
+    "refund_event_predicate",
     "region_ready",
     "register_provider",
     "registrations",

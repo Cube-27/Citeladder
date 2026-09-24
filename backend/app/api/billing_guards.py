@@ -11,21 +11,38 @@ provider reference (invariant 6).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+from typing import Annotated
+
+from fastapi import Depends, Header, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import (
     BillingProvider,
+    BillingProviderError,
     HostedPayment,
     HostedSubscription,
 )
+from app.connectors.billing.registry import ProviderUnavailableError
 from app.core.config.billing_contracts import (
     LIVE_SUBSCRIPTION_STATUSES,
     REASON_ADDON_PENDING,
+    REASON_CHECKOUT_UNAVAILABLE,
     REASON_SUBSCRIPTION_EXISTS,
     REASON_SUBSCRIPTION_PENDING,
 )
 from app.core.config.billing_tax import BillingIdentity, TaxPolicyError
-from app.domain.billing.idempotency import ProviderCall, provider_metadata
+from app.core.http_errors import raise_api_error
+from app.domain.billing.catalog_revisions import CatalogUnavailableError
+from app.domain.billing.commercial_journeys import IntroductoryAccessError
+from app.domain.billing.idempotency import (
+    IdempotencyConflictError,
+    ProviderCall,
+    TrialUnavailableError,
+    provider_metadata,
+    validate_idempotency_key,
+)
 from app.domain.billing.service import (
     BillingConflictError,
     ResolvedIntent,
@@ -35,6 +52,52 @@ from app.domain.billing.service import (
     pending_base_activation,
 )
 from app.models.billing import BillingAccount, PendingActivation
+
+
+def require_idempotency_key(
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> str:
+    """Require a well-formed ``Idempotency-Key`` on every commercial mutation.
+
+    A missing or malformed key REJECTS with 400: without it a browser retry
+    could double-charge.
+    """
+    try:
+        return validate_idempotency_key(idempotency_key)
+    except ValueError as exc:
+        raise_api_error(400, str(exc), cause=exc)
+
+
+IdempotencyKey = Annotated[str, Depends(require_idempotency_key)]
+
+
+@contextmanager
+def safe_commercial_errors() -> Iterator[None]:
+    """Map domain refusals onto safe HTTP statuses (never a provider message)."""
+    try:
+        yield
+    except ProviderUnavailableError as exc:
+        # No provider is configured, or not in this record's environment. That
+        # is a commercial refusal the caller can act on, not a server fault —
+        # and it is decided before any provider I/O.
+        raise_api_error(409, REASON_CHECKOUT_UNAVAILABLE, cause=exc)
+    except (
+        TrialUnavailableError,
+        IdempotencyConflictError,
+        BillingConflictError,
+        IntroductoryAccessError,
+        TaxPolicyError,
+    ) as exc:
+        raise_api_error(409, str(exc), cause=exc)
+    except BillingProviderError as exc:
+        raise_api_error(502, exc.code, cause=exc)
+    except CatalogUnavailableError as exc:
+        raise_api_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Commercial catalog unavailable",
+            code=str(exc),
+            cause=exc,
+        )
 
 
 def purchase_country(account: BillingAccount) -> str:
@@ -154,11 +217,14 @@ def one_time_provider_call(
 
 
 __all__ = [
+    "IdempotencyKey",
     "base_provider_call",
     "one_time_provider_call",
     "purchase_country",
     "purchase_identity",
     "reject_existing_base",
     "reject_unsettled_addon",
+    "require_idempotency_key",
     "require_live_base",
+    "safe_commercial_errors",
 ]

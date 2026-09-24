@@ -51,6 +51,8 @@ class CheckoutResponse(BaseModel):
     sdk_name: str = ""
     public_key: str = ""
     reference: str = ""
+    #: ``subscription`` (recurring base plan) or ``order`` (one-time charge).
+    reference_kind: str = ""
     expires_at: datetime
     quote: ResolvedQuoteResponse
 
@@ -84,7 +86,7 @@ async def workspace_activation(
     workspace_id: uuid.UUID,
     lock: bool = False,
 ) -> PendingActivation | None:
-    """One base activation belonging to ``workspace_id``'s billing account.
+    """One activation (of any kind) belonging to ``workspace_id``'s account.
 
     Authorization is the WORKSPACE the caller is administering, joined
     through ``BillingAccount.workspace_id`` — never the signed-in user's own
@@ -97,7 +99,6 @@ async def workspace_activation(
         .where(
             PendingActivation.id == activation_id,
             BillingAccount.workspace_id == workspace_id,
-            PendingActivation.activation_kind == "base",
         )
     )
     if lock:
@@ -162,6 +163,7 @@ def checkout_response(pending: PendingActivation) -> CheckoutResponse:
         sdk_name=initialization.sdk_name,
         public_key=initialization.public_key,
         reference=initialization.reference,
+        reference_kind=initialization.reference_kind,
         expires_at=pending.expires_at,
         quote=_activation_quote(pending),
     )
