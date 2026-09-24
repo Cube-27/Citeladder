@@ -30,6 +30,7 @@ import {
   readPendingIntent,
   type PendingPricingIntentV1,
 } from '@/lib/billing/pending-pricing-intent';
+import { billingErrorMessage } from '@/lib/billing/reason-copy';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { publicOrigins } from '@/lib/config/public-origins';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -275,9 +276,20 @@ function QuoteConfirmation({
   );
 }
 
-function Notice({ error, fallback }: Readonly<{ error: unknown; fallback: string }>) {
+/**
+ * A route-level failure the checkout status does not already report. Errors
+ * raised inside the checkout hook become its notice, so repeating them here
+ * printed the same message twice.
+ */
+function Notice({
+  error,
+  fallback,
+  shown,
+}: Readonly<{ error: unknown; fallback: string; shown: string | null }>) {
   if (!error) return null;
-  return <p role="alert">{error instanceof Error ? error.message : fallback}</p>;
+  const message = billingErrorMessage(error, fallback);
+  if (message === shown) return null;
+  return <p role="alert">{message}</p>;
 }
 
 function PricingState({
@@ -415,8 +427,8 @@ export default function PricingRoute() {
           onConfirm={() => void confirm.mutate()}
         />
         <CheckoutStatus checkout={checkout} />
-        <Notice error={purchase.error} fallback="Purchase unavailable." />
-        <Notice error={confirm.error} fallback="Checkout unavailable." />
+        <Notice error={purchase.error} fallback="Purchase unavailable." shown={checkout.notice} />
+        <Notice error={confirm.error} fallback="Checkout unavailable." shown={checkout.notice} />
       </Stack>
     </PageShell>
   );

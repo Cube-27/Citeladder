@@ -13,10 +13,7 @@ type ConnectionState = ReturnType<typeof useEngineConnection>;
 function ApiKeyField({ state }: Readonly<{ state: ConnectionState }>) {
   const { configured, apiKey, setApiKey } = state;
   return (
-    <Field
-      label={configured ? 'API key (enter a new key to rotate)' : 'API key'}
-      hint="Write-only — your stored key is never displayed."
-    >
+    <Field label={configured ? 'API key (enter a new key to rotate)' : 'API key'}>
       {(props) => (
         <Input
           {...props}
@@ -42,10 +39,7 @@ function BasicAuthFields({ state }: Readonly<{ state: ConnectionState }>) {
   const { configured, apiLogin, setApiLogin, apiPassword, setApiPassword } = state;
   return (
     <>
-      <Field
-        label={configured ? 'API login (enter both fields to rotate)' : 'API login'}
-        hint="Powered by the DataForSEO Google Organic SERP API."
-      >
+      <Field label={configured ? 'API login (enter both fields to rotate)' : 'API login'}>
         {(props) => (
           <Input
             {...props}
@@ -57,7 +51,7 @@ function BasicAuthFields({ state }: Readonly<{ state: ConnectionState }>) {
           />
         )}
       </Field>
-      <Field label="API password" hint="Write-only — your stored password is never displayed.">
+      <Field label="API password">
         {(props) => (
           <Input
             {...props}

@@ -166,11 +166,25 @@ def _visible_brand_names(region: Any, container_ids: set[int]) -> list[str]:
 
 
 def _has_product_detail_heading(region: Any, container_ids: set[int]) -> bool:
-    for node in _find(region, ".//h2"):
+    """A product-detail section header in the page's own region.
+
+    Many themes title that section with a disclosure toggle rather than a
+    heading: Best&Less renders ``<button>Product Description <i>south</i>
+    </button>``, so its 129 product pages carried no heading, fell through to
+    the ``/Categories/`` route and entered Commerce as categories. A toggle's
+    label also carries its icon ligature, so it matches on the leading phrase;
+    a real heading must still match exactly.
+    """
+    for node in _find(region, ".//h2 | .//h3 | .//button | .//summary"):
         if not node_outside_containers(node, container_ids):
             continue
         normalized = " ".join(_WORD_RE.findall(_text(node).lower()))
         if normalized in _config.PRODUCT_DETAIL_HEADING_PHRASES:
+            return True
+        if node.tag in {"button", "summary"} and any(
+            normalized.startswith(f"{phrase} ")
+            for phrase in _config.PRODUCT_DETAIL_HEADING_PHRASES
+        ):
             return True
     return False
 

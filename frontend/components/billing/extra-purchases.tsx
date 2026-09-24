@@ -14,6 +14,7 @@ import type {
   CatalogTopup,
 } from '@/lib/api/billing';
 import { extrasForPlan, formatMoney, isPurchasable } from '@/lib/billing/catalog';
+import { billingReasonMessage } from '@/lib/billing/reason-copy';
 import { capabilityLabel } from '@/lib/marketing-content/pricing';
 
 export type ExtraPurchase = (kind: 'addon' | 'topup', catalogKey: string, quantity: number) => void;
@@ -59,7 +60,9 @@ function ExtraRow({
           usable for {entry.expiry_days} days or until your plan ends, whichever is first
         </span>
         {!purchasable && entry.unavailable_reason ? (
-          <span className="text-muted text-xs">{entry.unavailable_reason}</span>
+          <span className="text-muted text-xs">
+            {billingReasonMessage(entry.unavailable_reason)}
+          </span>
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">

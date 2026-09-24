@@ -12,11 +12,13 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.commerce_catalog import (
+    COMMERCE_BREADCRUMB_INDEX_NAMES,
     COMMERCE_PROJECTOR_VERSION,
     COMMERCE_VISIBLE_PRICE_AMBIGUOUS_TOKENS,
     COMMERCE_VISIBLE_PRICE_CURRENCY_MARKERS,
 )
 from app.domain.commerce.catalog_membership import (
+    _canonical_or_blank,
     _catalog_identity,
     _identity_base_url,
     _link_product_to_projected_shelves,
@@ -483,21 +485,11 @@ async def _merge_projected_categories(
     facts = _dict_value(artifact.normalized_facts)
     structured = _dict_value(_dict_value(facts.get("structured_data")).get("product"))
     names = [str(value) for value in _list_value(structured.get("category"))]
-    commerce = _dict_value(facts.get("commerce"))
-    # Separators are dropped BEFORE the slice, not after. Themes mark a
-    # breadcrumb trail up as one node per crumb AND one per separator, so
-    # "Home / Women / Dresses / Linen Dress" arrives as seven nodes. Slicing
-    # that raw both took the bare "/" as a category name -- creating a catalog
-    # category literally named "/" that all 413 of a site's products hung off
-    # while its 19 real collections reported zero -- and shifted the [1:-1]
-    # window off the crumbs it is meant to select.
-    breadcrumbs = [
-        crumb
-        for value in _list_value(commerce.get("breadcrumbs"))
-        if _is_named(crumb := str(value))
-    ]
-    if len(breadcrumbs) > 2:
-        names.extend(breadcrumbs[1:-1])
+    names.extend(
+        _breadcrumb_categories(
+            _dict_value(facts.get("commerce")), page_url=product.canonical_url
+        )
+    )
     named = [name for name in dict.fromkeys(names) if _is_named(name)]
     if not named and await _has_membership(session, product_id=product.id):
         # "Uncategorized" is a FALLBACK, not a label. The shelf pages assign
@@ -515,6 +507,75 @@ async def _merge_projected_categories(
         names=named or ["Uncategorized"],
         source_observation_id=observation.id,
     )
+
+
+def _crumb_key(value: str) -> str:
+    return " ".join(value.casefold().split())
+
+
+def _breadcrumb_categories(commerce: dict[str, Any], *, page_url: str) -> list[str]:
+    """The shelves a product page's breadcrumb trail places it on.
+
+    Separators are dropped first. Themes mark a trail up as one node per crumb
+    AND one per separator, so "Home / Women / Dresses / Linen Dress" arrives as
+    seven nodes; slicing that raw took the bare "/" as a category name that all
+    413 of a site's products hung off.
+
+    The root crumb is the site, never a shelf. The LAST crumb is the product
+    itself only when the trail does not link it to another page: Best&Less ends
+    its trail at the parent shelf ("Men's Underwear and Socks" linking to
+    ``/mens-underwear``), so dropping it unconditionally lost the one shelf
+    that mattered. Crumbs naming the site's category index ("Categories") are
+    navigation, not shelves.
+    """
+    crumbs = [
+        " ".join(crumb.split())
+        for value in _list_value(commerce.get("breadcrumbs"))
+        if _is_named(crumb := str(value))
+    ]
+    ancestors = crumbs[1:]
+    last = len(crumbs) - 1
+    if ancestors and last not in _crumbs_linked_elsewhere(
+        crumbs, _list_value(commerce.get("breadcrumb_links")), page_url=page_url
+    ):
+        ancestors = ancestors[:-1]
+    return [
+        crumb
+        for crumb in ancestors
+        if _crumb_key(crumb) not in COMMERCE_BREADCRUMB_INDEX_NAMES
+    ]
+
+
+def _crumbs_linked_elsewhere(
+    crumbs: list[str], links: list[Any], *, page_url: str
+) -> set[int]:
+    """Positions of the crumbs the trail links to a page other than this one.
+
+    Links are recorded in document order, so each is paired with the next
+    crumb occurrence carrying its title. Matching on title alone let an
+    earlier "Dresses" link vouch for a later, unlinked "Dresses" leaf.
+    """
+    page = _canonical_or_blank(page_url)
+    linked: set[int] = set()
+    cursor = 0
+    for link in links:
+        entry = _dict_value(link)
+        key = _crumb_key(str(entry.get("title") or ""))
+        position = next(
+            (
+                index
+                for index in range(cursor, len(crumbs))
+                if _crumb_key(crumbs[index]) == key
+            ),
+            None,
+        )
+        if position is None:
+            continue
+        cursor = position + 1
+        target = _canonical_or_blank(str(entry.get("url") or ""), page_url)
+        if target and target != page:
+            linked.add(position)
+    return linked
 
 
 async def _has_membership(session: AsyncSession, *, product_id: uuid.UUID) -> bool:

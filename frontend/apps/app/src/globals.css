@@ -441,7 +441,6 @@
   --table-header-height: 36px;
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 10px;
-  --dialog-scroll: 60vh;
   --score-ring: 72px;
   /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
   --radius-control: 6px;
