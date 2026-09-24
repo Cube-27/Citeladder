@@ -67,6 +67,8 @@ class ResolvedIntent:
     credit_price_ref: str
     quote: ResolvedQuoteResponse
     tax_snapshot: dict[str, object]
+    #: An upgrade's frozen target (subscription + full renewal terms).
+    change_terms: dict[str, object] | None = None
 
 
 def _quote_secret() -> bytes:
@@ -221,6 +223,7 @@ async def resolve_base_intent(
         at=at,
         billing_identity=billing_identity,
     )
+    _require_provider_plan_gross(base, quote)
     calculation = calculate_tax(
         subtotal_minor=quote.subtotal_price.amount_minor,
         discount_minor=quote.discount.amount_minor,
@@ -240,6 +243,23 @@ async def resolve_base_intent(
         tax_snapshot=tax_snapshot(identity=billing_identity, calculation=calculation),
         quote=quote,
     )
+
+
+def _require_provider_plan_gross(
+    base: CatalogPrice, quote: ResolvedQuoteResponse
+) -> None:
+    """The recurring charge must equal the quote the buyer is shown.
+
+    A provider plan charges the fixed gross it was provisioned with (the
+    price plus the GST frozen in the revision). If today's quote computes a
+    different total (an approved GST rate that changed since the plan was
+    provisioned), checkout is refused rather than letting the provider
+    collect an amount the activation would then reject.
+    """
+    if base.frozen_tax_minor is None:
+        return
+    if quote.total_price.amount_minor != base.amount_minor + base.frozen_tax_minor:
+        raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
 
 
 def _bounded_quantity(quantity: int, bounds: QuantityBounds) -> int:
@@ -276,9 +296,40 @@ def _resolve_pack_intent(
         raise BillingConflictError(reason or REASON_CHECKOUT_UNAVAILABLE)
     if billing_identity is None:
         raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
-    quote = resolve_quote(
+    return resolve_charge_intent(
         kind=kind,
         catalog_key=item.key,
+        quantity=quantity,
+        price=price,
+        country_code=country_code,
+        region=region,
+        catalog_revision=catalog_revision,
+        at=at,
+        billing_identity=billing_identity,
+    )
+
+
+def resolve_charge_intent(
+    *,
+    kind: str,
+    catalog_key: str,
+    quantity: int,
+    price: CatalogPrice,
+    country_code: str,
+    region: str,
+    catalog_revision: str,
+    at: datetime,
+    billing_identity: BillingIdentity,
+    change_terms: dict[str, object] | None = None,
+) -> ResolvedIntent:
+    """Quote one ONE-TIME charge (price x quantity + GST) server-side.
+
+    Shared by add-on/top-up purchases and the prorated upgrade charge, so every
+    one-time order is taxed and signed the same way.
+    """
+    quote = resolve_quote(
+        kind=kind,
+        catalog_key=catalog_key,
         quantity=quantity,
         credential_mode=CREDENTIAL_MODE_BYOK,
         country_code=country_code,
@@ -298,7 +349,7 @@ def _resolve_pack_intent(
     )
     return ResolvedIntent(
         kind=kind,
-        catalog_key=item.key,
+        catalog_key=catalog_key,
         quantity=quantity,
         credential_mode=CREDENTIAL_MODE_BYOK,
         country_code=country_code,
@@ -307,6 +358,7 @@ def _resolve_pack_intent(
         credit_price_ref="",
         tax_snapshot=tax_snapshot(identity=billing_identity, calculation=calculation),
         quote=quote,
+        change_terms=change_terms,
     )
 
 
@@ -379,6 +431,7 @@ __all__ = [
     "ResolvedIntent",
     "resolve_addon_intent",
     "resolve_base_intent",
+    "resolve_charge_intent",
     "resolve_quote",
     "resolve_topup_intent",
 ]

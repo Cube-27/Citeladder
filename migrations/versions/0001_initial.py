@@ -1527,6 +1527,9 @@ def upgrade() -> None:
         sa.Column("cadence", sa.String(length=24), nullable=False),
         sa.Column("credential_mode", sa.String(length=16), nullable=False),
         sa.Column("frozen_terms", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column(
+            "scheduled_change", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
         sa.Column("quantity", sa.Integer(), server_default="1", nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
         sa.Column("status", sa.String(length=24), nullable=False),
@@ -4717,6 +4720,7 @@ def upgrade() -> None:
         sa.Column("checkout_url", sa.Text(), nullable=True),
         sa.Column("quote", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("tax_snapshot", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("change_terms", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("country_code", sa.String(length=2), nullable=False),
         sa.Column("region", sa.String(length=16), nullable=False),
         sa.Column("settled_by", sa.String(length=24), nullable=True),
@@ -4786,6 +4790,13 @@ def upgrade() -> None:
         ["billing_account_id", "catalog_key"],
         unique=True,
         postgresql_where=sa.text("activation_kind = 'addon' AND status = 'pending'"),
+    )
+    op.create_index(
+        "uq_pending_activation_one_pending_upgrade",
+        "pending_activations",
+        ["billing_account_id"],
+        unique=True,
+        postgresql_where=sa.text("activation_kind = 'upgrade' AND status = 'pending'"),
     )
     op.create_table(
         "billing_payments",

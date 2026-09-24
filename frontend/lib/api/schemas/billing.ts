@@ -34,7 +34,7 @@ export const counterCapabilityTypeSchema = z.enum([
  * must branch on this, never on nullability.
  */
 export const limitStateSchema = z.enum(['finite', 'unlimited', 'unknown']);
-export const activationKindSchema = z.enum(['base', 'addon', 'topup']);
+export const activationKindSchema = z.enum(['base', 'addon', 'topup', 'upgrade']);
 export const activationStatusSchema = z.enum(['pending', 'activated', 'failed', 'abandoned']);
 
 export const moneySchema = responseObject({
@@ -230,11 +230,20 @@ export const resolvedCapabilitySchema = responseObject({
   ordered_draw_grant_ids: z.array(uuid()),
 });
 
+/** The one plan change waiting for the next renewal. */
+export const scheduledPlanChangeSchema = responseObject({
+  direction: z.enum(['upgrade', 'downgrade']),
+  catalog_key: z.string(),
+  effective_at: z.string(),
+  state: z.enum(['requested', 'scheduled', 'provider_rejected']),
+});
+
 export const subscriptionSummarySchema = responseObject({
   catalog_key: z.string(),
   status: z.string(),
   current_period_end: z.string().nullable(),
   cancel_at_period_end: z.boolean(),
+  scheduled_change: scheduledPlanChangeSchema.nullable(),
 });
 
 export const trialGrantSummarySchema = responseObject({

@@ -111,7 +111,9 @@ async def record_payment_receipt(
     if existing is not None:
         if existing.receipt_sha256 != digest:
             raise PaymentReceiptConflictError("payment_receipt_conflict")
-        await issue_paid_invoice(session, pending=pending, payment=existing)
+        await issue_paid_invoice(
+            session, pending=pending, payment=existing, subscription=subscription
+        )
         return existing
     receipt = BillingPayment(
         billing_account_id=pending.billing_account_id,
@@ -143,7 +145,9 @@ async def record_payment_receipt(
     )
     session.add(receipt)
     await session.flush()
-    await issue_paid_invoice(session, pending=pending, payment=receipt)
+    await issue_paid_invoice(
+        session, pending=pending, payment=receipt, subscription=subscription
+    )
     return receipt
 
 

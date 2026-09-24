@@ -98,6 +98,10 @@ class BillingSettings(BaseSettings):
     # Bounded so a typo can neither create a one-cycle subscription that
     # silently completes nor an unbounded mandate.
     subscription_total_cycles: int = Field(default=1200, ge=12, le=1200)
+    # Smallest prorated upgrade charge, in minor units. Razorpay refuses an
+    # order below one major unit, so a smaller difference is not charged and
+    # the upgrade is refused rather than created and left unpayable.
+    plan_change_minimum_charge_minor: int = Field(default=100, ge=100)
     max_webhook_body_bytes: int = 262_144
 
     @field_validator("india_gst_rate", mode="before")

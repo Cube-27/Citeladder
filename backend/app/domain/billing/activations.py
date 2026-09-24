@@ -47,6 +47,7 @@ from app.core.config.billing_contracts import (
     ACTIVATION_ACTIVATED,
     ACTIVATION_KIND_ADDON,
     ACTIVATION_KIND_TOPUP,
+    ACTIVATION_KIND_UPGRADE,
     ACTIVATION_PENDING,
     CADENCE_MONTHLY,
     IDEMPOTENCY_COMPLETED,
@@ -63,6 +64,7 @@ from app.domain.billing.catalog_revisions import (
     item_terms_from_row,
 )
 from app.domain.billing.payments import record_payment_receipt
+from app.domain.billing.plan_changes import PlanChangeEvidenceError, settle_upgrade
 from app.domain.billing.schemas import ActivationResponse
 from app.domain.billing.service import (
     apply_subscription_state,
@@ -229,7 +231,10 @@ async def _upsert_subscription(
                 "catalog_key": pending.catalog_key,
                 "credential_mode": pending.credential_mode,
                 "quantity": pending.quantity,
+                "price_ref": pending.external_price_id or "",
+                "currency": (quote.get("total_price") or {}).get("currency", ""),
                 "quote": quote,
+                "tax_snapshot": pending.tax_snapshot,
                 "grant_specs": [list(spec) for spec in frozen_specs],
             },
             quantity=pending.quantity,
@@ -386,6 +391,11 @@ async def _settle(
             raise ActivationRejectedError("provider_record_kind_mismatch")
         paid_at = _verify_payment(pending, provider_record)
         await record_payment_receipt(session, pending=pending, payment=provider_record)
+        if pending.activation_kind == ACTIVATION_KIND_UPGRADE:
+            try:
+                return await settle_upgrade(session, pending, paid_at)
+            except PlanChangeEvidenceError as exc:
+                raise ActivationRejectedError(str(exc)) from exc
         return await _issue_item_bundle(session, pending, paid_at)
     if not isinstance(provider_record, ProviderSubscription):
         raise ActivationRejectedError("provider_record_kind_mismatch")

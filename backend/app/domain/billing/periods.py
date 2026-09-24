@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.billing_catalog import scale_grant_specs
 from app.core.config.billing_contracts import (
+    PLAN_BUNDLE_PRIORITY,
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCEL_SCHEDULED,
 )
@@ -119,7 +120,7 @@ async def issue_period_bundle(
         period_end=end,
         bundle_role="primary",
         profile_key=subscription.catalog_key,
-        profile_priority=200,
+        profile_priority=PLAN_BUNDLE_PRIORITY,
     )
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from pydantic import SecretStr
@@ -317,3 +318,28 @@ def test_billing_identity_validation_and_discount_before_tax(monkeypatch) -> Non
         calculation.tax_minor,
         calculation.total_minor,
     ) == (9_000, 1_620, 10_620)
+
+
+async def test_checkout_refuses_a_quote_the_provider_plan_would_not_charge(
+    monkeypatch,
+) -> None:
+    """The provider plan bills its provisioned gross; a quote that disagrees
+    (the approved GST rate changed after provisioning) must not reach it.
+    """
+    _enable_checkout(monkeypatch, {f"tier_1:{REGION_INDIA}": "ref_private_in"})
+    provisioned = launch_catalog(refs=_refs)  # authored at the fixture 18% GST
+
+    async def load(_session):
+        return provisioned
+
+    monkeypatch.setattr("app.domain.billing.service.published_commercial_catalog", load)
+    monkeypatch.setattr(billing_settings, "india_gst_rate", Decimal("0.12"))
+    with pytest.raises(BillingConflictError, match="checkout_unavailable"):
+        await resolve_base_intent(
+            _CatalogSession(),
+            catalog_key="tier_1",
+            credential_mode="byok",
+            country_code="IN",
+            billing_identity=_identity(state_code="27"),
+            at=datetime.now(UTC),
+        )

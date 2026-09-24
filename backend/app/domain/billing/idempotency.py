@@ -56,6 +56,7 @@ from app.core.config.billing_contracts import (
     REASON_CHECKOUT_UNAVAILABLE,
     REASON_IDEMPOTENCY_KEY_REQUIRED,
     REASON_IDEMPOTENCY_KEY_REUSED,
+    REASON_PLAN_CHANGE_PENDING,
     REASON_SUBSCRIPTION_PENDING,
     REASON_TRIAL_REQUESTED_UNAVAILABLE,
 )
@@ -211,6 +212,7 @@ async def _insert_intent(
         external_price_id=intent.price_ref,
         quote=intent.quote.model_dump(mode="json"),
         tax_snapshot=intent.tax_snapshot,
+        change_terms=intent.change_terms,
         country_code=intent.country_code,
         region=intent.region,
         idempotency_key=idempotency_key,
@@ -333,6 +335,7 @@ async def replay_intent(
 _PENDING_SLOT_REASONS: dict[str, str] = {
     "uq_pending_activation_one_pending_base": REASON_SUBSCRIPTION_PENDING,
     "uq_pending_activation_one_pending_addon": REASON_ADDON_PENDING,
+    "uq_pending_activation_one_pending_upgrade": REASON_PLAN_CHANGE_PENDING,
 }
 
 
