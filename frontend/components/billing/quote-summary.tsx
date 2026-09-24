@@ -28,12 +28,18 @@ export function BillingQuoteSummary({
   if (quote.taxable_value.amount_minor !== quote.subtotal_price.amount_minor) {
     lines.push(['Taxable value', money(quote.taxable_value)]);
   }
-  for (const [label, value] of [
-    ['CGST', quote.cgst],
-    ['SGST', quote.sgst],
-    ['IGST', quote.igst],
+  // `tax_rate` is the combined GST rate as a fraction ("0.18"). CGST and SGST
+  // each carry half of it; IGST carries all of it — the same split the
+  // invoice PDF prints.
+  const combined = Number(quote.tax_rate) * 100;
+  for (const [label, value, share] of [
+    ['CGST', quote.cgst, 0.5],
+    ['SGST', quote.sgst, 0.5],
+    ['IGST', quote.igst, 1],
   ] as const) {
-    if (value.amount_minor > 0) lines.push([`${label} (${quote.tax_rate}%)`, money(value)]);
+    if (value.amount_minor > 0) {
+      lines.push([`${label} (${Number((combined * share).toFixed(2))}%)`, money(value)]);
+    }
   }
   return (
     <output className={panelClasses({ tone: 'tonal' }, 'grid gap-2 text-sm')}>
