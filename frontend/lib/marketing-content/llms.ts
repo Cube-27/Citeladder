@@ -1,7 +1,8 @@
 import { COMPETITORS } from './compare';
 import { POSTS } from './blog';
-import { PARENT_COMPANY } from './legal';
+import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from './legal';
 import { FOUNDER, PRODUCT_HEAD } from './people';
+import { CITELADDER_LINKEDIN } from './social';
 
 /**
  * Plain-text facts for answer engines at `/llms.txt`. Keep this aligned with
@@ -15,7 +16,8 @@ export const LLMS_TXT = [
   '',
   'CiteLadder is a Cube27 product.',
   `Parent: ${PARENT_COMPANY.legalName} (${PARENT_COMPANY.href})`,
-  `Registered office: ${PARENT_COMPANY.address}`,
+  `Principal business address: ${PARENT_COMPANY.address}`,
+  `LinkedIn: ${CITELADDER_LINKEDIN}`,
   `Product: ${PRODUCT_HEAD.name}, ${PRODUCT_HEAD.role} (${PRODUCT_HEAD.linkedin})`,
   `Company: ${FOUNDER.name}, ${FOUNDER.role} (${FOUNDER.linkedin})`,
   `Contact: ${PRODUCT_HEAD.email}`,
@@ -51,10 +53,9 @@ export const LLMS_TXT = [
   ...COMPETITORS.map((competitor) => `- https://citeladder.com/compare/${competitor.slug}`),
   '- https://citeladder.com/docs/mcp',
   '',
-  '## Optional reading',
+  '## Policies',
   '',
-  'Privacy and terms are Cube27 documents, not a second copy on this domain.',
-  PARENT_COMPANY.privacyHref,
-  PARENT_COMPANY.termsHref,
+  `CiteLadder's policies are published here and bind ${PARENT_COMPANY.legalName}.`,
+  ...FOOTER_LEGAL_LINKS.map((link) => `- https://citeladder.com${link.href}`),
   '',
 ].join('\n');

@@ -1,0 +1,13 @@
+---
+import { LegalDocumentView } from '@/components/marketing/pages/legal';
+import { TERMS_OF_SERVICE } from '@/lib/marketing-content/legal-terms';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+---
+
+<MarketingLayout
+  title="Terms of Service · CiteLadder"
+  description={TERMS_OF_SERVICE.description}
+  canonical="/terms"
+>
+  <LegalDocumentView document={TERMS_OF_SERVICE} />
+</MarketingLayout>

@@ -12,18 +12,15 @@ import { headingId } from '@/components/marketing/blog/post-blocks';
 import { POSTS, type BlogBlock } from './blog';
 import { COMPETITORS, FACT_ROWS, FAIRNESS_POINTS } from './compare';
 import { FAQ_GROUPS } from './faq';
-import {
-  AI_POLICY,
-  COOKIE_POLICY,
-  FOOTER_LEGAL_LINKS,
-  PARENT_COMPANY,
-  type LegalDocument,
-} from './legal';
+import { AI_POLICY, COOKIE_POLICY, FOOTER_LEGAL_LINKS, type LegalDocument } from './legal';
+import { CANCELLATION_POLICY, CONTACT_PAGE, REFUND_POLICY } from './legal-billing';
+import { PRIVACY_POLICY } from './legal-privacy';
+import { TERMS_OF_SERVICE } from './legal-terms';
 import { LLMS_TXT } from './llms';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF, NAV_DROPS, NAV_LINKS, type NavDropItem } from './nav';
 import { FOUNDER, PRODUCT_HEAD } from './people';
 import { PLAN_PRESENTATION, capabilityLabel } from './pricing';
-import { CONTACT_EMAIL } from './social';
+import { CITELADDER_LINKEDIN, CONTACT_EMAIL } from './social';
 import { SOLUTION_SEGMENTS } from './solutions';
 
 /**
@@ -36,12 +33,16 @@ import { SOLUTION_SEGMENTS } from './solutions';
  * repository already enforces at E2E level — a commercial page claiming the
  * product is open source or self-hostable.
  */
-/**
- * The policies this product publishes. Privacy and Terms are the PARENT
- * company's documents and live on cube27.com, so they are asserted as
- * external footer links rather than as local documents.
- */
-const ALL_LEGAL: readonly LegalDocument[] = [COOKIE_POLICY, AI_POLICY];
+/** Every policy this product publishes; each binds the parent company. */
+const ALL_LEGAL: readonly LegalDocument[] = [
+  TERMS_OF_SERVICE,
+  PRIVACY_POLICY,
+  REFUND_POLICY,
+  CANCELLATION_POLICY,
+  COOKIE_POLICY,
+  AI_POLICY,
+  CONTACT_PAGE,
+];
 
 function richParagraphText(block: Extract<BlogBlock, { type: 'richParagraph' }>): string {
   return block.content
@@ -65,7 +66,7 @@ function internalHrefs(): string[] {
   return [
     ...fromDrops,
     ...NAV_LINKS.map((link) => link.href),
-    ...FOOTER_LEGAL_LINKS.filter((link) => !link.external).map((link) => link.href),
+    ...FOOTER_LEGAL_LINKS.map((link) => link.href),
   ];
 }
 
@@ -358,30 +359,22 @@ describe('legal content', () => {
 
   it('links every published policy from the footer', () => {
     // A policy with no route out of the footer is effectively unpublished.
-    const linked = new Set(
-      FOOTER_LEGAL_LINKS.filter((link) => !link.external).map((link) =>
-        link.href.replace(/^\//, ''),
-      ),
-    );
+    const linked = new Set(FOOTER_LEGAL_LINKS.map((link) => link.href.replace(/^\//, '')));
     for (const document of ALL_LEGAL) {
       expect(linked.has(document.slug), document.slug).toBe(true);
     }
   });
 
-  it('sends the corporate policies to the parent company, not to a local copy', () => {
-    // Privacy and Terms bind Cube27, and a second copy of a policy is one that
-    // goes stale silently — so these must stay absolute and external.
-    const external = FOOTER_LEGAL_LINKS.filter((link) => link.external);
-    expect(external.map((link) => link.label).sort()).toEqual([
-      'Privacy Policy',
-      'Terms of Service',
-    ]);
-    for (const link of external) {
-      expect(link.href, link.label).toMatch(/^https:\/\/www\.cube27\.com\//);
+  it('never publishes an unfilled placeholder or an unresolved internal path', () => {
+    // Owner-pending details stay empty and are omitted; a bracketed
+    // placeholder reaching a public policy would be a published guess.
+    for (const document of ALL_LEGAL) {
+      const text = stringsIn(document.sections).join(' ');
+      expect(text, document.slug).not.toMatch(/\[[A-Z_]{3,}\]|to be completed/);
+      for (const path of text.match(/(?<=\s)\/[a-z][a-z-]*(?=[\s.,]|$)/g) ?? []) {
+        expect(marketingRouteExists(path), `${document.slug} → ${path}`).toBe(true);
+      }
     }
-    expect(PARENT_COMPANY.name).toBe('Cube27');
-    expect(PARENT_COMPANY.legalName).toBe('Cube27 IT Pvt. Ltd.');
-    expect(PARENT_COMPANY.address).toMatch(/Pune/);
   });
 
   it('gives every section an id, a title, and some content', () => {
@@ -440,7 +433,7 @@ describe('entity and llms.txt', () => {
     expect(CONTACT_EMAIL).toBe('abhineet.jain@cube27.com');
     expect(PRODUCT_HEAD.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//);
     expect(FOUNDER.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//);
-    expect(PARENT_COMPANY.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//);
+    expect(CITELADDER_LINKEDIN).toMatch(/^https:\/\/www\.linkedin\.com\/company\//);
   });
 
   it('publishes a machine-readable product brief', () => {

@@ -1,76 +1,41 @@
 /**
- * Legal entity + document content for marketing legal pages and the footer
- * strip. Company registration fields are owner-supplied — leave blank until
- * filled; the UI renders an em dash rather than inventing details.
- */
-
-export type LegalEntity = {
-  /** Registered company name, e.g. "CiteLadder Ltd". */
-  legalName: string;
-  /** Product / trading name shown in public copy. */
-  tradingName: string;
-  /** Company registration / filing number. */
-  registrationNumber: string;
-  /** e.g. "England and Wales" or "Delaware, U.S.A." */
-  registrationJurisdiction: string;
-  /** Registered office / principal business address. */
-  address: string;
-  /** Privacy contact email. */
-  privacyEmail: string;
-  /** General support / legal contact email. */
-  supportEmail: string;
-  /** ISO date string shown as "Last updated". */
-  lastUpdated: string;
-  /** Governing law label, e.g. "England and Wales". */
-  governingLaw: string;
-};
-
-/**
- * Owner blockers — fill before launch. Empty strings render as "—" on pages
- * and are omitted from sentences that would otherwise invent a jurisdiction.
- */
-export const LEGAL_ENTITY: LegalEntity = {
-  // Keep trading name for the copyright line. Cube27 IT Pvt. Ltd. is the parent.
-  legalName: '',
-  tradingName: 'CiteLadder',
-  registrationNumber: '',
-  registrationJurisdiction: 'India',
-  address:
-    'Plot No. 12, Mulberry Gardens 1, Magarpatta City, Hadapsar, Pune, Maharashtra 411013, India',
-  privacyEmail: 'contact@cube27.com',
-  supportEmail: 'abhineet.jain@cube27.com',
-  lastUpdated: '2026-09-03',
-  governingLaw: 'India',
-};
-
-/**
- * The parent company. CiteLadder is a Cube27 product, so the corporate legal
- * documents — privacy and terms — are Cube27's and are linked at their
- * canonical URLs rather than duplicated here. A second copy of a policy is a
- * copy that goes stale silently, and the entity the policy binds is Cube27.
+ * The contracting entity and the shared model for CiteLadder's legal pages.
  *
- * The product-specific policies (cookies, AI) stay on this surface because
- * they describe CiteLadder's own runtime behaviour.
+ * CiteLadder is a product, not a company. Its policies are CiteLadder's own
+ * documents, published on this domain, but the entity every one of them binds
+ * is the parent company, Cube27 IT Private Limited. `PARENT_COMPANY` is the one
+ * record of that entity; policy text and chrome read it rather than restating
+ * a name or an address.
+ *
+ * Owner-supplied fields that are not yet approved stay empty and are omitted
+ * from the rendered pages rather than invented. The open items are tracked in
+ * `docs/operations/CiteLadder_Legal_Pages_Final_Review_Draft_2026-09-24.md`.
  */
+
 export const PARENT_COMPANY = {
   name: 'Cube27',
-  legalName: 'Cube27 IT Pvt. Ltd.',
+  legalName: 'Cube27 IT Private Limited',
   href: 'https://www.cube27.com/',
-  privacyHref: 'https://www.cube27.com/privacy-policy/',
-  termsHref: 'https://www.cube27.com/terms-of-service/',
+  contactHref: 'https://www.cube27.com/contact/',
   address:
     'Plot No. 12, Mulberry Gardens 1, Magarpatta City, Hadapsar, Pune, Maharashtra 411013, India',
   email: 'contact@cube27.com',
-  linkedin: 'https://www.linkedin.com/company/cube27ltd',
 } as const;
 
-export function legalDisplayName(): string {
-  return LEGAL_ENTITY.legalName.trim() || LEGAL_ENTITY.tradingName;
-}
+/**
+ * Details the policies need but the owner has not yet approved. An empty
+ * string hides the line it would fill; nothing renders a placeholder.
+ */
+export const LEGAL_ENTITY = {
+  registrationNumber: '',
+  grievanceContact: '',
+  phone: '',
+  /** When these documents were last revised. Not a legal effective date. */
+  lastUpdated: '2026-09-24',
+} as const;
 
-function legalContactEmail(): string {
-  return LEGAL_ENTITY.privacyEmail.trim() || LEGAL_ENTITY.supportEmail.trim();
-}
+/** "Cube27 IT Private Limited, operating CiteLadder, <address>". */
+export const OPERATOR_LINE = `${PARENT_COMPANY.legalName}, operating CiteLadder, ${PARENT_COMPANY.address}`;
 
 type LegalSection = {
   id: string;
@@ -81,31 +46,48 @@ type LegalSection = {
   storage?: readonly { name: string; purpose: string; duration: string; category: string }[];
 };
 
+export type LegalSlug =
+  | 'terms'
+  | 'privacy'
+  | 'refund-policy'
+  | 'cancellation-policy'
+  | 'cookies'
+  | 'ai-policy'
+  | 'contact';
+
 export type LegalDocument = {
-  slug: 'cookies' | 'ai-policy';
+  slug: LegalSlug;
   title: string;
   description: string;
   lastUpdated?: string;
   sections: readonly LegalSection[];
 };
 
-const entity = () => legalDisplayName();
-const contact = () => {
-  const email = legalContactEmail();
-  return email || '[privacy contact — to be completed]';
-};
+export type LegalLink = { label: string; href: `/${LegalSlug}` };
+
+/** Every published policy, in footer order. Each has its own marketing route. */
+export const FOOTER_LEGAL_LINKS: readonly LegalLink[] = [
+  { label: 'Terms of Service', href: '/terms' },
+  { label: 'Privacy Policy', href: '/privacy' },
+  { label: 'Refund Policy', href: '/refund-policy' },
+  { label: 'Cancellation Policy', href: '/cancellation-policy' },
+  { label: 'Cookies', href: '/cookies' },
+  { label: 'AI Policy', href: '/ai-policy' },
+  { label: 'Contact', href: '/contact' },
+];
+
+const contact = PARENT_COMPANY.email;
 
 export const COOKIE_POLICY: LegalDocument = {
   slug: 'cookies',
   title: 'Cookie Policy',
   description: 'How CiteLadder uses cookies and similar technologies on the website and platform.',
-  lastUpdated: '2026-09-20',
   sections: [
     {
       id: 'intro',
       title: 'Introduction',
       paragraphs: [
-        `This Cookie Policy explains how ${entity()} (“CiteLadder”, “we”, “us”) uses cookies and similar technologies on our websites and Services. It should be read with the Cube27 Privacy Policy at ${PARENT_COMPANY.privacyHref}.`,
+        `This Cookie Policy explains how ${PARENT_COMPANY.legalName} (“Cube27”, “CiteLadder”, “we”, “us”) uses cookies and similar browser storage to operate CiteLadder. Read it with our Privacy Policy at /privacy.`,
         'Cookies are small text files stored on your device. We also use browser storage for your consent choice and product settings. Google Analytics is enabled only after you accept optional analytics.',
       ],
     },
@@ -169,20 +151,20 @@ export const COOKIE_POLICY: LegalDocument = {
       id: 'third-parties',
       title: 'Third parties',
       paragraphs: [
-        'Google Analytics processes website usage only after you accept optional analytics. Answer engines you connect via BYOK set their own cookies on their sites, not on CiteLadder.',
+        'Google Analytics processes website usage only after you accept optional analytics. An external payment, sign-in or connected-provider page may use its own storage under its own policy.',
       ],
     },
     {
       id: 'changes',
       title: 'Changes',
       paragraphs: [
-        'We may update this Cookie Policy as our practices change. The “Last updated” date will be revised when we do.',
+        'We update this Cookie Policy when the storage we use or its purposes change. The “Last updated” date is revised when we do.',
       ],
     },
     {
       id: 'contact',
       title: 'Contact',
-      paragraphs: [`Questions: ${contact()}.`],
+      paragraphs: [`Questions: ${contact}.`],
     },
   ],
 };
@@ -197,8 +179,8 @@ export const AI_POLICY: LegalDocument = {
       id: 'overview',
       title: 'Overview',
       paragraphs: [
-        `${entity()} operates CiteLadder, an AEO analysis product. We observe how answer engines describe brands and products, persist raw responses as evidence, and score them with deterministic rules.`,
-        `This AI Policy summarises how AI systems are involved. It does not replace the Cube27 Privacy Policy (${PARENT_COMPANY.privacyHref}) or Terms of Service (${PARENT_COMPANY.termsHref}).`,
+        `${PARENT_COMPANY.legalName} operates CiteLadder, an AEO analysis product. We observe how answer engines describe brands and products, persist raw responses as evidence, and score them with deterministic rules.`,
+        'This AI Policy summarises how AI systems are involved. It does not replace our Privacy Policy at /privacy or our Terms of Service at /terms.',
       ],
     },
     {
@@ -208,6 +190,7 @@ export const AI_POLICY: LegalDocument = {
         'Answer engines (ChatGPT, Gemini, Claude, and any others you configure) generate responses when you run audits. Those calls use your BYOK credentials where configured.',
         'Scoring of mentions, citations, and related visibility metrics is deterministic over persisted artifacts — not an LLM judging another model’s answer.',
         'Optional product features may use models for assistance (for example drafting or research helpers). When they do, we will describe the purpose in-product.',
+        'A visibility result records what a provider returned for one execution. It does not establish that the answer is true, permanent, or what another user would see.',
       ],
     },
     {
@@ -217,28 +200,21 @@ export const AI_POLICY: LegalDocument = {
         'We do not sell Customer Data.',
         'We do not use Customer Data to train third-party foundation models.',
         'We do not fabricate scores when evidence is missing — unavailable metrics render as an em dash.',
+        'Generation alone never publishes content, spends money, or changes an external system.',
       ],
     },
     {
       id: 'human',
       title: 'Human oversight',
       paragraphs: [
-        'CiteLadder is a measurement and evidence tool for professional teams. You remain responsible for decisions you make using the outputs. Raw answers and rule versions are available so you can verify scores.',
+        'CiteLadder is a measurement and evidence tool for professional teams. Review generated recommendations and drafts before relying on or publishing them. You remain responsible for decisions you make using the outputs. Raw answers and rule versions are available so you can verify scores.',
+        'CiteLadder does not guarantee a search ranking, citation, AI recommendation, traffic increase or commercial result. Provider models, data and availability can change independently of CiteLadder.',
       ],
     },
     {
       id: 'contact',
       title: 'Contact',
-      paragraphs: [`Questions about this Policy: ${contact()}.`],
+      paragraphs: [`Questions about this Policy: ${contact}.`],
     },
   ],
 };
-
-export type LegalLink = { label: string; href: string; external?: boolean };
-
-export const FOOTER_LEGAL_LINKS: readonly LegalLink[] = [
-  { label: 'Terms of Service', href: PARENT_COMPANY.termsHref, external: true },
-  { label: 'Privacy Policy', href: PARENT_COMPANY.privacyHref, external: true },
-  { label: 'Cookies', href: '/cookies' },
-  { label: 'AI Policy', href: '/ai-policy' },
-];

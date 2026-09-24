@@ -1,0 +1,13 @@
+---
+import { LegalDocumentView } from '@/components/marketing/pages/legal';
+import { PRIVACY_POLICY } from '@/lib/marketing-content/legal-privacy';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+---
+
+<MarketingLayout
+  title="Privacy Policy · CiteLadder"
+  description={PRIVACY_POLICY.description}
+  canonical="/privacy"
+>
+  <LegalDocumentView document={PRIVACY_POLICY} />
+</MarketingLayout>
