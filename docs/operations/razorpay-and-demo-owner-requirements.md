@@ -32,11 +32,16 @@ Cancellation: end of period
 Refunds: full refund revokes remaining grants (no clawback); partial keeps access;
          every refund issues a credit note
 Razorpay approvals: all approved by the owner (Subscriptions, international)
-Enabled methods: <record from the Razorpay Dashboard>
+Enabled methods: Visa, Mastercard and RuPay cards; UPI and UPI AutoPay;
+                 netbanking (all major banks); eMandate; international payments
 Support email: contact@cube27.com
 Support phone: none yet (optional field)
 Contact URL: https://www.cube27.com/contact/
 Seller GSTIN: 27AAJCC0427H1ZU (Maharashtra, state code 27)
+Seller legal name: CUBE27 IT PRIVATE LIMITED
+Seller registered address: Plot No 12, Mulberry Garden 1, Magarpatta City,
+                 Hadapsar, Pune, Maharashtra 411013
+Still required: SAC, GST approval reference, LUT reference
 Refund and cancellation policy URL: <to be created in PR C>
 ```
 

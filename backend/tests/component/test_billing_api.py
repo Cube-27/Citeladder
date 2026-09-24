@@ -61,7 +61,13 @@ _SECRET = "component-webhook-secret"
 
 
 @pytest.fixture(autouse=True)
-async def _published_catalog(db_session: AsyncSession) -> None:
+async def _published_catalog(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Unapproved GST: the India plan prices stay unauthored whatever the
+    # surrounding environment holds.
+    monkeypatch.setattr(billing_settings, "india_gst_rate", None)
+    monkeypatch.setattr(billing_settings, "india_gst_approval_reference", "")
     await publish_test_catalog(db_session)
 
 

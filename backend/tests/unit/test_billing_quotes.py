@@ -197,6 +197,7 @@ async def test_addon_quote_bounds_quantity_and_availability(monkeypatch) -> None
                 quantity=quantity,
                 country_code="US",
                 at=now,
+                base_plan_key="tier_1",
                 billing_identity=_identity(export=True),
             )
     with pytest.raises(BillingConflictError, match="quantity_out_of_bounds"):
@@ -206,6 +207,7 @@ async def test_addon_quote_bounds_quantity_and_availability(monkeypatch) -> None
             quantity=21,
             country_code="US",
             at=now,
+            base_plan_key="tier_1",
             billing_identity=_identity(export=True),
         )
     quote = (
@@ -215,6 +217,7 @@ async def test_addon_quote_bounds_quantity_and_availability(monkeypatch) -> None
             quantity=3,
             country_code="US",
             at=now,
+            base_plan_key="tier_1",
             billing_identity=_identity(export=True),
         )
     ).quote

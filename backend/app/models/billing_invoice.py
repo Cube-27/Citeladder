@@ -67,8 +67,9 @@ class BillingInvoice(Base):
         ForeignKey("billing_payments.id", ondelete="RESTRICT"),
         unique=True,
     )
-    invoice_number: Mapped[str] = mapped_column(String(32), unique=True)
-    receipt_number: Mapped[str] = mapped_column(String(36), unique=True)
+    # Sized for the longest series: a 16-char prefix + "-CN/2026-27/000001".
+    invoice_number: Mapped[str] = mapped_column(String(40), unique=True)
+    receipt_number: Mapped[str] = mapped_column(String(40), unique=True)
     financial_year: Mapped[str] = mapped_column(String(7))
     document_kind: Mapped[str] = mapped_column(String(24))
     invoice_date: Mapped[date] = mapped_column(Date)

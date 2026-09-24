@@ -58,6 +58,8 @@ def test_launch_seed_authors_checkout_prices_only_where_sellable(
     no_provider = validate_payload(launch_pricing_v1_payload(provider_mode=None))
     assert all(not plan.regional_byok_prices for plan in no_provider.plans)
     # Without an approved GST rate India is not authored at all.
+    monkeypatch.setattr(billing_settings, "india_gst_rate", None)
+    monkeypatch.setattr(billing_settings, "india_gst_approval_reference", "")
     unapproved = validate_payload(launch_pricing_v1_payload(provider_mode="test"))
     assert {
         region for plan in unapproved.plans for region in plan.regional_byok_prices
