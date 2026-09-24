@@ -1275,6 +1275,15 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     # The server quote controls the provider charge: 2 packs x $99.
     assert body["quote"]["total_price"] == {"currency": "USD", "amount_minor": 19_800}
     assert provider.payment_calls == [{"amount_minor": 19_800, "currency": "USD"}]
+    # The same checkout opens the one-time ORDER the intent committed.
+    init = await client.get(
+        f"/api/v1/billing/activations/{body['activation_id']}/checkout"
+    )
+    assert init.status_code == 200, init.text
+    assert (init.json()["reference"], init.json()["reference_kind"]) == (
+        "order_topup",
+        "order",
+    )
     # Nothing is granted in the intent path.
     assert await _commercial_grant_count(db_session) == 0
     assert await _total_grant_count(db_session) == baseline_grants
@@ -1723,6 +1732,9 @@ async def test_deleted_legacy_routes_return_404(client: httpx.AsyncClient) -> No
         ("POST", "/api/v1/billing/checkout"),
         ("POST", "/api/v1/billing/cancel"),
         ("POST", "/api/v1/billing/manage"),
+        # Checkout serves every activation kind under /billing/activations.
+        ("GET", f"/api/v1/billing/subscriptions/{uuid.uuid4()}/checkout"),
+        ("POST", f"/api/v1/billing/subscriptions/{uuid.uuid4()}/verify"),
         ("GET", f"/api/v1/workspaces/{uuid.uuid4()}/entitlements"),
     ):
         response = await client.request(method, path)

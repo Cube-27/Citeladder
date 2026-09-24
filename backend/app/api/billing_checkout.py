@@ -1,4 +1,10 @@
-"""Standard Checkout routes under the active workspace's billing account."""
+"""Standard Checkout routes under the active workspace's billing account.
+
+One pair of routes serves every activation kind: a base subscription, an
+add-on, a top-up or an upgrade's prorated charge. The adapter bound to the
+activation's persisted provider decides how its reference is opened and how
+its callback is authenticated.
+"""
 
 from __future__ import annotations
 
@@ -28,7 +34,7 @@ BillingWorkspace = Annotated[
 Session = Annotated[AsyncSession, Depends(get_db)]
 
 
-@router.get("/billing/subscriptions/{activation_id}/checkout")
+@router.get("/billing/activations/{activation_id}/checkout")
 async def get_checkout(
     activation_id: uuid.UUID, ctx: BillingWorkspace, session: Session
 ) -> CheckoutResponse:
@@ -59,7 +65,7 @@ async def get_activation(
 
 
 @router.post(
-    "/billing/subscriptions/{activation_id}/verify",
+    "/billing/activations/{activation_id}/verify",
     status_code=202,
 )
 async def post_verify(

@@ -12,17 +12,22 @@ type Checkout = Awaited<ReturnType<typeof billingApi.checkout>>;
  */
 export const RAZORPAY_SDK_NAME = 'razorpay-checkout';
 
-/** Razorpay's own callback shape. It never leaves this module unwrapped. */
+/**
+ * Razorpay's own callback shape: a subscription or an order id, never both.
+ * It never leaves this module unwrapped.
+ */
 type RazorpayCallback = {
   razorpay_payment_id: string;
-  razorpay_subscription_id: string;
   razorpay_signature: string;
+  razorpay_subscription_id?: string;
+  razorpay_order_id?: string;
 };
 
 type Instance = { open: () => void; on: (event: 'payment.failed', callback: () => void) => void };
 type Options = {
   key: string;
-  subscription_id: string;
+  subscription_id?: string;
+  order_id?: string;
   name: string;
   prefill: { email: string };
   handler: (callback: RazorpayCallback) => void;
@@ -61,12 +66,24 @@ export async function loadRazorpay(): Promise<void> {
 }
 
 /**
+ * The SDK option that names the server's reference: a recurring subscription
+ * or a one-time order. The amount is the order's or the plan's, fixed on the
+ * server; the browser never supplies one.
+ */
+function referenceOption(checkout: Checkout): Pick<Options, 'subscription_id' | 'order_id'> {
+  return checkout.reference_kind === 'order'
+    ? { order_id: checkout.reference }
+    : { subscription_id: checkout.reference };
+}
+
+/**
  * Open Razorpay's checkout and return its callback in the NEUTRAL wrapper.
  *
  * `public_key` is a publishable key id and `reference` is the provider's own
  * id for the intent — both are public initialization fields the server chose.
  * The vendor field names go back to the server untouched inside `fields`,
- * where this vendor's adapter allowlists and verifies them.
+ * where this vendor's adapter allowlists and verifies them. A callback only
+ * starts verification: paid access comes from the server's settled evidence.
  */
 export async function openRazorpay(
   checkout: Checkout,
@@ -79,7 +96,7 @@ export async function openRazorpay(
   return new Promise((resolve) => {
     const modal = new Constructor({
       key: checkout.public_key,
-      subscription_id: checkout.reference,
+      ...referenceOption(checkout),
       name: checkout.provider_mode === 'test' ? 'CiteLadder — Test mode' : 'CiteLadder',
       prefill: { email },
       handler: (callback) => resolve({ fields: { ...callback } }),

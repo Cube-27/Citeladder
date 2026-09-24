@@ -3,7 +3,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import { authApi } from '@/lib/api/auth';
-import { billingApi, type SubscriptionCheckoutInput } from '@/lib/api/billing';
+import {
+  billingApi,
+  type SelfServePlanKey,
+  type SubscriptionCheckoutInput,
+} from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { CHECKOUT_POLL_ATTEMPTS, CHECKOUT_POLL_INTERVAL_MS } from '@/lib/config/billing';
 import { useOptionalProjectContext } from '@/lib/project/project-context';
@@ -14,8 +18,33 @@ import { startCheckoutFlow } from './checkout-flow';
 const INCOMPLETE_CHECKOUT: Record<string, string | null> = {
   redirected: null,
   unsupported: 'Checkout is unavailable for this payment provider.',
-  dismissed: 'Checkout closed. Retry to reopen the same subscription.',
+  dismissed: 'Checkout closed. Retry to reopen the same payment.',
 };
+
+/**
+ * What one checkout pays for. Every kind creates a server intent whose quote
+ * the reader reviews before the same provider checkout opens: a base plan
+ * (recurring), an add-on or top-up (one-time order), or an upgrade's
+ * prorated charge (one-time order). The browser never names an amount.
+ */
+export type CheckoutPurchase =
+  | { readonly kind: 'base'; readonly input: SubscriptionCheckoutInput }
+  | { readonly kind: 'addon'; readonly catalog_key: string; readonly quantity: number }
+  | { readonly kind: 'topup'; readonly catalog_key: string; readonly quantity: number }
+  | { readonly kind: 'upgrade'; readonly catalog_key: SelfServePlanKey };
+
+type WorkspaceOptions = { workspaceId: string | null };
+
+async function createIntent(purchase: CheckoutPurchase, key: string, options: WorkspaceOptions) {
+  if (purchase.kind === 'base') return billingApi.createSubscription(purchase.input, key, options);
+  if (purchase.kind === 'addon' || purchase.kind === 'topup') {
+    const buy = purchase.kind === 'addon' ? billingApi.activateAddon : billingApi.purchaseTopup;
+    return buy(purchase.catalog_key, purchase.quantity, key, options);
+  }
+  const change = await billingApi.changePlan(purchase.catalog_key, key, options);
+  if (!change.activation) throw new Error('This plan change needs no payment.');
+  return change.activation;
+}
 
 /**
  * The workspace a purchase belongs to.
@@ -87,7 +116,11 @@ export function useSubscriptionCheckout() {
       attempt.current = null;
     }
     if (state.status === 'activated') {
-      setNotice('Payment verified. Your subscription is active.');
+      setNotice(
+        state.kind === 'base'
+          ? 'Payment verified. Your subscription is active.'
+          : 'Payment verified. Your purchase is active.',
+      );
       await queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
     } else if (state.status !== 'pending') {
       setNotice(`Checkout ${state.status}. No new access was granted.`);
@@ -105,7 +138,7 @@ export function useSubscriptionCheckout() {
   const beginAttempt = (
     userId: string,
     workspaceId: string | null,
-    input: SubscriptionCheckoutInput,
+    input: CheckoutPurchase,
     proposed?: string,
   ) => {
     const fingerprint = JSON.stringify([userId, workspaceId, input]);
@@ -121,18 +154,16 @@ export function useSubscriptionCheckout() {
   };
 
   const prepareCheckout = async ({
-    input,
+    purchase,
     key,
   }: {
-    input: SubscriptionCheckoutInput;
+    purchase: CheckoutPurchase;
     key?: string;
   }) => {
     const workspaceId = purchaseWorkspace(scope);
     const user = await authApi.me();
-    const started = beginAttempt(user.id, workspaceId, input, key);
-    const activation = await billingApi.createSubscription(input, started.key, {
-      workspaceId,
-    });
+    const started = beginAttempt(user.id, workspaceId, purchase, key);
+    const activation = await createIntent(purchase, started.key, { workspaceId });
     activationId.current = activation.activation_id;
     return activation;
   };
@@ -214,7 +245,7 @@ export function useSubscriptionCheckout() {
     attempt.current = null;
   }, [prepareReset, confirmReset]);
   const mutation = useMutation({
-    mutationFn: async (input: { input: SubscriptionCheckoutInput; key?: string }) => {
+    mutationFn: async (input: { purchase: CheckoutPurchase; key?: string }) => {
       const activation = await prepareCheckout(input);
       if (activation.status !== 'pending') return (await refresh()) ?? activation;
       return (await continueCheckout()) ?? activation;

@@ -317,6 +317,19 @@ export const activationSchema = responseObject({
 });
 
 /**
+ * A base-plan change. An upgrade answers `payment_required` with its pending
+ * prorated charge in `activation`; a downgrade is `requested`/`scheduled` for
+ * `effective_at` and carries no activation.
+ */
+export const planChangeSchema = responseObject({
+  direction: z.enum(['upgrade', 'downgrade']),
+  catalog_key: z.string(),
+  status: z.enum(['payment_required', 'requested', 'scheduled']),
+  effective_at: z.string(),
+  activation: activationSchema.nullable(),
+});
+
+/**
  * Deactivation has its OWN vocabulary — deliberately not the activation state
  * machine. Parsing a DELETE through `activationSchema` would invent a
  * pending/failed lifecycle the backend never reports.
@@ -372,6 +385,8 @@ export const subscriptionCheckoutSchema = responseObject({
   sdk_name: z.string(),
   public_key: z.string(),
   reference: z.string(),
+  /** A recurring `subscription` or a one-time `order` (add-on, top-up, upgrade). */
+  reference_kind: z.enum(['subscription', 'order', '']),
   expires_at: z.string(),
   quote: resolvedQuoteSchema,
 });

@@ -1,4 +1,4 @@
-import { createIdempotencyKey, type SubscriptionCheckoutInput } from '@/lib/api/billing';
+import { createIdempotencyKey } from '@/lib/api/billing';
 
 /**
  * The storage bucket for one (buyer, workspace) pair.
@@ -22,7 +22,7 @@ const bucket = (userId: string, workspaceId: string | null) =>
 export function checkoutAttempt(
   userId: string,
   workspaceId: string | null,
-  input: SubscriptionCheckoutInput,
+  input: object,
   proposed?: string,
 ): string {
   const fingerprint = JSON.stringify(input);

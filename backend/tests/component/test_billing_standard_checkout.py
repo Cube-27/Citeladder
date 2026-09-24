@@ -116,7 +116,7 @@ async def test_owner_checkout_callback_and_cross_account_isolation(
     client, db_session, checkout
 ):
     activation_id = checkout["activation_id"]
-    prefix = f"/api/v1/billing/subscriptions/{activation_id}"
+    prefix = f"/api/v1/billing/activations/{activation_id}"
     response = await client.get(prefix + "/checkout")
     assert response.status_code == 200
     body = response.json()
@@ -124,7 +124,10 @@ async def test_owner_checkout_callback_and_cross_account_isolation(
     # own reference. No secret and no amount cross this boundary.
     assert body["provider"] == "razorpay"
     assert body["flow"] == "provider_sdk"
-    assert body["reference"] == "sub_fixture"
+    assert (body["reference"], body["reference_kind"]) == (
+        "sub_fixture",
+        "subscription",
+    )
     assert body["public_key"] == "rzp_test_fixture"
     assert "synthetic-api-secret" not in response.text
     signature = hmac.new(

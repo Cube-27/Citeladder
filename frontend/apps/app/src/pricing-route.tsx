@@ -43,7 +43,6 @@ type Checkout = ReturnType<typeof useSubscriptionCheckout>;
 type PurchaseInput = {
   selection: Selection;
   catalog: BillingCatalog;
-  workspaceId: string;
   country: string;
   details: BillingCustomerDetails;
   checkout: Checkout;
@@ -59,17 +58,20 @@ function prepareBase(input: PurchaseInput) {
   const error = billingDetailsError(country, details);
   if (error) throw new Error(error);
   return checkout.prepare({
-    input: {
-      catalog_key: current.catalog_key,
-      credential_mode: selection.byok ? 'byok' : 'funded',
-      country_code: country,
-      ...details,
+    purchase: {
+      kind: 'base',
+      input: {
+        catalog_key: current.catalog_key,
+        credential_mode: selection.byok ? 'byok' : 'funded',
+        country_code: country,
+        ...details,
+      },
     },
   });
 }
 
-function buyExtra(input: PurchaseInput) {
-  const { selection, catalog, workspaceId } = input;
+function prepareExtra(input: PurchaseInput) {
+  const { selection, catalog, checkout } = input;
   const pool = selection.kind === 'addon' ? catalog.addons : catalog.topups;
   const entry = pool.find((candidate) => candidate.key === selection.catalog_key);
   if (
@@ -80,17 +82,19 @@ function buyExtra(input: PurchaseInput) {
   ) {
     throw new Error('This purchase is no longer available. Please select it again.');
   }
-  return selection.kind === 'addon'
-    ? billingApi.activateAddon(entry.key, selection.quantity, selection.idempotency_key, {
-        workspaceId,
-      })
-    : billingApi.purchaseTopup(entry.key, selection.quantity, selection.idempotency_key, {
-        workspaceId,
-      });
+  // The same quote review and provider checkout as a plan, paying the
+  // one-time order the server creates for this exact quantity.
+  return checkout.prepare({
+    purchase: {
+      kind: selection.kind === 'addon' ? 'addon' : 'topup',
+      catalog_key: entry.key,
+      quantity: selection.quantity,
+    },
+    key: selection.idempotency_key,
+  });
 }
 
 function PurchaseButton({
-  selection,
   canBuy,
   workspaceId,
   pending,
@@ -98,7 +102,6 @@ function PurchaseButton({
   priceUnavailable,
   onPurchase,
 }: Readonly<{
-  selection: Selection;
   canBuy: boolean;
   workspaceId: string | null;
   pending: boolean;
@@ -106,8 +109,7 @@ function PurchaseButton({
   priceUnavailable: boolean;
   onPurchase: () => void;
 }>) {
-  let label = selection.kind === 'checkout' ? 'Review current quote' : 'Confirm purchase';
-  if (pending) label = 'Preparing…';
+  const label = pending ? 'Preparing…' : 'Review current quote';
   return (
     <Button
       disabled={!canBuy || !workspaceId || pending || quoted || priceUnavailable}
@@ -235,7 +237,6 @@ function SelectedPurchase({
         before continuing to payment.
       </p>
       <PurchaseButton
-        selection={selection}
         canBuy={canBuy}
         workspaceId={workspaceId}
         pending={pending}
@@ -275,22 +276,6 @@ function QuoteConfirmation({
 function Notice({ error, fallback }: Readonly<{ error: unknown; fallback: string }>) {
   if (!error) return null;
   return <p role="alert">{error instanceof Error ? error.message : fallback}</p>;
-}
-
-function PendingExtraStatus({
-  selection,
-  status,
-}: Readonly<{
-  selection: Selection | null;
-  status: string | undefined;
-}>) {
-  if (!selection || selection.kind === 'checkout' || status !== 'pending') return null;
-  return (
-    <output>
-      Activation is pending. Check <a href="/settings?tab=billing">Billing settings</a> before
-      retrying this selection.
-    </output>
-  );
 }
 
 function PricingState({
@@ -370,12 +355,11 @@ export default function PricingRoute() {
       const input = {
         selection,
         catalog: refreshed.data,
-        workspaceId: activeWorkspaceId,
         country,
         details,
         checkout,
       };
-      return selection.kind === 'checkout' ? prepareBase(input) : buyExtra(input);
+      return selection.kind === 'checkout' ? prepareBase(input) : prepareExtra(input);
     },
     onSuccess: async (result) => {
       if (result.status !== 'pending') {
@@ -429,7 +413,6 @@ export default function PricingRoute() {
           onConfirm={() => void confirm.mutate()}
         />
         <CheckoutStatus checkout={checkout} />
-        <PendingExtraStatus selection={selection} status={purchase.data?.status} />
         <Notice error={purchase.error} fallback="Purchase unavailable." />
         <Notice error={confirm.error} fallback="Checkout unavailable." />
       </Stack>
