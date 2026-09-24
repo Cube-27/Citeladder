@@ -103,7 +103,7 @@ export const DATA_PROCESSING_AGREEMENT: LegalDocument = {
       id: 'transfers',
       title: 'International transfers',
       paragraphs: [
-        'CiteLadder is hosted in India. Some subprocessors process data in other countries. The subprocessor list gives each known location and, where a location depends on the provider, refers to that provider’s terms. Where the law requires a transfer mechanism for that processing, Cube27 will put it in place.',
+        'CiteLadder is hosted in India. Some subprocessors process data in other countries, as the subprocessor list shows. Where the law requires a transfer mechanism for that processing, Cube27 will put it in place.',
       ],
     },
     {
@@ -169,13 +169,13 @@ export const SUBPROCESSORS: LegalDocument = {
             'Keenable',
             'Web research for brand and competitor discovery',
             'Research queries such as brand, domain and competitor names',
-            'As set out in the provider’s terms',
+            'United States',
           ],
           [
             'Tavily',
             'Web search for commerce competitor research',
             'Search queries such as product and competitor names',
-            'As set out in the provider’s terms',
+            'United States',
           ],
         ],
       },
