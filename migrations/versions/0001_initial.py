@@ -4855,7 +4855,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "billing_invoice_counters",
-        sa.Column("financial_year", sa.String(length=7), nullable=False),
+        sa.Column("financial_year", sa.String(length=16), nullable=False),
         sa.Column("next_value", sa.Integer(), nullable=False),
         sa.CheckConstraint(
             "next_value > 0", name="ck_billing_invoice_counter_positive"

@@ -371,7 +371,11 @@ export const billingInvoiceSchema = responseObject({
   invoice_id: z.string(),
   invoice_number: z.string(),
   receipt_number: z.string(),
-  status: z.literal('paid'),
+  document_kind: z.enum(['gst_tax_receipt', 'export_receipt', 'credit_note']),
+  // `credited` marks a credit note; its `paid_at` is the issue time.
+  status: z.enum(['paid', 'credited']),
+  description: z.string(),
+  original_invoice_number: z.string().nullable(),
   paid_at: z.string(),
   amount_paid: moneySchema,
   subtotal_price: moneySchema,

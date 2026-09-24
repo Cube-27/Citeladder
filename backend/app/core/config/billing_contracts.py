@@ -251,6 +251,13 @@ REASON_PROVIDER_REJECTED: Final = "provider_rejected"
 
 REASON_ACTIVATION_EXPIRED: Final = "activation_expired"
 
+# Normalized refund status that has actually returned money to the buyer. Only
+# a processed refund issues a credit note or revokes grants.
+REFUND_PROCESSED: Final = "processed"
+
+# Revocation reason recorded when a purchase is refunded in full.
+REVOCATION_REASON_FULL_REFUND: Final = "full_refund"
+
 COMING_SOON_ADDON_KEYS: Final[frozenset[str]] = frozenset()
 
 IDEMPOTENCY_KEY_MIN_LENGTH: Final = 8

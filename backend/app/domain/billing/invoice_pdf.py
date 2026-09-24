@@ -1,4 +1,4 @@
-"""Render a polished, static paid receipt from persisted invoice facts."""
+"""Render a polished, static receipt or credit note from persisted facts."""
 
 from __future__ import annotations
 
@@ -84,6 +84,37 @@ def _address_block(identity: dict[str, Any], *, customer: bool) -> str:
     return "<br/>".join(row for row in rows if row)
 
 
+def _number_rows(
+    invoice: BillingInvoice,
+    payload: dict[str, Any],
+    style: ParagraphStyle,
+    *,
+    credit: bool,
+) -> list[list[object]]:
+    """Document identity rows; a credit note names the invoice it reverses."""
+    if credit:
+        return [
+            [
+                Paragraph("<b>Credit note number</b>", style),
+                Paragraph(_safe(invoice.invoice_number), style),
+            ],
+            [
+                Paragraph("<b>Against invoice</b>", style),
+                Paragraph(_safe(payload.get("original_invoice_number")), style),
+            ],
+        ]
+    return [
+        [
+            Paragraph("<b>Invoice number</b>", style),
+            Paragraph(_safe(invoice.invoice_number), style),
+        ],
+        [
+            Paragraph("<b>Receipt number</b>", style),
+            Paragraph(_safe(invoice.receipt_number), style),
+        ],
+    ]
+
+
 def _tax_rows(amounts: dict[str, Any], currency: str) -> list[list[object]]:
     rate = Decimal(str(amounts.get("tax_rate", "0"))) * 100
     taxable = int(amounts.get("taxable_minor", 0))
@@ -116,8 +147,11 @@ def _tax_rows(amounts: dict[str, Any], currency: str) -> list[list[object]]:
 
 
 def render_invoice_pdf(invoice: BillingInvoice) -> bytes:
-    """Return a one-page receipt PDF; it performs no I/O or state repair."""
+    """Return a one-page receipt/credit-note PDF; no I/O or state repair."""
     payload = _dict(invoice.payload)
+    credit = invoice.document_kind == "credit_note"
+    title = "Credit note" if credit else "Receipt"
+    settled = "credited" if credit else "paid"
     seller = _dict(payload.get("seller"))
     customer = _dict(payload.get("customer"))
     line = _dict(payload.get("line"))
@@ -142,7 +176,7 @@ def render_invoice_pdf(invoice: BillingInvoice) -> bytes:
         leftMargin=18 * mm,
         topMargin=16 * mm,
         bottomMargin=16 * mm,
-        title=f"Paid receipt {invoice.receipt_number}",
+        title=f"{title} {invoice.receipt_number}",
         author=str(seller.get("legal_name", "CiteLadder")),
     )
     story: list[Flowable] = [
@@ -150,7 +184,7 @@ def render_invoice_pdf(invoice: BillingInvoice) -> bytes:
             [
                 [
                     Paragraph(
-                        "<b>Receipt</b>",
+                        f"<b>{title}</b>",
                         ParagraphStyle(
                             "Title", parent=styles["Title"], fontSize=24, leading=28
                         ),
@@ -163,16 +197,11 @@ def render_invoice_pdf(invoice: BillingInvoice) -> bytes:
         Spacer(1, 8 * mm),
         Table(
             [
+                *_number_rows(invoice, payload, small, credit=credit),
                 [
-                    Paragraph("<b>Invoice number</b>", small),
-                    Paragraph(_safe(invoice.invoice_number), small),
-                ],
-                [
-                    Paragraph("<b>Receipt number</b>", small),
-                    Paragraph(_safe(invoice.receipt_number), small),
-                ],
-                [
-                    Paragraph("<b>Date paid</b>", small),
+                    Paragraph(
+                        "<b>Date issued</b>" if credit else "<b>Date paid</b>", small
+                    ),
                     Paragraph(_date(payload.get("paid_at")), small),
                 ],
             ],
@@ -195,7 +224,7 @@ def render_invoice_pdf(invoice: BillingInvoice) -> bytes:
         Spacer(1, 12 * mm),
         Paragraph(
             "<b>"
-            f"{_money(invoice.total_amount_minor, currency)} paid on "
+            f"{_money(invoice.total_amount_minor, currency)} {settled} on "
             f"{_date(payload.get('paid_at'))}</b>",
             ParagraphStyle("Paid", parent=styles["Heading2"], fontSize=16, leading=20),
         ),
@@ -259,7 +288,7 @@ def render_invoice_pdf(invoice: BillingInvoice) -> bytes:
         [
             ["Total", _money(invoice.total_amount_minor, currency)],
             [
-                Paragraph("<b>Amount paid</b>", body),
+                Paragraph(f"<b>Amount {settled}</b>", body),
                 Paragraph(
                     f"<b>{_money(invoice.total_amount_minor, currency)}</b>", right
                 ),
@@ -283,13 +312,21 @@ def render_invoice_pdf(invoice: BillingInvoice) -> bytes:
         [
             KeepTogether(totals_table),
             Spacer(1, 11 * mm),
-            Paragraph("<b>Payment history</b>", styles["Heading2"]),
+            Paragraph(
+                "<b>Refund</b>" if credit else "<b>Payment history</b>",
+                styles["Heading2"],
+            ),
             Spacer(1, 3 * mm),
         ]
     )
     history = Table(
         [
-            ["Payment method", "Date", "Amount paid", "Receipt number"],
+            [
+                "Payment method",
+                "Date",
+                f"Amount {settled}",
+                "Credit note number" if credit else "Receipt number",
+            ],
             [
                 str(payment.get("method", "Online payment")).title(),
                 _date(payload.get("paid_at")),

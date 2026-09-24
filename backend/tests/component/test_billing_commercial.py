@@ -30,6 +30,7 @@ from app.connectors.billing.base import (
     HostedPayment,
     HostedSubscription,
     ProviderPayment,
+    ProviderRefund,
     ProviderSubscription,
 )
 from app.core.config.billing_contracts import (
@@ -47,6 +48,7 @@ from app.core.config.razorpay_settings import razorpay_settings
 from app.domain.billing import idempotency as idempotency_module
 from app.domain.billing.activations import activate_pending
 from app.domain.billing.idempotency import IntentResult, execute_intent
+from app.domain.billing.payments import record_refund_receipt
 from app.domain.billing.reconciliation import reconcile_pending_activations
 from app.domain.billing.service import BillingConflictError, resolve_base_intent
 from app.models.billing import (
@@ -57,6 +59,7 @@ from app.models.billing import (
     IdempotencyRecord,
     PendingActivation,
 )
+from app.models.billing_payment import BillingPayment
 from tests.billing_catalog_support import TEST_CATALOG_REVISION, launch_catalog
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.billing_catalog_helpers import (
@@ -1314,6 +1317,31 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     assert duplicate.status_code == 204
     db_session.expire_all()
     assert await _commercial_grant_count(db_session, source_kind="topup") == 1
+
+    # A full refund revokes what is left of the purchase; consumed units
+    # would stay consumed, and the refund issues one credit note.
+    payment = await db_session.scalar(
+        select(BillingPayment).where(BillingPayment.receipt_kind == "payment")
+    )
+    assert payment is not None
+    await record_refund_receipt(
+        db_session,
+        payment_id=payment.id,
+        refund=ProviderRefund(
+            external_refund_id="rfnd_full",
+            external_payment_id="pay_topup",
+            status="processed",
+            amount_minor=19_800,
+            currency="USD",
+            updated_at=paid_at,
+        ),
+    )
+    await db_session.commit()
+    usage = await client.get("/api/v1/billing/usage")
+    items = {item["key"]: item for item in usage.json()["items"]}
+    assert items.get("audit_credits", {}).get("allowance", 0) == 0
+    notes = (await client.get("/api/v1/billing/invoices")).json()["invoices"]
+    assert [row["document_kind"] for row in notes].count("credit_note") == 1
 
 
 @pytest.mark.asyncio

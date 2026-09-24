@@ -26,11 +26,15 @@ def _utcnow() -> datetime:
 
 
 class BillingInvoiceCounter(Base):
-    """One locked, fiscal-year receipt serial allocator."""
+    """One locked serial allocator per document series and financial year.
+
+    Receipts use the bare year (``2026-27``); credit notes use their own
+    series key (``CN:2026-27``) so each series stays consecutive.
+    """
 
     __tablename__ = "billing_invoice_counters"
 
-    financial_year: Mapped[str] = mapped_column(String(7), primary_key=True)
+    financial_year: Mapped[str] = mapped_column(String(16), primary_key=True)
     next_value: Mapped[int] = mapped_column(Integer)
 
     __table_args__ = (

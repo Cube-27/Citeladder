@@ -17,6 +17,7 @@ from app.domain.billing.invoice_schemas import (
     BillingInvoiceResponse,
     BillingInvoicesResponse,
 )
+from app.domain.billing.invoices import DOCUMENT_CREDIT_NOTE
 from app.domain.billing.schemas import MoneyResponse
 from app.domain.billing.service import workspace_account
 from app.models.billing_invoice import BillingInvoice
@@ -41,10 +42,17 @@ def _money(currency: str, amounts: dict[str, Any], key: str) -> MoneyResponse:
 
 def _summary(row: BillingInvoice) -> BillingInvoiceResponse:
     amounts = _dict(row.payload.get("amounts"))
+    credit = row.document_kind == DOCUMENT_CREDIT_NOTE
+    line = _dict(row.payload.get("line"))
+    original = row.payload.get("original_invoice_number")
     return BillingInvoiceResponse(
         invoice_id=row.id,
         invoice_number=row.invoice_number,
         receipt_number=row.receipt_number,
+        document_kind=cast(Any, row.document_kind),
+        status="credited" if credit else "paid",
+        description=str(line.get("description") or ""),
+        original_invoice_number=original if isinstance(original, str) else None,
         paid_at=row.paid_at,
         amount_paid=MoneyResponse(
             currency=cast(Any, row.currency), amount_minor=row.total_amount_minor
