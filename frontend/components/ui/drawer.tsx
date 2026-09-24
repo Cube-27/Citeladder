@@ -99,7 +99,7 @@ export function Drawer({
           ) : (
             <header className="border-border flex items-start justify-between gap-3 border-b p-[var(--modal-padding)]">
               <div className="min-w-0">
-                <DialogPrimitive.Title className="text-foreground truncate text-lg font-semibold tracking-[-0.35px]">
+                <DialogPrimitive.Title className="text-foreground font-overlay-title truncate text-lg tracking-[-0.35px]">
                   {title}
                 </DialogPrimitive.Title>
                 {description ? (

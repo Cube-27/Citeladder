@@ -67,7 +67,7 @@ export function Select<T extends string>({
         aria-required={required || undefined}
         id={id}
         className={cn(
-          'focus-ring bg-input text-foreground data-[placeholder]:text-muted flex h-[var(--control-height)] min-w-0 items-center justify-between gap-2 rounded-[var(--radius-control)] px-2.5 text-sm shadow-smudge transition-[box-shadow] hover:shadow-smudge-hover disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:shadow-smudge-danger',
+          'focus-ring bg-input text-foreground data-[placeholder]:text-muted flex h-[var(--control-height)] min-w-0 items-center justify-between gap-2 rounded-[var(--radius-control)] px-2.5 text-field shadow-smudge transition-[box-shadow] hover:shadow-smudge-hover disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:shadow-smudge-danger',
           className,
         )}
       >

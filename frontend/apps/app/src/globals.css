@@ -361,6 +361,17 @@
   --text-preview-status--line-height: 0.875rem;
   --text-preview-code: 0.65625rem;
   --text-preview-code--line-height: 0.875rem;
+  /* Role sizes. These defaults are the public surfaces' values; the product
+     document rebinds them (see the product type ladder below). */
+  --text-role-meta: 0.75rem;
+  --text-role-meta--line-height: 1rem;
+  --text-role-body: 0.875rem;
+  --text-role-body--line-height: 1.25rem;
+  --text-role-section: 1rem;
+  --text-role-section--line-height: 1.5rem;
+  --text-field: 0.875rem;
+  --text-field--line-height: 1.25rem;
+  --font-weight-overlay-title: 600;
 
   --leading-tight: 1.25;
 
@@ -962,7 +973,7 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-shell-alt: #efede4;
   --color-foreground: #141413;
   --color-secondary: #3d3d3a;
-  --color-muted: #5e5d59;
+  --color-muted: #6a6862;
   --color-subtle: #6b6a65;
   --color-disabled: #8a8880;
   --color-border-subtle: #ebe9e1;
@@ -972,6 +983,22 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-neutral-bg: #f0eee6;
   --skeleton-base: #efede6;
   --skeleton-highlight: #faf9f5;
+}
+
+/* The product type ladder: weights stop at 500 and hierarchy comes from size.
+   Captions step up to 13px so they sit one rung under 14px body, body copy
+   opens to a 22px line, section headings step above card titles (18 vs 16),
+   and field text is 16px (which also stops iOS zooming on focus). Scoped like
+   the palette above so the public surfaces keep their own sizes. */
+:root:not([data-public-surface]) {
+  --text-role-meta: 0.8125rem;
+  --text-role-meta--line-height: 1.125rem;
+  --text-role-body--line-height: 1.375rem;
+  --text-role-section: 1.125rem;
+  --text-role-section--line-height: 1.625rem;
+  --text-field: 1rem;
+  --text-field--line-height: 1.5rem;
+  --font-weight-overlay-title: 500;
 }
 
 /* Light is the default. Dark is a per-device reader preference applied to the

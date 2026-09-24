@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils';
  * Fields use the 36px field role (44px at compact/coarse widths). Plain and
  * adorned inputs share the same inset outline and halo through `focus-input`.
  *
- * The field text is `text-sm` (14/20), the product body default, so what the
- * user types reads as primary body text next to the labels above it. The
+ * The field text is `text-field` (16px in the product, 14px on public
+ * surfaces), so what the user types reads as primary text next to the labels
+ * above it. The
  * line-height fills the control's content box so a text selection highlights
  * the whole field, not a thin band behind the glyphs.
  *
@@ -18,7 +19,7 @@ import { cn } from '@/lib/utils';
  * which owns the accent on its own.
  */
 export const inputClasses =
-  'focus-input h-[var(--field-height)] w-full rounded-[var(--radius-control)] shadow-smudge bg-input px-2.5 text-sm text-foreground leading-[calc(var(--field-height)_-_2px)] transition-[box-shadow] placeholder:text-muted hover:shadow-smudge-hover aria-invalid:shadow-smudge-danger disabled:cursor-not-allowed disabled:opacity-50';
+  'focus-input h-[var(--field-height)] w-full rounded-[var(--radius-control)] shadow-smudge bg-input px-2.5 text-field text-foreground leading-[calc(var(--field-height)_-_2px)] transition-[box-shadow] placeholder:text-muted hover:shadow-smudge-hover aria-invalid:shadow-smudge-danger disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
  * The composer lift. For the one field that IS the page — a brief box, an
@@ -98,7 +99,7 @@ export function Input({
       <input
         ref={ref}
         className={cn(
-          'placeholder:text-muted min-w-0 flex-1 self-stretch bg-transparent text-sm text-foreground outline-none disabled:cursor-not-allowed',
+          'placeholder:text-muted min-w-0 flex-1 self-stretch bg-transparent text-field text-foreground outline-none disabled:cursor-not-allowed',
           // Match the frame's control height so selections fill the pill.
           adornedLeading,
           className,
