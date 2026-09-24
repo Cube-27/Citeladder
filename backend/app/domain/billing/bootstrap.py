@@ -13,7 +13,7 @@ import uuid
 from datetime import UTC, datetime
 from hashlib import sha256
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -204,47 +204,64 @@ async def issue_development_access(
     account_id: uuid.UUID,
     grants: tuple[GrantSpec, ...],
     reason: str,
-    idempotency_key: str,
+    key_family: str,
+    initial_key: str,
 ) -> None:
-    """Issue a development override bundle, topping up keys added since.
+    """Raise a development account to ``grants``, topping up what is missing.
 
-    Grants are append-only and counters sum across bundles, so a re-run after
-    the registry gains an issuable capability can neither replay the original
-    key (``grant_bundle_conflict``) nor issue a fresh full bundle (doubled
-    allowances). Keys already granted under ``idempotency_key`` are left as
-    they are; only the missing ones are issued, keyed by exactly that set so
-    re-runs stay idempotent.
+    Grants are append-only and counters sum across bundles, so a re-run can
+    neither replay a changed bundle (``grant_bundle_conflict``) nor issue a
+    fresh full one (doubled allowances). Every earlier bundle under
+    ``key_family`` counts toward the target: a counter gets the difference, a
+    flag or level only a higher value. Lowering a value needs a revocation and
+    is left alone. The account row lock serialises concurrent bootstraps.
     """
     from app.domain.entitlements.grants import issue_override_bundle
 
-    granted = set(
-        (
-            await session.execute(
-                select(AccountGrant.key).where(
-                    AccountGrant.billing_account_id == account_id,
-                    or_(
-                        AccountGrant.idempotency_key == idempotency_key,
-                        AccountGrant.idempotency_key.startswith(
-                            f"{idempotency_key}:+", autoescape=True
-                        ),
-                    ),
-                )
-            )
-        ).scalars()
+    await session.execute(
+        select(BillingAccount.id)
+        .where(BillingAccount.id == account_id)
+        .with_for_update()
     )
-    missing = tuple(spec for spec in grants if spec.key not in granted)
-    if not missing:
+    granted: dict[str, list[int]] = {}
+    for key, value in (
+        await session.execute(
+            select(AccountGrant.key, AccountGrant.value).where(
+                AccountGrant.billing_account_id == account_id,
+                AccountGrant.idempotency_key.startswith(key_family, autoescape=True),
+            )
+        )
+    ).all():
+        granted.setdefault(key, []).append(value)
+    top_up: list[GrantSpec] = []
+    transitions: list[str] = []
+    for spec in grants:
+        values = granted.get(spec.key, [])
+        summed = CAPABILITY_REGISTRY.require(spec.key).capability_type not in {
+            CapabilityType.FLAG,
+            CapabilityType.LEVEL,
+        }
+        current = sum(values) if summed else max(values, default=0)
+        if values and spec.value <= current:
+            continue
+        top_up.append(
+            GrantSpec(
+                key=spec.key,
+                value=spec.value - current if summed and values else spec.value,
+            )
+        )
+        transitions.append(f"{spec.key}:{current}->{spec.value}")
+    if not top_up:
         return
+    idempotency_key = initial_key
     if granted:
-        digest = sha256(
-            "\n".join(sorted(spec.key for spec in missing)).encode()
-        ).hexdigest()[:16]
-        idempotency_key = f"{idempotency_key}:+{digest}"
+        digest = sha256("\n".join(transitions).encode()).hexdigest()[:16]
+        idempotency_key = f"{key_family.rstrip(':')}:+{digest}"
     await issue_override_bundle(
         session,
         operator_user=user,
         account_id=account_id,
-        grants=missing,
+        grants=tuple(top_up),
         reason=reason,
         valid_from=datetime.now(UTC),
         valid_until=None,
@@ -262,7 +279,8 @@ async def provision_development_access(
         account_id=account.id,
         grants=development_access_grants(allowance),
         reason="explicit configured development bootstrap",
-        idempotency_key=f"development-bootstrap:{user.id}:{allowance}",
+        key_family=f"development-bootstrap:{user.id}:",
+        initial_key=f"development-bootstrap:{user.id}:{allowance}",
     )
 
 

@@ -80,9 +80,9 @@ Call `textRole(role, layoutClasses?)` from `components/ui/typography.tsx`; name 
 
 | Role | Job | Size / line height | Weight | Ink |
 | --- | --- | --- | --- | --- |
-| `pageTitle` | Reserved; no longer the route H1 | 26/32px | 600 | `ink-strong` |
-| `sectionTitle` | Section H2 | 16/24px | 600 | `ink-strong` |
-| `objectTitle` | Entity heading; the in-pane route H1 | 18/26px | 600 | `ink-strong` |
+| `pageTitle` | Reserved; no longer the route H1 | 26/32px | 500 | `ink-strong` |
+| `sectionTitle` | Section H2 | 16/24px | 500 | `ink-strong` |
+| `objectTitle` | Entity heading; the in-pane route H1 | 18/26px | 500 | `ink-strong` |
 | `bodyStrong` | Leading copy | 14/20px | 500 | `ink` |
 | `body` | Reading copy, descriptions, cells | 14/20px | 400 | `ink` |
 | `label` | Field/column labels | 14/20px | 500 | `muted` |

@@ -1,5 +1,4 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 
@@ -24,53 +23,33 @@ const options = { cwd, env, stdio: 'inherit' };
 
 // A second dev server would rebuild the output the first one is serving from,
 // failing on locked files and leaving the running one with deleted assets.
-// The lock covers the whole lifetime, including the build before Wrangler
-// binds the port; the port probe also catches anything else on 3000.
-const lockPath = fileURLToPath(new URL('../apps/marketing/.dev/dev.lock', import.meta.url));
-function processAlive(pid) {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error.code === 'EPERM';
-  }
-}
-function acquireLock() {
-  mkdirSync(fileURLToPath(new URL('../apps/marketing/.dev/', import.meta.url)), {
-    recursive: true,
+// The lock is a listener on a private loopback port, held for the process's
+// whole life (including the build before Wrangler binds 3000): the OS grants
+// it atomically and releases it on any exit, so there is no stale lock to
+// recover. The port-3000 probe also catches anything else already there.
+const lockPort = 39_317;
+const port = 3000;
+function listen(server, listenPort) {
+  return new Promise((resolve) => {
+    server
+      .once('error', () => resolve(false))
+      .once('listening', () => resolve(true))
+      .listen(listenPort, '127.0.0.1');
   });
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      writeFileSync(openSync(lockPath, 'wx'), String(process.pid));
-      return true;
-    } catch (error) {
-      if (error.code !== 'EEXIST') throw error;
-      const holder = Number.parseInt(readFileSync(lockPath, 'utf8'), 10);
-      if (Number.isInteger(holder) && processAlive(holder)) return false;
-      unlinkSync(lockPath); // Left behind by a run that crashed.
-    }
-  }
-  return false;
 }
-if (!acquireLock()) {
+const lock = createServer();
+if (!(await listen(lock, lockPort))) {
   console.error('Another marketing dev server is running: stop it first.');
   process.exit(1);
 }
-process.on('exit', () => {
-  try {
-    unlinkSync(lockPath);
-  } catch {
-    // Already gone.
-  }
-});
-
-const port = 3000;
-const portFree = await new Promise((resolve) => {
-  const probe = createServer()
-    .once('error', () => resolve(false))
-    .once('listening', () => probe.close(() => resolve(true)))
-    .listen(port, '127.0.0.1');
-});
+lock.unref();
+const probe = createServer();
+const portFree = await listen(probe, port);
+if (portFree) {
+  await new Promise((resolve) => {
+    probe.close(resolve);
+  });
+}
 if (!portFree) {
   console.error(`Port ${port} is in use: stop the running marketing dev server first.`);
   process.exit(1);

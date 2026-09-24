@@ -86,7 +86,8 @@ async def _run(email: str, password: str, counter_allowance: int) -> None:
                 account_id=account.id,
                 grants=development_access_grants(counter_allowance),
                 reason="local development full-access account",
-                idempotency_key=f"dev-full-access:{user.id}",
+                key_family=f"dev-full-access:{user.id}",
+                initial_key=f"dev-full-access:{user.id}",
             )
             await ensure_initial_catalog(session, operator=user)
             await session.commit()
