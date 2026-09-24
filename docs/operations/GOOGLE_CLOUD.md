@@ -26,7 +26,7 @@ Product Worker (app.citeladder.com) ┘                       └─ workers and
   zone in the same region.
 - Runtime: one on-demand `e2-standard-2` VM, 2 vCPU/8 GiB, 30 GiB balanced disk.
 - URLs: `https://citeladder.com` for marketing and MCP; `https://app.citeladder.com` for product.
-- Lifetime: runs until torn down deliberately. Public sign-up is on by default; `DEMO_MODE=true` restores the one-account restriction.
+- Lifetime: runs until torn down deliberately. Self-serve sign-up and Google sign-in are off by default (`PUBLIC_SIGNUP_ENABLED`, `OAUTH_GOOGLE_ENABLED`); operators create client logins. `DEMO_MODE=true` restores the one-account restriction.
 - Expected GCP cost: approximately USD $15–25 for seven continuously running days; set an equivalent alert in the billing-account currency. The reviewed INR account uses INR 2,400. Provider/API usage is separate.
 - Do not use Cloud Run, Cloud SQL, a load balancer, Kubernetes, Redis, or Spot VMs for this temporary demo.
 
@@ -157,7 +157,7 @@ JWT, encryption, and referral secrets directly in Secret Manager on first use.
   - immutable image digests, Shielded VM controls, no self-teardown timer, and least-privilege service accounts.
 - Validate rendered backend Compose configuration, PostgreSQL TLS, demo-mode bootstrap idempotency, and protected Caddy routing.
 - Run `.\scripts\check.ps1` and focused native-runner tests; CI runs the full selected suites.
-- On the deployed stack, verify registration, Google sign-in, Search Console and Bing connect, persisted data after VM restart, two or more representative site crawls reaching terminal state, worker recovery, backup/restore, and spoofed forwarded-header handling.
+- On the deployed stack, verify operator-created login, Search Console and Bing connect, persisted data after VM restart, two or more representative site crawls reaching terminal state, worker recovery, backup/restore, and spoofed forwarded-header handling.
 - Production acceptance follows the Workers runbook; teardown needs separate authorization.
 
 ## Assumptions

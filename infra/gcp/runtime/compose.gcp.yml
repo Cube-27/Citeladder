@@ -30,15 +30,15 @@ x-backend: &backend
     SITE_HEALTH_AUTOMATIC_PAGE_LIMIT: "200"
     FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
     FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:?FRONTEND_ORIGINS is required}
-    # Google sign-in, ON here unless the host explicitly overrides it.
-    # The application default is OFF (OAuthSettings.google_enabled = False),
-    # which is why the deployed app served a catalog without Google before
-    # this line existed while local dev, whose .env sets it, worked fine.
+    # Google sign-in, OFF until the public policies are cleared for open
+    # sign-up: a first Google sign-in creates an account. Operator-created
+    # client logins use email and password. Set OAUTH_GOOGLE_ENABLED=true on
+    # the host to turn it back on.
     # The client id/secret fall back to the INTEGRATION Google pair by design
     # (one client for sign-in and the GSC/GA4 connect); the redirect URI
     # derives from FRONTEND_URL. deploy-vm.sh writes INTEGRATION_GOOGLE_* and
     # INTEGRATION_MICROSOFT_* (Bing) into runtime.env, injected by env_file.
-    OAUTH_GOOGLE_ENABLED: ${OAUTH_GOOGLE_ENABLED:-true}
+    OAUTH_GOOGLE_ENABLED: ${OAUTH_GOOGLE_ENABLED:-false}
     TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:?TRUSTED_PROXY_CIDRS is required}
   depends_on:
     db:

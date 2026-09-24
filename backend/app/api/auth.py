@@ -45,7 +45,7 @@ async def register(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> RegistrationResponse:
-    if settings.demo_mode:
+    if settings.demo_mode or not settings.public_signup_enabled:
         raise_api_error(status.HTTP_403_FORBIDDEN, "Registration is disabled")
     await enforce_limit(
         session,

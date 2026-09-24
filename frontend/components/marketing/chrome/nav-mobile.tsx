@@ -3,6 +3,7 @@ import { Fragment } from 'react';
 
 import { NAV_DROPS, NAV_LINKS, type NavDropKey } from '@/lib/marketing-content/nav';
 import { appHref } from '@/lib/config/app-link';
+import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
@@ -83,9 +84,11 @@ export function MobileNavigation({
             {label}
           </a>
         ))}
-        <ButtonLink href={appHref('/register')} className="w-full" onClick={closeMenu}>
-          Sign up
-        </ButtonLink>
+        {selfServeSignupOpen() ? (
+          <ButtonLink href={appHref('/register')} className="w-full" onClick={closeMenu}>
+            Sign up
+          </ButtonLink>
+        ) : null}
         <a
           href={appHref('/login')}
           className="text-muted py-3.5 text-lg font-medium"

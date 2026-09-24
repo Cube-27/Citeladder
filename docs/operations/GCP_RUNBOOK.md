@@ -67,7 +67,7 @@ Add these environment variables:
 | `DOMAIN_NAME` | Lower-case public DNS hostname |
 | `ORIGIN_DOMAIN_NAME` | `origin.citeladder.com` protected ingress hostname |
 | `APP_DOMAIN_NAME` | `app.citeladder.com` product Worker hostname |
-| `DEMO_MODE` | Optional; `false` (public sign-up) unless set to `true` |
+| `DEMO_MODE` | Optional; `false` unless set to `true` |
 | `DEMO_EXPIRES_AT` | Optional RFC3339 expiry; required only when `DEMO_MODE` is `true` |
 | `DEMO_LOGIN_EMAIL` | Optional; defaults to `dev@citeladder.com` |
 | `DEFAULT_AGENT_BASE_URL` | HTTPS base URL for the demo's OpenAI-compatible agent provider |
@@ -148,9 +148,13 @@ Merge the intended commit to `main` and wait for required CI. Run **GCP Demo -
 Deploy** from `main` and approve `gcp-demo`. It serializes deployments, safely
 reuses immutable images when retrying the same commit, applies Terraform,
 installs secrets once, deploys the backend digest over IAP, and migrates. With
-`DEMO_MODE` unset the deployment is public: visitors register or sign in with
-Google and own their own accounts. Set `DEMO_MODE` to `true` to bootstrap the
-single development account instead. Project slots remain unprovisioned, which
+`DEMO_MODE` unset, operators create client logins with
+`backend/scripts/account_manager.py`. Self-serve sign-up and Google sign-in
+stay off until the public policies are cleared: `PUBLIC_SIGNUP_ENABLED` and
+`OAUTH_GOOGLE_ENABLED` default to `false` on the host, and the Worker builds
+leave `NEXT_PUBLIC_SELF_SERVE_SIGNUP` unset. Turn all three on together to
+open sign-up. Set `DEMO_MODE` to `true` to bootstrap the single development
+account instead. Project slots remain unprovisioned, which
 is the pre-commercial unlimited-project behavior. Each project crawl is capped
 at 200 URLs. The crawler runs with eight global and six per-host slots.
 Deployment validates every long-running backend service and checks that an
@@ -169,9 +173,9 @@ curl.exe --fail --show-error "$appOrigin/health"
 curl.exe --fail --show-error "$appOrigin/api/v1/auth/oauth/providers"
 ```
 
-Health must succeed and the provider catalog must report Google as
-`configured`. Register a throwaway account, sign in with Google, connect Search
-Console and Bing end to end, then confirm ports 22, 3000, 3001, 5432, and 8000 are
+Health must succeed. While sign-up is closed, the provider catalog reports
+Google as not `configured` and `POST /api/v1/auth/register` returns 403. Sign
+in with an operator-created account, connect Search Console and Bing end to end, then confirm ports 22, 3000, 3001, 5432, and 8000 are
 not publicly reachable. Only Cloudflare may reach origin 80/443; use
 IAP for administration. After deployment and review, make the repository
 private as planned and recheck environment reviewers and the WIF claim.

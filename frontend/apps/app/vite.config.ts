@@ -64,6 +64,7 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
         'NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE',
       ),
       'process.env.NEXT_PUBLIC_DEMO_MODE': publicValue('NEXT_PUBLIC_DEMO_MODE'),
+      'process.env.NEXT_PUBLIC_SELF_SERVE_SIGNUP': publicValue('NEXT_PUBLIC_SELF_SERVE_SIGNUP'),
       'process.env.PUBLIC_WEBSITE_ORIGIN': publicValue('PUBLIC_WEBSITE_ORIGIN'),
       'process.env.PUBLIC_APP_ORIGIN': publicValue('PUBLIC_APP_ORIGIN'),
       'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),

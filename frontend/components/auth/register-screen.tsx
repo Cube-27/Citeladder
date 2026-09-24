@@ -13,10 +13,13 @@ type SearchParams = Pick<URLSearchParams, 'get'>;
 
 export function RegisterScreen({
   demoMode,
+  signupOpen,
   replace,
   searchParams,
 }: Readonly<{
   demoMode: boolean;
+  /** Self-serve sign-up; when closed, accounts are created by an operator. */
+  signupOpen: boolean;
   replace: (href: string) => void;
   searchParams: SearchParams;
 }>) {
@@ -39,16 +42,20 @@ export function RegisterScreen({
   const submit = (values: RegisterFormValues) =>
     mutation.mutateAsync(values).catch(() => undefined);
 
-  if (demoMode) {
+  if (demoMode || !signupOpen) {
     return (
       <AuthFormShell
         title="Registration unavailable"
-        description="This temporary demo uses a preconfigured account."
+        description={
+          demoMode
+            ? 'This temporary demo uses a preconfigured account.'
+            : 'Accounts are set up for you by the CiteLadder team. Book a demo to get access.'
+        }
         onSubmit={(event) => event.preventDefault()}
         pending={false}
         submitLabel="Registration disabled"
         pendingLabel="Registration disabled"
-        footerPrompt="Already have the demo account?"
+        footerPrompt={demoMode ? 'Already have the demo account?' : 'Already have an account?'}
         footerHref={withMcpReturnPath('/login', returnTo)}
         footerLabel="Sign in"
         showOAuth={false}
