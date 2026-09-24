@@ -69,8 +69,22 @@ uv run python -m scripts.billing_admin catalog-seed \
   --idempotency-key catalog-seed:launch-pricing-v1
 ```
 
-Provider plan references are then added to a private copy, imported as a new
-revision, verified and published as below.
+Provider plans are immutable artifacts: one per recurring SKU x region of a
+revision. Print the specs, create exactly those plans in the Razorpay Dashboard
+(one-time add-ons, top-ups and upgrade charges are Orders and need none), then
+bind the created ids. `bind` requires the complete SKU x region set, verifies
+each plan's amount, currency and cadence against the frozen terms, and writes the
+payload for a NEW revision, which is imported and published as below. Existing
+subscribers stay pinned to the plans they authorised.
+
+```bash
+uv run python -m scripts.provision_razorpay_plans propose \
+  --revision launch-pricing-v1 --environment test
+# plans.json: {"tier_1:international": "plan_…", "tier_2:international": …}
+uv run python -m scripts.provision_razorpay_plans bind \
+  --revision launch-pricing-v1 --environment test \
+  --plans /review/plans.json --output /review/catalog.json
+```
 
 ### Import and publish a revision
 
@@ -242,8 +256,22 @@ Verify accounting with immutable entries: grant value minus reservations plus
 releases minus debits, with refunds tied to `refund_of_id`. Typed subjects must
 match the Content, Agent, or audit parent evidence. Payment/refund receipts are
 normalized and digest-bound; cumulative refunds may not exceed the payment.
-Never infer entitlement merely from a redirect, Payment Link, receipt, or
+Never infer entitlement merely from a redirect, checkout callback, receipt, or
 provider dashboard—the accepted activation and resulting grants are authority.
+
+### One-time orders, plan changes and refunds
+
+- Enable automatic capture for Standard Checkout payments in the Dashboard: an
+  order settles only on a captured payment.
+- A captured payment for an intent that was already abandoned or failed is
+  logged as `billing.payment_for_closed_intent` and grants nothing; review and
+  refund it.
+- An upgrade's provider plan switch runs from the reconciliation watcher after
+  the prorated charge settles. `billing.plan_change_rejected` means Razorpay
+  refused the switch: the paid remainder of the period stands, and renewal stays
+  on the current plan until the change is resolved with the customer.
+- Refund from the Dashboard. The `refund.processed` event records the refund,
+  issues the credit note and, for a full refund, revokes remaining grants.
 
 After a captured payment is accepted, CiteLadder issues one immutable paid tax
 receipt from the frozen quote, customer billing facts, supplier GST settings,

@@ -196,7 +196,8 @@ Select only these implemented events:
 - `subscription.pending`, `subscription.halted`, `subscription.cancelled`
 - `subscription.completed`, `subscription.expired`
 - `subscription.paused`, `subscription.resumed`
-- `payment.captured`, `payment.failed`
+- `payment.captured`, `payment.failed`, `order.paid`
+- `refund.processed`
 
 Confirm an unrelated proxy path returns 404, a non-POST webhook request returns
 403, a missing signature returns 422, and an invalid signature returns 400.

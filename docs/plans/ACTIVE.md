@@ -20,9 +20,10 @@
   product redirects or aliases. App pricing continuation belongs to PR 2.
 
 - [Razorpay activation](citeladder-razorpay-activation.md) — owner-approved
-  on 24 September 2026. PR A (commercial core) implemented; PR B (payment
-  paths) and PR C (customer surfaces) follow, then test-mode acceptance and
-  the live sign-off. Payments stay disabled until that sign-off.
+  on 24 September 2026. PR A (commercial core) and PR B (payment paths)
+  implemented; the B8 test-mode smoke run is still to be performed. PR C
+  (customer surfaces) follows, then test-mode acceptance and the live sign-off.
+  Payments stay disabled until that sign-off.
 
 ## Queued
 

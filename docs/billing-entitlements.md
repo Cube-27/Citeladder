@@ -54,12 +54,28 @@ Normalized refunds cannot exceed payment value. Redirects grant nothing.
 [Invoices](../backend/app/domain/billing/invoices.py) issue one receipt per
 captured payment and one credit note per processed refund, each series
 consecutive per financial year. A full refund revokes the purchase's remaining
-grants; consumed units are not clawed back.
+grants; consumed units are not clawed back. Refunds arrive as provider refund
+events and settle against the original payment receipt.
+
+Base plans are recurring provider subscriptions. Add-ons, top-ups and an
+upgrade's prorated charge are one-time provider orders: the intent persists the
+order, and the single captured payment on it settles the purchase, so both
+order-paid and payment-captured deliveries converge on one activation. An
+unpaid checkout is abandoned after the reconciliation window (its subscription
+is cancelled at the provider) instead of holding the one-pending slot.
+[Plan changes](../backend/app/domain/billing/plan_changes.py) edit the one base
+subscription: an upgrade charges the prorated base-price difference for the rest
+of the paid period and, once paid, issues the higher plan's bundle for that
+remainder; a downgrade waits for renewal with no refund. Either way the
+subscription holds at most one scheduled change carrying the target plan's
+frozen terms, which the renewal billed on the target provider plan swaps in.
+Existing subscribers stay on the provider plan and terms they authorised;
+each catalog revision names one immutable provider plan per SKU and region.
 
 The provider registry fails closed for unknown or unconfigured adapters.
-Subscription checkout initialization exposes only safe public identity. Callback
-verification binds its signature to the stored subscription and schedules bounded
-reconciliation; durable webhook receipt precedes asynchronous processing. The
+Checkout initialization (one route for every activation kind) exposes only safe
+public identity. Callback verification binds its signature to the stored
+subscription or order and schedules bounded reconciliation; durable webhook receipt precedes asynchronous processing. The
 checkout kill switch does not disable recovery of existing payment evidence.
 Razorpay vocabulary, headers, keys and webhook path remain adapter-owned.
 [Provider readiness](billing-provider-readiness.md) owns selection and acceptance
@@ -96,8 +112,9 @@ The prepared app `/pricing` continuation captures only a bounded catalog
 selection from its URL before sign-in. The app stores its own pending intent;
 after sign-in it resolves the selected workspace and fresh catalog, requires
 billing permission and explicit confirmation, and uses the existing
-workspace-scoped checkout controller. A base-plan checkout shows the
-backend-resolved quote before the separate payment confirmation. No purchase
+workspace-scoped checkout controller. Every purchase (plan, add-on, top-up or
+upgrade) shows the backend-resolved quote before the separate payment
+confirmation. No purchase
 starts from a GET, login or reload. The prepared marketing Worker renders the
 validated public catalog in initial HTML and links bounded selections to app
 `/pricing`. It sends no visitor credentials on the catalog read and performs no

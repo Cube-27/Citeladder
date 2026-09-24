@@ -195,7 +195,7 @@ verified provider flow exists.
 Entitlement resolution selects one primary profile and deliberate supplements.
 Grants, revocations, consumable reservations/releases/debits/refunds, normalized
 payment/refund receipts, model attempts, and introductory claims are immutable
-evidence. Redirects, Payment Links, receipts, webhook delivery, or provider
+evidence. Redirects, checkout callbacks, receipts, webhook delivery, or provider
 Dashboard state alone never grant access; webhook and reconciliation must settle
 through the same idempotent activation owner. Customer BYOK consumes zero
 platform credits and never silently falls back. Platform-funded model work is
