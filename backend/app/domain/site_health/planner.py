@@ -41,6 +41,7 @@ from app.connectors.web_evidence.url_policy import (
     registrable_domain,
     split_host_port,
 )
+from app.core.config.entitlements import CODE_SITE_HEALTH_FETCHES_EXHAUSTED
 from app.core.config.site_health_contracts import (
     ANALYZER_VERSION,
     CODE_CRAWL_ALREADY_ACTIVE,
@@ -78,6 +79,10 @@ from app.domain.entitlements.service import (
 )
 from app.domain.site_health.discovery import add_automatic_root
 from app.domain.site_health.entitlements import lock_runtime
+from app.domain.site_health.fetch_budget import (
+    available_page_fetches,
+    reserve_crawl_fetches,
+)
 from app.domain.site_health.inventory_scope import freeze_inventory_lineage
 from app.domain.site_health.monitored_seeding import seed_monitored_targets
 from app.domain.site_health.normalization import canonical_identity
@@ -481,6 +486,18 @@ async def create_crawl(
     # ``requested_page_limit_reached`` against the effective bound rather than
     # against a 500 it was never going to reach.
     page_limit = _allowance_discovery_budget(page_limit, runtime=runtime)
+    # A metered (paid) account's crawl can never plan more page fetches than
+    # its period allowance has left; scheduled and manual crawls share it.
+    fetch_budget = await available_page_fetches(
+        session, workspace_id=workspace_id, at=datetime.now(UTC)
+    )
+    if fetch_budget is not None:
+        if fetch_budget <= 0:
+            raise CrawlPlanError(
+                "No Site Health page fetches remain this period",
+                code=CODE_SITE_HEALTH_FETCHES_EXHAUSTED,
+            )
+        page_limit = min(page_limit, fetch_budget)
 
     profile = await _upsert_profile(
         session,
@@ -558,6 +575,10 @@ async def create_crawl(
         accepted_seeds=accepted_seeds,
         page_limit=page_limit,
     )
+    if fetch_budget is not None:
+        await reserve_crawl_fetches(
+            session, crawl=crawl, units=page_limit, at=datetime.now(UTC)
+        )
 
     # Re-seed the persistent monitored set: on a recrawl the active monitored
     # URLs get fresh analyze tasks so their facts/scores refresh. On a first
@@ -681,8 +702,18 @@ async def create_page_rerun_crawl(
         admitted_url_count=1,
         inventory_complete=True,
     )
+    rerun_budget = await available_page_fetches(
+        session, workspace_id=workspace_id, at=datetime.now(UTC)
+    )
+    if rerun_budget is not None and rerun_budget <= 0:
+        raise CrawlPlanError(
+            "No Site Health page fetches remain this period",
+            code=CODE_SITE_HEALTH_FETCHES_EXHAUSTED,
+        )
     session.add(crawl)
     await session.flush()  # assign crawl.id
+    if rerun_budget is not None:
+        await reserve_crawl_fetches(session, crawl=crawl, units=1, at=datetime.now(UTC))
 
     # Record the target URL's observation so the page-detail projection (which
     # scopes URLs to a crawl's observed set) resolves it on this fresh crawl.

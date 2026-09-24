@@ -14,6 +14,7 @@ from fastapi import Query, status
 
 from app.api.usage_limits import enforce_workspace_request
 from app.core.config.abuse import abuse_settings
+from app.core.config.entitlements import CODE_SITE_HEALTH_FETCHES_EXHAUSTED
 from app.core.config.site_health_contracts import CODE_CRAWL_ALREADY_ACTIVE
 from app.core.errors import ApiException
 from app.domain.site_health import service
@@ -141,6 +142,10 @@ async def create_crawl_endpoint(
     except CrawlPlanError as exc:
         if exc.code == "project_not_found":
             raise _not_found("Project not found") from exc
+        if exc.code == CODE_SITE_HEALTH_FETCHES_EXHAUSTED:
+            raise ApiException.coded(
+                status.HTTP_409_CONFLICT, exc.code, str(exc)
+            ) from exc
         raise ApiException.coded(
             status.HTTP_422_UNPROCESSABLE_CONTENT, exc.code, str(exc)
         ) from exc

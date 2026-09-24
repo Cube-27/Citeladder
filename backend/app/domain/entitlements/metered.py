@@ -1,4 +1,4 @@
-"""Typed variable-unit reservations for Content and Growth Agent calls."""
+"""Typed variable-unit reservations for Content, Agent and Site Health work."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ class MeteredSubject:
     workspace_id: uuid.UUID
 
     def __post_init__(self) -> None:
-        if self.kind not in {"content", "agent"}:
+        if self.kind not in {"content", "agent", "site_crawl"}:
             raise LedgerError(f"unsupported metered subject: {self.kind}")
 
 
@@ -111,6 +111,7 @@ async def reserve_metered_usage(
             subject.subject_id if subject.kind == "content" else None
         ),
         "agent_task_run_id": subject.subject_id if subject.kind == "agent" else None,
+        "site_crawl_id": subject.subject_id if subject.kind == "site_crawl" else None,
     }
     for index, allocation in enumerate(allocations):
         key = (

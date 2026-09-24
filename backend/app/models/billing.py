@@ -460,11 +460,17 @@ class ConsumableLedger(Base):
         ),
         CheckConstraint(
             "(subject_kind = 'audit' AND audit_id IS NOT NULL AND task_id IS NOT NULL "
-            "AND content_generation_id IS NULL AND agent_task_run_id IS NULL) OR "
+            "AND content_generation_id IS NULL AND agent_task_run_id IS NULL "
+            "AND site_crawl_id IS NULL) OR "
             "(subject_kind = 'content' AND audit_id IS NULL AND task_id IS NULL "
-            "AND content_generation_id IS NOT NULL AND agent_task_run_id IS NULL) OR "
+            "AND content_generation_id IS NOT NULL AND agent_task_run_id IS NULL "
+            "AND site_crawl_id IS NULL) OR "
             "(subject_kind = 'agent' AND audit_id IS NULL AND task_id IS NULL "
-            "AND content_generation_id IS NULL AND agent_task_run_id IS NOT NULL)",
+            "AND content_generation_id IS NULL AND agent_task_run_id IS NOT NULL "
+            "AND site_crawl_id IS NULL) OR "
+            "(subject_kind = 'site_crawl' AND audit_id IS NULL AND task_id IS NULL "
+            "AND content_generation_id IS NULL AND agent_task_run_id IS NULL "
+            "AND site_crawl_id IS NOT NULL)",
             name="ck_consumable_ledger_typed_subject",
         ),
         CheckConstraint(
@@ -540,6 +546,12 @@ class ConsumableLedger(Base):
     agent_task_run_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("agent_task_runs.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    # Site Health page-fetch reservations are held per crawl.
+    site_crawl_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("site_crawls.id", ondelete="RESTRICT"),
         nullable=True,
     )
     dispatch_key: Mapped[str] = mapped_column(String(128), default="")

@@ -4924,6 +4924,7 @@ def upgrade() -> None:
         sa.Column("task_id", sa.UUID(), nullable=True),
         sa.Column("content_generation_id", sa.UUID(), nullable=True),
         sa.Column("agent_task_run_id", sa.UUID(), nullable=True),
+        sa.Column("site_crawl_id", sa.UUID(), nullable=True),
         sa.Column("dispatch_key", sa.String(length=128), nullable=False),
         sa.Column("request_fingerprint", sa.String(length=64), nullable=False),
         sa.Column("allocation_order", sa.Integer(), nullable=False),
@@ -4946,13 +4947,16 @@ def upgrade() -> None:
             name="ck_consumable_ledger_refund_shape",
         ),
         sa.CheckConstraint(
-            "(subject_kind = 'audit' AND audit_id IS NOT NULL AND task_id IS NOT NULL AND content_generation_id IS NULL AND agent_task_run_id IS NULL) OR (subject_kind = 'content' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NOT NULL AND agent_task_run_id IS NULL) OR (subject_kind = 'agent' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NULL AND agent_task_run_id IS NOT NULL)",
+            "(subject_kind = 'audit' AND audit_id IS NOT NULL AND task_id IS NOT NULL AND content_generation_id IS NULL AND agent_task_run_id IS NULL AND site_crawl_id IS NULL) OR (subject_kind = 'content' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NOT NULL AND agent_task_run_id IS NULL AND site_crawl_id IS NULL) OR (subject_kind = 'agent' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NULL AND agent_task_run_id IS NOT NULL AND site_crawl_id IS NULL) OR (subject_kind = 'site_crawl' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NULL AND agent_task_run_id IS NULL AND site_crawl_id IS NOT NULL)",
             name="ck_consumable_ledger_typed_subject",
         ),
         sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(
             ["content_generation_id"], ["content_generations.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["site_crawl_id"], ["site_crawls.id"], ondelete="RESTRICT"
         ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="RESTRICT"

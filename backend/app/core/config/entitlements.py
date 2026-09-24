@@ -478,3 +478,5 @@ CODE_MANUAL_RUN_RATE_EXCEEDED: Final = "manual_run_rate_exceeded"
 CODE_FUNDED_BUDGET_EXHAUSTED: Final = "funded_budget_exhausted"
 CODE_FUNDED_CREDITS_EXHAUSTED: Final = "funded_credits_exhausted"
 CODE_FUNDED_COST_UNRESOLVED: Final = "funded_cost_unresolved"
+# A paid account has no Site Health page fetches left this period.
+CODE_SITE_HEALTH_FETCHES_EXHAUSTED: Final = "site_health_fetches_exhausted"
