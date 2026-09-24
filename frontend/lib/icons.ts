@@ -2,6 +2,7 @@ import {
   AlertCircle,
   Bot,
   Check,
+  CreditCard,
   FileBarChart,
   FileText,
   Gauge,
@@ -72,6 +73,7 @@ export const ICONS = {
   opportunities: Lightbulb,
   setup: Wrench,
   settings: Settings,
+  billing: CreditCard,
   // Shared UI concepts.
   spinner: LoaderCircle,
   warning: TriangleAlert,

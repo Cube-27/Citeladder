@@ -42,7 +42,8 @@ Seller legal name: CUBE27 IT PRIVATE LIMITED
 Seller registered address: Plot No 12, Mulberry Garden 1, Magarpatta City,
                  Hadapsar, Pune, Maharashtra 411013
 Still required: SAC, GST approval reference, LUT reference
-Refund and cancellation policy URL: <to be created in PR C>
+Refund policy URL: https://citeladder.com/refund-policy
+Cancellation policy URL: https://citeladder.com/cancellation-policy
 ```
 
 Razorpay's own GSTIN appears only on Razorpay's fee invoices to Cube27, never

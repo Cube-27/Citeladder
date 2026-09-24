@@ -148,6 +148,11 @@ export const appRoutes: RouteObject[] = [
               default: SettingsRouteElement,
             })),
           ),
+          productRoute('/billing', () =>
+            import('./product-routes-settings-invitations').then(({ BillingRouteElement }) => ({
+              default: BillingRouteElement,
+            })),
+          ),
           productRoute('/invitations/accept', () =>
             import('./product-routes-settings-invitations').then(
               ({ AcceptInvitationRouteElement }) => ({ default: AcceptInvitationRouteElement }),

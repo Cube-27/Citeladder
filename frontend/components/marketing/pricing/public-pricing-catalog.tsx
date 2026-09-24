@@ -26,6 +26,14 @@ import {
 import { Section, SectionHeader } from '../primitives/section';
 import { PricingComparison } from './pricing-comparison';
 
+/**
+ * INR prices are published exclusive of GST, which the server quote adds for
+ * the buyer's state. Other currencies are charged as shown.
+ */
+function taxNote(currency: BillingCatalog['currency']): string {
+  return currency === 'INR' ? 'excl. GST' : 'taxes confirmed at checkout';
+}
+
 function priceLabel(price: HeadlinePrice, minorUnits: number): string {
   if (price.kind === 'price') return formatMoney(price.money, minorUnits);
   return price.kind === 'contact' ? 'Contact sales' : 'Not yet priced';
@@ -83,7 +91,7 @@ function PlanCard({
         {priceLabel(price, catalog.currency_minor_units)}
       </p>
       {price.kind === 'price' && (
-        <p className="website-label text-muted">per month · taxes calculated at checkout</p>
+        <p className="website-label text-muted">per month · {taxNote(catalog.currency)}</p>
       )}
       <PlanAction plan={plan} href={href} />
     </article>
@@ -118,6 +126,12 @@ function ExtraCard({
           ? formatMoney(entry.unit_price, catalog.currency_minor_units)
           : 'Not yet priced'}
       </p>
+      {entry.unit_price ? (
+        <p className="website-label text-muted">
+          one-time · {taxNote(catalog.currency)} · usable for {entry.expiry_days} days while your
+          plan is active
+        </p>
+      ) : null}
       {href ? (
         <a className="text-accent-text mt-auto underline" href={href}>
           Choose {entry.name}
@@ -156,8 +170,9 @@ export function PublicPricingCatalog({
           <span className="website-label text-muted">{BYOK_DISCLOSURE}</span>
         </label>
         <p className="website-label text-muted mb-6">
-          Prices shown in {catalog.currency}. Your billing country and final quote are confirmed in
-          the app.
+          Prices shown in {catalog.currency}
+          {catalog.currency === 'INR' ? ', exclusive of GST' : ''}. Your billing country sets the
+          final currency and tax, confirmed in the app before payment.
         </p>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {catalog.plans.map((plan) => (

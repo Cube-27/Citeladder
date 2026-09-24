@@ -91,6 +91,7 @@ const SUPPORT_NAV_ITEMS = [
     icon: ICONS.settings,
     scope: 'workspace',
   },
+  { label: 'Billing', href: '/billing', icon: ICONS.billing, scope: 'workspace' },
   { label: 'Settings', href: '/settings', icon: ICONS.settings, scope: 'workspace' },
 ] as const satisfies readonly NavItem[];
 

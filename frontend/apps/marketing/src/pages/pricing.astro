@@ -4,14 +4,14 @@ import { PricingComingSoonStrip } from '@/components/marketing/pricing/pricing-c
 import { PublicPricingCatalog } from '@/components/marketing/pricing/public-pricing-catalog';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
-import { publicCatalog } from '../public-catalog';
+import { displayCountry, publicCatalog } from '../public-catalog';
 import { workerApexEnv } from '../worker-env';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 
 const description =
   'Self-serve CiteLadder plans plus Enterprise. You pay for the workspace and the evidence. Model usage bills to your own provider keys, never marked up.';
 const env = workerApexEnv();
-const catalog = await publicCatalog(env);
+const catalog = await publicCatalog(env, displayCountry(Astro.request.headers));
 const initialByok = Astro.url.searchParams.get('byok') !== '0';
 Astro.response.headers.set('Cache-Control', 'no-store');
 ---

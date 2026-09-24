@@ -3,7 +3,8 @@
 Status: approved 24 September 2026. PR A (commercial core) implemented.
 PR B (payment paths) implemented except slice B8: the real test-mode smoke run
 needs a browser payment and has not been performed, so it moves to the start of
-the acceptance phase. PR C not started. The owner approved this scope. Payments stay
+the acceptance phase. PR C (customer surfaces) implemented; see "PR C as built"
+below. The owner approved this scope. Payments stay
 disabled: `BILLING_CHECKOUT_ENABLED` and `BILLING_RAZORPAY_LIVE_READY` remain
 false until the go-live sign-off in the acceptance phase. Testing against Razorpay is the last phase, after
 everything is implemented.
@@ -112,7 +113,7 @@ lists the rows it closes.
   reconciliation coverage for them must be verified.
 - **G19** — There is no public refund and cancellation policy page, and no
   CiteLadder support contact block.
-- **G20** — The billing UI (`components/settings/billing-settings.tsx` and
+- **G20** — The billing UI (then a settings sub-panel plus
   `components/billing/*`) needs a dedicated, improved billing section.
 
 ## Delivery: three PRs plus an acceptance phase
@@ -369,6 +370,23 @@ This PR covers everything a customer sees.
 - Browser acceptance passes on desktop and mobile, with no hard-coded prices
   and a truthful unavailable state while checkout is off.
 
+**PR C as built (24 September 2026):**
+- C1: `/billing` in the app shell replaces the settings Billing tab
+  (`?tab=billing` redirects). An upgrade prepares the server's prorated quote
+  for review; the plan-row direction label compares catalog prices and the
+  server still decides. The unshippable card-trial panel was removed.
+- C2: the marketing page passes Cloudflare's `CF-IPCountry` to the catalog read
+  as a display region only; INR shows "excl. GST".
+- C3: the owner asked for CiteLadder's own policies, bound to Cube27 IT Private
+  Limited, in place of links to Cube27's corporate policies. `/terms`,
+  `/privacy`, `/refund-policy`, `/cancellation-policy` and `/contact` are
+  published alongside `/cookies` and `/ai-policy`. The pages leave out every
+  clause still waiting on an owner decision. The open items are tracked in
+  [the legal draft](../operations/CiteLadder_Legal_Pages_Final_Review_Draft_2026-09-24.md)
+  (Part 0).
+- Not built: recording Terms acceptance per purchase (legal draft C2).
+  Checkout shows consent copy but stores no acceptance record.
+
 ### Acceptance phase — test mode, then go live
 
 This phase is operational, not a code PR. Anything it finds is fixed in a
@@ -403,10 +421,9 @@ follow-up PR.
   These come from the CA or the company's registration records; engineering
   will not guess them. The code fails closed until they are set, and tests use
   fixtures.
-- **Before C3:** the public policy wording. The mechanics are already decided:
-  cancellation takes effect at the end of the period, and refunds follow the
-  rules in the decisions table. Still to decide: the refund window, and whether
-  customers can request refunds for top-ups.
+- **After C3:** the remaining policy decisions: the refund window for a mistaken
+  add-on or top-up purchase, and the rest of the legal draft's Part A. Only
+  undecided clauses are left out of the published pages.
 
 ## Out of scope
 

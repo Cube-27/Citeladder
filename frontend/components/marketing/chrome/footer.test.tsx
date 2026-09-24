@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 import { render, screen, within } from '@testing-library/react';
 
 import { COMPETITORS } from '@/lib/marketing-content/compare';
-import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
+import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
+import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
 
 import { MarketingFooter } from './footer';
 
@@ -58,32 +59,17 @@ describe('MarketingFooter', () => {
     expect(screen.queryByRole('link', { name: /documentation/i })).toBeNull();
   });
 
-  it('exposes the legal strip, with the corporate policies on the parent site', async () => {
+  it('links every CiteLadder policy from the legal strip, in the same tab', async () => {
     render(await MarketingFooter());
 
-    // Privacy and Terms bind Cube27 and are published there, so the strip
-    // must leave the site for them (in a new tab) rather than link a local
-    // copy that would drift out of date.
+    // The policies are CiteLadder's own pages on this domain, so none of them
+    // may leave the site the way the former parent-company links did.
     const legal = screen.getByRole('navigation', { name: 'Legal' });
-    for (const [name, href] of [
-      ['Terms of Service', PARENT_COMPANY.termsHref],
-      ['Privacy Policy', PARENT_COMPANY.privacyHref],
-    ] as const) {
-      const link = within(legal).getByRole('link', { name });
+    for (const { label, href } of FOOTER_LEGAL_LINKS) {
+      const link = within(legal).getByRole('link', { name: label });
       expect(link).toHaveAttribute('href', href);
-      expect(link).toHaveAttribute('target', '_blank');
-      expect(link).toHaveAttribute('rel', 'noreferrer');
+      expect(link).not.toHaveAttribute('target');
     }
-
-    // The product's own policies stay on this surface.
-    expect(within(legal).getByRole('link', { name: 'Cookies' })).toHaveAttribute(
-      'href',
-      '/cookies',
-    );
-    expect(within(legal).getByRole('link', { name: 'AI Policy' })).toHaveAttribute(
-      'href',
-      '/ai-policy',
-    );
   });
 
   it('names the parent company in the ownership line', async () => {
@@ -102,9 +88,9 @@ describe('MarketingFooter', () => {
       'href',
       PARENT_COMPANY.href,
     );
-    expect(screen.getByRole('link', { name: 'Cube27 on LinkedIn' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'CiteLadder on LinkedIn' })).toHaveAttribute(
       'href',
-      PARENT_COMPANY.linkedin,
+      CITELADDER_LINKEDIN,
     );
   });
 });

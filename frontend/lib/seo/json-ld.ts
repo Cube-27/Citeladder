@@ -3,6 +3,7 @@ import { blogPostFreshness, type BlogPostSummary } from '@/lib/marketing-content
 import type { FaqGroup } from '@/lib/marketing-content/faq';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { FOUNDER, PRODUCT_HEAD } from '@/lib/marketing-content/people';
+import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
 
 export type JsonLdObject = Record<string, unknown>;
@@ -21,11 +22,11 @@ export function organizationJsonLd(): JsonLdObject | null {
     url,
     logo: absoluteUrl('/citeladder-logo.svg'),
     email: PARENT_COMPANY.email,
+    sameAs: [CITELADDER_LINKEDIN],
     parentOrganization: {
       '@type': 'Organization',
       name: PARENT_COMPANY.legalName,
       url: PARENT_COMPANY.href,
-      sameAs: [PARENT_COMPANY.linkedin],
       address: {
         '@type': 'PostalAddress',
         streetAddress: 'Plot No. 12, Mulberry Gardens 1, Magarpatta City',
@@ -38,8 +39,8 @@ export function organizationJsonLd(): JsonLdObject | null {
     // `sameAs` asserts "this URL is another identity OF THIS ENTITY", so a
     // personal profile here would claim CiteLadder and a named individual are
     // the same thing. The people are related to the organization, not
-    // identical to it, and `employee` is the property that says so. The one
-    // company profile that does identify the parent moves onto the parent.
+    // identical to it, and `employee` is the property that says so. The
+    // CiteLadder company page, by contrast, IS this entity.
     employee: [PRODUCT_HEAD, FOUNDER].map((person) => ({
       '@type': 'Person',
       name: person.name,

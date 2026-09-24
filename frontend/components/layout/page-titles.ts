@@ -24,6 +24,7 @@ const PAGE_TITLES: ReadonlyArray<readonly [prefix: string, title: string]> = [
   ['/search-intelligence', 'Search Intelligence'],
   ['/issues', 'Issues'],
   ['/settings', 'Settings'],
+  ['/billing', 'Billing'],
   ['/pricing', 'Pricing'],
 ];
 

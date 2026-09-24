@@ -78,7 +78,7 @@ describe('UserMenu', () => {
     logoutMock.mockReset().mockResolvedValue(undefined);
   });
 
-  it('shows Settings, MCP docs, and the tour replay above Sign out', async () => {
+  it('shows Settings, Billing, MCP docs, and the tour replay above Sign out', async () => {
     const user = userEvent.setup();
     renderMenu();
 
@@ -89,16 +89,19 @@ describe('UserMenu', () => {
     const labels = items.map((item) => item.textContent ?? '');
 
     const settingsIndex = labels.findIndex((label) => /settings/i.test(label));
+    const billingIndex = labels.findIndex((label) => /^billing$/i.test(label));
     const mcpIndex = labels.findIndex((label) => /^mcp$/i.test(label));
     const signOutIndex = labels.findIndex((label) => /sign out/i.test(label));
 
-    // Order: Settings → MCP → Sign out.
+    // Order: Settings → Billing → MCP → Sign out.
     expect(settingsIndex).toBeGreaterThanOrEqual(0);
-    expect(mcpIndex).toBe(settingsIndex + 1);
+    expect(billingIndex).toBe(settingsIndex + 1);
+    expect(mcpIndex).toBe(billingIndex + 1);
     expect(signOutIndex).toBe(mcpIndex + 1);
 
     // asChild renders the menuitem as the Link anchor itself.
     expect(items[settingsIndex]).toHaveAttribute('href', `/settings?workspace=${WORKSPACE}`);
+    expect(items[billingIndex]).toHaveAttribute('href', `/billing?workspace=${WORKSPACE}`);
     expect(items[mcpIndex]).toHaveAttribute('href', '/docs/mcp');
     expect(items[mcpIndex]).toHaveAttribute('target', '_blank');
   });

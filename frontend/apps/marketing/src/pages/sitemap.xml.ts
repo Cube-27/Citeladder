@@ -1,5 +1,6 @@
 import { POSTS } from '@/lib/marketing-content/blog';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
+import { FOOTER_LEGAL_LINKS } from '@/lib/marketing-content/legal';
 import { absoluteUrl } from '@/lib/seo/site';
 
 type RouteEntry = {
@@ -40,6 +41,11 @@ export function GET() {
       path: `/compare/${competitor.slug}`,
       changeFrequency: 'monthly' as const,
       priority: 0.5,
+    })),
+    ...FOOTER_LEGAL_LINKS.map((link) => ({
+      path: link.href,
+      changeFrequency: 'yearly' as const,
+      priority: 0.3,
     })),
   ];
   const entries = routes

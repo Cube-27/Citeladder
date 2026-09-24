@@ -1,0 +1,13 @@
+---
+import { LegalDocumentView } from '@/components/marketing/pages/legal';
+import { CONTACT_PAGE } from '@/lib/marketing-content/legal-billing';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+---
+
+<MarketingLayout
+  title="Contact · CiteLadder"
+  description={CONTACT_PAGE.description}
+  canonical="/contact"
+>
+  <LegalDocumentView document={CONTACT_PAGE} />
+</MarketingLayout>

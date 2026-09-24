@@ -36,7 +36,7 @@ function ordered(items: readonly UsageItem[]): UsageItem[] {
 }
 
 /**
- * Account usage, extracted from `BillingSettings` so plan orchestration and
+ * Account usage, extracted from `BillingScreen` so plan orchestration and
  * meter rendering have separate owners.
  *
  * Fails closed on an unresolved entitlement: an account whose fold did not

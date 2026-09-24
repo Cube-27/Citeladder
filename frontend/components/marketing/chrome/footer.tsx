@@ -3,13 +3,9 @@ import { ArrowUpRight } from 'lucide-react';
 import { LogoMark } from '@/components/ui/logo-mark';
 
 import { COMPETITORS } from '@/lib/marketing-content/compare';
-import {
-  FOOTER_LEGAL_LINKS,
-  PARENT_COMPANY,
-  type LegalLink,
-  legalDisplayName,
-} from '@/lib/marketing-content/legal';
+import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
 import { appHref } from '@/lib/config/app-link';
 
 import { Container } from '../primitives/section';
@@ -73,11 +69,8 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
       // led anyway.
       { label: DEMO_CTA, href: DEMO_HREF, external: DEMO_EXTERNAL },
       { label: PARENT_COMPANY.name, href: PARENT_COMPANY.href, external: true },
-      {
-        label: `${PARENT_COMPANY.name} on LinkedIn`,
-        href: PARENT_COMPANY.linkedin,
-        external: true,
-      },
+      { label: 'CiteLadder on LinkedIn', href: CITELADDER_LINKEDIN, external: true },
+      { label: 'Contact', href: '/contact' },
       { label: 'Log in', href: '/login', app: true },
     ],
   },
@@ -105,27 +98,11 @@ function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
 const LEGAL_STRIP_LINK =
   'text-muted hover:text-foreground text-xs font-medium underline-offset-4 hover:underline';
 
-function LegalStripLink({ link }: Readonly<{ link: LegalLink }>) {
-  if (link.external) {
-    return (
-      <a className={LEGAL_STRIP_LINK} href={link.href} target="_blank" rel="noreferrer">
-        {link.label}
-      </a>
-    );
-  }
-  return (
-    <a className={LEGAL_STRIP_LINK} href={link.href}>
-      {link.label}
-    </a>
-  );
-}
-
-/** Shared editorial footer; destinations and legal ownership stay unchanged. */
+/** Shared editorial footer: product links, the ownership line and every published policy. */
 export async function MarketingFooter() {
   'use cache';
 
   const year = new Date().getFullYear();
-  const name = legalDisplayName();
 
   return (
     <footer className="marketing-footer relative">
@@ -163,7 +140,7 @@ export async function MarketingFooter() {
             {/* CiteLadder is a Cube27 product, so the parent company is named in
               the ownership line rather than tucked into a link column alone. */}
             <p className="website-label text-muted">
-              © {year} {name}. A{' '}
+              © {year} CiteLadder. A{' '}
               <a
                 href={PARENT_COMPANY.href}
                 target="_blank"
@@ -176,7 +153,9 @@ export async function MarketingFooter() {
             </p>
             <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 lg:justify-end">
               {FOOTER_LEGAL_LINKS.map((link) => (
-                <LegalStripLink key={link.href} link={link} />
+                <a key={link.href} className={LEGAL_STRIP_LINK} href={link.href}>
+                  {link.label}
+                </a>
               ))}
             </nav>
           </div>

@@ -30,7 +30,7 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
   }),
 }));
 
-import { BillingSettings } from './billing-settings';
+import { BillingScreen } from './billing-screen';
 
 function resolvedEntitlement(subscription: unknown = null) {
   return {
@@ -135,7 +135,92 @@ const USAGE = {
   ],
 };
 
-const catalogHandler = () => http.get('/api/v1/billing/catalog', () => HttpResponse.json(CATALOG));
+const catalogHandler = (catalog: object = CATALOG) =>
+  http.get('/api/v1/billing/catalog', () => HttpResponse.json(catalog));
+const meHandler = () =>
+  http.get('/api/v1/auth/me', () =>
+    HttpResponse.json({
+      user: {
+        id: ACCOUNT,
+        email: 'payer@example.com',
+        role: 'owner',
+        is_active: true,
+        created_at: '2026-09-08T00:00:00Z',
+        updated_at: '2026-09-08T00:00:00Z',
+      },
+    }),
+  );
+
+function money(amount_minor: number) {
+  return { currency: 'USD', amount_minor };
+}
+
+function activation(kind: string, catalogKey: string, amount: number, quantity = 1) {
+  return {
+    activation_id: ACCOUNT,
+    kind,
+    catalog_key: catalogKey,
+    quantity,
+    status: 'pending',
+    quote: {
+      quote_id: 'q1',
+      catalog_revision: 'commercial-v9',
+      catalog_key: catalogKey,
+      credential_mode: 'byok',
+      country_code: 'US',
+      region: 'international',
+      base_price: money(amount),
+      subtotal_price: money(amount),
+      discount: money(0),
+      taxable_value: money(amount),
+      credit_price: null,
+      tax: money(0),
+      tax_treatment: 'EXPORT_ZERO_RATED',
+      tax_rate: '0',
+      cgst: money(0),
+      sgst: money(0),
+      igst: money(0),
+      tax_policy_version: 1,
+      total_price: money(amount),
+      expires_at: '2026-08-01T12:00:00Z',
+    },
+    checkout_url: null,
+    expires_at: '2026-08-01T12:00:00Z',
+    failure_code: null,
+  };
+}
+
+const ACTIVE_STARTER = {
+  catalog_key: 'tier_1',
+  status: 'active',
+  current_period_end: '2026-09-01T00:00:00Z',
+  cancel_at_period_end: false,
+  scheduled_change: null,
+};
+
+/** Starter, Growth and one add-on: enough for a subscriber's choices. */
+const SUBSCRIBER_CATALOG = {
+  ...CATALOG,
+  plans: [
+    CATALOG.plans[0],
+    { ...CATALOG.plans[0], key: 'tier_2', name: 'Growth', base_price: money(9900) },
+  ],
+  addons: [
+    {
+      key: 'extra_project',
+      name: 'Extra project',
+      description: 'One more project',
+      unit_price: money(1900),
+      quantity_min: 1,
+      quantity_max: 5,
+      availability: 'available',
+      unavailable_reason: null,
+      grants_per_unit: [{ key: 'project_slots', value: 1 }],
+      eligible_plan_keys: ['tier_1', 'tier_2'],
+      expiry_days: 30,
+    },
+  ],
+};
 const entitlementHandler = () =>
   http.get('/api/v1/billing/entitlement', () => HttpResponse.json(entitlementValue as never));
 const usageHandler = () => http.get('/api/v1/billing/usage', () => HttpResponse.json(USAGE));
@@ -151,7 +236,7 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 
-describe('BillingSettings', () => {
+describe('BillingScreen', () => {
   it('uses the shared page loading state for the initial entitlement read', async () => {
     entitlementLoading = true;
     mswServer.use(
@@ -162,16 +247,10 @@ describe('BillingSettings', () => {
       }),
     );
 
-    renderWithProviders(<BillingSettings />);
+    renderWithProviders(<BillingScreen />);
 
     // The `status` announcement is held back until the spinner becomes visible.
     expect(await screen.findByRole('status')).toHaveAccessibleName('Loading billing…');
-  });
-
-  it('omits disabled billing instead of presenting a loading state', () => {
-    const { container } = renderWithProviders(<BillingSettings enabled={false} />);
-
-    expect(container).toBeEmptyDOMElement();
   });
 
   it('renders the plan from the catalog with no retired free/paid vocabulary', async () => {
@@ -184,7 +263,7 @@ describe('BillingSettings', () => {
     });
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
-    renderWithProviders(<BillingSettings />);
+    renderWithProviders(<BillingScreen />);
 
     expect((await screen.findAllByText('Starter')).length).toBeGreaterThan(0);
     const body = document.body.textContent ?? '';
@@ -196,16 +275,17 @@ describe('BillingSettings', () => {
     entitlementValue = null;
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
-    renderWithProviders(<BillingSettings />);
+    renderWithProviders(<BillingScreen />);
 
     expect(await screen.findByText(/entitlement could not be resolved/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Choose a plan' })).not.toBeInTheDocument();
   });
 
   it('shows the BYOK base price and blocks checkout until a country is supplied', async () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
-    renderWithProviders(<BillingSettings />);
+    renderWithProviders(<BillingScreen />);
 
     // The headline equals the catalog's own base_price — never a constant.
     expect(await screen.findByText('$49 / month')).toBeInTheDocument();
@@ -217,57 +297,12 @@ describe('BillingSettings', () => {
     );
   });
 
-  it('submits only the catalog key, BYOK mode and country — never an amount', async () => {
+  it('submits only the catalog key, BYOK mode and country, then reviews the quote', async () => {
     entitlementValue = resolvedEntitlement();
     const bodies: unknown[] = [];
-    const response = {
-      activation_id: ACCOUNT,
-      kind: 'base',
-      catalog_key: 'tier_1',
-      quantity: 1,
-      status: 'pending',
-      quote: {
-        quote_id: 'q1',
-        catalog_revision: 'commercial-v9',
-        catalog_key: 'tier_1',
-        credential_mode: 'byok',
-        country_code: 'US',
-        region: 'international',
-        base_price: { currency: 'USD', amount_minor: 4900 },
-        subtotal_price: { currency: 'USD', amount_minor: 4900 },
-        discount: { currency: 'USD', amount_minor: 0 },
-        taxable_value: { currency: 'USD', amount_minor: 4900 },
-        credit_price: null,
-        tax: { currency: 'USD', amount_minor: 0 },
-        tax_treatment: 'EXPORT_ZERO_RATED',
-        tax_rate: '0',
-        cgst: { currency: 'USD', amount_minor: 0 },
-        sgst: { currency: 'USD', amount_minor: 0 },
-        igst: { currency: 'USD', amount_minor: 0 },
-        tax_policy_version: 1,
-        total_price: { currency: 'USD', amount_minor: 4900 },
-        expires_at: '2026-08-01T12:00:00Z',
-      },
-      checkout_url: null,
-      expires_at: '2026-08-01T12:00:00Z',
-      failure_code: null,
-    };
+    const response = activation('base', 'tier_1', 4900);
     mswServer.use(
-      http.get('/api/v1/auth/me', () =>
-        HttpResponse.json({
-          user: {
-            id: ACCOUNT,
-            email: 'payer@example.com',
-            role: 'owner',
-            is_active: true,
-            created_at: '2026-09-08T00:00:00Z',
-            updated_at: '2026-09-08T00:00:00Z',
-          },
-        }),
-      ),
-      http.get(`/api/v1/billing/activations/${ACCOUNT}`, () =>
-        HttpResponse.json({ ...response, status: 'failed' }),
-      ),
+      meHandler(),
       catalogHandler(),
       entitlementHandler(),
       usageHandler(),
@@ -277,20 +312,31 @@ describe('BillingSettings', () => {
       }),
     );
 
-    renderWithProviders(<BillingSettings />);
+    renderWithProviders(<BillingScreen />);
     await screen.findByText('$49 / month');
     fillExportBillingDetails();
     await userEvent.click(screen.getByRole('button', { name: /Choose Starter/ }));
 
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual(EXPORT_CHECKOUT_BODY);
+
+    // Nothing is charged yet: the server quote and the recurring consent come
+    // first, with the policies the buyer is agreeing to.
+    const review = await screen.findByRole('region', { name: 'Review your subscription' });
+    expect(within(review).getByText('Total')).toBeInTheDocument();
+    expect(within(review).getByText(/recurring monthly charge/i)).toBeInTheDocument();
+    expect(within(review).getByRole('link', { name: 'Refund Policy' })).toHaveAttribute(
+      'href',
+      expect.stringMatching(/\/refund-policy$/),
+    );
+    expect(within(review).getByRole('button', { name: 'Confirm and pay' })).toBeEnabled();
   });
 
   it('renders Enterprise as contact-only, with no checkout and no trial CTA', async () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
-    renderWithProviders(<BillingSettings />);
+    renderWithProviders(<BillingScreen />);
     await screen.findByText('$49 / month');
 
     const enterprise = document.querySelector('[data-tier="enterprise"]') as HTMLElement;
@@ -304,7 +350,7 @@ describe('BillingSettings', () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
-    renderWithProviders(<BillingSettings />);
+    renderWithProviders(<BillingScreen />);
 
     // A finite row shows the real ratio…
     expect(await screen.findByText('42 / 100 prompts')).toBeInTheDocument();
@@ -336,7 +382,7 @@ describe('BillingSettings', () => {
       }),
     );
 
-    renderWithProviders(<BillingSettings />);
+    renderWithProviders(<BillingScreen />);
 
     await userEvent.click(
       (await screen.findAllByRole('button', { name: /Cancel at period end/ }))[0],
@@ -358,7 +404,7 @@ describe('BillingSettings', () => {
       usageHandler(),
     );
 
-    renderWithProviders(<BillingSettings />);
+    renderWithProviders(<BillingScreen />);
 
     expect(await screen.findByText(/Could not load the plan catalog/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Choose/ })).toBeNull();
@@ -410,7 +456,7 @@ describe('BillingSettings', () => {
       ),
     );
 
-    renderWithProviders(<BillingSettings />);
+    renderWithProviders(<BillingScreen />);
 
     expect(await screen.findByText(/Invoice INV-1001/)).toBeInTheDocument();
     expect(screen.getByText(/Receipt RCT-1001/)).toBeInTheDocument();
@@ -425,5 +471,115 @@ describe('BillingSettings', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Download receipt' }));
     expect(await screen.findByText('Receipt download failed. Please retry.')).toBeInTheDocument();
+  });
+  it('quotes the prorated upgrade charge before any payment opens', async () => {
+    entitlementValue = resolvedEntitlement(ACTIVE_STARTER);
+    const changes: unknown[] = [];
+    let checkoutOpened = false;
+    mswServer.use(
+      meHandler(),
+      catalogHandler(SUBSCRIBER_CATALOG),
+      entitlementHandler(),
+      usageHandler(),
+      http.post('/api/v1/billing/subscription/change', async ({ request }) => {
+        changes.push(await request.json());
+        return HttpResponse.json({
+          direction: 'upgrade',
+          catalog_key: 'tier_2',
+          status: 'payment_required',
+          effective_at: '2026-08-15T00:00:00Z',
+          activation: activation('upgrade', 'tier_2', 2500),
+        });
+      }),
+      http.get(`/api/v1/billing/activations/${ACCOUNT}/checkout`, () => {
+        checkoutOpened = true;
+        return HttpResponse.json({ detail: 'unexpected' }, { status: 500 });
+      }),
+    );
+
+    renderWithProviders(<BillingScreen />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Upgrade to Growth' }));
+
+    const review = await screen.findByRole('region', { name: 'Review your upgrade' });
+    expect(changes).toEqual([{ catalog_key: 'tier_2' }]);
+    expect(within(review).getByText(/prorated for the rest of this period/)).toBeInTheDocument();
+    expect(within(review).getByText(/single charge/i)).toBeInTheDocument();
+    expect(checkoutOpened).toBe(false);
+  });
+
+  it('schedules a downgrade only after confirmation, without a payment', async () => {
+    entitlementValue = resolvedEntitlement({ ...ACTIVE_STARTER, catalog_key: 'tier_2' });
+    const changes: unknown[] = [];
+    mswServer.use(
+      catalogHandler(SUBSCRIBER_CATALOG),
+      entitlementHandler(),
+      usageHandler(),
+      http.post('/api/v1/billing/subscription/change', async ({ request }) => {
+        changes.push(await request.json());
+        return HttpResponse.json({
+          direction: 'downgrade',
+          catalog_key: 'tier_1',
+          status: 'scheduled',
+          effective_at: '2026-09-01T00:00:00Z',
+          activation: null,
+        });
+      }),
+    );
+
+    renderWithProviders(<BillingScreen />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Downgrade to Starter' }));
+    expect(changes).toHaveLength(0);
+
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Schedule downgrade' }));
+    await waitFor(() => expect(changes).toEqual([{ catalog_key: 'tier_1' }]));
+    expect(screen.queryByRole('region', { name: /Review your/ })).toBeNull();
+  });
+
+  it('buys the chosen add-on quantity through the one-time quote', async () => {
+    entitlementValue = resolvedEntitlement(ACTIVE_STARTER);
+    const bodies: unknown[] = [];
+    mswServer.use(
+      meHandler(),
+      catalogHandler(SUBSCRIBER_CATALOG),
+      entitlementHandler(),
+      usageHandler(),
+      http.post('/api/v1/billing/addons', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(activation('addon', 'extra_project', 5700, 3));
+      }),
+    );
+
+    renderWithProviders(<BillingScreen />);
+    const quantity = await screen.findByLabelText('Quantity of Extra project');
+    await userEvent.clear(quantity);
+    await userEvent.type(quantity, '3');
+    await userEvent.click(screen.getByRole('button', { name: 'Buy Extra project' }));
+
+    await waitFor(() => expect(bodies).toEqual([{ catalog_key: 'extra_project', quantity: 3 }]));
+    expect(await screen.findByRole('region', { name: 'Review your add-on' })).toBeInTheDocument();
+  });
+
+  it('holds every billing change for a member without billing rights', async () => {
+    entitlementValue = resolvedEntitlement(ACTIVE_STARTER);
+    mswServer.use(catalogHandler(SUBSCRIBER_CATALOG), entitlementHandler(), usageHandler());
+
+    renderWithProviders(<BillingScreen />, {
+      projectSelection: {
+        activeWorkspace: {
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          name: 'Test Workspace',
+          role: 'member',
+          capabilities: ['read', 'run', 'write'],
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      },
+    });
+
+    expect(await screen.findByText(/Only a workspace Owner or Admin/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upgrade to Growth' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Buy Extra project' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Cancel at period end/ })).toBeNull();
   });
 });

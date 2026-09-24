@@ -153,9 +153,8 @@ claims retain their recorded expiry unless the account owner uses the supported
 end-early-access endpoint or an operator performs a separately approved grant
 correction.
 
-The future card-trial quote remains unavailable, collects no card details, and
-must not be represented as launch-ready. No catalog publication or environment
-flag currently enables it.
+A card trial is not offered and has no customer surface. No catalog
+publication or environment flag enables it.
 
 ## Account inspection and grant correction
 

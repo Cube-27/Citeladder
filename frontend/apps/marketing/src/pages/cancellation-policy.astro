@@ -1,0 +1,13 @@
+---
+import { LegalDocumentView } from '@/components/marketing/pages/legal';
+import { CANCELLATION_POLICY } from '@/lib/marketing-content/legal-billing';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+---
+
+<MarketingLayout
+  title="Cancellation Policy · CiteLadder"
+  description={CANCELLATION_POLICY.description}
+  canonical="/cancellation-policy"
+>
+  <LegalDocumentView document={CANCELLATION_POLICY} />
+</MarketingLayout>

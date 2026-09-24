@@ -1,0 +1,13 @@
+---
+import { LegalDocumentView } from '@/components/marketing/pages/legal';
+import { SUBPROCESSORS } from '@/lib/marketing-content/legal-dpa';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+---
+
+<MarketingLayout
+  title="Subprocessors · CiteLadder"
+  description={SUBPROCESSORS.description}
+  canonical="/subprocessors"
+>
+  <LegalDocumentView document={SUBPROCESSORS} />
+</MarketingLayout>

@@ -44,16 +44,16 @@ export function InvoiceHistory({
   };
 
   return (
-    <section className={panelClasses({}, 'grid gap-3')} aria-label="Payment history">
+    <section className={panelClasses({}, 'grid gap-3')} aria-label="Billing documents">
       <div>
-        <p className={eyebrowClasses}>Payment history</p>
-        <h2 className={textRole('sectionTitle')}>Paid receipts</h2>
+        <p className={eyebrowClasses}>Billing documents</p>
+        <h2 className={textRole('sectionTitle')}>Invoices, receipts and credit notes</h2>
       </div>
       {error ? <Alert tone="danger">Receipts could not be loaded.</Alert> : null}
       {downloadError ? <Alert tone="danger">Receipt download failed. Please retry.</Alert> : null}
       {loading ? <Skeleton className="h-16 w-full" /> : null}
       {!loading && !error && invoices.length === 0 ? (
-        <p className={textRole('meta')}>No paid receipts have been issued.</p>
+        <p className={textRole('meta')}>No invoices have been issued yet.</p>
       ) : null}
       <div className="grid gap-2">
         {invoices.map((invoice) => (

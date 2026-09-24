@@ -104,9 +104,12 @@ across network I/O.
 ## Read and UI surfaces
 
 Public pricing reads the published catalog without a hardcoded fallback.
-[Billing settings](../frontend/components/settings/billing-settings.tsx) and
-[billing components](../frontend/components/billing/) show account, invoice,
-usage, intent and subscription state. The checkout controller polls persisted
+The app's `/billing` section
+([billing screen](../frontend/components/billing/billing-screen.tsx) and the
+other [billing components](../frontend/components/billing/)) shows account,
+invoice, usage, intent and subscription state, and runs plan changes and
+add-on/top-up purchases. Every purchase reviews the full server quote with
+payment consent and the policy links before the provider opens. The checkout controller polls persisted
 activation; only confirmed activation refreshes access caches. Unavailable
 checkout is shown honestly. Pricing remains usable before project creation.
 The prepared app `/pricing` continuation captures only a bounded catalog

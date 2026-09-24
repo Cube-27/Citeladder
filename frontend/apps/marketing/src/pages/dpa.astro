@@ -1,0 +1,13 @@
+---
+import { LegalDocumentView } from '@/components/marketing/pages/legal';
+import { DATA_PROCESSING_AGREEMENT } from '@/lib/marketing-content/legal-dpa';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+---
+
+<MarketingLayout
+  title="Data Processing Agreement · CiteLadder"
+  description={DATA_PROCESSING_AGREEMENT.description}
+  canonical="/dpa"
+>
+  <LegalDocumentView document={DATA_PROCESSING_AGREEMENT} />
+</MarketingLayout>

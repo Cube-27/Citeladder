@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { websiteHref } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 
 import { FlowShell } from './flow-shell';
@@ -26,7 +27,7 @@ function AuthLegalFooter() {
       </span>
       <span aria-hidden="true">·</span>
       <a
-        href={PARENT_COMPANY.privacyHref}
+        href={websiteHref('/privacy')}
         target="_blank"
         rel="noreferrer"
         className="hover:text-foreground transition-colors"
@@ -35,7 +36,7 @@ function AuthLegalFooter() {
       </a>
       <span aria-hidden="true">·</span>
       <a
-        href={PARENT_COMPANY.termsHref}
+        href={websiteHref('/terms')}
         target="_blank"
         rel="noreferrer"
         className="hover:text-foreground transition-colors"
