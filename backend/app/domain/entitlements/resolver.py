@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 
 from app.core.config.entitlements import (
     CONSUMABLE_DRAW_SOURCE_ORDER,
+    GRANT_SOURCE_ADDON,
     GRANT_SOURCE_KINDS,
     GRANT_SOURCE_TOPUP,
     CapabilityDefinition,
@@ -27,12 +28,14 @@ from app.domain.entitlements.types import (
     RevocationInput,
 )
 
-# A top-up with no readable current base subscription end resolves unavailable:
+# A one-time add-on/top-up with no readable current base subscription end
+# resolves unavailable:
 # its effective expiry is the distant past, so it is never active at ``at``.
 _TOPUP_UNAVAILABLE = datetime.min.replace(tzinfo=UTC)
 # Grants with no expiry draw after every expiring grant.
 _NO_EXPIRY = datetime.max.replace(tzinfo=UTC)
 _SOURCE_WEIGHT = {kind: i for i, kind in enumerate(CONSUMABLE_DRAW_SOURCE_ORDER)}
+_PAID_ACCESS_SOURCES = frozenset({GRANT_SOURCE_ADDON, GRANT_SOURCE_TOPUP})
 _PRIMARY_ROLE = "primary"
 _SUPPLEMENT_ROLE = "supplement"
 _ALLOWED_BUNDLE_ROLES = frozenset({_PRIMARY_ROLE, _SUPPLEMENT_ROLE})
@@ -47,12 +50,14 @@ def effective_grant_expiry(
 ) -> datetime | None:
     """The instant a grant stops counting toward resolution.
 
-    Top-ups fund only while a base subscription is readable: their effective
-    expiry is ``min(valid_until, subscription_end)`` and, with no readable
-    end, the distant past (never active). Every other source uses its stored
-    ``valid_until`` (None = no expiry).
+    One-time add-ons and top-ups count only while a base subscription is
+    readable: their effective expiry is ``min(valid_until, subscription_end)``
+    and, with no readable end, the distant past (never active). A lapsed plan
+    therefore suspends them, and a renewal resumes them until their own fixed
+    expiry. Every other source uses its stored ``valid_until`` (None = no
+    expiry).
     """
-    if grant.source_kind != GRANT_SOURCE_TOPUP:
+    if grant.source_kind not in _PAID_ACCESS_SOURCES:
         return grant.valid_until
     if subscription_end is None:
         return _TOPUP_UNAVAILABLE

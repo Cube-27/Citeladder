@@ -12,9 +12,8 @@ from app.core.config.billing_catalog import scale_grant_specs
 from app.core.config.billing_contracts import (
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCEL_SCHEDULED,
-    SUBSCRIPTION_KIND_ADDON,
 )
-from app.core.config.entitlements import GRANT_SOURCE_ADDON, GRANT_SOURCE_PLAN
+from app.core.config.entitlements import GRANT_SOURCE_PLAN
 from app.domain.entitlements.grants import issue_grant_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.models.billing import AccountGrant, BillingSubscription
@@ -106,11 +105,10 @@ async def issue_period_bundle(
     templates = scale_grant_specs(templates, max(subscription.quantity, 1))
     purpose = subscription.subscription_kind
     period_identity = f"{start.isoformat()}:{end.isoformat()}"
-    is_addon = purpose == SUBSCRIPTION_KIND_ADDON
     await issue_grant_bundle(
         session,
         account_id=subscription.billing_account_id,
-        source_kind=GRANT_SOURCE_ADDON if is_addon else GRANT_SOURCE_PLAN,
+        source_kind=GRANT_SOURCE_PLAN,
         source_ref=f"subscription:{subscription.id}",
         grants=tuple(GrantSpec(key=key, value=value) for key, value in templates),
         catalog_revision=subscription.catalog_revision,
@@ -119,9 +117,9 @@ async def issue_period_bundle(
         valid_until=end,
         period_start=start,
         period_end=end,
-        bundle_role="supplement" if is_addon else "primary",
-        profile_key="" if is_addon else subscription.catalog_key,
-        profile_priority=0 if is_addon else 200,
+        bundle_role="primary",
+        profile_key=subscription.catalog_key,
+        profile_priority=200,
     )
 
 

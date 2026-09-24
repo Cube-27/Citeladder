@@ -54,6 +54,24 @@ reads use the single `published` row and fail closed if none exists. Publication
 retires the previously published row; it does not mutate subscription terms
 already frozen on accepted subscriptions or periods.
 
+### Author the launch revision
+
+`catalog-seed` authors the `launch-pricing-v1` draft from the launch terms.
+Pass the provider environment whose checkout prices it should author and,
+optionally, the INR authoring rate (default 90); without an environment only
+the USD display prices are authored, and without an approved GST rate India is
+left unauthored. Omitting `--apply` is the dry-run.
+
+```bash
+uv run python -m scripts.billing_admin catalog-seed \
+  --environment test --usd-inr-rate 90 \
+  --actor billing-operator@example.com --reason "Author launch pricing" \
+  --idempotency-key catalog-seed:launch-pricing-v1
+```
+
+Provider plan references are then added to a private copy, imported as a new
+revision, verified and published as below.
+
 ### Import and publish a revision
 
 ```bash

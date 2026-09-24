@@ -14,6 +14,7 @@ const catalog = {
   providers: [],
   addons: [],
   topups: [],
+  support_contact: null,
   plans: [
     {
       key: 'tier_1',

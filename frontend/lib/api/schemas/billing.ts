@@ -121,32 +121,33 @@ export const catalogPlanSchema = responseObject({
   trial_days: z.number().int().nullable(),
 });
 
-export const catalogAddonSchema = responseObject({
+/**
+ * A one-time add-on or top-up. Its grants last `expiry_days` after purchase
+ * or until the paid plan ends, whichever is earlier, and only a plan in
+ * `eligible_plan_keys` can buy it.
+ */
+const catalogItemSchema = responseObject({
   key: z.string(),
   name: z.string(),
   description: z.string(),
-  cadence: z.literal('monthly'),
   unit_price: moneySchema.nullable(),
   quantity_min: z.number().int(),
   quantity_max: z.number().int(),
   availability: catalogAvailabilitySchema,
   unavailable_reason: z.string().nullable(),
-  grant_key: z.string(),
-  grant_value_per_unit: z.number().int(),
+  grants_per_unit: z.array(responseObject({ key: z.string(), value: z.number().int() })),
+  eligible_plan_keys: z.array(planCatalogKeySchema),
+  expiry_days: z.number().int(),
 });
 
-export const catalogTopupSchema = responseObject({
-  key: z.string(),
-  name: z.string(),
-  description: z.string(),
-  unit_price: moneySchema.nullable(),
-  quantity_min: z.number().int(),
-  quantity_max: z.number().int(),
-  availability: catalogAvailabilitySchema,
-  unavailable_reason: z.string().nullable(),
-  grant_key: z.literal('audit_credits'),
-  credits_per_unit: z.number().int().nullable(),
-  expiry_days: z.number().int(),
+export const catalogAddonSchema = catalogItemSchema;
+
+export const catalogTopupSchema = catalogItemSchema;
+
+export const catalogSupportContactSchema = responseObject({
+  email: z.string(),
+  phone: z.string().nullable(),
+  contact_url: z.string(),
 });
 
 export const workspaceEntitlementSchema = responseObject({
@@ -207,6 +208,7 @@ export const billingCatalogSchema = responseObject({
   addons: z.array(catalogAddonSchema),
   topups: z.array(catalogTopupSchema),
   providers: z.array(catalogProviderSchema),
+  support_contact: catalogSupportContactSchema.nullable(),
 });
 
 export const grantProvenanceSchema = responseObject({
@@ -369,7 +371,11 @@ export const billingInvoiceSchema = responseObject({
   invoice_id: z.string(),
   invoice_number: z.string(),
   receipt_number: z.string(),
-  status: z.literal('paid'),
+  document_kind: z.enum(['gst_tax_receipt', 'export_receipt', 'credit_note']),
+  // `credited` marks a credit note; its `paid_at` is the issue time.
+  status: z.enum(['paid', 'credited']),
+  description: z.string(),
+  original_invoice_number: z.string().nullable(),
   paid_at: z.string(),
   amount_paid: moneySchema,
   subtotal_price: moneySchema,

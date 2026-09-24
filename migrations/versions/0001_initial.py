@@ -1570,13 +1570,6 @@ def upgrade() -> None:
         unique=True,
         postgresql_where=sa.text("is_current AND subscription_kind = 'base'"),
     )
-    op.create_index(
-        "uq_billing_subscription_one_current_addon",
-        "billing_subscriptions",
-        ["billing_account_id", "catalog_key"],
-        unique=True,
-        postgresql_where=sa.text("is_current AND subscription_kind = 'addon'"),
-    )
     op.create_table(
         "brand_aliases",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -4862,7 +4855,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "billing_invoice_counters",
-        sa.Column("financial_year", sa.String(length=7), nullable=False),
+        sa.Column("financial_year", sa.String(length=16), nullable=False),
         sa.Column("next_value", sa.Integer(), nullable=False),
         sa.CheckConstraint(
             "next_value > 0", name="ck_billing_invoice_counter_positive"
@@ -4874,8 +4867,8 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("billing_account_id", sa.UUID(), nullable=False),
         sa.Column("payment_id", sa.UUID(), nullable=False),
-        sa.Column("invoice_number", sa.String(length=32), nullable=False),
-        sa.Column("receipt_number", sa.String(length=36), nullable=False),
+        sa.Column("invoice_number", sa.String(length=40), nullable=False),
+        sa.Column("receipt_number", sa.String(length=40), nullable=False),
         sa.Column("financial_year", sa.String(length=7), nullable=False),
         sa.Column("document_kind", sa.String(length=24), nullable=False),
         sa.Column("invoice_date", sa.Date(), nullable=False),
@@ -4931,6 +4924,7 @@ def upgrade() -> None:
         sa.Column("task_id", sa.UUID(), nullable=True),
         sa.Column("content_generation_id", sa.UUID(), nullable=True),
         sa.Column("agent_task_run_id", sa.UUID(), nullable=True),
+        sa.Column("site_crawl_id", sa.UUID(), nullable=True),
         sa.Column("dispatch_key", sa.String(length=128), nullable=False),
         sa.Column("request_fingerprint", sa.String(length=64), nullable=False),
         sa.Column("allocation_order", sa.Integer(), nullable=False),
@@ -4953,13 +4947,16 @@ def upgrade() -> None:
             name="ck_consumable_ledger_refund_shape",
         ),
         sa.CheckConstraint(
-            "(subject_kind = 'audit' AND audit_id IS NOT NULL AND task_id IS NOT NULL AND content_generation_id IS NULL AND agent_task_run_id IS NULL) OR (subject_kind = 'content' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NOT NULL AND agent_task_run_id IS NULL) OR (subject_kind = 'agent' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NULL AND agent_task_run_id IS NOT NULL)",
+            "(subject_kind = 'audit' AND audit_id IS NOT NULL AND task_id IS NOT NULL AND content_generation_id IS NULL AND agent_task_run_id IS NULL AND site_crawl_id IS NULL) OR (subject_kind = 'content' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NOT NULL AND agent_task_run_id IS NULL AND site_crawl_id IS NULL) OR (subject_kind = 'agent' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NULL AND agent_task_run_id IS NOT NULL AND site_crawl_id IS NULL) OR (subject_kind = 'site_crawl' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NULL AND agent_task_run_id IS NULL AND site_crawl_id IS NOT NULL)",
             name="ck_consumable_ledger_typed_subject",
         ),
         sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(
             ["content_generation_id"], ["content_generations.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["site_crawl_id"], ["site_crawls.id"], ondelete="RESTRICT"
         ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="RESTRICT"

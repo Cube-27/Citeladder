@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Final
 
 from app.core.config.entitlements import (
-    KEY_AUDIT_CREDITS,
     KEY_PROVIDER_COPILOT,
     KEY_PROVIDER_GROK,
     KEY_PROVIDER_PERPLEXITY,
@@ -15,9 +14,7 @@ CADENCES: Final = frozenset({CADENCE_MONTHLY})
 
 SUBSCRIPTION_KIND_BASE: Final = "base"
 
-SUBSCRIPTION_KIND_ADDON: Final = "addon"
-
-SUBSCRIPTION_KINDS: Final = frozenset({SUBSCRIPTION_KIND_BASE, SUBSCRIPTION_KIND_ADDON})
+SUBSCRIPTION_KINDS: Final = frozenset({SUBSCRIPTION_KIND_BASE})
 
 PROVIDER_RAZORPAY: Final = "razorpay"
 
@@ -125,10 +122,6 @@ TAX_BEHAVIORS: Final[frozenset[str]] = frozenset(
 
 CADENCE_CUSTOM: Final = "custom"
 
-PRICE_PURPOSE_BASE: Final = "base"
-
-PRICE_PURPOSE_CREDIT: Final = "credit"
-
 REASON_CHECKOUT_UNAVAILABLE: Final = "checkout_unavailable"
 
 REASON_CONTACT_ONLY: Final = "contact_only"
@@ -152,21 +145,17 @@ PLAN_KEYS: Final[tuple[str, ...]] = (
 
 SELF_SERVE_PLAN_KEYS: Final[tuple[str, ...]] = (PLAN_TIER_1, PLAN_TIER_2, PLAN_TIER_3)
 
-TIER_1_BASE_USD_MINOR: Final = 9_900
-
-TIER_2_BASE_USD_MINOR: Final = 19_900
-
-TIER_3_BASE_USD_MINOR: Final = 29_900
-
+# Stable add-on and top-up catalog keys. Their prices, grants and expiry are
+# persisted catalog terms (``BillingCatalogRevision``), never constants here.
 ADDON_EXTRA_PROJECT: Final = "addon_extra_project"
 
 ADDON_EXTRA_PROMPTS: Final = "addon_extra_prompts"
 
+ADDON_EXTRA_SITE_HEALTH: Final = "addon_extra_site_health"
+
 TOPUP_AUDIT_CREDITS: Final = "topup_audit_credits"
 
-ADDON_EXTRA_PROJECT_SLOTS_PER_UNIT: Final = 1
-
-ADDON_EXTRA_PROMPTS_SLOTS_PER_UNIT: Final = 10
+TOPUP_AI_CREDITS: Final = "topup_ai_credits"
 
 ADDON_QUANTITY_MIN: Final = 1
 
@@ -175,8 +164,6 @@ ADDON_QUANTITY_MAX: Final = 20
 TOPUP_QUANTITY_MIN: Final = 1
 
 TOPUP_QUANTITY_MAX: Final = 20
-
-TOPUP_CREDIT_KEYS: Final[dict[str, str]] = {TOPUP_AUDIT_CREDITS: KEY_AUDIT_CREDITS}
 
 COMING_SOON_PLAN_CAPABILITY_KEYS: Final[tuple[str, ...]] = (
     KEY_PROVIDER_GROK,
@@ -233,8 +220,6 @@ OPERATION_SUBSCRIPTION_CANCEL: Final = "subscription.cancel"
 
 OPERATION_ADDON_ACTIVATE: Final = "addon.activate"
 
-OPERATION_ADDON_CANCEL: Final = "addon.cancel"
-
 OPERATION_TOPUP_PURCHASE: Final = "topup.purchase"
 
 REASON_TRIAL_REQUESTED_UNAVAILABLE: Final = "trial_unavailable"
@@ -249,8 +234,6 @@ REASON_QUANTITY_OUT_OF_BOUNDS: Final = "quantity_out_of_bounds"
 
 REASON_SUBSCRIPTION_EXISTS: Final = "subscription_already_active"
 
-REASON_ADDON_EXISTS: Final = "addon_already_active"
-
 REASON_SUBSCRIPTION_PENDING: Final = "subscription_pending"
 
 REASON_ADDON_PENDING: Final = "addon_pending"
@@ -259,11 +242,21 @@ REASON_NO_CURRENT_SUBSCRIPTION: Final = "no_current_subscription"
 
 REASON_BASE_SUBSCRIPTION_REQUIRED: Final = "base_subscription_required"
 
+# The current plan cannot buy this add-on/top-up (e.g. Workflow AI on Starter).
+REASON_ITEM_PLAN_INELIGIBLE: Final = "item_plan_ineligible"
+
 REASON_PROVIDER_UNAVAILABLE: Final = "provider_unavailable"
 
 REASON_PROVIDER_REJECTED: Final = "provider_rejected"
 
 REASON_ACTIVATION_EXPIRED: Final = "activation_expired"
+
+# Normalized refund status that has actually returned money to the buyer. Only
+# a processed refund issues a credit note or revokes grants.
+REFUND_PROCESSED: Final = "processed"
+
+# Revocation reason recorded when a purchase is refunded in full.
+REVOCATION_REASON_FULL_REFUND: Final = "full_refund"
 
 COMING_SOON_ADDON_KEYS: Final[frozenset[str]] = frozenset()
 

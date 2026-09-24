@@ -77,6 +77,9 @@ KEY_MANUAL_RUNS_PER_DAY: Final = "manual_runs_per_day"
 # This is explicitly temporary. It is one key, commented as interim, and
 # deletable in one place once real SERP billing is defined.
 KEY_SERP_TASKS_PER_PERIOD: Final = "serp_tasks_per_period"
+# Site Health page fetches per paid period. Scheduled and manual crawls share
+# one allowance; URL occupancy (``monitored_urls``) is a separate limit.
+KEY_SITE_HEALTH_PAGE_FETCHES: Final = "site_health_page_fetches_per_period"
 KEY_CONTENT_CREATION: Final = "content_creation"
 KEY_GROWTH_AGENT: Final = "growth_agent"
 KEY_PROJECT_DELETION: Final = "project_deletion"
@@ -296,6 +299,11 @@ def _build_registry() -> CapabilityRegistry:
                 resolution_rule=ResolutionRule.SUM,
             ),
             CapabilityDefinition(
+                key=KEY_SITE_HEALTH_PAGE_FETCHES,
+                capability_type=CapabilityType.COUNTER_CONSUMABLE,
+                resolution_rule=ResolutionRule.SUM,
+            ),
+            CapabilityDefinition(
                 key=KEY_CONTENT_CREATION,
                 capability_type=CapabilityType.FLAG,
                 resolution_rule=ResolutionRule.ANY,
@@ -470,3 +478,5 @@ CODE_MANUAL_RUN_RATE_EXCEEDED: Final = "manual_run_rate_exceeded"
 CODE_FUNDED_BUDGET_EXHAUSTED: Final = "funded_budget_exhausted"
 CODE_FUNDED_CREDITS_EXHAUSTED: Final = "funded_credits_exhausted"
 CODE_FUNDED_COST_UNRESOLVED: Final = "funded_cost_unresolved"
+# A paid account has no Site Health page fetches left this period.
+CODE_SITE_HEALTH_FETCHES_EXHAUSTED: Final = "site_health_fetches_exhausted"

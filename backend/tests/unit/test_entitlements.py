@@ -156,7 +156,7 @@ def test_flags_resolve_with_or() -> None:
 
 def test_counters_resolve_with_sum() -> None:
     a = _grant(KEY_MONITORED_URLS, 30)
-    b = _grant(KEY_MONITORED_URLS, 20, source_kind=GRANT_SOURCE_ADDON)
+    b = _grant(KEY_MONITORED_URLS, 20, source_kind=GRANT_SOURCE_OVERRIDE)
     resolved = _fold((a, b)).capability(KEY_MONITORED_URLS)
     assert resolved is not None
     assert resolved.value == 50
@@ -292,7 +292,7 @@ def test_consumable_resolution_carries_the_draw_order() -> None:
 
 
 # =========================================================================
-# Top-up expiry is coupled to the readable base subscription end
+# One-time add-on/top-up expiry is coupled to the readable base subscription end
 # =========================================================================
 def test_topup_without_a_subscription_end_is_never_active() -> None:
     topup = _grant(KEY_AUDIT_CREDITS, 100, source_kind=GRANT_SOURCE_TOPUP)
@@ -315,29 +315,27 @@ def test_topup_expiry_is_the_min_of_valid_until_and_subscription_end() -> None:
     assert effective_grant_expiry(topup, later) == _AT + timedelta(days=30)
 
 
-def test_topup_expiry_moves_with_renewal_and_cancellation() -> None:
-    topup = _grant(
-        KEY_AUDIT_CREDITS,
-        100,
-        source_kind=GRANT_SOURCE_TOPUP,
-        valid_until=_AT + timedelta(days=30),
+@pytest.mark.parametrize(
+    ("key", "source_kind"),
+    [
+        (KEY_AUDIT_CREDITS, GRANT_SOURCE_TOPUP),
+        (KEY_MONITORED_URLS, GRANT_SOURCE_ADDON),
+    ],
+)
+def test_one_time_expiry_moves_with_renewal_and_cancellation(
+    key: str, source_kind: str
+) -> None:
+    item = _grant(
+        key, 100, source_kind=source_kind, valid_until=_AT + timedelta(days=30)
     )
     # Active while the base subscription runs past ``at``.
     renewed = _AT + timedelta(days=15)
-    assert (
-        _fold((topup,), subscription_end=renewed).capability_value(KEY_AUDIT_CREDITS)
-        == 100
-    )
-    # A cancellation removes the readable end: the top-up resolves unavailable.
-    assert (
-        _fold((topup,), subscription_end=None).capability_value(KEY_AUDIT_CREDITS) == 0
-    )
-    # A base end BEFORE ``at`` likewise leaves the top-up expired.
+    assert _fold((item,), subscription_end=renewed).capability_value(key) == 100
+    # A lapsed plan removes the readable end: the item resolves unavailable.
+    assert _fold((item,), subscription_end=None).capability_value(key) == 0
+    # A base end BEFORE ``at`` likewise leaves it suspended.
     lapsed = _AT - timedelta(days=1)
-    assert (
-        _fold((topup,), subscription_end=lapsed).capability_value(KEY_AUDIT_CREDITS)
-        == 0
-    )
+    assert _fold((item,), subscription_end=lapsed).capability_value(key) == 0
 
 
 # =========================================================================

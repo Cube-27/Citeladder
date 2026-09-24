@@ -334,6 +334,7 @@ async def reserve_funded_task(
                 task_id=task_id,
                 content_generation_id=None,
                 agent_task_run_id=None,
+                site_crawl_id=None,
                 dispatch_key="reservation",
                 request_fingerprint=fingerprint,
                 allocation_order=index,
@@ -457,6 +458,7 @@ async def record_billable_attempt(
             task_id=base.task_id,
             content_generation_id=base.content_generation_id,
             agent_task_run_id=base.agent_task_run_id,
+            site_crawl_id=base.site_crawl_id,
             dispatch_key=str(attempt),
             request_fingerprint=settlement_fingerprint,
             allocation_order=index,
@@ -568,6 +570,7 @@ async def release_unused_reservation(
                 task_id=base.task_id,
                 content_generation_id=base.content_generation_id,
                 agent_task_run_id=base.agent_task_run_id,
+                site_crawl_id=base.site_crawl_id,
                 dispatch_key="release",
                 request_fingerprint=_fingerprint(
                     {

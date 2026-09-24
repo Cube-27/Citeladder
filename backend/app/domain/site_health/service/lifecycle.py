@@ -57,6 +57,7 @@ from app.domain.entitlements.service import (
     refresh_site_health_runtime_for_workspace,
 )
 from app.domain.site_health.change_queue import enqueue_change_refresh
+from app.domain.site_health.fetch_budget import settle_crawl_fetches
 from app.domain.site_health.link_queue import enqueue_link_metric_refresh
 from app.domain.site_health.phase import resolve_phase
 from app.domain.site_health.service.common import (
@@ -524,6 +525,8 @@ async def _cancel_crawl_once(
         return already_cancelled
 
     apply_crawl_status(crawl, CRAWL_STATUS_CANCELLED)
+    # A cancelled crawl pays only for the pages it already analyzed.
+    await settle_crawl_fetches(session, crawl=crawl, at=datetime.now(UTC))
     # Discovery / analysis sub-states are cancelled only from a non-terminal
     # state (the guarded machine keeps a completed sub-state as-is). ONLY the
     # state machine's rejection is ignored: a bare ``except Exception`` here

@@ -78,6 +78,10 @@ from app.domain.entitlements.service import (
 )
 from app.domain.site_health.discovery import add_automatic_root
 from app.domain.site_health.entitlements import lock_runtime
+from app.domain.site_health.fetch_budget import (
+    budgeted_page_limit,
+    reserve_crawl_fetches,
+)
 from app.domain.site_health.inventory_scope import freeze_inventory_lineage
 from app.domain.site_health.monitored_seeding import seed_monitored_targets
 from app.domain.site_health.normalization import canonical_identity
@@ -481,6 +485,11 @@ async def create_crawl(
     # ``requested_page_limit_reached`` against the effective bound rather than
     # against a 500 it was never going to reach.
     page_limit = _allowance_discovery_budget(page_limit, runtime=runtime)
+    # Scheduled and manual crawls share one metered page-fetch allowance.
+    budget_at = datetime.now(UTC)
+    page_limit, metered = await budgeted_page_limit(
+        session, workspace_id=workspace_id, requested=page_limit, at=budget_at
+    )
 
     profile = await _upsert_profile(
         session,
@@ -558,6 +567,10 @@ async def create_crawl(
         accepted_seeds=accepted_seeds,
         page_limit=page_limit,
     )
+    if metered:
+        await reserve_crawl_fetches(
+            session, crawl=crawl, units=page_limit, at=budget_at
+        )
 
     # Re-seed the persistent monitored set: on a recrawl the active monitored
     # URLs get fresh analyze tasks so their facts/scores refresh. On a first
@@ -681,8 +694,14 @@ async def create_page_rerun_crawl(
         admitted_url_count=1,
         inventory_complete=True,
     )
+    budget_at = datetime.now(UTC)
+    _, metered = await budgeted_page_limit(
+        session, workspace_id=workspace_id, requested=1, at=budget_at
+    )
     session.add(crawl)
     await session.flush()  # assign crawl.id
+    if metered:
+        await reserve_crawl_fetches(session, crawl=crawl, units=1, at=budget_at)
 
     # Record the target URL's observation so the page-detail projection (which
     # scopes URLs to a crawl's observed set) resolves it on this fresh crawl.

@@ -139,14 +139,15 @@ Select **Test mode** in the Razorpay Dashboard. Confirm Subscriptions and the
 INR recurring methods you intend to exercise. Create three monthly plans with
 interval 1, using the exact names and terms printed by `propose`.
 
-| Tier | Taxable base, paise | CiteLadder GST, paise | Razorpay plan amount, paise |
+| Plan | Taxable base, paise | CiteLadder GST, paise | Razorpay plan amount, paise |
 |---|---:|---:|---:|
-| Tier 1 | 416500 | 74970 | 491470 |
-| Tier 2 | 841500 | 151470 | 992970 |
-| Tier 3 | 1266500 | 227970 | 1494470 |
+| Starter | 449900 | 80982 | 530882 |
+| Growth | 899900 | 161982 | 1061882 |
+| Scale | 1799900 | 323982 | 2123882 |
 
-The fixture freezes synthetic FX 85.00 and tax rate 0.18, rounding the base then
-tax with decimal HALF_UP. Create each Razorpay plan with the **final total** in
+The fixture follows the launch currency rule at ₹90/USD with a fixture GST rate
+of 0.18, rounding the GST once with decimal HALF_UP. Regenerate it from
+`launch_pricing_v1_payload` rather than editing amounts by hand. Create each Razorpay plan with the **final total** in
 the last column. Razorpay's plan/invoice tax fields are not tax authority and
 are not verified. CiteLadder freezes the taxable value and transaction-level
 CGST/SGST or IGST split before provider I/O, then issues the paid GST receipt

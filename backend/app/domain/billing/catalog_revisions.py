@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from math import ceil
 from typing import Literal
 
@@ -14,10 +15,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.billing_catalog import (
+    AddonCatalogEntry,
     CatalogPrice,
     CommercialCatalog,
     GrantTemplate,
     PlanCatalogEntry,
+    QuantityBounds,
+    TopupCatalogEntry,
 )
 from app.core.config.billing_contracts import (
     CADENCE_MONTHLY,
@@ -25,22 +29,17 @@ from app.core.config.billing_contracts import (
     PLAN_TIER_1,
     PLAN_TIER_2,
     PLAN_TIER_3,
+    REASON_CHECKOUT_UNAVAILABLE,
     REASON_CONTACT_ONLY,
     REASON_TRIAL_UNAVAILABLE,
     TAX_BEHAVIOR_INCLUSIVE,
 )
+from app.core.config.billing_pricing import inr_minor_from_usd_minor
 from app.core.config.entitlements import (
     CAPABILITY_REGISTRY,
-    KEY_AUDIT_CADENCE,
     KEY_CONTENT_CREATION,
-    KEY_EXPORTS,
-    KEY_FANOUT,
     KEY_GROWTH_AGENT,
-    KEY_HISTORY_WINDOW,
-    KEY_MANUAL_RUNS_PER_DAY,
-    KEY_MONITORED_URLS,
-    KEY_PROJECT_SLOTS,
-    KEY_PROMPT_SLOTS,
+    CapabilityType,
 )
 from app.core.config.provider_catalog import PUBLIC_PROVIDER_CATALOG
 from app.models.billing import BillingCatalogRevision
@@ -86,30 +85,32 @@ class RegionalPricePayload(BaseModel):
         return self
 
 
-def _validate_sandbox_price(
-    price: RegionalPricePayload, region: str, base: int
+def _validate_regional_price(
+    price: RegionalPricePayload, region: str, usd_minor: int
 ) -> None:
-    from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+    """Regional amounts must follow the published catalog currency rule.
 
-    if price.provider_mode != "test":
-        raise ValueError("Synthetic prices cannot be live")
-    expected, tax = base, 0
-    if region == "india":
-        try:
-            expected = int(
-                (Decimal(base) * Decimal(price.fx_inr_per_usd)).quantize(
-                    Decimal("1"), rounding=ROUND_HALF_UP
-                )
-            )
-            tax = int(
-                (Decimal(expected) * Decimal(price.tax_rate)).quantize(
-                    Decimal("1"), rounding=ROUND_HALF_UP
-                )
-            )
-        except (InvalidOperation, ValueError, OverflowError) as exc:
-            raise ValueError("Invalid sandbox FX or tax rate") from exc
+    International prices are the canonical USD amount. India prices are the
+    GST-exclusive INR derived once from the recorded authoring rate, with the
+    frozen GST amount the provider plan will collect on top.
+    """
+    if region == "international":
+        if price.amount_minor != usd_minor or price.tax_minor:
+            raise ValueError("International price must equal the USD catalog price")
+        return
+    try:
+        rate = Decimal(price.fx_inr_per_usd)
+        tax_rate = Decimal(price.tax_rate)
+        expected = inr_minor_from_usd_minor(usd_minor, rate)
+    except (InvalidOperation, ValueError) as exc:
+        raise ValueError("Invalid INR authoring rate") from exc
+    if price.tax_behavior != "exclusive" or not Decimal(0) <= tax_rate <= 1:
+        raise ValueError("India prices are GST-exclusive with a valid GST rate")
+    tax = int(
+        (Decimal(expected) * tax_rate).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    )
     if (price.amount_minor, price.tax_minor) != (expected, tax):
-        raise ValueError("Sandbox price rounding mismatch")
+        raise ValueError("India price does not follow the catalog currency rule")
 
 
 class GrantPayload(BaseModel):
@@ -150,8 +151,7 @@ class PlanPayload(BaseModel):
                 raise ValueError("Regional currency mismatch")
             if self.contact_only or self.byok_price is None:
                 raise ValueError("Contact-only plans cannot have regional prices")
-            if price.metadata == "sandbox-fixture-not-for-production":
-                _validate_sandbox_price(price, region, self.byok_price.amount_minor)
+            _validate_regional_price(price, region, self.byok_price.amount_minor)
         return self
 
     @model_validator(mode="after")
@@ -164,6 +164,13 @@ class PlanPayload(BaseModel):
             raise ValueError("self-serve plan requires a BYOK price")
         if len({grant.key for grant in self.grants}) != len(self.grants):
             raise ValueError("plan capability keys must be unique")
+        return self
+
+    @model_validator(mode="after")
+    def funded_not_below_byok(self) -> PlanPayload:
+        byok, funded = self.byok_price, self.funded_price
+        if byok and funded and funded.amount_minor < byok.amount_minor:
+            raise ValueError("funded price cannot be below the BYOK price")
         return self
 
 
@@ -274,22 +281,6 @@ def _plans_by_key(plans: tuple[PlanPayload, ...]) -> dict[str, PlanPayload]:
     return by_key
 
 
-def _validate_approved_plan_terms(by_key: dict[str, PlanPayload]) -> None:
-    approved_prices = {
-        PLAN_TIER_1: (4_900, 9_900),
-        PLAN_TIER_2: (9_900, 14_900),
-        PLAN_TIER_3: (14_900, 29_900),
-    }
-    for key, amounts in approved_prices.items():
-        plan = by_key[key]
-        actual = (
-            plan.byok_price.amount_minor if plan.byok_price else None,
-            plan.funded_price.amount_minor if plan.funded_price else None,
-        )
-        if actual != amounts:
-            raise ValueError(f"{key} prices differ from approved terms")
-
-
 def _validate_agent_capabilities(by_key: dict[str, PlanPayload]) -> None:
     required_upper = {KEY_CONTENT_CREATION, KEY_GROWTH_AGENT}
     tier_1_keys = {grant.key for grant in by_key[PLAN_TIER_1].grants}
@@ -321,6 +312,108 @@ def _validate_platform_routes(routes: tuple[dict[str, str], ...]) -> None:
             raise ValueError("platform route credential reference is invalid")
 
 
+class ItemPricePayload(BaseModel):
+    """One regional one-time price. One-time charges need no provider plan."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    currency: Literal["USD", "INR"]
+    amount_minor: int = Field(ge=100)
+    tax_behavior: Literal["inclusive", "exclusive"]
+    fx_inr_per_usd: str = ""
+
+
+class ItemModeTermsPayload(BaseModel):
+    """Price and per-unit grants of one item for one credential mode."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    usd_minor: int = Field(ge=100)
+    regional_prices: dict[Literal["india", "international"], ItemPricePayload]
+    grants: tuple[GrantPayload, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def regional_terms(self) -> ItemModeTermsPayload:
+        if len({grant.key for grant in self.grants}) != len(self.grants):
+            raise ValueError("item capability keys must be unique")
+        for region, price in self.regional_prices.items():
+            if region == "international":
+                if (price.currency, price.tax_behavior, price.amount_minor) != (
+                    "USD",
+                    "inclusive",
+                    self.usd_minor,
+                ):
+                    raise ValueError("International price must equal the USD price")
+                continue
+            try:
+                expected = inr_minor_from_usd_minor(
+                    self.usd_minor, Decimal(price.fx_inr_per_usd)
+                )
+            except (InvalidOperation, ValueError) as exc:
+                raise ValueError("Invalid INR authoring rate") from exc
+            if (price.currency, price.tax_behavior, price.amount_minor) != (
+                "INR",
+                "exclusive",
+                expected,
+            ):
+                raise ValueError("India price does not follow the catalog rule")
+        return self
+
+
+class CatalogItemPayload(BaseModel):
+    """One one-time add-on or top-up.
+
+    Every item is bought once and expires ``expiry_days`` after purchase or at
+    the end of the paid subscription, whichever is earlier. ``available`` is
+    the operator's sell switch for an item whose terms are published but whose
+    fulfilment is not yet ready.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    key: str = Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")
+    name: str = Field(min_length=1, max_length=80)
+    description: str = Field(max_length=255)
+    available: bool
+    eligible_plan_keys: tuple[Literal["tier_1", "tier_2", "tier_3"], ...] = Field(
+        min_length=1
+    )
+    quantity_min: int = Field(ge=1)
+    quantity_max: int = Field(ge=1, le=100)
+    expiry_days: int = Field(gt=0, le=366)
+    modes: dict[Literal["byok", "funded"], ItemModeTermsPayload]
+
+    @model_validator(mode="after")
+    def valid_item(self) -> CatalogItemPayload:
+        if self.quantity_min > self.quantity_max:
+            raise ValueError("item quantity bounds are inverted")
+        if "byok" not in self.modes:
+            raise ValueError("item requires BYOK terms")
+        if len(set(self.eligible_plan_keys)) != len(self.eligible_plan_keys):
+            raise ValueError("item eligible plans must be unique")
+        return self
+
+
+class SupportContactPayload(BaseModel):
+    """Public support identity shown on pricing, billing and documents."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    email: str = Field(pattern=r"^[^@\s]+@[^@.\s]+(?:\.[^@.\s]+)+$", max_length=254)
+    phone: str = Field(default="", max_length=32)
+    contact_url: str = Field(pattern=r"^https://", max_length=255)
+
+
+def _validate_items(
+    addons: tuple[CatalogItemPayload, ...], topups: tuple[CatalogItemPayload, ...]
+) -> None:
+    keys = [item.key for item in (*addons, *topups)]
+    if len(keys) != len(set(keys)):
+        raise ValueError("add-on and top-up keys must be unique")
+    for topup in topups:
+        for terms in topup.modes.values():
+            for grant in terms.grants:
+                definition = CAPABILITY_REGISTRY.require(grant.key)
+                if definition.capability_type is not CapabilityType.COUNTER_CONSUMABLE:
+                    raise ValueError("top-ups may only grant consumable credits")
+
+
 class CatalogPayload(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     schema_version: Literal[1]
@@ -329,135 +422,19 @@ class CatalogPayload(BaseModel):
     contact_sales_url: str
     platform_routes: tuple[dict[str, str], ...]
     ai_credit_policy: AiCreditPolicyPayload | None = None
+    addons: tuple[CatalogItemPayload, ...] = ()
+    topups: tuple[CatalogItemPayload, ...] = ()
+    support_contact: SupportContactPayload | None = None
 
     @model_validator(mode="after")
     def valid_catalog(self) -> CatalogPayload:
         by_key = _plans_by_key(self.plans)
-        _validate_approved_plan_terms(by_key)
         _validate_agent_capabilities(by_key)
         _validate_platform_routes(self.platform_routes)
+        _validate_items(self.addons, self.topups)
         if self.campaign.enabled and not by_key[self.campaign.plan_key].grants:
             raise ValueError("enabled campaign plan requires a grant bundle")
         return self
-
-
-def _level(key: str, value: str) -> int:
-    return CAPABILITY_REGISTRY.require(key).ordered_values.index(value)
-
-
-def _grants(
-    *, projects: int, prompts: int, urls: int, history: str, runs: int, upper: bool
-) -> list[dict[str, object]]:
-    rows: list[dict[str, object]] = [
-        {
-            "key": KEY_AUDIT_CADENCE,
-            "value": _level(KEY_AUDIT_CADENCE, "daily" if upper else "weekly"),
-        },
-        {"key": KEY_PROJECT_SLOTS, "value": projects},
-        {"key": KEY_PROMPT_SLOTS, "value": prompts},
-        {"key": KEY_MONITORED_URLS, "value": urls},
-        {"key": KEY_HISTORY_WINDOW, "value": _level(KEY_HISTORY_WINDOW, history)},
-        {"key": KEY_MANUAL_RUNS_PER_DAY, "value": runs},
-        {"key": KEY_EXPORTS, "value": 1},
-    ]
-    if upper:
-        rows.extend(
-            (
-                {"key": KEY_FANOUT, "value": 1},
-                {"key": KEY_CONTENT_CREATION, "value": 1},
-                {"key": KEY_GROWTH_AGENT, "value": 1},
-            )
-        )
-    return rows
-
-
-def approved_phase1_payload() -> dict[str, object]:
-    """Approved terms only; checkout and the no-card campaign remain disabled."""
-
-    def price(amount: int) -> dict[str, object]:
-        return {
-            "currency": "USD",
-            "amount_minor": amount,
-            "tax_behavior": "inclusive",
-            "provider_price_ref": "",
-        }
-
-    plans = (
-        (
-            PLAN_TIER_1,
-            "Tier 1",
-            4_900,
-            9_900,
-            _grants(
-                projects=1, prompts=10, urls=50, history="90d", runs=3, upper=False
-            ),
-        ),
-        (
-            PLAN_TIER_2,
-            "Tier 2",
-            9_900,
-            14_900,
-            _grants(
-                projects=3, prompts=30, urls=150, history="12mo", runs=6, upper=True
-            ),
-        ),
-        (
-            PLAN_TIER_3,
-            "Tier 3",
-            14_900,
-            29_900,
-            _grants(
-                projects=10, prompts=60, urls=400, history="24mo", runs=12, upper=True
-            ),
-        ),
-    )
-    return {
-        "schema_version": 1,
-        "plans": [
-            {
-                "key": key,
-                "name": name,
-                "description": f"Approved {name} monthly terms.",
-                "cadence": "monthly",
-                "self_serve": True,
-                "contact_only": False,
-                "byok_price": price(byok),
-                "funded_price": price(funded),
-                "grants": grants,
-            }
-            for key, name, byok, funded, grants in plans
-        ]
-        + [
-            {
-                "key": PLAN_ENTERPRISE,
-                "name": "Enterprise",
-                "description": (
-                    "Custom volume, security review, and deployment options."
-                ),
-                "cadence": "custom",
-                "self_serve": False,
-                "contact_only": True,
-                "byok_price": None,
-                "funded_price": None,
-                "grants": [],
-            }
-        ],
-        "campaign": {
-            "key": "no_card_tier_1_intro",
-            "state": "draft",
-            "enabled": False,
-            "duration_days": 7,
-            "plan_key": "tier_1",
-            "claim_available": False,
-            "cohort_started_at": None,
-            "ends_at": None,
-            "eligibility_policy": "new_account",
-            "operator_code_allowed": True,
-        },
-        "contact_sales_url": "https://www.cube27.com/contact/",
-        "platform_routes": [],
-        "ai_credit_policy": None,
-    }
 
 
 def validate_payload(payload: dict[str, object]) -> CatalogPayload:
@@ -499,30 +476,6 @@ async def create_draft(
     session.add(row)
     await session.flush()
     return row
-
-
-async def seed_phase1_draft(
-    session: AsyncSession,
-    *,
-    actor: User,
-    reason: str,
-    revision: str = "commercial-phase1-v1",
-) -> BillingCatalogRevision:
-    existing = await session.scalar(
-        select(BillingCatalogRevision).where(
-            BillingCatalogRevision.revision == revision
-        )
-    )
-    if existing is not None:
-        validate_payload(existing.payload)
-        return existing
-    return await create_draft(
-        session,
-        revision=revision,
-        payload=approved_phase1_payload(),
-        actor=actor,
-        reason=reason,
-    )
 
 
 async def publish_revision(
@@ -596,6 +549,22 @@ def grant_specs_from_row(
     if plan is None or not plan.grant_bundle:
         return None
     return tuple((grant.key, grant.value) for grant in plan.grant_bundle)
+
+
+def item_terms_from_row(
+    row: BillingCatalogRevision, catalog_key: str
+) -> tuple[tuple[tuple[str, int], ...], int, tuple[str, ...]] | None:
+    """Per-unit grants, expiry days and eligible plans of one add-on/top-up.
+
+    Read from the purchase's FROZEN revision, so a later publication never
+    changes what an earlier purchase grants.
+    """
+    catalog = commercial_catalog_from_row(row)
+    item = catalog.addon(catalog_key) or catalog.topup(catalog_key)
+    if item is None or not item.grant_bundle_per_unit:
+        return None
+    specs = tuple((grant.key, grant.value) for grant in item.grant_bundle_per_unit)
+    return specs, item.expiry_days, item.eligible_plan_keys
 
 
 async def published_ai_credit_policy(
@@ -684,7 +653,64 @@ def commercial_catalog_from_row(row: BillingCatalogRevision) -> CommercialCatalo
     return CommercialCatalog(
         revision=row.revision,
         plans=tuple(plans),
-        addons=(),
-        topups=(),
+        addons=tuple(_addon_entry(item) for item in payload.addons),
+        topups=tuple(_topup_entry(item) for item in payload.topups),
         providers=PUBLIC_PROVIDER_CATALOG,
+    )
+
+
+# Launch checkout is BYOK-only: runtime entries carry the BYOK terms, while the
+# payload keeps the funded terms for a later funded release.
+_ITEM_MODE: Literal["byok"] = "byok"
+
+
+def _item_parts(
+    item: CatalogItemPayload,
+) -> tuple[dict[str, CatalogPrice], tuple[GrantTemplate, ...], str, str | None]:
+    terms = item.modes[_ITEM_MODE]
+    prices: dict[str, CatalogPrice] = {
+        region: CatalogPrice(
+            currency=price.currency,
+            amount_minor=price.amount_minor,
+            tax_behavior=price.tax_behavior,
+            provider_price_ref="",
+            one_time=True,
+        )
+        for region, price in terms.regional_prices.items()
+    }
+    grants = tuple(GrantTemplate(key=g.key, value=g.value) for g in terms.grants)
+    if item.available and prices:
+        return prices, grants, "available", None
+    return prices, grants, "unavailable", REASON_CHECKOUT_UNAVAILABLE
+
+
+def _addon_entry(item: CatalogItemPayload) -> AddonCatalogEntry:
+    prices, grants, availability, reason = _item_parts(item)
+    return AddonCatalogEntry(
+        key=item.key,
+        name=item.name,
+        description=item.description,
+        quantity_bounds=QuantityBounds(item.quantity_min, item.quantity_max),
+        prices=prices,
+        grant_bundle_per_unit=grants,
+        availability=availability,
+        unavailable_reason=reason,
+        eligible_plan_keys=item.eligible_plan_keys,
+        expiry_days=item.expiry_days,
+    )
+
+
+def _topup_entry(item: CatalogItemPayload) -> TopupCatalogEntry:
+    prices, grants, availability, reason = _item_parts(item)
+    return TopupCatalogEntry(
+        key=item.key,
+        name=item.name,
+        description=item.description,
+        quantity_bounds=QuantityBounds(item.quantity_min, item.quantity_max),
+        prices=prices,
+        grant_bundle_per_unit=grants,
+        availability=availability,
+        unavailable_reason=reason,
+        expiry_days=item.expiry_days,
+        eligible_plan_keys=item.eligible_plan_keys,
     )

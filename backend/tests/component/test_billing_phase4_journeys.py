@@ -8,10 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.billing import commercial_journeys
 from app.domain.billing.catalog_revisions import (
-    approved_phase1_payload,
     create_draft,
     publish_revision,
-    seed_phase1_draft,
+)
+from app.domain.billing.launch_catalog import (
+    launch_pricing_v1_payload,
+    seed_launch_draft,
 )
 from app.models.billing import AccountGrant, BillingAccount, BillingCatalogRevision
 from app.models.billing_journeys import IntroductoryClaim
@@ -36,8 +38,11 @@ async def test_seeded_campaign_is_unavailable_and_cannot_be_claimed(
     client, db_session: AsyncSession
 ) -> None:
     actor = await _admin(db_session)
-    draft = await seed_phase1_draft(
-        db_session, actor=actor, reason="phase4 disabled campaign test"
+    draft = await seed_launch_draft(
+        db_session,
+        provider_mode=None,
+        actor=actor,
+        reason="phase4 disabled campaign test",
     )
     await publish_revision(
         db_session,
@@ -74,7 +79,7 @@ async def test_enabled_fixture_claim_is_atomic_idempotent_and_lifetime_bounded(
 ) -> None:
     actor = await _admin(db_session)
     cohort_start = datetime.now(UTC) - timedelta(minutes=1)
-    payload = approved_phase1_payload()
+    payload = launch_pricing_v1_payload(provider_mode=None)
     payload["campaign"].update(
         {
             "state": "enabled",
@@ -169,7 +174,9 @@ async def test_repository_seed_contains_no_enabled_campaign(
     db_session: AsyncSession,
 ) -> None:
     actor = await _admin(db_session)
-    row = await seed_phase1_draft(db_session, actor=actor, reason="seed assertion")
+    row = await seed_launch_draft(
+        db_session, provider_mode=None, actor=actor, reason="seed assertion"
+    )
     assert row.payload["campaign"]["enabled"] is False
     assert row.payload["campaign"]["claim_available"] is False
     assert row.payload["campaign"]["state"] == "draft"

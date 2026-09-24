@@ -40,7 +40,6 @@ from app.core.config.billing_contracts import (
     SUBSCRIPTION_CANCEL_SCHEDULED,
     SUBSCRIPTION_CANCELLED,
     SUBSCRIPTION_EXPIRED,
-    SUBSCRIPTION_KIND_ADDON,
     SUBSCRIPTION_KIND_BASE,
 )
 from app.core.config.billing_tax import BillingIdentity
@@ -352,6 +351,7 @@ async def resolve_addon_intent(
     quantity: int,
     country_code: str,
     at: datetime,
+    base_plan_key: str,
     billing_identity: BillingIdentity | None = None,
 ) -> ResolvedIntent:
     """Compatibility seam retaining the historical service import path."""
@@ -361,6 +361,7 @@ async def resolve_addon_intent(
         quantity=quantity,
         country_code=country_code,
         at=at,
+        base_plan_key=base_plan_key,
         billing_identity=billing_identity,
         _catalog_loader=published_commercial_catalog,
     )
@@ -373,6 +374,7 @@ async def resolve_topup_intent(
     quantity: int,
     country_code: str,
     at: datetime,
+    base_plan_key: str,
     billing_identity: BillingIdentity | None = None,
 ) -> ResolvedIntent:
     """Compatibility seam retaining the historical service import path."""
@@ -382,6 +384,7 @@ async def resolve_topup_intent(
         quantity=quantity,
         country_code=country_code,
         at=at,
+        base_plan_key=base_plan_key,
         billing_identity=billing_identity,
         _catalog_loader=published_commercial_catalog,
     )
@@ -396,19 +399,6 @@ async def current_base_subscription(
             BillingSubscription.billing_account_id == account_id,
             BillingSubscription.is_current.is_(True),
             BillingSubscription.subscription_kind == SUBSCRIPTION_KIND_BASE,
-        )
-    )
-
-
-async def current_addon_subscription(
-    session: AsyncSession, account_id: uuid.UUID, catalog_key: str
-) -> BillingSubscription | None:
-    return await session.scalar(
-        select(BillingSubscription).where(
-            BillingSubscription.billing_account_id == account_id,
-            BillingSubscription.is_current.is_(True),
-            BillingSubscription.subscription_kind == SUBSCRIPTION_KIND_ADDON,
-            BillingSubscription.catalog_key == catalog_key,
         )
     )
 
@@ -528,18 +518,6 @@ async def schedule_base_cancellation(
     return catalog_key, status, effective_at
 
 
-async def schedule_addon_cancellation(
-    session: AsyncSession, *, account_id: uuid.UUID, catalog_key: str
-) -> tuple[str, datetime]:
-    """Schedule one add-on's period-end cancellation, on ITS own provider."""
-    subscription = await current_addon_subscription(session, account_id, catalog_key)
-    if subscription is None:
-        raise BillingConflictError(REASON_NO_CURRENT_SUBSCRIPTION)
-    return await _schedule_cancellation(
-        session, _originating_adapter(subscription), subscription
-    )
-
-
 def _originating_adapter(subscription: BillingSubscription) -> BillingProvider:
     """The adapter that CREATED this subscription, or a safe refusal."""
     adapter = adapter_for_record(subscription.provider, subscription.provider_mode)
@@ -554,7 +532,6 @@ __all__ = [
     "SubscriptionEvent",
     "accept_subscription_event",
     "apply_subscription_state",
-    "current_addon_subscription",
     "current_base_subscription",
     "live_base_subscription",
     "persist_billing_country",
@@ -563,7 +540,6 @@ __all__ = [
     "resolve_base_intent",
     "resolve_quote",
     "resolve_topup_intent",
-    "schedule_addon_cancellation",
     "schedule_base_cancellation",
     "workspace_account",
 ]

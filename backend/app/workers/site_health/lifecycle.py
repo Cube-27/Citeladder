@@ -79,6 +79,7 @@ from app.core.config.task_queue import (
 from app.domain.site_health.canonical_aliases import reconcile_crawl_duplicate_aliases
 from app.domain.site_health.change_queue import enqueue_change_refresh
 from app.domain.site_health.failure import load_root_failure_summary
+from app.domain.site_health.fetch_budget import settle_crawl_fetches
 from app.domain.site_health.link_queue import enqueue_link_metric_refresh
 from app.domain.site_health.score_summary import (
     refresh_live_score_summary,
@@ -472,6 +473,7 @@ class CrawlLifecycle(CrawlFinalizeMixin):
         if crawl.status != CRAWL_STATUS_RUNNING:
             return
         crawl.completed_at = _utcnow()
+        await settle_crawl_fetches(session, crawl=crawl, at=crawl.completed_at)
         failure_summary: dict | None = None
         if fully_failed:
             apply_crawl_status(crawl, CRAWL_STATUS_FAILED)

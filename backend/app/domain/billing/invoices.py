@@ -1,10 +1,18 @@
-"""Issue immutable CiteLadder paid tax receipts from captured payments."""
+"""Issue immutable CiteLadder tax receipts and credit notes.
+
+Every captured payment yields exactly one receipt and every processed refund
+exactly one credit note: the unique ``payment_id`` (one document per payment or
+refund receipt) plus unique document numbers make settlement replays and
+concurrent deliveries converge on the same row. Numbers come from row-locked
+per-series, per-financial-year counters inside the settlement transaction.
+"""
 
 from __future__ import annotations
 
 import hashlib
 import json
-from datetime import date
+from datetime import UTC, date, datetime
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
@@ -12,12 +20,22 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.billing.catalog_revisions import (
+    CatalogUnavailableError,
+    catalog_revision,
+    commercial_catalog_from_row,
+)
 from app.models.billing import BillingAccount, PendingActivation
 from app.models.billing_invoice import BillingInvoice, BillingInvoiceCounter
 from app.models.billing_payment import BillingPayment
 from app.models.user import User
 
 _INDIA_ZONE = ZoneInfo("Asia/Kolkata")
+# Credit notes are numbered in their own consecutive series.
+_CREDIT_NOTE_SERIES = "CN"
+DOCUMENT_CREDIT_NOTE = "credit_note"
+# Indian GST caps an invoice/credit-note serial at 16 characters.
+_GST_DOCUMENT_NUMBER_MAX = 16
 
 
 class InvoiceEvidenceError(ValueError):
@@ -27,6 +45,18 @@ class InvoiceEvidenceError(ValueError):
 def financial_year(day: date) -> str:
     start = day.year if day.month >= 4 else day.year - 1
     return f"{start:04d}-{(start + 1) % 100:02d}"
+
+
+def document_number(prefix: str, series: str, year: str, serial: int) -> str:
+    """A GST document number of at most 16 characters.
+
+    ``CL/2627/000001`` (invoice), ``CLR/…`` (receipt), ``CLC/…`` (credit
+    note): the financial year ``2026-27`` is written as ``2627``.
+    """
+    number = f"{prefix}{series}/{year[2:4]}{year[-2:]}/{serial:06d}"
+    if len(number) > _GST_DOCUMENT_NUMBER_MAX:
+        raise InvoiceEvidenceError("invoice_number_too_long")
+    return number
 
 
 def _object(value: object, field: str) -> dict[str, Any]:
@@ -47,15 +77,16 @@ def _text(value: object, field: str) -> str:
     return value.strip()
 
 
-async def _next_serial(session: AsyncSession, year: str) -> int:
+async def _next_serial(session: AsyncSession, series: str) -> int:
+    """Allocate the next number in one series (row-locked, gap-free per commit)."""
     await session.execute(
         insert(BillingInvoiceCounter)
-        .values(financial_year=year, next_value=1)
+        .values(financial_year=series, next_value=1)
         .on_conflict_do_nothing(index_elements=["financial_year"])
     )
     counter = await session.scalar(
         select(BillingInvoiceCounter)
-        .where(BillingInvoiceCounter.financial_year == year)
+        .where(BillingInvoiceCounter.financial_year == series)
         .with_for_update()
     )
     if counter is None:  # pragma: no cover - insert/select are one transaction
@@ -65,8 +96,22 @@ async def _next_serial(session: AsyncSession, year: str) -> int:
     return serial
 
 
-def _description(pending: PendingActivation) -> str:
-    label = pending.catalog_key.replace("_", " ").title()
+async def _catalog_name(session: AsyncSession, pending: PendingActivation) -> str:
+    """The display name frozen in the purchase's catalog revision."""
+    try:
+        row = await catalog_revision(session, pending.catalog_revision)
+    except CatalogUnavailableError:
+        return pending.catalog_key.replace("_", " ").title()
+    catalog = commercial_catalog_from_row(row)
+    entry = (
+        catalog.plan(pending.catalog_key)
+        or catalog.addon(pending.catalog_key)
+        or catalog.topup(pending.catalog_key)
+    )
+    return entry.name if entry is not None else pending.catalog_key
+
+
+def _description(pending: PendingActivation, label: str) -> str:
     if pending.activation_kind == "base":
         return f"CiteLadder {label} subscription"
     if pending.activation_kind == "addon":
@@ -82,6 +127,7 @@ def _invoice_payload(
     invoice_number: str,
     receipt_number: str,
     invoice_day: date,
+    label: str,
 ) -> dict[str, object]:
     snapshot = _object(pending.tax_snapshot, "tax_snapshot")
     seller = _object(snapshot.get("seller"), "seller")
@@ -118,7 +164,7 @@ def _invoice_payload(
             "email": owner_email,
         },
         "line": {
-            "description": _description(pending),
+            "description": _description(pending, label),
             "quantity": pending.quantity,
             "unit_price_minor": subtotal // pending.quantity,
             "amount_minor": subtotal,
@@ -186,8 +232,8 @@ async def issue_paid_invoice(
     snapshot = _object(pending.tax_snapshot, "tax_snapshot")
     seller = _object(snapshot.get("seller"), "seller")
     prefix = _text(seller.get("invoice_prefix"), "invoice_prefix")
-    invoice_number = f"{prefix}/{year}/{serial:06d}"
-    receipt_number = f"{prefix}-R/{year}/{serial:06d}"
+    invoice_number = document_number(prefix, "", year, serial)
+    receipt_number = document_number(prefix, "R", year, serial)
     payload = _invoice_payload(
         pending=pending,
         payment=payment,
@@ -195,6 +241,7 @@ async def issue_paid_invoice(
         invoice_number=invoice_number,
         receipt_number=receipt_number,
         invoice_day=invoice_day,
+        label=await _catalog_name(session, pending),
     )
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     amounts = _object(payload["amounts"], "amounts")
@@ -219,3 +266,178 @@ async def issue_paid_invoice(
     session.add(invoice)
     await session.flush()
     return invoice
+
+
+_AMOUNT_KEYS = ("taxable_minor", "cgst_minor", "sgst_minor", "igst_minor")
+
+
+def _remaining(original: dict[str, Any], credited: dict[str, int]) -> dict[str, int]:
+    """Components of the original receipt not yet reversed by credit notes."""
+    return {
+        key: _integer(original.get(key), key) - credited.get(key, 0)
+        for key in _AMOUNT_KEYS
+    }
+
+
+def _split_tax(treatment: str, tax: int, remaining: dict[str, int]) -> dict[str, int]:
+    """Split a credit's tax by treatment without exceeding what is left."""
+    if treatment == "IGST":
+        return {"cgst_minor": 0, "sgst_minor": 0, "igst_minor": tax}
+    if treatment != "CGST_SGST":
+        if tax:
+            raise InvoiceEvidenceError("credit_note_tax_invalid")
+        return {"cgst_minor": 0, "sgst_minor": 0, "igst_minor": 0}
+    cgst = min(tax // 2, remaining["cgst_minor"])
+    sgst = min(tax - cgst, remaining["sgst_minor"])
+    return {"cgst_minor": tax - sgst, "sgst_minor": sgst, "igst_minor": 0}
+
+
+def _credit_amounts(
+    original: dict[str, Any], credited: dict[str, int], refunded: int
+) -> dict[str, object]:
+    """Reverse ``refunded`` against what the receipt still has un-credited.
+
+    Each credit is allocated in proportion to the REMAINING taxable value and
+    tax, and a refund that exhausts the receipt reverses the exact remainder,
+    so cumulative credit notes always sum to the original components.
+    """
+    remaining = _remaining(original, credited)
+    remaining_tax = (
+        remaining["cgst_minor"] + remaining["sgst_minor"] + remaining["igst_minor"]
+    )
+    remaining_total = remaining["taxable_minor"] + remaining_tax
+    if not 0 < refunded <= remaining_total:
+        raise InvoiceEvidenceError("credit_note_amount_invalid")
+    treatment = _text(original.get("tax_treatment"), "tax_treatment")
+    if refunded == remaining_total:
+        taxable = remaining["taxable_minor"]
+        split = {key: remaining[key] for key in _AMOUNT_KEYS[1:]}
+    else:
+        proportional = Decimal(refunded) * remaining["taxable_minor"] / remaining_total
+        taxable = int(proportional.quantize(Decimal("1"), ROUND_HALF_UP))
+        taxable = max(taxable, refunded - remaining_tax)
+        split = _split_tax(treatment, refunded - taxable, remaining)
+    tax = refunded - taxable
+    return {
+        "subtotal_minor": taxable,
+        "discount_minor": 0,
+        "taxable_minor": taxable,
+        **split,
+        "tax_minor": tax,
+        "total_minor": refunded,
+        "currency": _text(original.get("currency"), "currency"),
+        "tax_rate": _text(original.get("tax_rate"), "tax_rate"),
+        "tax_treatment": treatment,
+    }
+
+
+async def _credited_so_far(
+    session: AsyncSession, original: BillingInvoice
+) -> dict[str, int]:
+    """Sum the components already reversed by earlier credit notes."""
+    notes = (
+        await session.scalars(
+            select(BillingInvoice).where(
+                BillingInvoice.billing_account_id == original.billing_account_id,
+                BillingInvoice.document_kind == DOCUMENT_CREDIT_NOTE,
+                BillingInvoice.payload["original_invoice_number"].astext
+                == original.invoice_number,
+            )
+        )
+    ).all()
+    totals = dict.fromkeys(_AMOUNT_KEYS, 0)
+    for note in notes:
+        amounts = _object(note.payload.get("amounts"), "amounts")
+        for key in _AMOUNT_KEYS:
+            totals[key] += _integer(amounts.get(key), key)
+    return totals
+
+
+async def issue_credit_note(
+    session: AsyncSession, *, refund: BillingPayment, at: datetime | None = None
+) -> BillingInvoice:
+    """Issue exactly one immutable credit note for one processed refund.
+
+    It references the original receipt and reverses its taxable value and
+    tax in proportion, so partial refunds are supported.
+    """
+    existing = await session.scalar(
+        select(BillingInvoice).where(BillingInvoice.payment_id == refund.id)
+    )
+    if existing is not None:
+        return existing
+    original = await session.scalar(
+        select(BillingInvoice).where(
+            BillingInvoice.payment_id == refund.parent_payment_id
+        )
+    )
+    if original is None:
+        raise InvoiceEvidenceError("credit_note_invoice_missing")
+    source = _object(original.payload, "invoice")
+    amounts = _credit_amounts(
+        _object(source.get("amounts"), "amounts"),
+        await _credited_so_far(session, original),
+        refund.amount_minor,
+    )
+    issued_at = at or datetime.now(UTC)
+    issued_day = issued_at.astimezone(_INDIA_ZONE).date()
+    year = financial_year(issued_day)
+    serial = await _next_serial(session, f"{_CREDIT_NOTE_SERIES}:{year}")
+    seller = _object(source.get("seller"), "seller")
+    prefix = _text(seller.get("invoice_prefix"), "invoice_prefix")
+    number = document_number(prefix, "C", year, serial)
+    original_line = _object(source.get("line"), "line")
+    payload: dict[str, object] = {
+        "schema_version": 1,
+        "document_kind": DOCUMENT_CREDIT_NOTE,
+        "invoice_number": number,
+        "receipt_number": number,
+        "invoice_date": issued_day.isoformat(),
+        "paid_at": issued_at.isoformat(),
+        "original_invoice_number": original.invoice_number,
+        "seller": seller,
+        "customer": _object(source.get("customer"), "customer"),
+        "line": {
+            "description": (
+                f"Credit against {original.invoice_number}: "
+                f"{_text(original_line.get('description'), 'description')}"
+            ),
+            "quantity": 1,
+            "unit_price_minor": amounts["taxable_minor"],
+            "amount_minor": amounts["taxable_minor"],
+            "period_start": original_line.get("period_start"),
+            "period_end": original_line.get("period_end"),
+            "sac": original_line.get("sac"),
+        },
+        "amounts": amounts,
+        "payment": {
+            "method": refund.payment_method or "Refund",
+            "provider": refund.provider,
+            "receipt_number": number,
+        },
+        "provenance": {
+            "refund_receipt_sha256": refund.receipt_sha256,
+            "original_invoice_id": str(original.id),
+            "tax_policy_version": original.tax_policy_version,
+        },
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    credit_note = BillingInvoice(
+        billing_account_id=original.billing_account_id,
+        payment_id=refund.id,
+        invoice_number=number,
+        receipt_number=number,
+        financial_year=year,
+        document_kind=DOCUMENT_CREDIT_NOTE,
+        invoice_date=issued_day,
+        paid_at=issued_at,
+        currency=original.currency,
+        total_amount_minor=refund.amount_minor,
+        tax_treatment=original.tax_treatment,
+        tax_policy_version=original.tax_policy_version,
+        payload=payload,
+        payload_sha256=hashlib.sha256(encoded).hexdigest(),
+    )
+    session.add(credit_note)
+    await session.flush()
+    return credit_note

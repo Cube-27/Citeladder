@@ -63,10 +63,13 @@ export function InvoiceHistory({
           >
             <div className="grid gap-1 text-sm">
               <span className={textRole('emphasis')}>
-                Invoice {invoice.invoice_number} · Receipt {invoice.receipt_number}
+                {invoice.status === 'credited'
+                  ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
+                  : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
               </span>
               <span className="text-muted">
-                Paid <DisplayTime value={invoice.paid_at} dateOnly /> ·{' '}
+                {invoice.status === 'credited' ? 'Credited' : 'Paid'}{' '}
+                <DisplayTime value={invoice.paid_at} dateOnly /> ·{' '}
                 {formatMoney(invoice.amount_paid, 2)}
               </span>
               <span className="text-muted text-xs">
@@ -81,7 +84,11 @@ export function InvoiceHistory({
               disabled={downloading === invoice.invoice_id}
               onClick={() => void download(invoice)}
             >
-              {downloading === invoice.invoice_id ? 'Preparing…' : 'Download receipt'}
+              {downloading === invoice.invoice_id
+                ? 'Preparing…'
+                : invoice.status === 'credited'
+                  ? 'Download credit note'
+                  : 'Download receipt'}
             </Button>
           </div>
         ))}

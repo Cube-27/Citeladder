@@ -259,16 +259,6 @@ class BillingProvider(Protocol):
         metadata: ProviderMetadata,
     ) -> HostedSubscription: ...
 
-    async def create_addon_subscription(
-        self,
-        *,
-        price_ref: str,
-        quantity: int,
-        intent_id: str,
-        account_ref: str,
-        metadata: ProviderMetadata,
-    ) -> HostedSubscription: ...
-
     async def cancel_subscription(
         self, external_subscription_id: str, *, at_cycle_end: bool = True
     ) -> ProviderSubscription: ...

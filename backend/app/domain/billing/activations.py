@@ -19,10 +19,11 @@ Under the pending-row lock it:
 - marks the pending row activated and stores its safe response;
 - invalidates entitlement and refreshes Site Health runtime AFTER commit.
 
-Top-up grants store ``valid_from=paid_at`` and a FIXED
-``paid_at + topup_credit_valid_days`` expiry; the resolver applies the moving
-current subscription end. A top-up with no readable live base subscription is
-REJECTED.
+Add-ons and top-ups are one-time purchases. Their grants store
+``valid_from=paid_at`` and a FIXED ``paid_at + expiry_days`` expiry read from
+the purchase's frozen catalog revision; the resolver applies the moving current
+subscription end, so they lapse with the plan and resume if it is renewed. A
+one-time purchase with no readable live base subscription is REJECTED.
 """
 
 from __future__ import annotations
@@ -37,10 +38,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import ProviderPayment, ProviderSubscription
 from app.connectors.billing.registry import status_normalizer
-from app.core.config.billing_catalog import scale_grant_specs, topup_grant_specs
+from app.core.config.billing_catalog import scale_grant_specs
 from app.core.config.billing_contracts import (
     ACTIVATION_ACTIVATED,
-    ACTIVATION_KIND_BASE,
+    ACTIVATION_KIND_ADDON,
     ACTIVATION_KIND_TOPUP,
     ACTIVATION_PENDING,
     CADENCE_MONTHLY,
@@ -48,14 +49,14 @@ from app.core.config.billing_contracts import (
     PAYMENT_PAID,
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCEL_SCHEDULED,
-    SUBSCRIPTION_KIND_ADDON,
     SUBSCRIPTION_KIND_BASE,
 )
-from app.core.config.billing_settings import (
-    billing_settings,
+from app.core.config.entitlements import GRANT_SOURCE_ADDON, GRANT_SOURCE_TOPUP
+from app.domain.billing.catalog_revisions import (
+    catalog_revision,
+    grant_specs_from_row,
+    item_terms_from_row,
 )
-from app.core.config.entitlements import GRANT_SOURCE_TOPUP
-from app.domain.billing.catalog_revisions import catalog_revision, grant_specs_from_row
 from app.domain.billing.payments import record_payment_receipt
 from app.domain.billing.schemas import ActivationResponse
 from app.domain.billing.service import (
@@ -186,12 +187,8 @@ async def _claim_activation(
 async def _upsert_subscription(
     session: AsyncSession, pending: PendingActivation, record: ProviderSubscription
 ) -> BillingSubscription:
-    """Create or reuse the account's subscription row for this activation."""
-    kind = (
-        SUBSCRIPTION_KIND_BASE
-        if pending.activation_kind == ACTIVATION_KIND_BASE
-        else SUBSCRIPTION_KIND_ADDON
-    )
+    """Create or reuse the account's base subscription row for this activation."""
+    kind = SUBSCRIPTION_KIND_BASE
     # Identity is (provider, ENVIRONMENT, external id): the same id string in a
     # provider's test and live environments names two different subscriptions,
     # and the unique index now says so too.
@@ -238,25 +235,40 @@ async def _upsert_subscription(
     return subscription
 
 
-async def _issue_topup_bundle(
+_ONE_TIME_KINDS = frozenset({ACTIVATION_KIND_ADDON, ACTIVATION_KIND_TOPUP})
+_ONE_TIME_SOURCES = {
+    ACTIVATION_KIND_ADDON: GRANT_SOURCE_ADDON,
+    ACTIVATION_KIND_TOPUP: GRANT_SOURCE_TOPUP,
+}
+
+
+async def _issue_item_bundle(
     session: AsyncSession, pending: PendingActivation, paid_at: datetime
 ) -> int:
-    """Issue the top-up bundle with a FIXED expiry; requires a live base sub."""
+    """Issue a one-time add-on/top-up bundle with a FIXED expiry.
+
+    Grants and expiry come from the purchase's frozen revision, scaled by the
+    purchased quantity. A live base subscription is required.
+    """
     await live_base_subscription(session, pending.billing_account_id)
-    specs = topup_grant_specs(pending.catalog_key, pending.catalog_revision)
-    if not specs:
-        raise ActivationRejectedError("topup_grant_unconfigured")
+    revision_row = await catalog_revision(session, pending.catalog_revision)
+    terms = item_terms_from_row(revision_row, pending.catalog_key)
+    if terms is None:
+        raise ActivationRejectedError("item_grant_unconfigured")
+    specs, expiry_days, _eligible = terms
     scaled = scale_grant_specs(specs, pending.quantity)
     rows = await issue_grant_bundle(
         session,
         account_id=pending.billing_account_id,
-        source_kind=GRANT_SOURCE_TOPUP,
+        source_kind=_ONE_TIME_SOURCES[pending.activation_kind],
         source_ref=f"activation:{pending.id}",
         grants=tuple(GrantSpec(key=key, value=value) for key, value in scaled),
         catalog_revision=pending.catalog_revision,
-        idempotency_key=f"topup:{pending.id}:{pending.catalog_revision}",
+        idempotency_key=(
+            f"{pending.activation_kind}:{pending.id}:{pending.catalog_revision}"
+        ),
         valid_from=paid_at,
-        valid_until=paid_at + timedelta(days=billing_settings.topup_credit_valid_days),
+        valid_until=paid_at + timedelta(days=expiry_days),
     )
     return len(rows)
 
@@ -365,12 +377,12 @@ async def _settle(
     provider_record: ProviderRecord,
 ) -> int:
     """Verify the record kind and write the subscription/grant side effects."""
-    if pending.activation_kind == ACTIVATION_KIND_TOPUP:
+    if pending.activation_kind in _ONE_TIME_KINDS:
         if not isinstance(provider_record, ProviderPayment):
             raise ActivationRejectedError("provider_record_kind_mismatch")
         paid_at = _verify_payment(pending, provider_record)
         await record_payment_receipt(session, pending=pending, payment=provider_record)
-        return await _issue_topup_bundle(session, pending, paid_at)
+        return await _issue_item_bundle(session, pending, paid_at)
     if not isinstance(provider_record, ProviderSubscription):
         raise ActivationRejectedError("provider_record_kind_mismatch")
     _verify_subscription(pending, provider_record)

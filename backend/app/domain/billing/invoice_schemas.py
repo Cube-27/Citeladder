@@ -1,4 +1,4 @@
-"""Safe persisted paid-receipt read contracts."""
+"""Safe persisted receipt and credit-note read contracts."""
 
 from __future__ import annotations
 
@@ -17,7 +17,12 @@ class BillingInvoiceResponse(BaseModel):
     invoice_id: uuid.UUID
     invoice_number: str
     receipt_number: str
-    status: Literal["paid"] = "paid"
+    document_kind: Literal["gst_tax_receipt", "export_receipt", "credit_note"]
+    # "credited" marks a credit note; ``paid_at`` is then its issue time.
+    status: Literal["paid", "credited"]
+    description: str
+    # The receipt a credit note reverses; null for receipts.
+    original_invoice_number: str | None
     paid_at: datetime
     amount_paid: MoneyResponse
     subtotal_price: MoneyResponse

@@ -1,22 +1,20 @@
 """Shared persisted-catalog fixtures for billing component tests."""
 
 import uuid
+from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.billing_settings import billing_settings
-from app.domain.billing.catalog_revisions import (
-    approved_phase1_payload,
-    payload_digest,
-    validate_payload,
-)
+from app.domain.billing.catalog_revisions import payload_digest, validate_payload
 from app.models.billing import BillingCatalogRevision
 from app.models.user import User
+from tests.billing_catalog_support import TEST_CATALOG_REVISION, launch_payload
 
 # The seller of record on every invoice the billing tests produce. Five
 # fixtures used to spell these nine values out; a GSTIN or SAC that disagrees
 # between two of them is a tax bug the suite cannot see.
-SELLER_SETTINGS: dict[str, str] = {
+SELLER_SETTINGS: dict[str, object] = {
     "seller_legal_name": "CiteLadder Private Limited",
     "seller_legal_address": "1 Seller Street, Mumbai",
     "seller_email": "billing@citeladder.test",
@@ -25,15 +23,18 @@ SELLER_SETTINGS: dict[str, str] = {
     "seller_gst_state_name": "Maharashtra",
     "seller_sac": "998313",
     "seller_lut_reference": "LUT/2026/001",
+    # The approved GST rate plus its approval record; neither has a default.
+    "india_gst_rate": Decimal("0.18"),
+    "india_gst_approval_reference": "CA-GST-APPROVAL-FIXTURE",
 }
 
 
-def seller_settings(**overrides: str) -> dict[str, str]:
+def seller_settings(**overrides: object) -> dict[str, object]:
     """The seller settings block, for `apply_billing_settings` or setattr."""
     return {**SELLER_SETTINGS, **overrides}
 
 
-def apply_seller_settings(monkeypatch, **overrides: str) -> None:
+def apply_seller_settings(monkeypatch, **overrides: object) -> None:
     """Point `billing_settings` at the fixture seller."""
     for name, value in seller_settings(**overrides).items():
         monkeypatch.setattr(billing_settings, name, value)
@@ -77,8 +78,9 @@ def tax_snapshot(total_minor: int) -> dict[str, object]:
     }
 
 
-async def publish_test_catalog(db_session: AsyncSession) -> None:
-    payload = approved_phase1_payload()
+async def publish_test_catalog(db_session: AsyncSession, **options) -> None:
+    """Publish the authored launch revision (``launch_payload`` options)."""
+    payload = launch_payload(**options)
     parsed = validate_payload(payload)
     actor = User(
         email=f"catalog-{uuid.uuid4()}@example.com", role="admin", is_active=True
@@ -87,7 +89,7 @@ async def publish_test_catalog(db_session: AsyncSession) -> None:
     await db_session.flush()
     db_session.add(
         BillingCatalogRevision(
-            revision=billing_settings.catalog_version,
+            revision=TEST_CATALOG_REVISION,
             payload=payload,
             payload_sha256=payload_digest(parsed),
             publication_state="published",

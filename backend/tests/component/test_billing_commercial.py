@@ -30,9 +30,9 @@ from app.connectors.billing.base import (
     HostedPayment,
     HostedSubscription,
     ProviderPayment,
+    ProviderRefund,
     ProviderSubscription,
 )
-from app.core.config.billing_catalog import commercial_catalog
 from app.core.config.billing_contracts import (
     ACTIVATION_AUTHORITY_RECONCILIATION,
     ACTIVATION_AUTHORITY_WEBHOOK,
@@ -48,6 +48,7 @@ from app.core.config.razorpay_settings import razorpay_settings
 from app.domain.billing import idempotency as idempotency_module
 from app.domain.billing.activations import activate_pending
 from app.domain.billing.idempotency import IntentResult, execute_intent
+from app.domain.billing.payments import record_refund_receipt
 from app.domain.billing.reconciliation import reconcile_pending_activations
 from app.domain.billing.service import BillingConflictError, resolve_base_intent
 from app.models.billing import (
@@ -58,6 +59,8 @@ from app.models.billing import (
     IdempotencyRecord,
     PendingActivation,
 )
+from app.models.billing_payment import BillingPayment
+from tests.billing_catalog_support import TEST_CATALOG_REVISION, launch_catalog
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.billing_catalog_helpers import (
     apply_seller_settings,
@@ -105,26 +108,19 @@ def _billing_identity() -> BillingIdentity:
 # --- helpers -----------------------------------------------------------------
 @pytest.fixture(autouse=True)
 async def _published_catalog(db_session: AsyncSession) -> None:
-    await publish_test_catalog(db_session)
+    await publish_test_catalog(db_session, available_items=[_TOPUP_KEY])
+
+
+# Operator plan refs for the current test, keyed "{plan_key}:{region}".
+_refs: dict[str, str] = {}
 
 
 @pytest.fixture(autouse=True)
 def _runtime_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
+    _refs.clear()
+
     async def load(_session):
-        catalog = commercial_catalog()
-        return replace(
-            catalog,
-            plans=tuple(
-                replace(
-                    plan,
-                    base_prices={
-                        region: replace(price, provider_mode="test", tax_verified=True)
-                        for region, price in plan.base_prices.items()
-                    },
-                )
-                for plan in catalog.plans
-            ),
-        )
+        return launch_catalog(refs=_refs, available_items=[_TOPUP_KEY])
 
     monkeypatch.setattr("app.domain.billing.service.published_commercial_catalog", load)
 
@@ -143,7 +139,7 @@ def _enable_checkout(monkeypatch: pytest.MonkeyPatch, refs: dict[str, str]) -> N
     monkeypatch.setattr(billing_settings, "checkout_enabled", True)
     monkeypatch.setattr(razorpay_settings, "live_ready", True)
     monkeypatch.setattr(razorpay_settings, "international_ready", True)
-    monkeypatch.setattr(billing_settings, "provider_price_refs", refs)
+    _refs.update(refs)
     monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     apply_seller_settings(monkeypatch)
     monkeypatch.setattr(
@@ -229,7 +225,6 @@ class _FakeProvider:
         self.subscription_id = subscription_id
         self.payment_id = payment_id
         self.base_calls: list[dict[str, object]] = []
-        self.addon_calls: list[dict[str, object]] = []
         self.payment_calls: list[dict[str, object]] = []
 
     async def _assert_pending_committed(self, intent_id: str) -> None:
@@ -243,18 +238,6 @@ class _FakeProvider:
     ) -> HostedSubscription:
         await self._assert_pending_committed(intent_id)
         self.base_calls.append({"price_ref": price_ref, "trial_days": trial_days})
-        return HostedSubscription(
-            external_subscription_id=self.subscription_id,
-            checkout_url=f"https://rzp.io/i/{self.subscription_id}",
-            status="created",
-            price_ref=price_ref,
-        )
-
-    async def create_addon_subscription(
-        self, *, price_ref, quantity, intent_id, account_ref, metadata
-    ) -> HostedSubscription:
-        await self._assert_pending_committed(intent_id)
-        self.addon_calls.append({"price_ref": price_ref, "quantity": quantity})
         return HostedSubscription(
             external_subscription_id=self.subscription_id,
             checkout_url=f"https://rzp.io/i/{self.subscription_id}",
@@ -329,7 +312,7 @@ def _quote_dict(*, catalog_key: str, total_minor: int) -> dict[str, object]:
     now = datetime.now(UTC)
     return {
         "quote_id": "q" * 64,
-        "catalog_revision": billing_settings.catalog_version,
+        "catalog_revision": TEST_CATALOG_REVISION,
         "catalog_key": catalog_key,
         "credential_mode": "byok",
         "country_code": "US",
@@ -369,7 +352,7 @@ async def _seed_pending(
         provider_mode="test",
         catalog_key=catalog_key,
         quantity=quantity,
-        catalog_revision=billing_settings.catalog_version,
+        catalog_revision=TEST_CATALOG_REVISION,
         credential_mode="byok",
         status="pending",
         external_reference=external_reference,
@@ -394,7 +377,7 @@ async def test_base_purchase_is_202_pending_and_grants_nothing(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     provider = _FakeProvider(session_factory)
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "buyer@example.com")
@@ -420,13 +403,13 @@ async def test_base_purchase_is_202_pending_and_grants_nothing(
     # The SERVER quote controls the charge and agrees with catalog pricing.
     quote = body["quote"]
     assert quote["catalog_key"] == "tier_1"
-    assert quote["catalog_revision"] == billing_settings.catalog_version
+    assert quote["catalog_revision"] == TEST_CATALOG_REVISION
     assert quote["credential_mode"] == "byok"
     assert quote["country_code"] == "US"
     assert quote["region"] == "international"
-    assert quote["base_price"] == {"currency": "USD", "amount_minor": 9_900}
+    assert quote["base_price"] == {"currency": "USD", "amount_minor": 4_900}
     assert quote["credit_price"] is None
-    assert quote["total_price"] == {"currency": "USD", "amount_minor": 9_900}
+    assert quote["total_price"] == {"currency": "USD", "amount_minor": 4_900}
     # The private provider ref reaches only the provider call, never the body.
     assert _PLAN_REF not in response.text
     assert provider.base_calls == [{"price_ref": _PLAN_REF, "trial_days": None}]
@@ -447,7 +430,7 @@ async def test_base_purchase_rejects_a_deferred_trial_before_any_write(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     provider = _FakeProvider(session_factory)
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "trial@example.com")
@@ -478,7 +461,7 @@ async def test_base_purchase_rejects_a_deferred_trial_before_any_write(
 async def test_mutation_rejects_missing_malformed_key_and_browser_smuggling(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     await _register(client, "guards@example.com")
     payload = {
         "catalog_key": "tier_1",
@@ -522,7 +505,7 @@ async def test_idempotency_replays_same_body_and_rejects_a_different_one(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     provider = _FakeProvider(session_factory)
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "replay@example.com")
@@ -567,7 +550,7 @@ async def test_uncertain_provider_error_returns_202_pending_then_replays(
     committed before the call, so the route returns a clean 202-pending (not
     a 500) and a same-key retry replays it without a second provider call.
     """
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
 
     class _UncertainProvider(_FakeProvider):
         async def create_base_subscription(
@@ -628,7 +611,7 @@ async def test_concurrent_same_key_requests_never_500_or_double_call(
     """Two concurrent same-Idempotency-Key checkouts: one winner, one replayed
     response — never a 500 and never a second provider call.
     """
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     provider = _FakeProvider(session_factory)
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "race-api@example.com")
@@ -691,7 +674,7 @@ async def test_insert_race_loser_replays_the_winner(
     commits: the loser's commit trips the account-key unique, and it must
     replay the winner's committed intent instead of 500ing on IntegrityError.
     """
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     await _register(client, "race-domain@example.com")
     account_id = (await _account(db_session)).id
     intent = await resolve_base_intent(
@@ -767,7 +750,7 @@ async def test_insert_race_different_keys_loser_conflicts(
     winner, and the loser's commit maps to the SAME 409 code the guard returns
     — never a 500 and never a second provider call.
     """
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     await _register(client, "race-slot@example.com")
     account_id = (await _account(db_session)).id
     intent = await resolve_base_intent(
@@ -846,7 +829,7 @@ async def test_concurrent_different_key_base_posts_one_winner_one_conflict(
     """API level: two concurrent different-key base purchases — exactly one 202
     and one 409 ``subscription_pending``, one provider call, one pending row.
     """
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     provider = _FakeProvider(session_factory)
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "race-slot-api@example.com")
@@ -886,7 +869,7 @@ async def test_same_key_replay_while_pending_still_replays(
     same-Idempotency-Key retry of a still-pending purchase replays the original
     response instead of 409ing on its own pending row.
     """
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     provider = _FakeProvider(session_factory)
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "replay-pending@example.com")
@@ -924,7 +907,7 @@ async def test_failed_pending_frees_the_base_slot(
     unsettled pending blocks a second different-key purchase with 409, and
     after it settles to failed a new different-key intent succeeds.
     """
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     provider = _FakeProvider(session_factory)
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "slot-lifecycle@example.com")
@@ -982,18 +965,7 @@ async def test_pending_addon_blocks_same_key_but_not_other_addons_or_topups(
     unsettled add-on blocks only a second different-key intent for the SAME
     key — a different add-on key and a repeatable top-up still go through.
     """
-    monkeypatch.setattr(billing_settings, "addon_extra_project_usd_minor", 1_900)
-    monkeypatch.setattr(billing_settings, "addon_extra_prompts_usd_minor", 2_900)
-    monkeypatch.setattr(billing_settings, "topup_audit_credits_usd_minor", 1_000)
-    monkeypatch.setattr(billing_settings, "topup_audit_credits_per_pack", 25)
-    _enable_checkout(
-        monkeypatch,
-        {
-            "addon_extra_project:international:base": "plan_addon_private",
-            "addon_extra_prompts:international:base": "plan_prompts_private",
-            f"{_TOPUP_KEY}:international:base": _TOPUP_REF,
-        },
-    )
+    _enable_checkout(monkeypatch, {})
     provider = _FakeProvider(session_factory, payment_id="pay_slot")
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "addon-slot@example.com")
@@ -1015,22 +987,22 @@ async def test_pending_addon_blocks_same_key_but_not_other_addons_or_topups(
     )
     assert blocked.status_code == 409
     assert blocked.json()["detail"] == REASON_ADDON_PENDING
-    assert len(provider.addon_calls) == 1
+    assert len(provider.payment_calls) == 1
 
     # A DIFFERENT add-on catalog key is not blocked (fresh hosted reference).
-    provider.subscription_id = "sub_addon_b"
+    provider.payment_id = "pay_slot_b"
     other = await client.post(
         "/api/v1/billing/addons",
         json={"catalog_key": "addon_extra_prompts", "quantity": 1},
         headers={"Idempotency-Key": "addon-slot-003"},
     )
     assert other.status_code == 202
-    assert len(provider.addon_calls) == 2
 
     # Top-ups are intentionally repeatable and never slot-blocked.
+    provider.payment_id = "pay_slot_c"
     topup = await _purchase_topup(client, quantity=1, key="addon-slot-topup")
     assert topup.status_code == 202
-    assert len(provider.payment_calls) == 1
+    assert len(provider.payment_calls) == 3
     assert await db_session.scalar(select(func.count(PendingActivation.id))) == 3
 
 
@@ -1050,7 +1022,7 @@ async def test_renewal_with_a_removed_catalog_key_logs_and_issues_nothing(
     account = await _account(db_session)
     subscription = await _seed_live_base(db_session, account)
     subscription.catalog_key = "tier_removed"
-    subscription.catalog_revision = billing_settings.catalog_version
+    subscription.catalog_revision = TEST_CATALOG_REVISION
     subscription.provider_mode = "test"
     pending = await _seed_pending(
         db_session,
@@ -1092,7 +1064,7 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     provider = _FakeProvider(session_factory, subscription_id="sub_activate")
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "activate@example.com")
@@ -1138,7 +1110,7 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     assert subscription.external_subscription_id == "sub_activate"
     # The REAL tier_1 catalog bundle: 8 grants, one version bump for the event
     # plus one for the bundle.
-    assert await _commercial_grant_count(db_session, source_kind="plan") == 7
+    assert await _commercial_grant_count(db_session, source_kind="plan") == 9
     assert await _account_version(db_session) == baseline_version + 2
 
     # The account read now reports the subscription and the issued grants.
@@ -1149,7 +1121,7 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     assert view["subscription"]["catalog_key"] == "tier_1"
     assert view["subscription"]["cancel_at_period_end"] is False
     plan_grants = [g for g in view["grants"] if g["source_kind"] == "plan"]
-    assert len(plan_grants) == 7
+    assert len(plan_grants) == 9
     assert "funded_execution_allowed" not in view
 
     # A redelivery under a NEW event id never duplicates the subscription or
@@ -1157,7 +1129,7 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     duplicate = await _post_webhook(client, raw, event_id="evt_act_2")
     assert duplicate.status_code == 204
     db_session.expire_all()
-    assert await _commercial_grant_count(db_session, source_kind="plan") == 7
+    assert await _commercial_grant_count(db_session, source_kind="plan") == 9
     assert await db_session.scalar(select(func.count(BillingSubscription.id))) == 1
     assert await db_session.scalar(select(func.count(BillingWebhookEvent.id))) == 2
 
@@ -1169,7 +1141,7 @@ async def test_webhook_reconciliation_race_settles_exactly_once(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
+    _enable_checkout(monkeypatch, {"tier_1:international": _PLAN_REF})
     provider = _FakeProvider(session_factory, subscription_id="sub_race")
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "race@example.com")
@@ -1205,8 +1177,8 @@ async def test_webhook_reconciliation_race_settles_exactly_once(
     record = replace(
         record,
         provider_mode="test",
-        catalog_revision=billing_settings.catalog_version,
-        payment=captured_payment(record, 9900),
+        catalog_revision=TEST_CATALOG_REVISION,
+        payment=captured_payment(record, 4900),
     )
     webhook_result = await activate_pending(
         db_session,
@@ -1232,7 +1204,7 @@ async def test_webhook_reconciliation_race_settles_exactly_once(
     assert sweep_result.already_settled is True
     db_session.expire_all()
     assert await db_session.scalar(select(func.count(BillingSubscription.id))) == 1
-    assert await _commercial_grant_count(db_session, source_kind="plan") == 7
+    assert await _commercial_grant_count(db_session, source_kind="plan") == 9
     assert await _account_version(db_session) == version_after_first
 
 
@@ -1252,9 +1224,7 @@ async def _purchase_topup(
 
 
 def _enable_topup(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(billing_settings, "topup_audit_credits_usd_minor", 1_000)
-    monkeypatch.setattr(billing_settings, "topup_audit_credits_per_pack", 25)
-    _enable_checkout(monkeypatch, {f"{_TOPUP_KEY}:international:base": _TOPUP_REF})
+    _enable_checkout(monkeypatch, {})
 
 
 @pytest.mark.asyncio
@@ -1297,9 +1267,9 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     body = purchase.json()
     assert body["kind"] == "topup"
     assert body["status"] == "pending"
-    # The server quote controls the provider charge: 2 packs x 1000 minor.
-    assert body["quote"]["total_price"] == {"currency": "USD", "amount_minor": 2_000}
-    assert provider.payment_calls == [{"amount_minor": 2_000, "currency": "USD"}]
+    # The server quote controls the provider charge: 2 packs x $99.
+    assert body["quote"]["total_price"] == {"currency": "USD", "amount_minor": 19_800}
+    assert provider.payment_calls == [{"amount_minor": 19_800, "currency": "USD"}]
     # Nothing is granted in the intent path.
     assert await _commercial_grant_count(db_session) == 0
     assert await _total_grant_count(db_session) == baseline_grants
@@ -1307,7 +1277,7 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     paid_at = int(datetime.now(UTC).timestamp())
     raw = _payment_payload(
         external_id="pay_topup",
-        amount=2_000,
+        amount=19_800,
         paid_at=paid_at,
         intent_id=body["activation_id"],
         account_ref=str(account.id),
@@ -1321,7 +1291,7 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     assert pending.status == "activated"
     (grant,) = await _commercial_grants(db_session, source_kind="topup")
     assert grant.key == "audit_credits"
-    assert grant.value == 50  # 25 per pack x 2 packs
+    assert grant.value == 2_000  # 1,000 per pack x 2 packs
     assert grant.source_kind == "topup"
     # The STORED expiry is the FIXED paid_at + 30 days.
     stored_until = datetime.fromtimestamp(paid_at, tz=UTC) + timedelta(days=30)
@@ -1335,9 +1305,9 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     items = {item["key"]: item for item in usage.json()["items"]}
     credits = items["audit_credits"]
     assert credits["limit_state"] == "finite"
-    assert credits["allowance"] == 50
+    assert credits["allowance"] == 2_000
     assert credits["consumed"] == 0
-    assert credits["remaining"] == 50
+    assert credits["remaining"] == 2_000
     grant_row = credits["grants"][0]
     effective = datetime.fromisoformat(grant_row["effective_valid_until"])
     assert effective == base_period_end
@@ -1347,6 +1317,31 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     assert duplicate.status_code == 204
     db_session.expire_all()
     assert await _commercial_grant_count(db_session, source_kind="topup") == 1
+
+    # A full refund revokes what is left of the purchase; consumed units
+    # would stay consumed, and the refund issues one credit note.
+    payment = await db_session.scalar(
+        select(BillingPayment).where(BillingPayment.receipt_kind == "payment")
+    )
+    assert payment is not None
+    await record_refund_receipt(
+        db_session,
+        payment_id=payment.id,
+        refund=ProviderRefund(
+            external_refund_id="rfnd_full",
+            external_payment_id="pay_topup",
+            status="processed",
+            amount_minor=19_800,
+            currency="USD",
+            updated_at=paid_at,
+        ),
+    )
+    await db_session.commit()
+    usage = await client.get("/api/v1/billing/usage")
+    items = {item["key"]: item for item in usage.json()["items"]}
+    assert items.get("audit_credits", {}).get("allowance", 0) == 0
+    notes = (await client.get("/api/v1/billing/invoices")).json()["invoices"]
+    assert [row["document_kind"] for row in notes].count("credit_note") == 1
 
 
 @pytest.mark.asyncio
@@ -1370,7 +1365,7 @@ async def test_payment_with_a_mismatched_amount_is_rejected_and_grants_nothing(
 
     raw = _payment_payload(
         external_id="pay_mismatch",
-        amount=999,  # the stored quote says 1_000
+        amount=9_899,  # the stored quote says 9_900
         paid_at=int(datetime.now(UTC).timestamp()),
         intent_id=activation_id,
         account_ref=str(account.id),
@@ -1389,19 +1384,18 @@ async def test_payment_with_a_mismatched_amount_is_rejected_and_grants_nothing(
 
 # --- Add-ons -------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_addon_activation_and_period_end_cancellation(
+async def test_addon_is_a_one_time_purchase_with_a_fixed_expiry(
     client: httpx.AsyncClient,
     db_session: AsyncSession,
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "addon_extra_project_usd_minor", 1_900)
-    _enable_checkout(
-        monkeypatch, {"addon_extra_project:international:base": "plan_addon_private"}
-    )
-    provider = _FakeProvider(session_factory, subscription_id="sub_addon")
+    _enable_checkout(monkeypatch, {})
+    provider = _FakeProvider(session_factory, payment_id="pay_addon")
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "addon@example.com")
+    account = await _account(db_session)
+    await _seed_live_base(db_session, account, period_days=10)
 
     activate = await client.post(
         "/api/v1/billing/addons",
@@ -1410,27 +1404,59 @@ async def test_addon_activation_and_period_end_cancellation(
     )
     assert activate.status_code == 202
     body = activate.json()
-    assert body["kind"] == "addon"
-    assert body["quantity"] == 3
+    assert (body["kind"], body["quantity"]) == ("addon", 3)
     assert body["quote"]["total_price"] == {"currency": "USD", "amount_minor": 5_700}
-    assert provider.addon_calls == [{"price_ref": "plan_addon_private", "quantity": 3}]
-    assert "plan_addon_private" not in activate.text
+    assert provider.payment_calls == [{"amount_minor": 5_700, "currency": "USD"}]
 
-    # Deleting an unknown add-on is a safe conflict.
-    missing = await client.delete(
-        "/api/v1/billing/addons/addon_extra_prompts",
+    paid_at = int(datetime.now(UTC).timestamp())
+    raw = _payment_payload(
+        external_id="pay_addon",
+        amount=5_700,
+        paid_at=paid_at,
+        intent_id=body["activation_id"],
+        account_ref=str(account.id),
+    )
+    assert (await _post_webhook(client, raw, event_id="evt_addon")).status_code == 204
+    db_session.expire_all()
+    (grant,) = await _commercial_grants(db_session, source_kind="addon")
+    assert (grant.key, grant.value) == ("project_slots", 3)
+    paid = datetime.fromtimestamp(paid_at, tz=UTC)
+    assert grant.valid_until == paid + timedelta(days=30)
+    # Buying the same add-on again after it settles is allowed.
+    provider.payment_id = "pay_addon_again"
+    again = await client.post(
+        "/api/v1/billing/addons",
+        json={"catalog_key": "addon_extra_project", "quantity": 1},
+        headers={"Idempotency-Key": "addon-key-00002"},
+    )
+    assert again.status_code == 202
+    # There is no add-on subscription left to cancel.
+    retired = await client.delete(
+        "/api/v1/billing/addons/addon_extra_project",
         headers={"Idempotency-Key": "addon-del-00001"},
     )
-    assert missing.status_code == 409
-    assert "no_current_subscription" in missing.text
+    assert retired.status_code in {404, 405}
 
 
 @pytest.mark.asyncio
-async def test_addon_activation_refuses_unknown_keys_and_bad_quantities(
-    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+async def test_one_time_purchases_require_a_live_eligible_plan(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _enable_checkout(monkeypatch, {})
+    provider = _FakeProvider(session_factory)
+    monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "addon-guards@example.com")
+    no_base = await client.post(
+        "/api/v1/billing/addons",
+        json={"catalog_key": "addon_extra_project", "quantity": 1},
+        headers={"Idempotency-Key": "addon-nobase-1"},
+    )
+    assert no_base.status_code == 409
+    assert "base_subscription_required" in no_base.text
+    await _seed_live_base(db_session, await _account(db_session))
     unknown = await client.post(
         "/api/v1/billing/addons",
         json={"catalog_key": "nope", "quantity": 1},
@@ -1438,12 +1464,21 @@ async def test_addon_activation_refuses_unknown_keys_and_bad_quantities(
     )
     assert unknown.status_code == 409
     assert "catalog_key_unknown" in unknown.text
+    # Workflow AI credits are only sold to plans that include Content/Agent.
+    ineligible = await client.post(
+        "/api/v1/billing/topups",
+        json={"catalog_key": "topup_ai_credits", "quantity": 1},
+        headers={"Idempotency-Key": "topup-ineligible-1"},
+    )
+    assert ineligible.status_code == 409
+    assert "item_plan_ineligible" in ineligible.text
     zero = await client.post(
         "/api/v1/billing/addons",
         json={"catalog_key": "addon_extra_project", "quantity": 0},
         headers={"Idempotency-Key": "addon-zero-0001"},
     )
     assert zero.status_code == 422
+    assert provider.payment_calls == []
 
 
 # --- Reconciliation sweep -------------------------------------------------------
@@ -1454,7 +1489,6 @@ async def test_reconciliation_settles_fails_and_abandons_from_provider_state(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "topup_audit_credits_per_pack", 25)
     monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     await _register(client, "sweep@example.com")
     account = await _account(db_session)
@@ -1511,7 +1545,7 @@ async def test_reconciliation_settles_fails_and_abandons_from_provider_state(
     assert settled.settled_by == "reconciliation"
     (grant,) = await _commercial_grants(db_session, source_kind="topup")
     assert grant.key == "audit_credits"
-    assert grant.value == 25
+    assert grant.value == 1_000
     assert grant.valid_until == (
         datetime.fromtimestamp(paid_at, tz=UTC) + timedelta(days=30)
     )

@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import uuid
-from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -20,9 +19,7 @@ from app.connectors.billing.razorpay_webhook import (
 )
 from app.core.config.billing_catalog import (
     GrantTemplate,
-    commercial_catalog,
     plan_checkout_availability,
-    plan_period_grant_specs,
     resolve_region,
 )
 from app.core.config.billing_contracts import (
@@ -35,23 +32,13 @@ from app.core.config.billing_contracts import (
     REGION_CURRENCIES,
     REGION_INDIA,
     REGION_INTERNATIONAL,
+    TOPUP_AUDIT_CREDITS,
 )
 from app.core.config.billing_settings import (
     billing_settings,
 )
 from app.core.config.entitlements import (
-    AUDIT_CADENCE_VALUES,
-    COMING_SOON_PROVIDER_KEYS,
-    HISTORY_WINDOW_VALUES,
-    KEY_AUDIT_CADENCE,
     KEY_AUDIT_CREDITS,
-    KEY_EXPORTS,
-    KEY_FANOUT,
-    KEY_HISTORY_WINDOW,
-    KEY_MANUAL_RUNS_PER_DAY,
-    KEY_MONITORED_URLS,
-    KEY_PROJECT_SLOTS,
-    KEY_PROMPT_SLOTS,
     KEY_PROVIDER_COPILOT,
 )
 from app.core.config.provider_catalog import (
@@ -81,6 +68,7 @@ from app.domain.billing.schemas import (
 from scripts.provision_razorpay_plans import (
     _validate_environment,
 )
+from tests.billing_catalog_support import launch_catalog
 
 
 def test_webhook_signature_uses_exact_raw_body(
@@ -303,11 +291,11 @@ async def test_razorpay_adapter_rejects_an_echoed_price_ref_mismatch(
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = RazorpayBillingProvider(client=client)
         with pytest.raises(BillingProviderError, match="provider_price_ref_mismatch"):
-            await provider.create_addon_subscription(
+            await provider.create_base_subscription(
                 price_ref="plan_test",
-                quantity=2,
                 intent_id="intent-1",
                 account_ref="account-1",
+                trial_days=None,
                 metadata=_metadata(),
             )
 
@@ -409,71 +397,7 @@ def test_plan_provisioning_validates_credential_environment(
             _validate_environment(environment)
 
 
-# --- v8 commercial catalog + strict DTOs -----------------------------------
-def test_catalog_has_final_plan_keys_in_order_with_exact_defaults() -> None:
-    catalog = commercial_catalog()
-    assert [plan.key for plan in catalog.plans] == [
-        "tier_1",
-        "tier_2",
-        "tier_3",
-        "enterprise",
-    ]
-    base = {
-        plan.key: plan.base_price(REGION_INTERNATIONAL) for plan in catalog.plans[:3]
-    }
-    assert [price.amount_minor for price in base.values()] == [9_900, 19_900, 29_900]
-    assert {price.currency for price in base.values()} == {"USD"}
-    enterprise = catalog.plans[3]
-    assert enterprise.contact_only is True
-    assert enterprise.self_serve is False
-    assert enterprise.base_prices == {}
-    assert enterprise.credit_prices_by_cadence == {}
-    assert enterprise.grant_bundle == ()
-
-
-def test_catalog_vocabulary_has_no_free_paid_or_bundle_tokens() -> None:
-    catalog = commercial_catalog()
-    text = " ".join(
-        f"{plan.key} {plan.name} {plan.description}" for plan in catalog.plans
-    ).lower()
-    assert "free" not in text
-    assert "paid" not in text
-    assert "bundle" not in text
-
-
-def test_plan_grant_templates_match_the_registry_and_omit_coming_soon() -> None:
-    catalog = commercial_catalog()
-    grants = {
-        plan.key: {template.key: template.value for template in plan.grant_bundle}
-        for plan in catalog.plans
-    }
-    assert grants["tier_1"] == {
-        KEY_AUDIT_CADENCE: AUDIT_CADENCE_VALUES.index("weekly"),
-        KEY_PROJECT_SLOTS: 1,
-        KEY_PROMPT_SLOTS: 10,
-        KEY_MONITORED_URLS: 50,
-        KEY_HISTORY_WINDOW: HISTORY_WINDOW_VALUES.index("90d"),
-        KEY_MANUAL_RUNS_PER_DAY: 3,
-        KEY_EXPORTS: 1,
-    }
-    assert grants["tier_2"][KEY_PROJECT_SLOTS] == 3
-    assert grants["tier_2"][KEY_PROMPT_SLOTS] == 30
-    assert grants["tier_2"][KEY_MONITORED_URLS] == 150
-    assert grants["tier_2"][KEY_HISTORY_WINDOW] == HISTORY_WINDOW_VALUES.index("12mo")
-    assert grants["tier_2"][KEY_MANUAL_RUNS_PER_DAY] == 6
-    assert grants["tier_2"][KEY_FANOUT] == 1
-    assert grants["tier_3"][KEY_PROJECT_SLOTS] == 10
-    assert grants["tier_3"][KEY_PROMPT_SLOTS] == 60
-    assert grants["tier_3"][KEY_MONITORED_URLS] == 400
-    assert grants["tier_3"][KEY_HISTORY_WINDOW] == HISTORY_WINDOW_VALUES.index("24mo")
-    assert grants["tier_3"][KEY_MANUAL_RUNS_PER_DAY] == 12
-    # No plan issues a runnable coming-soon provider grant, and no plan carries
-    # a benchmark-credit grant (included counts are unconfigured).
-    for bundle in grants.values():
-        assert not COMING_SOON_PROVIDER_KEYS & set(bundle)
-        assert KEY_AUDIT_CREDITS not in bundle
-
-
+# --- commercial catalog + strict DTOs -------------------------------------
 def test_grant_template_rejects_non_issuable_and_unknown_keys() -> None:
     with pytest.raises(ValueError, match="non-issuable"):
         GrantTemplate(KEY_PROVIDER_COPILOT, 1)
@@ -481,76 +405,54 @@ def test_grant_template_rejects_non_issuable_and_unknown_keys() -> None:
         GrantTemplate("not_a_capability", 1)
 
 
-def test_base_and_credit_prices_stay_separate_and_funded_needs_a_margin(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    tier_1 = commercial_catalog().plan("tier_1")
-    assert tier_1 is not None
-    # Funded margin UNSET: no credit price exists, so base is never derived
-    # from (or confused with) a credit price.
-    assert tier_1.credit_price(REGION_INTERNATIONAL) is None
-    monkeypatch.setattr(billing_settings, "funded_margin_bps", 2_000)
-    funded = commercial_catalog().plan("tier_1")
-    assert funded is not None
-    base = funded.base_price(REGION_INTERNATIONAL)
-    credit = funded.credit_price(REGION_INTERNATIONAL)
-    assert base is not None
-    assert credit is not None
-    assert base.amount_minor == 9_900
-    assert credit.amount_minor == 60_000
-    assert base.amount_minor != credit.amount_minor
-
-
-def test_items_are_unavailable_until_the_open_config_is_set(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    catalog = commercial_catalog()
-    for addon in catalog.addons:
-        assert addon.availability == "unavailable"
-        assert addon.unavailable_reason == REASON_CHECKOUT_UNAVAILABLE
-    topup = catalog.topups[0]
-    assert topup.availability == "unavailable"
-    assert topup.unavailable_reason == REASON_CHECKOUT_UNAVAILABLE
-    assert topup.grant_bundle_per_unit == ()
-    assert topup.expiry_days == 30
-    # A configured price alone is not enough: the private provider ref must
-    # also be present before anything becomes purchasable.
-    monkeypatch.setattr(billing_settings, "addon_extra_project_usd_minor", 1_900)
-    assert commercial_catalog().addons[0].availability == "unavailable"
-    monkeypatch.setattr(
-        billing_settings,
-        "provider_price_refs",
-        {f"{ADDON_EXTRA_PROJECT}:{REGION_INTERNATIONAL}:base": "ref_private"},
-    )
-    assert commercial_catalog().addons[0].availability == "available"
+def test_one_time_items_need_no_plan_ref_but_honor_the_sell_switch() -> None:
+    catalog = launch_catalog()
+    by_key = {item.key: item for item in (*catalog.addons, *catalog.topups)}
+    project = by_key[ADDON_EXTRA_PROJECT]
+    price = project.price(REGION_INTERNATIONAL)
+    assert price is not None and price.purchasable
+    assert project.availability == "available"
+    # Published but not sold: the operator switch keeps it unavailable.
+    answers = by_key[TOPUP_AUDIT_CREDITS]
+    assert answers.availability == "unavailable"
+    assert answers.unavailable_reason == REASON_CHECKOUT_UNAVAILABLE
+    enabled = launch_catalog(available_items=[TOPUP_AUDIT_CREDITS])
+    topup = enabled.topup(TOPUP_AUDIT_CREDITS)
+    assert topup is not None and topup.availability == "available"
 
 
 def test_plan_checkout_requires_a_private_ref_and_enabled_region(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    tier_1 = commercial_catalog().plan("tier_1")
-    assert tier_1 is not None
-    assert plan_checkout_availability(tier_1, REGION_INTERNATIONAL) == (
+    unpriced = launch_catalog().plan("tier_1")
+    assert unpriced is not None
+    assert plan_checkout_availability(unpriced, REGION_INTERNATIONAL) == (
         False,
         REASON_CHECKOUT_UNAVAILABLE,
     )
-    enterprise = commercial_catalog().plan("enterprise")
+    enterprise = launch_catalog().plan("enterprise")
     assert enterprise is not None
     assert plan_checkout_availability(enterprise, REGION_INTERNATIONAL) == (
         False,
         REASON_CONTACT_ONLY,
     )
     monkeypatch.setattr(billing_settings, "checkout_enabled", True)
-    monkeypatch.setattr(razorpay_settings, "live_ready", True)
-    monkeypatch.setattr(razorpay_settings, "international_ready", True)
-    monkeypatch.setattr(
-        billing_settings,
-        "provider_price_refs",
-        {f"tier_1:{REGION_INTERNATIONAL}:base": "ref_private"},
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_fixture")
+    monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("synthetic"))
+    monkeypatch.setattr(razorpay_settings, "test_ready", True)
+    monkeypatch.setattr(razorpay_settings, "test_international_ready", True)
+    priced = launch_catalog(refs={"tier_1:international": "plan_private"}).plan(
+        "tier_1"
     )
-    priced = commercial_catalog().plan("tier_1")
     assert priced is not None
-    assert plan_checkout_availability(priced, REGION_INTERNATIONAL) == (
+    assert plan_checkout_availability(priced, REGION_INTERNATIONAL) == (True, None)
+    # A price authored for another environment never admits checkout here.
+    live = launch_catalog(
+        provider_mode="live", refs={"tier_1:international": "plan_private"}
+    ).plan("tier_1")
+    assert live is not None
+    assert plan_checkout_availability(live, REGION_INTERNATIONAL) == (
         False,
         REASON_CHECKOUT_UNAVAILABLE,
     )
@@ -563,37 +465,6 @@ def test_region_and_currency_resolution_stays_server_side() -> None:
     assert resolve_region(None) == REGION_INTERNATIONAL
     assert REGION_CURRENCIES[REGION_INDIA] == "INR"
     assert CURRENCY_MINOR_UNITS["INR"] == 2
-
-
-def test_india_price_is_zero_until_the_operator_sets_a_rate(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    tier_1 = commercial_catalog().plan("tier_1")
-    assert tier_1 is not None
-    india = tier_1.base_price(REGION_INDIA)
-    assert india is not None
-    assert india.currency == "INR"
-    assert india.amount_minor == 0
-    assert india.purchasable is False
-    monkeypatch.setattr(billing_settings, "usd_inr_rate", Decimal("83"))
-    rated = commercial_catalog().plan("tier_1")
-    assert rated is not None
-    priced = rated.base_price(REGION_INDIA)
-    assert priced is not None
-    assert priced.amount_minor == 9_900 * 83
-
-
-def test_plan_period_grant_specs_reads_the_catalog_and_rejects_stale_revisions(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    specs = plan_period_grant_specs("tier_1", billing_settings.catalog_version)
-    assert specs is not None
-    assert dict(specs)[KEY_PROJECT_SLOTS] == 1
-    assert plan_period_grant_specs("tier_1", "billing-v1") is None
-    assert (
-        plan_period_grant_specs("enterprise", billing_settings.catalog_version) is None
-    )
-    assert plan_period_grant_specs("nope", billing_settings.catalog_version) is None
 
 
 def test_coming_soon_providers_never_reach_the_active_write_surface() -> None:

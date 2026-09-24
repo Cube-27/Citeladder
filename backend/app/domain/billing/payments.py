@@ -1,4 +1,10 @@
-"""Normalized durable payment/refund receipts and cumulative refund caps."""
+"""Normalized durable payment/refund receipts and cumulative refund caps.
+
+A processed refund issues one credit note. When processed refunds reach the
+full payment, the purchase's remaining grants are revoked from that moment;
+units already consumed are never clawed back, and a partial refund keeps
+access.
+"""
 
 from __future__ import annotations
 
@@ -7,15 +13,21 @@ import json
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import ProviderPayment, ProviderRefund
 from app.connectors.billing.registry import (
     PROVIDER_MODE_DISABLED as PROVIDER_MODE_UNSET,
 )
-from app.domain.billing.invoices import issue_paid_invoice
-from app.models.billing import BillingSubscription, PendingActivation
+from app.core.config.billing_contracts import (
+    REFUND_PROCESSED,
+    REVOCATION_REASON_FULL_REFUND,
+)
+from app.core.config.entitlements import ACTOR_KIND_PROVIDER
+from app.domain.billing.invoices import issue_credit_note, issue_paid_invoice
+from app.domain.entitlements.grants import revoke_grants
+from app.models.billing import AccountGrant, BillingSubscription, PendingActivation
 from app.models.billing_payment import BillingPayment
 
 
@@ -199,4 +211,53 @@ async def record_refund_receipt(
     )
     session.add(receipt)
     await session.flush()
+    if refund.status == REFUND_PROCESSED:
+        await issue_credit_note(session, refund=receipt)
+        await _revoke_if_fully_refunded(session, payment)
     return receipt
+
+
+async def _revoke_if_fully_refunded(
+    session: AsyncSession, payment: BillingPayment
+) -> None:
+    """Revoke a purchase's remaining grants once it is refunded in full."""
+    processed = await session.scalar(
+        select(func.coalesce(func.sum(BillingPayment.amount_minor), 0)).where(
+            BillingPayment.parent_payment_id == payment.id,
+            BillingPayment.receipt_kind == "refund",
+            BillingPayment.status == REFUND_PROCESSED,
+        )
+    )
+    if int(processed or 0) < payment.amount_minor:
+        return
+    if payment.subscription_id is not None:
+        # A refunded subscription charge revokes the period it paid for.
+        purchase = and_(
+            AccountGrant.source_ref == f"subscription:{payment.subscription_id}",
+            AccountGrant.period_start == payment.period_start,
+        )
+    else:
+        purchase = (
+            AccountGrant.source_ref == f"activation:{payment.pending_activation_id}"
+        )
+    grant_ids = tuple(
+        (
+            await session.scalars(
+                select(AccountGrant.id).where(
+                    AccountGrant.billing_account_id == payment.billing_account_id,
+                    purchase,
+                )
+            )
+        ).all()
+    )
+    if not grant_ids:
+        return
+    await revoke_grants(
+        session,
+        grant_ids=grant_ids,
+        effective_from=datetime.now(UTC),
+        reason=REVOCATION_REASON_FULL_REFUND,
+        actor_kind=ACTOR_KIND_PROVIDER,
+        actor_user_id=None,
+        idempotency_key=f"refund:{payment.id}",
+    )

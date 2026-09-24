@@ -258,19 +258,6 @@ export const billingApi = {
     return strictValidate(activationSchema, response, 'billing.purchaseTopup');
   },
 
-  /**
-   * Deactivation has its OWN response vocabulary. Parsing it through the
-   * activation state machine would invent a pending/failed lifecycle the
-   * backend never reports.
-   */
-  deactivateAddon: async (catalogKey: string, options?: ApiRequestOptions) => {
-    const response = await apiClient.delete<unknown>(
-      `/billing/addons/${encodeURIComponent(catalogKey)}`,
-      options,
-    );
-    return strictValidate(subscriptionChangeSchema, response, 'billing.deactivateAddon');
-  },
-
   cancelSubscription: async (options?: ApiRequestOptions) => {
     const response = await apiClient.delete<unknown>('/billing/subscription', options);
     return strictValidate(subscriptionChangeSchema, response, 'billing.cancelSubscription');

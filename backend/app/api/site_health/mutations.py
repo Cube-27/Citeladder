@@ -29,6 +29,7 @@ from app.domain.site_health.api_schemas import (
     UrlPreviewRequest,
     UrlPreviewResponse,
 )
+from app.domain.site_health.fetch_budget import SiteHealthFetchesExhaustedError
 from app.domain.site_health.planner import (
     CrawlAlreadyActiveError,
     CrawlPlanError,
@@ -138,6 +139,8 @@ async def create_crawl_endpoint(
         raise ApiException.coded(
             status.HTTP_409_CONFLICT, CODE_CRAWL_ALREADY_ACTIVE, str(exc)
         ) from exc
+    except SiteHealthFetchesExhaustedError as exc:
+        raise ApiException.coded(status.HTTP_409_CONFLICT, exc.code, str(exc)) from exc
     except CrawlPlanError as exc:
         if exc.code == "project_not_found":
             raise _not_found("Project not found") from exc

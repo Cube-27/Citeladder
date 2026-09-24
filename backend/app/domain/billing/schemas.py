@@ -151,32 +151,45 @@ class CatalogPlanResponse(_StrictResponse):
     trial_days: int | None
 
 
-class CatalogAddonResponse(_StrictResponse):
+class CatalogGrantResponse(_StrictResponse):
+    """One capability an add-on/top-up unit grants."""
+
+    key: str
+    value: int
+
+
+class _CatalogItemResponse(_StrictResponse):
+    """A one-time add-on or top-up.
+
+    Grants last ``expiry_days`` after purchase or until the paid subscription
+    ends, whichever is earlier, and require one of ``eligible_plan_keys``.
+    """
+
     key: str
     name: str
     description: str
-    cadence: Literal["monthly"]
     unit_price: MoneyResponse | None
     quantity_min: int
     quantity_max: int
     availability: CatalogAvailability
     unavailable_reason: str | None
-    grant_key: str
-    grant_value_per_unit: int
-
-
-class CatalogTopupResponse(_StrictResponse):
-    key: str
-    name: str
-    description: str
-    unit_price: MoneyResponse | None
-    quantity_min: int
-    quantity_max: int
-    availability: CatalogAvailability
-    unavailable_reason: str | None
-    grant_key: Literal["audit_credits"]
-    credits_per_unit: int | None
+    grants_per_unit: list[CatalogGrantResponse]
+    eligible_plan_keys: list[PlanCatalogKey]
     expiry_days: int
+
+
+class CatalogAddonResponse(_CatalogItemResponse):
+    pass
+
+
+class CatalogTopupResponse(_CatalogItemResponse):
+    pass
+
+
+class CatalogSupportContactResponse(_StrictResponse):
+    email: str
+    phone: str | None
+    contact_url: str
 
 
 class BillingCatalogResponse(_StrictResponse):
@@ -194,6 +207,7 @@ class BillingCatalogResponse(_StrictResponse):
     addons: list[CatalogAddonResponse]
     topups: list[CatalogTopupResponse]
     providers: list[CatalogProviderResponse]
+    support_contact: CatalogSupportContactResponse | None
 
 
 # --- Entitlement and usage reads ------------------------------------------
