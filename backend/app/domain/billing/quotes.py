@@ -30,6 +30,7 @@ from app.core.config.billing_contracts import (
     CREDENTIAL_MODE_BYOK,
     REASON_CATALOG_KEY_UNKNOWN,
     REASON_CHECKOUT_UNAVAILABLE,
+    REASON_ITEM_PLAN_INELIGIBLE,
     REASON_PROVIDER_UNAVAILABLE,
     REASON_QUANTITY_OUT_OF_BOUNDS,
 )
@@ -256,9 +257,16 @@ def _resolve_pack_intent(
     region: str,
     catalog_revision: str,
     at: datetime,
+    base_plan_key: str,
     billing_identity: BillingIdentity | None = None,
 ) -> ResolvedIntent:
-    """Validate a quantity-bounded pack purchase and resolve its quote."""
+    """Validate a one-time add-on/top-up purchase and resolve its quote.
+
+    The buyer's live base plan must be eligible for the item, so a plan that
+    lacks a feature can never buy credits for it.
+    """
+    if base_plan_key not in item.eligible_plan_keys:
+        raise BillingConflictError(REASON_ITEM_PLAN_INELIGIBLE)
     _bounded_quantity(quantity, item.quantity_bounds)
     price = item.price(region)
     available, reason = item_checkout_availability(
@@ -309,6 +317,7 @@ async def resolve_addon_intent(
     quantity: int,
     country_code: str,
     at: datetime,
+    base_plan_key: str,
     billing_identity: BillingIdentity | None = None,
     _catalog_loader: Callable[[AsyncSession], Awaitable[CommercialCatalog]]
     | None = None,
@@ -329,6 +338,7 @@ async def resolve_addon_intent(
         region=region,
         catalog_revision=catalog.revision,
         at=at,
+        base_plan_key=base_plan_key,
         billing_identity=billing_identity,
     )
 
@@ -340,6 +350,7 @@ async def resolve_topup_intent(
     quantity: int,
     country_code: str,
     at: datetime,
+    base_plan_key: str,
     billing_identity: BillingIdentity | None = None,
     _catalog_loader: Callable[[AsyncSession], Awaitable[CommercialCatalog]]
     | None = None,
@@ -358,6 +369,7 @@ async def resolve_topup_intent(
         region=region,
         catalog_revision=catalog.revision,
         at=at,
+        base_plan_key=base_plan_key,
         billing_identity=billing_identity,
     )
 

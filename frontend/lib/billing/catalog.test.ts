@@ -43,6 +43,7 @@ function catalog(overrides: Partial<BillingCatalog> = {}): BillingCatalog {
     plans: [plan()],
     addons: [],
     topups: [],
+    support_contact: null,
     providers: [],
     ...overrides,
   } as BillingCatalog;
@@ -141,14 +142,14 @@ describe('isPurchasable', () => {
         key: 'topup_bench',
         name: 'Audit credits',
         description: '',
-        cadence: 'monthly',
         unit_price: null,
         quantity_min: 1,
         quantity_max: 10,
         availability: 'available',
         unavailable_reason: null,
-        grant_key: 'audit_credits',
-        grant_value_per_unit: 1,
+        grants_per_unit: [{ key: 'audit_credits', value: 1 }],
+        eligible_plan_keys: ['tier_1'],
+        expiry_days: 30,
       }),
     ).toBe(false);
   });

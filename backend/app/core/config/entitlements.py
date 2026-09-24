@@ -77,6 +77,9 @@ KEY_MANUAL_RUNS_PER_DAY: Final = "manual_runs_per_day"
 # This is explicitly temporary. It is one key, commented as interim, and
 # deletable in one place once real SERP billing is defined.
 KEY_SERP_TASKS_PER_PERIOD: Final = "serp_tasks_per_period"
+# Site Health page fetches per paid period. Scheduled and manual crawls share
+# one allowance; URL occupancy (``monitored_urls``) is a separate limit.
+KEY_SITE_HEALTH_PAGE_FETCHES: Final = "site_health_page_fetches_per_period"
 KEY_CONTENT_CREATION: Final = "content_creation"
 KEY_GROWTH_AGENT: Final = "growth_agent"
 KEY_PROJECT_DELETION: Final = "project_deletion"
@@ -292,6 +295,11 @@ def _build_registry() -> CapabilityRegistry:
             # concurrent grants add and a spent unit stays spent.
             CapabilityDefinition(
                 key=KEY_SERP_TASKS_PER_PERIOD,
+                capability_type=CapabilityType.COUNTER_CONSUMABLE,
+                resolution_rule=ResolutionRule.SUM,
+            ),
+            CapabilityDefinition(
+                key=KEY_SITE_HEALTH_PAGE_FETCHES,
                 capability_type=CapabilityType.COUNTER_CONSUMABLE,
                 resolution_rule=ResolutionRule.SUM,
             ),

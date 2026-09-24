@@ -13,10 +13,12 @@ import json
 import sys
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 from sqlalchemy import select
 
+from app.core.config.billing_pricing import AUTHORING_USD_INR_RATE
 from app.core.database import SessionLocal, dispose_engine
 from app.domain.billing.admin import (
     OperatorContext,
@@ -71,7 +73,12 @@ async def _run(args: argparse.Namespace) -> dict[str, object]:
         )
         result: dict[str, object]
         if args.command == "catalog-seed":
-            row = await seed_catalog(session, context=context)
+            row = await seed_catalog(
+                session,
+                context=context,
+                provider_mode=args.environment,
+                usd_inr_rate=Decimal(args.usd_inr_rate),
+            )
             result = {"revision": row.revision, "state": row.publication_state}
         elif args.command == "catalog-import":
             row = await import_catalog(
@@ -141,6 +148,17 @@ def main(argv: list[str] | None = None) -> int:
         command = sub.add_parser(name)
         command.add_argument("--file", required=True)
     seed = sub.add_parser("catalog-seed")
+    seed.add_argument(
+        "--environment",
+        choices=("test", "live"),
+        default=None,
+        help="Provider environment whose checkout prices to author",
+    )
+    seed.add_argument(
+        "--usd-inr-rate",
+        default=str(AUTHORING_USD_INR_RATE),
+        help="INR per USD used once to author frozen INR prices",
+    )
     _mutation_options(seed)
     imported = sub.add_parser("catalog-import")
     imported.add_argument("--revision", required=True)

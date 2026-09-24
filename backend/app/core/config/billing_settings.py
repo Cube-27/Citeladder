@@ -34,9 +34,6 @@ class BillingSettings(BaseSettings):
         populate_by_name=True,
     )
 
-    # Legacy builder compatibility only; runtime billing reads never consult
-    # this value and fail closed on a missing persisted published revision.
-    catalog_version: str = "legacy-config-catalog"
     # Operational emergency switch only. Commercial prices, grants, campaign
     # policy and catalog revisions are persisted in BillingCatalogRevision.
     checkout_enabled: bool = False
@@ -46,11 +43,11 @@ class BillingSettings(BaseSettings):
     # it never falls back to another provider (plan §3.3).
     checkout_provider: str = PROVIDER_RAZORPAY
 
-    # India price is frozen when an item is provisioned from this
-    # operator-owned rate. Zero deliberately means "route unavailable", never a
-    # guessed rate.
-    usd_inr_rate: Decimal = Decimal("0")
-    india_gst_rate: Decimal = Decimal("0.18")
+    # The approved Indian GST rate and the reference to its approval record.
+    # Both are REQUIRED: there is no source default, and Indian checkout,
+    # quotes and India catalog authoring fail closed while either is unset.
+    india_gst_rate: Decimal | None = None
+    india_gst_approval_reference: str = ""
     # Seller identity is configuration, while the applicable tax treatment is
     # determined per transaction in ``billing_tax``.
     seller_legal_name: str = ""
@@ -63,44 +60,16 @@ class BillingSettings(BaseSettings):
     seller_lut_reference: str = ""
     invoice_prefix: str = "CL"
 
-    # --- Commercial catalog (open config) --------------------------------
-    # PRIVATE provider price/plan references, keyed
-    # ``"{catalog_key}:{region}:{purpose}"`` (invariant 6: never in a DTO). An
-    # ABSENT ref makes the item unavailable rather than failing at purchase.
-    provider_price_refs: dict[str, str] = {}
-
     # Where a contact-only plan sends the buyer (display metadata, no price).
     contact_sales_url: str = "https://www.cube27.com/contact/"
 
     # Funded admission budget (minor USD units). The SOLE commercial amount
     # kept here; expected execution costs live in ``config/costs.py``.
     funded_monthly_budget_minor: int = 50_000
-    # Funded margin over the budget, in basis points. NULL/UNSET keeps funded
-    # credit pricing (and therefore funded checkout) unavailable — a margin is
-    # never guessed.
-    funded_margin_bps: int | None = None
-
-    # Add-on unit prices in minor USD units. Zero means "not yet priced", which
-    # renders the add-on unavailable.
-    addon_extra_project_usd_minor: int = 0
-    addon_extra_prompts_usd_minor: int = 0
-
-    # Top-up pack price + pack size. Both UNSET: the pack size is NULLABLE and
-    # a top-up without a configured size issues no grant and stays
-    # unavailable. Included audit credits and audit repetitions are
-    # likewise unset and carry no default.
-    topup_audit_credits_usd_minor: int = 0
-    topup_audit_credits_per_pack: int | None = None
-    included_audit_credits: int | None = None
-    audit_repetitions: int | None = None
-    # Fixed validity of a purchased top-up grant, in days.
-    topup_credit_valid_days: int = 30
-
     # DEFERRED trial terms. Retained only as future catalog copy and as
     # grant-algebra/API fixtures: they never enable checkout (the catalog
     # reports trial_availability='unavailable' unconditionally).
     trial_days: int = 7
-    trial_max_executions: int = 30
 
     request_timeout_seconds: float = 15.0
     http_max_connections: int = 20

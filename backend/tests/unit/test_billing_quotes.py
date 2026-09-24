@@ -2,23 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from datetime import UTC, datetime
-from decimal import Decimal
 
 import pytest
 from pydantic import SecretStr
 
-from app.core.config.billing_catalog import (
-    commercial_catalog,
-    scale_grant_specs,
-    topup_grant_specs,
-)
+from app.core.config.billing_catalog import scale_grant_specs
 from app.core.config.billing_contracts import (
     ADDON_EXTRA_PROJECT,
     REGION_INDIA,
     REGION_INTERNATIONAL,
-    TOPUP_AUDIT_CREDITS,
 )
 from app.core.config.billing_settings import (
     billing_settings,
@@ -31,6 +24,7 @@ from app.domain.billing.service import (
     resolve_addon_intent,
     resolve_base_intent,
 )
+from tests.billing_catalog_support import TEST_CATALOG_REVISION, launch_catalog
 from tests.billing_settings_support import apply_billing_settings
 from tests.component.billing_catalog_helpers import (
     apply_seller_settings,
@@ -43,31 +37,24 @@ class _CatalogSession:
         return None
 
 
+# Operator plan refs for the current test, keyed "{plan_key}:{region}".
+_refs: dict[str, str] = {}
+
+
 @pytest.fixture(autouse=True)
 def _published_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
     apply_seller_settings(monkeypatch)
     monkeypatch.setattr(billing_settings, "invoice_prefix", "CL")
+    _refs.clear()
 
     async def load(_session):
-        catalog = commercial_catalog()
-        return replace(
-            catalog,
-            plans=tuple(
-                replace(
-                    plan,
-                    base_prices={
-                        region: replace(price, provider_mode="test", tax_verified=True)
-                        for region, price in plan.base_prices.items()
-                    },
-                )
-                for plan in catalog.plans
-            ),
-        )
+        return launch_catalog(refs=_refs)
 
     monkeypatch.setattr("app.domain.billing.service.published_commercial_catalog", load)
 
 
-def _enable_checkout(monkeypatch, refs) -> None:
+def _enable_checkout(monkeypatch, refs: dict[str, str]) -> None:
+    _refs.update(refs)
     apply_billing_settings(
         monkeypatch,
         {
@@ -81,7 +68,6 @@ def _enable_checkout(monkeypatch, refs) -> None:
             "razorpay_test_india_ready": True,
             "razorpay_live_ready": True,
             "razorpay_international_ready": True,
-            "provider_price_refs": refs,
             **seller_settings(),
         },
     )
@@ -102,7 +88,7 @@ def _identity(
 
 
 async def test_base_quote_separates_byok_and_funded_prices(monkeypatch) -> None:
-    refs = {f"tier_1:{REGION_INTERNATIONAL}:base": "ref_private"}
+    refs = {f"tier_1:{REGION_INTERNATIONAL}": "ref_private"}
     _enable_checkout(monkeypatch, refs)
     now = datetime.now(UTC)
     quote = (
@@ -120,21 +106,16 @@ async def test_base_quote_separates_byok_and_funded_prices(monkeypatch) -> None:
         quote.catalog_revision,
         quote.credential_mode,
         quote.region,
-    ) == ("tier_1", billing_settings.catalog_version, "byok", REGION_INTERNATIONAL)
+    ) == ("tier_1", TEST_CATALOG_REVISION, "byok", REGION_INTERNATIONAL)
     assert (
         quote.base_price.amount_minor,
         quote.credit_price,
         quote.tax.amount_minor,
         quote.total_price.amount_minor,
-    ) == (9_900, None, 0, 9_900)
+    ) == (4_900, None, 0, 4_900)
     assert "ref_private" not in quote.model_dump_json()
     assert "Ada Buyer" not in quote.model_dump_json()
-    monkeypatch.setattr(billing_settings, "funded_margin_bps", 2_000)
-    monkeypatch.setattr(
-        billing_settings,
-        "provider_price_refs",
-        {**refs, f"tier_1:{REGION_INTERNATIONAL}:credit": "ref_credit"},
-    )
+    # The funded price is published but funded checkout is not sold at launch.
     with pytest.raises(BillingConflictError, match="checkout_unavailable"):
         await resolve_base_intent(
             _CatalogSession(),
@@ -147,9 +128,7 @@ async def test_base_quote_separates_byok_and_funded_prices(monkeypatch) -> None:
 
 
 async def test_base_quote_refuses_unknown_or_unavailable_checkout(monkeypatch) -> None:
-    _enable_checkout(
-        monkeypatch, {f"tier_1:{REGION_INTERNATIONAL}:base": "ref_private"}
-    )
+    _enable_checkout(monkeypatch, {f"tier_1:{REGION_INTERNATIONAL}": "ref_private"})
     now = datetime.now(UTC)
     for kwargs, error in (
         ({"catalog_key": "nope", "credential_mode": "byok"}, "catalog_key_unknown"),
@@ -178,9 +157,8 @@ async def test_base_quote_refuses_unknown_or_unavailable_checkout(monkeypatch) -
         )
 
 
-async def test_india_quote_applies_configured_gst(monkeypatch) -> None:
-    _enable_checkout(monkeypatch, {f"tier_1:{REGION_INDIA}:base": "ref_private_in"})
-    monkeypatch.setattr(billing_settings, "usd_inr_rate", Decimal("83"))
+async def test_india_quote_adds_gst_to_the_frozen_inr_price(monkeypatch) -> None:
+    _enable_checkout(monkeypatch, {f"tier_1:{REGION_INDIA}": "ref_private_in"})
     quote = (
         await resolve_base_intent(
             _CatalogSession(),
@@ -194,27 +172,24 @@ async def test_india_quote_applies_configured_gst(monkeypatch) -> None:
     assert (quote.region, quote.base_price.currency, quote.base_price.amount_minor) == (
         REGION_INDIA,
         "INR",
-        9_900 * 83,
+        449_900,
     )
     assert quote.tax_treatment == "CGST_SGST"
     assert quote.cgst.amount_minor == quote.sgst.amount_minor
     assert (
         quote.total_price.amount_minor
         == quote.base_price.amount_minor + quote.tax.amount_minor
-        == 9900 * 83 + round(9900 * 83 * 0.18)
+        == 449_900 + 80_982
     )
 
 
 async def test_addon_quote_bounds_quantity_and_availability(monkeypatch) -> None:
     _enable_checkout(
         monkeypatch,
-        {f"{ADDON_EXTRA_PROJECT}:{REGION_INTERNATIONAL}:base": "ref_private"},
+        {f"{ADDON_EXTRA_PROJECT}:{REGION_INTERNATIONAL}": "ref_private"},
     )
     now = datetime.now(UTC)
-    for key, quantity, error in (
-        (ADDON_EXTRA_PROJECT, 1, "checkout_unavailable"),
-        ("nope", 1, "catalog_key_unknown"),
-    ):
+    for key, quantity, error in (("nope", 1, "catalog_key_unknown"),):
         with pytest.raises(BillingConflictError, match=error):
             await resolve_addon_intent(
                 _CatalogSession(),
@@ -224,7 +199,6 @@ async def test_addon_quote_bounds_quantity_and_availability(monkeypatch) -> None
                 at=now,
                 billing_identity=_identity(export=True),
             )
-    monkeypatch.setattr(billing_settings, "addon_extra_project_usd_minor", 1_900)
     with pytest.raises(BillingConflictError, match="quantity_out_of_bounds"):
         await resolve_addon_intent(
             _CatalogSession(),
@@ -250,31 +224,21 @@ async def test_addon_quote_bounds_quantity_and_availability(monkeypatch) -> None
     )
 
 
-def test_topup_specs_and_provisioning_refs(monkeypatch) -> None:
-    version = billing_settings.catalog_version
-    assert topup_grant_specs(TOPUP_AUDIT_CREDITS, version) is None
-    monkeypatch.setattr(billing_settings, "topup_audit_credits_per_pack", 25)
-    specs = topup_grant_specs(TOPUP_AUDIT_CREDITS, version)
-    assert specs == ((KEY_AUDIT_CREDITS, 25),)
-    assert scale_grant_specs(specs, 3) == ((KEY_AUDIT_CREDITS, 75),)
+def test_grant_specs_scale_with_the_purchased_quantity() -> None:
+    specs = ((KEY_AUDIT_CREDITS, 1_000),)
+    assert scale_grant_specs(specs, 3) == ((KEY_AUDIT_CREDITS, 3_000),)
     with pytest.raises(ValueError, match=">= 1"):
         scale_grant_specs(specs, 0)
-    assert (
-        topup_grant_specs(TOPUP_AUDIT_CREDITS, "billing-v1")
-        is topup_grant_specs("nope", version)
-        is None
-    )
 
 
 async def test_base_quote_applies_interstate_and_export_policy(monkeypatch) -> None:
     _enable_checkout(
         monkeypatch,
         {
-            f"tier_1:{REGION_INDIA}:base": "ref_private_in",
-            f"tier_1:{REGION_INTERNATIONAL}:base": "ref_private_us",
+            f"tier_1:{REGION_INDIA}": "ref_private_in",
+            f"tier_1:{REGION_INTERNATIONAL}": "ref_private_us",
         },
     )
-    monkeypatch.setattr(billing_settings, "usd_inr_rate", Decimal("83"))
     now = datetime.now(UTC)
     interstate = (
         await resolve_base_intent(
@@ -298,7 +262,7 @@ async def test_base_quote_applies_interstate_and_export_policy(monkeypatch) -> N
     ).quote
     assert (interstate.tax_treatment, interstate.igst.amount_minor) == (
         "IGST",
-        round(9_900 * 83 * 0.18),
+        80_982,
     )
     assert (exported.tax_treatment, exported.tax.amount_minor) == (
         "EXPORT_ZERO_RATED",
@@ -307,7 +271,7 @@ async def test_base_quote_applies_interstate_and_export_policy(monkeypatch) -> N
 
 
 async def test_base_quote_fails_closed_without_export_evidence(monkeypatch) -> None:
-    _enable_checkout(monkeypatch, {f"tier_1:{REGION_INTERNATIONAL}:base": "ref"})
+    _enable_checkout(monkeypatch, {f"tier_1:{REGION_INTERNATIONAL}": "ref"})
     now = datetime.now(UTC)
     for identity in (_identity(), _identity(export=True)):
         if identity.export_eligibility_attested:

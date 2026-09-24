@@ -260,5 +260,14 @@ async def ensure_initial_catalog(session: AsyncSession, *, operator: User) -> No
         idempotency_key="environment-initial-catalog",
         dry_run=False,
     )
-    draft = await seed_catalog(session, context=context)
+    from app.core.config.billing_catalog import checkout_provider_mode
+    from app.domain.billing.launch_catalog import ProviderMode
+
+    # Checkout-capable regional prices are authored only for the configured
+    # provider environment; without one the region stays unavailable.
+    mode = checkout_provider_mode()
+    provider_mode: ProviderMode | None = (
+        "live" if mode == "live" else "test" if mode == "test" else None
+    )
+    draft = await seed_catalog(session, context=context, provider_mode=provider_mode)
     await publish_catalog(session, revision=draft.revision, context=context)

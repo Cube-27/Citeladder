@@ -132,6 +132,20 @@ def calculate_tax(
     )
 
 
+def approved_india_gst_rate() -> Decimal:
+    """The operator-approved GST rate, or a policy error while unapproved.
+
+    ``0.18`` in source is not evidence of tax approval: the rate and the
+    reference to its approval record must both be configured.
+    """
+    gst_rate = billing_settings.india_gst_rate
+    if gst_rate is None or not billing_settings.india_gst_approval_reference.strip():
+        raise TaxPolicyError("Indian GST rate is not approved")
+    if not Decimal("0") <= gst_rate <= Decimal("1"):
+        raise TaxPolicyError("Indian GST rate is invalid")
+    return gst_rate
+
+
 def _calculate_india(
     subtotal_minor: int,
     discount_minor: int,
@@ -139,9 +153,7 @@ def _calculate_india(
     currency: str,
     identity: BillingIdentity,
 ) -> TaxCalculation:
-    gst_rate = billing_settings.india_gst_rate
-    if not Decimal("0") <= gst_rate <= Decimal("1"):
-        raise TaxPolicyError("Indian GST rate is invalid")
+    gst_rate = approved_india_gst_rate()
     if currency != "INR" or not identity.state_code:
         raise TaxPolicyError("Indian billing requires INR and a billing state")
     total_gst_minor = _tax_minor(taxable_minor, gst_rate)
@@ -217,6 +229,7 @@ def tax_snapshot(
             "sac": billing_settings.seller_sac,
             "lut_reference": billing_settings.seller_lut_reference,
             "invoice_prefix": billing_settings.invoice_prefix,
+            "gst_approval_reference": billing_settings.india_gst_approval_reference,
         },
         "tax": calculation.snapshot(),
     }

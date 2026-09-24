@@ -19,7 +19,6 @@ from app.core.config.billing_contracts import (
     COMING_SOON_ROW_PLAN_KEYS,
     CURRENCY_MINOR_UNITS,
     REGION_CURRENCIES,
-    TOPUP_CREDIT_KEYS,
 )
 from app.core.config.billing_settings import billing_settings
 from app.core.config.entitlements import (
@@ -34,17 +33,21 @@ from app.core.config.provider_catalog import (
 from app.domain.billing.catalog_revisions import (
     commercial_catalog_from_row,
     published_revision,
+    validate_payload,
 )
 from app.domain.billing.schemas import (
     BillingCatalogResponse,
     CapabilityValueResponse,
     CatalogAddonResponse,
+    CatalogGrantResponse,
     CatalogPlanResponse,
     CatalogProviderResponse,
     CatalogProviderRouteResponse,
+    CatalogSupportContactResponse,
     CatalogTopupResponse,
     MoneyResponse,
 )
+from app.models.billing import BillingCatalogRevision
 
 
 def _money(price: CatalogPrice | None) -> MoneyResponse | None:
@@ -116,37 +119,37 @@ def _plan_response(plan: PlanCatalogEntry, region: str) -> CatalogPlanResponse:
     )
 
 
-def _addon_response(addon: AddonCatalogEntry, region: str) -> CatalogAddonResponse:
-    template = addon.grant_bundle_per_unit[0]
-    return CatalogAddonResponse(
-        key=addon.key,
-        name=addon.name,
-        description=addon.description,
-        cadence=addon.cadence,
-        unit_price=_money(addon.price(region)),
-        quantity_min=addon.quantity_bounds.minimum,
-        quantity_max=addon.quantity_bounds.maximum,
-        availability=addon.availability,
-        unavailable_reason=addon.unavailable_reason,
-        grant_key=template.key,
-        grant_value_per_unit=template.value,
-    )
+def _item_fields(
+    item: AddonCatalogEntry | TopupCatalogEntry, region: str
+) -> dict[str, object]:
+    return {
+        "key": item.key,
+        "name": item.name,
+        "description": item.description,
+        "unit_price": _money(item.price(region)),
+        "quantity_min": item.quantity_bounds.minimum,
+        "quantity_max": item.quantity_bounds.maximum,
+        "availability": item.availability,
+        "unavailable_reason": item.unavailable_reason,
+        "grants_per_unit": [
+            CatalogGrantResponse(key=template.key, value=template.value)
+            for template in item.grant_bundle_per_unit
+        ],
+        "eligible_plan_keys": list(item.eligible_plan_keys),
+        "expiry_days": item.expiry_days,
+    }
 
 
-def _topup_response(topup: TopupCatalogEntry, region: str) -> CatalogTopupResponse:
-    templates = topup.grant_bundle_per_unit
-    return CatalogTopupResponse(
-        key=topup.key,
-        name=topup.name,
-        description=topup.description,
-        unit_price=_money(topup.price(region)),
-        quantity_min=topup.quantity_bounds.minimum,
-        quantity_max=topup.quantity_bounds.maximum,
-        availability=topup.availability,
-        unavailable_reason=topup.unavailable_reason,
-        grant_key=TOPUP_CREDIT_KEYS[topup.key],
-        credits_per_unit=templates[0].value if templates else None,
-        expiry_days=topup.expiry_days,
+def _support_contact(
+    row: BillingCatalogRevision,
+) -> CatalogSupportContactResponse | None:
+    contact = validate_payload(row.payload).support_contact
+    if contact is None:
+        return None
+    return CatalogSupportContactResponse(
+        email=contact.email,
+        phone=contact.phone or None,
+        contact_url=contact.contact_url,
     )
 
 
@@ -176,9 +179,8 @@ async def public_catalog(
     normalized = (country_code or "").strip().upper() or None
     region = resolve_region(normalized)
     currency = REGION_CURRENCIES[region]
-    catalog: CommercialCatalog = commercial_catalog_from_row(
-        await published_revision(session)
-    )
+    row = await published_revision(session)
+    catalog: CommercialCatalog = commercial_catalog_from_row(row)
     return BillingCatalogResponse(
         catalog_revision=catalog.revision,
         country_code=normalized,
@@ -186,7 +188,14 @@ async def public_catalog(
         currency=currency,
         currency_minor_units=CURRENCY_MINOR_UNITS[currency],
         plans=[_plan_response(plan, region) for plan in catalog.plans],
-        addons=[_addon_response(addon, region) for addon in catalog.addons],
-        topups=[_topup_response(topup, region) for topup in catalog.topups],
+        addons=[
+            CatalogAddonResponse.model_validate(_item_fields(addon, region))
+            for addon in catalog.addons
+        ],
+        topups=[
+            CatalogTopupResponse.model_validate(_item_fields(topup, region))
+            for topup in catalog.topups
+        ],
         providers=[_provider_response(provider) for provider in catalog.providers],
+        support_contact=_support_contact(row),
     )

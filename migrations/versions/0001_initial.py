@@ -1570,13 +1570,6 @@ def upgrade() -> None:
         unique=True,
         postgresql_where=sa.text("is_current AND subscription_kind = 'base'"),
     )
-    op.create_index(
-        "uq_billing_subscription_one_current_addon",
-        "billing_subscriptions",
-        ["billing_account_id", "catalog_key"],
-        unique=True,
-        postgresql_where=sa.text("is_current AND subscription_kind = 'addon'"),
-    )
     op.create_table(
         "brand_aliases",
         sa.Column("id", sa.UUID(), nullable=False),

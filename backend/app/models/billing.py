@@ -196,13 +196,6 @@ class BillingSubscription(Base):
             unique=True,
             postgresql_where=text("is_current AND subscription_kind = 'base'"),
         ),
-        Index(
-            "uq_billing_subscription_one_current_addon",
-            "billing_account_id",
-            "catalog_key",
-            unique=True,
-            postgresql_where=text("is_current AND subscription_kind = 'addon'"),
-        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

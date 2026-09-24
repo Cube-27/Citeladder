@@ -20,7 +20,6 @@ from app.connectors.billing.base import (
 )
 from app.core.config.billing_contracts import (
     LIVE_SUBSCRIPTION_STATUSES,
-    REASON_ADDON_EXISTS,
     REASON_ADDON_PENDING,
     REASON_SUBSCRIPTION_EXISTS,
     REASON_SUBSCRIPTION_PENDING,
@@ -30,7 +29,6 @@ from app.domain.billing.idempotency import ProviderCall, provider_metadata
 from app.domain.billing.service import (
     BillingConflictError,
     ResolvedIntent,
-    current_addon_subscription,
     current_base_subscription,
     live_base_subscription,
     pending_addon_activation,
@@ -86,17 +84,6 @@ async def reject_existing_base(session: AsyncSession, account: BillingAccount) -
     await _reject_unsettled_base(session, account)
 
 
-async def _reject_live_addon(
-    session: AsyncSession, account: BillingAccount, catalog_key: str
-) -> None:
-    """Refuse a duplicate add-on while one is LIVE (quantity changes are a
-    separate, later operation).
-    """
-    subscription = await current_addon_subscription(session, account.id, catalog_key)
-    if subscription is not None and subscription.status in LIVE_SUBSCRIPTION_STATUSES:
-        raise BillingConflictError(REASON_ADDON_EXISTS)
-
-
 async def _reject_unsettled_addon(
     session: AsyncSession, account: BillingAccount, catalog_key: str
 ) -> None:
@@ -108,19 +95,24 @@ async def _reject_unsettled_addon(
         raise BillingConflictError(REASON_ADDON_PENDING)
 
 
-async def reject_existing_addon(
+async def reject_unsettled_addon(
     session: AsyncSession, account: BillingAccount, catalog_key: str
 ) -> None:
-    """Refuse a duplicate add-on while one is live OR still settling."""
-    await _reject_live_addon(session, account, catalog_key)
+    """Refuse a second add-on intent for the same key while one is settling.
+
+    Add-ons are one-time purchases, so buying the same add-on again after the
+    first settles is allowed; each purchase carries its own expiry.
+    """
     await _reject_unsettled_addon(session, account, catalog_key)
 
 
-async def require_live_base(session: AsyncSession, account: BillingAccount) -> None:
-    """A top-up requires a readable LIVE base subscription (checked twice: here
-    before provider I/O, and again inside the activation transaction).
+async def require_live_base(session: AsyncSession, account: BillingAccount) -> str:
+    """The live base plan key a one-time purchase is priced against.
+
+    Checked twice: here before provider I/O, and again inside the activation
+    transaction.
     """
-    await live_base_subscription(session, account.id)
+    return (await live_base_subscription(session, account.id)).catalog_key
 
 
 def base_provider_call(
@@ -143,25 +135,10 @@ def base_provider_call(
     return call
 
 
-def addon_provider_call(
+def one_time_provider_call(
     provider: BillingProvider, intent: ResolvedIntent
 ) -> ProviderCall:
-    async def call(pending: PendingActivation) -> HostedSubscription:
-        return await provider.create_addon_subscription(
-            price_ref=intent.price_ref,
-            quantity=pending.quantity,
-            intent_id=str(pending.id),
-            account_ref=str(pending.billing_account_id),
-            metadata=provider_metadata(pending),
-        )
-
-    return call
-
-
-def topup_provider_call(
-    provider: BillingProvider, intent: ResolvedIntent
-) -> ProviderCall:
-    """Charge exactly the server-resolved total (base + credit + tax)."""
+    """Charge an add-on/top-up's exact server-resolved total (price + tax)."""
     total = intent.quote.total_price
 
     async def call(pending: PendingActivation) -> HostedPayment:
@@ -177,12 +154,11 @@ def topup_provider_call(
 
 
 __all__ = [
-    "addon_provider_call",
     "base_provider_call",
+    "one_time_provider_call",
     "purchase_country",
     "purchase_identity",
-    "reject_existing_addon",
     "reject_existing_base",
+    "reject_unsettled_addon",
     "require_live_base",
-    "topup_provider_call",
 ]

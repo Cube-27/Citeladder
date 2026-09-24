@@ -9,10 +9,9 @@ Routes, in the frozen order of the work order:
 5. ``GET  /billing/invoices/{id}/pdf`` authorized receipt download;
 6. ``POST /billing/subscriptions``  the ONE base purchase route (202 pending);
 7. ``DELETE /billing/subscription`` schedule base cancellation;
-8. ``POST /billing/addons``         add-on activation;
-9. ``POST /billing/topups``         top-up purchase;
-10. ``DELETE /billing/addons/{key}`` schedule add-on cancellation;
-11. ``POST /billing/webhooks/{provider}`` signed ingress, 204 with no body
+8. ``POST /billing/addons``         one-time add-on purchase;
+9. ``POST /billing/topups``         one-time top-up purchase;
+10. ``POST /billing/webhooks/{provider}`` signed ingress, 204 with no body
     (``/billing/webhooks/razorpay`` is that path for Razorpay).
 
 The v6 ``/billing/me``, ``/billing/profile``, ``/billing/checkout``,
@@ -57,14 +56,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.billing_checkout import router as checkout_router
 from app.api.billing_guards import (
-    addon_provider_call,
     base_provider_call,
+    one_time_provider_call,
     purchase_country,
     purchase_identity,
-    reject_existing_addon,
     reject_existing_base,
+    reject_unsettled_addon,
     require_live_base,
-    topup_provider_call,
 )
 from app.api.billing_invoices import router as invoices_router
 from app.api.deps import (
@@ -138,7 +136,6 @@ from app.domain.billing.service import (
     resolve_addon_intent,
     resolve_base_intent,
     resolve_topup_intent,
-    schedule_addon_cancellation,
     schedule_base_cancellation,
     workspace_account,
 )
@@ -534,8 +531,8 @@ async def post_addon(
     idempotency_key: IdempotencyKey,
     response: Response,
 ) -> ActivationResponse:
-    """Activate one add-on. A coming-soon add-on refuses with
-    ``provider_unavailable`` before any provider I/O or grant issuance.
+    """Buy one add-on once. It needs a live, eligible base plan; a coming-soon
+    add-on refuses with ``provider_unavailable`` before any provider I/O.
     """
     with _safe_commercial_errors():
         account = await _account(session, ctx)
@@ -556,7 +553,8 @@ async def post_addon(
         )
         if replayed is not None:
             return replayed
-        await reject_existing_addon(session, account, payload.catalog_key)
+        base_plan_key = await require_live_base(session, account)
+        await reject_unsettled_addon(session, account, payload.catalog_key)
         provider = get_billing_provider()
         intent = await resolve_addon_intent(
             session,
@@ -564,6 +562,7 @@ async def post_addon(
             quantity=payload.quantity,
             country_code=purchase_country(account),
             billing_identity=identity,
+            base_plan_key=base_plan_key,
             at=datetime.now(UTC),
         )
         return await _run_intent(
@@ -572,7 +571,7 @@ async def post_addon(
             operation=OPERATION_ADDON_ACTIVATE,
             intent=intent,
             idempotency_key=idempotency_key,
-            provider_call=addon_provider_call(provider, intent),
+            provider_call=one_time_provider_call(provider, intent),
             response=response,
         )
 
@@ -612,7 +611,7 @@ async def post_topup(
         )
         if replayed is not None:
             return replayed
-        await require_live_base(session, account)
+        base_plan_key = await require_live_base(session, account)
         provider = get_billing_provider()
         intent = await resolve_topup_intent(
             session,
@@ -620,6 +619,7 @@ async def post_topup(
             quantity=payload.quantity,
             country_code=purchase_country(account),
             billing_identity=identity,
+            base_plan_key=base_plan_key,
             at=datetime.now(UTC),
         )
         return await _run_intent(
@@ -628,7 +628,7 @@ async def post_topup(
             operation=OPERATION_TOPUP_PURCHASE,
             intent=intent,
             idempotency_key=idempotency_key,
-            provider_call=topup_provider_call(provider, intent),
+            provider_call=one_time_provider_call(provider, intent),
             response=response,
         )
 
@@ -658,25 +658,6 @@ async def delete_subscription(
         )
         return SubscriptionChangeResponse(
             catalog_key=catalog_key, status=change_status, effective_at=effective_at
-        )
-
-
-@router.delete("/billing/addons/{key}")
-async def delete_addon(
-    ctx: BillingWorkspace,
-    session: Session,
-    idempotency_key: IdempotencyKey,
-    key: Annotated[str, PathParam(max_length=64)],
-) -> SubscriptionChangeResponse:
-    """Schedule one add-on's PERIOD-END cancellation (grants untouched)."""
-    del idempotency_key
-    with _safe_commercial_errors():
-        account = await _account(session, ctx)
-        change_status, effective_at = await schedule_addon_cancellation(
-            session, account_id=account.id, catalog_key=key
-        )
-        return SubscriptionChangeResponse(
-            catalog_key=key, status=change_status, effective_at=effective_at
         )
 
 

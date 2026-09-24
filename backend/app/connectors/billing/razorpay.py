@@ -221,28 +221,6 @@ class RazorpayBillingProvider:
         data = await self._request("POST", _SUBSCRIPTIONS_PATH, payload=payload)
         return self._hosted_subscription(data, expected_price_ref=price_ref)
 
-    async def create_addon_subscription(
-        self,
-        *,
-        price_ref: str,
-        quantity: int,
-        intent_id: str,
-        account_ref: str,
-        metadata: ProviderMetadata,
-    ) -> HostedSubscription:
-        data = await self._request(
-            "POST",
-            _SUBSCRIPTIONS_PATH,
-            payload={
-                "plan_id": price_ref,
-                "quantity": quantity,
-                "total_count": billing_settings.subscription_total_cycles,
-                "customer_notify": 1,
-                "notes": metadata.as_notes(),
-            },
-        )
-        return self._hosted_subscription(data, expected_price_ref=price_ref)
-
     async def fetch_subscription(
         self, external_subscription_id: str
     ) -> ProviderSubscription:

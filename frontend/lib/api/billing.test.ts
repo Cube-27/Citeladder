@@ -145,23 +145,6 @@ describe('billing API contract', () => {
     ).toBe('topup-key');
   });
 
-  it('parses add-on deactivation through its own vocabulary, not the activation machine', async () => {
-    const fetchMock = stubFetch({
-      catalog_key: 'addon_seats',
-      status: 'cancellation_scheduled',
-      effective_at: '2026-09-01T00:00:00Z',
-    });
-
-    const result = await billingApi.deactivateAddon('addon_seats');
-
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/api/v1/billing/addons/addon_seats');
-    expect(init.method).toBe('DELETE');
-    expect(result.status).toBe('cancellation_scheduled');
-    // A deactivation has no pending/activated/failed lifecycle at all.
-    expect('quote' in result).toBe(false);
-  });
-
   it('rejects a retired tier key rather than rendering it as an unknown plan', async () => {
     stubFetch({
       catalog_revision: 'commercial-v9',
@@ -172,6 +155,7 @@ describe('billing API contract', () => {
       plans: [{ key: 'paid', name: 'Paid', description: '', cadence: 'monthly' }],
       addons: [],
       topups: [],
+      support_contact: null,
       providers: [],
     });
 
@@ -188,6 +172,7 @@ describe('billing API contract', () => {
       plans: [],
       addons: [],
       topups: [],
+      support_contact: null,
       providers: [],
       razorpay_plan_id: 'plan_leaked',
     });

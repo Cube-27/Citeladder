@@ -61,6 +61,7 @@ ALL_CAPABILITY_KEYS = (
     # before the shared run budget, never a second gate that can reject
     # admission on its own — see the key's comment in config.
     "serp_tasks_per_period",
+    "site_health_page_fetches_per_period",
     "content_creation",
     "growth_agent",
     "project_deletion",

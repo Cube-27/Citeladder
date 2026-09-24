@@ -95,6 +95,7 @@ const CATALOG = {
   ],
   addons: [],
   topups: [],
+  support_contact: null,
   providers: [],
 };
 

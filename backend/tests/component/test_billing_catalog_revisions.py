@@ -9,10 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.billing_tax import BillingIdentity
 from app.domain.billing.catalog_revisions import (
-    approved_phase1_payload,
     create_draft,
     publish_revision,
-    seed_phase1_draft,
+)
+from app.domain.billing.launch_catalog import (
+    launch_pricing_v1_payload,
+    seed_launch_draft,
 )
 from app.domain.billing.service import resolve_base_intent
 from app.models.billing import AccountGrant, BillingCatalogRevision
@@ -32,11 +34,11 @@ async def _admin(
 @pytest.mark.asyncio
 async def test_seed_is_idempotent_and_grants_nothing(db_session: AsyncSession) -> None:
     actor = await _admin(db_session)
-    first = await seed_phase1_draft(
-        db_session, actor=actor, reason="approved Phase 1 seed"
+    first = await seed_launch_draft(
+        db_session, provider_mode=None, actor=actor, reason="approved Phase 1 seed"
     )
-    second = await seed_phase1_draft(
-        db_session, actor=actor, reason="approved Phase 1 seed"
+    second = await seed_launch_draft(
+        db_session, provider_mode=None, actor=actor, reason="approved Phase 1 seed"
     )
     assert first.id == second.id
     assert first.publication_state == "draft"
@@ -52,7 +54,7 @@ async def test_draft_is_not_runtime_published_until_explicit_publication(
     row = await create_draft(
         db_session,
         revision="commercial-test-v1",
-        payload=approved_phase1_payload(),
+        payload=launch_pricing_v1_payload(provider_mode=None),
         actor=actor,
         reason="review",
     )
@@ -83,11 +85,11 @@ async def test_database_allows_only_one_published_revision(
     first = await create_draft(
         db_session,
         revision="commercial-race-a",
-        payload=approved_phase1_payload(),
+        payload=launch_pricing_v1_payload(provider_mode=None),
         actor=actor,
         reason="a",
     )
-    payload = approved_phase1_payload()
+    payload = launch_pricing_v1_payload(provider_mode=None)
     payload["contact_sales_url"] = "https://www.cube27.com/contact/sales/"
     second = await create_draft(
         db_session,
@@ -107,7 +109,7 @@ async def test_purchase_intent_reads_the_persisted_catalog_revision(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     actor = await _admin(db_session, "persisted-intent@example.com")
-    payload = approved_phase1_payload()
+    payload = launch_pricing_v1_payload(provider_mode=None)
     plans = payload["plans"]
     assert isinstance(plans, list)
     tier_1 = plans[0]

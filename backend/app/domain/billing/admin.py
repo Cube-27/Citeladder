@@ -6,17 +6,21 @@ import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.billing.catalog_revisions import (
-    approved_phase1_payload,
     create_draft,
     publish_revision,
-    seed_phase1_draft,
     validate_payload,
+)
+from app.domain.billing.launch_catalog import (
+    AUTHORING_USD_INR_RATE,
+    ProviderMode,
+    seed_launch_draft,
 )
 from app.domain.entitlements.grants import issue_override_bundle, revoke_grants
 from app.domain.entitlements.types import GrantSpec
@@ -82,10 +86,21 @@ async def catalog_diff(
 
 
 async def seed_catalog(
-    session: AsyncSession, *, context: OperatorContext
+    session: AsyncSession,
+    *,
+    context: OperatorContext,
+    provider_mode: ProviderMode | None,
+    usd_inr_rate: Decimal = AUTHORING_USD_INR_RATE,
 ) -> BillingCatalogRevision:
+    """Author the launch draft for one provider environment (reviewed dry-run)."""
     require_operator(context)
-    row = await seed_phase1_draft(session, actor=context.actor, reason=context.reason)
+    row = await seed_launch_draft(
+        session,
+        actor=context.actor,
+        reason=context.reason,
+        provider_mode=provider_mode,
+        usd_inr_rate=usd_inr_rate,
+    )
     if context.dry_run:
         session.expunge(row)
         await session.rollback()
@@ -202,7 +217,3 @@ async def revoke_grant(
     if context.dry_run:
         await session.rollback()
     return rows
-
-
-def phase1_seed_payload() -> dict[str, object]:
-    return approved_phase1_payload()

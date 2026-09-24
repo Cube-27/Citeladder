@@ -1,56 +1,119 @@
 from __future__ import annotations
 
 import copy
+from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
 
+from app.core.config.billing_pricing import (
+    AUTHORING_USD_INR_RATE,
+    inr_minor_from_usd_minor,
+)
+from app.core.config.billing_settings import billing_settings
 from app.domain.billing.admin import OperatorContext, redact, require_operator
 from app.domain.billing.catalog_revisions import (
     RegionalPricePayload,
-    approved_phase1_payload,
     validate_payload,
 )
+from app.domain.billing.launch_catalog import launch_pricing_v1_payload
 from app.models.user import User
 
 
-def test_phase1_seed_has_approved_terms_and_disabled_campaign() -> None:
-    payload = validate_payload(approved_phase1_payload())
-    plans = {plan.key: plan for plan in payload.plans}
-    assert (
-        plans["tier_1"].byok_price.amount_minor,
-        plans["tier_1"].funded_price.amount_minor,
-    ) == (4_900, 9_900)
-    assert (
-        plans["tier_2"].byok_price.amount_minor,
-        plans["tier_2"].funded_price.amount_minor,
-    ) == (9_900, 14_900)
-    assert (
-        plans["tier_3"].byok_price.amount_minor,
-        plans["tier_3"].funded_price.amount_minor,
-    ) == (14_900, 29_900)
-    assert "checkout_enabled" not in payload.model_dump()
+@pytest.mark.parametrize(
+    ("usd_minor", "inr_minor"),
+    [
+        (4_900, 449_900),
+        (9_900, 899_900),
+        (19_900, 1_799_900),
+        (24_900, 2_249_900),
+        (49_900, 4_499_900),
+        (1_500, 139_900),
+        (1_900, 179_900),
+        (2_500, 229_900),
+    ],
+)
+def test_inr_rule_reproduces_the_approved_prices(
+    usd_minor: int, inr_minor: int
+) -> None:
+    assert inr_minor_from_usd_minor(usd_minor, AUTHORING_USD_INR_RATE) == inr_minor
+
+
+def test_launch_seed_keeps_checkout_and_campaign_disabled() -> None:
+    payload = validate_payload(launch_pricing_v1_payload(provider_mode="test"))
     assert payload.campaign.state == "draft"
     assert payload.campaign.enabled is False
     assert payload.campaign.claim_available is False
-    assert payload.campaign.cohort_started_at is None
-    assert payload.campaign.ends_at is None
-    assert payload.campaign.duration_days == 7
+    # Authored regional prices name no provider plan until an operator imports
+    # and verifies one, so nothing is purchasable from the seed alone.
+    for plan in payload.plans:
+        for price in plan.regional_byok_prices.values():
+            assert price.provider_price_ref == ""
+            assert (price.period, price.interval) == ("monthly", 1)
 
 
-def test_invalid_catalog_rejects_unknown_capability_and_changed_price() -> None:
-    unknown = copy.deepcopy(approved_phase1_payload())
+def test_launch_seed_authors_checkout_prices_only_where_sellable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    no_provider = validate_payload(launch_pricing_v1_payload(provider_mode=None))
+    assert all(not plan.regional_byok_prices for plan in no_provider.plans)
+    # Without an approved GST rate India is not authored at all.
+    unapproved = validate_payload(launch_pricing_v1_payload(provider_mode="test"))
+    assert {
+        region for plan in unapproved.plans for region in plan.regional_byok_prices
+    } == {"international"}
+    monkeypatch.setattr(billing_settings, "india_gst_rate", Decimal("0.18"))
+    monkeypatch.setattr(billing_settings, "india_gst_approval_reference", "CA-1")
+    approved = validate_payload(launch_pricing_v1_payload(provider_mode="test"))
+    starter = next(plan for plan in approved.plans if plan.key == "tier_1")
+    india = starter.regional_byok_prices["india"]
+    assert (india.amount_minor, india.tax_minor, india.tax_verified) == (
+        449_900,
+        80_982,
+        True,
+    )
+
+
+def test_regional_prices_must_follow_the_currency_rule() -> None:
+    payload = launch_pricing_v1_payload(provider_mode="test")
+    off_rule = copy.deepcopy(payload)
+    usd = off_rule["plans"][0]["regional_byok_prices"]["international"]
+    usd["amount_minor"] = 5_000
+    with pytest.raises(ValidationError, match="USD catalog price"):
+        validate_payload(off_rule)
+    item = copy.deepcopy(payload)
+    item["addons"][0]["modes"]["byok"]["regional_prices"]["india"]["amount_minor"] = (
+        100_000
+    )
+    with pytest.raises(ValidationError, match="catalog rule"):
+        validate_payload(item)
+
+
+def test_invalid_catalog_rejects_unknown_capability_and_underpriced_funding() -> None:
+    unknown = launch_pricing_v1_payload(provider_mode=None)
     unknown["plans"][0]["grants"].append({"key": "unknown", "value": 1})
     with pytest.raises((ValidationError, ValueError)):
         validate_payload(unknown)
-    changed = copy.deepcopy(approved_phase1_payload())
-    changed["plans"][0]["byok_price"]["amount_minor"] = 1
-    with pytest.raises(ValidationError, match="approved terms"):
-        validate_payload(changed)
+    underpriced = launch_pricing_v1_payload(provider_mode=None)
+    underpriced["plans"][0]["funded_price"]["amount_minor"] = 100
+    with pytest.raises(ValidationError, match="below the BYOK price"):
+        validate_payload(underpriced)
+
+
+def test_items_reject_duplicate_keys_and_non_consumable_topups() -> None:
+    duplicate = launch_pricing_v1_payload(provider_mode=None)
+    duplicate["topups"][0]["key"] = duplicate["addons"][0]["key"]
+    with pytest.raises(ValidationError, match="must be unique"):
+        validate_payload(duplicate)
+    occupancy = launch_pricing_v1_payload(provider_mode=None)
+    for terms in occupancy["topups"][0]["modes"].values():
+        terms["grants"] = [{"key": "project_slots", "value": 1}]
+    with pytest.raises(ValidationError, match="consumable"):
+        validate_payload(occupancy)
 
 
 def test_explicit_ai_credit_policy_is_finite_versioned_and_bounded() -> None:
-    payload = approved_phase1_payload()
+    payload = launch_pricing_v1_payload(provider_mode=None)
     payload["ai_credit_policy"] = {
         "version": "verified-rates-v1",
         "rates": [
@@ -79,7 +142,7 @@ def test_explicit_ai_credit_policy_is_finite_versioned_and_bounded() -> None:
 
 
 def test_platform_metadata_rejects_secret_shaped_fields() -> None:
-    payload = approved_phase1_payload()
+    payload = launch_pricing_v1_payload(provider_mode=None)
     payload["platform_routes"] = [
         {
             "logical_engine": "chatgpt",

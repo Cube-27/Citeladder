@@ -41,6 +41,7 @@ from app.models.billing import (
     PendingActivation,
 )
 from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
+from tests.billing_catalog_support import TEST_CATALOG_REVISION
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.billing_catalog_helpers import publish_test_catalog, tax_snapshot
 from tests.component.billing_provider_helpers import (
@@ -119,7 +120,7 @@ async def _seed_subscription(
         external_price_id="plan_test",
         catalog_key=catalog_key,
         currency="USD",
-        catalog_revision=billing_settings.catalog_version,
+        catalog_revision=TEST_CATALOG_REVISION,
         frozen_terms={"grant_specs": [[KEY_MONITORED_URLS, 50]]},
         provider_state_version=provider_state_version,
     )
@@ -131,14 +132,14 @@ async def _seed_subscription(
             activation_kind="base",
             catalog_key=catalog_key,
             quantity=1,
-            catalog_revision=billing_settings.catalog_version,
+            catalog_revision=TEST_CATALOG_REVISION,
             credential_mode="byok",
             status="activated",
             provider_mode="test",
             external_reference=external_id,
             external_price_id="plan_test",
             quote={
-                "catalog_revision": billing_settings.catalog_version,
+                "catalog_revision": TEST_CATALOG_REVISION,
                 "total_price": {"currency": "USD", "amount_minor": 4900},
                 "tax": {"currency": "USD", "amount_minor": 0},
             },
@@ -546,7 +547,7 @@ async def test_cancel_marks_cancel_at_period_end(
         status="active",
         current_period_start=now,
         current_period_end=now + timedelta(days=30),
-        catalog_revision=billing_settings.catalog_version,
+        catalog_revision=TEST_CATALOG_REVISION,
         frozen_terms={"grant_specs": [[KEY_MONITORED_URLS, 50]]},
     )
     db_session.add(subscription)
@@ -627,7 +628,7 @@ async def test_public_catalog_needs_no_auth_and_previews_without_a_country(
     response = await client.get("/api/v1/billing/catalog")
     assert response.status_code == 200
     body = response.json()
-    assert body["catalog_revision"] == billing_settings.catalog_version
+    assert body["catalog_revision"] == TEST_CATALOG_REVISION
     # No country supplied: null country, config-owned international preview.
     assert body["country_code"] is None
     assert body["region"] == "international"
@@ -664,8 +665,8 @@ async def test_public_catalog_resolves_india_region_server_side(
     assert body["country_code"] == "IN"
     assert body["region"] == "india"
     assert body["currency"] == "INR"
-    # The persisted approved revision contains USD-only commercial terms. It
-    # never guesses an INR conversion, so the regional price is absent.
+    # India plan prices are authored only with an approved GST rate, which
+    # this environment lacks, so the INR plan price is absent (never guessed).
     tier_1 = body["plans"][0]
     assert tier_1["base_price"] is None
     assert tier_1["checkout_available"] is False
@@ -681,11 +682,11 @@ async def test_public_catalog_plan_rows_separate_base_and_credit_prices(
     assert [
         plans[key]["base_price"]["amount_minor"]
         for key in ("tier_1", "tier_2", "tier_3")
-    ] == [4_900, 9_900, 14_900]
+    ] == [4_900, 9_900, 19_900]
     assert [
         plans[key]["funded_total_price"]["amount_minor"]
         for key in ("tier_1", "tier_2", "tier_3")
-    ] == [9_900, 14_900, 29_900]
+    ] == [9_900, 24_900, 49_900]
     for key in ("tier_1", "tier_2", "tier_3"):
         plan = plans[key]
         # The persisted revision freezes distinct BYOK and funded totals.
@@ -713,14 +714,30 @@ async def test_public_catalog_plan_rows_separate_base_and_credit_prices(
 
 
 @pytest.mark.asyncio
-async def test_public_catalog_reports_unset_addons_and_topups_as_unavailable(
+async def test_public_catalog_lists_one_time_items_in_the_buyer_currency(
     client: httpx.AsyncClient,
 ) -> None:
     body = (await client.get("/api/v1/billing/catalog")).json()
-    # Phase 1 persisted terms intentionally publish no add-ons or top-ups;
-    # absence is the unavailable contract rather than config-derived placeholders.
-    assert body["addons"] == []
-    assert body["topups"] == []
+    items = {item["key"]: item for item in (*body["addons"], *body["topups"])}
+    project = items["addon_extra_project"]
+    assert project["unit_price"] == {"currency": "USD", "amount_minor": 1_900}
+    assert (project["availability"], project["expiry_days"]) == ("available", 30)
+    assert project["grants_per_unit"] == [{"key": "project_slots", "value": 1}]
+    # Published but not sold until managed execution exists.
+    assert items["topup_audit_credits"]["availability"] == "unavailable"
+    assert items["topup_ai_credits"]["eligible_plan_keys"] == ["tier_2", "tier_3"]
+    india = (
+        await client.get("/api/v1/billing/catalog", params={"country": "IN"})
+    ).json()
+    india_project = next(
+        item for item in india["addons"] if item["key"] == "addon_extra_project"
+    )
+    assert india_project["unit_price"] == {"currency": "INR", "amount_minor": 179_900}
+    assert body["support_contact"] == {
+        "email": "contact@cube27.com",
+        "phone": None,
+        "contact_url": "https://www.cube27.com/contact/",
+    }
 
 
 @pytest.mark.asyncio
