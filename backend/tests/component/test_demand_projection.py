@@ -221,3 +221,76 @@ async def test_latest_contract_and_removed_demand_routes(
     }.isdisjoint(body)
     for removed in ("snapshots", "capabilities", "journeys"):
         assert (await client.get(f"{prefix}/{removed}")).status_code == 404
+
+
+def _signal(
+    snapshot: DemandSnapshot, *, identity: str, signal_type: str
+) -> DemandSignal:
+    return DemandSignal(
+        workspace_id=snapshot.workspace_id,
+        project_id=snapshot.project_id,
+        snapshot_id=snapshot.id,
+        identity_hash=identity * 64,
+        signal_type=signal_type,
+        state="active",
+        topic_cluster="admissions",
+        page_url="",
+        evidence={"target_kind": "query", "target": f"admissions {identity}"},
+        metrics={"impressions": 100, "clicks": 0},
+        coverage={"search_demand": "observed"},
+        limitations=[],
+        priority_score=80,
+        priority_inputs={},
+        analyzer_version="demand-analyzer-1",
+        rule_version="demand-rules-1",
+        formula_version="demand-priority-1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_promoted_signal_links_to_its_action(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
+    """The "Act on this" band reads which Action each promoted signal joined."""
+    from app.domain.opportunities import recompute
+    from app.models.opportunity import Opportunity
+
+    project = await _create_api_project(client)
+    snapshot = DemandSnapshot(
+        workspace_id=uuid.UUID(project["workspace_id"]),
+        project_id=uuid.UUID(project["id"]),
+        window_start=date(2026, 7, 1),
+        window_end=date(2026, 7, 7),
+        source_hash="b" * 64,
+        source_artifact_ids=[],
+        source_metric_row_ids=[],
+        coverage={"search": "observed"},
+        summary={},
+        formula_version="demand-priority-1",
+        analyzer_version="demand-analyzer-2",
+    )
+    db_session.add(snapshot)
+    await db_session.flush()
+    db_session.add(
+        _signal(snapshot, identity="p", signal_type="high_impression_low_ctr")
+    )
+    db_session.add(
+        _signal(snapshot, identity="n", signal_type="branded_query_performance")
+    )
+    await db_session.commit()
+    await recompute.recompute(
+        db_session, workspace_id=snapshot.workspace_id, project_id=snapshot.project_id
+    )
+    action_id = await db_session.scalar(
+        select(Opportunity.action_id).where(
+            Opportunity.project_id == snapshot.project_id
+        )
+    )
+
+    response = await client.get(f"/api/v1/projects/{project['id']}/demand/latest")
+
+    assert response.status_code == 200
+    by_type = {item["signal_type"]: item for item in response.json()["signals"]}
+    assert action_id is not None
+    assert by_type["high_impression_low_ctr"]["action_id"] == str(action_id)
+    assert by_type["branded_query_performance"]["action_id"] is None

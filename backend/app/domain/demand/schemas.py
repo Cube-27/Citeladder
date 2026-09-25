@@ -45,6 +45,8 @@ class DemandSignalView(_Model):
     priority_score: float | None
     priority_inputs: dict[str, Any]
     created_at: datetime
+    # The Action this signal was promoted into, when it was (plan §12).
+    action_id: uuid.UUID | None = None
 
 
 class DemandSnapshotView(_Model):

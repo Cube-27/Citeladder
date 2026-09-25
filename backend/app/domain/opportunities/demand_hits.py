@@ -15,6 +15,12 @@ from app.core.config.opportunities import (
 )
 from app.domain.demand.selection import current_demand_snapshot
 from app.models.demand import DemandSignal, DemandSnapshot
+from app.models.opportunity import Opportunity
+
+
+def demand_target_key(identity_hash: str) -> str:
+    """The Opportunity target key of a promoted signal, stable across snapshots."""
+    return f"demand:{identity_hash}"
 
 
 def _targets(
@@ -45,7 +51,7 @@ def _hit(snapshot: DemandSnapshot, signal: DemandSignal) -> DetectorHit | None:
     )
     return DetectorHit(
         rule_id=DEMAND_SIGNAL_RULE_IDS[signal.signal_type],
-        target_key=f"demand:{signal.identity_hash}",
+        target_key=demand_target_key(signal.identity_hash),
         target_prompt_id=None,
         target_url=target_url,
         target_theme=target_theme,
@@ -90,3 +96,31 @@ async def load_demand_hits(
         ).all()
     )
     return snapshot, [hit for signal in signals if (hit := _hit(snapshot, signal))]
+
+
+async def signal_actions(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    identity_hashes: list[str],
+) -> dict[str, uuid.UUID]:
+    """The Action each promoted signal's live Opportunity is grouped into.
+
+    Keyed by signal identity, so a signal from a newer snapshot than the one
+    the last recompute promoted still finds its Action. A signal that was not
+    promoted, or whose row predates Actions, is absent.
+    """
+    keys = {demand_target_key(value): value for value in identity_hashes}
+    if not keys:
+        return {}
+    rows = await session.execute(
+        select(Opportunity.target_key, Opportunity.action_id).where(
+            Opportunity.workspace_id == workspace_id,
+            Opportunity.project_id == project_id,
+            Opportunity.target_key.in_(list(keys)),
+            Opportunity.superseded_at.is_(None),
+            Opportunity.action_id.is_not(None),
+        )
+    )
+    return {keys[key]: action_id for key, action_id in rows.all() if action_id}
