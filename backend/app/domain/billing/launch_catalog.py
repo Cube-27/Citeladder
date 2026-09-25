@@ -110,7 +110,7 @@ _PLANS: Final = (
     _PlanTerms(
         key=PLAN_TIER_2,
         name="Growth",
-        description="Prompt fan-out, Content and the Growth Agent for three projects.",
+        description="Prompt fan-out and the Agent for three projects.",
         byok_usd_minor=9_900,
         funded_usd_minor=24_900,
         projects=3,
@@ -362,7 +362,7 @@ def _topups(rate: Decimal) -> list[dict[str, object]]:
         _item(
             key=TOPUP_AI_CREDITS,
             name="Workflow AI top-up",
-            description="1,000 AI credits for Content and the Growth Agent, 30 days.",
+            description="1,000 AI credits for the Agent, 30 days.",
             available=True,
             eligible=(PLAN_TIER_2, PLAN_TIER_3),
             bounds=_TOPUP_BOUNDS,

@@ -382,7 +382,13 @@ class OpportunitySnapshot(Base):
 
 
 class OpportunityImplementationEvent(Base):
-    """Immutable user declaration that an Opportunity was implemented."""
+    """Immutable user declaration that an Action was implemented.
+
+    Anchored on the Action (the unit of work) and, when the work was done in
+    CiteLadder, on the exact output revision the user says they shipped. The
+    member Opportunity rows, targets and expected checks are frozen at
+    declaration time; one Action carries at most one declaration.
+    """
 
     __tablename__ = "opportunity_implementation_events"
     __table_args__ = (
@@ -394,6 +400,7 @@ class OpportunityImplementationEvent(Base):
         UniqueConstraint(
             "workspace_id", "id", name="uq_opportunity_implementation_ws_id"
         ),
+        UniqueConstraint("action_id", name="uq_opportunity_implementation_action"),
         Index(
             "ix_opportunity_implementation_project_created",
             "project_id",
@@ -425,11 +432,19 @@ class OpportunityImplementationEvent(Base):
         ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
         index=True,
     )
-    opportunity_id: Mapped[uuid.UUID] = mapped_column(
+    action_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey(_FK_ACTION, ondelete=_ON_DELETE_CASCADE)
+    )
+    # The revision the user says they implemented; null for work done outside
+    # CiteLadder. Never re-pointed: a later revision is not what was shipped.
+    output_revision_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey(_FK_OPPORTUNITY, ondelete=_ON_DELETE_CASCADE),
+        ForeignKey("agent_output_revisions.id"),
+        nullable=True,
         index=True,
     )
+    # The Action's live member Opportunity rows at declaration (invariant 5).
+    member_opportunity_ids: Mapped[list] = mapped_column(JSONB, default=list)
     opportunity_snapshot_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey(_FK_OPPORTUNITY_SNAPSHOT, ondelete="RESTRICT"),

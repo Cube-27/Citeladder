@@ -542,6 +542,11 @@ Opportunity status and its carry-forward logic under the replacement gate.
 Mark implemented and the declaration anchored to the Action and output revision
 (§9), loop-leg waits on the Action detail and output pane, and the Search Demand
 redesign (§12), whose "Act on this" band links to Actions.
+*Implementation notes (25 September 2026):* one Action carries at most one
+declaration; `measuring` and `done` are derived from the verifier's
+observations rather than stored. Expected checks are the union of the member
+rules' checks only: a chat's measurement plan is free text, so adding its
+checks needs a structured measurement-plan output first and is deferred.
 
 **Customer-facing Agent copy (moved here from PR 1 by the owner, 25 September
 2026).** PR 1 retired the Content and Growth Agent runtimes in code and

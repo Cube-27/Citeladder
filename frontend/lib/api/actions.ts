@@ -3,7 +3,8 @@
  *
  * An Action is the unit of work over the Opportunity store: every live
  * Opportunity sharing one target, plus Agent work on that target. Reads are
- * persisted projections; the only write is the user's workflow decision.
+ * persisted projections; the writes are the user's workflow decision and
+ * the implementation declaration.
  */
 import { mutationOptions, queryOptions } from '@tanstack/react-query';
 import type { z } from 'zod';
@@ -11,6 +12,7 @@ import type { z } from 'zod';
 import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
 import {
+  actionDeclarationSchema,
   actionDetailSchema,
   actionItemSchema,
   actionStatusSchema,
@@ -22,6 +24,14 @@ import { definedQuery, withQuery } from './shared';
 export type Action = z.infer<typeof actionItemSchema>;
 export type ActionDetail = z.infer<typeof actionDetailSchema>;
 export type ActionStatus = z.infer<typeof actionStatusSchema>;
+export type ActionDeclaration = z.infer<typeof actionDeclarationSchema>;
+export type MeasurementLeg = ActionDeclaration['legs'][number];
+/** Targets and expected checks are server-owned; the user names only these. */
+export type ActionDeclarationInput = {
+  /** The revision shipped, or null for work done outside CiteLadder. */
+  output_revision_id: string | null;
+  declared_implemented_at: string;
+};
 /** The statuses a user may store; the rest are derived or declared. */
 export type ActionUserStatus = Extract<ActionStatus, 'open' | 'dismissed'>;
 
@@ -33,7 +43,7 @@ export type ActionsParams = {
   target_kind?: string;
 };
 
-const actionsApi = {
+export const actionsApi = {
   list: async (projectId: string, params?: ActionsParams, options?: ApiRequestOptions) =>
     strictValidate(
       actionsPageSchema,
@@ -54,6 +64,21 @@ const actionsApi = {
       actionItemSchema,
       await apiClient.patch(`/actions/${actionId}`, { status }, options),
       'actions.updateStatus',
+    ),
+  declare: async (
+    actionId: string,
+    input: ActionDeclarationInput,
+    idempotencyKey: string,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      actionDeclarationSchema,
+      await apiClient.post(`/actions/${actionId}/declaration`, input, {
+        ...options,
+        idempotencyKey,
+        retryNetworkFailures: true,
+      }),
+      'actions.declare',
     ),
 };
 
@@ -80,5 +105,13 @@ export const actionsMutations = {
     mutationOptions({
       mutationFn: (vars: { actionId: string; status: ActionUserStatus }) =>
         actionsApi.updateStatus(vars.actionId, vars.status, { workspaceId }),
+    }),
+  declare: (workspaceId: string) =>
+    mutationOptions({
+      mutationFn: (vars: {
+        actionId: string;
+        input: ActionDeclarationInput;
+        idempotencyKey: string;
+      }) => actionsApi.declare(vars.actionId, vars.input, vars.idempotencyKey, { workspaceId }),
     }),
 };

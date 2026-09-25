@@ -3,6 +3,8 @@
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { ArrowUpRight, ExternalLink, ShieldCheck, Split } from 'lucide-react';
 
+import { SignalInsight } from '@/components/demand/demand-signal-insight';
+import { SignalChip } from '@/components/demand/demand-signal-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
@@ -71,9 +73,7 @@ function DemandEvidenceContent({
         <div className="border-border-subtle grid gap-2 border-b pb-4">
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant="neutral">{details.targetKind}</Badge>
-            <Badge variant="status" value="info">
-              {signal.signal_type.replace(/_/g, ' ')}
-            </Badge>
+            <SignalChip signalType={signal.signal_type} />
           </div>
           <h2 className={textRole('objectTitle', 'break-words')}>{details.target}</h2>
           {details.linkablePageUrl && (
@@ -91,6 +91,8 @@ function DemandEvidenceContent({
             </div>
           )}
         </div>
+
+        <SignalInsight signal={signal} />
 
         {/* Observed GSC Metrics */}
         <section className="grid gap-2">

@@ -94,7 +94,7 @@
     {
       "key": "tier_2",
       "name": "Growth",
-      "description": "Prompt fan-out, Content and the Growth Agent for three projects.",
+      "description": "Prompt fan-out and the Agent for three projects.",
       "cadence": "monthly",
       "self_serve": true,
       "contact_only": false,
@@ -557,7 +557,7 @@
     {
       "key": "topup_ai_credits",
       "name": "Workflow AI top-up",
-      "description": "1,000 AI credits for Content and the Growth Agent, 30 days.",
+      "description": "1,000 AI credits for the Agent, 30 days.",
       "available": true,
       "eligible_plan_keys": ["tier_2", "tier_3"],
       "quantity_min": 1,

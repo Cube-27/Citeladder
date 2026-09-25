@@ -46,7 +46,7 @@ from app.models.audit import (
     RawResponseArtifact,
 )
 from app.models.brand import OwnedDomain
-from app.models.opportunity import Opportunity
+from app.models.opportunity import Action, Opportunity
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.site_health.acquisition import SiteFetchArtifact
@@ -542,3 +542,26 @@ def _by_rule(rows: list[Opportunity], rule_id: str) -> Opportunity:
     matches = [row for row in rows if row.rule_id == rule_id]
     assert len(matches) == 1, f"expected exactly one {rule_id} row, got {len(matches)}"
     return matches[0]
+
+
+async def seed_action_for(
+    session: AsyncSession, opportunity: Opportunity, *, target_kind: str
+) -> uuid.UUID:
+    """Group one hand-seeded Opportunity into its own Action, as recompute would."""
+    action = Action(
+        workspace_id=opportunity.workspace_id,
+        project_id=opportunity.project_id,
+        group_key=f"{target_kind}:{opportunity.target_key}",
+        target_kind=target_kind,
+        target_label=opportunity.target_url or opportunity.title,
+        target_url=opportunity.target_url,
+        origin="evidence",
+        member_opportunity_ids=[str(opportunity.id)],
+    )
+    session.add(action)
+    await session.flush()
+    live = await session.get(Opportunity, opportunity.id)
+    assert live is not None
+    live.action_id = action.id
+    await session.commit()
+    return action.id

@@ -89,6 +89,7 @@ describe('Actions', () => {
             measure_with: ['next_crawl'],
           },
           members: [],
+          declaration: null,
         }),
       ),
       http.patch(`/api/v1/actions/${ACTION}`, async ({ request }) => {

@@ -47,6 +47,7 @@ from app.domain.demand.service import (
     latest_snapshot,
     list_signals,
 )
+from app.domain.opportunities.demand_hits import signal_actions
 from app.domain.projects.service import ProjectNotFoundError, get_project
 
 router = APIRouter(prefix="/projects", tags=["demand"])
@@ -81,6 +82,12 @@ async def _snapshot_view(session: AsyncSession, row) -> DemandSnapshotView:
         project_id=row.project_id,
         snapshot_id=row.id,
     )
+    actions = await signal_actions(
+        session,
+        workspace_id=row.workspace_id,
+        project_id=row.project_id,
+        identity_hashes=[signal.identity_hash for signal in signals],
+    )
     return DemandSnapshotView(
         id=row.id,
         project_id=row.project_id,
@@ -96,7 +103,12 @@ async def _snapshot_view(session: AsyncSession, row) -> DemandSnapshotView:
         formula_version=row.formula_version,
         analyzer_version=row.analyzer_version,
         created_at=row.created_at,
-        signals=[DemandSignalView.model_validate(signal) for signal in signals],
+        signals=[
+            DemandSignalView.model_validate(signal).model_copy(
+                update={"action_id": actions.get(signal.identity_hash)}
+            )
+            for signal in signals
+        ],
     )
 
 

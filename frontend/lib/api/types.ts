@@ -98,7 +98,6 @@ import type {
   siteScoreSummarySchema,
   // Opportunities
   opportunitiesPageSchema,
-  implementationEventSchema,
   opportunityDetailSchema,
   opportunitySchema,
   opportunitySummarySchema,
@@ -205,4 +204,3 @@ export type Opportunity = z.infer<typeof opportunitySchema>;
 export type OpportunityDetail = z.infer<typeof opportunityDetailSchema>;
 export type OpportunitiesPage = z.infer<typeof opportunitiesPageSchema>;
 export type OpportunitySummary = z.infer<typeof opportunitySummarySchema>;
-export type ImplementationEvent = z.infer<typeof implementationEventSchema>;

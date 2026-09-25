@@ -38,7 +38,10 @@ picking a skill that produces a different kind of output is refused; start a
 new chat for it. Long-form content is outline-first: a draft is written only
 after the user explicitly approves an outline revision of that output, whatever
 phase the output is in. Ordinary tool and reasoning steps need no approval.
-Approving or generating an output is not an implementation declaration.
+Approving or generating an output is not an implementation declaration: the
+output pane's **Mark implemented** declares the attached Action implemented
+with the revision on screen and then shows what each loop leg is waiting
+for; see [declaration](opportunities.md#explicit-implementation-declaration).
 
 The chat list pages by keyset cursor, can be narrowed to the chats linked to one
 Action, and names each chat's target. An Action's workflow status is derived

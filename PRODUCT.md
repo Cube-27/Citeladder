@@ -20,11 +20,11 @@ The product keeps measurable facts deterministic and provenance-linked while usi
 
 ## Operating Context
 
-Users connect an owned site and integrations, review automatically discovered facts, confirm the scope of tracked competitors and questions, inspect site health and demand evidence, act on ranked opportunities, and remeasure the result. The Growth Agent orchestrates the same typed-domain tools and persisted evidence; it does not own a second knowledge store.
+Users connect an owned site and integrations, review automatically discovered facts, confirm the scope of tracked competitors and questions, inspect site health and demand evidence, act on ranked Actions, and remeasure the result. The Agent works through the same read tools and persisted evidence as the MCP server; it does not own a second knowledge store.
 
 ## Capabilities and Constraints
 
-- Four durable capabilities are Site Health, Content Intelligence, Demand Intelligence, and the Growth Agent; AI Visibility is the Track capability.
+- Four durable capabilities are Site Health, Content Intelligence, Demand Intelligence, and the Agent, whose skills deliver content creation; AI Visibility is the Track capability.
 - Onboarding discovers brand facts and comparable brands, but the user confirms structured ICP facts before prompt generation and project creation.
 - Project data is workspace-authorized, IDs are UUIDs, read APIs render persisted projections, and unknown or unavailable states remain distinct from zero.
 - Publishing, prompt activation, external mutation, billing changes, and other durable external actions require an explicit user decision.
@@ -50,7 +50,7 @@ Canonical product and system truth lives in `AGENTS.md`, `docs/architecture.md`,
 
 CiteLadder does not promise causal attribution, guaranteed AI ranking, automatic
 publishing, or model-generated business truth. It is not a replacement CMS,
-payment provider, unrestricted agent or second knowledge store. Content outputs
+payment provider, unrestricted agent or second knowledge store. Agent outputs
 are drafts; unavailable evidence and unverified integrations stay explicit.
 
 The visual and accessibility contract lives in [docs/design.md](docs/design.md).

@@ -285,11 +285,11 @@ def _validate_agent_capabilities(by_key: dict[str, PlanPayload]) -> None:
     required_upper = {KEY_CONTENT_CREATION, KEY_GROWTH_AGENT}
     tier_1_keys = {grant.key for grant in by_key[PLAN_TIER_1].grants}
     if required_upper & tier_1_keys:
-        raise ValueError("Tier 1 cannot grant Content or Growth Agent")
+        raise ValueError("Tier 1 cannot grant the Agent")
     for key in (PLAN_TIER_2, PLAN_TIER_3):
         upper_keys = {grant.key for grant in by_key[key].grants}
         if not required_upper.issubset(upper_keys):
-            raise ValueError(f"{key} must grant Content and Growth Agent")
+            raise ValueError(f"{key} must grant the Agent")
 
 
 def _validate_platform_routes(routes: tuple[dict[str, str], ...]) -> None:

@@ -1,5 +1,5 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
@@ -81,6 +81,7 @@ const snapshot = {
       priority_score: 85,
       priority_inputs: {},
       created_at: '2026-07-08T00:00:00Z',
+      action_id: '66666666-6666-4666-8666-666666666666',
     },
     {
       id: '44444444-4444-4444-8444-444444444444',
@@ -109,6 +110,7 @@ const snapshot = {
       priority_score: 50,
       priority_inputs: {},
       created_at: '2026-07-08T00:00:00Z',
+      action_id: null,
     },
   ],
 };
@@ -148,7 +150,7 @@ describe('DemandProjection', () => {
     );
   }
 
-  it('renders one Search Demand view with KPI summary cards, diagnostic insights, and no raw priority score', async () => {
+  it('renders one Search Demand view with KPI summary cards, a page-grouped table, and no raw priority score', async () => {
     renderProjection();
 
     expect(await screen.findByText('2 demand signals observed')).toBeInTheDocument();
@@ -166,15 +168,15 @@ describe('DemandProjection', () => {
     expect(screen.getByText('Query trends')).toBeInTheDocument();
     expect(screen.getByText('Needs 28d history')).toBeInTheDocument();
 
-    // Query cards & diagnostic insights
-    expect(screen.getByText('ai marketing tools')).toBeInTheDocument();
-    expect(screen.getByText('Within reach of the top results')).toBeInTheDocument();
-    expect(screen.getByText('school fees')).toBeInTheDocument();
-    expect(screen.getByText('Underperforming expected CTR')).toBeInTheDocument();
-
-    const relevance = screen.getByRole('region', { name: 'Query relevance' });
-    expect(relevance).toHaveTextContent('Title50%H10%Page text100%');
-    expect(relevance).toHaveTextContent('Missing from title or H1: fees, school');
+    // One table grouped by page, a chip per row, each type explained once
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('https://example.com/ai-tools')).toBeInTheDocument();
+    expect(within(table).getByText('ai marketing tools')).toBeInTheDocument();
+    expect(within(table).getByText('https://example.com/fees')).toBeInTheDocument();
+    expect(within(table).getByText('school fees')).toBeInTheDocument();
+    const legend = screen.getByRole('region', { name: 'Signal types' });
+    expect(within(legend).getByText(/Earns many impressions but few clicks/)).toBeInTheDocument();
+    expect(screen.queryByText('Within reach of the top results')).not.toBeInTheDocument();
 
     // Tabular metrics
     expect(screen.getByText('250')).toBeInTheDocument();
@@ -191,14 +193,35 @@ describe('DemandProjection', () => {
     expect(screen.queryByText(/Demand overview/i)).not.toBeInTheDocument();
   });
 
-  it('quotes no CTR comparison when the cohort benchmark was not observed', async () => {
-    // `school fees` carries ctr but no `cohort_median_ctr` — the insight must
+  it('keeps the reading and query relevance in the evidence drawer, quoting no unobserved benchmark', async () => {
+    // `school fees` carries ctr but no `cohort_median_ctr` — the reading must
     // describe the gap without inventing a benchmark to compare against.
     renderProjection();
 
-    expect(await screen.findByText('Underperforming expected CTR')).toBeInTheDocument();
-    expect(screen.getByText(/Impressions are not converting into clicks/i)).toBeInTheDocument();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Inspect evidence for school fees' }),
+    );
+
+    const reading = await screen.findByRole('region', { name: 'Reading' });
+    expect(within(reading).getByText(/Earns many impressions but few clicks/)).toBeInTheDocument();
     expect(screen.queryByText(/median for this position band/i)).not.toBeInTheDocument();
+    const relevance = screen.getByRole('region', { name: 'Query relevance' });
+    expect(relevance).toHaveTextContent('Title50%H10%Page text100%');
+    expect(relevance).toHaveTextContent('Missing from title or H1: fees, school');
+  });
+
+  it('links promoted signals to their Action in the Act on this band', async () => {
+    renderProjection();
+
+    const band = await screen.findByRole('region', { name: 'Act on this' });
+    const link = within(band).getByRole('link', {
+      name: 'Open the Action for https://example.com/ai-tools',
+    });
+    expect(link.getAttribute('href')).toContain(
+      '/agent/actions/66666666-6666-4666-8666-666666666666',
+    );
+    // The unpromoted signal is read and asked about from the table only.
+    expect(within(band).queryByText('https://example.com/fees')).not.toBeInTheDocument();
   });
 
   it('keeps a signal’s priority rank stable when a filter hides the signals above it', async () => {

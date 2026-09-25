@@ -54,13 +54,13 @@ Five user-facing stations sit over four durable capability owners.
 | **Site Health** | Crawls the owned site, classifies pages structurally, applies page-type-correct checks, and persists comparable-crawl changes |
 | **Content Intelligence** | Turns verified gaps into strategies, briefs, drafts, and post-publication verification |
 | **Demand Intelligence** | Connects GSC, GA4, journeys, prompts, AI Visibility, and later paid marketing evidence to decide what improves next |
-| **Growth Agent** | Explains and orchestrates bounded tasks through typed tools, selective context, and reproducible provenance |
+| **Agent** | Answers questions and produces reviewable outputs through the same read tools as the MCP server, with frozen context and reproducible provenance |
 
 AI Visibility is the Track station. The primary measured outcome is increased
 **observed** mention/citation share under comparable portfolio and engine
 conditions; Site Health and demand metrics remain leading indicators.
 
-> The Growth Agent is a real layer — the one you spend the most time in — but it owns no data. It
+> The Agent is a real layer — the one you spend the most time in — but it owns no data. It
 > is deliberately **not** a fourth database, an unrestricted chat interface, or an autonomous
 > publisher.
 
@@ -70,7 +70,7 @@ The system runs itself. You are asked exactly twice:
 
 | Decision | Why you are here |
 |---|---|
-| **Generate and save content** | Content is the only durable outward-facing output. You choose what to generate, edit it, and decide what to keep. |
+| **Ask the Agent and declare what you ship** | Agent outputs are the only durable outward-facing deliverables. You choose what to ask for, edit it, and declare what you implemented. |
 | **Run and schedule audits** | Crawls, syncs, and answer-engine audits cost money and hit external systems. You choose when they run. |
 
 Everything else — bounded crawling, structural page classification, deterministic

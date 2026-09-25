@@ -54,8 +54,10 @@ ACTION_ORIGIN_AGENT: Final = "agent"
 # --- Workflow status -----------------------------------------------------
 # open → in progress → implemented (declared) → measuring → done | dismissed.
 # Only ``open`` and ``dismissed`` are stored by a user. ``in_progress`` is
-# derived at read time from a linked chat having an output; the declaration
-# and measurement loop own the remaining states. The Agent sets none of them.
+# derived at read time from a linked chat having an output. A user declaration
+# stores ``implemented``; ``measuring`` (a post-declaration observation exists)
+# and ``done`` (an observation verified every expected check) are derived from
+# the verifier's append-only observations. The Agent sets none of them.
 ACTION_STATUS_OPEN: Final = "open"
 ACTION_STATUS_IN_PROGRESS: Final = "in_progress"
 ACTION_STATUS_IMPLEMENTED: Final = "implemented"
@@ -273,6 +275,26 @@ FAMILY_MEASUREMENT_LEG: Final[dict[str, str]] = {
     FAMILY_SITE_CHANGES: LEG_CRAWL,
     FAMILY_COMMERCE: LEG_COMMERCE_AUDIT,
 }
+
+# Which loop leg brings the evidence for each server-owned expected check.
+CHECK_KIND_MEASUREMENT_LEG: Final[dict[str, str]] = {
+    "site_rule": LEG_CRAWL,
+    "page_fact": LEG_CRAWL,
+    "visibility_metric": LEG_VISIBILITY_RUN,
+    "traffic_metric": LEG_SEARCH_CONSOLE_WINDOW,
+    "placement": LEG_PLACEMENT_RECHECK,
+}
+# What a declared Action's leg is waiting for (plan §9). Nothing is triggered
+# automatically: ``not_scheduled`` means no reading comes until someone runs
+# one, and ``sync_needed`` means the window closed but its data is not synced.
+LEG_STATE_WAITING: Final = "waiting"
+LEG_STATE_NOT_SCHEDULED: Final = "not_scheduled"
+LEG_STATE_SYNC_NEEDED: Final = "sync_needed"
+LEG_STATE_OBSERVED: Final = "observed"
+# A Search Console window is complete once it has run in full after the
+# declaration and the property has had time to finalise its data.
+SEARCH_CONSOLE_MEASUREMENT_WINDOW_DAYS: Final = 28
+SEARCH_CONSOLE_FINALIZATION_LAG_DAYS: Final = 3
 
 # Family evidence states in a diagnosis (invariant 7): a family with a member
 # finding is observed; one whose source exists but found nothing on this

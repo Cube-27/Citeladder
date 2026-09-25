@@ -330,46 +330,24 @@ const placementExpectedCheckSchema = responseObject({
   deterioration: z.array(z.string()),
   baseline_snapshot_id: z.string().nullable(),
 });
-const expectedCheckSchema = z.discriminatedUnion('kind', [
+export const expectedCheckSchema = z.discriminatedUnion('kind', [
   siteRuleExpectedCheckSchema,
   pageFactExpectedCheckSchema,
   metricExpectedCheckSchema,
   placementExpectedCheckSchema,
 ]);
 
-export const implementationEventSchema = responseObject({
+export const verificationEventSchema = responseObject({
   id: uuid(),
-  project_id: uuid(),
-  opportunity_id: uuid(),
-  opportunity_snapshot_id: uuid(),
-  target_site_url_ids: z.array(uuid()),
-  // Populated instead of the owned ids for an earned action: the publisher
-  // page the placement was declared on. Never both.
-  target_external_url: z.string().nullable(),
-  declared_implemented_at: z.string(),
-  expected_checks: z.array(expectedCheckSchema),
-  state: implementationStateSchema,
+  observation_kind: z.enum(['observed', 'verified', 'contradicted']),
+  observed_at: z.string(),
+  crawl_id: uuid().nullable(),
+  audit_id: uuid().nullable(),
+  source_analysis_ids: z.array(uuid()),
+  source_rule_evaluation_ids: z.array(uuid()),
+  source_metric_ids: z.array(uuid()),
+  result: z.record(z.string(), z.unknown()),
+  verifier_version: z.string(),
   limitations: z.array(z.string()),
-  verification_events: z.array(
-    responseObject({
-      id: uuid(),
-      observation_kind: z.enum(['observed', 'verified', 'contradicted']),
-      observed_at: z.string(),
-      crawl_id: uuid().nullable(),
-      audit_id: uuid().nullable(),
-      source_analysis_ids: z.array(uuid()),
-      source_rule_evaluation_ids: z.array(uuid()),
-      source_metric_ids: z.array(uuid()),
-      result: z.record(z.string(), z.unknown()),
-      verifier_version: z.string(),
-      limitations: z.array(z.string()),
-      created_at: z.string(),
-    }),
-  ),
   created_at: z.string(),
-});
-
-export const implementationEventsPageSchema = responseObject({
-  items: z.array(implementationEventSchema),
-  next_cursor: z.string().nullable(),
 });

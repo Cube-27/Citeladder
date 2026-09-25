@@ -202,7 +202,7 @@ plans:
 ```
 
 `ai_credits_per_period` and all non-visibility-inference features are identical in funded and BYOK variants.
-Do not restrict MCP or Growth Agent more than specified above.
+Do not restrict MCP or the Agent more than specified above.
 
 ## 3. Usage and funding rules
 
