@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { VerificationObservations } from '@/components/opportunities/verification-observations';
 import { Button } from '@/components/ui/button';
 import { MutationNotice } from '@/components/ui/mutation-notice';
+import { ReadError } from '@/components/ui/read-error';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { opportunitiesMutations, opportunitiesQueries } from '@/lib/api/opportunities';
 import type { OpportunityDetail } from '@/lib/api/types';
@@ -59,12 +60,21 @@ function ScopedDeclarationFooter({
           onRetry={() => declaration.variables && declaration.mutate(declaration.variables)}
         />
       ) : null}
+      {declarations.isError ? (
+        <ReadError
+          error={declarations.error}
+          fallback="Existing declarations could not be loaded."
+          onRetry={() => void declarations.refetch()}
+          pending={declarations.isFetching}
+        />
+      ) : null}
       <VerificationObservations implementation={implementation} />
       <div className="flex items-center justify-end gap-2">
         <Button
           variant="secondary"
           size="sm"
-          disabled={declaration.isPending || Boolean(implementation)}
+          // Until the read succeeds, no declaration is not yet known to be absent.
+          disabled={declaration.isPending || Boolean(implementation) || !declarations.isSuccess}
           onClick={declare}
         >
           I implemented this

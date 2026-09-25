@@ -161,6 +161,36 @@ async def test_a_user_cannot_store_a_derived_or_declared_status(
             )
 
 
+async def test_a_user_cannot_overwrite_a_declared_status(
+    db_session: AsyncSession,
+) -> None:
+    scn = await _seed_scenario(db_session)
+    await recompute.recompute(
+        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
+    )
+    action = next(iter((await _actions(db_session, scn.project_id)).values()))
+    action.status = "implemented"
+    await db_session.commit()
+
+    with pytest.raises(OpportunityValidationError):
+        await action_status.update_status(
+            db_session,
+            workspace_id=scn.workspace_id,
+            action_id=action.id,
+            status="dismissed",
+            changed_by_user_id=scn.user_id,
+        )
+    await db_session.rollback()
+    await db_session.refresh(action)
+    assert action.status == "implemented"
+    events = (
+        await db_session.scalars(
+            select(ActionStatusEvent).where(ActionStatusEvent.action_id == action.id)
+        )
+    ).all()
+    assert events == []
+
+
 async def test_agent_work_on_a_page_with_evidence_attaches_to_its_action(
     db_session: AsyncSession,
 ) -> None:

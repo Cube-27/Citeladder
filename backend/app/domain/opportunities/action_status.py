@@ -116,6 +116,12 @@ async def update_status(
     if action is None:
         raise OpportunityNotFoundError(_ACTION_NOT_FOUND)
     previous = action.status
+    # Declared and measured states belong to the declaration loop; a user
+    # decision must not overwrite them.
+    if previous not in ACTION_USER_STATUSES:
+        raise OpportunityValidationError(
+            f"an action in {previous!r} cannot be changed by a user"
+        )
     if previous != status:
         action.status = status
         session.add(

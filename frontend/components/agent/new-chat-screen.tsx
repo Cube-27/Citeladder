@@ -82,6 +82,12 @@ function NewChat({
     },
   });
   const failure = create.isError ? agentWriteFailure(create.error) : null;
+  // Shares AttachedAction's cache entry. An Action that failed to load is
+  // dropped, as that notice promises, rather than failing the whole chat.
+  const attached = useQuery({
+    ...actionsQueries.detail(workspaceId, handoff.actionId ?? ''),
+    enabled: Boolean(handoff.actionId),
+  });
 
   const submit = () =>
     create.mutate({
@@ -90,7 +96,7 @@ function NewChat({
       input: {
         message: message.trim(),
         skill_id: skillId ?? undefined,
-        action_id: handoff.actionId,
+        action_id: attached.isError ? undefined : handoff.actionId,
         context,
       },
     });

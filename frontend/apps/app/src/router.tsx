@@ -103,6 +103,11 @@ export const appRoutes: RouteObject[] = [
               default: PerformanceRoute,
             })),
           ),
+          // The retired Opportunities screen: old links land on Actions.
+          {
+            path: '/opportunities',
+            loader: ({ request }) => redirect(`/agent/actions${new URL(request.url).search}`),
+          },
           productRoute('/agent', () =>
             import('./product-routes-agent').then(({ NewChatRouteElement }) => ({
               default: NewChatRouteElement,

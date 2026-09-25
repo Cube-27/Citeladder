@@ -64,6 +64,7 @@ export const actionsQueries = {
         status: params?.status ?? null,
         targetKind: params?.target_kind ?? null,
         cursor: params?.cursor ?? null,
+        limit: params?.limit ?? null,
       }),
       queryFn: ({ signal }) => actionsApi.list(projectId, params, { signal, workspaceId }),
     }),

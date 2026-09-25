@@ -47,6 +47,22 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 
+const ACCEPTED = {
+  chat_id: CHAT,
+  run: {
+    id: '55555555-5555-4555-8555-555555555555',
+    status: 'queued',
+    mode: 'turn',
+    skill_id: null,
+    skill_source: null,
+    steps_used: 0,
+    error_code: '',
+    error_detail: '',
+    created_at: '2026-09-25T10:00:00Z',
+    completed_at: null,
+  },
+};
+
 function baseHandlers() {
   return [
     http.get('/api/v1/agent/skills', () => HttpResponse.json({ skills: [] })),
@@ -65,24 +81,7 @@ describe('NewChatScreen', () => {
       http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
         bodies.push(await request.json());
         keys.push(request.headers.get('Idempotency-Key'));
-        return HttpResponse.json(
-          {
-            chat_id: CHAT,
-            run: {
-              id: '55555555-5555-4555-8555-555555555555',
-              status: 'queued',
-              mode: 'turn',
-              skill_id: null,
-              skill_source: null,
-              steps_used: 0,
-              error_code: '',
-              error_detail: '',
-              created_at: '2026-09-25T10:00:00Z',
-              completed_at: null,
-            },
-          },
-          { status: 202 },
-        );
+        return HttpResponse.json(ACCEPTED, { status: 202 });
       }),
     );
     const user = userEvent.setup();
@@ -101,6 +100,29 @@ describe('NewChatScreen', () => {
       { message: 'Why did clicks drop?', context: { demand_signal_id: SIGNAL } },
     ]);
     expect(keys[0]).toBeTruthy();
+  });
+
+  it('starts without an attached Action that could not be loaded', async () => {
+    const action = '66666666-6666-4666-8666-666666666666';
+    const bodies: unknown[] = [];
+    mswServer.use(
+      ...baseHandlers(),
+      http.get(`/api/v1/actions/${action}`, () =>
+        HttpResponse.json({ detail: 'Action not found' }, { status: 404 }),
+      ),
+      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(ACCEPTED, { status: 202 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderNewChat(`?action_id=${action}&prompt=Plan%20this`);
+
+    expect(await screen.findByText(/This Action is unavailable/)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([{ message: 'Plan this', context: {} }]);
   });
 
   it('explains a plan without the agent instead of offering to send', async () => {

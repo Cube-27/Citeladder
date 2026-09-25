@@ -119,25 +119,10 @@ function ChatView({
               detail.latest_run && cancel.mutate({ chatId, runId: detail.latest_run.id })
             }
             stopping={cancel.isPending}
-            canSend={access.canSend}
+            canSend={access.canSend && !turn.pending}
           />
           {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
-          {turn.failure ? (
-            <Alert tone="danger">
-              {turn.failure.message}{' '}
-              {turn.failure.startNewChat ? (
-                <ProjectLink
-                  href={agentHandoffHref({
-                    actionId: detail.chat.action_id,
-                    prompt: turn.lastMessage,
-                  })}
-                  className="underline"
-                >
-                  Start a new chat
-                </ProjectLink>
-              ) : null}
-            </Alert>
-          ) : null}
+          <FollowUpFailure turn={turn} actionId={detail.chat.action_id} />
           <Composer
             id="chat-message"
             label="Reply to the agent"
@@ -174,6 +159,26 @@ function ChatView({
         </div>
       ) : null}
     </PageShell>
+  );
+}
+
+function FollowUpFailure({
+  turn,
+  actionId,
+}: Readonly<{ turn: ReturnType<typeof useFollowUp>; actionId: string | null }>) {
+  if (!turn.failure) return null;
+  return (
+    <Alert tone="danger">
+      {turn.failure.message}{' '}
+      {turn.failure.startNewChat ? (
+        <ProjectLink
+          href={agentHandoffHref({ actionId, prompt: turn.lastMessage })}
+          className="underline"
+        >
+          Start a new chat
+        </ProjectLink>
+      ) : null}
+    </Alert>
   );
 }
 
