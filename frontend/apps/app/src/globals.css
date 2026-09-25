@@ -119,7 +119,6 @@
   --color-secondary: #30313d;
   --color-muted: #475467;
   --color-subtle: #525e70;
-  --color-disabled: #8793a3;
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
 
@@ -214,54 +213,27 @@
 
   /* Citation classifications retain their distinct persisted meanings. */
   --color-citation-owned: #c15f3c;
-  --color-citation-owned-bg: #f7e8e1;
-  --color-citation-owned-border: #ebcfc4;
-  --color-citation-owned-text: #964226;
   --color-citation-competitor: #00a9c5;
-  --color-citation-competitor-bg: #edf7f7;
-  --color-citation-competitor-border: #ddf1f2;
-  --color-citation-competitor-text: #155e75;
   --color-citation-third-party: #6b6b72;
-  --color-citation-third-party-bg: #f4f4f1;
-  --color-citation-third-party-border: #ddddd6;
   --color-citation-third-party-text: #3a3a40;
 
   --color-run-draft: #6b6b72;
-  --color-run-draft-bg: #f4f4f1;
   --color-run-queued: #6b6b72;
-  --color-run-queued-bg: #f4f4f1;
   --color-run-running: #00a9c5;
-  --color-run-running-bg: #edf7f7;
   --color-run-analyzing: #c15f3c;
-  --color-run-analyzing-bg: #f7e8e1;
   --color-run-completed: #9acd32;
-  --color-run-completed-bg: #f4f8ec;
   --color-run-partial: #f59e0b;
-  --color-run-partial-bg: #fffbeb;
   --color-run-failed: #ff6e56;
-  --color-run-failed-bg: #fff3f0;
   --color-run-cancelled: #6b6b72;
-  --color-run-cancelled-bg: #f4f4f1;
 
   /* Score bands — low/mid escalate coral→amber; good/high use cyan→lime. */
-  --color-score-low: #ff6e56;
-  --color-score-low-bg: #fff3f0;
-  --color-score-low-border: #ffe4de;
   --color-score-low-text: #9a3412;
   --color-score-low-ring: #ff6e56;
-  --color-score-mid: #f59e0b;
-  --color-score-mid-bg: #fffbeb;
-  --color-score-mid-border: #fde68a;
   --color-score-mid-text: #b45309;
   --color-score-mid-ring: #f59e0b;
-  --color-score-good: #00a9c5;
-  --color-score-good-bg: #edf7f7;
-  --color-score-good-border: #ddf1f2;
   --color-score-good-text: #155e75;
   --color-score-good-ring: #00a9c5;
   --color-score-high: #9acd32;
-  --color-score-high-bg: #f4f8ec;
-  --color-score-high-border: #e6f0d1;
   --color-score-high-text: #3f6212;
   --color-score-high-ring: #9acd32;
 
@@ -285,8 +257,6 @@
   --color-series-4: var(--color-chart-4);
   --color-series-5: var(--color-chart-5);
   --color-series-other: var(--color-chart-8);
-  --color-chart-tooltip: #172554;
-  --color-chart-tooltip-fg: #ffffff;
   --color-overlay-scrim: rgb(20 33 61 / 45%);
 
   /* Tailwind's default radius scale is cleared so the ladder cannot be
@@ -403,8 +373,7 @@
   --content-gutter: 28px;
   --content-max-width: 1392px;
   --workflow-max-width: 1040px;
-  /* The two sanctioned two-column splits. A screen picks a role, never a ratio. */
-  --pane-main-rail: minmax(0, 2fr) minmax(0, 1fr);
+  /* The sanctioned two-column split. A screen picks a role, never a ratio. */
   --pane-list-detail: minmax(18rem, 0.9fr) minmax(0, 2fr);
   --page-section-gap: 24px;
   --workspace-gap: 16px;
@@ -432,16 +401,13 @@
      controls. A route with no tabs and no controls still closes its identity
      band, so content always begins one rule below a row of known height. */
   --page-band-identity: var(--compact-topbar-height);
-  --page-band-height: var(--tab-height);
   --page-header-padding-top: 24px;
   --page-header-padding-bottom: 20px;
-  --page-header-heading-gap: 4px;
   --page-header-gap: 20px;
   --table-row-height: 44px;
   --table-header-height: 36px;
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 10px;
-  --score-ring: 72px;
   /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
   --radius-control: 6px;
   --radius-card: 8px;
@@ -457,12 +423,6 @@
   --site-gutter: 20px;
   --section-y: 56px;
   --marketing-nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
-  --interaction-press-scale: 0.985;
-  --preview-grid-image: radial-gradient(#0000000a 1px, transparent 1px);
-  --preview-grid-size: 10px 10px;
-  --workflow-share-yours: 68%;
-  --workflow-share-competitors: 22%;
-  --workflow-share-none: 10%;
   --focus-ring: 0 0 0 3px var(--color-focus-ring);
   --skeleton-base: #eef2f6;
   --skeleton-highlight: #ffffff;
@@ -479,14 +439,12 @@
   --cl-warm-line: var(--color-hairline-warm);
   --cl-line: var(--color-border);
   --cl-preview-border: var(--color-border-strong);
-  --cl-window-bar: var(--color-background-alt);
   --cl-window-text: var(--color-muted);
   --cl-sidebar: var(--color-shell);
   --cl-sidebar-text: var(--color-muted);
   --cl-chart-secondary: var(--color-chart-2);
   --cl-chart-tertiary: var(--color-chart-3);
   --cl-faint-edge: var(--color-border-subtle);
-  --cl-bar: var(--color-chart-2);
   /* One warm band tone, derived from the warm hairline so it tracks the theme.
      The former cool alt read as a near-invisible stripe beside warm paper. */
   --cl-paper-alt: color-mix(in srgb, var(--color-hairline-warm) 45%, var(--color-canvas-soft));
@@ -551,7 +509,6 @@
   --color-secondary: #d6d3e8;
   --color-muted: #a5a1c2;
   --color-subtle: #8d89ad;
-  --color-disabled: #6d6a8e;
   --color-panel: #242244;
   --color-elevated: #242244;
   --color-well: #2b2950;
@@ -590,7 +547,6 @@
   --color-secondary: #cfdedb;
   --color-muted: #9db8b2;
   --color-subtle: #8aa6a0;
-  --color-disabled: #6f8a85;
   --color-panel: #143b3b;
   --color-elevated: #143b3b;
   --color-well: #1a4545;
@@ -974,7 +930,6 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-secondary: #3d3d3a;
   --color-muted: #6a6862;
   --color-subtle: #6b6a65;
-  --color-disabled: #8a8880;
   --color-border-subtle: #ebe9e1;
   --color-border: #dedcd1;
   --color-border-strong: #c7c4b8;
@@ -1024,7 +979,6 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-secondary: #e5e3dc;
   --color-muted: #c2c0b6;
   --color-subtle: #a6a49c;
-  --color-disabled: #85837c;
   --color-border-subtle: #33322f;
   --color-border: #403f3c;
   --color-border-strong: #76746c;
@@ -1079,18 +1033,9 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-sentiment-negative-bg: var(--color-danger-bg);
   --color-sentiment-negative-text: var(--color-danger-text);
   --color-citation-owned: var(--color-chart-4);
-  --color-citation-owned-bg: var(--color-danger-bg);
-  --color-citation-owned-border: var(--color-danger-border);
-  --color-citation-owned-text: var(--color-danger-text);
   --color-citation-competitor: var(--color-chart-2);
-  --color-citation-competitor-bg: var(--color-info-bg);
-  --color-citation-competitor-border: var(--color-info-border);
-  --color-citation-competitor-text: var(--color-info-text);
   --color-citation-third-party: var(--color-chart-8);
-  --color-citation-third-party-bg: var(--color-neutral-bg);
-  --color-citation-third-party-border: var(--color-border);
   --color-citation-third-party-text: var(--color-secondary);
-  --color-run-draft-bg: var(--color-neutral-bg);
   --color-run-draft: var(--color-chart-8);
   --color-run-queued: var(--color-chart-8);
   --color-run-running: var(--color-chart-2);
@@ -1099,32 +1044,14 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-run-partial: var(--color-chart-3);
   --color-run-failed: var(--color-chart-4);
   --color-run-cancelled: var(--color-chart-8);
-  --color-run-queued-bg: var(--color-neutral-bg);
-  --color-run-running-bg: var(--color-info-bg);
-  --color-run-analyzing-bg: var(--color-warning-bg);
-  --color-run-completed-bg: var(--color-success-bg);
-  --color-run-partial-bg: var(--color-warning-bg);
-  --color-run-failed-bg: var(--color-danger-bg);
-  --color-run-cancelled-bg: var(--color-neutral-bg);
-  --color-score-low-bg: var(--color-danger-bg);
-  --color-score-low: var(--color-chart-4);
   --color-score-low-ring: var(--color-chart-4);
-  --color-score-low-border: var(--color-danger-border);
   --color-score-low-text: var(--color-danger-text);
-  --color-score-mid-bg: var(--color-warning-bg);
-  --color-score-mid: var(--color-chart-3);
   --color-score-mid-ring: var(--color-chart-3);
-  --color-score-mid-border: var(--color-warning-border);
   --color-score-mid-text: var(--color-warning-text);
-  --color-score-good-bg: var(--color-info-bg);
-  --color-score-good: var(--color-chart-2);
   --color-score-good-ring: var(--color-chart-2);
-  --color-score-good-border: var(--color-info-border);
   --color-score-good-text: var(--color-info-text);
-  --color-score-high-bg: var(--color-success-bg);
   --color-score-high: var(--color-chart-5);
   --color-score-high-ring: var(--color-chart-5);
-  --color-score-high-border: var(--color-success-border);
   --color-score-high-text: var(--color-success-text);
   --color-chart-1: #76df9c;
   --color-chart-2: #75cee1;
@@ -1138,26 +1065,14 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-gsc-impressions: #c58af9;
   --color-gsc-ctr: #4db6ac;
   --color-gsc-position: #ff8a65;
-  --color-chart-tooltip: #30302e;
-  --color-chart-tooltip-fg: #faf9f5;
   --color-overlay-scrim: rgb(0 0 0 / 60%);
   --skeleton-base: #30302e;
   --skeleton-highlight: #3a3936;
-  --cl-closing: #202d39;
-  --marketing-footer-background: #0c1218;
-  --marketing-footer-foreground: #f2f6f8;
-  --marketing-footer-muted: #afbec8;
-  --marketing-footer-line: #455562;
   --shadow-smudge: 0 0 0 1px rgb(222 220 209 / 14%), 0 1px 2px rgb(0 0 0 / 25%);
   --shadow-smudge-hover: 0 0 0 1px rgb(222 220 209 / 22%), 0 1px 2px rgb(0 0 0 / 35%);
   --shadow-card: 0 1px 2px rgb(0 0 0 / 16%);
   --shadow-elevated: 0 12px 32px rgb(0 0 0 / 40%);
   --shadow-modal-value: var(--shadow-elevated);
-}
-
-:root[data-theme='dark'][data-public-surface] {
-  --color-background: #141b22;
-  --color-canvas-soft: #1d211f;
 }
 
 :root[data-theme='dark'] img[src='/citeladder-logo.svg'] {
