@@ -26,6 +26,7 @@ from app.connectors.agent.gateway import ModelGateway
 from app.connectors.app_model_config import AppModelRouteConfig
 from app.core.config.agent import (
     AGENT_HISTORY_MAX_MESSAGES,
+    ERROR_OUTPUT_CONFLICT,
     ERROR_PROTOCOL,
     ERROR_ROUTE_CHANGED,
     ERROR_STOPPED_AT_LIMIT,
@@ -47,17 +48,26 @@ from app.domain.agent.model_calls import (
     ModelUnavailableError,
     call_model,
     lock_owned_run,
+    member_may_run,
 )
-from app.domain.agent.outputs import latest_revision, output_for_chat, save_agent_output
+from app.domain.agent.outputs import (
+    OutputError,
+    has_approved_outline,
+    latest_revision,
+    output_for_chat,
+    save_agent_output,
+)
 from app.domain.agent.prompting import (
     STEP_SCHEMA_NAME,
     ProtocolError,
     StepResponse,
     TurnState,
     admissible_phase,
+    bound_reply,
     outline_required,
     parse_step,
     step_schema,
+    strip_unverified_refs,
     system_text,
     user_text,
 )
@@ -191,13 +201,14 @@ async def _current_output(
     session: AsyncSession, output: AgentOutput | None
 ) -> dict[str, Any] | None:
     revision = await latest_revision(session, output=output) if output else None
-    if revision is None:
+    if output is None or revision is None:
         return None
     return {
         "number": revision.number,
         "phase": revision.phase,
         "title": revision.title,
         "body": revision.body,
+        "outline_approved": await has_approved_outline(session, output=output),
     }
 
 
@@ -548,29 +559,46 @@ async def _finalize(
     if run is None:
         await session.rollback()
         return
+    if not await member_may_run(session, run):
+        await session.rollback()
+        raise ModelUnavailableError(reason="access")
     chat = await session.get(AgentChat, turn.chat_id, with_for_update=True)
     assert chat is not None  # noqa: S101 - loaded for this run above
     # Only references a tool actually returned (or the frozen Action evidence)
-    # may be cited; anything else is dropped rather than shown as evidence.
+    # may be cited; anything else is dropped rather than shown as evidence,
+    # including references written into the visible text.
     evidence = [ref for ref in (step.evidence or []) if ref in turn.seen_refs]
+    reply = bound_reply(strip_unverified_refs(str(step.reply).strip(), turn.seen_refs))
     message = await _append_reply(
-        session, run=run, turn=turn, content=str(step.reply).strip(), evidence=evidence
+        session, run=run, turn=turn, content=reply, evidence=evidence
     )
     if step.output is not None and turn.skill is not None:
-        await save_agent_output(
-            session,
-            chat=chat,
-            skill_id=turn.skill.id,
-            payload=step.output.model_dump(),
-            phase=admissible_phase(step.output.phase, outline_only=outline_only),
-            run_id=run.id,
-            message_id=message.id,
-            source_refs=evidence,
-            user_id=run.user_id,
-        )
+        payload = step.output.model_dump()
+        payload["body"] = strip_unverified_refs(str(payload["body"]), turn.seen_refs)
+        try:
+            await save_agent_output(
+                session,
+                chat=chat,
+                skill_id=turn.skill.id,
+                payload=payload,
+                phase=admissible_phase(step.output.phase, outline_only=outline_only),
+                run_id=run.id,
+                message_id=message.id,
+                source_refs=evidence,
+                user_id=run.user_id,
+                base_revision_number=_base_revision_number(turn),
+            )
+        except OutputError as exc:
+            await session.rollback()
+            raise RunFailedError(ERROR_OUTPUT_CONFLICT, str(exc)) from exc
     chat.last_activity_at = _utcnow()
     _terminal(run, status=TASK_STATUS_SUCCEEDED, turn=turn)
     await session.commit()
+
+
+def _base_revision_number(turn: _Turn) -> int | None:
+    current = turn.state.current_output
+    return int(current["number"]) if current is not None else None
 
 
 async def _stop_at_limit(session: AsyncSession, *, turn: _Turn, owner: str) -> None:

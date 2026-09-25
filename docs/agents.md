@@ -28,14 +28,21 @@ step/tool/size budgets and funding identity. A configuration change never
 alters a queued turn. Budgets live in
 [Agent configuration](../backend/app/core/config/agent.py).
 
-A chat owns one deliverable. Agent saves and user edits both append an immutable
-[output revision](../backend/app/domain/agent/outputs.py); an edit against a
-stale base revision conflicts, restoring an old revision appends a new one, and
-a follow-up turn revises the latest revision, including the user's own edit.
-Long-form content is outline-first: its first save is always an outline, and a
-draft is written only after the user explicitly approves that outline revision.
-Ordinary tool and reasoning steps need no approval. Approving or generating an
-output is not an implementation declaration.
+A chat owns one deliverable of one kind. Agent saves and user edits both append
+an immutable [output revision](../backend/app/domain/agent/outputs.py); an edit
+against a stale base revision conflicts, restoring an old revision appends a new
+one, and a follow-up turn revises the latest revision, including the user's own
+edit. Edits and restores are refused while a turn is queued or running, and a
+turn whose output moved on from the revision it read saves nothing. Explicitly
+picking a skill that produces a different kind of output is refused; start a
+new chat for it. Long-form content is outline-first: a draft is written only
+after the user explicitly approves an outline revision of that output, whatever
+phase the output is in. Ordinary tool and reasoning steps need no approval.
+Approving or generating an output is not an implementation declaration.
+
+Idempotency keys are workspace-scoped and bound to the full request: project,
+message, skill, Action and context for a new chat. A reused key with a changed
+request conflicts, including when two identical requests race.
 
 A targeted output (a page or a planned page) attaches the chat to the existing
 [Action](opportunities.md#actions) for that target or creates one, so work on
@@ -59,8 +66,10 @@ structured model steps. Each step does exactly one of `select_skill`,
 `call_tool` or `respond`. The runtime enforces the step, tool-call, transcript
 and output limits; the final step cannot spend a tool call, and a turn that
 exhausts its budget stops without saving a partial deliverable. Only evidence
-references that the frozen context or an executed tool actually returned
-survive into the reply.
+references an executed tool returned, or the attached Action's frozen diagnosis
+named, survive; the rest of the context package carries no record references.
+Any other `citeladder://` reference is dropped from the evidence list and
+replaced in the visible reply and output text.
 
 ## Read tools
 
@@ -107,9 +116,12 @@ the [skill loader tests](../backend/tests/unit/test_agent_skills.py).
 
 The [worker](../backend/app/workers/agent_worker.py) claims runs from the shared
 PostgreSQL queue with a lease and a heartbeat. Before each model step it rechecks
-lease ownership, cancellation, capability and the exact customer route/key
-revision, then [commits the dispatch](../backend/app/domain/agent/model_calls.py)
-before any network I/O. No transaction is held across provider or tool I/O.
+lease ownership, cancellation, that the queuing member still holds the run
+permission, capability, and the exact customer route/key revision or admitted
+platform model, then [commits the dispatch](../backend/app/domain/agent/model_calls.py)
+before any network I/O. The terminal write rechecks the member again. A revoked
+member, a changed platform model or a lost route ends the turn with its own
+code rather than retrying. No transaction is held across provider or tool I/O.
 
 Every model step is funded independently. Platform funding reserves a finite
 per-call AI-credit hold from the published policy, then settles it against the

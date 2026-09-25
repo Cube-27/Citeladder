@@ -44,6 +44,8 @@ from app.domain.entitlements.metered import (
     reserve_metered_usage,
     settle_metered_usage,
 )
+from app.domain.workspaces.policy import WorkspaceCapability, role_allows
+from app.domain.workspaces.service import get_membership
 from app.models.agent import AgentModelAttempt, AgentRun
 from app.models.provider import ProviderAppRoute, ProviderConnection
 
@@ -55,8 +57,10 @@ class ModelUnavailableError(RuntimeError):
     """A step could not be dispatched or did not return a usable receipt.
 
     ``reason`` is ``lease`` (the run is no longer ours or was cancelled),
-    ``funding`` (capability, route or credits), or ``provider`` (the call
-    failed; ``cause`` carries the provider error).
+    ``access`` (the member lost the run permission), ``model_changed`` (the
+    platform model differs from the admitted one), ``funding`` (capability,
+    route or credits), or ``provider`` (the call failed; ``cause`` carries the
+    provider error).
     """
 
     def __init__(self, *, reason: str, cause: Exception | None = None) -> None:
@@ -149,18 +153,42 @@ async def _platform_hold(
     return reservation.reservation_id, rate.call_credit_cap, revision
 
 
+async def member_may_run(session: AsyncSession, run: AgentRun) -> bool:
+    """Whether the member who queued the turn still holds the run permission.
+
+    Admission checked it once; a turn outlives that request, so every model
+    dispatch and the terminal write check it again (invariant 3). A removed
+    or demoted member's frozen context is not sent to a model on their behalf.
+    """
+    if run.user_id is None:
+        return False
+    membership = await get_membership(session, run.workspace_id, run.user_id)
+    return membership is not None and role_allows(
+        membership.role, WorkspaceCapability.RUN
+    )
+
+
 async def _fenced_run(
     session: AsyncSession,
     *,
     run_id: uuid.UUID,
     owner: str,
     app_route: AppModelRouteConfig | None,
+    model: str,
 ) -> AgentRun:
-    """The locked run, once lease, capability and any customer route recheck."""
+    """The locked run, once lease, member, capability and route all recheck."""
     run = await lock_owned_run(session, run_id=run_id, owner=owner)
     if run is None:
         await session.rollback()
         raise ModelUnavailableError(reason="lease")
+    if not await member_may_run(session, run):
+        await session.rollback()
+        raise ModelUnavailableError(reason="access")
+    if app_route is None and model != run.requested_model:
+        # The platform model is frozen at admission with its rate; a changed
+        # deployment default must not run (or be charged) under a new identity.
+        await session.rollback()
+        raise ModelUnavailableError(reason="model_changed")
     try:
         await require_workspace_capability(
             session, workspace_id=run.workspace_id, key=KEY_AGENT
@@ -188,7 +216,13 @@ async def start_model_attempt(
 ) -> AgentModelAttempt:
     """Fence the lease and commit the dispatch (and any hold) before I/O."""
     await session.rollback()
-    run = await _fenced_run(session, run_id=run_id, owner=owner, app_route=app_route)
+    run = await _fenced_run(
+        session,
+        run_id=run_id,
+        owner=owner,
+        app_route=app_route,
+        model=gateway.model,
+    )
     dispatch_id = uuid.uuid5(run.id, f"step:{run.attempt_count}:{ordinal}")
     if await session.scalar(
         select(AgentModelAttempt.id).where(AgentModelAttempt.dispatch_id == dispatch_id)

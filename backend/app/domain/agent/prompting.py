@@ -11,6 +11,7 @@ are labelled untrusted evidence, never instructions (invariant 12).
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -20,6 +21,7 @@ from app.core.config.agent import (
     AGENT_HISTORY_MESSAGE_MAX_CHARS,
     AGENT_OUTPUT_BODY_MAX_CHARS,
     AGENT_OUTPUT_TITLE_MAX_CHARS,
+    AGENT_REPLY_MAX_CHARS,
     AGENT_TRANSCRIPT_MAX_CHARS,
     OUTPUT_PHASE_DRAFT,
     OUTPUT_PHASE_FINAL,
@@ -283,15 +285,53 @@ def user_text(state: TurnState) -> str:
     return text
 
 
+_RECORD_REF = re.compile(r"citeladder://[^\s<>()\[\]{}\"'`]+")
+_REF_TRAILING = ".,;:!?"
+UNVERIFIED_REF_PLACEHOLDER = "[unverified reference removed]"
+
+
+def strip_unverified_refs(text: str, allowed: set[str]) -> str:
+    """Remove record references a tool never returned from visible model text.
+
+    The model may write a ``citeladder://`` reference into its prose as well
+    as its evidence list; either way, one it was not given is not evidence
+    (invariant 12) and is replaced rather than shown to the user as a source.
+    """
+
+    def _check(match: re.Match[str]) -> str:
+        raw = match.group(0)
+        ref = raw.rstrip(_REF_TRAILING)
+        if ref in allowed:
+            return raw
+        return UNVERIFIED_REF_PLACEHOLDER + raw[len(ref) :]
+
+    return _RECORD_REF.sub(_check, text)
+
+
+REPLY_TRUNCATED_MARKER = "\n\n[reply truncated at its size bound]"
+
+
+def bound_reply(text: str) -> str:
+    """Cap the stored chat reply, marking the cut rather than hiding it."""
+    if len(text) <= AGENT_REPLY_MAX_CHARS:
+        return text
+    return text[:AGENT_REPLY_MAX_CHARS] + REPLY_TRUNCATED_MARKER
+
+
 def outline_required(
     skill: AgentSkill | None, current_output: dict[str, Any] | None, mode: str
 ) -> bool:
-    """Long-form content starts as an outline until the user approves one."""
+    """Long-form content stays an outline until the user has approved one.
+
+    The test is the approval itself, not the current phase: a phase can be
+    reached by restoring a revision or by an output of another kind, and
+    neither may stand in for the user's explicit decision.
+    """
     if skill is None or skill.output_kind not in OUTLINE_FIRST_OUTPUT_KINDS:
         return False
     if mode == RUN_MODE_DRAFT_FROM_OUTLINE:
         return False
-    return current_output is None or current_output["phase"] == OUTPUT_PHASE_OUTLINE
+    return current_output is None or not current_output.get("outline_approved")
 
 
 def admissible_phase(requested: str, *, outline_only: bool) -> str:

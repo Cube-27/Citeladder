@@ -489,11 +489,14 @@ runnable after every slice.
 
 ### PR 1 — Foundation and cutover (backend base, debt removed)
 
-1. **Actions.** Action tables, grouping/priority/convergence config, the
-   diagnosis projection and the status cutover off Opportunities. Development
-   guidance (`guidance.py`, `OpportunityGuidance`, `/guidance`) is removed.
-   `/api/v1/actions` is added. The existing Opportunities screen reads Action
-   status until PR 2.
+1. **Actions.** Action tables, grouping/priority/convergence config and the
+   diagnosis projection. Development guidance (`guidance.py`,
+   `OpportunityGuidance`, `/guidance`) is removed. `/api/v1/actions` is added.
+   *Amended during implementation (owner-accepted, 25 September 2026):* the
+   status cutover (§3) moves to PR 2 with the screen that edits it. In PR 1
+   workflow status stays on each Opportunity and Actions carry no status, so
+   member Opportunities of one Action can still hold different statuses until
+   PR 2.
 2. **Registry.** `domain/agent/tools.py` and the MCP read definitions move into
    the Agent owner's registry. MCP binds to it with no change to its advertised
    set. The `agent`-only detail readers are added (§6.1).
@@ -531,6 +534,8 @@ edit, history, copy and export, Actions list and detail, the Skills list, and
 the Context view with the facts moved (the Overview `FactsDrawer` is deleted).
 Evidence-screen handoffs move to **Ask agent** and **Work on this**. The
 `/opportunities` screen is deleted, and the *Act* group leaves the Dashboard nav.
+The status cutover moved from PR 1 lands here: Action status (§3) replaces
+Opportunity status and its carry-forward logic under the replacement gate.
 
 ### PR 3 — Implementation, measurement and Search Demand
 

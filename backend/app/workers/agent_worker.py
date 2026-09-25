@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 import logging
 import uuid
+from typing import Final
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -22,7 +23,9 @@ from app.core.config.agent import (
     AGENT_HEARTBEAT_SECONDS,
     AGENT_QUEUE_SPEC,
     AGENT_WORKER_POLL_SECONDS,
+    ERROR_ACCESS_REVOKED,
     ERROR_FUNDING,
+    ERROR_MODEL_CHANGED,
     ERROR_PROVIDER,
     default_agent_settings,
 )
@@ -41,6 +44,20 @@ from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.drain import DrainableWorkerMixin
 
 logger = logging.getLogger("app.workers.agent_worker")
+
+
+# Refusals no retry can fix: the turn ends with its own code.
+_TERMINAL_REFUSALS: Final[dict[str, tuple[str, str]]] = {
+    "funding": (ERROR_FUNDING, "The Agent could not be funded for this turn."),
+    "access": (
+        ERROR_ACCESS_REVOKED,
+        "The member who asked no longer has permission to run the Agent.",
+    ),
+    "model_changed": (
+        ERROR_MODEL_CHANGED,
+        "The platform model changed after this turn was queued; ask again.",
+    ),
+}
 
 
 def _default_gateway(route: AppModelRouteConfig | None) -> ModelGateway:
@@ -138,13 +155,11 @@ class AgentWorker(DrainableWorkerMixin):
         if exc.reason == "lease":
             return  # cancelled or reclaimed: another owner (or nobody) acts now
         async with self._session_factory() as session:
-            if exc.reason == "funding":
+            terminal = _TERMINAL_REFUSALS.get(exc.reason)
+            if terminal is not None:
+                code, detail = terminal
                 await fail_run(
-                    session,
-                    run_id=run_id,
-                    owner=self.owner,
-                    code=ERROR_FUNDING,
-                    detail="The Agent could not be funded for this turn.",
+                    session, run_id=run_id, owner=self.owner, code=code, detail=detail
                 )
                 return
             run = await session.get(AgentRun, run_id)

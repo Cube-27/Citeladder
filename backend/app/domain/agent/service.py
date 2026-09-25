@@ -31,6 +31,8 @@ from app.core.config.agent import (
     AGENT_PROTOCOL_VERSION,
     AGENT_REVISION_LIST_MAX,
     AGENT_RUNTIME_VERSION,
+    CODE_AGENT_RUN_ACTIVE,
+    CODE_AGENT_SKILL_KIND_CONFLICT,
     MESSAGE_ROLE_USER,
     RUN_MODE_DRAFT_FROM_OUTLINE,
     RUN_MODE_TURN,
@@ -220,6 +222,37 @@ def _requested_skill(
     return None, None
 
 
+async def _turn_skill(
+    session: AsyncSession, *, chat: AgentChat, explicit: str | None
+) -> tuple[str | None, str | None]:
+    """The turn's skill, held to the kind of deliverable the chat already owns.
+
+    A chat owns one deliverable, so once it has an output a skill producing a
+    different kind cannot take over: an explicit pick is refused, and an
+    implicit one (pin or Action) yields to the output's own skill.
+    """
+    if explicit is not None and explicit not in AGENT_SKILL_REGISTRY:
+        raise AgentConflictError("validation_error", f"Unknown skill {explicit!r}.")
+    action = (
+        await session.get(Action, chat.action_id)
+        if chat.action_id is not None
+        else None
+    )
+    skill_id, source = _requested_skill(explicit=explicit, chat=chat, action=action)
+    output = await outputs.output_for_chat(session, chat=chat)
+    if output is None or skill_id is None:
+        return skill_id, source
+    if AGENT_SKILL_REGISTRY[skill_id].output_kind == output.kind:
+        return skill_id, source
+    if source == SKILL_SOURCE_USER:
+        raise AgentConflictError(
+            CODE_AGENT_SKILL_KIND_CONFLICT,
+            "This chat's deliverable is a different kind of output; start a new "
+            "chat to use that skill.",
+        )
+    return output.skill_id, SKILL_SOURCE_CHAT
+
+
 async def _enqueue_turn(
     session: AsyncSession,
     *,
@@ -229,17 +262,10 @@ async def _enqueue_turn(
     mode: str,
     skill_id: str | None,
     idempotency_key: str,
+    fingerprint: dict[str, Any],
 ) -> AgentRun:
     """Append the user message and its run (caller holds the chat lock)."""
-    active = await session.scalar(
-        select(AgentRun.id).where(
-            AgentRun.chat_id == chat.id, AgentRun.status.in_(TASK_ACTIVE_STATUSES)
-        )
-    )
-    if active is not None:
-        raise AgentConflictError(
-            "agent_run_active", "The agent is still answering this chat."
-        )
+    await _require_idle(session, chat, "The agent is still answering this chat.")
     if chat.turn_count >= AGENT_CHAT_TURN_LIMIT:
         raise AgentConflictError(
             "agent_turn_limit", "This chat reached its turn limit; start a new chat."
@@ -257,18 +283,11 @@ async def _enqueue_turn(
         usage_limit=abuse_settings.agent_runs_per_workspace_daily,
         retry_after_seconds=abuse_settings.active_job_retry_after_seconds,
     )
-    if skill_id is not None and skill_id not in AGENT_SKILL_REGISTRY:
-        raise AgentConflictError("validation_error", f"Unknown skill {skill_id!r}.")
+    requested_skill, skill_source = await _turn_skill(
+        session, chat=chat, explicit=skill_id
+    )
     if skill_id is not None:
         chat.pinned_skill_id = skill_id
-    action = (
-        await session.get(Action, chat.action_id)
-        if chat.action_id is not None
-        else None
-    )
-    requested_skill, skill_source = _requested_skill(
-        explicit=skill_id, chat=chat, action=action
-    )
     try:
         manifest = await build_manifest(session, chat=chat, request=content)
     except (ContentContextNotFoundError, ContentContextConflictError) as exc:
@@ -296,9 +315,7 @@ async def _enqueue_turn(
         user_message_id=message.id,
         user_id=user_id,
         idempotency_key=idempotency_key,
-        request_fingerprint=_fingerprint(
-            {"chat": str(chat.id), "content": content, "mode": mode, "skill": skill_id}
-        ),
+        request_fingerprint=_fingerprint(fingerprint),
         mode=mode,
         requested_skill_id=requested_skill,
         requested_skill_source=skill_source,
@@ -340,18 +357,31 @@ async def _replay(
 
 
 async def _commit_or_replay(
-    session: AsyncSession, *, workspace_id: uuid.UUID, key: str
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    key: str,
+    fingerprint: dict[str, Any],
 ) -> AgentRun | None:
+    """Commit, or on a concurrent same-key insert replay the winner.
+
+    The winner is held to the same fingerprint as an ordinary replay, so a
+    race cannot return a run created for a different request.
+    """
     try:
         await session.commit()
         return None
     except IntegrityError:
         await session.rollback()
-        return await session.scalar(
-            select(AgentRun).where(
-                AgentRun.workspace_id == workspace_id, AgentRun.idempotency_key == key
-            )
+        return await _replay(
+            session, workspace_id=workspace_id, key=key, fingerprint=fingerprint
         )
+
+
+async def _replayed_chat(session: AsyncSession, run: AgentRun) -> AgentChat:
+    chat = await session.get(AgentChat, run.chat_id)
+    assert chat is not None  # noqa: S101 - the run's chat is its parent
+    return chat
 
 
 async def create_chat(
@@ -368,16 +398,20 @@ async def create_chat(
 ) -> tuple[AgentChat, AgentRun]:
     """Start a chat with its first user message and queued run."""
     await _project(session, workspace_id=workspace_id, project_id=project_id)
-    existing = await session.scalar(
-        select(AgentRun).where(
-            AgentRun.workspace_id == workspace_id,
-            AgentRun.idempotency_key == idempotency_key,
-        )
+    fingerprint = {
+        "op": "create_chat",
+        "project": str(project_id),
+        "content": message,
+        "mode": RUN_MODE_TURN,
+        "skill": skill_id,
+        "action": str(action_id) if action_id else None,
+        "context": context_refs,
+    }
+    existing = await _replay(
+        session, workspace_id=workspace_id, key=idempotency_key, fingerprint=fingerprint
     )
     if existing is not None:
-        chat = await session.get(AgentChat, existing.chat_id)
-        assert chat is not None  # noqa: S101 - the run's chat is its parent
-        return chat, existing
+        return await _replayed_chat(session, existing), existing
     if action_id is not None:
         await _action(
             session,
@@ -403,14 +437,13 @@ async def create_chat(
         mode=RUN_MODE_TURN,
         skill_id=skill_id,
         idempotency_key=idempotency_key,
+        fingerprint=fingerprint,
     )
     winner = await _commit_or_replay(
-        session, workspace_id=workspace_id, key=idempotency_key
+        session, workspace_id=workspace_id, key=idempotency_key, fingerprint=fingerprint
     )
     if winner is not None:
-        chat = await session.get(AgentChat, winner.chat_id)
-        assert chat is not None  # noqa: S101 - the run's chat is its parent
-        return chat, winner
+        return await _replayed_chat(session, winner), winner
     return chat, run
 
 
@@ -429,16 +462,15 @@ async def send_message(
     skill_id: str | None,
     idempotency_key: str,
 ) -> AgentRun:
+    fingerprint = {
+        "op": "send_message",
+        "chat": str(chat_id),
+        "content": message,
+        "mode": RUN_MODE_TURN,
+        "skill": skill_id,
+    }
     replay = await _replay(
-        session,
-        workspace_id=workspace_id,
-        key=idempotency_key,
-        fingerprint={
-            "chat": str(chat_id),
-            "content": message,
-            "mode": RUN_MODE_TURN,
-            "skill": skill_id,
-        },
+        session, workspace_id=workspace_id, key=idempotency_key, fingerprint=fingerprint
     )
     if replay is not None:
         return replay
@@ -453,9 +485,10 @@ async def send_message(
         mode=RUN_MODE_TURN,
         skill_id=skill_id,
         idempotency_key=idempotency_key,
+        fingerprint=fingerprint,
     )
     winner = await _commit_or_replay(
-        session, workspace_id=workspace_id, key=idempotency_key
+        session, workspace_id=workspace_id, key=idempotency_key, fingerprint=fingerprint
     )
     return winner or run
 
@@ -470,6 +503,17 @@ async def approve_outline_and_write(
     idempotency_key: str,
 ) -> AgentRun:
     """Record the outline approval and queue the draft from it."""
+    fingerprint = {
+        "op": "approve_outline",
+        "chat": str(chat_id),
+        "revision": str(revision_id),
+        "mode": RUN_MODE_DRAFT_FROM_OUTLINE,
+    }
+    replay = await _replay(
+        session, workspace_id=workspace_id, key=idempotency_key, fingerprint=fingerprint
+    )
+    if replay is not None:
+        return replay
     chat = await get_chat(
         session, workspace_id=workspace_id, chat_id=chat_id, lock=True
     )
@@ -487,9 +531,10 @@ async def approve_outline_and_write(
         mode=RUN_MODE_DRAFT_FROM_OUTLINE,
         skill_id=None,
         idempotency_key=idempotency_key,
+        fingerprint=fingerprint,
     )
     winner = await _commit_or_replay(
-        session, workspace_id=workspace_id, key=idempotency_key
+        session, workspace_id=workspace_id, key=idempotency_key, fingerprint=fingerprint
     )
     return winner or run
 
@@ -523,21 +568,29 @@ async def cancel_run(
     return run
 
 
-async def archive_chat(
-    session: AsyncSession, *, workspace_id: uuid.UUID, chat_id: uuid.UUID
-) -> None:
-    chat = await get_chat(
-        session, workspace_id=workspace_id, chat_id=chat_id, lock=True
-    )
+async def _require_idle(session: AsyncSession, chat: AgentChat, detail: str) -> None:
+    """Refuse a chat change while a turn is queued or running.
+
+    The caller holds the chat lock, which ``_enqueue_turn`` also takes, so a
+    change and a new turn are serialized: a run always starts from the output
+    the user last saved, and cannot finish on top of an edit it never saw.
+    """
     active = await session.scalar(
         select(AgentRun.id).where(
             AgentRun.chat_id == chat.id, AgentRun.status.in_(TASK_ACTIVE_STATUSES)
         )
     )
     if active is not None:
-        raise AgentConflictError(
-            "agent_run_active", "Stop the running turn before archiving."
-        )
+        raise AgentConflictError(CODE_AGENT_RUN_ACTIVE, detail)
+
+
+async def archive_chat(
+    session: AsyncSession, *, workspace_id: uuid.UUID, chat_id: uuid.UUID
+) -> None:
+    chat = await get_chat(
+        session, workspace_id=workspace_id, chat_id=chat_id, lock=True
+    )
+    await _require_idle(session, chat, "Stop the running turn before archiving.")
     chat.archived_at = _utcnow()
     await session.commit()
 
@@ -644,6 +697,7 @@ async def edit_output(
     chat = await get_chat(
         session, workspace_id=workspace_id, chat_id=chat_id, lock=True
     )
+    await _require_idle(session, chat, "Wait for the agent to finish before editing.")
     try:
         revision = await outputs.save_user_revision(
             session,
@@ -671,6 +725,7 @@ async def restore_output_revision(
     chat = await get_chat(
         session, workspace_id=workspace_id, chat_id=chat_id, lock=True
     )
+    await _require_idle(session, chat, "Wait for the agent to finish before restoring.")
     try:
         revision = await outputs.restore_revision(
             session, chat=chat, revision_id=revision_id, user_id=user_id

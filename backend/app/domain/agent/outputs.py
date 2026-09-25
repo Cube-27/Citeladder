@@ -59,13 +59,18 @@ async def latest_revision(
     )
 
 
-async def _next_number(session: AsyncSession, *, output: AgentOutput) -> int:
-    current = await session.scalar(
-        select(func.max(AgentOutputRevision.number)).where(
-            AgentOutputRevision.output_id == output.id
+async def has_approved_outline(session: AsyncSession, *, output: AgentOutput) -> bool:
+    """Whether the user ever approved an outline revision of this output."""
+    approved = await session.scalar(
+        select(func.count())
+        .select_from(AgentOutputRevision)
+        .where(
+            AgentOutputRevision.output_id == output.id,
+            AgentOutputRevision.phase == OUTPUT_PHASE_OUTLINE,
+            AgentOutputRevision.approved_at.isnot(None),
         )
     )
-    return int(current or 0) + 1
+    return bool(approved)
 
 
 async def save_agent_output(
@@ -79,13 +84,23 @@ async def save_agent_output(
     message_id: uuid.UUID,
     source_refs: list[str],
     user_id: uuid.UUID | None,
+    base_revision_number: int | None,
 ) -> AgentOutputRevision:
     """Append the agent's revision; attach the chat to its target's Action.
 
-    Runs inside the run's terminal transaction; the caller commits.
+    ``base_revision_number`` is the revision the model was shown (None when
+    there was no output). If the output moved on since, or belongs to another
+    kind of deliverable, the save is refused rather than stacking a stale body
+    on top of a revision the model never read. Runs inside the run's terminal
+    transaction; the caller commits.
     """
     skill = AGENT_SKILL_REGISTRY[skill_id]
     output = await output_for_chat(session, chat=chat)
+    parent = await latest_revision(session, output=output) if output else None
+    if (parent.number if parent else None) != base_revision_number:
+        raise OutputError("the output changed while the agent was working")
+    if output is not None and output.kind != skill.output_kind:
+        raise OutputError("this chat's deliverable is a different kind of output")
     format_id = payload.get("format_id")
     if format_id not in CONTENT_FORMATS:
         format_id = None
@@ -105,12 +120,11 @@ async def save_agent_output(
     await _attach_target(
         session, chat=chat, output=output, payload=payload, user_id=user_id
     )
-    parent = await latest_revision(session, output=output)
     revision = AgentOutputRevision(
         workspace_id=chat.workspace_id,
         project_id=chat.project_id,
         output_id=output.id,
-        number=await _next_number(session, output=output),
+        number=(parent.number + 1) if parent else 1,
         parent_revision_id=parent.id if parent is not None else None,
         author=REVISION_AUTHOR_AGENT,
         run_id=run_id,

@@ -63,6 +63,8 @@ AGENT_MESSAGE_MAX_CHARS: Final = 8_000
 AGENT_INSTRUCTIONS_MAX_CHARS: Final = 4_000
 AGENT_OUTPUT_TITLE_MAX_CHARS: Final = 255
 AGENT_OUTPUT_BODY_MAX_CHARS: Final = 100_000
+# The chat reply is conversational; the deliverable belongs in the output.
+AGENT_REPLY_MAX_CHARS: Final = 12_000
 AGENT_CHAT_TITLE_MAX_CHARS: Final = 120
 AGENT_IDEMPOTENCY_KEY_MAX_CHARS: Final = 128
 AGENT_LIST_DEFAULT_LIMIT: Final = 30
@@ -103,6 +105,7 @@ CODE_AGENT_RUN_ACTIVE: Final = "agent_run_active"
 CODE_AGENT_FUNDING_UNAVAILABLE: Final = "agent_funding_unavailable"
 CODE_AGENT_IDEMPOTENCY_CONFLICT: Final = "agent_idempotency_conflict"
 CODE_AGENT_OUTLINE_NOT_APPROVABLE: Final = "agent_outline_not_approvable"
+CODE_AGENT_SKILL_KIND_CONFLICT: Final = "agent_skill_kind_conflict"
 
 # Terminal run error codes.
 ERROR_STOPPED_AT_LIMIT: Final = "stopped_at_limit"
@@ -112,6 +115,12 @@ ERROR_CAPABILITY: Final = "capability_unavailable"
 ERROR_ROUTE_CHANGED: Final = "route_unavailable"
 ERROR_PROVIDER: Final = "provider_error"
 ERROR_TOOL: Final = "tool_failed"
+# The member who queued the turn no longer holds the run permission.
+ERROR_ACCESS_REVOKED: Final = "access_revoked"
+# The output moved on from the revision the model read; nothing was saved.
+ERROR_OUTPUT_CONFLICT: Final = "output_conflict"
+# The platform model changed after admission; the turn must be resubmitted.
+ERROR_MODEL_CHANGED: Final = "model_changed"
 
 
 def _is_nvidia_host(host: str) -> bool:

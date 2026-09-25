@@ -36,11 +36,13 @@ from app.models.agent import (
 from app.models.opportunity import Action
 from app.models.project import Project
 from app.models.provider import ProviderAppRoute, ProviderConnection
+from app.models.workspace import WorkspaceMember
 from app.workers.agent_worker import AgentWorker
 from tests.component.auth_helpers import grant_test_capabilities, register_and_login
 
 _SITE = "https://acme.example"
 _PAGE = f"{_SITE}/pricing"
+_INVENTED_REF = "citeladder://opportunity/00000000-0000-4000-8000-00000000dead"
 
 
 class ScriptedGateway:
@@ -190,9 +192,9 @@ async def test_a_turn_reads_evidence_and_saves_an_output_attached_to_its_page(
             {"action": "call_tool", "tool": "read_integration_status", "arguments": {}},
             {
                 "action": "respond",
-                "reply": "Here are snippet edits; Search Console is not connected.",
-                "evidence": ["citeladder://invented/not-returned"],
-                "output": _output("## Edit 1\n\nNew title."),
+                "reply": f"Snippet edits per {_INVENTED_REF}.",
+                "evidence": [_INVENTED_REF],
+                "output": _output(f"## Edit 1\n\nNew title ({_INVENTED_REF})."),
             },
         ]
     )
@@ -203,7 +205,11 @@ async def test_a_turn_reads_evidence_and_saves_an_output_attached_to_its_page(
     assert [message["role"] for message in detail["messages"]] == ["user", "agent"]
     reply = detail["messages"][1]
     assert reply["skill_id"] == "gsc_optimize"
-    assert reply["evidence_refs"] == []  # never cite a reference no tool returned
+    # A reference no tool returned is never cited: not in the evidence list,
+    # and not in the visible reply or the saved output either.
+    assert reply["evidence_refs"] == []
+    assert _INVENTED_REF not in reply["content"]
+    assert _INVENTED_REF not in detail["output"]["latest_revision"]["body"]
     assert [step["kind"] for step in reply["steps"]] == ["skill", "tool"]
     assert detail["latest_run"]["status"] == "succeeded"
     output = detail["output"]
@@ -267,6 +273,15 @@ async def test_a_follow_up_revises_the_users_edit_instead_of_starting_over(
         f"/api/v1/agent/chats/{chat_id}/messages", json={"message": "Make it shorter."}
     )
     assert sent.status_code == 202, sent.text
+    # While the turn is queued the output is frozen, so the run can never
+    # finish on top of an edit it did not read.
+    user_edit = edited.json()
+    during_run = await client.post(
+        f"/api/v1/agent/chats/{chat_id}/output/revisions",
+        json={"base_revision_id": user_edit["id"], "title": "Plan", "body": "racing"},
+    )
+    assert during_run.status_code == 409
+    assert during_run.json()["error"]["code"] == "agent_run_active"
     second = ScriptedGateway(
         [
             {
@@ -289,6 +304,15 @@ async def test_a_follow_up_revises_the_users_edit_instead_of_starting_over(
         (1, "agent"),
     ]
     assert items[0]["parent_revision_id"] == items[1]["id"]
+
+    # The chat owns a plan; switching it to long-form content (which would
+    # otherwise skip outline approval) needs a new chat.
+    switched = await client.post(
+        f"/api/v1/agent/chats/{chat_id}/messages",
+        json={"message": "Now write the article.", "skill_id": "content_create"},
+    )
+    assert switched.status_code == 409
+    assert switched.json()["error"]["code"] == "agent_skill_kind_conflict"
 
 
 async def test_long_form_content_is_outlined_before_an_approved_draft(
@@ -447,9 +471,15 @@ async def test_a_repeated_idempotency_key_replays_the_same_turn(
 
     first = await client.post(url, json=body, headers=headers)
     replay = await client.post(url, json=body, headers=headers)
+    changed = await client.post(
+        url, json={"message": "Something else entirely."}, headers=headers
+    )
 
     assert first.status_code == replay.status_code == 202
     assert first.json()["run"]["id"] == replay.json()["run"]["id"]
+    # The key is bound to the request, not just to the workspace.
+    assert changed.status_code == 409
+    assert changed.json()["error"]["code"] == "agent_idempotency_conflict"
 
 
 async def test_admission_needs_a_funding_route(client: httpx.AsyncClient) -> None:
@@ -475,6 +505,117 @@ async def test_chats_are_invisible_to_another_workspace(
     response = await client.get(f"/api/v1/agent/chats/{chat_id}")
 
     assert response.status_code == 404
+
+
+class CancellingGateway(ScriptedGateway):
+    """Answers its first step, but the user cancels the run while it thinks."""
+
+    def __init__(self, steps: list[dict[str, Any]], cancel: Any) -> None:
+        super().__init__(steps)
+        self._cancel = cancel
+
+    async def complete_structured(self, **kwargs: Any) -> ModelResult:
+        result = await super().complete_structured(**kwargs)
+        await self._cancel()
+        return result
+
+
+async def test_a_cancelled_turn_stops_before_its_next_step_and_saves_nothing(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-cancel@example.com")
+    await _verified_route(session_factory, project_id)
+    started = await client.post(
+        f"/api/v1/projects/{project_id}/agent/chats",
+        json={"message": "Audit everything.", "skill_id": "growth_plan"},
+    )
+    chat_id, run_id = started.json()["chat_id"], started.json()["run"]["id"]
+
+    async def cancel() -> None:
+        response = await client.post(
+            f"/api/v1/agent/chats/{chat_id}/runs/{run_id}/cancel"
+        )
+        assert response.status_code == 200, response.text
+
+    gateway = CancellingGateway(
+        [
+            {"action": "call_tool", "tool": "read_site_health", "arguments": {}},
+            {"action": "respond", "reply": "Too late.", "output": _output("x")},
+        ],
+        cancel,
+    )
+
+    await _worker(session_factory, gateway).run_once()
+
+    detail = await _detail(client, chat_id)
+    assert detail["latest_run"]["status"] == "cancelled"
+    assert [message["role"] for message in detail["messages"]] == ["user"]
+    assert detail["output"] is None
+    assert len(gateway.prompts) == 1  # the step after cancellation never ran
+    async with session_factory() as session:
+        tools = (await session.scalars(select(AgentToolAttempt))).all()
+        dispatched = (await session.scalars(select(AgentModelAttempt))).all()
+    assert tools == []
+    # The one call that did happen keeps its evidence and is settled.
+    assert [(row.outcome, row.settlement_status) for row in dispatched] == [
+        ("completed", "zero_debit")
+    ]
+
+
+async def test_a_customer_route_revoked_after_admission_is_never_used(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-route-revoked@example.com")
+    await _verified_route(session_factory, project_id)
+    chat_id = await _start(client, project_id, "Summarize.", skill_id="growth_plan")
+    async with session_factory() as session:
+        route = await session.scalar(select(ProviderAppRoute))
+        assert route is not None
+        route.active = False  # the customer disabled their model route
+        await session.commit()
+    gateway = ScriptedGateway([{"action": "respond", "reply": "Summary."}])
+
+    await _worker(session_factory, gateway).run_once()
+
+    detail = await _detail(client, chat_id)
+    assert (detail["latest_run"]["status"], detail["latest_run"]["error_code"]) == (
+        "failed",
+        "route_unavailable",
+    )
+    # Never sent anywhere, and never silently moved to platform funding.
+    assert gateway.prompts == []
+
+
+async def test_a_member_who_loses_run_access_never_reaches_the_model(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-revoked@example.com")
+    await _verified_route(session_factory, project_id)
+    chat_id = await _start(client, project_id, "Summarize our pricing page.")
+    async with session_factory() as session:
+        project = await session.get(Project, uuid.UUID(project_id))
+        assert project is not None
+        member = await session.scalar(
+            select(WorkspaceMember).where(
+                WorkspaceMember.workspace_id == project.workspace_id
+            )
+        )
+        assert member is not None
+        member.role = "viewer"  # read-only now: may not run generated work
+        await session.commit()
+    gateway = ScriptedGateway([{"action": "respond", "reply": "Leaked summary."}])
+
+    await _worker(session_factory, gateway).run_once()
+
+    assert gateway.prompts == []  # the frozen context was never sent
+    async with session_factory() as session:
+        run = await session.scalar(
+            select(AgentRun).where(AgentRun.chat_id == uuid.UUID(chat_id))
+        )
+        dispatched = (await session.scalars(select(AgentModelAttempt))).all()
+    assert run is not None
+    assert (run.status, run.error_code) == ("failed", "access_revoked")
+    assert dispatched == []
 
 
 @pytest.fixture
@@ -535,6 +676,28 @@ async def test_platform_funded_steps_settle_each_call_against_the_rate(
     await _worker(session_factory, gateway).run_once()
 
     assert await _ai_credit_usage(session_factory, project_id) == (0, 4)
+
+
+@pytest.mark.usefixtures("_platform_policy")
+async def test_a_changed_platform_model_neither_runs_nor_charges(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-model-drift@example.com")
+    chat_id = await _start(client, project_id, "Summarize.", skill_id="growth_plan")
+    # A deploy switched the default model after this turn was admitted.
+    gateway = ScriptedGateway([{"action": "respond", "reply": "Summary."}])
+    gateway.model = "replacement-model"
+
+    await _worker(session_factory, gateway).run_once()
+
+    assert gateway.prompts == []
+    async with session_factory() as session:
+        run = await session.scalar(
+            select(AgentRun).where(AgentRun.chat_id == uuid.UUID(chat_id))
+        )
+    assert run is not None
+    assert (run.status, run.error_code) == ("failed", "model_changed")
+    assert await _ai_credit_usage(session_factory, project_id) == (0, 0)
 
 
 @pytest.mark.usefixtures("_platform_policy")

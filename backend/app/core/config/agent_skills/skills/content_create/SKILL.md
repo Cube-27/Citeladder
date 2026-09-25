@@ -3,7 +3,7 @@ id: content_create
 label: Create content
 group: content
 order: 10
-version: 1
+version: 2
 output_kind: content
 description: Write or refresh complete articles, buyer guides, homepages, landing pages, YouTube scripts and community/social drafts using CiteLadder business and search evidence. Use for actual content delivery, not generic recommendations.
 ---
@@ -26,7 +26,7 @@ Read the native CiteLadder content catalog when relevant to the requested format
 
 ## Accept the upstream brief; preserve the evidence
 
-When arriving from a research skill, reuse its accepted page decision, audience, conversion goal and evidence manifest. Re-open only claims requiring freshness or missing context; do not restart discovery or ask for facts already confirmed. Read existing content before replacing it and record what must survive. Deliver one complete requested asset plus a short editorial handoff: verified claims, unresolved publication blockers, internal links and next check. Do not claim an app save or publication because the local file exists. Native `list_skills` metadata does not provide native instructions unless a body is actually retrieved.
+When arriving from a research skill, reuse its accepted page decision, audience, conversion goal and evidence manifest. Re-open only claims requiring freshness or missing context; do not restart discovery or ask for facts already confirmed. Read existing content before replacing it and record what must survive. Deliver one complete requested asset plus a short editorial handoff: verified claims, unresolved publication blockers, internal links and next check. Do not claim an app save or publication because the local file exists.
 
 ## Workflow
 
