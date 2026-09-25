@@ -21,6 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import type { DemandSignal } from '@/lib/api/demand';
 import {
   competingPages,
+  demandSignalHandoffHref,
   numericMetric,
   safePageUrl,
   signalTarget,
@@ -463,14 +464,15 @@ export function DemandSignalCard({
 
           {/* Direct Workflow Links */}
           <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
-            {signal.signal_type !== 'branded_query_performance' && (
-              <Button variant="tonal" size="sm" asChild>
-                <ProjectLink href="/opportunities" className="inline-flex items-center">
-                  <span>Opportunities</span>
-                  <ChevronRight className="ml-1 size-3" />
-                </ProjectLink>
-              </Button>
-            )}
+            <Button variant="tonal" size="sm" asChild>
+              <ProjectLink
+                href={demandSignalHandoffHref(signal)}
+                className="inline-flex items-center"
+              >
+                <span>Ask agent</span>
+                <ChevronRight className="ml-1 size-3" />
+              </ProjectLink>
+            </Button>
           </div>
         </div>
       </CardContent>

@@ -129,6 +129,8 @@ class ChatSummary(_Model):
     id: uuid.UUID
     project_id: uuid.UUID
     action_id: uuid.UUID | None
+    # The attached Action's target, for a list row; None while unattached.
+    target_label: str | None
     title: str
     turn_count: int
     output_kind: str | None
@@ -139,6 +141,7 @@ class ChatSummary(_Model):
 
 class ChatsPage(_Model):
     items: list[ChatSummary]
+    next_cursor: str | None = None
 
 
 class ChatDetail(_Model):

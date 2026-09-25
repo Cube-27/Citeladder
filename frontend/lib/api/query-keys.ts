@@ -11,10 +11,14 @@
  *   - demand.ts        — search-demand projections
  *   - ai-referrals.ts  — AI-referral measurements
  *   - opportunities.ts — opportunities (catalog, detail, summary)
+ *   - actions.ts       — actions (work queue, detail)
+ *   - agent.ts         — agent chats, outputs, skills, instructions
  *   - commerce.ts      — commerce (catalog feed health, agentic product visibility)
  *
  * This facade assembles them under one `queryKeys` entry point.
  */
+import { actionKeys } from './query-keys/actions';
+import { agentKeys } from './query-keys/agent';
 import { aiReferralsKeys } from './query-keys/ai-referrals';
 import { billingKeys } from './query-keys/billing';
 import { brandDiscoveryKeys } from './query-keys/brand-discovery';
@@ -53,5 +57,7 @@ export const queryKeys = {
   searchIntelligence: searchIntelligenceKeys,
   aiReferrals: aiReferralsKeys,
   opportunities: opportunityKeys,
+  actions: actionKeys,
+  agent: agentKeys,
   commerce: commerceKeys,
 } as const;

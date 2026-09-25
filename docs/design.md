@@ -149,14 +149,14 @@ Use sections, ledgers, tables, and split workspaces. Cards support architecture;
 
 The shell is neutral ground with an inset white `.app-pane`, not separately bordered chrome. Desktop sidebar paints no separate surface; document scrolling remains normal and workspace/content overflow stays unset. The pane meets the sidebar and right/bottom viewport edges: only its top corners round (`.app-pane-workspace`). Below 768px it is edge-to-edge without radius or lift. Ground/paper separates by tone and radius plus the pane's own single cast edge (`--shadow-pane`), which follows the pane's radius; the sidebar adds no border of its own, or the two rules stack into a trench at that one seam. Sections inside paper use space and hairlines.
 
-Overview sections, Website metric cards/page tables, Opportunities tables, and Prompts tables use the shared white panel role without added elevation. The 56px topbar is present at every width: from 981px it carries only the account trigger, and below that it adds the menu trigger, the compact route title, and a focus-managed off-canvas drawer. Retain every critical mobile action; tables become labelled records, and filters/evidence use full-height sheets.
+Overview sections, Website metric cards/page tables, Actions lists, and Prompts tables use the shared white panel role without added elevation. The 56px topbar is present at every width: from 981px it carries only the account trigger, and below that it adds the menu trigger, the compact route title, and a focus-managed off-canvas drawer. Retain every critical mobile action; tables become labelled records, and filters/evidence use full-height sheets.
 
 #### Screen geometry and shell ownership
 
 | Region | Owns | Excludes |
 | --- | --- | --- |
-| Desktop sidebar | Project switcher (first row), Search, Agent, Overview/Analyze/Act/Track groups, Settings access, brand lockup and accent picker (foot) | Duplicate navigation trees/registries; the account trigger |
-| Topbar | Account trigger at every width; below 981px also Menu, compact route title, Agent and accent picker | Fixed bottom navigation |
+| Desktop sidebar | Project switcher (first row), Search, the Dashboard/Agent mode switch, then either the Overview/Analyze/Track groups or the Agent navigation, Settings access, brand lockup and accent picker (foot) | Duplicate navigation trees/registries; the account trigger |
+| Topbar | Account trigger at every width; below 981px also Menu, compact route title and accent picker | Fixed bottom navigation |
 | Page header | One in-pane route H1 at `objectTitle`, existing description, route actions on the same row; entity heading is the sole H1 on detail routes | Metrics or duplicate route H1 |
 | Metric row | Three to five headline values, each with its change when one is comparable | More than five, unsupported metrics, or run bookkeeping |
 | Analytical surface | The page's primary chart, table, or comparison | Competing equal-weight surfaces |
@@ -164,11 +164,11 @@ Overview sections, Website metric cards/page tables, Opportunities tables, and P
 
 Keep date ranges and comparisons in their owning page, not the global shell. Align section tabs/actions on one row rather than adding an empty header row. Desktop and compact navigation reuse `nav-items.ts` destinations and capability resolution; hidden navigation never changes direct-route authorisation.
 
-Search's Command Palette and the Agent controller remain mounted once in the authenticated shell, not inside the drawer. Desktop Search/Agent triggers live in the sidebar; compact Search/Agent triggers live in the topbar. The account trigger is the topbar's at every width, and renders initials only. Escape closes overlays and focus returns to the visible trigger.
+Search's Command Palette remains mounted once in the authenticated shell, not inside the drawer; its trigger lives in the sidebar and in the compact drawer. The account trigger is the topbar's at every width, and renders initials only. Escape closes overlays and focus returns to the visible trigger.
 
 #### Screen-specific contracts
 
-**Overview.** Keep the page useful before any audit. Preserve reading order: compact project identity; warnings; Project State with Track context; Movement; one Next action; ranked actions and report proof; Top Insights; Company facts. Use the same DOM order at desktop and compact widths. The shared editor drawer has Facts & Positioning, Audience & Offerings, and Competitors tabs, one save action above the tablist, full available editing height, and shared brand logos beside tracked competitors. Do not restore a Product loop station strip. Track uses explicit availability labels; report actions require a persisted audit/report. Citation share uses separate shared heading/value roles, not an oversized combined sentence.
+**Overview.** Keep the page useful before any audit. Preserve reading order: compact project identity; warnings; Project State with Track context; Movement; one Next action; ranked actions and report proof; Top Insights; Company facts. Use the same DOM order at desktop and compact widths. Company facts are edited in Agent → Context, not in an Overview drawer. Do not restore a Product loop station strip. Track uses explicit availability labels; report actions require a persisted audit/report. Citation share uses separate shared heading/value roles, not an oversized combined sentence.
 
 **AI Visibility.** Exactly three tabs: Trends (default), Sources, Query fanouts; no parallel Overview or page-local project switcher.
 
@@ -192,13 +192,11 @@ Prompt results belong to the Prompts section, on the prompt row, because the pro
 
 **Commerce.** This conditional Analyze destination requires persisted capability evidence. Its catalog is the sole target selector. Group catalog-wide secondary actions behind one disclosure; show bulk actions only after selection; align one correction control with the selected target's heading.
 
-**Agent.** Context is limited to typed workspace, project, canonical route, date range, and route filters—never DOM text or unpersisted page data. Reuse the bounded explain/roadmap workspace and clear the route preset on project change. The sheet is its sole host: drawer-owned title/description, one result scroll region, pinned composer, and collapsed task history rather than a sidebar or duplicated page chrome.
-
-**Content Generation.** Use full workspace width. Show catalog channel groups first, with server-owned formats inside channel dropdowns, not a growing wall of chips. A searchable persisted-page picker plus explicit URL escape hatch precedes Your instruction. Entry points may preselect page/format; instruction remains empty and focused. A quiet line names available brand, target, issue, and related-page context without confirmation. History opens from the composer header in the shared right drawer. Prose scrolls vertically; normal text/long links wrap, while intrinsically wide Markdown tables may scroll horizontally. Copy, Markdown export, and regenerate remain at both result header and footer. Terminal history rows expose Delete; individual deletion/Clear history use shared destructive confirmation and never delete active work.
+**Agent.** A full workspace in Agent mode, not a sheet over Dashboard pages. New chat offers a freeform composer, starter prompts, a skill picker and the top recommended Actions; an attached Action and typed evidence references show as removable chips, never as pasted evidence. A chat keeps its conversation beside one output pane: rendered Markdown, edit-as-new-revision, copy, Markdown export, sources, revision history with restore-as-new-revision, and outline approval for outline-first content. Queued, running, cancelled, failed and stopped-at-limit are distinct states with a Stop control while active. Actions list by deterministic priority with status and target filters; detail shows diagnosis, evidence-family convergence, member evidence in a drawer, recommended approach, what to avoid, measurement legs, linked chats, Dismiss/Reopen and Work on this. Skills show what each produces, never methodology. Evidence screens offer Ask agent, and Work on this where an Action exists.
 
 #### The insight object
 
-The product loop is acquire evidence → understand → detect gaps → create opportunities → improve → verify → recommend next. Its reusable unit is one shared insight component across Analyze, Act, Track, and the Agent workspace.
+The product loop is acquire evidence → understand → detect gaps → create opportunities → improve → verify → recommend next. Its reusable unit is one shared insight component across Analyze, Track, and the Agent workspace.
 
 Required anatomy, in order:
 

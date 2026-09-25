@@ -11,11 +11,10 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from app.core.config.opportunities import (
     IMPLEMENTATION_EXPECTED_CHECKS_MAX,
-    OPPORTUNITY_STATUSES,
 )
 
 
@@ -28,19 +27,6 @@ class _Model(BaseModel):
 # =========================================================================
 # Requests
 # =========================================================================
-class OpportunityStatusPatch(_Model):
-    """PATCH body — ``status`` is the ONLY mutable field on an Opportunity."""
-
-    status: str
-
-    @field_validator("status")
-    @classmethod
-    def _known_status(cls, value: str) -> str:
-        if value not in OPPORTUNITY_STATUSES:
-            raise ValueError(f"unknown opportunity status: {value!r}")
-        return value
-
-
 class OpportunityOrderUpdate(_Model):
     ordered_opportunity_ids: list[uuid.UUID]
     expected_version: int = Field(ge=0)
@@ -134,7 +120,6 @@ class ImplementationEventsPage(_Model):
 
 class OpportunityHistoryEvent(_Model):
     id: uuid.UUID
-    status: str
     seen_at: str
 
 
@@ -175,7 +160,8 @@ class OpportunityItem(_Model):
     # Backend-owned target presentation (url / frozen prompt text / humanized
     # theme / frozen product name); null when nothing user-facing exists.
     target_label: str | None
-    status: str
+    # The Action this row was grouped into; it owns the workflow status.
+    action_id: uuid.UUID | None
     system_rank: int = 0
     display_rank: int = 0
     order_source: Literal["system", "manual"] = "system"
@@ -223,7 +209,6 @@ class OpportunitySummary(_Model):
     domain_rollups: list[dict[str, Any]]
     counts_by_type: dict[str, int]
     counts_by_severity: dict[str, int]
-    counts_by_status: dict[str, int]
     total_count: int
     median_priority: float | None
     analyzer_version: str
@@ -255,7 +240,6 @@ class RecomputeResponse(_Model):
     domain_rollups: list[dict[str, Any]]
     counts_by_type: dict[str, int]
     counts_by_severity: dict[str, int]
-    counts_by_status: dict[str, int]
     total_count: int
     median_priority: float | None
     analyzer_version: str

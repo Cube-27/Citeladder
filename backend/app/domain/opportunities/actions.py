@@ -21,11 +21,13 @@ from app.analysis.opportunities.actions import (
     select_approach,
 )
 from app.core.config.actions import (
+    ACTION_ACTIVE_STATUSES,
     ACTION_LABEL_MAX_CHARS,
     ACTION_LIST_DEFAULT_LIMIT,
     ACTION_LIST_MAX_LIMIT,
     ACTION_ORIGIN_AGENT,
     ACTION_ORIGIN_EVIDENCE,
+    ACTION_TARGET_KINDS,
     AGENT_ORIGIN_DEFAULT_SKILL,
     AGENT_TARGET_KINDS,
     FAMILY_AI_VISIBILITY,
@@ -37,6 +39,11 @@ from app.core.config.actions import (
     FAMILY_SOURCES,
     PLANNED_PAGE_TOPIC_MAX_CHARS,
     TARGET_PAGE,
+)
+from app.domain.opportunities.action_status import (
+    effective_status,
+    listed_actions,
+    validate_status,
 )
 from app.domain.opportunities.common import _require_project, _utcnow
 from app.domain.opportunities.errors import (
@@ -127,6 +134,7 @@ async def sync_actions(
     }
     now = _utcnow()
     seen: set[str] = set()
+    actions_by_key: dict[str, Action] = {}
     for group in groups:
         seen.add(group.target.group_key)
         action = existing.get(group.target.group_key)
@@ -140,6 +148,9 @@ async def sync_actions(
             )
             session.add(action)
         _apply_group(action, group, snapshot_id=snapshot_id)
+        actions_by_key[group.target.group_key] = action
+    await session.flush()
+    _stamp_members(groups, actions_by_key, new_rows)
     for group_key, action in existing.items():
         if group_key in seen:
             continue
@@ -152,6 +163,21 @@ async def sync_actions(
             and action.origin == ACTION_ORIGIN_EVIDENCE
         ):
             action.evidence_cleared_at = now
+
+
+def _stamp_members(
+    groups: Sequence[ActionGroup],
+    actions_by_key: dict[str, Action],
+    rows: Sequence[Opportunity],
+) -> None:
+    """Point each new row at its Action, in the recompute that wrote it."""
+    action_for_row: dict[uuid.UUID, uuid.UUID] = {}
+    for group in groups:
+        action_id = actions_by_key[group.target.group_key].id
+        for member in group.members:
+            action_for_row[member.opportunity_id] = action_id
+    for row in rows:
+        row.action_id = action_for_row.get(row.id)
 
 
 def _apply_group(action: Action, group: ActionGroup, *, snapshot_id: uuid.UUID) -> None:
@@ -177,20 +203,35 @@ async def list_actions(
     project_id: uuid.UUID,
     limit: int | None = None,
     cursor: str | None = None,
-) -> tuple[list[Action], str | None]:
-    """Current Actions by descending priority; cleared evidence-only rows hidden."""
+    status: str | None = None,
+    target_kind: str | None = None,
+) -> tuple[list[tuple[Action, str]], str | None]:
+    """Actions by descending priority, each with its effective status.
+
+    Without a status filter the list is the work queue (open and in
+    progress); cleared evidence-only rows are always hidden.
+    """
     await _require_project(session, workspace_id=workspace_id, project_id=project_id)
+    if status is not None:
+        validate_status(status)
+    if target_kind is not None and target_kind not in ACTION_TARGET_KINDS:
+        raise OpportunityValidationError(f"unknown target kind: {target_kind!r}")
     bounded = max(1, min(limit or ACTION_LIST_DEFAULT_LIMIT, ACTION_LIST_MAX_LIMIT))
     sort_priority = func.coalesce(Action.priority_score, _UNSCORED)
-    statement = select(Action).where(
+    current = effective_status()
+    statement = select(Action, current).where(
         Action.workspace_id == workspace_id,
         Action.project_id == project_id,
-        or_(
-            Action.evidence_cleared_at.is_(None),
-            Action.origin == ACTION_ORIGIN_AGENT,
-        ),
+        listed_actions(),
+        current == status if status else current.in_(sorted(ACTION_ACTIVE_STATUSES)),
     )
-    filters = {"project_id": str(project_id)}
+    if target_kind:
+        statement = statement.where(Action.target_kind == target_kind)
+    filters = {
+        "project_id": str(project_id),
+        "status": status,
+        "target_kind": target_kind,
+    }
     if cursor:
         try:
             last_priority, last_id = decode_keyset_cursor(
@@ -206,19 +247,20 @@ async def list_actions(
                 and_(sort_priority == priority_value, Action.id > id_value),
             )
         )
-    rows = list(
-        (
-            await session.scalars(
+    rows = [
+        (action, str(value))
+        for action, value in (
+            await session.execute(
                 statement.order_by(sort_priority.desc(), Action.id.asc()).limit(
                     bounded + 1
                 )
             )
         ).all()
-    )
+    ]
     page = rows[:bounded]
     next_cursor = None
     if len(rows) > bounded:
-        last = page[-1]
+        last = page[-1][0]
         next_cursor = encode_keyset_cursor(
             scope=_LIST_SCOPE,
             filters=filters,
@@ -232,16 +274,19 @@ async def list_actions(
 
 async def get_action(
     session: AsyncSession, *, workspace_id: uuid.UUID, action_id: uuid.UUID
-) -> tuple[Action, list[Opportunity]]:
-    """One Action and its current live member Opportunities."""
-    action = await session.scalar(
-        select(Action).where(
-            Action.id == action_id, Action.workspace_id == workspace_id
+) -> tuple[Action, str, list[Opportunity]]:
+    """One Action, its effective status and its current live members."""
+    row = (
+        await session.execute(
+            select(Action, effective_status()).where(
+                Action.id == action_id, Action.workspace_id == workspace_id
+            )
         )
-    )
-    if action is None:
+    ).first()
+    if row is None:
         raise OpportunityNotFoundError(_ACTION_NOT_FOUND)
-    return action, await _members(session, action=action)
+    action, status = row
+    return action, str(status), await _members(session, action=action)
 
 
 async def _members(session: AsyncSession, *, action: Action) -> list[Opportunity]:
@@ -366,9 +411,10 @@ async def _require_owned_url(
         )
 
 
-def action_projection(action: Action) -> dict[str, Any]:
+def action_projection(action: Action, status: str) -> dict[str, Any]:
     return {
         "id": action.id,
+        "status": status,
         "project_id": action.project_id,
         "target_kind": action.target_kind,
         "target_label": action.target_label,

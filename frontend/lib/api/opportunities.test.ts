@@ -10,10 +10,8 @@ import {
   opportunityDetailSchema,
   opportunitySchema,
   opportunitySeveritySchema,
-  opportunityStatusSchema,
   opportunitySummarySchema,
   opportunityTypeSchema,
-  recomputeResponseSchema,
 } from './schemas/opportunities';
 import { strictValidate } from './schemas/validation';
 
@@ -50,7 +48,7 @@ const item = {
   target_url: null,
   target_theme: 'crm',
   target_label: 'best crm for small teams',
-  status: 'open' as const,
+  action_id: '66666666-6666-4666-8666-666666666666',
   system_rank: 1,
   display_rank: 1,
   order_source: 'system' as const,
@@ -109,7 +107,6 @@ const summary = {
   domain_rollups: [],
   counts_by_type: { site: 2, topic: 0, traffic: 0, visibility: 2 },
   counts_by_severity: { critical: 0, high: 1, info: 0, low: 1, medium: 2 },
-  counts_by_status: { dismissed: 0, in_progress: 0, open: 4, resolved: 0 },
   total_count: 4,
   median_priority: 50,
   analyzer_version: 'opp-analyzer-1',
@@ -118,29 +115,6 @@ const summary = {
   computed_at: '2026-07-24T00:00:00Z',
   evidence_updated_at: '2026-07-23T00:00:00Z',
   stale: false,
-};
-
-const recomputeResponse = {
-  id: AUDIT,
-  run_id: AUDIT,
-  audit_id: AUDIT,
-  site_crawl_id: CRAWL,
-  demand_snapshot_id: null,
-  demand_source_revision: null,
-  coverage: summary.coverage,
-  limitations: summary.limitations,
-  source_mix: emptySourceMix,
-  action_path_mix: emptySourceMix,
-  domain_rollups: [],
-  counts_by_type: summary.counts_by_type,
-  counts_by_severity: summary.counts_by_severity,
-  counts_by_status: summary.counts_by_status,
-  total_count: 4,
-  median_priority: 50,
-  analyzer_version: 'opp-analyzer-1',
-  rule_version: 'opp-rules-1',
-  formula_version: 'opp-formula-1',
-  created_at: '2026-07-24T00:00:00Z',
 };
 
 const implementationEvent = {
@@ -192,9 +166,6 @@ describe('opportunity schemas (strictValidate drift policy)', () => {
       strictValidate(opportunitiesPageSchema, { items: [item], next_cursor: null }, 'test'),
     ).toEqual({ items: [item], next_cursor: null });
     expect(strictValidate(opportunitySummarySchema, summary, 'test')).toEqual(summary);
-    expect(strictValidate(recomputeResponseSchema, recomputeResponse, 'test')).toEqual(
-      recomputeResponse,
-    );
     expect(strictValidate(implementationEventSchema, implementationEvent, 'test')).toEqual(
       implementationEvent,
     );
@@ -212,7 +183,6 @@ describe('opportunity schemas (strictValidate drift policy)', () => {
       demand_source_revision: null,
       counts_by_type: {},
       counts_by_severity: {},
-      counts_by_status: {},
       total_count: 0,
       median_priority: null,
       computed_at: null,
@@ -263,9 +233,9 @@ describe('opportunity schemas (strictValidate drift policy)', () => {
     expect(() =>
       strictValidate(opportunitySchema, { ...item, severity: 'urgent' }, 'test'),
     ).toThrow(/API validation failure/);
-    expect(() => strictValidate(opportunitySchema, { ...item, status: 'triaged' }, 'test')).toThrow(
-      /API validation failure/,
-    );
+    expect(() =>
+      strictValidate(opportunitySchema, { ...item, action_id: 'not-a-uuid' }, 'test'),
+    ).toThrow(/API validation failure/);
     expect(() =>
       strictValidate(opportunitySchema, { ...item, opportunity_type: 'brand' }, 'test'),
     ).toThrow(/API validation failure/);
@@ -299,12 +269,6 @@ describe('opportunity schemas (strictValidate drift policy)', () => {
       'medium',
       'low',
       'info',
-    ]);
-    expect(opportunityStatusSchema.options).toEqual([
-      'open',
-      'in_progress',
-      'dismissed',
-      'resolved',
     ]);
   });
 });
@@ -352,34 +316,9 @@ describe('opportunitiesApi transport', () => {
     expect(seen[0]).toBe('');
   });
 
-  it('gets the detail and patches the status', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      http.get(`/api/v1/opportunities/${OPP}`, () => HttpResponse.json(detail)),
-      http.patch(`/api/v1/opportunities/${OPP}`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json({ ...item, status: 'in_progress' });
-      }),
-    );
+  it('gets the detail', async () => {
+    mswServer.use(http.get(`/api/v1/opportunities/${OPP}`, () => HttpResponse.json(detail)));
     expect((await opportunitiesApi.get(OPP)).rule_id).toBe('brand_absent_high_value_prompt');
-    const updated = await opportunitiesApi.updateStatus(OPP, 'in_progress');
-    expect(updated.status).toBe('in_progress');
-    expect(bodies).toEqual([{ status: 'in_progress' }]);
-  });
-
-  it('posts the recompute scope (default {}) and validates the snapshot', async () => {
-    const bodies: unknown[] = [];
-    mswServer.use(
-      http.post(`/api/v1/projects/${PROJECT}/opportunities/recompute`, async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(recomputeResponse);
-      }),
-    );
-    const result = await opportunitiesApi.recompute(PROJECT);
-    expect(result.total_count).toBe(4);
-    expect(bodies[0]).toEqual({});
-    await opportunitiesApi.recompute(PROJECT, { audit_id: AUDIT });
-    expect(bodies[1]).toEqual({ audit_id: AUDIT });
   });
 
   it('declares an implementation with idempotency and reads verification state', async () => {
@@ -422,32 +361,6 @@ describe('opportunitiesApi transport', () => {
     );
     const result = await opportunitiesApi.summary(PROJECT);
     expect('extra' in result).toBe(false);
-  });
-
-  it('downloads filtered exports with explicit workspace scope', async () => {
-    let seenWorkspace: string | null = null;
-    let seenParams = new URLSearchParams();
-    mswServer.use(
-      http.get(`/api/v1/projects/${PROJECT}/opportunities/export.csv`, ({ request }) => {
-        seenWorkspace = request.headers.get('X-Workspace-Id');
-        seenParams = new URL(request.url).searchParams;
-        return new HttpResponse('id,title\n1,Example', {
-          headers: { 'content-type': 'text/csv' },
-        });
-      }),
-    );
-
-    const blob = await opportunitiesApi.downloadExport(
-      PROJECT,
-      'csv',
-      { type: 'site', severity: 'low' },
-      { workspaceId: WORKSPACE },
-    );
-
-    expect(await blob.text()).toContain('Example');
-    expect(seenWorkspace).toBe(WORKSPACE);
-    expect(seenParams.get('type')).toBe('site');
-    expect(seenParams.get('severity')).toBe('low');
   });
 });
 

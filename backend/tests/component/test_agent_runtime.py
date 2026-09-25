@@ -232,6 +232,18 @@ async def test_a_turn_reads_evidence_and_saves_an_output_attached_to_its_page(
         ("read_integration_status", "completed")
     ]
     assert {row.settlement_status for row in model_attempts} == {"zero_debit"}
+    # The Action reads in progress because a linked chat has an output; the
+    # Agent stored no status, and the chat is listed as the Action's work.
+    action_view = await client.get(f"/api/v1/actions/{output['action_id']}")
+    assert action_view.json()["status"] == "in_progress"
+    assert action.status == "open"
+    linked = await client.get(
+        f"/api/v1/projects/{project_id}/agent/chats",
+        params={"action_id": output["action_id"]},
+    )
+    assert [(item["id"], item["target_label"]) for item in linked.json()["items"]] == [
+        (chat_id, _PAGE)
+    ]
 
 
 async def test_a_follow_up_revises_the_users_edit_instead_of_starting_over(
@@ -733,3 +745,80 @@ async def test_a_lost_dispatch_settles_once_as_unknown_usage(
             await session.commit()
 
     assert await _ai_credit_usage(session_factory, project_id) == (0, 4)
+
+
+@pytest.mark.usefixtures("_platform_policy")
+async def test_the_sweeper_reclaims_a_lost_turn_without_recounting_its_attempt(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-reclaim@example.com")
+    chat_id = await _start(client, project_id, "Anything.", skill_id="growth_plan")
+    worker = _worker(session_factory, ScriptedGateway([]))
+    async with session_factory() as session:
+        run_id = await session.scalar(
+            select(AgentRun.id).where(AgentRun.chat_id == uuid.UUID(chat_id))
+        )
+    assert run_id is not None
+    await worker._queue.claim(owner=worker.owner, limit=1)
+    assert await worker._start(run_id) == 1
+    async with session_factory() as session:
+        await model_calls.start_model_attempt(
+            session,
+            run_id=run_id,
+            owner=worker.owner,
+            ordinal=1,
+            gateway=ScriptedGateway([]),  # type: ignore[arg-type]
+            app_route=None,
+            request_text="lost",
+        )
+    # The worker died mid-dispatch: its lease lapses with the hold open.
+    async with session_factory() as session:
+        run = await session.get(AgentRun, run_id)
+        assert run is not None
+        counted = run.attempt_count
+        run.lease_expires_at = datetime(2000, 1, 1, tzinfo=UTC)
+        await session.commit()
+
+    assert await worker._queue.release_expired() == 1
+
+    async with session_factory() as session:
+        run = await session.get(AgentRun, run_id)
+    assert run is not None
+    assert (run.status, run.attempt_count) == ("retry_wait", counted)
+    assert await _ai_credit_usage(session_factory, project_id) == (0, 4)
+
+
+async def test_restoring_an_approved_outline_needs_a_fresh_approval_record(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-restore-outline@example.com")
+    await _verified_route(session_factory, project_id)
+    chat_id = await _start(
+        client, project_id, "Write a buying guide.", skill_id="content_create"
+    )
+    outline_step = {
+        "action": "respond",
+        "reply": "Outline.",
+        "output": _output("1. A\n2. B", phase="outline", target=None),
+    }
+    await _worker(session_factory, ScriptedGateway([outline_step])).run_once()
+    outline = (await _detail(client, chat_id))["output"]["latest_revision"]
+    approved = await client.post(
+        f"/api/v1/agent/chats/{chat_id}/output/approve-outline",
+        json={"revision_id": outline["id"]},
+    )
+    assert approved.status_code == 202, approved.text
+    draft_step = {
+        "action": "respond",
+        "reply": "Draft.",
+        "output": _output("# Guide", phase="draft", target=None),
+    }
+    await _worker(session_factory, ScriptedGateway([draft_step])).run_once()
+
+    restored = await client.post(
+        f"/api/v1/agent/chats/{chat_id}/output/revisions/{outline['id']}/restore"
+    )
+
+    assert restored.status_code == 201, restored.text
+    body = restored.json()
+    assert (body["number"], body["phase"], body["approved_at"]) == (3, "outline", None)

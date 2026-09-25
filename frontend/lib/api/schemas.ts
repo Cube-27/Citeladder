@@ -13,6 +13,8 @@ export * from './schemas/performance';
 export * from './schemas/ai-referrals';
 export * from './schemas/commerce-suite';
 export * from './schemas/opportunities';
+export * from './schemas/actions';
+export * from './schemas/agent';
 export * from './schemas/billing';
 export * from './schemas/audit-events';
 export * from './schemas/validation';

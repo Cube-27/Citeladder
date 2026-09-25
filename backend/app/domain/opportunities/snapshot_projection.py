@@ -22,7 +22,6 @@ def project_snapshot(snapshot: OpportunitySnapshot) -> dict:
         "domain_rollups": list(snapshot.domain_rollups or []),
         "counts_by_type": snapshot.counts_by_type or {},
         "counts_by_severity": snapshot.counts_by_severity or {},
-        "counts_by_status": snapshot.counts_by_status or {},
         "total_count": snapshot.total_count,
         "median_priority": snapshot.median_priority,
         "analyzer_version": snapshot.analyzer_version,

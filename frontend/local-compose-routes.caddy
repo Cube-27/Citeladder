@@ -12,11 +12,11 @@ reverse_proxy @astro_assets {$MARKETING_ORIGIN:127.0.0.1:3000}
 
 # Exact application paths and bounded dynamic routes retain Vite ownership.
 # Unknown descendants fall through to Astro and return a real 404.
-@vite_exact path /login /login/ /register /register/ /projects /projects/ /onboarding /onboarding/ /site /site/ /issues /issues/ /demand /demand/ /search-intelligence /search-intelligence/ /performance /performance/ /opportunities /opportunities/ /visibility /visibility/ /runs /runs/ /prompts /prompts/ /products /products/ /ai-referrals /ai-referrals/ /settings /settings/ /invitations/accept /invitations/accept/
+@vite_exact path /login /login/ /register /register/ /projects /projects/ /onboarding /onboarding/ /site /site/ /issues /issues/ /demand /demand/ /search-intelligence /search-intelligence/ /performance /performance/ /opportunities /opportunities/ /agent /agent/ /agent/actions /agent/actions/ /agent/skills /agent/skills/ /agent/context /agent/context/ /visibility /visibility/ /runs /runs/ /prompts /prompts/ /products /products/ /ai-referrals /ai-referrals/ /settings /settings/ /invitations/accept /invitations/accept/
 reverse_proxy @vite_exact {$VITE_ORIGIN:127.0.0.1:3001} {
   header_down Cache-Control "no-store"
 }
-@vite_dynamic path_regexp vite_dynamic ^/(?:runs/[^/]+|site/crawls/[^/]+/pages/[^/]+)/?$
+@vite_dynamic path_regexp vite_dynamic ^/(?:runs/[^/]+|site/crawls/[^/]+/pages/[^/]+|agent/(?:chats|actions)/[^/]+)/?$
 reverse_proxy @vite_dynamic {$VITE_ORIGIN:127.0.0.1:3001} {
   header_down Cache-Control "no-store"
 }

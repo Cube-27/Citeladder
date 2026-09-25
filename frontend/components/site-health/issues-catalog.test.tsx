@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import type { IssueOccurrence, SiteIssue } from '@/lib/api/types';
+import { parseAgentHandoff } from '@/lib/agent/handoff';
 import { IssuesCatalog as ScopedIssuesCatalog } from './issues-catalog';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -515,6 +516,11 @@ describe('IssuesCatalog', () => {
     // The affected page's v2 P1 type badge renders inside the row (scoped —
     // the filter <select> also lists the type label as an option).
     expect(within(link).getByText('Article')).toBeInTheDocument();
+    // Ask agent hands the Agent the page's id, never its evidence.
+    const ask = screen.getByRole('link', { name: 'Ask agent about this page' });
+    const handoff = parseAgentHandoff(new URL(ask.getAttribute('href')!, 'http://x').searchParams);
+    expect(handoff.context).toEqual({ target_site_url_id: URL_A });
+    expect(handoff.prompt).toContain('https://acme.com/');
   });
 
   it('pages occurrences with a cursor-aware Next/Previous control', async () => {

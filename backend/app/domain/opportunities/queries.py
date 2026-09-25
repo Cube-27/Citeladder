@@ -14,11 +14,13 @@ from app.core.config.earned_actions import (
 )
 from app.core.config.opportunities import (
     EARNED_RULE_IDS,
-    OPPORTUNITY_ACTIVE_STATUSES,
     OPPORTUNITY_SEVERITIES,
-    OPPORTUNITY_STATUSES,
     OPPORTUNITY_TYPES,
     validate_rule_id,
+)
+from app.domain.opportunities.action_status import (
+    opportunity_status_clause,
+    validate_status,
 )
 from app.domain.opportunities.common import (
     _LIST_SCOPE,
@@ -59,8 +61,8 @@ def _validate_filters(
         )
     if severity is not None and severity not in OPPORTUNITY_SEVERITIES:
         raise OpportunityValidationError(f"unknown opportunity severity: {severity!r}")
-    if status is not None and status not in OPPORTUNITY_STATUSES:
-        raise OpportunityValidationError(f"unknown opportunity status: {status!r}")
+    if status is not None:
+        validate_status(status)
     if rule_id is not None:
         try:
             validate_rule_id(rule_id)
@@ -90,10 +92,7 @@ def _filter_clauses(
         clauses.append(Opportunity.opportunity_type == opportunity_type)
     if severity:
         clauses.append(Opportunity.severity == severity)
-    if status:
-        clauses.append(Opportunity.status == status)
-    else:
-        clauses.append(Opportunity.status.in_(sorted(OPPORTUNITY_ACTIVE_STATUSES)))
+    clauses.append(opportunity_status_clause(status))
     if rule_id:
         clauses.append(Opportunity.rule_id == rule_id)
     if min_priority is not None:

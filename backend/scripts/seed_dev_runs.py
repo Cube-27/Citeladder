@@ -23,6 +23,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.actions import ACTION_STATUS_DISMISSED
 from app.core.config.audits import AUDIT_TRIGGER_SYSTEM, audit_settings
 from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.config.provider_catalog import (
@@ -39,7 +40,7 @@ from app.domain.audits.creation import create_audit
 from app.domain.billing.bootstrap import ensure_workspace_billing
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
-from app.domain.opportunities import commands
+from app.domain.opportunities import action_status
 from app.domain.opportunities.queries import list_opportunities
 from app.domain.opportunities.recompute import recompute as recompute_opportunities
 from app.domain.site_health.planner import create_crawl
@@ -307,20 +308,23 @@ async def run_site_health_crawls(
     )
 
 
-async def _resolve_first_opportunity(
+async def _dismiss_first_action(
     *, workspace_id: uuid.UUID, project_id: uuid.UUID, demo_user_id: uuid.UUID
 ) -> None:
     async with SessionLocal() as session:
-        actions = await list_opportunities(
+        page = await list_opportunities(
             session, workspace_id=workspace_id, project_id=project_id
         )
-        if not actions["items"]:
+        action_id = next(
+            (item["action_id"] for item in page["items"] if item["action_id"]), None
+        )
+        if action_id is None:
             return
-        await commands.update_status(
+        await action_status.update_status(
             session,
             workspace_id=workspace_id,
-            opportunity_id=actions["items"][0]["id"],
-            status="resolved",
+            action_id=action_id,
+            status=ACTION_STATUS_DISMISSED,
             changed_by_user_id=demo_user_id,
         )
 
@@ -336,7 +340,7 @@ async def run_actions_and_comparison(
 ) -> None:
     """Materialize the first action set, then give it comparable history.
 
-    One item is resolved between two comparable Wanderlust audits. The later
+    One Action is dismissed between two comparable Wanderlust audits. The later
     deterministic adapter generations improve the evidence mix without changing
     prompt or engine identity, which is what keeps the pair comparable.
     """
@@ -350,10 +354,10 @@ async def run_actions_and_comparison(
         )
         # Same caller-owns-the-transaction contract as the grant above: this
         # used to share a session with `update_status`, which commits. Without
-        # its own commit the action set is rolled back and the resolve step
-        # below finds nothing to resolve.
+        # its own commit the action set is rolled back and the dismiss step
+        # below finds nothing to dismiss.
         await session.commit()
-    await _resolve_first_opportunity(
+    await _dismiss_first_action(
         workspace_id=workspace_id, project_id=project_id, demo_user_id=demo_user_id
     )
 

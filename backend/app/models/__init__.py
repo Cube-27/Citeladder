@@ -116,11 +116,11 @@ from app.models.mcp import (
 )
 from app.models.opportunity import (
     Action,
+    ActionStatusEvent,
     Opportunity,
     OpportunityImplementationEvent,
     OpportunityOrder,
     OpportunitySnapshot,
-    OpportunityStatusEvent,
     OpportunityVerificationEvent,
 )
 from app.models.project import Project
@@ -181,6 +181,7 @@ from app.models.workspace import (
 __all__ = [
     "AccountGrant",
     "Action",
+    "ActionStatusEvent",
     "AgentChat",
     "AgentInstructionRevision",
     "AgentMessage",
@@ -260,7 +261,6 @@ __all__ = [
     "OpportunityImplementationEvent",
     "OpportunityOrder",
     "OpportunitySnapshot",
-    "OpportunityStatusEvent",
     "OpportunityVerificationEvent",
     "OwnedDomain",
     "PendingActivation",

@@ -51,6 +51,33 @@ PLANNED_PAGE_TOPIC_MAX_CHARS: Final = 120
 ACTION_ORIGIN_EVIDENCE: Final = "evidence"
 ACTION_ORIGIN_AGENT: Final = "agent"
 
+# --- Workflow status -----------------------------------------------------
+# open → in progress → implemented (declared) → measuring → done | dismissed.
+# Only ``open`` and ``dismissed`` are stored by a user. ``in_progress`` is
+# derived at read time from a linked chat having an output; the declaration
+# and measurement loop own the remaining states. The Agent sets none of them.
+ACTION_STATUS_OPEN: Final = "open"
+ACTION_STATUS_IN_PROGRESS: Final = "in_progress"
+ACTION_STATUS_IMPLEMENTED: Final = "implemented"
+ACTION_STATUS_MEASURING: Final = "measuring"
+ACTION_STATUS_DONE: Final = "done"
+ACTION_STATUS_DISMISSED: Final = "dismissed"
+ACTION_STATUSES: Final[tuple[str, ...]] = (
+    ACTION_STATUS_OPEN,
+    ACTION_STATUS_IN_PROGRESS,
+    ACTION_STATUS_IMPLEMENTED,
+    ACTION_STATUS_MEASURING,
+    ACTION_STATUS_DONE,
+    ACTION_STATUS_DISMISSED,
+)
+ACTION_USER_STATUSES: Final[frozenset[str]] = frozenset(
+    {ACTION_STATUS_OPEN, ACTION_STATUS_DISMISSED}
+)
+# The default work queue: what still needs someone's attention.
+ACTION_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
+    {ACTION_STATUS_OPEN, ACTION_STATUS_IN_PROGRESS}
+)
+
 # --- Evidence families (convergence) -------------------------------------
 FAMILY_AI_VISIBILITY: Final = "ai_visibility"
 FAMILY_SOURCES: Final = "sources"

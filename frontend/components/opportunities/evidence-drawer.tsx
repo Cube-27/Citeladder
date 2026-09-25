@@ -5,8 +5,7 @@ import type { ReactNode } from 'react';
 
 import { EarnedPageHandoff } from '@/components/opportunities/earned-page-handoff';
 import { OpportunityEvidenceSection } from '@/components/opportunities/opportunity-evidence-section';
-import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-status-badge';
-import { OpportunityStatusFooter } from '@/components/opportunities/opportunity-status-footer';
+import { OpportunityDeclarationFooter } from '@/components/opportunities/opportunity-declaration-footer';
 import { OpportunitySummarySection } from '@/components/opportunities/opportunity-summary-section';
 import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge';
 import { Alert } from '@/components/ui/alert';
@@ -22,7 +21,7 @@ import { panelClasses } from '@/components/ui/panel';
 import { Limitations } from '@/components/ui/passage';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
-/** Recommendation detail drawer backed by the persisted detail projection. */
+/** One Action member's evidence, backed by the persisted detail projection. */
 export function EvidenceDrawer({
   opportunityId,
   projectId,
@@ -74,9 +73,11 @@ export function EvidenceDrawer({
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Opportunity detail"
+      title="Evidence detail"
       className="sm:max-w-160"
-      footer={detail ? <OpportunityStatusFooter detail={detail} projectId={projectId} /> : null}
+      footer={
+        detail ? <OpportunityDeclarationFooter detail={detail} projectId={projectId} /> : null
+      }
     >
       {body}
     </Drawer>
@@ -94,7 +95,6 @@ function OpportunityDetailBody({ detail }: Readonly<{ detail: OpportunityDetail 
             {severityLabel(detail.severity)} impact
           </Badge>
           <OpportunityTypeBadge type={detail.opportunity_type} />
-          <OpportunityStatusBadge status={detail.status} />
         </div>
       </div>
       <OpportunityEvidenceSection detail={detail} />

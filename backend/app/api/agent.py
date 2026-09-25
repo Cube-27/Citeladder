@@ -26,11 +26,11 @@ from app.core.config.agent import (
     AGENT_LIST_MAX_LIMIT,
     CODE_AGENT_FUNDING_UNAVAILABLE,
 )
-from app.core.config.errors import CODE_NOT_FOUND
+from app.core.config.errors import CODE_INVALID_CURSOR, CODE_NOT_FOUND
 from app.core.errors import ApiException
 from app.core.http_errors import raise_api_error
 from app.domain.abuse.service import UsageLimitExceededError
-from app.domain.agent import service
+from app.domain.agent import chat_list, service
 from app.domain.agent.schemas import (
     ChatCreate,
     ChatDetail,
@@ -68,6 +68,10 @@ def _mapped_errors() -> Iterator[None]:
         yield
     except service.AgentNotFoundError as exc:
         raise ApiException(status.HTTP_404_NOT_FOUND, CODE_NOT_FOUND, str(exc)) from exc
+    except chat_list.InvalidChatCursorError as exc:
+        raise ApiException(
+            status.HTTP_400_BAD_REQUEST, CODE_INVALID_CURSOR, str(exc)
+        ) from exc
     except service.AgentConflictError as exc:
         raise ApiException(status.HTTP_409_CONFLICT, exc.code, str(exc)) from exc
     except service.AgentFundingError as exc:
@@ -117,11 +121,14 @@ def _revision_view(row: AgentOutputRevision) -> RevisionView:
     )
 
 
-def _summary(chat: AgentChat, output: AgentOutput | None) -> ChatSummary:
+def _summary(
+    chat: AgentChat, output: AgentOutput | None, action_label: str | None
+) -> ChatSummary:
     return ChatSummary(
         id=chat.id,
         project_id=chat.project_id,
         action_id=chat.action_id,
+        target_label=(output.target_label if output else None) or action_label,
         title=chat.title,
         turn_count=chat.turn_count,
         output_kind=output.kind if output else None,
@@ -146,16 +153,23 @@ async def list_chats_endpoint(
         int, Query(ge=1, le=AGENT_LIST_MAX_LIMIT)
     ] = AGENT_LIST_DEFAULT_LIMIT,
     q: Annotated[str | None, Query(max_length=120)] = None,
+    action_id: Annotated[uuid.UUID | None, Query()] = None,
+    cursor: Annotated[str | None, Query(max_length=512)] = None,
 ) -> ChatsPage:
     with _mapped_errors():
-        rows = await service.list_chats(
+        rows, next_cursor = await chat_list.list_chats(
             session,
             workspace_id=ctx.workspace_id,
             project_id=project_id,
             limit=limit,
             query=q,
+            action_id=action_id,
+            cursor=cursor,
         )
-    return ChatsPage(items=[_summary(chat, output) for chat, output in rows])
+    return ChatsPage(
+        items=[_summary(chat, output, label) for chat, output, label in rows],
+        next_cursor=next_cursor,
+    )
 
 
 @router.post("/projects/{project_id}/agent/chats", status_code=status.HTTP_202_ACCEPTED)
@@ -193,7 +207,7 @@ async def get_chat_endpoint(
     output: AgentOutput | None = detail["output"]
     revision: AgentOutputRevision | None = detail["revision"]
     return ChatDetail(
-        chat=_summary(chat, output),
+        chat=_summary(chat, output, detail["action_label"]),
         pinned_skill_id=chat.pinned_skill_id,
         context=dict(chat.context_refs or {}),
         messages=[

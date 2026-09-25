@@ -13,7 +13,6 @@ const uuid = () => z.uuid();
 // site-health `issueSeveritySchema` is NOT reused, they evolve independently).
 export const opportunityTypeSchema = z.enum(['visibility', 'commerce', 'site', 'traffic', 'topic']);
 export const opportunitySeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);
-export const opportunityStatusSchema = z.enum(['open', 'in_progress', 'dismissed', 'resolved']);
 export const implementationStateSchema = z.enum([
   'declared',
   'observed',
@@ -136,7 +135,8 @@ export const opportunitySchema = responseObject({
   // Backend-owned target presentation (url / frozen prompt text / humanized
   // theme / frozen product name); null when nothing user-facing exists.
   target_label: z.string().nullable(),
-  status: opportunityStatusSchema,
+  // The Action this row was grouped into; it owns the workflow status.
+  action_id: uuid().nullable(),
   system_rank: z.number().int(),
   display_rank: z.number().int(),
   order_source: z.enum(['system', 'manual']),
@@ -235,7 +235,7 @@ export const opportunityOrderResponseSchema = responseObject({
 });
 
 // Full evidence bundle + provenance for one opportunity. Superseded rows stay
-// readable (only the status PATCH is live-only, coded 409).
+// readable.
 export const opportunityDetailSchema = opportunitySchema.extend({
   remediation: z.string(),
   evidence: z.record(z.string(), z.unknown()),
@@ -266,7 +266,6 @@ const snapshotFields = {
   domain_rollups: z.array(domainRollupSchema),
   counts_by_type: z.record(z.string(), z.number().int()),
   counts_by_severity: z.record(z.string(), z.number().int()),
-  counts_by_status: z.record(z.string(), z.number().int()),
   total_count: z.number().int(),
   median_priority: z.number().nullable(),
   analyzer_version: z.string(),
@@ -286,13 +285,6 @@ export const opportunitySummarySchema = responseObject({
   // whether it post-dates the latest snapshot (drives the stale badge).
   evidence_updated_at: z.string().nullable(),
   stale: z.boolean(),
-});
-
-// The immutable snapshot written by one recompute run (POST response).
-export const recomputeResponseSchema = responseObject({
-  id: uuid(),
-  ...snapshotFields,
-  created_at: z.string(),
 });
 
 const siteRuleExpectedCheckSchema = responseObject({

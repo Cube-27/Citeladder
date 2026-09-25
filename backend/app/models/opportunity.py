@@ -10,9 +10,10 @@
 # or provenance on an existing row. A fresh hit for the same
 # ``(rule_id, target_key)`` inserts a NEW identity and closes the prior live
 # row (``superseded_by_id`` + ``superseded_at``); a live row whose evidence no
-# longer fires is closed with no successor. The human workflow ``status`` is
-# the ONLY mutable field. ``OpportunitySnapshot`` is immutable per run — a
-# re-run inserts a new snapshot identity, never an overwrite.
+# longer fires is closed with no successor. Workflow status belongs to the
+# ``Action`` that groups a target's rows, never to a row. ``OpportunitySnapshot``
+# is immutable per run — a re-run inserts a new snapshot identity, never an
+# overwrite.
 from __future__ import annotations
 
 import uuid
@@ -35,7 +36,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.config.opportunities import STATUS_OPEN
+from app.core.config.actions import ACTION_STATUS_OPEN
 from app.core.database import Base
 from app.models.constants import FK_AUDITS_ID, ON_DELETE_SET_NULL
 
@@ -45,6 +46,7 @@ _FK_PROMPT = "prompts.id"
 _FK_SITE_CRAWL = "site_crawls.id"
 _FK_OPPORTUNITY = "opportunities.id"
 _FK_OPPORTUNITY_SNAPSHOT = "opportunity_snapshots.id"
+_FK_ACTION = "actions.id"
 _FK_USER = "users.id"
 _ON_DELETE_CASCADE = "CASCADE"
 
@@ -76,11 +78,10 @@ class Opportunity(Base):
             unique=True,
             postgresql_where=text("superseded_at IS NULL"),
         ),
-        # Filter index: triage queue + chip filters.
+        # Filter index: chip filters.
         Index(
             "ix_opportunities_filter",
             "project_id",
-            "status",
             "severity",
             "opportunity_type",
         ),
@@ -134,8 +135,14 @@ class Opportunity(Base):
     analyzer_version: Mapped[str] = mapped_column(String(32), default="")
     rule_version: Mapped[str] = mapped_column(String(32), default="")
     formula_version: Mapped[str] = mapped_column(String(32), default="")
-    # Human workflow status — the ONLY mutable field.
-    status: Mapped[str] = mapped_column(String(16), default=STATUS_OPEN)
+    # The Action this row was grouped into, stamped by the recompute that
+    # wrote the row (same transaction), so a reader can open the unit of work.
+    action_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_ACTION, ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
     # Supersede bookkeeping (system-owned; never touches evidence).
     superseded_by_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
@@ -163,7 +170,8 @@ class Action(Base):
     firing keeps its identity (chats and declarations may reference it) with
     ``evidence_cleared_at`` set. ``origin`` records whether evidence or agent
     work created it; an agent-created Action gains members through the same
-    ``group_key`` when evidence later appears.
+    ``group_key`` when evidence later appears. ``status`` is the human
+    workflow decision, the only field a user writes; recompute never touches it.
     """
 
     __tablename__ = "actions"
@@ -195,6 +203,7 @@ class Action(Base):
         nullable=True,
     )
     origin: Mapped[str] = mapped_column(String(16))
+    status: Mapped[str] = mapped_column(String(16), default=ACTION_STATUS_OPEN)
     # Derived projection, rewritten by each recompute (invariant 5 provenance:
     # the member ids, the snapshot they came from and the policy versions).
     priority_score: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -221,6 +230,47 @@ class Action(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
+class ActionStatusEvent(Base):
+    """Append-only audit trail for human Action workflow changes."""
+
+    __tablename__ = "action_status_events"
+    __table_args__ = (
+        Index(
+            "ix_action_status_events_project_created",
+            "project_id",
+            "created_at",
+            "id",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    action_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_ACTION, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    previous_status: Mapped[str] = mapped_column(String(16))
+    next_status: Mapped[str] = mapped_column(String(16))
+    changed_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey(_FK_USER, ondelete="RESTRICT")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
     )
 
 
@@ -257,54 +307,12 @@ class OpportunityOrder(Base):
     )
 
 
-class OpportunityStatusEvent(Base):
-    """Append-only audit trail for human opportunity workflow changes."""
-
-    __tablename__ = "opportunity_status_events"
-    __table_args__ = (
-        Index(
-            "ix_opportunity_status_events_project_created",
-            "project_id",
-            "created_at",
-            "id",
-        ),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
-        index=True,
-    )
-    project_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
-        index=True,
-    )
-    opportunity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey(_FK_OPPORTUNITY, ondelete=_ON_DELETE_CASCADE),
-        index=True,
-    )
-    stable_key: Mapped[str] = mapped_column(String(640))
-    previous_status: Mapped[str] = mapped_column(String(16))
-    next_status: Mapped[str] = mapped_column(String(16))
-    changed_by_user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey(_FK_USER, ondelete="RESTRICT")
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-
-
 class OpportunitySnapshot(Base):
     """Immutable per-recompute aggregate projection (mirrors MetricSnapshot).
 
     One row per recompute run (``run_id`` is the run identity). Records the
     resolved source identities (audit / site crawl), the counts by
-    type/severity/status over the new live set, the total + median priority,
+    type/severity over the new live set, the total + median priority,
     the aggregated source row ids, and the analyzer/rule/formula versions.
     Never mutated after insert (invariant 3).
     """
@@ -360,7 +368,6 @@ class OpportunitySnapshot(Base):
     domain_rollups: Mapped[list] = mapped_column(JSONB, default=list)
     counts_by_type: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     counts_by_severity: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    counts_by_status: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     total_count: Mapped[int] = mapped_column(Integer, default=0)
     median_priority: Mapped[float | None] = mapped_column(Float, nullable=True)
     analyzer_version: Mapped[str] = mapped_column(String(32), default="")

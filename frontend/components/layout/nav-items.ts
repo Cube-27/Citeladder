@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 
 import { ICONS } from '@/lib/icons';
+import type { NavigationMode } from '@/lib/navigation/mode-memory';
 
 export type NavItem = {
   label: string;
@@ -14,7 +15,7 @@ export type NavItem = {
 };
 
 export type NavGroup = {
-  title: 'Overview' | 'Analyze' | 'Act' | 'Track';
+  title: 'Overview' | 'Analyze' | 'Track';
   href: string;
   icon: LucideIcon;
   items: readonly NavItem[];
@@ -46,12 +47,6 @@ export const NAV_GROUPS = [
     ],
   },
   {
-    title: 'Act',
-    href: '/opportunities',
-    icon: ICONS.opportunities,
-    items: [{ label: 'Opportunities', href: '/opportunities', icon: ICONS.opportunities }],
-  },
-  {
     title: 'Track',
     href: '/visibility?tab=trends',
     icon: ICONS.visibility,
@@ -68,6 +63,19 @@ export const NAV_GROUPS = [
     ],
   },
 ] as const satisfies readonly NavGroup[];
+
+export const AGENT_HOME = '/agent';
+
+/** Agent mode's fixed destinations, below New chat and above the chat list. */
+export const AGENT_NAV_ITEMS = [
+  { label: 'Actions', href: '/agent/actions', icon: ICONS.opportunities },
+  { label: 'Skills', href: '/agent/skills', icon: ICONS.skills },
+  { label: 'Context', href: '/agent/context', icon: ICONS.context },
+] as const satisfies readonly NavItem[];
+
+export function navigationMode(pathname: string): NavigationMode {
+  return pathname === AGENT_HOME || pathname.startsWith(`${AGENT_HOME}/`) ? 'agent' : 'dashboard';
+}
 
 const SUPPORT_NAV_ITEMS = [
   {
@@ -110,6 +118,13 @@ export function resolveNavigationGroups(hasCapability: CapabilityResolver): read
 export function resolveCommandGroups(hasCapability: CapabilityResolver) {
   return [
     ...resolveNavigationGroups(hasCapability),
+    {
+      title: 'Agent',
+      items: [
+        { label: 'New chat', href: AGENT_HOME, icon: ICONS.newChat },
+        ...AGENT_NAV_ITEMS,
+      ] satisfies readonly NavItem[] as readonly NavItem[],
+    },
     { title: 'Settings', items: SUPPORT_NAV_ITEMS },
   ] as const;
 }

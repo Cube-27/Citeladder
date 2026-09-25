@@ -24,8 +24,6 @@ from app.core.config.abuse import abuse_settings
 from app.core.config.agent import (
     AGENT_CHAT_TITLE_MAX_CHARS,
     AGENT_CHAT_TURN_LIMIT,
-    AGENT_LIST_DEFAULT_LIMIT,
-    AGENT_LIST_MAX_LIMIT,
     AGENT_MAX_STEPS,
     AGENT_MAX_TOOL_CALLS,
     AGENT_PROTOCOL_VERSION,
@@ -76,7 +74,6 @@ from app.models.agent import (
     AgentChat,
     AgentInstructionRevision,
     AgentMessage,
-    AgentOutput,
     AgentOutputRevision,
     AgentRun,
 )
@@ -595,40 +592,6 @@ async def archive_chat(
     await session.commit()
 
 
-async def list_chats(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    limit: int | None,
-    query: str | None,
-) -> list[tuple[AgentChat, AgentOutput | None]]:
-    await _project(session, workspace_id=workspace_id, project_id=project_id)
-    bounded = max(1, min(limit or AGENT_LIST_DEFAULT_LIMIT, AGENT_LIST_MAX_LIMIT))
-    statement = (
-        select(AgentChat, AgentOutput)
-        .outerjoin(AgentOutput, AgentOutput.chat_id == AgentChat.id)
-        .where(
-            AgentChat.workspace_id == workspace_id,
-            AgentChat.project_id == project_id,
-            AgentChat.archived_at.is_(None),
-        )
-    )
-    if query and query.strip():
-        escaped = (
-            query.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-        )
-        statement = statement.where(AgentChat.title.ilike(f"%{escaped}%", escape="\\"))
-    rows = (
-        await session.execute(
-            statement.order_by(
-                AgentChat.last_activity_at.desc(), AgentChat.id.desc()
-            ).limit(bounded)
-        )
-    ).all()
-    return [(chat, output) for chat, output in rows]
-
-
 async def chat_detail(
     session: AsyncSession, *, workspace_id: uuid.UUID, chat_id: uuid.UUID
 ) -> dict[str, Any]:
@@ -653,8 +616,18 @@ async def chat_detail(
     )
     output = await outputs.output_for_chat(session, chat=chat)
     revision = await outputs.latest_revision(session, output=output) if output else None
+    action_label = (
+        await session.scalar(
+            select(Action.target_label).where(
+                Action.id == chat.action_id, Action.workspace_id == workspace_id
+            )
+        )
+        if chat.action_id is not None
+        else None
+    )
     return {
         "chat": chat,
+        "action_label": action_label,
         "messages": messages,
         "latest_run": latest_run,
         "output": output,

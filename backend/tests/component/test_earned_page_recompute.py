@@ -40,7 +40,7 @@ from app.domain.source_pages.persistence import OUTCOME_INSPECTED
 from app.domain.source_pages.roster import project_roster
 from app.models.analysis import Citation
 from app.models.audit import Audit
-from app.models.opportunity import Opportunity
+from app.models.opportunity import Action, Opportunity
 from app.models.source_pages import (
     SourcePage,
     SourcePageEntityPresence,
@@ -382,7 +382,7 @@ async def test_a_page_nobody_read_is_never_reported_as_an_absence(
 async def test_a_human_status_survives_recomputing_the_same_evidence(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """The lost-status defect, on the key that replaced the domain key."""
+    """The lost-status defect, on the page's Action rather than its row."""
     async with session_factory() as session:
         scenario = await _seed_scenario(session)
         await _seed_cited_page(
@@ -396,18 +396,23 @@ async def test_a_human_status_survives_recomputing_the_same_evidence(
 
     await _recompute(session_factory, scenario)
     first = (await _earned_rows(session_factory, scenario))[0]
+    assert first.action_id is not None
     async with session_factory() as session:
-        row = await session.get(Opportunity, first.id)
-        assert row is not None
-        row.status = "in_progress"
+        action = await session.get(Action, first.action_id)
+        assert action is not None
+        action.status = "dismissed"
         await session.commit()
 
     await _recompute(session_factory, scenario)
     rows = await _earned_rows(session_factory, scenario)
 
     assert len(rows) == 1
-    assert rows[0].status == "in_progress"
     assert rows[0].id != first.id
+    assert rows[0].action_id == first.action_id
+    async with session_factory() as session:
+        kept = await session.get(Action, first.action_id)
+    assert kept is not None
+    assert kept.status == "dismissed"
 
 
 async def test_the_page_format_never_promotes_the_publisher_class(

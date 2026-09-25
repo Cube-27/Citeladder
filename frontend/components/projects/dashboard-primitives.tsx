@@ -161,7 +161,7 @@ export function ActionRow({
       <div className="grid min-w-0 gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <ProjectLink
-            href={`/opportunities?selected=${action.id}`}
+            href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
             className={textRole('bodyStrong', 'hover:text-accent-text transition-colors')}
           >
             {action.title}

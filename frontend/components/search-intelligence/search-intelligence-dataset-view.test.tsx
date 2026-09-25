@@ -9,6 +9,7 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders, testProjectSelection } from '@/test/render';
 import { SearchIntelligenceDatasetView } from './search-intelligence-dataset-view';
 import * as csv from '@/lib/csv/download';
+import { parseAgentHandoff } from '@/lib/agent/handoff';
 
 const project = makeProject();
 const dataset: SearchIntelligenceDataset = {
@@ -103,6 +104,36 @@ it('filters on the server and exports every saved matching page', async () => {
   expect(exported[0]).toContain('needle first');
   expect(exported[1]).toContain('=needle second');
   expect(requests.at(-1)?.get('search')).toBe('needle');
+});
+
+it('hands the visible rows, or one selected row, to the Agent by id', async () => {
+  const first = '44444444-4444-4444-8444-444444444444';
+  const second = '55555555-5555-4555-8555-555555555555';
+  mswServer.use(
+    http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
+      HttpResponse.json({
+        dataset,
+        rows: [row(first, 'crm software'), row(second, 'crm pricing')],
+        next_cursor: null,
+      }),
+    ),
+  );
+  renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
+    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+  });
+  const handoff = (name: string) =>
+    parseAgentHandoff(
+      new URL(screen.getByRole('link', { name }).getAttribute('href')!, 'http://x').searchParams,
+    ).context.search_intelligence_reference;
+
+  await screen.findByText('crm software');
+  expect(handoff('Ask agent')).toEqual({ dataset_id: dataset.id, row_ids: [first, second] });
+  await userEvent.click(screen.getByRole('button', { name: 'View evidence for crm pricing' }));
+  expect(await screen.findByRole('link', { name: 'Ask agent about this row' })).toBeVisible();
+  expect(handoff('Ask agent about this row')).toEqual({
+    dataset_id: dataset.id,
+    row_ids: [second],
+  });
 });
 
 it.each([

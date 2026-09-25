@@ -47,6 +47,7 @@ from app.core.config.opportunities import (
 )
 from app.core.errors import ApiException
 from app.domain.opportunities import (
+    action_status,
     actions,
     commands,
     export,
@@ -61,12 +62,12 @@ from app.domain.opportunities.action_schemas import (
     ActionDetail,
     ActionItem,
     ActionsPage,
+    ActionStatusPatch,
 )
 from app.domain.opportunities.errors import (
     InvalidCursorError,
     OpportunityNotFoundError,
     OpportunityOrderConflictError,
-    OpportunitySupersededError,
     OpportunityValidationError,
 )
 from app.domain.opportunities.implementation_events import (
@@ -87,10 +88,8 @@ from app.domain.opportunities.schemas import (
     OpportunitiesPage,
     OpportunityDetail,
     OpportunityHistoryResponse,
-    OpportunityItem,
     OpportunityOrderResponse,
     OpportunityOrderUpdate,
-    OpportunityStatusPatch,
     OpportunitySummary,
     RecomputeRequest,
     RecomputeResponse,
@@ -164,11 +163,6 @@ def _validation(exc: OpportunityValidationError) -> ApiException:
 
 def _bad_cursor(exc: InvalidCursorError) -> ApiException:
     return ApiException(status.HTTP_400_BAD_REQUEST, CODE_INVALID_CURSOR, str(exc))
-
-
-def _superseded(exc: OpportunitySupersededError) -> ApiException:
-    # Coded dialect: the legacy ``detail`` dict keeps its exact shape (WS-A A1).
-    return ApiException.coded(status.HTTP_409_CONFLICT, exc.code, str(exc))
 
 
 # =========================================================================
@@ -393,7 +387,7 @@ async def get_implementation_event_endpoint(
 
 
 # =========================================================================
-# Row read + the one mutation (human workflow status)
+# Row read
 # =========================================================================
 @router.get("/opportunities/{opportunity_id}")
 async def get_opportunity_endpoint(
@@ -406,30 +400,6 @@ async def get_opportunity_endpoint(
     except OpportunityNotFoundError as exc:
         raise _not_found(exc) from exc
     return OpportunityDetail.model_validate(detail)
-
-
-@router.patch("/opportunities/{opportunity_id}")
-async def update_status_endpoint(
-    opportunity_id: uuid.UUID,
-    payload: OpportunityStatusPatch,
-    ctx: _WriteDep,
-    session: _SessionDep,
-) -> OpportunityItem:
-    try:
-        item = await commands.update_status(
-            session,
-            workspace_id=ctx.workspace_id,
-            opportunity_id=opportunity_id,
-            status=payload.status,
-            changed_by_user_id=ctx.user.id,
-        )
-    except OpportunityNotFoundError as exc:
-        raise _not_found(exc) from exc
-    except OpportunityValidationError as exc:
-        raise _validation(exc) from exc
-    except OpportunitySupersededError as exc:
-        raise _superseded(exc) from exc
-    return OpportunityItem.model_validate(item)
 
 
 @router.put(
@@ -475,6 +445,8 @@ async def list_actions_endpoint(
         int, Query(ge=1, le=ACTION_LIST_MAX_LIMIT)
     ] = ACTION_LIST_DEFAULT_LIMIT,
     cursor: Annotated[str | None, Query()] = None,
+    status_filter: Annotated[str | None, Query(alias="status")] = None,
+    target_kind: Annotated[str | None, Query()] = None,
 ) -> ActionsPage:
     try:
         rows, next_cursor = await actions.list_actions(
@@ -483,16 +455,25 @@ async def list_actions_endpoint(
             project_id=project_id,
             limit=limit,
             cursor=cursor,
+            status=status_filter,
+            target_kind=target_kind,
         )
     except OpportunityNotFoundError as exc:
         raise _not_found(exc) from exc
+    except OpportunityValidationError as exc:
+        raise _validation(exc) from exc
     except InvalidCursorError as exc:
         raise _bad_cursor(exc) from exc
+    counts = await action_status.status_counts(
+        session, workspace_id=ctx.workspace_id, project_id=project_id
+    )
     return ActionsPage(
         items=[
-            ActionItem.model_validate(actions.action_projection(row)) for row in rows
+            ActionItem.model_validate(actions.action_projection(row, current))
+            for row, current in rows
         ],
         next_cursor=next_cursor,
+        status_counts=counts,
     )
 
 
@@ -501,18 +482,42 @@ async def get_action_endpoint(
     action_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> ActionDetail:
     try:
-        action, members = await actions.get_action(
+        action, current, members = await actions.get_action(
             session, workspace_id=ctx.workspace_id, action_id=action_id
         )
     except OpportunityNotFoundError as exc:
         raise _not_found(exc) from exc
     return ActionDetail.model_validate(
         {
-            **actions.action_projection(action),
+            **actions.action_projection(action, current),
             "diagnosis": action.diagnosis or {},
             "members": [project_item(member) for member in members],
         }
     )
+
+
+@router.patch("/actions/{action_id}")
+async def update_action_status_endpoint(
+    action_id: uuid.UUID,
+    payload: ActionStatusPatch,
+    ctx: _WriteDep,
+    session: _SessionDep,
+) -> ActionItem:
+    """Store a user's workflow decision (open or dismissed) on one Action."""
+    try:
+        action = await action_status.update_status(
+            session,
+            workspace_id=ctx.workspace_id,
+            action_id=action_id,
+            status=payload.status,
+            changed_by_user_id=ctx.user.id,
+        )
+    except OpportunityNotFoundError as exc:
+        raise _not_found(exc) from exc
+    except OpportunityValidationError as exc:
+        raise _validation(exc) from exc
+    current = await action_status.action_status(session, action_id=action.id)
+    return ActionItem.model_validate(actions.action_projection(action, current))
 
 
 # =========================================================================

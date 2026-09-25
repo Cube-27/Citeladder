@@ -20,7 +20,7 @@ from app.core.config.opportunities import (
     RULE_VERSION,
 )
 from app.domain.opportunities import (
-    commands,
+    action_status,
     export,
     queries,
     recompute,
@@ -184,11 +184,13 @@ async def test_list_defaults_to_active_statuses(db_session: AsyncSession) -> Non
     )
     rows = await _live_rows(db_session, scn)
     thin = _by_rule(rows, "thin_content")
-    await commands.update_status(
+    assert thin.action_id is not None
+    # Workflow status is the Action's; its rows leave the default queue.
+    await action_status.update_status(
         db_session,
         workspace_id=scn.workspace_id,
         changed_by_user_id=scn.user_id,
-        opportunity_id=thin.id,
+        action_id=thin.action_id,
         status="dismissed",
     )
 

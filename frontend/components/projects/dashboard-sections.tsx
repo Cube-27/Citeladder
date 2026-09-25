@@ -19,7 +19,7 @@ import type { CommandCenter, Project } from '@/lib/api/types';
 import { DisplayTime } from '@/components/ui/display-time';
 import { cn } from '@/lib/utils';
 
-import { FactsDrawer, ProjectControls } from './dashboard-controls';
+import { ProjectControls } from './dashboard-controls';
 import {
   ActionRow,
   deltaLabel,
@@ -90,7 +90,14 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
     <section className="grid gap-3">
       <div className="flex items-center justify-between gap-3">
         <SectionTitle id="company-facts">Company facts</SectionTitle>
-        <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
+        <div className="flex items-center gap-3">
+          <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
+          <Button asChild variant="ghost" size="sm">
+            <ProjectLink href="/agent/context">
+              Edit in Agent context <ArrowRight className="ms-1 size-3.5" aria-hidden />
+            </ProjectLink>
+          </Button>
+        </div>
       </div>
       <div
         className={cn(hairlineBandClasses, 'border-y-0 sm:grid-cols-3')}
@@ -129,7 +136,6 @@ export function DashboardActions({
   return (
     <div className="flex flex-wrap items-center gap-2.5">
       <ProjectControls activeProject={activeProject} onEditProject={onEditProject} />
-      <FactsDrawer projectId={activeProject.id} competitors={activeProject.competitors ?? []} />
       {data.report_available ? (
         <PdfButton downloading={downloading} onDownload={onDownload} />
       ) : null}
@@ -322,7 +328,7 @@ export function ActionsAndProof({
           ruled
           actions={
             <Button asChild variant="ghost" size="sm">
-              <ProjectLink href="/opportunities">
+              <ProjectLink href="/agent/actions">
                 View all <ArrowRight className="ms-1 size-3.5" aria-hidden />
               </ProjectLink>
             </Button>

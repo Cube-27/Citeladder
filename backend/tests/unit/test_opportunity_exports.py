@@ -24,7 +24,6 @@ def _item(**overrides: object) -> dict:
         "opportunity_type": "visibility",
         "severity": "high",
         "priority_score": 60.0,
-        "status": "open",
         "title": "Brand absent from high-value prompt",
         "target": "best crm for small teams",
         "remediation": "Publish a comparison page.",

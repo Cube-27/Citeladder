@@ -5,6 +5,7 @@
  * counts, KPI cards), each free to drift from the others. Every grouping,
  * label, and metric read now derives from the maps here.
  */
+import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { DemandSignal } from '@/lib/api/demand';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 
@@ -142,4 +143,18 @@ export function detectorStates(summary: Record<string, unknown>): Record<string,
     };
   }
   return normalised;
+}
+
+/**
+ * Ask agent about one signal: its id travels as a typed reference the server
+ * resolves, and its page (when it is a safe URL) as the chat's target.
+ */
+export function demandSignalHandoffHref(signal: DemandSignal): string {
+  const target = signalTarget(signal);
+  const subject = target ? ` for "${target}"` : '';
+  return agentHandoffHref({
+    demandSignalId: signal.id,
+    targetUrl: safePageUrl(signal.page_url),
+    prompt: `Help me act on this Search Console demand signal${subject}.`,
+  });
 }

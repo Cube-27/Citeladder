@@ -5,9 +5,9 @@
 Opportunities is the single persisted cross-system action owner. It connects
 Site Health findings, demand observations and answer-engine evidence to ranked
 actions, groups them into target-level Actions and projects the typed evidence
-handoff the [Agent](agents.md) receives. It distinguishes a workflow status from
-a user's declaration that an external change was implemented, and both from
-subsequent observed evidence. It cannot establish causation.
+handoff the [Agent](agents.md) receives. It distinguishes an Action's workflow
+status from a user's declaration that an external change was implemented, and
+both from subsequent observed evidence. It cannot establish causation.
 
 ## Evidence to action
 
@@ -41,14 +41,14 @@ Earned actions are keyed on one inspected page, not on a publisher domain.
 evidence that a page was read, behind a qualification gate that research is
 the explicit exception to. Their priority reads verified on-page competitor
 presence; answer-level co-occurrence is descriptive and never scores. The
-domain-keyed `earned_source_recurs_beside_gap` is retired and config-only, and
-a human status carries forward to a page only where one page unambiguously
-succeeds it. [Earned sources](earned-sources.md) is the authority for the
+domain-keyed `earned_source_recurs_beside_gap` is retired and config-only.
+[Earned sources](earned-sources.md) is the authority for the
 inspection and the four rules; a declaration against them targets the
 publisher page and never an owned `SiteUrl`.
 
-The [screen](../frontend/components/opportunities/opportunities-screen.tsx)
-renders that contract; it never reclassifies domains or fabricates task prose.
+The Agent's [Actions screens](../frontend/components/agent/actions-screen.tsx)
+render that contract; they never reclassify domains or fabricate task prose.
+There is no separate Opportunities screen.
 
 ## Actions
 
@@ -67,9 +67,19 @@ An Action's identity and origin never change. When no live Opportunity targets
 it any more, the row keeps its identity with its evidence cleared. The Agent
 attaches a targeted chat to the existing Action, or creates one only for a page
 or planned-page target. `/api/v1/projects/{project_id}/actions` and
-`/api/v1/actions/{action_id}` are workspace-authorized persisted reads. Workflow
-status is still recorded on each Opportunity; moving it onto Actions happens
-with the Agent workspace UI.
+`/api/v1/actions/{action_id}` are workspace-authorized persisted reads; the list
+filters by status and target kind and returns project-wide status counts, and
+the detail names the chats linked to the Action.
+
+The Action, not the Opportunity, owns workflow status. A user stores only `open`
+or `dismissed` through `PATCH /api/v1/actions/{action_id}`, and each change
+appends an [ActionStatusEvent](../backend/app/domain/opportunities/action_status.py).
+`in_progress` is never stored: an open Action reads as in progress while a
+linked chat has an output, so the Agent sets no status. The remaining states in
+[Action policy](../backend/app/core/config/actions.py) belong to the declaration
+and measurement loop. Recompute stamps each Opportunity's `action_id`; the
+Opportunity list, export and MCP `status` filter resolve through that Action,
+and the command center's resolved state reads Action events.
 
 ## Explicit implementation declaration
 
@@ -78,7 +88,8 @@ authorize the project, Opportunity and target pages. The server supplies applica
 set is rejected outright, because a declaration that chose its own expectation
 could declare itself verified. An idempotent declaration freezes the targets,
 expected checks and baseline evidence. Same-key conflicting input is rejected.
-Merely marking an Opportunity resolved does not create this declaration.
+Dismissing an Action or producing Agent output for it does not create this
+declaration.
 
 An earned declaration receives a PLACEMENT check, not the baseline-anchored
 visibility one. Its expected change is read from the rule — a listing acquired,
@@ -133,13 +144,10 @@ observation status separately from workflow status, and preserves the causality
 notice. A positive movement does not prove that this action caused it; another
 action or changed measurement scope may overlap.
 
-The catalog's shareable URL state owns type, severity, workflow status, action
-path and a selected Opportunity UUID. Defaults are omitted; a committed filter
-change resets the local cursor and closes detail. Direct `selected` links load
-the authorized detail independently of the visible page. The historical
-`opportunity` and `opportunity_id` parameters are accepted only as inbound
-aliases and replaced with the canonical spelling. Overview and Top Insights
-links emit `selected` for their Opportunities destination.
+The Actions list keeps its `status` and `target` filters in shareable URL state
+and pages with a cursor. Overview and Top Insights link to the owning Action at
+`/agent/actions/{action_id}`, or to the Actions list when an Opportunity has no
+Action yet; an Opportunity's member evidence opens in a drawer on that detail.
 
 Declaration and verification rows are append-only. Deleting their owning
 workspace/project follows the baseline cascade; nullable crawl/audit references

@@ -86,28 +86,9 @@ OPPORTUNITY_SEVERITIES: Final[frozenset[str]] = frozenset(
     }
 )
 
-# Human workflow status — the ONLY mutable field on an ``Opportunity`` row.
-STATUS_OPEN: Final = "open"
-STATUS_IN_PROGRESS: Final = "in_progress"
-STATUS_DISMISSED: Final = "dismissed"
-STATUS_RESOLVED: Final = "resolved"
-OPPORTUNITY_STATUSES: Final[frozenset[str]] = frozenset(
-    {
-        STATUS_OPEN,
-        STATUS_IN_PROGRESS,
-        STATUS_DISMISSED,
-        STATUS_RESOLVED,
-    }
-)
-# Default list view: the triage queue (not yet closed by the human).
-OPPORTUNITY_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
-    {STATUS_OPEN, STATUS_IN_PROGRESS}
-)
-
 # =========================================================================
 # Coded API failures (stable tokens returned to the client)
 # =========================================================================
-CODE_OPPORTUNITY_SUPERSEDED: Final = "opportunity_superseded"
 CODE_OPPORTUNITY_ORDER_CONFLICT: Final = "opportunity_order_conflict"
 CODE_IMPLEMENTATION_TARGET_CONFLICT: Final = "implementation_target_conflict"
 CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT: Final = "implementation_idempotency_conflict"

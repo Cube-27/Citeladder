@@ -5,6 +5,7 @@ const PROJECT = FIXTURE_PROJECT.id;
 const OPPORTUNITY = '22222222-2222-4222-8222-222222222222';
 const SNAPSHOT = '33333333-3333-4333-8333-333333333333';
 const IMPLEMENTATION = '55555555-5555-4555-8555-555555555555';
+const ACTION = '66666666-6666-4666-8666-666666666666';
 
 /** The loop reads the project's industry into its brief, so those two fields
  * are stated; everything else is the shared shell project. */
@@ -13,19 +14,6 @@ const project = {
   industry: 'Software',
   subindustry: 'Analytics',
   primary_market: 'US',
-};
-
-const mix = {
-  state: 'available',
-  projection_version: 'opportunity-source-mix-1',
-  taxonomy_version: 'source-taxonomy-2',
-  counts: { earned: 2, owned: 1, competitive_evidence: 1 },
-  percentages: { earned: 50, owned: 25, competitive_evidence: 25 },
-  observation_count: 4,
-  answers_with_sources: 3,
-  eligible_analyzed_answers: 4,
-  coverage_rate: 0.75,
-  limitations: [],
 };
 
 const row = {
@@ -41,7 +29,7 @@ const row = {
   target_url: null,
   target_theme: 'analytics',
   target_label: 'example.org',
-  status: 'open',
+  action_id: ACTION,
   system_rank: 1,
   display_rank: 1,
   order_source: 'system',
@@ -109,44 +97,47 @@ const verificationResult = {
   causality_notice: 'Later observations do not prove causality.',
 };
 
-const opportunitySummary = {
-  activation_state: 'ready',
-  computed: true,
-  run_id: SNAPSHOT,
-  audit_id: SNAPSHOT,
-  site_crawl_id: null,
-  demand_snapshot_id: null,
-  demand_source_revision: null,
-  coverage: {},
-  limitations: [],
-  source_mix: mix,
-  action_path_mix: mix,
-  domain_rollups: [],
-  counts_by_type: { visibility: 1 },
-  counts_by_severity: { high: 1 },
-  counts_by_status: { open: 1 },
-  total_count: 1,
-  median_priority: 140,
-  analyzer_version: 'opp-analyzer-7',
-  rule_version: 'opp-rules-8',
-  formula_version: 'opp-formula-3',
-  computed_at: '2026-08-28T00:00:00Z',
-  evidence_updated_at: '2026-08-28T00:00:00Z',
-  stale: false,
+const action = {
+  id: ACTION,
+  project_id: PROJECT,
+  target_kind: 'earned_page',
+  target_label: 'example.org/tools',
+  target_url: 'https://example.org/tools',
+  target_prompt_id: null,
+  origin: 'evidence',
+  status: 'open',
+  priority_score: 140,
+  families: ['sources'],
+  approach: 'earned_placement',
+  skill_id: 'earned_authority',
+  member_count: 1,
+  evidence_cleared_at: null,
+  created_at: '2026-08-28T00:00:00Z',
+  updated_at: '2026-08-28T00:00:00Z',
 };
 
-test('earned opportunity declaration shows comparable verification', async ({ page }) => {
+test('an Action member declaration shows comparable verification', async ({ page }) => {
   let declarationBody: Record<string, unknown> | null = null;
 
   await stubAuthedShell(page, [], [project]);
   await page.route(`**/api/v1/projects/${PROJECT}/logos/refresh`, (route) =>
     route.fulfill({ json: {} }),
   );
-  await page.route(`**/api/v1/projects/${PROJECT}/opportunities/summary`, (route) =>
-    route.fulfill({ json: opportunitySummary }),
+  await page.route('**/api/v1/agent/skills', (route) => route.fulfill({ json: { skills: [] } }));
+  await page.route(`**/api/v1/projects/${PROJECT}/actions*`, (route) =>
+    route.fulfill({ json: { items: [action], next_cursor: null, status_counts: { open: 1 } } }),
   );
-  await page.route(`**/api/v1/projects/${PROJECT}/opportunities?*`, (route) =>
-    route.fulfill({ json: { items: [row], next_cursor: null } }),
+  await page.route(`**/api/v1/actions/${ACTION}`, (route) =>
+    route.fulfill({
+      json: {
+        ...action,
+        diagnosis: { approach: 'earned_placement', families: { sources: 'observed' } },
+        members: [row],
+      },
+    }),
+  );
+  await page.route(`**/api/v1/projects/${PROJECT}/agent/chats?*`, (route) =>
+    route.fulfill({ json: { items: [], next_cursor: null } }),
   );
   await page.route(`**/api/v1/opportunities/${OPPORTUNITY}`, (route) =>
     route.fulfill({ json: detail() }),
@@ -203,8 +194,8 @@ test('earned opportunity declaration shows comparable verification', async ({ pa
       });
     },
   );
-  await page.goto('/opportunities');
-  await page.getByRole('button', { name: 'Review recommendation' }).click();
+  await page.goto(`/agent/actions/${ACTION}?project=${PROJECT}`);
+  await page.getByRole('button', { name: 'View evidence' }).click();
   await page.getByRole('button', { name: 'I implemented this' }).click();
 
   await expect(page.getByText('visibility: available')).toBeVisible();
@@ -216,39 +207,30 @@ test('earned opportunity declaration shows comparable verification', async ({ pa
   });
 });
 
-test('opportunity filters and detail restore through URL history and reload', async ({ page }) => {
+test('Action filters restore through URL history and reload', async ({ page }) => {
   await stubAuthedShell(page, [], [project]);
-  await page.route(`**/api/v1/projects/${PROJECT}/opportunities/summary`, (route) =>
-    route.fulfill({ json: opportunitySummary }),
+  await page.route(`**/api/v1/projects/${PROJECT}/actions*`, (route) => {
+    const status = new URL(route.request().url()).searchParams.get('status');
+    return route.fulfill({
+      json: {
+        items: status === 'dismissed' ? [] : [action],
+        next_cursor: null,
+        status_counts: { open: 1, dismissed: 0 },
+      },
+    });
+  });
+  await page.route(`**/api/v1/projects/${PROJECT}/agent/chats?*`, (route) =>
+    route.fulfill({ json: { items: [], next_cursor: null } }),
   );
-  await page.route(`**/api/v1/projects/${PROJECT}/opportunities?*`, (route) =>
-    route.fulfill({ json: { items: [row], next_cursor: null } }),
-  );
-  await page.route(`**/api/v1/opportunities/${OPPORTUNITY}`, (route) =>
-    route.fulfill({ json: detail() }),
-  );
+  await page.route('**/api/v1/agent/skills', (route) => route.fulfill({ json: { skills: [] } }));
 
-  await page.goto(`/opportunities?project=${PROJECT}&opportunity=${OPPORTUNITY}&keep=1#evidence`);
-  await expect(page.getByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
-  await expect.poll(() => new URL(page.url()).searchParams.get('selected')).toBe(OPPORTUNITY);
-  expect(new URL(page.url()).searchParams.has('opportunity')).toBe(false);
-
-  await page.getByRole('button', { name: 'Close drawer' }).click();
-  await page.getByRole('button', { name: 'Review recommendation' }).click();
-  await page.goBack();
-  await expect(page.getByRole('dialog', { name: 'Opportunity detail' })).not.toBeVisible();
-  await page.goForward();
-  await expect(page.getByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
+  await page.goto(`/agent/actions?project=${PROJECT}&status=dismissed`);
+  await expect(page.getByText('No Actions match these filters')).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
+  await expect(page.getByText('No Actions match these filters')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Close drawer' }).click();
-  await page.getByRole('button', { name: /Path:/ }).click();
-  await page.getByRole('menuitemradio', { name: 'Earned' }).click();
-  await expect(page.getByRole('dialog', { name: 'Opportunity detail' })).not.toBeVisible();
-  await expect
-    .poll(() => Object.fromEntries(new URL(page.url()).searchParams))
-    .toMatchObject({ project: PROJECT, keep: '1', action_path: 'earned' });
-  expect(new URL(page.url()).hash).toBe('#evidence');
-  expect(new URL(page.url()).searchParams.has('selected')).toBe(false);
+  await page.getByRole('combobox', { name: 'Status' }).click();
+  await page.getByRole('option', { name: 'Open and in progress' }).click();
+  await expect(page.getByRole('link', { name: 'example.org/tools' })).toBeVisible();
+  await expect.poll(() => new URL(page.url()).searchParams.has('status')).toBe(false);
 });

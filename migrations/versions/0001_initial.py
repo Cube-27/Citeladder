@@ -31,6 +31,7 @@ _PROVIDER_CONNECTION_FK = "provider_connections.id"
 _AGENT_CHAT_FK = "agent_chats.id"
 _AGENT_MESSAGE_FK = "agent_messages.id"
 _AGENT_RUN_FK = "agent_runs.id"
+_ACTION_FK = "actions.id"
 
 
 def _create_indexes(table: str, columns: tuple[str, ...]) -> None:
@@ -2064,7 +2065,7 @@ def upgrade() -> None:
         sa.Column("analyzer_version", sa.String(length=32), nullable=False),
         sa.Column("rule_version", sa.String(length=32), nullable=False),
         sa.Column("formula_version", sa.String(length=32), nullable=False),
-        sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("action_id", sa.UUID(), nullable=True),
         sa.Column("superseded_by_id", sa.UUID(), nullable=True),
         sa.Column("superseded_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -2084,13 +2085,19 @@ def upgrade() -> None:
     op.create_index(
         "ix_opportunities_filter",
         "opportunities",
-        ["project_id", "status", "severity", "opportunity_type"],
+        ["project_id", "severity", "opportunity_type"],
         unique=False,
     )
     op.create_index(
         "ix_opportunities_list",
         "opportunities",
         ["project_id", "priority_score", "id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_opportunities_action_id"),
+        "opportunities",
+        ["action_id"],
         unique=False,
     )
     op.create_index(
@@ -2139,53 +2146,6 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
-        "opportunity_status_events",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("opportunity_id", sa.UUID(), nullable=False),
-        sa.Column("stable_key", sa.String(length=640), nullable=False),
-        sa.Column("previous_status", sa.String(length=16), nullable=False),
-        sa.Column("next_status", sa.String(length=16), nullable=False),
-        sa.Column("changed_by_user_id", sa.UUID(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["changed_by_user_id"], ["users.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["opportunity_id"], ["opportunities.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_opportunity_status_events_opportunity_id"),
-        "opportunity_status_events",
-        ["opportunity_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_opportunity_status_events_project_id"),
-        "opportunity_status_events",
-        ["project_id"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_opportunity_status_events_project_created",
-        "opportunity_status_events",
-        ["project_id", "created_at", "id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_opportunity_status_events_workspace_id"),
-        "opportunity_status_events",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
         "opportunity_snapshots",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
@@ -2213,9 +2173,6 @@ def upgrade() -> None:
         ),
         sa.Column(
             "counts_by_severity", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column(
-            "counts_by_status", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
         sa.Column("total_count", sa.Integer(), nullable=False),
         sa.Column("median_priority", sa.Float(), nullable=True),
@@ -2269,6 +2226,7 @@ def upgrade() -> None:
         sa.Column("target_url", sa.Text(), nullable=True),
         sa.Column("target_prompt_id", sa.UUID(), nullable=True),
         sa.Column("origin", sa.String(length=16), nullable=False),
+        sa.Column("status", sa.String(length=16), nullable=False),
         sa.Column("priority_score", sa.Float(), nullable=True),
         sa.Column("families", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("approach", sa.String(length=32), nullable=False),
@@ -2309,6 +2267,41 @@ def upgrade() -> None:
         unique=False,
     )
     _create_indexes("actions", ("project_id", "workspace_id"))
+    op.create_foreign_key(
+        "fk_opportunities_action_id",
+        "opportunities",
+        "actions",
+        ["action_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
+    op.create_table(
+        "action_status_events",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("action_id", sa.UUID(), nullable=False),
+        sa.Column("previous_status", sa.String(length=16), nullable=False),
+        sa.Column("next_status", sa.String(length=16), nullable=False),
+        sa.Column("changed_by_user_id", sa.UUID(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["action_id"], [_ACTION_FK], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["changed_by_user_id"], ["users.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        "ix_action_status_events_project_created",
+        "action_status_events",
+        ["project_id", "created_at", "id"],
+        unique=False,
+    )
+    _create_indexes("action_status_events", ("action_id", "project_id", "workspace_id"))
     op.create_table(
         "opportunity_implementation_events",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -6719,7 +6712,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.ForeignKeyConstraint(["action_id"], ["actions.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["action_id"], [_ACTION_FK], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
             ["created_by_user_id"], ["users.id"], ondelete="SET NULL"
         ),
@@ -6807,7 +6800,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.ForeignKeyConstraint(["action_id"], ["actions.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["action_id"], [_ACTION_FK], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["chat_id"], [_AGENT_CHAT_FK], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
@@ -7162,7 +7155,7 @@ def downgrade() -> None:
         "query_evidence_rows",
         "provider_attempts",
         "prompt_metric_snapshots",
-        "opportunity_status_events",
+        "action_status_events",
         "actions",
         "opportunity_snapshots",
         "observed_entity_candidates",

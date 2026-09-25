@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
@@ -38,7 +38,7 @@ let searchParams = new URLSearchParams();
 vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...props }: { to: string; children: ReactNode }) =>
     createElement('a', { ...props, href: to }, children),
-  useLocation: () => ({ pathname }),
+  useLocation: () => ({ pathname, search: '' }),
   useSearchParams: () => [searchParams, vi.fn()],
 }));
 
@@ -56,21 +56,20 @@ const PERFORMANCE_LANDING_KEY = [
 
 describe('station navigation', () => {
   beforeEach(() => {
+    pathname = '/site';
+    window.sessionStorage.clear();
     mocks.prefetchQuery.mockClear();
     mocks.find.mockClear();
   });
 
-  it('ships the four loop stations and their canonical destinations', () => {
+  it('ships the Dashboard stations and their canonical destinations', () => {
     render(<SidebarNav />);
-    expect(NAV_GROUPS.map((group) => group.title)).toEqual(['Overview', 'Analyze', 'Act', 'Track']);
+    expect(NAV_GROUPS.map((group) => group.title)).toEqual(['Overview', 'Analyze', 'Track']);
     expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute(
       'href',
       '/site?tab=pages&project=11111111-1111-4111-8111-111111111111',
     );
-    expect(screen.getByRole('link', { name: 'Opportunities' })).toHaveAttribute(
-      'href',
-      '/opportunities?project=11111111-1111-4111-8111-111111111111',
-    );
+    expect(screen.queryByRole('link', { name: 'Opportunities' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Commerce Suite' })).toHaveAttribute(
       'href',
       '/products?project=11111111-1111-4111-8111-111111111111',
@@ -94,6 +93,10 @@ describe('station navigation', () => {
     expect(commandLabels).not.toContain('Content');
     expect(commandLabels).toEqual([
       ...sidebarLabels,
+      'New chat',
+      'Actions',
+      'Skills',
+      'Context',
       'Integrations',
       'Providers',
       'Billing',
@@ -116,11 +119,48 @@ describe('station navigation', () => {
     expect(onNavigate).toHaveBeenCalledOnce();
   });
 
+  it('derives the Dashboard | Agent mode from the route', () => {
+    pathname = '/site';
+    const { unmount } = render(<SidebarNav />);
+    const modes = screen.getByRole('navigation', { name: 'Mode' });
+    expect(within(modes).getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(modes).getByRole('link', { name: 'Agent' })).toHaveAttribute(
+      'href',
+      '/agent?project=11111111-1111-4111-8111-111111111111',
+    );
+    unmount();
+
+    pathname = '/agent/actions';
+    render(<SidebarNav />);
+    expect(
+      within(screen.getByRole('navigation', { name: 'Mode' })).getByRole('link', {
+        name: 'Agent',
+      }),
+    ).toHaveAttribute('aria-current', 'page');
+    // Agent mode replaces the Dashboard stations.
+    expect(screen.queryByRole('link', { name: 'Website' })).not.toBeInTheDocument();
+  });
+
+  it('returns each mode to the last route it used for the project', () => {
+    pathname = '/agent/skills';
+    const { unmount } = render(<SidebarNav />);
+    unmount();
+
+    pathname = '/demand';
+    render(<SidebarNav />);
+    expect(screen.getByRole('link', { name: 'Agent' })).toHaveAttribute(
+      'href',
+      '/agent/skills?project=11111111-1111-4111-8111-111111111111',
+    );
+  });
+
   it('omits section heading for Overview but renders headings for other stations', () => {
     render(<SidebarNav />);
     expect(screen.queryByText('Overview', { selector: 'p' })).not.toBeInTheDocument();
     expect(screen.getByText('Analyze', { selector: 'p' })).toBeInTheDocument();
-    expect(screen.getByText('Act', { selector: 'p' })).toBeInTheDocument();
     expect(screen.getByText('Track', { selector: 'p' })).toBeInTheDocument();
     expect(screen.queryByText('Connect', { selector: 'p' })).not.toBeInTheDocument();
   });

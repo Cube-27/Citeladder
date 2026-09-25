@@ -31,7 +31,7 @@ marketing routes reach Astro SSR.
 | Overview and company facts | /projects | [Onboarding](onboarding.md) |
 | Website and issues | /site, /issues | [Site Health](site-health.md) |
 | Search Demand, Search Intelligence, Performance, AI Referrals | /demand, /search-intelligence, /performance, /ai-referrals | [Connected data](integrations-traffic-analytics.md) |
-| Opportunities | /opportunities | [Opportunities](opportunities.md) |
+| Agent: chats, Actions, Skills and Context | /agent, /agent/chats/:chatId, /agent/actions, /agent/actions/:actionId, /agent/skills, /agent/context | [Agent](agents.md), [Actions](opportunities.md#actions) |
 | Prompts, Visibility and runs | /prompts, /visibility, /runs | [Visibility](visibility-prompt.md) |
 | Commerce | /products | [Commerce](commerce-intelligence.md) |
 | Settings and account management | /settings and account routes | [Workspace access](workspace-access.md), [Billing](billing-entitlements.md) |
@@ -42,6 +42,9 @@ context and entitlement providers across app and onboarding navigation.
 [Workspace access](workspace-access.md) owns selection precedence and identity
 transitions. Navigation, compact navigation and Command Palette share the
 route/capability owner; UI visibility never replaces backend authorization.
+The shell has two route-derived modes, Dashboard and Agent. The mode switch
+returns to the last route used in each mode for the project during the browser
+session; the Agent mode's navigation and its API modules load only in that mode.
 
 The Vite SPA preserves the authenticated shell while route content resolves.
 `shell-fallback` is the neutral pre-session structure only; after
@@ -88,10 +91,9 @@ device-local choice (Auto, UTC, or a named IANA zone) in a same-origin preferenc
 cookie. Auto resolves the browser zone once per app load and falls back to UTC
 when unavailable. Server rendering uses UTC unless an explicit cookie zone is
 available; it never infers a browser zone.
-Opportunities owns its `type`, `severity`, `status`, `action_path`, and
-`selected` URL contract; default filters are omitted, filter commits clear the
-selection, and `opportunity` remains a read-only legacy alias normalized with
-replace; `opportunity_id` is accepted and normalized the same way.
+The Actions list owns its `status` and `target` URL filters. New chat reads
+typed evidence handoffs from its URL through `lib/agent/handoff.ts`; the URL
+carries identifiers and an optional prompt, never evidence content.
 
 ## Component capability and technical ownership
 

@@ -2,10 +2,10 @@
  * Opportunities domain endpoints + query/mutation options.
  *
  * Owns transport for the Opportunities slice: the priority-sorted keyset
- * catalog, the immutable recompute snapshots (summary + recompute), the row
- * detail, the one mutation (human workflow status), and same-origin export
- * URLs. Every JSON response passes through `strictValidate` (fail loud on any
- * drift — the backend is the source of truth). All paths are relative
+ * catalog, the latest recompute summary, the row detail, the shared queue
+ * order and implementation declarations. Workflow status belongs to Actions
+ * (`lib/api/actions.ts`). Every JSON response passes through `strictValidate`
+ * (fail loud on any drift — the backend is the source of truth). All paths are relative
  * `/api/v1` (same-origin proxy, invariant 12) and every read accepts an
  * `AbortSignal` via `ApiRequestOptions`.
  */
@@ -19,20 +19,15 @@ import {
   opportunitiesPageSchema,
   opportunityDetailSchema,
   opportunityOrderResponseSchema,
-  opportunitySchema,
   opportunitySummarySchema,
-  recomputeResponseSchema,
 } from './schemas/opportunities';
 import { strictValidate } from './schemas/validation';
 import { definedQuery, withQuery } from './shared';
 import type {
   ImplementationEvent,
   OpportunitiesPage,
-  Opportunity,
   OpportunityDetail,
-  OpportunityStatus,
   OpportunitySummary,
-  RecomputeResponse,
 } from './types';
 
 /** Keyset catalog params. Ordering is server-owned (priority desc, id desc). */
@@ -52,8 +47,6 @@ export type OpportunityOrderUpdate = {
   expected_version: number;
 };
 
-/** Optional recompute scope; omit both for the latest dashboard sources. */
-export type RecomputeScope = { audit_id?: string; site_crawl_id?: string };
 type ExpectedCheck =
   | {
       kind: 'site_rule';
@@ -91,18 +84,6 @@ export const opportunitiesApi = {
     const res = await apiClient.get<OpportunityDetail>(`/opportunities/${opportunityId}`, options);
     return strictValidate(opportunityDetailSchema, res, 'opportunities.get');
   },
-  updateStatus: async (
-    opportunityId: string,
-    status: OpportunityStatus,
-    options?: ApiRequestOptions,
-  ) => {
-    const res = await apiClient.patch<Opportunity>(
-      `/opportunities/${opportunityId}`,
-      { status },
-      options,
-    );
-    return strictValidate(opportunitySchema, res, 'opportunities.updateStatus');
-  },
   updateOrder: async (
     projectId: string,
     input: OpportunityOrderUpdate,
@@ -110,14 +91,6 @@ export const opportunitiesApi = {
   ) => {
     const res = await apiClient.put(`/projects/${projectId}/opportunities/order`, input, options);
     return strictValidate(opportunityOrderResponseSchema, res, 'opportunities.updateOrder');
-  },
-  recompute: async (projectId: string, scope?: RecomputeScope, options?: ApiRequestOptions) => {
-    const res = await apiClient.post<RecomputeResponse>(
-      `/projects/${projectId}/opportunities/recompute`,
-      scope ?? {},
-      options,
-    );
-    return strictValidate(recomputeResponseSchema, res, 'opportunities.recompute');
   },
   summary: async (projectId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<OpportunitySummary>(
@@ -153,28 +126,6 @@ export const opportunitiesApi = {
     );
     return strictValidate(implementationEventsPageSchema, res, 'opportunities.implementation.list');
   },
-  getImplementationEvent: async (
-    projectId: string,
-    eventId: string,
-    options?: ApiRequestOptions,
-  ) => {
-    const res = await apiClient.get(
-      `/projects/${projectId}/opportunities/implementation-events/${eventId}`,
-      options,
-    );
-    return strictValidate(implementationEventSchema, res, 'opportunities.implementation.get');
-  },
-  /** Fetch an export through the authenticated client so workspace scope is explicit. */
-  downloadExport: (
-    projectId: string,
-    format: 'csv' | 'md',
-    filters?: Omit<OpportunitiesParams, 'cursor' | 'limit'>,
-    options?: ApiRequestOptions,
-  ) =>
-    apiClient.getBlob(
-      withQuery(`/projects/${projectId}/opportunities/export.${format}`, definedQuery(filters)),
-      options,
-    ),
 };
 
 function extractProjectId(queryKey: readonly unknown[] | undefined): string | undefined {
@@ -238,16 +189,6 @@ export const opportunitiesQueries = {
 };
 
 export const opportunitiesMutations = {
-  updateStatus: (workspaceId: string) =>
-    mutationOptions({
-      mutationFn: (vars: { opportunityId: string; status: OpportunityStatus }) =>
-        opportunitiesApi.updateStatus(vars.opportunityId, vars.status, { workspaceId }),
-    }),
-  recompute: (workspaceId: string) =>
-    mutationOptions({
-      mutationFn: (vars: { projectId: string; scope?: RecomputeScope }) =>
-        opportunitiesApi.recompute(vars.projectId, vars.scope, { workspaceId }),
-    }),
   createImplementationEvent: (workspaceId: string) =>
     mutationOptions({
       mutationFn: (vars: {

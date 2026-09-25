@@ -36,7 +36,6 @@ class PageAction:
     # What the live action IS, for a reader who should not have to open the
     # drawer to find out. Null exactly when ``opportunity_id`` is null.
     rule_id: str | None = None
-    status: str | None = None
     title: str | None = None
 
 
@@ -55,8 +54,9 @@ async def live_page_opportunities(
 
     Left join in one statement: the pages and their actions are the same
     question, and asking it twice serialized two round trips on a read path.
-    Every status is included -- a dismissed or resolved action is still the
-    action for that page, and hiding it would make "no action yet" a lie.
+    Every live row is included whatever its Action's status -- a dismissed
+    action is still the action for that page, and hiding it would make "no
+    action yet" a lie.
     """
     if not url_hashes:
         return {}
@@ -70,7 +70,6 @@ async def live_page_opportunities(
             SourcePage.inspection_state,
             Opportunity.id,
             Opportunity.rule_id,
-            Opportunity.status,
             Opportunity.title,
         )
         .outerjoin(
@@ -90,7 +89,7 @@ async def live_page_opportunities(
         )
     )
     found: dict[str, PageAction] = {}
-    for url_hash, state, opportunity_id, rule_id, status, title in rows.all():
+    for url_hash, state, opportunity_id, rule_id, title in rows.all():
         # Ordered by descending priority, so the first row per page is the
         # one a reader should act on first if a future rule set ever emits
         # two for one page.
@@ -103,7 +102,6 @@ async def live_page_opportunities(
                 # together, so a page can never be shown an action's name
                 # beside another action's identity.
                 rule_id=rule_id,
-                status=status,
                 title=title,
             ),
         )

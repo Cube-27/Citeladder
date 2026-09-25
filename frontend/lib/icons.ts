@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  BookOpen,
   Bot,
   Check,
   CreditCard,
@@ -15,8 +16,10 @@ import {
   OctagonAlert,
   Package,
   Radar,
+  SquarePen,
   Settings,
   ShieldCheck,
+  Sparkles,
   TrendingUp,
   TriangleAlert,
   Wrench,
@@ -71,6 +74,10 @@ export const ICONS = {
   siteHealth: ShieldCheck,
   issues: OctagonAlert,
   opportunities: Lightbulb,
+  // Agent workspace.
+  newChat: SquarePen,
+  skills: Sparkles,
+  context: BookOpen,
   setup: Wrench,
   settings: Settings,
   billing: CreditCard,

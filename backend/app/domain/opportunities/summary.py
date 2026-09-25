@@ -155,7 +155,6 @@ async def get_summary(
             "domain_rollups": [],
             "counts_by_type": {},
             "counts_by_severity": {},
-            "counts_by_status": {},
             "total_count": 0,
             "median_priority": None,
             "analyzer_version": ANALYZER_VERSION,

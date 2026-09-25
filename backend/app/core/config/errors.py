@@ -9,10 +9,9 @@
 #
 # Domain-owned coded errors keep their existing codes where they already live
 # (e.g. ``config/site_health_contracts.py``'s ``stale_selection_version`` /
-# ``site_health_quota_exceeded`` / ``crawl_already_active``, opportunities'
-# ``opportunity_superseded``) — this module owns the GENERIC vocabulary used
-# by the envelope handlers and by raise sites that previously returned an
-# uncoded string detail.
+# ``site_health_quota_exceeded`` / ``crawl_already_active``) — this module
+# owns the GENERIC vocabulary used by the envelope handlers and by raise sites
+# that previously returned an uncoded string detail.
 from __future__ import annotations
 
 from typing import Final

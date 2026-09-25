@@ -101,11 +101,8 @@ import type {
   implementationEventSchema,
   opportunityDetailSchema,
   opportunitySchema,
-  opportunitySeveritySchema,
-  opportunityStatusSchema,
   opportunitySummarySchema,
   opportunityTypeSchema,
-  recomputeResponseSchema,
 } from './schemas';
 
 export type SessionUser = z.infer<typeof sessionUserSchema>;
@@ -204,11 +201,8 @@ export type VisibilityEvidenceResponse = z.infer<typeof visibilityEvidenceRespon
 
 // --- Opportunities ---
 export type OpportunityType = z.infer<typeof opportunityTypeSchema>;
-export type OpportunitySeverity = z.infer<typeof opportunitySeveritySchema>;
-export type OpportunityStatus = z.infer<typeof opportunityStatusSchema>;
 export type Opportunity = z.infer<typeof opportunitySchema>;
 export type OpportunityDetail = z.infer<typeof opportunityDetailSchema>;
 export type OpportunitiesPage = z.infer<typeof opportunitiesPageSchema>;
 export type OpportunitySummary = z.infer<typeof opportunitySummarySchema>;
-export type RecomputeResponse = z.infer<typeof recomputeResponseSchema>;
 export type ImplementationEvent = z.infer<typeof implementationEventSchema>;
