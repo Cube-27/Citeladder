@@ -16,6 +16,7 @@ import { panelClasses } from '@/components/ui/panel';
 import { SectionTitle, textRole } from '@/components/ui/typography';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import { agentWriteFailure } from '@/lib/agent/errors';
+import { useRequestKey } from '@/lib/agent/idempotency';
 import {
   agentHandoffHref,
   contextChips,
@@ -35,8 +36,6 @@ const STARTERS = [
   'Create content for our highest-demand topic.',
   'Fix our most important technical issue.',
 ] as const;
-
-const newKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
 /**
  * New chat: ask a question, request a deliverable, or pick up an Action.
@@ -74,9 +73,11 @@ function NewChat({
   const navigate = useNavigate();
   const projectHref = useProjectHref();
   const queryClient = useQueryClient();
+  const requestKey = useRequestKey();
   const create = useMutation({
     ...agentMutations.createChat(workspaceId),
     onSuccess: (accepted) => {
+      requestKey.accepted();
       void queryClient.invalidateQueries({ queryKey: queryKeys.agent.chatLists(projectId) });
       navigate(projectHref(`/agent/chats/${accepted.chat_id}`));
     },
@@ -89,17 +90,15 @@ function NewChat({
     enabled: Boolean(handoff.actionId),
   });
 
-  const submit = () =>
-    create.mutate({
-      projectId,
-      idempotencyKey: newKey(),
-      input: {
-        message: message.trim(),
-        skill_id: skillId ?? undefined,
-        action_id: attached.isError ? undefined : handoff.actionId,
-        context,
-      },
-    });
+  const submit = () => {
+    const input = {
+      message: message.trim(),
+      skill_id: skillId ?? undefined,
+      action_id: attached.isError ? undefined : handoff.actionId,
+      context,
+    };
+    create.mutate({ projectId, idempotencyKey: requestKey.keyFor({ projectId, input }), input });
+  };
 
   return (
     <PageShell measure="workflow">

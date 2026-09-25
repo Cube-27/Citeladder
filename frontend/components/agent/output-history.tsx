@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,15 @@ export function OutputHistory({
   const query = useQuery(agentQueries.revisions(workspaceId, chatId));
   const [viewing, setViewing] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  // Chat polling moves the output on without touching this query: when the
+  // latest revision is not in the history yet, read it again (once per id).
+  const missingLatest = Boolean(
+    query.data && !query.data.items.some((item) => item.id === latestRevisionId),
+  );
+  const { refetch } = query;
+  useEffect(() => {
+    if (missingLatest) void refetch();
+  }, [latestRevisionId, missingLatest, refetch]);
   const restore = useMutation({
     ...agentMutations.restoreRevision(workspaceId),
     onSuccess: async () => {

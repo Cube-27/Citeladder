@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Download, Pencil, X } from 'lucide-react';
 import { useState } from 'react';
 
-import { OutputEditor } from '@/components/agent/output-editor';
+import { OutputEditor, type OutputDraft } from '@/components/agent/output-editor';
 import { OutputHistory } from '@/components/agent/output-history';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -14,14 +14,13 @@ import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { downloadOutputMarkdown, outputMarkdown } from '@/lib/agent/export';
+import { newIdempotencyKey } from '@/lib/agent/idempotency';
 import { OUTPUT_PHASE_LABEL, outputKindLabel } from '@/lib/agent/vocabulary';
 import { agentMutations, type AgentOutput, type AgentRevision } from '@/lib/api/agent';
 import { queryKeys } from '@/lib/api/query-keys';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 
 type PaneTab = 'output' | 'sources' | 'history';
-
-const newKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
 /**
  * The chat's deliverable. Edits, restores and outline approval are refused by
@@ -47,7 +46,9 @@ export function OutputPane({
 }>) {
   const revision = output.latest_revision;
   const [tab, setTab] = useState<PaneTab>('output');
-  const [editing, setEditing] = useState(false);
+  // Held here, not in the editor, so switching tabs cannot discard it.
+  const [draft, setDraft] = useState<OutputDraft | null>(null);
+  const editing = draft !== null;
   if (!revision) return null;
   const locked = runActive || !canEdit;
   return (
@@ -75,7 +76,7 @@ export function OutputPane({
             locked={locked}
             onEdit={() => {
               setTab('output');
-              setEditing(true);
+              setDraft({ baseRevisionId: revision.id, title: revision.title, body: revision.body });
             }}
           />
         )}
@@ -98,12 +99,14 @@ export function OutputPane({
         ]}
       >
         <TabPanel value="output" className="pt-3">
-          {editing ? (
+          {draft ? (
             <OutputEditor
               workspaceId={workspaceId}
               chatId={chatId}
               revision={revision}
-              onDone={() => setEditing(false)}
+              draft={draft}
+              onChange={setDraft}
+              onDone={() => setDraft(null)}
             />
           ) : (
             <ContentMarkdown markdown={revision.body} density="compact" />
@@ -189,7 +192,7 @@ function OutlineApproval({
         className="justify-self-start"
         disabled={!canSend || runActive || approve.isPending}
         onClick={() =>
-          approve.mutate({ chatId, revisionId: revision.id, idempotencyKey: newKey() })
+          approve.mutate({ chatId, revisionId: revision.id, idempotencyKey: newIdempotencyKey() })
         }
       >
         Use outline &amp; write

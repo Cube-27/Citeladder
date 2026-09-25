@@ -187,6 +187,59 @@ describe('ChatScreen', () => {
     ).toBeVisible();
   });
 
+  it('keeps an unsaved edit when switching output tabs', async () => {
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json(detail(revision(REV1, 1, 'agent', 'Old title tag.'))),
+      ),
+    );
+    const user = userEvent.setup();
+    renderChat();
+
+    const pane = await screen.findByRole('region', { name: 'Pricing page edits' });
+    await user.click(within(pane).getByRole('button', { name: 'Edit' }));
+    await user.type(within(pane).getByLabelText('Output body (Markdown)'), ' Draft.');
+    await user.click(within(pane).getByRole('tab', { name: 'Sources' }));
+    await user.click(within(pane).getByRole('tab', { name: 'Final' }));
+
+    expect(within(pane).getByLabelText('Output body (Markdown)')).toHaveValue(
+      'Old title tag. Draft.',
+    );
+  });
+
+  it('retries a failed send with the same idempotency key', async () => {
+    const keys: (string | null)[] = [];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json(detail(revision(REV1, 1, 'agent', 'Old title tag.'))),
+      ),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, ({ request }) => {
+        keys.push(request.headers.get('Idempotency-Key'));
+        if (keys.length === 1) return HttpResponse.json({ detail: 'Unavailable' }, { status: 503 });
+        return HttpResponse.json(
+          {
+            chat_id: CHAT,
+            run: { ...detail(revision(REV1, 1, 'agent', '')).latest_run, status: 'queued' },
+          },
+          { status: 202 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+
+    await user.type(await screen.findByLabelText('Reply to the agent'), 'Shorten it.');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByRole('alert');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await vi.waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBe(keys[0]);
+  });
+
   it('exports the revision as Markdown', async () => {
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),

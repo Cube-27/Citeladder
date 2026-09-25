@@ -18,6 +18,7 @@ import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { agentHandoffHref } from '@/lib/agent/handoff';
+import { useRequestKey } from '@/lib/agent/idempotency';
 import { isRunActive } from '@/lib/agent/run-state';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import { agentMutations, agentQueries, type AgentChatDetail } from '@/lib/api/agent';
@@ -25,7 +26,12 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { AGENT_RUN_POLL_MS } from '@/lib/config/agent';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
-const newKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+/** Below this width the output opens as a sheet instead of beside the chat. */
+const COMPACT_OUTPUT_QUERY = '(max-width: 1099px)';
+
+function compactOutput(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia(COMPACT_OUTPUT_QUERY).matches;
+}
 
 /**
  * One chat: the conversation on the left and its output on the right. Reads
@@ -82,7 +88,8 @@ function ChatView({
   const [sheetOpen, setSheetOpen] = useState(false);
   const openOutput = () => {
     setPaneOpen(true);
-    setSheetOpen(true);
+    // The sheet portals out of its hidden wrapper, so it must not open on desktop.
+    setSheetOpen(compactOutput());
   };
   const turn = useFollowUp(workspaceId, detail);
   const cancel = useCancel(workspaceId, chatId);
@@ -211,10 +218,12 @@ function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   const [draft, setDraft] = useState('');
   const [skillId, setSkillId] = useState<string | null>(null);
   const [lastMessage, setLastMessage] = useState('');
+  const requestKey = useRequestKey();
   const queryClient = useQueryClient();
   const mutation = useMutation({
     ...agentMutations.sendMessage(workspaceId),
     onSuccess: async () => {
+      requestKey.accepted();
       setDraft('');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(chatId) }),
@@ -228,12 +237,8 @@ function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     const text = message.trim();
     if (!text) return;
     setLastMessage(text);
-    mutation.mutate({
-      chatId,
-      message: text,
-      skillId: skillId ?? undefined,
-      idempotencyKey: newKey(),
-    });
+    const request = { chatId, message: text, skillId: skillId ?? undefined };
+    mutation.mutate({ ...request, idempotencyKey: requestKey.keyFor(request) });
   };
   return {
     draft,

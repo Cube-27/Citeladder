@@ -18,15 +18,20 @@
 @import './globals.css';
 
 @source '../../../apps/app/src';
+@source '../../../components/agent';
+@source '../../../components/ai-referrals';
 @source '../../../components/analytics';
 @source '../../../components/auth';
 @source '../../../components/billing';
 @source '../../../components/demand';
+@source '../../../components/intelligence';
+@source '../../../components/knowledge-base';
 @source '../../../components/layout';
 @source '../../../components/onboarding';
 @source '../../../components/opportunities';
 @source '../../../components/performance';
 @source '../../../components/products';
+@source '../../../components/providers';
 @source '../../../components/projects';
 @source '../../../components/prompts';
 @source '../../../components/runs';

@@ -66,7 +66,14 @@ export function ActionDetailScreen() {
         </Alert>
       </PageShell>
     );
-  return <ActionDetailView action={query.data} workspaceId={activeWorkspaceId ?? ''} />;
+  // Keyed so a mutation's state (and its Retry) never outlives its Action.
+  return (
+    <ActionDetailView
+      key={query.data.id}
+      action={query.data}
+      workspaceId={activeWorkspaceId ?? ''}
+    />
+  );
 }
 
 function ActionDetailView({
