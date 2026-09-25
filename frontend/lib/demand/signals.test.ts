@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vite-plus/test';
 import type { DemandSignal } from '@/lib/api/demand';
 import { parseAgentHandoff } from '@/lib/agent/handoff';
 import {
+  actionGroups,
   competingPages,
   demandSignalHandoffHref,
   detectorStates,
+  groupByPage,
   safePageUrl,
   signalTarget,
 } from './signals';
@@ -27,6 +29,7 @@ function signal(overrides: Partial<DemandSignal> = {}): DemandSignal {
     priority_score: null,
     priority_inputs: {},
     created_at: '2026-07-08T00:00:00Z',
+    action_id: null,
     ...overrides,
   } as DemandSignal;
 }
@@ -122,5 +125,52 @@ describe('demandSignalHandoffHref', () => {
     expect(handoff(signal({ page_url: 'javascript:alert(1)' })).context).toEqual({
       demand_signal_id: signal().id,
     });
+  });
+});
+
+describe('groupByPage', () => {
+  it('groups query rows under their resolved page and page rows under themselves', () => {
+    const pricing = 'https://example.com/pricing';
+    const rows = [
+      { rank: 1, signal: signal({ page_url: pricing, evidence: { target: 'crm pricing' } }) },
+      { rank: 2, signal: signal({ page_url: '', evidence: { target: 'crm tools' } }) },
+      {
+        rank: 3,
+        signal: signal({ page_url: '', evidence: { target_kind: 'page', target: pricing } }),
+      },
+    ];
+
+    expect(
+      groupByPage(rows).map((group) => [group.page, group.rows.map((row) => row.rank)]),
+    ).toEqual([
+      [pricing, [1, 3]],
+      [null, [2]],
+    ]);
+  });
+});
+
+describe('actionGroups', () => {
+  it('lists each promoted Action once, in priority order, with its signal types', () => {
+    const first = '55555555-5555-4555-8555-555555555555';
+    const second = '66666666-6666-4666-8666-666666666666';
+    const groups = actionGroups([
+      signal({ action_id: first, signal_type: 'striking_distance', page_url: 'https://a.test/x' }),
+      signal({ action_id: null, signal_type: 'branded_query_performance' }),
+      signal({ action_id: second, signal_type: 'declining_query', page_url: 'https://a.test/y' }),
+      signal({
+        action_id: first,
+        signal_type: 'high_impression_low_ctr',
+        page_url: 'https://a.test/x',
+      }),
+    ]);
+
+    expect(groups).toEqual([
+      {
+        actionId: first,
+        page: 'https://a.test/x',
+        signalTypes: ['striking_distance', 'high_impression_low_ctr'],
+      },
+      { actionId: second, page: 'https://a.test/y', signalTypes: ['declining_query'] },
+    ]);
   });
 });

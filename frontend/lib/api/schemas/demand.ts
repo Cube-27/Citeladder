@@ -16,6 +16,8 @@ export const demandSignalSchema = responseObject({
   priority_score: z.number().nullable(),
   priority_inputs: z.record(z.string(), z.unknown()),
   created_at: z.string(),
+  // The Action this signal was promoted into; null when it was not.
+  action_id: z.uuid().nullable(),
 });
 
 export const demandSnapshotSchema = responseObject({

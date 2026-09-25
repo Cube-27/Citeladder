@@ -14,9 +14,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PageShell } from '@/components/layout/page-shell';
 import { ReadError } from '@/components/ui/read-error';
 import { ProjectLink } from '@/components/layout/scoped-link';
+import { DemandActBand } from '@/components/demand/demand-act-band';
 import { DemandDetectorBar } from '@/components/demand/demand-detector-bar';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
-import { DemandSignalCard } from '@/components/demand/demand-signal-card';
+import { DemandSignalTable, SignalLegend } from '@/components/demand/demand-signal-table';
 import { DemandSummaryCards } from '@/components/demand/demand-summary-cards';
 import { demandApi, type DemandSignal, type DemandSnapshot } from '@/lib/api/demand';
 import { httpErrorStatus } from '@/lib/api/errors';
@@ -28,6 +29,7 @@ import {
   matchesTab,
   signalTarget,
   type FilterTab,
+  type RankedSignal,
 } from '@/lib/demand/signals';
 import { formatWindowDate } from '@/lib/format';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -48,13 +50,7 @@ const DEMAND_LOADING_METRICS = [
   'ctr-gap',
   'detector-health',
 ] as const;
-const DEMAND_LOADING_SIGNALS = ['signal-a', 'signal-b'] as const;
-const DEMAND_LOADING_SIGNAL_METRICS = [
-  'signal-impressions',
-  'signal-clicks',
-  'signal-ctr',
-  'signal-position',
-] as const;
+const DEMAND_LOADING_SIGNALS = ['signal-a', 'signal-b', 'signal-c'] as const;
 
 function DemandLoading() {
   return (
@@ -107,31 +103,9 @@ function DemandLoading() {
         <Skeleton className="h-9 w-full rounded-[var(--radius-control)] sm:w-64" />
       </div>
 
-      <div className="grid gap-3">
+      <div className="grid gap-2">
         {DEMAND_LOADING_SIGNALS.map((placeholder) => (
-          <Card key={placeholder}>
-            <CardContent className="grid gap-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="grid min-w-0 flex-1 gap-2">
-                  <div className="flex flex-wrap gap-2">
-                    <Skeleton className="h-5 w-20 rounded-full" />
-                    <Skeleton className="h-5 w-28 rounded-full" />
-                  </div>
-                  <Skeleton className="h-6 w-2/3" />
-                </div>
-                <Skeleton className="h-8 w-28 rounded-[var(--radius-control)]" />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-4">
-                {DEMAND_LOADING_SIGNAL_METRICS.map((metric) => (
-                  <div key={metric} className="grid gap-2">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-6 w-16" />
-                  </div>
-                ))}
-              </div>
-              <Skeleton className="h-16 w-full" />
-            </CardContent>
-          </Card>
+          <Skeleton key={placeholder} className="h-10 w-full" />
         ))}
       </div>
     </Stack>
@@ -198,25 +172,22 @@ function SearchDemandView({
    */
   const filteredSignals = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return snapshot.signals.reduce<Array<{ signal: DemandSignal; rank: number }>>(
-      (matches, signal, index) => {
-        if (!matchesTab(signal, activeTab)) return matches;
-        if (!query) {
-          matches.push({ signal, rank: index + 1 });
-          return matches;
-        }
-        const haystack = [
-          signalTarget(signal),
-          signal.page_url,
-          signal.signal_type.replace(/_/g, ' '),
-        ]
-          .join(' ')
-          .toLowerCase();
-        if (haystack.includes(query)) matches.push({ signal, rank: index + 1 });
+    return snapshot.signals.reduce<RankedSignal[]>((matches, signal, index) => {
+      if (!matchesTab(signal, activeTab)) return matches;
+      if (!query) {
+        matches.push({ signal, rank: index + 1 });
         return matches;
-      },
-      [],
-    );
+      }
+      const haystack = [
+        signalTarget(signal),
+        signal.page_url,
+        signal.signal_type.replace(/_/g, ' '),
+      ]
+        .join(' ')
+        .toLowerCase();
+      if (haystack.includes(query)) matches.push({ signal, rank: index + 1 });
+      return matches;
+    }, []);
   }, [snapshot.signals, activeTab, searchQuery]);
 
   // An empty feed has two different causes, and they need different words:
@@ -242,11 +213,10 @@ function SearchDemandView({
   );
   if (filteredSignals.length > 0) {
     signalsFeed = (
-      <div className="grid gap-3">
-        {filteredSignals.map(({ signal, rank }) => (
-          <DemandSignalCard key={signal.id} signal={signal} rank={rank} onInspect={handleInspect} />
-        ))}
-      </div>
+      <Stack gap="compact">
+        <SignalLegend signals={filteredSignals.map(({ signal }) => signal)} />
+        <DemandSignalTable rows={filteredSignals} onInspect={handleInspect} />
+      </Stack>
     );
   } else if (snapshot.signals.length === 0) {
     signalsFeed = (
@@ -360,7 +330,8 @@ function SearchDemandView({
           </CardContent>
         </Card>
 
-        {/* Signals List Feed */}
+        <DemandActBand signals={snapshot.signals} />
+
         {signalsFeed}
 
         {/* Evidence Inspection Drawer */}

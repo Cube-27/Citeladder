@@ -45,6 +45,67 @@ export const FILTER_TABS: readonly { tab: FilterTab; label: string }[] = [
   { tab: 'branded', label: 'Branded Cohort' },
 ];
 
+export type SignalTone = 'info' | 'warning' | 'danger' | 'success' | 'neutral';
+
+/**
+ * Each signal type's chip label and its one-sentence definition. The screen
+ * explains a type once, in its legend, rather than repeating prose per row.
+ */
+export const SIGNAL_TYPE_META: Readonly<
+  Record<SignalType, { label: string; tone: SignalTone; definition: string }>
+> = {
+  striking_distance: {
+    label: 'Striking distance',
+    tone: 'info',
+    definition:
+      'Ranks close enough to the top results that better coverage can lift it into the positions that earn clicks.',
+  },
+  query_cannibalization: {
+    label: 'Cannibalization',
+    tone: 'warning',
+    definition: 'More than one of your pages ranks for the query, splitting its impressions.',
+  },
+  property_relative_ctr_gap: {
+    label: 'CTR gap',
+    tone: 'danger',
+    definition: 'Clicked less often than results at the same position across your property.',
+  },
+  high_impression_low_ctr: {
+    label: 'Low CTR',
+    tone: 'danger',
+    definition: 'Earns many impressions but few clicks for its ranking.',
+  },
+  emerging_query: {
+    label: 'Emerging',
+    tone: 'success',
+    definition: 'Impressions rose across the last two 14-day windows.',
+  },
+  declining_query: {
+    label: 'Declining',
+    tone: 'danger',
+    definition: 'Impressions fell across the last two 14-day windows.',
+  },
+  branded_query_performance: {
+    label: 'Branded',
+    tone: 'neutral',
+    definition:
+      'Navigational demand for your brand, tracked apart so it cannot skew the gap analysis.',
+  },
+};
+
+const FALLBACK_TYPE_META = {
+  label: 'Demand signal',
+  tone: 'neutral' as SignalTone,
+  definition: 'A Search Console gap identified by demand analysis.',
+};
+
+export function signalTypeMeta(signalType: string) {
+  return (
+    (SIGNAL_TYPE_META as Record<string, typeof FALLBACK_TYPE_META>)[signalType] ??
+    FALLBACK_TYPE_META
+  );
+}
+
 export function matchesTab(signal: DemandSignal, tab: FilterTab): boolean {
   if (tab === 'all') return true;
   return (SIGNAL_GROUPS[tab] as readonly string[]).includes(signal.signal_type);
@@ -157,4 +218,47 @@ export function demandSignalHandoffHref(signal: DemandSignal): string {
     targetUrl: safePageUrl(signal.page_url),
     prompt: `Help me act on this Search Console demand signal${subject}.`,
   });
+}
+
+export type RankedSignal = { signal: DemandSignal; rank: number };
+export type PageGroup = { page: string | null; rows: RankedSignal[] };
+
+/**
+ * The page a signal is about: its own target for a page signal, the resolved
+ * landing page for a query signal, or null when none was resolved.
+ */
+export function signalPage(signal: DemandSignal): string | null {
+  if (signalTargetKind(signal) === 'Page') return signalTarget(signal) || null;
+  return signal.page_url.trim() || null;
+}
+
+/** Rows grouped by page, in the order each page's best signal ranks. */
+export function groupByPage(rows: readonly RankedSignal[]): PageGroup[] {
+  const groups = new Map<string | null, RankedSignal[]>();
+  for (const row of rows) {
+    const page = signalPage(row.signal);
+    groups.set(page, [...(groups.get(page) ?? []), row]);
+  }
+  return [...groups].map(([page, grouped]) => ({ page, rows: grouped }));
+}
+
+export type ActionGroup = { actionId: string; page: string; signalTypes: string[] };
+
+/**
+ * Promoted signals, one entry per Action they were grouped into, in priority
+ * order. Signals on one page share its Action, so this is grouped by page.
+ */
+export function actionGroups(signals: readonly DemandSignal[]): ActionGroup[] {
+  const groups = new Map<string, ActionGroup>();
+  for (const signal of signals) {
+    if (!signal.action_id) continue;
+    const group = groups.get(signal.action_id) ?? {
+      actionId: signal.action_id,
+      page: signalPage(signal) ?? signalTarget(signal),
+      signalTypes: [],
+    };
+    if (!group.signalTypes.includes(signal.signal_type)) group.signalTypes.push(signal.signal_type);
+    groups.set(signal.action_id, group);
+  }
+  return [...groups.values()];
 }
