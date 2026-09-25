@@ -13,6 +13,7 @@ import { ReadError } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
+import { agentHandoffHref } from '@/lib/agent/handoff';
 import { httpErrorStatus } from '@/lib/api/errors';
 import {
   searchIntelligenceApi,
@@ -135,6 +136,11 @@ export function SearchIntelligenceDatasetView({
               setIntent={setIntent}
             />
             <SearchIntelligenceExport dataset={dataset} params={params} />
+            {rows.length > 0 ? (
+              <Button size="sm" variant="secondary" asChild>
+                <ProjectLink href={rowsHandoffHref(dataset.id, rows, title)}>Ask agent</ProjectLink>
+              </Button>
+            ) : null}
             <DepthReviewAction onExpand={onExpand} />
           </div>
           {query.isError ? (
@@ -190,6 +196,26 @@ export function SearchIntelligenceDatasetView({
   );
 }
 
+/**
+ * Ask agent about saved rows. Only their ids travel; the server re-reads and
+ * authorizes them. A table page never exceeds the 100-row reference cap.
+ */
+function rowsHandoffHref(
+  datasetId: string,
+  rows: readonly SearchIntelligenceRow[],
+  title?: string,
+): string {
+  const [first] = rows;
+  const subject =
+    rows.length === 1 && first
+      ? `the Search Intelligence row for "${first.keyword || first.url || first.domain}"`
+      : `these ${rows.length} ${title ?? 'Search Intelligence'} rows`;
+  return agentHandoffHref({
+    searchIntelligence: { datasetId, rowIds: rows.map((row) => row.id) },
+    prompt: `Help me act on ${subject}.`,
+  });
+}
+
 function EvidenceDrawer({
   selected,
   onClose,
@@ -203,6 +229,13 @@ function EvidenceDrawer({
       title="Provider evidence"
       description="Persisted normalized row and provider metadata."
     >
+      {selected ? (
+        <Button size="sm" variant="secondary" asChild className="w-fit">
+          <ProjectLink href={rowsHandoffHref(selected.dataset_id, [selected])}>
+            Ask agent about this row
+          </ProjectLink>
+        </Button>
+      ) : null}
       {selected?.row_kind === 'citation_match' &&
       typeof selected.auxiliary.audit_id === 'string' ? (
         <ProjectLink

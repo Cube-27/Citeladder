@@ -16,11 +16,11 @@ import {
   acquireOpenApiSpec,
   componentProperties,
   contractGuardIsStrict,
-  CONTRACT_SCHEMA_MAP,
   declaredKeysFor,
   diffContract,
   type OpenApiSpec,
 } from './contract-drift';
+import { CONTRACT_SCHEMA_MAP } from './contract-schema-map';
 
 function specWith(components: Record<string, unknown>): OpenApiSpec {
   return { components: { schemas: components } } as OpenApiSpec;

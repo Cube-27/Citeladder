@@ -10,6 +10,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { DemandSignal } from '@/lib/api/demand';
 import {
   competingPages,
+  demandSignalHandoffHref,
   numericMetric,
   safePageUrl,
   signalTarget,
@@ -54,9 +55,12 @@ function DemandEvidenceContent({
       footer={
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button variant="secondary" size="sm" asChild>
-            <ProjectLink href="/opportunities" className="inline-flex items-center">
+            <ProjectLink
+              href={demandSignalHandoffHref(signal)}
+              className="inline-flex items-center"
+            >
               <ArrowUpRight className="mr-1.5 size-3.5" />
-              View in Opportunities
+              Ask agent
             </ProjectLink>
           </Button>
         </div>

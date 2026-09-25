@@ -12,6 +12,7 @@ import { panelClasses } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
+import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { SiteIssue, SiteIssueDetail } from '@/lib/api/types';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
@@ -104,6 +105,7 @@ export function IssueDetailRail({
             </div>
           ) : null}
           <OccurrenceList
+            issue={issue}
             detail={detail}
             crawlId={crawlId}
             isError={detailQuery.isError}
@@ -133,25 +135,41 @@ export function IssueDetailRail({
   );
 }
 
-/** Every issue gets an action: the fix prompt a developer or assistant can use. */
+/**
+ * Every issue gets an action: the fix prompt a developer or assistant can use,
+ * and Ask agent, which starts a chat about it in the Agent workspace.
+ */
 function IssueActions({ issue }: Readonly<{ issue: SiteIssue }>) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <CopyButton value={buildFixPrompt(issue)} size="sm" variant="secondary" className="w-fit">
         Copy fix prompt
       </CopyButton>
+      <Button variant="secondary" size="sm" asChild>
+        <ProjectLink href={agentHandoffHref({ prompt: askAgentPrompt(issue) })}>
+          Ask agent
+        </ProjectLink>
+      </Button>
     </div>
   );
+}
+
+function askAgentPrompt(issue: SiteIssue, page?: string): string {
+  const count = issue.affected_url_count;
+  const scope = page ? ` on ${page}` : ` (${count} affected ${count === 1 ? 'page' : 'pages'})`;
+  return `Help me fix the Site Health issue "${issueTitle(issue)}"${scope}.`;
 }
 
 const OCCURRENCE_PLACEHOLDERS = ['first', 'second', 'third'] as const;
 
 function OccurrenceList({
+  issue,
   detail,
   crawlId,
   isError,
   isPending,
 }: Readonly<{
+  issue: SiteIssue;
   detail: SiteIssueDetail | undefined;
   crawlId: string;
   isError: boolean;
@@ -199,6 +217,16 @@ function OccurrenceList({
             </span>
           </ProjectLink>
           <IssueEvidence occurrence={occurrence} />
+          <Button variant="ghost" size="sm" asChild className="w-fit">
+            <ProjectLink
+              href={agentHandoffHref({
+                siteUrlId: occurrence.site_url_id,
+                prompt: askAgentPrompt(issue, occurrence.display_url),
+              })}
+            >
+              Ask agent about this page
+            </ProjectLink>
+          </Button>
         </li>
       ))}
     </ul>

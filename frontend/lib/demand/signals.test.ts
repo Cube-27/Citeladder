@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import type { DemandSignal } from '@/lib/api/demand';
-import { competingPages, detectorStates, safePageUrl, signalTarget } from './signals';
+import { parseAgentHandoff } from '@/lib/agent/handoff';
+import {
+  competingPages,
+  demandSignalHandoffHref,
+  detectorStates,
+  safePageUrl,
+  signalTarget,
+} from './signals';
 
 /** `evidence`/`metrics` are `Record<string, unknown>` on the wire, so these
  * helpers are the boundary that makes them safe to render. */
@@ -95,5 +102,25 @@ describe('signalTarget', () => {
     expect(signalTarget(signal({ topic_cluster: '', page_url: 'https://x.example' }))).toBe(
       'https://x.example',
     );
+  });
+});
+
+describe('demandSignalHandoffHref', () => {
+  const handoff = (value: DemandSignal) =>
+    parseAgentHandoff(new URL(demandSignalHandoffHref(value), 'http://x').searchParams);
+
+  it('carries the signal id and its safe page as typed references', () => {
+    const value = signal({ page_url: 'https://example.com/a', evidence: { target: 'crm tools' } });
+    expect(handoff(value).context).toEqual({
+      demand_signal_id: value.id,
+      target_url: 'https://example.com/a',
+    });
+    expect(handoff(value).prompt).toContain('"crm tools"');
+  });
+
+  it('drops a page URL that is not safe to link', () => {
+    expect(handoff(signal({ page_url: 'javascript:alert(1)' })).context).toEqual({
+      demand_signal_id: signal().id,
+    });
   });
 });

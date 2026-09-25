@@ -184,6 +184,8 @@ export const fmtConfig: OxfmtConfig = {
     '**/coverage/**',
     '**/playwright-report/**',
     '**/test-results/**',
+    // The marketing build rewrites Wrangler's deploy config (gitignored).
+    '**/.wrangler/**',
     '**/pnpm-lock.yaml',
     // Re-wrapping this inflates it past the owner line budget that
     // check-frontend-architecture.mjs enforces; kept hand-formatted.
