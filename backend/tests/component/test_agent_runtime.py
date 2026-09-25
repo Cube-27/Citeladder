@@ -241,9 +241,9 @@ async def test_a_turn_reads_evidence_and_saves_an_output_attached_to_its_page(
         f"/api/v1/projects/{project_id}/agent/chats",
         params={"action_id": output["action_id"]},
     )
-    assert [
-        (item["id"], item["target_label"]) for item in linked.json()["items"]
-    ] == [(chat_id, _PAGE)]
+    assert [(item["id"], item["target_label"]) for item in linked.json()["items"]] == [
+        (chat_id, _PAGE)
+    ]
 
 
 async def test_a_follow_up_revises_the_users_edit_instead_of_starting_over(
