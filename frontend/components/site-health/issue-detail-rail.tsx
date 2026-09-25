@@ -156,7 +156,8 @@ function IssueActions({ issue }: Readonly<{ issue: SiteIssue }>) {
 
 function askAgentPrompt(issue: SiteIssue, page?: string): string {
   const count = issue.affected_url_count;
-  const scope = page ? ` on ${page}` : ` (${count} affected ${count === 1 ? 'page' : 'pages'})`;
+  const pages = count === 1 ? 'page' : 'pages';
+  const scope = page ? ` on ${page}` : ` (${count} affected ${pages})`;
   return `Help me fix the Site Health issue "${issueTitle(issue)}"${scope}.`;
 }
 

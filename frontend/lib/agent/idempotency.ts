@@ -7,8 +7,7 @@
  */
 import { useRef } from 'react';
 
-export const newIdempotencyKey = () =>
-  globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+export const newIdempotencyKey = () => globalThis.crypto.randomUUID();
 
 export function useRequestKey() {
   const pending = useRef<{ fingerprint: string; key: string } | null>(null);

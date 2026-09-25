@@ -31,6 +31,7 @@ _PROVIDER_CONNECTION_FK = "provider_connections.id"
 _AGENT_CHAT_FK = "agent_chats.id"
 _AGENT_MESSAGE_FK = "agent_messages.id"
 _AGENT_RUN_FK = "agent_runs.id"
+_ACTION_FK = "actions.id"
 
 
 def _create_indexes(table: str, columns: tuple[str, ...]) -> None:
@@ -2284,7 +2285,7 @@ def upgrade() -> None:
         sa.Column("next_status", sa.String(length=16), nullable=False),
         sa.Column("changed_by_user_id", sa.UUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["action_id"], ["actions.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["action_id"], [_ACTION_FK], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["changed_by_user_id"], ["users.id"], ondelete="RESTRICT"
         ),
@@ -6711,7 +6712,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.ForeignKeyConstraint(["action_id"], ["actions.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["action_id"], [_ACTION_FK], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
             ["created_by_user_id"], ["users.id"], ondelete="SET NULL"
         ),
@@ -6799,7 +6800,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.ForeignKeyConstraint(["action_id"], ["actions.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["action_id"], [_ACTION_FK], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["chat_id"], [_AGENT_CHAT_FK], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(

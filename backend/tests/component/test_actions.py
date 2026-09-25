@@ -126,7 +126,8 @@ async def test_a_dismissed_action_keeps_its_status_across_recompute(
             )
         )
     ).all()
-    assert members and set(members) == {page_b_id}
+    assert members
+    assert set(members) == {page_b_id}
     page = await queries.list_opportunities(
         db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
     )

@@ -101,6 +101,7 @@ function MessageBubble({
       </div>
     );
   const tools = message.steps.filter((step) => step.kind === 'tool').length;
+  const readsLabel = tools === 1 ? 'read' : 'reads';
   return (
     <article aria-label="Agent reply" className="grid gap-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -118,7 +119,7 @@ function MessageBubble({
         <details className="group">
           <summary className={textRole('meta', 'cursor-pointer')}>
             Run complete · {message.steps.length} {message.steps.length === 1 ? 'step' : 'steps'}
-            {tools > 0 ? ` · ${tools} data ${tools === 1 ? 'read' : 'reads'}` : ''}
+            {tools > 0 ? ` · ${tools} data ${readsLabel}` : ''}
           </summary>
           <ul className="grid gap-1 ps-4 pt-2">
             {message.steps.map((step, index) => (
