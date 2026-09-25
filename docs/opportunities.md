@@ -75,21 +75,34 @@ The Action, not the Opportunity, owns workflow status. A user stores only `open`
 or `dismissed` through `PATCH /api/v1/actions/{action_id}`, and each change
 appends an [ActionStatusEvent](../backend/app/domain/opportunities/action_status.py).
 `in_progress` is never stored: an open Action reads as in progress while a
-linked chat has an output, so the Agent sets no status. The remaining states in
-[Action policy](../backend/app/core/config/actions.py) belong to the declaration
-and measurement loop. Recompute stamps each Opportunity's `action_id`; the
-Opportunity list, export and MCP `status` filter resolve through that Action,
-and the command center's resolved state reads Action events.
+linked chat has an output, so the Agent sets no status. A declaration stores
+`implemented` (with its status event); `measuring` and `done` are derived from
+the verifier's observations of that declaration — any observation reads as
+measuring, and one that verified every expected check reads as done — so the
+verifier never writes Action status. A user cannot overwrite a declared state.
+Recompute stamps each Opportunity's `action_id`; the Opportunity list, export
+and MCP `status` filter resolve through that Action, and the command center
+counts an Action resolved at its first verified observation. Each promoted
+Search Demand signal's read carries the Action its live Opportunity joined, for
+the Search Demand "Act on this" band.
 
 ## Explicit implementation declaration
 
-[Implementation events](../backend/app/domain/opportunities/implementation_events.py)
-authorize the project, Opportunity and target pages. The server supplies applicable expected checks; a caller-supplied
-set is rejected outright, because a declaration that chose its own expectation
-could declare itself verified. An idempotent declaration freezes the targets,
-expected checks and baseline evidence. Same-key conflicting input is rejected.
-Dismissing an Action or producing Agent output for it does not create this
-declaration.
+`POST /api/v1/actions/{action_id}/declaration` records that an Action was
+implemented ([implementation events](../backend/app/domain/opportunities/implementation_events.py)).
+It is anchored on the Action and, when the work came from the Agent, on the
+exact output revision the user shipped; a revision from another Action's output
+or an outline is refused, and null means work done outside CiteLadder. The
+caller names only that revision and the implementation time. The server
+freezes the Action's live member rows, the targets (the publisher page for an
+earned Action, otherwise the members' resolved pages or the Action's own page)
+and the expected checks: the union of the member rules' checks. Caller-supplied
+checks or targets are rejected, because a declaration that chose its own
+expectation could declare itself verified. The Action row is locked and one
+Action carries at most one declaration; a same-key replay returns it, and
+same-key conflicting input is rejected. A dismissed Action is reopened first.
+Dismissing an Action or producing Agent output for it does not declare it. The
+chat's own measurement plan is free text and does not add checks.
 
 An earned declaration receives a PLACEMENT check, not the baseline-anchored
 visibility one. Its expected change is read from the rule — a listing acquired,
@@ -139,10 +152,17 @@ Visibility comparison checks frozen audit context, prompt/cohort identity,
 engines, repetitions, locale and retrieval policy. Missing or incompatible
 evidence remains not-run, unavailable or non-comparable.
 
-The UI reads the same implementation-event projection after reload. It shows
-observation status separately from workflow status, and preserves the causality
-notice. A positive movement does not prove that this action caused it; another
-action or changed measurement scope may overlap.
+The Action detail returns the declaration with its observations and what each
+[loop leg](../backend/app/domain/opportunities/measurement_legs.py) is waiting
+for, read from persisted rows: the next scheduled visibility run, the next
+complete Search Console window after the declaration (or a sync once it has
+closed), the next crawl (none is scheduled until someone runs one) and the
+earned-page placement recheck. Nothing is triggered. **Mark implemented** in
+the Agent output pane declares the revision on screen; the Action detail
+declares work done outside CiteLadder. Both show observation status separately
+from workflow status and preserve the causality notice. A positive movement
+does not prove that this action caused it; another action or changed
+measurement scope may overlap.
 
 The Actions list keeps its `status` and `target` filters in shareable URL state
 and pages with a cursor. Overview and Top Insights link to the owning Action at

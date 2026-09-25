@@ -130,10 +130,10 @@ than defaulting to an article. It carries the snapshot, the quoted passages,
 the extraction coverage and its own limitations; it cannot manufacture
 placement evidence.
 
-A declaration against an earned rule targets the publisher page directly. It
+A declaration on an earned Action targets the publisher page directly. It
 never routes through `resolve_owned_page`, which would match a third-party URL
-against this project's crawled inventory and raise, and it rejects owned page
-targets outright: verifying an owned-page change against an external placement
+against this project's crawled inventory and raise, and it carries no owned
+page targets: verifying an owned-page change against an external placement
 would report two things as one.
 
 ## Confirming the placement

@@ -124,8 +124,8 @@ for the resolved page's title, H1 and primary content, preserves meaningful shor
 terms such as `AI`, and remains unknown when page resolution or extracted
 content is unavailable. The relevance evidence and CTR gap must share the exact
 date, country and device scope; wording is correlational and never claims that
-missing terms caused the CTR result. The Search Demand CTR-gap card renders the
-three measured coverage values and missing title/H1 terms, or the explicit
+missing terms caused the CTR result. The Search Demand evidence drawer renders
+the three measured coverage values and missing title/H1 terms, or the explicit
 unavailable reason when the page could not be inspected.
 
 `opportunities/demand_hits.py` alone maps actionable signals to Opportunity
@@ -162,7 +162,11 @@ that snapshot.
 Cursors bind project, snapshot, dimension, filters, sorting and page size.
 The browser resets cursor history when those inputs change.
 Search Demand is one /demand surface; AI Referrals exposes volume/share/source
-totals at /ai-referrals rather than copied Visibility metrics.
+totals at /ai-referrals rather than copied Visibility metrics. Search Demand
+leads with an "Act on this" band of promoted signals, one entry per page's
+Action, then one table grouped by page with a signal chip per row; each signal
+type is explained once in a legend, and the evidence drawer keeps the reading,
+relevance, competing pages and provenance.
 Search Demand's missing-snapshot state links to the selected project's
 Performance setup. AI Referrals retains its range and granularity controls when
 the selected projection is empty because another persisted range or granularity
