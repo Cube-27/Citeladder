@@ -137,20 +137,37 @@ export function OutputDeclaration({
   output,
   runActive,
 }: Readonly<{ workspaceId: string; output: AgentOutput; runActive: boolean }>) {
-  const mayWrite = useWorkspaceCapability('write');
-  const actionId = output.action_id;
   const revision = output.latest_revision;
-  const action = useQuery({
-    ...actionsQueries.detail(workspaceId, actionId ?? ''),
-    enabled: Boolean(actionId) && output.phase !== 'outline',
-  });
   if (output.phase === 'outline' || !revision) return null;
-  if (!actionId)
+  if (!output.action_id)
     return (
       <p className={textRole('meta')}>
         Name the page or topic this output is for to declare it implemented.
       </p>
     );
+  return (
+    <AttachedDeclaration
+      workspaceId={workspaceId}
+      actionId={output.action_id}
+      revision={revision}
+      runActive={runActive}
+    />
+  );
+}
+
+function AttachedDeclaration({
+  workspaceId,
+  actionId,
+  revision,
+  runActive,
+}: Readonly<{
+  workspaceId: string;
+  actionId: string;
+  revision: { id: string; number: number };
+  runActive: boolean;
+}>) {
+  const mayWrite = useWorkspaceCapability('write');
+  const action = useQuery(actionsQueries.detail(workspaceId, actionId));
   if (action.isError)
     return (
       <ReadError

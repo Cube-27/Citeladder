@@ -312,31 +312,40 @@ async def _resolve_targets(
         if not action.target_url:
             raise ImplementationConflictError("Implementation target is unresolved")
         return ResolvedTargets(site_url_ids=[], external_url=action.target_url)
-    evidence_ids: list[uuid.UUID] = []
-    for member in members:
-        raw = (member.evidence or {}).get("site_url_id")
-        if raw:
-            evidence_ids.append(uuid.UUID(str(raw)))
+    evidence_ids = [
+        uuid.UUID(str(raw))
+        for member in members
+        if (raw := (member.evidence or {}).get("site_url_id"))
+    ]
     site_url_ids = await _owned_ids(session, project=project, requested=evidence_ids)
     if action.target_kind == TARGET_PAGE and not site_url_ids and action.target_url:
-        resolution = await resolve_owned_page(
-            session,
-            workspace_id=project.workspace_id,
-            project_id=project.id,
-            url=action.target_url,
-            preferred_origin=project.website_url,
-        )
-        if (
-            resolution.outcome not in {"exact", "resolved"}
-            or resolution.site_url_id is None
-        ):
-            raise ImplementationConflictError(
-                "Implementation target is ambiguous or unresolved"
-            )
-        site_url_ids = [resolution.site_url_id]
+        site_url_ids = [
+            await _resolved_page(session, project=project, url=action.target_url)
+        ]
     if len(site_url_ids) > IMPLEMENTATION_TARGETS_MAX:
         raise ImplementationConflictError("Too many implementation targets")
     return ResolvedTargets(site_url_ids=site_url_ids)
+
+
+async def _resolved_page(
+    session: AsyncSession, *, project: Project, url: str
+) -> uuid.UUID:
+    """The one crawled page an owned-page Action names, or a conflict."""
+    resolution = await resolve_owned_page(
+        session,
+        workspace_id=project.workspace_id,
+        project_id=project.id,
+        url=url,
+        preferred_origin=project.website_url,
+    )
+    if (
+        resolution.outcome not in {"exact", "resolved"}
+        or resolution.site_url_id is None
+    ):
+        raise ImplementationConflictError(
+            "Implementation target is ambiguous or unresolved"
+        )
+    return resolution.site_url_id
 
 
 async def _member_checks(

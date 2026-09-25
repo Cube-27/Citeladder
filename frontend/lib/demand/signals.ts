@@ -45,13 +45,13 @@ export const FILTER_TABS: readonly { tab: FilterTab; label: string }[] = [
   { tab: 'branded', label: 'Branded Cohort' },
 ];
 
-export type SignalTone = 'info' | 'warning' | 'danger' | 'success' | 'neutral';
+type SignalTone = 'info' | 'warning' | 'danger' | 'success' | 'neutral';
 
 /**
  * Each signal type's chip label and its one-sentence definition. The screen
  * explains a type once, in its legend, rather than repeating prose per row.
  */
-export const SIGNAL_TYPE_META: Readonly<
+const SIGNAL_TYPE_META: Readonly<
   Record<SignalType, { label: string; tone: SignalTone; definition: string }>
 > = {
   striking_distance: {
@@ -227,7 +227,7 @@ export type PageGroup = { page: string | null; rows: RankedSignal[] };
  * The page a signal is about: its own target for a page signal, the resolved
  * landing page for a query signal, or null when none was resolved.
  */
-export function signalPage(signal: DemandSignal): string | null {
+function signalPage(signal: DemandSignal): string | null {
   if (signalTargetKind(signal) === 'Page') return signalTarget(signal) || null;
   return signal.page_url.trim() || null;
 }
