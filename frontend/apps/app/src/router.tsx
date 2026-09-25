@@ -103,25 +103,50 @@ export const appRoutes: RouteObject[] = [
               default: PerformanceRoute,
             })),
           ),
-          productRoute('/opportunities', () =>
-            import('./product-routes-opportunity-visibility-runs').then(
-              ({ OpportunitiesRouteElement }) => ({ default: OpportunitiesRouteElement }),
-            ),
+          productRoute('/agent', () =>
+            import('./product-routes-agent').then(({ NewChatRouteElement }) => ({
+              default: NewChatRouteElement,
+            })),
+          ),
+          productRoute('/agent/chats/:chatId', () =>
+            import('./product-routes-agent').then(({ ChatRouteElement }) => ({
+              default: ChatRouteElement,
+            })),
+          ),
+          productRoute('/agent/actions', () =>
+            import('./product-routes-agent').then(({ ActionsRouteElement }) => ({
+              default: ActionsRouteElement,
+            })),
+          ),
+          productRoute('/agent/actions/:actionId', () =>
+            import('./product-routes-agent').then(({ ActionDetailRouteElement }) => ({
+              default: ActionDetailRouteElement,
+            })),
+          ),
+          productRoute('/agent/skills', () =>
+            import('./product-routes-agent').then(({ SkillsRouteElement }) => ({
+              default: SkillsRouteElement,
+            })),
+          ),
+          productRoute('/agent/context', () =>
+            import('./product-routes-agent').then(({ ContextRouteElement }) => ({
+              default: ContextRouteElement,
+            })),
           ),
           productRoute('/visibility', () =>
-            import('./product-routes-opportunity-visibility-runs').then(
-              ({ VisibilityRouteElement }) => ({ default: VisibilityRouteElement }),
-            ),
+            import('./product-routes-visibility-runs').then(({ VisibilityRouteElement }) => ({
+              default: VisibilityRouteElement,
+            })),
           ),
           productRoute('/runs', () =>
-            import('./product-routes-opportunity-visibility-runs').then(({ RunsRouteElement }) => ({
+            import('./product-routes-visibility-runs').then(({ RunsRouteElement }) => ({
               default: RunsRouteElement,
             })),
           ),
           productRoute('/runs/:runId', () =>
-            import('./product-routes-opportunity-visibility-runs').then(
-              ({ RunDetailRouteElement }) => ({ default: RunDetailRouteElement }),
-            ),
+            import('./product-routes-visibility-runs').then(({ RunDetailRouteElement }) => ({
+              default: RunDetailRouteElement,
+            })),
           ),
           productRoute('/prompts', () =>
             import('./product-routes-prompts-commerce-referrals').then(

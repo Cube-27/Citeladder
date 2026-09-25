@@ -3,7 +3,7 @@
 Covers auth (401), second-workspace isolation (404), the recompute endpoint
 (200 + provenance body, 404 for a foreign audit), the priority-sorted
 keyset-paginated catalog (ordering, filters, coded 400 cursor, 422 unknown
-token), detail (200/404), the status PATCH (200/409 coded/422/404), the
+token), detail (200/404), the Action status PATCH (200/422/404), the
 summary (computed=false then populated), and the CSV/Markdown exports.
 Seed helpers live in ``tests/component/opportunity_helpers.py``.
 """
@@ -83,7 +83,7 @@ async def test_unauthenticated_requests_401(client: httpx.AsyncClient) -> None:
     ).status_code == 401
     assert (
         await client.patch(
-            f"/api/v1/opportunities/{uuid.uuid4()}", json={"status": "open"}
+            f"/api/v1/actions/{uuid.uuid4()}", json={"status": "dismissed"}
         )
     ).status_code == 401
     assert (
@@ -171,7 +171,6 @@ async def test_recompute_returns_snapshot_with_provenance(
         "commerce": 0,
     }
     assert body["counts_by_severity"]["high"] == 1
-    assert body["counts_by_status"]["open"] == 4
     assert body["median_priority"] == 50.0
     assert body["analyzer_version"]
     assert body["rule_version"]
@@ -336,7 +335,7 @@ async def test_list_ordering_filters_and_keyset(
     ]
     first = body["items"][0]
     assert first["priority_score"] == SCORE_BRAND_ABSENT
-    assert first["status"] == "open"
+    assert first["action_id"]
     assert first["target_key"]
     # C1: the backend owns target presentation — the frozen prompt text.
     assert first["target_label"] == "best crm for small teams"
@@ -394,7 +393,7 @@ async def test_list_ordering_filters_and_keyset(
 
 
 # =========================================================================
-# Detail + status PATCH
+# Detail + Action status PATCH
 # =========================================================================
 async def test_detail_200_and_404(
     client: httpx.AsyncClient,
@@ -429,7 +428,7 @@ async def test_detail_200_and_404(
     assert missing.status_code == 404
 
 
-async def test_patch_status_200_409_422_404(
+async def test_action_status_patch_200_422_404(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -438,53 +437,43 @@ async def test_patch_status_200_409_422_404(
         f"/api/v1/projects/{scn.project_id}/opportunities?rule_id=thin_content",
         headers=_headers(scn),
     )
-    item = listed.json()["items"][0]
+    action_id = listed.json()["items"][0]["action_id"]
+    url = f"/api/v1/actions/{action_id}"
 
     patched = await client.patch(
-        f"/api/v1/opportunities/{item['id']}",
-        headers=_headers(scn),
-        json={"status": "in_progress"},
+        url, headers=_headers(scn), json={"status": "dismissed"}
     )
     assert patched.status_code == 200
-    assert patched.json()["status"] == "in_progress"
-    assert patched.json()["rule_id"] == "thin_content"
+    assert patched.json()["status"] == "dismissed"
+    actions_url = f"/api/v1/projects/{scn.project_id}/actions"
+    queue = (await client.get(actions_url, headers=_headers(scn))).json()
+    assert action_id not in {item["id"] for item in queue["items"]}
+    assert queue["status_counts"]["dismissed"] == 1
+    filtered = await client.get(
+        f"{actions_url}?status=dismissed", headers=_headers(scn)
+    )
+    assert [item["id"] for item in filtered.json()["items"]] == [action_id]
 
-    # Unknown status + unknown body keys are 422; a missing row is 404.
+    # Derived/declared states, unknown keys and unknown tokens are 422; a
+    # missing Action is 404.
+    for body in (
+        {"status": "in_progress"},
+        {"status": "bogus"},
+        {"status": "open", "priority_score": 1},
+    ):
+        assert (
+            await client.patch(url, headers=_headers(scn), json=body)
+        ).status_code == 422
     assert (
-        await client.patch(
-            f"/api/v1/opportunities/{item['id']}",
-            headers=_headers(scn),
-            json={"status": "bogus"},
-        )
+        await client.get(f"{actions_url}?target_kind=bogus", headers=_headers(scn))
     ).status_code == 422
     assert (
         await client.patch(
-            f"/api/v1/opportunities/{item['id']}",
-            headers=_headers(scn),
-            json={"status": "open", "priority_score": 1},
-        )
-    ).status_code == 422
-    assert (
-        await client.patch(
-            f"/api/v1/opportunities/{uuid.uuid4()}",
+            f"/api/v1/actions/{uuid.uuid4()}",
             headers=_headers(scn),
             json={"status": "open"},
         )
     ).status_code == 404
-
-    # After another recompute the row is superseded: PATCH is a coded 409.
-    recompute = await client.post(
-        f"/api/v1/projects/{scn.project_id}/opportunities/recompute",
-        headers=_headers(scn),
-    )
-    assert recompute.status_code == 200
-    conflict = await client.patch(
-        f"/api/v1/opportunities/{item['id']}",
-        headers=_headers(scn),
-        json={"status": "resolved"},
-    )
-    assert conflict.status_code == 409
-    assert conflict.json()["detail"]["code"] == "opportunity_superseded"
 
 
 # =========================================================================

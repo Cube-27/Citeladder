@@ -11,6 +11,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.actions import ACTION_STATUS_OPEN
 from app.domain.analysis.evidence import get_execution_evidence
 from app.domain.mcp.common import (
     _caller_is_member_of,
@@ -18,6 +19,7 @@ from app.domain.mcp.common import (
 )
 from app.domain.mcp.data import project_business_context
 from app.domain.mcp.retrieval_document import parse_record_id, retrieval_document
+from app.domain.opportunities.action_status import action_status
 from app.domain.site_health import service as site_health_service
 from app.models.analysis import Citation
 from app.models.audit import Audit, AuditTask
@@ -96,7 +98,13 @@ async def _resolve_opportunity(
             "project_id": str(row.project_id),
             "title": row.title,
             "remediation": row.remediation,
-            "status": row.status,
+            # Workflow status is the grouping Action's; a row recomputed
+            # before Actions existed has none and reads as open.
+            "status": (
+                await action_status(session, action_id=row.action_id)
+                if row.action_id is not None
+                else ACTION_STATUS_OPEN
+            ),
             "severity": row.severity,
             "priority_score": row.priority_score,
             "target_url": row.target_url,

@@ -84,7 +84,10 @@ export function insightFromOpportunity(opportunity: Opportunity): InsightModel {
     // component drops it rather than showing an unbacked claim.
     evidence: hasEvidence
       ? {
-          href: `/opportunities?selected=${opportunity.id}`,
+          // The work happens on the Action that groups this finding.
+          href: opportunity.action_id
+            ? `/agent/actions/${opportunity.action_id}`
+            : '/agent/actions',
           label: evidenceLabel(opportunity),
         }
       : null,

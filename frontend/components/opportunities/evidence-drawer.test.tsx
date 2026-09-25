@@ -31,8 +31,8 @@ vi.mock('@/components/opportunities/opportunity-evidence-section', () => ({
 vi.mock('@/components/opportunities/opportunity-summary-section', () => ({
   OpportunitySummarySection: () => null,
 }));
-vi.mock('@/components/opportunities/opportunity-status-footer', () => ({
-  OpportunityStatusFooter: () => <div data-testid="status-footer" />,
+vi.mock('@/components/opportunities/opportunity-declaration-footer', () => ({
+  OpportunityDeclarationFooter: () => <div data-testid="declaration-footer" />,
 }));
 
 import { EvidenceDrawer } from './evidence-drawer';
@@ -59,7 +59,7 @@ describe('EvidenceDrawer authorization and recovery', () => {
     );
 
     expect(await screen.findByText(/unavailable in the selected project/i)).toBeVisible();
-    expect(screen.queryByTestId('status-footer')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('declaration-footer')).not.toBeInTheDocument();
   });
 
   it('keeps a failed direct detail link dismissible', async () => {

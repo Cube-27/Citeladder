@@ -56,14 +56,15 @@ def _project_history_group(
             "rule_id": rule_id,
             "target_key": target_key,
             "title": occurrences[-1].title or "",
-            "current_state": current.status if current is not None else "resolved",
+            # Whether the rule still fires on this target; workflow status
+            # belongs to the target's Action, not to an occurrence.
+            "current_state": "live" if current is not None else "resolved",
             "transition": transition,
             "occurrence_count": len(occurrences),
             "first_seen": _iso(occurrences[0].created_at),
             "last_seen": _iso(occurrences[-1].created_at),
             "timeline": [
-                {"id": row.id, "status": row.status, "seen_at": _iso(row.created_at)}
-                for row in occurrences
+                {"id": row.id, "seen_at": _iso(row.created_at)} for row in occurrences
             ],
         },
         transition,

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.analysis.comparison import frozen_comparison_key
+from app.core.config.actions import ACTION_STATUS_DONE
 from app.core.config.audits import AUDIT_SCOPE_BRAND, AUDIT_STATUS_COMPLETED
 from app.domain.analysis.schemas import RankingRow, VisibilityResponse
 from app.domain.analysis.visibility import get_visibility
@@ -33,11 +34,11 @@ from app.models.brand import BrandProfile, Competitor
 from app.models.demand import DemandSnapshot
 from app.models.integrations import IntegrationPropertyMapping
 from app.models.opportunity import (
-    Opportunity,
+    Action,
+    ActionStatusEvent,
     OpportunityImplementationEvent,
     OpportunityOrder,
     OpportunitySnapshot,
-    OpportunityStatusEvent,
 )
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
@@ -525,7 +526,11 @@ async def _next_action(
         return CommandCenterNextAction(
             kind="opportunity",
             title=str(action["title"]),
-            href=f"/opportunities?selected={action['id']}",
+            href=(
+                f"/agent/actions/{action['action_id']}"
+                if action.get("action_id")
+                else "/agent/actions"
+            ),
             opportunity_id=action["id"],
         )
     if not evidence["connected"]:
@@ -609,23 +614,23 @@ async def _resolved_action_summary(
     audits: ComparableAudits | None,
 ) -> ResolvedActionSummary:
     resolved_query = (
-        select(OpportunityStatusEvent, Opportunity.title)
-        .join(Opportunity, Opportunity.id == OpportunityStatusEvent.opportunity_id)
+        select(ActionStatusEvent, Action.target_label)
+        .join(Action, Action.id == ActionStatusEvent.action_id)
         .where(
-            OpportunityStatusEvent.workspace_id == workspace_id,
-            OpportunityStatusEvent.project_id == project_id,
-            OpportunityStatusEvent.next_status == "resolved",
+            ActionStatusEvent.workspace_id == workspace_id,
+            ActionStatusEvent.project_id == project_id,
+            ActionStatusEvent.next_status == ACTION_STATUS_DONE,
         )
-        .order_by(OpportunityStatusEvent.created_at.desc())
+        .order_by(ActionStatusEvent.created_at.desc())
     )
     if audits and audits.previous:
         resolved_query = resolved_query.where(
-            OpportunityStatusEvent.created_at
+            ActionStatusEvent.created_at
             > (audits.previous.completed_at or audits.previous.created_at)
         )
     if audits:
         resolved_query = resolved_query.where(
-            OpportunityStatusEvent.created_at
+            ActionStatusEvent.created_at
             <= (audits.selected.completed_at or audits.selected.created_at)
         )
     resolved_rows = list((await session.execute(resolved_query)).all())

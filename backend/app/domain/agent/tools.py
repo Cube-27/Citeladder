@@ -22,9 +22,11 @@ from typing import Any, Final
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.actions import ACTION_STATUSES
 from app.core.config.integrations_contracts import MAPPING_STATUS_ACTIVE
 from app.domain.analytics.service import get_ai_referrals
 from app.domain.integrations.readiness import get_project_readiness
+from app.domain.opportunities.action_status import opportunity_status_clause
 from app.domain.traffic.performance import (
     get_performance_dashboard,
     get_performance_table,
@@ -207,18 +209,16 @@ async def _opportunity_selection(
     )
     status = _text(payload, "status")
     if status:
-        statement = statement.where(Opportunity.status == status)
+        # Workflow status lives on the Action that groups the row.
+        if status not in ACTION_STATUSES:
+            raise ValueError(f"status must be one of {list(ACTION_STATUSES)}")
+        statement = statement.where(opportunity_status_clause(status))
     cursor = _identifier(payload, "cursor")
     if cursor:
         cursor_row = await context.session.scalar(
-            select(Opportunity).where(
-                Opportunity.id == cursor,
-                Opportunity.workspace_id == context.workspace_id,
-                Opportunity.project_id == context.project_id,
-                Opportunity.superseded_at.is_(None),
-            )
+            statement.where(Opportunity.id == cursor)
         )
-        if cursor_row is None or (status and cursor_row.status != status):
+        if cursor_row is None:
             raise ValueError("cursor is invalid for this opportunity selection")
         statement = statement.where(
             or_(

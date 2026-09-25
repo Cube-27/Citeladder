@@ -1,22 +1,9 @@
-import { ChevronDown, Pencil, Plus, BookOpen } from 'lucide-react';
+import { ChevronDown, Pencil, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { BrandProfilePanel } from '@/components/knowledge-base/brand-profile-panel';
-import { CompetitorSuggestions } from '@/components/visibility/prompt-insights';
 import { Button } from '@/components/ui/button';
-import { Drawer } from '@/components/ui/drawer';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
-import { Alert } from '@/components/ui/alert';
-import { projectsApi } from '@/lib/api/projects';
-import { queryKeys } from '@/lib/api/query-keys';
-import {
-  useActiveWorkspaceId,
-  useProjectContext,
-  useWorkspaceCapability,
-} from '@/lib/project/project-context';
-import { visibilityApi } from '@/lib/api/visibility';
+import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import type { Project } from '@/lib/api/types';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
@@ -59,59 +46,5 @@ export function ProjectControls({
         ) : null}
       </DropdownContent>
     </Dropdown>
-  );
-}
-
-export function FactsDrawer({
-  projectId,
-  competitors,
-}: Readonly<{ projectId: string; competitors: Project['competitors'] }>) {
-  const [open, setOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const workspaceId = useActiveWorkspaceId();
-  const profile = useQuery({
-    queryKey: queryKeys.projects.brandProfile(projectId),
-    queryFn: ({ signal }) => projectsApi.getBrandProfile(projectId, { signal, workspaceId }),
-    enabled: open,
-  });
-  const suggestions = useQuery({
-    queryKey: queryKeys.visibility.competitorSuggestions(projectId),
-    queryFn: ({ signal }) =>
-      visibilityApi.listCompetitorSuggestions(projectId, { signal, workspaceId }),
-    enabled: open,
-  });
-  return (
-    <>
-      <Button variant="secondary" size="md" onClick={() => setOpen(true)} className="gap-1.5">
-        <BookOpen className="size-4" aria-hidden /> Edit facts
-      </Button>
-      <Drawer
-        open={open}
-        onOpenChange={setOpen}
-        title="Company facts"
-        description="Review the canonical facts and competitors used across CiteLadder."
-        closeLabel="Close company facts"
-      >
-        <div className="flex flex-col gap-[var(--workspace-gap)]">
-          {profile.isError ? <Alert tone="danger">Company facts could not be loaded.</Alert> : null}
-          {profile.data ? (
-            <BrandProfilePanel
-              key={projectId}
-              projectId={projectId}
-              profile={profile.data}
-              competitors={competitors}
-              competitorSuggestions={
-                <CompetitorSuggestions projectId={projectId} suggestionsQuery={suggestions} />
-              }
-              onSaved={() =>
-                void queryClient.invalidateQueries({
-                  queryKey: queryKeys.projects.commandCenter(projectId),
-                })
-              }
-            />
-          ) : null}
-        </div>
-      </Drawer>
-    </>
   );
 }

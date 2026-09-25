@@ -23,7 +23,7 @@ function opportunity(overrides: Partial<Opportunity> = {}): Opportunity {
     target_url: null,
     target_theme: null,
     target_label: '47 pages · /products/*',
-    status: 'open',
+    action_id: '99999999-9999-4999-8999-999999999999',
     system_rank: 1,
     display_rank: 1,
     order_source: 'system',

@@ -39,7 +39,7 @@ def _row(
             target_url=target_url,
             target_theme=target_theme,
             evidence=evidence,
-            status="open",
+            action_id=None,
             formula_version=FORMULA_VERSION,
             source_analysis_ids=[],
             source_issue_ids=[],

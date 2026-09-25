@@ -1,7 +1,5 @@
 """Shared errors for the workspace-scoped Opportunities owner."""
 
-from app.core.config.opportunities import CODE_OPPORTUNITY_SUPERSEDED
-
 
 class OpportunityNotFoundError(Exception):
     """A workspace-scoped resource was missing or foreign (404)."""
@@ -9,12 +7,6 @@ class OpportunityNotFoundError(Exception):
 
 class OpportunityValidationError(Exception):
     """An unknown filter, status, or request token was supplied (422)."""
-
-
-class OpportunitySupersededError(Exception):
-    """A mutation targeted a superseded row (409)."""
-
-    code = CODE_OPPORTUNITY_SUPERSEDED
 
 
 class OpportunityOrderConflictError(Exception):

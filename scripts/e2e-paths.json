@@ -14,11 +14,11 @@
   {
     "sources": ["frontend/playwright.config.ts"],
     "frontendE2E": [
+      "e2e/action-loop.spec.ts",
       "e2e/billing.spec.ts",
       "e2e/design-repair.spec.ts",
       "e2e/landing-nav.spec.ts",
       "e2e/marketing-pages.spec.ts",
-      "e2e/opportunity-loop.spec.ts",
       "e2e/providers.spec.ts",
       "e2e/runs.spec.ts",
       "e2e/shell.spec.ts",
@@ -69,7 +69,7 @@
   },
   {
     "sources": [
-      "frontend/apps/app/src/product-routes-opportunity-visibility-runs.tsx",
+      "frontend/apps/app/src/product-routes-visibility-runs.tsx",
       "frontend/components/visibility/**",
       "frontend/lib/visibility/**",
       "frontend/components/intelligence/**"
@@ -78,7 +78,7 @@
   },
   {
     "sources": [
-      "frontend/apps/app/src/product-routes-opportunity-visibility-runs.tsx",
+      "frontend/apps/app/src/product-routes-visibility-runs.tsx",
       "frontend/components/runs/**",
       "frontend/lib/runs/**",
       "frontend/lib/sse/**"
@@ -87,13 +87,17 @@
   },
   {
     "sources": [
-      "frontend/apps/app/src/product-routes-opportunity-visibility-runs.tsx",
+      "frontend/apps/app/src/product-routes-agent.tsx",
+      "frontend/components/agent/**",
+      "frontend/lib/agent/**",
+      "frontend/lib/api/actions.ts",
+      "frontend/lib/api/agent.ts",
       "frontend/components/opportunities/**",
       "frontend/lib/opportunities/**",
       "frontend/lib/api/opportunities.ts",
       "frontend/lib/api/schemas/opportunities.ts"
     ],
-    "frontendE2E": ["e2e/opportunity-loop.spec.ts"]
+    "frontendE2E": ["e2e/action-loop.spec.ts"]
   },
   {
     "sources": [

@@ -119,7 +119,8 @@ def _application_record_url(
         suffix = f"&source={source}" if source else ""
         return f"{origin}/visibility?project={project}&evidence={row_id}{suffix}"
     if kind == "opportunity":
-        return f"{origin}/opportunities?project={project}&opportunity={row_id}"
+        # Opportunities are worked through their Action in the Agent area.
+        return f"{origin}/agent/actions?project={project}"
     if kind == "prompt":
         return f"{origin}/visibility/prompts?project={project}&prompt={row_id}"
     if kind in {"traffic_snapshot", "demand_snapshot", "query_snapshot", "query_row"}:

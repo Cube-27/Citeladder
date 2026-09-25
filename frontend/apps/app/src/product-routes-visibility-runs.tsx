@@ -1,12 +1,6 @@
-import { OpportunitiesScreen } from '@/components/opportunities/opportunities-screen';
 import { RunDetailScreen } from '@/components/runs/run-detail-screen';
 import { RunsScreen } from '@/components/runs/runs-screen';
 import { VisibilityScreen } from '@/components/visibility/visibility-screen';
-
-/** `/opportunities`: active-project recommendation catalog and evidence. */
-export function OpportunitiesRouteElement() {
-  return <OpportunitiesScreen />;
-}
 
 /** `/visibility`: active-project AI visibility workspace and URL-backed tabs. */
 export function VisibilityRouteElement() {

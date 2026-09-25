@@ -31,7 +31,6 @@ from app.models.site_health.runtime import SiteHealthProfile
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
 from tests.component.auth_helpers import register_and_login
-from tests.component.opportunity_helpers import _seed_scenario
 from tests.component.site_health_helpers import seed_monitored_urls_allowance
 
 pytestmark = pytest.mark.asyncio
@@ -185,44 +184,6 @@ async def test_opportunities_404_envelope(client: httpx.AsyncClient) -> None:
     body = resp.json()
     assert body["detail"] == "Opportunity not found"
     _assert_envelope(body, code="not_found", retryable=False)
-
-
-async def test_opportunities_superseded_409_envelope(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """Coded 409 opportunity_superseded keeps its exact legacy shape."""
-    await _register(client)
-    async with session_factory() as session:
-        scn = await _seed_scenario(session, email=_EMAIL)
-    headers = {"X-Workspace-Id": str(scn.workspace_id)}
-    recompute = await client.post(
-        f"/api/v1/projects/{scn.project_id}/opportunities/recompute",
-        headers=headers,
-    )
-    assert recompute.status_code == 200
-    listed = await client.get(
-        f"/api/v1/projects/{scn.project_id}/opportunities?rule_id=thin_content",
-        headers=headers,
-    )
-    item = listed.json()["items"][0]
-
-    # A second recompute supersedes the first snapshot's rows.
-    recompute = await client.post(
-        f"/api/v1/projects/{scn.project_id}/opportunities/recompute",
-        headers=headers,
-    )
-    assert recompute.status_code == 200
-    conflict = await client.patch(
-        f"/api/v1/opportunities/{item['id']}",
-        headers=headers,
-        json={"status": "resolved"},
-    )
-    assert conflict.status_code == 409
-    body = conflict.json()
-    assert body["detail"]["code"] == "opportunity_superseded"
-    assert body["detail"]["message"] == body["error"]["message"]
-    _assert_envelope(body, code="opportunity_superseded", retryable=False)
 
 
 # =========================================================================

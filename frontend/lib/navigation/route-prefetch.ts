@@ -60,9 +60,9 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
         commerceApi.catalog(projectId, { signal, workspaceId }),
     });
   },
-  '/opportunities': async (client, { projectId, workspaceId }) => {
-    const { opportunitiesQueries } = await import('@/lib/api/opportunities');
-    warmQuery(client, opportunitiesQueries.summary(workspaceId, projectId));
+  '/agent/actions': async (client, { projectId, workspaceId }) => {
+    const { actionsQueries } = await import('@/lib/api/actions');
+    warmQuery(client, actionsQueries.list(workspaceId, projectId));
   },
   '/prompts': async (client, { projectId, workspaceId }) => {
     const { promptsApi } = await import('@/lib/api/prompts');

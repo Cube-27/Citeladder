@@ -199,7 +199,8 @@ def _register_action_tools(
                 "state": "available" if rows else "unavailable",
                 "reason": None if rows else "no_actions",
                 "items": [
-                    _jsonable(action_owner.action_projection(row)) for row in rows
+                    _jsonable(action_owner.action_projection(row, status))
+                    for row, status in rows
                 ],
                 "next_cursor": next_cursor,
             }
@@ -213,7 +214,7 @@ def _register_action_tools(
     async def get_action(project_id: str, action_id: str) -> dict[str, Any]:
         async with session_factory() as session:
             project = await _authorized_project(session, project_id)
-            action, members = await action_owner.get_action(
+            action, status, members = await action_owner.get_action(
                 session,
                 workspace_id=project.workspace_id,
                 action_id=uuid.UUID(action_id),
@@ -222,7 +223,7 @@ def _register_action_tools(
                 raise LookupError("Action was not found in this project")
             return {
                 "state": "available",
-                "action": _jsonable(action_owner.action_projection(action)),
+                "action": _jsonable(action_owner.action_projection(action, status)),
                 "diagnosis": action.diagnosis or {},
                 "members": [
                     {

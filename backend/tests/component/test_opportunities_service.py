@@ -296,12 +296,6 @@ async def test_recompute_persists_rows_and_snapshot_with_provenance(
         "low": 1,
         "medium": 2,
     }
-    assert result["counts_by_status"] == {
-        "dismissed": 0,
-        "in_progress": 0,
-        "open": 4,
-        "resolved": 0,
-    }
     # Median of [10.0, 20.0, 80.0, 120.0].
     assert result["median_priority"] == 50.0
     assert result["analyzer_version"] == ANALYZER_VERSION
@@ -319,7 +313,7 @@ async def test_recompute_persists_rows_and_snapshot_with_provenance(
     assert brand_absent.opportunity_type == "visibility"
     assert brand_absent.severity == "high"
     assert brand_absent.priority_score == SCORE_BRAND_ABSENT
-    assert brand_absent.status == "open"
+    assert brand_absent.action_id is not None
     assert brand_absent.evidence is not None
     assert brand_absent.evidence["competitor_names"] == ["Globex"]
     assert brand_absent.evidence["prompt_intent"] == "purchase"
@@ -514,12 +508,6 @@ async def test_recompute_without_sources_yields_empty_snapshot(
     assert result["audit_id"] is None
     assert result["site_crawl_id"] is None
     assert result["median_priority"] is None
-    assert result["counts_by_status"] == {
-        "dismissed": 0,
-        "in_progress": 0,
-        "open": 0,
-        "resolved": 0,
-    }
     assert (
         await db_session.scalar(
             select(OpportunitySnapshot).where(

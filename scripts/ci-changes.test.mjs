@@ -34,7 +34,7 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   assert.equal(classifyPaths(['frontend/components/ui/primitives.test.tsx']).e2e, false);
   assert.equal(classifyPaths(['frontend/lib/api/projects.ts']).e2e, false);
   assert.deepEqual(selectE2EFiles(['frontend/components/opportunities/evidence-drawer.tsx']), [
-    'e2e/opportunity-loop.spec.ts',
+    'e2e/action-loop.spec.ts',
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/components/ui/button.tsx']), []);
   assert.deepEqual(selectE2EFiles(['frontend/components/ui/command-palette.tsx']), [

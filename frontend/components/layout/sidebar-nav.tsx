@@ -1,77 +1,28 @@
 'use client';
 
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
-import { textRole } from '@/components/ui/typography';
-import { prefetchRoute } from '@/lib/navigation/route-prefetch';
+import { useRouteIntent } from '@/lib/navigation/use-route-intent';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 
+import { ModeSwitch } from './mode-switch';
+import { NavLink } from './nav-link';
 import {
   isNavItemActive,
+  navigationMode,
   resolveNavigationGroups,
   resolveNavigationItems,
   type NavGroup,
-  type NavItem,
 } from './nav-items';
 
-function NavLink({
-  item,
-  active,
-  onIntent,
-  onNavigate,
-}: Readonly<{
-  item: NavItem;
-  active: boolean;
-  onIntent: (href: string) => void;
-  onNavigate?: () => void;
-}>) {
-  const Icon = item.icon;
-  return (
-    <Link
-      to={item.href}
-      onMouseEnter={() => {
-        if (!active) onIntent(item.href);
-      }}
-      onFocus={() => {
-        if (!active) onIntent(item.href);
-      }}
-      onClick={onNavigate}
-      aria-current={active ? 'page' : undefined}
-      className={cn(
-        'group relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] border px-2.5 text-sm transition-colors duration-150',
-        // Navigation is a label, not reading copy, so both states sit at the
-        // shared label weight rather than body regular — the destinations stay
-        // scannable against the group titles above them. The role owns the
-        // weight; 600 stays reserved for headings, and the active row is
-        // carried by the paper surface, leading mark, and icon.
-        active
-          ? textRole(
-              'label',
-              'app-nav-current border-border bg-panel text-foreground before:bg-brand-forest before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full',
-            )
-          : textRole(
-              'label',
-              'border-transparent text-secondary hover:bg-active hover:text-foreground',
-            ),
-      )}
-    >
-      <Icon
-        className={cn(
-          'size-4 shrink-0 transition-colors duration-150',
-          active ? 'text-foreground' : 'text-subtle group-hover:text-foreground',
-        )}
-        aria-hidden
-      />
-      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-    </Link>
-  );
-}
+// Agent mode reads chats and Actions; its API modules stay out of the chunk
+// the shell needs before it can paint.
+const AgentNav = lazy(() => import('./agent-nav').then(({ AgentNav }) => ({ default: AgentNav })));
 
 function StationLinks({
   group,
@@ -111,13 +62,27 @@ export function SidebarNav({
   className,
   onNavigate,
 }: Readonly<{ className?: string; onNavigate?: () => void }>) {
+  const pathname = useLocation().pathname ?? '';
+  const agentMode = navigationMode(pathname) === 'agent';
+  return (
+    <div className={cn('flex flex-col gap-3', className)}>
+      <ModeSwitch onNavigate={onNavigate} />
+      {agentMode ? (
+        <Suspense fallback={null}>
+          <AgentNav onNavigate={onNavigate} />
+        </Suspense>
+      ) : (
+        <DashboardNav onNavigate={onNavigate} />
+      )}
+    </div>
+  );
+}
+
+function DashboardNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) {
   const { hasCapability } = useEntitlement();
   const groups = resolveNavigationGroups(hasCapability);
   return (
-    <nav
-      aria-label="Primary"
-      className={cn('flex flex-col gap-[var(--sidebar-group-gap)]', className)}
-    >
+    <nav aria-label="Primary" className="flex flex-col gap-[var(--sidebar-group-gap)]">
       {groups.map((group) => {
         const showHeading = group.title !== 'Overview';
         return (
@@ -132,21 +97,5 @@ export function SidebarNav({
         );
       })}
     </nav>
-  );
-}
-
-function useRouteIntent() {
-  const queryClient = useQueryClient();
-  const { activeProject } = useProjectContext();
-  return useCallback(
-    (href: string) =>
-      prefetchRoute(
-        queryClient,
-        href,
-        activeProject
-          ? { projectId: activeProject.id, workspaceId: activeProject.workspace_id }
-          : null,
-      ),
-    [activeProject, queryClient],
   );
 }

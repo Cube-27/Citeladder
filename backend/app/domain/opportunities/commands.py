@@ -1,4 +1,4 @@
-"""Mutable Opportunities workflow commands."""
+"""The shared Opportunity queue order, the one Opportunity-level write."""
 
 from __future__ import annotations
 
@@ -7,65 +7,15 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.opportunities import OPPORTUNITY_STATUSES
-from app.domain.opportunities.common import (
-    _OPPORTUNITY_NOT_FOUND,
-    _PROJECT_NOT_FOUND,
-)
+from app.domain.opportunities.common import _PROJECT_NOT_FOUND
 from app.domain.opportunities.errors import (
     OpportunityNotFoundError,
     OpportunityOrderConflictError,
-    OpportunitySupersededError,
     OpportunityValidationError,
 )
-from app.domain.opportunities.projection import project_item, stable_key
-from app.models.opportunity import Opportunity, OpportunityOrder, OpportunityStatusEvent
+from app.domain.opportunities.projection import stable_key
+from app.models.opportunity import Opportunity, OpportunityOrder
 from app.models.project import Project
-
-
-async def update_status(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    opportunity_id: uuid.UUID,
-    status: str,
-    changed_by_user_id: uuid.UUID,
-) -> dict:
-    """Mutate the human workflow status, the only mutable row field."""
-    _validate_status(status)
-    row = await session.scalar(
-        select(Opportunity).where(
-            Opportunity.id == opportunity_id,
-            Opportunity.workspace_id == workspace_id,
-        )
-    )
-    if row is None:
-        raise OpportunityNotFoundError(_OPPORTUNITY_NOT_FOUND)
-    if row.superseded_at is not None:
-        raise OpportunitySupersededError(
-            "Opportunity was superseded by a newer recompute"
-        )
-    previous_status = row.status
-    if previous_status != status:
-        row.status = status
-        session.add(
-            OpportunityStatusEvent(
-                workspace_id=workspace_id,
-                project_id=row.project_id,
-                opportunity_id=row.id,
-                stable_key=stable_key(row),
-                previous_status=previous_status,
-                next_status=status,
-                changed_by_user_id=changed_by_user_id,
-            )
-        )
-    await session.commit()
-    return project_item(row)
-
-
-def _validate_status(status: str) -> None:
-    if status not in OPPORTUNITY_STATUSES:
-        raise OpportunityValidationError(f"unknown opportunity status: {status!r}")
 
 
 async def _lock_project(

@@ -26,7 +26,6 @@ OPPORTUNITIES_COLUMNS = [
     "opportunity_type",
     "severity",
     "priority_score",
-    "status",
     "title",
     "target",
     "remediation",
