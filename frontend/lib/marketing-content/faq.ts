@@ -48,7 +48,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'How is the product organized?',
-        'Five stations form one loop: Overview, Connect, Analyze, Act, and Track. Site Health, Content Intelligence, Demand Intelligence, and the bounded Growth Agent sit behind those stations. Improve / Verify is the transition after you declare a change, not a separate workspace.',
+        'Five stations form one loop: Overview, Connect, Analyze, Act, and Track. Site Health, Content Intelligence, Demand Intelligence, and the bounded Agent sit behind those stations. Improve / Verify is the transition after you declare a change, not a separate workspace.',
       ),
       faqItem(
         'How does the growth loop work?',

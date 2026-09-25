@@ -9,7 +9,7 @@ export type PlanPresentation = {
 export const PLAN_PRESENTATION: Readonly<Record<PlanKey, PlanPresentation>> = {
   tier_1: { blurb: 'Daily AI visibility tracking for one brand.' },
   tier_2: {
-    blurb: 'Add content creation and the Growth Agent to your workflow.',
+    blurb: 'Add the Agent and its content skills to your workflow.',
     highlighted: true,
   },
   tier_3: { blurb: 'Higher limits and priority support for expanding teams.' },
@@ -30,6 +30,9 @@ const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   audit_cadence: 'Audit frequency',
   audit_web_search: 'Web-search-grounded audits',
   authenticated_exports: 'Authenticated exports',
+  // The merged Agent capability keeps its persisted key until a billing
+  // migration retires it.
+  growth_agent: 'Agent',
 };
 
 export function capabilityLabel(key: string): string {

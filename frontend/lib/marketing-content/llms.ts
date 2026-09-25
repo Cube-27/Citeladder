@@ -28,7 +28,7 @@ export const LLMS_TXT = [
   '- Site Health: crawl, page-kind classification, deterministic checks, issues, recrawl verification.',
   '- Content Intelligence: evidence-grounded briefs, drafts, and schema. Save is a human decision.',
   '- Demand Intelligence: Google Search Console and GA4 beside owned-page evidence.',
-  '- Growth Agent: typed tools over those systems. No second knowledge store. No autonomous publish.',
+  '- Agent: chats and reviewable outputs over the same read tools as the MCP server. No second knowledge store. No autonomous publish.',
   '',
   '## What CiteLadder is not',
   '',
