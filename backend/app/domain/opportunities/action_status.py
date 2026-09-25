@@ -1,8 +1,11 @@
-"""Action workflow status: the effective read and the one user write.
+"""Action workflow status: the effective read and the user writes.
 
-A user stores ``open`` or ``dismissed``. ``in_progress`` is never stored: an
-open Action reads as in progress while a linked chat has an output, so the
-Agent never sets a status and deleting the chat's work cannot strand one.
+A user stores ``open`` or ``dismissed``, and a declaration stores
+``implemented``. The rest is never stored: an open Action reads as in progress
+while a linked chat has an output, and an implemented one reads as measuring
+once the verifier has appended an observation for its declaration and as done
+once an observation verified every expected check. So the Agent never sets a
+status, and neither the verifier nor deleting a chat's work can strand one.
 """
 
 from __future__ import annotations
@@ -15,7 +18,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.actions import (
     ACTION_ACTIVE_STATUSES,
     ACTION_ORIGIN_AGENT,
+    ACTION_STATUS_DONE,
+    ACTION_STATUS_IMPLEMENTED,
     ACTION_STATUS_IN_PROGRESS,
+    ACTION_STATUS_MEASURING,
     ACTION_STATUS_OPEN,
     ACTION_STATUSES,
     ACTION_USER_STATUSES,
@@ -25,7 +31,13 @@ from app.domain.opportunities.errors import (
     OpportunityValidationError,
 )
 from app.models.agent import AgentOutput
-from app.models.opportunity import Action, ActionStatusEvent, Opportunity
+from app.models.opportunity import (
+    Action,
+    ActionStatusEvent,
+    Opportunity,
+    OpportunityImplementationEvent,
+    OpportunityVerificationEvent,
+)
 
 _ACTION_NOT_FOUND = "Action not found"
 
@@ -38,7 +50,30 @@ def effective_status() -> ColumnElement[str]:
             and_(Action.status == ACTION_STATUS_OPEN, has_output),
             literal(ACTION_STATUS_IN_PROGRESS),
         ),
+        (
+            and_(
+                Action.status == ACTION_STATUS_IMPLEMENTED,
+                _observed(OpportunityVerificationEvent.observation_kind == "verified"),
+            ),
+            literal(ACTION_STATUS_DONE),
+        ),
+        (
+            and_(Action.status == ACTION_STATUS_IMPLEMENTED, _observed()),
+            literal(ACTION_STATUS_MEASURING),
+        ),
         else_=Action.status,
+    )
+
+
+def _observed(*criteria: ColumnElement[bool]) -> ColumnElement[bool]:
+    """Whether the verifier observed this Action's declaration (matching criteria)."""
+    return exists().where(
+        OpportunityImplementationEvent.action_id == Action.id,
+        OpportunityVerificationEvent.workspace_id
+        == OpportunityImplementationEvent.workspace_id,
+        OpportunityVerificationEvent.implementation_event_id
+        == OpportunityImplementationEvent.id,
+        *criteria,
     )
 
 
@@ -136,3 +171,28 @@ async def update_status(
         )
     await session.commit()
     return action
+
+
+def record_implemented(
+    session: AsyncSession, *, action: Action, changed_by_user_id: uuid.UUID
+) -> None:
+    """Store a declaration's status change on a row the caller has locked.
+
+    Only an Action the user still holds open can be declared: a dismissed one
+    is reopened first, and a declared one already carries its declaration.
+    """
+    if action.status != ACTION_STATUS_OPEN:
+        raise OpportunityValidationError(
+            f"an action in {action.status!r} cannot be declared implemented"
+        )
+    action.status = ACTION_STATUS_IMPLEMENTED
+    session.add(
+        ActionStatusEvent(
+            workspace_id=action.workspace_id,
+            project_id=action.project_id,
+            action_id=action.id,
+            previous_status=ACTION_STATUS_OPEN,
+            next_status=ACTION_STATUS_IMPLEMENTED,
+            changed_by_user_id=changed_by_user_id,
+        )
+    )

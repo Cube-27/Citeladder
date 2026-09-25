@@ -24,6 +24,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config.actions import TARGET_EARNED_PAGE
 from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION
 from app.core.config.earned_actions import RULE_EARNED_PAGE_ACQUIRE
 from app.core.config.placement import (
@@ -68,7 +69,11 @@ from app.models.source_pages import (
     SourcePageEntityPresence,
     SourcePageSnapshot,
 )
-from tests.component.opportunity_helpers import Scenario, _seed_scenario
+from tests.component.opportunity_helpers import (
+    Scenario,
+    _seed_scenario,
+    seed_action_for,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -224,20 +229,24 @@ async def _seed(
 
 
 async def _declare(
-    client: httpx.AsyncClient, scenario: Scenario, opportunity: Opportunity, *, key: str
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    scenario: Scenario,
+    opportunity: Opportunity,
+    *,
+    key: str,
 ) -> dict:
+    async with session_factory() as session:
+        action_id = await seed_action_for(
+            session, opportunity, target_kind=TARGET_EARNED_PAGE
+        )
     response = await client.post(
-        f"/api/v1/projects/{scenario.project_id}/opportunities/implementation-events",
+        f"/api/v1/actions/{action_id}/declaration",
         headers={
             "X-Workspace-Id": str(scenario.workspace_id),
             "Idempotency-Key": key,
         },
-        json={
-            "opportunity_id": str(opportunity.id),
-            "target_site_url_ids": [],
-            "declared_implemented_at": datetime.now(UTC).isoformat(),
-            "expected_checks": [],
-        },
+        json={"declared_implemented_at": datetime.now(UTC).isoformat()},
     )
     assert response.status_code == 201, response.text
     return response.json()
@@ -283,7 +292,9 @@ async def test_a_declaration_opens_a_check_anchored_on_that_declaration(
 ) -> None:
     scenario, opportunity, page, baseline = await _seed(client, session_factory)
 
-    body = await _declare(client, scenario, opportunity, key="declare-once")
+    body = await _declare(
+        client, session_factory, scenario, opportunity, key="declare-once"
+    )
     check = await _check(session_factory, scenario)
 
     # The anchor is the implementation event. The same page and action can be
@@ -303,7 +314,7 @@ async def test_a_page_nobody_reread_is_not_a_failed_placement(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     scenario, opportunity, _page, _baseline = await _seed(client, session_factory)
-    await _declare(client, scenario, opportunity, key="declare-unread")
+    await _declare(client, session_factory, scenario, opportunity, key="declare-unread")
 
     observed = await _settle(session_factory, scenario)
 
@@ -318,7 +329,7 @@ async def test_a_listing_that_went_live_settles_the_check(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     scenario, opportunity, page, _baseline = await _seed(client, session_factory)
-    await _declare(client, scenario, opportunity, key="declare-live")
+    await _declare(client, session_factory, scenario, opportunity, key="declare-live")
 
     async with session_factory() as session:
         fresh = await session.get(SourcePage, page.id)
@@ -353,7 +364,7 @@ async def test_placement_and_visibility_are_reported_as_two_observations(
     leg would make one of those disagreements invisible.
     """
     scenario, opportunity, page, _baseline = await _seed(client, session_factory)
-    await _declare(client, scenario, opportunity, key="declare-report")
+    await _declare(client, session_factory, scenario, opportunity, key="declare-report")
     async with session_factory() as session:
         fresh = await session.get(SourcePage, page.id)
         assert fresh is not None
@@ -400,7 +411,7 @@ async def test_a_due_recheck_makes_its_page_claimable_and_pays_for_it(
     path around the accounting.
     """
     scenario, opportunity, page, _baseline = await _seed(client, session_factory)
-    await _declare(client, scenario, opportunity, key="declare-due")
+    await _declare(client, session_factory, scenario, opportunity, key="declare-due")
 
     later = datetime.now(UTC) + timedelta(days=30)
     async with session_factory() as session:
@@ -424,7 +435,7 @@ async def test_a_reading_that_found_nothing_keeps_asking_until_it_stops(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     scenario, opportunity, page, _baseline = await _seed(client, session_factory)
-    await _declare(client, scenario, opportunity, key="declare-unmet")
+    await _declare(client, session_factory, scenario, opportunity, key="declare-unmet")
 
     async with session_factory() as session:
         fresh = await session.get(SourcePage, page.id)
@@ -458,7 +469,7 @@ async def test_a_settled_check_becomes_a_verification_observation(
     records the placement check as unobservable rather than passing it.
     """
     scenario, opportunity, page, _baseline = await _seed(client, session_factory)
-    await _declare(client, scenario, opportunity, key="declare-verify")
+    await _declare(client, session_factory, scenario, opportunity, key="declare-verify")
     async with session_factory() as session:
         fresh = await session.get(SourcePage, page.id)
         assert fresh is not None
@@ -513,7 +524,7 @@ async def test_an_audit_cannot_observe_a_publishers_page(
     unobservable check verifies nothing.
     """
     scenario, opportunity, _page, _baseline = await _seed(client, session_factory)
-    await _declare(client, scenario, opportunity, key="declare-audit")
+    await _declare(client, session_factory, scenario, opportunity, key="declare-audit")
 
     task = AnalyticsTask(
         workspace_id=scenario.workspace_id,
@@ -573,7 +584,7 @@ async def test_a_reading_too_thin_to_judge_is_asked_again(
     strength of one bad fetch.
     """
     scenario, opportunity, page, _baseline = await _seed(client, session_factory)
-    await _declare(client, scenario, opportunity, key="declare-thin")
+    await _declare(client, session_factory, scenario, opportunity, key="declare-thin")
     await _thin_snapshot(session_factory, scenario, page.id)
 
     await _settle(session_factory, scenario)
@@ -596,7 +607,7 @@ async def test_an_answer_no_rereading_can_change_stops_asking(
 ) -> None:
     """A roster change is a property of the CHECK. Re-reading cannot fix it."""
     scenario, opportunity, page, _baseline = await _seed(client, session_factory)
-    await _declare(client, scenario, opportunity, key="declare-roster")
+    await _declare(client, session_factory, scenario, opportunity, key="declare-roster")
     async with session_factory() as session:
         row = await session.scalar(
             select(PlacementCheck).where(

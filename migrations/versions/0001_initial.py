@@ -2307,7 +2307,13 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("opportunity_id", sa.UUID(), nullable=False),
+        sa.Column("action_id", sa.UUID(), nullable=False),
+        sa.Column("output_revision_id", sa.UUID(), nullable=True),
+        sa.Column(
+            "member_opportunity_ids",
+            postgresql.JSONB(astext_type=Text()),
+            nullable=False,
+        ),
         sa.Column("opportunity_snapshot_id", sa.UUID(), nullable=False),
         sa.Column(
             "target_site_url_ids",
@@ -2329,9 +2335,7 @@ def upgrade() -> None:
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["opportunity_id"], ["opportunities.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["action_id"], ["actions.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["opportunity_snapshot_id"],
             ["opportunity_snapshots.id"],
@@ -2352,13 +2356,14 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "workspace_id", "id", name="uq_opportunity_implementation_ws_id"
         ),
+        sa.UniqueConstraint("action_id", name="uq_opportunity_implementation_action"),
     )
     _create_indexes(
         "opportunity_implementation_events",
         (
             "workspace_id",
             "project_id",
-            "opportunity_id",
+            "output_revision_id",
             "opportunity_snapshot_id",
         ),
     )
@@ -7092,6 +7097,13 @@ def upgrade() -> None:
         "agent_tool_attempts",
         ["workspace_id"],
         unique=False,
+    )
+    op.create_foreign_key(
+        "fk_opportunity_implementation_output_revision_id",
+        "opportunity_implementation_events",
+        "agent_output_revisions",
+        ["output_revision_id"],
+        ["id"],
     )
     op.create_foreign_key(
         "fk_consumable_ledger_agent_run_id",

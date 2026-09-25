@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query, status
@@ -39,8 +39,6 @@ from app.core.config.opportunities import (
     CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT,
     CODE_IMPLEMENTATION_TARGET_CONFLICT,
     CODE_OPPORTUNITY_ORDER_CONFLICT,
-    IMPLEMENTATION_EVENT_DEFAULT_LIMIT,
-    IMPLEMENTATION_EVENT_MAX_LIMIT,
     IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN,
     LIST_DEFAULT_LIMIT,
     LIST_MAX_LIMIT,
@@ -59,10 +57,13 @@ from app.domain.opportunities import (
     summary as summary_service,
 )
 from app.domain.opportunities.action_schemas import (
+    ActionDeclarationCreate,
+    ActionDeclarationView,
     ActionDetail,
     ActionItem,
     ActionsPage,
     ActionStatusPatch,
+    MeasurementLegView,
 )
 from app.domain.opportunities.errors import (
     InvalidCursorError,
@@ -75,16 +76,13 @@ from app.domain.opportunities.implementation_events import (
     ImplementationDeclaration,
     ImplementationIdempotencyConflictError,
     ImplementationNotFoundError,
-    create_implementation_event,
-    get_implementation_event,
-    list_implementation_events,
+    action_declaration,
+    declare_action_implemented,
     list_verification_events,
 )
+from app.domain.opportunities.measurement_legs import measurement_legs
 from app.domain.opportunities.projection import project_item
 from app.domain.opportunities.schemas import (
-    ImplementationEventCreate,
-    ImplementationEventsPage,
-    ImplementationEventView,
     OpportunitiesPage,
     OpportunityDetail,
     OpportunityHistoryResponse,
@@ -130,15 +128,25 @@ def _verification_view(row: OpportunityVerificationEvent) -> VerificationEventVi
     )
 
 
-def _implementation_view(
-    row: OpportunityImplementationEvent,
-    verification_rows: Sequence[OpportunityVerificationEvent] = (),
-) -> ImplementationEventView:
-    latest = verification_rows[-1] if verification_rows else None
-    return ImplementationEventView(
+async def _declaration_view(
+    session: AsyncSession, row: OpportunityImplementationEvent
+) -> ActionDeclarationView:
+    """The declaration, its observations and what each loop leg awaits."""
+    observations = (
+        await list_verification_events(
+            session,
+            workspace_id=row.workspace_id,
+            project_id=row.project_id,
+            implementation_event_ids=[row.id],
+        )
+    ).get(row.id, [])
+    latest = observations[-1] if observations else None
+    legs = await measurement_legs(session, declaration=row, observations=observations)
+    return ActionDeclarationView(
         id=row.id,
-        project_id=row.project_id,
-        opportunity_id=row.opportunity_id,
+        action_id=row.action_id,
+        output_revision_id=row.output_revision_id,
+        member_opportunity_ids=list(row.member_opportunity_ids or []),
         opportunity_snapshot_id=row.opportunity_snapshot_id,
         target_site_url_ids=list(row.target_site_url_ids or []),
         target_external_url=row.target_external_url,
@@ -146,7 +154,16 @@ def _implementation_view(
         expected_checks=list(row.expected_checks or []),
         state=latest.observation_kind if latest is not None else "declared",
         limitations=list(latest.limitations or []) if latest is not None else [],
-        verification_events=[_verification_view(item) for item in verification_rows],
+        verification_events=[_verification_view(item) for item in observations],
+        legs=[
+            MeasurementLegView(
+                leg=leg.leg,
+                state=leg.state,
+                due_at=leg.due_at,
+                last_evidence_at=leg.last_evidence_at,
+            )
+            for leg in legs
+        ],
         created_at=row.created_at,
     )
 
@@ -259,133 +276,6 @@ async def get_grouped_history_endpoint(
     return OpportunityHistoryResponse.model_validate(projection)
 
 
-@router.post(
-    "/projects/{project_id}/opportunities/implementation-events",
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_implementation_event_endpoint(
-    project_id: uuid.UUID,
-    payload: ImplementationEventCreate,
-    ctx: _WriteDep,
-    session: _SessionDep,
-    response: Response,
-    idempotency_key: Annotated[
-        str | None,
-        Header(
-            alias="Idempotency-Key",
-            max_length=IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN,
-        ),
-    ] = None,
-) -> ImplementationEventView:
-    key = (idempotency_key or "").strip()
-    if not key:
-        raise ApiException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            CODE_VALIDATION_ERROR,
-            "Idempotency-Key is required",
-        )
-    try:
-        row, created = await create_implementation_event(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            actor_user_id=ctx.user.id,
-            idempotency_key=key,
-            declaration=ImplementationDeclaration(
-                opportunity_id=payload.opportunity_id,
-                target_site_url_ids=payload.target_site_url_ids,
-                declared_implemented_at=payload.declared_implemented_at,
-                expected_checks=[
-                    item.model_dump(mode="json") for item in payload.expected_checks
-                ],
-            ),
-        )
-        await session.commit()
-    except ImplementationNotFoundError as exc:
-        raise ApiException(status.HTTP_404_NOT_FOUND, CODE_NOT_FOUND, str(exc)) from exc
-    except ImplementationIdempotencyConflictError as exc:
-        raise ApiException(
-            status.HTTP_409_CONFLICT,
-            CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT,
-            str(exc),
-        ) from exc
-    except ImplementationConflictError as exc:
-        raise ApiException(
-            status.HTTP_409_CONFLICT,
-            CODE_IMPLEMENTATION_TARGET_CONFLICT,
-            str(exc),
-        ) from exc
-    if not created:
-        response.status_code = status.HTTP_200_OK
-    verification = await list_verification_events(
-        session,
-        workspace_id=ctx.workspace_id,
-        project_id=project_id,
-        implementation_event_ids=[row.id],
-    )
-    return _implementation_view(row, verification.get(row.id, []))
-
-
-@router.get(
-    "/projects/{project_id}/opportunities/implementation-events",
-)
-async def list_implementation_events_endpoint(
-    project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    limit: Annotated[
-        int, Query(ge=1, le=IMPLEMENTATION_EVENT_MAX_LIMIT)
-    ] = IMPLEMENTATION_EVENT_DEFAULT_LIMIT,
-    opportunity_id: Annotated[uuid.UUID | None, Query()] = None,
-) -> ImplementationEventsPage:
-    try:
-        rows = await list_implementation_events(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            limit=limit,
-            opportunity_id=opportunity_id,
-        )
-    except ImplementationNotFoundError as exc:
-        raise ApiException(status.HTTP_404_NOT_FOUND, CODE_NOT_FOUND, str(exc)) from exc
-    verification = await list_verification_events(
-        session,
-        workspace_id=ctx.workspace_id,
-        project_id=project_id,
-        implementation_event_ids=[row.id for row in rows],
-    )
-    return ImplementationEventsPage(
-        items=[_implementation_view(row, verification.get(row.id, [])) for row in rows]
-    )
-
-
-@router.get(
-    "/projects/{project_id}/opportunities/implementation-events/{event_id}",
-)
-async def get_implementation_event_endpoint(
-    project_id: uuid.UUID,
-    event_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-) -> ImplementationEventView:
-    try:
-        row = await get_implementation_event(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            event_id=event_id,
-        )
-    except ImplementationNotFoundError as exc:
-        raise ApiException(status.HTTP_404_NOT_FOUND, CODE_NOT_FOUND, str(exc)) from exc
-    verification = await list_verification_events(
-        session,
-        workspace_id=ctx.workspace_id,
-        project_id=project_id,
-        implementation_event_ids=[row.id],
-    )
-    return _implementation_view(row, verification.get(row.id, []))
-
-
 # =========================================================================
 # Row read
 # =========================================================================
@@ -487,13 +377,74 @@ async def get_action_endpoint(
         )
     except OpportunityNotFoundError as exc:
         raise _not_found(exc) from exc
+    declaration = await action_declaration(
+        session, workspace_id=ctx.workspace_id, action_id=action.id
+    )
     return ActionDetail.model_validate(
         {
             **actions.action_projection(action, current),
             "diagnosis": action.diagnosis or {},
             "members": [project_item(member) for member in members],
+            "declaration": (
+                await _declaration_view(session, declaration) if declaration else None
+            ),
         }
     )
+
+
+@router.post("/actions/{action_id}/declaration", status_code=status.HTTP_201_CREATED)
+async def declare_action_endpoint(
+    action_id: uuid.UUID,
+    payload: ActionDeclarationCreate,
+    ctx: _WriteDep,
+    session: _SessionDep,
+    response: Response,
+    idempotency_key: Annotated[
+        str | None,
+        Header(
+            alias="Idempotency-Key",
+            max_length=IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN,
+        ),
+    ] = None,
+) -> ActionDeclarationView:
+    """Declare an Action implemented, anchored to the revision the user shipped."""
+    key = (idempotency_key or "").strip()
+    if not key:
+        raise ApiException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            CODE_VALIDATION_ERROR,
+            "Idempotency-Key is required",
+        )
+    try:
+        row, created = await declare_action_implemented(
+            session,
+            workspace_id=ctx.workspace_id,
+            actor_user_id=ctx.user.id,
+            idempotency_key=key,
+            declaration=ImplementationDeclaration(
+                action_id=action_id,
+                output_revision_id=payload.output_revision_id,
+                declared_implemented_at=payload.declared_implemented_at,
+            ),
+        )
+        await session.commit()
+    except ImplementationNotFoundError as exc:
+        raise ApiException(status.HTTP_404_NOT_FOUND, CODE_NOT_FOUND, str(exc)) from exc
+    except ImplementationIdempotencyConflictError as exc:
+        raise ApiException(
+            status.HTTP_409_CONFLICT,
+            CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT,
+            str(exc),
+        ) from exc
+    except ImplementationConflictError as exc:
+        raise ApiException(
+            status.HTTP_409_CONFLICT,
+            CODE_IMPLEMENTATION_TARGET_CONFLICT,
+            str(exc),
+        ) from exc
+    if not created:
+        response.status_code = status.HTTP_200_OK
+    return await _declaration_view(session, row)
 
 
 @router.patch("/actions/{action_id}")

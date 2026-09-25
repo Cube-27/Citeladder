@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.analysis.comparison import frozen_comparison_key
-from app.core.config.actions import ACTION_STATUS_DONE
 from app.core.config.audits import AUDIT_SCOPE_BRAND, AUDIT_STATUS_COMPLETED
 from app.domain.analysis.schemas import RankingRow, VisibilityResponse
 from app.domain.analysis.visibility import get_visibility
@@ -35,10 +34,10 @@ from app.models.demand import DemandSnapshot
 from app.models.integrations import IntegrationPropertyMapping
 from app.models.opportunity import (
     Action,
-    ActionStatusEvent,
     OpportunityImplementationEvent,
     OpportunityOrder,
     OpportunitySnapshot,
+    OpportunityVerificationEvent,
 )
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
@@ -613,31 +612,42 @@ async def _resolved_action_summary(
     project_id: uuid.UUID,
     audits: ComparableAudits | None,
 ) -> ResolvedActionSummary:
+    # An Action is done when an observation verified its declaration; the
+    # status is derived from that observation, so the observation's time is
+    # when it resolved. One Action counts once, at its first verification.
+    resolved_at = func.min(OpportunityVerificationEvent.created_at).label("resolved_at")
     resolved_query = (
-        select(ActionStatusEvent, Action.target_label)
-        .join(Action, Action.id == ActionStatusEvent.action_id)
-        .where(
-            ActionStatusEvent.workspace_id == workspace_id,
-            ActionStatusEvent.project_id == project_id,
-            ActionStatusEvent.next_status == ACTION_STATUS_DONE,
+        select(Action.id, Action.target_label, resolved_at)
+        .join(
+            OpportunityImplementationEvent,
+            OpportunityImplementationEvent.action_id == Action.id,
         )
-        .order_by(ActionStatusEvent.created_at.desc())
+        .join(
+            OpportunityVerificationEvent,
+            OpportunityVerificationEvent.implementation_event_id
+            == OpportunityImplementationEvent.id,
+        )
+        .where(
+            Action.workspace_id == workspace_id,
+            Action.project_id == project_id,
+            OpportunityVerificationEvent.observation_kind == "verified",
+        )
+        .group_by(Action.id, Action.target_label)
+        .order_by(resolved_at.desc())
     )
     if audits and audits.previous:
-        resolved_query = resolved_query.where(
-            ActionStatusEvent.created_at
-            > (audits.previous.completed_at or audits.previous.created_at)
+        resolved_query = resolved_query.having(
+            resolved_at > (audits.previous.completed_at or audits.previous.created_at)
         )
     if audits:
-        resolved_query = resolved_query.where(
-            ActionStatusEvent.created_at
-            <= (audits.selected.completed_at or audits.selected.created_at)
+        resolved_query = resolved_query.having(
+            resolved_at <= (audits.selected.completed_at or audits.selected.created_at)
         )
     resolved_rows = list((await session.execute(resolved_query)).all())
     return ResolvedActionSummary(
         since_audit_id=audits.previous.id if audits and audits.previous else None,
         count=len(resolved_rows),
-        titles=[title for _event, title in resolved_rows[:5]],
+        titles=[title for _id, title, _at in resolved_rows[:5]],
     )
 
 
