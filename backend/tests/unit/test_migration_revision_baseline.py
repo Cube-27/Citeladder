@@ -116,11 +116,12 @@ def test_0001_initial_is_the_only_migration_revision() -> None:
     )
 
 
-def test_baseline_contains_site_health_guidance_and_commerce_schema() -> None:
+def test_baseline_contains_actions_and_commerce_schema() -> None:
     source = _BASELINE.read_text(encoding="utf-8")
     tables = _created_tables(source)
 
-    assert "opportunity_guidance" in tables
+    assert "actions" in tables
+    assert "opportunity_guidance" not in tables
     assert (
         not {
             "commerce_discovery_runs",

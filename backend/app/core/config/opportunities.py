@@ -109,10 +109,6 @@ OPPORTUNITY_ACTIVE_STATUSES: Final[frozenset[str]] = frozenset(
 # =========================================================================
 CODE_OPPORTUNITY_SUPERSEDED: Final = "opportunity_superseded"
 CODE_OPPORTUNITY_ORDER_CONFLICT: Final = "opportunity_order_conflict"
-CODE_OPPORTUNITY_GUIDANCE_UNAVAILABLE: Final = "opportunity_guidance_unavailable"
-CODE_OPPORTUNITY_GUIDANCE_IDEMPOTENCY_CONFLICT: Final = (
-    "opportunity_guidance_idempotency_conflict"
-)
 CODE_IMPLEMENTATION_TARGET_CONFLICT: Final = "implementation_target_conflict"
 CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT: Final = "implementation_idempotency_conflict"
 IMPLEMENTATION_EVENT_DEFAULT_LIMIT: Final = 50
@@ -774,24 +770,3 @@ LIST_DEFAULT_LIMIT: Final = 50
 LIST_MAX_LIMIT: Final = 200
 # Hard cap on rows materialized for one export request.
 MAX_EXPORT_ITEMS: Final = 20000
-
-# =========================================================================
-# On-demand guidance policy (development-only, immutable records)
-# =========================================================================
-# Guidance is deliberately deterministic in this slice: it turns the already
-# persisted opportunity evidence into a bounded recommendation snapshot. No
-# provider is contacted by this write or its read projections (invariant 7).
-GUIDANCE_ENABLED_ENVIRONMENTS: Final[frozenset[str]] = frozenset(
-    {"", "development", "dev", "local", "test", "testing"}
-)
-GUIDANCE_GENERATOR_VERSION: Final = "opportunity-guidance-deterministic-v1"
-GUIDANCE_PROMPT_VERSION: Final = "opportunity-guidance-template-v1"
-GUIDANCE_PROVIDER: Final = "deterministic"
-GUIDANCE_MODEL: Final = "none"
-GUIDANCE_IDEMPOTENCY_KEY_MAX_LEN: Final = 160
-GUIDANCE_HISTORY_DEFAULT_LIMIT: Final = 20
-GUIDANCE_HISTORY_MAX_LIMIT: Final = 100
-GUIDANCE_MAX_EVIDENCE_KEYS: Final = 24
-GUIDANCE_MAX_EVIDENCE_VALUE_CHARS: Final = 500
-GUIDANCE_MAX_EVIDENCE_LIST_ITEMS: Final = 20
-GUIDANCE_MAX_FINDINGS: Final = 8

@@ -2456,6 +2456,59 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
+        "actions",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("group_key", sa.String(length=640), nullable=False),
+        sa.Column("target_kind", sa.String(length=24), nullable=False),
+        sa.Column("target_label", sa.String(length=255), nullable=False),
+        sa.Column("target_url", sa.Text(), nullable=True),
+        sa.Column("target_prompt_id", sa.UUID(), nullable=True),
+        sa.Column("origin", sa.String(length=16), nullable=False),
+        sa.Column("priority_score", sa.Float(), nullable=True),
+        sa.Column("families", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("approach", sa.String(length=32), nullable=False),
+        sa.Column("skill_id", sa.String(length=64), nullable=False),
+        sa.Column("diagnosis", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column(
+            "member_opportunity_ids",
+            postgresql.JSONB(astext_type=Text()),
+            nullable=False,
+        ),
+        sa.Column("opportunity_snapshot_id", sa.UUID(), nullable=True),
+        sa.Column("evidence_cleared_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_by_user_id", sa.UUID(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["created_by_user_id"], ["users.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["opportunity_snapshot_id"],
+            ["opportunity_snapshots.id"],
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["target_prompt_id"], ["prompts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_id", "group_key", name="uq_actions_project_group"
+        ),
+    )
+    op.create_index(
+        "ix_actions_list",
+        "actions",
+        ["project_id", "priority_score", "id"],
+        unique=False,
+    )
+    _create_indexes("actions", ("project_id", "workspace_id"))
+    op.create_table(
         "opportunity_implementation_events",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
@@ -2580,83 +2633,6 @@ def upgrade() -> None:
         "ix_opportunity_verification_implementation_created",
         "opportunity_verification_events",
         ["implementation_event_id", "created_at", "id"],
-    )
-    op.create_table(
-        "opportunity_guidance",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("opportunity_id", sa.UUID(), nullable=False),
-        sa.Column("idempotency_key", sa.String(length=160), nullable=False),
-        sa.Column(
-            "input_snapshot", postgresql.JSONB(astext_type=Text()), nullable=False
-        ),
-        sa.Column("input_hash", sa.String(length=64), nullable=False),
-        sa.Column("findings", postgresql.JSONB(astext_type=Text()), nullable=False),
-        sa.Column(
-            "recommendations", postgresql.JSONB(astext_type=Text()), nullable=False
-        ),
-        sa.Column(
-            "source_analysis_ids", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column(
-            "source_issue_ids", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column(
-            "source_metric_ids", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column("analyzer_version", sa.String(length=32), nullable=False),
-        sa.Column("rule_version", sa.String(length=32), nullable=False),
-        sa.Column("formula_version", sa.String(length=32), nullable=False),
-        sa.Column("generator_version", sa.String(length=64), nullable=False),
-        sa.Column("prompt_version", sa.String(length=64), nullable=False),
-        sa.Column("provider", sa.String(length=32), nullable=False),
-        sa.Column("model", sa.String(length=64), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["opportunity_id"], ["opportunities.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "workspace_id",
-            "opportunity_id",
-            "idempotency_key",
-            name="uq_opportunity_guidance_idempotency",
-        ),
-    )
-    op.create_index(
-        op.f("ix_opportunity_guidance_input_hash"),
-        "opportunity_guidance",
-        ["input_hash"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_opportunity_guidance_opportunity_id"),
-        "opportunity_guidance",
-        ["opportunity_id"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_opportunity_guidance_opportunity_created",
-        "opportunity_guidance",
-        ["opportunity_id", "created_at", "id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_opportunity_guidance_project_id"),
-        "opportunity_guidance",
-        ["project_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_opportunity_guidance_workspace_id"),
-        "opportunity_guidance",
-        ["workspace_id"],
-        unique=False,
     )
     op.create_table(
         "site_crawl_events",
@@ -7144,8 +7120,8 @@ def downgrade() -> None:
         "provider_attempts",
         "prompt_metric_snapshots",
         "opportunity_status_events",
+        "actions",
         "opportunity_snapshots",
-        "opportunity_guidance",
         "observed_entity_candidates",
         "monitored_site_urls",
         "metric_snapshots",

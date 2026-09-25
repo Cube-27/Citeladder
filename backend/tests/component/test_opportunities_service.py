@@ -1,4 +1,4 @@
-"""Opportunity recompute, source coverage, guidance, and history scenarios."""
+"""Opportunity recompute, source coverage, Action, and history scenarios."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ import pytest
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH
 from app.core.config.audits import AUDIT_STATUS_RUNNING
 from app.core.config.opportunities import (
@@ -24,19 +23,14 @@ from app.core.config.site_health_contracts import (
 from app.core.config.source_patterns import SOURCE_TAXONOMY_VERSION
 from app.core.config.task_queue import TASK_STATUS_FAILED
 from app.domain.opportunities import (
-    guidance,
+    history as history_service,
+)
+from app.domain.opportunities import (
     queue,
     recompute,
 )
 from app.domain.opportunities import (
-    history as history_service,
-)
-from app.domain.opportunities import (
     summary as summary_service,
-)
-from app.domain.opportunities.errors import (
-    OpportunityGuidanceIdempotencyConflictError,
-    OpportunityGuidanceUnavailableError,
 )
 from app.models.analysis import Citation
 from app.models.analytics import AnalyticsTask
@@ -534,70 +528,6 @@ async def test_recompute_without_sources_yields_empty_snapshot(
         )
         is not None
     )
-
-
-async def test_guidance_is_immutable_bounded_and_idempotent(
-    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Guidance stores a frozen input and replays only an identical key/input."""
-    monkeypatch.setattr(settings, "app_env", "development")
-    scn = await _seed_scenario(db_session)
-    await recompute.recompute(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
-    opportunity = _by_rule(
-        await _live_rows(db_session, scn), "brand_absent_high_value_prompt"
-    )
-    grouped = await history_service.get_grouped_history(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
-    assert grouped["since_previous"] == {"new": 0, "continuing": 4, "resolved": 0}
-    assert all(item["occurrence_count"] == 1 for item in grouped["items"])
-    opportunity.evidence = {"long": "x" * 1000}
-    await db_session.commit()
-
-    first, created = await guidance.create_guidance(
-        db_session,
-        workspace_id=scn.workspace_id,
-        opportunity_id=opportunity.id,
-        idempotency_key="guidance-1",
-    )
-    assert created is True
-    assert first.provider == "deterministic"
-    assert len(first.input_snapshot["evidence"]["long"]) < 1000
-    assert len(first.input_hash) == 64
-
-    replay, created = await guidance.create_guidance(
-        db_session,
-        workspace_id=scn.workspace_id,
-        opportunity_id=opportunity.id,
-        idempotency_key="guidance-1",
-    )
-    assert created is False
-    assert replay.id == first.id
-    history = await guidance.list_guidance_history(
-        db_session, workspace_id=scn.workspace_id, opportunity_id=opportunity.id
-    )
-    assert [row.id for row in history] == [first.id]
-
-    opportunity.status = "in_progress"
-    await db_session.commit()
-    with pytest.raises(OpportunityGuidanceIdempotencyConflictError):
-        await guidance.create_guidance(
-            db_session,
-            workspace_id=scn.workspace_id,
-            opportunity_id=opportunity.id,
-            idempotency_key="guidance-1",
-        )
-
-    monkeypatch.setattr(settings, "app_env", "production")
-    with pytest.raises(OpportunityGuidanceUnavailableError):
-        await guidance.create_guidance(
-            db_session,
-            workspace_id=scn.workspace_id,
-            opportunity_id=opportunity.id,
-            idempotency_key="guidance-2",
-        )
 
 
 async def test_grouped_history_compares_the_latest_two_recompute_snapshots(

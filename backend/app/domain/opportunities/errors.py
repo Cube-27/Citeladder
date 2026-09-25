@@ -21,13 +21,5 @@ class OpportunityOrderConflictError(Exception):
     """The project order changed after the caller read its version."""
 
 
-class OpportunityGuidanceUnavailableError(Exception):
-    """Guidance is unavailable outside the configured eligibility gate."""
-
-
-class OpportunityGuidanceIdempotencyConflictError(Exception):
-    """An idempotency key was replayed for changed frozen input."""
-
-
 class InvalidCursorError(Exception):
     """A cursor was tampered with or replayed across scopes (400)."""

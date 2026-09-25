@@ -153,6 +153,77 @@ class Opportunity(Base):
     )
 
 
+class Action(Base):
+    """One unit of work: the live Opportunities and agent work on one target.
+
+    Identity is ``(project_id, group_key)`` and survives recompute: a
+    recompute re-derives the members, priority, convergence and diagnosis in
+    the same transaction that supersedes the Opportunity rows, and never
+    creates a second Action for a target. An Action whose members all stopped
+    firing keeps its identity (chats and declarations may reference it) with
+    ``evidence_cleared_at`` set. ``origin`` records whether evidence or agent
+    work created it; an agent-created Action gains members through the same
+    ``group_key`` when evidence later appears.
+    """
+
+    __tablename__ = "actions"
+    __table_args__ = (
+        UniqueConstraint("project_id", "group_key", name="uq_actions_project_group"),
+        Index("ix_actions_list", "project_id", "priority_score", "id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    group_key: Mapped[str] = mapped_column(String(640))
+    target_kind: Mapped[str] = mapped_column(String(24))
+    target_label: Mapped[str] = mapped_column(String(255))
+    target_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    target_prompt_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_PROMPT, ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    origin: Mapped[str] = mapped_column(String(16))
+    # Derived projection, rewritten by each recompute (invariant 5 provenance:
+    # the member ids, the snapshot they came from and the policy versions).
+    priority_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    families: Mapped[list] = mapped_column(JSONB, default=list)
+    approach: Mapped[str] = mapped_column(String(32), default="")
+    skill_id: Mapped[str] = mapped_column(String(64), default="")
+    diagnosis: Mapped[dict] = mapped_column(JSONB, default=dict)
+    member_opportunity_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    opportunity_snapshot_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_OPPORTUNITY_SNAPSHOT, ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    evidence_cleared_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_USER, ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
 class OpportunityOrder(Base):
     """One shared, optimistic project ordering over stable opportunity keys."""
 
@@ -444,70 +515,6 @@ class OpportunityVerificationEvent(Base):
     verifier_version: Mapped[str] = mapped_column(String(32))
     limitations: Mapped[list] = mapped_column(JSONB, default=list)
     idempotency_key: Mapped[str] = mapped_column(String(160))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-
-
-class OpportunityGuidance(Base):
-    """Immutable, bounded guidance generated from one opportunity evidence set.
-
-    This is a record of what was shown to the user, not a mutable annotation
-    on ``Opportunity``. Regeneration always creates a new identity; an
-    idempotency key only replays the original record. The frozen input and its
-    digest make the result independently auditable without retaining unbounded
-    raw evidence.
-    """
-
-    __tablename__ = "opportunity_guidance"
-    __table_args__ = (
-        UniqueConstraint(
-            "workspace_id",
-            "opportunity_id",
-            "idempotency_key",
-            name="uq_opportunity_guidance_idempotency",
-        ),
-        Index(
-            "ix_opportunity_guidance_opportunity_created",
-            "opportunity_id",
-            "created_at",
-            "id",
-        ),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
-        index=True,
-    )
-    project_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
-        index=True,
-    )
-    opportunity_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey(_FK_OPPORTUNITY, ondelete=_ON_DELETE_CASCADE),
-        index=True,
-    )
-    idempotency_key: Mapped[str] = mapped_column(String(160))
-    input_snapshot: Mapped[dict] = mapped_column(JSONB)
-    input_hash: Mapped[str] = mapped_column(String(64), index=True)
-    findings: Mapped[list] = mapped_column(JSONB, default=list)
-    recommendations: Mapped[list] = mapped_column(JSONB, default=list)
-    source_analysis_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    source_issue_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    source_metric_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    analyzer_version: Mapped[str] = mapped_column(String(32), default="")
-    rule_version: Mapped[str] = mapped_column(String(32), default="")
-    formula_version: Mapped[str] = mapped_column(String(32), default="")
-    generator_version: Mapped[str] = mapped_column(String(64), default="")
-    prompt_version: Mapped[str] = mapped_column(String(64), default="")
-    provider: Mapped[str] = mapped_column(String(32), default="")
-    model: Mapped[str] = mapped_column(String(64), default="")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

@@ -110,8 +110,8 @@ from app.models.mcp import (
     McpOAuthGrant,
 )
 from app.models.opportunity import (
+    Action,
     Opportunity,
-    OpportunityGuidance,
     OpportunityImplementationEvent,
     OpportunityOrder,
     OpportunitySnapshot,
@@ -175,6 +175,7 @@ from app.models.workspace import (
 
 __all__ = [
     "AccountGrant",
+    "Action",
     "AgentModelAttempt",
     "AgentTaskRun",
     "AgentToolAttempt",
@@ -248,7 +249,6 @@ __all__ = [
     "MonitoredSiteUrl",
     "ObservedEntityCandidate",
     "Opportunity",
-    "OpportunityGuidance",
     "OpportunityImplementationEvent",
     "OpportunityOrder",
     "OpportunitySnapshot",
