@@ -7,6 +7,7 @@ import statistics
 from datetime import date, timedelta
 from typing import Any
 
+from app.analysis.lexical import lexical_tokens, normalized_coverage
 from app.core.config.demand import (
     DEMAND_CANNIBALIZATION_GAP_WEIGHT,
     DEMAND_CANNIBALIZATION_MIN_PAGE_IMPRESSIONS,
@@ -37,7 +38,6 @@ from app.core.config.demand import (
     DEMAND_TREND_REQUIRED_DAYS,
     DEMAND_TREND_WINDOW_DAYS,
 )
-from app.domain.content.lexical import lexical_tokens, normalized_coverage
 from app.domain.demand.projection import (
     DemandSignalCandidate,
     DetectorEvaluation,

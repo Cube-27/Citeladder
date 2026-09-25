@@ -15,6 +15,7 @@ from app.analysis.content_differentiation import (
     DifferentiationPage,
     analyze_content_differentiation,
 )
+from app.analysis.lexical import lexical_tokens, normalized_coverage
 from app.connectors.web_evidence.url_policy import registrable_domain
 from app.core.config.content_differentiation import (
     DIFFERENTIATION_FORMULA_VERSION,
@@ -22,7 +23,6 @@ from app.core.config.content_differentiation import (
     DIFFERENTIATION_MIN_SOURCE_CHARS,
 )
 from app.core.config.site_health_contracts import PAGE_ANALYSIS_STATUS_COMPLETED
-from app.domain.content.lexical import lexical_tokens, normalized_coverage
 from app.models.audit import Audit
 from app.models.content_differentiation import (
     ContentDifferentiationCandidate,

@@ -24,6 +24,7 @@ from sqlalchemy import ColumnElement, and_, cast, func, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.lexical import lexical_tokens
 from app.core.config.content import (
     CONTENT_CONTEXT_FIELD_MAX_CHARS,
     CONTENT_CONTEXT_MAX_CHARS,
@@ -43,7 +44,6 @@ from app.core.config.content import (
 from app.core.config.site_health_contracts import (
     CRAWL_TERMINAL_STATUSES,
 )
-from app.domain.content.lexical import lexical_tokens
 from app.models.site_health.acquisition import SiteFetchArtifact
 from app.models.site_health.analysis import SitePageAnalysis
 from app.models.site_health.crawl import SiteCrawl

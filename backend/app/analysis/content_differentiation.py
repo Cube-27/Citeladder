@@ -7,6 +7,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from app.analysis.lexical import lexical_tokens
 from app.core.config.content_differentiation import (
     DIFFERENTIATION_FORMULA_VERSION,
     DIFFERENTIATION_MAX_FEATURE_VALUES,
@@ -14,7 +15,6 @@ from app.core.config.content_differentiation import (
     DIFFERENTIATION_MOST_PAGES_RATIO,
     DIFFERENTIATION_RESULT_LIMIT,
 )
-from app.domain.content.lexical import lexical_tokens
 
 
 @dataclass(frozen=True, slots=True)

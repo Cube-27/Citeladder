@@ -7,6 +7,7 @@ import uuid
 from collections import Counter
 from dataclasses import dataclass
 
+from app.analysis.lexical import lexical_token_sequence
 from app.core.config.site_health_topical import (
     TOPICAL_CLUSTER_TOP_TERMS,
     TOPICAL_FORMULA_VERSION,
@@ -19,7 +20,6 @@ from app.core.config.site_health_topical import (
     TOPICAL_MIN_PAGE_TERMS,
     TOPICAL_OUTLIER_THRESHOLD,
 )
-from app.domain.content.lexical import lexical_token_sequence
 
 
 @dataclass(frozen=True, slots=True)
