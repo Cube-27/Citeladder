@@ -4,6 +4,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { DeclarationStatus, MarkImplementedButton } from '@/components/agent/action-declaration';
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
@@ -32,7 +33,7 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
-/** One Action: deterministic diagnosis, member evidence and linked chats. */
+/** One Action: diagnosis, member evidence, its declaration and linked chats. */
 export function ActionDetailScreen() {
   const { actionId = '' } = useParams();
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
@@ -89,6 +90,7 @@ function ActionDetailView({
       <Stack gap="section">
         <ActionFacts action={action} />
         <Diagnosis action={action} onOpenEvidence={setEvidenceId} />
+        <Implementation action={action} workspaceId={workspaceId} />
         <LinkedChats action={action} workspaceId={workspaceId} />
       </Stack>
       <EvidenceDrawer
@@ -236,6 +238,38 @@ function Diagnosis({
 }
 
 const isText = (value: string | null): value is string => Boolean(value);
+
+/**
+ * The declaration loop (plan §9): what was declared and what each leg awaits,
+ * or the way to declare work done outside CiteLadder. An Agent output is
+ * declared from its chat, which names the exact revision shipped.
+ */
+function Implementation({
+  action,
+  workspaceId,
+}: Readonly<{ action: ActionDetail; workspaceId: string }>) {
+  const mayWrite = useWorkspaceCapability('write');
+  const declarable = action.status === 'open' || action.status === 'in_progress';
+  if (!action.declaration && !(declarable && mayWrite)) return null;
+  return (
+    <section aria-labelledby="action-implementation" className="grid gap-3">
+      <SectionTitle id="action-implementation">Implementation</SectionTitle>
+      {action.declaration ? (
+        <DeclarationStatus declaration={action.declaration} />
+      ) : (
+        <div className="grid gap-3">
+          <p className={textRole('body')}>
+            When this work is live, declare it so CiteLadder can measure it. To declare an Agent
+            output, use Mark implemented in its chat.
+          </p>
+          <div>
+            <MarkImplementedButton workspaceId={workspaceId} actionId={action.id} revision={null} />
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
 
 function TextList({ title, items }: Readonly<{ title: string; items: string[] }>) {
   if (items.length === 0) return null;

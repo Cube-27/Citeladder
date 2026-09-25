@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 
 import { EarnedPageHandoff } from '@/components/opportunities/earned-page-handoff';
 import { OpportunityEvidenceSection } from '@/components/opportunities/opportunity-evidence-section';
-import { OpportunityDeclarationFooter } from '@/components/opportunities/opportunity-declaration-footer';
 import { OpportunitySummarySection } from '@/components/opportunities/opportunity-summary-section';
 import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge';
 import { Alert } from '@/components/ui/alert';
@@ -75,9 +74,6 @@ export function EvidenceDrawer({
       onOpenChange={onOpenChange}
       title="Evidence detail"
       className="sm:max-w-160"
-      footer={
-        detail ? <OpportunityDeclarationFooter detail={detail} projectId={projectId} /> : null
-      }
     >
       {body}
     </Drawer>

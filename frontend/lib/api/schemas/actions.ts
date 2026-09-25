@@ -1,13 +1,18 @@
 import { z } from 'zod';
 
-import { opportunitySchema } from './opportunities';
+import {
+  expectedCheckSchema,
+  implementationStateSchema,
+  opportunitySchema,
+  verificationEventSchema,
+} from './opportunities';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
 // open → in progress → implemented (declared) → measuring → done | dismissed.
-// A user stores only `open` or `dismissed`; `in_progress` is derived by the
-// server from a linked chat having an output.
+// A user stores `open` or `dismissed` and a declaration stores `implemented`;
+// `in_progress`, `measuring` and `done` are derived by the server.
 export const actionStatusSchema = z.enum([
   'open',
   'in_progress',
@@ -56,9 +61,43 @@ const actionDiagnosisSchema = responseObject({
   measure_with: z.array(z.string()).optional(),
 });
 
+// What one loop leg of a declared Action is waiting for (plan §9).
+export const measurementLegSchema = responseObject({
+  leg: z.enum([
+    'next_visibility_run',
+    'next_search_console_window',
+    'next_crawl',
+    'placement_recheck',
+  ]),
+  state: z.enum(['waiting', 'not_scheduled', 'sync_needed', 'observed']),
+  due_at: z.string().nullable(),
+  last_evidence_at: z.string().nullable(),
+});
+
+// The user's declaration, frozen server-side: members, targets and checks.
+export const actionDeclarationSchema = responseObject({
+  id: uuid(),
+  action_id: uuid(),
+  output_revision_id: uuid().nullable(),
+  member_opportunity_ids: z.array(uuid()),
+  opportunity_snapshot_id: uuid(),
+  target_site_url_ids: z.array(uuid()),
+  // Populated instead of the owned ids for an earned Action: the publisher
+  // page the placement was declared on. Never both.
+  target_external_url: z.string().nullable(),
+  declared_implemented_at: z.string(),
+  expected_checks: z.array(expectedCheckSchema),
+  state: implementationStateSchema,
+  limitations: z.array(z.string()),
+  verification_events: z.array(verificationEventSchema),
+  legs: z.array(measurementLegSchema),
+  created_at: z.string(),
+});
+
 export const actionDetailSchema = actionItemSchema.extend({
   diagnosis: actionDiagnosisSchema,
   members: z.array(opportunitySchema),
+  declaration: actionDeclarationSchema.nullable(),
 });
 
 export const actionsPageSchema = responseObject({

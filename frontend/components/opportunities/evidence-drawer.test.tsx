@@ -31,9 +31,6 @@ vi.mock('@/components/opportunities/opportunity-evidence-section', () => ({
 vi.mock('@/components/opportunities/opportunity-summary-section', () => ({
   OpportunitySummarySection: () => null,
 }));
-vi.mock('@/components/opportunities/opportunity-declaration-footer', () => ({
-  OpportunityDeclarationFooter: () => <div data-testid="declaration-footer" />,
-}));
 
 import { EvidenceDrawer } from './evidence-drawer';
 
@@ -43,7 +40,7 @@ beforeEach(() => {
 });
 
 describe('EvidenceDrawer authorization and recovery', () => {
-  it('does not expose another project’s detail or mutation footer', async () => {
+  it('does not expose another project’s detail', async () => {
     queryState.data = {
       id: OPPORTUNITY,
       project_id: '33333333-3333-4333-8333-333333333333',
@@ -59,7 +56,6 @@ describe('EvidenceDrawer authorization and recovery', () => {
     );
 
     expect(await screen.findByText(/unavailable in the selected project/i)).toBeVisible();
-    expect(screen.queryByTestId('declaration-footer')).not.toBeInTheDocument();
   });
 
   it('keeps a failed direct detail link dismissible', async () => {

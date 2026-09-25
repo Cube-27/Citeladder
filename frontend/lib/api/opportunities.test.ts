@@ -5,7 +5,6 @@ import { mswServer } from '@/test/msw-server';
 import { opportunitiesApi, opportunitiesQueries } from './opportunities';
 import { queryKeys } from './query-keys';
 import {
-  implementationEventSchema,
   opportunitiesPageSchema,
   opportunityDetailSchema,
   opportunitySchema,
@@ -20,7 +19,6 @@ const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OPP = '22222222-2222-4222-8222-222222222222';
 const AUDIT = '33333333-3333-4333-8333-333333333333';
 const CRAWL = '44444444-4444-4444-8444-444444444444';
-const IMPLEMENTATION = '55555555-5555-4555-8555-555555555555';
 
 const emptySourceMix = {
   state: 'not_applicable' as const,
@@ -117,43 +115,6 @@ const summary = {
   stale: false,
 };
 
-const implementationEvent = {
-  id: IMPLEMENTATION,
-  project_id: PROJECT,
-  opportunity_id: OPP,
-  opportunity_snapshot_id: AUDIT,
-  target_site_url_ids: [CRAWL],
-  target_external_url: null,
-  declared_implemented_at: '2026-07-24T00:00:00Z',
-  expected_checks: [
-    {
-      kind: 'site_rule' as const,
-      target_site_url_id: CRAWL,
-      rule_id: 'aeo.structured_data_present',
-      expected_outcome: 'pass' as const,
-    },
-  ],
-  state: 'verified' as const,
-  limitations: [],
-  verification_events: [
-    {
-      id: '66666666-6666-4666-8666-666666666666',
-      observation_kind: 'verified' as const,
-      observed_at: '2026-07-25T00:00:00Z',
-      crawl_id: CRAWL,
-      audit_id: null,
-      source_analysis_ids: [AUDIT],
-      source_rule_evaluation_ids: [OPP],
-      source_metric_ids: [],
-      result: {},
-      verifier_version: 'implementation-verifier-1',
-      limitations: [],
-      created_at: '2026-07-25T00:01:00Z',
-    },
-  ],
-  created_at: '2026-07-24T00:00:01Z',
-};
-
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
@@ -166,9 +127,6 @@ describe('opportunity schemas (strictValidate drift policy)', () => {
       strictValidate(opportunitiesPageSchema, { items: [item], next_cursor: null }, 'test'),
     ).toEqual({ items: [item], next_cursor: null });
     expect(strictValidate(opportunitySummarySchema, summary, 'test')).toEqual(summary);
-    expect(strictValidate(implementationEventSchema, implementationEvent, 'test')).toEqual(
-      implementationEvent,
-    );
   });
 
   it('accepts the pre-recompute summary (computed=false, nulls)', () => {
@@ -319,38 +277,6 @@ describe('opportunitiesApi transport', () => {
   it('gets the detail', async () => {
     mswServer.use(http.get(`/api/v1/opportunities/${OPP}`, () => HttpResponse.json(detail)));
     expect((await opportunitiesApi.get(OPP)).rule_id).toBe('brand_absent_high_value_prompt');
-  });
-
-  it('declares an implementation with idempotency and reads verification state', async () => {
-    const keys: string[] = [];
-    mswServer.use(
-      http.post(
-        `/api/v1/projects/${PROJECT}/opportunities/implementation-events`,
-        ({ request }) => {
-          keys.push(request.headers.get('Idempotency-Key') ?? '');
-          return HttpResponse.json(implementationEvent, { status: 201 });
-        },
-      ),
-      http.get(`/api/v1/projects/${PROJECT}/opportunities/implementation-events`, () =>
-        HttpResponse.json({ items: [implementationEvent], next_cursor: null }),
-      ),
-    );
-    const created = await opportunitiesApi.createImplementationEvent(
-      PROJECT,
-      {
-        opportunity_id: OPP,
-        target_site_url_ids: [CRAWL],
-        declared_implemented_at: '2026-07-24T00:00:00Z',
-        expected_checks: implementationEvent.expected_checks,
-      },
-      'implementation-once',
-    );
-    expect(keys).toEqual(['implementation-once']);
-    expect(created.state).toBe('verified');
-    const listed = await opportunitiesApi.listImplementationEvents(PROJECT);
-    expect(listed.items[0]?.verification_events[0]?.verifier_version).toBe(
-      'implementation-verifier-1',
-    );
   });
 
   it('strips an additive key when the wire shape drifts (tolerant-on-unknown)', async () => {

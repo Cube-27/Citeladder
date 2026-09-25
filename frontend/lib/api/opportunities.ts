@@ -2,20 +2,18 @@
  * Opportunities domain endpoints + query/mutation options.
  *
  * Owns transport for the Opportunities slice: the priority-sorted keyset
- * catalog, the latest recompute summary, the row detail, the shared queue
- * order and implementation declarations. Workflow status belongs to Actions
+ * catalog, the latest recompute summary, the row detail and the shared queue
+ * order. Workflow status and implementation declarations belong to Actions
  * (`lib/api/actions.ts`). Every JSON response passes through `strictValidate`
  * (fail loud on any drift — the backend is the source of truth). All paths are relative
  * `/api/v1` (same-origin proxy, invariant 12) and every read accepts an
  * `AbortSignal` via `ApiRequestOptions`.
  */
-import { mutationOptions, queryOptions } from '@tanstack/react-query';
+import { queryOptions } from '@tanstack/react-query';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
 import {
-  implementationEventSchema,
-  implementationEventsPageSchema,
   opportunitiesPageSchema,
   opportunityDetailSchema,
   opportunityOrderResponseSchema,
@@ -23,12 +21,7 @@ import {
 } from './schemas/opportunities';
 import { strictValidate } from './schemas/validation';
 import { definedQuery, withQuery } from './shared';
-import type {
-  ImplementationEvent,
-  OpportunitiesPage,
-  OpportunityDetail,
-  OpportunitySummary,
-} from './types';
+import type { OpportunitiesPage, OpportunityDetail, OpportunitySummary } from './types';
 
 /** Keyset catalog params. Ordering is server-owned (priority desc, id desc). */
 export type OpportunitiesParams = {
@@ -45,33 +38,6 @@ export type OpportunitiesParams = {
 export type OpportunityOrderUpdate = {
   ordered_opportunity_ids: string[];
   expected_version: number;
-};
-
-type ExpectedCheck =
-  | {
-      kind: 'site_rule';
-      target_site_url_id?: string;
-      rule_id: string;
-      expected_outcome: 'pass' | 'fail' | 'partial';
-    }
-  | {
-      kind: 'page_fact';
-      target_site_url_id?: string;
-      fact_key: string;
-      expected_value: unknown;
-    }
-  | {
-      kind: 'visibility_metric' | 'traffic_metric';
-      metric: string;
-      direction: 'increase' | 'decrease' | 'equal';
-      expected_value: number;
-      tolerance?: number;
-    };
-export type ImplementationEventCreate = {
-  opportunity_id: string;
-  target_site_url_ids: string[];
-  declared_implemented_at: string;
-  expected_checks: ExpectedCheck[];
 };
 
 export const opportunitiesApi = {
@@ -98,33 +64,6 @@ export const opportunitiesApi = {
       options,
     );
     return strictValidate(opportunitySummarySchema, res, 'opportunities.summary');
-  },
-  createImplementationEvent: async (
-    projectId: string,
-    input: ImplementationEventCreate,
-    idempotencyKey: string,
-    options?: ApiRequestOptions,
-  ) => {
-    const res = await apiClient.post<ImplementationEvent>(
-      `/projects/${projectId}/opportunities/implementation-events`,
-      input,
-      { ...options, idempotencyKey, retryNetworkFailures: true },
-    );
-    return strictValidate(implementationEventSchema, res, 'opportunities.implementation.create');
-  },
-  listImplementationEvents: async (
-    projectId: string,
-    opportunityId?: string,
-    options?: ApiRequestOptions,
-  ) => {
-    const res = await apiClient.get(
-      withQuery(
-        `/projects/${projectId}/opportunities/implementation-events`,
-        definedQuery({ opportunity_id: opportunityId }),
-      ),
-      options,
-    );
-    return strictValidate(implementationEventsPageSchema, res, 'opportunities.implementation.list');
   },
 };
 
@@ -176,33 +115,5 @@ export const opportunitiesQueries = {
       queryFn: ({ signal }) => opportunitiesApi.summary(projectId, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         isSameProjectQuery(previousQuery, projectId) ? previousData : undefined,
-    }),
-  implementationEvents: (workspaceId: string, projectId: string, opportunityId?: string) =>
-    queryOptions({
-      queryKey: queryKeys.opportunities.implementationEvents(projectId, opportunityId),
-      queryFn: ({ signal }) =>
-        opportunitiesApi.listImplementationEvents(projectId, opportunityId, {
-          signal,
-          workspaceId,
-        }),
-    }),
-};
-
-export const opportunitiesMutations = {
-  createImplementationEvent: (workspaceId: string) =>
-    mutationOptions({
-      mutationFn: (vars: {
-        projectId: string;
-        input: ImplementationEventCreate;
-        idempotencyKey: string;
-      }) =>
-        opportunitiesApi.createImplementationEvent(
-          vars.projectId,
-          vars.input,
-          vars.idempotencyKey,
-          {
-            workspaceId,
-          },
-        ),
     }),
 };

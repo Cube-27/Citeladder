@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Download, Pencil, X } from 'lucide-react';
 import { useState } from 'react';
 
+import { OutputDeclaration } from '@/components/agent/action-declaration';
 import { OutputEditor, type OutputDraft } from '@/components/agent/output-editor';
 import { OutputHistory } from '@/components/agent/output-history';
 import { Alert } from '@/components/ui/alert';
@@ -87,6 +88,9 @@ export function OutputPane({
           runActive={runActive}
           canSend={canSend}
         />
+        {editing ? null : (
+          <OutputDeclaration workspaceId={workspaceId} output={output} runActive={runActive} />
+        )}
       </header>
       <Tabs
         value={tab}

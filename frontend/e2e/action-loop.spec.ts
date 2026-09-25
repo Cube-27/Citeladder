@@ -116,7 +116,54 @@ const action = {
   updated_at: '2026-08-28T00:00:00Z',
 };
 
-test('an Action member declaration shows comparable verification', async ({ page }) => {
+const declaration = {
+  id: IMPLEMENTATION,
+  action_id: ACTION,
+  output_revision_id: null,
+  member_opportunity_ids: [OPPORTUNITY],
+  opportunity_snapshot_id: SNAPSHOT,
+  target_site_url_ids: [],
+  target_external_url: 'https://example.org/tools',
+  declared_implemented_at: '2026-08-28T00:03:00Z',
+  expected_checks: [
+    {
+      kind: 'visibility_metric',
+      metric: 'visibility_score',
+      direction: 'increase',
+      expected_value: 1,
+      tolerance: 0,
+    },
+  ],
+  state: 'verified',
+  limitations: [],
+  verification_events: [
+    {
+      id: '77777777-7777-4777-8777-777777777777',
+      observation_kind: 'verified',
+      observed_at: '2026-08-28T00:04:00Z',
+      crawl_id: null,
+      audit_id: SNAPSHOT,
+      source_analysis_ids: [SNAPSHOT],
+      source_rule_evaluation_ids: [],
+      source_metric_ids: [SNAPSHOT],
+      result: verificationResult,
+      verifier_version: 'implementation-verifier-2',
+      limitations: [],
+      created_at: '2026-08-28T00:04:00Z',
+    },
+  ],
+  legs: [
+    {
+      leg: 'next_visibility_run',
+      state: 'observed',
+      due_at: null,
+      last_evidence_at: '2026-08-28T00:04:00Z',
+    },
+  ],
+  created_at: '2026-08-28T00:03:00Z',
+};
+
+test('declaring an Action implemented shows comparable verification', async ({ page }) => {
   let declarationBody: Record<string, unknown> | null = null;
 
   await stubAuthedShell(page, [], [project]);
@@ -131,8 +178,10 @@ test('an Action member declaration shows comparable verification', async ({ page
     route.fulfill({
       json: {
         ...action,
+        status: declarationBody ? 'done' : 'open',
         diagnosis: { approach: 'earned_placement', families: { sources: 'observed' } },
         members: [row],
+        declaration: declarationBody ? declaration : null,
       },
     }),
   );
@@ -142,69 +191,21 @@ test('an Action member declaration shows comparable verification', async ({ page
   await page.route(`**/api/v1/opportunities/${OPPORTUNITY}`, (route) =>
     route.fulfill({ json: detail() }),
   );
-  await page.route(`**/api/v1/projects/${PROJECT}/opportunities/implementation-events?*`, (route) =>
-    route.fulfill({ json: { items: [], next_cursor: null } }),
-  );
-  await page.route(
-    `**/api/v1/projects/${PROJECT}/opportunities/implementation-events`,
-    async (route) => {
-      if (route.request().method() !== 'POST') {
-        return route.fulfill({ json: { items: [], next_cursor: null } });
-      }
-      declarationBody = (await route.request().postDataJSON()) as Record<string, unknown>;
-      return route.fulfill({
-        status: 201,
-        json: {
-          id: IMPLEMENTATION,
-          project_id: PROJECT,
-          opportunity_id: OPPORTUNITY,
-          opportunity_snapshot_id: SNAPSHOT,
-          target_site_url_ids: [],
-          target_external_url: null,
-          declared_implemented_at: '2026-08-28T00:03:00Z',
-          expected_checks: [
-            {
-              kind: 'visibility_metric',
-              metric: 'visibility_score',
-              direction: 'increase',
-              expected_value: 1,
-              tolerance: 0,
-            },
-          ],
-          state: 'verified',
-          limitations: [],
-          verification_events: [
-            {
-              id: '77777777-7777-4777-8777-777777777777',
-              observation_kind: 'verified',
-              observed_at: '2026-08-28T00:04:00Z',
-              crawl_id: null,
-              audit_id: SNAPSHOT,
-              source_analysis_ids: [SNAPSHOT],
-              source_rule_evaluation_ids: [],
-              source_metric_ids: [SNAPSHOT],
-              result: verificationResult,
-              verifier_version: 'implementation-verifier-2',
-              limitations: [],
-              created_at: '2026-08-28T00:04:00Z',
-            },
-          ],
-          created_at: '2026-08-28T00:03:00Z',
-        },
-      });
-    },
-  );
+  await page.route(`**/api/v1/actions/${ACTION}/declaration`, async (route) => {
+    declarationBody = (await route.request().postDataJSON()) as Record<string, unknown>;
+    return route.fulfill({ status: 201, json: declaration });
+  });
   await page.goto(`/agent/actions/${ACTION}?project=${PROJECT}`);
-  await page.getByRole('button', { name: 'View evidence' }).click();
-  await page.getByRole('button', { name: 'I implemented this' }).click();
+  await page.getByRole('button', { name: 'Mark implemented' }).click();
+  await page
+    .getByRole('dialog', { name: 'Mark implemented' })
+    .getByRole('button', { name: 'Declare implemented' })
+    .click();
 
   await expect(page.getByText('visibility: available')).toBeVisible();
   await expect(page.getByText('ai referral traffic: observed zero')).toBeVisible();
   await expect(page.getByText('Gaps: 1 no longer observed · 1 persistent · 1 new')).toBeVisible();
-  expect(declarationBody).toMatchObject({
-    opportunity_id: OPPORTUNITY,
-    expected_checks: [],
-  });
+  expect(declarationBody).toMatchObject({ output_revision_id: null });
 });
 
 test('Action filters restore through URL history and reload', async ({ page }) => {
