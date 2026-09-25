@@ -104,25 +104,25 @@ function step(name, command, commandArgs, cwd, env = process.env) {
   } finally {
     closeSync(log);
   }
-  if (!result.error && result.status === 0) return;
+  if (!result.error && result.status === 0) return true;
   failedSteps.push(name);
   process.stderr.write(`${name} failed. ${result.error?.message ?? ''}\n`);
   process.stderr.write(`${readFileSync(logPath, 'utf8').split(/\r?\n/u).slice(-60).join('\n')}\n`);
   process.stderr.write(`Full output: ${logPath}\n`);
+  return false;
 }
 
 function pnpm(name, commandArgs, env = process.env) {
   if (process.platform === 'win32') {
-    step(
+    return step(
       name,
       process.env.ComSpec ?? 'cmd.exe',
       ['/d', '/s', '/c', 'pnpm', ...commandArgs],
       frontendRoot,
       env,
     );
-    return;
   }
-  step(name, 'pnpm', commandArgs, frontendRoot, env);
+  return step(name, 'pnpm', commandArgs, frontendRoot, env);
 }
 
 // Production-mode quality builds require both public origins. CI sets the
@@ -178,7 +178,11 @@ function backendChecks() {
 
 function frontendChecks() {
   pnpm('Astro marketing build', ['build'], QUALITY_BUILD_ENV);
-  pnpm('Vite product-app build', ['build:vite'], QUALITY_BUILD_ENV);
+  // The budget reads the build's manifest, so it only runs against a fresh
+  // build; after a failed one it would judge stale output.
+  if (pnpm('Vite product-app build', ['build:vite'], QUALITY_BUILD_ENV)) {
+    pnpm('Eager bundle budget', ['check:bundle']);
+  }
   // Single static-check step: `vp check` (format + lint) reads its strict
   // policy — denyWarnings, unused-disable-directives-as-errors — from the
   // `lint.options` block shared by frontend/vite.config.ts and the root
