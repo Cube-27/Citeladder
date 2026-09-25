@@ -4,7 +4,11 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { DeclarationStatus, MarkImplementedButton } from '@/components/agent/action-declaration';
+import {
+  DeclarationStatus,
+  isDeclarable,
+  MarkImplementedButton,
+} from '@/components/agent/action-declaration';
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
@@ -249,8 +253,7 @@ function Implementation({
   workspaceId,
 }: Readonly<{ action: ActionDetail; workspaceId: string }>) {
   const mayWrite = useWorkspaceCapability('write');
-  const declarable = action.status === 'open' || action.status === 'in_progress';
-  if (!action.declaration && !(declarable && mayWrite)) return null;
+  if (!action.declaration && !(isDeclarable(action) && mayWrite)) return null;
   return (
     <section aria-labelledby="action-implementation" className="grid gap-3">
       <SectionTitle id="action-implementation">Implementation</SectionTitle>

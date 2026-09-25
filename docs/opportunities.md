@@ -77,9 +77,10 @@ appends an [ActionStatusEvent](../backend/app/domain/opportunities/action_status
 `in_progress` is never stored: an open Action reads as in progress while a
 linked chat has an output, so the Agent sets no status. A declaration stores
 `implemented` (with its status event); `measuring` and `done` are derived from
-the verifier's observations of that declaration — any observation reads as
-measuring, and one that verified every expected check reads as done — so the
-verifier never writes Action status. A user cannot overwrite a declared state.
+the verifier's observations of that declaration — the latest observation
+decides: one that verified every expected check reads as done, any other reads
+as measuring, so a later contradiction reopens measurement — and the verifier
+never writes Action status. A user cannot overwrite a declared state.
 Recompute stamps each Opportunity's `action_id`; the Opportunity list, export
 and MCP `status` filter resolve through that Action, and the command center
 counts an Action resolved at its first verified observation. Each promoted
@@ -100,7 +101,9 @@ and the expected checks: the union of the member rules' checks. Caller-supplied
 checks or targets are rejected, because a declaration that chose its own
 expectation could declare itself verified. The Action row is locked and one
 Action carries at most one declaration; a same-key replay returns it, and
-same-key conflicting input is rejected. A dismissed Action is reopened first.
+same-key conflicting input is rejected. A dismissed Action is reopened first,
+and an Action with no current finding is refused: with no checks it could never
+be measured.
 Dismissing an Action or producing Agent output for it does not declare it. The
 chat's own measurement plan is free text and does not add checks.
 
@@ -155,9 +158,10 @@ evidence remains not-run, unavailable or non-comparable.
 The Action detail returns the declaration with its observations and what each
 [loop leg](../backend/app/domain/opportunities/measurement_legs.py) is waiting
 for, read from persisted rows: the next scheduled visibility run, the next
-complete Search Console window after the declaration (or a sync once it has
-closed), the next crawl (none is scheduled until someone runs one) and the
-earned-page placement recheck. Nothing is triggered. **Mark implemented** in
+complete Search Console window after the declaration — a synced window that
+starts on or after the declaration day — (or a sync once it has closed), the next crawl (none is scheduled until someone runs one) and the
+earned-page placement recheck, each with the row it read. Nothing is
+triggered. **Mark implemented** in
 the Agent output pane declares the revision on screen; the Action detail
 declares work done outside CiteLadder. Both show observation status separately
 from workflow status and preserve the causality notice. A positive movement

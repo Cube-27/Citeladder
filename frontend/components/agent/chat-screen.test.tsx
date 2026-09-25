@@ -317,7 +317,15 @@ describe('ChatScreen', () => {
       state: 'declared',
       limitations: [],
       verification_events: [],
-      legs: [{ leg: 'next_crawl', state: 'not_scheduled', due_at: null, last_evidence_at: null }],
+      legs: [
+        {
+          leg: 'next_crawl',
+          state: 'not_scheduled',
+          due_at: null,
+          last_evidence_at: null,
+          source_id: null,
+        },
+      ],
       created_at: NOW,
     };
     let declared: typeof declaration | null = null;
@@ -335,7 +343,7 @@ describe('ChatScreen', () => {
       families: ['site_health'],
       approach: 'fix_technical',
       skill_id: 'technical_health',
-      member_count: 0,
+      member_count: 1,
       evidence_cleared_at: null,
       created_at: NOW,
       updated_at: NOW,

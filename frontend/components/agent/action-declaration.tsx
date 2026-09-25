@@ -54,9 +54,10 @@ export function MarkImplementedButton({
   disabled?: boolean;
 }>) {
   const [open, setOpen] = useState(false);
-  // One key per dialog opening, so a retry after an ambiguous failure replays
-  // the same declaration instead of attempting a second one.
-  const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
+  // One key and one timestamp per dialog opening, so a retry after an
+  // ambiguous failure replays the identical declaration instead of sending a
+  // request the server would refuse as a reused key with changed input.
+  const [attempt, setAttempt] = useState(newAttempt);
   const queryClient = useQueryClient();
   const declare = useMutation({
     ...actionsMutations.declare(workspaceId),
@@ -68,10 +69,10 @@ export function MarkImplementedButton({
   const submit = () =>
     declare.mutate({
       actionId,
-      idempotencyKey,
+      idempotencyKey: attempt.idempotencyKey,
       input: {
         output_revision_id: revision?.id ?? null,
-        declared_implemented_at: new Date().toISOString(),
+        declared_implemented_at: attempt.declaredAt,
       },
     });
   return (
@@ -80,7 +81,7 @@ export function MarkImplementedButton({
         disabled={disabled}
         onClick={() => {
           declare.reset();
-          setIdempotencyKey(newIdempotencyKey());
+          setAttempt(newAttempt());
           setOpen(true);
         }}
       >
@@ -125,6 +126,19 @@ export function MarkImplementedButton({
       </Dialog>
     </>
   );
+}
+
+/**
+ * Whether an Action can be declared now: still open, with a current finding
+ * whose next reading can measure it. Without one there is nothing to verify,
+ * and the server refuses the declaration.
+ */
+export function isDeclarable(action: { status: string; member_count: number }): boolean {
+  return (action.status === 'open' || action.status === 'in_progress') && action.member_count > 0;
+}
+
+function newAttempt() {
+  return { idempotencyKey: newIdempotencyKey(), declaredAt: new Date().toISOString() };
 }
 
 /**
@@ -180,11 +194,9 @@ function AttachedDeclaration({
   if (!action.data) return null;
   const declaration = action.data.declaration;
   if (declaration) {
-    const number = declaration.output_revision_id === revision.id ? revision.number : null;
-    return <DeclarationStatus declaration={declaration} revisionNumber={number} />;
+    return <DeclarationStatus declaration={declaration} shownRevision={revision} />;
   }
-  const declarable = action.data.status === 'open' || action.data.status === 'in_progress';
-  if (!declarable || !mayWrite) return null;
+  if (!isDeclarable(action.data) || !mayWrite) return null;
   return (
     <div>
       <MarkImplementedButton
@@ -200,14 +212,17 @@ function AttachedDeclaration({
 /** A declared Action: when, which revision, and what each loop leg awaits. */
 export function DeclarationStatus({
   declaration,
-  revisionNumber,
-}: Readonly<{ declaration: ActionDeclaration; revisionNumber?: number | null }>) {
+  shownRevision,
+}: Readonly<{
+  declaration: ActionDeclaration;
+  /** The revision on screen, when shown beside an output. */
+  shownRevision?: { id: string; number: number };
+}>) {
   return (
     <div className="grid gap-3">
       <p className={textRole('body')}>
         Declared implemented on <DisplayTime value={declaration.declared_implemented_at} dateOnly />
-        {revisionNumber ? ` · revision ${revisionNumber}` : null}
-        {declaration.output_revision_id ? null : ' · done outside CiteLadder'}
+        {revisionNote(declaration.output_revision_id, shownRevision)}
       </p>
       {declaration.legs.length > 0 ? (
         <ul className="grid gap-2" aria-label="Measurement">
@@ -223,6 +238,18 @@ export function DeclarationStatus({
       <VerificationObservations implementation={declaration} />
     </div>
   );
+}
+
+function revisionNote(
+  declaredId: string | null,
+  shown: { id: string; number: number } | undefined,
+): string {
+  if (!declaredId) return ' · done outside CiteLadder';
+  if (!shown) return '';
+  // Later edits are not what was shipped; say so rather than imply they were.
+  return declaredId === shown.id
+    ? ` · revision ${shown.number}`
+    : ' · an earlier revision; this one was not declared';
 }
 
 function LegRow({ leg }: Readonly<{ leg: MeasurementLeg }>) {
@@ -257,11 +284,13 @@ function LegWait({ leg }: Readonly<{ leg: MeasurementLeg }>) {
   }
   if (leg.state === 'sync_needed')
     return <>The window has closed. Sync Search Console to measure it.</>;
-  if (leg.state === 'waiting' && leg.due_at) {
-    return (
+  if (leg.state === 'waiting') {
+    return leg.due_at ? (
       <>
         Waiting · expected <DisplayTime value={leg.due_at} dateOnly />.
       </>
+    ) : (
+      <>Waiting for the next reading; its date is not known.</>
     );
   }
   return <>{NOT_SCHEDULED[leg.leg]}</>;

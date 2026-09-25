@@ -72,6 +72,8 @@ export const measurementLegSchema = responseObject({
   state: z.enum(['waiting', 'not_scheduled', 'sync_needed', 'observed']),
   due_at: z.string().nullable(),
   last_evidence_at: z.string().nullable(),
+  // The crawl, audit, traffic snapshot, placement check or schedule behind it.
+  source_id: uuid().nullable(),
 });
 
 // The user's declaration, frozen server-side: members, targets and checks.

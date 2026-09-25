@@ -30,7 +30,9 @@ export function DemandActBand({ signals }: Readonly<{ signals: readonly DemandSi
             )}
           >
             <div className="grid min-w-0 flex-1 gap-1.5">
-              <span className={textRole('bodyStrong', 'break-all')}>{group.page}</span>
+              <span className={textRole('bodyStrong', 'break-all')}>
+                {group.page ?? 'No page resolved'}
+              </span>
               <div className="flex flex-wrap gap-1.5">
                 {group.signalTypes.map((type) => (
                   <SignalChip key={type} signalType={type} />
@@ -40,7 +42,7 @@ export function DemandActBand({ signals }: Readonly<{ signals: readonly DemandSi
             <Button variant="secondary" size="sm" asChild className="self-start sm:self-center">
               <ProjectLink
                 href={`/agent/actions/${group.actionId}`}
-                aria-label={`Open the Action for ${group.page}`}
+                aria-label={`Open the Action for ${group.page ?? 'an unresolved page'}`}
               >
                 Open Action
                 <ArrowRight className="size-3.5" aria-hidden />

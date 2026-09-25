@@ -28,6 +28,7 @@ from app.models.opportunity import (
     Opportunity,
     OpportunityImplementationEvent,
     OpportunitySnapshot,
+    OpportunityVerificationEvent,
 )
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.urls import SiteUrl
@@ -67,7 +68,8 @@ async def _seed_and_recompute(
                 Opportunity.superseded_at.is_(None),
             )
         )
-        assert opportunity is not None and opportunity.action_id is not None
+        assert opportunity is not None
+        assert opportunity.action_id is not None
         action = await session.get(Action, opportunity.action_id)
         site_url = await session.scalar(
             select(SiteUrl).where(
@@ -75,7 +77,8 @@ async def _seed_and_recompute(
                 SiteUrl.normalized_url == opportunity.target_url,
             )
         )
-        assert action is not None and site_url is not None
+        assert action is not None
+        assert site_url is not None
         session.expunge_all()
     return scenario, action, site_url
 
@@ -312,7 +315,8 @@ async def test_observations_derive_measuring_and_done(
     scenario, action, site_url = await _seed_and_recompute(client, session_factory)
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, scenario.crawl_id)
-        assert crawl is not None and crawl.completed_at is not None
+        assert crawl is not None
+        assert crawl.completed_at is not None
         boundary = crawl.completed_at - timedelta(minutes=1)
         snapshot_id = await session.scalar(
             select(OpportunitySnapshot.id).where(
@@ -404,6 +408,37 @@ async def test_observations_derive_measuring_and_done(
 
     assert (await read(awaiting))["status"] == "implemented"
     assert (await read(verified))["status"] == "done"
+    # The latest reading decides: a later contradiction reopens measurement.
+    async with session_factory() as session:
+        first = await session.scalar(
+            select(OpportunityVerificationEvent)
+            .join(
+                OpportunityImplementationEvent,
+                OpportunityImplementationEvent.id
+                == OpportunityVerificationEvent.implementation_event_id,
+            )
+            .where(OpportunityImplementationEvent.action_id == verified)
+        )
+        assert first is not None
+        session.add(
+            OpportunityVerificationEvent(
+                workspace_id=first.workspace_id,
+                project_id=first.project_id,
+                implementation_event_id=first.implementation_event_id,
+                observation_kind="contradicted",
+                observed_at=first.observed_at + timedelta(days=1),
+                created_at=first.created_at + timedelta(days=1),
+                source_analysis_ids=[],
+                source_rule_evaluation_ids=[],
+                source_metric_ids=[],
+                result={},
+                verifier_version=first.verifier_version,
+                limitations=[],
+                idempotency_key="later-contradiction",
+            )
+        )
+        await session.commit()
+    assert (await read(verified))["status"] == "measuring"
     assert (await read(contradicted))["status"] == "measuring"
     partial_detail = await read(partial)
     assert partial_detail["status"] == "measuring"
@@ -505,3 +540,35 @@ async def test_the_database_refuses_a_row_claiming_both_target_kinds(
         )
         with pytest.raises(IntegrityError):
             await session.commit()
+
+
+async def test_an_action_with_no_current_finding_cannot_be_declared(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """With no member there is no check, so the declaration could never measure."""
+    scenario, _action, _site_url = await _seed_and_recompute(client, session_factory)
+    async with session_factory() as session:
+        planned = Action(
+            workspace_id=scenario.workspace_id,
+            project_id=scenario.project_id,
+            group_key="planned:school-uniform-checklist",
+            target_kind="planned_page",
+            target_label="School-uniform checklist",
+            origin="agent",
+        )
+        session.add(planned)
+        await session.commit()
+        planned_id = planned.id
+
+    response = await client.post(
+        f"/api/v1/actions/{planned_id}/declaration",
+        headers=_headers(scenario, "no-members"),
+        json={"declared_implemented_at": datetime.now(UTC).isoformat()},
+    )
+
+    assert response.status_code == 409
+    detail = await client.get(
+        f"/api/v1/actions/{planned_id}", headers=_headers(scenario)
+    )
+    assert detail.json()["status"] == "open"

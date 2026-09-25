@@ -70,6 +70,8 @@ class MeasurementLegView(_Model):
     state: Literal["waiting", "not_scheduled", "sync_needed", "observed"]
     due_at: datetime | None
     last_evidence_at: datetime | None
+    # The crawl, audit, traffic snapshot, placement check or schedule behind it.
+    source_id: uuid.UUID | None
 
 
 class ActionDeclarationView(_Model):

@@ -37,6 +37,7 @@ const declaration = {
       state: 'waiting',
       due_at: '2026-10-26T00:00:00Z',
       last_evidence_at: null,
+      source_id: null,
     },
   ],
   created_at: NOW,

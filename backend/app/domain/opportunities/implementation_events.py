@@ -416,6 +416,12 @@ async def declare_action_implemented(
         session, action=action, revision_id=declaration.output_revision_id
     )
     members = await _live_members(session, action=action)
+    if not members:
+        # Checks come only from live findings; a declaration with none could
+        # never be measured and would sit in ``implemented`` for good.
+        raise ImplementationConflictError(
+            "No current finding targets this Action, so there is nothing to measure"
+        )
     snapshot = await _current_snapshot(
         session, workspace_id=workspace_id, project_id=project.id
     )

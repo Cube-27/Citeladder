@@ -283,7 +283,8 @@ async def test_a_promoted_signal_links_to_its_action(
     )
     action_id = await db_session.scalar(
         select(Opportunity.action_id).where(
-            Opportunity.project_id == snapshot.project_id
+            Opportunity.workspace_id == snapshot.workspace_id,
+            Opportunity.project_id == snapshot.project_id,
         )
     )
 

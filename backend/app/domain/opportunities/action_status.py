@@ -4,7 +4,7 @@ A user stores ``open`` or ``dismissed``, and a declaration stores
 ``implemented``. The rest is never stored: an open Action reads as in progress
 while a linked chat has an output, and an implemented one reads as measuring
 once the verifier has appended an observation for its declaration and as done
-once an observation verified every expected check. So the Agent never sets a
+while the latest observation verified every expected check. So the Agent never sets a
 status, and neither the verifier nor deleting a chat's work can strand one.
 """
 
@@ -45,35 +45,50 @@ _ACTION_NOT_FOUND = "Action not found"
 def effective_status() -> ColumnElement[str]:
     """The status a reader sees, derived in SQL so filters and reads agree."""
     has_output = exists().where(AgentOutput.action_id == Action.id)
+    latest = _latest_observation_kind()
     return case(
         (
             and_(Action.status == ACTION_STATUS_OPEN, has_output),
             literal(ACTION_STATUS_IN_PROGRESS),
         ),
         (
-            and_(
-                Action.status == ACTION_STATUS_IMPLEMENTED,
-                _observed(OpportunityVerificationEvent.observation_kind == "verified"),
-            ),
+            and_(Action.status == ACTION_STATUS_IMPLEMENTED, latest == "verified"),
             literal(ACTION_STATUS_DONE),
         ),
         (
-            and_(Action.status == ACTION_STATUS_IMPLEMENTED, _observed()),
+            and_(Action.status == ACTION_STATUS_IMPLEMENTED, latest.is_not(None)),
             literal(ACTION_STATUS_MEASURING),
         ),
         else_=Action.status,
     )
 
 
-def _observed(*criteria: ColumnElement[bool]) -> ColumnElement[bool]:
-    """Whether the verifier observed this Action's declaration (matching criteria)."""
-    return exists().where(
-        OpportunityImplementationEvent.action_id == Action.id,
-        OpportunityVerificationEvent.workspace_id
-        == OpportunityImplementationEvent.workspace_id,
-        OpportunityVerificationEvent.implementation_event_id
-        == OpportunityImplementationEvent.id,
-        *criteria,
+def _latest_observation_kind() -> ColumnElement[str | None]:
+    """The newest verifier observation of this Action's declaration, if any.
+
+    The latest reading decides, so a later contradiction takes a verified
+    Action back to measuring, matching the declaration's projected state.
+    """
+    return (
+        select(OpportunityVerificationEvent.observation_kind)
+        .join(
+            OpportunityImplementationEvent,
+            OpportunityImplementationEvent.id
+            == OpportunityVerificationEvent.implementation_event_id,
+        )
+        .where(
+            OpportunityImplementationEvent.action_id == Action.id,
+            OpportunityImplementationEvent.workspace_id == Action.workspace_id,
+            OpportunityImplementationEvent.project_id == Action.project_id,
+            OpportunityVerificationEvent.workspace_id
+            == OpportunityImplementationEvent.workspace_id,
+        )
+        .order_by(
+            OpportunityVerificationEvent.created_at.desc(),
+            OpportunityVerificationEvent.id.desc(),
+        )
+        .limit(1)
+        .scalar_subquery()
     )
 
 

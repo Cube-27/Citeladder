@@ -158,6 +158,7 @@ const declaration = {
       state: 'observed',
       due_at: null,
       last_evidence_at: '2026-08-28T00:04:00Z',
+      source_id: null,
     },
   ],
   created_at: '2026-08-28T00:03:00Z',

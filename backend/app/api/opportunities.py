@@ -161,6 +161,7 @@ async def _declaration_view(
                 state=leg.state,
                 due_at=leg.due_at,
                 last_evidence_at=leg.last_evidence_at,
+                source_id=leg.source_id,
             )
             for leg in legs
         ],

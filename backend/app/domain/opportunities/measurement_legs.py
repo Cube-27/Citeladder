@@ -8,10 +8,11 @@ so, and the user starts the run from the owning screen.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.actions import (
@@ -47,6 +48,9 @@ class MeasurementLeg:
     due_at: datetime | None = None
     # The newest persisted evidence this leg reads, whatever its date.
     last_evidence_at: datetime | None = None
+    # That evidence's row: the crawl, audit, traffic snapshot or placement
+    # check observed, else the schedule the next reading comes from.
+    source_id: uuid.UUID | None = None
 
 
 def declared_legs(declaration: OpportunityImplementationEvent) -> list[str]:
@@ -88,17 +92,27 @@ async def _crawl_leg(
     observations: list[OpportunityVerificationEvent],
     now: datetime,
 ) -> MeasurementLeg:
-    last = await session.scalar(
-        select(func.max(SiteCrawl.completed_at)).where(
-            SiteCrawl.workspace_id == declaration.workspace_id,
-            SiteCrawl.project_id == declaration.project_id,
-            SiteCrawl.status == CRAWL_STATUS_COMPLETED,
+    observed = next((row.crawl_id for row in observations if row.crawl_id), None)
+    latest = (
+        await session.execute(
+            select(SiteCrawl.id, SiteCrawl.completed_at)
+            .where(
+                SiteCrawl.workspace_id == declaration.workspace_id,
+                SiteCrawl.project_id == declaration.project_id,
+                SiteCrawl.status == CRAWL_STATUS_COMPLETED,
+            )
+            .order_by(SiteCrawl.completed_at.desc(), SiteCrawl.id.desc())
+            .limit(1)
         )
-    )
-    observed = any(row.crawl_id is not None for row in observations)
+    ).first()
+    crawl_id, completed_at = latest if latest is not None else (None, None)
     # Crawls run when someone starts one, so there is no date to wait for.
-    state = LEG_STATE_OBSERVED if observed else LEG_STATE_NOT_SCHEDULED
-    return MeasurementLeg(leg=LEG_CRAWL, state=state, last_evidence_at=last)
+    return MeasurementLeg(
+        leg=LEG_CRAWL,
+        state=LEG_STATE_OBSERVED if observed else LEG_STATE_NOT_SCHEDULED,
+        last_evidence_at=completed_at,
+        source_id=observed or crawl_id,
+    )
 
 
 async def _visibility_leg(
@@ -108,37 +122,58 @@ async def _visibility_leg(
     observations: list[OpportunityVerificationEvent],
     now: datetime,
 ) -> MeasurementLeg:
-    if any(row.audit_id is not None for row in observations):
-        return MeasurementLeg(leg=LEG_VISIBILITY_RUN, state=LEG_STATE_OBSERVED)
-    next_run = await session.scalar(
-        select(func.min(AuditSchedule.next_run_at)).where(
-            AuditSchedule.workspace_id == declaration.workspace_id,
-            AuditSchedule.project_id == declaration.project_id,
-            AuditSchedule.enabled.is_(True),
-            AuditSchedule.next_run_at.is_not(None),
+    audit = next((row for row in observations if row.audit_id), None)
+    if audit is not None:
+        return MeasurementLeg(
+            leg=LEG_VISIBILITY_RUN,
+            state=LEG_STATE_OBSERVED,
+            last_evidence_at=audit.observed_at,
+            source_id=audit.audit_id,
         )
-    )
+    schedule = (
+        await session.execute(
+            select(AuditSchedule.id, AuditSchedule.next_run_at)
+            .where(
+                AuditSchedule.workspace_id == declaration.workspace_id,
+                AuditSchedule.project_id == declaration.project_id,
+                AuditSchedule.enabled.is_(True),
+                AuditSchedule.next_run_at.is_not(None),
+            )
+            .order_by(AuditSchedule.next_run_at.asc(), AuditSchedule.id.asc())
+            .limit(1)
+        )
+    ).first()
+    if schedule is None:
+        return MeasurementLeg(leg=LEG_VISIBILITY_RUN, state=LEG_STATE_NOT_SCHEDULED)
     return MeasurementLeg(
         leg=LEG_VISIBILITY_RUN,
-        state=LEG_STATE_WAITING if next_run else LEG_STATE_NOT_SCHEDULED,
-        due_at=next_run,
+        state=LEG_STATE_WAITING,
+        due_at=schedule.next_run_at,
+        source_id=schedule.id,
     )
 
 
 def search_console_state(
-    *, declared_at: datetime, window_end: date | None, now: datetime
+    *, declared_at: datetime, window: tuple[date, date] | None, now: datetime
 ) -> tuple[str, datetime]:
     """Whether a complete post-declaration window is synced, due or awaited.
 
-    Complete means the window has run in full after the declaration; it can be
-    read once the property has finalised that data. Returns the state and the
+    Complete means a synced window that starts on or after the declaration day
+    and has run in full since; a window reaching back before the declaration
+    mixes in the evidence it is meant to be compared against. It can be read
+    once the property has finalised that data. Returns the state and the
     moment the window becomes readable.
     """
     complete_through = declared_at.astimezone(UTC).date() + timedelta(
         days=SEARCH_CONSOLE_MEASUREMENT_WINDOW_DAYS
     )
     ready_on = complete_through + timedelta(days=SEARCH_CONSOLE_FINALIZATION_LAG_DAYS)
-    if window_end is not None and window_end >= complete_through:
+    declared_on = declared_at.astimezone(UTC).date()
+    if (
+        window is not None
+        and window[0] >= declared_on
+        and window[1] >= complete_through
+    ):
         state = LEG_STATE_OBSERVED
     elif now.astimezone(UTC).date() >= ready_on:
         state = LEG_STATE_SYNC_NEEDED
@@ -154,28 +189,37 @@ async def _search_console_leg(
     observations: list[OpportunityVerificationEvent],
     now: datetime,
 ) -> MeasurementLeg:
-    latest = (
+    declared_on = declaration.declared_implemented_at.astimezone(UTC).date()
+    base = select(
+        TrafficSnapshot.id,
+        TrafficSnapshot.window_start,
+        TrafficSnapshot.window_end,
+        TrafficSnapshot.created_at,
+    ).where(
+        TrafficSnapshot.workspace_id == declaration.workspace_id,
+        TrafficSnapshot.project_id == declaration.project_id,
+    )
+    order = (TrafficSnapshot.created_at.desc(), TrafficSnapshot.id.desc())
+    # The widest synced window lying wholly after the declaration, else the
+    # newest synced window at all, which says only when data last arrived.
+    row = (
         await session.execute(
-            select(TrafficSnapshot.window_end, TrafficSnapshot.created_at)
-            .where(
-                TrafficSnapshot.workspace_id == declaration.workspace_id,
-                TrafficSnapshot.project_id == declaration.project_id,
-            )
-            .order_by(TrafficSnapshot.created_at.desc(), TrafficSnapshot.id.desc())
+            base.where(TrafficSnapshot.window_start >= declared_on)
+            .order_by(TrafficSnapshot.window_end.desc(), *order)
             .limit(1)
         )
-    ).first()
-    window_end, synced_at = latest if latest is not None else (None, None)
+    ).first() or (await session.execute(base.order_by(*order).limit(1))).first()
     state, ready_at = search_console_state(
         declared_at=declaration.declared_implemented_at,
-        window_end=window_end,
+        window=(row.window_start, row.window_end) if row is not None else None,
         now=now,
     )
     return MeasurementLeg(
         leg=LEG_SEARCH_CONSOLE_WINDOW,
         state=state,
         due_at=ready_at,
-        last_evidence_at=synced_at,
+        last_evidence_at=row.created_at if row is not None else None,
+        source_id=row.id if row is not None else None,
     )
 
 
@@ -195,14 +239,13 @@ async def _placement_leg(
     if check is None:
         return MeasurementLeg(leg=LEG_PLACEMENT_RECHECK, state=LEG_STATE_NOT_SCHEDULED)
     if check.state != PLACEMENT_STATE_PENDING and check.due_at is None:
-        return MeasurementLeg(
-            leg=LEG_PLACEMENT_RECHECK,
-            state=LEG_STATE_OBSERVED,
-            last_evidence_at=check.observed_at,
-        )
+        state = LEG_STATE_OBSERVED
+    else:
+        state = LEG_STATE_WAITING if check.due_at else LEG_STATE_NOT_SCHEDULED
     return MeasurementLeg(
         leg=LEG_PLACEMENT_RECHECK,
-        state=LEG_STATE_WAITING if check.due_at else LEG_STATE_NOT_SCHEDULED,
+        state=state,
         due_at=check.due_at,
         last_evidence_at=check.observed_at,
+        source_id=check.id,
     )

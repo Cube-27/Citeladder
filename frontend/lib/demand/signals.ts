@@ -228,7 +228,10 @@ export type PageGroup = { page: string | null; rows: RankedSignal[] };
  * landing page for a query signal, or null when none was resolved.
  */
 function signalPage(signal: DemandSignal): string | null {
-  if (signalTargetKind(signal) === 'Page') return signalTarget(signal) || null;
+  if (signalTargetKind(signal) === 'Page') {
+    const target = signal.evidence.target;
+    return typeof target === 'string' && target.trim() ? target : null;
+  }
   return signal.page_url.trim() || null;
 }
 
@@ -242,7 +245,7 @@ export function groupByPage(rows: readonly RankedSignal[]): PageGroup[] {
   return [...groups].map(([page, grouped]) => ({ page, rows: grouped }));
 }
 
-export type ActionGroup = { actionId: string; page: string; signalTypes: string[] };
+export type ActionGroup = { actionId: string; page: string | null; signalTypes: string[] };
 
 /**
  * Promoted signals, one entry per Action they were grouped into, in priority
@@ -254,7 +257,7 @@ export function actionGroups(signals: readonly DemandSignal[]): ActionGroup[] {
     if (!signal.action_id) continue;
     const group = groups.get(signal.action_id) ?? {
       actionId: signal.action_id,
-      page: signalPage(signal) ?? signalTarget(signal),
+      page: signalPage(signal),
       signalTypes: [],
     };
     if (!group.signalTypes.includes(signal.signal_type)) group.signalTypes.push(signal.signal_type);
