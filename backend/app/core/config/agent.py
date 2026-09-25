@@ -1,7 +1,7 @@
 # Default-agent configuration (invariant 1: all config lives in core/config).
 #
 # The "default agent" is the app-level, env-configured general model that powers
-# assisted features (prompt generation now; content generation later). It is
+# assisted features: prompt generation and the platform-funded Agent. It is
 # deliberately DISTINCT from:
 #   * the three measurement engines (chatgpt/gemini/claude) — those are only
 #     ever measured, never used for generation (roadmap non-goal), and
@@ -15,7 +15,6 @@
 # swapping env values.
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Final
 from urllib.parse import urlsplit
 
@@ -29,66 +28,83 @@ STRUCTURED_OUTPUT_PROMPT_JSON = "prompt_json"
 STRUCTURED_OUTPUT_JSON_OBJECT = "json_object"
 STRUCTURED_OUTPUT_JSON_SCHEMA = "json_schema"
 
-# v4: a bounded evidence read whose snapshot does not exist is recorded as an
-# explicit ``unavailable`` attempt and withheld from the narration payload,
-# instead of being logged as ``completed`` and shipped to the provider as an
-# empty fact the model was asked to explain.
-AGENT_POLICY_VERSION: Final = "bounded-agent-v1"
+# =========================================================================
+# Agent runtime policy (chats, runs, outputs)
+# =========================================================================
+# Stamped on every run so a turn names the runtime that produced it
+# (invariant 5). Skill and registry versions are stamped separately.
+AGENT_RUNTIME_VERSION: Final = "agent-runtime-1"
+AGENT_PROTOCOL_VERSION: Final = "agent-protocol-1"
 
-# Status vocabulary for one ``AgentToolAttempt`` row. ``unavailable`` is a
-# THIRD outcome, distinct from both a successful read and a failed one
-# (invariant 7): the source did not exist, which is neither an error nor an
-# observed zero. Every executed tool writes exactly one row.
+# One run is one agent turn: a bounded loop of structured model steps. A step
+# either calls one read tool or responds. Every bound is frozen onto the run at
+# admission, so a config change never alters a turn already queued.
+AGENT_MAX_STEPS: Final = 8
+AGENT_MAX_TOOL_CALLS: Final = 6
+# A run's attempts at the whole turn (a lost lease or retryable provider error).
+AGENT_RUN_MAX_ATTEMPTS: Final = 3
+# Per-chat bound on user turns, so one conversation cannot grow without end.
+AGENT_CHAT_TURN_LIMIT: Final = 60
+
+# Context bounds (characters, after serialization).
+AGENT_TOOL_RESULT_MAX_CHARS: Final = 12_000
+AGENT_CONTEXT_PACKAGE_MAX_CHARS: Final = 24_000
+AGENT_TRANSCRIPT_MAX_CHARS: Final = 90_000
+AGENT_HISTORY_MAX_MESSAGES: Final = 12
+AGENT_HISTORY_MESSAGE_MAX_CHARS: Final = 4_000
+
+# Input and output bounds.
+AGENT_MESSAGE_MAX_CHARS: Final = 8_000
+AGENT_INSTRUCTIONS_MAX_CHARS: Final = 4_000
+AGENT_OUTPUT_TITLE_MAX_CHARS: Final = 255
+AGENT_OUTPUT_BODY_MAX_CHARS: Final = 100_000
+AGENT_CHAT_TITLE_MAX_CHARS: Final = 120
+AGENT_IDEMPOTENCY_KEY_MAX_CHARS: Final = 128
+AGENT_LIST_DEFAULT_LIMIT: Final = 30
+AGENT_LIST_MAX_LIMIT: Final = 100
+AGENT_REVISION_LIST_MAX: Final = 100
+
+# Status vocabulary for one tool attempt. ``unavailable`` is a THIRD outcome,
+# distinct from both a successful read and a failed one (invariant 7): the
+# source did not exist, which is neither an error nor an observed zero.
 TOOL_ATTEMPT_COMPLETED: Final = "completed"
 TOOL_ATTEMPT_UNAVAILABLE: Final = "unavailable"
 TOOL_ATTEMPT_FAILED: Final = "failed"
-AGENT_INSTRUCTION_VERSION: Final = "bounded-agent-narration-v1"
-AGENT_LIST_DEFAULT_LIMIT: Final = 25
-AGENT_LIST_MAX_LIMIT: Final = 100
-AGENT_OBJECTIVE_MAX_CHARS: Final = 2_000
-AGENT_IDEMPOTENCY_KEY_MAX_CHARS: Final = 128
-# Narration is one bounded leaf call. Evidence beyond this limit is withheld
-# rather than allowing queue payload growth to become unbounded model spend.
-AGENT_NARRATION_INPUT_MAX_CHARS: Final = 48_000
+TOOL_ATTEMPT_REFUSED: Final = "refused"
 
+# Chat message roles and output lifecycle.
+MESSAGE_ROLE_USER: Final = "user"
+MESSAGE_ROLE_AGENT: Final = "agent"
+RUN_MODE_TURN: Final = "turn"
+RUN_MODE_DRAFT_FROM_OUTLINE: Final = "draft_from_outline"
+OUTPUT_PHASE_OUTLINE: Final = "outline"
+OUTPUT_PHASE_DRAFT: Final = "draft"
+OUTPUT_PHASE_FINAL: Final = "final"
+REVISION_AUTHOR_AGENT: Final = "agent"
+REVISION_AUTHOR_USER: Final = "user"
 
-@dataclass(frozen=True, slots=True)
-class AgentTaskPolicy:
-    """Versioned evidence-reader allowlist for one bounded task."""
+# How a turn's skill was chosen, in precedence order (explicit pick, the
+# attached Action's diagnosis, the chat's previous skill, then the model).
+SKILL_SOURCE_USER: Final = "user"
+SKILL_SOURCE_ACTION: Final = "action"
+SKILL_SOURCE_CHAT: Final = "chat"
+SKILL_SOURCE_MODEL: Final = "model"
 
-    task_type: str
-    allowed_tools: tuple[str, ...]
+# Coded API failures.
+CODE_AGENT_TURN_LIMIT: Final = "agent_turn_limit"
+CODE_AGENT_RUN_ACTIVE: Final = "agent_run_active"
+CODE_AGENT_FUNDING_UNAVAILABLE: Final = "agent_funding_unavailable"
+CODE_AGENT_IDEMPOTENCY_CONFLICT: Final = "agent_idempotency_conflict"
+CODE_AGENT_OUTLINE_NOT_APPROVABLE: Final = "agent_outline_not_approvable"
 
-
-AGENT_TASK_POLICIES: Final[dict[str, AgentTaskPolicy]] = {
-    policy.task_type: policy
-    for policy in (
-        # Explaining a project means being able to say why a number looks
-        # the way it does, which needs the connected layer: an empty chart
-        # because nothing is connected, because an import is still running,
-        # and because search traffic really fell are three different answers.
-        AgentTaskPolicy(
-            "explain",
-            (
-                "site.read_snapshot",
-                "demand.read_snapshot",
-                "opportunities.read_ranked",
-                "audits.read_latest",
-                "performance.read_snapshot",
-                "referrals.read_snapshot",
-                "integrations.read_status",
-            ),
-        ),
-        AgentTaskPolicy(
-            "build_roadmap",
-            (
-                "site.read_snapshot",
-                "demand.read_snapshot",
-                "opportunities.read_ranked",
-            ),
-        ),
-    )
-}
+# Terminal run error codes.
+ERROR_STOPPED_AT_LIMIT: Final = "stopped_at_limit"
+ERROR_PROTOCOL: Final = "protocol_violation"
+ERROR_FUNDING: Final = "funding_unavailable"
+ERROR_CAPABILITY: Final = "capability_unavailable"
+ERROR_ROUTE_CHANGED: Final = "route_unavailable"
+ERROR_PROVIDER: Final = "provider_error"
+ERROR_TOOL: Final = "tool_failed"
 
 
 def _is_nvidia_host(host: str) -> bool:

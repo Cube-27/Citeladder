@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     # column contract documented on ``PostgresQueueSpec``.
     from app.models.analytics import AnalyticsTask
     from app.models.audit import AuditTask
-    from app.models.content import ContentGeneration
     from app.models.discovery import BrandDiscoveryTask
     from app.models.integrations import IntegrationSyncRun
     from app.models.site_health.queue import SiteCrawlTask
@@ -116,7 +115,6 @@ class PostgresQueueSpec[
     T: (
         "AuditTask",
         "SiteCrawlTask",
-        "ContentGeneration",
         "BrandDiscoveryTask",
         "IntegrationSyncRun",
         "AnalyticsTask",

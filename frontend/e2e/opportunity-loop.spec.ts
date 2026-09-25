@@ -4,7 +4,6 @@ import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
 const PROJECT = FIXTURE_PROJECT.id;
 const OPPORTUNITY = '22222222-2222-4222-8222-222222222222';
 const SNAPSHOT = '33333333-3333-4333-8333-333333333333';
-const GENERATION = '44444444-4444-4444-8444-444444444444';
 const IMPLEMENTATION = '55555555-5555-4555-8555-555555555555';
 
 /** The loop reads the project's industry into its brief, so those two fields
@@ -72,7 +71,7 @@ const handoff = {
   snapshot_versions: { source_taxonomy: 'source-taxonomy-2' },
 };
 
-function detail(linked: boolean) {
+function detail() {
   return {
     ...row,
     remediation: 'Prepare a transparent expert-contribution brief.',
@@ -88,61 +87,10 @@ function detail(linked: boolean) {
     rule_version: 'opp-rules-8',
     formula_version: 'opp-formula-3',
     content_handoff: handoff,
-    linked_generations: linked
-      ? [
-          {
-            id: GENERATION,
-            status: 'succeeded',
-            skill_id: 'article',
-            created_at: '2026-08-28T00:01:00Z',
-          },
-        ]
-      : [],
     superseded_by_id: null,
     superseded_at: null,
   };
 }
-
-const generation = {
-  id: GENERATION,
-  project_id: PROJECT,
-  status: 'succeeded',
-  skill_id: 'article',
-  opportunity_id: OPPORTUNITY,
-  skill_version: 1,
-  feedback: null,
-  feedback_reason: '',
-  feedback_at: null,
-  context_status: 'included',
-  requested_model: 'approved-frontier-model',
-  returned_model: 'approved-frontier-model',
-  provider: 'approved-provider',
-  created_at: '2026-08-28T00:01:00Z',
-  updated_at: '2026-08-28T00:02:00Z',
-  completed_at: '2026-08-28T00:02:00Z',
-  error_code: '',
-  instruction_preview: 'Editorial inclusion brief',
-  user_instruction: 'Prepare an evidence-backed editorial inclusion brief for example.org.',
-  context_summary: {
-    version: 'content-context-v1',
-    crawl_page_count: 2,
-    crawl_urls: ['https://acme.example/', 'https://acme.example/analytics'],
-    crawl_completed_at: '2026-08-28T00:00:00Z',
-    brand_memory: true,
-    brand_fields: ['description'],
-    target_url: 'https://acme.example/analytics',
-    issue_count: 1,
-    related_page_count: 1,
-    omissions: [],
-  },
-  finish_reason: 'stop',
-  output_truncated: false,
-  output_text: '# Editorial inclusion brief\n\nA transparent evidence pack.',
-  usage: { total_tokens: 80 },
-  latency_ms: 200,
-  error_detail: '',
-  generator_version: 'content-v3',
-};
 
 const verificationResult = {
   state: 'available',
@@ -187,10 +135,7 @@ const opportunitySummary = {
   stale: false,
 };
 
-test('earned opportunity handoff links generation and comparable verification', async ({
-  page,
-}) => {
-  let generated = false;
+test('earned opportunity declaration shows comparable verification', async ({ page }) => {
   let declarationBody: Record<string, unknown> | null = null;
 
   await stubAuthedShell(page, [], [project]);
@@ -204,7 +149,7 @@ test('earned opportunity handoff links generation and comparable verification', 
     route.fulfill({ json: { items: [row], next_cursor: null } }),
   );
   await page.route(`**/api/v1/opportunities/${OPPORTUNITY}`, (route) =>
-    route.fulfill({ json: detail(generated) }),
+    route.fulfill({ json: detail() }),
   );
   await page.route(`**/api/v1/projects/${PROJECT}/opportunities/implementation-events?*`, (route) =>
     route.fulfill({ json: { items: [], next_cursor: null } }),
@@ -225,7 +170,6 @@ test('earned opportunity handoff links generation and comparable verification', 
           opportunity_snapshot_id: SNAPSHOT,
           target_site_url_ids: [],
           target_external_url: null,
-          generation_id: GENERATION,
           declared_implemented_at: '2026-08-28T00:03:00Z',
           expected_checks: [
             {
@@ -259,62 +203,8 @@ test('earned opportunity handoff links generation and comparable verification', 
       });
     },
   );
-  await page.route('**/api/v1/content/skills', (route) =>
-    route.fulfill({
-      json: {
-        version: 'content-skills-v5',
-        default_skill_id: 'content_page',
-        skills: [
-          {
-            id: 'article',
-            label: 'Article',
-            channel: 'web',
-            description: 'An evidence-led article.',
-            structure: ['A clear H1.'],
-            tone: 'Expert.',
-            length_hint: '900–1400 words.',
-          },
-        ],
-      },
-    }),
-  );
-  await page.route('**/api/v1/content/context-preview?*', (route) =>
-    route.fulfill({
-      json: {
-        brand_memory: true,
-        target_page: 'Analytics',
-        issue_count: 1,
-        related_page_count: 1,
-      },
-    }),
-  );
-  await page.route('**/api/v1/content/generations?*', (route) =>
-    route.fulfill({ json: generated ? [generation] : [] }),
-  );
-  await page.route('**/api/v1/content/generations', async (route) => {
-    generated = true;
-    return route.fulfill({ status: 201, json: generation });
-  });
-  await page.route(`**/api/v1/content/generations/${GENERATION}`, (route) =>
-    route.fulfill({ json: generation }),
-  );
-
   await page.goto('/opportunities');
   await page.getByRole('button', { name: 'Review recommendation' }).click();
-  await page.getByRole('link', { name: 'Prepare earned content' }).click();
-  await expect(page).toHaveURL(/\/content/);
-  expect(new URL(page.url()).searchParams.get('opportunity_id')).toBe(OPPORTUNITY);
-  await expect(page.getByText('Path: Earned')).toBeVisible();
-  // Instant navigation may retain the previous route's hidden DOM in its reusable shell.
-  await expect(page.getByText(detail(false).remediation).filter({ visible: true })).toHaveCount(0);
-  const prompt = page.getByRole('textbox', { name: 'Your instruction' });
-  await expect(prompt).toHaveValue('');
-  await prompt.fill('Prepare an evidence-backed editorial inclusion brief for example.org.');
-  await page.getByRole('button', { name: 'Generate' }).click();
-  await expect(page.getByRole('heading', { name: 'Editorial inclusion brief' })).toBeVisible();
-  await page.getByRole('link', { name: 'Return to opportunity' }).click();
-  // Returning through the cached shell restores the open opportunity drawer.
-  await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { name: 'I implemented this' }).click();
 
   await expect(page.getByText('visibility: available')).toBeVisible();
@@ -322,7 +212,6 @@ test('earned opportunity handoff links generation and comparable verification', 
   await expect(page.getByText('Gaps: 1 no longer observed · 1 persistent · 1 new')).toBeVisible();
   expect(declarationBody).toMatchObject({
     opportunity_id: OPPORTUNITY,
-    generation_id: GENERATION,
     expected_checks: [],
   });
 });
@@ -336,7 +225,7 @@ test('opportunity filters and detail restore through URL history and reload', as
     route.fulfill({ json: { items: [row], next_cursor: null } }),
   );
   await page.route(`**/api/v1/opportunities/${OPPORTUNITY}`, (route) =>
-    route.fulfill({ json: detail(false) }),
+    route.fulfill({ json: detail() }),
   );
 
   await page.goto(`/opportunities?project=${PROJECT}&opportunity=${OPPORTUNITY}&keep=1#evidence`);

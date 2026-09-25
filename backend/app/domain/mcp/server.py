@@ -19,6 +19,7 @@ from mcp.server.auth.settings import (
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 from pydantic import AnyHttpUrl
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 from starlette.responses import (
     HTMLResponse,
@@ -32,12 +33,7 @@ from app.core.config import demo_access_expired, settings
 from app.core.config.mcp import MCP_READ_SCOPE, MCP_SERVER_VERSION, mcp_settings
 from app.core.database import SessionLocal
 from app.domain.auth.service import resolve_session_user
-from app.domain.mcp.data import (
-    list_account_projects,
-    project_business_context,
-    search_business_context,
-    skill_catalog,
-)
+from app.domain.mcp.data import project_business_context
 from app.domain.mcp.oauth_provider import (
     CiteLadderOAuthProvider,
     PendingAuthorization,
@@ -45,8 +41,6 @@ from app.domain.mcp.oauth_provider import (
     consent_csrf_valid,
     public_base_url,
 )
-from app.domain.mcp.retrieval import fetch_business_record
-from app.domain.mcp.schemas import EvidenceResponse, RetrievalDocument, SearchEnvelope
 from app.domain.mcp.tool_registrations import register_evidence_tools
 from app.models.user import User
 
@@ -130,78 +124,6 @@ mcp_server = MCPServer(
 )
 
 
-@mcp_server.tool(
-    name="list_projects",
-    title="List CiteLadder projects",
-    description=(
-        "List a bounded page of projects visible to the connected CiteLadder "
-        "account; follow next_cursor to enumerate the rest."
-    ),
-    annotations=_READ_ONLY,
-)
-async def list_projects(
-    cursor: str | None = None, limit: int | None = None
-) -> EvidenceResponse:
-    async with SessionLocal() as session:
-        return EvidenceResponse.model_validate(
-            await list_account_projects(session, cursor=cursor, limit=limit)
-        )
-
-
-@mcp_server.tool(
-    name="get_project_business_context",
-    title="Get complete project business context",
-    description=(
-        "Read the project profile, active prompt portfolio, Site Health, demand, "
-        "opportunities, and latest visibility audit from persisted CiteLadder data."
-    ),
-    annotations=_READ_ONLY,
-)
-async def get_project_business_context(
-    project_id: str, sections: list[str] | None = None
-) -> EvidenceResponse:
-    async with SessionLocal() as session:
-        return EvidenceResponse.model_validate(
-            await project_business_context(session, project_id, sections)
-        )
-
-
-@mcp_server.tool(
-    name="search",
-    title="Search CiteLadder business context",
-    description=(
-        "Search account-authorized projects, opportunities, and prompts. Returns "
-        "stable record URIs that can be passed to fetch."
-    ),
-    annotations=_READ_ONLY,
-)
-async def search(
-    query: str, project_id: str | None = None, limit: int = 10
-) -> SearchEnvelope:
-    async with SessionLocal() as session:
-        return SearchEnvelope.model_validate(
-            await search_business_context(session, query, project_id, limit)
-        )
-
-
-@mcp_server.tool(
-    name="fetch",
-    title="Fetch a CiteLadder record",
-    description=(
-        "Fetch a full account-authorized record by a citeladder:// URI returned "
-        "by search."
-    ),
-    annotations=_READ_ONLY,
-)
-async def fetch(
-    id: str,
-) -> RetrievalDocument:
-    async with SessionLocal() as session:
-        return RetrievalDocument.model_validate(
-            await fetch_business_record(session, id)
-        )
-
-
 def _evidence_tool(
     name: str, title: str, description: str
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -216,32 +138,13 @@ def _evidence_tool(
     return decorator
 
 
-register_evidence_tools(_evidence_tool)
+def _session() -> AsyncSession:
+    # Resolved on every call rather than bound at registration, so the one
+    # module-level factory stays the single seam for the protocol server.
+    return SessionLocal()
 
 
-@mcp_server.tool(
-    name="list_skills",
-    title="List CiteLadder skills",
-    description=(
-        "Inspect metadata for native content formats and supported read capabilities."
-    ),
-    annotations=_READ_ONLY,
-)
-def list_skills() -> dict[str, Any]:
-    return skill_catalog()
-
-
-@mcp_server.resource(
-    "citeladder://skills",
-    name="citeladder-skills",
-    title="CiteLadder skill catalog",
-    description=(
-        "Metadata for native CiteLadder content formats and read capabilities."
-    ),
-    mime_type="application/json",
-)
-def skills_resource() -> str:
-    return json.dumps(skill_catalog(), sort_keys=True)
+register_evidence_tools(_evidence_tool, _session)
 
 
 @mcp_server.resource(

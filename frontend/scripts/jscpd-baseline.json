@@ -9,7 +9,5 @@
     "frontend/lib"
   ],
   "production_percentage": 0.008000808502753963,
-  "clone_fingerprints": [
-    "python|backend/app/models/audit.py|backend/app/models/content.py|1c4bbaf3ede0b965|20|183"
-  ]
+  "clone_fingerprints": []
 }

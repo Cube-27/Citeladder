@@ -435,11 +435,6 @@ class OpportunityImplementationEvent(Base):
     # ours nor crawlable on our terms. A declaration carries one or the
     # other, never both -- see the check constraint above.
     target_external_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    generation_id: Mapped[uuid.UUID | None] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("content_generations.id", ondelete="SET NULL"),
-        nullable=True,
-    )
     declared_implemented_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expected_checks: Mapped[list] = mapped_column(JSONB, default=list)
     actor_user_id: Mapped[uuid.UUID] = mapped_column(

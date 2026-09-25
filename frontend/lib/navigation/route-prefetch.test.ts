@@ -57,14 +57,4 @@ describe('prefetchRoute', () => {
     expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(callsAfterFailure);
     expect(query?.state.status).toBe('error');
   });
-
-  /**
-   * Content reads only the `demand_signal_id` URL parameter, never the
-   * snapshot, so hovering it must not touch Search Demand's cache entry at all.
-   */
-  it('does not touch the demand snapshot when intent targets Content', async () => {
-    prefetchRoute(client, '/content', PROJECT);
-    await Promise.resolve();
-    expect(demandApi.getLatest).not.toHaveBeenCalled();
-  });
 });

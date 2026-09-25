@@ -1,16 +1,10 @@
 import { AiReferralsRouteContent } from '@/components/ai-referrals/ai-referrals-route-content';
-import { ContentRouteContent } from '@/components/content/content-route-content';
 import { ProductsRouteContent } from '@/components/products/products-route-content';
 import { PromptsRouteContent } from '@/components/prompts/prompts-route-content';
 
 /** /prompts: active-project prompt portfolio and URL-backed manage mode. */
 export function PromptsRouteElement() {
   return <PromptsRouteContent />;
-}
-
-/** /content: active-project draft generation and deep-link context. */
-export function ContentRouteElement() {
-  return <ContentRouteContent />;
 }
 
 /** /products: active-project Commerce Suite workspace. */

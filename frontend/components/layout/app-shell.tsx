@@ -10,7 +10,6 @@ import { Drawer } from '@/components/ui/drawer';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
-import { AgentSheet, AgentSheetTrigger } from './agent-sheet';
 import { CompactPageTitleContext } from './compact-page-title-context';
 import { ProjectSwitcher } from './project-switcher';
 import { SidebarNav } from './sidebar-nav';
@@ -18,7 +17,7 @@ import { UserMenuTrigger } from './user-menu';
 import { resolveTitle } from './page-titles';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
-import { OPEN_AGENT_EVENT, OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
+import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
 
 /**
  * AppShell — the authenticated application chrome.
@@ -30,9 +29,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [compactTitleOverride, setCompactTitleOverride] = useState<string>();
   const navigationTriggerRef = useRef<HTMLButtonElement>(null);
-  const pendingDrawerLaunch = useRef<
-    { kind: 'palette'; trigger: HTMLElement } | { kind: 'agent' } | null
-  >(null);
+  const pendingDrawerLaunch = useRef<{ trigger: HTMLElement } | null>(null);
   const pathname = useLocation().pathname ?? '/projects';
   const { activeProjectId } = useProjectContext();
   const overviewHref = activeProjectId
@@ -41,15 +38,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const compactTitle = compactTitleOverride ?? resolveTitle(pathname);
 
   function openPaletteFromDrawer(trigger: HTMLElement) {
-    pendingDrawerLaunch.current = {
-      kind: 'palette',
-      trigger: navigationTriggerRef.current ?? trigger,
-    };
-    setNavigationOpen(false);
-  }
-
-  function openAgentFromDrawer() {
-    pendingDrawerLaunch.current = { kind: 'agent' };
+    pendingDrawerLaunch.current = { trigger: navigationTriggerRef.current ?? trigger };
     setNavigationOpen(false);
   }
 
@@ -57,10 +46,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
     const launch = pendingDrawerLaunch.current;
     pendingDrawerLaunch.current = null;
     if (!launch) return;
-    if (launch.kind === 'agent') {
-      window.dispatchEvent(new Event(OPEN_AGENT_EVENT));
-      return;
-    }
     window.dispatchEvent(
       new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, {
         detail: { trigger: launch.trigger },
@@ -92,7 +77,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               {/* Band-height rows, so the sidebar's second row and the pane's
                     second row are the same band at the same offset. */}
               <CommandPaletteTrigger className="h-[var(--tab-height)] w-full" />
-              <AgentSheetTrigger className="h-[var(--tab-height)] w-full justify-start" />
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <SidebarNav />
               </div>
@@ -127,7 +111,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               </div>
               <div className="text-secondary min-w-0 truncate text-sm">{compactTitle}</div>
               <div className="flex items-center justify-end gap-2.5 justify-self-end">
-                <AgentSheetTrigger />
                 <UserMenuTrigger presenter="compact" />
               </div>
             </header>
@@ -159,7 +142,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             </main>
 
             <CommandPalette />
-            <AgentSheet />
             <Drawer
               open={navigationOpen}
               onOpenChange={setNavigationOpen}
@@ -182,10 +164,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 <ProjectSwitcher />
                 <div className="grid gap-2">
                   <CommandPaletteTrigger className="w-full" onOpen={openPaletteFromDrawer} />
-                  <AgentSheetTrigger
-                    className="w-full justify-start"
-                    onOpen={openAgentFromDrawer}
-                  />
                   <SidebarNav onNavigate={() => setNavigationOpen(false)} />
                 </div>
               </div>

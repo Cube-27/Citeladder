@@ -80,7 +80,7 @@ Choose a specific buyer question demonstrated by CiteLadder demand or source evi
 
 Deliver: a recommended title, audience and intent, the complete script, shot and evidence notes, a thumbnail concept that does not misrepresent the video, a description with source links, and proposed chapters marked approximate.
 
-## short_video — TikTok, Reels or Shorts
+## tiktok — TikTok, Reels or Shorts
 
 A very short hook line, three to five rapid beats of one idea each, on-screen text or visual cues in brackets, and a short closing line. Punchy and spoken; cut preamble and corporate register; do not stretch a weak idea to fill time.
 
@@ -98,7 +98,7 @@ For a thread, the first post carries the strongest useful claim, each following 
 
 A short useful hook, a scannable body with natural line breaks that complements the visual rather than describing it, a relevant action when appropriate, and only a few relevant hashtags. Plain-text friendly; do not point to a clickable caption URL.
 
-## community — Reddit or forum answer
+## reddit — Reddit or forum answer
 
 You cannot read the live thread or community rules, so write a conditional answer to the question as supplied and say the live context and rules need checking before posting. Answer the person's question before mentioning the business, disclose affiliation in natural language and never impersonate a neutral customer. Include a commercial link only when useful and allowed; a link-free answer may be best. No fabricated anecdotes, reviews, votes or multiple-account support.
 

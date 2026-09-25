@@ -169,7 +169,7 @@ it('rounds estimated traffic in the table and opens evidence from the keyword', 
   expect(screen.getByRole('dialog', { name: 'Provider evidence' })).toBeInTheDocument();
 });
 
-it('explains a paid empty scope without offering selection or content actions', async () => {
+it('explains a paid empty scope', async () => {
   const empty = {
     ...dataset,
     dataset_kind: 'referring_domains',
@@ -185,38 +185,6 @@ it('explains a paid empty scope without offering selection or content actions', 
     projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
   });
   expect(await screen.findByText(/provider returned no data/i)).toBeInTheDocument();
-  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Create content brief' })).not.toBeInTheDocument();
-});
-
-it('shows a storage failure instead of losing a content handoff', async () => {
-  mswServer.use(
-    http.get(`/api/v1/projects/${project.id}/search-intelligence/datasets/${dataset.id}/rows`, () =>
-      HttpResponse.json({
-        dataset,
-        rows: [row('33333333-3333-4333-8333-333333333333', 'Keyword')],
-        next_cursor: null,
-      }),
-    ),
-    http.post(`/api/v1/projects/${project.id}/search-intelligence/content-handoff`, () =>
-      HttpResponse.json({
-        project_id: project.id,
-        dataset_id: dataset.id,
-        row_ids: ['33333333-3333-4333-8333-333333333333'],
-        evidence: [],
-      }),
-    ),
-  );
-  renderWithProviders(<SearchIntelligenceDatasetView dataset={dataset} />, {
-    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
-  });
-  await userEvent.click(await screen.findByRole('checkbox', { name: /Select evidence row/ }));
-  vi.spyOn(Object.getPrototypeOf(sessionStorage), 'setItem').mockImplementation(() => {
-    throw new Error('Storage is full');
-  });
-  await userEvent.click(screen.getByRole('button', { name: 'Create content brief' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Continue to Content' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Storage is full');
 });
 
 it('uses shared pagination and resets its cursor when sorting or changing rows per page', async () => {
@@ -293,11 +261,9 @@ it('hides a previous page while a different sort is pending', async () => {
     projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
   });
   expect(await screen.findByText('First keyword')).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('checkbox', { name: /Select evidence row/ }));
   await userEvent.click(screen.getByRole('button', { name: 'Keyword' }));
   expect(screen.queryByText('First keyword')).not.toBeInTheDocument();
   expect(await screen.findByText('Sorted keyword')).toBeInTheDocument();
-  expect(screen.getByText('1 evidence row selected')).toBeInTheDocument();
 });
 
 it('does not show a previous query page after a sort read fails', async () => {

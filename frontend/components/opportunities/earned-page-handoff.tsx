@@ -1,8 +1,6 @@
 'use client';
 
-import { ProjectLink } from '@/components/layout/scoped-link';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { OnPageEntities } from '@/components/ui/on-page-entities';
 import { panelClasses } from '@/components/ui/panel';
@@ -68,12 +66,6 @@ export function EarnedPageHandoff({ detail }: Readonly<{ detail: OpportunityDeta
         <NamedInAnswers names={handoff.answer_competitors} />
         <Coverage handoff={handoff} />
         <Limitations items={handoff.limitations} />
-        <Button asChild size="sm" className="justify-self-start">
-          <ProjectLink href={`/content?opportunity_id=${detail.id}`}>
-            Prepare earned content
-          </ProjectLink>
-        </Button>
-        <LinkedGenerations detail={detail} />
       </div>
     </section>
   );
@@ -173,15 +165,5 @@ function Coverage({ handoff }: Readonly<{ handoff: OpportunityDetail['content_ha
         </p>
       ) : null}
     </div>
-  );
-}
-
-function LinkedGenerations({ detail }: Readonly<{ detail: OpportunityDetail }>) {
-  const count = detail.linked_generations.length;
-  if (count === 0) return null;
-  return (
-    <p className="text-muted text-xs">
-      {count} linked {count === 1 ? 'generation' : 'generations'}
-    </p>
   );
 }

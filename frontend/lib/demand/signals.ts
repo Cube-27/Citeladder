@@ -82,7 +82,7 @@ export function signalTargetKind(signal: DemandSignal): 'Page' | 'Query' {
  * `signal.page_url` as a link target, or `null` when it is not a safe absolute
  * web URL.
  *
- * Stricter than the Markdown sanitiser in `lib/content/safe-url`: a demand
+ * Stricter than the Markdown sanitiser in `lib/markdown/safe-url`: a demand
  * page URL is always an absolute address observed by the crawler, so relative
  * and `mailto:` values are rejected here rather than allowed. The value
  * ultimately originates from third-party Search Console data, so it is never

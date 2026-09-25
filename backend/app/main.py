@@ -12,7 +12,6 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.agent import router as agent_router
 from app.api.ai_referrals import router as ai_referrals_router
 from app.api.audit_schedules import router as audit_schedules_router
 from app.api.audits import router as audits_router
@@ -20,7 +19,6 @@ from app.api.auth import router as auth_router
 from app.api.billing import router as billing_router
 from app.api.brand_discoveries import router as brand_discoveries_router
 from app.api.commerce import router as commerce_router
-from app.api.content import router as content_router
 from app.api.demand import router as demand_router
 from app.api.executions import router as executions_router
 from app.api.integrations import router as integrations_router
@@ -81,7 +79,6 @@ def _sanitize_correlation_id(value: str) -> str:
 # owns its own paths; the prefix keeps the whole surface under /api/v1.
 _ROUTERS = (
     auth_router,
-    agent_router,
     billing_router,
     oauth_router,
     workspaces_router,
@@ -96,7 +93,6 @@ _ROUTERS = (
     audit_schedules_router,
     executions_router,
     site_health_router,
-    content_router,
     demand_router,
     search_intelligence_router,
     integrations_router,

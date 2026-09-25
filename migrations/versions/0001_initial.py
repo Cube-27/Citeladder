@@ -21,11 +21,9 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
-_CONTENT_GENERATION_FK = "content_generations.id"
 _SITE_SNAPSHOT_FK = "site_health_snapshots.id"
 _SITE_CHANGE_SNAPSHOT_FK = "site_change_snapshots.id"
 _DEMAND_SNAPSHOT_FK = "demand_snapshots.id"
-_AGENT_TASK_RUN_FK = "agent_task_runs.id"
 _ANALYTICS_TASK_FK = "analytics_tasks.id"
 _SEARCH_RUN_FK = "search_intelligence_runs.id"
 _SEARCH_DATASET_FK = "search_intelligence_datasets.id"
@@ -1011,133 +1009,6 @@ def upgrade() -> None:
         op.f("ix_competitors_project_id"), "competitors", ["project_id"], unique=False
     )
     op.create_table(
-        "content_generations",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("opportunity_id", sa.UUID(), nullable=True),
-        sa.Column("target_site_url_id", sa.UUID(), nullable=True),
-        sa.Column(
-            "target_url", sa.String(length=2048), nullable=False, server_default=""
-        ),
-        sa.Column("demand_signal_id", sa.UUID(), nullable=True),
-        sa.Column(
-            "site_health_reference", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column(
-            "search_intelligence_reference", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column("user_instruction", sa.Text(), nullable=False),
-        sa.Column("skill_id", sa.String(64), nullable=False),
-        sa.Column("skill_version", sa.Integer(), nullable=False),
-        sa.Column("feedback", sa.String(16), nullable=True),
-        sa.Column("feedback_reason", sa.String(32), nullable=False, server_default=""),
-        sa.Column("feedback_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("context_status", sa.String(length=16), nullable=False),
-        sa.Column(
-            "context_snapshot",
-            postgresql.JSONB(astext_type=Text()),
-            nullable=False,
-        ),
-        sa.Column("request_fingerprint", sa.String(length=64), nullable=False),
-        sa.Column("message_digest", sa.String(length=64), nullable=False),
-        sa.Column(
-            "message_snapshot", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column("idempotency_key", sa.String(length=128), nullable=False),
-        sa.Column("status", sa.String(length=24), nullable=False),
-        sa.Column("priority", sa.Integer(), nullable=False),
-        sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("lease_owner", sa.String(length=64), nullable=True),
-        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("attempt_count", sa.Integer(), nullable=False),
-        sa.Column("max_attempts", sa.Integer(), nullable=False),
-        sa.Column("randomized_position", sa.Integer(), nullable=False),
-        sa.Column("error_code", sa.String(length=32), nullable=False),
-        sa.Column("error_detail", sa.Text(), nullable=False),
-        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("output_text", sa.Text(), nullable=True),
-        sa.Column("funding_source", sa.String(length=24), nullable=False),
-        sa.Column("route_id", sa.UUID(), nullable=True),
-        sa.Column("connection_id", sa.UUID(), nullable=True),
-        sa.Column("route_revision", sa.UUID(), nullable=True),
-        sa.Column("credential_revision", sa.UUID(), nullable=True),
-        sa.Column("policy_revision", sa.String(length=64), nullable=True),
-        sa.Column("reservation_id", sa.UUID(), nullable=True),
-        sa.Column("customer_charge_cap", sa.Integer(), nullable=True),
-        sa.Column("archived_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("provider", sa.String(length=64), nullable=False),
-        sa.Column("requested_model", sa.String(length=255), nullable=False),
-        sa.Column("returned_model", sa.String(length=255), nullable=True),
-        sa.Column("finish_reason", sa.String(length=32), nullable=True),
-        sa.Column("output_truncated", sa.Boolean(), nullable=False),
-        sa.Column("usage", postgresql.JSONB(astext_type=Text()), nullable=True),
-        sa.Column("latency_ms", sa.Integer(), nullable=True),
-        sa.Column(
-            "request_snapshot", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column("generator_version", sa.String(length=32), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "workspace_id", "idempotency_key", name="uq_content_generation_ws_idem"
-        ),
-    )
-    op.create_index(
-        op.f("ix_content_generations_available_at"),
-        "content_generations",
-        ["available_at"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_content_generations_project_id"),
-        "content_generations",
-        ["project_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_content_generations_request_fingerprint"),
-        "content_generations",
-        ["request_fingerprint"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_content_generations_status"),
-        "content_generations",
-        ["status"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_content_generations_workspace_id"),
-        "content_generations",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_content_generations_opportunity_id"),
-        "content_generations",
-        ["opportunity_id"],
-    )
-    op.create_index(
-        op.f("ix_content_generations_target_site_url_id"),
-        "content_generations",
-        ["target_site_url_id"],
-    )
-    op.create_index(
-        op.f("ix_content_generations_demand_signal_id"),
-        "content_generations",
-        ["demand_signal_id"],
-    )
-    op.create_table(
         "discovery_model_configs",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
@@ -1336,14 +1207,6 @@ def upgrade() -> None:
         "provider_app_routes",
         ["workspace_id"],
         unique=False,
-    )
-    op.create_foreign_key(
-        "fk_content_generations_route_id_provider_app_routes",
-        "content_generations",
-        "provider_app_routes",
-        ["route_id"],
-        ["id"],
-        ondelete="RESTRICT",
     )
     op.create_table(
         "site_health_profiles",
@@ -1624,64 +1487,6 @@ def upgrade() -> None:
         op.f("ix_brand_profiles_workspace_id"),
         "brand_profiles",
         ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
-        "content_generation_attempts",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("content_generation_id", sa.UUID(), nullable=False),
-        sa.Column("attempt_number", sa.Integer(), nullable=False),
-        sa.Column("dispatch_id", sa.UUID(), nullable=False),
-        sa.Column("status", sa.String(length=16), nullable=False),
-        sa.Column("funding_source", sa.String(length=24), nullable=False),
-        sa.Column("route_id", sa.UUID(), nullable=True),
-        sa.Column("connection_id", sa.UUID(), nullable=True),
-        sa.Column("route_revision", sa.UUID(), nullable=True),
-        sa.Column("credential_revision", sa.UUID(), nullable=True),
-        sa.Column("reservation_id", sa.UUID(), nullable=True),
-        sa.Column("hold_units", sa.Integer(), nullable=False),
-        sa.Column("policy_revision", sa.String(length=64), nullable=True),
-        sa.Column("rate_snapshot", postgresql.JSONB(astext_type=Text()), nullable=True),
-        sa.Column("customer_charge_cap", sa.Integer(), nullable=True),
-        sa.Column("requested_model", sa.String(length=255), nullable=False),
-        sa.Column("returned_model", sa.String(length=255), nullable=True),
-        sa.Column("finish_reason", sa.String(length=32), nullable=True),
-        sa.Column("error_code", sa.String(length=32), nullable=False),
-        sa.Column("error_detail", sa.Text(), nullable=False),
-        sa.Column("usage", postgresql.JSONB(astext_type=Text()), nullable=True),
-        sa.Column("usage_completeness", sa.String(length=16), nullable=False),
-        sa.Column("settled_units", sa.Integer(), nullable=True),
-        sa.Column("absorbed_units", sa.Integer(), nullable=False),
-        sa.Column("settlement_status", sa.String(length=24), nullable=False),
-        sa.Column("provider_request_id", sa.String(length=255), nullable=True),
-        sa.Column("latency_ms", sa.Integer(), nullable=True),
-        sa.Column("dispatched_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("usage_hold_expires_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["content_generation_id"], [_CONTENT_GENERATION_FK], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["route_id"], ["provider_app_routes.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "content_generation_id",
-            "attempt_number",
-            name="uq_content_generation_attempt_number",
-        ),
-        sa.UniqueConstraint(
-            "dispatch_id", name="uq_content_generation_attempt_dispatch"
-        ),
-    )
-    op.create_index(
-        op.f("ix_content_generation_attempts_content_generation_id"),
-        "content_generation_attempts",
-        ["content_generation_id"],
         unique=False,
     )
     op.create_table(
@@ -2301,14 +2106,6 @@ def upgrade() -> None:
         unique=True,
         postgresql_where=sa.text("superseded_at IS NULL"),
     )
-    op.create_foreign_key(
-        "fk_content_generations_opportunity_id",
-        "content_generations",
-        "opportunities",
-        ["opportunity_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
     op.create_table(
         "opportunity_orders",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -2521,7 +2318,6 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("target_external_url", sa.Text(), nullable=True),
-        sa.Column("generation_id", sa.UUID(), nullable=True),
         sa.Column(
             "declared_implemented_at", sa.DateTime(timezone=True), nullable=False
         ),
@@ -2543,9 +2339,6 @@ def upgrade() -> None:
             ["opportunity_snapshot_id"],
             ["opportunity_snapshots.id"],
             ondelete="RESTRICT",
-        ),
-        sa.ForeignKeyConstraint(
-            ["generation_id"], ["content_generations.id"], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
@@ -4909,8 +4702,6 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("audit_id", sa.UUID(), nullable=True),
         sa.Column("task_id", sa.UUID(), nullable=True),
-        sa.Column("content_generation_id", sa.UUID(), nullable=True),
-        sa.Column("agent_task_run_id", sa.UUID(), nullable=True),
         sa.Column("site_crawl_id", sa.UUID(), nullable=True),
         sa.Column("dispatch_key", sa.String(length=128), nullable=False),
         sa.Column("request_fingerprint", sa.String(length=64), nullable=False),
@@ -4934,14 +4725,11 @@ def upgrade() -> None:
             name="ck_consumable_ledger_refund_shape",
         ),
         sa.CheckConstraint(
-            "(subject_kind = 'audit' AND audit_id IS NOT NULL AND task_id IS NOT NULL AND content_generation_id IS NULL AND agent_task_run_id IS NULL AND site_crawl_id IS NULL) OR (subject_kind = 'content' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NOT NULL AND agent_task_run_id IS NULL AND site_crawl_id IS NULL) OR (subject_kind = 'agent' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NULL AND agent_task_run_id IS NOT NULL AND site_crawl_id IS NULL) OR (subject_kind = 'site_crawl' AND audit_id IS NULL AND task_id IS NULL AND content_generation_id IS NULL AND agent_task_run_id IS NULL AND site_crawl_id IS NOT NULL)",
+            "(subject_kind = 'audit' AND audit_id IS NOT NULL AND task_id IS NOT NULL AND site_crawl_id IS NULL) OR (subject_kind = 'site_crawl' AND audit_id IS NULL AND task_id IS NULL AND site_crawl_id IS NOT NULL)",
             name="ck_consumable_ledger_typed_subject",
         ),
         sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(
-            ["content_generation_id"], ["content_generations.id"], ondelete="RESTRICT"
-        ),
         sa.ForeignKeyConstraint(
             ["site_crawl_id"], ["site_crawls.id"], ondelete="RESTRICT"
         ),
@@ -5361,22 +5149,6 @@ def upgrade() -> None:
         "demand_signals",
         ("workspace_id", "project_id", "snapshot_id", "signal_type", "state"),
     )
-    op.create_foreign_key(
-        "fk_content_generations_target_site_url_id",
-        "content_generations",
-        "site_urls",
-        ["target_site_url_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
-    op.create_foreign_key(
-        "fk_content_generations_demand_signal_id",
-        "content_generations",
-        "demand_signals",
-        ["demand_signal_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
 
     op.create_table(
         "query_evidence_snapshots",
@@ -5514,183 +5286,6 @@ def upgrade() -> None:
         ["workspace_id", "project_id", "normalized_query", "ordinal"],
     )
 
-    # --- Bounded Growth Agent --------------------------------------------
-    op.create_table(
-        "agent_task_runs",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("user_id", sa.UUID(), nullable=True),
-        sa.Column("idempotency_key", sa.String(length=128), nullable=False),
-        sa.Column("request_fingerprint", sa.String(length=64), nullable=False),
-        sa.Column("task_type", sa.String(length=32), nullable=False),
-        sa.Column("objective", sa.Text(), nullable=False),
-        sa.Column("task_policy_version", sa.String(length=32), nullable=False),
-        sa.Column(
-            "allowed_tools", postgresql.JSONB(astext_type=Text()), nullable=False
-        ),
-        sa.Column("status", sa.String(length=24), nullable=False),
-        sa.Column("result", postgresql.JSONB(astext_type=Text()), nullable=True),
-        sa.Column("provider_adapter", sa.String(length=64), nullable=False),
-        sa.Column("endpoint_host", sa.String(length=255), nullable=False),
-        sa.Column("model", sa.String(length=255), nullable=False),
-        sa.Column("instruction_version", sa.String(length=64), nullable=False),
-        sa.Column("usage", postgresql.JSONB(astext_type=Text()), nullable=True),
-        sa.Column("latency_ms", sa.Integer(), nullable=True),
-        sa.Column("error_code", sa.String(length=64), nullable=False),
-        sa.Column("error_detail", sa.Text(), nullable=False),
-        sa.Column("priority", sa.Integer(), nullable=False),
-        sa.Column("available_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("lease_owner", sa.String(length=64), nullable=True),
-        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("attempt_count", sa.Integer(), nullable=False),
-        sa.Column("max_attempts", sa.Integer(), nullable=False),
-        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("cancelled_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "workspace_id", "idempotency_key", name="uq_agent_run_ws_idempotency"
-        ),
-    )
-    _create_indexes(
-        "agent_task_runs",
-        ("workspace_id", "project_id", "status", "available_at"),
-    )
-    op.create_index(
-        "ix_agent_task_runs_project_created",
-        "agent_task_runs",
-        ["project_id", "created_at", "id"],
-    )
-    op.create_index(
-        "ix_agent_task_runs_claim",
-        "agent_task_runs",
-        ["status", "available_at", "created_at"],
-    )
-    op.create_foreign_key(
-        "fk_consumable_ledger_agent_task_run_id",
-        "consumable_ledger",
-        "agent_task_runs",
-        ["agent_task_run_id"],
-        ["id"],
-        ondelete="RESTRICT",
-    )
-
-    op.create_table(
-        "agent_model_attempts",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("task_run_id", sa.UUID(), nullable=False),
-        sa.Column("dispatch_id", sa.UUID(), nullable=False),
-        sa.Column("run_attempt", sa.Integer(), nullable=False),
-        sa.Column("ordinal", sa.Integer(), nullable=False),
-        sa.Column("funding_source", sa.String(length=24), nullable=False),
-        sa.Column("provider_connection_id", sa.UUID(), nullable=True),
-        sa.Column("provider_route_id", sa.UUID(), nullable=True),
-        sa.Column("credential_revision", sa.UUID(), nullable=True),
-        sa.Column("route_revision", sa.UUID(), nullable=True),
-        sa.Column("provider_adapter", sa.String(length=64), nullable=False),
-        sa.Column("endpoint_host", sa.String(length=255), nullable=False),
-        sa.Column("requested_model", sa.String(length=255), nullable=False),
-        sa.Column("returned_model", sa.String(length=255), nullable=False),
-        sa.Column("pricing_revision", sa.String(length=64), nullable=False),
-        sa.Column("reservation_id", sa.UUID(), nullable=True),
-        sa.Column("reserved_credits", sa.BigInteger(), nullable=False),
-        sa.Column("debited_credits", sa.BigInteger(), nullable=False),
-        sa.Column("input_tokens", sa.BigInteger(), nullable=True),
-        sa.Column("cached_input_tokens", sa.BigInteger(), nullable=True),
-        sa.Column("output_tokens", sa.BigInteger(), nullable=True),
-        sa.Column("reasoning_tokens", sa.BigInteger(), nullable=True),
-        sa.Column("total_tokens", sa.BigInteger(), nullable=True),
-        sa.Column("usage_complete", sa.Boolean(), nullable=False),
-        sa.Column("settlement_status", sa.String(length=24), nullable=False),
-        sa.Column("provider_request_id", sa.String(length=255), nullable=False),
-        sa.Column("request_hash", sa.String(length=64), nullable=False),
-        sa.Column("output_hash", sa.String(length=64), nullable=False),
-        sa.Column("outcome", sa.String(length=24), nullable=False),
-        sa.Column("finish_status", sa.String(length=64), nullable=False),
-        sa.Column("error_code", sa.String(length=64), nullable=False),
-        sa.Column("latency_ms", sa.Integer(), nullable=True),
-        sa.Column("dispatched_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("deadline_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("settled_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("late_receipt", sa.Boolean(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(
-            ["task_run_id"], [_AGENT_TASK_RUN_FK], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["provider_connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["provider_route_id"], ["provider_app_routes.id"], ondelete="RESTRICT"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("dispatch_id", name="uq_agent_model_attempt_dispatch"),
-        sa.UniqueConstraint(
-            "task_run_id", "run_attempt", "ordinal", name="uq_agent_model_attempt_slot"
-        ),
-    )
-    op.create_index(
-        "ix_agent_model_attempts_run_created",
-        "agent_model_attempts",
-        ["task_run_id", "created_at"],
-    )
-    _create_indexes(
-        "agent_model_attempts", ("workspace_id", "project_id", "task_run_id")
-    )
-
-    op.create_table(
-        "agent_tool_attempts",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("task_run_id", sa.UUID(), nullable=False),
-        sa.Column("run_attempt", sa.Integer(), nullable=False),
-        sa.Column("ordinal", sa.Integer(), nullable=False),
-        sa.Column("tool_name", sa.String(length=128), nullable=False),
-        sa.Column("tool_version", sa.String(length=32), nullable=False),
-        sa.Column("status", sa.String(length=16), nullable=False),
-        sa.Column("input", postgresql.JSONB(astext_type=Text()), nullable=False),
-        sa.Column(
-            "artifact_refs", postgresql.JSONB(astext_type=Text()), nullable=False
-        ),
-        sa.Column("output_hash", sa.String(length=64), nullable=False),
-        sa.Column("omissions", postgresql.JSONB(astext_type=Text()), nullable=False),
-        sa.Column("error_code", sa.String(length=64), nullable=False),
-        sa.Column("retryable", sa.Boolean(), nullable=False),
-        sa.Column("latency_ms", sa.Integer(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["task_run_id"], [_AGENT_TASK_RUN_FK], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "task_run_id",
-            "run_attempt",
-            "ordinal",
-            name="uq_agent_tool_attempt_slot",
-        ),
-    )
-    _create_indexes(
-        "agent_tool_attempts", ("workspace_id", "project_id", "task_run_id")
-    )
     # ### commands auto generated by Alembic - please adjust! ###
     op.create_table(
         "commerce_csv_imports",
@@ -7105,7 +6700,6 @@ def downgrade() -> None:
         "site_rule_evaluations",
         "referral_events",
         "opportunity_implementation_events",
-        "content_generation_attempts",
         "competitor_mentions",
         "commerce_product_observations",
         "commerce_categories",
@@ -7127,7 +6721,6 @@ def downgrade() -> None:
         "metric_snapshots",
         "integration_metric_rows",
         "execution_cost_projections",
-        "content_generations",
         "consumable_ledger",
         "commerce_shelf_snapshots",
         "commerce_recommendation_observations",
@@ -7162,8 +6755,6 @@ def downgrade() -> None:
         "brand_aliases",
         "billing_subscriptions",
         "audit_schedules",
-        "agent_tool_attempts",
-        "agent_model_attempts",
         "unintended_domains",
         "traffic_snapshots",
         "topics",
@@ -7193,7 +6784,6 @@ def downgrade() -> None:
         "billing_customers",
         "analytics_tasks",
         "ai_referrals_snapshots",
-        "agent_task_runs",
         "account_grants",
         "workspace_site_health_runtime",
         "workspace_members",

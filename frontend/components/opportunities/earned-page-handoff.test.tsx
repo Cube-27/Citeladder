@@ -17,7 +17,6 @@ import { EarnedPageHandoff } from './earned-page-handoff';
 function detailWith(handoff: Partial<OpportunityDetail['content_handoff']>): OpportunityDetail {
   return {
     id: '22222222-2222-4222-8222-222222222222',
-    linked_generations: [],
     content_handoff: {
       opportunity_id: '22222222-2222-4222-8222-222222222222',
       pathway: 'earned',

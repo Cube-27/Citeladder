@@ -143,7 +143,6 @@ def _implementation_view(
         opportunity_snapshot_id=row.opportunity_snapshot_id,
         target_site_url_ids=list(row.target_site_url_ids or []),
         target_external_url=row.target_external_url,
-        generation_id=row.generation_id,
         declared_implemented_at=row.declared_implemented_at,
         expected_checks=list(row.expected_checks or []),
         state=latest.observation_kind if latest is not None else "declared",
@@ -301,7 +300,6 @@ async def create_implementation_event_endpoint(
             declaration=ImplementationDeclaration(
                 opportunity_id=payload.opportunity_id,
                 target_site_url_ids=payload.target_site_url_ids,
-                generation_id=payload.generation_id,
                 declared_implemented_at=payload.declared_implemented_at,
                 expected_checks=[
                     item.model_dump(mode="json") for item in payload.expected_checks

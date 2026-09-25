@@ -25,7 +25,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.lexical import lexical_tokens
-from app.core.config.content import (
+from app.core.config.agent_context import (
     CONTENT_CONTEXT_FIELD_MAX_CHARS,
     CONTENT_CONTEXT_MAX_CHARS,
     CONTENT_CONTEXT_MAX_PAGES,

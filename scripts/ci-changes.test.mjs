@@ -33,8 +33,8 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   assert.equal(classifyPaths(['frontend/components/ui/command-palette.tsx']).e2e, true);
   assert.equal(classifyPaths(['frontend/components/ui/primitives.test.tsx']).e2e, false);
   assert.equal(classifyPaths(['frontend/lib/api/projects.ts']).e2e, false);
-  assert.deepEqual(selectE2EFiles(['frontend/components/content/content-screen.tsx']), [
-    'e2e/content.spec.ts',
+  assert.deepEqual(selectE2EFiles(['frontend/components/opportunities/evidence-drawer.tsx']), [
+    'e2e/opportunity-loop.spec.ts',
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/components/ui/button.tsx']), []);
   assert.deepEqual(selectE2EFiles(['frontend/components/ui/command-palette.tsx']), [
@@ -42,7 +42,6 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/billing.spec.ts']), ['e2e/billing.spec.ts']);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/billing.spec.mjs']), []);
-  assert.deepEqual(selectE2EFiles(['frontend/e2e/content-integration.spec.ts']), []);
   assert.equal(classifyPaths(['scripts/check.ps1', '.github/workflows/ci.yml']).e2e, false);
 });
 
@@ -84,15 +83,18 @@ test('root governance and product prose avoid implementation suites', () => {
   });
 });
 
-test('packaged Content skills remain backend production inputs', () => {
-  assert.deepEqual(classifyPaths(['backend/app/core/config/content_skills/packs/blog/SKILL.md']), {
-    backend: true,
-    frontend: false,
-    contract: false,
-    e2e: false,
-    security: false,
-    compose: false,
-  });
+test('packaged Agent skills remain backend production inputs', () => {
+  assert.deepEqual(
+    classifyPaths(['backend/app/core/config/agent_skills/skills/gsc_optimize/SKILL.md']),
+    {
+      backend: true,
+      frontend: false,
+      contract: false,
+      e2e: false,
+      security: false,
+      compose: false,
+    },
+  );
 });
 
 test('Compose selects container-shaped changes only, on every push of a PR', () => {

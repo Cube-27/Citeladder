@@ -100,9 +100,3 @@ export const searchDatasetPageSchema = responseObject({
   rows: z.array(searchRowSchema),
   next_cursor: z.string().nullable(),
 });
-export const searchContentHandoffSchema = responseObject({
-  project_id: z.uuid(),
-  dataset_id: z.uuid(),
-  row_ids: z.array(z.uuid()),
-  evidence: z.array(z.record(z.string(), z.unknown())),
-});

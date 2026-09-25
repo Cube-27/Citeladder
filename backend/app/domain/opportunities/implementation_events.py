@@ -20,14 +20,12 @@ from app.core.config.opportunities import (
     OPPORTUNITY_TYPE_TRAFFIC,
 )
 from app.core.config.placement import PLACEMENT_CHECK_KIND
-from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.demand.page_equivalence import resolve_owned_page
 from app.domain.opportunities.placement_checks import (
     open_placement_check,
     placement_expected_check,
 )
 from app.domain.opportunities.visibility_checks import build_visibility_check
-from app.models.content import ContentGeneration
 from app.models.opportunity import (
     Opportunity,
     OpportunityImplementationEvent,
@@ -54,7 +52,6 @@ class ImplementationIdempotencyConflictError(ImplementationConflictError):
 class ImplementationDeclaration:
     opportunity_id: uuid.UUID
     target_site_url_ids: list[uuid.UUID]
-    generation_id: uuid.UUID | None
     declared_implemented_at: datetime
     expected_checks: list[dict]
 
@@ -243,29 +240,6 @@ async def _current_snapshot(
     return snapshot
 
 
-async def _validate_generation(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    opportunity_id: uuid.UUID,
-    generation_id: uuid.UUID | None,
-) -> None:
-    if generation_id is None:
-        return
-    generation = await session.scalar(
-        select(ContentGeneration.id).where(
-            ContentGeneration.workspace_id == workspace_id,
-            ContentGeneration.project_id == project_id,
-            ContentGeneration.id == generation_id,
-            ContentGeneration.opportunity_id == opportunity_id,
-            ContentGeneration.status == TASK_STATUS_SUCCEEDED,
-        )
-    )
-    if generation is None:
-        raise ImplementationConflictError("Generation not found")
-
-
 async def _idempotent_replay(
     session: AsyncSession,
     *,
@@ -321,7 +295,6 @@ async def create_implementation_event(
     request_payload = {
         "opportunity_id": declaration.opportunity_id,
         "target_site_url_ids": declaration.target_site_url_ids,
-        "generation_id": declaration.generation_id,
         "declared_implemented_at": declaration.declared_implemented_at,
         "expected_checks": declaration.expected_checks,
     }
@@ -355,13 +328,6 @@ async def create_implementation_event(
         opportunity=opportunity,
         requested_ids=declaration.target_site_url_ids,
     )
-    await _validate_generation(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        opportunity_id=opportunity.id,
-        generation_id=declaration.generation_id,
-    )
     checks = await _project_expected_checks(
         session, project=project, opportunity=opportunity, snapshot=snapshot
     )
@@ -372,7 +338,6 @@ async def create_implementation_event(
         opportunity_snapshot_id=snapshot.id,
         target_site_url_ids=[str(item) for item in targets.site_url_ids],
         target_external_url=targets.external_url,
-        generation_id=declaration.generation_id,
         declared_implemented_at=declaration.declared_implemented_at,
         expected_checks=checks,
         actor_user_id=actor_user_id,

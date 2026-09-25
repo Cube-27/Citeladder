@@ -348,40 +348,15 @@ describe('AEO Readiness', () => {
       await screen.findByRole('button', { name: 'View details for Answerability' }),
     );
     expect(screen.getAllByRole('button', { name: /Copy fix prompt/ }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole('link', { name: 'Improve with Content' })).toBeNull();
   });
 
-  it('lets the server withdraw a check from the Content route', async () => {
-    // `technical.title_present` is in the frontend's fallback set, so a local
-    // lookup would offer a draft here. The SERVER says this check is not
-    // content-addressable, and the endpoint authorizes against that same
-    // config — so the panel must not render a hand-off it would refuse.
-    stubReadiness({
-      dimensions: DIMENSIONS.map(([key, label], index) => {
-        const base = dimension(key, label, index === 0);
-        if (index !== 0) return base;
-        return {
-          ...base,
-          evidence_pages: base.evidence_pages.map((page) => ({
-            ...page,
-            failed_checks: [
-              {
-                ...page.failed_checks[0],
-                rule_id: 'technical.title_present',
-                content_addressable: false,
-                remediation_route: 'code',
-              },
-            ],
-          })),
-        };
-      }),
-    });
+  it('gives a page whose checks route to content the fix prompt too', async () => {
+    stubReadiness();
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
     await userEvent.click(
       await screen.findByRole('button', { name: 'View details for Answerability' }),
     );
-    expect(screen.queryByRole('link', { name: 'Improve with Content' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /Copy fix prompt/ }).length).toBeGreaterThan(0);
   });
 });

@@ -41,14 +41,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.analytics import ANALYTICS_QUEUE_SPEC
 from app.core.config.audits import AUDIT_QUEUE_SPEC
 from app.core.config.brand_discovery import BRAND_DISCOVERY_QUEUE_SPEC
-from app.core.config.content import CONTENT_QUEUE_SPEC
 from app.core.config.integrations_clients import INTEGRATION_QUEUE_SPEC
 from app.core.config.site_health_runtime import SITE_CRAWL_QUEUE_SPEC
 from app.core.config.task_queue import PostgresQueueSpec
 from app.core.database import SessionLocal
 from app.core.telemetry import configure_logging, instrument_worker
-from app.domain.agent.model_attempts import reconcile_stale_cancelled_model_attempts
-from app.domain.content.reconciliation import content_reclaim_accounting
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.parent_reconcilers import PARENT_RECONCILERS
 from app.workers.terminal_compensation import TERMINAL_TASK_HOOKS
@@ -63,7 +60,6 @@ _CANDIDATE_QUEUES: tuple[PostgresQueueSpec, ...] = (
     ANALYTICS_QUEUE_SPEC,
     AUDIT_QUEUE_SPEC,
     BRAND_DISCOVERY_QUEUE_SPEC,
-    CONTENT_QUEUE_SPEC,
     INTEGRATION_QUEUE_SPEC,
     SITE_CRAWL_QUEUE_SPEC,
 )
@@ -89,27 +85,13 @@ class QueueSweeper:
         self._queues = [
             (
                 spec,
-                PostgresTaskQueue(
-                    self._session_factory,
-                    spec,
-                    reclaim_accounting=(
-                        content_reclaim_accounting
-                        if spec is CONTENT_QUEUE_SPEC
-                        else None
-                    ),
-                ),
+                PostgresTaskQueue(self._session_factory, spec),
             )
             for spec in specs
         ]
 
     async def run_once(self) -> int:
         """One pass over every queue. Returns the total rows reclaimed."""
-        from app.domain.content.reconciliation import (
-            reconcile_stale_cancelled_dispatches,
-        )
-
-        await reconcile_stale_cancelled_dispatches(self._session_factory)
-        await reconcile_stale_cancelled_model_attempts(self._session_factory)
         reclaimed = 0
         for spec, queue in self._queues:
             name = spec.model.__tablename__

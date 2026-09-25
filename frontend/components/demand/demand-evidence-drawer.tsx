@@ -1,14 +1,13 @@
 'use client';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { ArrowUpRight, ExternalLink, FileText, ShieldCheck, Split } from 'lucide-react';
+import { ArrowUpRight, ExternalLink, ShieldCheck, Split } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { DemandSignal } from '@/lib/api/demand';
-import { demandContentHref } from '@/lib/demand/content-link';
 import {
   competingPages,
   numericMetric,
@@ -58,12 +57,6 @@ function DemandEvidenceContent({
             <ProjectLink href="/opportunities" className="inline-flex items-center">
               <ArrowUpRight className="mr-1.5 size-3.5" />
               View in Opportunities
-            </ProjectLink>
-          </Button>
-          <Button variant="primary" size="sm" asChild>
-            <ProjectLink href={demandContentHref(signal)} className="inline-flex items-center">
-              <FileText className="mr-1.5 size-3.5" />
-              Draft Content Brief
             </ProjectLink>
           </Button>
         </div>

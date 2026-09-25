@@ -84,9 +84,6 @@ export const CONTRACT_SCHEMA_MAP = {
   visibilityTrendPointSchema: 'VisibilityTrendPoint',
   visibilityEvidenceResponseSchema: 'VisibilityEvidenceResponse',
   // Externally cited pages
-  // Content
-  contentGenerationListItemSchema: 'ContentGenerationListItem',
-  contentGenerationDetailSchema: 'ContentGenerationDetail',
   // AI Referrals / performance
   aiReferralsSchema: 'AiReferralsResponse',
   performanceDashboardSchema: 'PerformanceDashboardResponse',
@@ -112,14 +109,6 @@ export const CONTRACT_SCHEMA_MAP = {
   searchReadinessSchema: 'ReadinessResponse',
   searchRowSchema: 'SearchRowResponse',
   searchDatasetPageSchema: 'DatasetPageResponse',
-  searchContentHandoffSchema: 'ContentHandoffResponse',
-  // Growth Agent
-  agentArtifactReferenceSchema: 'AgentArtifactReference',
-  agentRoadmapItemSchema: 'AgentRoadmapItem',
-  agentEvidenceSourceSchema: 'AgentEvidenceSource',
-  agentResultSchema: 'AgentTaskResult',
-  agentTaskRunSummarySchema: 'AgentTaskRunSummary',
-  agentTaskRunSchema: 'AgentTaskRunDetail',
   // Billing (v8 commercial surface)
   billingCatalogSchema: 'BillingCatalogResponse',
   billingEntitlementSchema: 'BillingEntitlementResponse',

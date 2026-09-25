@@ -17,7 +17,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.content import (
+from app.core.config.agent_context import (
     CONTENT_CONTEXT_FIELD_MAX_CHARS,
     CONTENT_CONTEXT_MAX_CHARS,
     CONTENT_CONTEXT_MAX_PAGES,
@@ -31,8 +31,8 @@ from app.core.config.site_health_contracts import (
     CRAWL_STATUS_PARTIALLY_COMPLETED,
     CRAWL_STATUS_RUNNING,
 )
-from app.domain.content import website_context
-from app.domain.content.website_context import select_crawl_fragments
+from app.domain.agent import website_context
+from app.domain.agent.website_context import select_crawl_fragments
 from app.models.project import Project
 from app.models.site_health.acquisition import SiteFetchArtifact
 from app.models.site_health.analysis import SitePageAnalysis

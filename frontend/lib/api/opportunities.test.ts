@@ -90,7 +90,6 @@ const detail = {
     source_analysis_ids: [AUDIT],
     snapshot_versions: { analyzer_version: 'opp-analyzer-1' },
   },
-  linked_generations: [],
   superseded_by_id: null,
   superseded_at: null,
 };
@@ -151,7 +150,6 @@ const implementationEvent = {
   opportunity_snapshot_id: AUDIT,
   target_site_url_ids: [CRAWL],
   target_external_url: null,
-  generation_id: null,
   declared_implemented_at: '2026-07-24T00:00:00Z',
   expected_checks: [
     {

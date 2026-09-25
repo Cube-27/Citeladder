@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
@@ -21,7 +20,6 @@ import {
   type SearchIntelligenceRow,
 } from '@/lib/api/search-intelligence';
 import { searchIntelligenceKeys } from '@/lib/api/query-keys/search-intelligence';
-import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import { formatEvidenceValue, formatSearchNumber } from './search-intelligence-format';
@@ -72,13 +70,7 @@ export function SearchIntelligenceDatasetView({
   onExpand,
 }: Readonly<{ dataset: SearchIntelligenceDataset; title?: string; onExpand?: () => void }>) {
   const { activeProject } = useProjectContext();
-  const navigate = useNavigate();
-  const projectHref = useProjectHref();
   const [selected, setSelected] = useState<SearchIntelligenceRow | null>(null);
-  const [selectedEvidence, setSelectedEvidence] = useState<Record<string, SearchIntelligenceRow>>(
-    {},
-  );
-  const [reviewOpen, setReviewOpen] = useState(false);
   const [filter, setFilter] = useState('');
   const [minVolume, setMinVolume] = useState('');
   const [intent, setIntent] = useState('');
@@ -103,20 +95,7 @@ export function SearchIntelligenceDatasetView({
     activeProject?.workspace_id,
     params,
   );
-  const handoff = useMutation({
-    mutationFn: () =>
-      searchIntelligenceApi.contentHandoff(
-        activeProject!.id,
-        dataset.id,
-        Object.keys(selectedEvidence),
-        { workspaceId: activeProject!.workspace_id },
-      ),
-    onSuccess: (payload) => {
-      sessionStorage.setItem('citeladder:search-intelligence-handoff', JSON.stringify(payload));
-      navigate(projectHref('/content?source=search-intelligence'));
-    },
-  });
-  const selectable = [
+  const keywordDataset = [
     'ranking_keywords',
     'keyword_suggestions',
     'missing_keywords',
@@ -135,7 +114,6 @@ export function SearchIntelligenceDatasetView({
     return <EmptyDataset dataset={dataset} title={title} />;
   const rows = page.rows;
   const range = pageRange(table.page, table.pageSize, rows.length);
-  const selectedCount = Object.keys(selectedEvidence).length;
   return (
     <>
       <Card className="min-w-0">
@@ -150,7 +128,7 @@ export function SearchIntelligenceDatasetView({
               className="min-w-0 flex-1 basis-48"
             />
             <KeywordFilters
-              enabled={selectable}
+              enabled={keywordDataset}
               minVolume={minVolume}
               setMinVolume={setMinVolume}
               intent={intent}
@@ -159,7 +137,6 @@ export function SearchIntelligenceDatasetView({
             <SearchIntelligenceExport dataset={dataset} params={params} />
             <DepthReviewAction onExpand={onExpand} />
           </div>
-          {handoff.isError ? <Alert>{handoff.error.message}</Alert> : null}
           {query.isError ? (
             <Alert>
               Saved rows could not be updated.{' '}
@@ -177,9 +154,6 @@ export function SearchIntelligenceDatasetView({
             <SearchIntelligenceRowsTable
               kind={dataset.dataset_kind}
               rows={rows}
-              selectable={selectable}
-              selectedEvidence={selectedEvidence}
-              setSelectedEvidence={setSelectedEvidence}
               order={order}
               onSelect={setSelected}
               onSort={(sort) => {
@@ -197,11 +171,6 @@ export function SearchIntelligenceDatasetView({
           >
             {query.isFetching ? 'Updating saved rows…' : `${rows.length} rows shown`}
           </output>
-          <EvidenceSelection
-            selectable={selectable}
-            count={selectedCount}
-            onReview={() => setReviewOpen(true)}
-          />
           <CursorTableFooter
             {...range}
             total={filteredSavedCount(page.dataset)}
@@ -216,35 +185,6 @@ export function SearchIntelligenceDatasetView({
           />
         </CardContent>
       </Card>
-      <Drawer
-        open={reviewOpen}
-        onOpenChange={setReviewOpen}
-        title="Use this evidence in Content"
-        description={`${selectedCount} saved rows · ${dataset.target_hostname}`}
-        footer={
-          <Button disabled={handoff.isPending} onClick={() => handoff.mutate()}>
-            Continue to Content
-          </Button>
-        }
-      >
-        <div className="grid gap-4">
-          <p className={textRole('body')}>
-            These saved facts will be attached as read-only context. Write your instructions in
-            Content.
-          </p>
-          <ul className="grid gap-3">
-            {Object.values(selectedEvidence).map((row) => (
-              <li key={row.id} className="border-border rounded-[var(--radius-card)] border p-3">
-                <p className={textRole('bodyStrong')}>{row.keyword || row.domain || row.url}</p>
-                <p className={textRole('meta')}>
-                  Volume: {formatSearchNumber(row.search_volume)} · Position:{' '}
-                  {formatSearchNumber(row.rank_group)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </Drawer>
       <EvidenceDrawer selected={selected} onClose={() => setSelected(null)} />
     </>
   );
@@ -356,24 +296,6 @@ function KeywordFilters({
         )}
       />
     </>
-  );
-}
-
-function EvidenceSelection({
-  selectable,
-  count,
-  onReview,
-}: Readonly<{ selectable: boolean; count: number; onReview: () => void }>) {
-  if (!selectable || count === 0) return null;
-  return (
-    <div className="border-border-subtle flex min-h-14 flex-wrap items-center justify-between gap-3 border-b px-[var(--table-cell-padding-x)] py-2">
-      <span className={textRole('body')}>
-        {count} evidence {count === 1 ? 'row' : 'rows'} selected
-      </span>
-      <Button size="sm" onClick={onReview}>
-        Create content brief
-      </Button>
-    </div>
   );
 }
 

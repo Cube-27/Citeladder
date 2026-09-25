@@ -296,7 +296,7 @@ async def test_generated_tool_reference_matches_registered_catalog() -> None:
 
     assert documented.keys() == registered.keys()
     assert all(tool["read_only"] for tool in documented.values())
-    assert documented["list_skills"]["description"].startswith("Inspect metadata")
+    assert "list_skills" not in documented
     assert "get_skill" not in documented
     for name, tool in registered.items():
         assert documented[name]["description"] == tool.description

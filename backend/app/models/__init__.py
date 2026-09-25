@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from app.core.database import Base
 from app.models.abuse import QueueWorkspaceTurn, UsageWindow
-from app.models.agent import AgentModelAttempt, AgentTaskRun, AgentToolAttempt
 from app.models.analysis import (
     BrandMention,
     Citation,
@@ -76,10 +75,6 @@ from app.models.commerce import (
     CommercePromptTarget,
     CommerceRecommendationObservation,
     CommerceShelfSnapshot,
-)
-from app.models.content import (
-    ContentGeneration,
-    ContentGenerationAttempt,
 )
 from app.models.content_differentiation import (
     ContentDifferentiationCandidate,
@@ -176,9 +171,6 @@ from app.models.workspace import (
 __all__ = [
     "AccountGrant",
     "Action",
-    "AgentModelAttempt",
-    "AgentTaskRun",
-    "AgentToolAttempt",
     "AiReferralsSnapshot",
     "AioEntityLink",
     "AioObservation",
@@ -223,8 +215,6 @@ __all__ = [
     "ConsumableLedger",
     "ContentDifferentiationCandidate",
     "ContentDifferentiationReport",
-    "ContentGeneration",
-    "ContentGenerationAttempt",
     "DemandSignal",
     "DemandSnapshot",
     "DiscoveryModelConfig",

@@ -1,6 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
 
-import { CONTENT_CREATION_CAPABILITY } from '@/lib/config/billing';
 import { ICONS } from '@/lib/icons';
 
 export type NavItem = {
@@ -50,15 +49,7 @@ export const NAV_GROUPS = [
     title: 'Act',
     href: '/opportunities',
     icon: ICONS.opportunities,
-    items: [
-      { label: 'Opportunities', href: '/opportunities', icon: ICONS.opportunities },
-      {
-        label: 'Content',
-        href: '/content',
-        icon: ICONS.content,
-        requiredCapability: CONTENT_CREATION_CAPABILITY,
-      },
-    ],
+    items: [{ label: 'Opportunities', href: '/opportunities', icon: ICONS.opportunities }],
   },
   {
     title: 'Track',

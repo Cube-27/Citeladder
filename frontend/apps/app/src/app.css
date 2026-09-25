@@ -18,11 +18,9 @@
 @import './globals.css';
 
 @source '../../../apps/app/src';
-@source '../../../components/agent';
 @source '../../../components/analytics';
 @source '../../../components/auth';
 @source '../../../components/billing';
-@source '../../../components/content';
 @source '../../../components/demand';
 @source '../../../components/layout';
 @source '../../../components/onboarding';

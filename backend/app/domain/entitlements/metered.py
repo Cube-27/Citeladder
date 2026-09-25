@@ -47,8 +47,6 @@ class MeteredSettlement:
 
 
 _TYPED_SUBJECT_COLUMNS = {
-    "content": "content_generation_id",
-    "agent": "agent_task_run_id",
     "site_crawl": "site_crawl_id",
 }
 

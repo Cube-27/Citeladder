@@ -71,10 +71,7 @@ export function selectE2EFiles(paths) {
     selected.add(test);
   };
   for (const path of paths) {
-    if (
-      /^frontend\/e2e\/.+\.spec\.ts$/u.test(path) &&
-      path !== 'frontend/e2e/content-integration.spec.ts'
-    ) {
+    if (/^frontend\/e2e\/.+\.spec\.ts$/u.test(path)) {
       addTest(path.slice('frontend/'.length));
     }
     for (const rule of E2E_RULES) {

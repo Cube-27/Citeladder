@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -13,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.earned_actions import RULE_EARNED_PAGE_ACQUIRE
 from app.domain.opportunities.verification import verify_implementation_events
 from app.models.analytics import AnalyticsTask
-from app.models.content import ContentGeneration
 from app.models.opportunity import (
     Opportunity,
     OpportunityImplementationEvent,
@@ -151,81 +149,6 @@ async def test_cross_workspace_target_is_rejected(
     assert response.json()["error"]["code"] == "implementation_target_conflict"
 
 
-async def test_declaration_accepts_only_a_successful_generation_for_the_opportunity(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    scenario, opportunity, site_url = await _seed_and_recompute(client, session_factory)
-    async with session_factory() as session:
-        rows = [
-            ContentGeneration(
-                workspace_id=scenario.workspace_id,
-                project_id=scenario.project_id,
-                opportunity_id=opportunity.id if linked else None,
-                user_instruction="Prepare the evidence-backed asset.",
-                skill_id="article",
-                skill_version=1,
-                context_status="included",
-                context_snapshot={},
-                request_fingerprint=character * 64,
-                idempotency_key=f"generation-{character}",
-                status=status,
-                provider="mistral",
-                requested_model="fixture-model",
-                generator_version="content-v1",
-            )
-            for linked, status, character in (
-                (True, "succeeded", "a"),
-                (False, "succeeded", "b"),
-                (True, "failed", "c"),
-            )
-        ]
-        session.add_all(rows)
-        await session.commit()
-        generation_ids = [row.id for row in rows]
-
-    url = f"/api/v1/projects/{scenario.project_id}/opportunities/implementation-events"
-    base_payload = {
-        "opportunity_id": str(opportunity.id),
-        "target_site_url_ids": [str(site_url.id)],
-        "declared_implemented_at": datetime.now(UTC).isoformat(),
-        "expected_checks": [],
-    }
-    headers = {"X-Workspace-Id": str(scenario.workspace_id)}
-    for index, generation_id in enumerate(generation_ids[1:], start=1):
-        rejected = await client.post(
-            url,
-            headers={**headers, "Idempotency-Key": f"bad-generation-{index}"},
-            json={**base_payload, "generation_id": str(generation_id)},
-        )
-        assert rejected.status_code == 409
-        assert rejected.json()["error"]["code"] == "implementation_target_conflict"
-
-    accepted = await client.post(
-        url,
-        headers={**headers, "Idempotency-Key": "linked-generation"},
-        json={**base_payload, "generation_id": str(generation_ids[0])},
-    )
-    assert accepted.status_code == 201
-    assert accepted.json()["generation_id"] == str(generation_ids[0])
-    assert accepted.json()["expected_checks"][0]["kind"] == "site_rule"
-
-    deleted = await client.delete(
-        f"/api/v1/content/generations/{generation_ids[0]}", headers=headers
-    )
-    assert deleted.status_code == 204
-    async with session_factory() as session:
-        declaration = await session.get(
-            OpportunityImplementationEvent, uuid.UUID(accepted.json()["id"])
-        )
-        assert declaration is not None
-        assert declaration.generation_id == generation_ids[0]
-        generation = await session.get(ContentGeneration, generation_ids[0])
-        assert generation is not None
-        assert generation.archived_at is not None
-        assert generation.output_text is None
-
-
 async def test_terminal_crawl_appends_all_persisted_projection_states(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
@@ -259,7 +182,6 @@ async def test_terminal_crawl_appends_all_persisted_projection_states(
                 opportunity_id=opportunity.id,
                 opportunity_snapshot_id=snapshot_id,
                 target_site_url_ids=[str(site_url.id)],
-                generation_id=None,
                 declared_implemented_at=boundary,
                 expected_checks=checks,
                 actor_user_id=scenario.user_id,

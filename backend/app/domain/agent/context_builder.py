@@ -12,17 +12,17 @@ from urllib.parse import urlsplit
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.content import (
+from app.core.config.agent_context import (
     CONTENT_CONTEXT_STATUS_INCLUDED,
     CONTENT_CONTEXT_STATUS_UNAVAILABLE,
     CONTENT_CONTEXT_VERSION,
 )
 from app.core.config.earned_actions import ACTION_PATH_EARNED
-from app.domain.content.search_intelligence_context import (
+from app.domain.agent.search_intelligence_context import (
     SearchIntelligenceEvidenceNotFound,
     search_intelligence_context,
 )
-from app.domain.content.website_context import (
+from app.domain.agent.website_context import (
     CrawlFragmentSelection,
     normalized_target_url,
     select_crawl_fragments,

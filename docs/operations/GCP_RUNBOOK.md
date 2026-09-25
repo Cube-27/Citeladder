@@ -79,10 +79,9 @@ Add these environment secrets:
 - `CLOUDFLARE_ORIGIN_CERT`: the complete PEM Origin CA certificate;
 - `CLOUDFLARE_ORIGIN_KEY`: the complete PEM private key;
 - `DEFAULT_AGENT_API_KEY`: required with `DEFAULT_AGENT_BASE_URL` and
-  `DEFAULT_AGENT_MODEL` for Growth Agent features;
+  `DEFAULT_AGENT_MODEL` for platform-funded Agent features;
 - `KEENABLE_API_KEY`: required for external brand-discovery research;
 - `TAVILY_API_KEY`: required for commerce-catalog web research;
-- `CONTENT_API_KEY`: required for the configured Content generation provider;
 - `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`: required. One Google
   OAuth client serves both sign-in and the Search Console / Analytics connect.
 - `BING_OAUTH_CLIENT_ID` / `BING_OAUTH_CLIENT_SECRET`: optional. They are issued
@@ -228,7 +227,7 @@ Example database restore on the VM (replace the object exactly):
 
 ```bash
 cd /opt/citeladder
-services=(caddy web audit-worker audit-scheduler site-health-worker brand-discovery-worker content-worker agent-worker analytics-worker queue-sweeper integration-worker integration-dispatcher)
+services=(caddy web audit-worker audit-scheduler site-health-worker brand-discovery-worker agent-worker analytics-worker queue-sweeper integration-worker integration-dispatcher)
 sudo docker compose --env-file runtime.env -f compose.gcp.yml stop "${services[@]}"
 bucket=$(sudo sed -n "s/^BACKUP_BUCKET='\(.*\)'$/\1/p" runtime.env)
 gcloud storage cp "gs://${bucket}/predeploy/<TIMESTAMP>.sql.gz" /tmp/citeladder-restore.sql.gz

@@ -18,7 +18,6 @@ const PROJECT = '11111111-1111-4111-8111-111111111111';
 const OPP_A = '22222222-2222-4222-8222-222222222222';
 const OPP_B = '33333333-3333-4333-8333-333333333333';
 const RUN = '44444444-4444-4444-8444-444444444444';
-const GENERATION = '88888888-8888-4888-8888-888888888888';
 
 const emptySourceMix = {
   state: 'not_applicable' as const,
@@ -171,14 +170,6 @@ const detail = {
     source_analysis_ids: [RUN],
     snapshot_versions: { analyzer_version: 'opp-analyzer-1' },
   },
-  linked_generations: [
-    {
-      id: GENERATION,
-      status: 'succeeded',
-      skill_id: 'comparison',
-      created_at: '2026-07-24T00:00:00Z',
-    },
-  ],
   superseded_by_id: null,
   superseded_at: null,
 };
@@ -587,7 +578,6 @@ describe('OpportunitiesScreen', () => {
               opportunity_snapshot_id: RUN,
               target_site_url_ids: [],
               target_external_url: null,
-              generation_id: GENERATION,
               declared_implemented_at: '2026-07-24T00:00:00Z',
               expected_checks: [
                 {
@@ -644,7 +634,6 @@ describe('OpportunitiesScreen', () => {
     expect(declarations).toHaveLength(1);
     expect(declarations[0]).toMatchObject({
       opportunity_id: OPP_A,
-      generation_id: GENERATION,
       expected_checks: [],
     });
 
@@ -686,7 +675,6 @@ describe('OpportunitiesScreen', () => {
         observed_competitors: [],
         source_analysis_ids: [],
       },
-      linked_generations: [],
       superseded_by_id: null,
       superseded_at: null,
     };

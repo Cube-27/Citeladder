@@ -36,7 +36,7 @@ uv run python -m app.workers.audit_worker
 uv run python -m app.workers.audit_scheduler
 uv run python -m app.workers.site_health_worker
 uv run python -m app.workers.brand_discovery_worker
-uv run python -m app.workers.content_worker
+uv run python -m app.workers.agent_worker
 uv run python -m app.workers.integration_worker
 uv run python -m app.workers.integration_dispatcher
 uv run python -m app.workers.analytics_worker

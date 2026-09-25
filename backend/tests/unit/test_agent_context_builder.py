@@ -7,12 +7,12 @@ import uuid
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.domain.content.context_builder import (
+from app.domain.agent.context_builder import (
     ContentContext,
     ContentContextNotFoundError,
     build_content_context,
 )
-from app.domain.content.website_context import CrawlFragmentSelection
+from app.domain.agent.website_context import CrawlFragmentSelection
 from app.models.brand import Brand, BrandAlias, BrandProfile, Competitor
 from app.models.project import Project
 from app.models.workspace import Workspace
@@ -117,7 +117,7 @@ async def test_target_page_must_match_the_selected_url(
         )
 
     monkeypatch.setattr(
-        "app.domain.content.context_builder.select_crawl_fragments", _selection
+        "app.domain.agent.context_builder.select_crawl_fragments", _selection
     )
     async with session_factory() as session:
         workspace_id, project_id = await _project(session)

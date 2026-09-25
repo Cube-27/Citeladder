@@ -95,7 +95,6 @@ function declarationPayload(detail: OpportunityDetail, projectId: string, idempo
     input: {
       opportunity_id: detail.id,
       target_site_url_ids: targetId ? [targetId] : [],
-      generation_id: detail.linked_generations.find((item) => item.status === 'succeeded')?.id,
       declared_implemented_at: new Date().toISOString(),
       expected_checks: [],
     },

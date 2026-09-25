@@ -79,10 +79,6 @@ export const LOADING_INDICATOR_DELAY_MS = 300;
 export const EVIDENCE_LIMIT = 100;
 export const FANOUT_SEARCH_DEBOUNCE_MS = 300;
 
-// Content request and list bounds.
-export const CONTENT_INSTRUCTION_MAX_LEN = 4_000;
-export const CONTENT_LIST_DEFAULT_LIMIT = 50;
-
 // Audit launch bounds.
 export const MIN_REPETITIONS = 1;
 export const MAX_REPETITIONS = 10;
@@ -90,6 +86,4 @@ export const DEFAULT_REPETITIONS = 1;
 
 // Polling cadences and retry ceilings.
 export const ACTIVE_RUN_POLL_MS = 3_000;
-export const CONTENT_LIST_POLL_MS = 3_000;
-export const CONTENT_DETAIL_POLL_MS = 2_000;
 export const SYNC_RUN_POLL_MS = 3_000;

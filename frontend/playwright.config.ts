@@ -6,9 +6,6 @@ const marketingSpecs = ['**/marketing-pages.spec.ts', '**/landing-nav.spec.ts', 
 
 export default defineConfig({
   testDir: './e2e',
-  // The real-stack integration spec owns its own lifecycle + config; run it
-  // explicitly with `--config e2e/content-integration.config.ts`.
-  testIgnore: ['**/content-integration.spec.ts'],
   // Each suite exercises its owning runtime; marketing must never hit SPA fallback.
   workers: 1,
   retries: 1,
@@ -19,7 +16,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'app', testIgnore: [...marketingSpecs, '**/content-integration.spec.ts'] },
+    { name: 'app', testIgnore: marketingSpecs },
     {
       name: 'marketing',
       testMatch: marketingSpecs,

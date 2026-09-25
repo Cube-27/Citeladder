@@ -5,8 +5,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Literal
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import SessionLocal
-from app.domain.mcp.data import read_growth_evidence
+from app.domain.mcp.data import (
+    list_account_projects,
+    project_business_context,
+    read_growth_evidence,
+    search_business_context,
+)
 from app.domain.mcp.evidence_readers import (
     read_prompt_portfolio as read_prompt_portfolio_data,
 )
@@ -31,7 +38,8 @@ from app.domain.mcp.evidence_readers import (
 from app.domain.mcp.evidence_readers import (
     read_visibility_sources as read_visibility_sources_data,
 )
-from app.domain.mcp.schemas import EvidenceResponse
+from app.domain.mcp.retrieval import fetch_business_record
+from app.domain.mcp.schemas import EvidenceResponse, RetrievalDocument, SearchEnvelope
 
 PerformanceRange = Literal[
     "day", "week", "month", "3_months", "6_months", "last_synced", "custom"
@@ -50,10 +58,75 @@ PerformanceDimension = Literal[
 ]
 
 
+EvidenceTool = Callable[
+    [str, str, str], Callable[[Callable[..., Any]], Callable[..., Any]]
+]
+# Opens one session per tool call; resolved at call time by the caller.
+SessionFactory = Callable[[], AsyncSession]
+
+
+def _register_context_tools(
+    evidence_tool: EvidenceTool, session_factory: SessionFactory
+) -> None:
+    @evidence_tool(
+        "list_projects",
+        "List CiteLadder projects",
+        "List a bounded page of projects visible to the connected CiteLadder "
+        "account; follow next_cursor to enumerate the rest.",
+    )
+    async def list_projects(
+        cursor: str | None = None, limit: int | None = None
+    ) -> EvidenceResponse:
+        async with session_factory() as session:
+            return EvidenceResponse.model_validate(
+                await list_account_projects(session, cursor=cursor, limit=limit)
+            )
+
+    @evidence_tool(
+        "get_project_business_context",
+        "Get complete project business context",
+        "Read the project profile, active prompt portfolio, Site Health, demand, "
+        "opportunities, and latest visibility audit from persisted CiteLadder data.",
+    )
+    async def get_project_business_context(
+        project_id: str, sections: list[str] | None = None
+    ) -> EvidenceResponse:
+        async with session_factory() as session:
+            return EvidenceResponse.model_validate(
+                await project_business_context(session, project_id, sections)
+            )
+
+    @evidence_tool(
+        "search",
+        "Search CiteLadder business context",
+        "Search account-authorized projects, opportunities, and prompts. Returns "
+        "stable record URIs that can be passed to fetch.",
+    )
+    async def search(
+        query: str, project_id: str | None = None, limit: int = 10
+    ) -> SearchEnvelope:
+        async with session_factory() as session:
+            return SearchEnvelope.model_validate(
+                await search_business_context(session, query, project_id, limit)
+            )
+
+    @evidence_tool(
+        "fetch",
+        "Fetch a CiteLadder record",
+        "Fetch a full account-authorized record by a citeladder:// URI returned "
+        "by search.",
+    )
+    async def fetch(
+        id: str,
+    ) -> RetrievalDocument:
+        async with session_factory() as session:
+            return RetrievalDocument.model_validate(
+                await fetch_business_record(session, id)
+            )
+
+
 def _register_summary_tools(
-    evidence_tool: Callable[
-        [str, str, str], Callable[[Callable[..., Any]], Callable[..., Any]]
-    ],
+    evidence_tool: EvidenceTool, session_factory: SessionFactory
 ) -> None:
     @evidence_tool(
         "read_site_health",
@@ -62,7 +135,7 @@ def _register_summary_tools(
         "a project.",
     )
     async def read_site_health(project_id: str) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_growth_evidence(session, project_id, "site.read_snapshot")
             )
@@ -74,7 +147,7 @@ def _register_summary_tools(
         "a project.",
     )
     async def read_demand(project_id: str) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_growth_evidence(session, project_id, "demand.read_snapshot")
             )
@@ -91,7 +164,7 @@ def _register_summary_tools(
         limit: int | None = None,
         status: str | None = None,
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_growth_evidence(
                     session,
@@ -112,7 +185,7 @@ def _register_summary_tools(
         audit_id: str | None = None,
         completed_baseline: bool = False,
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_growth_evidence(
                     session,
@@ -145,7 +218,7 @@ def _register_summary_tools(
         # ``from`` is a Python keyword, so a parameter of that name cannot exist
         # here, and a trailing-underscore spelling is one a client would have to
         # guess from the signature rather than the description.
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_growth_evidence(
                     session,
@@ -183,7 +256,7 @@ def _register_summary_tools(
         page_size: int | None = None,
         compare_snapshot_id: str | None = None,
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_growth_evidence(
                     session,
@@ -220,7 +293,7 @@ def _register_summary_tools(
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_growth_evidence(
                     session,
@@ -239,7 +312,7 @@ def _register_summary_tools(
         "empty.",
     )
     async def read_integration_status(project_id: str) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_growth_evidence(
                     session, project_id, "integrations.read_status"
@@ -248,9 +321,7 @@ def _register_summary_tools(
 
 
 def _register_detail_tools(
-    evidence_tool: Callable[
-        [str, str, str], Callable[[Callable[..., Any]], Callable[..., Any]]
-    ],
+    evidence_tool: EvidenceTool, session_factory: SessionFactory
 ) -> None:
     @evidence_tool(
         "read_prompt_portfolio",
@@ -265,7 +336,7 @@ def _register_detail_tools(
         cursor: str | None = None,
         limit: int | None = None,
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_prompt_portfolio_data(
                     session,
@@ -293,7 +364,7 @@ def _register_detail_tools(
         cursor: str | None = None,
         limit: int | None = None,
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_query_evidence_data(
                     session,
@@ -322,7 +393,7 @@ def _register_detail_tools(
         cursor: str | None = None,
         limit: int | None = None,
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_site_pages_data(
                     session,
@@ -348,7 +419,7 @@ def _register_detail_tools(
         cursor: str | None = None,
         limit: int | None = None,
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_site_links_data(
                     session,
@@ -375,7 +446,7 @@ def _register_detail_tools(
         cursor: str | None = None,
         limit: int | None = None,
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_visibility_results_data(
                     session,
@@ -404,7 +475,7 @@ def _register_detail_tools(
         cursor: str | None = None,
         limit: int | None = None,
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_visibility_sources_data(
                     session,
@@ -425,7 +496,7 @@ def _register_detail_tools(
         "scope, coverage, and acquisition status without acquiring data.",
     )
     async def read_search_intelligence(project_id: str) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_search_intelligence_data(session, project_id)
             )
@@ -445,7 +516,7 @@ def _register_detail_tools(
         sort: str = "id",
         direction: Literal["asc", "desc"] = "asc",
     ) -> EvidenceResponse:
-        async with SessionLocal() as session:
+        async with session_factory() as session:
             return EvidenceResponse.model_validate(
                 await read_search_dataset_data(
                     session,
@@ -460,9 +531,15 @@ def _register_detail_tools(
 
 
 def register_evidence_tools(
-    evidence_tool: Callable[
-        [str, str, str], Callable[[Callable[..., Any]], Callable[..., Any]]
-    ],
+    evidence_tool: EvidenceTool,
+    session_factory: SessionFactory = SessionLocal,
 ) -> None:
-    _register_summary_tools(evidence_tool)
-    _register_detail_tools(evidence_tool)
+    """Register every read tool, in catalog order, on one decorator.
+
+    The MCP server registers these on its protocol server; the in-app agent
+    registers the same definitions on its own collector, bound to its session
+    factory, so the two surfaces can never advertise different tools.
+    """
+    _register_context_tools(evidence_tool, session_factory)
+    _register_summary_tools(evidence_tool, session_factory)
+    _register_detail_tools(evidence_tool, session_factory)
