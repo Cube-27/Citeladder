@@ -231,34 +231,32 @@ async def test_arbitrary_endpoint_is_rejected_and_change_requires_fresh_key(
 
 
 @pytest.mark.asyncio
-async def test_one_connection_serves_content_and_growth_without_key_echo(
+async def test_the_agent_route_saves_without_key_echo_and_content_is_retired(
     client: httpx.AsyncClient,
 ) -> None:
     await _register(client, "prov-app-routes@example.com")
+
+    def route(feature: str) -> dict[str, str]:
+        return {
+            "feature": feature,
+            "model": "customer-model",
+            "api_base_url": "https://models.example.com/v1",
+        }
+
+    retired = await client.post(
+        "/api/v1/provider-connections",
+        json=_connection_payload(app_routes=[route("content")]),
+    )
+    assert retired.status_code == 422
     response = await client.post(
         "/api/v1/provider-connections",
-        json=_connection_payload(
-            app_routes=[
-                {
-                    "feature": "content",
-                    "model": "customer-model-a",
-                    "api_base_url": "https://models.example.com/v1",
-                },
-                {
-                    "feature": "growth_agent",
-                    "model": "customer-model-b",
-                    "api_base_url": "https://models.example.com/v1",
-                },
-            ]
-        ),
+        json=_connection_payload(app_routes=[route("growth_agent")]),
     )
     assert response.status_code == 201
     body = response.json()
-    assert {item["feature"] for item in body["app_routes"]} == {
-        "content",
-        "growth_agent",
-    }
-    assert all(item["verified"] is False for item in body["app_routes"])
+    assert [(item["feature"], item["verified"]) for item in body["app_routes"]] == [
+        ("growth_agent", False)
+    ]
     _assert_no_secret(body)
 
 
@@ -272,7 +270,7 @@ async def test_app_route_destination_change_requires_key_and_confirmation(
         json=_connection_payload(
             app_routes=[
                 {
-                    "feature": "content",
+                    "feature": "growth_agent",
                     "model": "customer-model",
                     "api_base_url": "https://models.example.com/v1",
                 }
@@ -282,7 +280,7 @@ async def test_app_route_destination_change_requires_key_and_confirmation(
     connection_id = created.json()["id"]
     changed_route = [
         {
-            "feature": "content",
+            "feature": "growth_agent",
             "model": "customer-model",
             "api_base_url": "https://other.example.com/v1",
         }
@@ -476,7 +474,7 @@ async def test_stale_app_probe_failure_does_not_mark_new_route_unhealthy(
         json=_connection_payload(
             app_routes=[
                 {
-                    "feature": "content",
+                    "feature": "growth_agent",
                     "model": "customer-model",
                     "api_base_url": "https://models.example.com/v1",
                 }

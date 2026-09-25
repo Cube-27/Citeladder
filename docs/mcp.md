@@ -47,9 +47,10 @@ what an existing grant may read without copying business data into MCP.
 The catalog exposes bounded project and prompt enumeration, business context,
 citation-compatible search/fetch documents, query-page evidence, Site Health
 pages/link projections, visibility results/sources, Search Intelligence
-datasets, Content/task catalog metadata and shared growth-evidence reads. It
-delegates to [Growth Agent tools](../backend/app/domain/agent/tools.py) and the
-existing domain read services. Search is bounded persisted retrieval; it is not
+datasets and shared growth-evidence reads. It delegates to the
+[shared evidence tools](../backend/app/domain/agent/tools.py) and the existing
+domain read services. The in-app [Agent](agents.md) binds the same registered
+read tools; its internal skills and Agent-only reads are not exposed here. Search is bounded persisted retrieval; it is not
 a web search or provider request. Missing projections remain unavailable and
 cannot be repaired by reading them. Search Intelligence summaries retain their
 dataset grain: referring-domain and destination-page aggregates are not exposed

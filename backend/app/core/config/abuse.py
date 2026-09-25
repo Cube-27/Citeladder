@@ -45,8 +45,8 @@ class AbuseSettings(BaseSettings):
 
     active_audits_per_workspace: int = Field(default=3, ge=1)
     audit_tasks_per_workspace_daily: int = Field(default=1500, ge=1)
-    active_content_jobs_per_workspace: int = Field(default=5, ge=1)
-    content_jobs_per_workspace_daily: int = Field(default=100, ge=1)
+    active_agent_runs_per_workspace: int = Field(default=5, ge=1)
+    agent_runs_per_workspace_daily: int = Field(default=200, ge=1)
     active_job_retry_after_seconds: int = Field(default=60, ge=1)
 
 

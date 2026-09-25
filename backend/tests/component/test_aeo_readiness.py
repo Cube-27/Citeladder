@@ -362,7 +362,7 @@ async def test_readiness_reconciles_persisted_measurement_and_page_evidence(
     # The flag now comes from the single config set the hand-off endpoint
     # authorizes against, so a rendered "Improve with Content" action and a
     # servable hand-off cannot disagree — which is what made every such button
-    # answer 404. These pages route to the Growth Agent instead.
+    # answer 404. These pages are editorial work for the Agent instead.
     assert (
         answerability["evidence_pages"][0]["failed_checks"][0]["content_addressable"]
         is False

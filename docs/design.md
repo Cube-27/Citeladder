@@ -198,7 +198,7 @@ Prompt results belong to the Prompts section, on the prompt row, because the pro
 
 #### The insight object
 
-The product loop is acquire evidence → understand → detect gaps → create opportunities → improve → verify → recommend next. Its reusable unit is one shared insight component across Analyze, Act, Track, and the Growth Agent sheet.
+The product loop is acquire evidence → understand → detect gaps → create opportunities → improve → verify → recommend next. Its reusable unit is one shared insight component across Analyze, Act, Track, and the Agent workspace.
 
 Required anatomy, in order:
 

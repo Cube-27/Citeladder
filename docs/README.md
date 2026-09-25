@@ -20,12 +20,11 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 | Prompt generation, audits and AI Visibility | [Prompts and Visibility](visibility-prompt.md) |
 | Crawl, page understanding, issues and measurement | [Site Health](site-health.md) |
 | Integrations, search, traffic, referrals and demand | [Connected data](integrations-traffic-analytics.md) |
-| Generation, context, runtime skills and history | [Content](content-generation.md) |
-| Ranked actions, implementation and verification | [Opportunities](opportunities.md) |
+| Ranked actions, Actions, implementation and verification | [Opportunities](opportunities.md) |
 | Inspection of externally cited pages and earned actions | [Earned sources](earned-sources.md) |
 | Commercial accounts, access and usage accounting | [Billing and entitlements](billing-entitlements.md) |
 | Catalog, competitors, buyer prompts and AI Shelf | [Commerce](commerce-intelligence.md) |
-| Bounded explain/roadmap tasks | [Growth Agent](growth-agent.md) |
+| Agent chats, context, internal skills and deliverables | [Agent](agents.md) |
 | Hosted read tools and OAuth grants | [MCP](mcp.md) |
 | Sessions, projects, memberships and roles | [Workspace access](workspace-access.md) |
 

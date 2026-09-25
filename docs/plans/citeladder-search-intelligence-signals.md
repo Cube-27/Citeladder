@@ -4,7 +4,7 @@
 > as contract and implementation history.
 
 [Site Health](../site-health.md), [Opportunities](../opportunities.md),
-[Connected data](../integrations-traffic-analytics.md), [Content](../content-generation.md)
+[Connected data](../integrations-traffic-analytics.md), [Agent](../agents.md)
 and [Visibility](../visibility-prompt.md) own shipped behavior. The originating
 material is an owner-authored analysis of the 2024 Google Content Warehouse API
 leak, retained as guidance only; every capability below was re-scoped against

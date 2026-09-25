@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api.agent import router as agent_router
 from app.api.ai_referrals import router as ai_referrals_router
 from app.api.audit_schedules import router as audit_schedules_router
 from app.api.audits import router as audits_router
@@ -99,6 +100,7 @@ _ROUTERS = (
     ai_referrals_router,
     performance_router,
     opportunities_router,
+    agent_router,
     commerce_router,
 )
 

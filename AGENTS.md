@@ -21,8 +21,8 @@ plans and archives are historical evidence; never resume an old wave or
 fresh-chat protocol because a document mentions it.
 
 Coding-agent skills may supply tool-specific procedures, not a second copy of
-repository policy. Packaged Content `SKILL.md` files are production inputs,
-not redundant engineering skills; their owner is [Content](docs/content-generation.md).
+repository policy. Packaged Agent `SKILL.md` files are production inputs,
+not redundant engineering skills; their owner is the [Agent](docs/agents.md).
 
 ## Non-negotiable guardrails
 
@@ -38,7 +38,7 @@ not redundant engineering skills; their owner is [Content](docs/content-generati
 - Models may explain, generate, plan or classify bounded ambiguity; they do not
   become raw truth or redefine deterministic metrics. Keep unknown, unavailable,
   zero, historical, conflicting, excluded and not-applicable states distinct.
-- The Growth Agent orchestrates existing owners, not a second knowledge store.
+- The Agent orchestrates existing owners, not a second knowledge store.
   No autonomous publishing, prompt activation, external mutation or unbounded loop.
 
 These are reminders, not a replacement for the affected invariants.
@@ -73,7 +73,7 @@ do not run the full backend suite locally instead of selecting relevant tests.
 
 Ordinary copy/documentation edits need only cheap whitespace/reference checks.
 Documentation consumed by the application as runtime or packaged input, including
-Content skills and templates, needs validation of the affected consumer instead.
+Agent skills and templates, needs validation of the affected consumer instead.
 
 Do not overlap test/check processes or repeat successful runs merely for a commit,
 handoff or milestone. If later executable changes invalidate the evidence, rerun

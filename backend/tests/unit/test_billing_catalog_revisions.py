@@ -121,7 +121,7 @@ def test_explicit_ai_credit_policy_is_finite_versioned_and_bounded() -> None:
         "version": "verified-rates-v1",
         "rates": [
             {
-                "feature": "content",
+                "feature": "growth_agent",
                 "model": "verified-model",
                 "input_credits_per_million": 100,
                 "cached_input_credits_per_million": 25,
@@ -134,7 +134,7 @@ def test_explicit_ai_credit_policy_is_finite_versioned_and_bounded() -> None:
     }
     policy = validate_payload(payload).ai_credit_policy
     assert policy is not None
-    rate = policy.rate(feature="content", model="verified-model")
+    rate = policy.rate(feature="growth_agent", model="verified-model")
     assert rate is not None
     assert rate.charge({"input_tokens": 1_000_000, "output_tokens": 0}) == 50
     assert rate.charge({}) is None

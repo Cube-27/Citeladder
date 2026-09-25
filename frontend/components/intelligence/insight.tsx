@@ -31,7 +31,7 @@ const LAYER_LABEL: Record<InsightLayer, string> = {
   site: 'Site',
   content: 'Content',
   demand: 'Demand',
-  agent: 'Growth Agent',
+  agent: 'Agent',
 };
 
 /** Deterministic priority bands — from the priority formula, never a model. */

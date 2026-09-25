@@ -79,7 +79,6 @@ describe('station navigation', () => {
       'href',
       '/prompts?project=11111111-1111-4111-8111-111111111111',
     );
-    expect(screen.queryByRole('link', { name: 'Growth Agent' })).not.toBeInTheDocument();
   });
 
   it('uses the same capability result for sidebar and command destinations', () => {

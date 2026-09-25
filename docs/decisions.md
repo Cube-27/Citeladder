@@ -40,3 +40,24 @@ payments stay disabled until that plan's sign-off.
 Real sandbox captures, recurring-method acceptance and GST parity remain
 unverified. [Provider readiness](billing-provider-readiness.md) owns the
 acceptance and separate enablement boundary.
+
+## One Agent runtime; the Action is the unit of work
+
+The separate Content and Growth Agent runtimes are replaced by one in-app Agent.
+It reads through the same registered read tools as MCP, applies internal skills
+the user may pick by name but never sees, and keeps one versioned deliverable
+per chat; the chat is the saved work. Target-level work converges on one Action
+per target, grouped and diagnosed deterministically from live Opportunities.
+Skills stay internal: they are not exposed through MCP or offered as a
+download, and the MCP surface is otherwise unchanged apart from removing its
+retired skill catalog. Generating or approving a deliverable is not an
+implementation declaration.
+
+This removes two overlapping generation stacks, keeps MCP and the app from
+drifting into different reads, and gives repeated findings on one target one
+place to converge. Persisted `growth_agent` capability, route and rate keys are
+kept for catalog compatibility until a separate billing migration.
+
+Source: owner-settled [Agent workspace plan](plans/citeladder-action-center.md),
+25 September 2026. [Agent](agents.md) and [Opportunities](opportunities.md)
+own shipped behavior.

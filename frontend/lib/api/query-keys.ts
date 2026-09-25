@@ -3,7 +3,7 @@
  *
  * All ids are string UUIDs (workspace-scoped contract). One namespace per API
  * domain owner, each defined in its own module under `query-keys/`:
- *   - core.ts          — auth, workspaces, projects, prompts, providers, content
+ *   - core.ts          — auth, workspaces, projects, prompts, providers
  *   - runs.ts          — runs (audits + executions), visibility, cited pages
  *   - site-health.ts   — site health (crawls, inventory, monitored, issues)
  *   - integrations.ts  — integrations (connections, sync runs)
@@ -16,7 +16,6 @@
  * This facade assembles them under one `queryKeys` entry point.
  */
 import { aiReferralsKeys } from './query-keys/ai-referrals';
-import { agentKeys } from './query-keys/agent';
 import { billingKeys } from './query-keys/billing';
 import { brandDiscoveryKeys } from './query-keys/brand-discovery';
 import { commerceKeys } from './query-keys/commerce';
@@ -24,7 +23,6 @@ import { demandKeys } from './query-keys/demand';
 import { searchIntelligenceKeys } from './query-keys/search-intelligence';
 import {
   authKeys,
-  contentKeys,
   projectKeys,
   promptKeys,
   providerKeys,
@@ -38,7 +36,6 @@ import { siteHealthKeys } from './query-keys/site-health';
 import { performanceKeys } from './query-keys/performance';
 
 export const queryKeys = {
-  agent: agentKeys,
   auth: authKeys,
   billing: billingKeys,
   brandDiscovery: brandDiscoveryKeys,
@@ -50,7 +47,6 @@ export const queryKeys = {
   runs: runKeys,
   visibility: visibilityKeys,
   siteHealth: siteHealthKeys,
-  content: contentKeys,
   integrations: integrationKeys,
   performance: performanceKeys,
   demand: demandKeys,

@@ -8,6 +8,16 @@ from __future__ import annotations
 
 from app.core.database import Base
 from app.models.abuse import QueueWorkspaceTurn, UsageWindow
+from app.models.agent import (
+    AgentChat,
+    AgentInstructionRevision,
+    AgentMessage,
+    AgentModelAttempt,
+    AgentOutput,
+    AgentOutputRevision,
+    AgentRun,
+    AgentToolAttempt,
+)
 from app.models.analysis import (
     BrandMention,
     Citation,
@@ -171,6 +181,14 @@ from app.models.workspace import (
 __all__ = [
     "AccountGrant",
     "Action",
+    "AgentChat",
+    "AgentInstructionRevision",
+    "AgentMessage",
+    "AgentModelAttempt",
+    "AgentOutput",
+    "AgentOutputRevision",
+    "AgentRun",
+    "AgentToolAttempt",
     "AiReferralsSnapshot",
     "AioEntityLink",
     "AioObservation",

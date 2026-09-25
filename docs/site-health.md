@@ -5,7 +5,7 @@
 
 Site Health owns URL discovery, secure acquisition, immutable fetch evidence,
 bounded normalized facts, page-kind classification, deterministic checks,
-scores, grouped issues, snapshots and exports. Content owns drafts and review.
+scores, grouped issues, snapshots and exports. The Agent owns deliverables and review.
 Opportunities owns implementation declarations and verification events.
 
 ## Pipeline and ownership
@@ -20,7 +20,7 @@ explicit Run new crawl
   -> applicable evaluations and evidence-backed findings
   -> locked crawl finalization and final page-analysis revisions
   -> persisted snapshot and equal-page cohort summaries
-  -> read-only API, UI, exports, Content and Opportunities consumers
+  -> read-only API, UI, exports, Agent and Opportunities consumers
   -> explicit implementation declaration
   -> fresh comparable crawl evidence
 ```
@@ -215,7 +215,7 @@ non-comparable.
 
 ## Consumers and actions
 
-Page detail, Issues, history, Changes, snapshots, exports, Growth Agent and MCP
+Page detail, Issues, history, Changes, snapshots, exports, the Agent and MCP
 read the same persisted final-result contract. Browser requests use same-origin
 `/api/v1` through the frontend proxy.
 
@@ -226,16 +226,17 @@ refresh withholds entitlement-dependent mutation controls until that read
 succeeds; a 401/403 also removes protected evidence. A project change never
 reuses the prior project's crawl identity.
 
-Content selects one current finalized analysis per URL from the explicit source
-crawl. A Site Health handoff carries exact analysis, evaluation and artifact
-IDs, target field, captured value, expected condition and limitations. Initial
-grounded drafts are limited to missing title and meta description. Accessible
+The Agent's context selects one current finalized analysis per URL from the
+explicit source crawl. A Site Health handoff carries exact analysis, evaluation
+and artifact IDs, target field, captured value, expected condition and
+limitations. Grounded page edits from a handoff are limited to missing title and
+meta description. Accessible
 names, indexing, canonicals, price/stock, legal text, broken links and uncertain
-template changes remain manual or investigation actions. Draft generation,
-review or export never resolves the live finding or changes a score.
+template changes remain manual or investigation actions. Generating, reviewing
+or exporting a deliverable never resolves the live finding or changes a score.
 
-The rule catalog derives Content eligibility and remediation routing from one
-config policy. Content links identify crawl and URL; an optional analysis ID
+The rule catalog derives handoff eligibility and remediation routing from one
+config policy. Handoff requests identify crawl and URL; an optional analysis ID
 must match the current finalized revision or its direct predecessor. The
 handoff returns only requested, supported gaps in that revision's source
 manifest. Other findings offer a copyable fix prompt.

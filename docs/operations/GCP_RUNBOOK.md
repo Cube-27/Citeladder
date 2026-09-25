@@ -71,7 +71,7 @@ Add these environment variables:
 | `DEMO_EXPIRES_AT` | Optional RFC3339 expiry; required only when `DEMO_MODE` is `true` |
 | `DEMO_LOGIN_EMAIL` | Optional; defaults to `dev@citeladder.com` |
 | `DEFAULT_AGENT_BASE_URL` | HTTPS base URL for the demo's OpenAI-compatible agent provider |
-| `DEFAULT_AGENT_MODEL` | Exact provider model identifier used by the Growth Agent |
+| `DEFAULT_AGENT_MODEL` | Exact provider model identifier used by the Agent |
 
 Add these environment secrets:
 

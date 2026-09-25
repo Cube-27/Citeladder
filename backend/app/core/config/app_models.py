@@ -2,14 +2,13 @@
 
 from typing import Final
 
-APP_FEATURE_CONTENT: Final = "content"
 APP_FEATURE_GROWTH_AGENT: Final = "growth_agent"
-# The Agent runs on the ``growth_agent`` route and credit rate. The stored
-# identifier predates the merged Agent and is kept because published catalog
-# revisions and customer routes already persist it; ``content`` is retained
-# only so those persisted rows stay readable, and no runtime path uses it.
+# The Agent is the one application model feature. It runs on the
+# ``growth_agent`` route and credit rate: the stored identifier predates the
+# merged Agent and is kept because published catalog revisions and customer
+# routes persist it.
 APP_FEATURE_AGENT: Final = APP_FEATURE_GROWTH_AGENT
-APP_FEATURES: Final = frozenset({APP_FEATURE_CONTENT, APP_FEATURE_GROWTH_AGENT})
+APP_FEATURES: Final = frozenset({APP_FEATURE_AGENT})
 APP_PROTOCOL_OPENAI_CHAT: Final = "openai_chat"
 APP_MODEL_ALLOWED_PORTS: Final = frozenset({443})
 APP_MODEL_MAX_REQUEST_BYTES: Final = 256_000

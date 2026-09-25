@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     # would create the config <-> models circular import ``model_ref`` exists
     # to avoid). The queue-row union below is the typed version of the shared
     # column contract documented on ``PostgresQueueSpec``.
+    from app.models.agent import AgentRun
     from app.models.analytics import AnalyticsTask
     from app.models.audit import AuditTask
     from app.models.discovery import BrandDiscoveryTask
@@ -115,6 +116,7 @@ class PostgresQueueSpec[
     T: (
         "AuditTask",
         "SiteCrawlTask",
+        "AgentRun",
         "BrandDiscoveryTask",
         "IntegrationSyncRun",
         "AnalyticsTask",

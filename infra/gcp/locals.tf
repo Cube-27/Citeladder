@@ -15,7 +15,6 @@ locals {
     "citeladder-cloudflare-origin-key",
     "citeladder-worker-origin-token",
     "citeladder-worker-origin-token-previous",
-    "citeladder-content-api-key",
     "citeladder-default-agent-api-key",
     "citeladder-keenable-api-key",
     "citeladder-tavily-api-key",
