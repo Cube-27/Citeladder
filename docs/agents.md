@@ -40,6 +40,10 @@ after the user explicitly approves an outline revision of that output, whatever
 phase the output is in. Ordinary tool and reasoning steps need no approval.
 Approving or generating an output is not an implementation declaration.
 
+The chat list pages by keyset cursor, can be narrowed to the chats linked to one
+Action, and names each chat's target. An Action's workflow status is derived
+from, never written by, the Agent; see [Actions](opportunities.md#actions).
+
 Idempotency keys are workspace-scoped and bound to the full request: project,
 message, skill, Action and context for a new chat. A reused key with a changed
 request conflicts, including when two identical requests race.
@@ -70,6 +74,24 @@ references an executed tool returned, or the attached Action's frozen diagnosis
 named, survive; the rest of the context package carries no record references.
 Any other `citeladder://` reference is dropped from the evidence list and
 replaced in the visible reply and output text.
+
+## Workspace and handoffs
+
+The product shell switches between Dashboard and Agent modes, derived from the
+route. Agent mode holds New chat, Actions, Skills, Context and the searchable
+chat history under `/agent`; the Skills catalog shows what each skill produces,
+never its methodology, and Context edits the Agent instructions and the
+reviewed brand profile.
+
+Evidence screens hand work to New chat through the
+[handoff codec](../frontend/lib/agent/handoff.ts). **Work on this** attaches an
+Action. **Ask agent** carries typed references only (an Opportunity, a Demand
+signal, a site page or URL, or up to 100 Search Intelligence rows of one
+dataset) plus an optional prefilled question; Site Health, Demand and Search
+Intelligence offer it. The browser never embeds evidence content, and parsing
+drops a malformed id or URL rather than guessing. The context builder resolves
+and authorizes every reference when the run starts, so a stale or foreign id
+fails there. Composer chips let the user remove a reference before sending.
 
 ## Read tools
 
