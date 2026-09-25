@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Iterator
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
@@ -227,9 +226,8 @@ async def test_a_turn_reads_evidence_and_saves_an_output_attached_to_its_page(
         action = await session.get(Action, uuid.UUID(output["action_id"]))
         attempts = (await session.scalars(select(AgentToolAttempt))).all()
         model_attempts = (await session.scalars(select(AgentModelAttempt))).all()
-    assert (
-        action is not None and action.origin == "agent" and action.target_url == _PAGE
-    )
+    assert action is not None
+    assert (action.origin, action.target_url) == ("agent", _PAGE)
     assert [(row.tool_name, row.status) for row in attempts] == [
         ("read_integration_status", "completed")
     ]
@@ -372,7 +370,8 @@ async def test_long_form_content_is_outlined_before_an_approved_draft(
         first = await session.scalar(
             select(AgentOutputRevision).where(AgentOutputRevision.number == 1)
         )
-    assert first is not None and first.approved_at is not None
+    assert first is not None
+    assert first.approved_at is not None
 
 
 async def test_the_turn_stops_at_its_step_budget_without_saving(
@@ -619,7 +618,7 @@ async def test_a_member_who_loses_run_access_never_reaches_the_model(
 
 
 @pytest.fixture
-def _platform_policy(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _platform_policy(monkeypatch: pytest.MonkeyPatch) -> None:
     """A published platform rate: 2 credits per call, 10 held, 4 if unknown."""
     rate = SimpleNamespace(
         call_credit_cap=10, unknown_usage_charge=4, charge=lambda _usage: 2
@@ -640,7 +639,6 @@ def _platform_policy(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         default_agent_settings, "base_url", "https://provider.invalid/v1"
     )
     monkeypatch.setattr(default_agent_settings, "model", "fixture-model")
-    yield
 
 
 async def _ai_credit_usage(

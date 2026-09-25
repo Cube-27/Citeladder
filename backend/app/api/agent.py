@@ -211,21 +211,26 @@ async def get_chat_endpoint(
             for row in detail["messages"]
         ],
         latest_run=_run_view(detail["latest_run"]) if detail["latest_run"] else None,
-        output=(
-            OutputView(
-                id=output.id,
-                action_id=output.action_id,
-                kind=output.kind,
-                skill_id=output.skill_id,
-                format_id=output.format_id,
-                target_kind=output.target_kind,
-                target_label=output.target_label,
-                phase=output.phase,
-                latest_revision=_revision_view(revision) if revision else None,
-            )
-            if output is not None
-            else None
-        ),
+        output=_output_view(output, revision),
+    )
+
+
+def _output_view(
+    output: AgentOutput | None, revision: AgentOutputRevision | None
+) -> OutputView | None:
+    if output is None:
+        return None
+    latest = _revision_view(revision) if revision else None
+    return OutputView(
+        id=output.id,
+        action_id=output.action_id,
+        kind=output.kind,
+        skill_id=output.skill_id,
+        format_id=output.format_id,
+        target_kind=output.target_kind,
+        target_label=output.target_label,
+        phase=output.phase,
+        latest_revision=latest,
     )
 
 

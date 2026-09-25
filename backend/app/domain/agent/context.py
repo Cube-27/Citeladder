@@ -93,30 +93,30 @@ async def build_manifest(
         "version": AGENT_CONTEXT_MANIFEST_VERSION,
         "refs": refs,
         "package": package.snapshot(),
-        "action": (
-            {
-                "id": str(action.id),
-                "target_kind": action.target_kind,
-                "target_label": action.target_label,
-                "target_url": action.target_url,
-                "approach": action.approach,
-                "skill_id": action.skill_id,
-                "families": list(action.families or []),
-                "diagnosis": action.diagnosis or {},
-                "opportunity_snapshot_id": (
-                    str(action.opportunity_snapshot_id)
-                    if action.opportunity_snapshot_id
-                    else None
-                ),
-            }
-            if action is not None
-            else None
-        ),
+        "action": _action_block(action),
         "instructions": (
             {"revision": instructions.revision, "text": instructions.text}
             if instructions is not None and instructions.text.strip()
             else None
         ),
+    }
+
+
+def _action_block(action: Action | None) -> dict[str, Any] | None:
+    """The attached Action's frozen identity and diagnosis, or None."""
+    if action is None:
+        return None
+    snapshot_id = action.opportunity_snapshot_id
+    return {
+        "id": str(action.id),
+        "target_kind": action.target_kind,
+        "target_label": action.target_label,
+        "target_url": action.target_url,
+        "approach": action.approach,
+        "skill_id": action.skill_id,
+        "families": list(action.families or []),
+        "diagnosis": action.diagnosis or {},
+        "opportunity_snapshot_id": str(snapshot_id) if snapshot_id else None,
     }
 
 

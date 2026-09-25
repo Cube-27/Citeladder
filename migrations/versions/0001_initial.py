@@ -27,6 +27,10 @@ _DEMAND_SNAPSHOT_FK = "demand_snapshots.id"
 _ANALYTICS_TASK_FK = "analytics_tasks.id"
 _SEARCH_RUN_FK = "search_intelligence_runs.id"
 _SEARCH_DATASET_FK = "search_intelligence_datasets.id"
+_PROVIDER_CONNECTION_FK = "provider_connections.id"
+_AGENT_CHAT_FK = "agent_chats.id"
+_AGENT_MESSAGE_FK = "agent_messages.id"
+_AGENT_RUN_FK = "agent_runs.id"
 
 
 def _create_indexes(table: str, columns: tuple[str, ...]) -> None:
@@ -1023,7 +1027,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
-            ["connection_id"], ["provider_connections.id"], ondelete="SET NULL"
+            ["connection_id"], [_PROVIDER_CONNECTION_FK], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
@@ -1114,7 +1118,7 @@ def upgrade() -> None:
         sa.Column("transport_model", sa.String(length=255), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
-            ["connection_id"], ["provider_connections.id"], ondelete="CASCADE"
+            ["connection_id"], [_PROVIDER_CONNECTION_FK], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
@@ -1152,7 +1156,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
-            ["connection_id"], ["provider_connections.id"], ondelete="CASCADE"
+            ["connection_id"], [_PROVIDER_CONNECTION_FK], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
@@ -1188,7 +1192,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
-            ["connection_id"], ["provider_connections.id"], ondelete="CASCADE"
+            ["connection_id"], [_PROVIDER_CONNECTION_FK], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
@@ -1339,7 +1343,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
-            ["connection_id"], ["provider_connections.id"], ondelete="SET NULL"
+            ["connection_id"], [_PROVIDER_CONNECTION_FK], ondelete="SET NULL"
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
@@ -2720,7 +2724,7 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(
             ["provider_connection_id"],
-            ["provider_connections.id"],
+            [_PROVIDER_CONNECTION_FK],
             ondelete="SET NULL",
         ),
         sa.ForeignKeyConstraint(
@@ -2796,7 +2800,7 @@ def upgrade() -> None:
             ["billing_account_id"], ["billing_accounts.id"], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(
-            ["connection_id"], ["provider_connections.id"], ondelete="SET NULL"
+            ["connection_id"], [_PROVIDER_CONNECTION_FK], ondelete="SET NULL"
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
@@ -6219,7 +6223,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["provider_connection_id"],
-            ["provider_connections.id"],
+            [_PROVIDER_CONNECTION_FK],
             ondelete="SET NULL",
         ),
         sa.ForeignKeyConstraint(
@@ -6416,7 +6420,7 @@ def upgrade() -> None:
             ["previous_run_id"], [_SEARCH_RUN_FK], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(
-            ["connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
+            ["connection_id"], [_PROVIDER_CONNECTION_FK], ondelete="RESTRICT"
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("analytics_task_id"),
@@ -6762,10 +6766,10 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
         sa.ForeignKeyConstraint(["author_user_id"], ["users.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["chat_id"], ["agent_chats.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["chat_id"], [_AGENT_CHAT_FK], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
-            ["reply_to_message_id"], ["agent_messages.id"], ondelete="SET NULL"
+            ["reply_to_message_id"], [_AGENT_MESSAGE_FK], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
@@ -6804,7 +6808,7 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
         sa.ForeignKeyConstraint(["action_id"], ["actions.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["chat_id"], ["agent_chats.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["chat_id"], [_AGENT_CHAT_FK], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
@@ -6872,9 +6876,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["chat_id"], ["agent_chats.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["chat_id"], [_AGENT_CHAT_FK], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
-            ["connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
+            ["connection_id"], [_PROVIDER_CONNECTION_FK], ondelete="RESTRICT"
         ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
@@ -6882,7 +6886,7 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
-            ["user_message_id"], ["agent_messages.id"], ondelete="CASCADE"
+            ["user_message_id"], [_AGENT_MESSAGE_FK], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
@@ -6955,12 +6959,12 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(
-            ["provider_connection_id"], ["provider_connections.id"], ondelete="RESTRICT"
+            ["provider_connection_id"], [_PROVIDER_CONNECTION_FK], ondelete="RESTRICT"
         ),
         sa.ForeignKeyConstraint(
             ["provider_route_id"], ["provider_app_routes.id"], ondelete="RESTRICT"
         ),
-        sa.ForeignKeyConstraint(["run_id"], ["agent_runs.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["run_id"], [_AGENT_RUN_FK], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="RESTRICT"
         ),
@@ -7012,7 +7016,7 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["author_user_id"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
-            ["message_id"], ["agent_messages.id"], ondelete="SET NULL"
+            ["message_id"], [_AGENT_MESSAGE_FK], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(
             ["output_id"], ["agent_outputs.id"], ondelete="CASCADE"
@@ -7021,7 +7025,7 @@ def upgrade() -> None:
             ["parent_revision_id"], ["agent_output_revisions.id"], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["run_id"], ["agent_runs.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["run_id"], [_AGENT_RUN_FK], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
@@ -7069,7 +7073,7 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["run_id"], ["agent_runs.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["run_id"], [_AGENT_RUN_FK], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
