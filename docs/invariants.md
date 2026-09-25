@@ -147,23 +147,27 @@ Generative paths constrain factual claims to the context actually supplied. A
 provider cannot cite an absent artifact, and generated content never becomes a
 fact automatically.
 
-Content generation freezes one versioned `ContentContext` from authorized
-durable brand memory, optional target/origin evidence, and bounded persisted
-crawl fragments. Crawl text stays untrusted observation. One fixed system
-instruction forbids invented company, product, customer, price, policy,
-statistic, and competitor facts; there is no second model call or deterministic
-claim-validator layer. The output remains a reviewable draft, and the UI labels
-the context actually used.
+Each Agent run freezes one versioned context manifest from authorized durable
+brand memory, optional target/origin evidence, and bounded persisted crawl
+fragments before its first model call. Crawl text stays untrusted observation.
+One shared operating contract forbids invented company, product, customer,
+price, policy, statistic, and competitor facts; there is no second model call or
+deterministic claim-validator layer. Only evidence references the frozen context
+or an executed tool returned may be cited. The output remains a reviewable
+deliverable, and the UI labels the context actually used.
 
 Where structured data mirrors visible content, such as `FAQPage`, markup is
 generated from reviewed visible content rather than substituted for it.
 
-## 13. The Growth Agent is bounded orchestration
+## 13. The Agent is bounded orchestration
 
-The agent uses a config-owned task catalog and typed domain tools. Every call is
-authorized, bounded, versioned, and idempotent where required. The agent has no
-arbitrary SQL, unrestricted URL access, provider impersonation, private data
-store, autonomous recursion, or unapproved external mutation.
+The Agent uses the shared registered read tools on a server-pinned project and
+config-owned step, tool-call and size budgets frozen per run. Every call is
+authorized as the chat member, bounded, versioned, and idempotent where
+required. The Agent has no write tool, arbitrary SQL, unrestricted URL access,
+provider impersonation, private data store, autonomous recursion, or unapproved
+external mutation. Generating or approving an output never declares
+implementation or claims an improvement without new measured evidence.
 
 ## 14. Secrets and private evidence do not leak
 

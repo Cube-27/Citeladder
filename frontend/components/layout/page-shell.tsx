@@ -90,22 +90,6 @@ export function PageShell({
 }
 
 /**
- * Content that belongs to the page but sits outside its `PageShell` — a route
- * appending something after the screen it renders. It only borrows the measure
- * and the gutter, so the thing stays aligned with the work above it.
- */
-export function PageRegion({
-  children,
-  className,
-}: Readonly<{ children: ReactNode; className?: string }>) {
-  return (
-    <div className={cn(pageGutterClasses, 'pt-[var(--page-section-gap)]', className)}>
-      {children}
-    </div>
-  );
-}
-
-/**
  * The paper's measure. Bands and content share it so their gutters line up and
  * the rules stop at the same place the work does.
  */

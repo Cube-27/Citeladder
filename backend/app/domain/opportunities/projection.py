@@ -126,7 +126,6 @@ def project_detail(row: Opportunity) -> dict:
         "rule_version": row.rule_version,
         "formula_version": row.formula_version,
         "content_handoff": project_content_handoff(row),
-        "linked_generations": [],
         "superseded_by_id": row.superseded_by_id,
         "superseded_at": _iso(row.superseded_at),
     }

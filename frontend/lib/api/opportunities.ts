@@ -77,7 +77,6 @@ type ExpectedCheck =
 export type ImplementationEventCreate = {
   opportunity_id: string;
   target_site_url_ids: string[];
-  generation_id?: string;
   declared_implemented_at: string;
   expected_checks: ExpectedCheck[];
 };

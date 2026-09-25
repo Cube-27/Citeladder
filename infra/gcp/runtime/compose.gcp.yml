@@ -132,9 +132,6 @@ services:
   brand-discovery-worker:
     <<: *backend
     command: ["python", "-m", "app.workers.brand_discovery_worker"]
-  content-worker:
-    <<: *backend
-    command: ["python", "-m", "app.workers.content_worker"]
   agent-worker:
     <<: *backend
     command: ["python", "-m", "app.workers.agent_worker"]

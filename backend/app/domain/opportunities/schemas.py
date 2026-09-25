@@ -89,7 +89,6 @@ ExpectedCheck = Annotated[
 class ImplementationEventCreate(_Model):
     opportunity_id: uuid.UUID
     target_site_url_ids: list[uuid.UUID] = Field(default_factory=list, max_length=64)
-    generation_id: uuid.UUID | None = None
     declared_implemented_at: AwareDatetime
     expected_checks: list[ExpectedCheck] = Field(
         default_factory=list, max_length=IMPLEMENTATION_EXPECTED_CHECKS_MAX
@@ -120,7 +119,6 @@ class ImplementationEventView(_Model):
     # Populated instead of ``target_site_url_ids`` for an earned action: the
     # publisher page the placement was declared on. Never both.
     target_external_url: str | None
-    generation_id: uuid.UUID | None
     declared_implemented_at: datetime
     expected_checks: list[dict[str, Any]]
     state: Literal["declared", "observed", "verified", "contradicted"]
@@ -132,29 +130,6 @@ class ImplementationEventView(_Model):
 class ImplementationEventsPage(_Model):
     items: list[ImplementationEventView]
     next_cursor: str | None = None
-
-
-class OpportunityGuidanceItem(_Model):
-    id: uuid.UUID
-    opportunity_id: uuid.UUID
-    input_hash: str
-    findings: list[str]
-    recommendations: list[str]
-    source_analysis_ids: list[uuid.UUID]
-    source_issue_ids: list[uuid.UUID]
-    source_metric_ids: list[uuid.UUID]
-    analyzer_version: str
-    rule_version: str
-    formula_version: str
-    generator_version: str
-    prompt_version: str
-    provider: str
-    model: str
-    created_at: str
-
-
-class OpportunityGuidanceHistory(_Model):
-    items: list[OpportunityGuidanceItem]
 
 
 class OpportunityHistoryEvent(_Model):
@@ -223,7 +198,6 @@ class OpportunityDetail(OpportunityItem):
     rule_version: str
     formula_version: str
     content_handoff: dict[str, Any]
-    linked_generations: list[dict[str, Any]]
     superseded_by_id: uuid.UUID | None
     superseded_at: str | None
 

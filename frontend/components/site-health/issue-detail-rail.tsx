@@ -14,8 +14,6 @@ import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import type { SiteIssue, SiteIssueDetail } from '@/lib/api/types';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
-import { contentHandoffHref, remediationRoute } from '@/lib/site-health/remediation';
-import { useActiveProject } from '@/lib/project/project-context';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
 import { pageDisplayTitle } from '@/lib/site-health/status';
 
@@ -83,7 +81,7 @@ export function IssueDetailRail({
               ) : null}
             </div>
           </div>
-          <IssueActions issue={issue} detail={detail} crawlId={crawlId} />
+          <IssueActions issue={issue} />
         </header>
         <div className="content-scroll grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)] min-[701px]:flex-1 min-[701px]:overflow-y-auto">
           {issue.description ? (
@@ -135,40 +133,10 @@ export function IssueDetailRail({
   );
 }
 
-/**
- * The one row that answers "so what do I do about it".
- *
- * Every issue gets an action, not only the ones a draft can write. Both of
- * these are verified paths: the Content link opens the hand-off the backend
- * authorizes for exactly these rules, and the prompt is a clipboard copy.
- * There is deliberately no Growth Agent launcher per issue — this screen is a
- * list of two hundred rows, and the agent is a considered act with its own
- * entry point, not a button to repeat on each of them.
- */
-function IssueActions({
-  issue,
-  detail,
-  crawlId,
-}: Readonly<{ issue: SiteIssue; detail: SiteIssueDetail | undefined; crawlId: string }>) {
-  const route = remediationRoute(issue.remediation_route);
-  const firstOccurrence = detail?.occurrences[0];
-  const projectId = useActiveProject()?.id ?? null;
-  const contentHref =
-    route === 'content' && projectId && firstOccurrence
-      ? contentHandoffHref({
-          projectId,
-          crawlId,
-          siteUrlId: firstOccurrence.site_url_id,
-          ruleIds: [issue.rule_id],
-        })
-      : null;
+/** Every issue gets an action: the fix prompt a developer or assistant can use. */
+function IssueActions({ issue }: Readonly<{ issue: SiteIssue }>) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {contentHref ? (
-        <Button asChild size="sm">
-          <ProjectLink href={contentHref}>Improve with Content</ProjectLink>
-        </Button>
-      ) : null}
       <CopyButton value={buildFixPrompt(issue)} size="sm" variant="secondary" className="w-fit">
         Copy fix prompt
       </CopyButton>

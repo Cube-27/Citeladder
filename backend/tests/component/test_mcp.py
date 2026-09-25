@@ -234,7 +234,9 @@ async def test_oauth_grant_is_account_scoped_and_revocable(
         "get_project_business_context",
         "search",
         "fetch",
-        "list_skills",
+    }
+    assert "list_skills" not in {
+        tool["name"] for tool in listed.json()["result"]["tools"]
     }
     assert called.status_code == 200
     assert called.json()["result"]["isError"] is False

@@ -1,4 +1,4 @@
-"""Live probes for customer-configured Content and Growth Agent routes."""
+"""Live probes for customer-configured Agent model routes."""
 
 from __future__ import annotations
 

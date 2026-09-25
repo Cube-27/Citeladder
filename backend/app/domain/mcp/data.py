@@ -10,11 +10,6 @@ from urllib.parse import quote
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.agent import AGENT_TASK_POLICIES
-from app.core.config.content import (
-    CONTENT_SKILL_CATALOG_VERSION,
-    CONTENT_SKILL_REGISTRY,
-)
 from app.core.config.mcp import (
     MCP_MAX_SEARCH_RESULTS,
     mcp_public_origin,
@@ -405,27 +400,6 @@ def _render_project_context(
             "follow_through": "applicable",
         },
         "evidence": evidence,
-    }
-
-
-def skill_catalog() -> dict[str, Any]:
-    return {
-        "catalog_version": CONTENT_SKILL_CATALOG_VERSION,
-        "content_skills": [
-            {
-                "id": skill.id,
-                "label": skill.label,
-                "channel": skill.channel,
-                "description": skill.description,
-                "version": skill.version,
-            }
-            for skill in CONTENT_SKILL_REGISTRY.values()
-        ],
-        "growth_agent_tasks": [
-            {"task_type": task.task_type, "read_tools": list(task.allowed_tools)}
-            for task in AGENT_TASK_POLICIES.values()
-        ],
-        "access": "read_only",
     }
 
 

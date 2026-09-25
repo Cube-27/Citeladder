@@ -42,6 +42,7 @@ from app.core.config.site_health_contracts import (
     CRAWL_STATUS_PARTIALLY_COMPLETED,
 )
 from app.core.config.site_health_rule_types import FINDING_CLASS_DEFECT
+from app.domain.opportunities.actions import available_families, sync_actions
 from app.domain.opportunities.change_hits import load_change_hits
 from app.domain.opportunities.commerce_hits import load_commerce_opportunity_hits
 from app.domain.opportunities.common import (
@@ -534,6 +535,19 @@ async def _write_recompute(
         domain_rollups=domain_rollups,
     )
     session.add(snapshot)
+    await session.flush()
+    await sync_actions(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        new_rows=new_rows,
+        snapshot_id=snapshot.id,
+        families=available_families(
+            has_audit=audit is not None,
+            has_demand=demand_snapshot is not None,
+            has_crawl=crawl is not None,
+        ),
+    )
     await session.commit()
     return project_snapshot(snapshot)
 

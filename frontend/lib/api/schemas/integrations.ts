@@ -42,9 +42,8 @@ export const integrationGrantStatusSchema = z.enum([
 export const integrationSyncKindSchema = z.enum(['scheduled', 'on_demand', 'backfill']);
 
 // `IntegrationSyncRun` IS a queue row (same shared queue-row contract as
-// `AuditTask` / `SiteCrawlTask` / `ContentGeneration`), so the wire statuses
-// are the queue statuses — the same vocabulary as
-// `siteCrawlTaskStatusSchema` / `contentGenerationStatusSchema`.
+// `AuditTask` / `SiteCrawlTask` / `AgentRun`), so the wire statuses
+// are the queue statuses — the same vocabulary as `siteCrawlTaskStatusSchema`.
 export const integrationSyncRunStatusSchema = z.enum([
   'queued',
   'leased',

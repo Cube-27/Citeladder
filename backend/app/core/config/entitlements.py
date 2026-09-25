@@ -82,6 +82,12 @@ KEY_SERP_TASKS_PER_PERIOD: Final = "serp_tasks_per_period"
 KEY_SITE_HEALTH_PAGE_FETCHES: Final = "site_health_page_fetches_per_period"
 KEY_CONTENT_CREATION: Final = "content_creation"
 KEY_GROWTH_AGENT: Final = "growth_agent"
+# The Agent capability. Every paid tier grants ``growth_agent`` together with
+# ``content_creation`` (the catalog validator requires both), so gating the
+# merged Agent on this persisted key admits exactly the accounts either flag
+# admitted before. ``content_creation`` stays registered only because
+# persisted grants and published catalogs carry it; nothing gates on it.
+KEY_AGENT: Final = KEY_GROWTH_AGENT
 KEY_PROJECT_DELETION: Final = "project_deletion"
 
 # Public-signup baseline. These are account-wide allowances; occupancy is

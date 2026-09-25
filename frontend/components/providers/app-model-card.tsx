@@ -6,7 +6,6 @@ import { useMemo, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { panelClasses } from '@/components/ui/panel';
@@ -16,37 +15,31 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { ProviderConnection } from '@/lib/api/types';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
-const CONNECTION_LABEL = 'Content and Growth Agent custom model';
+const CONNECTION_LABEL = 'Agent custom model';
+// The Agent's persisted route identifier predates the merged Agent runtime.
+const AGENT_ROUTE_FEATURE = 'growth_agent';
 
 type AppModelForm = {
   baseUrl: string;
   model: string;
   apiKey: string;
-  content: boolean;
-  growthAgent: boolean;
 };
 
+function agentRoute(connection?: ProviderConnection) {
+  return connection?.app_routes?.find((entry) => entry.feature === AGENT_ROUTE_FEATURE);
+}
+
 function initialForm(connection?: ProviderConnection): AppModelForm {
-  const route = connection?.app_routes?.[0];
+  const route = agentRoute(connection);
   return {
     baseUrl: route?.api_base_url ?? '',
     model: route?.model ?? '',
     apiKey: '',
-    content: connection?.app_routes?.some((entry) => entry.feature === 'content') ?? true,
-    growthAgent: connection?.app_routes?.some((entry) => entry.feature === 'growth_agent') ?? true,
   };
 }
 
 function appRoutes(form: AppModelForm): ProviderAppRouteInput[] {
-  const route = (feature: ProviderAppRouteInput['feature']): ProviderAppRouteInput => ({
-    feature,
-    model: form.model,
-    api_base_url: form.baseUrl,
-  });
-  return [
-    form.content ? route('content') : null,
-    form.growthAgent ? route('growth_agent') : null,
-  ].filter((entry): entry is ProviderAppRouteInput => entry !== null);
+  return [{ feature: AGENT_ROUTE_FEATURE, model: form.model, api_base_url: form.baseUrl }];
 }
 
 function saveConnection(
@@ -95,7 +88,7 @@ function useAppModelForm(connections: ProviderConnection[]) {
   const validDestination = form.baseUrl.startsWith('https://') && form.model.trim() !== '';
   return {
     connection,
-    existingRoute: connection?.app_routes?.[0],
+    existingRoute: agentRoute(connection),
     form,
     update,
     save,
@@ -104,7 +97,6 @@ function useAppModelForm(connections: ProviderConnection[]) {
     canSave:
       Boolean(workspaceId) &&
       validDestination &&
-      (form.content || form.growthAgent) &&
       Boolean(connection || form.apiKey) &&
       !save.isPending,
   };
@@ -181,24 +173,6 @@ function CredentialField({ controller }: Readonly<{ controller: Controller }>) {
   );
 }
 
-function RouteFields({ controller }: Readonly<{ controller: Controller }>) {
-  const { form, update } = controller;
-  return (
-    <div className="flex flex-wrap gap-4">
-      <Checkbox
-        checked={form.content}
-        onCheckedChange={(checked) => update('content', checked === true)}
-        label="Content route"
-      />
-      <Checkbox
-        checked={form.growthAgent}
-        onCheckedChange={(checked) => update('growthAgent', checked === true)}
-        label="Growth Agent route"
-      />
-    </div>
-  );
-}
-
 function OperationFeedback({ controller }: Readonly<{ controller: Controller }>) {
   const { save, test } = controller;
   if (save.isError || test.isError) {
@@ -244,7 +218,7 @@ export function AppModelCard({ connections }: Readonly<{ connections: ProviderCo
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
           <h2 id="app-model-title" className={textRole('bodyStrong')}>
-            Custom model (Content & Growth Agent)
+            Custom model (Agent)
           </h2>
           <p className={textRole('body')}>
             True BYOK is customer-funded and spends no platform AI credits.
@@ -254,7 +228,6 @@ export function AppModelCard({ connections }: Readonly<{ connections: ProviderCo
       </div>
       <DestinationFields controller={controller} />
       <CredentialField controller={controller} />
-      <RouteFields controller={controller} />
       <Alert tone="info">
         Fallback: none. If this route is missing, revoked, or fails validation, the request is
         refused rather than silently using a platform key.

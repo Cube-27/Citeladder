@@ -1,37 +1,20 @@
 [
   {
-    "sources": [
-      "frontend/apps/app/src/globals.css",
-      "frontend/apps/app/src/website-type.css"
-    ],
-    "frontendE2E": [
-      "e2e/shell.spec.ts",
-      "e2e/marketing-pages.spec.ts"
-    ]
+    "sources": ["frontend/apps/app/src/globals.css", "frontend/apps/app/src/website-type.css"],
+    "frontendE2E": ["e2e/shell.spec.ts", "e2e/marketing-pages.spec.ts"]
   },
   {
-    "sources": [
-      "frontend/components/ui/command-palette.tsx"
-    ],
-    "frontendE2E": [
-      "e2e/shell.spec.ts"
-    ]
+    "sources": ["frontend/components/ui/command-palette.tsx"],
+    "frontendE2E": ["e2e/shell.spec.ts"]
   },
   {
-    "sources": [
-      "frontend/test/provider-catalog-fixture.ts"
-    ],
-    "frontendE2E": [
-      "e2e/providers.spec.ts"
-    ]
+    "sources": ["frontend/test/provider-catalog-fixture.ts"],
+    "frontendE2E": ["e2e/providers.spec.ts"]
   },
   {
-    "sources": [
-      "frontend/playwright.config.ts"
-    ],
+    "sources": ["frontend/playwright.config.ts"],
     "frontendE2E": [
       "e2e/billing.spec.ts",
-      "e2e/content.spec.ts",
       "e2e/design-repair.spec.ts",
       "e2e/landing-nav.spec.ts",
       "e2e/marketing-pages.spec.ts",
@@ -44,14 +27,8 @@
     ]
   },
   {
-    "sources": [
-      "frontend/e2e/helpers/app-fixture.ts"
-    ],
-    "frontendE2E": [
-      "e2e/content.spec.ts",
-      "e2e/design-repair.spec.ts",
-      "e2e/shell.spec.ts"
-    ]
+    "sources": ["frontend/e2e/helpers/app-fixture.ts"],
+    "frontendE2E": ["e2e/design-repair.spec.ts", "e2e/shell.spec.ts"]
   },
   {
     "sources": [
@@ -62,19 +39,11 @@
       "frontend/lib/consent/**",
       "frontend/lib/seo/**"
     ],
-    "frontendE2E": [
-      "e2e/marketing-pages.spec.ts",
-      "e2e/landing-nav.spec.ts"
-    ]
+    "frontendE2E": ["e2e/marketing-pages.spec.ts", "e2e/landing-nav.spec.ts"]
   },
   {
-    "sources": [
-      "frontend/components/analytics/**",
-      "frontend/lib/consent/**"
-    ],
-    "frontendE2E": [
-      "e2e/marketing-pages.spec.ts"
-    ]
+    "sources": ["frontend/components/analytics/**", "frontend/lib/consent/**"],
+    "frontendE2E": ["e2e/marketing-pages.spec.ts"]
   },
   {
     "sources": [
@@ -84,9 +53,7 @@
       "frontend/lib/setup/**",
       "frontend/components/tour/**"
     ],
-    "frontendE2E": [
-      "e2e/design-repair.spec.ts"
-    ]
+    "frontendE2E": ["e2e/design-repair.spec.ts"]
   },
   {
     "sources": [
@@ -98,9 +65,7 @@
       "frontend/apps/app/src/private-routes.tsx",
       "frontend/apps/app/src/auth-routes.tsx"
     ],
-    "frontendE2E": [
-      "e2e/shell.spec.ts"
-    ]
+    "frontendE2E": ["e2e/shell.spec.ts"]
   },
   {
     "sources": [
@@ -109,9 +74,7 @@
       "frontend/lib/visibility/**",
       "frontend/components/intelligence/**"
     ],
-    "frontendE2E": [
-      "e2e/visibility.spec.ts"
-    ]
+    "frontendE2E": ["e2e/visibility.spec.ts"]
   },
   {
     "sources": [
@@ -120,9 +83,7 @@
       "frontend/lib/runs/**",
       "frontend/lib/sse/**"
     ],
-    "frontendE2E": [
-      "e2e/runs.spec.ts"
-    ]
+    "frontendE2E": ["e2e/runs.spec.ts"]
   },
   {
     "sources": [
@@ -132,19 +93,7 @@
       "frontend/lib/api/opportunities.ts",
       "frontend/lib/api/schemas/opportunities.ts"
     ],
-    "frontendE2E": [
-      "e2e/opportunity-loop.spec.ts"
-    ]
-  },
-  {
-    "sources": [
-      "frontend/apps/app/src/product-routes-prompts-content-commerce-referrals.tsx",
-      "frontend/components/content/**",
-      "frontend/lib/content/**"
-    ],
-    "frontendE2E": [
-      "e2e/content.spec.ts"
-    ]
+    "frontendE2E": ["e2e/opportunity-loop.spec.ts"]
   },
   {
     "sources": [
@@ -152,9 +101,7 @@
       "frontend/components/settings/provider-settings.tsx",
       "frontend/lib/providers/**"
     ],
-    "frontendE2E": [
-      "e2e/providers.spec.ts"
-    ]
+    "frontendE2E": ["e2e/providers.spec.ts"]
   },
   {
     "sources": [
@@ -164,8 +111,6 @@
       "frontend/lib/api/billing.ts",
       "frontend/components/marketing/pricing/**"
     ],
-    "frontendE2E": [
-      "e2e/billing.spec.ts"
-    ]
+    "frontendE2E": ["e2e/billing.spec.ts"]
   }
 ]

@@ -1,7 +1,6 @@
 /** Mirrors the Search Intelligence request bounds. */
 import { COUNTRY_OPTIONS } from '@/lib/setup/markets';
 
-export const SEARCH_HANDOFF_MAX_ROWS = 100;
 export const SEARCH_MAX_DEPTH = 1_000_000;
 export type SearchColumn = {
   field: string;

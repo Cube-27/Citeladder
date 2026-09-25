@@ -247,14 +247,6 @@ export const opportunityDetailSchema = opportunitySchema.extend({
   rule_version: z.string(),
   formula_version: z.string(),
   content_handoff: contentHandoffSchema,
-  linked_generations: z.array(
-    responseObject({
-      id: uuid(),
-      status: z.string(),
-      skill_id: z.string(),
-      created_at: z.string(),
-    }),
-  ),
   superseded_by_id: uuid().nullable(),
   superseded_at: z.string().nullable(),
 });
@@ -362,7 +354,6 @@ export const implementationEventSchema = responseObject({
   // Populated instead of the owned ids for an earned action: the publisher
   // page the placement was declared on. Never both.
   target_external_url: z.string().nullable(),
-  generation_id: uuid().nullable(),
   declared_implemented_at: z.string(),
   expected_checks: z.array(expectedCheckSchema),
   state: implementationStateSchema,

@@ -88,17 +88,6 @@
       "title": "List CiteLadder projects"
     },
     {
-      "description": "Inspect metadata for native content formats and supported read capabilities.",
-      "input_schema": {
-        "properties": {},
-        "title": "list_skillsArguments",
-        "type": "object"
-      },
-      "name": "list_skills",
-      "read_only": true,
-      "title": "List CiteLadder skills"
-    },
-    {
       "description": "Read the persisted AI-referral projection for a project: sessions referred by AI answer engines, their share of traffic, and the sources behind them. Pass start_date and end_date (ISO YYYY-MM-DD) for an explicit window.",
       "input_schema": {
         "properties": {

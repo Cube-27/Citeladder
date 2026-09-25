@@ -63,18 +63,3 @@ export const providerKeys = {
   // The authenticated workspace projection — distinct from the public catalog.
   states: (workspaceId: string) => ['providers', 'states', workspaceId] as const,
 };
-
-export const contentKeys = {
-  all: ['content'] as const,
-  // `limit` is part of the key so different caps cache separately.
-  list: (projectId: string, limit: number) => ['content', 'list', projectId, limit] as const,
-  detail: (generationId: string) => ['content', 'detail', generationId] as const,
-  // Static server config — not invalidated by any generation mutation.
-  skills: (workspaceId: string | null) => ['content', 'skills', workspaceId] as const,
-  contextPreview: (projectId: string, inputs: object) =>
-    ['content', 'context-preview', projectId, inputs] as const,
-  differentiation: (projectId: string, limit: number) =>
-    ['content', 'differentiation', projectId, limit] as const,
-  targetPages: (projectId: string, query: string) =>
-    ['content', 'target-pages', projectId, query] as const,
-};

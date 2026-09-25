@@ -90,7 +90,7 @@ test('runs resolve on their own while the schedules empty state waits for its re
   await expect(page.getByRole('heading', { name: 'No runs yet' })).toBeVisible();
 });
 
-test('compact navigation hands focus to persistent tools and returns it on Escape', async ({
+test('compact navigation hands focus to the command palette and returns it on Escape', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -98,20 +98,15 @@ test('compact navigation hands focus to persistent tools and returns it on Escap
   await page.goto(fixtureProjectPath('/projects'));
   const menu = page.getByRole('button', { name: 'Open navigation' });
 
-  for (const [trigger, title] of [
-    ['Search or jump to', 'Command palette'],
-    ['Open Growth Agent', 'Growth Agent'],
-  ]) {
-    await menu.click();
-    const navigation = page.getByRole('dialog', { name: 'Navigation', exact: true });
-    await navigation.getByRole('button', { name: trigger, exact: true }).click();
-    await expect(navigation).not.toBeVisible();
-    const tool = page.getByRole('dialog', { name: title, exact: true });
-    await expect(tool).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(tool).not.toBeVisible();
-    await expect(menu).toBeFocused();
-  }
+  await menu.click();
+  const navigation = page.getByRole('dialog', { name: 'Navigation', exact: true });
+  await navigation.getByRole('button', { name: 'Search or jump to', exact: true }).click();
+  await expect(navigation).not.toBeVisible();
+  const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
+  await expect(palette).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(palette).not.toBeVisible();
+  await expect(menu).toBeFocused();
 });
 
 test('project lookup failure retries in place and only confirmed empty projects enter onboarding', async ({

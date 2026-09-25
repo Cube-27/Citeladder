@@ -1,126 +1,209 @@
-"""Durable worker for bounded Growth Agent narration tasks."""
-
+# Agent worker: claims agent runs and executes one bounded turn each.
+#
+# A separate process (the ``agent-worker`` compose service). Claims go through
+# the generic ``PostgresTaskQueue`` (``FOR UPDATE SKIP LOCKED``; the claim
+# commits before any network I/O -- invariant 15) and a heartbeat renews the
+# lease while the turn's model calls and tool reads run. The runtime owns the
+# loop and every terminal write; this process only sequences it and decides
+# between a retry and a terminal failure when a step cannot be dispatched.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-import signal
 import uuid
-from datetime import UTC, datetime
+from typing import Final
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.factory import create_model_gateway
 from app.connectors.agent.gateway import ModelGateway
-from app.core.config.agent import default_agent_settings
-from app.core.config.app_models import APP_FEATURE_GROWTH_AGENT
-from app.core.database import SessionLocal, dispose_engine
-from app.core.telemetry import configure_logging, instrument_worker
-from app.domain.agent.service import claim_task, execute_claimed_task
-from app.domain.providers.app_routes import (
-    AppModelRouteUnavailableError,
-    has_configured_app_model_route,
-    resolve_app_model_route,
+from app.connectors.app_model_config import AppModelRouteConfig
+from app.core.config.agent import (
+    AGENT_HEARTBEAT_SECONDS,
+    AGENT_QUEUE_SPEC,
+    AGENT_WORKER_POLL_SECONDS,
+    ERROR_ACCESS_REVOKED,
+    ERROR_FUNDING,
+    ERROR_MODEL_CHANGED,
+    ERROR_PROVIDER,
+    default_agent_settings,
 )
+from app.core.database import SessionLocal
+from app.core.telemetry import configure_logging, instrument_worker
+from app.domain.agent.model_calls import (
+    ModelUnavailableError,
+    agent_reclaim_accounting,
+    lock_owned_run,
+    reconcile_stale_cancelled_model_attempts,
+)
+from app.domain.agent.runtime import GatewayFactory, RuntimeDeps, execute_run, fail_run
+from app.domain.agent.tool_catalog import build_agent_tools
+from app.models.agent import AgentRun
+from app.orchestration.postgres_task_queue import PostgresTaskQueue
+from app.workers.drain import DrainableWorkerMixin
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("app.workers.agent_worker")
 
 
-class AgentWorker:
-    def __init__(self, *, owner: str | None = None) -> None:
-        self._owner = owner or f"agent-{uuid.uuid4().hex[:12]}"
-        self._stop = asyncio.Event()
+# Refusals no retry can fix: the turn ends with its own code.
+_TERMINAL_REFUSALS: Final[dict[str, tuple[str, str]]] = {
+    "funding": (ERROR_FUNDING, "The Agent could not be funded for this turn."),
+    "access": (
+        ERROR_ACCESS_REVOKED,
+        "The member who asked no longer has permission to run the Agent.",
+    ),
+    "model_changed": (
+        ERROR_MODEL_CHANGED,
+        "The platform model changed after this turn was queued; ask again.",
+    ),
+}
 
-    def stop(self) -> None:
-        self._stop.set()
+
+def _default_gateway(route: AppModelRouteConfig | None) -> ModelGateway:
+    return create_model_gateway(app_route=route)
+
+
+class AgentWorker(DrainableWorkerMixin):
+    """Claim/lease loop for ``AgentRun`` rows.
+
+    ``gateway_for`` is the test seam: a scripted fake gateway runs the real
+    loop without a network. Production builds the configured gateway.
+    """
+
+    def __init__(
+        self,
+        *,
+        session_factory: async_sessionmaker[AsyncSession] | None = None,
+        owner: str | None = None,
+        gateway_for: GatewayFactory | None = None,
+    ) -> None:
+        self._session_factory = session_factory or SessionLocal
+        self._queue = PostgresTaskQueue(
+            self._session_factory,
+            AGENT_QUEUE_SPEC,
+            reclaim_accounting=agent_reclaim_accounting,
+        )
+        self._deps = RuntimeDeps(
+            session_factory=self._session_factory,
+            tools=build_agent_tools(self._session_factory),
+            gateway_for=gateway_for or _default_gateway,
+        )
+        self.owner = owner or f"agent-worker-{uuid.uuid4().hex[:12]}"
 
     async def run_once(self) -> int:
-        async with SessionLocal() as session:
-            run = await claim_task(
-                session,
-                owner=self._owner,
-                lease_seconds=(
-                    default_agent_settings.execution_timeout_seconds
-                    + default_agent_settings.lease_margin_seconds
-                ),
-            )
-            if run is None:
-                return 0
-            route = None
-            gateway: ModelGateway | None
-            if hasattr(run, "workspace_id"):
-                try:
-                    route = await resolve_app_model_route(
-                        session,
-                        workspace_id=run.workspace_id,
-                        feature=APP_FEATURE_GROWTH_AGENT,
-                        at=datetime.now(UTC),
-                    )
-                    gateway = create_model_gateway(app_route=route)
-                except AppModelRouteUnavailableError:
-                    customer_route_configured = await has_configured_app_model_route(
-                        session,
-                        workspace_id=run.workspace_id,
-                        feature=APP_FEATURE_GROWTH_AGENT,
-                    )
-                    gateway = (
-                        None
-                        if customer_route_configured
-                        or not default_agent_settings.configured
-                        else create_model_gateway()
-                    )
-            elif default_agent_settings.configured:
-                gateway = create_model_gateway()
-            else:
-                gateway = None
-            if route is None:
-                await execute_claimed_task(
-                    session, run=run, owner=self._owner, gateway=gateway
-                )
-            else:
-                await execute_claimed_task(
-                    session,
-                    run=run,
-                    owner=self._owner,
-                    gateway=gateway,
-                    app_route=route,
-                )
-            return 1
+        """Sweep expired leases, claim one run, execute it. Returns count run."""
+        await self._queue.release_expired()
+        await reconcile_stale_cancelled_model_attempts(self._session_factory)
+        rows = await self._queue.claim(owner=self.owner, limit=1)
+        for row in rows:
+            await self._execute(row.id)
+        return len(rows)
 
-    async def run_forever(self) -> None:
-        while not self._stop.is_set():
+    async def run_forever(self) -> None:  # pragma: no cover - process loop
+        logger.info("agent worker started", extra={"owner": self.owner})
+        while True:
             try:
-                changed = await self.run_once()
+                ran = await self.run_once()
             except Exception:
-                logger.exception("agent worker iteration failed")
-                changed = 0
-            if changed:
-                continue
-            try:
-                await asyncio.wait_for(
-                    self._stop.wait(),
-                    timeout=default_agent_settings.reconcile_poll_seconds,
-                )
-            except TimeoutError:
-                pass
+                logger.exception("agent worker loop iteration failed")
+                ran = 0
+            if ran == 0:
+                await asyncio.sleep(AGENT_WORKER_POLL_SECONDS)
 
+    async def _start(self, run_id: uuid.UUID) -> int | None:
+        """Mark the claimed run running and count this attempt at the turn."""
+        if not await self._queue.mark_running(task_id=run_id, owner=self.owner):
+            return None
+        async with self._session_factory() as session:
+            run = await lock_owned_run(session, run_id=run_id, owner=self.owner)
+            if run is None:
+                await session.rollback()
+                return None
+            run.attempt_count += 1
+            attempt = run.attempt_count
+            await session.commit()
+            return attempt
 
-async def _main() -> None:
-    worker = AgentWorker()
-    loop = asyncio.get_running_loop()
-    for signum in (signal.SIGINT, signal.SIGTERM):
+    async def _execute(self, run_id: uuid.UUID) -> None:
+        attempt = await self._start(run_id)
+        if attempt is None:
+            return
+        heartbeat = asyncio.create_task(self._heartbeat_loop(run_id))
         try:
-            loop.add_signal_handler(signum, worker.stop)
-        except NotImplementedError:
-            pass
-    try:
-        await worker.run_forever()
-    finally:
-        await dispose_engine()
+            await execute_run(self._deps, run_id=run_id, owner=self.owner)
+        except ModelUnavailableError as exc:
+            await self._unavailable(run_id, attempt=attempt, exc=exc)
+        except Exception as exc:
+            logger.exception("agent run crashed", extra={"run_id": str(run_id)})
+            async with self._session_factory() as session:
+                await fail_run(
+                    session,
+                    run_id=run_id,
+                    owner=self.owner,
+                    code=ERROR_PROVIDER,
+                    detail=f"worker crash: {type(exc).__name__}",
+                )
+        finally:
+            heartbeat.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await heartbeat
+
+    async def _unavailable(
+        self, run_id: uuid.UUID, *, attempt: int, exc: ModelUnavailableError
+    ) -> None:
+        if exc.reason == "lease":
+            return  # cancelled or reclaimed: another owner (or nobody) acts now
+        async with self._session_factory() as session:
+            terminal = _TERMINAL_REFUSALS.get(exc.reason)
+            if terminal is not None:
+                code, detail = terminal
+                await fail_run(
+                    session, run_id=run_id, owner=self.owner, code=code, detail=detail
+                )
+                return
+            run = await session.get(AgentRun, run_id)
+            max_attempts = run.max_attempts if run is not None else attempt
+            await session.rollback()
+            retryable = exc.cause is not None and bool(
+                getattr(exc.cause, "retryable", False)
+            )
+            if retryable and attempt < max_attempts:
+                await self._queue.retry(
+                    task_id=run_id,
+                    owner=self.owner,
+                    delay_seconds=default_agent_settings.retry_delay(attempt),
+                    error_code=ERROR_PROVIDER,
+                    error_detail="The model call failed; retrying this turn.",
+                )
+                return
+            await fail_run(
+                session,
+                run_id=run_id,
+                owner=self.owner,
+                code=ERROR_PROVIDER,
+                detail="The model call failed.",
+            )
+
+    async def _heartbeat_loop(
+        self, run_id: uuid.UUID
+    ) -> None:  # pragma: no cover - timing loop
+        while True:
+            await asyncio.sleep(AGENT_HEARTBEAT_SECONDS)
+            try:
+                await self._queue.heartbeat(task_id=run_id, owner=self.owner)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception(
+                    "agent heartbeat failed", extra={"run_id": str(run_id)}
+                )
 
 
-def main() -> None:  # pragma: no cover
+def main() -> None:  # pragma: no cover - process entrypoint
     configure_logging()
     instrument_worker("agent-worker")
-    asyncio.run(_main())
+    asyncio.run(AgentWorker().run_forever())
 
 
 if __name__ == "__main__":  # pragma: no cover

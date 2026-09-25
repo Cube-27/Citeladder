@@ -7,6 +7,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Any, cast
 
+from app.analysis.lexical import lexical_tokens, normalized_coverage
 from app.connectors.web_evidence.url_policy import canonicalize
 from app.core.config.site_health_link_metrics import (
     ANCHOR_GENERIC_TEXTS,
@@ -18,7 +19,6 @@ from app.core.config.site_health_link_metrics import (
     AUTHORITY_MAX_ITERATIONS,
     AUTHORITY_REPEATED_ANCHOR_FACTOR,
 )
-from app.domain.content.lexical import lexical_tokens, normalized_coverage
 from app.domain.site_health.normalization import canonical_identity
 
 

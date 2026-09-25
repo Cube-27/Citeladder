@@ -31,11 +31,10 @@ marketing routes reach Astro SSR.
 | Overview and company facts | /projects | [Onboarding](onboarding.md) |
 | Website and issues | /site, /issues | [Site Health](site-health.md) |
 | Search Demand, Search Intelligence, Performance, AI Referrals | /demand, /search-intelligence, /performance, /ai-referrals | [Connected data](integrations-traffic-analytics.md) |
-| Opportunities and Content | /opportunities, /content | [Opportunities](opportunities.md), [Content](content-generation.md) |
+| Opportunities | /opportunities | [Opportunities](opportunities.md) |
 | Prompts, Visibility and runs | /prompts, /visibility, /runs | [Visibility](visibility-prompt.md) |
 | Commerce | /products | [Commerce](commerce-intelligence.md) |
 | Settings and account management | /settings and account routes | [Workspace access](workspace-access.md), [Billing](billing-entitlements.md) |
-| Growth Agent drawer | Shell-owned sheet | [Growth Agent](growth-agent.md) |
 | Public MCP setup | /docs/mcp | [MCP](mcp.md) |
 
 One authenticated layout retains the session, query client, workspace/project
@@ -130,9 +129,8 @@ exact retry. A transient same-scope refresh failure may retain persisted data
 with an inline notice; an access failure must remove protected evidence and
 mutation controls.
 
-Initial Content catalog/context reads and Runs list/schedule reads settle before
-their working surfaces appear. Later context changes retain the Content editor
-and typed instruction. Performance starts readiness alongside its dashboard,
+Initial Runs list/schedule reads settle before their working surface appears.
+Performance starts readiness alongside its dashboard,
 then presents one first-use guidance state rather than stacking connection and
 missing-range notices. The page loader's reveal and rotation animate on separate
 elements so its delay cannot replace the spinning animation.
@@ -147,9 +145,7 @@ screen from its internal presentation files.
 
 | Surface | Coordinator boundary | Focused owners |
 |---|---|---|
-| Growth Agent | `components/agent/growth-agent-workspace.tsx` owns workspace state and actions | `growth-agent-workspace-view.tsx` owns run detail, task form, and task history presentation |
 | AI Referrals | `components/ai-referrals/ai-referrals-screen.tsx` owns project/range queries and toolbar selection | content and dashboard owners render the query states and measurements |
-| Content | `components/content/content-screen.tsx` owns project transitions and generation orchestration | data hooks, generation history, and composer/result panels own their respective concerns |
 | Onboarding | `components/onboarding/onboarding-screen.tsx` selects the active stage and actions | `onboarding-flow.ts` owns transaction state, stage owners render domain UI, and `components/auth/flow-shell.tsx` owns shared auth/onboarding chrome |
 | Projects dashboard | `components/projects/dashboard-screen.tsx` owns query gates and project context | dashboard controls, primitives, sections, and command-center action hook own reusable UI and mutations |
 | Performance | `components/performance/performance-screen.tsx` owns project/range/compare selection and the range-projection hand-off | date-range dialog, metric cards, chart, dimension table, and synchronization hook own their scoped behavior |
@@ -168,7 +164,7 @@ detail, pagination, and shared schema primitives. Do not import a focused file f
 avoid the facade; move a genuinely shared primitive into the focused schema
 folder and re-export it through the facade.
 
-Demand Intelligence, Search Intelligence, and Growth Agent response schemas
+Demand Intelligence and Search Intelligence response schemas
 likewise live under `frontend/lib/api/schemas/` and are re-exported by the
 public facade. API clients validate through `strictValidate`; the contract
 drift map covers their declared response objects. The frontend architecture

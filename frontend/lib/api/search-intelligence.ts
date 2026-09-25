@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import {
-  searchContentHandoffSchema,
   searchDatasetPageSchema,
   searchDatasetSchema,
   searchPreferencesSchema,
@@ -16,7 +15,6 @@ export type SearchIntelligenceReadiness = z.infer<typeof searchReadinessSchema>;
 export type SearchIntelligenceRun = z.infer<typeof searchRunSchema>;
 export type SearchIntelligenceDataset = z.infer<typeof searchDatasetSchema>;
 export type SearchIntelligenceRow = z.infer<typeof searchRowSchema>;
-export type SearchIntelligenceHandoff = z.infer<typeof searchContentHandoffSchema>;
 export type DatasetSelection = {
   kind: string;
   competitor_id?: string | null;
@@ -118,21 +116,6 @@ export const searchIntelligenceApi = {
         options,
       ),
       'searchIntelligence.deriveCitationMatches',
-    ),
-  contentHandoff: async (
-    projectId: string,
-    datasetId: string,
-    rowIds: string[],
-    options?: ApiRequestOptions,
-  ) =>
-    strictValidate(
-      searchContentHandoffSchema,
-      await apiClient.post<unknown>(
-        `${root(projectId)}/content-handoff`,
-        { dataset_id: datasetId, row_ids: rowIds },
-        options,
-      ),
-      'searchIntelligence.contentHandoff',
     ),
   savePreferences: async (
     projectId: string,

@@ -7,7 +7,6 @@ const failures = [];
 for (const owner of [
   'ai-referrals.ts',
   'auth.ts',
-  'content.ts',
   'integrations.ts',
   'opportunities.ts',
   'performance.ts',

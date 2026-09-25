@@ -160,8 +160,7 @@ silently skip for lack of a backend virtual environment.
 The shared error envelope includes the following stable coded failures for
 these routes: `url_hard_excluded`, `url_out_of_scope`,
 `url_preview_invalid`, `crawl_limit_not_available`, `acquisition_budget_exceeded`,
-`scraperapi_unavailable`, `opportunity_guidance_unavailable`,
-and `opportunity_guidance_idempotency_conflict`.
+and `scraperapi_unavailable`.
 They use the existing `{ code, message, request_id, details? }` envelope; details
 contain only safe validation or aggregate information and never secrets, raw HTML,
 or provider request headers.

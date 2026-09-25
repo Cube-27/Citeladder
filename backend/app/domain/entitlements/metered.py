@@ -47,8 +47,7 @@ class MeteredSettlement:
 
 
 _TYPED_SUBJECT_COLUMNS = {
-    "content": "content_generation_id",
-    "agent": "agent_task_run_id",
+    "agent": "agent_run_id",
     "site_crawl": "site_crawl_id",
 }
 
@@ -189,6 +188,7 @@ async def settle_metered_usage(
             units=debit,
             idempotency_key=f"{idempotency_key}:{dispatch_key}",
             at=at,
+            dispatch_key=dispatch_key,
         )
     await release_unused_reservation(
         session,

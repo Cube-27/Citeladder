@@ -6,6 +6,9 @@ import base64
 import binascii
 import json
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 from mcp.server.auth.middleware.auth_context import get_access_token
@@ -96,7 +99,30 @@ def _normalize_refs(value: dict[str, Any]) -> dict[str, Any]:
     return value
 
 
+# The in-app agent reads through these same tools as the chat's member. There
+# is no MCP bearer token in a worker, so the runtime binds the member here for
+# the duration of one tool call. It is set only by server-side code; nothing an
+# HTTP or MCP caller sends can reach it. Every read still runs the same
+# membership and role predicate below, so a removed member reads nothing.
+_IN_APP_READER: ContextVar[uuid.UUID | None] = ContextVar(
+    "citeladder_in_app_reader", default=None
+)
+
+
+@contextmanager
+def read_as_member(user_id: uuid.UUID) -> Iterator[None]:
+    """Authorize the tool reads inside this block as ``user_id``."""
+    token = _IN_APP_READER.set(user_id)
+    try:
+        yield
+    finally:
+        _IN_APP_READER.reset(token)
+
+
 def current_user_id() -> uuid.UUID:
+    in_app_reader = _IN_APP_READER.get()
+    if in_app_reader is not None:
+        return in_app_reader
     token = get_access_token()
     if token is None or not token.subject:
         raise PermissionError("An authenticated CiteLadder account is required")

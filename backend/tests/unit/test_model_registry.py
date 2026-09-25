@@ -9,7 +9,8 @@ import app.models as models
 
 def test_models_are_exported_and_registered_once() -> None:
     expected = {
-        "OpportunityGuidance": "opportunity_guidance",
+        "Action": "actions",
+        "AgentRun": "agent_runs",
         "CommerceProduct": "commerce_products",
         "CommerceProductObservation": "commerce_product_observations",
         "CommerceShelfSnapshot": "commerce_shelf_snapshots",
@@ -37,12 +38,20 @@ def test_models_are_exported_and_registered_once() -> None:
         "SiteLinkGraphSnapshot",
         "SiteLinkGraphNode",
         "SiteLinkGraphEdge",
+        "OpportunityGuidance",
+        "ContentGeneration",
+        "ContentGenerationAttempt",
+        "AgentTaskRun",
     }
     retired_tables = {
         "site_link_references",
         "site_link_graph_snapshots",
         "site_link_graph_nodes",
         "site_link_graph_edges",
+        "opportunity_guidance",
+        "content_generations",
+        "content_generation_attempts",
+        "agent_task_runs",
     }
     assert retired_models.isdisjoint(models.__all__)
     assert retired_tables.isdisjoint(models.Base.metadata.tables)

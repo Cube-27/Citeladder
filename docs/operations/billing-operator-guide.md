@@ -253,7 +253,7 @@ ORDER BY created_at, allocation_order, id;
 
 Verify accounting with immutable entries: grant value minus reservations plus
 releases minus debits, with refunds tied to `refund_of_id`. Typed subjects must
-match the Content, Agent, or audit parent evidence. Payment/refund receipts are
+match the Agent, Site Health crawl, or audit parent evidence. Payment/refund receipts are
 normalized and digest-bound; cumulative refunds may not exceed the payment.
 Never infer entitlement merely from a redirect, checkout callback, receipt, or
 provider dashboard—the accepted activation and resulting grants are authority.
@@ -279,8 +279,8 @@ invoice tax fields are not used to decide or allocate GST. Same-state Indian
 receipts show 9% CGST plus 9% SGST; interstate receipts show 18% IGST; eligible
 exports show zero-rated treatment and the frozen LUT reference.
 
-For model-funded work also inspect `content_generation_attempts` or
-`agent_model_attempts` for frozen route/key revisions, dispatch identity, usage
+For model-funded work also inspect `agent_model_attempts` (one row per model
+step) for frozen route/key revisions, dispatch identity, usage
 completeness, and settlement status. Customer BYOK attempts have zero platform
 credit debit. Platform-funded calls remain unavailable unless the published
 catalog contains an explicit finite AI-credit policy and the account has an

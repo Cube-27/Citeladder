@@ -1,4 +1,4 @@
-"""Read-only, workspace-authorized evidence tools for Growth Agent tasks.
+"""Read-only, workspace-authorized evidence tools shared by MCP and the Agent.
 
 Every executor here is a PROJECTION over persisted rows: no provider call, no
 recomputation, and no write (invariant 7). Each returns one of two shapes —

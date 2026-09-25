@@ -173,7 +173,7 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
     expected_secret_mappings = {
         "KEENABLE_API_KEY": "citeladder-keenable-api-key",
         "TAVILY_API_KEY": "citeladder-tavily-api-key",
-        "CONTENT_API_KEY": "citeladder-content-api-key",
+        "DEFAULT_AGENT_API_KEY": "citeladder-default-agent-api-key",
     }
     for variable, secret_id in expected_secret_mappings.items():
         assert any(f"secrets.{variable}" in value for value in references)
@@ -221,15 +221,9 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
         assert f"write_env {runtime_var}" in deploy
     assert 'has_version "$required" ||' in workflow
     assert 'has_version "$optional" ||' in workflow
-    # Content and the default agent are each a provider-neutral trio
-    # (key + url + model): neither may silently inherit a baked-in default.
-    for variable in (
-        "DEFAULT_AGENT_BASE_URL",
-        "DEFAULT_AGENT_MODEL",
-        "CONTENT_PROVIDER",
-        "CONTENT_PROVIDER_ENDPOINT",
-        "CONTENT_MODEL",
-    ):
+    # The default agent is the one application model: a provider-neutral trio
+    # (key + url + model) that may not silently inherit a baked-in default.
+    for variable in ("DEFAULT_AGENT_BASE_URL", "DEFAULT_AGENT_MODEL"):
         assert any(f"vars.{variable}" in value for value in references)
         assert f"${{{variable}:?{variable} is required}}" in deploy
         assert f"write_env {variable}" in deploy
@@ -378,7 +372,7 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
         for name, service in services.items()
         if any("app.workers." in value for value in _values(service.get("command", [])))
     ]
-    assert len(workers) == 10
+    assert len(workers) == 9
     caddy = (RUNTIME / "Caddyfile").read_text(encoding="utf-8")
     assert "trusted_proxies static __CLOUDFLARE_CIDRS__" in caddy
     tls_init = (RUNTIME / "init-postgres-tls.sh").read_text(encoding="utf-8")

@@ -17,15 +17,15 @@ positioning; [the index](README.md) routes to substantive feature documents.
 | Site Health | Acquisition, normalized facts, classifications, findings and snapshots | Persisted site evidence and change observations |
 | Integrations / Demand | Imported observations, projections and demand signals | Exact-window/source evidence |
 | Prompts / Visibility | Portfolios, frozen audits, answer artifacts and measurements | Comparable observed mentions/citations |
-| Opportunities | Ranked actions, declarations and verification observations | One action and implementation record |
-| Content | Frozen generation context, attempts and draft history | Reviewable output; never automatic business truth |
+| Opportunities | Ranked actions, target-level Actions, declarations and verification observations | One Action per target and one implementation record |
 | Commerce | Catalog projections and target-specific shelf observations | Reuses acquisition, Prompt and audit owners |
-| Growth Agent | Bounded task/tool/model attempts and explanation | Orchestrates typed persisted readers |
+| Agent | Chats, frozen run context, tool/model attempts and versioned outputs | Reviewable deliverable over shared persisted readers; never automatic business truth |
 | MCP | OAuth authorization records | Read-only access to the same owners |
 | Billing / Entitlements | Commercial evidence, grants and ledger | Admission, availability and settlement |
 
-Site Health, Content Intelligence, Demand Intelligence and Growth Agent are the
-durable product capabilities; AI Visibility is Track. Commerce reuses the same
+Site Health, Content Intelligence, Demand Intelligence and the Agent are the
+durable product capabilities; the Agent's skills deliver content creation, and
+AI Visibility is Track. Commerce reuses the same
 evidence and measurement owners rather than owning another crawler or runner.
 
 ## Evidence and action flow
@@ -37,14 +37,16 @@ derived result attributable. Persisted does not mean verified truth.
 
 Onboarding confirms business context before portfolio generation. Site Health
 and integrations acquire evidence within their configured bounds. Opportunities
-routes an action to Content using durable identifiers. Content freezes context
-and returns a draft. Only an explicit implementation declaration starts the
-Act → Verify record; later observations remain separate from that declaration.
+groups actions by target into Actions. The Agent freezes context from durable
+identifiers, reads further evidence through bounded tools and returns a
+reviewable deliverable attached to the target's Action. Only an explicit
+implementation declaration starts the Act → Verify record; later observations
+remain separate from that declaration.
 
 Command Center composes these persisted owners into Facts, evidence-labelled
 loop states and one next action. Before an audit, measurement fields remain
 unavailable. Report reads return missing state rather than building a report.
-Growth Agent and MCP reuse these projections and own no second knowledge store.
+The Agent and MCP reuse these projections and own no second knowledge store.
 
 ## Shared execution and automation
 

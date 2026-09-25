@@ -1,11 +1,17 @@
-"""Typed bounded Content handoff projected by the Opportunity owner."""
+"""Typed bounded content handoff projected by the Opportunity owner.
+
+The handoff is the evidence package an agent chat receives for an Opportunity.
+``suggested_skill_id`` names a content FORMAT from the Agent format reference.
+"""
 
 from __future__ import annotations
 
-from app.core.config.content import CONTENT_DEFAULT_SKILL, CONTENT_SKILLS
+from app.core.config.agent_skills import CONTENT_FORMAT_IDS
 from app.core.config.earned_actions import ACTION_PATH_OWNED
 from app.core.config.source_patterns import CONTENT_HANDOFF_TEMPLATE_VERSION
 from app.models.opportunity import Opportunity
+
+_DEFAULT_FORMAT = "content_page"
 
 
 def persisted_handoff(row: Opportunity) -> dict:
@@ -27,9 +33,9 @@ def project_content_handoff(row: Opportunity) -> dict:
         or CONTENT_HANDOFF_TEMPLATE_VERSION,
     }
     if persisted:
-        skill = str(persisted.get("suggested_skill_id") or CONTENT_DEFAULT_SKILL)
+        skill = str(persisted.get("suggested_skill_id") or _DEFAULT_FORMAT)
         persisted["suggested_skill_id"] = (
-            skill if skill in CONTENT_SKILLS else CONTENT_DEFAULT_SKILL
+            skill if skill in CONTENT_FORMAT_IDS else _DEFAULT_FORMAT
         )
         persisted["opportunity_id"] = str(row.id)
         persisted["snapshot_versions"] = snapshot_versions
@@ -40,7 +46,7 @@ def project_content_handoff(row: Opportunity) -> dict:
         "source_class": None,
         "canonical_domain": None,
         "suggested_role": "Content",
-        "suggested_skill_id": CONTENT_DEFAULT_SKILL,
+        "suggested_skill_id": _DEFAULT_FORMAT,
         "target_url": row.target_url,
         "target_theme": row.target_theme,
         "representative_citations": [],

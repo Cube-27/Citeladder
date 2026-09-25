@@ -1,8 +1,6 @@
-import type { Dispatch, SetStateAction } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Pressable } from '@/components/ui/pressable';
-import { Checkbox } from '@/components/ui/checkbox';
 import { sortIndicator } from '@/components/ui/sort-indicator';
 import {
   Table,
@@ -13,11 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { SearchIntelligenceRow } from '@/lib/api/search-intelligence';
-import {
-  SEARCH_HANDOFF_MAX_ROWS,
-  SEARCH_COLUMNS_BY_KIND,
-  type SearchColumn,
-} from '@/lib/config/search-intelligence';
+import { SEARCH_COLUMNS_BY_KIND, type SearchColumn } from '@/lib/config/search-intelligence';
 import { formatSearchNumber } from './search-intelligence-format';
 
 function displayValue(row: SearchIntelligenceRow, column: SearchColumn) {
@@ -31,24 +25,17 @@ function displayValue(row: SearchIntelligenceRow, column: SearchColumn) {
 export function SearchIntelligenceRowsTable({
   kind,
   rows: visibleRows,
-  selectable,
-  selectedEvidence,
-  setSelectedEvidence,
   order,
   onSort,
   onSelect,
 }: Readonly<{
   kind: string;
   rows: SearchIntelligenceRow[];
-  selectable: boolean;
-  selectedEvidence: Record<string, SearchIntelligenceRow>;
-  setSelectedEvidence: Dispatch<SetStateAction<Record<string, SearchIntelligenceRow>>>;
   order: { sort: string; direction: 'asc' | 'desc' };
   onSort: (sort: string) => void;
   onSelect: (row: SearchIntelligenceRow) => void;
 }>) {
   const columns = SEARCH_COLUMNS_BY_KIND[kind] ?? SEARCH_COLUMNS_BY_KIND.footprint;
-  const selectedCount = Object.keys(selectedEvidence).length;
   return (
     <Table
       className={
@@ -56,40 +43,12 @@ export function SearchIntelligenceRowsTable({
       }
     >
       <colgroup>
-        {selectable ? <col className="w-14" /> : null}
         {columns.map((column) => (
           <col key={column.field} className={column.numeric ? 'w-28' : 'w-48'} />
         ))}
       </colgroup>
       <TableHeader>
         <TableRow>
-          {selectable ? (
-            <TableHead className="text-center">
-              <Checkbox
-                aria-label="Select current page"
-                checked={
-                  visibleRows.length > 0 &&
-                  visibleRows.every((row) => Boolean(selectedEvidence[row.id]))
-                }
-                disabled={!visibleRows.length}
-                onCheckedChange={() =>
-                  setSelectedEvidence((current) => {
-                    const next = { ...current };
-                    if (visibleRows.every((row) => Boolean(next[row.id]))) {
-                      visibleRows.forEach((row) => {
-                        delete next[row.id];
-                      });
-                    } else {
-                      visibleRows.forEach((row) => {
-                        if (Object.keys(next).length < SEARCH_HANDOFF_MAX_ROWS) next[row.id] = row;
-                      });
-                    }
-                    return next;
-                  })
-                }
-              />
-            </TableHead>
-          ) : null}
           {columns.map((column) =>
             column.detail ? (
               <TableHead key={column.field} numeric={column.numeric}>
@@ -110,25 +69,6 @@ export function SearchIntelligenceRowsTable({
       <TableBody>
         {visibleRows.map((row) => (
           <TableRow key={row.id}>
-            {selectable ? (
-              <TableCell className="text-center">
-                <Checkbox
-                  aria-label={`Select evidence row ${row.id}`}
-                  checked={Boolean(selectedEvidence[row.id])}
-                  disabled={selectedCount >= SEARCH_HANDOFF_MAX_ROWS && !selectedEvidence[row.id]}
-                  onCheckedChange={() =>
-                    setSelectedEvidence((current) => {
-                      if (current[row.id]) {
-                        const next = { ...current };
-                        delete next[row.id];
-                        return next;
-                      }
-                      return { ...current, [row.id]: row };
-                    })
-                  }
-                />
-              </TableCell>
-            ) : null}
             {columns.map((column) => (
               <TableCell
                 key={column.field}
@@ -154,9 +94,7 @@ export function SearchIntelligenceRowsTable({
         ))}
         {!visibleRows.length ? (
           <TableRow>
-            <TableCell colSpan={columns.length + (selectable ? 1 : 0)}>
-              No saved rows match this view.
-            </TableCell>
+            <TableCell colSpan={columns.length}>No saved rows match this view.</TableCell>
           </TableRow>
         ) : null}
       </TableBody>

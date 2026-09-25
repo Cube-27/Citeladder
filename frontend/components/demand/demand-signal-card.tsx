@@ -6,7 +6,6 @@ import {
   ArrowUpRight,
   ChevronRight,
   ExternalLink,
-  FileText,
   HelpCircle,
   Sparkles,
   Split,
@@ -20,7 +19,6 @@ import { Button } from '@/components/ui/button';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { Card, CardContent } from '@/components/ui/card';
 import type { DemandSignal } from '@/lib/api/demand';
-import { demandContentHref } from '@/lib/demand/content-link';
 import {
   competingPages,
   numericMetric,
@@ -473,12 +471,6 @@ export function DemandSignalCard({
                 </ProjectLink>
               </Button>
             )}
-            <Button variant="tonal" size="sm" asChild>
-              <ProjectLink href={demandContentHref(signal)} className="inline-flex items-center">
-                <FileText className="mr-1 size-3" />
-                <span>Draft</span>
-              </ProjectLink>
-            </Button>
           </div>
         </div>
       </CardContent>

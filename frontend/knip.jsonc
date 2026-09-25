@@ -14,8 +14,6 @@
     "apps/app/vite.config.ts",
     "apps/app/src/main.tsx",
     "apps/app/worker.ts",
-    // Invoked explicitly as the real-stack content-integration Playwright entry point.
-    "e2e/content-integration.config.ts",
   ],
   "project": [
     "apps/app/**/*.{ts,tsx}",
@@ -32,9 +30,5 @@
   "ignoreDependencies": [
     // Resolved through a computed path in check-jscpd.mjs, which static analysis cannot follow.
     "jscpd",
-  ],
-  "ignoreBinaries": [
-    // External Python package manager used by the real-stack helper, not an npm dependency.
-    "uv",
   ],
 }

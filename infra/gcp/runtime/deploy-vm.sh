@@ -14,9 +14,6 @@ set -euo pipefail
 : "${SOURCE_COMMIT:?SOURCE_COMMIT is required}"
 : "${DEFAULT_AGENT_BASE_URL:?DEFAULT_AGENT_BASE_URL is required}"
 : "${DEFAULT_AGENT_MODEL:?DEFAULT_AGENT_MODEL is required}"
-: "${CONTENT_PROVIDER:?CONTENT_PROVIDER is required}"
-: "${CONTENT_PROVIDER_ENDPOINT:?CONTENT_PROVIDER_ENDPOINT is required}"
-: "${CONTENT_MODEL:?CONTENT_MODEL is required}"
 # "true" restores the single-account demo: no registration, no third-party
 # sign-up, MCP limited to DEV_LOGIN_EMAIL.
 DEMO_MODE="${DEMO_MODE:-false}"
@@ -159,7 +156,6 @@ origin_key="$(secret citeladder-cloudflare-origin-key)"
 origin_token="$(secret citeladder-worker-origin-token)"
 origin_token_previous="$(secret citeladder-worker-origin-token-previous 2>/dev/null || true)"
 agent_key="$(secret citeladder-default-agent-api-key 2>/dev/null || true)"
-content_key="$(secret citeladder-content-api-key 2>/dev/null || true)"
 keenable_key="$(secret citeladder-keenable-api-key 2>/dev/null || true)"
 tavily_key="$(secret citeladder-tavily-api-key 2>/dev/null || true)"
 # Required, not best-effort: without these Google sign-in and the GSC/GA4
@@ -230,10 +226,6 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env ENCRYPTION_KEY "$encryption_key"
   write_env REFERRAL_HASH_SALT "$referral_salt"
   write_env DEV_LOGIN_PASSWORD "$demo_password"
-  [[ -z "$content_key" ]] || write_env CONTENT_API_KEY "$content_key"
-  write_env CONTENT_PROVIDER "$CONTENT_PROVIDER"
-  write_env CONTENT_PROVIDER_ENDPOINT "$CONTENT_PROVIDER_ENDPOINT"
-  write_env CONTENT_MODEL "$CONTENT_MODEL"
   [[ -z "$agent_key" ]] || write_env DEFAULT_AGENT_API_KEY "$agent_key"
   write_env DEFAULT_AGENT_BASE_URL "$DEFAULT_AGENT_BASE_URL"
   write_env DEFAULT_AGENT_MODEL "$DEFAULT_AGENT_MODEL"
@@ -254,7 +246,7 @@ mv /opt/citeladder/ingress.env.new /opt/citeladder/ingress.env
 cd /opt/citeladder
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 stopped_services=(caddy web audit-worker audit-scheduler site-health-worker \
-  brand-discovery-worker content-worker agent-worker analytics-worker \
+  brand-discovery-worker agent-worker analytics-worker \
   queue-sweeper integration-worker integration-dispatcher)
 
 docker compose --env-file runtime.env -f compose.gcp.yml pull

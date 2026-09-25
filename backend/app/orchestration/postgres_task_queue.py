@@ -46,9 +46,9 @@ from app.models.abuse import QueueWorkspaceTurn
 if TYPE_CHECKING:
     # Type-only: the queue is generic over the concrete queue-row models (the
     # ``PostgresQueueSpec`` constraint); nothing here imports them at runtime.
+    from app.models.agent import AgentRun
     from app.models.analytics import AnalyticsTask
     from app.models.audit import AuditTask
-    from app.models.content import ContentGeneration
     from app.models.integrations import IntegrationSyncRun
     from app.models.site_health.queue import SiteCrawlTask
 
@@ -77,7 +77,7 @@ class PostgresTaskQueue[
     T: (
         "AuditTask",
         "SiteCrawlTask",
-        "ContentGeneration",
+        "AgentRun",
         "IntegrationSyncRun",
         "AnalyticsTask",
     )

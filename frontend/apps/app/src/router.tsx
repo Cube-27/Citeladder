@@ -124,22 +124,17 @@ export const appRoutes: RouteObject[] = [
             ),
           ),
           productRoute('/prompts', () =>
-            import('./product-routes-prompts-content-commerce-referrals').then(
+            import('./product-routes-prompts-commerce-referrals').then(
               ({ PromptsRouteElement }) => ({ default: PromptsRouteElement }),
             ),
           ),
-          productRoute('/content', () =>
-            import('./product-routes-prompts-content-commerce-referrals').then(
-              ({ ContentRouteElement }) => ({ default: ContentRouteElement }),
-            ),
-          ),
           productRoute('/products', () =>
-            import('./product-routes-prompts-content-commerce-referrals').then(
+            import('./product-routes-prompts-commerce-referrals').then(
               ({ ProductsRouteElement }) => ({ default: ProductsRouteElement }),
             ),
           ),
           productRoute('/ai-referrals', () =>
-            import('./product-routes-prompts-content-commerce-referrals').then(
+            import('./product-routes-prompts-commerce-referrals').then(
               ({ AiReferralsRouteElement }) => ({ default: AiReferralsRouteElement }),
             ),
           ),

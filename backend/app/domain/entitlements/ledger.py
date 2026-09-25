@@ -332,8 +332,7 @@ async def reserve_funded_task(
                 workspace_id=workspace_id,
                 audit_id=audit_id,
                 task_id=task_id,
-                content_generation_id=None,
-                agent_task_run_id=None,
+                agent_run_id=None,
                 site_crawl_id=None,
                 dispatch_key="reservation",
                 request_fingerprint=fingerprint,
@@ -395,6 +394,7 @@ async def record_billable_attempt(
     units: int = 1,
     idempotency_key: str,
     at: datetime,
+    dispatch_key: str | None = None,
 ) -> None:
     """Convert reserved units into one billable attempt (release + debit).
 
@@ -402,7 +402,9 @@ async def record_billable_attempt(
     ``(task_id, attempt)`` debit index makes retry accounting idempotent: a
     repeat call for an already-billed attempt returns without writing.
     A timed-out provider call bills exactly like any other — outcome is not
-    a parameter of this contract.
+    a parameter of this contract. ``dispatch_key`` defaults to the attempt;
+    a subject that holds one reservation per dispatch (metered usage) passes
+    its own so each dispatch's debit stays distinct.
     """
     if units <= 0 or attempt <= 0:
         raise LedgerError(
@@ -456,10 +458,9 @@ async def record_billable_attempt(
             workspace_id=base.workspace_id,
             audit_id=base.audit_id,
             task_id=base.task_id,
-            content_generation_id=base.content_generation_id,
-            agent_task_run_id=base.agent_task_run_id,
+            agent_run_id=base.agent_run_id,
             site_crawl_id=base.site_crawl_id,
-            dispatch_key=str(attempt),
+            dispatch_key=dispatch_key or str(attempt),
             request_fingerprint=settlement_fingerprint,
             allocation_order=index,
             refund_of_id=None,
@@ -568,8 +569,7 @@ async def release_unused_reservation(
                 workspace_id=base.workspace_id,
                 audit_id=base.audit_id,
                 task_id=base.task_id,
-                content_generation_id=base.content_generation_id,
-                agent_task_run_id=base.agent_task_run_id,
+                agent_run_id=base.agent_run_id,
                 site_crawl_id=base.site_crawl_id,
                 dispatch_key="release",
                 request_fingerprint=_fingerprint(

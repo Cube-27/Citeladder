@@ -32,7 +32,7 @@ type ProviderRouteInput = {
 };
 
 export type ProviderAppRouteInput = {
-  feature: 'content' | 'growth_agent';
+  feature: 'growth_agent';
   model: string;
   api_base_url: string;
   protocol?: 'openai_chat';

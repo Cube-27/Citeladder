@@ -111,7 +111,7 @@ confirmed offerings.
 - Offering harvest is bounded HTML evidence, not a sitemap or JavaScript
   rendering service. Missing evidence must not be padded with generic topics.
 - Confirmation authorizes completion, not publishing, an external mutation or
-  an automatic crawl. Growth Agent does not maintain a second company memory.
+  an automatic crawl. The Agent does not maintain a second company memory.
 
 The [completion tests](../backend/tests/component/test_brand_discovery_completion.py)
 cover atomicity, idempotency, isolation, recovery and the no-crawl boundary.

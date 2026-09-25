@@ -26,6 +26,10 @@ from app.api.deps import (
     require_active_workspace_run,
     require_active_workspace_write,
 )
+from app.core.config.actions import (
+    ACTION_LIST_DEFAULT_LIMIT,
+    ACTION_LIST_MAX_LIMIT,
+)
 from app.core.config.errors import (
     CODE_INVALID_CURSOR,
     CODE_NOT_FOUND,
@@ -34,12 +38,7 @@ from app.core.config.errors import (
 from app.core.config.opportunities import (
     CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT,
     CODE_IMPLEMENTATION_TARGET_CONFLICT,
-    CODE_OPPORTUNITY_GUIDANCE_IDEMPOTENCY_CONFLICT,
-    CODE_OPPORTUNITY_GUIDANCE_UNAVAILABLE,
     CODE_OPPORTUNITY_ORDER_CONFLICT,
-    GUIDANCE_HISTORY_DEFAULT_LIMIT,
-    GUIDANCE_HISTORY_MAX_LIMIT,
-    GUIDANCE_IDEMPOTENCY_KEY_MAX_LEN,
     IMPLEMENTATION_EVENT_DEFAULT_LIMIT,
     IMPLEMENTATION_EVENT_MAX_LIMIT,
     IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN,
@@ -48,9 +47,9 @@ from app.core.config.opportunities import (
 )
 from app.core.errors import ApiException
 from app.domain.opportunities import (
+    actions,
     commands,
     export,
-    guidance,
     history,
     queries,
     recompute,
@@ -58,10 +57,13 @@ from app.domain.opportunities import (
 from app.domain.opportunities import (
     summary as summary_service,
 )
+from app.domain.opportunities.action_schemas import (
+    ActionDetail,
+    ActionItem,
+    ActionsPage,
+)
 from app.domain.opportunities.errors import (
     InvalidCursorError,
-    OpportunityGuidanceIdempotencyConflictError,
-    OpportunityGuidanceUnavailableError,
     OpportunityNotFoundError,
     OpportunityOrderConflictError,
     OpportunitySupersededError,
@@ -77,14 +79,13 @@ from app.domain.opportunities.implementation_events import (
     list_implementation_events,
     list_verification_events,
 )
+from app.domain.opportunities.projection import project_item
 from app.domain.opportunities.schemas import (
     ImplementationEventCreate,
     ImplementationEventsPage,
     ImplementationEventView,
     OpportunitiesPage,
     OpportunityDetail,
-    OpportunityGuidanceHistory,
-    OpportunityGuidanceItem,
     OpportunityHistoryResponse,
     OpportunityItem,
     OpportunityOrderResponse,
@@ -142,7 +143,6 @@ def _implementation_view(
         opportunity_snapshot_id=row.opportunity_snapshot_id,
         target_site_url_ids=list(row.target_site_url_ids or []),
         target_external_url=row.target_external_url,
-        generation_id=row.generation_id,
         declared_implemented_at=row.declared_implemented_at,
         expected_checks=list(row.expected_checks or []),
         state=latest.observation_kind if latest is not None else "declared",
@@ -169,22 +169,6 @@ def _bad_cursor(exc: InvalidCursorError) -> ApiException:
 def _superseded(exc: OpportunitySupersededError) -> ApiException:
     # Coded dialect: the legacy ``detail`` dict keeps its exact shape (WS-A A1).
     return ApiException.coded(status.HTTP_409_CONFLICT, exc.code, str(exc))
-
-
-def _guidance_unavailable(exc: OpportunityGuidanceUnavailableError) -> ApiException:
-    return ApiException(
-        status.HTTP_403_FORBIDDEN, CODE_OPPORTUNITY_GUIDANCE_UNAVAILABLE, str(exc)
-    )
-
-
-def _guidance_conflict(
-    exc: OpportunityGuidanceIdempotencyConflictError,
-) -> ApiException:
-    return ApiException(
-        status.HTTP_409_CONFLICT,
-        CODE_OPPORTUNITY_GUIDANCE_IDEMPOTENCY_CONFLICT,
-        str(exc),
-    )
 
 
 # =========================================================================
@@ -316,7 +300,6 @@ async def create_implementation_event_endpoint(
             declaration=ImplementationDeclaration(
                 opportunity_id=payload.opportunity_id,
                 target_site_url_ids=payload.target_site_url_ids,
-                generation_id=payload.generation_id,
                 declared_implemented_at=payload.declared_implemented_at,
                 expected_checks=[
                     item.model_dump(mode="json") for item in payload.expected_checks
@@ -481,82 +464,54 @@ async def update_order_endpoint(
 
 
 # =========================================================================
-# Development-only tailored guidance, persisted as immutable versions
+# Actions (one unit of work per target over the live Opportunity set)
 # =========================================================================
-@router.post(
-    "/opportunities/{opportunity_id}/guidance",
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_guidance_endpoint(
-    opportunity_id: uuid.UUID,
-    ctx: _RunDep,
-    session: _SessionDep,
-    idempotency_key: Annotated[
-        str | None,
-        Header(alias="Idempotency-Key", max_length=GUIDANCE_IDEMPOTENCY_KEY_MAX_LEN),
-    ] = None,
-) -> OpportunityGuidanceItem:
-    try:
-        row, _created = await guidance.create_guidance(
-            session,
-            workspace_id=ctx.workspace_id,
-            opportunity_id=opportunity_id,
-            idempotency_key=(idempotency_key or "").strip(),
-        )
-    except OpportunityNotFoundError as exc:
-        raise _not_found(exc) from exc
-    except OpportunityValidationError as exc:
-        raise _validation(exc) from exc
-    except OpportunityGuidanceUnavailableError as exc:
-        raise _guidance_unavailable(exc) from exc
-    except OpportunityGuidanceIdempotencyConflictError as exc:
-        raise _guidance_conflict(exc) from exc
-    return OpportunityGuidanceItem.model_validate(guidance.project_guidance(row))
-
-
-@router.get(
-    "/opportunities/{opportunity_id}/guidance",
-)
-async def get_latest_guidance_endpoint(
-    opportunity_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
-) -> OpportunityGuidanceItem | None:
-    try:
-        row = await guidance.get_latest_guidance(
-            session, workspace_id=ctx.workspace_id, opportunity_id=opportunity_id
-        )
-    except OpportunityNotFoundError as exc:
-        raise _not_found(exc) from exc
-    except OpportunityGuidanceUnavailableError as exc:
-        raise _guidance_unavailable(exc) from exc
-    if row is None:
-        return None
-    return OpportunityGuidanceItem.model_validate(guidance.project_guidance(row))
-
-
-@router.get(
-    "/opportunities/{opportunity_id}/guidance/history",
-)
-async def get_guidance_history_endpoint(
-    opportunity_id: uuid.UUID,
+@router.get("/projects/{project_id}/actions")
+async def list_actions_endpoint(
+    project_id: uuid.UUID,
     ctx: _WorkspaceDep,
     session: _SessionDep,
     limit: Annotated[
-        int, Query(ge=1, le=GUIDANCE_HISTORY_MAX_LIMIT)
-    ] = GUIDANCE_HISTORY_DEFAULT_LIMIT,
-) -> OpportunityGuidanceHistory:
+        int, Query(ge=1, le=ACTION_LIST_MAX_LIMIT)
+    ] = ACTION_LIST_DEFAULT_LIMIT,
+    cursor: Annotated[str | None, Query()] = None,
+) -> ActionsPage:
     try:
-        rows = await guidance.list_guidance_history(
+        rows, next_cursor = await actions.list_actions(
             session,
             workspace_id=ctx.workspace_id,
-            opportunity_id=opportunity_id,
+            project_id=project_id,
             limit=limit,
+            cursor=cursor,
         )
     except OpportunityNotFoundError as exc:
         raise _not_found(exc) from exc
-    except OpportunityGuidanceUnavailableError as exc:
-        raise _guidance_unavailable(exc) from exc
-    return OpportunityGuidanceHistory.model_validate(
-        {"items": [guidance.project_guidance(row) for row in rows]}
+    except InvalidCursorError as exc:
+        raise _bad_cursor(exc) from exc
+    return ActionsPage(
+        items=[
+            ActionItem.model_validate(actions.action_projection(row)) for row in rows
+        ],
+        next_cursor=next_cursor,
+    )
+
+
+@router.get("/actions/{action_id}")
+async def get_action_endpoint(
+    action_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> ActionDetail:
+    try:
+        action, members = await actions.get_action(
+            session, workspace_id=ctx.workspace_id, action_id=action_id
+        )
+    except OpportunityNotFoundError as exc:
+        raise _not_found(exc) from exc
+    return ActionDetail.model_validate(
+        {
+            **actions.action_projection(action),
+            "diagnosis": action.diagnosis or {},
+            "members": [project_item(member) for member in members],
+        }
     )
 
 

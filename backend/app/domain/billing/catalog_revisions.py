@@ -178,7 +178,7 @@ class AiCreditRatePayload(BaseModel):
     """One explicit finite credit rate for an exact app-model route."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
-    feature: Literal["content", "growth_agent"]
+    feature: Literal["growth_agent"]
     model: str = Field(min_length=1, max_length=255)
     input_credits_per_million: int = Field(ge=0)
     cached_input_credits_per_million: int = Field(ge=0)

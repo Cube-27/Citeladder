@@ -85,7 +85,7 @@ const parameterNames = (schema: { properties?: Record<string, unknown> }) =>
           <section id="tools" class="border-border-subtle scroll-mt-24 border-t pt-8">
             <h2 class="website-feature-heading text-foreground">Data and tools</h2>
             <div class="website-body text-muted mt-4 grid max-w-4xl gap-4">
-              <p>This reference is generated from the registered server metadata for release <code>{toolReference.server_version}</code>. Every listed tool is read-only. <code>list_skills</code> returns native format and capability metadata; it does not distribute instruction bodies.</p>
+              <p>This reference is generated from the registered server metadata for release <code>{toolReference.server_version}</code>. Every listed tool is read-only.</p>
               <div class="border-border-subtle divide-border-subtle divide-y rounded-[var(--radius-control)] border">
                 {toolReference.tools.map((tool) => (
                   <div class="grid gap-2 p-4 sm:grid-cols-[15rem_1fr] sm:gap-5">

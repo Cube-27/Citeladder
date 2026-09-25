@@ -45,11 +45,11 @@ registry or migration history.
 ## Evidence and migrations
 
 [Invariants](docs/invariants.md) own immutability, provenance, unknown states,
-authorization, bounded generation and approval boundaries. [Content](docs/content-generation.md)
-returns reviewable drafts, not automatically validated facts or published content.
+authorization, bounded generation and approval boundaries. The [Agent](docs/agents.md)
+returns reviewable deliverables, not automatically validated facts or published content.
 Raw chat and generated bodies are not approved memory; promotion requires its
 explicit, audited transition. Grounding instructions do not certify factual
-correctness; the Content owner defines the review boundary.
+correctness; the Agent owner defines the review boundary.
 
 The [single-baseline migration policy](docs/invariants.md#17-the-migration-baseline-remains-singular)
 remains in force. Follow [the migration procedure](docs/DEVELOPMENT.md#migrations-single-greenfield-baseline)

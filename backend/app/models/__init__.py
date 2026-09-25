@@ -8,7 +8,16 @@ from __future__ import annotations
 
 from app.core.database import Base
 from app.models.abuse import QueueWorkspaceTurn, UsageWindow
-from app.models.agent import AgentModelAttempt, AgentTaskRun, AgentToolAttempt
+from app.models.agent import (
+    AgentChat,
+    AgentInstructionRevision,
+    AgentMessage,
+    AgentModelAttempt,
+    AgentOutput,
+    AgentOutputRevision,
+    AgentRun,
+    AgentToolAttempt,
+)
 from app.models.analysis import (
     BrandMention,
     Citation,
@@ -77,10 +86,6 @@ from app.models.commerce import (
     CommerceRecommendationObservation,
     CommerceShelfSnapshot,
 )
-from app.models.content import (
-    ContentGeneration,
-    ContentGenerationAttempt,
-)
 from app.models.content_differentiation import (
     ContentDifferentiationCandidate,
     ContentDifferentiationReport,
@@ -110,8 +115,8 @@ from app.models.mcp import (
     McpOAuthGrant,
 )
 from app.models.opportunity import (
+    Action,
     Opportunity,
-    OpportunityGuidance,
     OpportunityImplementationEvent,
     OpportunityOrder,
     OpportunitySnapshot,
@@ -175,8 +180,14 @@ from app.models.workspace import (
 
 __all__ = [
     "AccountGrant",
+    "Action",
+    "AgentChat",
+    "AgentInstructionRevision",
+    "AgentMessage",
     "AgentModelAttempt",
-    "AgentTaskRun",
+    "AgentOutput",
+    "AgentOutputRevision",
+    "AgentRun",
     "AgentToolAttempt",
     "AiReferralsSnapshot",
     "AioEntityLink",
@@ -222,8 +233,6 @@ __all__ = [
     "ConsumableLedger",
     "ContentDifferentiationCandidate",
     "ContentDifferentiationReport",
-    "ContentGeneration",
-    "ContentGenerationAttempt",
     "DemandSignal",
     "DemandSnapshot",
     "DiscoveryModelConfig",
@@ -248,7 +257,6 @@ __all__ = [
     "MonitoredSiteUrl",
     "ObservedEntityCandidate",
     "Opportunity",
-    "OpportunityGuidance",
     "OpportunityImplementationEvent",
     "OpportunityOrder",
     "OpportunitySnapshot",

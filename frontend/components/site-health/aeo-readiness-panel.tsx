@@ -24,11 +24,6 @@ import {
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { ReadinessCheck, ReadinessDimension } from '@/lib/api/types';
 import { formatScore, PLACEHOLDER } from '@/lib/site-health/status';
-import {
-  contentHandoffHref,
-  remediationRoute,
-  type RemediationRoute,
-} from '@/lib/site-health/remediation';
 import { textRole } from '@/components/ui/typography';
 import { Stack } from '@/components/ui/layout';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -127,12 +122,7 @@ export function AeoReadinessPanel({
     <div className="grid min-w-0 gap-4" data-testid="aeo-readiness">
       {data.limitations.length > 0 ? <Alert tone="info">{data.limitations.join(' ')}</Alert> : null}
       <ReadinessLedger dimensions={data.dimensions} onOpen={setDetailKey} />
-      <DimensionDrawer
-        dimension={selected}
-        crawlId={crawlId}
-        projectId={projectId}
-        onClose={() => setDetailKey(null)}
-      />
+      <DimensionDrawer dimension={selected} crawlId={crawlId} onClose={() => setDetailKey(null)} />
     </div>
   );
 }
@@ -213,12 +203,10 @@ function ReadinessLedger({
 function DimensionDrawer({
   dimension,
   crawlId,
-  projectId,
   onClose,
 }: Readonly<{
   dimension: ReadinessDimension | null;
   crawlId: string;
-  projectId: string;
   onClose: () => void;
 }>) {
   return (
@@ -232,7 +220,7 @@ function DimensionDrawer({
       {dimension ? (
         <div className="grid gap-[var(--workspace-gap)]">
           <CheckLedger checks={dimension.checks} />
-          <FailingPages dimension={dimension} crawlId={crawlId} projectId={projectId} />
+          <FailingPages dimension={dimension} crawlId={crawlId} />
         </div>
       ) : null}
     </Drawer>
@@ -314,8 +302,7 @@ function QualityCell({
 function FailingPages({
   dimension,
   crawlId,
-  projectId,
-}: Readonly<{ dimension: ReadinessDimension; crawlId: string; projectId: string }>) {
+}: Readonly<{ dimension: ReadinessDimension; crawlId: string }>) {
   const shown = dimension.evidence_pages.length;
   const total = dimension.failing_page_count;
   return (
@@ -343,12 +330,7 @@ function FailingPages({
                 </li>
               ))}
             </ul>
-            <PageActions
-              projectId={projectId}
-              crawlId={crawlId}
-              page={page}
-              dimensionLabel={dimension.label}
-            />
+            <PageActions page={page} dimensionLabel={dimension.label} />
           </li>
         ))}
       </ul>
@@ -356,54 +338,18 @@ function FailingPages({
   );
 }
 
-/**
- * The next action for one failing page, whatever kind of failure it is.
- *
- * Previously a single "Improve in Content" button appeared whenever any failed
- * check carried the catalog's `content_addressable` flag, and it sent EVERY
- * flagged rule id in the pillar to an endpoint that accepts only title and
- * meta-description gaps — so every button 404'd. The backend now routes each
- * check, the Content link carries only what Content can write, and everything
- * else gets the prompt.
- */
+/** The next action for one failing page: the prompt for its failing checks. */
 function PageActions({
-  projectId,
-  crawlId,
   page,
   dimensionLabel,
 }: Readonly<{
-  projectId: string;
-  crawlId: string;
   page: ReadinessDimension['evidence_pages'][number];
   dimensionLabel: string;
 }>) {
-  // The SERVER routes every check, from the same catalog the hand-off endpoint
-  // authorizes against — so the panel cannot offer a draft that 404s, and the
-  // three buckets partition the failed checks with nothing falling through.
-  const byRoute = (route: RemediationRoute) =>
-    page.failed_checks.filter((check) => remediationRoute(check.remediation_route) === route);
-  const contentChecks = byRoute('content');
-  const href = contentHandoffHref({
-    projectId,
-    crawlId,
-    siteUrlId: page.site_url_id,
-    ruleIds: contentChecks.map((check) => check.rule_id),
-  });
-  // Everything Content cannot write gets the prompt instead. There is no
-  // per-row Growth Agent launcher here: the screen already has ONE agent entry
-  // point, and repeating it on every failing page turned a considered action
-  // into chrome. It also fires from inside this open drawer into a second
-  // modal drawer, which was never verified to work.
-  const promptChecks = page.failed_checks.filter(
-    (check) => remediationRoute(check.remediation_route) !== 'content',
-  );
+  // Every failing check gets the prompt a developer or assistant can act on.
+  const promptChecks = page.failed_checks;
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {href ? (
-        <Button asChild size="sm" className="justify-self-start">
-          <ProjectLink href={href}>Improve with Content</ProjectLink>
-        </Button>
-      ) : null}
       {promptChecks.length > 0 ? (
         <CopyButton
           value={fixPrompt(dimensionLabel, page.normalized_url, promptChecks)}

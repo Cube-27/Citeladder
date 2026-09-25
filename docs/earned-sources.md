@@ -9,7 +9,7 @@ pages within a bounded budget, records who appears on each of them with the
 passage proving it, and turns a qualified gap into one named action on one
 page. [Visibility](visibility-prompt.md) owns the answers and their citations.
 [Opportunities](opportunities.md) owns ranking, declaration and verification.
-[Content](content-generation.md) owns the draft a brief produces.
+The [Agent](agents.md) owns the deliverable a brief produces.
 [Site Health](site-health.md) owns everything about pages we do own, and is
 not involved here.
 
@@ -124,7 +124,7 @@ evidence, labelled as such, and never scores.
 
 ## Brief, declaration and the retired rule
 
-The brief reaches Content through the existing handoff on
+The brief reaches the Agent's context through the existing handoff on
 `evidence.content_handoff`, and its output type follows the page format rather
 than defaulting to an article. It carries the snapshot, the quoted passages,
 the extraction coverage and its own limitations; it cannot manufacture

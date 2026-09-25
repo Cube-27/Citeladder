@@ -4,7 +4,7 @@
 implementation scope and historical plan remain below.
 
 [Onboarding](../onboarding.md), [Prompts and Visibility](../visibility-prompt.md),
-[Content](../content-generation.md), and [AGENTS.md](../../AGENTS.md) remain the
+[Agent](../agents.md), and [AGENTS.md](../../AGENTS.md) remain the
 owners of shipped contracts and engineering constraints.
 
 ## Summary and plan registration

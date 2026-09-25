@@ -24,7 +24,6 @@ from app.domain.opportunities.common import (
     _LIST_SCOPE,
     _OPPORTUNITY_NOT_FOUND,
     _clamp_limit,
-    _iso,
     _require_project,
 )
 from app.domain.opportunities.errors import (
@@ -40,7 +39,6 @@ from app.domain.site_health.normalization import (
     decode_keyset_cursor,
     encode_keyset_cursor,
 )
-from app.models.content import ContentGeneration
 from app.models.opportunity import Opportunity, OpportunityOrder
 
 # Sorted once: a frozen catalog derivation, not a per-query computation.
@@ -279,29 +277,4 @@ async def get_opportunity(
     if row is None:
         raise OpportunityNotFoundError(_OPPORTUNITY_NOT_FOUND)
     detail = project_detail(row)
-    generations = list(
-        (
-            await session.scalars(
-                select(ContentGeneration)
-                .where(
-                    ContentGeneration.workspace_id == workspace_id,
-                    ContentGeneration.project_id == row.project_id,
-                    ContentGeneration.opportunity_id == row.id,
-                )
-                .order_by(
-                    ContentGeneration.created_at.desc(), ContentGeneration.id.desc()
-                )
-                .limit(20)
-            )
-        ).all()
-    )
-    detail["linked_generations"] = [
-        {
-            "id": str(item.id),
-            "status": item.status,
-            "skill_id": item.skill_id,
-            "created_at": _iso(item.created_at),
-        }
-        for item in generations
-    ]
     return detail

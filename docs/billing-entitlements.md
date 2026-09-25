@@ -86,9 +86,11 @@ explicit-target, reasoned, dry-run-reviewed administrative operations.
 ## Metered execution
 
 [Metering](../backend/app/domain/entitlements/metered.py) and the
-[ledger](../backend/app/domain/entitlements/ledger.py) share audit, Content and
-Agent accounting. Reservation, release, debit and refund retain typed parent
-identity, allocation order, fingerprints and dispatch provenance. Commit the
+[ledger](../backend/app/domain/entitlements/ledger.py) share audit, Agent and
+Site Health accounting. Reservation, release, debit and refund retain typed parent
+identity, allocation order, fingerprints and dispatch provenance. An Agent run
+holds one reservation per model step, so each debit carries that step's
+dispatch key. Commit the
 hold and attempt evidence before provider I/O; settle through the owning
 transaction. Successful-answer charging and actual provider cost are distinct
 quantities. Finite persisted rate/cap policy bounds funded work and unknown

@@ -36,7 +36,7 @@ uv run python -m app.workers.audit_worker
 uv run python -m app.workers.audit_scheduler
 uv run python -m app.workers.site_health_worker
 uv run python -m app.workers.brand_discovery_worker
-uv run python -m app.workers.content_worker
+uv run python -m app.workers.agent_worker
 uv run python -m app.workers.integration_worker
 uv run python -m app.workers.integration_dispatcher
 uv run python -m app.workers.analytics_worker
@@ -212,11 +212,8 @@ pnpm test:e2e         # Playwright (needs a browser + a running stack)
 ```
 
 The default Playwright suite uses mocked browser fixtures. Its `app` project
-targets Vite on 3100; its `marketing` project targets Astro on 3101. The real-stack Content integration has a separate
-configuration and lifecycle: run it explicitly with
-`pnpm exec playwright test --config e2e/content-integration.config.ts`.
-Neither mode is evidence of live provider acceptance; those checks remain
-explicit release work.
+targets Vite on 3100; its `marketing` project targets Astro on 3101. It is not
+evidence of live provider acceptance; those checks remain explicit release work.
 
 ### Repository validation harness
 
@@ -244,7 +241,6 @@ Run focused behavior tests directly with the native runner: pytest from
 Redirect output to a log in the worktree Git directory and inspect only failures.
 Choose tests from the behavior at risk; there is no local test mapping or retry
 state. Do not overlap checks/tests or rerun successful evidence merely to commit.
-Provider-backed Content browser integration remains an explicit separate workflow.
 
 GitHub CI has one cheap classifier before the implementation jobs. On an
 initial pull-request run it classifies the complete PR diff. A later push uses

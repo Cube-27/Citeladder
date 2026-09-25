@@ -212,27 +212,8 @@ services:
     healthcheck:
       disable: true
 
-  # Content-generation worker: claims content_generations queue rows and calls
-  # the separately configured content provider.
-  content-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file:
-      - ${CITELADDER_ENV_FILE:-.env}
-    environment: *backend_env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: ["python", "-m", "app.workers.content_worker"]
-    healthcheck:
-      disable: true
-
-  # Growth Agent reconciler: advances runs that are waiting on existing
-  # content/audit queues. It performs no provider I/O and owns no second queue.
+  # Agent worker: claims agent runs (one chat turn each) and runs the bounded
+  # tool-use loop over the shared read-tool registry.
   agent-worker:
     build:
       context: .

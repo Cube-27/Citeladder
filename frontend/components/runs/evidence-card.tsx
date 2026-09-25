@@ -11,7 +11,7 @@ import type { ExecutionEvidence } from '@/lib/api/types';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 import { cn } from '@/lib/utils';
 
-import { ContentMarkdown } from '@/lib/content/markdown';
+import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { panelClasses } from '@/components/ui/panel';
 import { ledgerClasses } from '@/components/ui/workspace';
 

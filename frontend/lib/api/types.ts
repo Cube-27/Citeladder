@@ -96,12 +96,6 @@ import type {
   siteIssueSchema,
   siteIssuesPageSchema,
   siteScoreSummarySchema,
-  // Content
-  contentGenerationDetailSchema,
-  contentGenerationListItemSchema,
-  contentGenerationStatusSchema,
-  contentContextPreviewSchema,
-  contentFeedbackReasonSchema,
   // Opportunities
   opportunitiesPageSchema,
   implementationEventSchema,
@@ -207,13 +201,6 @@ export type ChangesPage = z.infer<typeof changesPageSchema>;
 export type VisibilityTrendPoint = z.infer<typeof visibilityTrendPointSchema>;
 export type VisibilityExecutionEvidence = z.infer<typeof visibilityExecutionEvidenceSchema>;
 export type VisibilityEvidenceResponse = z.infer<typeof visibilityEvidenceResponseSchema>;
-
-// --- Content ---
-export type ContentGenerationStatus = z.infer<typeof contentGenerationStatusSchema>;
-export type ContentContextPreview = z.infer<typeof contentContextPreviewSchema>;
-export type ContentFeedbackReason = z.infer<typeof contentFeedbackReasonSchema>;
-export type ContentGenerationListItem = z.infer<typeof contentGenerationListItemSchema>;
-export type ContentGenerationDetail = z.infer<typeof contentGenerationDetailSchema>;
 
 // --- Opportunities ---
 export type OpportunityType = z.infer<typeof opportunityTypeSchema>;

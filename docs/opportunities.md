@@ -4,7 +4,8 @@
 
 Opportunities is the single persisted cross-system action owner. It connects
 Site Health findings, demand observations and answer-engine evidence to ranked
-actions and typed Content handoffs. It distinguishes a workflow status from
+actions, groups them into target-level Actions and projects the typed evidence
+handoff the [Agent](agents.md) receives. It distinguishes a workflow status from
 a user's declaration that an external change was implemented, and both from
 subsequent observed evidence. It cannot establish causation.
 
@@ -30,8 +31,9 @@ gap action over the same scope; it never creates a duplicate action or asserts
 causation. Anchor diagnostics and topical outliers do not promote by default.
 
 Source routing distinguishes owned and earned actions and exposes the persisted
-source mix. The [Content handoff](../backend/app/domain/opportunities/content_handoff.py)
-projects target IDs, citations, limitations, coverage and suggested skill.
+source mix. The [content handoff](../backend/app/domain/opportunities/content_handoff.py)
+projects target IDs, citations, limitations, coverage and a suggested content
+format for the Agent's context.
 
 Earned actions are keyed on one inspected page, not on a publisher domain.
 `earned_page_acquire_listing`, `earned_page_correct_listing`,
@@ -47,13 +49,32 @@ publisher page and never an owned `SiteUrl`.
 
 The [screen](../frontend/components/opportunities/opportunities-screen.tsx)
 renders that contract; it never reclassifies domains or fabricates task prose.
-A successful Content generation may link back without declaring implementation.
+
+## Actions
+
+An [Action](../backend/app/domain/opportunities/actions.py) is the unit of work
+over this store: the live Opportunities that share one target (an owned, earned
+or planned page, a product or category, a Search Console query or a visibility
+prompt), plus any Agent work on that target. Recompute re-derives every Action
+inside the same transaction and project lock as the snapshot it describes, so
+members, priority and diagnosis always match that snapshot. Grouping,
+convergence across evidence families, priority and the deterministic diagnosis
+(approach and recommended skill) are pure functions of the members under
+[Action policy](../backend/app/core/config/actions.py), stamped with their
+versions. A model does not score or diagnose an Action.
+
+An Action's identity and origin never change. When no live Opportunity targets
+it any more, the row keeps its identity with its evidence cleared. The Agent
+attaches a targeted chat to the existing Action, or creates one only for a page
+or planned-page target. `/api/v1/projects/{project_id}/actions` and
+`/api/v1/actions/{action_id}` are workspace-authorized persisted reads. Workflow
+status is still recorded on each Opportunity; moving it onto Actions happens
+with the Agent workspace UI.
 
 ## Explicit implementation declaration
 
 [Implementation events](../backend/app/domain/opportunities/implementation_events.py)
-authorize the project, Opportunity, target pages and optional successful
-generation. The server supplies applicable expected checks; a caller-supplied
+authorize the project, Opportunity and target pages. The server supplies applicable expected checks; a caller-supplied
 set is rejected outright, because a declaration that chose its own expectation
 could declare itself verified. An idempotent declaration freezes the targets,
 expected checks and baseline evidence. Same-key conflicting input is rejected.
@@ -117,18 +138,17 @@ path and a selected Opportunity UUID. Defaults are omitted; a committed filter
 change resets the local cursor and closes detail. Direct `selected` links load
 the authorized detail independently of the visible page. The historical
 `opportunity` and `opportunity_id` parameters are accepted only as inbound
-aliases and replaced with the canonical spelling. Overview, Top Insights, and
-Content return links emit `selected` for their Opportunities destination.
+aliases and replaced with the canonical spelling. Overview and Top Insights
+links emit `selected` for their Opportunities destination.
 
 Declaration and verification rows are append-only. Deleting their owning
 workspace/project follows the baseline cascade; nullable crawl/audit references
-survive source retention through SET NULL. Content history actions retain
-attempt provenance and the declaration's nullable generation relationship.
+survive source retention through SET NULL.
 
 [Configuration](../backend/app/core/config/opportunities.py) owns tunable
 ranking and verification policy;
 [placement configuration](../backend/app/core/config/placement.py) owns the
-expected-change vocabulary, the check states and the recheck schedule. [Content](content-generation.md),
+expected-change vocabulary, the check states and the recheck schedule.
 [Site Health](site-health.md), [Demand](integrations-traffic-analytics.md) and
 [Visibility](visibility-prompt.md) remain the source authorities.
 [Verification-result tests](../backend/tests/unit/test_opportunity_verification_result.py)

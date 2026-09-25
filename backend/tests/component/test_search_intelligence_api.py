@@ -13,8 +13,8 @@ from sqlalchemy import select
 from app.connectors.search_intelligence_dataforseo import ResearchResponse
 from app.core.config.dataforseo import pack_credential
 from app.core.security import encrypt_secret
-from app.domain.content.schemas import SearchIntelligenceReference
-from app.domain.content.search_intelligence_context import (
+from app.domain.agent.context_refs import SearchIntelligenceReference
+from app.domain.agent.search_intelligence_context import (
     SearchIntelligenceEvidenceNotFound,
     search_intelligence_context,
 )
