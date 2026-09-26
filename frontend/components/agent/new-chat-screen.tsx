@@ -1,12 +1,13 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { Composer } from '@/components/agent/composer';
 import { SkillPicker } from '@/components/agent/skill-picker';
+import { useCreateChat } from '@/components/agent/use-chat-turns';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
@@ -15,8 +16,6 @@ import { Stack } from '@/components/ui/layout';
 import { panelClasses } from '@/components/ui/panel';
 import { SectionTitle, textRole } from '@/components/ui/typography';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
-import { agentWriteFailure } from '@/lib/agent/errors';
-import { useRequestKey } from '@/lib/agent/idempotency';
 import {
   agentHandoffHref,
   contextChips,
@@ -25,8 +24,6 @@ import {
 } from '@/lib/agent/handoff';
 import { approachLabel, targetKindLabel } from '@/lib/agent/vocabulary';
 import { actionsQueries, type Action } from '@/lib/api/actions';
-import { agentMutations } from '@/lib/api/agent';
-import { queryKeys } from '@/lib/api/query-keys';
 import { AGENT_TOP_ACTIONS } from '@/lib/config/agent';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -72,17 +69,10 @@ function NewChat({
   const access = useAgentAccess();
   const navigate = useNavigate();
   const projectHref = useProjectHref();
-  const queryClient = useQueryClient();
-  const requestKey = useRequestKey();
-  const create = useMutation({
-    ...agentMutations.createChat(workspaceId),
-    onSuccess: (accepted) => {
-      requestKey.accepted();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.agent.chatLists(projectId) });
-      navigate(projectHref(`/agent/chats/${accepted.chat_id}`));
-    },
-  });
-  const failure = create.isError ? agentWriteFailure(create.error) : null;
+  const create = useCreateChat(workspaceId, projectId, (chatId) =>
+    navigate(projectHref(`/agent/chats/${chatId}`)),
+  );
+  const failure = create.failure;
   // Shares AttachedAction's cache entry. An Action that failed to load is
   // dropped, as that notice promises, rather than failing the whole chat.
   const attached = useQuery({
@@ -90,15 +80,13 @@ function NewChat({
     enabled: Boolean(handoff.actionId),
   });
 
-  const submit = () => {
-    const input = {
-      message: message.trim(),
-      skill_id: skillId ?? undefined,
-      action_id: attached.isError ? undefined : handoff.actionId,
+  const submit = () =>
+    create.start({
+      message,
+      skillId,
+      actionId: attached.isError ? undefined : handoff.actionId,
       context,
-    };
-    create.mutate({ projectId, idempotencyKey: requestKey.keyFor({ projectId, input }), input });
-  };
+    });
 
   return (
     <PageShell measure="workflow">
@@ -114,7 +102,7 @@ function NewChat({
           value={message}
           onChange={setMessage}
           onSubmit={submit}
-          pending={create.isPending}
+          pending={create.pending}
           disabled={!access.canSend}
           placeholder="Ask a question or describe the work you need."
           chips={contextChips(context)}
