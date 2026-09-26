@@ -15,6 +15,7 @@ from app.core.config.site_health_contracts import (
     SEVERITY_LOW,
 )
 from app.core.config.site_health_rule_types import (
+    FINDING_CLASS_ADVISORY,
     FINDING_CLASS_DIAGNOSTIC,
     RULE_SCOPE_SITE,
     SCORE_ROLE_AEO,
@@ -24,6 +25,26 @@ from app.core.config.site_health_rule_types import (
 SEARCH_ROBOTS_HEADER_AGENTS: Final[frozenset[str]] = frozenset({"googlebot"})
 
 SEARCH_ACCESS_RULES: Final[tuple[SiteHealthRule, ...]] = (
+    SiteHealthRule(
+        rule_id="technical.robots_txt_present",
+        rule_version=RULE_CATALOG_VERSION,
+        dimension=DIMENSION_TECHNICAL,
+        category=CATEGORY_INDEXABILITY,
+        severity=SEVERITY_LOW,
+        weight=0.0,
+        applicability_key=APPLICABILITY_SITE_ROOT,
+        scope=RULE_SCOPE_SITE,
+        description=(
+            "Site serves a robots.txt file. Its absence does not prevent "
+            "crawling of publicly accessible pages."
+        ),
+        remediation=(
+            "Publish /robots.txt to state crawl directives for search engines "
+            "and AI crawlers."
+        ),
+        display_label="robots.txt missing",
+        finding_class=FINDING_CLASS_ADVISORY,
+    ),
     SiteHealthRule(
         rule_id="technical.ai_crawler_access",
         rule_version=RULE_CATALOG_VERSION,

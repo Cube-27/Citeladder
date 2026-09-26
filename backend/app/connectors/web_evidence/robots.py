@@ -9,13 +9,16 @@
 #     default when robots specifies none; excessive delays pause acquisition.
 #   - sitemaps(): the sitemap URLs robots declares (seed URLs for discovery).
 #
-# An empty robots file permits access; network/server failures and parser
-# failures deny access. A delay exceeding the supported ceiling pauses the host.
-# A policy built from a body that explicitly disallows still denies. The worker owns the
-# fetch (through the SSRF-safe fetcher); this module only parses.
+# An empty or missing robots file permits access. An unreachable file (429,
+# 5xx, network failure) is a temporary complete disallow; an access-restricted
+# file (401/403) is a standing refusal CiteLadder never works around. Malformed
+# lines are ignored and the parseable rules are honored. A delay exceeding the
+# supported ceiling pauses the host. The worker owns the fetch (through the
+# SSRF-safe fetcher); this module only parses.
 from __future__ import annotations
 
 import math
+import re
 
 from protego import Protego
 
@@ -23,11 +26,15 @@ from app.core.config.site_health_runtime import (
     site_health_settings,
 )
 
+# A robots record line ("field: value") or a blank/comment line. Anything else
+# is malformed and dropped before a second parse attempt.
+_ROBOTS_LINE = re.compile(r"^\s*(#.*)?$|^\s*[A-Za-z][A-Za-z-]*\s*:")
+
 
 class RobotsPolicy:
     """A parsed robots policy for one host, evaluated for a fixed user-agent."""
 
-    __slots__ = ("_allow_all", "_deny_all", "_parser", "_user_agent")
+    __slots__ = ("_allow_all", "_deny_all", "_parser", "_restricted", "_user_agent")
 
     def __init__(
         self,
@@ -36,11 +43,13 @@ class RobotsPolicy:
         user_agent: str,
         allow_all: bool = False,
         deny_all: bool = False,
+        restricted: bool = False,
     ) -> None:
         self._parser = parser
         self._user_agent = user_agent.split("/", 1)[0]
         self._allow_all = allow_all
         self._deny_all = deny_all
+        self._restricted = restricted
 
     @classmethod
     def allow_all(cls, *, user_agent: str) -> RobotsPolicy:
@@ -53,10 +62,25 @@ class RobotsPolicy:
         complete, temporary disallow)."""
         return cls(None, user_agent=user_agent, deny_all=True)
 
+    @classmethod
+    def access_restricted(cls, *, user_agent: str) -> RobotsPolicy:
+        """A standing refusal: robots.txt answered 401/403.
+
+        RFC 9309 would permit crawling here, but an authentication or
+        authorization response is an access-control signal, and CiteLadder
+        does not circumvent access controls.
+        """
+        return cls(None, user_agent=user_agent, restricted=True)
+
     @property
     def unavailable(self) -> bool:
         """Whether robots.txt could not be retrieved or read (temporary disallow)."""
         return self._deny_all
+
+    @property
+    def restricted(self) -> bool:
+        """Whether robots.txt itself is behind an access control (401/403)."""
+        return self._restricted
 
     @property
     def delay_exceeds_limit(self) -> bool:
@@ -65,7 +89,11 @@ class RobotsPolicy:
 
     @classmethod
     def parse(cls, body: str | bytes, *, user_agent: str) -> RobotsPolicy:
-        """Parse a robots.txt body. An empty body yields an allow-all policy."""
+        """Parse a robots.txt body. An empty body yields an allow-all policy.
+
+        Malformed lines are ignored and the parseable rules honored (RFC 9309
+        §2.2). Only a body that cannot be read even then denies acquisition.
+        """
         if isinstance(body, bytes):
             body = body.decode("utf-8", errors="replace")
         text = body or ""
@@ -73,8 +101,14 @@ class RobotsPolicy:
             return cls.allow_all(user_agent=user_agent)
         try:
             parser = Protego.parse(text)
-        except Exception:  # noqa: BLE001 - an unreadable policy cannot authorize acquisition
-            return cls.deny_all(user_agent=user_agent)
+        except Exception:  # noqa: BLE001 - retried below with malformed lines dropped
+            wellformed = "\n".join(
+                line for line in text.splitlines() if _ROBOTS_LINE.match(line)
+            )
+            try:
+                parser = Protego.parse(wellformed)
+            except Exception:  # noqa: BLE001 - an unreadable policy cannot authorize acquisition
+                return cls.deny_all(user_agent=user_agent)
         return cls(parser, user_agent=user_agent)
 
     def can_fetch(self, url: str) -> bool:
@@ -83,7 +117,7 @@ class RobotsPolicy:
 
     def permits(self, url: str) -> bool:
         """Whether the publisher's rules permit ``url``, ignoring crawl-delay."""
-        if self._deny_all:
+        if self._deny_all or self._restricted:
             return False
         if self._allow_all or self._parser is None:
             return True

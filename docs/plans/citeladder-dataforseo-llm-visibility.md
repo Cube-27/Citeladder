@@ -84,6 +84,14 @@ implementation. This plan is indexed as queued in [plan status](ACTIVE.md).
   Apply bounded pagination and account-level pacing. An unresolved or ambiguous
   submission terminates honestly without automatic paid resubmission.
   [ID-list contract](https://docs.dataforseo.com/v3/appendix/id_list/)
+- Bound all recovery by a config-owned deadline measured from the committed
+  submission time. It must sit well inside DataForSEO's 30-day Advanced result
+  retention and one-month `id_list` metadata window (default 72 hours).
+  Polling backoff and lease renewal are capped so the final poll or
+  reconciliation attempt starts before the deadline. A task still unresolved
+  at the deadline terminalizes as an unrecovered provider failure: no
+  resubmission, no negative brand observation, reported submission charge
+  retained, and the task's lease released.
 - Retain reported submission charges even when retrieval fails. Retrieval must
   neither overwrite a known submission charge with a free-GET cost nor count
   the charge twice.
@@ -152,6 +160,9 @@ Required coverage:
 - **PostgreSQL lifecycle:** worker restart, lease loss, pending polling, timeout
   after submission, exact-tag reconciliation, ambiguous matches, credential
   rotation, cancellation, idempotent finalization, and single cost attribution.
+  Recovery reaches its terminal unrecovered state at the configured deadline,
+  never schedules a poll or reconciliation after it, and the deadline
+  configuration is rejected when it exceeds the provider retention windows.
 - **Compatibility:** unchanged API and AI Overview behavior; saved schedules and
   historical runs preserve their identities; source totals, mention
   denominators, filters, trends, and fanout grouping remain correct.
@@ -177,7 +188,8 @@ only on disposable data.
   live-provider acceptance.
 - Disable new admission if rollback is needed; retain historical evidence and
   allow accepted paid tasks to finish retrieval.
-- Keenable, enrichment, platform-funded scraping, new scoring formulas, and
-  broader frontend redesign are excluded.
+- Keenable search/fetch research as an answer source, enrichment,
+  platform-funded scraping, new scoring formulas, and broader frontend
+  redesign are excluded.
 - For the current request, save only the approved plan and queued index entry,
   check documentation links/whitespace, and stop.

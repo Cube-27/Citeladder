@@ -8,6 +8,8 @@ from app.analysis.site_health.rule_scope import server_render_signals
 from app.core.config.site_health_acquisition import (
     AI_CRAWLER_BOTS,
     AI_CRAWLER_STANCE_BLOCK,
+    ROBOTS_FETCH_STATUS_FETCHED,
+    ROBOTS_FETCH_STATUS_NOT_FOUND,
     SEARCH_CITATION_CRAWLER_BOTS,
 )
 from app.core.config.site_health_contracts import (
@@ -84,6 +86,22 @@ def _check_ai_crawler_access(facts: dict) -> tuple[str, dict]:
         "ai_crawlers": bounded_stance,
         "blocked": blocked,
     }
+
+
+def _check_robots_txt_present(facts: dict) -> tuple[str, dict]:
+    robots = (facts.get("site") or {}).get("robots") or {}
+    status = robots.get("status")
+    evidence = {
+        "status": status,
+        "status_code": robots.get("status_code"),
+        "url": str(robots.get("url") or "")[:2048],
+    }
+    if robots.get("fetched") or status == ROBOTS_FETCH_STATUS_FETCHED:
+        return RULE_OUTCOME_SATISFIED, evidence
+    if status == ROBOTS_FETCH_STATUS_NOT_FOUND:
+        return RULE_OUTCOME_MISSING, evidence
+    # An unreadable file is not evidence of absence.
+    return RULE_OUTCOME_NOT_APPLICABLE, {**evidence, "reason": "robots_not_fetched"}
 
 
 def _check_search_crawler_access(facts: dict) -> tuple[str, dict]:
@@ -173,6 +191,7 @@ DELIVERY_CHECKS: dict[str, Callable[[dict], tuple[str, dict]]] = {
     "technical.ttfb_band": _check_ttfb_band,
     "technical.uncompressed_html": _check_uncompressed_html,
     "technical.ai_crawler_access": _check_ai_crawler_access,
+    "technical.robots_txt_present": _check_robots_txt_present,
     "search.crawler_access": _check_search_crawler_access,
     "search.snippet_access": _check_snippet_access,
     "aeo.llms_txt_present": _check_llms_txt_present,

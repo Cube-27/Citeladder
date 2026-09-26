@@ -162,6 +162,9 @@ class SiteHealthSettings(BaseSettings):
     # How long a cached per-authority robots policy stays fresh before the
     # worker re-fetches it (RFC 9309 caching guidance is ~24h).
     robots_cache_ttl_seconds: float = 86_400.0
+    # An unreachable robots.txt (429, 5xx, network failure) pauses the host
+    # only until this recheck, not for the full cache lifetime.
+    robots_unreachable_recheck_seconds: float = 300.0
     # Hard ceiling on cached authorities. Expired entries are dropped first;
     # beyond the cap, the oldest go. 0 disables the cap.
     robots_cache_max_authorities: int = 2048

@@ -193,6 +193,7 @@ const FACTS_BY_RULE: Readonly<Record<string, (evidence: Evidence) => string[]>> 
   'technical.uncompressed_html': () => ['Content-Encoding'],
   'technical.ttfb_band': ttfbBand,
   'technical.ai_crawler_access': (evidence) => textList(evidence.blocked),
+  'technical.robots_txt_present': () => ['/robots.txt'],
   'search.crawler_access': (evidence) => textList(evidence.blocked),
   'search.snippet_access': (evidence) => textList(evidence.directives),
   'aeo.structured_data_present': (evidence) =>

@@ -86,8 +86,9 @@ def _classify_robots_fetch(body: str | None, status: int | None) -> str:
 
     Mirrors ``RobotsCache.ensure`` through the one shared predicate: a missing
     robots file (404-class) is ``not_found`` and permits crawling, while a
-    network error, 5xx, redirect or 401/403/429 refusal is ``fetch_failed``
-    because the crawl is paused on it rather than proceeding fail-open.
+    network error, 5xx, redirect or 401/403/429 response is ``fetch_failed``:
+    the stance is unknown and the crawl is paused (or, for 401/403, refused)
+    rather than proceeding fail-open.
     """
     if body is not None:
         return ROBOTS_FETCH_STATUS_FETCHED

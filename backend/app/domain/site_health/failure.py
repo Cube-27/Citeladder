@@ -49,11 +49,12 @@ _FAILURE_BASE_MESSAGES: Final[dict[str, str]] = {
     ERROR_CONNECTION_FAILED: "The site could not be reached (connection failed)",
     ERROR_TIMEOUT: "The site did not answer in time",
     ERROR_ROBOTS_DENIED: (
-        "The site's robots.txt disallows the crawler from fetching the start URL"
+        "The site's robots.txt disallows the crawler from fetching the start "
+        "URL, or restricts access to robots.txt itself"
     ),
     ERROR_ROBOTS_UNAVAILABLE: (
-        "The site's robots.txt endpoint returned a server error, so fetching "
-        "paused (a temporary disallow)"
+        "The site's robots.txt could not be read (server error, rate limit or "
+        "network failure), so fetching paused (a temporary disallow)"
     ),
     ERROR_BOT_BLOCKED: (
         "The site answered the start URL with a bot-protection challenge"

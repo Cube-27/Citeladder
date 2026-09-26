@@ -72,15 +72,16 @@ function SiteFactsAlerts({
   if (view.robotsFetchStatus === 'not_found') {
     return (
       <Alert tone="info">
-        No robots.txt — crawling proceeds fail-open; the AI-crawler stance defaults to allow.
+        No robots.txt — public pages are crawled under normal rate limits; the AI-crawler stance
+        defaults to allow.
       </Alert>
     );
   }
   if (view.robotsFetchStatus === 'fetch_failed') {
     return (
       <Alert tone="warning">
-        robots.txt could not be fetched, so the AI-crawler stance could not be read. Crawling
-        continued with the fail-open default.
+        robots.txt could not be read, so the AI-crawler stance is unknown. Crawling pauses until it
+        can be read, and access-restricted robots.txt files are never bypassed.
       </Alert>
     );
   }

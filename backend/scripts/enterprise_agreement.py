@@ -19,7 +19,7 @@ async def _run(args: argparse.Namespace) -> None:
     payload = AgreementReferenceInput.model_validate_json(contents)
     async with SessionLocal() as session:
         actor_id = await session.scalar(
-            select(User.id).where(User.email == args.actor.lower())
+            select(User.id).where(User.email == args.actor.strip().lower())
         )
         if actor_id is None:
             raise PermissionError("Unknown operator")

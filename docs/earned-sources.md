@@ -37,7 +37,11 @@ The inspector supplies a per-request gate to `SecureFetcher`: each URL,
 including same-host and cross-host redirects, must pass its destination's
 robots rules before the transport downloads it. Pacing honors the larger of
 the source-inspection floor and the declared crawl delay. Unsupported delays
-block acquisition; unavailable robots remains a retryable failure. Durable
+block acquisition; unreachable robots (429, 5xx, network failure) remains a
+retryable failure, while an access-restricted robots.txt (401/403) blocks the
+page. Robots handling otherwise follows the
+[Site Health table](site-health.md#acquisition-and-evidence-guarantees).
+The per-hop transport timeout starts only once the host slot is held. Durable
 suppression is rechecked after waiting. The former final-host check after
 download is removed.
 

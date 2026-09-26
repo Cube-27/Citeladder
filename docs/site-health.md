@@ -31,10 +31,23 @@ score, call a model/provider or repair state.
 ## Acquisition and evidence guarantees
 
 The curl transport sends `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)`
-and no longer impersonates a browser. Network/server failures and explicit
-robots refusals pause acquisition; missing robots (404/410) permit it. A declared
-delay above the supported maximum blocks the host instead of shortening the
-requested delay. The shared fetcher invokes a durable suppression check before
+and no longer impersonates a browser. The robots.txt response decides access:
+
+| robots.txt result | Crawl behavior |
+|---|---|
+| 200 | Parse and honor applicable Allow/Disallow rules; malformed lines are ignored |
+| Empty 200, 404, 410, other 4xx | Crawl public pages under normal pacing and admission |
+| 3xx | Followed, up to the fetcher's redirect limit |
+| 401 / 403 | Never crawled — an access-control signal, reported as a robots refusal |
+| 429, 5xx, DNS/timeout/network failure | Temporary disallow; robots.txt is rechecked after `robots_unreachable_recheck_seconds` |
+
+Other policies are cached for at most `robots_cache_ttl_seconds` (24 hours).
+Host pacing, concurrency and admission apply whether or not robots.txt exists,
+and a missing file is never permission to bypass authentication, paywalls,
+CAPTCHAs or other access controls. The site-root advisory
+`technical.robots_txt_present` reports a missing file without affecting scores
+or blocking discovery. A declared delay above the supported maximum blocks the
+host instead of shortening the requested delay. The shared fetcher invokes a durable suppression check before
 every URL/redirect hop, including discovery, logos, commerce and source inspection.
 An in-flight HTTP request cannot be recalled; subsequent hops recheck the stop.
 
