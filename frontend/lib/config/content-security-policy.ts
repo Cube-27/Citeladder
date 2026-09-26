@@ -40,18 +40,24 @@ export const FALLBACK_CONTENT_SECURITY_POLICY = [
   "form-action 'self'",
 ].join('; ');
 
-export function marketingContentSecurityPolicy(
-  analyticsEnabled: boolean,
-): NonNullable<AstroUserConfig['security']>['csp'] {
+type AstroContentSecurityPolicy = NonNullable<AstroUserConfig['security']>['csp'];
+type AstroDirective = NonNullable<
+  Exclude<AstroContentSecurityPolicy, boolean | undefined>['directives']
+>[number];
+
+// Astro hashes only its compiled framework/inline scripts. No runtime blanket
+// hashing/noncing of HTML.
+function astroContentSecurityPolicy(
+  scriptSources: string[],
+  directives: AstroDirective[],
+): AstroContentSecurityPolicy {
   return {
-    // Astro hashes only its compiled framework/inline scripts, and emits the
-    // matching response header. No runtime blanket hashing/noncing of HTML.
     scriptDirective: {
       resources: [
         "'self'",
         ...CLOUDFLARE_BEACON_SOURCES,
         { resource: "'none'", kind: 'attribute' },
-        ...(analyticsEnabled ? ['https://www.googletagmanager.com/gtag/js'] : []),
+        ...scriptSources,
       ],
     },
     styleDirective: { resources: ["'self'", "'unsafe-inline'"] },
@@ -59,14 +65,33 @@ export function marketingContentSecurityPolicy(
       "default-src 'self'",
       "object-src 'none'",
       "base-uri 'none'",
-      "frame-ancestors 'none'",
       "font-src 'self'",
       "img-src 'self' data:",
       "frame-src 'none'",
       "form-action 'self'",
+      ...directives,
+    ],
+  };
+}
+
+// Server-rendered marketing emits the policy as a response header.
+export function marketingContentSecurityPolicy(
+  analyticsEnabled: boolean,
+): AstroContentSecurityPolicy {
+  return astroContentSecurityPolicy(
+    analyticsEnabled ? ['https://www.googletagmanager.com/gtag/js'] : [],
+    [
+      "frame-ancestors 'none'",
       analyticsEnabled
         ? "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum https://www.google-analytics.com https://region1.google-analytics.com"
         : "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum",
     ],
-  };
+  );
 }
+
+// Static docs receive the policy as a <meta> element, where browsers ignore
+// frame-ancestors; X-Frame-Options in the docs _headers file denies framing.
+export const DOCS_CONTENT_SECURITY_POLICY = astroContentSecurityPolicy(
+  [],
+  ["connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum"],
+);

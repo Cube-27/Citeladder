@@ -35,6 +35,9 @@ path and reporting endpoint, following the
 [Cloudflare CSP requirements](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/).
 Google Analytics destinations are included only in a marketing build with a
 configured measurement ID, and loading still requires cookie consent.
+The static documentation site has no Worker, so Astro emits its policy as a
+`<meta>` element with the same script hashing; `X-Frame-Options` in its
+`_headers` file denies framing because browsers ignore `frame-ancestors` there.
 
 ## Routes and shared shell
 
