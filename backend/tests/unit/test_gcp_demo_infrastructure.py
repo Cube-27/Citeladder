@@ -351,7 +351,14 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
 
     assert "frontend" not in services
     assert "vite-app" not in services
-    assert services["caddy"]["depends_on"] == {"web": {"condition": "service_healthy"}}
+    assert services["caddy"]["depends_on"] == {
+        "web": {"condition": "service_healthy"},
+        "api-service": {"condition": "service_healthy"},
+    }
+    api_environment = services["api-service"]["environment"]
+    assert api_environment["HOST"] == "127.0.0.1"
+    assert api_environment["DB_SSL_MODE"] == "require"
+    assert api_environment["DB_MAX_OVERFLOW"] == "0"
     assert all(
         "frontend-routes.caddy" not in mount for mount in services["caddy"]["volumes"]
     )

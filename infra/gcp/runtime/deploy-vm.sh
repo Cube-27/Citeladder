@@ -4,6 +4,7 @@ set -euo pipefail
 : "${PROJECT_ID:?PROJECT_ID is required}"
 : "${REGION:?REGION is required}"
 : "${BACKEND_IMAGE:?BACKEND_IMAGE is required}"
+: "${API_SERVICE_IMAGE:?API_SERVICE_IMAGE is required}"
 : "${BACKUP_BUCKET:?BACKUP_BUCKET is required}"
 : "${DOMAIN_NAME:?DOMAIN_NAME is required}"
 : "${ORIGIN_DOMAIN_NAME:?ORIGIN_DOMAIN_NAME is required}"
@@ -42,6 +43,8 @@ fi
 [[ "$BACKEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
 expected_registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
 [[ "$BACKEND_IMAGE" == "$expected_registry/backend@sha256:"* ]]
+[[ "$API_SERVICE_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
+[[ "$API_SERVICE_IMAGE" == "$expected_registry/api-service@sha256:"* ]]
 had_previous=false
 reset_started=false
 running_services=""
@@ -199,6 +202,7 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env PROJECT_ID "$PROJECT_ID"
   write_env REGION "$REGION"
   write_env BACKEND_IMAGE "$BACKEND_IMAGE"
+  write_env API_SERVICE_IMAGE "$API_SERVICE_IMAGE"
   write_env BACKUP_BUCKET "$BACKUP_BUCKET"
   write_env DOMAIN_NAME "$DOMAIN_NAME"
   write_env ORIGIN_DOMAIN_NAME "$ORIGIN_DOMAIN_NAME"
@@ -245,7 +249,7 @@ mv /opt/citeladder/ingress.env.new /opt/citeladder/ingress.env
 
 cd /opt/citeladder
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-stopped_services=(caddy web audit-worker audit-scheduler site-health-worker \
+stopped_services=(caddy web api-service audit-worker audit-scheduler site-health-worker \
   brand-discovery-worker agent-worker analytics-worker \
   queue-sweeper integration-worker integration-dispatcher)
 
@@ -305,6 +309,13 @@ for attempt in $(seq 1 30); do
   sleep 5
 done
 curl --fail --silent http://127.0.0.1:8000/ready >/dev/null
+# Caddy waits for the API service's own healthcheck; confirm it answers too.
+for attempt in $(seq 1 30); do
+  if curl --fail --silent http://127.0.0.1:8100/ready >/dev/null; then break; fi
+  echo "API service probe attempt $attempt failed"
+  sleep 5
+done
+curl --fail --silent http://127.0.0.1:8100/ready >/dev/null
 for service in "${stopped_services[@]}" db; do
   container_id="$(docker compose --env-file runtime.env -f compose.gcp.yml ps -q "$service")"
   [[ -n "$container_id" ]]
