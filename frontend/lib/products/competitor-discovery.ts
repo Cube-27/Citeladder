@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { CommerceTarget, CompetitorDiscoveryTask } from '@/lib/api/schemas/commerce-suite';
+import type { CommerceTarget, CompetitorDiscoveryTask } from '@citeladder/contracts/commerce-suite';
 import { ACTIVE_RUN_POLL_MS } from '@/lib/config/operational';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 

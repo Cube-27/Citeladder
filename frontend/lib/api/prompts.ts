@@ -14,8 +14,8 @@ import {
   promptSchema,
   promptSetSchema,
   topicSchema,
-} from './schemas/project';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/project';
+import { strictValidate } from '@citeladder/contracts/validation';
 import type {
   Prompt,
   PromptCandidate,

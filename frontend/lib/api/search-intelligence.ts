@@ -8,8 +8,8 @@ import {
   searchReadinessSchema,
   searchRowSchema,
   searchRunSchema,
-} from './schemas';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts';
+import { strictValidate } from '@citeladder/contracts/validation';
 
 export type SearchIntelligenceReadiness = z.infer<typeof searchReadinessSchema>;
 export type SearchIntelligenceRun = z.infer<typeof searchRunSchema>;

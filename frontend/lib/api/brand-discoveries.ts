@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
-import { strictValidate } from './schemas/validation';
+import { strictValidate } from '@citeladder/contracts/validation';
 import {
   brandDiscoveryCatalogSchema,
   brandDiscoveryCompleteSchema,
   brandDiscoverySchema,
-} from './schemas/visibility';
+} from '@citeladder/contracts/visibility';
 
 export type BrandDiscovery = z.infer<typeof brandDiscoverySchema>;
 export type BrandDiscoveryInput = {

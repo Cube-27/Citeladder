@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
+import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 
 import type { CommerceQueries } from './commerce-queries';

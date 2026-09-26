@@ -1,4 +1,4 @@
-import { billingCatalogSchema } from '@/lib/api/schemas/billing';
+import { billingCatalogSchema } from '@citeladder/contracts/billing';
 import { PUBLIC_CATALOG_TIMEOUT_MS } from '@/lib/config/billing';
 import { proxyWorkerRequest } from '@/lib/server/worker-origin-proxy';
 

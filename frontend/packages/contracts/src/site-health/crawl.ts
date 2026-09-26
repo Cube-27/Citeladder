@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { responseObject, uuid } from './core';
+import { responseObject, uuid } from './core.ts';
 
 // Capability access mode: a zero-allowance account gets a server-selected
 // `sample`; an account with a monitored allowance gets `full` discovery plus

@@ -28,8 +28,8 @@ import {
   subscriptionChangeSchema,
   subscriptionCheckoutSchema,
   workspaceEntitlementSchema,
-} from './schemas/billing';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/billing';
+import { strictValidate } from '@citeladder/contracts/validation';
 
 export type BillingCatalog = z.infer<typeof billingCatalogSchema>;
 export type CatalogPlan = BillingCatalog['plans'][number];

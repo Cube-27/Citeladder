@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-import { pageKindSchema } from './crawl';
-import { responseObject, uuid } from './core';
-import { cursorPageSchema } from './pagination';
+import { pageKindSchema } from './crawl.ts';
+import { responseObject, uuid } from './core.ts';
+import { cursorPageSchema } from './pagination.ts';
 
 // Issue severity + dimension enums (config-owned rule catalog).
 export const issueSeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);

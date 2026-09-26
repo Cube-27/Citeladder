@@ -1,6 +1,6 @@
 import { apiClient } from './client';
-import { policyStatusSchema } from './schemas/auth';
-import { strictValidate } from './schemas/validation';
+import { policyStatusSchema } from '@citeladder/contracts/auth';
+import { strictValidate } from '@citeladder/contracts/validation';
 
 export const policiesApi = {
   status: async (workspaceId: string, signal?: AbortSignal) =>

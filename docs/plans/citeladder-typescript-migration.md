@@ -2,8 +2,10 @@
 
 Status: PR 1 (TS platform foundation) implemented on 27 September 2026 at the
 owner's request, applying D1–D5 as drafted; D6 (team rule) still awaits the
-owner. Not execution authorization; each later PR is executed only when
-individually assigned.
+owner. PR 2 (shared contracts and route-ownership gate) implemented on
+27 September 2026 at the owner's request; the manifest lists all 21 current
+families as Python-owned. Not execution authorization; each later PR is
+executed only when individually assigned.
 
 ## 1. Goal, scope and pace
 

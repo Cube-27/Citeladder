@@ -95,7 +95,7 @@
       "frontend/components/opportunities/**",
       "frontend/lib/opportunities/**",
       "frontend/lib/api/opportunities.ts",
-      "frontend/lib/api/schemas/opportunities.ts"
+      "frontend/packages/contracts/src/opportunities.ts"
     ],
     "frontendE2E": ["e2e/action-loop.spec.ts"]
   },

@@ -11,8 +11,8 @@ import {
   opportunitySeveritySchema,
   opportunitySummarySchema,
   opportunityTypeSchema,
-} from './schemas/opportunities';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/opportunities';
+import { strictValidate } from '@citeladder/contracts/validation';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';

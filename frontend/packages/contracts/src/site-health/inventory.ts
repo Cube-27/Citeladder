@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-import { pageKindSchema, siteCrawlSchema, siteUrlSourceSchema } from './crawl';
-import { responseObject, uuid } from './core';
-import { cursorPageSchema } from './pagination';
+import { pageKindSchema, siteCrawlSchema, siteUrlSourceSchema } from './crawl.ts';
+import { responseObject, uuid } from './core.ts';
+import { cursorPageSchema } from './pagination.ts';
 
 // The exact frozen pack identity an understanding was produced under. Shown in
 // the "why this role?" disclosure so a result is always attributable to one

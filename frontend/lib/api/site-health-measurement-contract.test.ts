@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { siteCrawlSchema, siteHealthOverviewSchema } from './schemas/site-health';
-import { strictValidate } from './schemas/validation';
+import { siteCrawlSchema, siteHealthOverviewSchema } from '@citeladder/contracts/site-health';
+import { strictValidate } from '@citeladder/contracts/validation';
 import {
   SITE_HEALTH_CRAWL as crawl,
   SITE_HEALTH_UUID as UUID,

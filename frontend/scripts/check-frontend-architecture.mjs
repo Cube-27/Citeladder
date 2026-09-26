@@ -46,10 +46,10 @@ for (const file of ['app', 'components', 'lib'].flatMap(sourceFiles)) {
 }
 
 for (const file of sourceFiles('lib/api')) {
-  if (file.includes('.test.') || file.startsWith('lib/api/schemas/')) continue;
+  if (file.includes('.test.')) continue;
   const source = fs.readFileSync(path.join(root, file), 'utf8');
   if (/\bz\s*\.\s*(?:object|strictObject|looseObject)\s*\(/.test(source)) {
-    failures.push(`${file} declares an API object schema outside lib/api/schemas/.`);
+    failures.push(`${file} declares an API object schema outside packages/contracts.`);
   }
 }
 

@@ -31,12 +31,20 @@ function isFrontend(path) {
   return path.startsWith('frontend/');
 }
 
-// The TypeScript API service plus the Python inputs it is built from: the
-// policy export and golden masters read `app/core` and the workspace policy,
-// and its Kysely types are generated from the Alembic-migrated schema.
+// The TypeScript API service, the contracts package it imports, and the
+// Python inputs it is built from: the policy export and golden masters read
+// `app/core` and the workspace policy, and its Kysely types are generated
+// from the Alembic-migrated schema. The route-ownership gate also reads the
+// Python routers' OpenAPI families and the local ingress routes.
 function isApiService(path) {
   return (
     path.startsWith('frontend/services/') ||
+    path.startsWith('frontend/packages/') ||
+    path === 'frontend/local-compose-routes.caddy' ||
+    path.startsWith('backend/app/api/') ||
+    path === 'backend/app/main.py' ||
+    path === 'backend/scripts/export_openapi.py' ||
+    path === 'backend/scripts/openapi_fragments.py' ||
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
     path === 'frontend/pnpm-workspace.yaml' ||
@@ -119,7 +127,8 @@ function isContract(path) {
     path === 'backend/app/main.py' ||
     /^backend\/app\/.+\/[^/]*schemas?\.py$/.test(path) ||
     path === 'backend/scripts/export_openapi.py' ||
-    path.startsWith('frontend/lib/api/')
+    path.startsWith('frontend/lib/api/') ||
+    path.startsWith('frontend/packages/contracts/')
   );
 }
 

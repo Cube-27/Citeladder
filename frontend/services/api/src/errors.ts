@@ -4,9 +4,10 @@
  * Mirrors `backend/app/core/errors.py`: every 4xx/5xx body is
  * `{detail, error: {code, message, request_id, retryable, details?}}`, with
  * `detail` retained for legacy clients. Codes and the retryable rule come
- * from the Python policy export; golden masters prove the JSON is identical,
+ * from the Python policy export, typed by the contracts' code union; golden masters prove the JSON is identical,
  * key order included.
  */
+import { asApiErrorCode, type ApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
@@ -17,11 +18,14 @@ import { getLogger } from './logging.ts';
 const logger = getLogger('api.errors');
 
 const INTERNAL_ERROR_MESSAGE = 'An unexpected error occurred';
+// Narrowed at import, so a policy export naming an undeclared code fails at
+// startup rather than on the first unhandled error.
+const INTERNAL_ERROR_CODE = asApiErrorCode(policy.errors.internal_error_code);
 
 export type Envelope = {
   detail: unknown;
   error: {
-    code: string;
+    code: ApiErrorCode;
     message: string;
     request_id: string;
     retryable: boolean;
@@ -34,13 +38,13 @@ export function isRetryableStatus(status: number): boolean {
 }
 
 /** The status's canonical code, or the fallback for an unmapped status. */
-export function defaultCode(status: number): string {
+export function defaultCode(status: number): ApiErrorCode {
   const codes: Record<string, string> = policy.errors.status_default_code;
-  return codes[String(status)] ?? policy.errors.fallback_code;
+  return asApiErrorCode(codes[String(status)] ?? policy.errors.fallback_code);
 }
 
 export function errorEnvelope(input: {
-  code: string;
+  code: ApiErrorCode;
   message: string;
   requestId: string;
   retryable: boolean;
@@ -60,14 +64,14 @@ export function errorEnvelope(input: {
 /** What every route raises: the TS counterpart of `ApiException`. */
 export class ApiError extends Error {
   readonly status: ContentfulStatusCode;
-  readonly code: string;
+  readonly code: ApiErrorCode;
   readonly details?: Record<string, unknown>;
   readonly retryable?: boolean;
 
   constructor(
     status: ContentfulStatusCode,
     message: string,
-    options: { code?: string; details?: Record<string, unknown>; retryable?: boolean } = {},
+    options: { code?: ApiErrorCode; details?: Record<string, unknown>; retryable?: boolean } = {},
   ) {
     super(message);
     this.status = status;
@@ -130,7 +134,7 @@ export const onError: ErrorHandler = (error, c) => {
   });
   return c.json(
     errorEnvelope({
-      code: policy.errors.internal_error_code,
+      code: INTERNAL_ERROR_CODE,
       message: INTERNAL_ERROR_MESSAGE,
       requestId,
       retryable: isRetryableStatus(500),

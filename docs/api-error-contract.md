@@ -15,7 +15,10 @@ so both stacks emit byte-identical envelopes; on the frontend, `frontend/lib/api
 type and its display-safe projection (`humanizeApiError`). Generic codes live in
 `backend/app/core/config/errors.py`; feature-specific codes live in their single owning
 `backend/app/core/config/*` module (for example `oauth.py` or `provider_catalog.py`).
-Codes are never declared inline at raise sites.
+Codes are never declared inline at raise sites. The TypeScript service may emit only
+the `ApiErrorCode` union in `@citeladder/contracts/error-codes`, generated from the
+config modules listed in `export_ts_platform.py`'s `ERROR_CODE_MODULES`; a PR that
+ports a route family adds its owning config module there.
 
 ## 1. The wire envelope
 

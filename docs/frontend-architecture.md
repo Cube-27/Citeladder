@@ -177,20 +177,24 @@ screen from its internal presentation files.
 | Site Health architecture | `components/site-health/architecture-panel.tsx` owns the projection query, page-kind rows, and persisted link/depth summaries | — |
 | Commerce, prompts, providers, and marketing previews | Existing public panels and dialogs remain their caller-facing owners | small view, cell, topic, preview, and message-bus modules own discrete presentation or local interaction regions |
 
-### Site Health API schemas
+### API response schemas
 
-`frontend/lib/api/schemas/site-health.ts` is the stable Site Health schema
-facade. The public `lib/api/schemas` barrel re-exports that facade, so API
+The zod response contracts are the `@citeladder/contracts` workspace package
+(`frontend/packages/contracts`), shared with the TypeScript API service. Import
+the package entry or a subpath (`@citeladder/contracts/project`); API client
+modules never declare response objects themselves.
+
+`packages/contracts/src/site-health.ts` is the stable Site Health schema
+facade. The package entry re-exports that facade, so API
 consumers retain their existing import boundary and inferred Zod schema names.
-Focused modules under `lib/api/schemas/site-health/` own crawl lifecycle,
+Focused modules under `src/site-health/` own crawl lifecycle,
 dashboard/change/readiness, observed architecture, inventory, issues, page
 detail, pagination, and shared schema primitives. Do not import a focused file from a feature solely to
 avoid the facade; move a genuinely shared primitive into the focused schema
 folder and re-export it through the facade.
 
 Demand Intelligence and Search Intelligence response schemas
-likewise live under `frontend/lib/api/schemas/` and are re-exported by the
-public facade. API clients validate through `strictValidate`; the contract
+likewise live in the package and are re-exported by its entry. API clients validate through `strictValidate`; the contract
 drift map covers their declared response objects. The frontend architecture
 guard rejects response object declarations in API client modules.
 

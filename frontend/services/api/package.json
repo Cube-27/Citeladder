@@ -7,15 +7,18 @@
     "start": "node src/server.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
+    "check:routes": "node scripts/check-route-ownership.ts",
     "db:types": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern alembic_version --out-file src/generated/db-schema.ts",
     "db:types:check": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern alembic_version --out-file src/generated/db-schema.ts --verify"
   },
   "dependencies": {
+    "@citeladder/contracts": "workspace:*",
     "@hono/node-server": "^2.1.1",
     "hono": "^4.13.9",
     "jose": "^6.2.12",
     "kysely": "^0.29.6",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

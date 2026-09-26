@@ -16,7 +16,7 @@
  * quotes (`""`), and embedded newlines — enough for prompt CSVs.
  */
 import type { PromptImportRow } from '@/lib/api/prompts';
-import { promptIntentSchema } from '@/lib/api/schemas/project';
+import { promptIntentSchema } from '@citeladder/contracts/project';
 import type { PromptIntent } from '@/lib/api/types';
 
 /** The import's column contract, in the order the sample file uses. */

@@ -6,6 +6,7 @@
  * Python policy export; a role missing from it confers nothing (fail closed).
  * A non-member cannot tell an existing workspace from a missing one: both 404.
  */
+import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { MiddlewareHandler } from 'hono';
 
 import { policy } from '../config.ts';
@@ -18,6 +19,7 @@ import { parseUuid } from './session.ts';
 export type WorkspaceCapability = keyof typeof policy.workspaces.denial_messages;
 
 const ROLE_CAPABILITIES: Record<string, readonly string[]> = policy.workspaces.roles;
+const FORBIDDEN_CODE = asApiErrorCode(policy.workspaces.forbidden_code);
 
 function roleCapabilities(role: string): readonly string[] {
   return (Object.hasOwn(ROLE_CAPABILITIES, role) && ROLE_CAPABILITIES[role]) || [];
@@ -49,7 +51,7 @@ export class WorkspaceContext {
   require(capability: WorkspaceCapability): void {
     if (!this.allows(capability)) {
       throw new ApiError(403, policy.workspaces.denial_messages[capability], {
-        code: policy.workspaces.forbidden_code,
+        code: FORBIDDEN_CODE,
       });
     }
   }

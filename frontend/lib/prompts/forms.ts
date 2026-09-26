@@ -9,7 +9,7 @@
 import { z } from 'zod';
 
 import type { PromptInput, PromptUpdateInput } from '@/lib/api/prompts';
-import { promptIntentSchema } from '@/lib/api/schemas/project';
+import { promptIntentSchema } from '@citeladder/contracts/project';
 import type { Prompt, PromptIntent } from '@/lib/api/types';
 
 export const promptFormSchema = z.object({

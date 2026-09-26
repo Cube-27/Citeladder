@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
-import { strictValidate } from './schemas/validation';
+import { strictValidate } from '@citeladder/contracts/validation';
 import {
   buyerPromptSchema,
   catalogImportSchema,
@@ -13,7 +13,7 @@ import {
   competitorCandidateSchema,
   shelfSchema,
   type CommerceTarget,
-} from './schemas/commerce-suite';
+} from '@citeladder/contracts/commerce-suite';
 
 const path = (projectId: string, suffix: string) => `/projects/${projectId}/commerce/${suffix}`;
 

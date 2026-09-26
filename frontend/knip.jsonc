@@ -31,10 +31,17 @@
         "**/*.css",
       ],
     },
+    // The API contracts shared by the browser app and the TypeScript service.
+    // Its exports are its public surface, so an export no consumer imports is
+    // still reported as dead rather than excused as a package entry.
+    "packages/contracts": {
+      "project": ["src/**/*.ts"],
+      "includeEntryExports": true,
+    },
     // The TypeScript API service (docs/architecture.md). Its generated inputs
     // are consumed wholesale, so unused generated table types are expected.
     "services/api": {
-      "project": ["src/**/*.ts", "test/**/*.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
       "ignore": ["src/generated/**"],
     },
   },

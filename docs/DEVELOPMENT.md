@@ -265,9 +265,17 @@ After changing an exported setting, error code, the workspace role matrix or a
 golden-mastered behavior, regenerate the Python-owned inputs from `backend/` with
 `uv run python -m scripts.export_ts_platform` and commit them. From the
 repository root, `node scripts/quality.mjs --mode check --scope api` checks types,
-schema authority and export freshness; CI additionally verifies the generated types
-and runs the suite against PostgreSQL. `docker compose up api-service` runs the
-service on `127.0.0.1:8100`.
+schema authority, export freshness and route ownership (`pnpm check:routes` against
+FastAPI's exported OpenAPI, the frozen fragments and both ingress Caddyfiles); CI
+additionally verifies the generated types and runs the suite against PostgreSQL.
+`docker compose up api-service` runs the service on `127.0.0.1:8100`.
+
+A new OpenAPI tag on a Python router needs an entry in
+`frontend/packages/contracts/src/route-ownership.ts`. Moving a family to TypeScript
+starts with `uv run python -m scripts.export_ts_platform --freeze-family <tag>` while
+Python still serves it; the same change adds the TS route contracts, flips the
+manifest entry, routes the family's paths to the service in both Caddyfiles and
+deletes the Python router.
 
 ### Repository validation harness
 

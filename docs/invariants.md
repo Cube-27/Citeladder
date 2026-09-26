@@ -31,6 +31,8 @@ stores or policy authorities; do not relax repository gates to accommodate them.
 
 A route family, task kind or table has exactly one writing stack, Python or
 TypeScript. The change that gives it a TypeScript owner deletes the Python owner.
+For route families the route-ownership manifest is the single record, and
+ingress must route each family's paths only to the stack it names.
 
 ## 2. Product policy is configuration
 

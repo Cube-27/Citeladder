@@ -298,7 +298,7 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: API service quality (types, schema authority, Python export)
+      - name: API service quality (types, schema authority, Python export, route ownership)
         working-directory: frontend
         run: node ../scripts/quality.mjs --mode check --scope api
       - name: Generated database types match the migrated schema

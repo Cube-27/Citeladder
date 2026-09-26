@@ -27,8 +27,8 @@ import {
   agentSkillCatalogSchema,
   agentSkillSchema,
   agentTurnAcceptedSchema,
-} from './schemas/agent';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/agent';
+import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 
 export type AgentRun = z.infer<typeof agentRunSchema>;

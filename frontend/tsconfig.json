@@ -30,6 +30,7 @@
     "components/**/*.tsx",
     "lib/**/*.ts",
     "lib/**/*.tsx",
+    "packages/*/src/**/*.ts",
     "scripts/**/*.ts",
     "test/**/*.ts",
     "test/**/*.tsx",

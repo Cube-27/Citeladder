@@ -17,8 +17,8 @@ import {
   actionItemSchema,
   actionStatusSchema,
   actionsPageSchema,
-} from './schemas/actions';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/actions';
+import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 
 export type Action = z.infer<typeof actionItemSchema>;

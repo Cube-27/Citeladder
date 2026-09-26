@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { citationSchema } from './audits';
+import { citationSchema } from './audits.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();

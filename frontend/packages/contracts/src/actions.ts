@@ -5,7 +5,7 @@ import {
   implementationStateSchema,
   opportunitySchema,
   verificationEventSchema,
-} from './opportunities';
+} from './opportunities.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();

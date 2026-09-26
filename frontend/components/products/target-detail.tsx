@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { BusyBar } from '@/components/ui/busy-bar';
-import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
+import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 
 import type { CommerceQueries } from './commerce-queries';

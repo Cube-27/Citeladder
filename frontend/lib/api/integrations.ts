@@ -26,8 +26,8 @@ import {
   type integrationConnectionSchema,
   type integrationPropertySchema,
   type integrationProviderSchema,
-} from './schemas/integrations';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/integrations';
+import { strictValidate } from '@citeladder/contracts/validation';
 
 export type IntegrationProvider = z.infer<typeof integrationProviderSchema>;
 export type IntegrationConnection = z.infer<typeof integrationConnectionSchema>;

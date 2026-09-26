@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { auditStatusSchema, modelProvenanceSchema } from './audits';
-import { promptCohortSchema } from './project';
+import { auditStatusSchema, modelProvenanceSchema } from './audits.ts';
+import { promptCohortSchema } from './project.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();

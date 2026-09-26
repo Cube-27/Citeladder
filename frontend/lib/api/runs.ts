@@ -15,8 +15,8 @@ import {
   auditSchema,
   executionEvidenceSchema,
   executionSchema,
-} from './schemas/audits';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/audits';
+import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 import type {
   Audit,

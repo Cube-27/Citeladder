@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { integrationProviderSchema } from './integrations';
+import { integrationProviderSchema } from './integrations.ts';
 
 // ---------------------------------------------------------------------------
 // Performance (projection over persisted TrafficSnapshot / dimension stat rows

@@ -13,7 +13,7 @@ import { CHART_TOKENS } from '@/lib/visibility/chart-tokens';
 import type {
   visibilitySourceSeriesSchema,
   visibilitySourcesSchema,
-} from '@/lib/api/schemas/visibility-evidence';
+} from '@citeladder/contracts/visibility-evidence';
 import {
   domainTypeLabel,
   DOMAIN_TYPES,

@@ -29,7 +29,7 @@ import {
   targetKindLabel,
 } from '@/lib/agent/vocabulary';
 import { actionsQueries, type Action, type ActionStatus } from '@/lib/api/actions';
-import { actionStatusSchema } from '@/lib/api/schemas/actions';
+import { actionStatusSchema } from '@citeladder/contracts/actions';
 import { AGENT_ACTIONS_PAGE_SIZE } from '@/lib/config/agent';
 import { ICONS } from '@/lib/icons';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';

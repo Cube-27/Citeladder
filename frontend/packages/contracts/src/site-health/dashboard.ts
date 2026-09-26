@@ -5,12 +5,12 @@ import {
   pageKindSchema,
   siteCrawlSchema,
   siteScoreSummarySchema,
-} from './crawl';
-import { responseObject, uuid } from './core';
-import { monitoredQuotaSchema } from './inventory';
-import { findingClassSchema, issueDimensionSchema, issueSeveritySchema } from './issues';
-import { rootErrorSchema } from './pages';
-import { cursorPageSchema } from './pagination';
+} from './crawl.ts';
+import { responseObject, uuid } from './core.ts';
+import { monitoredQuotaSchema } from './inventory.ts';
+import { findingClassSchema, issueDimensionSchema, issueSeveritySchema } from './issues.ts';
+import { rootErrorSchema } from './pages.ts';
+import { cursorPageSchema } from './pagination.ts';
 
 // One per-URL issue-history row — an issue occurrence from the selected crawl
 // or a prior crawl in the project chronology (immutable failure projection).

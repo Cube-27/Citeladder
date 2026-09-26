@@ -18,19 +18,19 @@ import {
   visibilitySourceSeriesSchema,
   visibilitySourceUrlSchema,
   visibilitySourcesSchema,
-} from './schemas/visibility-evidence';
+} from '@citeladder/contracts/visibility-evidence';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
-import { competitorSchema } from './schemas/project';
-import { strictValidate } from './schemas/validation';
+import { competitorSchema } from '@citeladder/contracts/project';
+import { strictValidate } from '@citeladder/contracts/validation';
 import {
   observedCompetitorSchema,
   promptMetricItemSchema,
   visibilitySchema,
-} from './schemas/visibility';
-import { surfaceRatesSchema } from './schemas/audits';
-import { visibilityTrendListSchema } from './schemas/visibility-trends';
+} from '@citeladder/contracts/visibility';
+import { surfaceRatesSchema } from '@citeladder/contracts/audits';
+import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
 import { definedQuery, withQuery } from './shared';
 import type {
   ObservedCompetitor,
