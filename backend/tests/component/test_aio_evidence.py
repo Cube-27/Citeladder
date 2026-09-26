@@ -1,15 +1,13 @@
-"""Composing one overview's evidence, and folding a selection's rates.
+"""Composing one overview's evidence, for the Python copy MCP still reads.
 
-Two things are worth defending here and nothing else is.
+Mentioned / linked / cited stay THREE signals. The plan's acceptance fixtures
+are three rows that each light exactly one of them, and they are the whole
+reason ``AioEntityLink`` exists as a separate table. A reader who sees them
+collapse into one "appeared" column has lost the finding.
 
-First, that mentioned / linked / cited stay THREE signals. The plan's
-acceptance fixtures are three rows that each light exactly one of them, and
-they are the whole reason ``AioEntityLink`` exists as a separate table. A
-reader who sees them collapse into one "appeared" column has lost the finding.
-
-Second, that a retrieval CiteLadder never completed never reaches a
-denominator. Counting it would publish our own failures as the brand's
-absence, which is the single most damaging thing this surface could do.
+The selection's rates and the HTTP routes moved to the TypeScript API service,
+whose suite (``frontend/services/api/test/visibility-routes.test.ts``) carries
+their tests, including that a failed retrieval never reaches a denominator.
 """
 
 from __future__ import annotations
@@ -17,28 +15,21 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-import httpx
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.search_surfaces.contracts import (
     OUTCOME_AI_OVERVIEW_PRESENT,
-    OUTCOME_EXECUTION_FAILURE,
     OUTCOME_NO_AI_OVERVIEW,
 )
 from app.core.config.audits import AUDIT_STATUS_COMPLETED
 from app.core.config.provider_catalog import (
-    ENGINE_CHATGPT,
     ENGINE_GOOGLE_AI_OVERVIEW,
     TRANSPORT_DATAFORSEO,
 )
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
-from app.domain.analysis.aio_evidence import execution_surface_evidence, surface_rates
-from app.domain.analysis.aio_rates import (
-    DENOMINATOR_OBSERVATIONS_WITH_AIO,
-    DENOMINATOR_SUCCESSFUL_OBSERVATIONS,
-)
+from app.domain.analysis.aio_evidence import execution_surface_evidence
 from app.domain.analysis.aio_schemas import (
     SearchSurfaceEvidence,
     SurfaceEntityEvidence,
@@ -52,8 +43,6 @@ from app.models.audit import (
     RawResponseArtifact,
 )
 from app.models.search_surfaces import AioEntityLink, AioObservation
-from app.models.user import User
-from app.models.workspace import WorkspaceMember
 from tests.component.audit_helpers import seed_audit_fixtures
 
 _CONFIGURATION = {
@@ -439,312 +428,3 @@ class TestSurfaceEvidencePresence:
             )
         assert evidence.aio_present is False
         assert evidence.outcome == OUTCOME_NO_AI_OVERVIEW
-
-
-class TestRatesExcludeOurOwnFailures:
-    @pytest.mark.asyncio
-    async def test_a_failed_retrieval_is_excluded_not_counted_as_absence(
-        self, session_factory: async_sessionmaker[AsyncSession]
-    ) -> None:
-        """Two successes and one failure: the trigger rate divides by two.
-
-        A failure counted as an absence would drag the rate to 1/3 and report
-        a gap in our own retrieval as Google declining to answer.
-        """
-        async with session_factory() as session:
-            fixture = await _seed_audit(session)
-            await _seed_observation(session, fixture, prompt_index=0)
-            await _seed_observation(
-                session,
-                fixture,
-                prompt_index=1,
-                outcome=OUTCOME_NO_AI_OVERVIEW,
-                aio_present=False,
-            )
-            await _seed_observation(
-                session,
-                fixture,
-                prompt_index=2,
-                outcome=OUTCOME_EXECUTION_FAILURE,
-                aio_present=None,
-                analysis=False,
-            )
-            await session.commit()
-        async with session_factory() as session:
-            rates = await surface_rates(
-                session,
-                workspace_id=fixture.workspace_id,
-                project_id=fixture.project_id,
-                logical_engine=ENGINE_GOOGLE_AI_OVERVIEW,
-                audit_id=fixture.audit_id,
-            )
-        assert rates.successful == 2
-        assert rates.with_overview == 1
-        assert rates.excluded == 1
-        assert rates.trigger_rate.value == 0.5
-        assert (
-            rates.trigger_rate.denominator_kind == DENOMINATOR_SUCCESSFUL_OBSERVATIONS
-        )
-
-    @pytest.mark.asyncio
-    async def test_an_empty_denominator_is_unavailable_never_zero(
-        self, session_factory: async_sessionmaker[AsyncSession]
-    ) -> None:
-        async with session_factory() as session:
-            fixture = await _seed_audit(session)
-            await _seed_observation(
-                session,
-                fixture,
-                outcome=OUTCOME_NO_AI_OVERVIEW,
-                aio_present=False,
-            )
-            await session.commit()
-        async with session_factory() as session:
-            rates = await surface_rates(
-                session,
-                workspace_id=fixture.workspace_id,
-                project_id=fixture.project_id,
-                logical_engine=ENGINE_GOOGLE_AI_OVERVIEW,
-                audit_id=fixture.audit_id,
-            )
-        # No overview appeared, so every conditional rate has nothing to
-        # divide by. That is unknown, not zero.
-        assert rates.brand_mention_rate_when_present.value is None
-        assert (
-            rates.brand_mention_rate_when_present.denominator_kind
-            == DENOMINATOR_OBSERVATIONS_WITH_AIO
-        )
-        assert rates.trigger_rate.value == 0.0
-
-    @pytest.mark.asyncio
-    async def test_competitor_rates_use_the_conditional_denominator(
-        self, session_factory: async_sessionmaker[AsyncSession]
-    ) -> None:
-        async with session_factory() as session:
-            fixture = await _seed_audit(session)
-            await _seed_observation(
-                session, fixture, prompt_index=0, competitor_named=True
-            )
-            await _seed_observation(session, fixture, prompt_index=1)
-            await _seed_observation(
-                session,
-                fixture,
-                prompt_index=2,
-                outcome=OUTCOME_NO_AI_OVERVIEW,
-                aio_present=False,
-            )
-            await session.commit()
-        async with session_factory() as session:
-            rates = await surface_rates(
-                session,
-                workspace_id=fixture.workspace_id,
-                project_id=fixture.project_id,
-                logical_engine=ENGINE_GOOGLE_AI_OVERVIEW,
-                audit_id=fixture.audit_id,
-            )
-        assert [
-            (row.name, row.rate.numerator, row.rate.denominator)
-            for row in rates.competitor_mention_rates
-        ] == [("Globex", 1, 2)]
-
-    @pytest.mark.asyncio
-    async def test_an_answer_engine_gets_no_rates_at_all(
-        self, session_factory: async_sessionmaker[AsyncSession]
-    ) -> None:
-        """Not zeroes. A trigger rate for an asked engine is a category error."""
-        async with session_factory() as session:
-            fixture = await _seed_audit(session)
-            await session.commit()
-        async with session_factory() as session:
-            rates = await surface_rates(
-                session,
-                workspace_id=fixture.workspace_id,
-                project_id=fixture.project_id,
-                logical_engine=ENGINE_CHATGPT,
-                audit_id=fixture.audit_id,
-            )
-        assert rates.successful == 0
-        assert rates.trigger_rate.value is None
-
-    @pytest.mark.asyncio
-    async def test_the_cohort_filter_keeps_failures_in_the_excluded_count(
-        self, session_factory: async_sessionmaker[AsyncSession]
-    ) -> None:
-        """A failure has no analysis, so cohort must come off the snapshot.
-
-        Filtering cohort through the analysis row would inner-join the failure
-        away and report a clean measurement that hid it.
-        """
-        async with session_factory() as session:
-            fixture = await _seed_audit(session)
-            await _seed_observation(
-                session,
-                fixture,
-                prompt_index=0,
-                outcome=OUTCOME_EXECUTION_FAILURE,
-                aio_present=None,
-                analysis=False,
-            )
-            await _seed_observation(
-                session, fixture, prompt_index=1, cohort="comparison"
-            )
-            await session.commit()
-        async with session_factory() as session:
-            rates = await surface_rates(
-                session,
-                workspace_id=fixture.workspace_id,
-                project_id=fixture.project_id,
-                logical_engine=ENGINE_GOOGLE_AI_OVERVIEW,
-                audit_id=fixture.audit_id,
-            )
-        assert rates.excluded == 1
-        assert rates.successful == 0
-
-
-async def _authenticate(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-    *,
-    workspace_id: uuid.UUID,
-) -> None:
-    """Register a real user and attach them to the seeded workspace as owner."""
-    email = f"aio-{uuid.uuid4().hex[:8]}@example.com"
-    registration = await client.post(
-        "/api/v1/auth/register", json={"email": email, "password": "password123"}
-    )
-    assert registration.status_code == 202
-    login = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "password123"}
-    )
-    assert login.status_code == 200
-    async with session_factory() as session:
-        user = await session.scalar(select(User).where(User.email == email))
-        assert user is not None
-        session.add(
-            WorkspaceMember(workspace_id=workspace_id, user_id=user.id, role="owner")
-        )
-        await session.commit()
-
-
-class TestTheRatesEndpoint:
-    """The HTTP surface, for the boundary rather than for breadth."""
-
-    @pytest.mark.asyncio
-    async def test_a_foreign_workspace_cannot_read_a_projects_rates(
-        self,
-        client: httpx.AsyncClient,
-        session_factory: async_sessionmaker[AsyncSession],
-    ) -> None:
-        """404, not 403: existence itself must not leak across workspaces."""
-        async with session_factory() as session:
-            fixture = await _seed_audit(session)
-            await _seed_observation(session, fixture)
-            await session.commit()
-        await _authenticate(client, session_factory, workspace_id=fixture.workspace_id)
-
-        response = await client.get(
-            f"/api/v1/projects/{fixture.project_id}/visibility/surface-rates",
-            params={"engine": ENGINE_GOOGLE_AI_OVERVIEW},
-            headers={"X-Workspace-Id": str(uuid.uuid4())},
-        )
-        assert response.status_code == 404
-
-    @pytest.mark.asyncio
-    async def test_an_unknown_run_is_not_found_even_as_a_single_audit_id(
-        self,
-        client: httpx.AsyncClient,
-        session_factory: async_sessionmaker[AsyncSession],
-    ) -> None:
-        """A singular ``audit_id`` is authorized exactly as the set is.
-
-        Authorizing only ``audit_ids`` left the singular selector unchecked:
-        an unknown run simply matched no rows, and the caller got a 200 full
-        of zero denominators. Our own "that run is not yours" then read as
-        "Google showed nothing" -- the one confusion every denominator in
-        this module exists to prevent.
-        """
-        async with session_factory() as session:
-            fixture = await _seed_audit(session)
-            await _seed_observation(session, fixture)
-            await session.commit()
-        await _authenticate(client, session_factory, workspace_id=fixture.workspace_id)
-
-        response = await client.get(
-            f"/api/v1/projects/{fixture.project_id}/visibility/surface-rates",
-            params={
-                "engine": ENGINE_GOOGLE_AI_OVERVIEW,
-                "audit_id": str(uuid.uuid4()),
-            },
-            headers={"X-Workspace-Id": str(fixture.workspace_id)},
-        )
-        assert response.status_code == 404
-
-    @pytest.mark.asyncio
-    async def test_a_name_that_is_no_engine_is_rejected_not_answered(
-        self,
-        client: httpx.AsyncClient,
-        session_factory: async_sessionmaker[AsyncSession],
-    ) -> None:
-        """A typo is a bad request, not a surface that measured nothing.
-
-        An answer engine deliberately answers with no rates -- asking one for
-        a trigger rate is a category error. A name that is no engine at all
-        is a different thing, and answering it the same way let a misspelled
-        filter render as an empty measurement.
-        """
-        async with session_factory() as session:
-            fixture = await _seed_audit(session)
-            await _seed_observation(session, fixture)
-            await session.commit()
-        await _authenticate(client, session_factory, workspace_id=fixture.workspace_id)
-
-        response = await client.get(
-            f"/api/v1/projects/{fixture.project_id}/visibility/surface-rates",
-            params={"engine": "gooogle_ai_overview"},
-            headers={"X-Workspace-Id": str(fixture.workspace_id)},
-        )
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_the_rates_travel_with_their_denominators(
-        self,
-        client: httpx.AsyncClient,
-        session_factory: async_sessionmaker[AsyncSession],
-    ) -> None:
-        """One observed search, no overview: a real 0% and a real unknown.
-
-        Both numbers are correct and they are not the same kind of thing. The
-        trigger rate divided by one and got zero; the conditional rate had
-        nothing to divide by at all. Serialising the second as 0.0 would erase
-        that at the last boundary it could be erased at.
-        """
-        async with session_factory() as session:
-            fixture = await _seed_audit(session)
-            await _seed_observation(
-                session,
-                fixture,
-                outcome=OUTCOME_NO_AI_OVERVIEW,
-                aio_present=False,
-            )
-            await session.commit()
-        await _authenticate(client, session_factory, workspace_id=fixture.workspace_id)
-
-        response = await client.get(
-            f"/api/v1/projects/{fixture.project_id}/visibility/surface-rates",
-            params={"engine": ENGINE_GOOGLE_AI_OVERVIEW},
-            headers={"X-Workspace-Id": str(fixture.workspace_id)},
-        )
-        assert response.status_code == 200
-        body = response.json()
-        assert body["trigger_rate"] == {
-            "numerator": 0,
-            "denominator": 1,
-            "denominator_kind": DENOMINATOR_SUCCESSFUL_OBSERVATIONS,
-            "value": 0.0,
-        }
-        assert body["brand_mention_rate_when_present"] == {
-            "numerator": 0,
-            "denominator": 0,
-            "denominator_kind": DENOMINATOR_OBSERVATIONS_WITH_AIO,
-            "value": None,
-        }

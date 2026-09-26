@@ -3,9 +3,11 @@
 Status: PR 1 (TS platform foundation) implemented on 27 September 2026 at the
 owner's request, applying D1–D5 as drafted; D6 (team rule) still awaits the
 owner. PR 2 (shared contracts and route-ownership gate) implemented on
-27 September 2026 at the owner's request; the manifest lists all 21 current
-families as Python-owned. Not execution authorization; each later PR is
-executed only when individually assigned.
+27 September 2026 at the owner's request. PR 3 (first live reads) implemented
+on 27 September 2026 at the owner's request: `executions`, `ai-referrals` and
+`visibility` are TypeScript-owned, served through every ingress, with the
+GCP runtime running the service image. Not execution authorization; each later
+PR is executed only when individually assigned.
 
 ## 1. Goal, scope and pace
 
@@ -158,6 +160,16 @@ GET-only routers `executions`, `ai_referrals`, `visibility_sources` and
 deterministic leaves they use (`analysis/lexical`, `normalization`, `position`,
 `trend_metrics`, `scoring`, `comparison`), each under rule 2. Their component
 tests are ported with workspace-isolation cases. This is the first ingress split.
+
+*As implemented:* the routes reach only the leaves listed in the port —
+normalization's domain helpers, the grounding-redirect predicate, citation
+classification, mention position and frozen provenance, all golden-mastered
+against the Python that still serves the scorer. `lexical`, `trend_metrics`
+and `comparison` are not on these routes' paths and move with the PRs whose
+readers call them. `get_execution_evidence`, `execution_surface_evidence` and
+`get_ai_referrals` stay in Python for MCP and the Agent (rule 2); the rates,
+source series and URL detail retired with their routers (about 15 Python files
+including tests), their behavior frozen as golden masters.
 
 ### PR 4: Queue engine and referral analytics kinds
 

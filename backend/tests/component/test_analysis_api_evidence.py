@@ -37,8 +37,6 @@ from app.domain.analysis.evidence import (
 from app.domain.analysis.schemas import VisibilityFanoutState
 from app.domain.analysis.selection import RunSelection
 from app.domain.analysis.source_projection import get_visibility_sources
-from app.domain.analysis.source_series import get_visibility_source_series
-from app.domain.analysis.source_url_detail import get_visibility_source_url
 from app.models.analysis import (
     ResponseAnalysis,
 )
@@ -207,7 +205,7 @@ async def test_source_counts_and_empty_answers_use_complete_selection(session_fa
         assert foreign.total == 0
 
 
-async def test_source_series_and_url_detail_use_selected_persisted_runs(
+async def test_source_comparison_uses_selected_persisted_runs(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     url = "https://example.com/selected"
@@ -262,13 +260,6 @@ async def test_source_series_and_url_detail_use_selected_persisted_runs(
         )
         await session.commit()
 
-        selection = RunSelection(
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            audit_ids=[selected.id],
-        )
-        series = await get_visibility_source_series(session, selection)
-        detail = await get_visibility_source_url(session, selection, url=url)
         comparison = await get_visibility_sources(
             session,
             RunSelection(
@@ -279,9 +270,6 @@ async def test_source_series_and_url_detail_use_selected_persisted_runs(
             baseline_audit_ids=[selected.id],
         )
 
-    assert [item.key for item in series.series] == ["example.com"]
-    assert series.series[0].points[0].responses == 1
-    assert (detail.responses, detail.retrievals, detail.citations) == (1, 1, 1)
     assert comparison.comparison_status == "comparable"
     assert comparison.items[0].response_delta == 100.0
 
@@ -306,12 +294,6 @@ async def test_source_readers_reject_foreign_selected_runs(
             audit_id=foreign.id if selection_field == "audit_id" else None,
             audit_ids=[foreign.id] if selection_field == "audit_ids" else None,
         )
-        with pytest.raises(AnalysisNotFoundError):
-            await get_visibility_source_series(session, selection)
-        with pytest.raises(AnalysisNotFoundError):
-            await get_visibility_source_url(
-                session, selection, url="https://example.com/page"
-            )
         with pytest.raises(AnalysisNotFoundError):
             await get_visibility_sources(session, selection)
         if selection_field == "audit_ids":

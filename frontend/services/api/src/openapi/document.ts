@@ -12,7 +12,7 @@ export type JsonSchema = { [key: string]: unknown };
 
 type OpenApiParameter = {
   name: string;
-  in: 'path' | 'query';
+  in: 'path' | 'query' | 'header' | 'cookie';
   required: boolean;
   schema: JsonSchema;
 };
@@ -57,7 +57,12 @@ function parameters(location: OpenApiParameter['in'], object?: z.ZodObject): Ope
 
 function operation(route: RouteContract<string>): OpenApiOperation {
   const result: OpenApiOperation = { tags: [route.family], responses: {} };
-  const declared = [...parameters('path', route.pathParams), ...parameters('query', route.query)];
+  const declared = [
+    ...parameters('path', route.pathParams),
+    ...parameters('query', route.query),
+    ...parameters('header', route.headers),
+    ...parameters('cookie', route.cookies),
+  ];
   if (declared.length > 0) result.parameters = declared;
   if (route.body) {
     result.requestBody = {

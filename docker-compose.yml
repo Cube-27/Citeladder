@@ -104,6 +104,7 @@ services:
     restart: unless-stopped
     environment:
       BACKEND_ORIGIN: web:8000
+      API_SERVICE_ORIGIN: api-service:8100
       VITE_ORIGIN: vite-app:3001
       MARKETING_ORIGIN: frontend:3000
       DOCS_ORIGIN: docs:4322
@@ -143,10 +144,13 @@ services:
         PUBLIC_DOCS_ORIGIN: http://docs.localhost:3000
     restart: unless-stopped
     environment:
-      # Caddy consumes this only at runtime; it is never bundled for browsers.
+      # Caddy consumes these only at runtime; they are never bundled for browsers.
       BACKEND_ORIGIN: http://web:8000
+      API_SERVICE_ORIGIN: http://api-service:8100
     depends_on:
       web:
+        condition: service_healthy
+      api-service:
         condition: service_healthy
 
   worker:
@@ -327,8 +331,9 @@ services:
       disable: true
 
   # TypeScript API service (docs/plans/citeladder-typescript-migration.md).
-  # Owns no route family yet: no ingress routes to it and nothing depends on
-  # it. It reads the Alembic-migrated schema and verifies backend sessions.
+  # Serves the route families the route-ownership manifest assigns to
+  # TypeScript; both local ingresses send it exactly those paths. It reads the
+  # Alembic-migrated schema and verifies backend-issued sessions.
   api-service:
     build:
       context: .

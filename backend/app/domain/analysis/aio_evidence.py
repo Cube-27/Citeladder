@@ -1,7 +1,4 @@
-"""Read the Google AI Overview surface: one execution, or one selection.
-
-Two readers live here because they answer the two questions the surface
-raises and nothing else in the analysis layer answers.
+"""Read what one Google AI Overview execution showed.
 
 ``execution_surface_evidence`` composes what ONE overview showed. The three
 signals it composes -- mentioned, linked and cited -- come from three
@@ -11,12 +8,10 @@ absent from the references, and an entity in the references that no inline
 link points at. Using the link rows as the master entity list would quietly
 collapse that into one signal.
 
-``surface_rates`` folds a run selection's observations into the five rates in
-``aio_rates``, each carrying the denominator it divided by. Failed and pending
-observations are excluded from every denominator and counted separately: a
-task CiteLadder could not retrieve says nothing about whether Google showed
-the brand, and counting it as an absence would publish our own failures as the
-brand's.
+MCP's execution reader calls it through ``get_execution_evidence``. The HTTP
+execution route and the selection's rates moved to the TypeScript API service
+(``frontend/services/api/src/visibility/surface.ts``); this copy stays until
+its last Python caller moves (TypeScript migration rule 2).
 
 Nothing here classifies a domain on its own. Link ownership is decided by the
 SAME ``classify_citation`` the scorer used on the references, so an owned
@@ -26,48 +21,24 @@ domain cannot be owned in one panel and third-party in the next.
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
-from typing import Any
 
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.analysis.position import brand_position, competitor_position
 from app.analysis.scoring import ScoringConfig, classify_citation
-from app.connectors.search_surfaces.contracts import OUTCOME_AI_OVERVIEW_PRESENT
-from app.core.config.provider_catalog import LOGICAL_ENGINES, is_search_surface
-from app.domain.analysis.aio_rates import (
-    AioObservationCounts,
-    AioRate,
-    brand_mention_rate_when_present,
-    competitor_mention_rate,
-    count_observations,
-    overall_brand_visibility,
-    owned_citation_rate_when_present,
-    trigger_rate,
-)
 from app.domain.analysis.aio_schemas import (
-    AioCompetitorRate,
     AioLinkEvidence,
-    AioRateValue,
     SearchSurfaceEvidence,
     SurfaceEntityEvidence,
-    SurfaceRatesResponse,
 )
-from app.domain.analysis.errors import TrendQueryError
-from app.domain.analysis.selection import authorize_run_set
 from app.models.analysis import Citation, CompetitorMention, ResponseAnalysis
-from app.models.audit import Audit, AuditPromptSnapshot, AuditTask
+from app.models.audit import Audit
 from app.models.search_surfaces import AioEntityLink, AioObservation
 
 _BRAND = "brand"
 _COMPETITOR = "competitor"
-
-
-# ---------------------------------------------------------------------------
-# One execution
-# ---------------------------------------------------------------------------
 
 
 async def execution_surface_evidence(
@@ -225,190 +196,4 @@ async def _mentioned_competitors(
                 )
             )
         ).all()
-    )
-
-
-# ---------------------------------------------------------------------------
-# One selection
-# ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True, slots=True)
-class _Scope:
-    """The run selection every rate below is counted over, resolved once."""
-
-    workspace_id: uuid.UUID
-    project_id: uuid.UUID
-    audit_id: uuid.UUID | None
-    audit_ids: tuple[uuid.UUID, ...]
-    cohort: str
-
-    def conditions(self) -> list[ColumnElement[bool]]:
-        """Cohort is filtered through the frozen PROMPT SNAPSHOT.
-
-        Not through the analysis row: a failed observation never reaches
-        ``analyze_task`` and has no analysis to carry a cohort, so filtering
-        there would drop exactly the rows the excluded count exists to report.
-        """
-        where: list[ColumnElement[bool]] = [
-            AioObservation.workspace_id == self.workspace_id,
-            Audit.project_id == self.project_id,
-            AuditPromptSnapshot.cohort == self.cohort,
-        ]
-        if self.audit_ids:
-            where.append(AioObservation.audit_id.in_(self.audit_ids))
-        elif self.audit_id is not None:
-            where.append(AioObservation.audit_id == self.audit_id)
-        return where
-
-
-def _scoped(scope: _Scope, *columns: Any) -> Any:
-    """Select ``columns`` over the scoped observations and their analyses.
-
-    ``outerjoin`` on the analysis on purpose, for the same reason the cohort
-    filter sits on the prompt snapshot: an inner join would silently discard
-    every observation CiteLadder failed to retrieve.
-    """
-    return (
-        select(*columns)
-        .select_from(AioObservation)
-        .join(Audit, Audit.id == AioObservation.audit_id)
-        .join(AuditTask, AuditTask.id == AioObservation.task_id)
-        .join(
-            AuditPromptSnapshot,
-            (AuditPromptSnapshot.audit_id == AioObservation.audit_id)
-            & (AuditPromptSnapshot.prompt_index == AuditTask.prompt_index),
-        )
-        .outerjoin(ResponseAnalysis, ResponseAnalysis.task_id == AioObservation.task_id)
-        .where(*scope.conditions())
-    )
-
-
-async def surface_rates(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    logical_engine: str,
-    audit_id: uuid.UUID | None = None,
-    audit_ids: list[uuid.UUID] | None = None,
-    cohort: str = "core",
-) -> SurfaceRatesResponse:
-    """The five labelled rates over one measurement selection.
-
-    An engine that is not an observed surface has no rates rather than empty
-    ones: asking an LLM for a trigger rate is a category error, and answering
-    with zeroes would look like one that measured nothing. A name that is not
-    an engine AT ALL is a different thing again -- a typo, not a question --
-    and is rejected rather than answered, so a misspelled filter cannot read
-    as a surface that measured nothing.
-    """
-    if logical_engine not in LOGICAL_ENGINES:
-        raise TrendQueryError(f"Unknown logical engine: {logical_engine!r}")
-    if not is_search_surface(logical_engine):
-        return SurfaceRatesResponse(logical_engine=logical_engine)
-    # The single `audit_id` needs authorizing exactly as much as the set does.
-    # Left out, an unknown or out-of-scope id simply matched no rows and the
-    # caller got zero-denominator rates -- our own 200 reading as a measured
-    # absence -- where the run set answers 404. `conditions()` already gives
-    # `audit_ids` precedence over `audit_id`, so this mirrors that order.
-    await authorize_run_set(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        audit_ids=audit_ids or ([audit_id] if audit_id is not None else None),
-    )
-    scope = _Scope(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        audit_id=audit_id,
-        audit_ids=tuple(audit_ids or ()),
-        cohort=cohort,
-    )
-    counts = count_observations(
-        [
-            (str(outcome), present, bool(mentioned), bool(owned))
-            for outcome, present, mentioned, owned in (
-                await session.execute(
-                    _scoped(
-                        scope,
-                        AioObservation.outcome,
-                        AioObservation.aio_present,
-                        ResponseAnalysis.brand_mentioned,
-                        ResponseAnalysis.owned_domain_cited,
-                    )
-                )
-            ).all()
-        ]
-    )
-    competitors = await _competitor_counts(session, scope=scope)
-    return _rates_response(logical_engine, counts, competitors)
-
-
-def _rates_response(
-    logical_engine: str,
-    counts: AioObservationCounts,
-    competitors: dict[str, int],
-) -> SurfaceRatesResponse:
-    return SurfaceRatesResponse(
-        logical_engine=logical_engine,
-        successful=counts.successful,
-        with_overview=counts.with_overview,
-        excluded=counts.excluded,
-        trigger_rate=_rate_value(trigger_rate(counts)),
-        brand_mention_rate_when_present=_rate_value(
-            brand_mention_rate_when_present(counts)
-        ),
-        overall_brand_visibility=_rate_value(overall_brand_visibility(counts)),
-        owned_citation_rate_when_present=_rate_value(
-            owned_citation_rate_when_present(counts)
-        ),
-        competitor_mention_rates=[
-            AioCompetitorRate(
-                name=name,
-                rate=_rate_value(
-                    competitor_mention_rate(counts, competitor_mentions=total)
-                ),
-            )
-            for name, total in sorted(competitors.items())
-        ],
-    )
-
-
-async def _competitor_counts(session: AsyncSession, *, scope: _Scope) -> dict[str, int]:
-    """Overviews naming each competitor, over the same scoped observations.
-
-    Counted over DISTINCT observations so a competitor named twice in one
-    overview cannot lift its own rate above the denominator.
-    """
-    rows = (
-        await session.execute(
-            _scoped(
-                scope,
-                CompetitorMention.competitor_name,
-                func.count(func.distinct(AioObservation.task_id)),
-            )
-            .join(
-                CompetitorMention,
-                CompetitorMention.analysis_id == ResponseAnalysis.id,
-            )
-            .where(AioObservation.outcome == OUTCOME_AI_OVERVIEW_PRESENT)
-            .group_by(CompetitorMention.competitor_name)
-        )
-    ).all()
-    return {str(name): int(total) for name, total in rows}
-
-
-def _rate_value(rate: AioRate) -> AioRateValue:
-    """Carry a rate across the API boundary WITH its denominator.
-
-    ``value`` stays ``None`` for unavailable all the way to the renderer. If
-    it were coerced to 0.0 anywhere on this path, the distinction the rate
-    module exists to keep would be gone by the time anyone read it.
-    """
-    return AioRateValue(
-        numerator=rate.numerator,
-        denominator=rate.denominator,
-        denominator_kind=rate.denominator_kind,
-        value=rate.value,
     )

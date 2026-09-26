@@ -13,7 +13,6 @@ from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.agent import router as agent_router
-from app.api.ai_referrals import router as ai_referrals_router
 from app.api.audit_schedules import router as audit_schedules_router
 from app.api.audits import router as audits_router
 from app.api.auth import router as auth_router
@@ -21,7 +20,6 @@ from app.api.billing import router as billing_router
 from app.api.brand_discoveries import router as brand_discoveries_router
 from app.api.commerce import router as commerce_router
 from app.api.demand import router as demand_router
-from app.api.executions import router as executions_router
 from app.api.integrations import router as integrations_router
 from app.api.mcp_connections import router as mcp_connections_router
 from app.api.oauth import router as oauth_router
@@ -35,8 +33,6 @@ from app.api.provider_connections import (
 from app.api.provider_connections import router as provider_connections_router
 from app.api.search_intelligence import router as search_intelligence_router
 from app.api.site_health import router as site_health_router
-from app.api.visibility_sources import router as visibility_sources_router
-from app.api.visibility_surfaces import router as visibility_surfaces_router
 from app.api.workspaces import router as workspaces_router
 from app.connectors.answer_engines.http_client import aclose_shared_clients
 from app.connectors.billing.http_client import aclose_shared_billing_clients
@@ -73,20 +69,16 @@ _ROUTERS = (
     oauth_router,
     workspaces_router,
     projects_router,
-    visibility_sources_router,
-    visibility_surfaces_router,
     brand_discoveries_router,
     prompts_router,
     provider_connections_router,
     provider_catalog_router,
     audits_router,
     audit_schedules_router,
-    executions_router,
     site_health_router,
     demand_router,
     search_intelligence_router,
     integrations_router,
-    ai_referrals_router,
     performance_router,
     opportunities_router,
     agent_router,

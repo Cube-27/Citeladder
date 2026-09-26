@@ -14,7 +14,8 @@
  *   `null` default is then dropped, since Pydantic does not publish one;
  * - zod's redundant spellings are dropped: a `pattern` beside a `format`, the
  *   safe-integer bounds of `z.int()`, `additionalProperties: false` and
- *   `propertyNames: {type: 'string'}`.
+ *   `propertyNames: {type: 'string'}`; an open object's
+ *   `additionalProperties: {}` is Pydantic's `true`.
  *
  * Only success responses are compared. FastAPI publishes its default 422
  * schema, not the error envelope both stacks actually send; the envelope has
@@ -110,6 +111,13 @@ function dropRedundantSpellings(schema: JsonSchema): void {
     if (schema.maximum === Number.MAX_SAFE_INTEGER) delete schema.maximum;
   }
   if (schema.additionalProperties === false) delete schema.additionalProperties;
+  // An open object: zod spells it `{}`, Pydantic `true`.
+  if (
+    isObject(schema.additionalProperties) &&
+    Object.keys(schema.additionalProperties).length === 0
+  ) {
+    schema.additionalProperties = true;
+  }
   if (canonical(schema.propertyNames) === canonical({ type: 'string' })) {
     delete schema.propertyNames;
   }
@@ -140,7 +148,16 @@ function normalizeSchema(node: unknown, definitions: Definitions, seen: Set<stri
   const schema: JsonSchema = {};
   for (const [key, value] of Object.entries(source)) {
     if (ANNOTATIONS.has(key) || key === '$defs') continue;
-    schema[key] = normalizeSchema(value, definitions, seen);
+    // `properties` maps names to schemas: a property may be called `title`.
+    schema[key] =
+      key === 'properties' && isObject(value)
+        ? Object.fromEntries(
+            Object.entries(value).map(([name, property]) => [
+              name,
+              normalizeSchema(property, definitions, seen),
+            ]),
+          )
+        : normalizeSchema(value, definitions, seen);
   }
   normalizeProperties(schema);
   dropRedundantSpellings(schema);

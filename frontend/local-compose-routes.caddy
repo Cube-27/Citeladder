@@ -1,6 +1,11 @@
 # Local Compose only. Browser port 3000 combines both frontend containers for
 # clean-clone smoke; production routing belongs to the two Workers.
 # /register is a browser route; dynamic MCP registration is /mcp/register.
+# Route families the TypeScript API service owns (route-ownership manifest in
+# packages/contracts). Declared first, with the longest first pattern.
+@ts_api path /api/v1/executions/* /api/v1/projects/*/ai-referrals /api/v1/projects/*/visibility/sources/series /api/v1/projects/*/visibility/sources/url /api/v1/projects/*/visibility/surface-rates
+reverse_proxy @ts_api {$API_SERVICE_ORIGIN:127.0.0.1:8100}
+
 @backend path /api /api/* /mcp /mcp/* /authorize /token /revoke /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource/mcp
 reverse_proxy @backend {$BACKEND_ORIGIN:127.0.0.1:8000}
 

@@ -26,7 +26,7 @@ from app.domain.projects.service import brand_logo_url, competitor_logo_url
 from app.models.brand import Brand, Competitor
 from app.models.project import Project
 
-__all__ = ["BrandIdentity", "brand_identities"]
+__all__ = ["BrandIdentity", "brand_identities", "identity_key"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,7 +37,8 @@ class BrandIdentity:
     website: str | None
 
 
-def _key(name: str) -> str:
+def identity_key(name: str) -> str:
+    """The lookup key a recorded mention name resolves under."""
     return " ".join(str(name or "").split()).casefold()
 
 
@@ -72,7 +73,7 @@ def _brand_entry(project: Project) -> dict[str, BrandIdentity]:
     if brand is None or not brand.name:
         return {}
     return {
-        _key(brand.name): BrandIdentity(
+        identity_key(brand.name): BrandIdentity(
             logo_url=brand_logo_url(project.id) if brand.logo_asset_id else None,
             website=str(project.website_url or "") or None,
         )
@@ -98,4 +99,4 @@ def _add_competitor(
     )
     for name in (competitor.name, *(competitor.aliases or [])):
         if name:
-            found.setdefault(_key(str(name)), identity)
+            found.setdefault(identity_key(str(name)), identity)

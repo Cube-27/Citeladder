@@ -93,6 +93,7 @@ function resolveSetting(name: string, env: Record<string, string | undefined>): 
 export type ServiceConfig = {
   appName: string;
   appEnv: string;
+  host: string;
   port: number;
   databaseUrl: string;
   database: {
@@ -162,6 +163,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   const config: ServiceConfig = {
     appName: setting('app_name') as string,
     appEnv: setting('app_env') as string,
+    // Every interface by default, as a bridged container needs; a host-network
+    // deployment pins loopback, as the Python web process does.
+    host: env.HOST?.trim() || '0.0.0.0',
     port: parsePort(env.PORT),
     databaseUrl: setting('database_url') as string,
     database: {

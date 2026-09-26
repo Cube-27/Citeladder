@@ -148,6 +148,32 @@ services:
     <<: *backend
     command: ["python", "-m", "app.workers.integration_dispatcher"]
 
+  # TypeScript API service: the route families the route-ownership manifest
+  # assigns to TypeScript, which Caddy sends to :8100. Same database, session
+  # key and runtime.env as the Python web process; a smaller pool, since it
+  # serves a handful of reads beside ten Python processes.
+  api-service:
+    image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE must be an immutable digest}
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - path: runtime.env
+        required: ${RUNTIME_ENV_REQUIRED:-true}
+    environment:
+      APP_ENV: production
+      HOST: 127.0.0.1
+      PORT: "8100"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DB_SSL_MODE: require
+      DB_POOL_SIZE: "4"
+      DB_MAX_OVERFLOW: "0"
+      DEMO_MODE: ${DEMO_MODE:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
   caddy:
     image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     network_mode: host
@@ -162,6 +188,8 @@ services:
       - caddy_config:/config
     depends_on:
       web:
+        condition: service_healthy
+      api-service:
         condition: service_healthy
 
 volumes:

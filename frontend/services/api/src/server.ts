@@ -8,8 +8,9 @@ import { getLogger } from './logging.ts';
 const logger = getLogger('api');
 const config = loadConfig();
 const db = createDatabase(config);
-const server = serve({ fetch: createApp(config, db).fetch, port: config.port }, (info) =>
-  logger.info('api_service_started', { port: info.port }),
+const server = serve(
+  { fetch: createApp(config, db).fetch, hostname: config.host, port: config.port },
+  (info) => logger.info('api_service_started', { host: config.host, port: info.port }),
 );
 
 function shutdown(signal: string): void {

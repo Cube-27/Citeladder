@@ -28,6 +28,7 @@ from app.core.config.errors import (
 from app.core.errors import error_envelope
 from app.core.security import TokenDecodeError, decode_access_token
 from app.core.telemetry import sanitize_correlation_id
+from scripts import golden_masters_analysis as analysis
 
 # A fixture-only signing key; it signs nothing outside these fixtures.
 GOLDEN_SESSION_KEY = "golden-session-key-fixture-only-00000"  # pragma: allowlist secret
@@ -174,8 +175,18 @@ def secret_strength() -> list[dict[str, Any]]:
 
 
 GOLDEN_MASTERS: dict[str, Callable[[], list[dict[str, Any]]]] = {
+    "brand_identity_keys": analysis.brand_identity_keys,
+    "citation_classifications": analysis.citation_classifications,
     "correlation_ids": correlation_ids,
+    "domain_matches": analysis.domain_match_pairs,
     "error_envelopes": error_envelopes,
+    "grounding_redirects": analysis.grounding_redirects,
+    "mention_positions": analysis.mention_positions,
+    "metric_series_points": analysis.metric_series,
+    "normalized_domains": analysis.normalized_domains,
+    "python_string_reprs": analysis.python_string_reprs,
+    "python_uuids": analysis.python_uuids,
+    "retrieval_provenance": analysis.retrieval_provenance,
     "secret_strength": secret_strength,
     "session_tokens": session_tokens,
 }

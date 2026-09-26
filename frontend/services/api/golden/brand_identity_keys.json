@@ -1,0 +1,54 @@
+{
+  "name": "brand_identity_keys",
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "cases": [
+    {
+      "input": "Wise",
+      "output": "wise"
+    },
+    {
+      "input": "  Transfer   Wise ",
+      "output": "transfer wise"
+    },
+    {
+      "input": "STRASSE",
+      "output": "strasse"
+    },
+    {
+      "input": "Straße",
+      "output": "strasse"
+    },
+    {
+      "input": "ΣΊΣΥΦΟΣ",
+      "output": "σίσυφοσ"
+    },
+    {
+      "input": "ﬁnance",
+      "output": "finance"
+    },
+    {
+      "input": "tab\tand\nnewline",
+      "output": "tab and newline"
+    },
+    {
+      "input": "nbsp space",
+      "output": "nbsp space"
+    },
+    {
+      "input": "zero​width",
+      "output": "zero​width"
+    },
+    {
+      "input": "file\u001cseparator",
+      "output": "file separator"
+    },
+    {
+      "input": "İstanbul",
+      "output": "i̇stanbul"
+    },
+    {
+      "input": "",
+      "output": ""
+    }
+  ]
+}

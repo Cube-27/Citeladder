@@ -21,7 +21,7 @@
  * guards are plain-node programs that never import app TypeScript.)
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
@@ -351,6 +351,27 @@ function recordAttempt(errors: string[], attempt: AcquisitionAttempt): AcquiredS
   return attempt.acquired;
 }
 
+/**
+ * Add the response models of TypeScript-owned route families.
+ *
+ * Python's document no longer carries a family once it moves; its frozen
+ * Python fragment (`services/api/golden/families/<tag>.json`) does, and the
+ * route-ownership gate holds the TypeScript service to that fragment. Models
+ * Python still publishes win a name collision.
+ */
+function withTypeScriptFamilies(spec: OpenApiSpec, root: string): OpenApiSpec {
+  const directory = resolve(root, 'services/api/golden/families');
+  if (!existsSync(directory)) return spec;
+  const schemas = { ...spec.components?.schemas };
+  for (const name of readdirSync(directory).filter((file) => file.endsWith('.json'))) {
+    const fragment = JSON.parse(readFileSync(resolve(directory, name), 'utf8')) as OpenApiSpec;
+    for (const [component, schema] of Object.entries(fragment.components?.schemas ?? {})) {
+      schemas[component] ??= schema;
+    }
+  }
+  return { ...spec, components: { ...spec.components, schemas } };
+}
+
 /** Obtain the backend OpenAPI document from file, codegen, then live fetch. */
 export async function acquireOpenApiSpec(
   options?: AcquireOpenApiOptions,
@@ -358,14 +379,23 @@ export async function acquireOpenApiSpec(
   const env = options?.env ?? process.env;
   const root = options?.root ?? frontendRoot();
   const errors: string[] = [];
-  const fileSpec = recordAttempt(errors, fileSpecAttempt(env.CITELADDER_OPENAPI_JSON));
-  if (fileSpec) return { acquired: fileSpec, errors };
-  const codegenSpec = recordAttempt(errors, codegenSpecAttempt(root, options?.timeoutMs));
-  if (codegenSpec) return { acquired: codegenSpec, errors };
-  const origin = env.CITELADDER_BACKEND_ORIGIN ?? CONTRACT_BACKEND_ORIGIN;
-  const liveSpec = recordAttempt(
+  const acquired = await acquireFrom(env, root, options, errors);
+  return {
+    acquired: acquired && { ...acquired, spec: withTypeScriptFamilies(acquired.spec, root) },
     errors,
-    await liveSpecAttempt(origin, options?.fetchImpl ?? fetch),
-  );
-  return { acquired: liveSpec, errors };
+  };
+}
+
+async function acquireFrom(
+  env: NodeJS.ProcessEnv,
+  root: string,
+  options: AcquireOpenApiOptions | undefined,
+  errors: string[],
+): Promise<AcquiredSpec | null> {
+  const fileSpec = recordAttempt(errors, fileSpecAttempt(env.CITELADDER_OPENAPI_JSON));
+  if (fileSpec) return fileSpec;
+  const codegenSpec = recordAttempt(errors, codegenSpecAttempt(root, options?.timeoutMs));
+  if (codegenSpec) return codegenSpec;
+  const origin = env.CITELADDER_BACKEND_ORIGIN ?? CONTRACT_BACKEND_ORIGIN;
+  return recordAttempt(errors, await liveSpecAttempt(origin, options?.fetchImpl ?? fetch));
 }

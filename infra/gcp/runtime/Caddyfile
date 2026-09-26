@@ -20,9 +20,26 @@ https://__ORIGIN_DOMAIN_NAME__ {
   }
   @apex header X-CiteLadder-Public-Host __DOMAIN_NAME__
   @app header X-CiteLadder-Public-Host __APP_DOMAIN_NAME__
+  # Route families the TypeScript API service owns (route-ownership manifest
+  # in frontend/packages/contracts); every other path stays on :8000.
+  @ts_api path /api/v1/executions/* /api/v1/projects/*/ai-referrals /api/v1/projects/*/visibility/sources/series /api/v1/projects/*/visibility/sources/url /api/v1/projects/*/visibility/surface-rates
   route {
     handle @authorized {
       handle @apex {
+        handle @ts_api {
+          reverse_proxy 127.0.0.1:8100 {
+            header_up Host __DOMAIN_NAME__
+            header_up X-Forwarded-Host __DOMAIN_NAME__
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-For {client_ip}
+            header_up -Forwarded
+            header_up -X-Forwarded-Port
+            header_up -X-Real-IP
+            header_up -CF-Connecting-IP
+            header_up -X-CiteLadder-Origin-Token
+            header_up -X-CiteLadder-Public-Host
+          }
+        }
         reverse_proxy 127.0.0.1:8000 {
           header_up Host __DOMAIN_NAME__
           header_up X-Forwarded-Host __DOMAIN_NAME__
@@ -37,6 +54,20 @@ https://__ORIGIN_DOMAIN_NAME__ {
         }
       }
       handle @app {
+        handle @ts_api {
+          reverse_proxy 127.0.0.1:8100 {
+            header_up Host __APP_DOMAIN_NAME__
+            header_up X-Forwarded-Host __APP_DOMAIN_NAME__
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-For {client_ip}
+            header_up -Forwarded
+            header_up -X-Forwarded-Port
+            header_up -X-Real-IP
+            header_up -CF-Connecting-IP
+            header_up -X-CiteLadder-Origin-Token
+            header_up -X-CiteLadder-Public-Host
+          }
+        }
         reverse_proxy 127.0.0.1:8000 {
           header_up Host __APP_DOMAIN_NAME__
           header_up X-Forwarded-Host __APP_DOMAIN_NAME__
