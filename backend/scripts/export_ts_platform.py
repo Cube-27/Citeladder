@@ -23,7 +23,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from annotated_types import Ge, Le
 from pydantic.fields import FieldInfo
 
 from app.core.config import DEVELOPMENT_ENV_NAMES, Settings
@@ -98,11 +97,13 @@ def _setting(name: str) -> dict[str, Any]:
     entry: dict[str, Any] = {"env": _env_names(name, field)}
     entry.update(_type_descriptor(field.annotation))
     entry["default"] = field.default
+    # Pydantic records ``Field(ge=..., le=...)`` as metadata objects that
+    # expose ``ge``/``le`` attributes.
     for constraint in field.metadata:
-        if isinstance(constraint, Ge):
-            entry["minimum"] = constraint.ge
-        elif isinstance(constraint, Le):
-            entry["maximum"] = constraint.le
+        if (minimum := getattr(constraint, "ge", None)) is not None:
+            entry["minimum"] = minimum
+        if (maximum := getattr(constraint, "le", None)) is not None:
+            entry["maximum"] = maximum
     return entry
 
 
