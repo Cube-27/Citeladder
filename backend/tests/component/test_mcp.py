@@ -441,6 +441,13 @@ async def test_browser_consent_requires_an_explicit_approval(
     assert "http://127.0.0.1/callback" in page.text
     assert "Deny access" in page.text
     assert page.headers["cache-control"] == "no-store"
+    policy = {
+        parts[0]: parts[1:]
+        for directive in page.headers["content-security-policy"].split(";")
+        if (parts := directive.split())
+    }
+    assert policy["script-src"] == ["'none'"]
+    assert policy["form-action"] == ["'self'", "http://127.0.0.1"]
 
     forged = await client.post(
         "/mcp/oauth/consent",

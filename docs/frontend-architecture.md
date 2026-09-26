@@ -19,11 +19,22 @@ transport without visitor credentials. Production delivery and acceptance remain
 operator gated. The first release retains captured prior VM artifacts for a
 bounded rollback; later frontend releases use accepted Worker versions.
 
-Cloudflare serves matching static assets directly on both hosts. The product
-Worker still handles the root HTML shell and API routes before asset matching;
-its generated `_headers` file preserves static security and cache headers.
-Unmatched app routes reach the Worker for guarded SPA navigation, while unmatched
-marketing routes reach Astro SSR.
+The product Worker runs before asset matching, so root, deep-link and direct
+HTML responses all carry the same enforced Content Security Policy and no-store
+policy. Fingerprinted resources retain immutable caching. Marketing static
+resources use Cloudflare asset delivery; unmatched routes reach Astro SSR.
+Astro emits a CSP header with hashes for compiled hydration scripts, and the
+marketing middleware preserves it or supplies a restrictive fallback for proxy
+and error responses. Browser destinations live in
+`frontend/lib/config/content-security-policy.ts`; inline script and eval are
+not enabled. Inline styles support React layout, charts and consent pages.
+The app's pre-paint theme bootstrap is an external same-origin script. Upstream
+policies, including sandboxed logos and MCP consent, remain authoritative.
+The observed Cloudflare-injected Web Analytics beacon is allowed by its script
+path and reporting endpoint, following the
+[Cloudflare CSP requirements](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/).
+Google Analytics destinations are included only in a marketing build with a
+configured measurement ID, and loading still requires cookie consent.
 
 ## Routes and shared shell
 

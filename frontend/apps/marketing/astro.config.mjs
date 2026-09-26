@@ -5,6 +5,7 @@ import react from '@astrojs/react';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
 import { publicOrigins } from '../../lib/config/public-origins.ts';
+import { marketingContentSecurityPolicy } from '../../lib/config/content-security-policy.ts';
 
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
@@ -28,7 +29,14 @@ export default defineConfig({
   session: false,
   // External webhook and MCP POSTs reach exact routes; the backend verifies
   // signatures, OAuth transactions and CSRF at their owning endpoints.
-  security: { checkOrigin: false },
+  security: {
+    checkOrigin: false,
+    csp: marketingContentSecurityPolicy(
+      Boolean(
+        process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? environment.NEXT_PUBLIC_GA_MEASUREMENT_ID,
+      ),
+    ),
+  },
   adapter: cloudflare({ imageService: 'compile' }),
   integrations: [react()],
   publicDir: fileURLToPath(new URL('../../public', import.meta.url)),

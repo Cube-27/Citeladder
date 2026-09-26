@@ -21,7 +21,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.auth_oauth import AuthOAuthClient, build_auth_oauth_client
@@ -32,9 +32,10 @@ from app.core.config.oauth import (
 )
 from app.core.security import create_oauth_state, decode_oauth_state, hash_password
 from app.domain.auth import oauth_service
+from app.models.billing import AccountGrant, BillingAccount
 from app.models.user import User
 from app.models.user_identity import UserIdentity
-from app.models.workspace import WorkspaceMember
+from app.models.workspace import Workspace, WorkspaceMember
 
 _BASE = "/api/v1/auth/oauth"
 _PROVIDERS = ("google", "github", "apple")
@@ -450,12 +451,15 @@ async def test_callback_for_an_unimplemented_provider_is_refused(
 @pytest.mark.asyncio
 async def test_callback_for_an_unconfigured_provider_is_refused(
     client: httpx.AsyncClient,
+    db_session: AsyncSession,
     _all_providers_unconfigured: None,
 ) -> None:
     resp = await client.get(
         f"{_BASE}/google/callback", params={"code": "c", "state": "s"}
     )
     assert _redirect_error(resp) == "oauth_signin_disabled"
+    for model in (User, UserIdentity, Workspace, BillingAccount, AccountGrant):
+        assert await db_session.scalar(select(func.count()).select_from(model)) == 0
 
 
 @pytest.mark.asyncio

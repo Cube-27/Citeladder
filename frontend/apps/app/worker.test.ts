@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { handleAppRequest } from './worker';
 
 const env: Parameters<typeof handleAppRequest>[1] = {
@@ -20,6 +20,47 @@ function request(path: string, method = 'GET', accept = 'text/html'): Request {
 }
 
 describe('product Worker routing', () => {
+  it('enforces document policy on root, deep links and direct HTML', async () => {
+    for (const path of ['/', '/agent/actions', '/index.html']) {
+      const document = await handleAppRequest(request(path), env);
+      const policy = Object.fromEntries(
+        document.headers
+          .get('content-security-policy')!
+          .split(';')
+          .map((directive) => {
+            const [name, ...sources] = directive.trim().split(/\s+/);
+            return [name, sources];
+          }),
+      );
+      expect(policy['object-src']).toEqual(["'none'"]);
+      expect(policy['frame-ancestors']).toEqual(["'none'"]);
+      expect(policy['script-src']).not.toContain("'unsafe-inline'");
+      expect(policy['script-src']).not.toContain("'unsafe-eval'");
+      expect(document.headers.get('cache-control')).toBe('no-store');
+    }
+  });
+
+  it('preserves an upstream consent or sandbox policy instead of weakening it', async () => {
+    const policy = "default-src 'none'; sandbox";
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('<html></html>', {
+        headers: {
+          'Content-Type': 'text/html',
+          'Content-Security-Policy': policy,
+          'Cache-Control': 'no-store',
+        },
+      }),
+    );
+    try {
+      const result = await handleAppRequest(request('/mcp/oauth/consent'), env);
+      expect(result.headers.get('content-security-policy')).toBe(policy);
+      expect(result.headers.get('cache-control')).toBe('private, no-store');
+      expect(result.headers.get('x-robots-tag')).toContain('noindex');
+    } finally {
+      fetch.mockRestore();
+    }
+  });
+
   it('serves document navigation without turning missing resources or methods into HTML', async () => {
     const document = await handleAppRequest(request('/projects'), env);
     expect(document.status).toBe(200);

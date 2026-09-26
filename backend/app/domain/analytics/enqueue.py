@@ -292,6 +292,7 @@ async def enqueue_demand_snapshot_refresh(
     downstream_trigger_kind: str | None = None,
     downstream_trigger_id: uuid.UUID | None = None,
     priority: int = 0,
+    manual: bool = False,
 ) -> uuid.UUID | None:
     """Queue one immutable Demand interpretation for an evidence revision."""
     revision = source_revision[:24]
@@ -306,6 +307,16 @@ async def enqueue_demand_snapshot_refresh(
         source_revision=revision,
         priority=priority,
     )
+    if task_id is not None:
+        await session.execute(
+            update(AnalyticsTask)
+            .where(
+                AnalyticsTask.id == task_id,
+                AnalyticsTask.workspace_id == workspace_id,
+                AnalyticsTask.project_id == project_id,
+            )
+            .values(payload=AnalyticsTask.payload.op("||")({"manual": manual}))
+        )
     if task_id is not None and downstream_trigger_kind is not None:
         if downstream_trigger_id is None:
             raise ValueError("downstream trigger id is required with its kind")

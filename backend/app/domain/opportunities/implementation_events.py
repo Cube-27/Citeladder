@@ -167,6 +167,8 @@ async def _idempotent_replay(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    action_id: uuid.UUID,
     idempotency_key: str,
     fingerprint: str,
 ) -> OpportunityImplementationEvent | None:
@@ -176,7 +178,11 @@ async def _idempotent_replay(
             OpportunityImplementationEvent.idempotency_key == idempotency_key,
         )
     )
-    if row is not None and row.request_fingerprint != fingerprint:
+    if row is not None and (
+        row.project_id != project_id
+        or row.action_id != action_id
+        or row.request_fingerprint != fingerprint
+    ):
         raise ImplementationIdempotencyConflictError("Idempotency key was reused")
     return row
 
@@ -195,6 +201,8 @@ async def _flush_declaration(
         replay = await _idempotent_replay(
             session,
             workspace_id=row.workspace_id,
+            project_id=row.project_id,
+            action_id=row.action_id,
             idempotency_key=row.idempotency_key,
             fingerprint=fingerprint,
         )
@@ -396,6 +404,8 @@ async def declare_action_implemented(
     existing = await _idempotent_replay(
         session,
         workspace_id=workspace_id,
+        project_id=action.project_id,
+        action_id=action.id,
         idempotency_key=idempotency_key,
         fingerprint=fingerprint,
     )

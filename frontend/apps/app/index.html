@@ -8,14 +8,7 @@
     <!-- Apply a stored dark preference before first paint so a dark reader
         never sees a light frame. Light is the default. The key must match
         THEME_STORAGE_KEY in lib/theme/theme.ts, which owns the preference. -->
-    <script>
-      try {
-        if (localStorage.getItem('citeladder.theme') === 'dark') {
-          document.documentElement.dataset.theme = 'dark';
-          document.querySelector('meta[name="color-scheme"]').content = 'dark';
-        }
-      } catch {}
-    </script>
+    <script src="/theme-preference.js"></script>
     <link rel="icon" href="/citeladder-favicon.ico" sizes="any" />
     <link rel="manifest" href="/site.webmanifest" />
     <title>CiteLadder · AI visibility with evidence you can open</title>

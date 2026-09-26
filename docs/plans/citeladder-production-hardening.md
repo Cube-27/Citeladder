@@ -2,9 +2,75 @@
 
 Date: 25 September 2026
 
-Status: queued plan; no implementation or deployment authorized by this document.
+Status: approved repository-side Phase 1 subset implemented locally on 26 September
+2026 in `codex/production-hardening`, based on main at `bd1faf74`. Deployment,
+remaining cloud changes and runtime acceptance are pending. The owner authorized
+implementation separately; this document does not authorize deployment.
 
 Repository baseline: `8d079f09c3c682181a89a639378ec5e765d92a56`.
+
+## Implementation status — 26 September 2026
+
+The implementation remains uncommitted in the separate
+`Citeladder-production-hardening` worktree. It has not been merged, deployed or
+validated by CI. This status supersedes the original planning-time assumptions
+below; historical scanner evidence is not a claim about the deployed revision.
+
+| Item | Status | Remaining work |
+|---|---|---|
+| P1-0 Deployment and scanner evidence | Awaiting access/evidence; read-only inventory partially complete | Record deployed backend SHA and Worker versions, effective inherited ingress and edge configuration; reconcile app cache/header ownership; correct scanner targets and obtain authenticated controls. |
+| P1-1 Replay identity / SEC-01 | Implemented — deployment/retest pending | Current Action declarations already authorize and lock the Action before replay. Added explicit stored project/Action identity checks to initial lookup and conflict recovery without changing persisted fingerprints. Real PostgreSQL replay, authorization and race coverage passed; verify the deployed artifact. The original opportunity-route description below is historical. |
+| P1-2 Demand admission / SEC-02 | Approved subset implemented — deployment/retest pending; D2 awaiting decision | Saved project windows and one active manual refresh per project are enforced transactionally. Exact retries deduplicate; leased/retry jobs retain capacity; automatic enqueues remain independent. Legacy unmarked active jobs conservatively occupy a manual slot. Workspace aggregate/rate protection is still open. |
+| P1-3 CSP / SEC-03 | Implemented — deployment/retest pending | App/direct HTML, marketing and MCP consent policies implemented with external theme initialization and bounded deployed beacon compatibility. Local Worker/browser checks passed. Deploy backend before app and marketing Workers; verify final headers, hydration, consent, integrations and cache behavior. |
+| P1-4 TLS / SEC-04 | Awaiting access/evidence | Obtain named cipher/protocol results for both hosts on 443 and 8443; inspect effective edge settings before proposing any change. No TLS setting was changed. |
+| P1-5 Closed provisioning / SEC-05 | Local coverage implemented; deployed evidence incomplete | Disabled auth/OAuth paths have no provisioning side effects in tests. Public provider discovery reports Google/GitHub/Apple unconfigured; verify effective password signup and OAuth flags and existing-login behavior. This is not full deployed closure. |
+| P1-6 Integration retirement and IAM | Awaiting dependency evidence and concrete cloud change | Gemini identities/API and Peec resources still exist. Peec has a deployed function/Eventarc trigger and its build uses the default Compute identity; complete caller inventory before retirement. Verify exact CodeAnt key use and required deploy/recovery permissions. No identities, keys, APIs or roles were changed. |
+| P1-7 Network and state controls | Awaiting evidence; demo exceptions retained | VM metadata and project firewall rules were inspected, but inherited/effective ingress and default-network dependencies are not fully established. State bucket recovery controls were inspected; no network, bucket or retention mutation occurred. |
+| Phase 2 / D5 | Awaiting policy decisions | Account admission, customer data/recovery, data-preserving releases, access, retention and capacity acceptance remain pending. Current demo exceptions do not establish readiness for customer production. |
+| Security alerts / D6 | Deferred by owner | No new alerts, notification channels or delivery tests; not a hidden release prerequisite. |
+
+Read-only observations on 26 September: both public roots returned 200 without
+CSP. The app again returned `CF-Cache-Status: HIT` with `Cache-Control: no-store`;
+both hosts advertised HSTS `max-age=2592000`. Identify the serving/cache override
+and verify the released response; this observation alone does not establish a
+sensitive-data leak. The demo VM is running in `asia-south1-a`, with instance
+OS Login enabled and project SSH keys blocked. Project firewall rules permit
+Cloudflare HTTP(S) and IAP SSH to its service identity; inherited policies remain
+unverified. The state bucket has versioning, enforced public-access prevention,
+uniform access and seven-day soft delete, with no lifecycle or locked retention.
+
+### Deployment blockers and acceptance gates
+
+There is no known unresolved application failure in the locally tested slice.
+This is not yet a deployable, accepted release:
+
+- Commit/reconcile the isolated branch with current main, obtain required green
+  CI, and pass the existing protected release process. Deployment credentials,
+  protected environment settings and origin-token alignment have not been
+  revalidated; they are unknown prerequisites, not confirmed missing secrets.
+- Verify effective closed-provisioning flags before accepting the demo release.
+  Resolve the cache/header ownership discrepancy and verify fresh responses
+  enforce CSP and intended cache behavior after rollout.
+- Release backend, app Worker, then marketing Worker using the existing runbook.
+  Capture artifact/configuration references and rollback targets; run bounded
+  deployed acceptance. No new schema migration, reset, queue service or secret
+  is required by this slice.
+
+D2 workspace limits are explicitly deferred by the owner's instruction to
+implement saved windows and one refresh per project. They do not block shipping
+that approved demo subset, but SEC-02 is only partially addressed. Pending TLS,
+cloud retirement/IAM and authenticated scanner evidence prevent declaring
+Phase 1 complete. Phase 2 policy and recovery requirements prevent declaring
+customer-production readiness; they do not automatically prevent this demo
+hardening deployment.
+
+Local verification includes real PostgreSQL owner coverage, focused frontend
+tests, app/marketing builds, local HTTPS Worker browser checks and unchanged
+generated Worker bindings. The repository check script completed with an initial
+Ruff line-length failure corrected by its formatter; the focused Ruff recheck
+passed, as did its other gates. Exact commands, exit statuses and logs are in
+the worktree Git directory for the PR/release record. Full CI, deployed DAST/TLS,
+restore drills and live payment/provider acceptance have not run.
 
 ## 1. Scope and decisions
 
@@ -30,7 +96,7 @@ verification; do not interpret them as permission to remove product AI engines.
 This plan owns the scoped remediation sequence. Existing feature documents and
 [invariants](../invariants.md) remain authoritative. Phase 2 consumes the policies
 and decisions from the separately queued
-[audit remediation plan](citeladder-audit-remediation.md); it does not start that
+audit remediation plan (`citeladder-audit-remediation.md`); it does not start that
 plan or duplicate its policy work.
 
 ## 2. Evidence and limitations
@@ -57,8 +123,10 @@ the scanner's captured HTTP response excerpts. Those excerpts are truncated;
 the original PDF files, GCP findings JSON and raw TLS negotiation output have
 not been supplied. GCP counts remain secondary report evidence. The source
 review below uses the recorded repository baseline, not an assumed deployed SHA.
-No live GCP/Cloudflare configuration, Terraform state, secrets or deployed
-application was inspected. No exploit, test suite or runtime scan was executed.
+At the original planning stage, no live GCP/Cloudflare configuration, Terraform
+state, secrets or deployed application was inspected, and no exploit, test suite
+or runtime scan was executed. The implementation status above records subsequent
+local checks and bounded read-only inspection; it does not claim a runtime scan.
 
 No applicable `SECURITY.md` was found by policy resolution for the inspected
 backend, frontend and infrastructure scopes. Boundary assessments instead use
@@ -478,7 +546,7 @@ is recorded. A clean scanner score is neither required nor sufficient.
 |---|---|---|
 | D0 | Demo now versus customer production now | Resolved by owner: Phase 1 current demo; Phase 2 production after policies |
 | D1 | Manual recompute windows and per-project concurrency | Resolved by owner: refresh the saved data window shown on screen; at most one queued/running manual refresh per project. No arbitrary custom-window expansion. |
-| D2 | Manual recompute workspace rate budget and aggregate capacity | Pending measured current-demo capacity and owner selection. Existing unrelated abuse defaults are not approval. Preserve legitimate saved windows; raise any required additional date restriction before implementation. |
+| D2 | Manual recompute workspace rate budget and aggregate capacity | Deferred from the current implementation by the owner on 26 September: implement approved saved windows and one refresh per project only. Measured demo capacity and owner-selected workspace limits remain pending; SEC-02 is partially addressed, not closed. |
 | D3 | Public provisioning policy | Current docs/config intend closed password and Google signup until policies are ready. Ask only if live evidence shows an intentional different policy. |
 | D4 | Paid TLS control or legacy-client exception | Conditional: ask only after an exact unacceptable cipher and account limitation are demonstrated. No purchase assumed. |
 | D5 | Phase 2 data/recovery/access/logging/cost policies | Deliberately pending the policy work; no invented retention, downtime, RPO/RTO or spending values. |
@@ -524,5 +592,6 @@ claim a false positive. Closure requires original finding references, changed
 files/resources, executed test results, deployed artifact/config references,
 bounded retest results and unresolved owner actions in the PR/release record.
 
-This saved plan changes documentation only. None of the reported vulnerabilities,
-cloud findings or runtime controls is claimed fixed by this planning work.
+The repository implementation status and remaining items are recorded above.
+Local verification does not establish deployed closure of the reported findings;
+no deployment or cloud mutation has been performed as part of this work.

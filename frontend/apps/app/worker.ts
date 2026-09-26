@@ -1,4 +1,5 @@
 import { proxyWorkerRequest } from '../../lib/server/worker-origin-proxy';
+import { APP_CONTENT_SECURITY_POLICY } from '../../lib/config/content-security-policy';
 import type { WorkerEnv } from './worker-configuration';
 
 const SECURITY_HEADERS = {
@@ -20,6 +21,9 @@ function response(body: string | null, status: number, contentType = 'text/plain
 function decorate(result: Response, html = false, immutable = false): Response {
   const headers = new Headers(result.headers);
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
+  if (!headers.has('Content-Security-Policy')) {
+    headers.set('Content-Security-Policy', APP_CONTENT_SECURITY_POLICY);
+  }
   if (html) headers.set('Cache-Control', 'no-store');
   if (immutable) headers.set('Cache-Control', 'public, max-age=31536000, immutable');
   return new Response(result.body, { status: result.status, headers });

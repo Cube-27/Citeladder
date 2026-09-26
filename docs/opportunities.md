@@ -104,6 +104,10 @@ Action carries at most one declaration; a same-key replay returns it, and
 same-key conflicting input is rejected. A dismissed Action is reopened first,
 and an Action with no current finding is refused: with no checks it could never
 be measured.
+Replay checks both the persisted project/Action identity and the original
+fingerprint after workspace-scoped Action authorization, including unique-key
+insert-conflict recovery. A valid retry returns the original declaration without
+requiring a new snapshot, resolving targets again, or repeating side effects.
 Dismissing an Action or producing Agent output for it does not declare it. The
 chat's own measurement plan is free text and does not add checks.
 

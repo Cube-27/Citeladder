@@ -237,6 +237,15 @@ The default Playwright suite uses mocked browser fixtures. Its `app` project
 targets Vite on 3100; its `marketing` project targets Astro on 3101. It is not
 evidence of live provider acceptance; those checks remain explicit release work.
 
+For browser enforcement of production Worker CSP, build `pnpm build:app` and
+`pnpm build:marketing` with explicit public origins and the disposable marketing
+analytics ID `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-CONSENTTEST`, then run `pnpm test:workers`
+from `frontend/`. This separate suite starts local HTTPS Workerd on ports
+8793/8794, checks built HTML and hydration, and proves injected inline scripts
+are blocked. It also runs the existing authenticated Performance and analytics
+consent checks against the built Workers. It uses disposable upstream settings and mocks analytics requests;
+it does not enable or test a live checkout/provider.
+
 ### Repository validation harness
 
 After the intended executable diff is complete, run the mode appropriate to the
