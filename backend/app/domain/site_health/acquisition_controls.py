@@ -29,7 +29,9 @@ async def authorize_acquisition(
             error_code=ERROR_ACQUISITION_UNAVAILABLE,
         ) from exc
     labels = host.split(".")
-    scopes = ["*", *(".".join(labels[index:]) for index in range(len(labels)))]
+    # Multi-label suffixes only: a stray bare-TLD row ("com") must never act as
+    # a second global stop. "*" is the one global scope.
+    scopes = ["*", *(".".join(labels[index:]) for index in range(len(labels) - 1))]
     try:
         async with session_factory() as session:
             blocked = await session.scalar(

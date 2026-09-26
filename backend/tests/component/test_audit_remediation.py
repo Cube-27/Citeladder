@@ -146,6 +146,16 @@ async def test_suppression_is_live_matches_subdomains_and_global_stop(
     await authorize_acquisition(
         "https://notexample.test/", session_factory=session_factory
     )
+    # A bare-TLD row is inert; only "*" stops every host.
+    db_session.add(
+        WebAcquisitionControl(
+            domain="test", blocked=True, actor_id=user.id, reason="Stray TLD row"
+        )
+    )
+    await db_session.commit()
+    await authorize_acquisition(
+        "https://unrelated.test/", session_factory=session_factory
+    )
     db_session.add(
         WebAcquisitionControl(
             domain="xn--bcher-kva.test",
