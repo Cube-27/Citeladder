@@ -11,11 +11,15 @@
  *   conditions. `path` and `path_regexp` are evaluated; any other condition
  *   (a header or host) is unknown, so both of its outcomes are explored;
  * - `route` keeps its handlers in written order. Any other block sorts them
- *   as Caddy does: by directive (`handle`, `route`, `respond`,
- *   `reverse_proxy`), then, within one directive, the longest first path of
- *   a single path matcher first, then other matchers, then no matcher.
+ *   as Caddy's `sortRoutes` does: by directive (`handle`, `route`, `respond`,
+ *   `reverse_proxy`), then, within one directive, matchers before no
+ *   matcher, and the longer path first where a matcher's `path` holds exactly
+ *   one pattern (other conditions beside it do not matter). A multi-pattern
+ *   `path` or a regexp counts as length zero and keeps written order.
  *
- * Anything outside the subset fails loudly rather than being guessed at.
+ * Anything outside the subset fails loudly rather than being guessed at: a
+ * directive that is neither a handler above, a matcher declaration nor a
+ * known non-routing directive is refused.
  */
 
 export type Upstreams = { python: readonly string[]; typescript: readonly string[] };
@@ -30,6 +34,10 @@ type Condition = { kind: 'path'; patterns: string[] } | { kind: 'regexp'; patter
 type Matcher = { conditions: Condition[]; firstPathLength: number };
 
 const HANDLER_ORDER = ['handle', 'route', 'respond', 'reverse_proxy'] as const;
+
+// Directives that change headers, encoding, logging or TLS but never which
+// handler serves a path.
+const NON_ROUTING = new Set(['encode', 'header', 'log', 'request_body', 'request_header', 'tls']);
 
 function tokenize(line: string): string[] {
   const tokens: string[] = [];
@@ -73,8 +81,11 @@ function condition(name: string, args: string[], line: number): Condition {
 
 function matcher(conditions: Condition[]): Matcher {
   const paths = conditions.filter((entry) => entry?.kind === 'path');
-  const first = paths.length === 1 && paths[0]?.kind === 'path' ? paths[0].patterns[0] : undefined;
-  return { conditions, firstPathLength: first?.length ?? 0 };
+  const only =
+    paths.length === 1 && paths[0]?.kind === 'path' && paths[0].patterns.length === 1
+      ? paths[0].patterns[0]
+      : undefined;
+  return { conditions, firstPathLength: only?.length ?? 0 };
 }
 
 function collectMatchers(nodes: Node[], matchers: Map<string, Matcher>): void {
@@ -123,7 +134,10 @@ function evaluate(entry: Matcher | undefined, path: string): boolean | null {
 type Handler = { node: Node; matcher: Matcher | undefined; hasMatcher: boolean };
 
 function handlerOf(node: Node, matchers: Map<string, Matcher>): Handler | null {
-  if (!(HANDLER_ORDER as readonly string[]).includes(node.name)) return null;
+  if (node.name.startsWith('@') || NON_ROUTING.has(node.name)) return null;
+  if (!(HANDLER_ORDER as readonly string[]).includes(node.name)) {
+    throw new Error(`Unsupported directive '${node.name}' at line ${node.line}`);
+  }
   const token = node.args[0];
   if (token?.startsWith('@')) {
     const named = matchers.get(token);

@@ -28,9 +28,27 @@ reverse_proxy {$MARKETING_ORIGIN:127.0.0.1:3000}
     expect(reach(snippet, '/pricing')).toEqual(['other']);
   });
 
-  it('sorts a regexp matcher behind every single-path matcher', () => {
+  it('keeps written order when neither matcher holds exactly one path', () => {
     const snippet = `
 @backend path /api /api/*
+reverse_proxy @backend {$BACKEND_ORIGIN:127.0.0.1:8000}
+@ts_api path /api/v1/executions /api/v1/executions/*
+reverse_proxy @ts_api {$API_SERVICE_ORIGIN:127.0.0.1:8100}
+`;
+    expect(reach(snippet, EXECUTION)).toEqual(['python']);
+  });
+
+  it('refuses a directive that could reroute a path', () => {
+    const snippet = `
+rewrite /api/v1/executions/* /api/v1/runs{uri}
+reverse_proxy {$BACKEND_ORIGIN:127.0.0.1:8000}
+`;
+    expect(() => reach(snippet, EXECUTION)).toThrow("Unsupported directive 'rewrite' at line 2");
+  });
+
+  it('sorts a regexp matcher behind a single-path matcher', () => {
+    const snippet = `
+@backend path /api/*
 reverse_proxy @backend {$BACKEND_ORIGIN:127.0.0.1:8000}
 @ts_api path_regexp ts ^/api/v1/executions/[^/]+$
 reverse_proxy @ts_api {$API_SERVICE_ORIGIN:127.0.0.1:8100}
