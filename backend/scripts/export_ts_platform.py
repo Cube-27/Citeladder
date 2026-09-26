@@ -8,6 +8,9 @@ Committed artifacts:
 * ``services/api/golden/*.json`` -- golden masters produced by the Python
   implementation and replayed by the TS test suite, so a port is proven to
   behave the same.
+* ``services/api/golden/openapi/parity.json`` -- the OpenAPI fragment
+  FastAPI publishes for a fixture family, which proves the TS exporter and
+  fragment normalization against Pydantic's schemas.
 * ``packages/contracts/src/generated/error-codes.ts`` -- the machine-code
   union: every error code declared by the modules in ``ERROR_CODE_MODULES``.
 
@@ -56,11 +59,13 @@ from app.core.config.workspaces import (
 )
 from app.domain.workspaces.policy import WORKSPACE_ROLES, effective_capabilities
 from scripts.golden_masters import GOLDEN_MASTERS
+from scripts.openapi_fragments import parity_fragment
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
 SERVICE_ROOT = FRONTEND_ROOT / "services" / "api"
 CONFIG_PATH = SERVICE_ROOT / "src" / "generated" / "python-config.json"
 GOLDEN_ROOT = SERVICE_ROOT / "golden"
+PARITY_PATH = GOLDEN_ROOT / "openapi" / "parity.json"
 CONTRACTS_ROOT = FRONTEND_ROOT / "packages" / "contracts"
 ERROR_CODES_PATH = CONTRACTS_ROOT / "src" / "generated" / "error-codes.ts"
 GENERATED_BY = "backend/scripts/export_ts_platform.py"
@@ -205,6 +210,7 @@ def build_artifacts() -> dict[Path, str]:
     artifacts = {
         CONFIG_PATH: _render(build_config()),
         ERROR_CODES_PATH: render_error_codes(),
+        PARITY_PATH: _render({"generated_by": GENERATED_BY, **parity_fragment()}),
     }
     for name, build in GOLDEN_MASTERS.items():
         payload = {"name": name, "generated_by": GENERATED_BY, "cases": build()}
