@@ -281,7 +281,9 @@ jobs:
           python-version: "3.12"
       - name: Install backend runtime (frozen lock)
         working-directory: backend
-        run: uv sync --frozen
+        # Published wheels only and no project install, as in the backend
+        # image: Alembic and the export run from backend/ on the source tree.
+        run: uv sync --frozen --no-dev --no-install-project --no-build
       - name: Apply the Alembic schema
         working-directory: backend
         run: .venv/bin/alembic upgrade head

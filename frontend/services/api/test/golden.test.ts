@@ -8,6 +8,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { decodeSessionToken } from '../src/auth/session.ts';
+import { secretIsWeak } from '../src/config.ts';
 import { defaultCode, errorEnvelope, isRetryableStatus } from '../src/errors.ts';
 import { sanitizeCorrelationId } from '../src/request-id.ts';
 
@@ -33,8 +34,10 @@ const PORTS: Record<string, (input: never) => unknown> = {
       details: input.details,
       detail: input.detail,
     }),
-  session_tokens: async (input: { key: string; token: string }) => {
-    const claims = await decodeSessionToken(input.token, input.key, REPLAY_INSTANT);
+  secret_strength: (input: string) => secretIsWeak(input),
+  session_tokens: async (input: { key: string; token_segments: string[] }) => {
+    const token = input.token_segments.join('.');
+    const claims = await decodeSessionToken(token, input.key, REPLAY_INSTANT);
     return claims === null ? { rejected: true } : { claims };
   },
 };

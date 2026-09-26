@@ -19,7 +19,7 @@ from typing import Any
 from joserfc import jwt
 from joserfc.jwk import OctKey
 
-from app.core.config import settings
+from app.core.config import secret_is_weak, settings
 from app.core.config.errors import (
     CODE_HTTP_ERROR,
     STATUS_DEFAULT_CODE,
@@ -147,13 +147,35 @@ def session_tokens() -> list[dict[str, Any]]:
                 output: dict[str, Any] = {"claims": decode_access_token(token)}
             except TokenDecodeError:
                 output = {"rejected": True}
-            case_input = {"label": label, "key": GOLDEN_SESSION_KEY, "token": token}
+            # Stored as dot-separated segments: a whole token literal reads
+            # as a leaked credential to secret scanners, which it is not.
+            case_input = {
+                "label": label,
+                "key": GOLDEN_SESSION_KEY,
+                "token_segments": token.split("."),
+            }
             cases.append({"input": case_input, "output": output})
     return cases
+
+
+def secret_strength() -> list[dict[str, Any]]:
+    inputs = [
+        "",
+        "short",
+        "replace-with-32-byte-minimum-secret",
+        "a" * 40,
+        "abcdefghijk" * 4,
+        "abcdefghijkl" * 3,
+        "  PassWord  ",
+        "ﬁ" * 11 + "abcdefghijklmnopqrstuvwxyz",
+        "correct-horse-battery-staple-4-0-9-x",
+    ]
+    return [{"input": value, "output": secret_is_weak(value)} for value in inputs]
 
 
 GOLDEN_MASTERS: dict[str, Callable[[], list[dict[str, Any]]]] = {
     "correlation_ids": correlation_ids,
     "error_envelopes": error_envelopes,
+    "secret_strength": secret_strength,
     "session_tokens": session_tokens,
 }

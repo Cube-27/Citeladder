@@ -132,13 +132,22 @@ function isDevelopmentEnv(appEnv: string): boolean {
   return policy.development_env_names.includes(appEnv.trim().toLowerCase());
 }
 
+/** Mirror of `secret_is_weak` in `backend/app/core/config`, from its exported policy. */
+export function secretIsWeak(value: string): boolean {
+  const rules = policy.secret_policy;
+  return (
+    new TextEncoder().encode(value).length < rules.min_bytes ||
+    new Set(value).size < rules.min_unique_chars ||
+    rules.insecure_values.includes(value) ||
+    rules.weak_words.includes(value.trim().toLowerCase())
+  );
+}
+
 function assertDeployable(config: ServiceConfig): void {
   if (isDevelopmentEnv(config.appEnv)) return;
-  const placeholder = policy.settings.jwt_secret_key.default;
-  const key = config.session.secretKey;
   // The Python startup check owns the full production policy; this service
-  // refuses at least the two failures that would make sessions forgeable.
-  if (key === placeholder || new TextEncoder().encode(key).length < 32) {
+  // refuses the two failures that would make its own sessions or data unsafe.
+  if (secretIsWeak(config.session.secretKey)) {
     throw new ConfigError('JWT_SECRET_KEY does not meet the production strength policy');
   }
   if (config.database.sslMode !== 'require') {

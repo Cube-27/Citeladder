@@ -52,15 +52,4 @@ describe('WorkspaceScope', () => {
     const rows = await new WorkspaceScope(ours).selectFrom(db, 'projects').select('name').execute();
     expect(rows).toEqual([{ name: 'Ours' }]);
   });
-
-  it('writes only the scoped workspace', async () => {
-    await new WorkspaceScope(ours).updateTable(db, 'projects').set({ name: 'Renamed' }).execute();
-    await new WorkspaceScope(ours).deleteFrom(db, 'projects').execute();
-    const names = await db
-      .selectFrom('projects')
-      .select('name')
-      .where('workspace_id', 'in', [ours, theirs])
-      .execute();
-    expect(names).toEqual([{ name: 'Theirs' }]);
-  });
 });

@@ -18,12 +18,19 @@ from app.core.config.dotenv import BASE_DIR as BASE_DIR
 from app.core.config.dotenv import PROJECT_ROOT as PROJECT_ROOT
 from app.core.config.dotenv import dotenv_sources
 
-_INSECURE_DEFAULTS = {
-    "change-me",
-    "change-me-32-bytes-minimum-change-me",
-    "replace-with-64-byte-random-secret",
-    "replace-with-32-byte-minimum-secret",
-}
+INSECURE_SECRET_DEFAULTS = frozenset(
+    {
+        "change-me",
+        "change-me-32-bytes-minimum-change-me",
+        "replace-with-64-byte-random-secret",
+        "replace-with-32-byte-minimum-secret",
+    }
+)
+# Deployment-secret strength policy. The TypeScript API service applies the
+# same rule through the generated export (scripts/export_ts_platform.py).
+SECRET_MIN_BYTES = 32
+SECRET_MIN_UNIQUE_CHARS = 12
+WEAK_SECRET_WORDS = frozenset({"password", "secret", "citeladder", "changeme"})
 
 
 class Settings(BaseSettings):
@@ -325,13 +332,13 @@ _SECRET_FIELDS = (
 )
 
 
-def _secret_is_weak(value: str) -> bool:
+def secret_is_weak(value: str) -> bool:
     normalized = value.strip().casefold()
     return (
-        len(value.encode("utf-8")) < 32
-        or len(set(value)) < 12
-        or value in _INSECURE_DEFAULTS
-        or normalized in {"password", "secret", "citeladder", "changeme"}
+        len(value.encode("utf-8")) < SECRET_MIN_BYTES
+        or len(set(value)) < SECRET_MIN_UNIQUE_CHARS
+        or value in INSECURE_SECRET_DEFAULTS
+        or normalized in WEAK_SECRET_WORDS
     )
 
 
@@ -369,7 +376,7 @@ def encryption_key_configured(candidate: Settings) -> bool:
     publicly known key (provisioning refuses to run, invariant 6).
     """
     value = candidate.encryption_key.strip()
-    return bool(value) and value not in _INSECURE_DEFAULTS
+    return bool(value) and value not in INSECURE_SECRET_DEFAULTS
 
 
 def trusted_proxy_networks(
@@ -448,7 +455,7 @@ def validate_production_security(candidate: Settings) -> list[str]:
     issues: list[str] = []
     values = {name: getattr(candidate, name) for name in _SECRET_FIELDS}
     for name, value in values.items():
-        if _secret_is_weak(value):
+        if secret_is_weak(value):
             issues.append(f"{name} does not meet the production strength policy")
     if len(set(values.values())) != len(values):
         issues.append("application secrets must be independent")
@@ -457,7 +464,7 @@ def validate_production_security(candidate: Settings) -> list[str]:
         database_password = make_url(candidate.database_url).password or ""
     except Exception:  # noqa: BLE001 - invalid URL is reported without its value
         database_password = ""
-    if _secret_is_weak(database_password):
+    if secret_is_weak(database_password):
         issues.append("database password does not meet the production strength policy")
     if database_password and database_password in values.values():
         issues.append("database password must be independent of application secrets")
@@ -540,7 +547,7 @@ def _check_secret_defaults() -> None:
         else [
             f"{name} is set to a default value"
             for name in _SECRET_FIELDS
-            if getattr(settings, name) in _INSECURE_DEFAULTS
+            if getattr(settings, name) in INSECURE_SECRET_DEFAULTS
         ]
     )
     if not issues:

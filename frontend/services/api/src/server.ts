@@ -15,7 +15,9 @@ const server = serve({ fetch: createApp(config, db).fetch, port: config.port }, 
 function shutdown(signal: string): void {
   logger.info('api_service_stopping', { signal });
   server.close(() => {
-    void db.destroy().then(() => process.exit(0));
+    db.destroy()
+      .catch((error: unknown) => logger.exception('api_service_pool_close_failed', error))
+      .finally(() => process.exit(0));
   });
 }
 

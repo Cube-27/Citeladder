@@ -25,7 +25,14 @@ from typing import Any
 
 from pydantic.fields import FieldInfo
 
-from app.core.config import DEVELOPMENT_ENV_NAMES, Settings
+from app.core.config import (
+    DEVELOPMENT_ENV_NAMES,
+    INSECURE_SECRET_DEFAULTS,
+    SECRET_MIN_BYTES,
+    SECRET_MIN_UNIQUE_CHARS,
+    WEAK_SECRET_WORDS,
+    Settings,
+)
 from app.core.config.api import API_V1_PREFIX, READINESS_TIMEOUT_SECONDS
 from app.core.config.errors import (
     CODE_HTTP_ERROR,
@@ -113,6 +120,12 @@ def build_config() -> dict[str, Any]:
         "generated_by": GENERATED_BY,
         "settings": {name: _setting(name) for name in EXPORTED_SETTINGS},
         "development_env_names": sorted(DEVELOPMENT_ENV_NAMES),
+        "secret_policy": {
+            "min_bytes": SECRET_MIN_BYTES,
+            "min_unique_chars": SECRET_MIN_UNIQUE_CHARS,
+            "insecure_values": sorted(INSECURE_SECRET_DEFAULTS),
+            "weak_words": sorted(WEAK_SECRET_WORDS),
+        },
         "api": {
             "prefix": API_V1_PREFIX,
             "readiness_timeout_seconds": READINESS_TIMEOUT_SECONDS,

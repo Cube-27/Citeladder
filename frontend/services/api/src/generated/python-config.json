@@ -165,6 +165,22 @@
     "test",
     "testing"
   ],
+  "secret_policy": {
+    "min_bytes": 32,
+    "min_unique_chars": 12,
+    "insecure_values": [
+      "change-me",
+      "change-me-32-bytes-minimum-change-me",
+      "replace-with-32-byte-minimum-secret",
+      "replace-with-64-byte-random-secret"
+    ],
+    "weak_words": [
+      "changeme",
+      "citeladder",
+      "password",
+      "secret"
+    ]
+  },
   "api": {
     "prefix": "/api/v1",
     "readiness_timeout_seconds": 2.0
