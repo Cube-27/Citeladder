@@ -76,3 +76,9 @@ BRAND_PROFILE_SUGGESTION_SYSTEM_PROMPT: Final = (
     'Respond with ONLY JSON shaped as: {"description": str, "positioning": '
     'str, "products_services": [str], "target_audience": str}. No markdown.'
 )
+
+# Business map bounds (domain/projects/business_map.py). The map is a small
+# set of reviewed facts per offering, not a catalogue.
+BUSINESS_MAP_VALUE_MAX_CHARS: Final = 120
+BUSINESS_MAP_MAX_ENTRIES_PER_DIMENSION: Final = 20
+BUSINESS_MAP_MAX_EXCLUSIONS: Final = 40
