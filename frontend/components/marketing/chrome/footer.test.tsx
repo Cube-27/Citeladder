@@ -52,11 +52,14 @@ describe('MarketingFooter', () => {
     vi.unstubAllEnvs();
   });
 
-  it('carries no GitHub or documentation links (the repo is private)', async () => {
+  it('links to public documentation but not the private repository', async () => {
     render(await MarketingFooter());
 
     expect(screen.queryByRole('link', { name: /github/i })).toBeNull();
-    expect(screen.queryByRole('link', { name: /documentation/i })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Documentation' })).toHaveAttribute(
+      'href',
+      'https://docs.citeladder.com/',
+    );
   });
 
   it('links every CiteLadder policy from the legal strip, in the same tab', async () => {

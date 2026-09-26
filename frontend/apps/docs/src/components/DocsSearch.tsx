@@ -13,6 +13,7 @@ export function DocsSearch() {
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const trigger = useRef<HTMLButtonElement>(null);
+  const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
@@ -61,6 +62,7 @@ export function DocsSearch() {
       <Dialog
         open={open}
         onOpenChange={setOpen}
+        initialFocusRef={input}
         title="Search documentation"
         description="Find guides across the product, Agent and MCP."
       >
@@ -69,20 +71,13 @@ export function DocsSearch() {
         </label>
         <Input
           id="docs-query"
+          ref={input}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Try outline approval or citations"
         />
         <output className={textRole('meta', 'block py-4')}>
-          {failed
-            ? 'Search could not load. Browse the navigation or retry.'
-            : !entries
-              ? 'Loading search…'
-              : !query.trim()
-                ? 'Search titles and the full text of every guide.'
-                : results.length
-                  ? `${results.length} matching guides`
-                  : 'No matching guides. Try fewer words or a feature name.'}
+          {searchStatus(failed, entries, query, results.length)}
         </output>
         {failed && (
           <Button
@@ -112,4 +107,17 @@ export function DocsSearch() {
       </Dialog>
     </>
   );
+}
+
+function searchStatus(
+  failed: boolean,
+  entries: SearchEntry[] | null,
+  query: string,
+  count: number,
+): string {
+  if (failed) return 'Search could not load. Browse the navigation or retry.';
+  if (!entries) return 'Loading search…';
+  if (!query.trim()) return 'Search titles and the full text of every guide.';
+  if (count) return `${count} matching guides`;
+  return 'No matching guides. Try fewer words or a feature name.';
 }

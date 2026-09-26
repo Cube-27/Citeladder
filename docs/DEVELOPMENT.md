@@ -14,7 +14,7 @@ From `frontend/`, run `pnpm dev:docs` for the static docs site at
 `http://127.0.0.1:4322`. It needs no backend or live credentials. Production
 output is built with `pnpm build:docs`; `pnpm preview:docs` serves that output.
 `pnpm test:docs` rebuilds the site, then runs the isolated browser suite. Its artifacts
-live in the worktree Git directory.
+land in the ignored `frontend/test-results/docs`.
 
 Articles live under `apps/docs/src/content/`. Each Markdown file supplies
 `title`, `description`, `group` and numeric `order`. Those values drive the

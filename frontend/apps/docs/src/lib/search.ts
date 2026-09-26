@@ -6,6 +6,12 @@ export interface SearchEntry {
   body: string;
 }
 
+function termWeight(term: string, title: string, summary: string): number {
+  if (title.includes(term)) return 10;
+  if (summary.includes(term)) return 3;
+  return 1;
+}
+
 /** Match every term, with exact titles and title matches ahead of body matches. */
 export function searchArticles(entries: readonly SearchEntry[], query: string): SearchEntry[] {
   const normalized = query.trim().toLocaleLowerCase();
@@ -16,13 +22,12 @@ export function searchArticles(entries: readonly SearchEntry[], query: string): 
       const title = entry.title.toLocaleLowerCase();
       const summary = `${entry.group} ${entry.description}`.toLocaleLowerCase();
       const text = `${title} ${summary} ${entry.body.toLocaleLowerCase()}`;
-      const score = terms.every((term) => text.includes(term))
-        ? (title === normalized ? 100 : 0) +
-          terms.reduce(
-            (total, term) => total + (title.includes(term) ? 10 : summary.includes(term) ? 3 : 1),
-            0,
-          )
-        : 0;
+      if (!terms.every((term) => text.includes(term))) return { entry, score: 0 };
+      const exactTitle = title === normalized ? 100 : 0;
+      const score = terms.reduce(
+        (total, term) => total + termWeight(term, title, summary),
+        exactTitle,
+      );
       return { entry, score };
     })
     .filter(({ score }) => score > 0)
