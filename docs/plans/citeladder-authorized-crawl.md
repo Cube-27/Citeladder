@@ -53,6 +53,11 @@ authorization.
 Authorization applies to one exact registrable domain, and optionally its
 subdomains, of the project's configured site. It never applies to competitor,
 source-page or earned-source acquisition, which always use Standard mode.
+The fetcher checks every destination request, including each redirect hop,
+against the crawl's frozen authorization receipt before network I/O,
+alongside the existing SSRF and DNS-pinning checks. A redirect leaving the
+authorized domain falls back to Standard robots handling for that hop and
+never inherits the authorization.
 
 ## Authorization paths
 
@@ -116,13 +121,19 @@ These are separate from authorized crawling and can ship independently.
 
   AWS CloudFront, Vercel, WordPress and Akamai follow only on customer demand.
   Ingestion keeps only requests matching the config-owned AI-bot catalog and
-  discards other traffic at the boundary. It stores URL path, status, bot,
-  timestamp and verification state. It never keeps request bodies, cookies,
-  auth headers or client IPs beyond bot verification, is bounded and
-  idempotent on replay, and follows the retention decision still pending in
-  audit remediation. Verify bot identity by published IP ranges or reverse DNS
-  where available; a user-agent string alone is reported as claimed, not
-  verified. Connection credentials use the existing encrypted provider
+  discards other traffic at the boundary. It stores sanitized URL path, status,
+  bot, timestamp and verification state. Paths are sanitized before any
+  persistence: query strings and fragments dropped, and config-owned patterns
+  replace path segments that look like identifiers or one-time tokens (long
+  hex/base64 runs, UUIDs, signed-URL and reset-link segments). URL-level
+  insights and joins read only sanitized paths. Ingestion never keeps request
+  bodies, cookies, auth headers or client IPs beyond bot verification, is
+  bounded and idempotent on replay, and follows the retention decision still
+  pending in audit remediation. Verify bot identity by published IP ranges
+  where available. Reverse DNS counts only when the hostname is under a
+  provider-controlled domain and a forward lookup resolves back to the source
+  IP; otherwise, and for a user-agent string alone, the identity is reported
+  as claimed, not verified. Connection credentials use the existing encrypted provider
   credential owner and are never returned to the browser. The Cloudflare
   Worker must fail open for site traffic, so a CiteLadder outage never
   affects the customer's visitors.
@@ -156,6 +167,10 @@ These are separate from authorized crawling and can ship independently.
 - Authorization is workspace-isolated, domain-exact, cannot target competitor
   or source-page acquisition, and is downgraded by failed re-verification.
 - Suppression and the kill switch override authorization.
+- A redirect to an unauthorized destination is rejected (or handled under
+  Standard robots rules) before any network I/O to it.
+- Path sanitization strips queries, tokens and identifier-like segments
+  before persistence; rDNS without forward confirmation stays "claimed".
 - Crawls freeze the authorization receipt; revocation mid-crawl stops further
   robots-excluded fetches.
 - Verification commits before network I/O; reads never verify.

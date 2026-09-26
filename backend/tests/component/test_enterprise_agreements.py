@@ -49,11 +49,10 @@ async def test_signed_reference_authority_replay_conflict_and_rollback(
             db_session, actor_id=signer_id, payload=payload
         )
     await db_session.rollback()
+    foreign_payload = payload.model_copy(update={"workspace_id": foreign_id})
     with pytest.raises(PermissionError, match="target workspace"):
         await record_agreement_reference(
-            db_session,
-            actor_id=operator_id,
-            payload=payload.model_copy(update={"workspace_id": foreign_id}),
+            db_session, actor_id=operator_id, payload=foreign_payload
         )
     await db_session.rollback()
     await record_agreement_reference(db_session, actor_id=operator_id, payload=payload)
@@ -71,11 +70,10 @@ async def test_signed_reference_authority_replay_conflict_and_rollback(
     )
     assert replay.id == record_id
     await db_session.commit()
+    conflicting = payload.model_copy(update={"document_sha256": "b" * 64})
     with pytest.raises(ValueError, match="different signed evidence"):
         await record_agreement_reference(
-            db_session,
-            actor_id=operator_id,
-            payload=payload.model_copy(update={"document_sha256": "b" * 64}),
+            db_session, actor_id=operator_id, payload=conflicting
         )
     await db_session.rollback()
     assert list(await db_session.scalars(select(SecurityEvent.target_id))) == [

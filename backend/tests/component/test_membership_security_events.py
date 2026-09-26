@@ -5,7 +5,11 @@ import uuid
 import pytest
 from sqlalchemy import select
 
-from app.domain.workspaces.members import MembershipError, change_member_role
+from app.domain.workspaces.members import (
+    MembershipError,
+    change_member_role,
+    remove_member,
+)
 from app.models.security_event import SecurityEvent
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
@@ -24,8 +28,9 @@ async def test_role_receipt_is_atomic_and_noops_or_refusals_emit_nothing(db_sess
     )
     db_session.add_all([owner, member])
     await db_session.commit()
-    actor_id, workspace_id, member_id, owner_id = (
+    actor_id, target_id, workspace_id, member_id, owner_id = (
         actor.id,
+        target.id,
         workspace.id,
         member.id,
         owner.id,
@@ -52,8 +57,24 @@ async def test_role_receipt_is_atomic_and_noops_or_refusals_emit_nothing(db_sess
     with pytest.raises(MembershipError, match="owner_role_requires_transfer"):
         await change(owner_id, "viewer")
     await db_session.rollback()
-    events = (await db_session.scalars(select(SecurityEvent))).all()
+
+    # The removal receipt names the removed user, which outlives the deleted
+    # membership row.
+    await remove_member(
+        db_session, workspace_id=workspace_id, member_id=member_id, actor_id=actor_id
+    )
+    await db_session.commit()
+    assert await db_session.get(WorkspaceMember, member_id) is None
+
+    events = (
+        await db_session.scalars(
+            select(SecurityEvent).order_by(SecurityEvent.occurred_at)
+        )
+    ).all()
     assert [
         (event.event, event.actor_id, event.workspace_id, event.target_id)
         for event in events
-    ] == [("membership.role", actor_id, workspace_id, member_id)]
+    ] == [
+        ("membership.role", actor_id, workspace_id, target_id),
+        ("membership.remove", actor_id, workspace_id, target_id),
+    ]

@@ -55,8 +55,8 @@ from app.core.config.source_pages import (
     INSPECTION_REASON_UNRESOLVED_REDIRECT,
     SOURCE_PAGE_ALLOWED_CONTENT_TYPES,
     SOURCE_PAGE_FETCH_CONCURRENCY,
+    SOURCE_PAGE_HOP_TIMEOUT_SECONDS,
     SOURCE_PAGE_PER_HOST_DELAY_SECONDS,
-    SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS,
 )
 from app.domain.content_differentiation import refresh_content_differentiation_reports
 from app.domain.opportunities.placement_checks import (
@@ -167,7 +167,7 @@ class _Inspector:
                 else ERROR_ROBOTS_DENIED,
             )
         async with self.pacer.slot(authority, crawl_delay=policy.crawl_delay()):
-            async with asyncio.timeout(SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS * 2):
+            async with asyncio.timeout(SOURCE_PAGE_HOP_TIMEOUT_SECONDS):
                 yield
 
     async def refusal(self, url: str, *, requested_url: str) -> FetchOutcome | None:

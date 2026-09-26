@@ -361,13 +361,15 @@ async def update_connection(
         record_destination_acknowledgements(
             session, connection, payload.app_routes, actor_id
         )
-    record_security_event(
-        session,
-        event="credential.update",
-        actor_id=actor_id,
-        workspace_id=workspace_id,
-        target_id=connection.id,
-    )
+    if payload.model_fields_set:
+        # An empty PATCH changes nothing and leaves no credential receipt.
+        record_security_event(
+            session,
+            event="credential.update",
+            actor_id=actor_id,
+            workspace_id=workspace_id,
+            target_id=connection.id,
+        )
     await session.commit()
     return await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id

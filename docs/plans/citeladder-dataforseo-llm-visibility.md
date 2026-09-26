@@ -188,8 +188,8 @@ only on disposable data.
   live-provider acceptance.
 - Disable new admission if rollback is needed; retain historical evidence and
   allow accepted paid tasks to finish retrieval.
-- Keenable search/fetch research as an answer source, enrichment,
-  platform-funded scraping, new scoring formulas, and broader frontend
-  redesign are excluded.
+- Excluded: using the existing onboarding web search/fetch research
+  provider (Keenable) as an AI-answer source, enrichment, platform-funded
+  scraping, new scoring formulas, and broader frontend redesign.
 - For the current request, save only the approved plan and queued index entry,
   check documentation links/whitespace, and stop.

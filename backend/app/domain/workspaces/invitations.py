@@ -324,13 +324,12 @@ async def accept_invitation(
         role=invitation.role,
     )
     session.add(member)
-    await session.flush()
     record_security_event(
         session,
         event="membership.join",
         actor_id=user.id,
         workspace_id=workspace.id,
-        target_id=member.id,
+        target_id=user.id,
     )
     invitation.accepted_at = now
     invitation.accepted_by_user_id = user.id

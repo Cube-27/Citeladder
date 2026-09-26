@@ -246,6 +246,7 @@ __all__ = [
     "DemandSignal",
     "DemandSnapshot",
     "DiscoveryModelConfig",
+    "EnterpriseAgreementReference",
     "ExecutionCostProjection",
     "GrantRevocation",
     "IdempotencyRecord",

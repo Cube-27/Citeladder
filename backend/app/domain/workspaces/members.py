@@ -108,7 +108,7 @@ async def change_member_role(
         event="membership.role",
         actor_id=actor_id,
         workspace_id=workspace_id,
-        target_id=member.id,
+        target_id=member.user_id,
     )
     await session.flush()
     return member
@@ -134,7 +134,7 @@ async def remove_member(
         event="membership.remove",
         actor_id=actor_id,
         workspace_id=workspace_id,
-        target_id=member.id,
+        target_id=member.user_id,
     )
     await session.delete(member)
     await session.flush()
@@ -168,7 +168,7 @@ async def transfer_ownership(
         event="membership.transfer",
         actor_id=actor_id,
         workspace_id=workspace_id,
-        target_id=incoming.id,
+        target_id=incoming.user_id,
     )
     await session.flush()
     return incoming, previous
@@ -199,7 +199,7 @@ async def leave_workspace(
         event="membership.leave",
         actor_id=user_id,
         workspace_id=workspace_id,
-        target_id=member.id,
+        target_id=member.user_id,
     )
     await session.delete(member)
     await session.flush()

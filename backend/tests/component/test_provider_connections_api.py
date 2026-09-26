@@ -354,6 +354,9 @@ async def test_delete_connection(
         },
     )
     assert rejected.status_code == 400
+    # An empty PATCH changes nothing, so it leaves no credential receipt.
+    unchanged = await client.patch(f"/api/v1/provider-connections/{conn_id}", json={})
+    assert unchanged.status_code == 200
     resp = await client.delete(f"/api/v1/provider-connections/{conn_id}")
     assert resp.status_code == 204
     listed = await client.get("/api/v1/provider-connections")

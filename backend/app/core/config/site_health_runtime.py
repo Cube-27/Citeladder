@@ -375,7 +375,16 @@ class SiteHealthSettings(BaseSettings):
             self,
             ("acquisition_policy_version",),
         )
-        _require_positive(self, ("rate_limit_cooldown_seconds",))
+        # A zero or negative robots lifetime would refetch robots.txt on every
+        # request against a site that is already failing.
+        _require_positive(
+            self,
+            (
+                "rate_limit_cooldown_seconds",
+                "robots_cache_ttl_seconds",
+                "robots_unreachable_recheck_seconds",
+            ),
+        )
         _require_non_negative(
             self,
             (

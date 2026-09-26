@@ -151,7 +151,9 @@ async def _resolve_account(
             raise SignInStateError("linked account is unavailable")
         linked.email = identity.email
         linked.email_verified = identity.email_verified
-        await session.commit()
+        # Flushed, not committed: the caller commits it with the sign-in
+        # security receipt so neither lands without the other.
+        await session.flush()
         return user
 
     if not identity.email_verified:
@@ -165,7 +167,9 @@ async def _resolve_account(
             session, user=existing, provider=provider, identity=identity
         )
         try:
-            await session.commit()
+            # The unique constraint fires on flush; the caller commits the
+            # link together with the sign-in security receipt.
+            await session.flush()
         except IntegrityError as exc:
             # Two callbacks for the same account raced past the SELECT in
             # ``_link_identity`` and both inserted. The unique constraint is

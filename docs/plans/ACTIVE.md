@@ -11,8 +11,8 @@
   open. Security alert implementation remains deferred. See the plan's current
   status and deployment gates; this entry does not authorize deployment.
 - [Audit remediation and enterprise readiness](citeladder-audit-remediation.md)
-  — PR 1 merged in #156; PR 2 is partially implemented on
-  `codex/audit-remediation-pr2`. Section 4 records the remaining work and the
+  — PR 1 merged in #156; a partial PR 2 slice is published as #158. Section 4
+  records the remaining work and the
   pending retention/billing scope decision. Public policy
   revisions and management/legal proposals await approval.
   Payment implementation, deployment and external acceptance remain excluded.

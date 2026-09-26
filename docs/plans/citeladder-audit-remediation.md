@@ -1,6 +1,6 @@
 # CiteLadder audit remediation and enterprise readiness
 
-**Status: PR 1 merged into main as `6c5209eb` (#156). PR 2 is in progress on `codex/audit-remediation-pr2`, based on current main; it is not complete or published as a GitHub PR. Public policy revisions and proposed management decisions remain unpublished pending approval.**
+**Status: PR 1 merged into main as `6c5209eb` (#156). A partial PR 2 slice is published as #158 from `codex/audit-remediation-pr2`; PR 2 as a whole remains incomplete (Section 4). Public policy revisions and proposed management decisions remain unpublished pending approval.**
 
 ## 1. Summary and boundaries
 
@@ -284,7 +284,9 @@ PR 2 handoff; do not start PR 2 as part of that cleanup.
 and Google-sign-in security events, customer provider-credential events, and
 per-destination robots/pacing controls for source inspection are implemented on
 the PR 2 branch.
-These are partial slices of items 4 and 5, not completion of either item or PR 2.
+These are partial slices of PR 2 work items 4 (acceptance and security
+evidence) and 5 (crawler authorization, redirects and pacing) below, not
+completion of either item or PR 2.
 Lifecycle jobs/fences/export/purge/replay, owned-site authority receipts, broader
 direct-acquisition robots/pacing coverage, remaining
 security events and policy-history recovery, licensing/Google downstream-use

@@ -216,13 +216,14 @@ async def test_stop_is_rechecked_after_waiting_for_request_slot():
         yield
 
     transport = _SequenceTransport([])
+    request = _request()
     async with SecureFetcher(
         authorize_url=authorize,
         resolver=_FakeResolver(),
         transport=transport,
     ) as fetcher:
         with pytest.raises(FetchError, match="stopped"):
-            await fetcher.fetch(_request(), request_slot=slot)
+            await fetcher.fetch(request, request_slot=slot)
     assert transport.requests == []
 
 
