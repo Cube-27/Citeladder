@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { benchmarkModeSchema } from './project';
-import { logicalEngineSchema, transportProviderSchema } from './providers';
+import { benchmarkModeSchema } from './project.ts';
+import { logicalEngineSchema, transportProviderSchema } from './providers.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();

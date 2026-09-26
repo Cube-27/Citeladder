@@ -5,10 +5,14 @@
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
-import { workspaceSchema } from './schemas/auth';
-import { commandCenterSchema } from './schemas/opportunities';
-import { brandProfileSchema, businessMapSchema, projectSchema } from './schemas/project';
-import { strictValidate } from './schemas/validation';
+import { workspaceSchema } from '@citeladder/contracts/auth';
+import { commandCenterSchema } from '@citeladder/contracts/opportunities';
+import {
+  brandProfileSchema,
+  businessMapSchema,
+  projectSchema,
+} from '@citeladder/contracts/project';
+import { strictValidate } from '@citeladder/contracts/validation';
 import type {
   BrandProfile,
   BrandProfileDraft,

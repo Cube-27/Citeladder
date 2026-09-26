@@ -9,7 +9,7 @@ import { SearchField } from '@/components/ui/search-field';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pressable } from '@/components/ui/pressable';
 import { Alert } from '@/components/ui/alert';
-import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
+import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { targetKey } from '@/lib/products/use-commerce-target';
 import { cn } from '@/lib/utils';
 

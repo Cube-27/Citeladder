@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { responseObject, uuid } from './core';
+import { responseObject, uuid } from './core.ts';
 
 export const coverageStateSchema = z.enum(['complete', 'partial', 'unknown']);
 

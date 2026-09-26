@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
 import { commerceApi } from './commerce';
-import { commerceCatalogSchema, shelfSchema } from './schemas/commerce-suite';
+import { commerceCatalogSchema, shelfSchema } from '@citeladder/contracts/commerce-suite';
 
 afterEach(() => {
   vi.restoreAllMocks();

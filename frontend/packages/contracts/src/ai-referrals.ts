@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { metricSeriesSchema, snapshotGranularitySchema } from './analytics';
+import { metricSeriesSchema, snapshotGranularitySchema } from './analytics.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();

@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 import { apiClient } from './client';
-import { mcpConnectionSchema } from './schemas/mcp';
-import { strictValidate } from './schemas/validation';
+import { mcpConnectionSchema } from '@citeladder/contracts/mcp';
+import { strictValidate } from '@citeladder/contracts/validation';
 
 function path(workspaceId?: string) {
   return workspaceId ? `/workspaces/${workspaceId}/mcp/connections` : '/mcp/connections';

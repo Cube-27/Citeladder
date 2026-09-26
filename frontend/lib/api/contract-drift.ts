@@ -3,14 +3,14 @@
  *
  * Diffs the backend OpenAPI response-model field sets against the zod
  * schemas' declared keys, so the tolerant-on-unknown policy (`responseObject`
- * in `schemas.ts`) can never become silent divergence:
+ * in `@citeladder/contracts`) can never become silent divergence:
  *
  *   - **FAIL on missing declared fields** — a zod schema declares a REQUIRED
  *     field the backend response model no longer has. That is drift the UI
  *     needs: `strictValidate` would throw on the real response at runtime.
  *   - **WARN on additive-only diffs** — the backend model carries fields the
  *     zod schema does not declare. The UI keeps working (unknown keys are
- *     stripped), but `schemas.ts` should be updated promptly.
+ *     stripped), but the contract should be updated promptly.
  *
  * OpenAPI comes from an explicit JSON export, offline backend generation, or
  * a configured live backend, in that order.
@@ -32,7 +32,7 @@ import {
   CONTRACT_LIVE_FETCH_TIMEOUT_MS,
 } from '@/lib/config/contract';
 import { CONTRACT_SCHEMA_MAP, type ContractSchemaName } from './contract-schema-map';
-import * as schemas from './schemas';
+import * as schemas from '@citeladder/contracts';
 
 /**
  * The lookup behind `declaredKeysFor`: response schemas exported by the facade.
@@ -191,7 +191,7 @@ export function diffContract(spec: OpenApiSpec): ContractDiffResult {
   ][]) {
     const keys = declaredKeysFor(name);
     if (!keys) {
-      unresolved.push(`${name}: does not resolve to an object schema in lib/api/schemas.ts`);
+      unresolved.push(`${name}: does not resolve to an object schema in @citeladder/contracts`);
       continue;
     }
     const properties = componentProperties(spec, component);

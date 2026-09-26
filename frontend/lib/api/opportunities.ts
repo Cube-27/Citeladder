@@ -18,8 +18,8 @@ import {
   opportunityDetailSchema,
   opportunityOrderResponseSchema,
   opportunitySummarySchema,
-} from './schemas/opportunities';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/opportunities';
+import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 import type { OpportunitiesPage, OpportunityDetail, OpportunitySummary } from './types';
 

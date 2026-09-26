@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
+import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { catalogPollingInterval } from './catalog-polling';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 

@@ -7,8 +7,8 @@ import {
   authResponseSchema,
   oauthStartResponseSchema,
   registrationResponseSchema,
-} from './schemas/auth';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/auth';
+import { strictValidate } from '@citeladder/contracts/validation';
 import type {
   AuthResponse,
   OAuthProvider,

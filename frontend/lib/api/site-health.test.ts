@@ -14,8 +14,8 @@ import {
   siteHealthErrorSchema,
   siteIssueSchema,
   urlPreviewResponseSchema,
-} from './schemas/site-health';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/site-health';
+import { strictValidate } from '@citeladder/contracts/validation';
 import { siteHealthApi } from './site-health';
 import { mswServer } from '@/test/msw-server';
 import {

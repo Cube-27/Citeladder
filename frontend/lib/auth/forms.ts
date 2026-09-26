@@ -3,7 +3,7 @@
  *
  * These validate the login/register forms in the browser (react-hook-form +
  * zod) BEFORE a request is made. They are intentionally separate from the API
- * contract schemas in `lib/api/schemas.ts` (which validate backend responses):
+ * contract schemas in `@citeladder/contracts` (which validate backend responses):
  * these describe form *input*, the API schemas describe server *output*.
  */
 import { z } from 'zod';

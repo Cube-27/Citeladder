@@ -7,7 +7,7 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
+import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 
 import type { CommerceQueries } from './commerce-queries';

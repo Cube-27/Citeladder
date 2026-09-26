@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { responseObject } from './core';
+import { responseObject } from './core.ts';
 
 // Opaque, filter-bound keyset cursor page envelope. `next_cursor` is null on
 // the last page. There is no offset / page total field (invariant: no Free

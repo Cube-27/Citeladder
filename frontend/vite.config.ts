@@ -24,7 +24,7 @@ export default defineConfig({
     include: ['**/*.{test,spec}.{ts,tsx}'],
     maxWorkers,
     // Server-side services run their own Node-environment suites.
-    exclude: ['node_modules', 'e2e', 'services/**'],
+    exclude: ['**/node_modules/**', 'e2e', 'services/**'],
     css: false,
   },
   lint: lintConfig,

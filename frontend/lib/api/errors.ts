@@ -86,7 +86,7 @@ export function humanizeApiError(
  * True for a contract-validation failure whose message is machine detail, not
  * user copy.
  *
- * `strictValidate` (lib/api/schemas.ts) throws a plain `Error` whose message
+ * `strictValidate` (@citeladder/contracts) throws a plain `Error` whose message
  * embeds `ZodError.message` — a serialized JSON array of issue objects. It was
  * therefore returned verbatim as the user-facing message, putting a raw JSON
  * blob on screen: exactly what the transport's `readErrorBody` guarantees

@@ -1,15 +1,15 @@
 import { z } from 'zod';
 
-import { pageAnalysisStatusSchema, pageKindSchema } from './crawl';
-import { analysisSummaryFields } from './inventory';
-import { responseObject, uuid } from './core';
+import { pageAnalysisStatusSchema, pageKindSchema } from './crawl.ts';
+import { analysisSummaryFields } from './inventory.ts';
+import { responseObject, uuid } from './core.ts';
 import {
   findingClassSchema,
   issueDimensionSchema,
   issueSeveritySchema,
   issueOccurrenceSchema,
-} from './issues';
-import { cursorPageSchema } from './pagination';
+} from './issues.ts';
+import { cursorPageSchema } from './pagination.ts';
 
 // Deterministic HTTP delivery facts. `field_cwv_available` is a literal false —
 // the HTTP-first crawler never fabricates field Core Web Vitals (no LCP/CLS/INP).

@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { MissingValue } from '@/components/ui/unavailable-value';
-import type { visibilitySourceUrlSchema } from '@/lib/api/schemas/visibility-evidence';
+import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { engineLabel, productModelLabel } from '@/lib/providers/catalog';
 import { count } from '@/lib/visibility/sources';
 

@@ -2,8 +2,12 @@
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
-import { demandRecomputeResponseSchema, demandSignalSchema, demandSnapshotSchema } from './schemas';
-import { strictValidate } from './schemas/validation';
+import {
+  demandRecomputeResponseSchema,
+  demandSignalSchema,
+  demandSnapshotSchema,
+} from '@citeladder/contracts';
+import { strictValidate } from '@citeladder/contracts/validation';
 
 export type DemandSignal = z.infer<typeof demandSignalSchema>;
 export type DemandSnapshot = z.infer<typeof demandSnapshotSchema>;

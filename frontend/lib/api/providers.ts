@@ -7,13 +7,13 @@
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
-import { providerConnectionStatesSchema } from './schemas/billing';
+import { providerConnectionStatesSchema } from '@citeladder/contracts/billing';
 import {
   connectionTestResultSchema,
   providerCatalogSchema,
   providerConnectionSchema,
-} from './schemas/providers';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/providers';
+import { strictValidate } from '@citeladder/contracts/validation';
 import type {
   LogicalEngine,
   ProviderCatalog,

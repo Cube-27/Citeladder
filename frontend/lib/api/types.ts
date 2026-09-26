@@ -106,7 +106,7 @@ import type {
   opportunitySchema,
   opportunitySummarySchema,
   opportunityTypeSchema,
-} from './schemas';
+} from '@citeladder/contracts';
 
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 export type AuthResponse = z.infer<typeof authResponseSchema>;

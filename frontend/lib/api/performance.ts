@@ -16,7 +16,7 @@ import type { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
-import { performanceSyncEnqueueResponseSchema } from './schemas/integrations';
+import { performanceSyncEnqueueResponseSchema } from '@citeladder/contracts/integrations';
 import {
   performanceDashboardSchema,
   performanceRangeTaskSchema,
@@ -27,8 +27,8 @@ import {
   type performanceGranularitySchema,
   type performanceRangeSchema,
   type projectReadinessStageSchema,
-} from './schemas/performance';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/performance';
+import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 
 export type PerformanceRange = z.infer<typeof performanceRangeSchema>;

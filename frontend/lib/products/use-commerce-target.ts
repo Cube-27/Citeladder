@@ -2,7 +2,7 @@
 
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
-import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
+import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 
 const KINDS = new Set(['category', 'product']);
 

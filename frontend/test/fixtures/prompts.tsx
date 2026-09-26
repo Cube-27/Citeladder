@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 
-import { promptSchema, promptSetSchema } from '@/lib/api/schemas/project';
+import { promptSchema, promptSetSchema } from '@citeladder/contracts/project';
 
 type Prompt = z.infer<typeof promptSchema>;
 type PromptSet = z.infer<typeof promptSetSchema>;

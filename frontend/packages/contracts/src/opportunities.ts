@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { cursorPageSchema } from './site-health';
-import { pageEntityFields } from './source-pages';
+import { cursorPageSchema } from './site-health.ts';
+import { pageEntityFields } from './source-pages.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();

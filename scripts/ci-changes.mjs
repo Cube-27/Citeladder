@@ -119,7 +119,8 @@ function isContract(path) {
     path === 'backend/app/main.py' ||
     /^backend\/app\/.+\/[^/]*schemas?\.py$/.test(path) ||
     path === 'backend/scripts/export_openapi.py' ||
-    path.startsWith('frontend/lib/api/')
+    path.startsWith('frontend/lib/api/') ||
+    path.startsWith('frontend/packages/contracts/')
   );
 }
 

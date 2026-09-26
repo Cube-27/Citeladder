@@ -7,6 +7,7 @@ WORKDIR /app
 # Keep this version in lockstep with packageManager in frontend/package.json.
 RUN npm install --global --ignore-scripts pnpm@12.4.2
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+COPY frontend/packages/contracts/package.json ./packages/contracts/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM node@sha256:e961046fec20896e8904f2b4a8b4c7e5ca91826d84d8d33d83dbaa61f942069e AS builder

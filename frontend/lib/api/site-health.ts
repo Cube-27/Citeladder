@@ -36,8 +36,8 @@ import {
   siteIssueDetailSchema,
   siteIssuesPageSchema,
   urlPreviewResponseSchema,
-} from './schemas/site-health';
-import { strictValidate } from './schemas/validation';
+} from '@citeladder/contracts/site-health';
+import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
 import type {
   AeoReadiness,
