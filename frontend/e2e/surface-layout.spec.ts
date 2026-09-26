@@ -46,6 +46,7 @@ const overview = {
   movements: [
     { label: 'visibility', direction: 'positive', current: 72.5, previous: 68.3, delta: 4.2 },
   ],
+  active_prompt_count: 1,
   actions: [],
   action_order_version: 0,
   resolved_actions: { since_audit_id: null, count: 0, titles: [] },

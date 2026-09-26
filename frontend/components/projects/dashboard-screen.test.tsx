@@ -68,6 +68,7 @@ const commandCenter = {
     href: '/visibility?tab=trends',
     opportunity_id: null,
   },
+  active_prompt_count: 12,
   track: {
     citation_share: { value: 32.5, delta: 2.1 },
     engine_coverage: 2,
@@ -308,6 +309,30 @@ describe('DashboardScreen', () => {
       within(screen.getByRole('region', { name: 'Citation share' })).getByText('Not run'),
     ).toBeVisible();
     expect(screen.queryByRole('button', { name: /executive pdf/i })).not.toBeInTheDocument();
+  });
+  it('asks a project with no active prompts to choose what to track', () => {
+    queryResult.data = { ...commandCenter, active_prompt_count: 0 };
+    renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    const setup = screen.getByRole('region', { name: 'Choose the questions you want to track' });
+    expect(within(setup).getByRole('link', { name: 'Generate prompts' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/prompts?mode=manage&generate=1'),
+    );
+    expect(within(setup).getByRole('link', { name: 'Add or import prompts' })).toBeVisible();
+  });
+  it('omits prompt setup once the project tracks prompts', () => {
+    renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    expect(
+      screen.queryByRole('region', { name: 'Choose the questions you want to track' }),
+    ).not.toBeInTheDocument();
   });
   it('labels a null citation share from an observed run as unavailable', () => {
     queryResult.data = {

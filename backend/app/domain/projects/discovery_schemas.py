@@ -246,19 +246,15 @@ class BrandDiscoveryCatalogResponse(BaseModel):
 
 
 class BrandDiscoveryCompleteResponse(BaseModel):
-    """The accepted completion, which is a job -- not a finished project.
+    """The accepted completion and the project it created.
 
-    ``project_id`` identifies the committed, immediately usable shell while
-    ``status`` remains ``completing``. The worker fills its existing prompt set
-    and then advances the discovery to ``project_created``.
-
-    ``failed`` is the third terminal answer. It reports exhausted background
-    generation honestly even though the previously committed shell can remain
-    available through ``project_id``.
+    ``project_id`` identifies the created project, whose prompt set starts
+    empty: onboarding generates no prompts. ``failed`` is reported only when
+    replaying a completion that failed before that change.
     """
 
     discovery_id: uuid.UUID
-    status: Literal["completing", "project_created", "failed"]
+    status: Literal["project_created", "failed"]
     project_id: uuid.UUID | None = None
     crawl_id: uuid.UUID | None = None
     activation_state: Literal["queued"] = "queued"

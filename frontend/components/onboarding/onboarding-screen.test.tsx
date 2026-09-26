@@ -224,7 +224,7 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('OnboardingScreen', () => {
-  it('keeps draft URL updates paused after a shell-less completion is accepted', async () => {
+  it('keeps draft URL updates paused while completion is in flight', async () => {
     discoveryState = discovery('ready', 'preparing_review');
     const destination = `/onboarding?discovery=${DISCOVERY_ID}&step=review`;
     let release!: () => void;
@@ -235,18 +235,15 @@ describe('OnboardingScreen', () => {
       catalogHandler(),
       http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, async () => {
         await pending;
-        return HttpResponse.json(
-          {
-            discovery_id: DISCOVERY_ID,
-            status: 'completing',
-            project_id: null,
-            crawl_id: null,
-            activation_state: 'queued',
-            page_limit: null,
-            warnings: [],
-          },
-          { status: 202 },
-        );
+        return HttpResponse.json({
+          discovery_id: DISCOVERY_ID,
+          status: 'failed',
+          project_id: null,
+          crawl_id: null,
+          activation_state: 'queued',
+          page_limit: null,
+          warnings: [],
+        });
       }),
     );
     let flow!: ReturnType<typeof useOnboardingFlow>;
@@ -273,10 +270,6 @@ describe('OnboardingScreen', () => {
     expect(screen.getByTestId('location')).toHaveTextContent(destination);
     act(() => release());
     await waitFor(() => expect(flow.complete.isSuccess).toBe(true));
-    expect(flow.isCompleting).toBe(true);
-    // A late draft-state update must not rewrite the accepted transaction URL.
-    act(() => flow.setStep(0));
-    expect(screen.getByTestId('location')).toHaveTextContent(destination);
   });
 
   it('keeps the research screen and entered basics when the discovery URL is persisted', async () => {
@@ -518,7 +511,7 @@ describe('OnboardingScreen', () => {
     );
   });
 
-  it('shows page-level creation progress before opening the queued project', async () => {
+  it('shows page-level creation progress before opening the created project', async () => {
     discoveryState = discovery('ready', 'preparing_review');
     let releaseCompletion!: () => void;
     const completionSettled = new Promise<void>((resolve) => {
@@ -528,18 +521,15 @@ describe('OnboardingScreen', () => {
       catalogHandler(),
       http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, async () => {
         await completionSettled;
-        return HttpResponse.json(
-          {
-            discovery_id: DISCOVERY_ID,
-            status: 'completing',
-            project_id: PROJECT_ID,
-            crawl_id: null,
-            activation_state: 'queued',
-            page_limit: null,
-            warnings: [],
-          },
-          { status: 202 },
-        );
+        return HttpResponse.json({
+          discovery_id: DISCOVERY_ID,
+          status: 'project_created',
+          project_id: PROJECT_ID,
+          crawl_id: null,
+          activation_state: 'queued',
+          page_limit: null,
+          warnings: [],
+        });
       }),
       // The committed creation is resolved through the project-detail read
       // before the shell is navigated to, so the destination is usable on
@@ -560,9 +550,7 @@ describe('OnboardingScreen', () => {
     expect(await screen.findByRole('heading', { name: 'Creating your project' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Does this look right?' })).toBeNull();
-    expect(
-      screen.getByText('Starting topics can continue in the background after you arrive.'),
-    ).toBeVisible();
+    expect(screen.getByText('Next, choose the questions you want to track.')).toBeVisible();
 
     act(() => releaseCompletion());
     await waitFor(() =>
@@ -571,12 +559,14 @@ describe('OnboardingScreen', () => {
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
   });
 
-  it('opens a persisted shell after reload while prompts are still generating', async () => {
+  // `completing` is a legacy discovery accepted before onboarding stopped
+  // generating prompts; its project is already committed.
+  it.each([
+    ['created', discovery('project_created', 'complete')],
+    ['legacy completing', discovery('completing', 'preparing_review')],
+  ])('opens the committed project of a %s discovery after reload', async (_label, state) => {
     searchParams = `discovery=${DISCOVERY_ID}`;
-    discoveryState = {
-      ...discovery('completing', 'preparing_review'),
-      project_id: PROJECT_ID,
-    };
+    discoveryState = { ...state, project_id: PROJECT_ID };
     mswServer.use(
       catalogHandler(),
       // The committed creation is resolved through the project-detail read
@@ -596,9 +586,12 @@ describe('OnboardingScreen', () => {
     expect(visitedLocations).toEqual([onboardingUrl(), `/projects?project=${PROJECT_ID}`]);
   });
 
-  it('starts fresh when a persisted completion has lost its deleted project', async () => {
+  it.each([
+    ['created', discovery('project_created', 'complete')],
+    ['legacy completing', discovery('completing', 'preparing_review')],
+  ])('starts fresh when a %s completion has lost its deleted project', async (_label, state) => {
     searchParams = `discovery=${DISCOVERY_ID}&step=review`;
-    discoveryState = discovery('completing', 'preparing_review');
+    discoveryState = state;
     mswServer.use(catalogHandler());
     renderOnboarding();
 

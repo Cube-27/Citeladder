@@ -100,7 +100,7 @@ Project lists, provider state, usage and entitlements carry workspace identity
 in both query key and request. Late responses cannot answer for a workspace
 the user has left. [Project destination](../frontend/lib/navigation/project-destination.ts)
 owns push/replace/no-op history rules. Onboarding seeds the committed project
-detail and enters that exact project without waiting for portfolio generation.
+detail and enters that exact project as soon as completion commits it.
 Every project-owned link carries `?project=` when the selection is known; Settings
 remains workspace-owned. A bare post-login URL is only a bootstrap state and is
 replaced with the resolved project URL. Every additional-project entry point carries

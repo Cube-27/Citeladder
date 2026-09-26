@@ -191,6 +191,7 @@ export const commandCenterSchema = responseObject({
     href: z.string(),
     opportunity_id: uuid().nullable(),
   }),
+  active_prompt_count: z.number().int().nonnegative(),
   track: responseObject({
     citation_share: commandCenterMetricSchema,
     engine_coverage: z.number().int(),

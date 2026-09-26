@@ -215,6 +215,9 @@ async def get_command_center(
         project_id=project.id,
         audits=audits,
     )
+    prompt_count = await _active_prompt_count(
+        session, workspace_id=workspace_id, project_id=project.id
+    )
     return CommandCenterResponse(
         project=CommandCenterProject(
             id=project.id,
@@ -224,13 +227,12 @@ async def get_command_center(
         ),
         facts=facts,
         loop=loop,
-        next_action=await _next_action(
-            session,
-            workspace_id=workspace_id,
-            project_id=project.id,
+        next_action=_next_action(
             actions=opportunities["items"],
             evidence=evidence,
+            prompt_count=prompt_count,
         ),
+        active_prompt_count=prompt_count,
         track=_track_summary(current, previous, audits),
         measurement=_measurement(audits) if audits is not None else None,
         state=(
@@ -512,13 +514,32 @@ def _tracked_state(audits: ComparableAudits | None) -> EvidenceState:
     )
 
 
-async def _next_action(
-    session: AsyncSession,
+async def _active_prompt_count(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> int:
+    return int(
+        await session.scalar(
+            select(func.count(Prompt.id))
+            .select_from(Prompt)
+            .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
+            .join(Project, Project.id == PromptSet.project_id)
+            .where(
+                PromptSet.project_id == project_id,
+                Project.workspace_id == workspace_id,
+                Prompt.status == "active",
+                # Audits run only enabled prompts; a disabled one tracks nothing.
+                Prompt.enabled.is_(True),
+            )
+        )
+        or 0
+    )
+
+
+def _next_action(
     *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
     actions: list[dict],
     evidence: dict[str, bool],
+    prompt_count: int,
 ) -> CommandCenterNextAction:
     if actions:
         action = actions[0]
@@ -542,20 +563,6 @@ async def _next_action(
         return CommandCenterNextAction(
             kind="crawl", title="Run the first site crawl", href="/site"
         )
-    prompt_count = int(
-        await session.scalar(
-            select(func.count(Prompt.id))
-            .select_from(Prompt)
-            .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
-            .join(Project, Project.id == PromptSet.project_id)
-            .where(
-                PromptSet.project_id == project_id,
-                Project.workspace_id == workspace_id,
-                Prompt.status == "active",
-            )
-        )
-        or 0
-    )
     if prompt_count == 0:
         return CommandCenterNextAction(
             kind="configure_prompts",

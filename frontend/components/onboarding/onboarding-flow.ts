@@ -88,7 +88,9 @@ function isOrphanedCompletion(
   discovery: BrandDiscovery | undefined,
 ): boolean {
   if (!discoveryId || discovery?.project_id) return false;
-  return discovery?.status === 'completing' || discovery?.status === 'project_created';
+  // `completing` is a legacy discovery accepted before onboarding stopped
+  // generating prompts; without its project it is orphaned the same way.
+  return discovery?.status === 'project_created' || discovery?.status === 'completing';
 }
 
 export function useOnboardingFlow(transactionKey: string) {
@@ -261,25 +263,17 @@ export function useOnboardingFlow(transactionKey: string) {
         finishOnboardingCompletionRequest(timingStarted);
       }
     },
-    // The request only ACCEPTS the completion; the portfolio is generated on a
-    // worker because it takes minutes and the client abandons a request after
-    // 30s. A replayed completion already carries its project id and skips
-    // straight through; otherwise the discovery poll below finishes the job.
+    // Completion creates the project, with no prompts yet, in the request.
     onSuccess: async (result) => {
-      if (result.status === 'failed') return;
-      if (result.project_id) await openProject(result.project_id);
-      else await queryClient.invalidateQueries({ queryKey: brandDiscoveryKeys.all });
+      if (result.status === 'failed' || !result.project_id) return;
+      await openProject(result.project_id);
     },
   });
 
   const completedProjectId = complete.data?.project_id ?? discoveryState?.project_id ?? null;
   const completionFailed =
     complete.data?.status === 'failed' || discoveryState?.status === 'failed';
-  const isCompleting =
-    !completionFailed &&
-    (complete.isPending ||
-      (complete.isSuccess && !completedProjectId) ||
-      discoveryState?.status === 'completing');
+  const isCompleting = !completionFailed && (complete.isPending || complete.isSuccess);
   useEffect(() => {
     // Completion owns navigation from acceptance through the project handoff.
     if (orphanedCompletion || openingProject.current || isCompleting || completedProjectId) return;
@@ -348,10 +342,8 @@ export function useOnboardingFlow(transactionKey: string) {
     complete,
     completedProjectId,
     completionFailed,
-    // Hold the action through navigation to the committed shell. Persisted
-    // `completing` still protects a resumed legacy/shell-less response from a
-    // duplicate click; normal completions redirect as soon as `project_id`
-    // arrives and do not wait for prompt generation.
+    // Hold the action through navigation to the created project so a second
+    // click cannot race the handoff.
     isCompleting,
     discovery,
     domains,

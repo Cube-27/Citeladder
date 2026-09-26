@@ -244,6 +244,9 @@ export const brandDiscoverySchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   project_id: uuid().nullable(),
+  // `completing` is legacy: a discovery accepted before onboarding stopped
+  // generating prompts, until the worker drain finalizes it. Keep it while the
+  // backend retains LEGACY_DISCOVERY_STATUS_COMPLETING.
   status: z.enum(['queued', 'running', 'failed', 'ready', 'completing', 'project_created']),
   progress: responseObject({
     phase: z.enum([
@@ -291,13 +294,12 @@ export const brandDiscoveryCatalogSchema = responseObject({
   prompt_cohorts: z.array(z.string()),
 });
 
-// Completion is accepted as a job, not returned as a finished project: the
-// portfolio takes minutes to generate and the client gives up on a request
-// after 30s. `project_id` is null until the worker lands it, so callers poll
-// the discovery and read the id from `project_created`.
+// Completion creates the project in the request. Onboarding generates no
+// prompts, so the project starts with an empty prompt set. `failed` is only
+// reported when replaying a completion that failed before that change.
 export const brandDiscoveryCompleteSchema = responseObject({
   discovery_id: uuid(),
-  status: z.enum(['completing', 'project_created', 'failed']),
+  status: z.enum(['project_created', 'failed']),
   project_id: uuid().nullable(),
   crawl_id: uuid().nullable(),
   activation_state: z.enum(['queued']),

@@ -22,18 +22,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_QUEUE_SPEC,
-    DISCOVERY_STATUS_COMPLETING,
     DISCOVERY_STATUS_FAILED,
     DISCOVERY_STATUS_PROJECT_CREATED,
     DISCOVERY_STATUS_READY,
-    ERROR_BRAND_COMPLETION,
     ERROR_BRAND_DISCOVERY,
-    TASK_KIND_BRAND_COMPLETION,
-    WARNING_BRAND_COMPLETION_FAILED,
+    LEGACY_DISCOVERY_STATUS_COMPLETING,
 )
 from app.core.config.site_health_runtime import SITE_CRAWL_QUEUE_SPEC
-from app.core.config.task_queue import TASK_STATUS_FAILED
-from app.models.discovery import BrandDiscovery, BrandDiscoveryTask
+from app.models.discovery import BrandDiscovery
 
 Reconciler = Callable[
     [async_sessionmaker[AsyncSession], list[uuid.UUID]], Awaitable[None]
@@ -55,34 +51,14 @@ async def reconcile_brand_discoveries(
                 )
             ).all()
         )
-        failed_kinds: dict[uuid.UUID, set[str]] = {}
-        for discovery_id, task_kind in (
-            await session.execute(
-                select(
-                    BrandDiscoveryTask.discovery_id,
-                    BrandDiscoveryTask.task_kind,
-                ).where(
-                    BrandDiscoveryTask.discovery_id.in_(parent_ids),
-                    BrandDiscoveryTask.status == TASK_STATUS_FAILED,
-                )
-            )
-        ).all():
-            failed_kinds.setdefault(discovery_id, set()).add(task_kind)
         for row in rows:
-            kinds = failed_kinds.get(row.id, set())
-            if (
-                TASK_KIND_BRAND_COMPLETION in kinds
-                and row.status == DISCOVERY_STATUS_COMPLETING
-            ):
-                row.status = DISCOVERY_STATUS_FAILED
-                row.stage = "failed"
-                row.error_code = ERROR_BRAND_COMPLETION
-                row.warnings = list(
-                    dict.fromkeys([*row.warnings, WARNING_BRAND_COMPLETION_FAILED])
-                )
-                row.error_detail = BRAND_DISCOVERY_QUEUE_SPEC.max_attempts_error
-                continue
-            if row.status in {DISCOVERY_STATUS_READY, DISCOVERY_STATUS_PROJECT_CREATED}:
+            # A legacy completing row already owns a committed project shell;
+            # only research failures turn a discovery into a failed one.
+            if row.status in {
+                DISCOVERY_STATUS_READY,
+                LEGACY_DISCOVERY_STATUS_COMPLETING,
+                DISCOVERY_STATUS_PROJECT_CREATED,
+            }:
                 continue
             row.status = DISCOVERY_STATUS_FAILED
             row.stage = "failed"
