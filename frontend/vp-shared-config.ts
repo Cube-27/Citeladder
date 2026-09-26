@@ -191,6 +191,8 @@ export const fmtConfig: OxfmtConfig = {
     '**/pnpm-lock.yaml',
     // Generated service inputs, byte-checked against their generators in CI.
     '**/services/*/src/generated/**',
+    // Python-produced golden masters, byte-checked by export_ts_platform --check.
+    '**/services/*/golden/**',
     // Re-wrapping this inflates it past the owner line budget that
     // check-frontend-architecture.mjs enforces; kept hand-formatted.
     '**/apps/app/src/globals.css',

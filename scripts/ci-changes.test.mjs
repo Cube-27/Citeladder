@@ -13,6 +13,7 @@ test('backend and frontend paths select only their owning suites', () => {
     backend: true,
     frontend: false,
     contract: false,
+    api: false,
     e2e: false,
     security: false,
     compose: false,
@@ -21,6 +22,7 @@ test('backend and frontend paths select only their owning suites', () => {
     backend: false,
     frontend: true,
     contract: false,
+    api: false,
     e2e: false,
     security: false,
     compose: false,
@@ -61,11 +63,33 @@ test('contracts and shared configuration invalidate both sides', () => {
   }
 });
 
+test('the TypeScript API service runs for its code and every Python input it is built from', () => {
+  for (const path of [
+    'frontend/services/api/src/app.ts',
+    'frontend/pnpm-lock.yaml',
+    'migrations/versions/0001_initial.py',
+    'backend/app/core/config/errors.py',
+    'backend/app/domain/workspaces/policy.py',
+    'backend/scripts/golden_masters.py',
+  ]) {
+    assert.equal(classifyPaths([path]).api, true, path);
+  }
+  for (const path of [
+    'backend/app/analysis/costs.py',
+    'backend/app/core/config/agent_skills/skills/gsc_optimize/SKILL.md',
+    'frontend/components/card.tsx',
+  ]) {
+    assert.equal(classifyPaths([path]).api, false, path);
+  }
+  assert.equal(classifyPaths(['frontend/services/api/src/server.ts']).compose, true);
+});
+
 test('documentation-only changes avoid implementation suites', () => {
   assert.deepEqual(classifyPaths(['docs/DEVELOPMENT.md', 'README.md']), {
     backend: false,
     frontend: false,
     contract: false,
+    api: false,
     e2e: false,
     security: false,
     compose: false,
@@ -77,6 +101,7 @@ test('root governance and product prose avoid implementation suites', () => {
     backend: false,
     frontend: false,
     contract: false,
+    api: false,
     e2e: false,
     security: false,
     compose: false,
@@ -90,6 +115,7 @@ test('packaged Agent skills remain backend production inputs', () => {
       backend: true,
       frontend: false,
       contract: false,
+      api: false,
       e2e: false,
       security: false,
       compose: false,
@@ -142,6 +168,7 @@ test('previous CI evidence requires every owner to be successful or intentionall
       'Backend (quality, pytest)',
       'Frontend (quality, coverage, build)',
       'API contract (backend to frontend)',
+      'API service (TypeScript)',
       'E2E (playwright)',
       'Security (pip-audit, detect-secrets)',
     ].map((name) => ({ name, status: 'completed', conclusion: 'skipped' })),
