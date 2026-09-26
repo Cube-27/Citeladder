@@ -42,7 +42,7 @@ def uses_scraper_recovery(task: AuditTask) -> bool:
 
 
 def recovery_deadline(task: AuditTask) -> datetime | None:
-    if task.provider_task_submitted_at is None:
+    if task.logical_engine not in PRODUCTS or task.provider_task_submitted_at is None:
         return None
     hours = (task.request_snapshot or {}).get(
         "recovery_deadline_hours",

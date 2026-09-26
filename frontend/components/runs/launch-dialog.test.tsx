@@ -109,6 +109,49 @@ describe('Consumer engine selection', () => {
   });
 });
 
+describe('Engine availability changes', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('drops a selected engine from the picker and payload when its route goes inactive', async () => {
+    stubApis(ESTIMATE);
+    const connection = (active: boolean) => [
+      {
+        active: true,
+        api_key_set: true,
+        last_test_status: 'ok',
+        routes: [
+          { logical_engine: 'chatgpt_search', active },
+          { logical_engine: 'chatgpt', active: true },
+        ],
+      },
+    ];
+    vi.mocked(providersApi.listConnections).mockResolvedValue(connection(true) as never);
+    const { queryClient } = renderWithProviders(
+      <LaunchDialog
+        open
+        onOpenChange={() => undefined}
+        projectId={PROJECT_ID}
+        fixedPromptIds={PROMPT_IDS}
+      />,
+    );
+    const search = await screen.findByRole('button', { name: 'ChatGPT Search' });
+    await waitFor(() => expect(search).toHaveAttribute('aria-pressed', 'true'));
+
+    vi.mocked(providersApi.listConnections).mockResolvedValue(connection(false) as never);
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.providers.connections(WORKSPACE_ID),
+      });
+    });
+
+    expect(await screen.findByRole('button', { name: /ChatGPT Search · Connect/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: 'Launch audit' })).toBeDisabled();
+  });
+});
+
 describe('LaunchDialog fixed prompt selection', () => {
   afterEach(() => vi.restoreAllMocks());
 

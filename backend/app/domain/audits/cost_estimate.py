@@ -25,6 +25,7 @@ from app.core.config.costs import (
     route_pricing_for,
 )
 from app.core.config.dataforseo import dataforseo_settings
+from app.core.config.llm_scraper import PRODUCTS
 from app.core.config.provider_catalog import measurement_route, uses_provider_tasks
 from app.domain.audits.estimate_errors import AuditEstimateError
 from app.domain.audits.schemas import (
@@ -230,7 +231,7 @@ async def estimate_audit(
     # Paid provider tasks may legitimately recover until their frozen deadline.
     wall_clock_seconds = (
         dataforseo_settings.recovery_deadline_hours * 3600
-        if any(uses_provider_tasks(engine) for engine in payload.engines)
+        if any(engine in PRODUCTS for engine in payload.engines)
         else attempts
         * policy.timeout_seconds
         / max(1, audit_settings.worker_concurrency)

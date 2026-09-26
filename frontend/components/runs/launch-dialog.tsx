@@ -158,11 +158,17 @@ export function LaunchDialog({
       fixedSelection.locked,
     ],
   );
+  // An engine whose route went inactive leaves the picker and the payload
+  // together; both render from this one reconciled selection.
+  const selectedEngines = useMemo(
+    () => engines.filter((engine) => configuredEngines.includes(engine)),
+    [engines, configuredEngines],
+  );
   const selection = {
     projectId,
     promptSetId: promptSelection.payloadPromptSetId,
     promptIds: promptSelection.promptIds,
-    engines: engines.filter((engine) => configuredEngines.includes(engine)),
+    engines: selectedEngines,
     repetitions,
     auditScope,
   };
@@ -212,8 +218,10 @@ export function LaunchDialog({
       batches={promptSelection.batches}
       batchIndex={batchIndex}
       setBatchIndex={setBatchIndex}
-      engines={engines}
-      setEngines={setEngines}
+      engines={selectedEngines}
+      setEngines={(update) =>
+        setEngines(typeof update === 'function' ? update(selectedEngines) : update)
+      }
       repetitions={repetitions}
       setRepetitions={setRepetitions}
       estimate={estimateQuery.data}

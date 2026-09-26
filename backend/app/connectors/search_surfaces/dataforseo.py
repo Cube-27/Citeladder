@@ -283,16 +283,18 @@ class DataForSeoSearchSurfaceAdapter:
     def _payload(self, request: SearchSurfaceRequest) -> dict[str, Any]:
         if self._engine not in llm_scraper.PRODUCTS:
             return _task_payload(request)
+        settings = (
+            request.request_settings
+            if request.request_settings is not None
+            else llm_scraper.request_settings(self._engine)
+        )
+        # Settings first: the prompt, market and correlation tag always win.
         return {
+            **settings,
             "keyword": llm_scraper.scraper_keyword(request.query),
             "location_code": request.location_code,
             "language_code": request.language_code,
             "tag": request.provider_submission_ref,
-            **(
-                request.request_settings
-                if request.request_settings is not None
-                else llm_scraper.request_settings(self._engine)
-            ),
         }
 
     async def _call(

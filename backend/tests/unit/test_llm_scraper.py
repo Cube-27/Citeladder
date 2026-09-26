@@ -1,5 +1,7 @@
 """Consumer parser and submission boundaries, with no live provider calls."""
 
+from datetime import UTC, datetime
+
 import httpx
 import pytest
 
@@ -15,6 +17,8 @@ from app.core.config.dataforseo import (
 from app.core.config.llm_scraper import scraper_keyword
 from app.domain.audits.errors import AuditValidationError
 from app.domain.audits.resolution import _resolve_funded_routes
+from app.models.audit import AuditTask
+from app.workers.audit.search_surface_support import recovery_deadline
 
 
 def payload(page, status=20000):
@@ -96,6 +100,19 @@ def test_paid_admission_and_recovery_bounds():
         DataForSeoSettings(recovery_deadline_hours=30 * 24)
     with pytest.raises(AuditValidationError, match="funded"):
         _resolve_funded_routes(["gemini_consumer"])
+
+
+@pytest.mark.parametrize(
+    ("engine", "bounded"), [("chatgpt_search", True), ("google_ai_overview", False)]
+)
+def test_recovery_deadline_bounds_only_scraper_tasks(engine, bounded):
+    task = AuditTask(
+        logical_engine=engine,
+        provider_task_submitted_at=datetime(2026, 9, 1, tzinfo=UTC),
+        request_snapshot={"recovery_deadline_hours": 24},
+    )
+    expected = datetime(2026, 9, 2, tzinfo=UTC) if bounded else None
+    assert recovery_deadline(task) == expected
 
 
 @pytest.mark.parametrize("state", ["unavailable", "no_exposed_queries"])
