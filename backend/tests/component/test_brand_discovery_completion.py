@@ -411,12 +411,13 @@ async def test_completion_rolls_back_the_shell_when_finalizing_fails(
     async with session_factory() as session:
         workspace_id = await session.scalar(select(Workspace.id).limit(1))
         assert workspace_id is not None
+        payload = BrandDiscoveryComplete.model_validate(_completion_payload())
         with pytest.raises(RuntimeError, match="finalize failed"):
             await onboarding_completion.complete_discovery(
                 session,
                 workspace_id=workspace_id,
                 discovery_id=discovery_id,
-                payload=BrandDiscoveryComplete.model_validate(_completion_payload()),
+                payload=payload,
                 idempotency_key="completion-rollback",
                 reviewer_id=uuid.uuid4(),
             )

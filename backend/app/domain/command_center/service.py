@@ -527,6 +527,8 @@ async def _active_prompt_count(
                 PromptSet.project_id == project_id,
                 Project.workspace_id == workspace_id,
                 Prompt.status == "active",
+                # Audits run only enabled prompts; a disabled one tracks nothing.
+                Prompt.enabled.is_(True),
             )
         )
         or 0

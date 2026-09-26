@@ -43,9 +43,9 @@ onboarding's portfolio request (PR 1, `docs/onboarding.md`,
 Corrections found against the repository before implementation:
 
 - `backend/scripts/run_onboarding_eval.py` imported `generate_portfolio`; the draft
-  did not list it. Per decision 3 all prompt scoring is removed from it, from
-  `backend/evaluations/onboarding_golden.py` and from the golden cases; research,
-  context and competitor scoring remain.
+  did not list it. Per decision 3 and the owner's follow-up, the whole outdated
+  onboarding eval framework (runner, golden and obscure-brand corpora, scorers,
+  their tests and doc) is deleted.
 - The draft kept the completion worker. Without provider I/O it only adds a queue
   hop, a polling state (`completing`) and a failure reconciler. Decision 2 removes it.
 - The draft assumed "generated rows are active" stays. Decision 7 changes that: PR 3
@@ -85,10 +85,10 @@ Corrections found against the repository before implementation:
 
 ### Evals
 
-- Remove portfolio generation and prompt metrics from `run_onboarding_eval.py`.
-- Remove prompt scorers (`evaluate_portfolio`, realism, template tell, gold overlap,
-  collision) and gold prompt fixtures from `backend/evaluations/`, with their tests
-  and `backend/docs/evaluations/onboarding-golden.md` sections.
+- Delete the onboarding eval framework: `scripts/run_onboarding_eval.py`,
+  `evaluations/onboarding_*.py`, `tests/unit/test_onboarding_golden_eval.py`,
+  `tests/unit/test_onboarding_obscure_eval.py` and
+  `backend/docs/evaluations/onboarding-golden.md`. It was outdated and unused.
 
 ### Frontend
 
@@ -217,7 +217,8 @@ PR 1
       request, makes no model call and starts no worker task.
 - [ ] A legacy `completing` row or queued completion task finalizes without generating.
 - [ ] Overview and the Prompts library empty states invite Generate prompts.
-- [ ] Deleted modules, config, evals and tests are gone, not wrapped.
+- [ ] Deleted modules, config, the onboarding eval framework and tests are gone,
+      not wrapped.
 
 PR 2
 - [ ] `/prompts` has no separate manage step and offers Launch audit.

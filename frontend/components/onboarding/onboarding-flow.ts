@@ -88,7 +88,9 @@ function isOrphanedCompletion(
   discovery: BrandDiscovery | undefined,
 ): boolean {
   if (!discoveryId || discovery?.project_id) return false;
-  return discovery?.status === 'project_created';
+  // `completing` is a legacy discovery accepted before onboarding stopped
+  // generating prompts; without its project it is orphaned the same way.
+  return discovery?.status === 'project_created' || discovery?.status === 'completing';
 }
 
 export function useOnboardingFlow(transactionKey: string) {

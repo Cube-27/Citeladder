@@ -11,6 +11,7 @@ from app.domain.command_center.service import get_command_center
 from app.domain.opportunities import recompute as opportunity_recompute
 from app.models.demand import DemandSnapshot
 from app.models.project import Project
+from app.models.prompt import Prompt
 from tests.component.opportunity_helpers import _add_site, _seed_base, _seed_scenario
 
 pytestmark = pytest.mark.asyncio
@@ -69,6 +70,10 @@ async def test_command_center_projects_crawl_and_demand_before_first_audit(
         analyzer_version="demand-analyzer-v1",
     )
     db_session.add(demand)
+    # A disabled prompt is never audited, so it does not count as tracked.
+    disabled = await db_session.get(Prompt, prompt_ids[0])
+    assert disabled is not None
+    disabled.enabled = False
     await db_session.commit()
     project = await db_session.get(Project, project_id)
     assert project is not None
@@ -85,4 +90,4 @@ async def test_command_center_projects_crawl_and_demand_before_first_audit(
     assert response.loop.tracked.state == "not_run"
     assert response.track.citation_share.value is None
     assert response.next_action.kind == "connect"
-    assert response.active_prompt_count == len(prompt_ids)
+    assert response.active_prompt_count == len(prompt_ids) - 1
