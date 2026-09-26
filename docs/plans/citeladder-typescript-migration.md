@@ -1,8 +1,9 @@
 # TypeScript migration plan
 
-Status: draft, saved 26 September 2026. Awaiting owner approval of
-[section 3](#3-decisions-to-lock). Not execution authorization; each PR is
-executed only when individually assigned.
+Status: PR 1 (TS platform foundation) implemented on 27 September 2026 at the
+owner's request, applying D1–D5 as drafted; D6 (team rule) still awaits the
+owner. Not execution authorization; each later PR is executed only when
+individually assigned.
 
 ## 1. Goal, scope and pace
 

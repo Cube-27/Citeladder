@@ -64,6 +64,22 @@ Publishing, prompt activation, external mutation, billing changes and future
 durable-memory promotion retain their explicit user-decision boundaries.
 [Invariants](invariants.md) is the correctness authority.
 
+## Languages and the TypeScript service
+
+Python (FastAPI, SQLAlchemy, Alembic) owns every shipped route family, worker
+and task kind. `frontend/services/api` is the TypeScript API service (Node,
+Hono, Kysely) introduced by the
+[TypeScript migration](plans/citeladder-typescript-migration.md). Until a
+migration PR moves a family to it, it serves only `/health` and `/ready` and no
+ingress routes to it. Each route family, task kind and table has exactly one
+writing stack.
+
+The service does not own policy or schema. It reads `backend/app/core/config`
+through a generated, drift-checked export and verifies Python-issued sessions;
+Alembic stays the only schema author, so the service holds Kysely types
+generated from the migrated schema. Behavior it ports from Python replays
+Python-produced golden masters (`backend/scripts/export_ts_platform.py`).
+
 ## Delivery topology
 
 The marketing Worker serves `citeladder.com` with Astro SSR and keeps public

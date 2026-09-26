@@ -248,6 +248,26 @@ are blocked. It also runs the existing authenticated Performance and analytics
 consent checks against the built Workers. It uses disposable upstream settings and mocks analytics requests;
 it does not enable or test a live checkout/provider.
 
+### API service (TypeScript)
+
+`frontend/services/api` is a pnpm workspace package; `pnpm install` in `frontend/`
+installs it. Its suite writes and deletes fixture rows, so it never reads
+`TEST_DATABASE_URL`: point `API_TEST_DATABASE_URL` at a **disposable** database that
+`alembic upgrade head` has migrated, never the development database.
+
+```bash
+cd frontend/services/api
+API_TEST_DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<disposable-db>" pnpm test
+TYPES_DATABASE_URL="<same disposable database>" pnpm db:types   # regenerate Kysely types after a schema change
+```
+
+After changing an exported setting, error code, the workspace role matrix or a
+golden-mastered behavior, regenerate the Python-owned inputs from `backend/` with
+`uv run python -m scripts.export_ts_platform` and commit them. `node
+scripts/quality.mjs --mode check --scope api` checks types, schema authority and
+export freshness; CI additionally verifies the generated types and runs the suite
+against PostgreSQL. `docker compose up api-service` runs the service on port 8100.
+
 ### Repository validation harness
 
 After the intended executable diff is complete, run the mode appropriate to the

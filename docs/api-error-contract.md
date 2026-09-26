@@ -8,7 +8,9 @@
 > drift policy).
 
 One owner per concept (invariant 2): the envelope is **produced** only by
-`backend/app/core/errors.py`; on the frontend, `frontend/lib/api/client.ts` owns
+`backend/app/core/errors.py` and, for the TypeScript API service,
+`frontend/services/api/src/errors.ts`, which replays Python-produced golden masters
+so both stacks emit byte-identical envelopes; on the frontend, `frontend/lib/api/client.ts` owns
 **parsing** the wire envelope and `frontend/lib/api/errors.ts` owns the `ApiError`
 type and its display-safe projection (`humanizeApiError`). Generic codes live in
 `backend/app/core/config/errors.py`; feature-specific codes live in their single owning
