@@ -15,6 +15,7 @@ from app.connectors.web_evidence.contracts import FetchResult
 from app.connectors.web_evidence.fetcher_body import is_bot_block_result
 from app.connectors.web_evidence.robots import RobotsPolicy
 from app.core.config.site_health_acquisition import (
+    ERROR_ACCESS_BLOCKED,
     ERROR_HTTP_4XX,
     ERROR_HTTP_5XX,
     ERROR_ROBOTS_DENIED,
@@ -77,7 +78,7 @@ def _robots_denial_error(policy: RobotsPolicy) -> tuple[str, str]:
     or an unsupported crawl-delay surfaces as ``robots_unavailable`` — distinct
     from a real robots-rule disallow so the UI can explain the pause rather
     than claim the site blocks crawlers. A 401/403 robots.txt is a standing
-    access restriction, reported as a refusal we obey.
+    access restriction, ``access_blocked``: re-crawling cannot fix it.
     """
     if policy.unavailable:
         return (
@@ -86,8 +87,8 @@ def _robots_denial_error(policy: RobotsPolicy) -> tuple[str, str]:
         )
     if policy.restricted:
         return (
-            ERROR_ROBOTS_DENIED,
-            "robots.txt is access-restricted (401/403); the crawler does not "
+            ERROR_ACCESS_BLOCKED,
+            "robots.txt is access-blocked (401/403); the crawler does not "
             "bypass access controls",
         )
     if policy.delay_exceeds_limit:

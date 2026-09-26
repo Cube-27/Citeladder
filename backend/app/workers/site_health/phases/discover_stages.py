@@ -24,6 +24,7 @@ from app.core.config.site_health_acquisition import (
     FETCH_PURPOSE_LLMS,
     FETCH_PURPOSE_SITEMAP,
     LLMS_TXT_PATH,
+    ROBOTS_FETCH_STATUS_ACCESS_BLOCKED,
     ROBOTS_FETCH_STATUS_FETCH_FAILED,
     ROBOTS_FETCH_STATUS_FETCHED,
     ROBOTS_FETCH_STATUS_NOT_FOUND,
@@ -86,12 +87,14 @@ def _classify_robots_fetch(body: str | None, status: int | None) -> str:
 
     Mirrors ``RobotsCache.ensure`` through the one shared predicate: a missing
     robots file (404-class) is ``not_found`` and permits crawling, while a
-    network error, 5xx, redirect or 401/403/429 response is ``fetch_failed``:
-    the stance is unknown and the crawl is paused (or, for 401/403, refused)
-    rather than proceeding fail-open.
+    network error, 5xx, redirect or 429 response is ``fetch_failed``: the
+    stance is unknown and the crawl is paused rather than proceeding
+    fail-open. A 401/403 is ``access_blocked``, which a re-crawl cannot fix.
     """
     if body is not None:
         return ROBOTS_FETCH_STATUS_FETCHED
+    if status in (401, 403):
+        return ROBOTS_FETCH_STATUS_ACCESS_BLOCKED
     if robots_status_denies(status):
         return ROBOTS_FETCH_STATUS_FETCH_FAILED
     return ROBOTS_FETCH_STATUS_NOT_FOUND

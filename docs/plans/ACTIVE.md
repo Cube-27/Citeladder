@@ -25,6 +25,12 @@
   and connected DataForSEO defaults. Customer credentials only; existing API
   measurements and schedules remain available. Saving this plan does not
   authorize implementation or live-provider acceptance.
+- [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)
+  — plan saved on 26 September 2026; implementation not started. Customer
+  authorization (domain verification or attestation) lets Site Health crawl
+  robots-excluded pages of the customer's own domain without bypassing access
+  controls. Also covers an expanded AI-bot crawlability report and CDN-log
+  crawl insights. Terms wording awaits legal review.
 - [Subsequent prompt grounding](citeladder-subsequent-prompt-grounding.md)
   — pending; relevance-ranked persisted GSC evidence for later Generate prompts.
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)

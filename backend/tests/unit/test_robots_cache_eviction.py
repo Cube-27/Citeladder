@@ -17,12 +17,16 @@ from app.connectors.web_evidence.contracts import FetchRequest, FetchResult
 from app.connectors.web_evidence.fetcher import SecureFetcher
 from app.connectors.web_evidence.robots import RobotsPolicy
 from app.core.config.site_health_acquisition import (
+    ERROR_ACCESS_BLOCKED,
+    ERROR_ROBOTS_UNAVAILABLE,
+    ROBOTS_FETCH_STATUS_ACCESS_BLOCKED,
     ROBOTS_FETCH_STATUS_FETCH_FAILED,
     ROBOTS_FETCH_STATUS_NOT_FOUND,
 )
 from app.core.config.site_health_runtime import (
     site_health_settings,
 )
+from app.workers.site_health.helpers import _robots_denial_error
 from app.workers.site_health.phases.discover_stages import _classify_robots_fetch
 from app.workers.site_health.robots_cache import RobotsCache
 
@@ -58,10 +62,20 @@ async def test_robots_status_distinguishes_missing_from_refusal(status, allowed,
         state == "restricted",
         state == "unreachable",
     )
-    # The UI must never label a paused crawl as "no robots.txt".
-    assert _classify_robots_fetch(body, fetched_status) == (
-        ROBOTS_FETCH_STATUS_NOT_FOUND if allowed else ROBOTS_FETCH_STATUS_FETCH_FAILED
+    # The UI must never label a paused crawl as "no robots.txt", nor an
+    # access control as a temporary outage.
+    assert (
+        _classify_robots_fetch(body, fetched_status)
+        == {
+            "open": ROBOTS_FETCH_STATUS_NOT_FOUND,
+            "restricted": ROBOTS_FETCH_STATUS_ACCESS_BLOCKED,
+            "unreachable": ROBOTS_FETCH_STATUS_FETCH_FAILED,
+        }[state]
     )
+    if not allowed:
+        assert _robots_denial_error(policy)[0] == (
+            ERROR_ACCESS_BLOCKED if state == "restricted" else ERROR_ROBOTS_UNAVAILABLE
+        )
 
 
 @pytest.mark.asyncio

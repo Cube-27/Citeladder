@@ -144,6 +144,9 @@ ROBOTS_FETCH_STATUS_NOT_FOUND: Final = "not_found"
 
 ROBOTS_FETCH_STATUS_FETCH_FAILED: Final = "fetch_failed"
 
+# robots.txt answered 401/403: an access control, not an outage.
+ROBOTS_FETCH_STATUS_ACCESS_BLOCKED: Final = "access_blocked"
+
 ACQUISITION_TRANSPORT_CURL_CFFI: Final = "curl_cffi"
 
 ACQUISITION_TRIGGER_INITIAL: Final = "initial"
@@ -197,6 +200,10 @@ ERROR_ACQUISITION_UNAVAILABLE: Final = "acquisition_unavailable"
 
 ERROR_BOT_BLOCKED: Final = "bot_blocked"
 
+# robots.txt itself is behind 401/403. Terminal: re-crawling cannot fix it
+# until the site's access configuration changes, and it is never bypassed.
+ERROR_ACCESS_BLOCKED: Final = "access_blocked"
+
 # The crawl outran its wall-clock budget while this task was still
 # outstanding. Written by the overdue-crawl watchdog, never by a fetch: it
 # means the page was abandoned so the crawl could terminalize, which is a
@@ -228,6 +235,7 @@ SITE_FETCH_ERROR_TOKENS: Final[frozenset[str]] = frozenset(
         ERROR_URL_ADMISSION_REJECTED,
         ERROR_ACQUISITION_UNAVAILABLE,
         ERROR_BOT_BLOCKED,
+        ERROR_ACCESS_BLOCKED,
     }
 )
 
@@ -237,6 +245,7 @@ POLICY_BLOCKING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         ERROR_ROBOTS_UNAVAILABLE,
         ERROR_SSRF_BLOCKED,
         ERROR_BOT_BLOCKED,
+        ERROR_ACCESS_BLOCKED,
     }
 )
 

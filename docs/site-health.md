@@ -38,7 +38,7 @@ and no longer impersonates a browser. The robots.txt response decides access:
 | 200 | Parse and honor applicable Allow/Disallow rules; malformed lines are ignored |
 | Empty 200, 404, 410, other 4xx | Crawl public pages under normal pacing and admission |
 | 3xx | Followed, up to the fetcher's redirect limit |
-| 401 / 403 | Never crawled — an access-control signal, reported as a robots refusal |
+| 401 / 403 | Never crawled — terminal `access_blocked` ("Access blocked"); re-crawling cannot fix it until the site's access configuration changes |
 | 429, 5xx, DNS/timeout/network failure | Temporary disallow; robots.txt is rechecked after `robots_unreachable_recheck_seconds` |
 
 Other policies are cached for at most `robots_cache_ttl_seconds` (24 hours).

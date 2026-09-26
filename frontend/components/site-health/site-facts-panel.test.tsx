@@ -174,6 +174,20 @@ describe('SiteFactsPanel', () => {
     expect(within(files).getByText('Unknown')).toBeInTheDocument(); // no robots status
   });
 
+  it('reports a 403 robots.txt as access blocked, not a temporary outage', () => {
+    const accessBlocked = {
+      ...robotsUnfetched,
+      robots: { ...robotsUnfetched.robots, status: 'access_blocked', status_code: 403 },
+    };
+    render(<SiteFactsPanel crawl={crawl(accessBlocked)} dashboard={undefined} />);
+
+    expect(screen.queryByText('Stance unknown')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/HTTP 403/);
+    expect(screen.queryByText(/checked again shortly/)).not.toBeInTheDocument();
+    const files = screen.getByTestId('site-facts-well-known-files');
+    expect(within(files).getByText('Access blocked')).toBeInTheDocument();
+  });
+
   it('shows a definitive all-allowed stance when the site has NO robots.txt (B2 not_found)', () => {
     // A 404 robots.txt is not a fetch failure: the fail-open default IS the
     // answer, so the panel says so instead of crying "unknown".

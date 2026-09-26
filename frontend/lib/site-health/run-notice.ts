@@ -37,6 +37,8 @@ function failureGuidanceFor(code: string | undefined): string {
       return "Allow the crawler in the site's robots.txt, then re-crawl.";
     case 'robots_unavailable':
       return 'This is usually temporary — re-crawl to try again.';
+    case 'access_blocked':
+      return 'Re-crawling will not help until the site’s security settings allow the crawler.';
     case 'bot_blocked':
       return 'Allowlist the crawler with the site’s bot protection, then re-crawl.';
     case 'http_4xx':
