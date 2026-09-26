@@ -320,7 +320,7 @@ describe('DashboardScreen', () => {
     const setup = screen.getByRole('region', { name: 'Choose the questions you want to track' });
     expect(within(setup).getByRole('link', { name: 'Generate prompts' })).toHaveAttribute(
       'href',
-      expect.stringContaining('/prompts?mode=manage&generate=1'),
+      expect.stringContaining('/prompts?generate=1'),
     );
     expect(within(setup).getByRole('link', { name: 'Add or import prompts' })).toBeVisible();
   });

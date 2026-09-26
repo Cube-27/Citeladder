@@ -515,6 +515,72 @@ async def test_csv_import_bulk_creates_imported_prompts(
 
 
 @pytest.mark.asyncio
+async def test_csv_import_files_prompts_under_topics_by_name(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Existing names match case-insensitively; unknown names become manual
+    topics once; a blank topic imports unassigned; other projects' topics of
+    the same name are never reused."""
+    await _register(client, "p5-topics@example.com")
+    project = (await client.post("/api/v1/projects", json=_project_payload())).json()
+    async with session_factory() as session:
+        workspace_id = uuid.UUID(project["workspace_id"])
+        await revoke_signup_baseline_grants(session, workspace_id=workspace_id)
+        await seed_occupancy_grants(
+            session,
+            workspace_id=workspace_id,
+            grants=(
+                GrantSpec(key=KEY_PROJECT_SLOTS, value=2),
+                GrantSpec(key=KEY_PROMPT_SLOTS, value=10),
+            ),
+        )
+        await session.commit()
+    other = (
+        await client.post("/api/v1/projects", json=_project_payload(name="Other"))
+    ).json()
+    await client.post(f"/api/v1/projects/{other['id']}/topics", json={"name": "Bags"})
+    blank = await client.post(
+        f"/api/v1/projects/{project['id']}/topics", json={"name": "   "}
+    )
+    assert blank.status_code == 422
+    laptops = (
+        await client.post(
+            f"/api/v1/projects/{project['id']}/topics", json={"name": "Laptops"}
+        )
+    ).json()
+    prompt_set_id = (
+        await client.post(
+            "/api/v1/prompt-sets",
+            json={"project_id": project["id"], "name": "Topics"},
+        )
+    ).json()["id"]
+
+    csv_bytes = (
+        b"topic,prompt,intent\n"
+        b"laptops,cheap acme laptops,not-an-intent\n"
+        b"Bags,acme laptop bags,\n"
+        b"bags,best acme laptop bags,\n"
+        b",acme support hours,\n"
+    )
+    resp = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/import",
+        files={"file": ("prompts.csv", io.BytesIO(csv_bytes), "text/csv")},
+    )
+    assert resp.status_code == 201
+    topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
+    by_name = {topic["name"]: topic for topic in topics}
+    assert set(by_name) == {"Laptops", "Bags"}
+    assert by_name["Bags"]["origin"] == "manual"
+    filed = {p["text"]: p for p in resp.json()["prompts"]}
+    assert filed["cheap acme laptops"]["topic_id"] == laptops["id"]
+    assert filed["cheap acme laptops"]["intent"] == ""
+    assert filed["acme laptop bags"]["topic_id"] == by_name["Bags"]["id"]
+    assert filed["best acme laptop bags"]["topic_id"] == by_name["Bags"]["id"]
+    assert filed["acme support hours"]["topic_id"] is None
+
+
+@pytest.mark.asyncio
 async def test_csv_import_accepts_json_rows(client: httpx.AsyncClient) -> None:
     await _register(client, "p5b@example.com")
     project = (await client.post("/api/v1/projects", json=_project_payload())).json()

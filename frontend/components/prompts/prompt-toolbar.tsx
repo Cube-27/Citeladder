@@ -1,7 +1,8 @@
 'use client';
 
-import { Check, Filter, Sparkles, Upload } from 'lucide-react';
+import { Filter, Sparkles, Upload } from 'lucide-react';
 
+import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
 import {
   Dropdown,
@@ -20,7 +21,7 @@ import { textRole } from '@/components/ui/typography';
  * The prompt library's narrowing controls: a search box and the intent /
  * enabled / branded filter menu. For `PageShell`'s control band.
  *
- * The bulk-upload, generate, add and done buttons used to sit on this same row.
+ * The bulk-upload, generate and add buttons used to sit on this same row.
  * They are not filters — they act on the library rather than narrowing it — so
  * they moved to the identity band with every other route action, and this is
  * what was left. Presentational; state lives in the page.
@@ -150,34 +151,28 @@ export function PromptActions({
   onImport,
   onAdd,
   onGenerate,
-  onDoneManaging,
-  disabled,
+  hasActivePrompts,
 }: Readonly<{
   onImport: () => void;
   onAdd: () => void;
   onGenerate: () => void;
-  onDoneManaging?: () => void;
-  disabled?: boolean;
+  /** Launch audit measures active prompts, so it waits for at least one. */
+  hasActivePrompts: boolean;
 }>) {
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={onImport} disabled={disabled}>
+      <Button variant="secondary" size="sm" onClick={onImport}>
         <Upload className="size-4" aria-hidden />
         Bulk upload
       </Button>
-      <Button variant="secondary" size="sm" onClick={onGenerate} disabled={disabled}>
+      <Button variant="secondary" size="sm" onClick={onGenerate}>
         <Sparkles className="size-4" aria-hidden />
         Generate prompts
       </Button>
-      <Button variant="primary" size="sm" onClick={onAdd} disabled={disabled}>
+      <Button variant="secondary" size="sm" onClick={onAdd}>
         Add prompt
       </Button>
-      {onDoneManaging ? (
-        <Button variant="secondary" size="sm" aria-label="Done managing" onClick={onDoneManaging}>
-          <Check className="size-4" aria-hidden />
-          Done
-        </Button>
-      ) : null}
+      <LaunchAuditButton variant="primary" size="sm" disabled={!hasActivePrompts} />
     </>
   );
 }

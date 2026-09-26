@@ -7,18 +7,47 @@
  * column aliases (`app/domain/prompts/csv_import.py`) so a file that imports
  * server-side previews identically here.
  *
+ * Users supply only `topic` and `prompt` ({@link PROMPT_CSV_COLUMNS}, which the
+ * downloadable sample is also built from). Theme, intent, cohort and enabled
+ * remain optional internal columns: unknown or oversized values fall back to
+ * code defaults and never produce a row error.
+ *
  * A tiny hand-rolled parser (no dependency) handles quoted fields, escaped
  * quotes (`""`), and embedded newlines — enough for prompt CSVs.
  */
-import type { PromptInput } from '@/lib/api/prompts';
+import type { PromptImportRow } from '@/lib/api/prompts';
 import { promptIntentSchema } from '@/lib/api/schemas/project';
 import type { PromptIntent } from '@/lib/api/types';
 
-const THEME_KEYS = new Set(['theme', 'topic', 'category']);
-const TEXT_KEYS = new Set(['text', 'prompt', 'query', 'question']);
+/** The import's column contract, in the order the sample file uses. */
+export const PROMPT_CSV_COLUMNS = ['topic', 'prompt'] as const;
+
+/** Sample rows for the downloadable template, one cell per contract column. */
+export const PROMPT_CSV_SAMPLE_ROWS: readonly (readonly [string, string])[] = [
+  ['Running shoes', 'What are the best running shoes for flat feet?'],
+  ['Running shoes', 'Which running shoe brands last the longest?'],
+  ['Trail gear', 'What should I pack for a first trail marathon?'],
+  ['', 'Where can I get my running gait analysed?'],
+];
+
+type PromptCsvColumn = (typeof PROMPT_CSV_COLUMNS)[number];
+
+// Header aliases per column; each contract column's own name comes first.
+const COLUMN_KEYS: Record<PromptCsvColumn, ReadonlySet<string>> = {
+  topic: new Set(['topic', 'category']),
+  prompt: new Set(['prompt', 'text', 'query', 'question']),
+};
+const THEME_KEYS = new Set(['theme']);
 const INTENT_KEYS = new Set(['intent']);
 const COHORT_KEYS = new Set(['cohort']);
 const ENABLED_KEYS = new Set(['enabled', 'is_enabled', 'active']);
+
+/** Backend bounds (`config/http.py`), counted in code points as Python does. */
+const PROMPT_MAX_CHARS = 300;
+const TOPIC_MAX_CHARS = 255;
+const THEME_MAX_CHARS = 255;
+
+const codePoints = (value: string) => Array.from(value);
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'y', 't']);
 const FALSE_VALUES = new Set(['0', 'false', 'no', 'n', 'f']);
@@ -28,10 +57,8 @@ const VALID_INTENTS = new Set<string>(promptIntentSchema.options);
 type ParsedPromptRow = {
   /** 1-based source row number (excludes the header) for user feedback. */
   line: number;
-  input: PromptInput;
-  /** Non-fatal issues (e.g. an unknown intent that was dropped to ''). */
-  warnings: string[];
-  /** Fatal issues (row is not importable, e.g. empty text). */
+  input: PromptImportRow;
+  /** Fatal issues (row is not importable, e.g. empty prompt). */
   errors: string[];
 };
 
@@ -39,7 +66,7 @@ export type ParsedCsv = {
   rows: ParsedPromptRow[];
   /** True when the file had a recognizable header row. */
   hasHeader: boolean;
-  /** File-level errors (empty file, no text column, etc.). */
+  /** File-level errors (empty file, no data rows). */
   errors: string[];
 };
 
@@ -107,18 +134,15 @@ function asBool(value: string | undefined, fallback: boolean): boolean {
   return fallback;
 }
 
-function normalizeIntent(value: string | undefined): {
-  intent: PromptIntent;
-  dropped: boolean;
-} {
+/** An unknown intent is internal vocabulary gone stale: it defaults silently. */
+function normalizeIntent(value: string | undefined): PromptIntent {
   const normalized = (value ?? '').trim().toLowerCase();
-  if (!normalized) return { intent: '', dropped: false };
-  if (VALID_INTENTS.has(normalized)) return { intent: normalized as PromptIntent, dropped: false };
-  return { intent: '', dropped: true };
+  return VALID_INTENTS.has(normalized) ? (normalized as PromptIntent) : '';
 }
 
 type ColumnMap = {
   text: number;
+  topic: number;
   theme: number;
   intent: number;
   cohort: number;
@@ -126,24 +150,59 @@ type ColumnMap = {
 };
 
 function detectColumns(headerCells: string[]): ColumnMap | null {
-  const find = (keys: Set<string>) =>
+  const find = (keys: ReadonlySet<string>) =>
     headerCells.findIndex((cell) => keys.has(cell.trim().toLowerCase()));
   const map: ColumnMap = {
-    text: find(TEXT_KEYS),
+    text: find(COLUMN_KEYS.prompt),
+    topic: find(COLUMN_KEYS.topic),
     theme: find(THEME_KEYS),
     intent: find(INTENT_KEYS),
     cohort: find(COHORT_KEYS),
     enabled: find(ENABLED_KEYS),
   };
-  // A header row is recognized only if it names at least the text column.
+  // A header row is recognized only if it names at least the prompt column.
   return map.text >= 0 ? map : null;
+}
+
+/** Without a header, the first column is the prompt text (as on the server). */
+const HEADERLESS_COLUMNS: ColumnMap = {
+  text: 0,
+  topic: -1,
+  theme: -1,
+  intent: -1,
+  cohort: -1,
+  enabled: -1,
+};
+
+function parseRow(cells: string[], map: ColumnMap, line: number): ParsedPromptRow {
+  const cell = (col: number) => (col >= 0 ? cells[col] : undefined);
+  const text = (cell(map.text) ?? '').trim();
+  const topic = (cell(map.topic) ?? '').trim();
+  const errors: string[] = [];
+  if (!text) errors.push('Prompt is required.');
+  if (codePoints(text).length > PROMPT_MAX_CHARS) errors.push('Prompt is too long.');
+  if (codePoints(topic).length > TOPIC_MAX_CHARS) errors.push('Topic name is too long.');
+  return {
+    line,
+    input: {
+      text,
+      topic,
+      // Backend `PromptInput.theme` is a non-null string; send '' (not null)
+      // when the column is blank so the import never 422s.
+      theme: codePoints((cell(map.theme) ?? '').trim())
+        .slice(0, THEME_MAX_CHARS)
+        .join(''),
+      intent: normalizeIntent(cell(map.intent)),
+      cohort: cell(map.cohort)?.trim().toLowerCase() === 'comparison' ? 'comparison' : 'core',
+      enabled: asBool(cell(map.enabled), true),
+    },
+    errors,
+  };
 }
 
 /**
  * Parse CSV text into previewable prompt rows. With a header row, columns are
- * matched by name (any order); without one, the first column is the prompt
- * text and the remaining columns follow the canonical
- * `text,theme,intent,cohort,enabled` order.
+ * matched by name (any order); without one, the first column is the prompt.
  */
 export function parsePromptCsv(raw: string): ParsedCsv {
   const matrix = tokenizeCsv(raw);
@@ -153,40 +212,10 @@ export function parsePromptCsv(raw: string): ParsedCsv {
 
   const columns = detectColumns(matrix[0]);
   const hasHeader = columns !== null;
-  const map: ColumnMap = columns ?? {
-    text: 0,
-    theme: 1,
-    intent: 2,
-    cohort: 3,
-    enabled: 4,
-  };
   const dataRows = hasHeader ? matrix.slice(1) : matrix;
-
-  const rows: ParsedPromptRow[] = dataRows.map((cells, index) => {
-    const cell = (col: number) => (col >= 0 ? cells[col] : undefined);
-    const text = (cell(map.text) ?? '').trim();
-    const theme = (cell(map.theme) ?? '').trim();
-    const { intent, dropped } = normalizeIntent(cell(map.intent));
-    const warnings: string[] = [];
-    const errors: string[] = [];
-    if (!text) errors.push('Prompt text is required.');
-    if (dropped) warnings.push(`Unknown intent "${(cell(map.intent) ?? '').trim()}" was cleared.`);
-
-    return {
-      line: index + 1,
-      input: {
-        // Backend `PromptInput.theme` is a non-null string; send '' (not null)
-        // when the column is blank so the import never 422s.
-        text,
-        theme,
-        intent,
-        cohort: cell(map.cohort)?.trim().toLowerCase() === 'comparison' ? 'comparison' : 'core',
-        enabled: asBool(cell(map.enabled), true),
-      },
-      warnings,
-      errors,
-    };
-  });
+  const rows = dataRows.map((cells, index) =>
+    parseRow(cells, columns ?? HEADERLESS_COLUMNS, index + 1),
+  );
 
   const errors: string[] = [];
   if (rows.length === 0) errors.push('No data rows were found.');
@@ -195,6 +224,6 @@ export function parsePromptCsv(raw: string): ParsedCsv {
 }
 
 /** The importable subset (rows without fatal errors). */
-export function validRows(parsed: ParsedCsv): PromptInput[] {
+export function validRows(parsed: ParsedCsv): PromptImportRow[] {
   return parsed.rows.flatMap((row) => (row.errors.length === 0 ? [row.input] : []));
 }

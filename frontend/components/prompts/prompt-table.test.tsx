@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
-import type { Prompt } from '@/lib/api/types';
+import type { Prompt, Topic } from '@/lib/api/types';
 
 import { PromptTable } from './prompt-table';
 
@@ -22,11 +22,14 @@ function makePrompt(n: number, overrides: Partial<Prompt> = {}): Prompt {
   } as Prompt;
 }
 
+const TOPICS = [{ id: '22222222-2222-4222-8222-222222222222', name: 'Running shoes' }] as Topic[];
+
 function renderTable(prompts: Prompt[]) {
   return render(
     <TooltipProvider>
       <PromptTable
         prompts={prompts}
+        topics={TOPICS}
         onEdit={() => {}}
         onDelete={() => {}}
         onToggleEnabled={() => {}}
@@ -42,6 +45,15 @@ describe('PromptTable pagination', () => {
     expect(screen.queryByRole('columnheader', { name: 'Branded' })).not.toBeInTheDocument();
     expect(screen.queryByText('Branded')).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Stage' })).toBeInTheDocument();
+  });
+
+  it('names each row by its topic rather than its internal theme', () => {
+    renderTable([makePrompt(1, { topic_id: TOPICS[0].id }), makePrompt(2, { topic_id: null })]);
+
+    const [, filed, unassigned] = screen.getAllByRole('row');
+    expect(within(filed).getByText('Running shoes')).toBeInTheDocument();
+    expect(within(filed).queryByText('Comfort')).not.toBeInTheDocument();
+    expect(within(unassigned).queryByText('Running shoes')).not.toBeInTheDocument();
   });
 
   it('pages through rows with the page indicator and ghost buttons', async () => {
@@ -92,6 +104,7 @@ describe('PromptTable pagination', () => {
       <TooltipProvider>
         <PromptTable
           prompts={prompts}
+          topics={TOPICS}
           onEdit={() => {}}
           onDelete={() => {}}
           onToggleEnabled={() => {}}
@@ -113,6 +126,7 @@ describe('PromptTable pagination', () => {
       <TooltipProvider>
         <PromptTable
           prompts={prompts.slice(0, 5)}
+          topics={TOPICS}
           onEdit={() => {}}
           onDelete={() => {}}
           onToggleEnabled={() => {}}
@@ -136,6 +150,7 @@ describe('PromptTable pagination', () => {
       <TooltipProvider>
         <PromptTable
           prompts={[makePrompt(1)]}
+          topics={TOPICS}
           onEdit={() => {}}
           onDelete={() => {}}
           onToggleEnabled={onToggleEnabled}

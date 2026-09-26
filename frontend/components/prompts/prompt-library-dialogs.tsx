@@ -1,7 +1,8 @@
 import type { Dispatch, SetStateAction } from 'react';
 
-import type { PromptGenerateInput, PromptInput } from '@/lib/api/prompts';
+import type { PromptGenerateInput, PromptImportRow } from '@/lib/api/prompts';
 import type { Prompt, PromptGenerateResponse, Topic } from '@/lib/api/types';
+import type { PromptFormValues } from '@/lib/prompts/forms';
 
 import { CsvImportDialog } from './csv-import-dialog';
 import { GeneratePromptsDialog } from './generate-prompts-dialog';
@@ -12,12 +13,12 @@ type PromptLibraryDialogsProps = {
   setFormOpen: Dispatch<SetStateAction<boolean>>;
   editing: Prompt | undefined;
   setEditing: Dispatch<SetStateAction<Prompt | undefined>>;
-  submitForm: (input: PromptInput) => Promise<void>;
+  submitForm: (values: PromptFormValues) => Promise<void>;
   isSaving: boolean;
   formError?: string;
   importOpen: boolean;
   setImportOpen: Dispatch<SetStateAction<boolean>>;
-  importPrompts: (rows: PromptInput[]) => Promise<void>;
+  importPrompts: (rows: PromptImportRow[]) => Promise<void>;
   isImporting: boolean;
   importError?: string;
   generateOpen: boolean;
@@ -61,6 +62,8 @@ export function PromptLibraryDialogs({
           if (!open) setEditing(undefined);
         }}
         prompt={editing}
+        topics={topics}
+        defaultTopicId={selectedTopicId}
         onSubmit={submitForm}
         isSaving={isSaving}
         error={formError}

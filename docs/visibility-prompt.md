@@ -57,6 +57,33 @@ boundaries. Generation evidence freezes buyer-query policy, generator, slot,
 context/source and actual provider/model provenance; historical prompts are not
 rewritten by a newer generator.
 
+## Prompts page, manual entry and CSV import
+
+`/prompts` opens directly on the prompt library: topics rail, Active/Archived
+tabs, and each prompt's topic and latest measured visibility. Its actions are
+Bulk upload, Generate prompts, Add prompt and **Launch audit**, which reuses the
+shared launch dialog and its admission/funding checks and stays disabled until
+the project has an active prompt. `/prompts?generate=1` opens the Generate
+dialog once per arrival and is then removed from the URL.
+
+Users are asked only for a prompt and its topic. Theme, intent and cohort are
+internal generation vocabulary: never required, never a user-facing validation
+error, and defaulted in code when absent. Editing a prompt changes only its text
+and topic, so generated classification survives.
+
+CSV import reads `topic,prompt` (aliases `category`; `text`, `query`,
+`question`) in any order; a file without a recognized header is a list of
+prompts. Optional `theme`, `intent`, `cohort` and `enabled` columns are clipped
+or defaulted rather than rejected; the upload's column, row and cell-size bounds
+still reject a file before parsing. The browser previews and posts parsed rows;
+the [CSV parser](../backend/app/domain/prompts/csv_import.py) serves raw uploads
+with the same contract, and the dialog's sample file is generated from the
+[browser parser's column contract](../frontend/lib/prompts/csv.ts). Under the
+project lock, [import](../backend/app/domain/prompts/importing.py) matches topic
+names case-insensitively, creates unknown names as manual topics only for rows
+that insert, and imports a blank topic unassigned. A binding or capacity failure
+rejects the whole import; duplicate rows are skipped while the rest import.
+
 ## Audit admission and execution
 
 The [audit API](../backend/app/api/audits.py),

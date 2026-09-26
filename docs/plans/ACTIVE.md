@@ -3,10 +3,10 @@
 ## Active
 
 - [Prompt generation v2](citeladder-prompt-generation-v2.md)
-  — owner-approved on 26 September 2026. PR 1 (empty onboarding portfolio,
-  synchronous completion, prompt-eval removal, Overview call to action) in
-  progress. PR 2 (direct Prompts workflow, simpler CSV) and PR 3 (rebuilt
-  generation with review and JEV gate) follow in order.
+  — owner-approved on 26 September 2026 and revised after the prompt-universe/JEV
+  research. PR 1 merged as `54e6f4b8` (#161). Next: PR 2 (direct Prompts workflow,
+  simpler CSV), then PR 3a (business map, candidate staging, review), PR 3b
+  (rebuilt generation, JEV shadow) and PR 3c (policy revision, JEV gate).
 
 - [Demo and production hardening](citeladder-production-hardening.md)
   — repository-side Phase 1 subset implemented locally on 26 September 2026 in

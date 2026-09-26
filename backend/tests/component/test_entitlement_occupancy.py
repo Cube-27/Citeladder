@@ -37,16 +37,16 @@ from app.domain.entitlements.types import GrantSpec
 from app.domain.projects.schemas import ProjectCreate
 from app.domain.projects.service import create_project
 from app.domain.prompts.generation import generate_prompts
+from app.domain.prompts.importing import import_prompts
 from app.domain.prompts.schemas import (
     PromptCreate,
     PromptGenerateRequest,
-    PromptInput,
+    PromptImportRow,
     PromptUpdate,
 )
 from app.domain.prompts.service import (
     create_prompt,
     delete_prompt,
-    import_prompts,
     update_prompt,
 )
 from app.models.brand import Brand
@@ -241,10 +241,10 @@ async def test_concurrent_imports_never_exceed_grant(
         )
         await session.commit()
 
-    rows_a = [PromptInput(text=f"batch a acme {idx}") for idx in range(3)]
-    rows_b = [PromptInput(text=f"batch b acme {idx}") for idx in range(3)]
+    rows_a = [PromptImportRow(text=f"batch a acme {idx}") for idx in range(3)]
+    rows_b = [PromptImportRow(text=f"batch b acme {idx}") for idx in range(3)]
 
-    async def _import(rows: list[PromptInput]) -> str:
+    async def _import(rows: list[PromptImportRow]) -> str:
         async with session_factory() as session:
             try:
                 await import_prompts(
@@ -411,10 +411,10 @@ async def test_duplicate_filtering_charges_only_actual_inserts(
             workspace_id=workspace.id,
             prompt_set_id=prompt_set_id,
             rows=[
-                PromptInput(text="acme alpha"),
-                PromptInput(text=" ACME ALPHA "),
-                PromptInput(text="acme beta"),
-                PromptInput(text="acme gamma"),
+                PromptImportRow(text="acme alpha"),
+                PromptImportRow(text=" ACME ALPHA "),
+                PromptImportRow(text="acme beta"),
+                PromptImportRow(text="acme gamma"),
             ],
         )
         assert len(prompt_set.prompts) == 3
@@ -426,7 +426,10 @@ async def test_duplicate_filtering_charges_only_actual_inserts(
             session,
             workspace_id=workspace.id,
             prompt_set_id=prompt_set_id,
-            rows=[PromptInput(text="acme alpha"), PromptInput(text="acme beta")],
+            rows=[
+                PromptImportRow(text="acme alpha"),
+                PromptImportRow(text="acme beta"),
+            ],
         )
         assert len(prompt_set.prompts) == 3
 

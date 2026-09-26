@@ -6,7 +6,13 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { textRole } from '@/components/ui/typography';
 import { Skeleton } from '@/components/ui/skeleton';
-import { promptsApi, type PromptGenerateInput, type PromptInput } from '@/lib/api/prompts';
+import {
+  promptsApi,
+  type PromptGenerateInput,
+  type PromptImportRow,
+  type PromptInput,
+  type PromptUpdateInput,
+} from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
 import { humanizeApiError } from '@/lib/api/errors';
 import { visibilityApi } from '@/lib/api/visibility';
@@ -19,6 +25,11 @@ import type {
   Topic,
 } from '@/lib/api/types';
 import { emptyFilters, filterPrompts, type PromptFilters } from '@/lib/prompts/filter';
+import {
+  formValuesToPromptInput,
+  formValuesToPromptUpdate,
+  type PromptFormValues,
+} from '@/lib/prompts/forms';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
 import { Tabs } from '@/components/ui/tabs';
 
@@ -57,10 +68,8 @@ const STATUS_TABS: { id: PromptStatus; label: string }[] = [
  */
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this component only orchestrates queries/mutations; toolbar, topic rail, table, empty state, and dialogs are extracted.
 export function PromptLibrary({
-  onDoneManaging,
   generateRequest = 0,
 }: Readonly<{
-  onDoneManaging?: () => void;
   /** Increments once per URL request to open the Generate dialog. */
   generateRequest?: number;
 }>) {
@@ -126,7 +135,7 @@ export function PromptLibrary({
   });
 
   const updateMutation = useMutation({
-    mutationFn: (vars: { id: string; input: Partial<PromptInput> }) =>
+    mutationFn: (vars: { id: string; input: PromptUpdateInput }) =>
       promptsApi.updatePrompt(vars.id, vars.input, requestOptions()),
     onSuccess: async () => {
       await invalidate();
@@ -156,7 +165,7 @@ export function PromptLibrary({
   });
 
   const importMutation = useMutation({
-    mutationFn: async (rows: PromptInput[]): Promise<PromptSet> => {
+    mutationFn: async (rows: PromptImportRow[]): Promise<PromptSet> => {
       const options = requestOptions();
       const set = await ensurePromptSet();
       return promptsApi.importRows(set.id, rows, options);
@@ -242,9 +251,11 @@ export function PromptLibrary({
     setEditing(prompt);
     setFormOpen(true);
   };
-  const submitForm = async (input: PromptInput) => {
-    if (editing) await updateMutation.mutateAsync({ id: editing.id, input }).catch(() => undefined);
-    else await createMutation.mutateAsync(input).catch(() => undefined);
+  const submitForm = async (values: PromptFormValues) => {
+    const mutation = editing
+      ? updateMutation.mutateAsync({ id: editing.id, input: formValuesToPromptUpdate(values) })
+      : createMutation.mutateAsync(formValuesToPromptInput(values));
+    await mutation.catch(() => undefined);
   };
 
   if (!requestScope.enabled) {
@@ -277,6 +288,7 @@ export function PromptLibrary({
       }}
       busyId={busyId}
       measurements={measurements}
+      topics={topics}
     />
   );
   const openGenerateDialog = () => {
@@ -321,7 +333,7 @@ export function PromptLibrary({
           onImport={() => setImportOpen(true)}
           onAdd={openAdd}
           onGenerate={openGenerateDialog}
-          onDoneManaging={onDoneManaging}
+          hasActivePrompts={statusCounts.active > 0}
         />
       }
       controls={

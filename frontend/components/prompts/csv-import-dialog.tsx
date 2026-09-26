@@ -1,5 +1,6 @@
 'use client';
 
+import { Download } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { Alert } from '@/components/ui/alert';
@@ -15,27 +16,31 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import type { PromptInput } from '@/lib/api/prompts';
-import { parsePromptCsv, validRows, type ParsedCsv } from '@/lib/prompts/csv';
-import { intentLabels } from '@/lib/prompts/forms';
+import type { PromptImportRow } from '@/lib/api/prompts';
+import { downloadCsv } from '@/lib/csv/download';
+import {
+  PROMPT_CSV_COLUMNS,
+  PROMPT_CSV_SAMPLE_ROWS,
+  parsePromptCsv,
+  validRows,
+  type ParsedCsv,
+} from '@/lib/prompts/csv';
 
 /**
  * CSV import dialog (F7). The file is parsed + validated in the browser and the
- * parsed rows are previewed (with per-row warnings/errors) BEFORE anything is
- * persisted. On confirm, only the importable rows are handed to `onImport`,
- * which posts them to the B3 `/prompt-sets/{id}/import` endpoint.
+ * parsed rows are previewed (with per-row errors) BEFORE anything is persisted.
+ * On confirm, only the importable rows are handed to `onImport`, which posts
+ * them to the B3 `/prompt-sets/{id}/import` endpoint. The sample file is built
+ * from the same column contract the parser reads.
  */
-/** A row is rejected, admitted with caveats, or clean — in that order. */
-function RowStatus({
-  invalid,
-  errors,
-  warnings,
-}: Readonly<{ invalid: boolean; errors: readonly string[]; warnings: readonly string[] }>) {
-  if (invalid) return <span className="text-danger-text text-xs">{errors.join(' ')}</span>;
-  if (warnings.length > 0) {
-    return <span className="text-warning-text text-xs">{warnings.join(' ')}</span>;
-  }
+function RowStatus({ errors }: Readonly<{ errors: readonly string[] }>) {
+  if (errors.length > 0)
+    return <span className="text-danger-text text-xs">{errors.join(' ')}</span>;
   return <span className="text-success-text text-xs">Ready</span>;
+}
+
+function downloadSample() {
+  downloadCsv('prompts-sample.csv', PROMPT_CSV_COLUMNS, PROMPT_CSV_SAMPLE_ROWS);
 }
 
 export function CsvImportDialog({
@@ -47,7 +52,7 @@ export function CsvImportDialog({
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImport: (rows: PromptInput[]) => Promise<void> | void;
+  onImport: (rows: PromptImportRow[]) => Promise<void> | void;
   isImporting?: boolean;
   error?: string;
 }>) {
@@ -73,7 +78,7 @@ export function CsvImportDialog({
       open={open}
       onOpenChange={handleOpenChange}
       title="Import prompts from CSV"
-      description="Columns: text, theme, intent, cohort, enabled (header row optional)."
+      description="Columns: topic, prompt. New topic names are created; rows without a topic import without one."
       className="w-205"
       footer={
         <>
@@ -93,7 +98,15 @@ export function CsvImportDialog({
       <div className="grid gap-4">
         {error ? <Alert tone="danger">{error}</Alert> : null}
 
-        <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-60 flex-1">
+            <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
+          </div>
+          <Button variant="secondary" size="sm" onClick={downloadSample}>
+            <Download className="size-4" aria-hidden />
+            Download sample CSV
+          </Button>
+        </div>
 
         {parsed && parsed.errors.length > 0 ? (
           <Alert tone="danger">{parsed.errors.join(' ')}</Alert>
@@ -109,11 +122,8 @@ export function CsvImportDialog({
               <TableHeader>
                 <TableRow>
                   <TableHead>Row</TableHead>
-                  <TableHead>Text</TableHead>
-                  <TableHead>Theme</TableHead>
-                  <TableHead>Intent</TableHead>
-                  <TableHead>Cohort</TableHead>
-                  <TableHead>Enabled</TableHead>
+                  <TableHead>Topic</TableHead>
+                  <TableHead>Prompt</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -125,19 +135,14 @@ export function CsvImportDialog({
                       <TableCell numeric className="text-muted">
                         {row.line}
                       </TableCell>
-                      <TableCell className="max-w-70 truncate">
+                      <TableCell className="max-w-45 truncate">
+                        {row.input.topic || <UnavailableValue state="not_set" />}
+                      </TableCell>
+                      <TableCell className="max-w-90 truncate">
                         {row.input.text || <UnavailableValue state="not_set" />}
                       </TableCell>
                       <TableCell>
-                        {row.input.theme || <UnavailableValue state="not_set" />}
-                      </TableCell>
-                      <TableCell>{intentLabels[row.input.intent]}</TableCell>
-                      <TableCell>
-                        {row.input.cohort === 'comparison' ? 'Comparison' : 'Core'}
-                      </TableCell>
-                      <TableCell>{row.input.enabled ? 'Yes' : 'No'}</TableCell>
-                      <TableCell>
-                        <RowStatus invalid={invalid} errors={row.errors} warnings={row.warnings} />
+                        <RowStatus errors={row.errors} />
                       </TableCell>
                     </TableRow>
                   );

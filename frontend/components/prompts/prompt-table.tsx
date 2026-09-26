@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Archive, Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +24,7 @@ import { TablePagination, useTablePage } from '@/components/ui/table-pagination'
 import { Tooltip } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import type { Prompt, PromptStatus } from '@/lib/api/types';
+import type { Prompt, PromptStatus, Topic } from '@/lib/api/types';
 import { buyerStageLabels, intentLabels } from '@/lib/prompts/forms';
 import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import { changeLabel } from '@/lib/visibility/vocabulary';
@@ -39,7 +40,7 @@ export type PromptMeasurement = {
 const PAGE_SIZE = 10;
 
 /**
- * Prompt table (F7). Dense analytics table with columns text / theme / stage /
+ * Prompt table (F7). Dense analytics table with columns text / topic / stage /
  * intent / measured visibility / enabled and per-row actions (edit, delete,
  * enable/disable toggle, and — when `onSetStatus` is wired — archive or restore
  * transitions).
@@ -60,8 +61,11 @@ export function PromptTable({
   onSetStatus,
   busyId,
   measurements,
+  topics,
 }: Readonly<{
   prompts: Prompt[];
+  /** The project's topics, to name each row's topic (users' vocabulary, not theme). */
+  topics: readonly Topic[];
   onEdit: (prompt: Prompt) => void;
   onDelete: (prompt: Prompt) => void;
   onToggleEnabled: (prompt: Prompt) => void;
@@ -75,6 +79,10 @@ export function PromptTable({
   const measured = Boolean(measurements?.size);
   const { page, setPage, pageCount, from, to } = useTablePage(prompts.length, PAGE_SIZE);
   const pagedPrompts = prompts.slice(from - 1, to);
+  const topicNames = useMemo(
+    () => new Map(topics.map((topic) => [topic.id, topic.name])),
+    [topics],
+  );
 
   return (
     <>
@@ -82,7 +90,7 @@ export function PromptTable({
         <TableHeader>
           <TableRow>
             <TableHead>Prompt</TableHead>
-            <TableHead>Theme</TableHead>
+            <TableHead>Topic</TableHead>
             <TableHead>Stage</TableHead>
             <TableHead>Intent</TableHead>
             {measured ? <TableHead numeric>Visibility</TableHead> : null}
@@ -103,15 +111,7 @@ export function PromptTable({
                 </Tooltip>
               </TableCell>
               <TableCell className="max-w-45">
-                {prompt.theme ? (
-                  <Tooltip content={prompt.theme}>
-                    <Badge variant="neutral" className="max-w-full">
-                      <span className="min-w-0 truncate">{prompt.theme}</span>
-                    </Badge>
-                  </Tooltip>
-                ) : (
-                  <UnavailableValue state="not_set" />
-                )}
+                <TopicBadge name={prompt.topic_id ? topicNames.get(prompt.topic_id) : undefined} />
               </TableCell>
               <TableCell className="text-secondary">
                 {prompt.buyer_stage ? (
@@ -179,6 +179,18 @@ export function PromptTable({
         onPageChange={setPage}
       />
     </>
+  );
+}
+
+/** The row's topic; a prompt without one (or with a since-deleted one) has none. */
+function TopicBadge({ name }: Readonly<{ name?: string }>) {
+  if (!name) return <UnavailableValue state="not_set" />;
+  return (
+    <Tooltip content={name}>
+      <Badge variant="neutral" className="max-w-full">
+        <span className="min-w-0 truncate">{name}</span>
+      </Badge>
+    </Tooltip>
   );
 }
 

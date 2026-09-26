@@ -20,12 +20,13 @@ const promptSetListSchema = z.array(promptSetSchema);
 
 export type PromptInput = {
   text: string;
-  // Backend `PromptInput.theme` is a non-null `str = ""` — create/import 422 on
-  // null. Send an empty string (never null) when unset.
+  // Theme, intent and cohort are internal vocabulary: users are never asked
+  // for them, and omitting them takes the backend's defaults. Backend
+  // `PromptInput.theme` is a non-null `str = ""` — create/import 422 on null.
   theme?: string;
-  intent: Prompt['intent'];
-  cohort: Prompt['cohort'];
-  enabled: boolean;
+  intent?: Prompt['intent'];
+  cohort?: Prompt['cohort'];
+  enabled?: boolean;
   // Files the prompt under an existing topic at creation time. Onboarding
   // creates its topics first and passes this, rather than creating every
   // prompt and then PATCHing every prompt. Must name a topic of the prompt's
@@ -37,7 +38,10 @@ export type PromptInput = {
   generation_receipt?: string;
 };
 
-export type PromptUpdateInput = Partial<PromptInput> & {
+/** One CSV import row: the user's topic NAME (created when new, '' = none). */
+export type PromptImportRow = PromptInput & { topic: string };
+
+export type PromptUpdateInput = Partial<Omit<PromptInput, 'topic_id'>> & {
   status?: PromptStatus;
   // Explicit null detaches the prompt from its topic.
   topic_id?: string | null;
@@ -116,7 +120,7 @@ export const promptsApi = {
    * backend accepts a JSON body of `{ prompts: [...] }` (rows already parsed +
    * previewed in the browser) and bulk-creates them with `origin='imported'`.
    */
-  importRows: async (promptSetId: string, rows: PromptInput[], options?: ApiRequestOptions) => {
+  importRows: async (promptSetId: string, rows: PromptImportRow[], options?: ApiRequestOptions) => {
     const res = await apiClient.post<PromptSet>(
       `/prompt-sets/${promptSetId}/import`,
       { prompts: rows },

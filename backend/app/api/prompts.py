@@ -66,6 +66,7 @@ from app.domain.prompts.generation import (
     validate_generation_request,
 )
 from app.domain.prompts.generation_contract import generation_model_call_budget
+from app.domain.prompts.importing import import_prompts
 from app.domain.prompts.mappers import (
     prompt_set_to_response,
     prompt_to_response,
@@ -77,6 +78,7 @@ from app.domain.prompts.schemas import (
     PromptGenerateRequest,
     PromptGenerateResponse,
     PromptImport,
+    PromptImportRow,
     PromptInput,
     PromptResponse,
     PromptSetCreate,
@@ -97,7 +99,6 @@ from app.domain.prompts.service import (
     delete_prompt,
     delete_prompt_set,
     get_prompt_set,
-    import_prompts,
     list_prompt_sets,
     list_prompts,
     update_prompt,
@@ -343,12 +344,12 @@ async def delete_prompt_endpoint(
 # --------------------------------------------------------------------------
 async def _resolve_import_rows(
     request: Request, file: UploadFile | None
-) -> list[PromptInput]:
+) -> list[PromptImportRow]:
     """Accept either a multipart CSV upload or a JSON body of parsed rows.
 
     The committed frontend contract posts a CSV ``File`` (multipart); a future
     browser-parsed path may post ``{"prompts": [...]}`` JSON instead. Both
-    converge to a list of ``PromptInput`` for the service.
+    converge to a list of ``PromptImportRow`` for the service.
     """
     if file is not None:
         raw = (await read_limited_upload(file)).decode("utf-8-sig", errors="replace")

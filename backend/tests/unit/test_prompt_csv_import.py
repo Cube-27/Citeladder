@@ -8,6 +8,8 @@ from app.core.config.http import (
     IMPORT_MAX_CELL_CHARS,
     IMPORT_MAX_COLUMNS,
     PROMPT_IMPORT_MAX_ROWS,
+    PROMPT_INTENT_MAX_CHARS,
+    PROMPT_THEME_MAX_CHARS,
 )
 from app.domain.prompts.csv_import import parse_prompt_csv
 
@@ -28,15 +30,26 @@ def test_parse_headered_csv() -> None:
     assert rows[1].cohort == "comparison"
 
 
-def test_parse_header_aliases_and_reordered_columns() -> None:
-    csv_text = "prompt,topic\nwhere to buy widgets,shopping\n"
-    rows = parse_prompt_csv(csv_text)
+def test_parse_topic_prompt_contract_in_any_order() -> None:
+    rows = parse_prompt_csv("prompt,topic\nwhere to buy widgets,Shopping\n")
     assert len(rows) == 1
     assert rows[0].text == "where to buy widgets"
-    assert rows[0].theme == "shopping"
-    # Absent columns fall back to defaults.
+    assert rows[0].topic == "Shopping"
+    # Internal columns are optional and take code defaults.
+    assert rows[0].theme == ""
+    assert rows[0].intent == ""
     assert rows[0].enabled is True
     assert rows[0].cohort == "core"
+
+
+def test_parse_clips_internal_columns_instead_of_rejecting() -> None:
+    rows = parse_prompt_csv(
+        "question,category,theme,intent\n"
+        f"widget prices,Widgets,{'t' * 300},{'i' * 100}\n"
+    )
+    assert rows[0].topic == "Widgets"
+    assert len(rows[0].theme) == PROMPT_THEME_MAX_CHARS
+    assert len(rows[0].intent) == PROMPT_INTENT_MAX_CHARS
 
 
 def test_parse_headerless_single_column() -> None:

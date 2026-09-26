@@ -1,23 +1,18 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { PromptInput } from '@/lib/api/prompts';
-import type { Prompt } from '@/lib/api/types';
+import type { Prompt, Topic } from '@/lib/api/types';
 import {
   emptyPromptForm,
-  formValuesToPromptInput,
-  intentLabels,
-  intentValues,
   promptFormSchema,
   promptToFormValues,
   type PromptFormValues,
@@ -25,8 +20,9 @@ import {
 
 /**
  * Add / edit prompt dialog (F7). react-hook-form + zod; the same form serves
- * create (no `prompt`) and edit (prefilled from `prompt`). Submit maps to the
- * API `PromptInput` and delegates persistence to `onSubmit`.
+ * create (no `prompt`) and edit (prefilled from `prompt`). It asks only for the
+ * prompt and its topic, and hands the validated values to `onSubmit`, whose
+ * owner maps them to a create or an update payload.
  */
 /** Saving wins over both; otherwise the verb follows which dialog this is. */
 function submitLabel(saving: boolean | undefined, editing: boolean): string {
@@ -38,6 +34,8 @@ export function PromptFormDialog({
   open,
   onOpenChange,
   prompt,
+  topics,
+  defaultTopicId,
   onSubmit,
   isSaving,
   error,
@@ -45,11 +43,19 @@ export function PromptFormDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prompt?: Prompt;
-  onSubmit: (input: PromptInput) => Promise<void> | void;
+  topics: readonly Topic[];
+  /** The topic a new prompt starts under: the one the reader is viewing. */
+  defaultTopicId: string | null;
+  onSubmit: (values: PromptFormValues) => Promise<void> | void;
   isSaving?: boolean;
   error?: string;
 }>) {
   const isEdit = Boolean(prompt);
+  // Stable across renders: `values` re-syncs the form whenever it changes.
+  const initialValues = useMemo(
+    () => (prompt ? promptToFormValues(prompt) : emptyPromptForm(defaultTopicId)),
+    [prompt, defaultTopicId],
+  );
   const {
     register,
     control,
@@ -58,17 +64,22 @@ export function PromptFormDialog({
     formState: { errors },
   } = useForm<PromptFormValues>({
     resolver: zodResolver(promptFormSchema),
-    values: prompt ? promptToFormValues(prompt) : emptyPromptForm,
+    values: initialValues,
   });
 
   const submit = handleSubmit(async (values) => {
-    await onSubmit(formValuesToPromptInput(values));
+    await onSubmit(values);
   });
 
   const handleOpenChange = (next: boolean) => {
-    if (!next) reset(prompt ? promptToFormValues(prompt) : emptyPromptForm);
+    if (!next) reset(initialValues);
     onOpenChange(next);
   };
+
+  const topicOptions = [
+    { value: '', label: 'No topic' },
+    ...topics.map((topic) => ({ value: topic.id, label: topic.name })),
+  ];
 
   return (
     <Dialog
@@ -89,7 +100,25 @@ export function PromptFormDialog({
       <form noValidate onSubmit={submit} className="grid gap-4">
         {error ? <Alert tone="danger">{error}</Alert> : null}
 
-        <Field label="Prompt text" required error={errors.text?.message}>
+        <Field label="Topic">
+          {(props) => (
+            <Controller
+              control={control}
+              name="topicId"
+              render={({ field }) => (
+                <Select
+                  {...props}
+                  ariaLabel="Topic"
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  options={topicOptions}
+                />
+              )}
+            />
+          )}
+        </Field>
+
+        <Field label="Prompt" required error={errors.text?.message}>
           {(props) => (
             <Textarea
               {...props}
@@ -98,59 +127,6 @@ export function PromptFormDialog({
             />
           )}
         </Field>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Theme" error={errors.theme?.message} hint="Optional topic / category">
-            {(props) => <Input {...props} {...register('theme')} placeholder="Comfort" />}
-          </Field>
-          <Field label="Intent" error={errors.intent?.message}>
-            {(props) => (
-              <Controller
-                control={control}
-                name="intent"
-                render={({ field }) => (
-                  <Select
-                    {...props}
-                    ariaLabel="Intent"
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    options={intentValues.map((value) => ({
-                      value,
-                      label: intentLabels[value],
-                    }))}
-                  />
-                )}
-              />
-            )}
-          </Field>
-        </div>
-
-        <div className="flex flex-wrap gap-[var(--workspace-gap)]">
-          <Controller
-            control={control}
-            name="cohort"
-            render={({ field }) => (
-              <Checkbox
-                label="Named comparison"
-                checked={field.value === 'comparison'}
-                onCheckedChange={(checked) =>
-                  field.onChange(checked === true ? 'comparison' : 'core')
-                }
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name="enabled"
-            render={({ field }) => (
-              <Checkbox
-                label="Enabled"
-                checked={field.value}
-                onCheckedChange={(checked) => field.onChange(checked === true)}
-              />
-            )}
-          />
-        </div>
       </form>
     </Dialog>
   );
