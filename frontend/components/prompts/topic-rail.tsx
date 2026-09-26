@@ -238,7 +238,7 @@ function TopicItem({
           <span className="min-w-0 flex-1 truncate">{label}</span>
         </Tooltip>
         {typeof activeCount === 'number' ? (
-          <span className="mono text-muted shrink-0 text-xs">{activeCount}</span>
+          <span className="text-muted shrink-0 text-xs tabular-nums">{activeCount}</span>
         ) : null}
       </Pressable>
       {onDelete ? (

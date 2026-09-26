@@ -324,7 +324,7 @@ export function CommandPalette() {
                 // that rule is unlayered and would otherwise beat a utility.
                 className="text-foreground placeholder:text-muted h-11 min-w-0 flex-1 bg-transparent text-sm outline-none focus-visible:outline-none!"
               />
-              <kbd className="border-border/60 text-muted shrink-0 rounded-[var(--radius-control)] border px-1.5 py-0.5 font-mono text-xs">
+              <kbd className="border-border/60 text-muted shrink-0 rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs tabular-nums">
                 esc
               </kbd>
             </div>
@@ -397,16 +397,16 @@ export function CommandPalette() {
                 it states its own controls rather than assuming they are known. */}
             <div className="border-border/60 text-muted flex shrink-0 items-center gap-4 border-t px-4 py-2.5 text-xs font-medium">
               <span className="flex items-center gap-1.5">
-                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 font-mono text-xs">
+                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs tabular-nums">
                   ↑
                 </kbd>
-                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 font-mono text-xs">
+                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs tabular-nums">
                   ↓
                 </kbd>
                 navigate
               </span>
               <span className="flex items-center gap-1.5">
-                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 font-mono text-xs">
+                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs tabular-nums">
                   ↵
                 </kbd>
                 select

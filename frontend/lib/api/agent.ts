@@ -221,9 +221,9 @@ export const agentQueries = {
       queryKey: queryKeys.agent.chat(chatId),
       queryFn: ({ signal }) => agentApi.getChat(chatId, { signal, workspaceId }),
     }),
-  revisions: (workspaceId: string, chatId: string) =>
+  revisions: (workspaceId: string, chatId: string, latestRevisionId: string) =>
     queryOptions({
-      queryKey: queryKeys.agent.revisions(chatId),
+      queryKey: [...queryKeys.agent.revisions(chatId), latestRevisionId],
       queryFn: ({ signal }) => agentApi.revisions(chatId, { signal, workspaceId }),
     }),
   instructions: (workspaceId: string, projectId: string) =>

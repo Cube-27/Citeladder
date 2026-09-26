@@ -280,7 +280,7 @@ export function PerformanceChart({
           return (
             <span
               key={`x-label-${idx}`}
-              className={cn('absolute text-xs mono', alignClass)}
+              className={cn('absolute text-xs tabular-nums', alignClass)}
               style={{ left: `${pct}%` }}
             >
               {label}
@@ -301,7 +301,7 @@ export function PerformanceChart({
                   style={{ backgroundColor: entry.color }}
                 />
                 {entry.label}
-                <span className="mono">0–{formatAxisTick(entry.key, domain.max)}</span>
+                <span className="tabular-nums">0–{formatAxisTick(entry.key, domain.max)}</span>
               </li>
             );
           })}
@@ -337,7 +337,7 @@ function ChartTooltip({
   return (
     <output className="bg-panel border-border shadow-elevated pointer-events-none absolute top-2 right-2 grid gap-1 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
       <p className="text-secondary">
-        Day <span className="mono">{index + 1}</span>
+        Day <span className="tabular-nums">{index + 1}</span>
         {selectedDate ? ` · ${selectedDate}` : ''}
       </p>
       <ul className="grid gap-0.5">
@@ -349,11 +349,11 @@ function ChartTooltip({
               style={{ backgroundColor: entry.color }}
             />
             <span className="text-muted">{entry.label}</span>
-            <span className="mono">
+            <span className="tabular-nums">
               {formatMetric(entry.key, entry.selected[index]?.value ?? null)}
             </span>
             {entry.comparison ? (
-              <span className="text-muted mono">
+              <span className="text-muted tabular-nums">
                 vs {formatMetric(entry.key, entry.comparison[index]?.value ?? null)}
               </span>
             ) : null}

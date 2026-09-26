@@ -35,7 +35,7 @@ export function FilterChip({
     >
       {children}
       {typeof count === 'number' ? (
-        <span className={cn('mono text-xs', active ? 'text-accent-text' : 'text-muted')}>
+        <span className={cn('tabular-nums text-xs', active ? 'text-accent-text' : 'text-muted')}>
           {count}
         </span>
       ) : null}

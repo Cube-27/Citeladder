@@ -11,7 +11,7 @@ function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
   return (
     <>
       {'num' in item && (
-        <span className="text-accent-text pt-2 font-mono text-xs tabular-nums">{item.num}</span>
+        <span className="text-accent-text pt-2 text-xs tabular-nums">{item.num}</span>
       )}
       <span className="min-w-0">
         {/* Row titles are a UI role, not a display rung: Inter at 600, one

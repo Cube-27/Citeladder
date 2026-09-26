@@ -17,7 +17,6 @@ const twMerge = extendTailwindMerge({
             // to the colour and the numeral would lose its size. `text-2xs`,
             // `text-hero`, `text-display-1` and `text-display-2` no longer
             // exist in the token layer and are no longer registered here.
-            'heading-xs',
             'heading-sm',
             'page-title',
             'role-meta',

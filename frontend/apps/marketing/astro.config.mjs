@@ -66,6 +66,9 @@ export default defineConfig({
       'process.env.PUBLIC_APP_ORIGIN': JSON.stringify(
         process.env.PUBLIC_APP_ORIGIN ?? environment.PUBLIC_APP_ORIGIN ?? '',
       ),
+      'process.env.PUBLIC_DOCS_ORIGIN': JSON.stringify(
+        process.env.PUBLIC_DOCS_ORIGIN ?? environment.PUBLIC_DOCS_ORIGIN ?? '',
+      ),
       'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),
     },
     resolve: {

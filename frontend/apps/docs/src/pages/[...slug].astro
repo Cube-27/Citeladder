@@ -12,10 +12,10 @@ export function getStaticPaths() {
 
 const { article, previous, next } = Astro.props;
 const { Content } = article.entry;
-const headings = (await article.entry.getHeadings()).filter(({ depth }) => depth === 2);
+const headings = (await article.entry.getHeadings()).filter(({ depth }) => depth === 2 || depth === 3);
 if (article.slug === 'mcp/tools') headings.push({ depth: 2, slug: 'registered-tools', text: 'Registered tools' });
 ---
-<DocsLayout title={article.title} description={article.description} headings={headings}>
+<DocsLayout title={article.title} description={article.description} headings={headings.map((heading) => ({ ...heading, label: heading.text.replace(/^\d+[.)]\s+/, '') }))}>
   <article>
     <header class="docs-article-header">
       <h1 class="website-section-heading">{article.title}</h1>

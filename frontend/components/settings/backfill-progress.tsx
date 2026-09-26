@@ -39,9 +39,7 @@ export function BackfillProgress({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className={eyebrowClasses}>History</span>
-      <span className="text-secondary font-mono text-xs tabular-nums">
-        {progressLabel(progress)}
-      </span>
+      <span className="text-secondary text-xs tabular-nums">{progressLabel(progress)}</span>
     </div>
   );
 }

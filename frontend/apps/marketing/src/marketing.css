@@ -43,6 +43,6 @@
   color: var(--marketing-footer-foreground);
 }
 
-.marketing-footer-card img[src='/citeladder-logo.svg'] {
+.marketing-footer-card .brand-wordmark {
   filter: brightness(0) invert(1);
 }

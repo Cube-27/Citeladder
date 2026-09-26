@@ -7,9 +7,8 @@ import { cn } from '@/lib/utils';
  * (the `text-role-meta` size — 13/18 in the product, 12/16 on public
  * surfaces — medium, muted, sentence case).
  *
- * What does **not** come back is the mono face — mono stays reserved for
- * values, so a call site must never re-add `font-mono` here (see the
- * carry-forward note on page-kind-scores.tsx).
+ * Labels inherit the shared sans face; numeric labels may opt into tabular
+ * numerals without introducing a second font family.
  *
  * `eyebrowClasses` is the muted form, shared by page eyebrows, panel labels,
  * panel labels, sidebar group labels and <CardEyebrow>; apply it to whatever

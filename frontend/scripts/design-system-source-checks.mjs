@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import { visitorKeys } from 'oxc-parser';
+export { textContrastViolations } from './design-system-contrast.mjs';
 
 import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './source-ast.mjs';
 
@@ -10,23 +11,6 @@ const EDITORIAL_SIZE = /\btext-(?:2xs|xs|sm|base|lg|xl|2xl|3xl|4xl|5xl)\b/;
 const WEBSITE_CSS = 'apps/app/src/website-type.css';
 const TOKEN_CSS = 'apps/app/src/globals.css';
 const LANDING_CSS = 'apps/marketing/src/pages/landing.css';
-const MINIMUM_NORMAL_TEXT_CONTRAST = 4.5;
-const LIGHT_SURFACE_TOKENS = [
-  '--color-background',
-  '--color-background-alt',
-  '--color-panel',
-  '--color-panel-tonal',
-  '--color-well',
-  '--color-active',
-  '--color-sidebar',
-];
-const NEUTRAL_TEXT_TOKENS = [
-  '--color-foreground',
-  '--color-secondary',
-  '--color-muted',
-  '--color-subtle',
-];
-
 /**
  * Roles the website stylesheet must define.
  *
@@ -740,101 +724,6 @@ function escapeRegExp(value) {
 
 function selectorPattern(selector) {
   return new RegExp(escapeRegExp(selector) + String.raw`(?![\w-])`);
-}
-
-function tokenHex(source, token) {
-  const declaration = String.raw`${escapeRegExp(token)}\s*:\s*(#[0-9a-f]{6})\s*(?:;|(?=}))`;
-  const match = source.match(new RegExp(declaration, 'i'));
-  return match?.[1];
-}
-
-function relativeLuminance(hex) {
-  const channels = hex
-    .slice(1)
-    .match(/../g)
-    .map((channel) => Number.parseInt(channel, 16) / 255)
-    .map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-}
-
-function contrastRatio(first, second) {
-  const firstLuminance = relativeLuminance(first);
-  const secondLuminance = relativeLuminance(second);
-  const lighter = Math.max(firstLuminance, secondLuminance);
-  const darker = Math.min(firstLuminance, secondLuminance);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-export function textContrastViolations(root) {
-  const cssPath = join(root, ...TOKEN_CSS.split('/'));
-  const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
-  const source = readFileSync(cssPath, 'utf8');
-  const tokens = new Map(
-    [...LIGHT_SURFACE_TOKENS, ...NEUTRAL_TEXT_TOKENS].map((token) => [
-      token,
-      tokenHex(source, token),
-    ]),
-  );
-  const violations = [];
-
-  for (const [token, value] of tokens) {
-    if (!value) violations.push(`${cssLabel}: ${token} must be a six-digit hex value`);
-  }
-  if (violations.length) return violations;
-
-  for (const textToken of NEUTRAL_TEXT_TOKENS) {
-    for (const surfaceToken of LIGHT_SURFACE_TOKENS) {
-      // Subtle metadata belongs on the reading surfaces. Stronger interaction
-      // surfaces use muted/body ink; an unused cross-product is not a contrast
-      // contract and must not force a different approved palette.
-      if (
-        textToken === '--color-subtle' &&
-        ['--color-panel-tonal', '--color-active'].includes(surfaceToken)
-      )
-        continue;
-      const ratio = contrastRatio(tokens.get(textToken), tokens.get(surfaceToken));
-      if (ratio < MINIMUM_NORMAL_TEXT_CONTRAST) {
-        violations.push(
-          `${cssLabel}: ${textToken} on ${surfaceToken} has ${ratio.toFixed(2)}:1 contrast; ` +
-            `${MINIMUM_NORMAL_TEXT_CONTRAST}:1 is required`,
-        );
-      }
-    }
-  }
-
-  const darkScope = source.split(":root[data-theme='dark'] {")[1]?.split('\n}')[0];
-  if (!darkScope) {
-    violations.push(`${cssLabel}: dark theme token mapping is missing`);
-    return violations;
-  }
-  const darkSurfaces = [
-    '--color-background',
-    '--color-background-alt',
-    '--color-panel',
-    '--color-well',
-  ];
-  const darkText = ['--color-foreground', '--color-secondary', '--color-muted', '--color-subtle'];
-  for (const textToken of darkText) {
-    for (const surfaceToken of darkSurfaces) {
-      const ink = tokenHex(darkScope, textToken);
-      const surface = tokenHex(darkScope, surfaceToken);
-      if (!ink || !surface) {
-        violations.push(`${cssLabel}: dark ${textToken} and ${surfaceToken} need hex mappings`);
-      } else if (contrastRatio(ink, surface) < MINIMUM_NORMAL_TEXT_CONTRAST) {
-        violations.push(`${cssLabel}: dark ${textToken} on ${surfaceToken} needs 4.5:1 contrast`);
-      }
-    }
-  }
-  for (let index = 1; index <= 8; index += 1) {
-    const chartToken = `--color-chart-${index}`;
-    const mark = tokenHex(darkScope, chartToken);
-    const surface = tokenHex(darkScope, '--color-panel');
-    if (!mark || !surface || contrastRatio(mark, surface) < 3) {
-      violations.push(`${cssLabel}: dark ${chartToken} needs 3:1 contrast on the product panel`);
-    }
-  }
-
-  return violations;
 }
 
 export function websiteContractViolations(root) {

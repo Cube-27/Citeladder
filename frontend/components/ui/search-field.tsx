@@ -46,10 +46,11 @@ export function SearchField({
           <Search className="text-muted size-4 shrink-0" aria-hidden />
         )
       }
+      endContentFlush
       endContent={
         value ? (
           <Pressable
-            className="text-muted hover:bg-well hover:text-foreground -mr-1 grid size-11 place-items-center rounded-[var(--radius-control)] min-[701px]:pointer-fine:size-6"
+            className="text-muted hover:bg-well hover:text-foreground grid size-[var(--field-end-target)] place-items-center rounded-[var(--radius-control)]"
             disabled={props.disabled}
             onClick={() => (onClear ? onClear() : onValueChange(''))}
             aria-label="Clear search"

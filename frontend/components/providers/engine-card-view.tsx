@@ -65,7 +65,7 @@ function RouteDetails({ state }: Readonly<{ state: ConnectionState }>) {
         <span className={textRole('label')}>Route</span>
         <span className={textRole('label')}>{state.route.label}</span>
       </div>
-      <div className="text-muted grid gap-1 font-mono text-xs">
+      <div className="text-muted grid gap-1 text-xs tabular-nums">
         <div className="flex items-center justify-between">
           {/* An observed surface has no model to pin: the answer is whatever
               Google rendered. Labelling its SERP product "Model" would claim

@@ -192,7 +192,7 @@ function RunsContent({
       <CardHeader className="flex-row flex-wrap items-baseline justify-between gap-2 border-b-0 pb-3">
         <CardTitle>All runs</CardTitle>
         {anyActive ? (
-          <span className="mono text-muted inline-flex items-center gap-1.5 text-xs">
+          <span className="text-muted inline-flex items-center gap-1.5 text-xs tabular-nums">
             <span
               className="bg-accent inline-block size-1.5 animate-pulse rounded-full"
               aria-hidden

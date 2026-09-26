@@ -4,9 +4,6 @@
 :where([data-public-surface], [data-flow-surface]) {
   /* The public and focused-flow type world (docs/design.md §Typography):
      Inter carries body, UI and data type; General Sans carries display type. */
-  --font-sans: var(--font-text), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: var(--font-text), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: var(--font-heading), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   /* One ladder, one ratio. Each rung is ~1.2x its neighbour (the minor third
      the display rungs already used), so the steps are even instead of the old
      mix of 1.14x at the bottom and 1.27x at the top. The bottom three rungs are
@@ -22,7 +19,6 @@
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
   --text-heading-sm: 1.125rem;
-  --text-heading-xs: 1rem;
   --text-xs--line-height: 1rem;
   --text-sm--line-height: 1.25rem;
   --text-base--line-height: 1.5rem;
@@ -288,9 +284,11 @@
 }
 
 .flow-bar {
+  background: var(--color-panel);
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--z-index-sticky);
 }
 
 .flow-bar-content {
@@ -445,9 +443,11 @@
 
 .flow-footer,
 .flow-actions {
+  background: var(--color-panel);
+  border-top: 1px solid var(--color-border);
   position: sticky;
   bottom: 0;
-  z-index: 10;
+  z-index: var(--z-index-sticky);
   padding: var(--flow-answer) var(--flow-gutter);
 }
 
@@ -769,14 +769,17 @@
 @media (max-width: 639px) {
   [data-flow-surface] {
     --flow-bar-height: 3.5rem;
-    --control-height-sm: 2.75rem;
   }
 
-  /* Allocate the logo and exit their intrinsic space first. The former
-     symmetric columns could shrink beneath the logo width, allowing it to
-     paint over the current-step indicator on narrow phones. */
-  .flow-bar-content {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+  /* Progress has its own row so the full wordmark and account controls
+     never compete with the step label on a phone. Auth keeps its one row. */
+  .flow-bar-content:has(.flow-progress) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-top: 0.75rem;
+  }
+  .flow-bar-content:has(.flow-progress) > :last-child {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .flow-progress,
@@ -787,7 +790,10 @@
   }
 
   .flow-progress {
-    justify-self: end;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: start;
+    padding-bottom: 0.75rem;
   }
 
   .flow-step-label {
@@ -876,8 +882,6 @@
 
 /* A coded product preview is product UI, not oversized marketing copy. */
 .app-type-scale {
-  --font-display: var(--font-heading), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-sans: var(--font-text), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;

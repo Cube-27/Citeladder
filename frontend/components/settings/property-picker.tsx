@@ -62,7 +62,9 @@ function PropertyOption({
     >
       <span className="min-w-0 flex-1">
         <span className={textRole('bodyStrong', 'block truncate')}>{property.label}</span>
-        <span className="text-muted block truncate font-mono text-xs">{property.property_ref}</span>
+        <span className="text-muted block truncate text-xs tabular-nums">
+          {property.property_ref}
+        </span>
       </span>
       {pending ? <Spinner className="text-muted" /> : null}
       {selected && !pending ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
@@ -163,7 +165,9 @@ export function PropertyPicker({
     <>
       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
         {selected ? (
-          <span className={tagClasses('outline', 'max-w-full truncate font-mono')}>{selected}</span>
+          <span className={tagClasses('outline', 'max-w-full truncate tabular-nums')}>
+            {selected}
+          </span>
         ) : (
           <span
             className={textRole(

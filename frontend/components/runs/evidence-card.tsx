@@ -73,7 +73,7 @@ function EvidencePromptHeader({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Badge variant="neutral">Prompt #{promptBadgeNumber}</Badge>
-          <span className="mono text-muted text-xs">rep {displayRepetition}</span>
+          <span className="text-muted text-xs tabular-nums">rep {displayRepetition}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="neutral">
@@ -285,7 +285,7 @@ function CitationItem({
 
   return (
     <li className="flex gap-3 p-3.5">
-      <span className={textRole('label', 'mono mt-0.5 w-5 shrink-0')}>{ordinal}</span>
+      <span className={textRole('label', 'tabular-nums mt-0.5 w-5 shrink-0')}>{ordinal}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
           <div className="grid min-w-0 gap-0.5">

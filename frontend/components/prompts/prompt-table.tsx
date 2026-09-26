@@ -49,7 +49,7 @@ const PAGE_SIZE = 10;
  * row. It previously lived in a "Prompt analysis" card on the Visibility
  * dashboard, where the prompt was a detail of a measurement instead.
  * Client-side pagination footer
- * (mono indicator + ghost buttons) per the prompts frame. Purely
+ * (tabular page indicator + ghost buttons) per the prompts frame. Purely
  * presentational — CRUD is delegated to callbacks owned by the page.
  */
 export function PromptTable({

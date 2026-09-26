@@ -213,7 +213,7 @@ function HistoryRows({ rows }: Readonly<{ rows: IssueHistoryPage['items'] }>) {
         <li key={row.id} className="flex items-center justify-between gap-3 py-2">
           <span className="flex min-w-0 flex-col">
             <span className="text-foreground truncate text-sm">{issueTitle(row)}</span>
-            <span className="text-muted font-mono text-xs">
+            <span className="text-muted text-xs tabular-nums">
               {formatAudited(row.created_at, timeZone)}
             </span>
           </span>

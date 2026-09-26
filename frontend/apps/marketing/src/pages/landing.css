@@ -173,7 +173,7 @@
 }
 .cl-hero {
   margin-top: calc(-1 * var(--marketing-nav-offset));
-  padding-top: calc(var(--marketing-nav-offset) + 72px);
+  padding-top: calc(var(--marketing-nav-offset) + clamp(48px, 6vw, 88px));
   background: var(--cl-paper);
 }
 .cl-hero-copy {
@@ -290,7 +290,7 @@
   flex-direction: column;
   height: 196px;
   border-radius: var(--radius-marketing-well);
-  background: linear-gradient(to bottom, var(--cl-hue-well), var(--cl-raised));
+  background: var(--cl-hue-well);
   overflow: hidden;
 }
 .cl-cap-top {
@@ -478,12 +478,9 @@
   display: flex;
   gap: 20px;
   border-bottom: 1px solid var(--cl-platform-line);
-  margin-bottom: 48px;
-  overflow-x: auto;
+  margin-bottom: 40px;
 }
 .cl-module-tabs button {
-  flex: 1;
-  white-space: nowrap;
   text-align: left;
   padding: 14px 0;
   min-height: 51px;
@@ -929,9 +926,6 @@
   }
   .cl-integration-icon {
     margin: 0;
-  }
-  .cl-module-tabs button {
-    flex: none;
   }
   .cl-module-body {
     gap: 0;

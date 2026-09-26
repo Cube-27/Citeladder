@@ -96,7 +96,7 @@ export function LogoMark({
         width={width}
         height={resolvedSize}
         fetchPriority={priority ? 'high' : undefined}
-        className="block h-auto w-auto object-contain"
+        className="brand-wordmark block h-auto w-auto object-contain"
         style={{ height: `${resolvedSize}px` }}
       />
     </span>

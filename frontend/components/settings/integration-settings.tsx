@@ -95,8 +95,8 @@ function CallbackNotice({
     return (
       <Alert tone="danger">
         <strong>Connection failed.</strong> The provider did not complete the connect flow (
-        <code className="font-mono text-xs">{notice.error}</code>). No grant was created and nothing
-        was stored — you can retry whenever you&rsquo;re ready.
+        <code className="text-xs tabular-nums">{notice.error}</code>). No grant was created and
+        nothing was stored — you can retry whenever you&rsquo;re ready.
       </Alert>
     );
   }

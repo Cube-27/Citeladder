@@ -84,7 +84,7 @@ function PlanCard({
       )
     : null;
   return (
-    <article className="border-border-subtle bg-panel shadow-card flex flex-col rounded-[var(--radius-card)] border p-6">
+    <article className="border-border bg-panel flex flex-col rounded-[var(--radius-card)] border p-6">
       <h3 className="website-feature-heading text-foreground">{plan.name}</h3>
       <p className="website-body text-muted mt-3">{presentation?.blurb ?? plan.description}</p>
       <p className="website-data-display text-foreground mt-6">

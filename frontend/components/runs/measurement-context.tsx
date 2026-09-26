@@ -55,7 +55,7 @@ function ModelBadge({ model }: Readonly<{ model: string | null }>) {
   if (!model) return <Badge variant="neutral">Model not recorded</Badge>;
   return (
     <Badge variant="neutral">
-      <span className="font-mono">{model}</span>
+      <span className="tabular-nums">{model}</span>
     </Badge>
   );
 }

@@ -15,6 +15,8 @@ import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import type { PerformanceDashboard } from '@/lib/api/performance';
+import { useRangeProjection } from './use-range-projection';
+import type { ProjectRequestScope } from '@/lib/project/request-scope';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';
@@ -123,6 +125,66 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('PerformanceScreen evidence states', () => {
+  it.each(['window', 'project'])(
+    'ignores a late range response after the selected %s changes',
+    async (change) => {
+      let release!: () => void;
+      const pending = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let enqueued = 0;
+      const polled: string[] = [];
+      const latestTask = '33333333-3333-4333-8333-333333333334';
+      const nextProject = change === 'project' ? '11111111-1111-4111-8111-111111111112' : PROJECT;
+      mswServer.use(
+        http.post('/api/v1/projects/:projectId/performance/range', async ({ request }) => {
+          const index = ++enqueued;
+          const params = new URL(request.url).searchParams;
+          if (index === 1) await pending;
+          return HttpResponse.json({
+            task_id: index === 1 ? TASK : latestTask,
+            status: 'queued',
+            window_start: params.get('from'),
+            window_end: params.get('to'),
+          });
+        }),
+        http.get('/api/v1/projects/:projectId/performance/range/:taskId', ({ params }) => {
+          polled.push(String(params.taskId));
+          return HttpResponse.json({
+            task_id: params.taskId,
+            status: 'running',
+            window_start: '2026-08-02',
+            window_end: '2026-08-28',
+          });
+        }),
+      );
+      function Harness({ scope, from }: { scope: ProjectRequestScope; from: string }) {
+        const data = dashboard({
+          selected: { ...measuredWindow(emptyTotals), snapshot_id: null, window_start: from },
+        }) as PerformanceDashboard;
+        const { projecting } = useRangeProjection(scope, data);
+        return <output>{projecting ? 'Projecting' : 'Idle'}</output>;
+      }
+      const { rerender, queryClient } = renderWithProviders(
+        <Harness
+          scope={{ workspaceId: WORKSPACE, projectId: PROJECT, enabled: true }}
+          from="2026-08-01"
+        />,
+      );
+      await waitFor(() => expect(enqueued).toBe(1));
+      rerender(
+        <Harness
+          scope={{ workspaceId: WORKSPACE, projectId: nextProject, enabled: true }}
+          from="2026-08-02"
+        />,
+      );
+      await waitFor(() => expect(polled).toContain(latestTask));
+      release();
+      await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+      expect(polled).not.toContain(TASK);
+      expect(screen.getByText('Projecting')).toBeVisible();
+    },
+  );
   it('starts readiness alongside the dashboard and presents one settled first-use state', async () => {
     let release!: () => void;
     const pending = new Promise<void>((resolve) => {

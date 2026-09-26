@@ -215,7 +215,10 @@ function OccurrenceList({
                 </span>
               ) : null}
             </span>
-            <span className="mono text-muted truncate text-xs" title={occurrence.display_url}>
+            <span
+              className="text-muted truncate text-xs tabular-nums"
+              title={occurrence.display_url}
+            >
               {occurrence.display_url}
             </span>
           </ProjectLink>

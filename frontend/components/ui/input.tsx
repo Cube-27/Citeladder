@@ -37,9 +37,14 @@ const raisedClasses = 'shadow-raised hover:shadow-raised';
  */
 const inputSizes = {
   md: '',
-  compact:
-    'h-[var(--field-height-lg)] leading-[calc(var(--field-height-lg)_-_2px)] min-[701px]:pointer-fine:h-[var(--control-height-sm)] min-[701px]:pointer-fine:leading-[calc(var(--control-height-sm)_-_2px)]',
+  compact: 'h-[var(--control-height-sm)] leading-[calc(var(--control-height-sm)_-_2px)]',
   lg: 'h-[var(--field-height-lg)] px-3 leading-[calc(var(--field-height-lg)_-_2px)]',
+} as const;
+
+const adornedLineHeights = {
+  md: 'leading-[calc(var(--field-height)_-_2px)]',
+  compact: 'leading-[calc(var(--control-height-sm)_-_2px)]',
+  lg: 'leading-[calc(var(--field-height-lg)_-_2px)]',
 } as const;
 
 export function Input({
@@ -47,6 +52,7 @@ export function Input({
   containerClassName,
   startContent,
   endContent,
+  endContentFlush = false,
   size = 'md',
   raised = false,
   ref,
@@ -60,17 +66,13 @@ export function Input({
     startContent?: ReactNode;
     /** Trailing content rendered inside the shared input frame. */
     endContent?: ReactNode;
+    /** Let an interactive trailing target own most of the frame's end padding. */
+    endContentFlush?: boolean;
     /** Layout for the frame; `className` continues to target the native input. */
     containerClassName?: string;
     ref?: Ref<HTMLInputElement>;
   }
 >) {
-  let adornedLeading = 'leading-[calc(var(--field-height)_-_2px)]';
-  if (size === 'lg') adornedLeading = 'leading-[calc(var(--field-height-lg)_-_2px)]';
-  if (size === 'compact') {
-    adornedLeading =
-      'leading-[calc(var(--field-height-lg)_-_2px)] min-[701px]:pointer-fine:leading-[calc(var(--control-height-sm)_-_2px)]';
-  }
   if (!startContent && !endContent) {
     return (
       <input
@@ -86,10 +88,10 @@ export function Input({
       className={cn(
         'focus-frame bg-input has-[[aria-invalid=true]]:shadow-smudge-danger flex h-[var(--field-height)] w-full items-center gap-2 rounded-[var(--radius-control)] px-2.5 shadow-smudge transition-[box-shadow] hover:shadow-smudge-hover',
         size === 'lg' && 'h-[var(--field-height-lg)] px-3',
-        size === 'compact' &&
-          'h-[var(--field-height-lg)] min-[701px]:pointer-fine:h-[var(--control-height-sm)]',
+        size === 'compact' && 'h-[var(--control-height-sm)]',
         raised && raisedClasses,
         props.disabled && 'cursor-not-allowed opacity-50',
+        endContentFlush && 'pe-1',
         containerClassName,
       )}
     >
@@ -101,7 +103,7 @@ export function Input({
         className={cn(
           'placeholder:text-muted min-w-0 flex-1 self-stretch bg-transparent text-field text-foreground outline-none disabled:cursor-not-allowed',
           // Match the frame's control height so selections fill the pill.
-          adornedLeading,
+          adornedLineHeights[size],
           className,
         )}
         {...props}

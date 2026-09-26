@@ -147,9 +147,11 @@ curl -fsS http://localhost:3000/
 curl -fsS http://localhost:8000/health
 ```
 
-The default stack includes both frontend runtimes; no migration profile is needed.
-Only Caddy ingress exposes browser port 3000. Visit `http://127.0.0.1:3000`
-for marketing and `http://app.localhost:3000` for the app. The former retains
+The default stack includes the frontend runtimes and static docs; no migration profile
+is needed. Only Caddy ingress exposes browser port 3000. Visit `http://127.0.0.1:3000`
+for marketing, `http://app.localhost:3000` for the app and `http://docs.localhost:3000`
+for the documentation. Compose builds bake `PUBLIC_DOCS_ORIGIN` so marketing and app
+docs links stay local; other builds link `https://docs.citeladder.com`. The former retains
 the local-only path table in `frontend/local-compose-routes.caddy`; the app host
 serves the Vite application and its same-origin API. The internal Vite and
 marketing ports are not published. Local Compose uses disposable Worker-to-`web`

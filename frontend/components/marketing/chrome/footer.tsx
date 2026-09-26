@@ -9,6 +9,8 @@ import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav'
 import { CITELADDER_LINKEDIN } from '@/lib/marketing-content/social';
 import { appHref } from '@/lib/config/app-link';
 
+import { COOKIE_PREFERENCES_ATTRIBUTE } from './cookie-banner';
+
 import { Container } from '../primitives/section';
 
 type FooterLink = { label: string; href: string; external?: boolean; app?: boolean };
@@ -110,7 +112,7 @@ export async function MarketingFooter() {
   return (
     <footer className="marketing-footer relative">
       <div className="marketing-footer-card mx-auto w-full">
-        <Container className="pt-14 sm:pt-20">
+        <Container className="pt-14 pb-10 sm:pt-20 sm:pb-14">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] lg:gap-12">
             <div className="space-y-5">
               <a href="/" aria-label="CiteLadder home" className="inline-block">
@@ -155,11 +157,19 @@ export async function MarketingFooter() {
               product. All rights reserved.
             </p>
             <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 lg:justify-end">
-              {FOOTER_LEGAL_LINKS.map((link) => (
+              {/* Contact already sits in the Company column. */}
+              {FOOTER_LEGAL_LINKS.filter((link) => link.href !== '/contact').map((link) => (
                 <a key={link.href} className={LEGAL_STRIP_LINK} href={link.href}>
                   {link.label}
                 </a>
               ))}
+              <button
+                type="button"
+                className={LEGAL_STRIP_LINK}
+                {...{ [COOKIE_PREFERENCES_ATTRIBUTE]: '' }}
+              >
+                Cookie preferences
+              </button>
             </nav>
           </div>
         </Container>

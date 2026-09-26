@@ -67,6 +67,10 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
       'process.env.NEXT_PUBLIC_SELF_SERVE_SIGNUP': publicValue('NEXT_PUBLIC_SELF_SERVE_SIGNUP'),
       'process.env.PUBLIC_WEBSITE_ORIGIN': publicValue('PUBLIC_WEBSITE_ORIGIN'),
       'process.env.PUBLIC_APP_ORIGIN': publicValue('PUBLIC_APP_ORIGIN'),
+      // Optional: empty means the production docs origin (lib/config/docs.ts).
+      'process.env.PUBLIC_DOCS_ORIGIN': JSON.stringify(
+        process.env.PUBLIC_DOCS_ORIGIN ?? environment.PUBLIC_DOCS_ORIGIN ?? '',
+      ),
       'process.env.LOCAL_COMPOSE_BUILD': JSON.stringify(process.env.LOCAL_COMPOSE_BUILD ?? ''),
     },
     resolve: {

@@ -195,7 +195,7 @@ export function PagesTable({
             }}
             className="focus-ring cursor-pointer"
           >
-            <TableCell numeric className="mono text-muted text-xs">
+            <TableCell numeric className="text-muted text-xs tabular-nums">
               {index + 1}
             </TableCell>
             {/* A URL is one unbreakable token, so an untruncated cell takes its
@@ -214,7 +214,7 @@ export function PagesTable({
                 >
                   {pageDisplayTitle(page.title, page.display_url)}
                 </span>
-                <span className="mono text-muted truncate text-xs" title={page.display_url}>
+                <span className="text-muted truncate text-xs tabular-nums" title={page.display_url}>
                   {page.display_url}
                 </span>
               </span>
@@ -227,7 +227,7 @@ export function PagesTable({
                 {statusLabel(page.analysis_status)}
               </Badge>
             </TableCell>
-            <TableCell numeric className="mono text-danger-text">
+            <TableCell numeric className="text-danger-text tabular-nums">
               {formatIssueCount(page.issue_count)}
             </TableCell>
             <TableCell numeric className={scoreTextClass(page.web_fundamentals_score)}>
@@ -255,7 +255,10 @@ export function PagesTable({
                 <TableCell
                   key={column.sort}
                   numeric
-                  className={cn('mono', value === null ? 'text-muted text-xs' : 'text-secondary')}
+                  className={cn(
+                    'tabular-nums',
+                    value === null ? 'text-muted text-xs' : 'text-secondary',
+                  )}
                 >
                   {value === null ? <UnavailableValue state="not_measured" /> : value}
                 </TableCell>

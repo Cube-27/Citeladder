@@ -81,7 +81,10 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 {/* Band-height rows, so the sidebar's second row and the pane's
                     second row are the same band at the same offset. */}
                 <CommandPaletteTrigger className="h-[var(--tab-height)] w-full" />
-                <div className="min-h-0 flex-1 overflow-y-auto">
+                {/* A scroller clips everything outside its padding box, so this
+                    gutter keeps the 1px control edges and 3px focus rings of
+                    full-width rows visible; the negative margin keeps alignment. */}
+                <div className="-m-1 min-h-0 flex-1 overflow-y-auto p-1">
                   <SidebarNav />
                 </div>
               </div>
@@ -101,7 +104,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               {/* Compact only, exactly as before. On desktop the account
                   trigger rides the route's own header row instead, so the shell
                   adds no second bar above the work. */}
-              <header className="bg-shell sticky top-0 z-20 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-[var(--content-gutter)] min-[981px]:hidden">
+              <header className="bg-shell z-sticky sticky top-0 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-[var(--content-gutter)] min-[981px]:hidden">
                 <div className="flex items-center">
                   <Button
                     variant="ghost"

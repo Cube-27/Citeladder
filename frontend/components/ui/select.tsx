@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 
-import { menuPanelClasses } from '@/components/ui/menu-variants';
+import { menuItemVariants, menuPanelClasses } from '@/components/ui/menu-variants';
 import { cn } from '@/lib/utils';
 
 const EMPTY_VALUE = '__citeladder_empty_value__';
@@ -95,7 +95,7 @@ export function Select<T extends string>({
                 key={option.value}
                 value={radixValue(option.value) ?? EMPTY_VALUE}
                 disabled={option.disabled}
-                className="focus:bg-active focus:text-foreground data-[state=checked]:bg-accent-subtle data-[state=checked]:text-accent-text relative flex min-h-8 cursor-default items-center rounded-[var(--radius-control)] py-1.5 pr-8 pl-2.5 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                className={cn(menuItemVariants(), 'cursor-default py-1.5 pr-8 pl-2.5 select-none')}
               >
                 <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
                 <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex items-center">

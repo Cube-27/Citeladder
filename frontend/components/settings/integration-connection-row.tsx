@@ -132,7 +132,7 @@ function ConnectionMetadata({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
           <span className={eyebrowClasses}>Last synced</span>
-          <span className="text-secondary font-mono text-xs tabular-nums">
+          <span className="text-secondary text-xs tabular-nums">
             <DisplayTime value={connection.last_synced_at} fallback="Never" />
           </span>
         </div>
@@ -143,7 +143,7 @@ function ConnectionMetadata({
           <Badge variant="run-status" value={SYNC_RUN_BADGE[activeRun.status]}>
             {activeRun.status.replace('_', ' ')}
           </Badge>
-          <span className="text-muted font-mono text-xs whitespace-nowrap">
+          <span className="text-muted text-xs whitespace-nowrap tabular-nums">
             {activeRun.status === 'running' ? (
               `${formatCount(activeRun.row_count)} rows · window ${formatShortDate(activeRun.window_start)}–${formatShortDate(activeRun.window_end)}`
             ) : (
@@ -191,7 +191,7 @@ function DisconnectDialog({
       title={`Disconnect ${label}`}
       description={
         <>
-          Remove <span className="font-mono text-xs">{connection.account_ref}</span> from this
+          Remove <span className="text-xs tabular-nums">{connection.account_ref}</span> from this
           workspace?
         </>
       }
@@ -232,8 +232,8 @@ function DisconnectDialog({
           <>
             <p className={textRole('body')}>
               CiteLadder stops syncing {label} for{' '}
-              <span className="font-mono text-xs">{connection.account_ref}</span> and removes this
-              connection. Previously imported data is kept.
+              <span className="text-xs tabular-nums">{connection.account_ref}</span> and removes
+              this connection. Previously imported data is kept.
             </p>
             <p className={textRole('body')}>
               <strong>

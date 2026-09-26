@@ -143,7 +143,7 @@ function StatusValue({ status }: Readonly<{ status: number | null }>) {
   if (status === null) {
     return <UnavailableValue state="unknown" className="text-sm" />;
   }
-  return <span className={textRole('bodyStrong', 'mono')}>{status}</span>;
+  return <span className={textRole('bodyStrong', 'tabular-nums')}>{status}</span>;
 }
 
 /**
@@ -215,7 +215,7 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
                       : 'border-border-subtle bg-background-alt',
                   )}
                 >
-                  <span className={textRole('label', 'mono truncate')}>{bot}</span>
+                  <span className={textRole('label', 'tabular-nums truncate')}>{bot}</span>
                   <StanceBadge stance={stance} />
                   <span className="text-muted basis-full text-xs">{engineLabel(bot)}</span>
                 </div>
@@ -241,11 +241,13 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
               </div>
               <div className="grid min-w-0 gap-0.5 sm:justify-self-end">
                 <Label>Checked</Label>
-                <span className={textRole('label', 'mono truncate')}>
+                <span className={textRole('label', 'tabular-nums truncate')}>
                   {view.robotsUrl ?? <UnavailableValue state="unavailable" />}
                 </span>
                 {view.llmsTxtUrl !== null ? (
-                  <span className={textRole('label', 'mono truncate')}>{view.llmsTxtUrl}</span>
+                  <span className={textRole('label', 'tabular-nums truncate')}>
+                    {view.llmsTxtUrl}
+                  </span>
                 ) : null}
               </div>
             </div>

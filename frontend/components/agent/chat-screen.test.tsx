@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
@@ -14,6 +14,8 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
 }));
 
 import { ChatScreen } from './chat-screen';
+import { OutputHistory } from './output-history';
+import { queryKeys } from '@/lib/api/query-keys';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const CHAT = '22222222-2222-4222-8222-222222222222';
@@ -146,6 +148,37 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('ChatScreen', () => {
+  it('refreshes history for a new latest revision and retains prefix invalidation', async () => {
+    let items = [revision(REV1, 1, 'agent', 'First draft')];
+    mswServer.use(
+      http.get(`/api/v1/agent/chats/${CHAT}/output/revisions`, () => HttpResponse.json({ items })),
+    );
+    const { rerender, queryClient } = renderWithProviders(
+      <OutputHistory
+        workspaceId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        chatId={CHAT}
+        latestRevisionId={REV1}
+        canRestore={false}
+      />,
+    );
+    expect(await screen.findByText('Revision 1')).toBeVisible();
+    items = [...items, revision(REV2, 2, 'agent', 'Second draft')];
+    rerender(
+      <OutputHistory
+        workspaceId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        chatId={CHAT}
+        latestRevisionId={REV2}
+        canRestore={false}
+      />,
+    );
+    expect(await screen.findByText('Revision 2')).toBeVisible();
+    items = [
+      ...items,
+      revision('44444444-4444-4444-8444-444444444443', 3, 'user', 'Restored draft'),
+    ];
+    await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.revisions(CHAT) }));
+    expect(await screen.findByText('Revision 3')).toBeVisible();
+  });
   it('saves an edit as a new revision and reopens the pane on the latest one', async () => {
     let current = detail(revision(REV1, 1, 'agent', 'Old title tag.'));
     const edits: unknown[] = [];

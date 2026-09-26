@@ -110,7 +110,7 @@ export function InviteDialog({
                 — resending issues a new link and invalidates this one.
               </span>
               <div className="flex items-center gap-2">
-                <code className="mono text-secondary min-w-0 flex-1 truncate text-xs">
+                <code className="text-secondary min-w-0 flex-1 truncate text-xs tabular-nums">
                   {acceptanceLink(issuedToken)}
                 </code>
                 <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>

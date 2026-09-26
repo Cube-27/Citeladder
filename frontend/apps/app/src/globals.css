@@ -14,8 +14,6 @@
 @theme {
   --font-sans:
     var(--font-text), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono:
-    var(--font-text), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display:
     var(--font-heading), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
@@ -48,26 +46,26 @@
   --color-amber-500: #f59e0b;
   --color-amber-700: #b45309;
 
-  --color-background: #f2f6fa;
-  --color-background-alt: #f1f5f9;
+  --color-background: #f3f5f7;
+  --color-background-alt: #f7f9fb;
   --color-panel: #ffffff;
-  --color-panel-tonal: #f8fafc;
+  --color-panel-tonal: #f7f9fb;
   --color-elevated: #ffffff;
-  --color-well: #f8fafc;
-  --color-active: #f1f5f9;
+  --color-well: #e9edf1;
+  --color-active: #e9edf1;
   --color-input: #ffffff;
   /* The sidebar is a region of the ground now, not a surface of its own. The
      token stays because check:policy requires it, and it holds the ground value
      so a call site reaching for it cannot resurrect the old slab. It must be a
      literal (the policy requires six-digit hex here), so it moves with
      --color-shell below. */
-  --color-sidebar: #f2f6fa;
+  --color-sidebar: #f3f5f7;
   --color-surface-inverse: #14532d;
 
   /* Shell ground and stronger neutral surface. Workspace content remains
      white; interaction alone uses the accent ramp. */
-  --color-shell: #f2f6fa;
-  --color-shell-alt: #e9eff6;
+  --color-shell: #f3f5f7;
+  --color-shell-alt: #e9edf1;
 
   /* The marketing band ramp: canvas (paper) → soft (sunken) → indigo → teal.
      The two dark canvases rebind the semantic tokens in one place — see the
@@ -83,7 +81,7 @@
      the indigo navy kept for inverted feature surfaces (the pricing card),
      and the deep-teal close. Decorative families — they never carry state, so
      they stay out of the status ladder. */
-  --color-canvas-soft: #fafaf8;
+  --color-canvas-soft: #f7f9fb;
   --color-hairline-warm: #e8e4dd;
   --color-hairline-dark: #3f3a52;
   --color-violet-soft: #c9b4fa;
@@ -123,7 +121,7 @@
   --color-on-inverse: #ffffff;
 
   /* Forest uses the deep shade for white-on-colour controls and text. The
-     brighter brand green appears in the mark, focus, and chart series. */
+     brighter brand green appears in the mark, focus, selection markers, and chart series. */
   --color-brand-forest: #16a34a;
   --color-accent: #14532d;
   --color-accent-hover: #166534;
@@ -290,18 +288,16 @@
      A hair more ring than --shadow-smudge plus a wider drop, so it reads as
      the surface in front rather than as one more control in a row. */
   --shadow-raised:
-    0 0 0 1px rgb(26 31 54 / 0.07), 0 2px 8px -2px rgb(26 31 54 / 0.1);
+    0 0 0 1px rgb(26 31 54 / 0.24), 0 2px 8px -2px rgb(26 31 54 / 0.1);
   /* A card is separated by its border and the tone under it; this is only the
      hair of contact shadow that stops a bordered white box from looking
      printed onto the ground. If a card ever needs to read as "above" rather
      than "on", that is a different object, not a bigger shadow here. */
   --shadow-card: 0 1px 2px -1px rgb(17 28 69 / 0.06);
-  --shadow-card-hover: 0 2px 6px -2px rgb(17 28 69 / 0.09);
   --shadow-elevated:
     0 12px 32px rgb(26 31 54 / 0.12), 0 2px 6px rgb(26 31 54 / 0.06);
   --shadow-modal-value:
     0 12px 32px rgb(26 31 54 / 0.12), 0 2px 6px rgb(26 31 54 / 0.06);
-  --shadow-pricing-featured: 0 12px 36px -6px rgb(19 16 40 / 35%);
 
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
@@ -324,13 +320,6 @@
   --text-4xl: 2rem;
   --text-4xl--line-height: 2.5rem;
   --text-heading-sm: 1.125rem; /* 18px — compact headings */
-  --text-heading-xs: 1rem; /* 16px — structural sub-headings */
-  --text-preview-caption: 0.6875rem;
-  --text-preview-caption--line-height: 1rem;
-  --text-preview-status: 0.625rem;
-  --text-preview-status--line-height: 0.875rem;
-  --text-preview-code: 0.65625rem;
-  --text-preview-code--line-height: 0.875rem;
   /* Role sizes. These defaults are the public surfaces' values; the product
      document rebinds them (see the product type ladder below). */
   --text-role-meta: 0.75rem;
@@ -352,6 +341,7 @@
   --transition-slow: 280ms;
   --ease-standard: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --z-index-sticky: 20;
   --z-index-overlay: 40;
   --z-index-modal: 50;
   --z-index-toast: 60;
@@ -392,6 +382,7 @@
   --control-height: 36px;
   --control-height-lg: 40px;
   --field-height: 36px;
+  --field-end-target: 24px;
   --field-height-lg: 44px;
   --textarea-min-height: 112px;
   --tab-height: 40px;
@@ -430,7 +421,7 @@
 }
 
 .cl-landing {
-  --cl-paper: var(--color-canvas-soft);
+  --cl-paper: var(--color-panel);
   --cl-raised: var(--color-panel);
   --cl-stone: var(--color-background-alt);
   --cl-ink: var(--color-foreground);
@@ -445,10 +436,9 @@
   --cl-chart-secondary: var(--color-chart-2);
   --cl-chart-tertiary: var(--color-chart-3);
   --cl-faint-edge: var(--color-border-subtle);
-  /* One warm band tone, derived from the warm hairline so it tracks the theme.
-     The former cool alt read as a near-invisible stripe beside warm paper. */
-  --cl-paper-alt: color-mix(in srgb, var(--color-hairline-warm) 45%, var(--color-canvas-soft));
-  --cl-platform: var(--cl-paper);
+  /* White paper alternates with a distinct neutral band. */
+  --cl-paper-alt: var(--color-well);
+  --cl-platform: var(--color-panel-tonal);
   /* Every decorative well shares one accent-tinted surface, so the accent is the
      only hue on the page that is not evidence. */
   --cl-well: color-mix(in srgb, var(--color-accent-soft) 70%, var(--cl-paper-alt));
@@ -895,7 +885,7 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-muted: #3a4658;
   --color-subtle: #4b5a6e;
   --color-background-alt: #f8fafc;
-  --color-canvas-soft: #fafaf8;
+  --color-canvas-soft: #f7f9fb;
   --color-active: #f1f5f9;
   --color-border: #e2e8f0;
   --color-border-subtle: #f1f5f9;
@@ -907,36 +897,12 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-band-teal-mid: #114747;
 }
 
-/* The product's light palette: warm paper neutrals in the Claude register.
-   Scoped to the app document — the marketing <html> carries
-   data-public-surface and keeps its own canvas. Controls (inputs, secondary
-   buttons) fill with --color-input, one step brighter than the paper, so
-   every action item reads as lifted. Declared before the dark block, which
-   rebinds every token set here. */
+/* Product light inherits the white-paper palette from @theme. Public
+   surfaces override editorial roles; dark maps its own palette. */
 :root:not([data-public-surface]) {
-  --color-background: #f5f4ed;
-  --color-background-alt: #f0eee6;
-  --color-canvas-soft: #faf9f5;
-  --color-panel: #faf9f5;
-  --color-panel-tonal: #f5f4ed;
-  --color-elevated: #ffffff;
-  --color-well: #f0eee6;
-  --color-active: #ebe9df;
-  --color-input: #ffffff;
-  --color-sidebar: #f5f4ed;
-  --color-shell: #f5f4ed;
-  --color-shell-alt: #efede4;
-  --color-foreground: #141413;
-  --color-secondary: #3d3d3a;
-  --color-muted: #6a6862;
-  --color-subtle: #6b6a65;
-  --color-border-subtle: #ebe9e1;
-  --color-border: #dedcd1;
-  --color-border-strong: #c7c4b8;
-  --color-border-bold: #8f8d85;
-  --color-neutral-bg: #f0eee6;
-  --skeleton-base: #efede6;
-  --skeleton-highlight: #faf9f5;
+  --color-neutral-bg: var(--color-well);
+  --skeleton-base: var(--color-well);
+  --skeleton-highlight: var(--color-panel);
 }
 
 /* The product type ladder: weights stop at 500 and hierarchy comes from size.
@@ -1071,28 +1037,51 @@ input.focus-input:-webkit-autofill:focus-visible {
   --shadow-smudge: 0 0 0 1px rgb(255 255 255 / 10%), 0 1px 2px rgb(0 0 0 / 25%);
   --shadow-smudge-hover: 0 0 0 1px rgb(255 255 255 / 16%), 0 1px 2px rgb(0 0 0 / 35%);
   --shadow-card: 0 1px 2px rgb(0 0 0 / 16%);
+  --shadow-raised: 0 0 0 1px rgb(255 255 255 / 24%), 0 2px 5px rgb(0 0 0 / 35%);
+  --shadow-smudge-danger: 0 0 0 1px var(--color-danger), 0 1px 2px rgb(0 0 0 / 25%);
   --shadow-elevated: 0 12px 32px rgb(0 0 0 / 40%);
   --shadow-modal-value: var(--shadow-elevated);
 }
 
-:root[data-theme='dark'] img[src='/citeladder-logo.svg'] {
+:root[data-theme='dark'] .brand-wordmark {
   filter: brightness(0) invert(1);
 }
 
-/* Tailwind shadow utilities inline @theme values at build time. Rebind their
-   rendered properties as well as the variables used by hand-written rules. */
-:root[data-theme='dark'] .shadow-smudge {
-  box-shadow: var(--shadow-smudge);
+/* Bind utilities to live theme variables inside their layer so focus
+   continues to own the composed ring and edge. */
+@layer utilities {
+  .shadow-smudge { box-shadow: var(--shadow-smudge); }
+  .shadow-smudge-hover,
+  .hover\:shadow-smudge-hover:hover { box-shadow: var(--shadow-smudge-hover); }
+  .shadow-raised,
+  .hover\:shadow-raised:hover { box-shadow: var(--shadow-raised); }
+  .shadow-smudge-danger,
+  .hover\:shadow-smudge-danger:hover { box-shadow: var(--shadow-smudge-danger); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
 }
-:root[data-theme='dark'] .shadow-smudge-hover,
-:root[data-theme='dark'] .hover\:shadow-smudge-hover:hover {
-  box-shadow: var(--shadow-smudge-hover);
+.focus-input[aria-invalid='true'],
+.focus-ring[aria-invalid='true'],
+.focus-frame:has([aria-invalid='true']) {
+  box-shadow: var(--shadow-smudge-danger);
 }
-:root[data-theme='dark'] .shadow-card {
-  box-shadow: var(--shadow-card);
+.focus-input[aria-invalid='true']:focus-visible,
+.focus-ring[aria-invalid='true']:focus-visible,
+.focus-frame:has([aria-invalid='true']):has(:focus-visible) {
+  box-shadow: var(--focus-ring), var(--shadow-smudge-danger);
 }
-:root[data-theme='dark'] .shadow-elevated {
-  box-shadow: var(--shadow-elevated);
+input.focus-input[aria-invalid='true']:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--shadow-smudge-danger);
+}
+input.focus-input[aria-invalid='true']:-webkit-autofill:focus-visible {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset, var(--focus-ring), var(--shadow-smudge-danger);
+}
+@media (forced-colors: active) {
+  .focus-input[aria-invalid='true'],
+  .focus-ring[aria-invalid='true'],
+  .focus-frame:has([aria-invalid='true']) { border: 1px solid Mark; }
+  .focus-input:focus-visible,
+  .focus-frame:has(:focus-visible) { outline-color: Highlight; }
 }
 
 /* A spinner is a promise that the wait is long enough to be worth explaining.
@@ -1194,7 +1183,11 @@ input.focus-input:-webkit-autofill:focus-visible {
     --control-height: 44px;
     --control-height-lg: 44px;
     --field-height: 44px;
+    --field-end-target: 44px;
     --tab-height: 44px;
+  }
+  :root [data-flow-surface] {
+    --control-height-sm: 44px;
   }
 }
 
@@ -1207,30 +1200,18 @@ input.focus-input:-webkit-autofill:focus-visible {
   }
 }
 
-.mono,
-.font-mono,
 code,
 pre,
 kbd,
 samp {
-  font-family:
-    var(--font-text),
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
   font-synthesis: none;
 }
 
 .value-placeholder {
   color: var(--value-placeholder);
-  font-family:
-    var(--font-text),
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
   font-weight: 400;
   line-height: var(--text-xs--line-height);

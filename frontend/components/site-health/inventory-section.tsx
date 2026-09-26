@@ -123,7 +123,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
                     query-string URL is one unbreakable token and would size
                     the column to its full width. */}
                 <span
-                  className="mono text-foreground block max-w-[40rem] truncate text-xs"
+                  className="text-foreground block max-w-[40rem] truncate text-xs tabular-nums"
                   title={row.display_url}
                 >
                   {row.display_url}
