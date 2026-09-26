@@ -81,8 +81,8 @@ with the same contract, and the dialog's sample file is generated from the
 [browser parser's column contract](../frontend/lib/prompts/csv.ts). Under the
 project lock, [import](../backend/app/domain/prompts/importing.py) matches topic
 names case-insensitively, creates unknown names as manual topics only for rows
-that insert, and imports a blank topic unassigned. Binding, duplicate handling
-and capacity stay all-or-nothing.
+that insert, and imports a blank topic unassigned. A binding or capacity failure
+rejects the whole import; duplicate rows are skipped while the rest import.
 
 ## Audit admission and execution
 

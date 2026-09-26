@@ -106,7 +106,10 @@ class PromptImportRow(PromptInput):
     Theme, intent and cohort stay optional internal fields with code defaults.
     """
 
-    topic: str = Field(default="", max_length=TOPIC_NAME_MAX_CHARS)
+    # Stripped like ``TopicName``, but blank is allowed: it means unassigned.
+    topic: Annotated[
+        str, StringConstraints(strip_whitespace=True, max_length=TOPIC_NAME_MAX_CHARS)
+    ] = ""
 
 
 class PromptImport(BaseModel):
