@@ -3,7 +3,7 @@
 import { Link, useLocation } from 'react-router-dom';
 
 import { FlowActions, FlowShell, type FlowStep } from '@/components/auth/flow-shell';
-import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { ThemeSwitch } from '@/components/layout/theme-switch';
 import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { Button } from '@/components/ui/button';
 import { projectDestination } from '@/lib/navigation/project-destination';
@@ -64,7 +64,7 @@ function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: st
       exitHref={flow.isAdditional ? projectsHref : undefined}
       trailing={
         <div className="flex items-center gap-1">
-          <ThemeToggle />
+          <ThemeSwitch />
           <UserMenuTrigger presenter="compact" />
         </div>
       }

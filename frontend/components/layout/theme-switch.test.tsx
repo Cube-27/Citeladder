@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import { THEME_STORAGE_KEY } from '@/lib/theme/theme';
 
-import { ThemeToggle } from './theme-toggle';
+import { ThemeSwitch } from './theme-switch';
 
-describe('ThemeToggle', () => {
+describe('ThemeSwitch', () => {
   afterEach(() => {
     window.localStorage.clear();
     delete document.documentElement.dataset.theme;
@@ -14,7 +14,7 @@ describe('ThemeToggle', () => {
 
   it('flips light and dark in one click, remembering the choice on this device', async () => {
     const user = userEvent.setup();
-    render(<ThemeToggle />);
+    render(<ThemeSwitch />);
 
     await user.click(screen.getByRole('button', { name: 'Switch to dark theme' }));
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');

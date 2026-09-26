@@ -14,7 +14,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { CompactPageTitleContext } from './compact-page-title-context';
 import { ProjectSwitcher } from './project-switcher';
 import { SidebarNav } from './sidebar-nav';
-import { ThemeToggle } from './theme-toggle';
+import { ThemeSwitch } from './theme-switch';
 import { UserMenuTrigger } from './user-menu';
 import { resolveTitle } from './page-titles';
 import { AgentPanelProvider } from '@/lib/agent/panel-context';
@@ -116,7 +116,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 <div className="text-secondary min-w-0 truncate text-sm">{compactTitle}</div>
                 <div className="flex items-center justify-end gap-2.5 justify-self-end">
                   <AgentPanelTrigger />
-                  <ThemeToggle />
+                  <ThemeSwitch />
                   <UserMenuTrigger presenter="compact" />
                 </div>
               </header>
@@ -137,7 +137,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                   <div className="mx-auto flex h-full w-full max-w-[var(--content-max-width)] items-center justify-end px-[var(--content-gutter)]">
                     <div className="pointer-events-auto flex items-center gap-1">
                       <AgentPanelTrigger />
-                      <ThemeToggle />
+                      <ThemeSwitch />
                       <UserMenuTrigger presenter="header" />
                     </div>
                   </div>

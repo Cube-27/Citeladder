@@ -10,7 +10,7 @@ import { setTheme, useTheme } from '@/lib/theme/theme';
  * One click flips the app between light and dark for this device. It carries
  * its own tooltip provider because onboarding renders it outside the shell.
  */
-export function ThemeToggle() {
+export function ThemeSwitch() {
   const theme = useTheme();
   const next = theme === 'dark' ? 'light' : 'dark';
   const label = `Switch to ${next} theme`;
@@ -18,13 +18,7 @@ export function ThemeToggle() {
   return (
     <TooltipProvider>
       <Tooltip content={label} side="bottom">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={label}
-          className="rounded-full"
-          onClick={() => setTheme(next)}
-        >
+        <Button variant="ghost" size="iconRound" aria-label={label} onClick={() => setTheme(next)}>
           <Icon className="size-4" aria-hidden />
         </Button>
       </Tooltip>
