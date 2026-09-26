@@ -21,6 +21,7 @@ import {
   DashboardHeader,
   SummarySections,
 } from './dashboard-sections';
+import { PromptSetupCard } from './prompt-setup-card';
 import { useCommandCenterActions } from './use-command-center-actions';
 
 const DASHBOARD_METRIC_PLACEHOLDERS = ['metric-a', 'metric-b', 'metric-c'] as const;
@@ -201,6 +202,7 @@ function DashboardData({
       <Stack gap="section">
         <div className="grid gap-[var(--workspace-gap)]" data-tour="command-center">
           <DashboardHeader data={data} activeProject={activeProject} />
+          {data.active_prompt_count === 0 ? <PromptSetupCard /> : null}
           {actions.downloadError ? (
             <Alert tone="danger">The report could not be downloaded. Try again.</Alert>
           ) : null}

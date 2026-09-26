@@ -56,7 +56,10 @@ const STATUS_TABS: { id: PromptStatus; label: string }[] = [
  * opens the consent-gated AI dialog.
  */
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this component only orchestrates queries/mutations; toolbar, topic rail, table, empty state, and dialogs are extracted.
-export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: () => void }>) {
+export function PromptLibrary({
+  onDoneManaging,
+  openGenerate = false,
+}: Readonly<{ onDoneManaging?: () => void; openGenerate?: boolean }>) {
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
   const { projectId, promptSet, prompts, isLoading, isError, ensurePromptSet } = usePromptSet();
@@ -73,7 +76,7 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Prompt | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
-  const [generateOpen, setGenerateOpen] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(openGenerate);
   const [generateResult, setGenerateResult] = useState<PromptGenerateResponse | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -264,8 +267,13 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
       measurements={measurements}
     />
   );
+  const openGenerateDialog = () => {
+    setGenerateResult(null);
+    generateMutation.reset();
+    setGenerateOpen(true);
+  };
   if (!hasPrompts) {
-    libraryBody = <PromptEmptyState onAdd={openAdd} onImport={() => setImportOpen(true)} />;
+    libraryBody = <PromptEmptyState onGenerate={openGenerateDialog} onAdd={openAdd} />;
   } else if (visible.length === 0) {
     libraryBody = (
       <p className={textRole('body', 'px-[var(--card-padding)] py-[var(--empty-state-padding)]')}>
@@ -300,11 +308,7 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
         <PromptActions
           onImport={() => setImportOpen(true)}
           onAdd={openAdd}
-          onGenerate={() => {
-            setGenerateResult(null);
-            generateMutation.reset();
-            setGenerateOpen(true);
-          }}
+          onGenerate={openGenerateDialog}
           onDoneManaging={onDoneManaging}
         />
       }

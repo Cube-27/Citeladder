@@ -62,3 +62,17 @@ aliases; pre-launch, the demo database is reset instead (26 September 2026).
 Source: owner-settled [Agent workspace plan](plans/citeladder-action-center.md),
 25 September 2026. [Agent](agents.md) and [Opportunities](opportunities.md)
 own shipped behavior.
+
+## Onboarding creates no prompts
+
+Onboarding confirms business context and competitors, then creates the project
+with an empty prompt set in the completion request. A project with no prompts
+is a valid state; Overview and the Prompts page ask the user to choose the
+questions to track. The previous onboarding portfolio request produced prompts
+the owner judged low quality, added a completion worker and a polling state, and
+committed users to prompts they had not chosen.
+
+Source: owner decision of 26 September 2026 in the
+[prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 1.
+[Onboarding](onboarding.md) and [prompts and Visibility](visibility-prompt.md)
+own the shipped behavior.

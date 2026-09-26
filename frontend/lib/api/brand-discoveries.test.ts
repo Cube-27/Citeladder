@@ -7,6 +7,7 @@ import { brandDiscoveriesApi, type BrandDiscoveryCompletion } from './brand-disc
 
 const DISCOVERY_ID = '11111111-1111-4111-8111-111111111111';
 const CRAWL_ID = '33333333-3333-4333-8333-333333333333';
+const PROJECT_ID = '44444444-4444-4444-8444-444444444444';
 
 const completion: BrandDiscoveryCompletion = {
   name: 'Acme',
@@ -49,29 +50,24 @@ describe('brand discovery completion contract', () => {
       http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, async ({ request }) => {
         body = await request.json();
         idempotencyKey = request.headers.get('Idempotency-Key');
-        return HttpResponse.json(
-          {
-            discovery_id: DISCOVERY_ID,
-            status: 'completing',
-            project_id: null,
-            crawl_id: CRAWL_ID,
-            activation_state: 'queued',
-            page_limit: 10,
-            warnings: [],
-          },
-          { status: 202 },
-        );
+        return HttpResponse.json({
+          discovery_id: DISCOVERY_ID,
+          status: 'project_created',
+          project_id: PROJECT_ID,
+          crawl_id: CRAWL_ID,
+          activation_state: 'queued',
+          page_limit: 10,
+          warnings: [],
+        });
       }),
     );
 
-    // Completion is accepted as a job: the project id arrives via the
-    // discovery poll, not in this response.
     await expect(
       brandDiscoveriesApi.complete(DISCOVERY_ID, completion, 'complete-once'),
     ).resolves.toEqual({
       discovery_id: DISCOVERY_ID,
-      status: 'completing',
-      project_id: null,
+      status: 'project_created',
+      project_id: PROJECT_ID,
       crawl_id: CRAWL_ID,
       activation_state: 'queued',
       page_limit: 10,

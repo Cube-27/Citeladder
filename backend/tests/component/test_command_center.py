@@ -55,7 +55,7 @@ async def test_command_center_uses_persisted_state_and_report(
 async def test_command_center_projects_crawl_and_demand_before_first_audit(
     db_session: AsyncSession,
 ) -> None:
-    workspace_id, project_id, _prompt_ids = await _seed_base(db_session)
+    workspace_id, project_id, prompt_ids = await _seed_base(db_session)
     crawl, _issue_a, _issue_b = await _add_site(
         db_session, workspace_id=workspace_id, project_id=project_id
     )
@@ -85,3 +85,4 @@ async def test_command_center_projects_crawl_and_demand_before_first_audit(
     assert response.loop.tracked.state == "not_run"
     assert response.track.citation_share.value is None
     assert response.next_action.kind == "connect"
+    assert response.active_prompt_count == len(prompt_ids)

@@ -4,12 +4,13 @@
 
 Onboarding establishes the owned website, market, reviewed company profile and
 accepted competitors. Discovery output is evidence-backed suggestion, not
-confirmed business truth. It creates the project and its starting portfolio
+confirmed business truth. It creates the project, with an empty prompt set,
 only after the user confirms the visible category, buyer type and market scope
 choices where known. Generated positioning, audience and offerings remain
 unreviewed until edited in the project.
 [Workspace access](workspace-access.md) owns identity and project selection;
-[prompts and Visibility](visibility-prompt.md) owns the resulting portfolio.
+[prompts and Visibility](visibility-prompt.md) owns the prompts the user then
+chooses to track.
 
 ## Action to persisted result
 
@@ -23,9 +24,7 @@ The [worker](../backend/app/workers/brand_discovery_worker.py) claims PostgreSQL
 tasks with leases and commits before provider I/O.
 Identity makes one model request with a 20-second timeout. Competitor suggestions
 make at most three independent requests, each capped at 20 seconds. Failures
-degrade to reviewable evidence. Portfolio generation makes one request per
-durable attempt, capped at 20 seconds, with at most three attempts. Provider
-authentication and rate-limit errors terminate immediately.
+degrade to reviewable evidence. Onboarding makes no prompt-generation request.
 
 The resolved homepage is reused. First-party pages and independent research
 are separate bounded evidence sources. Identity keeps supported field citations
@@ -49,36 +48,27 @@ origin, review state, reviewer and review time. The Projects-owned
 unknown facets remain absent, and its field sources distinguish visible choices
 from inferred values. Reads never repeat discovery.
 
-## Confirmation and asynchronous completion
+## Confirmation and completion
 
 [Completion](../backend/app/domain/projects/onboarding/completion.py) locks the
 authorized discovery, validates the confirmation and idempotency key, freezes
-the reviewed input, persists the project/profile and initial empty prompt set,
-and queues a brand-completion task in one transaction. A rollback leaves no
-partial shell. The response can carry the committed project ID while portfolio
-generation is still running; no initial Site Health crawl is started.
+the reviewed input, persists the project/profile and its empty prompt set, and
+marks the discovery `project_created` in one transaction. A rollback leaves no
+partial shell. Completion makes no model call, creates no topics or prompts,
+queues no worker task and starts no initial Site Health crawl. Same-key replays
+return the same project; a different key conflicts. The user chooses what to
+track next, from Overview or the Prompts page.
 
-After the business context and competitor choices are confirmed, the worker
-makes one structured portfolio request with the confirmed context, accepted
-competitors, offering harvest and persisted research. Request-local buyer
-intents link topics to core prompts and may also link diagnostic and comparison
-prompts. Code validates those links, evidence references and prompt cohorts,
-then admits supported topics and prompts. An empty valid core portfolio uses
-the recoverable completion-failure flow. A failed attempt is retried by the
-durable worker with the same frozen input. The worker re-locks the discovery and
-persists topics, prompts and terminal completion together. Generated topics
-join any existing project topics before prompt binding; unresolved core or
-explicitly topic-bound prompts reject the transaction. A terminal-state guard
-and prompt uniqueness prevent repeated delivery from creating a second
-portfolio. Same-key replays return the same shell.
+A discovery left `completing` by the retired completion worker, or its queued
+`brand_completion` task, only finalizes its already committed shell; it never
+generates prompts.
 
-The request separates reviewed category and market choices from provisional
-research prose. Both have explicit source references; the project market is
-supplied as a confirmed locale fact, while language may use its default.
-BrandProfile remains the
+Reviewed category and market choices stay separate from provisional research
+prose. The project market is a confirmed locale fact, while language may use
+its default. BrandProfile remains the
 store for offerings, positioning and audience, while Project owns locale.
-The Projects-owned BusinessContext composes those facts for generation without
-duplicating their storage.
+The Projects-owned BusinessContext composes those facts for later prompt
+generation without duplicating their storage.
 
 The [onboarding screen](../frontend/components/onboarding/onboarding-screen.tsx)
 enters the project as soon as a committed project ID is available. It seeds the
@@ -86,16 +76,16 @@ detail cache and navigates through the shared project destination owner.
 After confirmation, the review controls are replaced immediately by page-level
 creation progress. A retryable completion failure returns to the recoverable
 review surface; a persisted terminal failure remains visible rather than
-spinning. The accepted request, terminal worker attempt, queue-to-terminal
-completion, and route handoff expose separate timing boundaries without
-delaying entry to the committed project.
+spinning. The completion request and route handoff expose separate timing
+boundaries without delaying entry to the committed project.
 Draft URL updates replace the router history entry while retaining its transaction
 identity, so persisting the discovery ID or step does not remount the flow. These
 updates stop during completion and the committed-project handoff. Leaving
 onboarding discards retained transaction state; a fresh
 Add project URL starts at Basics, while a discovery URL resumes that draft.
 A shell-less terminal failure remains an error, not an endless progress state.
-A project with no topics can later use explicit prompt generation from its
+Overview and the Prompts page ask a project with no active prompts to choose
+the questions it tracks; explicit generation can recover starting topics from
 confirmed offerings.
 
 ## Dependencies and limits

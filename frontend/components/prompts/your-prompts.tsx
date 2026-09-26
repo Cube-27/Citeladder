@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/table';
 import { queryKeys } from '@/lib/api/query-keys';
 import { topicsApi } from '@/lib/api/topics';
+import { PROMPTS_GENERATE_HREF, PROMPTS_MANAGE_HREF } from '@/lib/prompts/routes';
 import { visibilityApi } from '@/lib/api/visibility';
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { useActiveProject } from '@/lib/project/project-context';
@@ -258,17 +259,24 @@ export function YourPrompts() {
     promptsBody = (
       <div className="grid gap-3 py-[var(--empty-state-padding)]">
         <p className={eyebrowClasses}>Your prompts</p>
-        <h2 className={textRole('sectionTitle')}>No active prompts yet</h2>
+        <h2 className={textRole('sectionTitle')}>Choose the questions you want to track</h2>
         <p className="text-secondary max-w-md text-sm leading-relaxed">
-          Switch to manage mode to add prompts manually, import a CSV, or generate prompts and
-          topics with AI.
+          Generate buyer questions from your confirmed offerings, or add your own.
         </p>
-        <ProjectLink
-          href="/prompts?mode=manage"
-          className={buttonVariants({ variant: 'secondary', size: 'md' })}
-        >
-          Manage prompts
-        </ProjectLink>
+        <div className="flex flex-wrap gap-2">
+          <ProjectLink
+            href={PROMPTS_GENERATE_HREF}
+            className={buttonVariants({ variant: 'primary', size: 'md' })}
+          >
+            Generate prompts
+          </ProjectLink>
+          <ProjectLink
+            href={PROMPTS_MANAGE_HREF}
+            className={buttonVariants({ variant: 'secondary', size: 'md' })}
+          >
+            Add or import prompts
+          </ProjectLink>
+        </div>
       </div>
     );
   } else if (visiblePrompts.length === 0) {
@@ -284,7 +292,7 @@ export function YourPrompts() {
       actions={
         <>
           <ProjectLink
-            href="/prompts?mode=manage"
+            href={PROMPTS_MANAGE_HREF}
             className={buttonVariants({ variant: 'secondary', size: 'sm' })}
           >
             Manage prompts

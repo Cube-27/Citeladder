@@ -6,24 +6,25 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 
 /**
- * Empty state (F7) — shown when the active project's prompt set has no prompts.
- * The shared `EmptyState` shape, with CTAs inviting the first manual prompt or
- * a CSV import.
+ * Shown when the active project's prompt set has no prompts. Onboarding creates
+ * none, so this is the first thing a new project's library shows. Generating
+ * is the primary path; adding by hand is the equal alternative, and CSV import
+ * stays in the page actions.
  */
 export function PromptEmptyState({
+  onGenerate,
   onAdd,
-  onImport,
-}: Readonly<{ onAdd: () => void; onImport: () => void }>) {
+}: Readonly<{ onGenerate: () => void; onAdd: () => void }>) {
   return (
     <EmptyState
       icon={MessageSquarePlus}
-      heading="No prompts yet"
-      description="Add the questions you want to track across AI engines."
+      heading="Choose the questions you want to track"
+      description="Generate buyer questions from your confirmed offerings, or add your own."
       action={
         <>
-          <Button onClick={onAdd}>Add prompt</Button>
-          <Button variant="secondary" onClick={onImport}>
-            Import CSV
+          <Button onClick={onGenerate}>Generate prompts</Button>
+          <Button variant="secondary" onClick={onAdd}>
+            Add prompt
           </Button>
         </>
       }

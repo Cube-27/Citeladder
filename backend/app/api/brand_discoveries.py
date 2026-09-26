@@ -14,11 +14,7 @@ from app.api.deps import (
     require_active_workspace,
     require_active_workspace_run,
 )
-from app.core.config.brand_discovery import (
-    DISCOVERY_STATUS_COMPLETING,
-    DISCOVERY_STATUS_FAILED,
-    DISCOVERY_STATUS_PROJECT_CREATED,
-)
+from app.core.config.brand_discovery import DISCOVERY_STATUS_FAILED
 from app.core.errors import ApiException
 from app.core.http_errors import raise_api_error
 from app.domain.entitlements.enforcement import OccupancyError
@@ -97,7 +93,6 @@ async def get_brand_discovery(
 
 @router.post(
     "/brand-discoveries/{discovery_id}/complete",
-    status_code=status.HTTP_202_ACCEPTED,
 )
 async def complete_brand_discovery(
     discovery_id: uuid.UUID,
@@ -130,14 +125,15 @@ async def complete_brand_discovery(
 
 
 def _completion_response(row, crawl) -> BrandDiscoveryCompleteResponse:
-    """Return the durable shell immediately while its portfolio is generated.
+    """Return the created project shell; its prompt set starts empty.
 
-    A replay whose generation failed reports that terminal state rather than
-    telling a client to keep polling work that already exhausted its budget.
+    A replay of a completion that failed before onboarding stopped generating
+    prompts reports that terminal state; every other accepted completion has
+    created its project.
     """
     return BrandDiscoveryCompleteResponse(
         discovery_id=row.id,
-        status=_completion_status(row),
+        status="failed" if row.status == DISCOVERY_STATUS_FAILED else "project_created",
         project_id=row.project_id,
         crawl_id=crawl.id if crawl is not None else None,
         page_limit=(
@@ -145,11 +141,3 @@ def _completion_response(row, crawl) -> BrandDiscoveryCompleteResponse:
         ),
         warnings=list(row.warnings),
     )
-
-
-def _completion_status(row) -> str:
-    if row.status == DISCOVERY_STATUS_PROJECT_CREATED:
-        return DISCOVERY_STATUS_PROJECT_CREATED
-    if row.status == DISCOVERY_STATUS_FAILED:
-        return DISCOVERY_STATUS_FAILED
-    return DISCOVERY_STATUS_COMPLETING

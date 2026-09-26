@@ -16,11 +16,6 @@ GOLDEN_ONBOARDING_CASES: tuple[GoldenOnboardingCase, ...] = (
     *SOFTWARE_AND_SERVICE_CASES,
 )
 
-# Same category, different geography and size.  A generator driven by a fixed
-# industry table emits the same market prompts for both; the harness scores that
-# collision directly rather than relying on inspection.
-COLLISION_PAIR = ("wakefit-india", "burrow-united-states")
-
 CASES_BY_SLUG: dict[str, GoldenOnboardingCase] = {
     case.slug: case for case in GOLDEN_ONBOARDING_CASES
 }

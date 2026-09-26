@@ -19,33 +19,26 @@ DISCOVERY_STATUS_QUEUED: Final = "queued"
 DISCOVERY_STATUS_RUNNING: Final = "running"
 DISCOVERY_STATUS_FAILED: Final = "failed"
 DISCOVERY_STATUS_READY: Final = "ready"
-# Review is confirmed and the portfolio is being generated on a worker. The
-# completion request once ran generation inline and could outlast the client.
-# The visible in-between state lets the client wait for the worker's result.
-DISCOVERY_STATUS_COMPLETING: Final = "completing"
 DISCOVERY_STATUS_PROJECT_CREATED: Final = "project_created"
 ERROR_BRAND_DISCOVERY: Final = "brand_discovery_failed"
-ERROR_BRAND_COMPLETION: Final = "brand_completion_failed"
-WARNING_BRAND_COMPLETION_FAILED: Final = "completion_failed"
 DISCOVERY_STATUSES: Final = frozenset(
     {
         DISCOVERY_STATUS_QUEUED,
         DISCOVERY_STATUS_RUNNING,
         DISCOVERY_STATUS_FAILED,
         DISCOVERY_STATUS_READY,
-        DISCOVERY_STATUS_COMPLETING,
         DISCOVERY_STATUS_PROJECT_CREATED,
     }
 )
-# One queue, two jobs against the same discovery row: the research pass that
-# produces the review screen, then the portfolio generation that creates the
-# project. They are separate task rows so each gets its own attempts and its
-# own lease.
+# Completion once generated an onboarding portfolio on a worker, leaving the
+# discovery "completing" behind a "brand_completion" task. Onboarding now
+# creates no prompts and completes in its request. These values exist only so
+# a row or task persisted before that change finalizes its committed shell.
+# Remove them, with the worker drain, once production holds no discovery in
+# "completing" and no non-terminal "brand_completion" task.
+LEGACY_DISCOVERY_STATUS_COMPLETING: Final = "completing"
+LEGACY_TASK_KIND_BRAND_COMPLETION: Final = "brand_completion"
 TASK_KIND_BRAND_DISCOVERY: Final = "brand_discovery"
-TASK_KIND_BRAND_COMPLETION: Final = "brand_completion"
-BRAND_DISCOVERY_TASK_KINDS: Final = frozenset(
-    {TASK_KIND_BRAND_DISCOVERY, TASK_KIND_BRAND_COMPLETION}
-)
 
 BUSINESS_TYPES: Final = ("b2b", "b2c", "both")
 PRICE_TIERS: Final = ("budget", "mid_market", "premium", "luxury", "unknown")
@@ -172,9 +165,6 @@ KEENABLE_RESEARCH_VERSION: Final = "keenable-research-v1"
 BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION: Final = "brand-discovery-prompts-v2"
 BRAND_DISCOVERY_PROMPT_VALIDATION_VERSION: Final = "initial-portfolio-validation-v1"
 DISCOVERY_PROGRESS_TOTAL_STEPS: Final = 4
-# Bounded model-call duration. Completion ends its read transaction before the
-# call and reacquires the discovery lock only for the final write.
-PORTFOLIO_GENERATION_TIMEOUT_MAX_SECONDS: Final = 20.0
 DISCOVERY_CONFIRM_MAX_DOMAINS: Final = 50
 DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS: Final = 1024
 MARKET_CONTEXT_TERMS: Final[dict[str, tuple[str, ...]]] = {
@@ -343,19 +333,10 @@ class BrandDiscoverySettings(BaseSettings):
     competitor_suggestion_maximum: int = Field(default=10, ge=1, le=10)
     identity_first_party_evidence_max_chars: int = Field(default=12_000, ge=1)
     identity_external_evidence_max_chars: int = Field(default=12_000, ge=1)
-    # Per-page text handed to portfolio generation alongside the offering list. The
-    # list carries the taxonomy; page text only corroborates it, and is the
-    # sole source when a site publishes no readable list at all.
-    topic_evidence_max_chars_per_page: int = Field(default=2_500, ge=1)
     # One initial competitor request and at most two retries. Identity makes
     # one bounded request and degrades to reviewable evidence on failure.
     competitor_model_maximum_attempts: int = Field(default=3, ge=1, le=3)
     research_model_timeout_seconds: float = Field(default=20.0, gt=0, le=20.0)
-    # Completion has one model request per durable queue attempt.
-    portfolio_generation_timeout_seconds: float = Field(
-        default=20.0, gt=0, le=PORTFOLIO_GENERATION_TIMEOUT_MAX_SECONDS
-    )
-    completion_maximum_attempts: int = Field(default=3, ge=1, le=3)
     keenable_api_key: SecretStr = Field(
         default=SecretStr(""),
         validation_alias=AliasChoices("KEENABLE_API_KEY", "KEEBNABLE_API_KEY"),

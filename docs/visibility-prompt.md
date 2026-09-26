@@ -17,19 +17,16 @@ workspace/project, validate topic/cohort selection and capacity, gather confirme
 brand context and optional observed demand, call the configured model, then
 recheck ownership and insert conflict-safely. Generation does not start an audit.
 
-Onboarding's single intent-linked portfolio request runs after business and
-competitor confirmation in its completion worker.
-Existing-project generation uses existing topics; when a completed project has
-none, it can recover starting topics from confirmed products/services before
-generation. Missing confirmed offerings fail before provider I/O.
+Onboarding creates no prompts or topics; a created project starts with an
+empty prompt set and the user chooses what to track. Generation uses existing
+topics; when a project has none, it can recover starting topics from confirmed
+products/services before generation. Missing confirmed offerings fail before provider I/O.
 
-Offering harvest collects bounded evidence of things a customer buys, hires,
-books or enrolls in. Onboarding topics describe supported buyer needs rather
-than restate the provider's category. They can cite confirmed context and
-persisted research as well as the harvest. Empty harvest is explicit;
-unsupported topics are not invented. Topic evidence references must exist,
-names must be bounded and brand-neutral, and admitted topics receive canonical
-UUIDs.
+Onboarding research keeps a bounded offering harvest of things a customer buys,
+hires, books or enrolls in as reviewable evidence. Recovered starting topics
+describe confirmed offerings rather than restate the provider's category;
+unsupported topics are not invented. Topic names must be bounded and
+brand-neutral, and admitted topics receive canonical UUIDs.
 
 Topic distinctness uses singular-normalized token identity, not character
 similarity: men's and women's departments must not merge because their spellings
@@ -54,8 +51,7 @@ technical retries and partial-result behavior remain. Concurrent sibling
 batches do not coordinate their accepted text; final admission handles exact
 duplicates.
 
-Onboarding admits a smaller valid portfolio without filler or semantic retries.
-Subsequent prompt generation retains its requested-count, topic, cohort and
+Prompt generation retains its requested-count, topic, cohort and
 batching semantics. Saving/activation retains explicit user-action
 boundaries. Generation evidence freezes buyer-query policy, generator, slot,
 context/source and actual provider/model provenance; historical prompts are not

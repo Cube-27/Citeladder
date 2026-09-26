@@ -51,34 +51,6 @@ _FEEDONOMICS = GoldenOnboardingCase(
         "Lengow",
     ),
     buyer_register="research_comparative",
-    gold_buyer_prompts=(
-        "best product feed management software for ecommerce",
-        "how to sync shopify catalog to google shopping and amazon",
-        "product feed management tools compared",
-        "how do i fix google merchant center disapprovals at scale",
-        "best way to list products on multiple marketplaces automatically",
-        "product feed optimization tools for large catalogs",
-        "software to manage product data across amazon walmart ebay",
-        "enterprise feed management platform pricing",
-        "how to automate product feeds for shopping ads",
-        "tools that handle marketplace integrations for retailers",
-        "what is a product feed management platform",
-        "best feed tool for agencies managing multiple clients",
-    ),
-    gold_branded_prompts=(
-        "feedonomics vs channable",
-        "is feedonomics worth the price",
-        "feedonomics alternatives",
-        "feedonomics vs productsup for enterprise",
-        "does feedonomics support walmart marketplace",
-    ),
-    products_or_services=(
-        "product feed management",
-        "marketplace integrations",
-        "catalog optimization",
-    ),
-    use_cases=("sell on marketplaces", "shopping ads", "manage product data"),
-    market_terms=("united states", "u.s.", "us market", "usa"),
 )
 
 
@@ -120,38 +92,6 @@ _CANVA = GoldenOnboardingCase(
         "Figma",
     ),
     buyer_register="research_comparative",
-    gold_buyer_prompts=(
-        "easiest graphic design tool for non designers",
-        "best free tool to make social media posts",
-        "how to make a presentation look professional without design skills",
-        "best design app for small business marketing",
-        "free alternative to photoshop for simple designs",
-        "tool for making instagram posts with templates",
-        "best software for shared team brand templates",
-        "how to create a logo without hiring a designer",
-        "design tool that works in the browser with no install",
-        "best app for making flyers and posters",
-        "cheap design software for nonprofits",
-        "collaborative design tool for marketing teams",
-    ),
-    gold_branded_prompts=(
-        "is canva pro worth it",
-        "canva vs adobe express",
-        "canva vs figma for presentations",
-        "is the canva free version enough for a small business",
-        "canva alternatives for professional design",
-    ),
-    products_or_services=(
-        "graphic design",
-        "presentation design",
-        "social media design",
-    ),
-    use_cases=(
-        "create marketing materials",
-        "team collaboration",
-        "brand templates",
-    ),
-    market_terms=("australia", "australian", "aud"),
 )
 
 
@@ -197,34 +137,6 @@ _URBAN_COMPANY = GoldenOnboardingCase(
         "Justdial",
     ),
     buyer_register="local_urgent",
-    gold_buyer_prompts=(
-        "salon at home service bangalore",
-        "best home cleaning service near me",
-        "ac servicing at home bangalore price",
-        "trusted plumber near me bangalore",
-        "how much does deep cleaning cost in mumbai",
-        "at home spa service delhi",
-        "electrician home visit charges bangalore",
-        "best pest control service near me",
-        "home painting service cost bangalore",
-        "reliable carpenter near me hyderabad",
-        "waxing at home service price delhi",
-        "washing machine repair at home near me",
-    ),
-    gold_branded_prompts=(
-        "is urban company reliable",
-        "urban company vs local salon price",
-        "urban company ac service review",
-        "is urban company worth it for home cleaning",
-        "urban company charges vs local plumber",
-    ),
-    products_or_services=(
-        "at-home salon services",
-        "home cleaning",
-        "appliance repair",
-    ),
-    use_cases=("book a home service", "compare service prices", "urgent repair"),
-    market_terms=("india", "indian", "inr"),
 )
 
 
@@ -269,34 +181,6 @@ _JUPITER = GoldenOnboardingCase(
         "Kotak 811",
     ),
     buyer_register="advice_seeking",
-    gold_buyer_prompts=(
-        "best digital banking app india",
-        "zero balance savings account online india",
-        "which banking app has the best user experience india",
-        "best neobank in india",
-        "digital savings account with high interest india",
-        "app to track all my spending automatically india",
-        "is it safe to use a neobank in india",
-        "best account for salary with no minimum balance",
-        "which bank app gives instant account opening",
-        "upi app with the best rewards india",
-        "how to open a savings account online without a branch visit",
-        "digital bank with a free debit card india",
-    ),
-    gold_branded_prompts=(
-        "is jupiter money safe",
-        "jupiter vs fi money",
-        "jupiter bank account review",
-        "is jupiter a real bank or just an app",
-        "jupiter money hidden charges",
-    ),
-    products_or_services=(
-        "digital savings account",
-        "spending insights",
-        "upi payments",
-    ),
-    use_cases=("open an account", "track spending", "make payments"),
-    market_terms=("india", "indian", "inr"),
 )
 
 
@@ -341,30 +225,6 @@ _ZOHO = GoldenOnboardingCase(
         "Google Workspace",
     ),
     buyer_register="research_comparative",
-    gold_buyer_prompts=(
-        "affordable crm for small business",
-        "all in one business software suite for smb",
-        "cheap alternative to salesforce",
-        "best crm for indian small business",
-        "office suite alternative to microsoft 365",
-        "integrated accounting and crm software",
-        "best helpdesk software for small teams",
-        "business email hosting with own domain cheap",
-        "hr and payroll software for a small company india",
-        "project management tool that integrates with crm",
-        "business software that does not charge heavily per user",
-        "best invoicing software for freelancers india",
-    ),
-    gold_branded_prompts=(
-        "zoho vs salesforce for small business",
-        "is zoho one worth it",
-        "zoho crm vs hubspot pricing",
-        "is zoho good enough for enterprise",
-        "zoho mail vs google workspace",
-    ),
-    products_or_services=("crm software", "business email", "accounting software"),
-    use_cases=("manage customers", "run business operations", "send invoices"),
-    market_terms=("india", "indian", "inr"),
 )
 
 
@@ -407,38 +267,6 @@ _VALTECH = GoldenOnboardingCase(
         "Bounteous",
     ),
     buyer_register="research_comparative",
-    gold_buyer_prompts=(
-        "best agency for a commercetools implementation",
-        "who can replatform our ecommerce site to composable commerce",
-        "digital transformation consultancies for retail brands",
-        "how do i choose an ecommerce implementation partner",
-        "agencies that do sap commerce cloud migrations",
-        "systems integrator for a headless commerce build",
-        "which consultancy should we hire to rebuild our customer portal",
-        "digital agency with in house engineering and design",
-        "cost of hiring an agency to replatform an ecommerce site",
-        "best digital experience agencies for enterprise clients",
-        "who builds composable commerce for global brands",
-        "agency vs in house team for an ecommerce rebuild",
-    ),
-    gold_branded_prompts=(
-        "is valtech a good implementation partner",
-        "valtech vs publicis sapient",
-        "valtech ecommerce case studies",
-        "valtech vs accenture song for commerce",
-        "how much does valtech charge for a replatform",
-    ),
-    products_or_services=(
-        "ecommerce implementation",
-        "digital experience delivery",
-        "data and analytics consulting",
-    ),
-    use_cases=(
-        "replatform an ecommerce site",
-        "hire an implementation partner",
-        "modernise a digital experience",
-    ),
-    market_terms=("global", "worldwide", "international"),
 )
 
 

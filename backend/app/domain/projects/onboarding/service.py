@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import UTC, datetime
 
@@ -11,7 +10,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.normalization import normalize_alias
-from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.web_evidence.url_policy import registrable_domain
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_VERSION,
@@ -40,10 +38,7 @@ from app.domain.projects.business_context import BusinessContext
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryComplete,
     BrandDiscoveryCreate,
-    DiscoveryProfile,
-    DiscoveryTopic,
 )
-from app.domain.projects.offering_harvest import OfferingHarvest
 from app.domain.projects.onboarding.industry_library import (
     industry_context,
     industry_names,
@@ -54,11 +49,6 @@ from app.domain.projects.onboarding.normalization import (
     normalize_primary_market,
     normalize_website_url,
 )
-from app.domain.projects.onboarding.portfolio_generation import (
-    PortfolioResult,
-    generate_portfolio,
-)
-from app.domain.projects.onboarding.prompt_provenance import prompt_evidence
 from app.domain.projects.onboarding.research import research_brand
 from app.domain.projects.onboarding.site_resolution import (
     SiteNotFoundError,
@@ -66,15 +56,13 @@ from app.domain.projects.onboarding.site_resolution import (
 )
 from app.domain.projects.schemas import BrandInput, CompetitorInput, ProjectCreate
 from app.domain.projects.service import create_project
-from app.domain.prompts.portfolio_validation import brand_terms
-from app.domain.prompts.service import prepare_prompt_inserts
 from app.models.discovery import (
     BrandDiscovery,
     BrandDiscoveryTask,
     BrandResearchSnapshot,
 )
 from app.models.project import Project
-from app.models.prompt import Prompt, PromptSet, Topic
+from app.models.prompt import PromptSet
 
 IDEMPOTENCY_KEY_REQUIRED = "Idempotency-Key is required"
 
@@ -396,84 +384,6 @@ async def _attach_research_source_artifacts(
     return research_snapshot_id
 
 
-def _generated_topics(
-    project_id: uuid.UUID, discovery_topics: list[DiscoveryTopic]
-) -> list[Topic]:
-    return [
-        Topic(
-            id=topic.topic_id,
-            project_id=project_id,
-            name=topic.name,
-            description=topic.description,
-            origin="generated",
-        )
-        for topic in discovery_topics
-    ]
-
-
-def _generated_prompt(
-    item: dict,
-    *,
-    prompt_set_id: uuid.UUID,
-    topic: Topic | None,
-    generation_evidence: dict,
-) -> Prompt:
-    return Prompt(
-        prompt_set_id=prompt_set_id,
-        topic_id=topic.id if topic else None,
-        text=str(item["text"]),
-        theme=topic.name if topic else "",
-        intent=str(item["intent"]),
-        buyer_stage=str(item.get("buyer_stage") or ""),
-        prompt_intent=str(item.get("prompt_intent") or ""),
-        cohort=str(item["cohort"]),
-        branded=str(item["cohort"]) != PROMPT_COHORT_CORE,
-        origin="generated",
-        generation_evidence=generation_evidence,
-    )
-
-
-def _generated_prompts(
-    *,
-    prompt_set_id: uuid.UUID,
-    discovery_id: uuid.UUID,
-    prompts: list[dict],
-    discovery_topics: list[DiscoveryTopic],
-    topics_by_id: dict[str, Topic],
-    provider: str,
-    model: str,
-    intents: list[dict],
-    research_snapshot_id: uuid.UUID | None,
-) -> list[Prompt]:
-    intents_by_id = {item["id"]: item for item in intents}
-    refs_by_topic_id = {
-        str(item.topic_id): item.source_refs for item in discovery_topics
-    }
-    generated: list[Prompt] = []
-    for item in prompts:
-        topic_id = item.get("topic_id")
-        topic = topics_by_id.get(str(topic_id)) if topic_id else None
-        if topic is None and (item["cohort"] == PROMPT_COHORT_CORE or topic_id):
-            raise BrandDiscoveryError("Generated prompt references an unknown topic")
-        generated.append(
-            _generated_prompt(
-                item,
-                prompt_set_id=prompt_set_id,
-                topic=topic,
-                generation_evidence=prompt_evidence(
-                    item=item,
-                    discovery_id=discovery_id,
-                    provider=provider,
-                    model=model,
-                    intents_by_id=intents_by_id,
-                    refs_by_topic_id=refs_by_topic_id,
-                    research_snapshot_id=research_snapshot_id,
-                ),
-            )
-        )
-    return generated
-
-
 async def _persist_project_shell(
     session: AsyncSession,
     *,
@@ -482,7 +392,7 @@ async def _persist_project_shell(
     payload: BrandDiscoveryComplete,
     profile_sources: dict[str, dict[str, str]],
 ) -> uuid.UUID:
-    """Persist the immediately usable project and empty onboarding portfolio."""
+    """Persist the immediately usable project and its empty prompt set."""
     data = row.input_data
     profile = payload.profile
     project = await create_project(
@@ -529,144 +439,19 @@ async def _persist_project_shell(
     return project.id
 
 
-async def _canonical_generated_topics(
-    session: AsyncSession,
-    *,
-    project_id: uuid.UUID,
-    discovery_topics: list[DiscoveryTopic],
-) -> dict[str, Topic]:
-    existing = list(
-        (
-            await session.scalars(select(Topic).where(Topic.project_id == project_id))
-        ).all()
-    )
-    by_id = {str(topic.id): topic for topic in existing}
-    by_name = {topic.name.casefold(): topic for topic in existing}
-    missing: list[Topic] = []
-    for generated in _generated_topics(project_id, discovery_topics):
-        canonical = by_id.get(str(generated.id)) or by_name.get(
-            generated.name.casefold()
-        )
-        if canonical is None:
-            canonical = generated
-            missing.append(canonical)
-            by_name[canonical.name.casefold()] = canonical
-        by_id[str(generated.id)] = canonical
-    if missing:
-        session.add_all(missing)
-        await session.flush()
-    return by_id
-
-
-async def _persist_generated_prompts(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    row: BrandDiscovery,
-    prompts: list[dict],
-    discovery_topics: list[DiscoveryTopic],
-    prompt_provider: str,
-    prompt_model: str,
-    intents: list[dict],
-) -> None:
-    """Fill the shell's existing prompt set exactly once under the row lock."""
-    if row.project_id is None:
-        raise BrandDiscoveryError("Completion project shell is missing")
-    project = await session.scalar(
-        select(Project).where(
-            Project.id == row.project_id,
-            Project.workspace_id == workspace_id,
-        )
-    )
-    if project is None:
-        raise BrandDiscoveryError("Completion project shell is unavailable")
-    prompt_set = await session.scalar(
-        select(PromptSet).where(
-            PromptSet.project_id == project.id,
-            PromptSet.name == ONBOARDING_PROMPT_SET_NAME,
-        )
-    )
-    if prompt_set is None:
-        raise BrandDiscoveryError("Onboarding prompt set is missing")
-    approved_hashes = await prepare_prompt_inserts(
-        session,
-        workspace_id=workspace_id,
-        prompt_set_id=prompt_set.id,
-        texts=[str(item["text"]) for item in prompts],
-    )
-    by_id = await _canonical_generated_topics(
-        session, project_id=project.id, discovery_topics=discovery_topics
-    )
-    research_snapshot_id = await session.scalar(
-        select(BrandResearchSnapshot.id)
-        .where(
-            BrandResearchSnapshot.workspace_id == workspace_id,
-            BrandResearchSnapshot.discovery_id == row.id,
-        )
-        .order_by(BrandResearchSnapshot.created_at.desc())
-    )
-    prompt_rows = _generated_prompts(
-        prompt_set_id=prompt_set.id,
-        discovery_id=row.id,
-        prompts=prompts,
-        discovery_topics=discovery_topics,
-        topics_by_id=by_id,
-        provider=prompt_provider,
-        model=prompt_model,
-        intents=intents,
-        research_snapshot_id=research_snapshot_id,
-    )
-    retained = [
-        item for item in prompt_rows if item.normalized_text_hash in approved_hashes
-    ]
-    if len(retained) != len(prompts):
-        raise BrandDiscoveryError("Reviewed prompts must remain unique")
-    session.add_all(retained)
-
-
-def _confirmed_portfolio_inputs(
+def _confirmed_inputs(
     row: BrandDiscovery,
     *,
     payload: BrandDiscoveryComplete,
-) -> tuple[
-    list[str],
-    list[dict],
-    str,
-    str,
-    dict[str, dict[str, str]],
-]:
+) -> tuple[list[str], list[dict], dict[str, dict[str, str]]]:
     domains = _confirmed_domains(payload.domains)
     competitors = _confirmed_competitors(
         payload.competitors,
         brand_name=str(row.input_data["brand_name"]),
         owned_domains=domains,
     )
-    brand_name = str(row.input_data["brand_name"])
-    primary_market = str(row.input_data["primary_market"])
     profile_sources = _reviewed_profile_sources(payload.profile.model_dump())
-    return (
-        domains,
-        competitors,
-        brand_name,
-        primary_market,
-        profile_sources,
-    )
-
-
-def _category_vocabulary(profile: DiscoveryProfile) -> list[str]:
-    """The words this business's own category uses.
-
-    Confirmed at review, so it is the user's vocabulary rather than a guess.
-    A brand token that also appears here is category language and must stay
-    usable in organic prompts -- see `brand_terms`.
-    """
-    return [
-        *[profile.category],
-        *profile.category_options,
-        *profile.category_aliases,
-        *profile.category_terms,
-        *profile.products_services,
-    ]
+    return domains, competitors, profile_sources
 
 
 def _domain_brand_aliases(domains: list[str]) -> list[str]:
@@ -701,11 +486,9 @@ def _seed_brand_aliases(brand_name: str, domains: list[str]) -> list[str]:
     `app.analysis.normalization` covers the joined/split pair either way.
 
     A label is only trusted when it is RECOGNISABLY THIS BRAND.
-    `_domain_brand_aliases` was written as a ban list for generated prompts,
-    where an over-broad entry only costs a prompt; here the same string decides
-    what counts as a mention, where an over-broad entry inflates the number the
-    customer is paying to measure. "shop-online.com" would otherwise make every
-    "shop online" in every answer a sighting of the brand.
+    The label decides what counts as a mention, so an over-broad entry inflates
+    the number the customer is paying to measure. "shop-online.com" would
+    otherwise make every "shop online" in every answer a sighting of the brand.
     """
     brand_key = brand_name.strip().casefold()
     return [
@@ -737,58 +520,3 @@ def _names_the_brand(alias: str, brand_name: str) -> bool:
         return False
     shorter, longer = sorted((label, brand), key=len)
     return len(shorter) >= 4 and longer.startswith(shorter)
-
-
-async def _generate_confirmed_portfolio(
-    *,
-    payload: BrandDiscoveryComplete,
-    domains: list[str],
-    brand_name: str,
-    primary_market: str,
-    language_code: str,
-    competitors: list[dict],
-    harvest: OfferingHarvest,
-    page_evidence: list[dict[str, str]],
-) -> PortfolioResult:
-    try:
-        async with asyncio.timeout(
-            brand_discovery_settings.portfolio_generation_timeout_seconds
-        ):
-            result = await generate_portfolio(
-                brand_name=brand_name,
-                brand_terms=brand_terms(
-                    brand_name,
-                    _domain_brand_aliases(domains),
-                    _category_vocabulary(payload.profile),
-                ),
-                primary_market=primary_market,
-                profile={
-                    **payload.profile.model_dump(),
-                    "business_context": BusinessContext.from_onboarding(
-                        payload.profile,
-                        primary_market=primary_market,
-                        language_code=language_code,
-                    ).model_dump(mode="json", exclude_none=True),
-                },
-                competitors=[competitor["name"] for competitor in competitors],
-                competitor_terms=[
-                    term
-                    for competitor in competitors
-                    for term in [competitor["name"], *competitor.get("aliases", [])]
-                ],
-                harvest=harvest,
-                page_evidence=page_evidence,
-            )
-    except ProviderError:
-        raise
-    except TimeoutError as exc:
-        raise BrandDiscoveryError("Initial prompt generation timed out") from exc
-    except ValueError as exc:
-        raise BrandDiscoveryError(
-            "Initial prompt generation returned invalid output"
-        ) from exc
-    except RuntimeError as exc:
-        raise BrandDiscoveryError("Initial prompt generation failed") from exc
-    if not result.prompts:
-        raise BrandDiscoveryError("Initial prompt generation failed")
-    return result

@@ -1,10 +1,8 @@
 """Score the live onboarding pipeline against the golden corpus.
 
 This is an opt-in developer tool, never part of CI: it makes real network
-requests to customer sites and real model calls.  It exists because the corpus
-is the *specification* for onboarding — the pipeline is built backwards from
-what this script measures, so the baseline must be produced before any product
-code changes.
+requests to customer sites and real model calls.  It scores onboarding research
+(business context and competitor suggestions); onboarding generates no prompts.
 
 Usage (from ``backend/``)::
 
@@ -51,38 +49,19 @@ def _load_env() -> None:
 
 _load_env()
 
-from app.domain.projects.offering_harvest import (  # noqa: E402
-    OfferingHarvest,
-    OfferingNode,
-)
 from app.domain.projects.onboarding.industry_library import (  # noqa: E402
     industry_context,
-    load_industry_library,
 )
 from app.domain.projects.onboarding.normalization import (  # noqa: E402
     normalize_website_url,
 )
-from app.domain.projects.onboarding.portfolio_generation import (  # noqa: E402
-    generate_portfolio,
-)
 from app.domain.projects.onboarding.research import research_brand  # noqa: E402
 from app.domain.projects.onboarding.site_resolution import resolve_site  # noqa: E402
-from app.domain.prompts.portfolio_validation import brand_terms  # noqa: E402
-from evaluations.onboarding_cases import (  # noqa: E402
-    CASES_BY_SLUG,
-    COLLISION_PAIR,
-    GOLDEN_ONBOARDING_CASES,
-)
+from evaluations.onboarding_cases import GOLDEN_ONBOARDING_CASES  # noqa: E402
 from evaluations.onboarding_corpus import GoldenOnboardingCase  # noqa: E402
 from evaluations.onboarding_golden import (  # noqa: E402
-    PortfolioPrompt,
-    collision_score,
     evaluate_competitors,
     evaluate_context,
-    evaluate_portfolio,
-    evaluate_realism,
-    gold_overlap,
-    template_tell,
 )
 
 # The current product makes the user pick an industry from a fixed list.  To
@@ -123,63 +102,11 @@ class CaseResult:
     detail: str = ""
     industry: str = ""
     subindustry: str = ""
-    prompts: list[PortfolioPrompt] = field(default_factory=list)
     metrics: dict[str, Any] = field(default_factory=dict)
-    issues: tuple[str, ...] = ()
     elapsed_ms: int = 0
 
 
-def _archetype_templates() -> list[str]:
-    """Every slot template the deterministic fallback can emit.
-
-    The library is the only place these skeletons exist, and it nests them per
-    industry and subindustry, so they are collected by walking it rather than
-    by mirroring its shape here.
-    """
-    templates: list[str] = []
-
-    def walk(node: Any) -> None:
-        if isinstance(node, dict):
-            text = node.get("text")
-            if isinstance(text, str) and text.strip():
-                templates.append(text)
-            for value in node.values():
-                walk(value)
-        elif isinstance(node, list):
-            for item in node:
-                walk(item)
-
-    walk(load_industry_library())
-    return list(dict.fromkeys(templates))
-
-
-def _evaluation_harvest(offerings: list[dict]) -> OfferingHarvest:
-    return OfferingHarvest(
-        nodes=tuple(
-            OfferingNode(
-                ref=str(item["ref"]),
-                label=str(item["label"]),
-                path=str(item["path"]),
-            )
-            for item in offerings
-            if all(item.get(key) for key in ("ref", "label", "path"))
-        )
-    )
-
-
-def _evaluation_evidence(manifest: list[dict]) -> list[dict[str, str]]:
-    return [
-        {
-            "evidence_ref": str(item["evidence_ref"]),
-            "text": str(item.get("text") or ""),
-            "url": str(item.get("source_url") or ""),
-        }
-        for item in manifest
-        if item.get("evidence_ref")
-    ]
-
-
-async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseResult:
+async def _run_case(case) -> CaseResult:
     started = time.perf_counter()
     industry, subindustry = BEST_FIT_INDUSTRY[case.slug]
     result = CaseResult(
@@ -205,43 +132,12 @@ async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseRes
         profile = _as_mapping(research.profile)
         competitors = [_competitor_name(entry) for entry in research.competitors]
         competitors = [name for name in competitors if name]
-        portfolio = await generate_portfolio(
-            brand_name=case.brand_name,
-            brand_terms=brand_terms(
-                case.brand_name,
-                [],
-                _category_vocabulary(profile),
-            ),
-            primary_market=market,
-            profile=profile,
-            competitors=competitors,
-            competitor_terms=_competitor_terms(research.competitors),
-            harvest=_evaluation_harvest(research.offerings),
-            page_evidence=_evaluation_evidence(research.evidence_manifest),
-        )
-        if not portfolio.prompts:
-            raise RuntimeError("initial portfolio failed")
-        prompts = list(portfolio.prompts)
-        result.prompts = [
-            PortfolioPrompt(
-                text=str(item["text"]),
-                cohort=str(item["cohort"]),
-                intent=str(item.get("intent") or ""),
-                pattern=str(item.get("pattern") or ""),
-            )
-            for item in prompts
-        ]
-        result.metrics = await _score(
+        result.metrics = _score(
             case,
-            result.prompts,
             profile=profile,
             competitors=competitors,
-            research_topics=[topic.name for topic in portfolio.topics],
             warnings=list(research.warnings),
-            judge_key=judge_key,
-            judge_model=judge_model,
         )
-        result.issues = evaluate_portfolio(case, result.prompts).issues
         result.ok = True
     except Exception as exc:  # noqa: BLE001 - the harness reports, never aborts
         result.ok = False
@@ -257,48 +153,6 @@ def _competitor_name(entry: Any) -> str:
     return str(getattr(entry, "name", "") or "").strip()
 
 
-def _competitor_aliases(entry: Any) -> list[str]:
-    """The alias list carried alongside a competitor name, in either shape."""
-    raw = (
-        entry.get("aliases")
-        if isinstance(entry, dict)
-        else getattr(entry, "aliases", None)
-    )
-    return [str(alias).strip() for alias in (raw or []) if str(alias).strip()]
-
-
-def _competitor_terms(entries: Any) -> list[str]:
-    """Every name a competitor answers to, so prompts can be scored against it."""
-    return [
-        term
-        for entry in entries or ()
-        for term in [_competitor_name(entry), *_competitor_aliases(entry)]
-        if term
-    ]
-
-
-def _category_vocabulary(profile: dict[str, Any]) -> list[str]:
-    """The business's own category language, mirroring the onboarding service.
-
-    A token the confirmed category uses is category language first and brand
-    language second, so it must stay usable in organic prompts.
-    """
-    values: list[str] = []
-    for key in (
-        "category",
-        "category_options",
-        "category_aliases",
-        "category_terms",
-        "products_services",
-    ):
-        raw = profile.get(key)
-        if isinstance(raw, str):
-            values.append(raw)
-        elif isinstance(raw, list):
-            values.extend(str(item) for item in raw)
-    return [value.strip() for value in values if value.strip()]
-
-
 def _as_mapping(value: Any) -> dict[str, Any]:
     """Research results carry either the Pydantic profile or its dumped dict."""
     if isinstance(value, dict):
@@ -307,46 +161,26 @@ def _as_mapping(value: Any) -> dict[str, Any]:
     return dict(dump()) if callable(dump) else {}
 
 
-async def _score(
+def _score(
     case,
-    prompts: list[PortfolioPrompt],
     *,
     profile,
     competitors: list[str],
-    research_topics: list[str],
     warnings: list[str],
-    judge_key: str,
-    judge_model: str | None,
 ) -> dict[str, Any]:
     competitor_eval = evaluate_competitors(case, competitors)
     context_eval = evaluate_context(
         case,
         {
             "category": str(profile.get("category") or ""),
-            "category_terms": [
-                *(profile.get("category_terms") or []),
-                *research_topics,
-            ],
+            "category_terms": list(profile.get("category_terms") or []),
             "business_model": str(profile.get("business_model") or ""),
             "secondary_business_models": profile.get("secondary_business_models") or [],
             "market_scope": str(profile.get("market_scope") or ""),
             "buyer_type": str(profile.get("business_type") or ""),
         },
     )
-    realism = await evaluate_realism(
-        case, prompts, api_key=judge_key, model=judge_model
-    )
-    gold = [*case.gold_buyer_prompts, *case.gold_branded_prompts]
-    portfolio = evaluate_portfolio(case, prompts)
     return {
-        "prompt_count": len(prompts),
-        "template_tell": round(template_tell(prompts, _archetype_templates()), 3),
-        "gold_overlap": round(gold_overlap(prompts, gold), 3),
-        "buyer_realism": None if realism.skipped else round(realism.score or 0.0, 1),
-        "machine_detection_rate": realism.machine_detection_rate,
-        "false_positive_rate": realism.false_positive_rate,
-        "judge_model": realism.model,
-        "judge_detail": realism.detail,
         "resolved_category": str(profile.get("category") or ""),
         "knowledge_strength": str(profile.get("knowledge_strength") or ""),
         "category_match": context_eval.category_match,
@@ -357,48 +191,28 @@ async def _score(
         "competitor_recall": round(competitor_eval.recall, 3),
         "competitors_found": competitors,
         "competitors_missing": list(competitor_eval.missing),
-        "portfolio_valid": portfolio.valid,
-        "portfolio_issues": list(portfolio.issues),
-        "branded_count": portfolio.branded_count,
-        "market_signal_rate": round(portfolio.market_signal_rate, 3),
-        "offering_coverage": round(portfolio.offering_coverage, 3),
-        "use_case_coverage": round(portfolio.use_case_coverage, 3),
-        "buyer_query_pattern_coverage": round(
-            portfolio.buyer_query_pattern_coverage, 3
-        ),
         "research_warnings": warnings,
     }
 
 
-def _markdown(results: list[CaseResult], collision: float | None) -> str:
+def _markdown(results: list[CaseResult]) -> str:
     lines = [
-        "# Onboarding baseline scorecard",
+        "# Onboarding research scorecard",
         "",
-        "| case | prompts | realism | template_tell | gold_overlap | "
-        "category | facets | comp_recall | valid |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| case | category | facets | jtbd | comp_precision | comp_recall |",
+        "|---|---|---|---|---|---|",
     ]
     for result in results:
         if not result.ok:
-            lines.append(f"| {result.slug} | FAILED: {result.detail} | | | | | | | |")
+            lines.append(f"| {result.slug} | FAILED: {result.detail} | | | | |")
             continue
         metrics = result.metrics
-        realism = metrics.get("buyer_realism")
         lines.append(
-            f"| {result.slug} | {metrics['prompt_count']} | "
-            f"{'skipped' if realism is None else realism} | "
-            f"{metrics['template_tell']} | {metrics['gold_overlap']} | "
+            f"| {result.slug} | "
             f"{'yes' if metrics['category_match'] else 'NO'} | "
-            f"{metrics['facet_accuracy']} | {metrics['competitor_recall']} | "
-            f"{'yes' if metrics['portfolio_valid'] else 'no'} |"
+            f"{metrics['facet_accuracy']} | {metrics['jtbd_coverage']} | "
+            f"{metrics['competitor_precision']} | {metrics['competitor_recall']} |"
         )
-    if collision is not None:
-        lines += [
-            "",
-            f"**cross_brand_collision** ({COLLISION_PAIR[0]} vs "
-            f"{COLLISION_PAIR[1]}): **{collision:.3f}** "
-            "(1.0 = identical neutral prompts)",
-        ]
     return "\n".join(lines)
 
 
@@ -406,7 +220,6 @@ def _parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--baseline", action="store_true", help="run every case")
     parser.add_argument("--case", action="append", default=[], help="run one slug")
-    parser.add_argument("--judge-model", default=None)
     parser.add_argument("--out", default=None, help="write JSON results here")
     args = parser.parse_args()
     args.selected = _select_cases(parser, args)
@@ -430,23 +243,7 @@ def _select_cases(
     parser.error("pass --baseline for the whole corpus, or --case <slug>")
 
 
-def _collision_for(results: list[CaseResult]) -> float | None:
-    """Cross-brand collision, or None when either side of the pair did not pass."""
-    by_slug = {result.slug: result for result in results}
-    left, right = COLLISION_PAIR
-    if not (left in by_slug and right in by_slug):
-        return None
-    if not (by_slug[left].ok and by_slug[right].ok):
-        return None
-    return collision_score(
-        by_slug[left].prompts,
-        by_slug[right].prompts,
-        left_market_terms=CASES_BY_SLUG[left].market_terms,
-        right_market_terms=CASES_BY_SLUG[right].market_terms,
-    )
-
-
-def _payload(results: list[CaseResult], collision: float | None) -> dict[str, object]:
+def _payload(results: list[CaseResult]) -> dict[str, object]:
     return {
         "cases": [
             {
@@ -456,13 +253,10 @@ def _payload(results: list[CaseResult], collision: float | None) -> dict[str, ob
                 "detail": r.detail,
                 "industry": f"{r.industry}/{r.subindustry}".rstrip("/"),
                 "elapsed_ms": r.elapsed_ms,
-                "issues": list(r.issues),
-                "prompts": [{"text": p.text, "cohort": p.cohort} for p in r.prompts],
                 "metrics": r.metrics,
             }
             for r in results
-        ],
-        "cross_brand_collision": collision,
+        ]
     }
 
 
@@ -488,26 +282,19 @@ def _write_results(raw_destination: str, payload: dict[str, object]) -> None:
 async def main() -> int:
     args = _parse_arguments()
 
-    judge_key = os.environ.get("GROQ_API_KEY", "")
-    if not judge_key:
-        print("! GROQ_API_KEY absent - buyer_realism will be skipped", file=sys.stderr)
-
     results: list[CaseResult] = []
     for case in args.selected:
         print(f"-> {case.slug} ...", file=sys.stderr, flush=True)
-        result = await _run_case(
-            case, judge_key=judge_key, judge_model=args.judge_model
-        )
+        result = await _run_case(case)
         status = "ok" if result.ok else f"FAILED ({result.detail})"
         print(f"   {status} in {result.elapsed_ms}ms", file=sys.stderr, flush=True)
         results.append(result)
 
-    collision = _collision_for(results)
     if args.out:
-        await asyncio.to_thread(_write_results, args.out, _payload(results, collision))
+        await asyncio.to_thread(_write_results, args.out, _payload(results))
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    print(_markdown(results, collision))
+    print(_markdown(results))
     return 0
 
 

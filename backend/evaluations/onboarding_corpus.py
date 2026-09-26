@@ -1,18 +1,13 @@
 """Golden corpus of real businesses used to specify onboarding context quality.
 
-This corpus is the *specification* for onboarding, not a regression fixture: the
-expected values here were authored first, and the pipeline is built backwards
-from them.  Every case carries two hand-authored prompt sets written the way the
-business's actual customers speak, because the product's stated goal is to
-produce prompts real buyers would type into an answer engine.
+This corpus is the *specification* for onboarding research, not a regression
+fixture: the expected context and competitors were authored first, and the
+pipeline is built backwards from them. Onboarding generates no prompts, so the
+corpus carries no prompt expectations.
 
 Facet coverage is deliberate.  Cases were chosen to span business model, market
 scope, buyer type, company size and — critically — *model prior strength*, so
 the corpus exercises both well-known brands and brands the model barely knows.
-``wakefit-india`` and ``burrow-united-states`` are a deliberate collision pair:
-same category, different geography and size.  A taxonomy-driven generator gives
-them identical prompts, which makes that failure measurable rather than
-arguable.
 
 The corpus contains public, well-known brands only.  It is a quality gate for a
 generated review payload, never a source of production facts.
@@ -49,7 +44,7 @@ __all__ = [
 
 @dataclass(frozen=True, slots=True)
 class GoldenOnboardingCase:
-    """Expected onboarding context and buyer language for one real business."""
+    """Expected onboarding context and competitors for one real business."""
 
     slug: str
     brand_name: str
@@ -68,12 +63,4 @@ class GoldenOnboardingCase:
     category_terms: tuple[str, ...]
     expected_competitors: tuple[str, ...]
 
-    # --- the primary expectation -----------------------------------------
     buyer_register: str
-    gold_buyer_prompts: tuple[str, ...]
-    gold_branded_prompts: tuple[str, ...]
-
-    # --- retained deterministic coverage checks ---------------------------
-    products_or_services: tuple[str, ...]
-    use_cases: tuple[str, ...]
-    market_terms: tuple[str, ...]

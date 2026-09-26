@@ -13,7 +13,7 @@ positioning; [the index](README.md) routes to substantive feature documents.
 | Owner | Writes | Downstream contract |
 |---|---|---|
 | Workspace/project access | Identity, membership and project boundaries | Every product action/read is authorized |
-| Onboarding | Research evidence and reviewed company/competitor context | Confirmed context and initial portfolio |
+| Onboarding | Research evidence and reviewed company/competitor context | Confirmed context and a project with an empty prompt set |
 | Site Health | Acquisition, normalized facts, classifications, findings and snapshots | Persisted site evidence and change observations |
 | Integrations / Demand | Imported observations, projections and demand signals | Exact-window/source evidence |
 | Prompts / Visibility | Portfolios, frozen audits, answer artifacts and measurements | Comparable observed mentions/citations |
@@ -35,7 +35,8 @@ projections, then user-visible findings, signals, drafts, opportunities and
 measurements. Exact source IDs and relevant processing versions make each
 derived result attributable. Persisted does not mean verified truth.
 
-Onboarding confirms business context before portfolio generation. Site Health
+Onboarding confirms business context and creates no prompts; the user then
+chooses what to track. Site Health
 and integrations acquire evidence within their configured bounds. Opportunities
 groups actions by target into Actions. The Agent freezes context from durable
 identifiers, reads further evidence through bounded tools and returns a

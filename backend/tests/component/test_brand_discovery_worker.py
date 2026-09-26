@@ -26,12 +26,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_QUEUE_SPEC,
-    DISCOVERY_STATUS_COMPLETING,
     DISCOVERY_STATUS_FAILED,
-    ERROR_BRAND_COMPLETION,
     ERROR_BRAND_DISCOVERY,
-    TASK_KIND_BRAND_COMPLETION,
-    WARNING_BRAND_COMPLETION_FAILED,
 )
 from app.core.config.provider_catalog import ERROR_AUTH, ERROR_RATE_LIMIT
 from app.core.config.task_queue import (
@@ -179,20 +175,13 @@ async def test_a_failure_inside_the_budget_is_scheduled_for_retry(
 
 
 @pytest.mark.asyncio
-async def test_non_retryable_provider_failure_ends_completion_immediately(
+async def test_non_retryable_provider_failure_ends_research_immediately(
     db_session: AsyncSession,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     workspace_id = await _workspace(db_session)
-    discovery = await _discovery(
-        db_session, workspace_id, status=DISCOVERY_STATUS_COMPLETING
-    )
-    task = await _task(
-        db_session,
-        discovery,
-        max_attempts=3,
-        task_kind=TASK_KIND_BRAND_COMPLETION,
-    )
+    discovery = await _discovery(db_session, workspace_id)
+    task = await _task(db_session, discovery, max_attempts=3)
     await db_session.commit()
 
     await worker_module._finalize(
@@ -207,39 +196,6 @@ async def test_non_retryable_provider_failure_ends_completion_immediately(
     assert row.status == TASK_STATUS_FAILED
     assert row.attempt_count == 1
     assert row.error_code == ERROR_AUTH
-
-
-@pytest.mark.asyncio
-async def test_rate_limit_does_not_queue_the_same_completion_again(
-    db_session: AsyncSession,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    workspace_id = await _workspace(db_session)
-    discovery = await _discovery(
-        db_session, workspace_id, status=DISCOVERY_STATUS_COMPLETING
-    )
-    task = await _task(
-        db_session,
-        discovery,
-        max_attempts=3,
-        task_kind=TASK_KIND_BRAND_COMPLETION,
-    )
-    await db_session.commit()
-
-    await worker_module._finalize(
-        task.id,
-        worker_id=_OWNER,
-        error=ProviderError(
-            "rate limited", error_code=ERROR_RATE_LIMIT, retryable=True
-        ),
-    )
-
-    async with session_factory() as session:
-        row = await session.get(BrandDiscoveryTask, task.id)
-    assert row is not None
-    assert row.status == TASK_STATUS_FAILED
-    assert row.attempt_count == 1
-    assert row.error_code == ERROR_RATE_LIMIT
 
 
 @pytest.mark.asyncio
@@ -474,45 +430,6 @@ async def test_a_failing_discovery_leaves_the_task_retryable(
     assert row is not None
     assert row.status == TASK_STATUS_RETRY_WAIT
     assert row.error_code == ERROR_BRAND_DISCOVERY
-
-
-@pytest.mark.asyncio
-async def test_an_exhausted_completion_failure_terminalizes_the_discovery(
-    db_session: AsyncSession,
-    session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    workspace_id = await _workspace(db_session)
-    discovery = await _discovery(
-        db_session, workspace_id, status=DISCOVERY_STATUS_COMPLETING
-    )
-    task = await _task(
-        db_session,
-        discovery,
-        status=TASK_STATUS_QUEUED,
-        attempt_count=2,
-        max_attempts=3,
-        lease_owner=None,
-        task_kind=TASK_KIND_BRAND_COMPLETION,
-    )
-    await db_session.commit()
-
-    async def _fail_completion(*_: object, **__: object) -> None:
-        raise RuntimeError("provider unavailable")
-
-    monkeypatch.setattr(worker_module, "run_completion", _fail_completion)
-
-    assert await worker_module.run_once(_OWNER) is True
-
-    async with session_factory() as session:
-        task_row = await session.get(BrandDiscoveryTask, task.id)
-        parent = await session.get(BrandDiscovery, discovery.id)
-    assert task_row is not None
-    assert task_row.status == TASK_STATUS_FAILED
-    assert parent is not None
-    assert parent.status == DISCOVERY_STATUS_FAILED
-    assert parent.error_code == ERROR_BRAND_COMPLETION
-    assert WARNING_BRAND_COMPLETION_FAILED in parent.warnings
 
 
 # --- reaping expired leases -----------------------------------------------

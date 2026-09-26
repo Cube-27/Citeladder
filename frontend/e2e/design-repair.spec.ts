@@ -148,7 +148,7 @@ test('first creation opens its project and repeated New project visits start fre
     return route.fulfill({
       json: {
         discovery_id: DISCOVERY_ID,
-        status: 'completing',
+        status: 'project_created',
         project_id: FIXTURE_PROJECT.id,
         crawl_id: null,
         activation_state: 'queued',

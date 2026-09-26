@@ -2,6 +2,12 @@
 
 ## Active
 
+- [Prompt generation v2](citeladder-prompt-generation-v2.md)
+  — owner-approved on 26 September 2026. PR 1 (empty onboarding portfolio,
+  synchronous completion, prompt-eval removal, Overview call to action) in
+  progress. PR 2 (direct Prompts workflow, simpler CSV) and PR 3 (rebuilt
+  generation with review and JEV gate) follow in order.
+
 - [Demo and production hardening](citeladder-production-hardening.md)
   — repository-side Phase 1 subset implemented locally on 26 September 2026 in
   `codex/production-hardening`; merge, CI, deployment and runtime retest pending.

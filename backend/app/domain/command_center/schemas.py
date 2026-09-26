@@ -105,6 +105,9 @@ class CommandCenterResponse(BaseModel):
     facts: CommandCenterFacts
     loop: CommandCenterLoop
     next_action: CommandCenterNextAction
+    # Active prompts in the project. Zero is a real state: onboarding creates
+    # no prompts, so a new project asks the user to choose what to track.
+    active_prompt_count: int = 0
     track: CommandCenterTrackSummary
     measurement: CommandCenterMeasurement | None = None
     state: CommandCenterState

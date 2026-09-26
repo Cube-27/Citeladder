@@ -198,7 +198,7 @@ export function CreationStage({
     {
       id: 'open',
       label: 'Opening your workspace',
-      detail: 'Starting topics can continue in the background after you arrive.',
+      detail: 'Next, choose the questions you want to track.',
       state: projectCommitted ? 'active' : 'pending',
     },
   ];

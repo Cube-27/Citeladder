@@ -1,10 +1,9 @@
-"""Atomic project creation and durable onboarding queue contracts."""
+"""Atomic, prompt-free project creation and onboarding queue contracts."""
 
 from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import httpx
@@ -15,16 +14,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_QUEUE_SPEC,
     ERROR_BRAND_DISCOVERY,
-    brand_discovery_settings,
+    LEGACY_DISCOVERY_STATUS_COMPLETING,
+    LEGACY_TASK_KIND_BRAND_COMPLETION,
 )
 from app.core.config.entitlements import KEY_PROJECT_SLOTS, KEY_PROMPT_SLOTS
-from app.core.config.task_queue import TASK_STATUS_QUEUED, TASK_STATUS_RETRY_WAIT
-from app.core.config.visibility_prompts import CONFIRMED_OFFERING_SOURCE_REF
+from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.entitlements.types import GrantSpec
-from app.domain.projects.discovery_schemas import BrandDiscoveryComplete, DiscoveryTopic
+from app.domain.projects.discovery_schemas import BrandDiscoveryComplete
 from app.domain.projects.onboarding import completion as onboarding_completion
 from app.domain.projects.onboarding import service as onboarding_service
-from app.domain.projects.onboarding.portfolio_generation import PortfolioResult
 from app.domain.projects.onboarding.site_resolution import (
     ResolvedSite,
     SiteNotFoundError,
@@ -141,38 +139,6 @@ async def _seed_ready_discovery(
     return row
 
 
-async def _completion_shell(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
-    await _register(client, f"topic-persistence-{uuid.uuid4()}@example.com")
-    async with session_factory() as session:
-        workspace_id = await session.scalar(select(Workspace.id).limit(1))
-        assert workspace_id is not None
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace_id,
-            grants=(
-                GrantSpec(key=KEY_PROJECT_SLOTS, value=10),
-                GrantSpec(key=KEY_PROMPT_SLOTS, value=100),
-            ),
-        )
-        discovery = await _seed_ready_discovery(session, workspace_id)
-        await session.commit()
-        discovery_id = discovery.id
-    async with session_factory() as session:
-        row, _ = await onboarding_completion.complete_discovery(
-            session,
-            workspace_id=workspace_id,
-            discovery_id=discovery_id,
-            payload=BrandDiscoveryComplete.model_validate(_completion_payload()),
-            idempotency_key="persist-topics",
-            reviewer_id=uuid.uuid4(),
-        )
-        assert row.project_id is not None
-        return workspace_id, discovery_id, row.project_id
-
-
 @pytest.mark.asyncio
 async def test_selected_domain_failure_keeps_review_editable_without_shell(
     client: httpx.AsyncClient,
@@ -213,123 +179,6 @@ async def test_selected_domain_failure_keeps_review_editable_without_shell(
         assert persisted is not None
         assert persisted.status == "ready"
         assert persisted.project_id is None
-
-
-@pytest.mark.asyncio
-async def test_completion_persists_missing_topics_and_resolves_existing_names(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    workspace_id, discovery_id, project_id = await _completion_shell(
-        client, session_factory
-    )
-    reused = DiscoveryTopic(
-        topic_id=uuid.uuid4(), name="Existing need", source_refs=["confirmed-profile"]
-    )
-    added = DiscoveryTopic(
-        topic_id=uuid.uuid4(), name="New need", source_refs=["confirmed-profile"]
-    )
-    async with session_factory() as session:
-        existing = Topic(project_id=project_id, name="Existing need", origin="manual")
-        session.add(existing)
-        await session.commit()
-        row = await session.get(BrandDiscovery, discovery_id)
-        assert row is not None
-        await onboarding_service._persist_generated_prompts(
-            session,
-            workspace_id=workspace_id,
-            row=row,
-            prompts=[
-                {
-                    "topic_id": str(reused.topic_id),
-                    "text": "Which existing solutions fit teams",
-                    "intent": "discovery",
-                    "cohort": "core",
-                },
-                {
-                    "topic_id": str(added.topic_id),
-                    "text": "How do teams solve the new need",
-                    "intent": "discovery",
-                    "cohort": "core",
-                },
-                {
-                    "topic_id": None,
-                    "text": "Is Acme suitable for teams",
-                    "intent": "discovery",
-                    "cohort": "brand_diagnostic",
-                },
-            ],
-            discovery_topics=[reused, added],
-            prompt_provider="test",
-            prompt_model="test",
-            intents=[],
-        )
-        await session.commit()
-    async with session_factory() as session:
-        topics = (
-            await session.scalars(select(Topic).where(Topic.project_id == project_id))
-        ).all()
-        prompts = (await session.scalars(select(Prompt))).all()
-    assert {topic.name for topic in topics} == {"Existing need", "New need"}
-    assert {prompt.topic_id for prompt in prompts if prompt.cohort == "core"} == {
-        existing.id,
-        added.topic_id,
-    }
-    assert (
-        next(
-            prompt for prompt in prompts if prompt.cohort == "brand_diagnostic"
-        ).topic_id
-        is None
-    )
-
-
-@pytest.mark.parametrize("cohort", ["core", "brand_diagnostic"])
-@pytest.mark.asyncio
-async def test_unresolved_core_topic_rolls_back_generated_rows(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-    cohort: str,
-) -> None:
-    workspace_id, discovery_id, project_id = await _completion_shell(
-        client, session_factory
-    )
-    topic = DiscoveryTopic(
-        topic_id=uuid.uuid4(), name="New need", source_refs=["confirmed-profile"]
-    )
-    async with session_factory() as session:
-        row = await session.get(BrandDiscovery, discovery_id)
-        assert row is not None
-        with pytest.raises(
-            onboarding_service.BrandDiscoveryError, match="unknown topic"
-        ):
-            await onboarding_service._persist_generated_prompts(
-                session,
-                workspace_id=workspace_id,
-                row=row,
-                prompts=[
-                    {
-                        "topic_id": str(uuid.uuid4()),
-                        "text": "Which solutions fit teams",
-                        "intent": "discovery",
-                        "cohort": cohort,
-                    }
-                ],
-                discovery_topics=[topic],
-                prompt_provider="test",
-                prompt_model="test",
-                intents=[],
-            )
-        await session.rollback()
-    async with session_factory() as session:
-        assert (
-            await session.scalar(
-                select(func.count())
-                .select_from(Topic)
-                .where(Topic.project_id == project_id)
-            )
-            == 0
-        )
-        assert await session.scalar(select(func.count()).select_from(Prompt)) == 0
 
 
 @pytest.mark.asyncio
@@ -408,84 +257,12 @@ async def test_reaper_fails_active_parent_without_regressing_ready_parent(
         assert ready_persisted.status == "ready"
 
 
-@pytest.mark.asyncio
-async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_health(
+async def _seed_workspace_with_ready_discovery(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    generation_calls = 0
-    selected_topics = [
-        DiscoveryTopic(
-            topic_id=uuid.uuid4(),
-            name=name,
-            description="Confirmed fixture topic",
-            source_refs=[CONFIRMED_OFFERING_SOURCE_REF],
-        )
-        for name in ("Process mining", "Journey analytics", "Workflow analytics")
-    ]
-
-    async def fixture_portfolio(**kwargs) -> PortfolioResult:
-        nonlocal generation_calls
-        generation_calls += 1
-        topic_ids = [str(topic.topic_id) for topic in selected_topics]
-        organic_texts = (
-            "how can teams understand inefficient business workflows",
-            "which tools reveal bottlenecks in complex processes",
-            "how do companies compare process mining platforms",
-            "what software maps customer journeys across channels",
-            "which analytics tools explain workflow performance",
-            "how can operations teams find repeated process delays",
-            "what should I consider when choosing journey analytics software",
-            "which platform helps monitor enterprise workflow improvements",
-        )
-        prompts = [
-            {
-                "topic_id": topic_ids[index % len(topic_ids)],
-                "text": text,
-                "intent": "discovery",
-                "buyer_intent_id": "need-1",
-                "cohort": "core",
-            }
-            for index, text in enumerate(organic_texts)
-        ]
-        prompts.extend(
-            [
-                {
-                    "topic_id": topic_ids[0],
-                    "text": "is Acme suitable for workflow analytics",
-                    "intent": "discovery",
-                    "buyer_intent_id": "need-1",
-                    "cohort": "brand_diagnostic",
-                },
-                {
-                    "topic_id": topic_ids[1],
-                    "text": "how does Acme support process mining teams",
-                    "intent": "service",
-                    "buyer_intent_id": "need-1",
-                    "cohort": "brand_diagnostic",
-                },
-            ]
-        )
-        return PortfolioResult(
-            topics=tuple(selected_topics),
-            prompts=tuple(prompts),
-            intents=(
-                {
-                    "id": "need-1",
-                    "buyer_need": "Understand business workflows",
-                    "decision_intent": "learn",
-                    "buyer_stage": "awareness",
-                },
-            ),
-            provider="agent.test",
-            model="fake-model",
-        )
-
-    # This component test owns atomic completion, not a live application-model
-    # call. Supply an already validated Pass 2 portfolio fixture.
-    monkeypatch.setattr(onboarding_service, "generate_portfolio", fixture_portfolio)
-    await _register(client, "complete-owner@example.com")
+    email: str,
+) -> uuid.UUID:
+    await _register(client, email)
     async with session_factory() as session:
         workspace_id = await session.scalar(select(Workspace.id).limit(1))
         assert workspace_id is not None
@@ -499,10 +276,32 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
         )
         discovery = await _seed_ready_discovery(session, workspace_id)
         await session.commit()
-        discovery_id = discovery.id
+        return discovery.id
+
+
+async def _assert_empty_project(session: AsyncSession, discovery_id: uuid.UUID) -> None:
+    persisted = await session.get(BrandDiscovery, discovery_id)
+    assert persisted is not None
+    assert persisted.status == "project_created"
+    assert persisted.topics == []
+    assert persisted.progress["prompts_prepared"] == 0
+    assert await session.scalar(select(func.count()).select_from(Project)) == 1
+    assert await session.scalar(select(func.count()).select_from(PromptSet)) == 1
+    assert await session.scalar(select(func.count()).select_from(Topic)) == 0
+    assert await session.scalar(select(func.count()).select_from(Prompt)) == 0
+
+
+@pytest.mark.asyncio
+async def test_completion_creates_an_empty_project_atomically_and_idempotently(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    discovery_id = await _seed_workspace_with_ready_discovery(
+        client, session_factory, "complete-owner@example.com"
+    )
 
     # Independent request sessions race on the discovery lock. Both must see
-    # the same atomically committed shell and durable task.
+    # the same committed project.
     response, concurrent_replay = await asyncio.gather(
         client.post(
             f"/api/v1/brand-discoveries/{discovery_id}/complete",
@@ -515,21 +314,21 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
             json=_completion_payload(),
         ),
     )
-    assert response.status_code == 202, response.text
-    assert concurrent_replay.status_code == 202, concurrent_replay.text
+    assert response.status_code == 200, response.text
+    assert concurrent_replay.status_code == 200, concurrent_replay.text
     accepted = response.json()
-    assert accepted["status"] == "completing"
+    assert accepted["status"] == "project_created"
     assert accepted["project_id"] is not None
     assert accepted["crawl_id"] is None
+    assert accepted["warnings"] == []
     assert concurrent_replay.json() == accepted
 
-    # A normal sequential replay also returns the same shell.
     replay = await client.post(
         f"/api/v1/brand-discoveries/{discovery_id}/complete",
         headers={"Idempotency-Key": "complete-1"},
         json=_completion_payload(),
     )
-    assert replay.status_code == 202
+    assert replay.status_code == 200
     assert replay.json() == accepted
 
     conflict = await client.post(
@@ -540,172 +339,26 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
     assert conflict.status_code == 409
 
     async with session_factory() as session:
-        task = await session.scalar(
-            select(BrandDiscoveryTask).where(
-                BrandDiscoveryTask.discovery_id == discovery_id,
-                BrandDiscoveryTask.task_kind == "brand_completion",
-            )
-        )
-        assert task is not None
-        assert task.max_attempts == brand_discovery_settings.completion_maximum_attempts
-        assert await session.scalar(select(func.count()).select_from(Project)) == 1
-        assert await session.scalar(select(func.count()).select_from(PromptSet)) == 1
-        assert await session.scalar(select(func.count()).select_from(Topic)) == 0
-        assert await session.scalar(select(func.count()).select_from(Prompt)) == 0
-        # A replay repairs the only non-atomic operational failure still
-        # possible: an operator deleting the durable task after the shell
-        # transaction committed. It must not create another shell.
-        await session.delete(task)
-        await session.commit()
-
-    repaired = await client.post(
-        f"/api/v1/brand-discoveries/{discovery_id}/complete",
-        headers={"Idempotency-Key": "complete-1"},
-        json=_completion_payload(),
-    )
-    assert repaired.status_code == 202
-    assert repaired.json() == accepted
-    async with session_factory() as session:
+        await _assert_empty_project(session, discovery_id)
+        # Completion queues no background work: nothing is left to do.
         assert (
             await session.scalar(
                 select(func.count())
                 .select_from(BrandDiscoveryTask)
-                .where(
-                    BrandDiscoveryTask.discovery_id == discovery_id,
-                    BrandDiscoveryTask.task_kind == "brand_completion",
-                )
+                .where(BrandDiscoveryTask.discovery_id == discovery_id)
             )
-            == 1
+            == 0
         )
-        assert await session.scalar(select(func.count()).select_from(Project)) == 1
-
-    # The worker's queue binds the real SessionLocal at import; point both at
-    # the test database so the durable task can be claimed and recovered.
-    monkeypatch.setattr(brand_discovery_worker, "SessionLocal", session_factory)
-    monkeypatch.setattr(
-        brand_discovery_worker,
-        "_queue",
-        PostgresTaskQueue(session_factory, BRAND_DISCOVERY_QUEUE_SPEC),
-    )
-
-    # Simulate a process dying after provider I/O and prompt insertion flush,
-    # but before the completion transaction commits. The session rollback must
-    # discard that effect while the abandoned lease remains reclaimable.
-    claimed = await brand_discovery_worker._queue.claim(
-        owner="completion-abandoned", limit=1
-    )
-    assert len(claimed) == 1
-    claimed_task = claimed[0]
-    assert await brand_discovery_worker._queue.mark_running(
-        task_id=claimed_task.id, owner="completion-abandoned"
-    )
-    persist_prompts = onboarding_completion._persist_generated_prompts
-
-    async def fail_before_completion_commit(*args, **kwargs) -> None:
-        await persist_prompts(*args, **kwargs)
-        await args[0].flush()
-        raise RuntimeError("worker stopped before completion commit")
-
-    monkeypatch.setattr(
-        onboarding_completion,
-        "_persist_generated_prompts",
-        fail_before_completion_commit,
-    )
-    async with session_factory() as session:
-        row = await session.get(BrandDiscovery, discovery_id)
-        assert row is not None
-        with pytest.raises(RuntimeError, match="before completion commit"):
-            await onboarding_completion.run_completion(session, row)
-        await session.rollback()
-
-    async with session_factory() as session:
-        task = await session.get(BrandDiscoveryTask, claimed_task.id)
-        persisted = await session.get(BrandDiscovery, discovery_id)
-        assert task is not None
-        assert persisted is not None
-        assert persisted.status == "completing"
-        assert await session.scalar(select(func.count()).select_from(Prompt)) == 0
-        task.lease_expires_at = datetime.now(UTC) - timedelta(seconds=1)
-        await session.commit()
-
-    monkeypatch.setattr(
-        onboarding_completion,
-        "_persist_generated_prompts",
-        persist_prompts,
-    )
-    await brand_discovery_worker._reap_expired()
-    async with session_factory() as session:
-        task = await session.get(BrandDiscoveryTask, claimed_task.id)
-        assert task is not None
-        assert task.status == TASK_STATUS_RETRY_WAIT
-
-    assert await brand_discovery_worker.run_once("completion-test") is True
-    assert generation_calls == 2
-
-    # Simulate at-least-once delivery after the completion effect committed but
-    # before the original worker could durably acknowledge its queue row.
-    async with session_factory() as session:
-        task = await session.scalar(
-            select(BrandDiscoveryTask).where(
-                BrandDiscoveryTask.discovery_id == discovery_id,
-                BrandDiscoveryTask.task_kind == "brand_completion",
-            )
-        )
-        assert task is not None
-        task.status = TASK_STATUS_QUEUED
-        task.completed_at = None
-        await session.commit()
-    assert await brand_discovery_worker.run_once("completion-redelivery") is True
-    assert generation_calls == 2
-
-    settled = await client.post(
-        f"/api/v1/brand-discoveries/{discovery_id}/complete",
-        headers={"Idempotency-Key": "complete-1"},
-        json=_completion_payload(),
-    )
-    assert settled.status_code == 202
-    assert settled.json()["status"] == "project_created"
-    assert settled.json()["project_id"] is not None
-    assert settled.json()["warnings"] == []
-
-    async with session_factory() as session:
         project = await session.scalar(select(Project))
         assert project is not None
         assert project.industry == "Software"
         assert project.subindustry == "Analytics"
         assert project.primary_market == "US"
-        prompt_rows = (await session.scalars(select(Prompt))).all()
-        assert len(prompt_rows) == 10
-        assert sum(prompt.cohort == "core" for prompt in prompt_rows) == 8
-        diagnostic = [
-            prompt for prompt in prompt_rows if prompt.cohort == "brand_diagnostic"
-        ]
-        assert len(diagnostic) == 2
-        assert all(prompt.branded for prompt in diagnostic)
-        assert all(prompt.topic_id is not None for prompt in prompt_rows)
-        assert all(
-            prompt.generation_evidence.get("research_snapshot_id")
-            for prompt in prompt_rows
-        )
-        assert all(
-            prompt.generation_evidence.get("portfolio_version")
-            == "visibility-intent-portfolio-v1"
-            for prompt in prompt_rows
-        )
-        assert all(
-            prompt.generation_evidence.get("buyer_intent", {}).get("id") == "need-1"
-            for prompt in prompt_rows
-        )
-        assert all(
-            prompt.generation_evidence.get("topic_source_refs")
-            == [CONFIRMED_OFFERING_SOURCE_REF]
-            for prompt in prompt_rows
-        )
         profile = await session.scalar(select(BrandProfile))
         assert profile is not None
         # The confirm screen asks what you sell, who buys it and where; the
         # prose fields are not on it. Whatever arrives in them is the model's
-        # suggestion — or a default derived from the confirmed category — so it
+        # suggestion, or a default derived from the confirmed category, so it
         # is recorded unreviewed, with no reviewer attributed to a sentence no
         # user was shown.
         assert profile.sources["positioning"]["review_state"] == "unreviewed"
@@ -740,35 +393,25 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
 
 
 @pytest.mark.asyncio
-async def test_completion_rolls_back_shell_when_task_scheduling_fails(
+async def test_completion_rolls_back_the_shell_when_finalizing_fails(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _register(client, "completion-rollback@example.com")
+    discovery_id = await _seed_workspace_with_ready_discovery(
+        client, session_factory, "completion-rollback@example.com"
+    )
+
+    def finalize_failure(_row: BrandDiscovery) -> None:
+        raise RuntimeError("finalize failed")
+
+    monkeypatch.setattr(
+        onboarding_completion, "finalize_project_shell", finalize_failure
+    )
     async with session_factory() as session:
         workspace_id = await session.scalar(select(Workspace.id).limit(1))
         assert workspace_id is not None
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace_id,
-            grants=(
-                GrantSpec(key=KEY_PROJECT_SLOTS, value=10),
-                GrantSpec(key=KEY_PROMPT_SLOTS, value=100),
-            ),
-        )
-        discovery = await _seed_ready_discovery(session, workspace_id)
-        await session.commit()
-        discovery_id = discovery.id
-
-    async def scheduling_failure(*_args, **_kwargs) -> None:
-        raise RuntimeError("task insert failed")
-
-    monkeypatch.setattr(
-        onboarding_completion, "_ensure_completion_task", scheduling_failure
-    )
-    async with session_factory() as session:
-        with pytest.raises(RuntimeError, match="task insert failed"):
+        with pytest.raises(RuntimeError, match="finalize failed"):
             await onboarding_completion.complete_discovery(
                 session,
                 workspace_id=workspace_id,
@@ -785,60 +428,92 @@ async def test_completion_rolls_back_shell_when_task_scheduling_fails(
         assert persisted.status == "ready"
         assert persisted.project_id is None
         assert await session.scalar(select(func.count()).select_from(Project)) == 0
-        assert (
-            await session.scalar(select(func.count()).select_from(BrandDiscoveryTask))
-            == 0
-        )
         assert await session.scalar(select(func.count()).select_from(PromptSet)) == 0
 
 
+async def _legacy_completing_discovery(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    email: str,
+) -> uuid.UUID:
+    """A discovery accepted before onboarding stopped generating prompts.
+
+    Its project shell committed with the request; the row was left
+    ``completing`` behind a queued ``brand_completion`` task.
+    """
+    discovery_id = await _seed_workspace_with_ready_discovery(
+        client, session_factory, email
+    )
+    response = await client.post(
+        f"/api/v1/brand-discoveries/{discovery_id}/complete",
+        headers={"Idempotency-Key": "legacy-key"},
+        json=_completion_payload(),
+    )
+    assert response.status_code == 200, response.text
+    async with session_factory() as session:
+        row = await session.get(BrandDiscovery, discovery_id)
+        assert row is not None
+        row.status = LEGACY_DISCOVERY_STATUS_COMPLETING
+        row.stage = "generating_prompts"
+        session.add(
+            BrandDiscoveryTask(
+                discovery_id=row.id,
+                workspace_id=row.workspace_id,
+                task_kind=LEGACY_TASK_KIND_BRAND_COMPLETION,
+                idempotency_key=f"brand-completion:{row.id}",
+            )
+        )
+        await session.commit()
+    return discovery_id
+
+
 @pytest.mark.asyncio
-async def test_completion_does_not_invent_topics_when_portfolio_has_no_core(
+async def test_a_legacy_completion_task_finalizes_the_shell_without_prompts(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def fixture_portfolio(**_kwargs) -> PortfolioResult:
-        return PortfolioResult(provider="agent.test", model="fake-model")
-
-    monkeypatch.setattr(onboarding_service, "generate_portfolio", fixture_portfolio)
-    await _register(client, "complete-topic-fallback@example.com")
-    async with session_factory() as session:
-        workspace_id = await session.scalar(select(Workspace.id).limit(1))
-        assert workspace_id is not None
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace_id,
-            grants=(
-                GrantSpec(key=KEY_PROJECT_SLOTS, value=10),
-                GrantSpec(key=KEY_PROMPT_SLOTS, value=100),
-            ),
-        )
-        discovery = await _seed_ready_discovery(session, workspace_id, topics=[])
-        await session.commit()
-        discovery_id = discovery.id
-
-    response = await client.post(
-        f"/api/v1/brand-discoveries/{discovery_id}/complete",
-        headers={"Idempotency-Key": "complete-topic-fallback"},
-        json=_completion_payload(),
+    discovery_id = await _legacy_completing_discovery(
+        client, session_factory, "legacy-task@example.com"
     )
-    assert response.status_code == 202, response.text
-
     monkeypatch.setattr(brand_discovery_worker, "SessionLocal", session_factory)
     monkeypatch.setattr(
         brand_discovery_worker,
         "_queue",
         PostgresTaskQueue(session_factory, BRAND_DISCOVERY_QUEUE_SPEC),
     )
-    assert await brand_discovery_worker.run_once("completion-fallback") is True
+
+    assert await brand_discovery_worker.run_once("legacy-drain") is True
 
     async with session_factory() as session:
-        persisted = await session.get(BrandDiscovery, discovery_id)
-        assert persisted is not None
-        assert persisted.topics == []
-        assert persisted.status != "project_created"
-        assert await session.scalar(select(Topic)) is None
+        await _assert_empty_project(session, discovery_id)
+        task = await session.scalar(
+            select(BrandDiscoveryTask).where(
+                BrandDiscoveryTask.discovery_id == discovery_id
+            )
+        )
+        assert task is not None
+        assert task.status == TASK_STATUS_SUCCEEDED
+
+
+@pytest.mark.asyncio
+async def test_a_legacy_completing_replay_finalizes_the_shell_without_prompts(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    discovery_id = await _legacy_completing_discovery(
+        client, session_factory, "legacy-replay@example.com"
+    )
+
+    replay = await client.post(
+        f"/api/v1/brand-discoveries/{discovery_id}/complete",
+        headers={"Idempotency-Key": "legacy-key"},
+        json=_completion_payload(),
+    )
+    assert replay.status_code == 200, replay.text
+    assert replay.json()["status"] == "project_created"
+    async with session_factory() as session:
+        await _assert_empty_project(session, discovery_id)
 
 
 @pytest.mark.asyncio
