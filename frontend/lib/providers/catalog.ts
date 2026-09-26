@@ -196,9 +196,9 @@ const PLANNED_ENGINES = [
  * measurement is.
  */
 function routeLabel(transport: TransportProvider, surfaceKind: SurfaceKind): string {
-  return surfaceKind !== 'llm'
-    ? `Observed via ${TRANSPORT_LABELS[transport]}`
-    : `Direct (${TRANSPORT_LABELS[transport]})`;
+  if (surfaceKind === 'search_ai') return `Observed via ${TRANSPORT_LABELS[transport]}`;
+  if (surfaceKind === 'llm_scraper') return `Consumer app via ${TRANSPORT_LABELS[transport]}`;
+  return `Direct (${TRANSPORT_LABELS[transport]})`;
 }
 
 /**

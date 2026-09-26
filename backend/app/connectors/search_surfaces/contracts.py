@@ -214,6 +214,7 @@ def provider_cost_microusd(task: dict[str, Any]) -> int | None:
     cost = task.get("cost")
     if isinstance(cost, bool) or not isinstance(cost, (int, float)):
         return None
-    if not math.isfinite(cost) or cost < 0 or cost > (2**63 - 1) / MICRO_USD_PER_USD:
+    # Range first: math.isfinite overflows on huge integers.
+    if cost < 0 or cost > (2**63 - 1) / MICRO_USD_PER_USD or not math.isfinite(cost):
         return None
     return round(float(cost) * MICRO_USD_PER_USD)

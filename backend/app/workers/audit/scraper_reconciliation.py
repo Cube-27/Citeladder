@@ -27,12 +27,13 @@ def reconcile_page(listing, context, state):
     if len(matches) > 1:
         return {"ambiguous": True}, None
     offset = int(state.get("offset", 0)) + RECONCILE_PAGE_SIZE
-    if len(rows) < RECONCILE_PAGE_SIZE:
+    listing_done = len(rows) < RECONCILE_PAGE_SIZE
+    # At the page bound a unique exact-tag match still binds: discarding it
+    # would restart the sweep and can strand a paid task until its deadline.
+    if listing_done or offset >= RECONCILE_MAX_PAGES * RECONCILE_PAGE_SIZE:
         if len(matches) == 1:
             task_id, cost = next(iter(matches.items()))
             return {}, {"id": task_id, "cost": cost}
-        return {"offset": 0, "matches": {}}, None
-    if offset >= RECONCILE_MAX_PAGES * RECONCILE_PAGE_SIZE:
         return {"offset": 0, "matches": {}}, None
     return {"offset": offset, "matches": matches, "upper": state.get("upper")}, None
 

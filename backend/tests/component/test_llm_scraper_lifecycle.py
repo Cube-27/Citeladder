@@ -129,7 +129,9 @@ async def test_absolute_deadline_releases_lease_and_retains_charge(
     assert task.error_code == "submission_unreconciled"
     assert task.lease_owner is None
     assert task.provider_metadata["provider_submission_cost_microusd"] == 1200
-    assert stub.submits == 1 and stub.fetches == 0 and stub.lists == 0
+    assert stub.submits == 1
+    assert stub.fetches == 0
+    assert stub.lists == 0
     async with session_factory() as session:
         assert (
             await session.scalar(select(func.count()).select_from(ResponseAnalysis))
@@ -187,7 +189,8 @@ async def test_accepted_without_id_keeps_reported_charge_through_deadline(
         assert artifact.provider_metadata["provider_submission_payload"] == {
             "cost": 0.004
         }
-    assert stub.submits == 1 and stub.fetches == 0
+    assert stub.submits == 1
+    assert stub.fetches == 0
 
 
 @pytest.mark.asyncio
@@ -271,7 +274,8 @@ async def test_paid_scraper_recovers_past_run_deadline_using_frozen_recovery_win
     await worker._execute_task(claimed[0])
     task = await _task(session_factory, task_id)
     assert task.status == "succeeded"
-    assert stub.submits == 1 and stub.fetches == 1
+    assert stub.submits == 1
+    assert stub.fetches == 1
 
 
 @pytest.mark.asyncio

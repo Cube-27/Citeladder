@@ -30,8 +30,10 @@ async def _persist_answer(
     session: AsyncSession, task: AuditTask, audit: Audit, result: AnswerEngineResponse
 ) -> RawResponseArtifact:
     metadata = {**(task.provider_metadata or {}), **result.provider_metadata}
-    response = replace(
+    response: AnswerEngineResponse = replace(
         result,
+        transport_provider=task.transport_provider,
+        transport_model=task.transport_model,
         provider_metadata=metadata,
         normalized_usage=NormalizedUsage(
             provider_cost_microusd=metadata.get("provider_submission_cost_microusd")

@@ -173,7 +173,27 @@ def test_reconciliation_waits_for_complete_pagination_before_binding(monkeypatch
     assert match == {"id": "paid", "cost": 4000}
     first["tasks"][0]["result"][0] = {**row, "id": "duplicate"}
     state, match = recovery.reconcile_page(first, context, state)
-    assert state["ambiguous"] and match is None
+    assert state["ambiguous"]
+    assert match is None
+
+
+def test_reconciliation_binds_a_unique_match_at_the_page_bound(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.workers.audit import scraper_reconciliation as recovery
+
+    monkeypatch.setattr(recovery, "RECONCILE_PAGE_SIZE", 1)
+    monkeypatch.setattr(recovery, "RECONCILE_MAX_PAGES", 1)
+    context = SimpleNamespace(submission_ref="exact", logical_engine="gemini_consumer")
+    metadata = {"tag": "exact", "api": "ai_optimization", "se": "gemini"}
+    row = {
+        "id": "paid",
+        "cost": 0.002,
+        "metadata": {**metadata, "function": "llm_scraper"},
+    }
+    full = {"status_code": 20000, "tasks": [{"status_code": 20000, "result": [row]}]}
+    _, match = recovery.reconcile_page(full, context, {})
+    assert match == {"id": "paid", "cost": 2000}
 
 
 @pytest.mark.asyncio

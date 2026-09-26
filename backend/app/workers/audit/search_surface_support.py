@@ -150,7 +150,7 @@ class _SearchContext:
     location_code: int
     language_code: str
     device: str
-    logical_engine: str = "google_ai_overview"
+    logical_engine: str
     submitted_at: datetime | None = None
     reconciliation: dict[str, Any] | None = None
     request_settings: dict[str, Any] | None = None
