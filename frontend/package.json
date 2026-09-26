@@ -9,7 +9,7 @@
     "build:docs": "node scripts/prepare-docs-assets.mjs && astro build --root apps/docs",
     "preview:docs": "wrangler dev -c apps/docs/wrangler.jsonc --local --ip 127.0.0.1 --port 4322",
     "deploy:docs": "wrangler deploy -c apps/docs/wrangler.jsonc",
-    "test:docs": "playwright test --config playwright.docs.config.ts",
+    "test:docs": "pnpm build:docs && playwright test --config playwright.docs.config.ts",
     "dev": "node scripts/dev-marketing-worker.mjs",
     "build": "astro build --root apps/marketing",
     "start": "node scripts/dev-marketing-worker.mjs",
