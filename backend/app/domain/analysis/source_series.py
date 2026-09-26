@@ -117,6 +117,7 @@ async def get_visibility_source_series(
             counted.join(
                 SourcePage,
                 (SourcePage.url_hash == Citation.url_hash)
+                & (SourcePage.workspace_id == selection.workspace_id)
                 & (SourcePage.project_id == selection.project_id),
             ).where(SourcePage.page_format == source_class)
             if pages

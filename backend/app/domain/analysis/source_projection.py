@@ -227,6 +227,7 @@ def _grouped_sources(scope, *, workspace_id, project_id, domain, source_class, p
         return grouped.join(
             SourcePage,
             (SourcePage.url_hash == Citation.url_hash)
+            & (SourcePage.workspace_id == workspace_id)
             & (SourcePage.project_id == project_id),
         ).where(SourcePage.page_format == source_class)
     return grouped.where(Citation.source_class == source_class)
@@ -343,6 +344,7 @@ async def _format_totals(
         .join(
             SourcePage,
             (SourcePage.url_hash == Citation.url_hash)
+            & (SourcePage.workspace_id == workspace_id)
             & (SourcePage.project_id == project_id),
         )
         .where(
