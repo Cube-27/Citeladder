@@ -2,94 +2,45 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { Alert } from '@/components/ui/alert';
-import { textRole } from '@/components/ui/typography';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppModelCard } from '@/components/providers/app-model-card';
-import { EngineCard } from '@/components/providers/engine-card';
+import { ProviderList } from '@/components/providers/provider-list';
 import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
-import { ENGINE_ORDER, buildEngineCards } from '@/lib/providers/catalog';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /**
- * BYOK Provider Settings panel (F8, v2 direct-provider retirement) — rendered
- * inside the Settings screen's "Provider Settings" tab (formerly the
- * settings-owned Providers tab).
+ * BYOK Provider Settings panel, rendered inside the Settings screen's
+ * "Providers" tab.
  *
- * Renders one card per measured surface, each served by a single fixed
- * transport: the LLM engines through their direct provider APIs, and Google
- * AI Overview — which is observed rather than asked — through a SERP
- * provider. Each card takes a write-only credential in whichever shape its
- * transport authenticates with (the stored secret is never displayed), runs a
- * connection test, and shows a `configured` badge from `api_key_set`. Below,
- * Available transports and models are driven entirely by `/provider-catalog`.
+ * Measurement credentials come first as one list row per provider — a
+ * DataForSEO login is entered once and serves every consumer-app and search
+ * surface — then the Agent's optional customer model route.
  */
 export function ProviderSettings() {
-  const catalogQuery = useQuery({
-    queryKey: queryKeys.providers.catalog(),
-    queryFn: ({ signal }) => providersApi.getCatalog({ signal, workspaceId: null }),
-  });
-
-  // Provider connections belong to the workspace, so the read is keyed and
-  // sent for one: without that, switching workspace showed the previous
-  // workspace's engines as configured.
   const workspaceId = useActiveWorkspaceId();
   const connectionsQuery = useQuery({
     queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
     queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
     enabled: workspaceId !== null,
   });
-
-  // The AUTHENTICATED four-state projection. A failure here leaves every card
-  // at its fail-closed default (`missing`) rather than implying `connected`.
-  const statesQuery = useQuery({
-    queryKey: queryKeys.providers.states(workspaceId ?? 'unresolved'),
-    queryFn: ({ signal }) => providersApi.getConnectionStates({ signal, workspaceId }),
-    enabled: workspaceId !== null,
-  });
-
-  const cards = buildEngineCards(catalogQuery.data, statesQuery.data?.providers);
   const connections = connectionsQuery.data ?? [];
-  const isLoading = catalogQuery.isLoading || connectionsQuery.isLoading;
-  const isError = catalogQuery.isError || connectionsQuery.isError;
 
   return (
     <div className="grid gap-[var(--workspace-gap)]" data-tour="provider-settings">
-      <p className={textRole('body', 'max-w-2xl')}>
-        Bring your own API keys — save one per engine, then run a connection test. Keys are
-        write-only.
-      </p>
-
-      {isError ? (
-        <Alert tone="danger">
-          Could not load provider settings. Check your connection and try again.
-        </Alert>
-      ) : null}
-
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {/* Length-derived: the skeleton count follows the catalog rather
-              than a literal, so adding a surface never leaves the loading
-              state a card short. */}
-          {Array.from({ length: ENGINE_ORDER.length }, (_, i) => i).map((i) => (
-            <Card key={i}>
-              <CardContent className="grid gap-3">
-                <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {cards.map((model) => (
-            <EngineCard key={model.logical_engine} model={model} connections={connections} />
-          ))}
-        </div>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Measurement providers</CardTitle>
+          <CardDescription>
+            Bring your own credentials. Each provider is entered once and measures every engine
+            listed with it. Saving runs a connection test; stored secrets are never displayed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProviderList />
+        </CardContent>
+      </Card>
 
       {connectionsQuery.isLoading ? (
         <Skeleton className="h-72 w-full" />

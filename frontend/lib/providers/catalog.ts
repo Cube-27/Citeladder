@@ -8,6 +8,10 @@
  * logical engine has exactly ONE direct transport — ChatGPT/OpenAI,
  * Gemini/Google, Claude/Anthropic — so each card renders a single fixed direct
  * route with no toggle and no reserved "coming soon" option.
+ *
+ * Settings manages CREDENTIALS, not engines: one DataForSEO login serves every
+ * consumer-app and search surface, so `buildProviderGroups` folds the engine
+ * cards into one group per transport and a save routes all of them at once.
  */
 import type {
   LogicalEngine,
@@ -68,17 +72,12 @@ export const TRANSPORT_LABELS: Record<TransportProvider, string> = {
   dataforseo: 'DataForSEO',
 };
 
-/** Domains for brand logo resolution via Logo.dev / BrandLogo. */
-export const ENGINE_DOMAINS: Record<string, string> = {
-  chatgpt: 'openai.com',
-  gemini: 'google.com',
-  claude: 'anthropic.com',
-  grok: 'x.ai',
-  perplexity: 'perplexity.ai',
-  copilot: 'microsoft.com',
-  google_ai_overview: 'google.com',
-  chatgpt_search: 'openai.com',
-  gemini_consumer: 'google.com',
+/** Domains for a transport's brand logo on its credential row. */
+export const TRANSPORT_DOMAINS: Record<TransportProvider, string> = {
+  openai: 'openai.com',
+  anthropic: 'anthropic.com',
+  google: 'google.com',
+  dataforseo: 'dataforseo.com',
 };
 
 /** Local brand logo assets for engines when available. */
@@ -159,13 +158,11 @@ export type EngineCardModel = {
   /** The single direct route for this engine (null if the catalog omits it). */
   route: EngineRouteOption | null;
   /**
-   * Whether this engine can be connected at all. A planned provider is
-   * `unavailable` with `route: null`, which is what makes it non-connectable —
-   * the card is keyboard-reachable and informative, but constructs no mutation.
+   * Whether this engine can be connected at all. An engine the catalog
+   * publishes no route for is `unavailable` with `route: null`, which is what
+   * makes it non-connectable: it constructs no mutation.
    */
   availability: 'available' | 'unavailable';
-  /** The backend's own reason token when unavailable. Never invented here. */
-  unavailable_reason: string | null;
   /**
    * The AUTHENTICATED workspace state, distinct from availability. A provider
    * can be generally available and still `missing` for this workspace.
@@ -175,18 +172,6 @@ export type EngineCardModel = {
   safe_reason: string | null;
   latest_probe: ProviderConnectionStateEntry['latest_probe'];
 };
-
-/**
- * Planned providers. They exist as catalog presentation entries only: no
- * adapter, no route, and no transport enum entry, so nothing downstream can
- * resolve one to another provider. Keeping them visible is the approved
- * marketing exception; keeping them route-less is what makes it safe.
- */
-const PLANNED_ENGINES = [
-  { key: 'grok', label: 'Grok' },
-  { key: 'perplexity', label: 'Perplexity' },
-  { key: 'copilot', label: 'Copilot' },
-] as const;
 
 /**
  * Display label for a route.
@@ -204,8 +189,8 @@ function routeLabel(transport: TransportProvider, surfaceKind: SurfaceKind): str
 /**
  * Build the ordered engine card models.
  *
- * Shipped engines come first, each with its single direct route, then the
- * planned providers as keyboard-reachable unavailable cards.
+ * One model per shipped engine, each with its single catalog route. Planned
+ * providers are not listed: nothing can be connected for them.
  *
  * The authenticated `states` projection decides the four-state badge. It FAILS
  * CLOSED: without it, a configured key shows as `missing` rather than
@@ -219,7 +204,7 @@ export function buildEngineCards(
   const byEngine = new Map(catalog?.engines.map((e) => [e.logical_engine, e]) ?? []);
   const byKey = new Map((states ?? []).map((entry) => [entry.key, entry]));
 
-  const shipped = ENGINE_ORDER.map((engine) => {
+  return ENGINE_ORDER.map((engine) => {
     const approved = byEngine.get(engine)?.routes ?? [];
     const approvedRoute = approved[0];
     const route: EngineRouteOption | null = approvedRoute
@@ -237,35 +222,58 @@ export function buildEngineCards(
       label: ENGINE_LABELS[engine],
       route,
       availability: route ? ('available' as const) : ('unavailable' as const),
-      unavailable_reason: route ? null : 'route_not_published',
       state: entry?.state ?? ('missing' as const),
       safe_reason: entry?.safe_reason ?? null,
       latest_probe: entry?.latest_probe ?? null,
     };
   });
-
-  const planned = PLANNED_ENGINES.map((provider) => {
-    const entry = byKey.get(`provider.${provider.key}`);
-    return {
-      // Cast: a planned key is deliberately NOT in the transport/adapter enum,
-      // so it can never be resolved to a connectable route.
-      logical_engine: provider.key as LogicalEngine,
-      label: provider.label,
-      route: null,
-      availability: 'unavailable' as const,
-      unavailable_reason: entry?.safe_reason ?? 'adapter_not_shipped',
-      state: 'unavailable' as const,
-      safe_reason: entry?.safe_reason ?? null,
-      latest_probe: null,
-    };
-  });
-
-  return [...shipped, ...planned];
 }
 
 /** True when this card may construct a save/test mutation at all. */
-export function isConnectable(model: EngineCardModel): boolean {
+function isConnectable(model: EngineCardModel): boolean {
   return model.availability === 'available' && model.route !== null;
+}
+
+/** One stored credential and every engine it measures. */
+export type ProviderGroup = {
+  transport: TransportProvider;
+  label: string;
+  credential_shape: CredentialShape;
+  /** Connectable engines routed through this credential, in display order. */
+  engines: EngineCardModel[];
+};
+
+/**
+ * Fold the engine cards into one group per transport, ordered by each
+ * transport's first engine. Only connectable engines join a group, so a
+ * transport with no published route is simply absent.
+ */
+export function buildProviderGroups(cards: readonly EngineCardModel[]): ProviderGroup[] {
+  const groups = new Map<TransportProvider, ProviderGroup>();
+  for (const card of cards) {
+    if (!isConnectable(card) || !card.route) continue;
+    const transport = card.route.transport_provider;
+    const group = groups.get(transport) ?? {
+      transport,
+      label: TRANSPORT_LABELS[transport],
+      credential_shape: card.route.credential_shape,
+      engines: [],
+    };
+    group.engines.push(card);
+    groups.set(transport, group);
+  }
+  return [...groups.values()];
+}
+
+/** The transport whose credential measures `engine`, if one is published. */
+export function transportForEngine(
+  groups: readonly ProviderGroup[],
+  engine: LogicalEngine,
+): TransportProvider | null {
+  return (
+    groups.find((group) => group.engines.some((card) => card.logical_engine === engine))
+      ?.transport ?? null
+  );
 }
 
 /**
@@ -296,20 +304,22 @@ export function isVerified(connection: ProviderConnection | undefined): boolean 
 }
 
 /**
- * Merge a logical-engine route into a connection's existing routes for a
- * create/update payload. Preserves other engines' routes on the same direct
- * connection and stamps the catalog default model for the added engine.
+ * Merge logical-engine routes into a connection's existing routes for a
+ * create/update payload. Preserves routes already on the connection (and their
+ * default flag) and adds each missing engine once.
  */
 export function mergeRoutePayload(
   existing: ProviderConnection | undefined,
-  logical_engine: LogicalEngine,
+  engines: readonly LogicalEngine[],
 ): { logical_engine: LogicalEngine; is_default: boolean }[] {
   const routes = (existing?.routes ?? []).map((r) => ({
     logical_engine: r.logical_engine,
     is_default: r.is_default,
   }));
-  if (!routes.some((r) => r.logical_engine === logical_engine)) {
-    routes.push({ logical_engine, is_default: false });
+  for (const logical_engine of engines) {
+    if (!routes.some((r) => r.logical_engine === logical_engine)) {
+      routes.push({ logical_engine, is_default: false });
+    }
   }
   return routes;
 }

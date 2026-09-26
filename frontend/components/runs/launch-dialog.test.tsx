@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
@@ -6,6 +6,7 @@ import { promptsApi } from '@/lib/api/prompts';
 import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
+import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
 import { renderWithProviders } from '@/test/render';
 
 import { LaunchDialog } from './launch-dialog';
@@ -109,6 +110,51 @@ describe('Consumer engine selection', () => {
   });
 });
 
+describe('Inline provider setup', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("opens the clicked engine's provider inside the launch dialog, then closes", async () => {
+    stubApis();
+    vi.spyOn(providersApi, 'getCatalog').mockResolvedValue(providerCatalogFixture as never);
+    vi.spyOn(providersApi, 'getConnectionStates').mockResolvedValue({
+      workspace_id: WORKSPACE_ID,
+      providers: [],
+    } as never);
+    const dialog = (open: boolean) => (
+      <LaunchDialog
+        open={open}
+        onOpenChange={() => undefined}
+        projectId={PROJECT_ID}
+        fixedPromptIds={PROMPT_IDS}
+      />
+    );
+    const { rerender } = renderWithProviders(dialog(true));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Claude API, not connected' }));
+
+    const setup = await screen.findByRole('region', { name: 'Connect a provider' });
+    // Set up in place: no second dialog is stacked on the launch dialog.
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    // The provider that measures Claude arrives open on its credential form.
+    expect(await within(setup).findByRole('button', { name: 'Close Anthropic' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(within(setup).getByLabelText(/api key/i)).toBeInTheDocument();
+
+    fireEvent.click(within(setup).getByRole('button', { name: 'Close provider setup' }));
+    expect(screen.queryByRole('region', { name: 'Connect a provider' })).toBeNull();
+
+    // Closed by its owner mid-setup, the dialog reopens without the panel.
+    fireEvent.click(screen.getByRole('button', { name: 'Claude API, not connected' }));
+    await screen.findByRole('region', { name: 'Connect a provider' });
+    rerender(dialog(false));
+    rerender(dialog(true));
+    await screen.findByRole('button', { name: 'Launch audit' });
+    expect(screen.queryByRole('region', { name: 'Connect a provider' })).toBeNull();
+  });
+});
+
 describe('Engine availability changes', () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -144,10 +190,9 @@ describe('Engine availability changes', () => {
       });
     });
 
-    expect(await screen.findByRole('button', { name: /ChatGPT Search · Connect/ })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
+    expect(
+      await screen.findByRole('button', { name: 'ChatGPT Search, not connected' }),
+    ).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Launch audit' })).toBeDisabled();
   });
 });

@@ -135,7 +135,16 @@ export function LaunchDialog({
     }
   }, [open, connectionsQuery.isSuccess, configuredEngines]);
   const [repetitions, setRepetitions] = useState(DEFAULT_REPETITIONS);
-  const [connectOpen, setConnectOpen] = useState(false);
+  // The inline provider setup: closed, open on no particular provider, or
+  // open on the provider that measures the engine the user clicked.
+  const [connecting, setConnecting] = useState<LogicalEngine | 'any' | null>(null);
+  // Closed here, whoever closed it (the user, or the owner after a launch), so
+  // the next open never lands on a stale setup panel.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (!open) setConnecting(null);
+  }
   // `null` means the whole set. A caller that already fixed the prompts owns
   // the selection outright, so batching is not offered there.
   const [batchIndex, setBatchIndex] = useState<number | null>(null);
@@ -228,8 +237,8 @@ export function LaunchDialog({
       launchPending={launchMutation.isPending}
       launchNotice={launchNotice}
       onLaunch={() => launchMutation.mutate()}
-      connectOpen={connectOpen}
-      setConnectOpen={setConnectOpen}
+      connecting={connecting}
+      setConnecting={setConnecting}
       promptSetLocked={fixedSelection.locked}
       promptSelectionLabel={fixedSelection.label}
       selectionReady={ready}

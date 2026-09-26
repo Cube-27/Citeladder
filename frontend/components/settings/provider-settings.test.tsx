@@ -12,9 +12,8 @@ import {
   catalogHandler,
   connection,
   failedTestHandler,
+  providerCatalogFixture,
 } from '@/test/provider-catalog-fixture';
-
-import { ENGINE_ORDER } from '@/lib/providers/catalog';
 
 import { ProviderSettings } from './provider-settings';
 
@@ -30,80 +29,118 @@ beforeEach(() => {
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
+/** The list row for one provider, found by its heading. */
+async function row(name: string) {
+  const heading = await screen.findByRole('heading', { name }, { timeout: 3_000 });
+  return within(heading.closest('li')!);
+}
+
+/** The catalog with DataForSEO's consumer-app surfaces published too. */
+function consumerCatalogHandler() {
+  const scraped = (['chatgpt_search', 'gemini_consumer'] as const).map((logical_engine) => ({
+    logical_engine,
+    routes: [
+      {
+        transport_provider: 'dataforseo',
+        transport_model: `${logical_engine}-scraper`,
+        retrieval_enabled: null,
+        reasoning_effort: null,
+        surface_kind: 'llm_scraper',
+      },
+    ],
+  }));
+  return http.get('/api/v1/provider-catalog', () =>
+    HttpResponse.json({
+      ...providerCatalogFixture,
+      engines: [...providerCatalogFixture.engines, ...scraped],
+    }),
+  );
+}
+
 describe('ProviderSettings', () => {
-  it('renders a card for every measured surface with unconfigured state', async () => {
+  it('lists each provider once, with the engines it measures and nothing unconnectable', async () => {
     mswServer.use(
-      catalogHandler(),
+      consumerCatalogHandler(),
       http.get('/api/v1/provider-connections', () => HttpResponse.json([])),
     );
 
     renderWithProviders(<ProviderSettings />);
 
+    const dataforseo = await row('DataForSEO');
     expect(
-      await screen.findByRole('heading', { name: 'ChatGPT API' }, { timeout: 3_000 }),
+      dataforseo.getByText('ChatGPT Search · Gemini · Google AI Overview'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Gemini API' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Claude API' })).toBeInTheDocument();
-    // The observed surface is a card like any other: it takes a credential
-    // and reports connection state, even though it is never "asked" anything.
-    expect(screen.getByRole('heading', { name: 'Google AI Overview' })).toBeInTheDocument();
-    // No connections → every card reads "Missing". Length-derived rather than
-    // a literal, so adding a surface is not a test edit.
-    expect(screen.getAllByText('Missing')).toHaveLength(ENGINE_ORDER.length);
+    expect((await row('OpenAI')).getByText(`ChatGPT API · ${CHATGPT_MODEL}`)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Google' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Anthropic' })).toBeInTheDocument();
+    expect(screen.getAllByText('Not connected')).toHaveLength(4);
+    expect(screen.queryByText(/coming soon/i)).toBeNull();
+    // Credentials are asked for on demand, not repeated down the page.
+    expect(screen.queryByLabelText(/api login/i)).toBeNull();
   });
 
-  it('shows ChatGPT as a fixed direct OpenAI route with no toggle', async () => {
+  it('saves one DataForSEO login for every surface it measures', async () => {
+    const user = userEvent.setup();
+    let createdBody: Record<string, unknown> | null = null;
     mswServer.use(
-      catalogHandler(),
+      consumerCatalogHandler(),
       http.get('/api/v1/provider-connections', () => HttpResponse.json([])),
+      http.post('/api/v1/provider-connections', async ({ request }) => {
+        createdBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(connection({ transport_provider: 'dataforseo' }), {
+          status: 201,
+        });
+      }),
+      http.post(`/api/v1/provider-connections/${CONNECTION_ID}/test`, () =>
+        HttpResponse.json({
+          connection_id: CONNECTION_ID,
+          status: 'ok',
+          error_code: '',
+          detail: '',
+          latency_ms: 42,
+          logical_engine: 'chatgpt_search',
+          transport_provider: 'dataforseo',
+          transport_model: 'chatgpt_search-scraper',
+          tested_at: '2026-07-15T00:00:00Z',
+        }),
+      ),
     );
 
     renderWithProviders(<ProviderSettings />);
+    const dataforseo = await row('DataForSEO');
+    await user.click(dataforseo.getByRole('button', { name: 'Connect DataForSEO' }));
 
-    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT API' })).closest(
-      'section',
-    )!;
-    const utils = within(chatgptCard);
-    // Fixed direct route label; the OpenAI model is surfaced.
-    expect(utils.getByText('Direct (OpenAI)')).toBeInTheDocument();
-    expect(utils.getByText(/gpt-5\.5/)).toBeInTheDocument();
-    // No route toggle / radios or alternate route copy.
-    expect(utils.queryByRole('radio')).toBeNull();
-    expect(utils.queryByText(/coming soon/i)).toBeNull();
+    // One login and one password on the whole page.
+    expect(screen.getAllByLabelText(/api login/i)).toHaveLength(1);
+    await user.type(dataforseo.getByLabelText(/api login/i), 'team@example.com');
+    await user.type(dataforseo.getByLabelText(/api password/i), 'secret');
+    await user.click(dataforseo.getByRole('button', { name: /save credentials/i }));
 
-    // The other two direct engines carry their own transport labels.
-    expect(screen.getByRole('heading', { name: 'Gemini API' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Claude API' })).toBeInTheDocument();
-    expect(screen.getByText('Direct (Google)')).toBeInTheDocument();
-    expect(screen.getByText('Direct (Anthropic)')).toBeInTheDocument();
-  });
-
-  it('never renders an alternate transport control anywhere on the panel', async () => {
-    mswServer.use(
-      catalogHandler(),
-      http.get('/api/v1/provider-connections', () => HttpResponse.json([])),
+    await waitFor(() =>
+      expect(createdBody).toEqual({
+        transport_provider: 'dataforseo',
+        api_login: 'team@example.com',
+        api_password: 'secret',
+        routes: ['chatgpt_search', 'gemini_consumer', 'google_ai_overview'].map(
+          (logical_engine) => ({ logical_engine, is_default: false }),
+        ),
+      }),
     );
-
-    renderWithProviders(<ProviderSettings />);
-    await screen.findByRole('heading', { name: 'ChatGPT API' });
-
-    expect(screen.queryByRole('radio')).toBeNull();
-    expect(screen.queryByRole('radiogroup')).toBeNull();
+    // A verified save collapses the row.
+    await waitFor(() => expect(dataforseo.queryByLabelText(/api login/i)).toBeNull());
   });
 
-  it('keeps a saved-but-unprobed key at missing, then connects after a probe', async () => {
+  it('keeps a saved-but-unprobed key unverified, then connects after a probe', async () => {
     const user = userEvent.setup();
     let created = false;
-    let probed = false;
-    let createdTransport = '';
+    let probes = 0;
+    let verified = false;
     mswServer.use(
       catalogHandler(),
       http.get('/api/v1/provider-connections', () =>
         HttpResponse.json(created ? [connection()] : []),
       ),
-      http.post('/api/v1/provider-connections', async ({ request }) => {
-        const body = (await request.json()) as { transport_provider: string };
-        createdTransport = body.transport_provider;
+      http.post('/api/v1/provider-connections', () => {
         created = true;
         return HttpResponse.json(connection(), { status: 201 });
       }),
@@ -115,8 +152,8 @@ describe('ProviderSettings', () => {
               key: 'chatgpt',
               label: 'ChatGPT',
               // The whole point: a stored key alone is NOT connected.
-              state: probed ? 'connected' : 'missing',
-              safe_reason: probed ? null : 'verification required',
+              state: verified ? 'connected' : 'missing',
+              safe_reason: verified ? null : 'verification required',
               grant_key: 'provider.openai',
               latest_probe: null,
             },
@@ -124,12 +161,15 @@ describe('ProviderSettings', () => {
         }),
       ),
       http.post(`/api/v1/provider-connections/${CONNECTION_ID}/test`, () => {
-        probed = true;
+        // The save's own probe fails; the explicit retry succeeds.
+        probes += 1;
+        const ok = probes > 1;
+        verified = ok;
         return HttpResponse.json({
           connection_id: CONNECTION_ID,
-          status: 'ok',
-          error_code: '',
-          detail: 'Connection succeeded',
+          status: ok ? 'ok' : 'failed',
+          error_code: ok ? '' : 'timeout',
+          detail: ok ? 'Connection succeeded' : 'Provider timed out',
           latency_ms: 42,
           logical_engine: 'chatgpt',
           transport_provider: 'openai',
@@ -140,22 +180,17 @@ describe('ProviderSettings', () => {
     );
 
     renderWithProviders(<ProviderSettings />);
+    const openai = await row('OpenAI');
+    await user.click(openai.getByRole('button', { name: 'Connect OpenAI' }));
+    await user.type(openai.getByPlaceholderText(/paste your api key/i), 'sk-test-key');
+    await user.click(openai.getByRole('button', { name: /save key/i }));
 
-    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT API' })).closest(
-      'section',
-    )!;
-    const utils = within(chatgptCard);
+    expect(await openai.findByText('Provider timed out')).toBeInTheDocument();
+    expect(await openai.findByText('Not verified')).toBeInTheDocument();
 
-    await user.type(utils.getByPlaceholderText(/paste your api key/i), 'sk-test-key');
-    await user.click(utils.getByRole('button', { name: /save key/i }));
-
-    // Saving a key does NOT make the engine connected — only a successful
-    // probe does. Until then it stays missing.
-    await waitFor(() => expect(createdTransport).toBe('openai'));
-    expect(utils.getByText('Missing')).toBeInTheDocument();
-
-    await user.click(utils.getByRole('button', { name: /test connection/i }));
-    expect(await utils.findByText(/connection succeeded/i)).toBeInTheDocument();
+    await user.click(openai.getByRole('button', { name: /test connection/i }));
+    expect(await openai.findByText(/connection succeeded/i)).toBeInTheDocument();
+    expect(await openai.findByText('Connected')).toBeInTheDocument();
   });
 
   it('surfaces a failed connection test', async () => {
@@ -167,30 +202,25 @@ describe('ProviderSettings', () => {
     );
 
     renderWithProviders(<ProviderSettings />);
+    const openai = await row('OpenAI');
+    await user.click(await openai.findByRole('button', { name: 'Manage OpenAI' }));
+    await user.click(openai.getByRole('button', { name: /test connection/i }));
 
-    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT API' })).closest(
-      'section',
-    )!;
-    const utils = within(chatgptCard);
-    expect(utils.getByText('Missing')).toBeInTheDocument();
-
-    await user.click(utils.getByRole('button', { name: /test connection/i }));
-    expect(await utils.findByText(/invalid api key/i)).toBeInTheDocument();
+    expect(await openai.findByText(/invalid api key/i)).toBeInTheDocument();
   });
 
   it('never renders the stored secret — key input is empty and write-only', async () => {
+    const user = userEvent.setup();
     mswServer.use(
       catalogHandler(),
       http.get('/api/v1/provider-connections', () => HttpResponse.json([connection()])),
     );
 
     renderWithProviders(<ProviderSettings />);
+    const openai = await row('OpenAI');
+    await user.click(await openai.findByRole('button', { name: 'Manage OpenAI' }));
 
-    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT API' })).closest(
-      'section',
-    )!;
-    const utils = within(chatgptCard);
-    const keyInput = utils.getByPlaceholderText(/stored/i) as HTMLInputElement;
+    const keyInput = openai.getByPlaceholderText(/stored/i) as HTMLInputElement;
     expect(keyInput).toHaveAttribute('type', 'password');
     expect(keyInput.value).toBe('');
   });

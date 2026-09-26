@@ -54,7 +54,12 @@ from app.domain.agent.context_builder import (
     ContentContextConflictError,
     ContentContextNotFoundError,
 )
-from app.domain.agent.model_calls import FUNDING_CUSTOMER_BYOK, FUNDING_PLATFORM
+from app.domain.agent.model_calls import (
+    FUNDING_CUSTOMER_BYOK,
+    FUNDING_DEVELOPMENT,
+    FUNDING_PLATFORM,
+    is_development_login,
+)
 from app.domain.agent.tool_catalog import AGENT_TOOL_REGISTRY_VERSION
 from app.domain.billing.accounts import billing_account_id_for
 from app.domain.billing.catalog_revisions import (
@@ -157,7 +162,9 @@ async def _action(
     return action
 
 
-async def _funding(session: AsyncSession, *, workspace_id: uuid.UUID) -> dict[str, Any]:
+async def _funding(
+    session: AsyncSession, *, workspace_id: uuid.UUID, user_id: uuid.UUID
+) -> dict[str, Any]:
     """The frozen funding identity for one turn, or a coded refusal."""
     try:
         await require_workspace_capability(
@@ -192,11 +199,15 @@ async def _funding(session: AsyncSession, *, workspace_id: uuid.UUID) -> dict[st
         }
     if not default_agent_settings.configured:
         raise AgentFundingError("The platform Agent model is not configured.")
+    model = default_agent_settings.model.strip()
+    if await is_development_login(session, user_id):
+        # The provisioned development login is unrestricted: it runs the
+        # platform model without a published credit rate or a credit hold.
+        return {"funding_source": FUNDING_DEVELOPMENT, "requested_model": model}
     try:
         _revision, policy = await published_ai_credit_policy(session)
     except CatalogUnavailableError as exc:
         raise AgentFundingError("No AI-credit policy is published.") from exc
-    model = default_agent_settings.model.strip()
     if policy.rate(feature=APP_FEATURE_AGENT, model=model) is None:
         raise AgentFundingError(
             "The platform Agent model has no published AI-credit rate."
@@ -267,7 +278,7 @@ async def _enqueue_turn(
         raise AgentConflictError(
             "agent_turn_limit", "This chat reached its turn limit; start a new chat."
         )
-    funding = await _funding(session, workspace_id=chat.workspace_id)
+    funding = await _funding(session, workspace_id=chat.workspace_id, user_id=user_id)
     await reserve_workspace_capacity(
         session,
         workspace_id=chat.workspace_id,

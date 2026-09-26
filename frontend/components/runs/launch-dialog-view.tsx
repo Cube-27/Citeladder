@@ -1,4 +1,6 @@
-import { ConnectProviderDialog } from '@/components/providers/connect-provider-dialog';
+import { Plus, X } from 'lucide-react';
+
+import { ProviderList } from '@/components/providers/provider-list';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -128,6 +130,36 @@ function BatchField({
   );
 }
 
+/**
+ * Provider setup inside the launch dialog, instead of a second dialog stacked
+ * on this one. It scrolls on its own so the launch controls stay in reach, and
+ * a verified save refreshes the shared connections query, which turns the
+ * engine chips on without leaving the dialog.
+ */
+function InlineProviderSetup({
+  connecting,
+  onClose,
+}: Readonly<{ connecting: LogicalEngine | 'any'; onClose: () => void }>) {
+  const engine = connecting === 'any' ? null : connecting;
+  return (
+    <section
+      aria-label="Connect a provider"
+      className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-2')}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className={textRole('label')}>Connect a provider</p>
+        <Button variant="ghost" size="icon" aria-label="Close provider setup" onClick={onClose}>
+          <X className="size-4" aria-hidden />
+        </Button>
+      </div>
+      <div className="max-h-80 overflow-y-auto overscroll-contain">
+        {/* Keyed by engine so clicking another engine opens its provider. */}
+        <ProviderList key={engine ?? 'any'} expandEngine={engine} />
+      </div>
+    </section>
+  );
+}
+
 /** A prompt set names its size only when the server counted it. */
 function promptSetLabel(set: Readonly<{ name: string; prompt_count?: number | null }>): string {
   const count = typeof set.prompt_count === 'number' ? ` (${set.prompt_count})` : '';
@@ -154,8 +186,8 @@ export function LaunchDialogView({
   launchPending,
   launchNotice,
   onLaunch,
-  connectOpen,
-  setConnectOpen,
+  connecting,
+  setConnecting,
   promptSetLocked,
   promptSelectionLabel,
   selectionReady,
@@ -179,8 +211,8 @@ export function LaunchDialogView({
   launchPending: boolean;
   launchNotice: MutationNoticeData | null;
   onLaunch: () => void;
-  connectOpen: boolean;
-  setConnectOpen: (open: boolean) => void;
+  connecting: LogicalEngine | 'any' | null;
+  setConnecting: (target: LogicalEngine | 'any' | null) => void;
   promptSetLocked?: boolean;
   promptSelectionLabel?: string;
   selectionReady: boolean;
@@ -188,110 +220,119 @@ export function LaunchDialogView({
   const noEngines = !configuredEngines.length;
   const selected = new Set(engines);
   return (
-    <>
-      <Dialog
-        open={open}
-        onOpenChange={onOpenChange}
-        title="Launch an audit"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button onClick={onLaunch} disabled={!selectionReady || launchPending}>
-              {launchPending ? 'Launching…' : 'Launch audit'}
-            </Button>
-          </>
-        }
-      >
-        <div className="grid gap-[var(--workspace-gap)]">
-          {launchNotice ? <MutationNotice notice={launchNotice} onRetry={onLaunch} /> : null}
-          <PromptSetField
-            promptSets={promptSets}
-            promptSetsLoading={promptSetsLoading}
-            promptSetId={promptSetId}
-            setPromptSetId={setPromptSetId}
-            promptSetLocked={promptSetLocked}
-            promptSelectionLabel={promptSelectionLabel}
-          />
-          <BatchField batches={batches} batchIndex={batchIndex} setBatchIndex={setBatchIndex} />
-          <fieldset className="grid gap-2">
-            <legend className={textRole('label')}>
-              Engines <span className="text-danger">*</span>
-            </legend>
-            {noEngines ? (
-              <div className="grid gap-2">
-                <p className="text-muted text-sm">
-                  {unverifiedEngines.length
-                    ? `A key is stored for ${unverifiedEngines.map((engine) => ENGINE_LABELS[engine]).join(', ')}, but it has not passed a connection test yet. Test it to launch an audit with it.`
-                    : 'No configured engines. Connect a provider to launch an audit.'}
-                </p>
-                <div>
-                  <Button variant="secondary" onClick={() => setConnectOpen(true)}>
-                    {unverifiedEngines.length ? 'Test connection' : 'Connect a provider'}
-                  </Button>
-                </div>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Launch an audit"
+      className="w-180"
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={onLaunch} disabled={!selectionReady || launchPending}>
+            {launchPending ? 'Launching…' : 'Launch audit'}
+          </Button>
+        </>
+      }
+    >
+      <div className="grid gap-[var(--workspace-gap)]">
+        {launchNotice ? <MutationNotice notice={launchNotice} onRetry={onLaunch} /> : null}
+        <PromptSetField
+          promptSets={promptSets}
+          promptSetsLoading={promptSetsLoading}
+          promptSetId={promptSetId}
+          setPromptSetId={setPromptSetId}
+          promptSetLocked={promptSetLocked}
+          promptSelectionLabel={promptSelectionLabel}
+        />
+        <BatchField batches={batches} batchIndex={batchIndex} setBatchIndex={setBatchIndex} />
+        <fieldset className="grid gap-2">
+          <legend className={textRole('label')}>
+            Engines <span className="text-danger">*</span>
+          </legend>
+          {noEngines ? (
+            <div className="grid gap-2">
+              <p className="text-muted text-sm">
+                {unverifiedEngines.length
+                  ? `A key is stored for ${unverifiedEngines.map((engine) => ENGINE_LABELS[engine]).join(', ')}, but it has not passed a connection test yet. Test it to launch an audit with it.`
+                  : 'No configured engines. Connect a provider to launch an audit.'}
+              </p>
+              <div>
+                <Button
+                  variant="secondary"
+                  onClick={() => setConnecting(unverifiedEngines[0] ?? 'any')}
+                >
+                  {unverifiedEngines.length ? 'Test connection' : 'Connect a provider'}
+                </Button>
               </div>
-            ) : null}
-            {[true, false].map((consumer) => (
-              <div key={String(consumer)} className="grid gap-2">
-                <p className={textRole('label')}>{consumer ? 'Consumer experiences' : 'APIs'}</p>
-                <div className="flex flex-wrap gap-2">
-                  {ENGINE_ORDER.filter((engine) => isConsumerEngine(engine) === consumer).map(
-                    (engine) => (
-                      <FilterChip
-                        key={engine}
-                        active={selected.has(engine)}
-                        onClick={() =>
-                          configuredEngines.includes(engine)
-                            ? setEngines((current) => toggleEngine(current, engine))
-                            : setConnectOpen(true)
-                        }
-                      >
-                        {ENGINE_LABELS[engine]}
-                        {configuredEngines.includes(engine) ? '' : ' · Connect / test'}
-                      </FilterChip>
-                    ),
-                  )}
-                </div>
-              </div>
-            ))}
-          </fieldset>
-          <Field
-            label="Repetitions"
-            hint={`How many times to run each prompt per engine (${MIN_REPETITIONS}–${MAX_REPETITIONS}).`}
-          >
-            {(props) => (
-              <Input
-                {...props}
-                type="number"
-                min={MIN_REPETITIONS}
-                max={MAX_REPETITIONS}
-                value={repetitions}
-                onChange={(event) => setRepetitions(Number(event.target.value))}
-                onBlur={() => setRepetitions((current) => clampRepetitions(current))}
-                className="w-28"
-              />
-            )}
-          </Field>
-          {estimate ? (
-            <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1 text-xs')}>
-              <span className={textRole('emphasis', 'text-foreground')}>
-                {estimate.execution_count}{' '}
-                {estimate.execution_count === 1 ? 'response' : 'responses'} planned
-              </span>
-              <span className="text-muted">
-                Maximum wall-clock budget {estimate.maximum_wall_clock_seconds}s · cost{' '}
-                {estimate.cost_status}
-                {estimate.estimated_total_cost_microusd !== null
-                  ? ` · ~$${(estimate.estimated_total_cost_microusd / 1_000_000).toFixed(4)}`
-                  : ' · unavailable'}
-              </span>
             </div>
           ) : null}
-        </div>
-      </Dialog>
-      <ConnectProviderDialog open={connectOpen} onOpenChange={setConnectOpen} />
-    </>
+          {[true, false].map((consumer) => (
+            <div key={String(consumer)} className="grid gap-2">
+              <p className={textRole('label')}>{consumer ? 'Consumer experiences' : 'APIs'}</p>
+              <div className="flex flex-wrap gap-2">
+                {ENGINE_ORDER.filter((engine) => isConsumerEngine(engine) === consumer).map(
+                  (engine) => (
+                    <FilterChip
+                      key={engine}
+                      active={selected.has(engine)}
+                      onClick={() =>
+                        configuredEngines.includes(engine)
+                          ? setEngines((current) => toggleEngine(current, engine))
+                          : setConnecting(engine)
+                      }
+                    >
+                      {configuredEngines.includes(engine) ? null : (
+                        <Plus className="size-3.5" aria-hidden />
+                      )}
+                      {ENGINE_LABELS[engine]}
+                      {configuredEngines.includes(engine) ? null : (
+                        <span className="sr-only">, not connected</span>
+                      )}
+                    </FilterChip>
+                  ),
+                )}
+              </div>
+            </div>
+          ))}
+          {connecting ? (
+            <InlineProviderSetup connecting={connecting} onClose={() => setConnecting(null)} />
+          ) : null}
+        </fieldset>
+        <Field
+          label="Repetitions"
+          hint={`How many times to run each prompt per engine (${MIN_REPETITIONS}–${MAX_REPETITIONS}).`}
+        >
+          {(props) => (
+            <Input
+              {...props}
+              type="number"
+              min={MIN_REPETITIONS}
+              max={MAX_REPETITIONS}
+              value={repetitions}
+              onChange={(event) => setRepetitions(Number(event.target.value))}
+              onBlur={() => setRepetitions((current) => clampRepetitions(current))}
+              className="w-28"
+            />
+          )}
+        </Field>
+        {estimate ? (
+          <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1 text-xs')}>
+            <span className={textRole('emphasis', 'text-foreground')}>
+              {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
+              planned
+            </span>
+            <span className="text-muted">
+              Maximum wall-clock budget {estimate.maximum_wall_clock_seconds}s · cost{' '}
+              {estimate.cost_status}
+              {estimate.estimated_total_cost_microusd !== null
+                ? ` · ~$${(estimate.estimated_total_cost_microusd / 1_000_000).toFixed(4)}`
+                : ' · unavailable'}
+            </span>
+          </div>
+        ) : null}
+      </div>
+    </Dialog>
   );
 }

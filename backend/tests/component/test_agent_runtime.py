@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.gateway import ModelResult
+from app.core.config import settings
 from app.core.config.agent import default_agent_settings
 from app.core.config.app_models import APP_FEATURE_AGENT
 from app.core.config.entitlements import KEY_AI_CREDITS
@@ -35,6 +36,7 @@ from app.models.agent import (
 from app.models.opportunity import Action
 from app.models.project import Project
 from app.models.provider import ProviderAppRoute, ProviderConnection
+from app.models.user import User
 from app.models.workspace import WorkspaceMember
 from app.workers.agent_worker import AgentWorker
 from tests.component.auth_helpers import grant_test_capabilities, register_and_login
@@ -707,6 +709,48 @@ async def test_a_changed_platform_model_neither_runs_nor_charges(
         )
     assert run is not None
     assert (run.status, run.error_code) == ("failed", "model_changed")
+    assert await _ai_credit_usage(session_factory, project_id) == (0, 0)
+
+
+async def test_only_the_provisioned_dev_login_runs_the_platform_model_unmetered(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A platform model but no published AI-credit policy.
+    monkeypatch.setattr(default_agent_settings, "api_key", "platform-fixture")
+    monkeypatch.setattr(
+        default_agent_settings, "base_url", "https://provider.invalid/v1"
+    )
+    monkeypatch.setattr(default_agent_settings, "model", "fixture-model")
+    monkeypatch.setattr(settings, "dev_login_email", "Agent-Dev@example.com")
+    monkeypatch.setattr(settings, "dev_login_password", "fixture-password")
+    project_id = await _project(client, "agent-dev@example.com")
+
+    # The configured address alone is not the provisioned login.
+    refused = await client.post(
+        f"/api/v1/projects/{project_id}/agent/chats", json={"message": "Hello"}
+    )
+    assert refused.status_code == 402
+
+    async with session_factory() as session:
+        user = await session.scalar(
+            select(User).where(User.email == "agent-dev@example.com")
+        )
+        assert user is not None
+        user.role = "admin"
+        await session.commit()
+    chat_id = await _start(client, project_id, "Summarize.", skill_id="growth_plan")
+    gateway = ScriptedGateway([{"action": "respond", "reply": "Summary."}])
+
+    await _worker(session_factory, gateway).run_once()
+
+    assert (await _detail(client, chat_id))["latest_run"]["status"] == "succeeded"
+    async with session_factory() as session:
+        attempts = (await session.scalars(select(AgentModelAttempt))).all()
+    assert [(row.funding_source, row.settlement_status) for row in attempts] == [
+        ("development", "zero_debit")
+    ]
     assert await _ai_credit_usage(session_factory, project_id) == (0, 0)
 
 

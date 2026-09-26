@@ -4,9 +4,8 @@ import { http, HttpResponse } from 'msw';
  * The provider catalog plus the MSW handlers and connection builder that every
  * provider-facing suite needs.
  *
- * `connection()` and `catalogHandler()` used to be hand-rolled in both
- * connect-provider-dialog.test.tsx and provider-settings.test.tsx. The copies
- * disagreed about `transport_model` for no asserted reason (one file even
+ * `connection()` and `catalogHandler()` used to be hand-rolled in more than
+ * one provider suite. The copies disagreed about `transport_model` for no asserted reason (one file even
  * disagreed with itself between its connection and its test-result handler),
  * so the value is pinned here to the model the catalog actually routes
  * `chatgpt` to.
