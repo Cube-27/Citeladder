@@ -120,7 +120,11 @@ async def create_topic(
 
 
 async def resolve_topics_by_name(
-    session: AsyncSession, *, project_id: uuid.UUID, names: Iterable[str]
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    names: Iterable[str],
 ) -> dict[str, uuid.UUID]:
     """Topic id per requested name, creating unknown names as manual topics.
 
@@ -137,6 +141,9 @@ async def resolve_topics_by_name(
             wanted.setdefault(stripped.lower(), stripped)
     if not wanted:
         return {}
+    await _project_in_workspace(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
     existing = await session.execute(
         select(Topic.id, Topic.name).where(Topic.project_id == project_id)
     )

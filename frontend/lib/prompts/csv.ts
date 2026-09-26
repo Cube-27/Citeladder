@@ -42,9 +42,12 @@ const INTENT_KEYS = new Set(['intent']);
 const COHORT_KEYS = new Set(['cohort']);
 const ENABLED_KEYS = new Set(['enabled', 'is_enabled', 'active']);
 
-/** Backend column widths (`config/http.py`): topic names are user input. */
+/** Backend bounds (`config/http.py`), counted in code points as Python does. */
+const PROMPT_MAX_CHARS = 300;
 const TOPIC_MAX_CHARS = 255;
 const THEME_MAX_CHARS = 255;
+
+const codePoints = (value: string) => Array.from(value);
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'y', 't']);
 const FALSE_VALUES = new Set(['0', 'false', 'no', 'n', 'f']);
@@ -177,7 +180,8 @@ function parseRow(cells: string[], map: ColumnMap, line: number): ParsedPromptRo
   const topic = (cell(map.topic) ?? '').trim();
   const errors: string[] = [];
   if (!text) errors.push('Prompt is required.');
-  if (topic.length > TOPIC_MAX_CHARS) errors.push('Topic name is too long.');
+  if (codePoints(text).length > PROMPT_MAX_CHARS) errors.push('Prompt is too long.');
+  if (codePoints(topic).length > TOPIC_MAX_CHARS) errors.push('Topic name is too long.');
   return {
     line,
     input: {
@@ -185,7 +189,9 @@ function parseRow(cells: string[], map: ColumnMap, line: number): ParsedPromptRo
       topic,
       // Backend `PromptInput.theme` is a non-null string; send '' (not null)
       // when the column is blank so the import never 422s.
-      theme: (cell(map.theme) ?? '').trim().slice(0, THEME_MAX_CHARS),
+      theme: codePoints((cell(map.theme) ?? '').trim())
+        .slice(0, THEME_MAX_CHARS)
+        .join(''),
       intent: normalizeIntent(cell(map.intent)),
       cohort: cell(map.cohort)?.trim().toLowerCase() === 'comparison' ? 'comparison' : 'core',
       enabled: asBool(cell(map.enabled), true),

@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.core.config.http import (
     PROMPT_IMPORT_MAX_ROWS,
@@ -173,15 +173,23 @@ class PromptSetResponse(BaseModel):
 # --------------------------------------------------------------------------
 # Topics
 # --------------------------------------------------------------------------
+# Stripped before the length check, so a whitespace-only name is rejected
+# rather than persisted empty.
+TopicName = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True, min_length=1, max_length=TOPIC_NAME_MAX_CHARS
+    ),
+]
+
+
 class TopicCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=TOPIC_NAME_MAX_CHARS)
+    name: TopicName
     description: str = Field(default="", max_length=1024)
 
 
 class TopicUpdate(BaseModel):
-    name: str | None = Field(
-        default=None, min_length=1, max_length=TOPIC_NAME_MAX_CHARS
-    )
+    name: TopicName | None = None
     description: str | None = Field(default=None, max_length=1024)
 
 

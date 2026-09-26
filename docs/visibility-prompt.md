@@ -74,7 +74,8 @@ and topic, so generated classification survives.
 CSV import reads `topic,prompt` (aliases `category`; `text`, `query`,
 `question`) in any order; a file without a recognized header is a list of
 prompts. Optional `theme`, `intent`, `cohort` and `enabled` columns are clipped
-or defaulted rather than rejected. The browser previews and posts parsed rows;
+or defaulted rather than rejected; the upload's column, row and cell-size bounds
+still reject a file before parsing. The browser previews and posts parsed rows;
 the [CSV parser](../backend/app/domain/prompts/csv_import.py) serves raw uploads
 with the same contract, and the dialog's sample file is generated from the
 [browser parser's column contract](../frontend/lib/prompts/csv.ts). Under the

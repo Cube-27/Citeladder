@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.projects import PROMPT_ORIGIN_IMPORTED
 from app.domain.projects.normalization import normalize_intent
-from app.domain.prompts.locks import acquire_project_lock
+from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
 from app.domain.prompts.schemas import PromptImportRow
 from app.domain.prompts.service import (
@@ -169,8 +169,9 @@ async def import_prompts(
         project_id=project_id,
         texts=texts,
     )
-    # Project lock before the capacity lock: the order generation uses.
+    # Project, then prompt-set, then capacity lock: the order generation uses.
     await acquire_project_lock(session, project_id)
+    await acquire_prompt_set_lock(session, prompt_set_id)
     approved = await prepare_prompt_inserts(
         session,
         workspace_id=workspace_id,
@@ -179,7 +180,10 @@ async def import_prompts(
     )
     inserts = _first_row_per_approved_text(rows, texts, approved)
     topic_ids = await resolve_topics_by_name(
-        session, project_id=project_id, names=(row.topic for row, _ in inserts)
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        names=(row.topic for row, _ in inserts),
     )
     for row, text in inserts:
         await _insert_imported_row(

@@ -61,9 +61,12 @@ describe('parsePromptCsv', () => {
     expect(parsed.rows[0].input).toMatchObject({ text: 'Best shoes?', topic: '' });
   });
 
-  it('flags rows without a prompt or with an overlong topic and drops them', () => {
-    const parsed = parsePromptCsv(`topic,prompt\nShoes,\n${'x'.repeat(256)},Fit?\nShoes,Good`);
-    expect(parsed.rows.map((row) => row.errors.length > 0)).toEqual([true, true, false]);
+  it('flags rows the server would refuse and drops them', () => {
+    // Lengths are code points, as the server counts them: 255 emoji fit.
+    const parsed = parsePromptCsv(
+      `topic,prompt\nShoes,\n${'x'.repeat(256)},Fit?\nShoes,${'p'.repeat(301)}\n${'😀'.repeat(255)},Good`,
+    );
+    expect(parsed.rows.map((row) => row.errors.length > 0)).toEqual([true, true, true, false]);
     expect(validRows(parsed).map((row) => row.text)).toEqual(['Good']);
   });
 

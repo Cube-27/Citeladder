@@ -540,6 +540,10 @@ async def test_csv_import_files_prompts_under_topics_by_name(
         await client.post("/api/v1/projects", json=_project_payload(name="Other"))
     ).json()
     await client.post(f"/api/v1/projects/{other['id']}/topics", json={"name": "Bags"})
+    blank = await client.post(
+        f"/api/v1/projects/{project['id']}/topics", json={"name": "   "}
+    )
+    assert blank.status_code == 422
     laptops = (
         await client.post(
             f"/api/v1/projects/{project['id']}/topics", json={"name": "Laptops"}

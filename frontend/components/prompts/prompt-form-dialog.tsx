@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { Alert } from '@/components/ui/alert';
@@ -50,7 +51,11 @@ export function PromptFormDialog({
   error?: string;
 }>) {
   const isEdit = Boolean(prompt);
-  const initialValues = prompt ? promptToFormValues(prompt) : emptyPromptForm(defaultTopicId);
+  // Stable across renders: `values` re-syncs the form whenever it changes.
+  const initialValues = useMemo(
+    () => (prompt ? promptToFormValues(prompt) : emptyPromptForm(defaultTopicId)),
+    [prompt, defaultTopicId],
+  );
   const {
     register,
     control,
