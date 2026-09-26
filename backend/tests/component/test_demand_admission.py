@@ -111,7 +111,8 @@ async def test_concurrent_windows_retry_and_terminal_capacity(
     await db_session.execute(update(AnalyticsTask).values(status="succeeded"))
     await db_session.commit()
     recovered, task_id = await refresh(ends[1 - winner])
-    assert recovered == "accepted" and task_id is not None
+    assert recovered == "accepted"
+    assert task_id is not None
     assert await db_session.scalar(select(func.count()).select_from(AnalyticsTask)) == 2
 
 
@@ -154,7 +155,8 @@ async def test_manual_admission_does_not_limit_other_projects_or_automatic_work(
     await db_session.commit()
     assert automatic is not None
     task = await db_session.get(AnalyticsTask, automatic)
-    assert task is not None and task.payload["manual"] is False
+    assert task is not None
+    assert task.payload["manual"] is False
     assert task.payload["downstream_trigger_kind"] == "site_crawl"
 
 
@@ -248,9 +250,11 @@ async def test_api_capacity_error_is_retryable_and_does_not_leave_a_task(
     url = f"/api/v1/projects/{project['id']}/demand/recompute"
     payload = {"window_start": str(_START), "window_end": str(_END)}
     created = await client.post(url, json=payload)
-    assert created.status_code == 202 and created.json()["status"] == "queued"
+    assert created.status_code == 202
+    assert created.json()["status"] == "queued"
     replay = await client.post(url, json=payload)
-    assert replay.status_code == 202 and replay.json()["status"] == "already_queued"
+    assert replay.status_code == 202
+    assert replay.json()["status"] == "already_queued"
     refused = await client.post(url, json={**payload, "window_end": "2026-07-08"})
     assert refused.status_code == 429
     assert int(refused.headers["retry-after"]) > 0

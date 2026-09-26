@@ -9,7 +9,9 @@ const env: Parameters<typeof handleAppRequest>[1] = {
     fetch: async (request: Request) =>
       new URL(request.url).pathname === '/index.html'
         ? new Response('<html>app</html>', { headers: { 'Content-Type': 'text/html' } })
-        : new URL(request.url).pathname === '/app-assets/page-DqDZ7Zs-.js'
+        : ['/app-assets/page-DqDZ7Zs-.js', '/theme-preference.js'].includes(
+              new URL(request.url).pathname,
+            )
           ? new Response('export {};', { headers: { 'Content-Type': 'text/javascript' } })
           : new Response('missing', { status: 404 }),
   },
@@ -75,6 +77,9 @@ describe('product Worker routing', () => {
         'cache-control',
       ),
     ).toContain('immutable');
+    expect(
+      (await handleAppRequest(request('/theme-preference.js'), env)).headers.get('cache-control'),
+    ).toBeNull();
     expect(await handleAppRequest(request('/projects', 'POST'), env).then((r) => r.status)).toBe(
       405,
     );

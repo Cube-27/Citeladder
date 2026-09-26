@@ -75,7 +75,8 @@ async def test_replay_remains_bound_to_authorized_action_and_original_body(
             declarations, name, AsyncMock(side_effect=AssertionError(name))
         )
     replay = await client.post(url, headers=headers, json=payload)
-    assert replay.status_code == 200 and replay.json() == created.json()
+    assert replay.status_code == 200
+    assert replay.json() == created.json()
     async with session_factory() as session:
         await session.execute(
             delete(WorkspaceMember).where(
