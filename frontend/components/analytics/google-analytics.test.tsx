@@ -95,12 +95,17 @@ describe('GoogleAnalytics', () => {
       const script = within(document.documentElement).getByTestId('external-script');
       act(() => script.dispatchEvent(new Event('load')));
       Object.defineProperty(window, 'gtag', { value: gtag, configurable: true, writable: true });
+      document.cookie = '_ga=optional; path=/';
+      document.cookie = 'citeladder_session=essential; path=/';
 
       // A loaded tag continues to run after its script element exists, so
       // revocation must reach it through Consent Mode.
       await act(async () => writeConsent('rejected'));
 
       expect(gtag).toHaveBeenCalledWith('consent', 'update', { analytics_storage: 'denied' });
+      expect(Reflect.get(window, 'ga-disable-G-TEST')).toBe(true);
+      expect(document.cookie).not.toContain('_ga=');
+      expect(document.cookie).toContain('citeladder_session=essential');
     } finally {
       Reflect.deleteProperty(window, 'gtag');
       writeConsent('rejected');

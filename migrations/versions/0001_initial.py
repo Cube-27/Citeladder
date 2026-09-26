@@ -41,6 +41,52 @@ def _create_indexes(table: str, columns: tuple[str, ...]) -> None:
 
 def upgrade() -> None:
     op.create_table(
+        "provider_disclosures",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("actor_id", sa.UUID(), nullable=False),
+        sa.Column("connection_id", sa.UUID(), nullable=False),
+        sa.Column("destination", sa.String(length=1024), nullable=False),
+        sa.Column("model", sa.String(length=255), nullable=False),
+        sa.Column("disclosure_revision", sa.String(length=32), nullable=False),
+        sa.Column("acknowledged_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    _create_indexes("provider_disclosures", ("workspace_id",))
+    op.create_table(
+        "web_acquisition_controls",
+        sa.Column("domain", sa.String(length=255), nullable=False),
+        sa.Column("blocked", sa.Boolean(), nullable=False),
+        sa.Column("actor_id", sa.UUID(), nullable=False),
+        sa.Column("reason", sa.String(length=255), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("domain"),
+    )
+    op.create_table(
+        "policy_acceptances",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("actor_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("terms_revision", sa.String(length=64), nullable=False),
+        sa.Column("privacy_notice_revision", sa.String(length=64), nullable=False),
+        sa.Column("context", sa.String(length=32), nullable=False),
+        sa.Column("accepted_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("actor_id", "workspace_id", "terms_revision", name="uq_policy_acceptance_revision"),
+    )
+    _create_indexes("policy_acceptances", ("workspace_id",))
+    op.create_table(
+        "security_events",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("actor_id", sa.UUID(), nullable=True),
+        sa.Column("workspace_id", sa.UUID(), nullable=True),
+        sa.Column("target_id", sa.UUID(), nullable=True),
+        sa.Column("event", sa.String(length=64), nullable=False),
+        sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    _create_indexes("security_events", ("workspace_id", "occurred_at"))
+    op.create_table(
         "billing_webhook_events",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("provider", sa.String(length=24), nullable=False),
@@ -177,6 +223,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "mcp_authorization_codes",
+        sa.Column("workspace_ids", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("code_hash", sa.String(length=64), nullable=False),
         sa.Column("client_id", sa.String(length=36), nullable=False),
@@ -204,6 +251,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "mcp_oauth_grants",
+        sa.Column("workspace_ids", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("client_id", sa.String(length=36), nullable=False),
         sa.Column("user_id", sa.UUID(), nullable=False),
@@ -7116,6 +7164,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_table("provider_disclosures")
+    op.drop_table("web_acquisition_controls")
+    op.drop_table("policy_acceptances")
+    op.drop_table("security_events")
     # This is the repository's sole greenfield revision. The Commerce rebuild
     # retires tables that the earlier body creates before the final schema is
     # installed, so replaying the generated reverse delta would recreate those

@@ -23,6 +23,7 @@ from app.api.commerce import router as commerce_router
 from app.api.demand import router as demand_router
 from app.api.executions import router as executions_router
 from app.api.integrations import router as integrations_router
+from app.api.mcp_connections import router as mcp_connections_router
 from app.api.oauth import router as oauth_router
 from app.api.opportunities import router as opportunities_router
 from app.api.performance import router as performance_router
@@ -79,6 +80,7 @@ def _sanitize_correlation_id(value: str) -> str:
 # Explicit router stubs registered now so B2–B6 fill them in place. Each router
 # owns its own paths; the prefix keeps the whole surface under /api/v1.
 _ROUTERS = (
+    mcp_connections_router,
     auth_router,
     billing_router,
     oauth_router,

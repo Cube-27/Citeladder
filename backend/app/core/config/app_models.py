@@ -5,6 +5,7 @@ from typing import Final
 # The Agent is the one application model feature: its customer route and its
 # published credit rate are both keyed on this identifier.
 APP_FEATURE_AGENT: Final = "agent"
+APP_MODEL_DISCLOSURE_REVISION: Final = "1"
 APP_FEATURES: Final = frozenset({APP_FEATURE_AGENT})
 APP_PROTOCOL_OPENAI_CHAT: Final = "openai_chat"
 APP_MODEL_ALLOWED_PORTS: Final = frozenset({443})

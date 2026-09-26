@@ -32,6 +32,7 @@ from app.domain.providers import app_route_probes
 from app.domain.providers import service as provider_service
 from app.models.audit import ProviderCapacityBucket
 from app.models.provider import ProviderAppRoute, ProviderConnection
+from app.models.provider_disclosure import ProviderDisclosure
 from tests.component.auth_helpers import register_and_login as _register
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
@@ -236,11 +237,12 @@ async def test_the_agent_route_saves_without_key_echo_and_content_is_retired(
 ) -> None:
     await _register(client, "prov-app-routes@example.com")
 
-    def route(feature: str) -> dict[str, str]:
+    def route(feature: str) -> dict[str, str | bool]:
         return {
             "feature": feature,
             "model": "customer-model",
             "api_base_url": "https://models.example.com/v1",
+            "disclosure_accepted": True,
         }
 
     for retired_feature in ("content", "growth_agent"):
@@ -264,6 +266,7 @@ async def test_the_agent_route_saves_without_key_echo_and_content_is_retired(
 @pytest.mark.asyncio
 async def test_app_route_destination_change_requires_key_and_confirmation(
     client: httpx.AsyncClient,
+    db_session,
 ) -> None:
     await _register(client, "prov-app-destination@example.com")
     created = await client.post(
@@ -274,6 +277,7 @@ async def test_app_route_destination_change_requires_key_and_confirmation(
                     "feature": "agent",
                     "model": "customer-model",
                     "api_base_url": "https://models.example.com/v1",
+                    "disclosure_accepted": True,
                 }
             ]
         ),
@@ -284,6 +288,7 @@ async def test_app_route_destination_change_requires_key_and_confirmation(
             "feature": "agent",
             "model": "customer-model",
             "api_base_url": "https://other.example.com/v1",
+            "disclosure_accepted": True,
         }
     ]
     missing_key = await client.patch(
@@ -296,6 +301,15 @@ async def test_app_route_destination_change_requires_key_and_confirmation(
         json={"app_routes": changed_route, "api_key": "fresh-key"},
     )
     assert missing_confirmation.status_code == 400
+    missing_acknowledgement = await client.patch(
+        f"/api/v1/provider-connections/{connection_id}",
+        json={
+            "app_routes": [dict(changed_route[0], disclosure_accepted=False)],
+            "api_key": "fresh-key",
+            "confirm_destination_change": True,
+        },
+    )
+    assert missing_acknowledgement.status_code == 422
     changed = await client.patch(
         f"/api/v1/provider-connections/{connection_id}",
         json={
@@ -306,6 +320,21 @@ async def test_app_route_destination_change_requires_key_and_confirmation(
     )
     assert changed.status_code == 200
     assert changed.json()["app_routes"][0]["verified"] is False
+    receipts = list(
+        await db_session.scalars(
+            select(ProviderDisclosure)
+            .where(ProviderDisclosure.connection_id == uuid.UUID(connection_id))
+            .order_by(ProviderDisclosure.acknowledged_at)
+        )
+    )
+    assert [receipt.destination for receipt in receipts] == [
+        "https://models.example.com/v1",
+        "https://other.example.com/v1",
+    ]
+    assert receipts[0].actor_id == receipts[1].actor_id
+    assert {receipt.workspace_id for receipt in receipts} == {
+        uuid.UUID(created.json()["workspace_id"])
+    }
 
 
 @pytest.mark.asyncio
@@ -478,6 +507,7 @@ async def test_stale_app_probe_failure_does_not_mark_new_route_unhealthy(
                     "feature": "agent",
                     "model": "customer-model",
                     "api_base_url": "https://models.example.com/v1",
+                    "disclosure_accepted": True,
                 }
             ]
         ),

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { MemberSettings } from '@/components/settings/member-settings';
+import { McpConnections } from '@/components/settings/mcp-connections';
 import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
@@ -52,6 +53,7 @@ const SETTINGS_TABS = [
   { id: 'members', label: 'Members' },
   { id: 'providers', label: 'Providers' },
   { id: 'integrations', label: 'Integrations' },
+  { id: 'connections', label: 'MCP connections' },
 ] as const;
 
 type SettingsTab = (typeof SETTINGS_TABS)[number]['id'];
@@ -311,6 +313,9 @@ export function SettingsScreen() {
             the reader could not see. */}
         <TabPanel value="integrations" className="focus-ring">
           <IntegrationSettings />
+        </TabPanel>
+        <TabPanel value="connections" className="focus-ring">
+          <McpConnections />
         </TabPanel>
       </PageShell>
     </TabsRoot>

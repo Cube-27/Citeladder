@@ -26,17 +26,48 @@ from pydantic import AnyUrl
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config import demo_access_expired, settings
+from app.core.config import demo_access_expired, legal, settings
 from app.core.config.mcp import MCP_READ_SCOPE, mcp_public_origin, mcp_settings
 from app.core.database import SessionLocal
 from app.core.security import decrypt_secret, encrypt_secret
+from app.domain.auth.security_events import record_security_event
+from app.domain.workspaces.policy import WorkspaceCapability, roles_with
 from app.models.mcp import (
     McpAuthorizationCode,
     McpAuthorizationRequest,
     McpOAuthClient,
     McpOAuthGrant,
 )
+from app.models.policy_acceptance import PolicyAcceptance
 from app.models.user import User
+from app.models.workspace import Workspace, WorkspaceMember
+
+
+async def _consentable_workspaces(
+    session: AsyncSession, user_id: uuid.UUID
+) -> list[tuple[str, str]]:
+    """Readable workspaces whose current Terms revision the user has accepted."""
+    accepted = (
+        select(PolicyAcceptance.id)
+        .where(
+            PolicyAcceptance.actor_id == user_id,
+            PolicyAcceptance.workspace_id == Workspace.id,
+            PolicyAcceptance.terms_revision == legal.TERMS_REVISION,
+        )
+        .exists()
+    )
+    rows = await session.execute(
+        select(Workspace.id, Workspace.name)
+        .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
+        .where(
+            WorkspaceMember.user_id == user_id,
+            WorkspaceMember.role.in_(roles_with(WorkspaceCapability.READ)),
+            Workspace.is_system.is_(False),
+            accepted,
+        )
+        .order_by(Workspace.name, Workspace.id)
+    )
+    return [(str(row.id), row.name) for row in rows]
 
 
 class CiteLadderAuthorizationCode(AuthorizationCode):
@@ -259,7 +290,14 @@ class CiteLadderOAuthProvider:
             redirect_uri=request.redirect_uri,
         )
 
-    async def complete_authorization(self, transaction: str, user_id: uuid.UUID) -> str:
+    async def consent_workspaces(self, user_id: uuid.UUID) -> list[tuple[str, str]]:
+        async with self._session_factory() as session:
+            return await _consentable_workspaces(session, user_id)
+
+    async def complete_authorization(
+        self, transaction: str, user_id: uuid.UUID, workspace_ids: list[str]
+    ) -> str:
+        selected = sorted(set(workspace_ids))
         now = _utcnow()
         async with self._session_factory() as session:
             request = await session.scalar(
@@ -277,9 +315,17 @@ class CiteLadderOAuthProvider:
                 raise PermissionError("Authorization request is invalid or expired")
             if not _account_allowed(user):
                 raise PermissionError("This account is not enabled for MCP access")
+            # Checked in the consuming transaction, not a separate read.
+            consentable = await _consentable_workspaces(session, user.id)
+            allowed = {identifier for identifier, _name in consentable}
+            if not selected or not set(selected).issubset(allowed):
+                raise PermissionError(
+                    "Select at least one currently accessible workspace"
+                )
             code = secrets.token_urlsafe(32)
             session.add(
                 McpAuthorizationCode(
+                    workspace_ids=selected,
                     code_hash=_token_hash(code),
                     client_id=request.client_id,
                     user_id=user.id,
@@ -293,6 +339,13 @@ class CiteLadderOAuthProvider:
                 )
             )
             request.consumed_at = now
+            for workspace_id in selected:
+                record_security_event(
+                    session,
+                    event="mcp.consent",
+                    actor_id=user.id,
+                    workspace_id=uuid.UUID(workspace_id),
+                )
             await session.commit()
             return construct_redirect_uri(
                 request.redirect_uri,
@@ -376,6 +429,7 @@ class CiteLadderOAuthProvider:
             row.consumed_at = now
             session.add(
                 McpOAuthGrant(
+                    workspace_ids=row.workspace_ids,
                     client_id=client.client_id,
                     user_id=row.user_id,
                     access_token_hash=_token_hash(access_token),
@@ -406,7 +460,7 @@ class CiteLadderOAuthProvider:
                     McpOAuthGrant.refresh_expires_at > now,
                 )
             )
-            if row is None:
+            if row is None or not row.workspace_ids:
                 return None
             return CiteLadderRefreshToken(
                 token=refresh_token,
@@ -458,6 +512,10 @@ class CiteLadderOAuthProvider:
                     error="invalid_grant", error_description="Refresh token is invalid"
                 )
             row = pair.McpOAuthGrant
+            if not row.workspace_ids:
+                raise TokenError(
+                    error="invalid_grant", error_description="Renew workspace consent"
+                )
             row.access_token_hash = _token_hash(new_access)
             row.refresh_token_hash = _token_hash(new_refresh)
             row.scopes = granted_scopes
@@ -486,7 +544,11 @@ class CiteLadderOAuthProvider:
             if pair is None:
                 return None
             grant, user = pair
-            if not user.is_active or not _account_allowed(user):
+            if (
+                not user.is_active
+                or not _account_allowed(user)
+                or not grant.workspace_ids
+            ):
                 return None
             return AccessToken(
                 token=token,
@@ -495,7 +557,11 @@ class CiteLadderOAuthProvider:
                 expires_at=int(grant.access_expires_at.timestamp()),
                 resource=grant.resource,
                 subject=str(grant.user_id),
-                claims={"iss": public_base_url()},
+                claims={
+                    "iss": public_base_url(),
+                    "grant_id": str(grant.id),
+                    "token_hash": grant.access_token_hash,
+                },
             )
 
     async def revoke_token(self, token: AccessToken | RefreshToken) -> None:
@@ -514,6 +580,9 @@ class CiteLadderOAuthProvider:
             )
             if row is not None:
                 row.revoked_at = now
+                record_security_event(
+                    session, event="mcp.revoke", actor_id=row.user_id, target_id=row.id
+                )
                 await session.commit()
 
     async def exchange_identity_assertion(

@@ -10,14 +10,14 @@
   configuration, cloud dependency/retirement work and Phase 2 policies remain
   open. Security alert implementation remains deferred. See the plan's current
   status and deployment gates; this entry does not authorize deployment.
+- [Audit remediation and enterprise readiness](citeladder-audit-remediation.md)
+  — PR 1 implemented on branch `codex/audit-remediation`; remaining work is
+  scoped as PR 2 in Section 4 for the next assigned agent. Public policy
+  revisions and management/legal proposals await approval.
+  Payment implementation, deployment and external acceptance remain excluded.
 
 ## Queued
 
-- [Audit remediation and enterprise readiness](citeladder-audit-remediation.md)
-  — plan saved on 25 September 2026; implementation deferred. Covers policies,
-  data lifecycle, security, MCP, crawler and operational readiness for the unified
-  Agent. Payment implementation is excluded; legal/management decisions remain
-  in the plan's final section. Saving this plan does not authorize execution.
 - [Subsequent prompt grounding](citeladder-subsequent-prompt-grounding.md)
   — pending; relevance-ranked persisted GSC evidence for later Generate prompts.
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)

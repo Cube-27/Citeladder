@@ -32,6 +32,7 @@ type ProviderRouteInput = {
 };
 
 export type ProviderAppRouteInput = {
+  disclosure_accepted: true;
   feature: 'agent';
   model: string;
   api_base_url: string;

@@ -71,7 +71,7 @@ async def _fetch(monkeypatch, response: _Response | Exception, *, target=None):
     monkeypatch.setattr(
         curl_transport, "AsyncSession", lambda **_kwargs: _Session(response)
     )
-    transport = curl_transport.CurlCffiTransport(impersonation_profile="chrome")
+    transport = curl_transport.CurlCffiTransport()
     return await transport.fetch(
         FetchRequest(url="https://example.com/", purpose="discover"),
         target or _target(),
@@ -163,14 +163,10 @@ async def test_connection_failure_retains_safe_curl_error_code(monkeypatch) -> N
 
 
 @pytest.mark.asyncio
-async def test_user_agent_is_left_to_the_impersonation_profile(
+async def test_transport_identifies_crawler_without_browser_impersonation(
     monkeypatch,
 ) -> None:
-    """A caller UA is dropped rather than contradicting the TLS fingerprint.
-
-    Sending a crawler UA over a Chrome fingerprint makes Akamai reset the
-    HTTP/2 stream (curl 92), so the profile owns the header.
-    """
+    """A caller cannot suppress the public crawler identity."""
     captured: dict[str, str] = {}
 
     class _CapturingSession(_Session):
@@ -183,7 +179,7 @@ async def test_user_agent_is_left_to_the_impersonation_profile(
         "AsyncSession",
         lambda **_kwargs: _CapturingSession(_Response()),
     )
-    transport = curl_transport.CurlCffiTransport(impersonation_profile="chrome")
+    transport = curl_transport.CurlCffiTransport()
     await transport.fetch(
         FetchRequest(
             url="https://example.com/",
@@ -196,5 +192,7 @@ async def test_user_agent_is_left_to_the_impersonation_profile(
         timeout_seconds=5,
     )
 
-    assert "user-agent" not in captured
-    assert "User-Agent" not in captured
+    assert (
+        captured["user-agent"]
+        == "CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)"
+    )

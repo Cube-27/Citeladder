@@ -40,6 +40,17 @@ authorized to publish the global billing catalog or administer other workspaces.
 
 ## Membership and ownership continuity
 
+Authenticated onboarding reads `/workspaces/{id}/policies` and captures an
+explicit Terms acceptance before opening that workspace in the app. This covers
+password, Google-created and operator-created identities. PostgreSQL stores
+actor, workspace, immutable revision, context and timestamp; repeated acceptance
+of one revision is idempotent. Updating the approved Terms revision requires
+renewed acceptance and never overwrites an earlier row. Privacy is a notice;
+optional analytics consent remains separate. The approved revision registry is
+`backend/app/core/config/legal.py`; internal proposals never enter it.
+Signed enterprise-agreement references and checkout-linked acceptance remain
+separate unfinished work, as tracked in the audit-remediation plan.
+
 [Workspace APIs](../backend/app/api/workspaces.py) use the
 [workspace domain](../backend/app/domain/workspaces/) for invitations,
 acceptance, role changes, removal and ownership transfer. Invitation tokens are

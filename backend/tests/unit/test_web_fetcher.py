@@ -20,6 +20,10 @@ from app.core.config.site_health_acquisition import FETCH_PURPOSE_ANALYZE
 _PUBLIC_IP = "93.184.216.34"
 
 
+async def _authorize_test_url(_url: str) -> None:
+    return None
+
+
 class _FakeResolver:
     def __init__(self, mapping: dict[str, list[str]] | None = None) -> None:
         self._mapping = mapping or {}
@@ -89,7 +93,9 @@ def _request(url: str = "https://example.com/") -> FetchRequest:
 @pytest.mark.asyncio
 async def test_fetch_uses_only_curl_provenance_and_one_trace() -> None:
     transport = _SequenceTransport([_result()])
-    async with SecureFetcher(resolver=_FakeResolver(), transport=transport) as fetcher:
+    async with SecureFetcher(
+        authorize_url=_authorize_test_url, resolver=_FakeResolver(), transport=transport
+    ) as fetcher:
         result = await fetcher.fetch(_request())
 
     assert result.status_code == 200
@@ -103,6 +109,27 @@ async def test_fetch_uses_only_curl_provenance_and_one_trace() -> None:
 
 
 @pytest.mark.asyncio
+async def test_guard_refuses_redirect_before_destination_request():
+    visited = []
+
+    async def guard(url):
+        visited.append(url)
+        if "blocked.test" in url:
+            raise FetchError("suppressed", error_code="acquisition_unavailable")
+
+    transport = _SequenceTransport(
+        [_result(status=302, location="https://blocked.test/")]
+    )
+    async with SecureFetcher(
+        resolver=_FakeResolver(), transport=transport, authorize_url=guard
+    ) as fetcher:
+        with pytest.raises(FetchError, match="suppressed"):
+            await fetcher.fetch(_request())
+    assert visited == ["https://example.com/", "https://blocked.test/"]
+    assert len(transport.requests) == 1
+
+
+@pytest.mark.asyncio
 async def test_redirects_are_resolved_and_traced_per_network_call() -> None:
     transport = _SequenceTransport(
         [
@@ -110,7 +137,9 @@ async def test_redirects_are_resolved_and_traced_per_network_call() -> None:
             _result(url="https://example.com/final", body=b"final"),
         ]
     )
-    fetcher = SecureFetcher(resolver=_FakeResolver(), transport=transport)
+    fetcher = SecureFetcher(
+        authorize_url=_authorize_test_url, resolver=_FakeResolver(), transport=transport
+    )
 
     result = await fetcher.fetch(_request())
 
@@ -129,6 +158,7 @@ async def test_redirect_to_private_address_is_blocked_before_second_call() -> No
         [_result(status=302, location="https://internal.example/secret")]
     )
     fetcher = SecureFetcher(
+        authorize_url=_authorize_test_url,
         resolver=_FakeResolver({"internal.example": ["10.0.0.5"]}),
         transport=transport,
     )
@@ -146,7 +176,9 @@ async def test_redirect_scope_is_revalidated() -> None:
     transport = _SequenceTransport(
         [_result(status=302, location="https://other.example/final")]
     )
-    fetcher = SecureFetcher(resolver=_FakeResolver(), transport=transport)
+    fetcher = SecureFetcher(
+        authorize_url=_authorize_test_url, resolver=_FakeResolver(), transport=transport
+    )
     request = _request()
 
     with pytest.raises(FetchError) as excinfo:
@@ -171,7 +203,9 @@ async def test_redirect_limit_keeps_the_last_call_in_failure_trace() -> None:
             _result(url="https://example.com/second", status=302, location="/third"),
         ]
     )
-    fetcher = SecureFetcher(resolver=_FakeResolver(), transport=transport)
+    fetcher = SecureFetcher(
+        authorize_url=_authorize_test_url, resolver=_FakeResolver(), transport=transport
+    )
     request = FetchRequest(
         url="https://example.com/",
         purpose=FETCH_PURPOSE_ANALYZE,
@@ -191,7 +225,9 @@ async def test_redirect_limit_keeps_the_last_call_in_failure_trace() -> None:
 @pytest.mark.asyncio
 async def test_hard_excluded_url_never_reaches_transport() -> None:
     transport = _SequenceTransport([])
-    fetcher = SecureFetcher(resolver=_FakeResolver(), transport=transport)
+    fetcher = SecureFetcher(
+        authorize_url=_authorize_test_url, resolver=_FakeResolver(), transport=transport
+    )
     request = _request("https://example.com/image.png")
 
     with pytest.raises(FetchError) as excinfo:
@@ -206,7 +242,9 @@ async def test_transport_failure_carries_curl_trace() -> None:
     transport = _SequenceTransport(
         [FetchError("timed out", error_code="timeout", retryable=True)]
     )
-    fetcher = SecureFetcher(resolver=_FakeResolver(), transport=transport)
+    fetcher = SecureFetcher(
+        authorize_url=_authorize_test_url, resolver=_FakeResolver(), transport=transport
+    )
     request = _request()
 
     with pytest.raises(FetchError) as excinfo:

@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { panelClasses } from '@/components/ui/panel';
@@ -19,6 +20,7 @@ const CONNECTION_LABEL = 'Agent custom model';
 const AGENT_ROUTE_FEATURE = 'agent';
 
 type AppModelForm = {
+  acknowledged: boolean;
   baseUrl: string;
   model: string;
   apiKey: string;
@@ -31,6 +33,7 @@ function agentRoute(connection?: ProviderConnection) {
 function initialForm(connection?: ProviderConnection): AppModelForm {
   const route = agentRoute(connection);
   return {
+    acknowledged: false,
     baseUrl: route?.api_base_url ?? '',
     model: route?.model ?? '',
     apiKey: '',
@@ -38,7 +41,15 @@ function initialForm(connection?: ProviderConnection): AppModelForm {
 }
 
 function appRoutes(form: AppModelForm): ProviderAppRouteInput[] {
-  return [{ feature: AGENT_ROUTE_FEATURE, model: form.model, api_base_url: form.baseUrl }];
+  if (!form.acknowledged) throw new Error('Acknowledge the destination before saving.');
+  return [
+    {
+      feature: AGENT_ROUTE_FEATURE,
+      model: form.model,
+      api_base_url: form.baseUrl,
+      disclosure_accepted: true,
+    },
+  ];
 }
 
 function saveConnection(
@@ -67,7 +78,11 @@ function useAppModelForm(connections: ProviderConnection[]) {
   );
   const [form, setForm] = useState(() => initialForm(connection));
   const update = <Key extends keyof AppModelForm>(key: Key, value: AppModelForm[Key]) =>
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      const next = { ...current, [key]: value };
+      if (key === 'baseUrl') next.acknowledged = false;
+      return next;
+    });
   const save = useMutation({
     mutationFn: () => {
       if (!workspaceId) throw new Error('Workspace is not available.');
@@ -96,6 +111,7 @@ function useAppModelForm(connections: ProviderConnection[]) {
     canSave:
       Boolean(workspaceId) &&
       validDestination &&
+      form.acknowledged &&
       Boolean(connection || form.apiKey) &&
       !save.isPending,
   };
@@ -227,6 +243,18 @@ export function AppModelCard({ connections }: Readonly<{ connections: ProviderCo
       </div>
       <DestinationFields controller={controller} />
       <CredentialField controller={controller} />
+      <Checkbox
+        checked={controller.form.acknowledged}
+        onCheckedChange={(checked) => controller.update('acknowledged', checked === true)}
+        label={
+          <>
+            I authorize sending Agent messages, selected workspace evidence, instructions and
+            outputs to {controller.form.baseUrl || 'the destination above'}. My provider terms,
+            retention and training settings apply. I am responsible for selecting this provider;
+            Cube27 retains its own applicable duties.
+          </>
+        }
+      />
       <Alert tone="info">
         Fallback: none. If this route is missing, revoked, or fails validation, the request is
         refused rather than silently using a platform key.

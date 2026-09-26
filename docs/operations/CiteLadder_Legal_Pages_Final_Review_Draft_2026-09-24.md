@@ -6,6 +6,14 @@
 **Proposed contracting entity:** Cube27 IT Private Limited\
 **Status:** Drafts for business approval and final legal review. Not yet approved for publication.
 
+**26 September remediation addendum:** the active assignment and all supplied
+proposed decisions are retained in [the remediation plan](../plans/citeladder-audit-remediation.md).
+Part 0 below is dated historical evidence, not current deployed configuration.
+Its crawler findings (Chrome impersonation, fail-open robots, capped delay) are
+superseded in code by audit-remediation PR 1; see [Site Health](../site-health.md#acquisition-and-evidence-guarantees).
+Part E records the updated internal review package. Do not publish it or advance
+policy dates until approval. Existing liability/dispute terms remain unchanged.
+
 ---
 
 # Part 0. Implementation status (24 September 2026)
@@ -640,9 +648,11 @@ A change in AI answers, rankings, citations, traffic or another outcome we do no
 
 ## 4. Mistaken add-on or top-up purchases
 
-You may request a refund for an add-on or top-up bought by mistake within **7 calendar days** of purchase if no associated credits or additional capacity have been used.
-
-A purchase is not unused if its credits have funded an execution, or its additional project, prompt or URL capacity has been put into use. Other refund rights for billing error, non-delivery or applicable law are unaffected.
+**Pending owner decision D3.** If D3 is approved, a request may be made within
+7 calendar days of purchase only if no associated credits or additional capacity
+have been used. If D3 is not approved, this section offers no discretionary
+refund. Either way, existing rights for billing error, non-delivery and
+applicable law remain unchanged.
 
 Unused entitlement expiring under the purchase terms, or becoming unavailable because the base subscription has ended, does not by itself create a refund right.
 
@@ -850,3 +860,324 @@ For support, billing, cancellation, refunds, privacy requests or crawler concern
 **Telephone:** [BUSINESS_CONTACT_PHONE]
 
 We acknowledge complaints within **48 hours** and aim to resolve them within **30 calendar days**, or within a shorter period where applicable law requires it. If further information or investigation is needed, we will explain the next steps. This process does not remove your right to approach a competent authority or forum.
+
+# Part E. Internal remediation review package — 26 September 2026
+
+This section is an internal draft, never an approved policy, signed agreement,
+market-admission decision, security certification or evidence of live operations.
+Public policy changes remain withheld. The supplied management proposals and
+every “Still needed” item remain in the remediation plan, including the conflict
+between the proposed paid-data schedule and the plan's previously confirmed clocks.
+
+## E1. Policy revision instructions
+
+The shared legal-content modules remain the public owner. On approval, prepare a
+new immutable revision, preserve the previous revision and acceptance record,
+and update the approved backend revision registry in the same release. Record
+publication time separately from draft preparation and acceptance time. Never
+backdate acceptance or change an earlier agreement by editing its date.
+
+| Document | Proposed revision, held for review |
+|---|---|
+| Terms | Retain current liability and dispute clauses. Cover confidentiality, customer input authority, authorized crawling, customer-data ownership, human review, third-party dependencies, abuse suspension, termination and export/deletion. Generated output is supplied for customer use to the extent Cube27 can grant rights; uniqueness, copyrightability and freedom from third-party rights are not guaranteed. Mandatory duties are not waived. |
+| Privacy | Include Agent chats, instructions, context manifests, outputs/revisions and attempts. Describe controller account/security processing separately from customer-directed processor activity. Use actual recipient/location facts, verified request handling and the approved lifecycle clocks, with narrow exception categories. Do not promise unverified deletion or Google Limited Use controls. |
+| DPA | Include the same Agent categories and a completed processing/security schedule. Retain existing 30-day subprocessor notice and 15-day objection baseline pending signed revision. Any urgent-replacement exception needs approval. Customer responsibility does not remove Cube27's processor/security obligations. |
+| AI | Describe platform processing as verified business/API providers only once vendor evidence exists. Explain customer endpoints, recipients and transmitted context, provider terms and human review. Describe the unified Agent; exclude retired Content/Growth runtimes. No autonomous publishing or outcome guarantees. |
+| Cookies | Describe the persistent Cookie preferences control, analytics rejection/withdrawal and essential-session preservation. Confirm actual deployed traffic and first-party cookie domains before approving the inventory. Cross-host consent must not be inferred from host-local storage. |
+| Refund | Preserve current eligibility. Proposed targets: decision within five business days after complete information, initiation within a further five. Shorter legal periods prevail. The 7-day mistaken-purchase refund follows the pending D3 decision. |
+| Cancellation | Effective at verified paid-period end. No immediate deletion on cancellation. Preserve existing refund policy. Publish retention deadlines only after lifecycle acceptance. |
+| Subprocessors | Name only factual active subprocessors, separately from customer-directed providers and independent services. Confirm route/account, role, locations, data categories, training settings, retention and deletion from evidence. Never infer deployment from repository secrets or supported integrations. |
+| Contact | Approved identity: CUBE27 IT PRIVATE LIMITED; CIN U72900PN2020PTC194984; registered office Plot No. 12, Mulberry Garden 1, Magarpatta City, Hadapsar, Pune 411013, Maharashtra, India; contact@cube27.com. Named contact/designation/business phone remain pending. Proposed complaint acknowledgement 48 hours, resolution target 30 calendar days, shorter law controlling. |
+| AUP | Use the dedicated draft below after review. |
+| Crawler | Part D §8 remains unpublished until the remaining owned-site authority, redirect robots and pacing checks pass. Do not claim all safeguards solely from the identity/network-failure fix. |
+
+## E2. Dedicated Acceptable Use Policy draft
+
+Use CiteLadder only with authority to supply the inputs, connect the selected
+workspace, authorize owned-site analysis, and direct the requested processing.
+Do not supply unlawfully obtained data, secrets in prompts, or material that
+infringes third-party rights.
+
+Do not use the service for unauthorized access, credential theft, malware,
+harassment, impersonation, fraud, unlawful surveillance, or evasion of access
+controls. Do not bypass authentication, robots restrictions, CAPTCHAs, paywalls
+or rate limits. Do not overload sites, probe another workspace, or attempt to
+make retrieved text or model instructions expand an account's permissions.
+
+Review generated material before relying on or publishing it. Do not present
+synthetic claims, endorsements, partnerships or measurements as verified facts.
+Observe provider licensing limits; access to an API does not confer bulk resale,
+standalone redistribution or indefinite archival rights.
+
+Cube27 may restrict affected activity to contain abuse, protect the service or
+meet legal duties, subject to the agreement and mandatory law. Report suspected
+misuse through the approved contact route. No publishing or external-action
+capability is granted by this policy.
+
+## E3. Enterprise MSA draft for counsel
+
+Parties: CUBE27 IT PRIVATE LIMITED, identified in E1, and [customer legal entity,
+registration details and notice address]. Effective date: [date after approval
+and signature]. Authorized representatives: [names/designations].
+
+1. **Services.** Cube27 supplies only the CiteLadder capabilities and limits
+   expressly listed in the signed Order Form. Measurements describe observed
+   provider responses; no ranking, citation, traffic, revenue or visibility result
+   is guaranteed. No unlisted consulting, publishing, outreach or external mutation
+   is included.
+2. **Customer inputs and access.** The customer retains ownership of its data,
+   confirms authority to supply it and authorize processing, and manages its
+   members and connected clients. Cube27 uses inputs to provide and secure the
+   agreed service under the DPA and documented instructions.
+3. **Outputs and intellectual property.** Cube27 retains its service software.
+   Subject to payment and provider restrictions, the customer may use generated
+   deliverables to the extent rights can lawfully be granted. Outputs may be
+   inaccurate or non-unique and require human review. Third-party intellectual
+   property and open-source terms remain applicable.
+4. **Confidentiality.** Each party protects the other's confidential information,
+   limits access to persons with a need to know and appropriate duties, and
+   uses it only for this agreement. Public information, independently developed
+   information and lawful third-party receipt are excluded. Legally compelled
+   disclosure is limited and notified where lawful.
+5. **Data protection.** Execute the DPA, processing schedule, approved
+   subprocessors and any applicable transfer instruments. Neither party's
+   allocation of responsibility excludes non-waivable duties.
+6. **Dependencies.** Record approved platform providers and customer-selected
+   endpoints. Customer provider terms/settings apply to customer-directed
+   connections; Cube27 retains its own duties. Material service changes and
+   substitution procedures require the agreed notice mechanism.
+7. **Fees and term.** The Order Form states fees, taxes, currency, initial term,
+   renewals, usage limits and cancellation method. No payment activation follows
+   from this draft; finance-country approval and payment acceptance are separate.
+8. **Support and service levels.** [Approved support hours, time zone and
+   initial-response target]. No availability, resolution-time, recovery-point
+   or recovery-time guarantee exists unless expressly negotiated after evidence.
+9. **Suspension and termination.** Permit proportionate abuse/security suspension,
+   notice and cure where appropriate, termination rights and non-waivable refund
+   rights. Record export opportunity and deletion exceptions in the approved
+   lifecycle schedule; a legal hold covers only necessary categories.
+10. **Liability and indemnities.** [Counsel-approved clause]. The supplied
+    12-month fee cap and separately negotiated higher caps are proposals only.
+    Fraud/wilful misconduct and non-excludable liabilities require counsel
+    treatment. No new unlimited obligation or blanket privacy disclaimer is
+    accepted through this draft.
+11. **Disputes and precedence.** [Approved law/forum and escalation]. Proposed
+    precedence: DPA on data protection; signed Order Form on pricing/scope;
+    MSA on the relationship; online policies afterward. This hierarchy remains
+    unapproved and does not amend current public Terms.
+12. **Notices and signatures.** [Authorized notice contacts and mechanisms].
+    Amendments and enterprise exceptions require authorized written agreement.
+    Store the signed agreement reference, version, parties, approvers, effective
+    dates and workspace scope separately from ordinary user Terms acceptance.
+
+### Order Form template
+
+| Field | Required entry |
+|---|---|
+| Order / MSA / DPA references | [Unique references and approved revisions] |
+| Customer / Cube27 signatories | [Legal entities, authorized persons, dates] |
+| Workspace scope | [Explicit workspace UUIDs; no account-wide inference] |
+| Services / limits | [Capabilities, projects, monitored URLs, prompts, credits and exclusions] |
+| Term / renewal / cancellation | [Dates, renewal terms, notice and cancellation channel] |
+| Price / currency / taxes | [Finance-approved amounts and treatment] |
+| Billing country disposition | [Approved / Manual Review / Do Not Accept with accountant reference] |
+| Support / SLA | [Approved hours and targets; separately signed SLA if any] |
+| Processing / transfers | [Categories, recipients, locations, approved transfer instruments] |
+| Retention / offboarding | [Approved schedule, holds and export contact] |
+| Negotiated exceptions | [Exact superseded clause and approval, including liability] |
+| Signatures | [Both authorized signatories; this template itself is unsigned] |
+
+## E4. Country-readiness matrix
+
+All payment admission below is **Manual Review** until legal/accountant sign-off.
+The supplied commercial proposal permits worldwide website/demo/enquiry access;
+it is not approval to accept payment or process any category of personal data.
+The proposed initial self-service set excludes EU/Ireland pending manual review.
+
+| Market | Privacy, transfers and representation review | Contract / consumer / renewal review | Tax/payment disposition |
+|---|---|---|---|
+| India | Determine applicable DPDP commencement, existing duties, grievance roles and CERT-In coverage | Mandatory remedies, enforceability, electronic acceptance and renewal notices | Manual Review: GST, invoice/e-invoice and domestic payment treatment |
+| US | Applicable federal/state privacy, processors, transfer and sector restrictions | State consumer/automatic-renewal obligations and negotiated forum | Manual Review: state nexus and sales-tax determination |
+| UK | UK GDPR roles, restricted transfers, IDTA/Addendum and representative applicability | Mandatory consumer protections, renewals and enforceability | Manual Review: VAT and payment eligibility |
+| Ireland / EU | GDPR scope, SCCs/transfer assessment and representative/DPO applicability | Member-state mandatory rights, consumer terms and renewals | Manual Review: VAT; enterprise review proposed initially |
+| Canada | Federal/provincial privacy, Quebec-specific and cross-border requirements | Provincial contract, disclosure, language and renewal requirements | Manual Review: GST/HST/PST/QST applicability |
+| Australia | Privacy Act applicability and APP 8 overseas disclosure | ACL guarantees, unfair terms, renewals and non-excludable rights | Manual Review: GST and collection obligations |
+| New Zealand | Privacy Act applicability and overseas disclosure safeguards | Fair Trading/consumer protections and renewal disclosures | Manual Review: GST |
+| Singapore | PDPA roles, overseas transfer protection and local contact requirements | Contract/consumer and renewal review | Manual Review: GST |
+| South Africa | POPIA roles, transfers and representation/contact obligations | Consumer protections, fixed-term/renewal applicability | Manual Review: VAT |
+| All others | Country-specific privacy, transfers, local presence and sector review | Mandatory rights and contract review | Manual Review; no automatic checkout admission |
+
+Legal must attach applicability reasoning and approved instruments to each
+country; finance must attach its separate tax/payment decision. Unsupported
+countries are not made “Approved” by filling this table.
+
+Source review: [MeitY commencement notification](https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf)
+uses publication-triggered immediate, one-year and eighteen-month stages.
+Do not calculate them from an audit's preparation date. Counsel must verify
+the publication date and subsequent instruments before launch.
+[ICO](https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/international-transfers/)
+and [OAIC](https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/handling-personal-information/sending-personal-information-overseas)
+provide the transfer review starting points, not a blanket clearance.
+
+## E5. Processing and store inventory
+
+Database tables are PostgreSQL-owned. Exact deployed regions, object retention,
+logs and backup configuration require operator evidence; the historical Mumbai
+observation in Part 0 is not reverified here. No embeddings store was found or
+introduced by this work.
+
+| Category / owner | Purpose and role | Recipients / stores | Retention and deletion treatment |
+|---|---|---|---|
+| Users, identities, memberships, invitations | Account access; Cube27 controller for account/security administration | PostgreSQL; configured sign-in provider | Account-specific verified request; preserve other members' workspaces; transfer sole ownership before account removal |
+| Projects, brand profiles, domains, competitors and logos | Customer-directed analysis; processor for customer personal data | PostgreSQL; public-site fetches and configured research providers | Workspace/project lifecycle; include logo assets and exact source provenance |
+| Crawls, URLs, facts, rules, links, issues and snapshots | Customer analysis and deterministic evidence | PostgreSQL; source websites during acquisition | Follow workspace lifecycle; append-only until authorized deletion |
+| Prompts, audits, raw answers, mentions and citations | Customer-directed measurement | PostgreSQL; selected answer-engine/API recipient | Follow workspace lifecycle; no raw credentials in export |
+| Integrations, grants, import artifacts and metric rows | Customer-directed GSC/GA4/Bing analytics | PostgreSQL; connected provider | Disconnect/revoke differs from deletion of imported history; implement and verify both scopes |
+| Search datasets, calls, rows and source inspection | Licensed research and customer analysis | PostgreSQL; DataForSEO/research providers and public sources | Follow lifecycle plus vendor-specific restrictions; export manifest must name omissions |
+| Agent chats, messages, instructions, context, outputs/revisions, tool/model attempts | Bounded customer assistance | PostgreSQL; approved platform or acknowledged custom model | Follow workspace lifecycle; Markdown outputs plus JSON manifest; exclude secrets |
+| Provider credentials, MCP clients/codes/grants and OAuth state | Connection custody and scoped access | Encrypted credentials / hashed tokens in PostgreSQL | Revoke before offboarding; never export keys, token hashes or secrets |
+| Acceptance, destination receipts and security events | Agreement/security evidence; Cube27 controller | PostgreSQL with restricted operator access | Narrow category-specific legal/security schedule still needs approval; not a reason to retain all customer content |
+| Billing, invoices, grants and disputes | Finance/legal evidence; controller processing | Existing billing owners and processor when activated | Accountant-defined exceptions only; billing implementation excluded |
+| Browser state, analytics, support and operational logs | Essential access, optional measurement and support | Host-local browser storage, configured analytics and actual support/log systems | Withdraw optional analytics; determine support/log locations and category-specific retention |
+| Backups, storage, caches and restored copies | Recovery / transient delivery | Actual infrastructure register to be verified | Existing shorter lifetimes prevail; at most 90 days after active deletion under the confirmed schedule; replay minimal deletion records before restored access |
+
+**Lifecycle implementation is still required.** Do not advertise a completed
+30-day deletion service based on this inventory. Durable verified requests,
+operator authority, idempotent jobs, legal holds, execution fencing, safe exports,
+retry recovery and restore-time deletion replay must be delivered and tested.
+The plan preserves the exact trial/paid/request clocks and does not permit
+indefinite free-workspace retention.
+
+## E6. Vendor and data-license register
+
+Record actual contract/terms revision, approving person, business-account owner,
+DPA, data categories, processing/storage locations, training treatment,
+retention, deletion mechanism, onward recipients and review date for every row.
+“Unknown” is not no retention, no training or permission.
+
+| Recipient / source | Acquisition and intended use | Storage / display / export / MCP / redistribution | Evidence still required |
+|---|---|---|---|
+| Google Cloud / actual database, storage and observability | Hosting and operational processing | Necessary service processing only | Deployed regions, DPA, log destinations, backup lifecycle and operator access |
+| Cloudflare | Delivery, security and Workers | Necessary delivery; optional analytics separately gated | Account configuration, Zaraz injection, access logs and regional processing |
+| Platform AI provider | Approved business/API account and exact reviewed model/endpoint | Bounded context and generated assistance; no assumption about vendor retention or training | Contract, settings screenshot/export, subprocessor list, retention and account identity |
+| Customer custom model | Explicitly acknowledged endpoint and customer credential | Bounded selected context; customer provider terms/settings apply | Customer acknowledgement recorded; technical URL/probe checks do not certify the provider |
+| DataForSEO: keyword, SERP/AIO, domain analytics, backlinks | Licensed products for intended customer analysis | Do not assume raw resale, bulk export, perpetual archive, MCP redistribution or competing dataset rights | Written product-specific clarification and terms revision |
+| Keenable / Tavily | Configured research paths only | Review retrieved-material storage, quotation, export and downstream model/MCP use | Actual enabled account, DPA, region and licensed-use terms |
+| Google sign-in | Identity scopes, separately from analytics integrations | Identity/session processing only | OAuth application settings and consent screen |
+| GSC / GA4 / Bing | Read-only connected analytics | Customer-directed analysis; verify downstream Agent/MCP use and deletion | Provider policy assessment, actual scopes, revocation and history-deletion evidence |
+| Razorpay / other payment processor | Later payment workstream | Financial records only as approved | Merchant/accountant sign-off; excluded implementation |
+| Google Analytics | Optional website measurement | Only after consent; hard disable on withdrawal | Actual network capture, domain storage and injection review |
+
+[DataForSEO terms](https://dataforseo.com/terms-of-service) were consulted as a
+review source; an API subscription alone does not settle product-specific reuse
+rights. Ambiguous export/redistribution must remain blocked until clarified.
+The current bulk-export and MCP licensing restriction enforcement remains an
+engineering item, not an accomplished control.
+
+Google sign-in configuration uses identity scopes. Connected Google analytics
+uses webmasters.readonly and analytics.readonly, with provider-specific scope
+selection in the integration owner. Confirm consent-screen/deployed settings,
+token revocation and imported-history deletion separately. Do not publish
+[Google Limited Use](https://developers.google.com/terms/api-services-user-data-policy)
+assurance until downstream use and controls are verified.
+
+## E7. Enterprise security questionnaire and operational acceptance
+
+| Question | Defensible answer / remaining evidence |
+|---|---|
+| Architecture and tenant boundary | PostgreSQL durable owners; UUID resources authorized by workspace membership; same-origin browser API; selected-workspace MCP |
+| AI authority | Bounded Agent runtime, project-pinned tools and user-reviewed deliverables; no publishing or arbitrary URL/SQL tool |
+| Access and MFA | Named infrastructure access, MFA, least privilege, periodic review and emergency access must be evidenced by operations; repository roles alone do not prove MFA |
+| Encryption | Application credential encryption and TLS checks exist; prove deployed key custody, rotation, database/storage encryption and backup encryption |
+| Locations | Verify every infrastructure/vendor location; no new residency promise |
+| Retention and offboarding | Approved schedule in plan; lifecycle automation and restore deletion replay still outstanding |
+| Logging | Minimal shared event schema excludes arbitrary request bodies/tokens; complete source coverage, India retention and delivery alerts are outstanding |
+| Recovery | No contractual RTO/RPO until isolated restore evidence exists |
+| Incidents | Primary and backup names pending; use the process below, then run a tabletop |
+| Independent assurance | No SOC 2, ISO certification, penetration-test result or insurance coverage is asserted without evidence |
+
+### Incident process and exercise
+
+Assign the Engineering/Security Lead as proposed incident commander and a named
+director/management backup; names remain unfilled. Maintain a restricted contact
+roster with support and legal escalation. Record detection/awareness time in UTC,
+affected workspace IDs, severity, known evidence and actions without copying
+secrets into tickets.
+
+Contain using the relevant connection revocation and acquisition stop, suspend
+affected execution, preserve bounded evidence and rotate exposed credentials.
+Engineering investigates; management/legal decide notices and reporting.
+Use the [CERT-In directions and FAQs](https://cert-in.org.in/Directions70B.jsp)
+to confirm applicability, reportable categories, six-hour handling and the
+rolling 180-day India log requirement. An incomplete investigation must not
+silently extend a legal deadline. Preserve submission acknowledgements.
+
+Exercise a simulated leaked credential and cross-workspace access report.
+Demonstrate containment, timestamped log retrieval, notice approval and recovery.
+Record actual results and deficiencies in the protected release record; no
+exercise has been run by this repository change.
+
+### Recovery and verified requests
+
+Restore only to an isolated disposable environment with no live provider
+credentials or outbound jobs. Measure backup age, restore duration and consistency.
+Apply the deletion ledger before opening access; verify deleted workspaces cannot
+reappear through restored queues, credentials, object storage or caches.
+Record demonstrated recovery point/time, then let management decide guarantees.
+
+For privacy requests, verify identity and workspace authority through existing
+authenticated records. Record scope (account/workspace/project/integration),
+receipt/deadline, operator, legal exception, progress and completion. Never ask
+for a password, raw key or unnecessary identity document. A sole workspace owner
+must transfer ownership or explicitly authorize closure. Escalate deadline risk;
+do not mark a request complete while vendor or backup obligations remain unknown.
+
+## E8. Subprocessor changes, support, insurance and payment handoff
+
+**Subprocessors:** operations owner [pending] maintains the factual register.
+Before a material planned addition, prepare the recipient/data/location/DPA
+assessment and send notice to affected workspace owners through an approved
+delivery mechanism, retaining document revision, recipients, send/delivery
+evidence and objection deadline. The current published baseline is 30-day notice
+and a 15-day objection window. Log and resolve objections before processing.
+No mail transport is implemented here and no customer message was sent. The
+proposed urgent-security exception requires legal approval.
+
+**Support:** proposed business-hours support and one-business-day initial
+response target; exact hours, time zone and enterprise SLA policy await approval.
+Do not infer a guaranteed resolution time or 24×7 staffing.
+
+**Insurance brief:** seek management-authorized cyber and technology E&O quotes
+covering actual territories, incident response, privacy liability and professional
+services. Compare premium, limits, deductible, retroactive date, defense costs,
+contractual liability, AI exclusions, subcontractors and customer requirements.
+No purchase, coverage amount or decision that insurance is optional has been made.
+The owner's controlled-launch position remains a proposal.
+
+**Payment handoff:** finance signs a country matrix (Approved / Manual Review /
+Do Not Accept) covering GST, e-invoicing, LUT validity, invoice format,
+foreign-currency receipts and overseas VAT/GST. Later payment work must persist
+merchant identity, accepted policy revision and order/workspace/actor references,
+renewal/cancellation evidence, refund decision/initiation and credit-note records.
+This remediation changes no payment, checkout, tax, invoice or refund-processing code.
+
+## E9. Dependency and asset license inventory
+
+The [dependency inventory](dependency-licenses.json) records production dependency
+metadata resolved from frozen pnpm/uv locks on 26 September 2026. It is not a
+deployed SBOM or a legal clearance; “Needs review” and platform-specific entries
+remain unresolved. Preserve required upstream notices in delivered artifacts and
+compare the actual release digest/dependency tree before approving release.
+
+| Assets | Source / review requirement |
+|---|---|
+| General Sans and Inter font files | Existing private font repository pinned by `frontend/scripts/pull-licensed-fonts.mjs`; confirm self-hosting license and delivery notices; do not redistribute the private binaries in this repository |
+| CiteLadder logos and favicon | `frontend/public/citeladder-*`; obtain owner/creator rights record |
+| Provider brand logos | `frontend/public/brand/*`; descriptive identification only; trademark usage review required |
+| Blog/editorial images | `frontend/public/blog/editorial/*`; record creator, generation/source license and publication authority |
+| Screenshots, customer logos or future assets | Obtain specific consent/license before inclusion; no blanket approval from package licenses |
+
+Proposed trademark notice: “Third-party names and marks belong to their owners.
+References identify supported services or observed sources and do not imply
+endorsement, affiliation or partnership.” Review marketing claims and publish
+the notice only after approval.

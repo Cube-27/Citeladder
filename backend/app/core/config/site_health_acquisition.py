@@ -99,7 +99,9 @@ INFRASTRUCTURE_FETCH_PATH_SUFFIXES: Final[dict[str, tuple[str, ...]]] = {
     FETCH_PURPOSE_SITEMAP: (".xml", ".xml.gz"),
 }
 
-SITE_HEALTH_USER_AGENT: Final = "CiteLadderSiteHealthBot/1.0 (+https://citeladder)"
+SITE_HEALTH_USER_AGENT: Final = (
+    "CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)"
+)
 
 ROBOTS_TXT_PATH: Final = "/robots.txt"
 

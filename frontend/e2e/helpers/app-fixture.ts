@@ -251,6 +251,16 @@ export async function stubAuthedShell(
   await page.route('**/api/v1/billing/usage', (route) =>
     route.fulfill({ json: permittedUsage(projects.length) }),
   );
+  // The shell's Terms gate: the fixture owner has accepted the current revision.
+  await page.route('**/api/v1/workspaces/*/policies', (route) =>
+    route.fulfill({
+      json: {
+        terms_revision: '2026-09-24',
+        privacy_notice_revision: '2026-09-24',
+        accepted_at: '2026-01-01T00:00:00Z',
+      },
+    }),
+  );
   for (const [pattern, body] of stubs) {
     await page.route(pattern, (route) => route.fulfill({ json: body }));
   }

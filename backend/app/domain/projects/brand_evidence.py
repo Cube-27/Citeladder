@@ -36,6 +36,7 @@ from app.core.config.brand_evidence import (
     BRAND_EVIDENCE_UTILITY_LINK_TERMS,
     BRAND_EVIDENCE_VERSION,
 )
+from app.domain.site_health.acquisition_controls import authorize_acquisition
 
 logger = logging.getLogger(__name__)
 _LINK_TOKEN = re.compile(r"[a-z0-9]+")
@@ -160,7 +161,9 @@ async def _gather(
         seen_urls.add(page.url)
         pages.append(page)
 
-    async with SecureFetcher(resolver=SystemDnsResolver()) as fetcher:
+    async with SecureFetcher(
+        authorize_url=authorize_acquisition, resolver=SystemDnsResolver()
+    ) as fetcher:
         home_page = homepage_page
         if home_page is None:
             home_page = await fetch_brand_page(homepage, fetcher=fetcher)

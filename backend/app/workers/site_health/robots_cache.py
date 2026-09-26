@@ -20,6 +20,11 @@ from app.workers.site_health.urls import authority_key
 RobotsEntry = tuple[RobotsPolicy, str | None, int | None]
 
 
+def robots_status_denies(status: int | None) -> bool:
+    """Only a missing robots file (other 4xx) permits; failures and refusals deny."""
+    return status is None or status in {401, 403, 429} or not 200 <= status < 500
+
+
 class RobotsCache:
     """Fetch, cache, and evict robots policies for one worker process."""
 
@@ -30,9 +35,17 @@ class RobotsCache:
         self._locks: dict[str, asyncio.Lock] = {}
 
     def crawl_delay(self, url: str) -> float:
-        """Return a cached crawl delay without performing network I/O."""
+        """Return a cached pacing delay without performing network I/O.
+
+        Clamped: a longer declared delay pauses the host through
+        ``RobotsPolicy.can_fetch``; it must never park a task in the gate.
+        """
         cached = self._entries.get(authority_key(url))
-        return cached[0].crawl_delay() if cached is not None else 0.0
+        if cached is None:
+            return 0.0
+        return min(
+            cached[0].crawl_delay(), site_health_settings.max_crawl_delay_seconds
+        )
 
     def _cached(self, authority: str) -> RobotsEntry | None:
         cached = self._entries.get(authority)
@@ -57,7 +70,7 @@ class RobotsCache:
             if cached is not None:
                 return cached
             body, status = await self._fetch(authority)
-            if status is not None and 500 <= status < 600:
+            if robots_status_denies(status):
                 policy = RobotsPolicy.deny_all(user_agent=SITE_HEALTH_USER_AGENT)
             else:
                 policy = RobotsPolicy.parse(

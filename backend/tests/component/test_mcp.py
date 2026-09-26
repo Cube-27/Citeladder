@@ -10,12 +10,12 @@ import httpx
 import pytest
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
-from mcp.server.auth.provider import AccessToken, AuthorizationParams
+from mcp.server.auth.provider import AuthorizationParams
 from mcp.shared.auth import OAuthClientInformationFull
 from pydantic import AnyUrl
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config import settings
+from app.core.config import legal, settings
 from app.core.config.mcp import MCP_READ_SCOPE, mcp_settings
 from app.core.config.opportunities import OPPORTUNITY_TYPE_SITE
 from app.core.security import create_access_token
@@ -34,10 +34,12 @@ from app.domain.mcp.oauth_provider import (
 from app.domain.mcp.retrieval import fetch_business_record
 from app.domain.mcp.server import MCP_REGISTRATION_PATH, mcp_oauth_provider
 from app.models.opportunity import Opportunity
+from app.models.policy_acceptance import PolicyAcceptance
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
+from tests.component.mcp_helpers import read_grant
 
 
 async def _seed_account(
@@ -56,6 +58,13 @@ async def _seed_account(
     session.add_all(
         [
             WorkspaceMember(workspace_id=workspace.id, user_id=user.id),
+            PolicyAcceptance(
+                actor_id=user.id,
+                workspace_id=workspace.id,
+                terms_revision=legal.TERMS_REVISION,
+                privacy_notice_revision=legal.PRIVACY_NOTICE_REVISION,
+                context="authenticated_onboarding",
+            ),
             project,
         ]
     )
@@ -104,7 +113,9 @@ async def test_oauth_grant_is_account_scoped_and_revocable(
         ),
     )
     transaction = parse_qs(urlsplit(authorization_url).query)["transaction"][0]
-    callback = await provider.complete_authorization(transaction, user.id)
+    callback = await provider.complete_authorization(
+        transaction, user.id, [str(_workspace.id)]
+    )
     callback_params = parse_qs(urlsplit(callback).query)
     assert callback_params["state"] == ["client-state"]
 
@@ -286,7 +297,43 @@ async def test_demo_allowlist_rejects_another_account(
     )
     transaction = parse_qs(urlsplit(authorization_url).query)["transaction"][0]
     with pytest.raises(PermissionError, match="not enabled"):
-        await provider.complete_authorization(transaction, user.id)
+        await provider.complete_authorization(
+            transaction, user.id, [str(_workspace.id)]
+        )
+
+
+@pytest.mark.asyncio
+async def test_consent_requires_current_terms_for_the_selected_workspace(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mcp_settings, "enabled", True)
+    monkeypatch.setattr(mcp_settings, "allowed_account_email", "member@example.test")
+    async with session_factory() as session:
+        user, workspace, _project = await _seed_account(session, "member@example.test")
+    provider = CiteLadderOAuthProvider(session_factory)
+    assert await provider.consent_workspaces(user.id) == [
+        (str(workspace.id), workspace.name)
+    ]
+    monkeypatch.setattr(legal, "TERMS_REVISION", "2099-01-01")
+    assert await provider.consent_workspaces(user.id) == []
+
+    client = _client_info()
+    await provider.register_client(client)
+    authorization_url = await provider.authorize(
+        client,
+        AuthorizationParams(
+            state=None,
+            scopes=[MCP_READ_SCOPE],
+            code_challenge="C" * 43,
+            redirect_uri=AnyUrl("http://127.0.0.1/callback"),
+            redirect_uri_provided_explicitly=True,
+            resource=resource_url(),
+        ),
+    )
+    transaction = parse_qs(urlsplit(authorization_url).query)["transaction"][0]
+    with pytest.raises(PermissionError, match="currently accessible"):
+        await provider.complete_authorization(transaction, user.id, [str(workspace.id)])
 
 
 @pytest.mark.asyncio
@@ -472,6 +519,7 @@ async def test_browser_consent_requires_an_explicit_approval(
             "transaction": transaction,
             "csrf_token": csrf.group(1),
             "decision": "approve",
+            "workspace_id": str(_workspace.id),
         },
         follow_redirects=False,
     )
@@ -490,6 +538,7 @@ async def test_browser_consent_requires_an_explicit_approval(
             "transaction": transaction,
             "csrf_token": csrf.group(1),
             "decision": "approve",
+            "workspace_id": str(_workspace.id),
         },
         follow_redirects=False,
     )
@@ -600,13 +649,8 @@ async def test_system_workspace_membership_authorizes_no_read_path(
         await session.commit()
         project_id, opportunity_id, prompt_id = project.id, opportunity.id, prompt.id
 
-    access = AccessToken(
-        token="unused-in-process-token",
-        client_id="test-client",
-        scopes=[MCP_READ_SCOPE],
-        subject=str(user.id),
-        resource=resource_url(),
-    )
+    async with session_factory() as session:
+        access = await read_grant(session, user.id)
     context_token = auth_context_var.set(AuthenticatedUser(access))
     try:
         async with session_factory() as session:

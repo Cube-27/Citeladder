@@ -60,6 +60,7 @@ from app.domain.providers.connection_updates import (
     apply_scalar_updates,
     build_app_routes,
     ensure_app_features_available,
+    record_destination_acknowledgements,
     replace_app_routes,
     rotated_secret,
 )
@@ -229,7 +230,12 @@ async def create_connection(
     *,
     workspace_id: uuid.UUID,
     payload: ProviderConnectionCreate,
+    actor_id: uuid.UUID | None = None,
 ) -> ProviderConnection:
+    if payload.app_routes and actor_id is None:
+        raise InvalidProviderEndpointError(
+            "Destination acknowledgement requires an authenticated actor"
+        )
     workspace = await session.get(Workspace, workspace_id)
     if workspace is not None and workspace.is_system:
         raise InvalidProviderEndpointError(
@@ -258,6 +264,11 @@ async def create_connection(
         ),
     )
     session.add(connection)
+    await session.flush()
+    if payload.app_routes and actor_id is not None:
+        record_destination_acknowledgements(
+            session, connection, payload.app_routes, actor_id
+        )
     await session.commit()
     return await get_connection(
         session, workspace_id=workspace_id, connection_id=connection.id
@@ -322,7 +333,12 @@ async def update_connection(
     workspace_id: uuid.UUID,
     connection_id: uuid.UUID,
     payload: ProviderConnectionUpdate,
+    actor_id: uuid.UUID | None = None,
 ) -> ProviderConnection:
+    if payload.app_routes and actor_id is None:
+        raise InvalidProviderEndpointError(
+            "Destination acknowledgement requires an authenticated actor"
+        )
     connection = await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id
     )
@@ -333,6 +349,10 @@ async def update_connection(
             "read-only; create a new direct connection instead."
         )
     await _apply_connection_update(session, connection, payload)
+    if payload.app_routes and actor_id is not None:
+        record_destination_acknowledgements(
+            session, connection, payload.app_routes, actor_id
+        )
     await session.commit()
     return await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id

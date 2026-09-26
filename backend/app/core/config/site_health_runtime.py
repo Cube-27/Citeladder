@@ -137,7 +137,6 @@ class SiteHealthSettings(BaseSettings):
     # (not in a connector) because acquisition behavior is an operational
     # policy, not application logic.
     acquisition_policy_version: str = "sh-acquisition-1"
-    curl_cffi_impersonation_profile: str = "chrome"
 
     # --- Sitemap limits ---
     max_sitemap_index_depth: int = 3
@@ -371,7 +370,7 @@ class SiteHealthSettings(BaseSettings):
         """Keep curl acquisition policy reproducible."""
         _require_non_empty(
             self,
-            ("acquisition_policy_version", "curl_cffi_impersonation_profile"),
+            ("acquisition_policy_version",),
         )
         _require_positive(self, ("rate_limit_cooldown_seconds",))
         _require_non_negative(

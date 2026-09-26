@@ -124,6 +124,7 @@ describe('SettingsScreen', () => {
       'Members',
       'Providers',
       'Integrations',
+      'MCP connections',
     ]);
     expect(within(tablist).getByRole('tab', { name: 'Account' })).toHaveAttribute(
       'aria-selected',
@@ -241,7 +242,7 @@ describe('SettingsScreen', () => {
     await ue.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: 'Members' })).toHaveAttribute('aria-selected', 'true');
     await ue.keyboard('{End}');
-    expect(screen.getByRole('tab', { name: 'Integrations' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'MCP connections' })).toHaveAttribute(
       'aria-selected',
       'true',
     );

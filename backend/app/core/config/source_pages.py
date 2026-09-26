@@ -55,6 +55,8 @@ INSPECTION_STALE: Final = "stale"
 # Why a page is in a non-``inspected`` state. Kept separate from the state so
 # "blocked by robots" and "blocked by a bot wall" stay distinguishable.
 INSPECTION_REASON_ROBOTS: Final = "robots_disallowed"
+# robots.txt could not be read; retryable, never a publisher refusal.
+INSPECTION_REASON_ROBOTS_UNAVAILABLE: Final = "robots_unavailable"
 INSPECTION_REASON_NON_HTML: Final = "non_html"
 INSPECTION_REASON_STATUS: Final = "status_rejected"
 INSPECTION_REASON_TRANSPORT: Final = "transport_error"

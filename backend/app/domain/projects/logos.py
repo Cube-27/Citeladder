@@ -34,6 +34,7 @@ from app.core.config.brand_logos import (
     BRAND_LOGO_STATUS_READY,
     BRAND_LOGO_SUCCESS_CACHE_SECONDS,
 )
+from app.domain.site_health.acquisition_controls import authorize_acquisition
 from app.models.brand import Brand, BrandLogoAsset, Competitor
 from app.models.project import Project
 
@@ -135,7 +136,9 @@ async def _fetch_missing(
     results: dict[str, FetchedBrandLogo | None] = {
         target.domain: None for target in targets
     }
-    async with SecureFetcher(resolver=SystemDnsResolver()) as fetcher:
+    async with SecureFetcher(
+        authorize_url=authorize_acquisition, resolver=SystemDnsResolver()
+    ) as fetcher:
 
         async def fetch_one(target: _LogoTarget) -> None:
             async with semaphore:

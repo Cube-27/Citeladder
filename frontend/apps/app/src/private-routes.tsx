@@ -9,6 +9,7 @@ import { ProjectsScreen } from '@/components/projects/projects-screen';
 import { ProductTourProvider } from '@/components/tour/product-tour-provider';
 import { ToastProvider } from '@/components/ui/toast';
 import { SessionGuard } from '@/lib/auth/session-guard';
+import { PolicyAcceptanceGate } from '@/components/auth/policy-acceptance';
 import { EntitlementProvider } from '@/lib/billing/entitlement-context';
 import { ProjectProvider } from '@/lib/project/project-context';
 
@@ -31,11 +32,13 @@ export function PrivateRouteLayout() {
     <Suspense fallback={<ShellFallback />}>
       <ProjectProvider>
         <SessionGuard fallback={sessionFallback}>
-          <EntitlementProvider>
-            <UserMenuController>
-              <Outlet />
-            </UserMenuController>
-          </EntitlementProvider>
+          <PolicyAcceptanceGate>
+            <EntitlementProvider>
+              <UserMenuController>
+                <Outlet />
+              </UserMenuController>
+            </EntitlementProvider>
+          </PolicyAcceptanceGate>
         </SessionGuard>
       </ProjectProvider>
     </Suspense>

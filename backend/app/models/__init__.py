@@ -123,6 +123,7 @@ from app.models.opportunity import (
     OpportunitySnapshot,
     OpportunityVerificationEvent,
 )
+from app.models.policy_acceptance import PolicyAcceptance as PolicyAcceptance
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet, Topic
 from app.models.provider import (
@@ -132,6 +133,7 @@ from app.models.provider import (
     ProviderConnectionTest,
     ProviderRoute,
 )
+from app.models.provider_disclosure import ProviderDisclosure as ProviderDisclosure
 from app.models.search_intelligence import (
     SearchIntelligenceCall,
     SearchIntelligenceDataset,
@@ -140,6 +142,7 @@ from app.models.search_intelligence import (
     SearchIntelligenceRun,
 )
 from app.models.search_surfaces import AioEntityLink, AioObservation
+from app.models.security_event import SecurityEvent as SecurityEvent
 from app.models.site_changes import SiteChangeObservation, SiteChangeSnapshot
 from app.models.site_health.acquisition import SiteFetchArtifact, SiteFetchAttempt
 from app.models.site_health.analysis import (
@@ -172,6 +175,9 @@ from app.models.traffic import (
 )
 from app.models.user import User
 from app.models.user_identity import UserIdentity
+from app.models.web_acquisition_control import (
+    WebAcquisitionControl as WebAcquisitionControl,
+)
 from app.models.workspace import (
     Workspace,
     WorkspaceInvitation,

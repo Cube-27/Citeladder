@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -48,13 +48,25 @@ function getSnapshot(): BannerState {
 }
 
 export function CookieBanner() {
+  const [editing, setEditing] = useState(false);
   const state = useSyncExternalStore<BannerState>(subscribeToConsent, getSnapshot, () => 'pending');
 
   const decide = useCallback((next: ConsentDecision) => {
     writeConsent(next);
+    setEditing(false);
   }, []);
 
-  if (state !== 'undecided') return null;
+  if (state === 'pending') return null;
+  if (state !== 'undecided' && !editing)
+    return (
+      <Button
+        variant="secondary"
+        className="fixed bottom-4 left-4 z-[var(--z-index-overlay)] print:hidden"
+        onClick={() => setEditing(true)}
+      >
+        Cookie preferences
+      </Button>
+    );
 
   return (
     <section

@@ -11,10 +11,9 @@ from types import SimpleNamespace
 import pytest
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
-from mcp.server.auth.provider import AccessToken
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.mcp import MCP_MAX_VISIBILITY_SOURCE_OFFSET, MCP_READ_SCOPE
+from app.core.config.mcp import MCP_MAX_VISIBILITY_SOURCE_OFFSET
 from app.domain.mcp import evidence_readers, retrieval
 from app.domain.mcp.common import _cursor_decode, _cursor_encode
 from app.domain.mcp.evidence_readers import (
@@ -27,13 +26,13 @@ from app.domain.mcp.evidence_readers import (
     read_visibility_results,
     read_visibility_sources,
 )
-from app.domain.mcp.oauth_provider import resource_url
 from app.domain.mcp.retrieval import fetch_business_record
 from app.domain.mcp.server import mcp_server
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
+from tests.component.mcp_helpers import read_grant
 
 TOOL_REFERENCE = json.loads(
     (
@@ -65,18 +64,8 @@ async def _account(
     return user, workspace, project
 
 
-def _caller(user: User):
-    return auth_context_var.set(
-        AuthenticatedUser(
-            AccessToken(
-                token="test",
-                client_id="test-client",
-                scopes=[MCP_READ_SCOPE],
-                subject=str(user.id),
-                resource=resource_url(),
-            )
-        )
-    )
+async def _caller(session: AsyncSession, user: User):
+    return auth_context_var.set(AuthenticatedUser(await read_grant(session, user.id)))
 
 
 @pytest.mark.asyncio
@@ -96,7 +85,7 @@ async def test_prompt_portfolio_pages_without_skips_and_fetches_a_document(
     )
     await db_session.commit()
 
-    token = _caller(user)
+    token = await _caller(db_session, user)
     try:
         first = await read_prompt_portfolio(db_session, str(project.id), limit=50)
         second = await read_prompt_portfolio(
@@ -144,7 +133,7 @@ async def test_saved_evidence_reads_stay_unavailable_and_tenant_scoped(
 ) -> None:
     caller, _workspace, project = await _account(db_session, "caller")
     _other, _other_workspace, foreign = await _account(db_session, "foreign")
-    token = _caller(caller)
+    token = await _caller(db_session, caller)
     try:
         missing = await read_query_evidence(
             db_session,
@@ -170,7 +159,7 @@ async def test_visibility_source_cursor_rejects_invalid_offsets(
     db_session: AsyncSession,
 ) -> None:
     caller, _workspace, project = await _account(db_session, "source-cursor")
-    token = _caller(caller)
+    token = await _caller(db_session, caller)
     try:
         for offset in (-1, MCP_MAX_VISIBILITY_SOURCE_OFFSET + 1):
             with pytest.raises(ValueError, match="cursor offset"):
@@ -241,7 +230,7 @@ async def test_site_page_and_issue_references_use_current_owner_ids(
                 created_at=datetime.now(UTC),
             )
 
-    token = _caller(caller)
+    token = await _caller(db_session, caller)
     try:
         page_result = await read_site_pages(db_session, str(project.id))
         detail = await retrieval._resolve_site_page(AnalysisSession(), analysis_id)
@@ -265,7 +254,7 @@ async def test_every_detailed_reader_refuses_a_foreign_project(
     caller, _workspace, _project = await _account(db_session, "reader")
     _other, _other_workspace, foreign = await _account(db_session, "outside")
     arbitrary_id = str(uuid.uuid4())
-    token = _caller(caller)
+    token = await _caller(db_session, caller)
     try:
         calls = [
             read_prompt_portfolio(db_session, str(foreign.id)),

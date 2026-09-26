@@ -63,3 +63,11 @@ export const providerKeys = {
   // The authenticated workspace projection — distinct from the public catalog.
   states: (workspaceId: string) => ['providers', 'states', workspaceId] as const,
 };
+export const policyKeys = {
+  workspace: (workspaceId: string) => ['policies', workspaceId] as const,
+};
+
+export const mcpConnectionKeys = {
+  all: ['mcp-connections'] as const,
+  list: (workspaceId?: string) => ['mcp-connections', workspaceId ?? 'account'] as const,
+};

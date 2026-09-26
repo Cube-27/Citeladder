@@ -1,6 +1,6 @@
 """Reusable discover artifacts for the Site Health crawler.
 
-Every request uses the impersonating curl transport, so this owner only
+Every request uses the identified curl transport, so this owner only
 resolves immutable discovery evidence that analysis can safely reuse.
 """
 

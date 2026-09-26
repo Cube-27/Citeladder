@@ -73,14 +73,21 @@ def _serialize_redirect_chain(result: FetchResult) -> list[dict]:
 def _robots_denial_error(policy: RobotsPolicy) -> tuple[str, str]:
     """The (error_code, detail) for a robots-denied fetch.
 
-    A 5xx robots.txt (RFC 9309 complete/temporary disallow) surfaces as
-    ``robots_unavailable`` — distinct from a real robots-rule disallow so the
-    UI can explain the site is misbehaving rather than blocking crawlers.
+    An unretrievable robots.txt (network error, 5xx, redirect or 401/403/429)
+    or an unsupported crawl-delay surfaces as ``robots_unavailable`` — distinct
+    from a real robots-rule disallow so the UI can explain the pause rather
+    than claim the site blocks crawlers.
     """
     if policy.unavailable:
         return (
             ERROR_ROBOTS_UNAVAILABLE,
-            "robots.txt responded 5xx; fetches paused for this site",
+            "robots.txt could not be retrieved; fetches paused for this site",
+        )
+    if policy.delay_exceeds_limit:
+        return (
+            ERROR_ROBOTS_UNAVAILABLE,
+            "robots.txt crawl-delay exceeds the supported maximum; "
+            "fetches paused for this site",
         )
     return (
         ERROR_ROBOTS_DENIED,
