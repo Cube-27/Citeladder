@@ -124,6 +124,29 @@ def _candidate_row(
     }
 
 
+def _stageable(
+    suggestions: list[SuggestedTopic],
+    topics_by_id: dict[uuid.UUID, Topic],
+    existing: set[str],
+) -> tuple[list[tuple[uuid.UUID, SuggestedPrompt]], int]:
+    """Suggestions to stage, plus how many were already-tracked duplicates.
+
+    Suggestions under a topic that vanished during provider I/O are skipped,
+    not counted as duplicates.
+    """
+    stageable: list[tuple[uuid.UUID, SuggestedPrompt]] = []
+    duplicates = 0
+    for topic in suggestions:
+        if topic.topic_id not in topics_by_id:
+            continue
+        for prompt in topic.prompts:
+            if prompt_text_hash(prompt.text) in existing:
+                duplicates += 1
+            else:
+                stageable.append((topic.topic_id, prompt))
+    return stageable, duplicates
+
+
 async def stage_candidates(
     session: AsyncSession,
     *,
@@ -163,30 +186,19 @@ async def stage_candidates(
         for prompt in topic.prompts
     ]
     existing = await _existing_prompt_hashes(session, prompt_set.id, hashes)
-    # Duplicates are texts already tracked; suggestions under a topic that
-    # vanished during provider I/O are skipped, not duplicates.
-    dropped = sum(
-        1
-        for topic in suggestions
-        if topic.topic_id in topics_by_id
-        for prompt in topic.prompts
-        if prompt_text_hash(prompt.text) in existing
-    )
+    stageable, dropped = _stageable(suggestions, topics_by_id, existing)
     now = datetime.now(UTC)
     rows = [
         _candidate_row(
             workspace_id=workspace_id,
             run_id=run.id,
             prompt_set_id=prompt_set.id,
-            topic_id=topic.topic_id,
+            topic_id=topic_id,
             prompt=prompt,
             cohort=cohort,
             now=now,
         )
-        for topic in suggestions
-        if topic.topic_id in topics_by_id
-        for prompt in topic.prompts
-        if prompt_text_hash(prompt.text) not in existing
+        for topic_id, prompt in stageable
     ]
     inserted_ids: list[uuid.UUID] = []
     if rows:
