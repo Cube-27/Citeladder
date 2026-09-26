@@ -29,7 +29,7 @@ vi.mock('@/lib/project/project-context', () => ({
 }));
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({ hasCapability: (key: string) => key === 'content_creation' }),
+  useEntitlement: () => ({ hasCapability: (key: string) => key === 'agent' }),
 }));
 
 let pathname = '/site';
@@ -81,7 +81,7 @@ describe('station navigation', () => {
   });
 
   it('uses the same capability result for sidebar and command destinations', () => {
-    const canUse = (capability: string) => capability !== 'content_creation';
+    const canUse = (capability: string) => capability !== 'agent';
     const sidebarLabels = resolveNavigationGroups(canUse)
       .flatMap((group) => group.items)
       .map((item) => item.label);

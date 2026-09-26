@@ -1,7 +1,7 @@
 'use client';
 
 import { useEntitlement } from '@/lib/billing/entitlement-context';
-import { GROWTH_AGENT_CAPABILITY } from '@/lib/config/billing';
+import { AGENT_CAPABILITY } from '@/lib/config/billing';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 /**
@@ -22,8 +22,7 @@ export function useAgentAccess(): AgentAccess {
       reason: 'role',
       message: 'Your workspace role can read chats but not ask the agent.',
     };
-  // The persisted capability key stays `growth_agent` for billing continuity.
-  if (!hasCapability(GROWTH_AGENT_CAPABILITY))
+  if (!hasCapability(AGENT_CAPABILITY))
     return {
       canSend: false,
       reason: 'capability',

@@ -34,7 +34,7 @@ export const providerRouteSchema = responseObject({
 // violation and must fail loud — the secret is never present on the wire.
 export const providerAppRouteSchema = responseObject({
   id: uuid(),
-  feature: z.literal('growth_agent'),
+  feature: z.literal('agent'),
   protocol: z.literal('openai_chat'),
   model: z.string(),
   api_base_url: z.url(),

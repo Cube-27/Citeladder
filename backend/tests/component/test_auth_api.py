@@ -21,8 +21,7 @@ from app.core.config.entitlements import (
     FREE_MONITORED_URLS,
     FREE_PROJECT_SLOTS,
     FREE_PROMPT_SLOTS,
-    KEY_CONTENT_CREATION,
-    KEY_GROWTH_AGENT,
+    KEY_AGENT,
     KEY_MONITORED_URLS,
     KEY_PROJECT_DELETION,
     KEY_PROJECT_SLOTS,
@@ -152,8 +151,7 @@ async def test_public_signup_receives_the_free_account_limits(
         KEY_PROJECT_SLOTS: FREE_PROJECT_SLOTS,
         KEY_PROMPT_SLOTS: FREE_PROMPT_SLOTS,
     }
-    assert KEY_CONTENT_CREATION not in capabilities
-    assert KEY_GROWTH_AGENT not in capabilities
+    assert KEY_AGENT not in capabilities
 
 
 @pytest.mark.asyncio
@@ -174,8 +172,7 @@ async def test_configured_dev_email_receives_only_public_access(
     assert capabilities[KEY_MONITORED_URLS] == FREE_MONITORED_URLS
     assert capabilities[KEY_PROJECT_SLOTS] == FREE_PROJECT_SLOTS
     assert capabilities[KEY_PROMPT_SLOTS] == FREE_PROMPT_SLOTS
-    assert KEY_CONTENT_CREATION not in capabilities
-    assert KEY_GROWTH_AGENT not in capabilities
+    assert KEY_AGENT not in capabilities
     assert KEY_PROJECT_DELETION not in capabilities
 
 

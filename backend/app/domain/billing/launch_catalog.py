@@ -45,13 +45,12 @@ from app.core.config.billing_pricing import (
 from app.core.config.billing_tax import TaxPolicyError, approved_india_gst_rate
 from app.core.config.entitlements import (
     CAPABILITY_REGISTRY,
+    KEY_AGENT,
     KEY_AI_CREDITS,
     KEY_AUDIT_CADENCE,
     KEY_AUDIT_CREDITS,
-    KEY_CONTENT_CREATION,
     KEY_EXPORTS,
     KEY_FANOUT,
-    KEY_GROWTH_AGENT,
     KEY_HISTORY_WINDOW,
     KEY_MANUAL_RUNS_PER_DAY,
     KEY_MONITORED_URLS,
@@ -174,8 +173,7 @@ def _plan_grants(plan: _PlanTerms) -> list[dict[str, object]]:
         rows.extend(
             (
                 _grant(KEY_FANOUT, 1),
-                _grant(KEY_CONTENT_CREATION, 1),
-                _grant(KEY_GROWTH_AGENT, 1),
+                _grant(KEY_AGENT, 1),
             )
         )
     return rows

@@ -5,11 +5,9 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 import { billingApi, type BillingUsage, type WorkspaceEntitlement } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
-import { CONTENT_CREATION_CAPABILITY, GROWTH_AGENT_CAPABILITY } from '@/lib/config/billing';
+import { AGENT_CAPABILITY } from '@/lib/config/billing';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 import { useProjectContext } from '@/lib/project/project-context';
-
-const PAID_WORK_CAPABILITIES = new Set([CONTENT_CREATION_CAPABILITY, GROWTH_AGENT_CAPABILITY]);
 
 type EntitlementContextValue = {
   entitlement: WorkspaceEntitlement | null;
@@ -128,7 +126,7 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
       hasCapability,
       // Product controls follow effective capability authority, not a plan name
       // or historical grant kind. Backend admission remains authoritative.
-      canStartPaidWork: [...PAID_WORK_CAPABILITIES].some(hasCapability),
+      canStartPaidWork: hasCapability(AGENT_CAPABILITY),
     };
   }, [
     canReadBilling,

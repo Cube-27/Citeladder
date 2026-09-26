@@ -30,9 +30,7 @@ const CAPABILITY_LABELS: Readonly<Record<string, string>> = {
   audit_cadence: 'Audit frequency',
   audit_web_search: 'Web-search-grounded audits',
   authenticated_exports: 'Authenticated exports',
-  // The merged Agent capability keeps its persisted key until a billing
-  // migration retires it.
-  growth_agent: 'Agent',
+  agent: 'Agent',
 };
 
 export function capabilityLabel(key: string): string {
