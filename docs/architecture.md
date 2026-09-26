@@ -66,19 +66,28 @@ durable-memory promotion retain their explicit user-decision boundaries.
 
 ## Languages and the TypeScript service
 
-Python (FastAPI, SQLAlchemy, Alembic) owns every shipped route family, worker
-and task kind. `frontend/services/api` is the TypeScript API service (Node,
-Hono, Kysely) introduced by the
-[TypeScript migration](plans/citeladder-typescript-migration.md). Until a
-migration PR moves a family to it, it serves only `/health` and `/ready` and no
-ingress routes to it. Each route family, task kind and table has exactly one
-writing stack. For route families (OpenAPI tags) the record is the manifest in
-`frontend/packages/contracts/src/route-ownership.ts`; the route-ownership gate
-(`frontend/services/api/scripts/check-route-ownership.ts`) holds both stacks'
-OpenAPI documents and both ingress Caddyfiles to it. A family moves to
-TypeScript only with a frozen Python fragment
+Python (FastAPI, SQLAlchemy, Alembic) owns every worker and task kind and
+every route family except those the manifest assigns to TypeScript.
+`frontend/services/api` is the TypeScript API service (Node, Hono, Kysely)
+introduced by the [TypeScript migration](plans/citeladder-typescript-migration.md).
+It serves the read-only `executions`, `ai-referrals` and `visibility` families
+(one execution's evidence, the AI Referrals projection, the Sources series and
+URL detail, and the AI Overview rates), resolving the session and active
+workspace exactly as `require_active_workspace` does. Each route family, task
+kind and table has exactly one writing stack. For route families (OpenAPI tags)
+the record is the manifest in `frontend/packages/contracts/src/route-ownership.ts`;
+the route-ownership gate (`frontend/services/api/scripts/check-route-ownership.ts`)
+holds both stacks' OpenAPI documents and every ingress Caddyfile (production's
+origin, the local Compose ingress and the Vite app container) to it. A family
+moves to TypeScript only with a frozen Python fragment
 (`export_ts_platform --freeze-family`) that the service's generated fragment
 matches.
+
+Python code a moved route still shares with Python callers stays until its last
+Python caller moves (the Agent still reads AI Referrals, MCP still reads
+execution evidence); the TypeScript port is held to it by golden masters that
+`export_ts_platform` regenerates. Behavior that retired with its only Python
+caller is recorded once in `frontend/services/api/golden/frozen/`.
 
 `@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response
 contracts the browser app validates with, the route-ownership manifest, and the

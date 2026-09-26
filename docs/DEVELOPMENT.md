@@ -266,16 +266,21 @@ golden-mastered behavior, regenerate the Python-owned inputs from `backend/` wit
 `uv run python -m scripts.export_ts_platform` and commit them. From the
 repository root, `node scripts/quality.mjs --mode check --scope api` checks types,
 schema authority, export freshness and route ownership (`pnpm check:routes` against
-FastAPI's exported OpenAPI, the frozen fragments and both ingress Caddyfiles); CI
+FastAPI's exported OpenAPI, the frozen fragments and every ingress Caddyfile); CI
 additionally verifies the generated types and runs the suite against PostgreSQL.
-`docker compose up api-service` runs the service on `127.0.0.1:8100`.
+`docker compose up api-service` runs the service on `127.0.0.1:8100`; both local
+ingresses send it the TypeScript-owned paths. `pnpm dev` proxies the same paths
+to `API_SERVICE_ORIGIN` (default `http://localhost:8100`), so run the service
+beside the backend when working on those screens.
 
 A new OpenAPI tag on a Python router needs an entry in
 `frontend/packages/contracts/src/route-ownership.ts`. Moving a family to TypeScript
 starts with `uv run python -m scripts.export_ts_platform --freeze-family <tag>` while
 Python still serves it; the same change adds the TS route contracts, flips the
-manifest entry, routes the family's paths to the service in both Caddyfiles and
-deletes the Python router.
+manifest entry, adds the family's paths to `TYPESCRIPT_INGRESS_PATHS` and every
+ingress Caddyfile, and deletes the Python router. Behavior that leaves Python
+with the router is frozen once as golden masters under `golden/frozen/` before
+its code is deleted.
 
 ### Repository validation harness
 
