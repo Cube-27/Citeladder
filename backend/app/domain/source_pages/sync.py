@@ -52,10 +52,9 @@ from app.models.source_pages import SourcePage
 
 @dataclass(frozen=True, slots=True)
 class UnresolvedCitation:
-    """A redirect token awaiting resolution, and where it appears to point."""
+    """A redirect token awaiting resolution."""
 
     url: str
-    implied_domain: str
 
 
 def _stale_before(now: datetime) -> datetime:
@@ -120,7 +119,7 @@ async def _unresolved_rows(
         seen.add(raw)
         bucket = per_domain[str(domain or "")]
         if len(bucket) < SOURCE_PAGE_MAX_REDIRECTS_PER_DOMAIN:
-            bucket.append(UnresolvedCitation(url=raw, implied_domain=str(domain or "")))
+            bucket.append(UnresolvedCitation(url=raw))
     return tuple(item for bucket in per_domain.values() for item in bucket)
 
 

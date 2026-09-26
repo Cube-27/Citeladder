@@ -15,6 +15,7 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { panelClasses } from '@/components/ui/panel';
@@ -170,14 +171,12 @@ function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
         ))}
       </dl>
       {action.target_url ? (
-        <a
+        <ExternalHttpLink
           href={action.target_url}
-          target="_blank"
-          rel="noreferrer"
           className={textRole('body', 'text-accent-text break-all underline')}
         >
           {action.target_url}
-        </a>
+        </ExternalHttpLink>
       ) : null}
       {action.evidence_cleared_at ? (
         <Alert tone="info">No current evidence targets this Action. Its chats are kept.</Alert>

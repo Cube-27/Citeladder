@@ -41,13 +41,16 @@
 .docs-tabs {
   display: flex;
   gap: 2rem;
+  overflow-x: auto;
 }
 .docs-tabs a {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
   min-height: 2.75rem;
   border-bottom: 2px solid transparent;
   color: var(--color-muted);
+  white-space: nowrap;
 }
 .docs-tabs a[aria-current] {
   color: var(--color-accent-text);
@@ -194,13 +197,6 @@
   display: flex;
   align-items: center;
   gap: 0.625rem;
-}
-.docs-tabs a {
-  gap: 0.5rem;
-  white-space: nowrap;
-}
-.docs-tabs {
-  overflow-x: auto;
 }
 .docs-contents-links {
   list-style: none;

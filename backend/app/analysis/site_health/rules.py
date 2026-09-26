@@ -58,10 +58,7 @@ from app.core.config.site_health_rule_types import (
     RULE_SCOPE_PAGE,
     SiteHealthRule,
 )
-from app.core.config.site_health_rules import (
-    SITE_HEALTH_RULES,
-    SITE_HEALTH_RULES_BY_ID,
-)
+from app.core.config.site_health_rules import SITE_HEALTH_RULES_BY_ID
 
 
 @dataclass(frozen=True)
@@ -455,11 +452,6 @@ def evaluate_rule(
         return _not_applicable_evaluation(rule, facts, base, skip_reason)
     unavailable = _extraction_unavailable(rule, facts, base)
     return unavailable or _run_check(rule, facts, base)
-
-
-def evaluate_all(facts: dict) -> list[RuleEvaluation]:
-    """Evaluate every catalog rule against one frozen measurement profile."""
-    return evaluate_rules(facts, SITE_HEALTH_RULES)
 
 
 def evaluate_rules(

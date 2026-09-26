@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import cast
 
@@ -39,6 +40,7 @@ from app.domain.analysis.schemas import (
     VisibilityFanoutState,
     VisibilityMentionEvidence,
 )
+from app.domain.analysis.selection import RunSelection
 from app.domain.analysis.trend_folding import _to_utc
 from app.domain.analysis.trends import validate_engine_and_range
 from app.domain.audits.schemas import execution_frozen_provenance
@@ -61,23 +63,16 @@ type EvidenceRow = tuple[
 
 async def get_visibility_evidence(
     session: AsyncSession,
+    selection: RunSelection,
     *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    audit_id: uuid.UUID | None = None,
     prompt_id: uuid.UUID | None = None,
-    logical_engine: str | None = None,
-    from_at: datetime | None = None,
-    to_at: datetime | None = None,
     limit: int = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
-    cohort: str = "core",
     cursor: str | None = None,
     as_of: datetime | None = None,
     outcome: str | None = None,
     competitor: str | None = None,
     domain: str | None = None,
     url: str | None = None,
-    audit_ids: list[uuid.UUID] | None = None,
 ) -> VisibilityEvidenceResponse:
     """Project the workspace-scoped execution evidence dataset (invariant 7).
 
@@ -92,40 +87,11 @@ async def get_visibility_evidence(
     newest-first order with ``truncated`` set when more matches exist. A valid
     project with no matching evidence returns an empty list, ``truncated=False``.
     """
-    from_at, to_at = _validated_evidence_request(
-        logical_engine=logical_engine,
-        from_at=from_at,
-        to_at=to_at,
-        limit=limit,
-        cohort=cohort,
-    )
-    await _assert_selected_audit(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        audit_id=audit_id,
-    )
+    selection = await _authorized_selection(session, selection, limit=limit)
     as_of = as_of or datetime.now(UTC)
-    from app.domain.analysis.selection import authorize_run_set
-
-    await authorize_run_set(
-        session, workspace_id=workspace_id, project_id=project_id, audit_ids=audit_ids
-    )
     if as_of.tzinfo is None:
         raise TrendQueryError("'as_of' must be timezone-aware")
-    base = _evidence_statement(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        audit_id=audit_id,
-        prompt_id=None,
-        logical_engine=logical_engine,
-        from_at=from_at,
-        to_at=to_at,
-        limit=None,
-        cohort=cohort,
-    ).where(ResponseAnalysis.created_at <= as_of)
-    if audit_ids:
-        base = base.where(ResponseAnalysis.audit_id.in_(audit_ids))
+    base = _evidence_statement(selection).where(ResponseAnalysis.created_at <= as_of)
     options = (
         await session.execute(
             base.with_only_columns(
@@ -162,20 +128,20 @@ async def get_visibility_evidence(
     )
     scope = scope_digest(
         {
-            "workspace": workspace_id,
-            "project": project_id,
-            "audit": audit_id,
+            "workspace": selection.workspace_id,
+            "project": selection.project_id,
+            "audit": selection.audit_id,
             "prompt": prompt_id,
-            "engine": logical_engine,
-            "from": from_at,
-            "to": to_at,
-            "cohort": cohort,
+            "engine": selection.logical_engine,
+            "from": selection.from_at,
+            "to": selection.to_at,
+            "cohort": selection.cohort,
             "as_of": as_of,
             "outcome": outcome,
             "competitor": competitor,
             "domain": domain,
             "url": url,
-            "audit_ids": sorted(str(value) for value in audit_ids or []),
+            "audit_ids": sorted(str(value) for value in selection.audit_ids or []),
         }
     )
     rows = list(
@@ -203,58 +169,29 @@ async def get_visibility_evidence(
     return response
 
 
-def _validated_evidence_request(
-    *,
-    logical_engine: str | None,
-    from_at: datetime | None,
-    to_at: datetime | None,
-    limit: int,
-    cohort: str,
-) -> tuple[datetime | None, datetime | None]:
+async def _authorized_selection(
+    session: AsyncSession, selection: RunSelection, *, limit: int
+) -> RunSelection:
+    """Validate the request, normalize its window to UTC and authorize its runs."""
     validate_engine_and_range(
-        logical_engine=logical_engine, from_at=from_at, to_at=to_at
+        logical_engine=selection.logical_engine,
+        from_at=selection.from_at,
+        to_at=selection.to_at,
     )
-    if cohort not in REQUESTABLE_PROMPT_COHORTS:
-        raise TrendQueryError(f"Unknown prompt cohort: {cohort!r}")
+    if selection.cohort not in REQUESTABLE_PROMPT_COHORTS:
+        raise TrendQueryError(f"Unknown prompt cohort: {selection.cohort!r}")
     if limit < 1 or limit > VISIBILITY_EVIDENCE_MAX_LIMIT:
         raise TrendQueryError(
             f"'limit' must be between 1 and {VISIBILITY_EVIDENCE_MAX_LIMIT}"
         )
-    return _to_utc(from_at), _to_utc(to_at)
-
-
-async def _assert_selected_audit(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    audit_id: uuid.UUID | None,
-) -> None:
-    if audit_id is None:
-        return
-    owning = await session.scalar(
-        select(Audit.id).where(
-            Audit.id == audit_id,
-            Audit.workspace_id == workspace_id,
-            Audit.project_id == project_id,
-        )
+    selection = replace(
+        selection, from_at=_to_utc(selection.from_at), to_at=_to_utc(selection.to_at)
     )
-    if owning is None:
-        raise AnalysisNotFoundError(_AUDIT_NOT_FOUND)
+    await selection.authorize(session)
+    return selection
 
 
-def _evidence_statement(
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    audit_id: uuid.UUID | None,
-    prompt_id: uuid.UUID | None,
-    logical_engine: str | None,
-    from_at: datetime | None,
-    to_at: datetime | None,
-    limit: int | None,
-    cohort: str,
-):
+def _evidence_statement(selection: RunSelection):
     stmt = (
         select(
             ResponseAnalysis,
@@ -274,9 +211,9 @@ def _evidence_statement(
             RawResponseArtifact.id == ResponseAnalysis.artifact_id,
         )
         .where(
-            ResponseAnalysis.workspace_id == workspace_id,
-            Audit.workspace_id == workspace_id,
-            Audit.project_id == project_id,
+            ResponseAnalysis.workspace_id == selection.workspace_id,
+            Audit.workspace_id == selection.workspace_id,
+            Audit.project_id == selection.project_id,
             Audit.status.in_(_DASHBOARD_STATUSES),
             # An answer whose task never succeeded is not evidence of anything.
             # This belongs to the BASE scope, not to the optional filters:
@@ -291,21 +228,23 @@ def _evidence_statement(
             AuditTask.status == TASK_STATUS_SUCCEEDED,
         )
     )
-    if audit_id is not None:
-        stmt = stmt.where(ResponseAnalysis.audit_id == audit_id)
-    if prompt_id is not None:
-        stmt = stmt.where(AuditPromptSnapshot.prompt_id == prompt_id)
-    if logical_engine is not None:
-        stmt = stmt.where(ResponseAnalysis.logical_engine == logical_engine)
+    if selection.audit_id is not None:
+        stmt = stmt.where(ResponseAnalysis.audit_id == selection.audit_id)
+    if selection.audit_ids:
+        stmt = stmt.where(ResponseAnalysis.audit_id.in_(selection.audit_ids))
+    if selection.logical_engine is not None:
+        stmt = stmt.where(ResponseAnalysis.logical_engine == selection.logical_engine)
     stmt = stmt.where(
         ResponseAnalysis.cohort.in_(
-            tuple(ORGANIC_PROMPT_COHORTS) if cohort == PROMPT_COHORT_CORE else (cohort,)
+            tuple(ORGANIC_PROMPT_COHORTS)
+            if selection.cohort == PROMPT_COHORT_CORE
+            else (selection.cohort,)
         )
     )
-    if from_at is not None:
-        stmt = stmt.where(Audit.completed_at >= from_at)
-    if to_at is not None:
-        stmt = stmt.where(Audit.completed_at <= to_at)
+    if selection.from_at is not None:
+        stmt = stmt.where(Audit.completed_at >= selection.from_at)
+    if selection.to_at is not None:
+        stmt = stmt.where(Audit.completed_at <= selection.to_at)
     # Newest-first: audit completion desc, then prompt index / engine /
     # repetition asc for a deterministic order (created_at + analysis id break
     # any remaining ties so the truncation window is stable).
@@ -313,9 +252,6 @@ def _evidence_statement(
         ResponseAnalysis.created_at.desc(),
         ResponseAnalysis.id.desc(),
     )
-    if limit is not None:
-        stmt = stmt.limit(limit + 1)
-
     return stmt
 
 

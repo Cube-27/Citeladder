@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.mcp import MCP_MAX_VISIBILITY_SOURCE_OFFSET
 from app.domain.analysis.evidence import get_visibility_evidence
+from app.domain.analysis.selection import RunSelection
 from app.domain.analysis.source_projection import get_visibility_sources
 from app.domain.demand.query_evidence_reads import (
     QueryEvidenceCursorError,
@@ -409,12 +410,14 @@ async def read_visibility_results(
         raise ValueError("audit_id and prompt_id must be UUIDs") from exc
     response = await get_visibility_evidence(
         session,
-        workspace_id=project.workspace_id,
-        project_id=project.id,
-        audit_id=parsed_audit,
+        RunSelection(
+            workspace_id=project.workspace_id,
+            project_id=project.id,
+            audit_id=parsed_audit,
+            logical_engine=engine,
+            cohort=cohort,
+        ),
         prompt_id=parsed_prompt,
-        logical_engine=engine,
-        cohort=cohort,
         cursor=cursor,
         limit=_limit(limit),
     )
@@ -481,11 +484,13 @@ async def read_visibility_sources(
         raise ValueError("cursor offset is outside the supported range")
     response = await get_visibility_sources(
         session,
-        workspace_id=project.workspace_id,
-        project_id=project.id,
-        audit_id=parsed_audit,
-        logical_engine=engine,
-        cohort=cohort,
+        RunSelection(
+            workspace_id=project.workspace_id,
+            project_id=project.id,
+            audit_id=parsed_audit,
+            logical_engine=engine,
+            cohort=cohort,
+        ),
         dimension=level,
         offset=offset,
         limit=_limit(limit),

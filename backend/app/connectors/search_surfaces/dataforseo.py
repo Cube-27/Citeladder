@@ -32,7 +32,6 @@ from app.connectors.search_surfaces.contracts import (
 from app.core.config import dataforseo as dataforseo_config
 from app.core.config import llm_scraper
 from app.core.config.dataforseo import (
-    DataForSeoCredential,
     DataForSeoCredentialError,
     dataforseo_settings,
     serialize_keyword,
@@ -154,11 +153,6 @@ def _endpoint(base_url: str, path: str) -> str:
     """Resolve a path against the approved base, or an operator override."""
     base = (base_url or dataforseo_settings.base_url).strip().rstrip("/")
     return f"{base}{path}"
-
-
-def credential_from_secret(secret: str) -> DataForSeoCredential:
-    """Decrypted-secret entry point for the execution path."""
-    return unpack_credential(secret)
 
 
 class DataForSeoSearchSurfaceAdapter:

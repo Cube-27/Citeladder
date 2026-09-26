@@ -6,6 +6,32 @@ from pydantic import ValidationError
 from app.core.config.billing_settings import BillingSettings
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "",
+        "/contact",
+        "//example.test/contact",
+        "javascript:alert(1)",
+        "data:text/html,test",
+    ],
+)
+def test_contact_sales_configuration_rejects_non_http_links(url: str) -> None:
+    with pytest.raises(ValidationError):
+        BillingSettings(contact_sales_url=url)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://example.test/contact",
+        "https://example.test:8443/contact?plan=team#sales",
+    ],
+)
+def test_contact_sales_configuration_preserves_http_links(url: str) -> None:
+    assert BillingSettings(contact_sales_url=url).contact_sales_url == url
+
+
 def test_seller_email_configuration_is_normalized() -> None:
     settings = BillingSettings(seller_email=" billing@example.test ")
 

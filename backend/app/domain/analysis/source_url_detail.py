@@ -24,17 +24,13 @@ what is being looked at, never a claim about the page's age.
 
 from __future__ import annotations
 
-import uuid
-from datetime import datetime
-
 from sqlalchemy import String, cast, func, select
 
 from app.core.config.analysis import VISIBILITY_EVIDENCE_DEFAULT_LIMIT
 from app.domain.analysis.brand_identity import brand_identities
 from app.domain.analysis.evidence import (
-    _assert_selected_audit,
+    _authorized_selection,
     _evidence_statement,
-    _validated_evidence_request,
 )
 from app.domain.analysis.schemas import (
     SourceUrlBrand,
@@ -42,6 +38,7 @@ from app.domain.analysis.schemas import (
     SourceUrlEngineRow,
     SourceUrlPromptRow,
 )
+from app.domain.analysis.selection import RunSelection
 from app.models.analysis import (
     BrandMention,
     Citation,
@@ -58,45 +55,14 @@ SOURCE_URL_MAX_BRANDS = 12
 
 async def get_visibility_source_url(
     session,
+    selection: RunSelection,
     *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
     url: str,
-    audit_id: uuid.UUID | None = None,
-    audit_ids: list[uuid.UUID] | None = None,
-    logical_engine: str | None = None,
-    cohort: str = "core",
-    from_at: datetime | None = None,
-    to_at: datetime | None = None,
 ) -> SourceUrlDetail:
-    from_at, to_at = _validated_evidence_request(
-        logical_engine=logical_engine,
-        from_at=from_at,
-        to_at=to_at,
-        limit=VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
-        cohort=cohort,
+    selection = await _authorized_selection(
+        session, selection, limit=VISIBILITY_EVIDENCE_DEFAULT_LIMIT
     )
-    await _assert_selected_audit(
-        session, workspace_id=workspace_id, project_id=project_id, audit_id=audit_id
-    )
-    from app.domain.analysis.selection import authorize_run_set
-
-    await authorize_run_set(
-        session, workspace_id=workspace_id, project_id=project_id, audit_ids=audit_ids
-    )
-    statement = _evidence_statement(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        audit_id=audit_id,
-        prompt_id=None,
-        logical_engine=logical_engine,
-        from_at=from_at,
-        to_at=to_at,
-        limit=None,
-        cohort=cohort,
-    )
-    if audit_ids:
-        statement = statement.where(ResponseAnalysis.audit_id.in_(audit_ids))
+    statement = _evidence_statement(selection)
     scope = (
         statement.with_only_columns(
             ResponseAnalysis.id.label("analysis_id"),
@@ -125,7 +91,7 @@ async def get_visibility_source_url(
     cited = (
         select(scope)
         .join(Citation, Citation.analysis_id == scope.c.analysis_id)
-        .where(Citation.workspace_id == workspace_id, Citation.url == url)
+        .where(Citation.workspace_id == selection.workspace_id, Citation.url == url)
         .subquery()
     )
     overview = (
@@ -142,14 +108,16 @@ async def get_visibility_source_url(
         await session.scalar(
             select(func.count(Citation.id))
             .join(scope, scope.c.analysis_id == Citation.analysis_id)
-            .where(Citation.workspace_id == workspace_id, Citation.url == url)
+            .where(Citation.workspace_id == selection.workspace_id, Citation.url == url)
         )
         or 0
     )
     retrievals = int(overview.retrievals or 0)
     return SourceUrlDetail(
         url=url,
-        title=await _title(session, workspace_id=workspace_id, scope=scope, url=url),
+        title=await _title(
+            session, workspace_id=selection.workspace_id, scope=scope, url=url
+        ),
         retrievals=retrievals,
         citations=citations,
         responses=denominator,
@@ -162,7 +130,10 @@ async def get_visibility_source_url(
         engines=await _engines(session, cited=cited),
         prompt_rows=await _prompts(session, cited=cited),
         brands=await _brands(
-            session, workspace_id=workspace_id, project_id=project_id, cited=cited
+            session,
+            workspace_id=selection.workspace_id,
+            project_id=selection.project_id,
+            cited=cited,
         ),
     )
 

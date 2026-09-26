@@ -284,37 +284,6 @@ async def provision_development_access(
     )
 
 
-async def user_billing_bootstrap_complete(session: AsyncSession, user: User) -> bool:
-    """Cheap read-only guard for the common successful-login path.
-
-    True when every workspace the user OWNS already has its billing account.
-    Workspaces the user only belongs to are somebody else's to provision.
-    """
-    owned = (
-        await session.scalars(
-            select(WorkspaceMember.workspace_id)
-            .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
-            .where(
-                WorkspaceMember.user_id == user.id,
-                WorkspaceMember.role == WORKSPACE_ROLE_OWNER,
-                Workspace.is_system.is_(False),
-            )
-        )
-    ).all()
-    if not owned:
-        return False
-    provisioned = set(
-        (
-            await session.scalars(
-                select(BillingAccount.workspace_id).where(
-                    BillingAccount.workspace_id.in_(owned)
-                )
-            )
-        ).all()
-    )
-    return set(owned) == provisioned
-
-
 async def ensure_initial_catalog(session: AsyncSession, *, operator: User) -> None:
     """Explicit environment bootstrap; never called by public auth or reads."""
     from app.domain.billing.admin import OperatorContext, publish_catalog, seed_catalog

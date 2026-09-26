@@ -15,7 +15,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.config.agent import (
     AGENT_HISTORY_MESSAGE_MAX_CHARS,
@@ -124,7 +124,7 @@ def step_schema() -> dict[str, Any]:
 def parse_step(content: str) -> StepResponse:
     try:
         step = StepResponse.model_validate(json.loads(content))
-    except (TypeError, ValueError, ValidationError) as exc:
+    except (TypeError, ValueError) as exc:
         raise ProtocolError("the step was not valid structured output") from exc
     if step.action == "select_skill" and step.skill_id not in AGENT_SKILL_REGISTRY:
         raise ProtocolError(f"unknown skill {step.skill_id!r}")

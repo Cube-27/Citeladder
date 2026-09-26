@@ -40,6 +40,21 @@ resource "google_secret_manager_secret" "runtime" {
   }
 }
 
+# Data Access is opt-in; record object uploads and downloads, including backups.
+# This owns the Storage service policy for the project, including the state bucket.
+resource "google_project_iam_audit_config" "storage_data_access" {
+  project = var.project_id
+  service = "storage.googleapis.com"
+
+  audit_log_config {
+    log_type = "DATA_READ"
+  }
+
+  audit_log_config {
+    log_type = "DATA_WRITE"
+  }
+}
+
 resource "google_storage_bucket" "backups" {
   name                        = "${var.project_id}-citeladder-demo-backups"
   location                    = var.region

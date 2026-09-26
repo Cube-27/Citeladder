@@ -12,6 +12,7 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { SectionTitle, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { AccentEyebrow, eyebrowClasses } from '@/components/ui/eyebrow';
@@ -55,10 +56,8 @@ export function DashboardHeader({
                 {data.project.brand_name || data.project.name}
               </h2>
               {website ? (
-                <a
+                <ExternalHttpLink
                   href={/^https?:\/\//i.test(website) ? website : `https://${website}`}
-                  target="_blank"
-                  rel="noreferrer"
                   className={textRole(
                     'label',
                     'hover:text-foreground border-border bg-background-alt inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2 py-0.5 transition-colors',
@@ -68,7 +67,7 @@ export function DashboardHeader({
                     {website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
                   </span>
                   <ExternalLink className="size-3 shrink-0" aria-hidden />
-                </a>
+                </ExternalHttpLink>
               ) : null}
             </div>
             {data.measurement ? (

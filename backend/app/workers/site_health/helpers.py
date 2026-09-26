@@ -1,9 +1,9 @@
 """Pure helpers shared by the worker loop and explicit phase modules.
 
 Module-level and side-effect free: HTTP-status classification, robots denial
-tokens, URL canonicalization that tolerates junk, and the Free-tier
-count-disclosure rule. They live outside ``site_health_worker`` because the
-phase modules use them and the worker imports the phases — the other direction
+tokens, and the Free-tier count-disclosure rule. They live outside
+``site_health_worker`` because the phase modules use them and the worker
+imports the phases — the other direction
 would be a cycle.
 """
 
@@ -21,7 +21,6 @@ from app.core.config.site_health_acquisition import (
     ERROR_ROBOTS_DENIED,
     ERROR_ROBOTS_UNAVAILABLE,
 )
-from app.domain.site_health.normalization import canonical_identity
 from app.models.site_health.crawl import SiteCrawl
 
 
@@ -101,21 +100,3 @@ def _robots_denial_error(policy: RobotsPolicy) -> tuple[str, str]:
         ERROR_ROBOTS_DENIED,
         "robots.txt disallows the crawler user-agent for this URL",
     )
-
-
-def _canonical_or_empty(url: str) -> str:
-    """The canonical form of ``url``, or ``""`` when it fails normalization.
-
-    The finalize pass canonicalizes persisted URLs (link targets, hreflang
-    alternates, sitemap observations) that may no longer parse — an
-    unnormalizable URL simply contributes nothing.
-
-    Catches ``ValueError`` (the ``UrlPolicyError`` base) rather than the policy
-    error alone: a malformed persisted URL can fail inside ``urlsplit`` itself
-    (an unclosed IPv6 bracket, a junk port) before the policy checks run, and a
-    finalize pass must never die on one bad stored row.
-    """
-    try:
-        return canonical_identity(url)[0]
-    except ValueError:
-        return ""

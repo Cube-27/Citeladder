@@ -35,7 +35,10 @@ from app.domain.analysis.evidence import (
     get_visibility_evidence,
 )
 from app.domain.analysis.schemas import VisibilityFanoutState
+from app.domain.analysis.selection import RunSelection
 from app.domain.analysis.source_projection import get_visibility_sources
+from app.domain.analysis.source_series import get_visibility_source_series
+from app.domain.analysis.source_url_detail import get_visibility_source_url
 from app.models.analysis import (
     ResponseAnalysis,
 )
@@ -44,7 +47,12 @@ from app.models.audit import (
     RawResponseArtifact,
 )
 from app.workers.audit import execution as audit_execution
-from tests.component.analysis_api_helpers import _event, _seed_evidence_execution
+from tests.component.analysis_api_helpers import (
+    _event,
+    _seed_evidence_execution,
+    _seed_snapshot,
+    _trend_metrics,
+)
 from tests.component.audit_helpers import seed_audit_fixtures
 
 # The model the PLANNER freezes for these audits. Read from the catalog rather
@@ -89,8 +97,10 @@ async def test_evidence_projects_mentions_citations_and_queries(
 
         result = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
         )
     assert result.truncated is False
     assert len(result.items) == 1
@@ -154,10 +164,17 @@ async def test_source_counts_and_empty_answers_use_complete_selection(session_fa
             audit_id=audit.id,
         )
         answers = await get_visibility_evidence(
-            session, **scope, limit=1, outcome="brand_absent"
+            session,
+            RunSelection(**scope),
+            limit=1,
+            outcome="brand_absent",
         )
         assert answers.total == 2
-        sources = await get_visibility_sources(session, **scope, limit=1)
+        sources = await get_visibility_sources(
+            session,
+            RunSelection(**scope),
+            limit=1,
+        )
         assert sources.responses == 2
         assert sources.total == 1
         domain = sources.items[0]
@@ -165,19 +182,148 @@ async def test_source_counts_and_empty_answers_use_complete_selection(session_fa
         assert domain.response_rate == 0.5
         assert domain.category_unavailable
         urls = await get_visibility_sources(
-            session, **scope, domain="example.com", limit=1
+            session,
+            RunSelection(**scope),
+            domain="example.com",
+            limit=1,
         )
         assert urls.total == 2
         assert urls.next_offset == 1
         all_urls = await get_visibility_sources(
-            session, **scope, domain="example.com", limit=100
+            session,
+            RunSelection(**scope),
+            domain="example.com",
+            limit=100,
         )
         assert all_urls.total == urls.total
         assert all_urls.responses == urls.responses
         foreign = await get_visibility_sources(
-            session, workspace_id=_uuid.uuid4(), project_id=seed.project_id
+            session,
+            RunSelection(
+                workspace_id=_uuid.uuid4(),
+                project_id=seed.project_id,
+            ),
         )
         assert foreign.total == 0
+
+
+async def test_source_series_and_url_detail_use_selected_persisted_runs(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    url = "https://example.com/selected"
+    baseline_at = datetime(2026, 2, 1, tzinfo=UTC)
+    current_at = datetime(2026, 3, 1, tzinfo=UTC)
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+        metrics = _trend_metrics(
+            brand_rate=1.0,
+            owned_rate=0.0,
+            competitor_rate=0.0,
+            brand_count=1,
+            competitor_count=0,
+            total_completed=1,
+        )
+        metrics["coverage"] = {"requested": 1}
+        selected, _ = await _seed_snapshot(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            completed_at=baseline_at,
+            metrics=metrics,
+            visibility_score=50.0,
+            total_completed=1,
+        )
+        await _seed_evidence_execution(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            completed_at=baseline_at,
+            audit=selected,
+            transport_model=GEMINI_MODEL,
+            citations=[(url, "example.com", "third_party")],
+        )
+        unselected, _ = await _seed_snapshot(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            completed_at=current_at,
+            metrics=metrics,
+            visibility_score=50.0,
+            total_completed=1,
+        )
+        await _seed_evidence_execution(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            completed_at=current_at,
+            audit=unselected,
+            transport_model=GEMINI_MODEL,
+            citations=[("https://other.com/page", "other.com", "third_party")],
+        )
+        await session.commit()
+
+        selection = RunSelection(
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            audit_ids=[selected.id],
+        )
+        series = await get_visibility_source_series(session, selection)
+        detail = await get_visibility_source_url(session, selection, url=url)
+        comparison = await get_visibility_sources(
+            session,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+                audit_ids=[unselected.id],
+            ),
+            baseline_audit_ids=[selected.id],
+        )
+
+    assert [item.key for item in series.series] == ["example.com"]
+    assert series.series[0].points[0].responses == 1
+    assert (detail.responses, detail.retrievals, detail.citations) == (1, 1, 1)
+    assert comparison.comparison_status == "comparable"
+    assert comparison.items[0].response_delta == 100.0
+
+
+@pytest.mark.parametrize("selection_field", ["audit_id", "audit_ids"])
+async def test_source_readers_reject_foreign_selected_runs(
+    session_factory: async_sessionmaker[AsyncSession], selection_field: str
+) -> None:
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+        other = await seed_audit_fixtures(session, prompt_count=1)
+        foreign, *_ = await _seed_evidence_execution(
+            session,
+            workspace_id=other.workspace_id,
+            project_id=other.project_id,
+            completed_at=datetime(2026, 2, 1, tzinfo=UTC),
+        )
+        await session.commit()
+        selection = RunSelection(
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            audit_id=foreign.id if selection_field == "audit_id" else None,
+            audit_ids=[foreign.id] if selection_field == "audit_ids" else None,
+        )
+        with pytest.raises(AnalysisNotFoundError):
+            await get_visibility_source_series(session, selection)
+        with pytest.raises(AnalysisNotFoundError):
+            await get_visibility_source_url(
+                session, selection, url="https://example.com/page"
+            )
+        with pytest.raises(AnalysisNotFoundError):
+            await get_visibility_sources(session, selection)
+        if selection_field == "audit_ids":
+            with pytest.raises(AnalysisNotFoundError):
+                await get_visibility_sources(
+                    session,
+                    RunSelection(
+                        workspace_id=seed.workspace_id,
+                        project_id=seed.project_id,
+                    ),
+                    baseline_audit_ids=[foreign.id],
+                )
 
 
 async def test_url_rows_carry_last_seen_including_the_projects_own_pages(
@@ -207,8 +353,10 @@ async def test_url_rows_carry_last_seen_including_the_projects_own_pages(
         await session.commit()
         urls = await get_visibility_sources(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
             dimension="url",
             limit=100,
         )
@@ -222,8 +370,10 @@ async def test_url_rows_carry_last_seen_including_the_projects_own_pages(
     async with session_factory() as session:
         domains = await get_visibility_sources(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
             limit=100,
         )
     assert domains.items
@@ -250,8 +400,10 @@ async def test_evidence_artifact_first_then_task_fallback(
         await session.commit()
         result = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
         )
     by_index = {i.prompt_index: i for i in result.items}
     assert by_index[0].event_source == "audit_task"
@@ -282,8 +434,10 @@ async def test_evidence_malformed_entries_ignored_and_empty_preserved(
         await session.commit()
         result = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
         )
     item = result.items[0]
     # Only the two well-formed dict entries survive; text never fabricated.
@@ -316,8 +470,10 @@ async def test_evidence_count_only_retired_transport(
         await session.commit()
         result = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
         )
     item = result.items[0]
     assert item.state == VisibilityFanoutState.COUNT_ONLY
@@ -349,8 +505,10 @@ async def test_evidence_no_search_state(
         await session.commit()
         result = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
         )
     item = result.items[0]
     assert item.state == VisibilityFanoutState.NO_SEARCH
@@ -390,17 +548,21 @@ async def test_evidence_prompt_engine_audit_and_date_filters(
         # Engine filter.
         gemini = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            logical_engine=ENGINE_GEMINI,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+                logical_engine=ENGINE_GEMINI,
+            ),
         )
         assert {i.logical_engine for i in gemini.items} == {ENGINE_GEMINI}
 
         # Prompt filter (source prompt on the frozen snapshot).
         by_prompt = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
             prompt_id=prompt_a,
         )
         assert len(by_prompt.items) == 1
@@ -409,9 +571,11 @@ async def test_evidence_prompt_engine_audit_and_date_filters(
         # Audit filter.
         by_audit = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            audit_id=audit_gemini.id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+                audit_id=audit_gemini.id,
+            ),
         )
         assert len(by_audit.items) == 1
         assert by_audit.items[0].audit_id == audit_gemini.id
@@ -419,10 +583,12 @@ async def test_evidence_prompt_engine_audit_and_date_filters(
         # Date window (only Feb).
         windowed = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            from_at=datetime(2026, 2, 1, tzinfo=UTC),
-            to_at=datetime(2026, 3, 1, tzinfo=UTC),
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+                from_at=datetime(2026, 2, 1, tzinfo=UTC),
+                to_at=datetime(2026, 3, 1, tzinfo=UTC),
+            ),
         )
         assert len(windowed.items) == 1
         assert windowed.items[0].logical_engine == ENGINE_GEMINI
@@ -430,11 +596,13 @@ async def test_evidence_prompt_engine_audit_and_date_filters(
         # Audit + date INTERSECT: the audit outside the window yields nothing.
         empty = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            audit_id=audit_gemini.id,
-            from_at=datetime(2025, 1, 1, tzinfo=UTC),
-            to_at=datetime(2025, 12, 31, tzinfo=UTC),
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+                audit_id=audit_gemini.id,
+                from_at=datetime(2025, 1, 1, tzinfo=UTC),
+                to_at=datetime(2025, 12, 31, tzinfo=UTC),
+            ),
         )
         assert empty.items == []
 
@@ -459,8 +627,10 @@ async def test_evidence_limit_truncation_and_order(
         # limit=2 -> newest two, truncated True.
         limited = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
             limit=2,
         )
         assert limited.truncated is True
@@ -469,8 +639,10 @@ async def test_evidence_limit_truncation_and_order(
         assert limited.next_cursor is not None
         next_page = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
             limit=2,
             cursor=limited.next_cursor,
             as_of=limited.as_of,
@@ -484,8 +656,10 @@ async def test_evidence_limit_truncation_and_order(
 
         full = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
             limit=100,
         )
         assert full.truncated is False
@@ -543,13 +717,17 @@ async def test_evidence_deterministic_order_within_audit(
         await session.commit()
         result = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
         )
         repeated = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
             as_of=result.as_of,
         )
         assert [item.analysis_id for item in repeated.items] == [
@@ -580,14 +758,18 @@ async def test_evidence_deleted_prompt_snapshot_readable(
         await session.commit()
         result = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
         )
         # Not selectable by a current prompt id...
         by_prompt = await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
             prompt_id=seed.prompt_ids[0],
         )
     item = result.items[0]
@@ -613,8 +795,10 @@ async def test_evidence_workspace_isolation_and_empty(
         # Foreign workspace sees nothing (invariant 5).
         foreign = await get_visibility_evidence(
             session,
-            workspace_id=_uuid.uuid4(),
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=_uuid.uuid4(),
+                project_id=seed.project_id,
+            ),
         )
         assert foreign.items == []
         assert foreign.truncated is False
@@ -639,9 +823,11 @@ async def test_evidence_cross_workspace_audit_404(
         with pytest.raises(AnalysisNotFoundError):
             await get_visibility_evidence(
                 session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                audit_id=other_audit.id,
+                RunSelection(
+                    workspace_id=seed.workspace_id,
+                    project_id=seed.project_id,
+                    audit_id=other_audit.id,
+                ),
             )
 
 
@@ -655,37 +841,47 @@ async def test_evidence_invalid_query_raises(
         with pytest.raises(TrendQueryError):
             await get_visibility_evidence(
                 session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                logical_engine="bing",
+                RunSelection(
+                    workspace_id=seed.workspace_id,
+                    project_id=seed.project_id,
+                    logical_engine="bing",
+                ),
             )
         with pytest.raises(TrendQueryError):
             await get_visibility_evidence(
                 session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                from_at=datetime(2026, 3, 1, tzinfo=UTC),
-                to_at=datetime(2026, 1, 1, tzinfo=UTC),
+                RunSelection(
+                    workspace_id=seed.workspace_id,
+                    project_id=seed.project_id,
+                    from_at=datetime(2026, 3, 1, tzinfo=UTC),
+                    to_at=datetime(2026, 1, 1, tzinfo=UTC),
+                ),
             )
         with pytest.raises(TrendQueryError):
             await get_visibility_evidence(
                 session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                from_at=datetime(2026, 3, 1),  # naive
+                RunSelection(
+                    workspace_id=seed.workspace_id,
+                    project_id=seed.project_id,
+                    from_at=datetime(2026, 3, 1),  # naive
+                ),
             )
         with pytest.raises(TrendQueryError):
             await get_visibility_evidence(
                 session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
+                RunSelection(
+                    workspace_id=seed.workspace_id,
+                    project_id=seed.project_id,
+                ),
                 limit=0,
             )
         with pytest.raises(TrendQueryError):
             await get_visibility_evidence(
                 session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
+                RunSelection(
+                    workspace_id=seed.workspace_id,
+                    project_id=seed.project_id,
+                ),
                 limit=501,
             )
 
@@ -724,8 +920,10 @@ async def test_evidence_never_calls_provider_and_is_read_only(
         )
         await get_visibility_evidence(
             session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
+            RunSelection(
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+            ),
         )
         after_analyses = await session.scalar(
             select(func.count()).select_from(ResponseAnalysis)

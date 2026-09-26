@@ -10,6 +10,7 @@ import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
@@ -150,17 +151,15 @@ function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
     <section className="border-border-subtle min-w-0 border-b pb-4">
       <dl className="grid min-w-0 gap-x-6 gap-y-4 min-[701px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
         <DetailFact label="URL" className="min-[701px]:col-span-2 xl:col-span-1">
-          <a
+          <ExternalHttpLink
             href={detail.display_url}
-            target="_blank"
-            rel="noopener noreferrer"
             className={textRole(
               'bodyStrong',
               'tabular-nums text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline',
             )}
           >
             {detail.display_url}
-          </a>
+          </ExternalHttpLink>
         </DetailFact>
         <DetailFact label="Page Kind">
           <PageKindBadge pageKind={detail.page_kind} />

@@ -8,6 +8,7 @@ import { SignalChip } from '@/components/demand/demand-signal-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
+import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { DemandSignal } from '@/lib/api/demand';
 import {
@@ -79,15 +80,13 @@ function DemandEvidenceContent({
           {details.linkablePageUrl && (
             <div className="text-muted flex items-center gap-1.5 text-xs">
               <span className={textRole('emphasis', 'shrink-0')}>Resolved URL:</span>
-              <a
+              <ExternalHttpLink
                 href={details.linkablePageUrl}
-                target="_blank"
-                rel="noreferrer"
                 className="text-accent-text inline-flex items-center gap-1 truncate hover:underline"
               >
                 {details.linkablePageUrl}
                 <ExternalLink className="size-3" />
-              </a>
+              </ExternalHttpLink>
             </div>
           )}
         </div>

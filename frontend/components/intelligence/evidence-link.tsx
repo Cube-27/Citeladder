@@ -3,6 +3,7 @@ import { ArrowUpRight } from 'lucide-react';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
+import type { AppRoute } from '@/lib/navigation/app-route';
 
 /**
  * EvidenceLink — the path from a derived number to the artifact it came from.
@@ -16,7 +17,7 @@ import { textRole } from '@/components/ui/typography';
  */
 export type EvidenceRef = {
   /** Route to the persisted artifact — a crawl, import row, or engine answer. */
-  href: string;
+  href: AppRoute;
   /** What the evidence is: "47 pages · /products/*", "GSC import · 12 Jun". */
   label: string;
   /** Optional observation time, rendered as supporting context. */

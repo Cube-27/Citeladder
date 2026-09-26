@@ -695,7 +695,6 @@ async def _saved_response(
             response_sha256=call.response_sha256,
             provider_task_id=call.provider_task_id,
             cost_usd=call.provider_reported_cost_usd,
-            cost_source=None,
         )
 
 

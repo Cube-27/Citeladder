@@ -17,7 +17,6 @@ from app.connectors.web_evidence.url_policy import (
 from app.core.config.site_health_contracts import (
     CRAWL_ACTIVE_STATUSES,
     DISCOVERY_STATUS_RUNNING,
-    OBSERVATION_SOURCE_LINK,
     TASK_KIND_ANALYZE,
 )
 from app.core.config.site_health_crawl_policy import (
@@ -265,17 +264,10 @@ async def _add_free_sample(
     *,
     crawl: SiteCrawl,
     site_url_id: uuid.UUID,
-    url: str,
-    url_hash_value: str,
-    depth: int,
-    source_kind: str = OBSERVATION_SOURCE_LINK,
+    candidate: FrontierCandidate,
     analyze: bool = True,
     analyze_after_discovery: bool = False,
     selection_source: str = SELECTION_SOURCE_FREE_SAMPLE,
-    value_kind: str = "other",
-    value_priority: int = 0,
-    rewrite_reason: str = "",
-    rewrite_version: str = "",
 ) -> tuple[bool, bool]:
     """Admit a URL into inventory and optionally monitor and analyze it."""
     now = _utcnow()
@@ -297,14 +289,14 @@ async def _add_free_sample(
             project_id=crawl.project_id,
             crawl_id=crawl.id,
             site_url_id=site_url_id,
-            source_kind=source_kind,
-            value_kind=value_kind,
-            value_priority=value_priority,
-            rewrite_reason=rewrite_reason,
-            rewrite_version=rewrite_version,
-            depth=depth,
-            observed_url=url,
-            final_url=url,
+            source_kind=candidate.source_kind,
+            value_kind=candidate.value_kind,
+            value_priority=candidate.value_priority,
+            rewrite_reason=candidate.rewrite_reason,
+            rewrite_version=candidate.rewrite_version,
+            depth=candidate.depth,
+            observed_url=candidate.url,
+            final_url=candidate.url,
         )
         .on_conflict_do_nothing(index_elements=["crawl_id", "site_url_id"])
         .returning(SiteUrlObservation.id)
@@ -326,11 +318,11 @@ async def _add_free_sample(
             session,
             crawl=crawl,
             site_url_id=site_url_id,
-            url=url,
-            url_hash_value=url_hash_value,
+            url=candidate.url,
+            url_hash_value=candidate.url_hash,
             task_kind=TASK_KIND_ANALYZE,
-            depth=depth,
-            priority=value_priority + ANALYZE_PRIORITY_BOOST,
+            depth=candidate.depth,
+            priority=candidate.value_priority + ANALYZE_PRIORITY_BOOST,
         )
     return activated_id is not None, observation_id is not None
 

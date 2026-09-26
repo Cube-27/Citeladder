@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { isAppRoute } from './app-route';
 
 const navigate = vi.fn();
 let pathname = '/projects';
@@ -77,6 +78,20 @@ describe('scopedNavigationDestination', () => {
         WORKSPACE,
       ),
     ).toBe(`/settings?tab=providers&workspace=${WORKSPACE}#credentials`);
+  });
+
+  it('rejects browser-normalized external and scheme destinations', () => {
+    for (const href of [
+      'javascript:alert(1)',
+      'https://example.com',
+      '//example.com/path',
+      '/\\example.com/path',
+      '/\n/example.com/path',
+    ]) {
+      expect(isAppRoute(href)).toBe(false);
+      expect(() => scopedNavigationDestination(href, 'project', PROJECT_1, WORKSPACE)).toThrow();
+    }
+    expect(isAppRoute('/runs?tab=history#details')).toBe(true);
   });
 });
 

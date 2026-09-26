@@ -211,6 +211,23 @@ missing nightly backup as an incident before presenting.
 
 ## 7. Updates, backups, and rollback
 
+Terraform explicitly enables Storage `DATA_READ` and `DATA_WRITE` audit logs
+for the project, covering backup uploads/downloads and the Terraform state
+bucket. This is a service-wide policy, not a backup-bucket-only setting, and
+Data Access log storage can incur charges. Before adopting the resource on an
+existing project, review its current and inherited audit policy; import an
+existing Storage configuration and reconcile any log types or exemptions in
+the reviewed Terraform plan.
+
+After an approved deployment, inspect `gcloud projects get-iam-policy
+<PROJECT_ID> --format=json` for the Storage audit configuration. Following a
+normal backup, verify its `storage.objects.create` event in Cloud Logging
+using `log_id("cloudaudit.googleapis.com/data_access")` and
+`resource.labels.bucket_name="<PROJECT_ID>-citeladder-demo-backups"`.
+Restore downloads should record `storage.objects.get`. Viewing Data Access
+logs requires private-log access. Audit events prove object access; retain
+the backup job checks and restore verification as evidence of recoverability.
+
 Merge an update to `main`, wait for CI, and rerun **GCP Demo - Deploy**. The VM
 stops write-capable services, takes a `predeploy` dump, pulls exact digests,
 migrates, and validates the API, database, migration, Caddy, and all

@@ -41,7 +41,6 @@ _reporting = importlib.import_module(
 ROOT = Path(__file__).resolve().parents[2]
 COMPANIES = ("goodee", "lootcrate", "potgang", "united by blue")
 MAX_TEXT = 400
-SCHEMA_KEYS = ("schema", "structured_data", "structuredData")
 REDACTED_EVIDENCE_KEYS = frozenset(
     {"body", "class", "classes", "html", "raw_html", "selector", "value"}
 )

@@ -45,6 +45,7 @@ from app.domain.analysis.schemas import (
     VisibilityResponse,
     VisibilityTrendPoint,
 )
+from app.domain.analysis.selection import RunSelection
 from app.domain.analysis.source_projection import get_visibility_sources
 from app.domain.analysis.trends import get_visibility_trends
 from app.domain.analysis.visibility import get_visibility
@@ -382,20 +383,22 @@ async def get_visibility_sources_endpoint(
     try:
         return await get_visibility_sources(
             session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            audit_id=audit_id,
-            logical_engine=engine,
-            cohort=cohort,
+            RunSelection(
+                workspace_id=ctx.workspace_id,
+                project_id=project_id,
+                audit_id=audit_id,
+                audit_ids=audit_ids,
+                logical_engine=engine,
+                cohort=cohort,
+                from_at=from_at,
+                to_at=to_at,
+            ),
             domain=domain,
             source_class=source_type,
             dimension=dimension,
-            from_at=from_at,
-            to_at=to_at,
             as_of=as_of,
             offset=offset,
             limit=limit,
-            audit_ids=audit_ids,
             baseline_audit_ids=baseline_audit_ids,
         )
     except AnalysisNotFoundError as exc:
@@ -449,22 +452,24 @@ async def get_visibility_evidence_endpoint(
     try:
         return await get_visibility_evidence(
             session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            audit_id=audit_id,
+            RunSelection(
+                workspace_id=ctx.workspace_id,
+                project_id=project_id,
+                audit_id=audit_id,
+                audit_ids=audit_ids,
+                logical_engine=engine,
+                cohort=cohort,
+                from_at=from_at,
+                to_at=to_at,
+            ),
             cursor=cursor,
             as_of=as_of,
             outcome=outcome,
             competitor=competitor,
-            audit_ids=audit_ids,
             domain=domain,
             url=url,
             prompt_id=prompt_id,
-            logical_engine=engine,
-            from_at=from_at,
-            to_at=to_at,
             limit=limit,
-            cohort=cohort,
         )
     except AnalysisNotFoundError as exc:
         raise_not_found("Audit", cause=exc)

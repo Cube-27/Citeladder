@@ -1,5 +1,6 @@
 import { ChartAxes } from '@/components/ui/chart-axes';
 import { cn } from '@/lib/utils';
+import { isAppRoute, type AppRoute } from '@/lib/navigation/app-route';
 
 export type TrendPoint = {
   label: string;
@@ -14,7 +15,7 @@ export type TrendPoint = {
   versionChange?: { note: string } | null;
   timestamp?: number;
   breakBefore?: boolean;
-  href?: string;
+  href?: AppRoute;
 };
 
 /**
@@ -53,7 +54,7 @@ function TrendPointMark({ x, y, point }: Readonly<{ x: number; y: number; point:
       <title>{description}</title>
     </circle>
   );
-  if (!point.href) return mark;
+  if (!point.href || !isAppRoute(point.href)) return mark;
   return (
     <a href={point.href} aria-label={description}>
       {mark}

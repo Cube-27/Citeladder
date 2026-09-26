@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import binascii
 import json
 import uuid
 from collections.abc import Iterator
@@ -50,7 +49,7 @@ def _cursor_decode(value: str, size: int) -> list[str]:
         if not isinstance(decoded, list) or len(decoded) != size:
             raise ValueError
         return [str(part) for part in decoded]
-    except (ValueError, TypeError, binascii.Error) as exc:
+    except (ValueError, TypeError) as exc:
         raise ValueError("cursor is invalid") from exc
 
 

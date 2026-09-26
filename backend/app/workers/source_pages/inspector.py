@@ -219,7 +219,7 @@ class _Inspector:
                 requested_url=url,
                 reason=str(exc.error_code or INSPECTION_REASON_TRANSPORT)[:48],
             )
-        except (TimeoutError, OSError, ValueError):
+        except (OSError, ValueError):
             logger.debug("source-page fetch failed", exc_info=True)
             return FetchOutcome(
                 outcome=OUTCOME_FAILED,

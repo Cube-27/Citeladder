@@ -22,6 +22,7 @@ from app.api.deps import WorkspaceContext, get_db, require_active_workspace
 from app.core.http_errors import raise_api_error, raise_not_found
 from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
 from app.domain.analysis.schemas import SourceSeriesResponse, SourceUrlDetail
+from app.domain.analysis.selection import RunSelection
 from app.domain.analysis.source_series import (
     SOURCE_SERIES_MAX_SERIES,
     get_visibility_source_series,
@@ -74,18 +75,20 @@ async def get_visibility_source_series_endpoint(
     try:
         return await get_visibility_source_series(
             session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
+            RunSelection(
+                workspace_id=ctx.workspace_id,
+                project_id=project_id,
+                audit_id=audit_id,
+                audit_ids=audit_ids,
+                logical_engine=engine,
+                cohort=cohort,
+                from_at=from_at,
+                to_at=to_at,
+            ),
             dimension=dimension,
             granularity=granularity,
-            audit_id=audit_id,
-            audit_ids=audit_ids,
-            logical_engine=engine,
-            cohort=cohort,
             domain=domain,
             source_class=source_type,
-            from_at=from_at,
-            to_at=to_at,
             limit=limit,
         )
     except AnalysisNotFoundError as exc:
@@ -120,15 +123,17 @@ async def get_visibility_source_url_endpoint(
     try:
         return await get_visibility_source_url(
             session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
+            RunSelection(
+                workspace_id=ctx.workspace_id,
+                project_id=project_id,
+                audit_id=audit_id,
+                audit_ids=audit_ids,
+                logical_engine=engine,
+                cohort=cohort,
+                from_at=from_at,
+                to_at=to_at,
+            ),
             url=url,
-            audit_id=audit_id,
-            audit_ids=audit_ids,
-            logical_engine=engine,
-            cohort=cohort,
-            from_at=from_at,
-            to_at=to_at,
         )
     except AnalysisNotFoundError as exc:
         raise_not_found("Audit", cause=exc)
