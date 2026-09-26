@@ -235,17 +235,50 @@ class PromptGenerateRequest(BaseModel):
     cohort: PromptCohort = "core"
 
 
+class PromptCandidateResponse(BaseModel):
+    """A generated prompt awaiting accept/reject; never tracked until accepted."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    run_id: uuid.UUID
+    prompt_set_id: uuid.UUID
+    topic_id: uuid.UUID | None = None
+    text: str
+    intent: str = ""
+    buyer_stage: str = ""
+    prompt_intent: str = ""
+    cohort: str
+    created_at: datetime
+    expires_at: datetime
+
+
 class PromptGenerateResponse(BaseModel):
-    generated: list[PromptResponse] = Field(default_factory=list)
+    candidates: list[PromptCandidateResponse] = Field(default_factory=list)
     topics: list[TopicResponse] = Field(default_factory=list)
     # What the caller asked for. A request can exceed what the selected topics
     # can support, and returning fewer prompts with no
     # explanation is how a silent cap went unnoticed for a release.
     requested_count: int = 0
-    # Total prompts dropped as duplicates: intra-response collapses (an
-    # equivalent text repeated within one model response) plus DB
-    # ``ON CONFLICT`` skips against pre-existing prompts in the set.
+    # Suggestions dropped as duplicates: intra-response collapses plus texts
+    # already tracked in the set or already pending review.
     dropped_duplicates: int = 0
+
+
+class PromptCandidateReviewRequest(BaseModel):
+    """Accept (insert as active prompts) and/or reject (delete) candidates."""
+
+    accept_ids: list[uuid.UUID] = Field(default_factory=list)
+    reject_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class PromptCandidateReviewResponse(BaseModel):
+    accepted: list[PromptResponse] = Field(default_factory=list)
+    rejected_count: int = 0
+    # Accepted candidates whose text was already tracked in the set.
+    dropped_duplicates: int = 0
+    # Ids that were unknown, expired or already reviewed.
+    unavailable_count: int = 0
 
 
 class PromptBulkStatusRequest(BaseModel):

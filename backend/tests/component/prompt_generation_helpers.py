@@ -182,3 +182,18 @@ async def make_project_and_set(
         )
         assert topic.status_code == 201
     return project, prompt_set_id
+
+
+async def accept_all(
+    client: httpx.AsyncClient, prompt_set_id: str, generate_body: dict
+) -> list[dict]:
+    """Accept every staged candidate from a generate response."""
+    ids = [candidate["id"] for candidate in generate_body["candidates"]]
+    if not ids:
+        return []
+    response = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
+        json={"accept_ids": ids},
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["accepted"]

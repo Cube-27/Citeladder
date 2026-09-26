@@ -11,9 +11,9 @@ from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # --- Prompt lifecycle ------------------------------------------------------
-# Generation creates active library entries. Measurement is still explicitly
-# initiated by running or scheduling an audit; a second approval gate here
-# adds no safety and fragments the portfolio lifecycle.
+# A prompt is tracked from creation. Generated text is reviewed before it
+# becomes a prompt (candidates, below), and measurement is still explicitly
+# initiated by running or scheduling an audit.
 PROMPT_STATUS_ACTIVE: Final = "active"
 PROMPT_STATUS_ARCHIVED: Final = "archived"
 PROMPT_STATUSES: Final[frozenset[str]] = frozenset(
@@ -56,11 +56,6 @@ TOPIC_ORIGINS: Final[frozenset[str]] = frozenset(
 # hidden from review and purged by the next write to the set.
 CANDIDATE_DISPOSITION_PENDING: Final = "pending"
 CANDIDATE_DISPOSITION_ACCEPTED: Final = "accepted"
-
-# --- Topic hierarchy -------------------------------------------------------
-# A topic may have one parent in the same project; a subtopic cannot itself
-# have children. Prompts bind to the most specific topic.
-TOPIC_MAX_DEPTH: Final = 1
 
 # --- Generation pipeline version (stamped into generation_evidence) --------
 GENERATOR_VERSION: Final = "prompt-gen-v1"

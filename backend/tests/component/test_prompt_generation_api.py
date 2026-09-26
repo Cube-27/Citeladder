@@ -5,14 +5,15 @@ The default agent is always faked at the API boundary
 provider I/O, regardless of what keys exist in the developer's ``.env``.
 
 Covers:
-  - generate happy path: prompts reference existing canonical topics and retain
-    provenance evidence (invariant 4);
-  - automatic generation without a third decision gate + count cap (422);
+  - generate happy path: candidates reference existing canonical topics, stay
+    untracked until accepted, and accepted prompts retain provenance
+    evidence (invariant 4);
+  - count cap (422);
   - unconfigured agent -> 503, but foreign set -> 404 first (invariant 5);
   - unparseable model output -> 502;
   - DB-level duplicate dropping across repeat runs (conflict-safe dedupe);
   - topics CRUD with per-status counts + duplicate-name 409;
-  - bulk status review transitions + duplicate prompt text 409;
+  - bulk status transitions + duplicate prompt text 409;
   - the audit planner never consumes ``proposed``/``archived`` prompts.
 """
 
@@ -37,6 +38,7 @@ from app.domain.audits.errors import AuditValidationError
 from app.domain.audits.reads import list_tasks
 from app.domain.entitlements.types import GrantSpec
 from app.models.prompt import Prompt
+from app.models.prompt_candidate import PromptCandidate, PromptGenerationRun
 from tests.component.audit_helpers import seed_audit_fixtures
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import (
@@ -45,6 +47,7 @@ from tests.component.occupancy_helpers import (
 )
 from tests.component.prompt_generation_helpers import (
     FakeAgent,
+    accept_all,
     make_project_and_set,
     project_payload,
 )
@@ -64,7 +67,7 @@ def fake_agent(monkeypatch: pytest.MonkeyPatch) -> FakeAgent:
 # Generation
 # --------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_generate_creates_prompts_under_existing_topic(
+async def test_generate_stages_candidates_until_accepted(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
     project, prompt_set_id = await make_project_and_set(client, "gen1@example.com")
@@ -85,21 +88,29 @@ async def test_generate_creates_prompts_under_existing_topic(
     body = resp.json()
 
     assert body["dropped_duplicates"] == 0
-    assert len(body["generated"]) == 3
-    assert {p["status"] for p in body["generated"]} == {"active"}
-    assert {p["prompt_intent"] for p in body["generated"]} == {"recommend"}
-    assert all(
-        "buyer_query_archetype" not in p["generation_evidence"]
-        for p in body["generated"]
-    )
-    for prompt in body["generated"]:
+    assert len(body["candidates"]) == 3
+    assert {p["prompt_intent"] for p in body["candidates"]} == {"recommend"}
+    assert all(candidate["topic_id"] is not None for candidate in body["candidates"])
+    assert {t["name"] for t in body["topics"]} == {"Running Shoes"}
+    # Candidates are not tracked prompts: nothing counts until accepted.
+    assert body["topics"][0]["active_count"] == 0
+    tracked = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
+    assert tracked["prompts"] == []
+    pending = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
+    assert {c["id"] for c in pending.json()} == {c["id"] for c in body["candidates"]}
+
+    accepted = await accept_all(client, prompt_set_id, body)
+    assert len(accepted) == 3
+    for prompt in accepted:
+        assert prompt["status"] == "active"
         assert prompt["origin"] == "generated"
         assert prompt["topic_id"] is not None
-    assert {t["name"] for t in body["topics"]} == {"Running Shoes"}
-    running_shoes = body["topics"][0]
-    assert running_shoes["origin"] == "manual"
-    assert running_shoes["active_count"] == 3
-    assert running_shoes["proposed_count"] == 0
+        assert "buyer_query_archetype" not in prompt["generation_evidence"]
+    topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
+    assert topics[0]["active_count"] == 3
+    assert (
+        await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
+    ).json() == []
 
     # The brand evidence went to the agent (confirmed above), and the
     # request embedded identity + count instructions.
@@ -114,11 +125,8 @@ async def test_generate_creates_prompts_under_existing_topic(
     assert "Buyer-query slots" in sent
     assert '["running shoes"]' in sent
 
-    # Provenance evidence is persisted but the API response never includes
-    # any credential material — only host + model identity.
-    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
-    assert len(listed["prompts"]) == 3
     # Core generation excludes tracked and competitor names.
+    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
     assert all(prompt["branded"] is False for prompt in listed["prompts"])
 
 
@@ -158,6 +166,8 @@ async def test_generate_persists_provenance_evidence(
         json={"count": 3, "confirm_send_evidence": True},
     )
     assert resp.status_code == 201
+    candidate_ids = {candidate["id"] for candidate in resp.json()["candidates"]}
+    await accept_all(client, prompt_set_id, resp.json())
 
     async with session_factory() as session:
         prompts = (
@@ -185,8 +195,14 @@ async def test_generate_persists_provenance_evidence(
             "transport_model": "fake-model",
         }
         assert evidence["requested_count"] == 3
+        assert evidence["candidate_validation"]["admission"] == "passed"
         run_ids.add(evidence["generation_run_id"])
     assert len(run_ids) == 1  # one run id for the whole batch
+    assert {p.generation_evidence["candidate_id"] for p in prompts} == candidate_ids
+    async with session_factory() as session:
+        run = await session.get(PromptGenerationRun, uuid.UUID(run_ids.pop()))
+    assert run is not None
+    assert run.prompt_set_id == uuid.UUID(prompt_set_id)
 
 
 @pytest.mark.asyncio
@@ -218,11 +234,11 @@ async def test_generate_creates_topics_from_confirmed_offerings_when_none_exist(
 
     assert resp.status_code == 201
     body = resp.json()
-    assert len(body["generated"]) == 3
+    assert len(body["candidates"]) == 3
     assert {topic["name"] for topic in body["topics"]} == {"running shoes"}
     assert {topic["origin"] for topic in body["topics"]} == {"generated"}
     assert all(
-        prompt["topic_id"] == body["topics"][0]["id"] for prompt in body["generated"]
+        prompt["topic_id"] == body["topics"][0]["id"] for prompt in body["candidates"]
     )
 
     topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
@@ -371,7 +387,7 @@ async def test_generate_unparseable_output_returns_502(
 async def test_generate_twice_drops_duplicates(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
-    """Same model output twice: run 2 inserts nothing, reports drops."""
+    """Same output again drops texts pending review, then texts tracked."""
     _, prompt_set_id = await make_project_and_set(client, "gen9@example.com")
 
     first = await client.post(
@@ -379,15 +395,23 @@ async def test_generate_twice_drops_duplicates(
         json={"count": 3, "confirm_send_evidence": True},
     )
     assert first.status_code == 201
-    assert len(first.json()["generated"]) == 3
+    assert len(first.json()["candidates"]) == 3
 
     second = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
         json={"count": 3, "confirm_send_evidence": True},
     )
     assert second.status_code == 201
-    assert second.json()["generated"] == []
+    assert second.json()["candidates"] == []
     assert second.json()["dropped_duplicates"] == 3
+
+    await accept_all(client, prompt_set_id, first.json())
+    third = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
+        json={"count": 3, "confirm_send_evidence": True},
+    )
+    assert third.json()["candidates"] == []
+    assert third.json()["dropped_duplicates"] == 3
 
     listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
     assert len(listed["prompts"]) == 3  # no dupes, and no reused topics broke
@@ -436,7 +460,7 @@ async def test_generate_into_target_topic(
     assert resp.status_code == 201
     body = resp.json()
     assert [t["id"] for t in body["topics"]] == [topic["id"]]
-    assert body["generated"][0]["topic_id"] == topic["id"]
+    assert body["candidates"][0]["topic_id"] == topic["id"]
     assert '"topic":"Running Shoe Pricing"' in agent.calls[0]["user"]
 
     # No new topic was created from the model's invented name.
@@ -467,7 +491,7 @@ async def test_topic_scoped_generation_plans_only_that_topic(
     )
 
     assert resp.status_code == 201
-    generated = resp.json()["generated"]
+    generated = resp.json()["candidates"]
     assert len(generated) == 7
     # Every prompt belongs to the requested topic — the other project topic is
     # never planned for.
@@ -524,7 +548,7 @@ async def test_generation_reuses_existing_topic_with_description(
     assert response.status_code == 201
     body = response.json()
     assert [item["id"] for item in body["topics"]] == [topic["id"]]
-    assert body["generated"][0]["topic_id"] == topic["id"]
+    assert body["candidates"][0]["topic_id"] == topic["id"]
     assert '"topic":"Footwear"' in agent.calls[0]["user"]
     assert (
         '"topic_description":"Running and everyday shoes for families."'
@@ -561,12 +585,12 @@ def _agent_response_with_n_prompts(
 
 
 @pytest.mark.asyncio
-async def test_generate_activates_validated_requested_count(
+async def test_generate_stages_validated_requested_count_for_acceptance(
     client: httpx.AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """The requested, validated portfolio becomes active without measuring it."""
+    """The requested, validated set is staged and becomes active on accept."""
     project, prompt_set_id = await make_project_and_set(client, "pool1@example.com")
     async with session_factory() as session:
         await seed_occupancy_grants(
@@ -585,18 +609,18 @@ async def test_generate_activates_validated_requested_count(
     assert resp.status_code == 201
     body = resp.json()
     # A single topic can fill the requested count without recipe limits.
-    generated = body["generated"]
-    assert len(generated) == 20
-    assert [p["status"] for p in generated] == ["active"] * len(generated)
+    assert len(body["candidates"]) == 20
+    accepted = await accept_all(client, prompt_set_id, body)
+    assert [p["status"] for p in accepted] == ["active"] * 20
 
 
 @pytest.mark.asyncio
-async def test_generate_comparison_cohort_is_active_and_branded(
+async def test_accepting_comparison_candidates_is_capacity_checked_and_branded(
     client: httpx.AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Validated comparison prompts retain their cohort signal and are active."""
+    """Generation charges nothing; accept is where prompt capacity applies."""
     project, prompt_set_id = await make_project_and_set(client, "brandcap@example.com")
     async with session_factory() as session:
         # The ten pre-existing prompts consume the free baseline; the generated
@@ -607,8 +631,7 @@ async def test_generate_comparison_cohort_is_active_and_branded(
             grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=2),),
         )
         await session.commit()
-    # Ten existing prompts leave room for two more. Generation must not hide
-    # an over-capacity request by silently shortening its slot plan.
+    # Ten existing prompts leave room for two more.
     for i in range(10):
         created = await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
@@ -641,22 +664,29 @@ async def test_generate_comparison_cohort_is_active_and_branded(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
         json={"count": 10, "cohort": "comparison", "confirm_send_evidence": True},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 201
+    candidate_ids = [c["id"] for c in resp.json()["candidates"]]
+    assert len(candidate_ids) == 10
+
+    over = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
+        json={"accept_ids": candidate_ids},
+    )
+    assert over.status_code == 403
     listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
     assert len(listed["prompts"]) == 10
+    still_pending = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
+    assert len(still_pending.json()) == 10
 
-    resp = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
-        json={"count": 2, "cohort": "comparison", "confirm_send_evidence": True},
+    within = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
+        json={"accept_ids": candidate_ids[:2]},
     )
-    assert resp.status_code == 201
-    body = resp.json()
-    assert len(body["generated"]) == 2
-
-    active_branded = [
-        p for p in body["generated"] if p["branded"] and p["status"] == "active"
-    ]
-    assert len(active_branded) == 2
+    assert within.status_code == 200
+    accepted = within.json()["accepted"]
+    assert len(accepted) == 2
+    assert all(p["branded"] and p["status"] == "active" for p in accepted)
+    assert all(p["cohort"] == "comparison" for p in accepted)
 
 
 @pytest.mark.asyncio
@@ -696,7 +726,7 @@ async def test_generate_brand_diagnostic_uses_named_cohort_rules(
     )
 
     assert response.status_code == 201
-    assert [item["cohort"] for item in response.json()["generated"]] == [
+    assert [item["cohort"] for item in response.json()["candidates"]] == [
         "brand_diagnostic"
     ]
     assert "Every query must name the tracked brand" in agent.calls[0]["system"]
@@ -753,7 +783,7 @@ async def test_generate_counts_intra_response_duplicates(
     )
     assert resp.status_code == 201
     body = resp.json()
-    assert len(body["generated"]) == 4
+    assert len(body["candidates"]) == 4
     assert body["dropped_duplicates"] == 1
 
 
@@ -789,12 +819,12 @@ async def test_generate_bounds_existing_prompt_context(
 
 
 @pytest.mark.asyncio
-async def test_concurrent_generation_keeps_all_validated_rows_active(
+async def test_concurrent_generation_stages_both_runs_without_duplicates(
     client: httpx.AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Concurrent generation preserves both active portfolios without duplicates."""
+    """Concurrent generation keeps both runs' candidates without duplicates."""
     import asyncio
 
     from app.domain.prompts.generation import generate_prompts
@@ -809,14 +839,6 @@ async def test_concurrent_generation_keeps_all_validated_rows_active(
         proj = await session.get(Project, uuid.UUID(project["id"]))
         assert proj is not None
         workspace_id = proj.workspace_id
-        # The free baseline allows ten prompts; this concurrency test needs two
-        # fifteen-row portfolios, so grant only the additional twenty slots.
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace_id,
-            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=20),),
-        )
-        await session.commit()
 
     class _CountingAgent:
         model = "fake-model"
@@ -857,21 +879,20 @@ async def test_concurrent_generation_keeps_all_validated_rows_active(
     alpha_count, beta_count = await asyncio.gather(_run("Alpha", 15), _run("Beta", 15))
 
     async with session_factory() as session:
-        active = (
+        staged = (
             (
                 await session.execute(
-                    select(Prompt).where(
-                        Prompt.prompt_set_id == uuid.UUID(prompt_set_id),
-                        Prompt.status == "active",
+                    select(PromptCandidate).where(
+                        PromptCandidate.prompt_set_id == uuid.UUID(prompt_set_id),
                     )
                 )
             )
             .scalars()
             .all()
         )
-    texts = [prompt.text for prompt in active]
-    # Both portfolios survive, and neither run's rows collide with the other's.
-    assert len(active) == alpha_count + beta_count
+    texts = [candidate.text for candidate in staged]
+    # Both runs' candidates survive, and neither collides with the other's.
+    assert len(staged) == alpha_count + beta_count
     assert len(texts) == len(set(texts))
     assert any("Alpha" in text for text in texts)
     assert any("Beta" in text for text in texts)
@@ -1032,13 +1053,13 @@ async def test_generation_racing_topic_delete_is_scoped_validation_error(
     gen_result, _ = await asyncio.gather(_generate(), _delete())
     # Target topic gone -> scoped validation error the endpoint maps to 422.
     assert isinstance(gen_result, GenerationValidationError)
-    # No prompts were persisted into the vanished topic.
+    # No candidates were staged into the vanished topic.
     async with session_factory() as session:
         remaining = (
             (
                 await session.execute(
-                    select(Prompt).where(
-                        Prompt.prompt_set_id == uuid.UUID(prompt_set_id)
+                    select(PromptCandidate).where(
+                        PromptCandidate.prompt_set_id == uuid.UUID(prompt_set_id)
                     )
                 )
             )
@@ -1077,7 +1098,7 @@ async def test_generation_unrelated_integrity_error_is_not_remapped(
     async def _boom(*args: object, **kwargs: object) -> object:
         raise IntegrityError("boom", params=None, orig=Exception("unrelated"))
 
-    monkeypatch.setattr(generation, "_insert_prompts_returning", _boom)
+    monkeypatch.setattr(generation, "stage_candidates", _boom)
 
     with pytest.raises(IntegrityError):
         async with session_factory() as session:
@@ -1401,27 +1422,6 @@ async def test_prompt_status_update_and_duplicate_409(
 
 
 @pytest.mark.asyncio
-async def test_bulk_status_accepts_proposed_prompts(
-    client: httpx.AsyncClient, fake_agent: FakeAgent
-) -> None:
-    _, prompt_set_id = await make_project_and_set(client, "rev2@example.com")
-    generated = (
-        await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/generate",
-            json={"count": 3, "confirm_send_evidence": True},
-        )
-    ).json()["generated"]
-    ids = [p["id"] for p in generated]
-
-    resp = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts/bulk-status",
-        json={"prompt_ids": ids, "status": "active"},
-    )
-    assert resp.status_code == 200
-    assert {p["status"] for p in resp.json()["prompts"]} == {"active"}
-
-
-@pytest.mark.asyncio
 async def test_bulk_status_rejects_foreign_prompt_ids(
     client: httpx.AsyncClient,
 ) -> None:
@@ -1497,7 +1497,7 @@ async def test_planner_excludes_proposed_and_archived_prompts(
 # domain denial to the coded 403; the quota check lives in the service.
 # =========================================================================
 @pytest.mark.asyncio
-async def test_generate_over_occupancy_returns_coded_403(
+async def test_accept_over_occupancy_returns_coded_403(
     client: httpx.AsyncClient,
     fake_agent: FakeAgent,
     session_factory: async_sessionmaker[AsyncSession],
@@ -1506,7 +1506,7 @@ async def test_generate_over_occupancy_returns_coded_403(
         client, "occ-gen-403@example.com"
     )
     # Make the registered account bare, then provision a zero-slot grant: every
-    # generated row that could actually insert is over the allowance.
+    # accepted candidate that could actually insert is over the allowance.
     async with session_factory() as session:
         workspace_id = uuid.UUID(project["workspace_id"])
         await revoke_signup_baseline_grants(session, workspace_id=workspace_id)
@@ -1517,9 +1517,16 @@ async def test_generate_over_occupancy_returns_coded_403(
         )
         await session.commit()
 
-    resp = await client.post(
+    generated = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
         json={"count": 3, "confirm_send_evidence": True},
+    )
+    # Staging charges nothing, so generation itself is not over capacity.
+    assert generated.status_code == 201
+    candidate_ids = [c["id"] for c in generated.json()["candidates"]]
+    resp = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
+        json={"accept_ids": candidate_ids},
     )
     assert resp.status_code == 403
     body = resp.json()
@@ -1528,9 +1535,11 @@ async def test_generate_over_occupancy_returns_coded_403(
     assert body["error"]["details"]["key"] == "prompt_slots"
     assert body["detail"]["code"] == "occupancy_limit_exceeded"
 
-    # The denial is atomic: nothing persisted from the rejected generation.
+    # The denial is atomic: nothing tracked, every candidate still pending.
     got = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")
     assert got.json()["prompts"] == []
+    pending = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
+    assert sorted(c["id"] for c in pending.json()) == sorted(candidate_ids)
 
 
 @pytest.mark.asyncio
