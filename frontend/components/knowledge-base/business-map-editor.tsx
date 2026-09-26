@@ -68,7 +68,7 @@ export function BusinessMapEditor({
   if (query.isError) return <Alert tone="danger">{humanizeApiError(query.error).message}</Alert>;
   return (
     <BusinessMapForm
-      key={query.dataUpdatedAt}
+      key={projectId}
       map={query.data}
       onSave={(input) => projectsApi.updateBusinessMap(projectId, input, { workspaceId })}
       onSaved={(next) => queryClient.setQueryData(queryKeys.projects.businessMap(projectId), next)}
@@ -88,7 +88,11 @@ function BusinessMapForm({
   const [drafts, setDrafts] = useState(() => toDrafts(map));
   const mutation = useMutation({
     mutationFn: () => onSave({ offerings: drafts }),
-    onSuccess: onSaved,
+    onSuccess: (next) => {
+      // Reseed from the saved map so drafts show its canonical values.
+      setDrafts(toDrafts(next));
+      onSaved(next);
+    },
   });
 
   if (!map.available_offerings.length) {

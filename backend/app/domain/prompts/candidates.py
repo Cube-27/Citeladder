@@ -163,6 +163,15 @@ async def stage_candidates(
         for prompt in topic.prompts
     ]
     existing = await _existing_prompt_hashes(session, prompt_set.id, hashes)
+    # Duplicates are texts already tracked; suggestions under a topic that
+    # vanished during provider I/O are skipped, not duplicates.
+    dropped = sum(
+        1
+        for topic in suggestions
+        if topic.topic_id in topics_by_id
+        for prompt in topic.prompts
+        if prompt_text_hash(prompt.text) in existing
+    )
     now = datetime.now(UTC)
     rows = [
         _candidate_row(
@@ -179,7 +188,6 @@ async def stage_candidates(
         for prompt in topic.prompts
         if prompt_text_hash(prompt.text) not in existing
     ]
-    dropped = len(hashes) - len(rows)
     inserted_ids: list[uuid.UUID] = []
     if rows:
         stmt = (

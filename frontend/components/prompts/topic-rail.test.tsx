@@ -39,6 +39,25 @@ function renderRail(props: Partial<ComponentProps<typeof TopicRail>> = {}) {
 }
 
 describe('TopicRail', () => {
+  it('names a subtopic with its parent so same-named subtopics stay distinct', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const parent = makeTopic();
+    const child = makeTopic({
+      id: '66666666-6666-4666-8666-666666666666',
+      name: 'Trail',
+      parent_id: parent.id,
+    });
+    renderRail({ topics: [child, parent], onSelect });
+
+    const nav = screen.getByRole('navigation', { name: 'Topics' });
+    await user.click(within(nav).getByRole('button', { name: 'Footwear › Trail' }));
+    expect(onSelect).toHaveBeenCalledWith(child.id);
+    expect(
+      within(nav).getByRole('button', { name: 'Delete topic Footwear › Trail' }),
+    ).toBeInTheDocument();
+  });
+
   it('preserves topic selection and create/delete actions', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();

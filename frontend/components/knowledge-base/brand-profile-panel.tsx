@@ -110,8 +110,8 @@ export function BrandProfilePanel({
         rootClassName="grid gap-4"
       >
         <TabPanel value={activeTab} className="focus-ring">
-          {activeTab === 'map' && workspaceId ? (
-            <BusinessMapEditor projectId={projectId} workspaceId={workspaceId} />
+          {activeTab === 'map' ? (
+            <BusinessMapTab projectId={projectId} workspaceId={workspaceId} />
           ) : (
             <ProfileTabPanel
               activeTab={activeTab}
@@ -246,4 +246,12 @@ function ProfileTabPanel({
       {competitorSuggestions}
     </div>
   );
+}
+
+function BusinessMapTab({
+  projectId,
+  workspaceId,
+}: Readonly<{ projectId: string; workspaceId: string | null | undefined }>) {
+  if (!workspaceId) return <Alert tone="info">Workspace is not available.</Alert>;
+  return <BusinessMapEditor projectId={projectId} workspaceId={workspaceId} />;
 }

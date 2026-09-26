@@ -143,10 +143,11 @@ export function TopicRail({
           selected={selectedTopicId === null}
           onSelect={() => onSelect(null)}
         />
-        {orderTopicsForRail(topics).map(({ topic, nested }) => (
+        {orderTopicsForRail(topics).map(({ topic, nested, label }) => (
           <TopicItem
             key={topic.id}
             label={topic.name}
+            accessibleName={nested ? label : undefined}
             nested={nested}
             activeCount={topic.active_count}
             selected={selectedTopicId === topic.id}
@@ -209,6 +210,7 @@ function TopicSelect({
 
 function TopicItem({
   label,
+  accessibleName,
   nested = false,
   activeCount,
   selected,
@@ -216,6 +218,8 @@ function TopicItem({
   onDelete,
 }: Readonly<{
   label: string;
+  /** Parent-qualified name for a subtopic; top-level items use their text. */
+  accessibleName?: string;
   nested?: boolean;
   activeCount?: number;
   selected: boolean;
@@ -233,6 +237,7 @@ function TopicItem({
       <Pressable
         type="button"
         onClick={onSelect}
+        aria-label={accessibleName}
         aria-current={selected ? 'true' : undefined}
         className={cn(
           'focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 text-left text-xs',
@@ -251,7 +256,7 @@ function TopicItem({
           type="button"
           variant="destructiveGhost"
           size="icon"
-          aria-label={`Delete topic ${label}`}
+          aria-label={`Delete topic ${accessibleName ?? label}`}
           onClick={onDelete}
           className="size-8 shrink-0"
         >
