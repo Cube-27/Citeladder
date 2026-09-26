@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from starlette.requests import Request
 
-from app.api.rate_limit import trusted_client_identity
 from app.core.config import settings
+from app.core.http_security import trusted_client_identity
 from app.core.security import (
     TokenDecodeError,
     create_access_token,

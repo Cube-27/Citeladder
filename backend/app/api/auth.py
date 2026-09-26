@@ -19,10 +19,11 @@ from app.api.browser_cookies import (
     set_session_cookie,
 )
 from app.api.deps import get_current_user, get_db
-from app.api.rate_limit import enforce_limit, trusted_client_identity
+from app.api.rate_limit import enforce_limit
 from app.core.config import demo_access_expired, settings
 from app.core.config.abuse import abuse_settings
 from app.core.http_errors import raise_api_error
+from app.core.http_security import trusted_client_identity
 from app.domain.auth.schemas import (
     AuthResponse,
     Credentials,

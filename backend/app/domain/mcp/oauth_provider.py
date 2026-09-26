@@ -23,11 +23,21 @@ from mcp.server.auth.provider import (
 )
 from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 from pydantic import AnyUrl
-from sqlalchemy import or_, select
+from sqlalchemy import delete, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import demo_access_expired, legal, settings
-from app.core.config.mcp import MCP_READ_SCOPE, mcp_public_origin, mcp_settings
+from app.core.config.mcp import (
+    MCP_MAX_CLIENT_NAME_LENGTH,
+    MCP_MAX_REDIRECT_URI_LENGTH,
+    MCP_MAX_REDIRECT_URIS,
+    MCP_READ_SCOPE,
+    MCP_SUPPORTED_GRANT_TYPES,
+    MCP_SUPPORTED_RESPONSE_TYPES,
+    MCP_UNUSED_CLIENT_PRUNE_BATCH,
+    mcp_public_origin,
+    mcp_settings,
+)
 from app.core.database import SessionLocal
 from app.core.security import decrypt_secret, encrypt_secret
 from app.domain.auth.security_events import record_security_event
@@ -134,9 +144,53 @@ def _account_allowed(user: User) -> bool:
     return not allowed or user.email.casefold() == allowed
 
 
+def _registration_error(description: str) -> RegistrationError:
+    return RegistrationError(
+        error="invalid_client_metadata", error_description=description
+    )
+
+
+def _validate_client_metadata(client_info: OAuthClientInformationFull) -> None:
+    """Accept only what this server can actually honor (RFC 7591 §3.2.2).
+
+    The SDK already requires ``authorization_code``/``code`` and refuses the
+    identity-assertion grant; anything beyond the supported sets would register
+    a client for a flow no endpoint here serves.
+    """
+    unsupported_grants = set(client_info.grant_types) - MCP_SUPPORTED_GRANT_TYPES
+    if unsupported_grants:
+        raise _registration_error(
+            "Unsupported grant_types: " + ", ".join(sorted(unsupported_grants))
+        )
+    if not set(client_info.response_types) <= MCP_SUPPORTED_RESPONSE_TYPES:
+        raise _registration_error("response_types must be exactly ['code']")
+    if len(client_info.client_name or "") > MCP_MAX_CLIENT_NAME_LENGTH:
+        raise _registration_error("client_name is too long")
+    redirect_uris = client_info.redirect_uris or []
+    if not redirect_uris or len(redirect_uris) > MCP_MAX_REDIRECT_URIS:
+        raise _registration_error(
+            f"Between one and {MCP_MAX_REDIRECT_URIS} redirect URIs are required"
+        )
+    for redirect_uri in redirect_uris:
+        _validate_redirect_uri(redirect_uri)
+
+
 def _validate_redirect_uri(uri: AnyUrl) -> None:
-    parsed = urlsplit(str(uri))
+    raw = str(uri)
+    parsed = urlsplit(raw)
     loopback = parsed.hostname in {"127.0.0.1", "localhost", "::1"}
+    if len(raw) > MCP_MAX_REDIRECT_URI_LENGTH:
+        raise RegistrationError(
+            error="invalid_redirect_uri",
+            error_description="Redirect URI is too long",
+        )
+    # Redirects are matched exactly at /authorize, so a wildcard host would
+    # only ever be a confused or hostile registration.
+    if not parsed.hostname or "*" in parsed.netloc:
+        raise RegistrationError(
+            error="invalid_redirect_uri",
+            error_description="Redirect URIs need one concrete host",
+        )
     if parsed.fragment or parsed.username or parsed.password:
         raise RegistrationError(
             error="invalid_redirect_uri",
@@ -147,6 +201,37 @@ def _validate_redirect_uri(uri: AnyUrl) -> None:
             error="invalid_redirect_uri",
             error_description="Redirect URIs must use HTTPS or loopback HTTP",
         )
+
+
+async def _prune_unused_clients(session: AsyncSession) -> None:
+    """Delete a bounded batch of stale registrations that never earned a grant.
+
+    Registration is the only writer of client rows, so pruning here keeps the
+    table proportional to real use even under sustained anonymous traffic.
+    A client with a live authorization request or code is still mid-flow and
+    is kept; one that has ever held a grant is never touched.
+    """
+    now = _utcnow()
+    cutoff = now - timedelta(seconds=mcp_settings.unused_client_ttl_seconds)
+    client_id = McpOAuthClient.client_id
+    stale = (
+        select(McpOAuthClient.id)
+        .where(
+            McpOAuthClient.created_at < cutoff,
+            ~exists().where(McpOAuthGrant.client_id == client_id),
+            ~exists().where(
+                McpAuthorizationRequest.client_id == client_id,
+                McpAuthorizationRequest.expires_at > now,
+            ),
+            ~exists().where(
+                McpAuthorizationCode.client_id == client_id,
+                McpAuthorizationCode.expires_at > now,
+            ),
+        )
+        .order_by(McpOAuthClient.created_at)
+        .limit(MCP_UNUSED_CLIENT_PRUNE_BATCH)
+    )
+    await session.execute(delete(McpOAuthClient).where(McpOAuthClient.id.in_(stale)))
 
 
 class CiteLadderOAuthProvider:
@@ -188,14 +273,7 @@ class CiteLadderOAuthProvider:
                 error="invalid_client_metadata",
                 error_description="MCP access is not enabled",
             )
-        redirect_uris = client_info.redirect_uris or []
-        if not redirect_uris or len(redirect_uris) > 10:
-            raise RegistrationError(
-                error="invalid_client_metadata",
-                error_description="Between one and ten redirect URIs are required",
-            )
-        for redirect_uri in redirect_uris:
-            _validate_redirect_uri(redirect_uri)
+        _validate_client_metadata(client_info)
         try:
             uuid.UUID(client_info.client_id)
         except ValueError as exc:
@@ -207,6 +285,7 @@ class CiteLadderOAuthProvider:
             mode="json", exclude={"client_id", "client_secret"}
         )
         async with self._session_factory() as session:
+            await _prune_unused_clients(session)
             session.add(
                 McpOAuthClient(
                     client_id=client_info.client_id,

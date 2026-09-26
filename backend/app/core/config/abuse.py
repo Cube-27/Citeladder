@@ -25,6 +25,16 @@ class AbuseSettings(BaseSettings):
     login_window_seconds: int = Field(default=300, ge=1)
     register_client_limit: int = Field(default=20, ge=1)
     register_window_seconds: int = Field(default=86400, ge=1)
+    # Anonymous MCP client registration (RFC 7591) stays open because clients
+    # register before any CiteLadder login exists. The burst and per-client
+    # budgets stop one source from minting rows; the global budget caps table
+    # growth when the source is distributed. A real client registers rarely.
+    mcp_register_burst_limit: int = Field(default=3, ge=1)
+    mcp_register_burst_window_seconds: int = Field(default=60, ge=1)
+    mcp_register_client_limit: int = Field(default=10, ge=1)
+    mcp_register_client_window_seconds: int = Field(default=600, ge=1)
+    mcp_register_global_limit: int = Field(default=300, ge=1)
+    mcp_register_global_window_seconds: int = Field(default=3600, ge=1)
 
     agent_call_limit: int = Field(default=30, ge=1)
     agent_call_window_seconds: int = Field(default=86400, ge=1)
