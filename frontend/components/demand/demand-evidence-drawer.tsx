@@ -217,11 +217,13 @@ function DemandEvidenceContent({
           >
             <div className="flex justify-between">
               <span>Signal ID:</span>
-              <span className="text-foreground font-mono">{signal.id.slice(0, 8)}...</span>
+              <span className="text-foreground tabular-nums">{signal.id.slice(0, 8)}...</span>
             </div>
             <div className="flex justify-between">
               <span>Snapshot ID:</span>
-              <span className="text-foreground font-mono">{signal.snapshot_id.slice(0, 8)}...</span>
+              <span className="text-foreground tabular-nums">
+                {signal.snapshot_id.slice(0, 8)}...
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Source Metric Rows:</span>

@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * Field (§8) — wraps a control with a label, optional hint, and an inline
@@ -37,7 +38,7 @@ export function Field({
 
   return (
     <div className={cn('grid gap-2', className)}>
-      <label htmlFor={id} className={cn('text-foreground text-sm font-medium', labelClassName)}>
+      <label htmlFor={id} className={textRole('label', labelClassName)}>
         {label}
         {required ? <span className="text-danger ms-0.5">*</span> : null}
       </label>

@@ -22,9 +22,9 @@ const PAGE_SIZE = 10;
 /**
  * Runs (audits) list table (F10, design.md §9.7).
  *
- * One row per audit: a run-status badge, the requested/completed/failed mono
+ * One row per audit: a run-status badge, the requested/completed/failed
  * counts, and the created timestamp. Each row links to the run detail page.
- * Client-side pagination footer (mono indicator + ghost buttons) per the
+ * Client-side pagination footer (tabular page indicator + ghost buttons) per the
  * runs frame.
  */
 export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
@@ -62,13 +62,13 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
                   {audit.audit_scope === 'commerce' ? 'Commerce' : 'Brand'}
                 </Badge>
               </TableCell>
-              <TableCell numeric className="mono">
+              <TableCell numeric className="tabular-nums">
                 {audit.requested_count}
               </TableCell>
-              <TableCell numeric className="mono">
+              <TableCell numeric className="tabular-nums">
                 {audit.completed_count}
               </TableCell>
-              <TableCell numeric className="mono">
+              <TableCell numeric className="tabular-nums">
                 {audit.failed_count}
               </TableCell>
               <TableCell className="text-secondary">

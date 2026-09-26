@@ -89,7 +89,7 @@ export function PromptFilterControls({
               <span
                 className={textRole(
                   'label',
-                  'bg-accent-subtle text-accent-text ml-1 rounded-full px-1.5 font-mono',
+                  'bg-accent-subtle text-accent-text ml-1 rounded-full px-1.5 tabular-nums',
                 )}
               >
                 {activeFilterCount}

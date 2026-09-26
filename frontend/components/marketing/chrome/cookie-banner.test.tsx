@@ -9,7 +9,7 @@ import {
   writeConsent,
 } from '@/lib/consent/cookie-consent';
 
-import { CookieBanner } from './cookie-banner';
+import { COOKIE_PREFERENCES_ATTRIBUTE, CookieBanner } from './cookie-banner';
 
 function failStorageWrites() {
   const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
@@ -46,14 +46,23 @@ function failStorageWrites() {
  * a future analytics loader stays off.
  */
 describe('CookieBanner', () => {
-  it('lets a returning visitor reopen preferences and withdraw consent', async () => {
+  it('lets a returning visitor reopen preferences from the footer and withdraw consent', async () => {
     const user = userEvent.setup();
     writeConsent('accepted');
-    render(<CookieBanner />);
-    await user.click(await screen.findByRole('button', { name: 'Cookie preferences' }));
+    render(
+      <>
+        <button type="button" {...{ [COOKIE_PREFERENCES_ATTRIBUTE]: '' }}>
+          Cookie preferences
+        </button>
+        <CookieBanner />
+      </>,
+    );
+    expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cookie preferences' }));
+    expect(await screen.findByRole('region', { name: 'Cookie consent' })).toHaveFocus();
     await user.click(screen.getByRole('button', { name: 'Reject' }));
     expect(hasAnalyticsConsent()).toBe(false);
-    expect(screen.getByRole('button', { name: 'Cookie preferences' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
   });
   beforeEach(() => {
     window.localStorage.clear();

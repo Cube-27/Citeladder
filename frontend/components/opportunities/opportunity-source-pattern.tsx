@@ -51,7 +51,7 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
           {pattern.competitorSourceDomains.map(({ competitor, domains }) => (
             <div key={competitor} className="flex items-start justify-between gap-3 py-0.5">
               <span className={textRole('body', 'shrink-0')}>{competitor}</span>
-              <span className="mono text-muted text-right text-xs break-all">
+              <span className="text-muted text-right text-xs break-all tabular-nums">
                 {domains.join(', ')}
               </span>
             </div>
@@ -67,7 +67,7 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
               className="border-border bg-well grid gap-0.5 rounded-[var(--radius-control)] border px-3 py-2"
             >
               <span className="text-foreground text-xs">{citation.title || citation.domain}</span>
-              <span className="mono text-muted text-xs break-all">{citation.domain}</span>
+              <span className="text-muted text-xs break-all tabular-nums">{citation.domain}</span>
             </li>
           ))}
         </ul>

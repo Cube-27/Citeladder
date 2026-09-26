@@ -36,12 +36,12 @@ import { formatDisplayTimestamp } from '@/lib/format';
 function DetailRow({
   label,
   children,
-  mono = false,
-}: Readonly<{ label: string; children: React.ReactNode; mono?: boolean }>) {
+  numeric = false,
+}: Readonly<{ label: string; children: React.ReactNode; numeric?: boolean }>) {
   return (
     <div className="border-border-subtle grid min-h-12 grid-cols-[minmax(0,180px)_1fr] items-center gap-4 border-b py-2 last:border-b-0">
       <dt className={textRole('bodyStrong')}>{label}</dt>
-      <dd className={mono ? 'mono text-secondary text-xs' : 'text-foreground text-sm'}>
+      <dd className={numeric ? 'text-secondary text-xs tabular-nums' : 'text-foreground text-sm'}>
         {children}
       </dd>
     </div>
@@ -275,17 +275,17 @@ export function SettingsScreen() {
                   and again as a detail row. */}
               <dl className="border-border-subtle mt-[var(--card-padding-large)] border-t">
                 {createdLabel ? (
-                  <DetailRow label="Account created" mono>
+                  <DetailRow label="Account created" numeric>
                     {createdLabel}
                   </DetailRow>
                 ) : null}
                 {updatedLabel ? (
-                  <DetailRow label="Last updated" mono>
+                  <DetailRow label="Last updated" numeric>
                     {updatedLabel}
                   </DetailRow>
                 ) : null}
                 {user.id ? (
-                  <DetailRow label="User ID" mono>
+                  <DetailRow label="User ID" numeric>
                     {user.id}
                   </DetailRow>
                 ) : null}

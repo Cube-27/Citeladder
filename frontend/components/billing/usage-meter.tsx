@@ -44,7 +44,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
       <div className="border-border-subtle grid gap-1 border-b pb-3 last:border-b-0 last:pb-0">
         <div className="flex items-center justify-between gap-3">
           <span className={textRole('label')}>{label}</span>
-          <span className={textRole('label', 'font-mono tabular-nums')}>
+          <span className={textRole('label', 'tabular-nums')}>
             {item.consumed ?? 0} {item.unit}
           </span>
         </div>
@@ -67,7 +67,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
     <div className="border-border-subtle grid gap-1.5 border-b pb-3.5 last:border-b-0 last:pb-0">
       <div className="flex items-center justify-between gap-3">
         <span className={textRole('label')}>{label}</span>
-        <span className={textRole('label', 'font-mono tabular-nums')}>
+        <span className={textRole('label', 'tabular-nums')}>
           {consumed} / {allowance} {item.unit}
         </span>
       </div>

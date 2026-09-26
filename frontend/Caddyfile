@@ -12,3 +12,8 @@ http://app.localhost:3000 {
   encode zstd gzip
   reverse_proxy {$VITE_ORIGIN:127.0.0.1:3001}
 }
+
+http://docs.localhost:3000 {
+  encode zstd gzip
+  reverse_proxy {$DOCS_ORIGIN:127.0.0.1:4322}
+}

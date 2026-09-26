@@ -7,7 +7,7 @@ import { scoreBand, scoreBandStroke, scoreBandText } from './score-band';
 
 /**
  * ScoreRing (§8) — circular progress. Color from the score-band token, center
- * shows the mono display number. Carries an ARIA label with the percentage
+ * shows the tabular display number. Carries an ARIA label with the percentage
  * (role="img") so the value is announced to assistive tech.
  *
  * `numeralSize` sets the center numeral: `md` = `text-heading-sm`, `lg` =
@@ -104,7 +104,7 @@ export function ScoreRing({
         <span
           aria-hidden
           className={cn(
-            'mono absolute inset-0 flex items-center justify-center font-medium',
+            'tabular-nums absolute inset-0 flex items-center justify-center font-medium',
             NUMERAL_SIZE_CLASS[numeralSize],
             scoreBandText[band],
           )}

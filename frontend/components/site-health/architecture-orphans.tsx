@@ -52,14 +52,10 @@ export function OrphanMetric({
           aria-label={`View ${total} orphaned ${total === 1 ? 'page' : 'pages'}`}
           className="text-accent-text justify-self-start hover:underline"
         >
-          <span className={textRole('pageTitle', 'mono tracking-[-0.02em] tabular-nums')}>
-            {total}
-          </span>
+          <span className={textRole('pageTitle', 'tracking-[-0.02em] tabular-nums')}>{total}</span>
         </Pressable>
       ) : (
-        <span className={textRole('pageTitle', 'mono tracking-[-0.02em] tabular-nums')}>
-          {total}
-        </span>
+        <span className={textRole('pageTitle', 'tracking-[-0.02em] tabular-nums')}>{total}</span>
       )}
       <span className="text-muted text-xs">{ORPHAN_SCOPE_NOTE}</span>
     </div>
@@ -125,9 +121,7 @@ export function EvidenceMetric({
       {value === PLACEHOLDER ? (
         <UnavailableValue state="not_measured" />
       ) : (
-        <span className={textRole('pageTitle', 'mono tracking-[-0.02em] tabular-nums')}>
-          {value}
-        </span>
+        <span className={textRole('pageTitle', 'tracking-[-0.02em] tabular-nums')}>{value}</span>
       )}
       {supporting ? <span className="text-muted text-xs">{supporting}</span> : null}
     </div>

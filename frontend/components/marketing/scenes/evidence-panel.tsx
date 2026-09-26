@@ -321,7 +321,7 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
           >
             <span className="text-muted">{label}</span>
             <div className="flex items-center gap-3">
-              <span className="text-foreground font-mono text-sm font-medium">{val}</span>
+              <span className="text-foreground text-sm font-medium tabular-nums">{val}</span>
               <span
                 className={cn(
                   'rounded-full px-2 py-0.5 text-[11px] font-medium',
@@ -377,7 +377,7 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <span className="text-foreground text-sm font-medium">{name}</span>
               <div className="flex items-baseline gap-3">
-                <span className="text-foreground font-mono text-xs font-medium">{price}</span>
+                <span className="text-foreground text-xs font-medium tabular-nums">{price}</span>
                 <StateChip cited={cited} />
               </div>
             </div>
@@ -426,7 +426,7 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
               <span className={cn('text-sm', own ? 'text-foreground font-medium' : 'text-muted')}>
                 {label}
               </span>
-              <span className="text-muted font-mono text-xs">{engines}</span>
+              <span className="text-muted text-xs tabular-nums">{engines}</span>
             </div>
             <Bar width={share} own={own} tint={tint} />
           </div>

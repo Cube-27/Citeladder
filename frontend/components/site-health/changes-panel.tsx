@@ -203,7 +203,7 @@ function ChangesTable({
             {Object.entries(CLASS_LABELS).map(([key, label]) => (
               <div key={key}>
                 <span className={cn(eyebrowClasses, 'block')}>{label}</span>
-                <span className={textRole('objectTitle', 'mono mt-0.5 block tabular-nums')}>
+                <span className={textRole('objectTitle', 'mt-0.5 block tabular-nums')}>
                   {counts?.[key] ?? 0}
                 </span>
               </div>

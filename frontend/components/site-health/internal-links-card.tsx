@@ -65,7 +65,7 @@ export function InternalLinksCard({
         {metrics.map((metric) => (
           <div key={metric.label} className="grid gap-0.5">
             <Label>{metric.label}</Label>
-            <dd className={textRole('bodyStrong', 'mono')}>
+            <dd className={textRole('bodyStrong', 'tabular-nums')}>
               {metric.value === PLACEHOLDER ? (
                 <UnavailableValue state="not_measured" />
               ) : (
@@ -121,14 +121,14 @@ function NeighbourList({
               {neighbour.site_url_id ? (
                 <ProjectLink
                   href={`/site/crawls/${crawlId}/pages/${neighbour.site_url_id}`}
-                  className="text-accent-text mono min-w-0 text-xs leading-4 [overflow-wrap:anywhere] hover:underline"
+                  className="text-accent-text min-w-0 text-xs leading-4 [overflow-wrap:anywhere] tabular-nums hover:underline"
                   title={neighbour.url}
                 >
                   {neighbour.url}
                 </ProjectLink>
               ) : (
                 <span
-                  className="mono text-secondary min-w-0 text-xs leading-4 [overflow-wrap:anywhere]"
+                  className="text-secondary min-w-0 text-xs leading-4 [overflow-wrap:anywhere] tabular-nums"
                   title={neighbour.url}
                 >
                   {neighbour.url}
@@ -137,7 +137,7 @@ function NeighbourList({
               <span className="flex shrink-0 items-center gap-1.5">
                 {neighbour.main_content ? <Badge>Main</Badge> : null}
                 {neighbour.nofollow ? <Badge className="text-muted">nofollow</Badge> : null}
-                <span className="mono text-muted text-xs">×{neighbour.anchor_count}</span>
+                <span className="text-muted text-xs tabular-nums">×{neighbour.anchor_count}</span>
               </span>
             </li>
           ))}

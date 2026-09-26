@@ -103,7 +103,7 @@ export function Drawer({
                   {title}
                 </DialogPrimitive.Title>
                 {description ? (
-                  <DialogPrimitive.Description className="text-secondary mt-1 text-sm leading-[22px]">
+                  <DialogPrimitive.Description className="text-secondary mt-1 text-sm leading-[var(--text-role-body--line-height)]">
                     {description}
                   </DialogPrimitive.Description>
                 ) : null}

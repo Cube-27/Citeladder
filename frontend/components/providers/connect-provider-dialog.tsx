@@ -180,7 +180,7 @@ function ConnectEngineForm({
               <p className="text-muted text-xs">via {TRANSPORT_LABELS[route.transport_provider]}</p>
             </div>
           </div>
-          <div className="text-muted grid gap-0.5 text-right font-mono text-xs">
+          <div className="text-muted grid gap-0.5 text-right text-xs tabular-nums">
             <span className="text-secondary">{route.model}</span>
           </div>
         </div>

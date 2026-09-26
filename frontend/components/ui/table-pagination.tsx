@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 /**
- * Table pagination: a "from–to of total" page indicator (sans label, mono
+ * Table pagination: a "from–to of total" page indicator (sans label, tabular-nums
  * numerals) plus ghost Prev/Next buttons, pinned to the table card's bottom
  * border. Shared by the runs and prompts tables.
  *
@@ -46,10 +46,10 @@ export function TablePagination({
   return (
     <div className="border-border flex items-center justify-between gap-2 border-t px-[var(--table-cell-padding-x)] py-2">
       <span className="text-muted text-xs">
-        <span className="mono">
+        <span className="tabular-nums">
           {from}–{to}
         </span>{' '}
-        of <span className="mono">{total}</span> {noun}
+        of <span className="tabular-nums">{total}</span> {noun}
       </span>
       <div className="flex items-center gap-1">
         <Button

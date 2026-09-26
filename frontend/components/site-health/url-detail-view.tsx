@@ -156,7 +156,7 @@ function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
             rel="noopener noreferrer"
             className={textRole(
               'bodyStrong',
-              'mono text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline',
+              'tabular-nums text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline',
             )}
           >
             {detail.display_url}
@@ -223,7 +223,7 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
         {items.map((item) => (
           <div key={item.label} className="grid gap-0.5">
             <Label>{item.label}</Label>
-            <dd className={textRole('metricSm', 'mono')}>
+            <dd className={textRole('metricSm', 'tabular-nums')}>
               {item.value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : item.value}
             </dd>
           </div>
@@ -250,7 +250,9 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
               <li key={issue.occurrence_id} className="grid gap-2 py-3">
                 <span className="flex items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-3">
-                    <span className="mono text-muted w-6 shrink-0 text-xs">{index + 1}</span>
+                    <span className="text-muted w-6 shrink-0 text-xs tabular-nums">
+                      {index + 1}
+                    </span>
                     <span className={textRole('bodyStrong')}>{issue.issue_title}</span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">

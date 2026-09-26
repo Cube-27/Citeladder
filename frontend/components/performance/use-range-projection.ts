@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { performanceApi, type PerformanceDashboard } from '@/lib/api/performance';
@@ -29,8 +29,10 @@ export function useRangeProjection(
   // Read inside `onSuccess`, which runs long after the mutation was fired.
   const scopeKeyRef = useRef(scopeKey);
   const dataRef = useRef(data);
-  scopeKeyRef.current = scopeKey;
-  dataRef.current = data;
+  useLayoutEffect(() => {
+    scopeKeyRef.current = scopeKey;
+    dataRef.current = data;
+  }, [scopeKey, data]);
   const pending = queued?.scopeKey === scopeKey ? queued.taskId : null;
   const mutation = useMutation({
     mutationFn: async (window: { from: string; to: string }) => {

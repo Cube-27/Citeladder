@@ -77,7 +77,7 @@ export function Dialog({
                 {title}
               </DialogPrimitive.Title>
               {description ? (
-                <DialogPrimitive.Description className="text-secondary text-sm leading-[22px]">
+                <DialogPrimitive.Description className="text-secondary text-sm leading-[var(--text-role-body--line-height)]">
                   {description}
                 </DialogPrimitive.Description>
               ) : null}

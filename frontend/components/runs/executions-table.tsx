@@ -46,7 +46,7 @@ export function ExecutionsTable({
                 <span className="leading-relaxed break-words" title={execution.prompt_text}>
                   {execution.prompt_text || `Prompt #${execution.prompt_index + 1}`}
                 </span>
-                <span className="mono text-muted text-xs">rep {execution.repetition}</span>
+                <span className="text-muted text-xs tabular-nums">rep {execution.repetition}</span>
               </div>
             </TableCell>
             <TableCell>

@@ -100,7 +100,7 @@ export function MarketSelect({
       renderLeading={showCountryFlags ? (option) => <CountryFlag code={option.value} /> : undefined}
       renderOptionEnd={(option) =>
         option.value.trim().toLowerCase() === option.label.trim().toLowerCase() ? null : (
-          <span className="mono text-muted max-w-24 truncate">{option.value}</span>
+          <span className="text-muted max-w-24 truncate tabular-nums">{option.value}</span>
         )
       }
     />

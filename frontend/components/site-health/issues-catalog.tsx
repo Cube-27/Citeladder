@@ -174,16 +174,15 @@ export function IssuesCatalog({
               onChange={(page_kind) => updateFilters({ page_kind })}
             />
           </div>
-          <div className="max-w-full min-w-0 overflow-x-auto max-[700px]:w-full">
+          <div className="max-w-full min-w-0 max-[700px]:w-full">
             <FindingClassFilter
               value={findingView}
               summary={summary}
               onChange={(value) => updateFilters(findingClassChange(value))}
             />
           </div>
-          <div className="max-w-full min-w-0 overflow-x-auto max-[700px]:w-full">
+          <div className="max-w-full min-w-0 max-[700px]:w-full">
             <SegmentedControl
-              className="w-max"
               value={issueFilterClass(filters)}
               onChange={(value) => updateFilters(issueFilterClassChange(value))}
               ariaLabel="Issue filters"

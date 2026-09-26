@@ -71,7 +71,9 @@ function AgentInstructions({
       ) : null}
       {query.isPending ? <Skeleton className="h-32 w-full" /> : null}
       {query.data ? (
+        // Keyed by project so an unsaved draft never carries to another project.
         <InstructionsEditor
+          key={projectId}
           workspaceId={workspaceId}
           projectId={projectId}
           text={query.data.text}
@@ -90,12 +92,26 @@ function InstructionsEditor({
 }: Readonly<{ workspaceId: string; projectId: string; text: string; savedAt: string | null }>) {
   const mayEdit = useWorkspaceCapability('run');
   const queryClient = useQueryClient();
-  const [draft, setDraft] = useState(text);
+  // Null follows persisted data; a local edit survives background refreshes.
+  const [edit, setEdit] = useState<{ text: string | null; baseline: string; version: number }>({
+    text: null,
+    baseline: text,
+    version: 0,
+  });
+  const draft = edit.text ?? text;
   const save = useMutation({
     ...agentMutations.saveInstructions(workspaceId),
-    onSuccess: (saved) => {
+    onMutate: () => ({ version: edit.version, draft }),
+    onSuccess: (saved, submitted, submittedEdit) => {
       queryClient.setQueryData(queryKeys.agent.instructions(projectId), saved);
-      setDraft(saved.text);
+      setEdit((current) => ({
+        text:
+          current.version === submittedEdit?.version && submittedEdit.draft === submitted.text
+            ? null
+            : (current.text ?? current.baseline),
+        baseline: saved.text,
+        version: current.version,
+      }));
     },
   });
   const dirty = draft.trim() !== text.trim();
@@ -113,7 +129,14 @@ function InstructionsEditor({
       <Textarea
         id="agent-instructions-text"
         value={draft}
-        onChange={(event) => setDraft(event.target.value)}
+        onChange={(event) => {
+          const next = event.target.value;
+          setEdit((current) => ({
+            text: next === text ? null : next,
+            baseline: text,
+            version: current.version + 1,
+          }));
+        }}
         rows={8}
         readOnly={!mayEdit}
         placeholder="For example: Write for Australian parents. Plain, warm tone. Never promise delivery dates."

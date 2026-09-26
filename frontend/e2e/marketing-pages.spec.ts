@@ -1,6 +1,30 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('marketing routes', () => {
+  test('public paper surfaces and long tabs stay usable across viewport sizes', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const width of [1440, 1024, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.goto('/');
+      await expect(page.locator('h1')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      const strip = page.locator('.cl-module-tabs');
+      await strip.scrollIntoViewIfNeeded();
+      const last = strip.getByRole('tab').last();
+      await last.focus();
+      await expect(last).toBeInViewport();
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
+        path: test.info().outputPath(`marketing-${width}.png`),
+        fullPage: true,
+      });
+    }
+  });
   test('Google Analytics waits for an explicit cookie acceptance', async ({ page }) => {
     const tagRequests: string[] = [];
     await page.route('https://www.googletagmanager.com/gtag/js**', async (route) => {

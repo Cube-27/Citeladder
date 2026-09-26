@@ -20,9 +20,9 @@ const ARROW_DELTA: Readonly<Record<string, number>> = {
  *
  * Keyboard model is the APG radio-group one: the group holds a single tab stop
  * (only the checked radio is tabbable), and the arrow keys move focus AND
- * selection between options, wrapping at both ends. Both axes are bound because
- * the control is visually horizontal but wraps to more than one row at narrow
- * widths, where Up/Down is what a user reaches for.
+ * selection between options, wrapping at both ends. Both arrow axes move
+ * between options. The track stays on one row and scrolls at narrow widths;
+ * focused options are revealed inside that track.
  *
  * `trailing` is for a control that shares the track but is NOT one of the
  * choices — Performance's "More" button, which opens the range dialog. It has to
@@ -78,7 +78,7 @@ export function SegmentedControl<T extends string>({
         role="radiogroup"
         aria-label={ariaLabel}
         aria-describedby={describedBy}
-        className="flex items-center gap-0.5"
+        className="flex shrink-0 items-center gap-0.5"
       >
         {options.map((option, index) => {
           const selected = option.value === value;
@@ -97,6 +97,9 @@ export function SegmentedControl<T extends string>({
               // leaves it again, rather than stepping through every option.
               tabIndex={index === tabStop ? 0 : -1}
               onClick={() => onChange(option.value)}
+              onFocus={(event) =>
+                event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+              }
               onKeyDown={(event) => {
                 const delta = ARROW_DELTA[event.key];
                 if (delta === undefined) return;

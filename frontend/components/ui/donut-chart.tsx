@@ -77,12 +77,14 @@ export function DonutChart({
   }
 
   // Each segment starts where the ones before it ended, so the offsets are a
-  // running total. Accumulated up front rather than inside the map: mutating a
-  // local while rendering is the pattern that breaks when React replays a
-  // render, and the scan says what it means anyway.
+  // running total. The accumulator is local to this render: a linear scan
+  // avoids copying the growing array once for every slice.
   const lengths = drawn.map((slice) => (slice.value / whole) * CIRCUMFERENCE);
   const starts = lengths.reduce<number[]>(
-    (carry, length, index) => [...carry, (carry[index] ?? 0) + length],
+    (carry, length, index) => {
+      carry.push((carry[index] ?? 0) + length);
+      return carry;
+    },
     [0],
   );
   const arcs = drawn.map((slice, index) => ({

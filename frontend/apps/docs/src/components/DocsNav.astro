@@ -1,12 +1,15 @@
 ---
 import { articles, groups } from '../lib/content';
+import { Rocket, ChartNoAxesCombined, Bot, Plug, History, BookOpen, type LucideIcon } from 'lucide-react';
+// A group without its own icon falls back to the generic guide mark.
+const icons: Partial<Record<string, LucideIcon>> = { 'Start here': Rocket, 'Measure and understand': ChartNoAxesCombined, 'Improve with Agent': Bot, 'Connect with MCP': Plug, 'Updates': History };
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 ---
 <nav aria-label="Documentation" class="docs-nav">
-  {groups.map((group) => <section>
-    <h2 class="website-label">{group}</h2>
+  {groups.map((group) => { const Icon = icons[group] ?? BookOpen; return <section>
+    <h2 class="website-label docs-nav-heading"><Icon className="size-4" aria-hidden />{group}</h2>
     <ul>{articles.filter((article) => article.group === group).map((article) =>
       <li><a href={article.href} aria-current={(article.href.replace(/\/$/, '') || '/') === path ? 'page' : undefined}>{article.title}</a></li>
     )}</ul>
-  </section>)}
+  </section>; })}
 </nav>

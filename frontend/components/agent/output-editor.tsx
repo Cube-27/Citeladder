@@ -71,7 +71,7 @@ export function OutputEditor({
         value={body}
         rows={18}
         onChange={(event) => onChange({ ...draft, body: event.target.value })}
-        className="font-mono"
+        className="tabular-nums"
       />
       {save.isError ? <Alert tone="danger">{agentWriteFailure(save.error).message}</Alert> : null}
       <div className="flex justify-end gap-2">

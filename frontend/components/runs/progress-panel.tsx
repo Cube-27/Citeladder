@@ -52,7 +52,7 @@ function ProgressHeader({
         <MeasurementContext provenance={audit.model_provenance} />
         {polling ? (
           <span
-            className="mono text-muted inline-flex items-center gap-1.5 text-xs"
+            className="text-muted inline-flex items-center gap-1.5 text-xs tabular-nums"
             aria-live="polite"
           >
             <span className="activity-dot bg-accent inline-block size-1.5" aria-hidden />
@@ -171,7 +171,7 @@ function ProgressNotices({
 /**
  * Run progress panel (F10, design.md §9.7).
  *
- * Shows the audit's status badge, the requested/completed/failed mono counts,
+ * Shows the audit's status badge, the requested/completed/failed counts,
  * the created + completed timestamps, a Cancel button (enabled only while the
  * backend still accepts a cooperative cancel — i.e. not `reporting`/terminal),
  * and authenticated CSV/MD exports. Progress is driven by the parent's polling

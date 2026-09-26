@@ -77,13 +77,13 @@ export function CursorTableFooter({
       </div>
       <div className="flex items-center gap-1">
         <span className="text-muted mr-1 text-xs" aria-live="polite">
-          <span className="mono">
+          <span className="tabular-nums">
             {from}–{to}
           </span>
           {total === undefined ? null : (
             <>
               {' of '}
-              <span className="mono">{formatCount(total)}</span>
+              <span className="tabular-nums">{formatCount(total)}</span>
             </>
           )}{' '}
           {noun}

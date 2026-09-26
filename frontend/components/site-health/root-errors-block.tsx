@@ -41,21 +41,21 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
               data-testid="root-error-row"
               className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2"
             >
-              <span className={textRole('bodyStrong', 'mono')}>{error.method}</span>
-              <span className="mono text-muted min-w-0 flex-1 truncate text-sm">
+              <span className={textRole('bodyStrong', 'tabular-nums')}>{error.method}</span>
+              <span className="text-muted min-w-0 flex-1 truncate text-sm tabular-nums">
                 {error.target}
               </span>
               {error.error_code ? (
-                <span className="mono text-danger-text text-sm">{error.error_code}</span>
+                <span className="text-danger-text text-sm tabular-nums">{error.error_code}</span>
               ) : null}
-              <span className="mono text-muted text-sm">
+              <span className="text-muted text-sm tabular-nums">
                 {error.status_code !== null ? (
                   `HTTP ${error.status_code}`
                 ) : (
                   <UnavailableValue state="not_measured" />
                 )}
               </span>
-              <span className="mono text-muted text-sm">
+              <span className="text-muted text-sm tabular-nums">
                 {/* B6: 0 ms is an unmeasured hop (DNS failure never reached the
                   wire), not an instant response — show the placeholder. */}
                 {error.latency_ms !== null && error.latency_ms > 0 ? (

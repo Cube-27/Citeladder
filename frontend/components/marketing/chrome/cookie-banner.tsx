@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -38,7 +38,14 @@ const MARKETING_SECONDARY =
  * `'pending'` and renders nothing, which keeps hydration matched and stops the
  * banner flashing at visitors who already answered. Writing notifies the
  * subscribers, so the answer also propagates to any other tab.
+ *
+ * A visitor who already answered reopens the panel from the footer's
+ * "Cookie preferences" control (`COOKIE_PREFERENCES_ATTRIBUTE`) rather than a
+ * floating tab that would sit over every page.
  */
+
+/** Marks any server-rendered control that reopens the consent panel. */
+export const COOKIE_PREFERENCES_ATTRIBUTE = 'data-cookie-preferences';
 
 /** `'pending'` is the pre-hydration snapshot — distinct from an undecided visitor. */
 type BannerState = ConsentDecision | 'undecided' | 'pending';
@@ -49,7 +56,22 @@ function getSnapshot(): BannerState {
 
 export function CookieBanner() {
   const [editing, setEditing] = useState(false);
+  const region = useRef<HTMLElement>(null);
   const state = useSyncExternalStore<BannerState>(subscribeToConsent, getSnapshot, () => 'pending');
+
+  // The footer control is static markup, so the island listens by delegation.
+  useEffect(() => {
+    const reopen = (event: MouseEvent) => {
+      if (!(event.target instanceof Element)) return;
+      if (!event.target.closest(`[${COOKIE_PREFERENCES_ATTRIBUTE}]`)) return;
+      setEditing(true);
+    };
+    document.addEventListener('click', reopen);
+    return () => document.removeEventListener('click', reopen);
+  }, []);
+  useEffect(() => {
+    if (editing) region.current?.focus();
+  }, [editing]);
 
   const decide = useCallback((next: ConsentDecision) => {
     writeConsent(next);
@@ -57,22 +79,15 @@ export function CookieBanner() {
   }, []);
 
   if (state === 'pending') return null;
-  if (state !== 'undecided' && !editing)
-    return (
-      <Button
-        variant="secondary"
-        className="fixed bottom-4 left-4 z-[var(--z-index-overlay)] print:hidden"
-        onClick={() => setEditing(true)}
-      >
-        Cookie preferences
-      </Button>
-    );
+  if (state !== 'undecided' && !editing) return null;
 
   return (
     <section
       // A landmark `section`, not a `dialog`: this does not trap focus or
       // block the page, and announcing it as a dialog would imply both.
       aria-label="Cookie consent"
+      ref={region}
+      tabIndex={-1}
       className="fixed right-4 bottom-0 left-4 z-[var(--z-index-overlay)] sm:right-6 sm:left-auto sm:w-[27rem] print:hidden"
     >
       <div className="pb-[max(1rem,env(safe-area-inset-bottom))]">

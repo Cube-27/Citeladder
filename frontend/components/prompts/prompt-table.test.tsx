@@ -44,7 +44,7 @@ describe('PromptTable pagination', () => {
     expect(screen.getByRole('columnheader', { name: 'Stage' })).toBeInTheDocument();
   });
 
-  it('pages through rows with the mono indicator and ghost buttons', async () => {
+  it('pages through rows with the page indicator and ghost buttons', async () => {
     const user = userEvent.setup();
     const prompts = Array.from({ length: 12 }, (_, i) => makePrompt(i + 1));
     renderTable(prompts);

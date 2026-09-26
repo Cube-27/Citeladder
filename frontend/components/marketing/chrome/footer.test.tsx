@@ -62,16 +62,18 @@ describe('MarketingFooter', () => {
     );
   });
 
-  it('links every CiteLadder policy from the legal strip, in the same tab', async () => {
+  it('links every CiteLadder policy exactly once, in the same tab', async () => {
     render(await MarketingFooter());
 
     // The policies are CiteLadder's own pages on this domain, so none of them
     // may leave the site the way the former parent-company links did.
-    const legal = screen.getByRole('navigation', { name: 'Legal' });
+    const footer = screen.getByRole('contentinfo');
     for (const { label, href } of FOOTER_LEGAL_LINKS) {
-      const link = within(legal).getByRole('link', { name: label });
-      expect(link).toHaveAttribute('href', href);
-      expect(link).not.toHaveAttribute('target');
+      const links = within(footer)
+        .getAllByRole('link', { name: label })
+        .filter((link) => link.getAttribute('href') === href);
+      expect(links, href).toHaveLength(1);
+      expect(links[0]).not.toHaveAttribute('target');
     }
   });
 

@@ -30,7 +30,7 @@ export function BillingCountryInput({
         onChange={(event) => setCountry(event.target.value.toUpperCase().slice(0, 2))}
         placeholder="US"
         aria-describedby="billing-country-help"
-        className={textRole('label', 'h-8 w-20 text-center font-mono uppercase')}
+        className={textRole('label', 'h-8 w-20 text-center tabular-nums uppercase')}
       />
     </div>
   );

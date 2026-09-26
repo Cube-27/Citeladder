@@ -64,7 +64,11 @@ for (const path of files(root)) {
   ) {
     violations.push(`${label}: raw color outside apps/app/src/globals.css`);
   }
-  if (path !== tokenOwner && path !== import.meta.filename && /@theme\b/.test(source)) {
+  if (
+    path !== tokenOwner &&
+    path !== import.meta.filename &&
+    /@theme\b(?:\s+(?:inline|static|reference|default))*\s*\{/.test(source)
+  ) {
     violations.push(`${label}: @theme outside apps/app/src/globals.css`);
   }
   violations.push(

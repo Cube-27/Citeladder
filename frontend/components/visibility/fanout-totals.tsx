@@ -66,9 +66,9 @@ export function FanoutCounts({
       aria-label={`${distinct} distinct searches and ${occurrences} total occurrences ${scope}`}
       title={scope}
     >
-      <span className="mono text-foreground">{distinct}</span>{' '}
+      <span className="text-foreground tabular-nums">{distinct}</span>{' '}
       {distinct === 1 ? 'search' : 'searches'} ·{' '}
-      <span className="mono text-foreground">{occurrences}</span> occurrences
+      <span className="text-foreground tabular-nums">{occurrences}</span> occurrences
     </span>
   );
 }

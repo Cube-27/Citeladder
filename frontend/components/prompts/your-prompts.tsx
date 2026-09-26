@@ -63,12 +63,7 @@ function promptScores(items: VisibilityExecutionEvidence[]): Map<string, number>
 function ScoreCell({ score }: Readonly<{ score: number | null }>) {
   if (score === null) return <UnavailableValue state="not_measured" />;
   return (
-    <span
-      className={cn(
-        textRole('bodyStrong', 'font-mono tabular-nums'),
-        scoreBandText[scoreBand(score)],
-      )}
-    >
+    <span className={cn(textRole('bodyStrong', 'tabular-nums'), scoreBandText[scoreBand(score)])}>
       {score}%
     </span>
   );

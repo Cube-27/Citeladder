@@ -154,9 +154,7 @@ export function ActionRow({
     >
       <div className="flex items-center gap-2">
         <GripVertical className="text-muted hover:text-foreground size-4 cursor-grab" aria-hidden />
-        <span className={textRole('label', 'w-5 text-center font-mono tabular-nums')}>
-          {index + 1}
-        </span>
+        <span className={textRole('label', 'w-5 text-center tabular-nums')}>{index + 1}</span>
       </div>
       <div className="grid min-w-0 gap-1">
         <div className="flex flex-wrap items-center gap-2">

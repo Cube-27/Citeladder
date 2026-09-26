@@ -12,7 +12,7 @@
   background: var(--cl-raised);
   border: 1px solid var(--cl-card-border);
   border-bottom: 0;
-  border-radius: 14px 14px 0 0;
+  border-radius: var(--radius-overlay) var(--radius-overlay) 0 0;
   box-shadow:
     0 1px 2px rgb(15 23 42 / 4%),
     0 24px 48px -16px rgb(15 23 42 / 16%);
@@ -246,7 +246,7 @@
   min-width: 0;
   padding: 14px 16px;
   border: 1px solid var(--cl-faint-edge);
-  border-radius: 11px;
+  border-radius: var(--radius-marketing-control);
   background: var(--cl-raised);
 }
 .cl-hero-panel-heading {
@@ -371,7 +371,7 @@
   background: var(--cl-raised);
   border: 1px solid var(--cl-card-border);
   border-bottom: 0;
-  border-radius: 14px 14px 0 0;
+  border-radius: var(--radius-overlay) var(--radius-overlay) 0 0;
   box-shadow:
     0 1px 2px rgb(15 23 42 / 4%),
     0 24px 48px -16px rgb(15 23 42 / 16%);
@@ -402,7 +402,7 @@
   gap: 2px;
   background: var(--cl-stone);
   padding: 4px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   flex: none;
 }
 .cl-segment button {
@@ -571,7 +571,7 @@
   display: inline-grid;
   place-items: center;
   flex: none;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: var(--cl-favicon-owned);
   color: var(--cl-favicon-owned-ink);
   font-weight: 600;
@@ -676,7 +676,7 @@
 .cl-record {
   background: var(--cl-raised);
   border: 1px solid var(--cl-card-border);
-  border-radius: 14px;
+  border-radius: var(--radius-overlay);
   overflow: hidden;
   box-shadow:
     0 1px 2px rgb(15 23 42 / 4%),
@@ -723,7 +723,7 @@
 .cl-record-tags span {
   font-size: 12px;
   padding: 6px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--color-accent-soft);
   color: var(--color-accent-text);
 }

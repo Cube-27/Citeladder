@@ -309,8 +309,8 @@ export function DimensionTable({
               <TableCell className="bg-panel sticky left-0 z-10">
                 <span
                   className={cn(
-                    dimension === 'page' && 'mono text-xs break-all',
-                    dimension === 'day' && 'mono text-xs',
+                    dimension === 'page' && 'tabular-nums text-xs break-all',
+                    dimension === 'day' && 'tabular-nums text-xs',
                   )}
                 >
                   {formatDimensionValue(dimension, row.display_value)}
@@ -319,7 +319,7 @@ export function DimensionTable({
               {displayedMetrics.flatMap((metric) => {
                 const selectedCell = (
                   <TableCell key={metric.key} numeric>
-                    <span className="mono">
+                    <span className="tabular-nums">
                       {measured(formatMetric(metric.key, row.metrics[metric.key])) ?? (
                         <MissingValue />
                       )}
@@ -337,13 +337,16 @@ export function DimensionTable({
                 return [
                   selectedCell,
                   <TableCell key={`${metric.key}-comparison`} numeric>
-                    <span className="mono text-muted">
+                    <span className="text-muted tabular-nums">
                       {measured(formatMetric(metric.key, comparisonValue)) ?? <MissingValue />}
                     </span>
                   </TableCell>,
                   <TableCell key={`${metric.key}-difference`} numeric>
                     <span
-                      className={cn('mono', TONE_CLASS[differenceTone(metric.key, difference)])}
+                      className={cn(
+                        'tabular-nums',
+                        TONE_CLASS[differenceTone(metric.key, difference)],
+                      )}
                     >
                       {measured(formatDifference(metric.key, difference)) ?? <MissingValue />}
                     </span>

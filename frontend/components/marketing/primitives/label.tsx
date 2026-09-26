@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * The "meta" role: small (12/16), semibold labels with tabular numerals
- * (`font-mono tabular-nums`) — the same numeric recipe every figure in the
+ * (`tabular-nums`) — the same numeric recipe every figure in the
  * app renders with, so numbers align and read as data. The default ink is
  * `text-muted` (paper/surface-only — on sunken/wash bands callers
  * pass `text-muted`); kickers use the same sentence-case role. Codifying

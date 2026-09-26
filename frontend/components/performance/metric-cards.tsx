@@ -317,7 +317,7 @@ export function Ga4SummaryRow({
               />
             </dd>
             {comparison ? (
-              <dd className="text-muted mono text-xs">
+              <dd className="text-muted text-xs tabular-nums">
                 {comparisonValue === null || comparisonValue === undefined
                   ? `${compareLabel}: ${NOT_MEASURED.toLowerCase()}`
                   : `${compareLabel}: ${formatCount(comparisonValue)}`}

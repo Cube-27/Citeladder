@@ -108,3 +108,23 @@ test('built docs enforce a script policy without breaking hydration', async ({ p
   });
   await expect(page.locator('html')).not.toHaveAttribute('data-injected', 'executed');
 });
+
+test('contents omit step numbering without changing article anchors and follow the active heading', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/quickstart/');
+  const contents = page.getByRole('complementary', { name: 'On this page' });
+  const link = contents.getByRole('link', { name: 'Review your prompts', exact: true });
+  await link.click();
+  await expect(page).toHaveURL(/#2-review-your-prompts$/);
+  await expect(page.getByRole('heading', { name: '2. Review your prompts' })).toBeVisible();
+  await expect(link).toHaveAttribute('aria-current', 'location');
+  const headingTop = await page
+    .getByRole('heading', { name: '2. Review your prompts' })
+    .evaluate((node) => node.getBoundingClientRect().top);
+  const headerBottom = await page
+    .locator('.docs-header')
+    .evaluate((node) => node.getBoundingClientRect().bottom);
+  expect(headingTop).toBeGreaterThanOrEqual(headerBottom);
+});

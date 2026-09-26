@@ -1,0 +1,43 @@
+---
+interface Props {
+  headings: { slug: string; depth: number; label: string }[];
+}
+const { headings } = Astro.props;
+---
+<ul class="docs-contents-links">
+  {headings.map((heading) => <li data-depth={heading.depth}><a href={`#${heading.slug}`}>{heading.label}</a></li>)}
+</ul>
+<script>
+  const header = document.querySelector<HTMLElement>('.docs-header');
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('.docs-contents-links a')];
+  const ids = [...new Set(links.map((link) => decodeURIComponent(link.hash.slice(1))))];
+  const headings = ids.map((id) => document.getElementById(id)).filter((node): node is HTMLElement => Boolean(node));
+  let scheduled = false;
+  const update = () => {
+    scheduled = false;
+    const offset = (header?.getBoundingClientRect().bottom ?? 0) + 24;
+    document.documentElement.style.setProperty('--docs-header-offset', `${offset}px`);
+    let current = headings[0];
+    for (const heading of headings) {
+      if (heading.getBoundingClientRect().top <= offset + 1) current = heading;
+    }
+    if (window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+      current = headings.at(-1);
+    }
+    for (const link of links) {
+      if (decodeURIComponent(link.hash.slice(1)) === current?.id) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    }
+  };
+  const schedule = () => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(update);
+  };
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule);
+  window.addEventListener('hashchange', schedule);
+  if (header) new ResizeObserver(schedule).observe(header);
+  void document.fonts.ready.then(schedule);
+  update();
+</script>
