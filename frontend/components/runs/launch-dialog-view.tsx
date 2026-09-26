@@ -222,10 +222,7 @@ export function LaunchDialogView({
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => {
-        if (!next) setConnecting(null);
-        onOpenChange(next);
-      }}
+      onOpenChange={onOpenChange}
       title="Launch an audit"
       className="w-180"
       footer={
@@ -262,7 +259,10 @@ export function LaunchDialogView({
                   : 'No configured engines. Connect a provider to launch an audit.'}
               </p>
               <div>
-                <Button variant="secondary" onClick={() => setConnecting('any')}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setConnecting(unverifiedEngines[0] ?? 'any')}
+                >
                   {unverifiedEngines.length ? 'Test connection' : 'Connect a provider'}
                 </Button>
               </div>

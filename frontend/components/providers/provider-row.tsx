@@ -84,6 +84,8 @@ function CredentialForm({ id, state }: Readonly<{ id: string; state: ConnectionS
     busy,
   } = state;
   const noun = state.credentialShape === 'basic' ? 'credentials' : 'key';
+  const saveVerb = configured ? 'Update' : 'Save';
+  const saveLabel = saveMutation.isPending ? 'Saving & testing…' : `${saveVerb} ${noun}`;
   return (
     <div id={id} className={panelClasses({ tone: 'tonal', pad: 'compact' }, 'grid gap-3')}>
       <ProviderConnectionFields state={state} />
@@ -103,9 +105,7 @@ function CredentialForm({ id, state }: Readonly<{ id: string; state: ConnectionS
           onClick={() => saveMutation.mutate()}
           disabled={busy || hasPartialCredentialInput || (!hasCredentialInput && !configured)}
         >
-          {saveMutation.isPending
-            ? 'Saving & testing…'
-            : `${configured ? 'Update' : 'Save'} ${noun}`}
+          {saveLabel}
         </Button>
       </div>
     </div>
@@ -129,7 +129,8 @@ export function ProviderRow({
   const [open, setOpen] = useState(defaultOpen);
   const formId = useId();
   const state = useProviderConnection({ group, connections, onSaved: () => setOpen(false) });
-  const configured = state.configured;
+  const closedAction = state.configured ? 'Manage' : 'Connect';
+  const toggleLabel = open ? 'Close' : closedAction;
   return (
     <li className="grid gap-3 py-4 first:pt-0 last:pb-0">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -153,10 +154,10 @@ export function ProviderRow({
             size="sm"
             aria-expanded={open}
             aria-controls={formId}
-            aria-label={`${open ? 'Close' : configured ? 'Manage' : 'Connect'} ${group.label}`}
+            aria-label={`${toggleLabel} ${group.label}`}
             onClick={() => setOpen((current) => !current)}
           >
-            {open ? 'Close' : configured ? 'Manage' : 'Connect'}
+            {toggleLabel}
           </Button>
         </div>
       </div>

@@ -120,14 +120,15 @@ describe('Inline provider setup', () => {
       workspace_id: WORKSPACE_ID,
       providers: [],
     } as never);
-    renderWithProviders(
+    const dialog = (open: boolean) => (
       <LaunchDialog
-        open
+        open={open}
         onOpenChange={() => undefined}
         projectId={PROJECT_ID}
         fixedPromptIds={PROMPT_IDS}
-      />,
+      />
     );
+    const { rerender } = renderWithProviders(dialog(true));
 
     fireEvent.click(await screen.findByRole('button', { name: 'Claude API, not connected' }));
 
@@ -142,6 +143,14 @@ describe('Inline provider setup', () => {
     expect(within(setup).getByLabelText(/api key/i)).toBeInTheDocument();
 
     fireEvent.click(within(setup).getByRole('button', { name: 'Close provider setup' }));
+    expect(screen.queryByRole('region', { name: 'Connect a provider' })).toBeNull();
+
+    // Closed by its owner mid-setup, the dialog reopens without the panel.
+    fireEvent.click(screen.getByRole('button', { name: 'Claude API, not connected' }));
+    await screen.findByRole('region', { name: 'Connect a provider' });
+    rerender(dialog(false));
+    rerender(dialog(true));
+    await screen.findByRole('button', { name: 'Launch audit' });
     expect(screen.queryByRole('region', { name: 'Connect a provider' })).toBeNull();
   });
 });
