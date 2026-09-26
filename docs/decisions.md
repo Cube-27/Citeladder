@@ -76,3 +76,16 @@ Source: owner decision of 26 September 2026 in the
 [prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 1.
 [Onboarding](onboarding.md) and [prompts and Visibility](visibility-prompt.md)
 own the shipped behavior.
+
+## Generated prompts are reviewed before they are tracked
+
+Generate stages candidates in a separate table; only a user's accept creates an
+active prompt, and rejected candidates are deleted. This reverses "generated
+rows are active immediately": the owner judged generated quality too uneven to
+track unseen. Candidates are not a `proposed` status on `Prompt`, because every
+audit, capacity and visibility query would then have to exclude proposals and
+one miss would corrupt measurement.
+
+Source: owner decision of 26 September 2026 in the
+[prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 3a.
+[Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.

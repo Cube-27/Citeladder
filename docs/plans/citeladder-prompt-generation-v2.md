@@ -2,7 +2,9 @@
 
 Status: active, owner-approved direction (26 September 2026; revised the same day
 after the prompt-universe and JEV feasibility research). PR 1 merged as `54e6f4b8`
-(#161). PR 2 is in review.
+(#161); PR 2 merged as `42c73cfe` (#162). PR 3a is implemented on
+`prompt-gen-v2-pr3a`; model-suggested map entries and subtopic creation in the
+topic rail are left to PR 3b, which produces and consumes them.
 Scope: onboarding completion, the Prompts page workflow, and the quick **Generate
 prompts** path. The agent-driven "Build with Agent" generation is phase 2 and is
 out of scope (section 9).
@@ -213,9 +215,9 @@ PR 2
 - [x] Manual add asks only for topic and prompt.
 
 PR 3a
-- [ ] Business map entries are editable and carry provenance.
-- [ ] Generated prompts land as candidates; accept inserts, reject deletes.
-- [ ] Candidates never reach audits, capacity or visibility (tested at PostgreSQL).
+- [x] Business map entries are editable and carry provenance.
+- [x] Generated prompts land as candidates; accept inserts, reject deletes.
+- [x] Candidates never reach audits, capacity or visibility (tested at PostgreSQL).
 
 PR 3b
 - [ ] Multi-topic generation from compatible business-map cells.

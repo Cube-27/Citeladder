@@ -13,9 +13,34 @@ confirmation; [Commerce](commerce-intelligence.md) owns typed buyer targets.
 
 The [prompt API](../backend/app/api/prompts.py) and
 [generation service](../backend/app/domain/prompts/generation.py) authorize the
-workspace/project, validate topic/cohort selection and capacity, gather confirmed
-brand context and optional observed demand, call the configured model, then
-recheck ownership and insert conflict-safely. Generation does not start an audit.
+workspace/project, validate topic/cohort selection, gather confirmed brand
+context and optional observed demand, call the configured model, then recheck
+ownership and stage the admitted suggestions for review. Generation does not
+start an audit.
+
+Generated prompts are **candidates**, not prompts. Each Generate request records
+a `PromptGenerationRun` (request, generator version, provenance) and pending
+`PromptCandidate` rows in [their own tables](../backend/app/models/prompt_candidate.py),
+so no audit, capacity/occupancy or visibility query can see a proposal. The
+[candidate owner](../backend/app/domain/prompts/candidates.py) drops texts already
+tracked or already pending. `POST /prompt-sets/{id}/candidates/review` takes
+`accept_ids`/`reject_ids`: accept re-runs prompt capacity and the conflict-safe
+insert under the project, prompt-set and account locks, copying run provenance
+and the candidate's validation into `generation_evidence`; reject deletes. An
+over-allowance accept writes nothing. Unreviewed candidates expire after
+`GENERATION_CANDIDATE_RETENTION_HOURS`; expired rows are hidden and purged by
+the next write. The Generate dialog shows the pending list with select-all and
+**Accept selected** / **Reject selected**.
+
+Topics may have one level of subtopics (`Topic.parent_id`, same project); a
+subtopic cannot have children, and deleting a parent promotes its subtopics.
+
+The [business map](../backend/app/domain/projects/business_map.py), edited under
+Brand knowledge and stored in `BusinessContext.business_map`, lists per
+confirmed offering its attributes, situations/constraints and audiences, plus
+excluded pairs that never combine. Entries carry origin and review state: a
+model suggestion stays `suggested` until a person confirms it, and edits keep
+each surviving entry's provenance. Generation does not read the map yet.
 
 Onboarding creates no prompts or topics; a created project starts with an
 empty prompt set and the user chooses what to track. Generation uses existing
