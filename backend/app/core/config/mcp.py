@@ -12,6 +12,7 @@ from app.core.config.dotenv import dotenv_sources
 
 MCP_READ_SCOPE = "citeladder:read"
 MCP_SERVER_VERSION = "1.1.0"
+MCP_DOCUMENTATION_URL = "https://docs.citeladder.com/mcp/"
 MCP_MAX_SEARCH_RESULTS = 20
 MCP_DEFAULT_LIST_LIMIT = 50
 MCP_MAX_LIST_LIMIT = 200

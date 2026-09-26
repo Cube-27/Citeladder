@@ -1,0 +1,31 @@
+---
+import { articles } from '../lib/content';
+import DocsLayout from '../layouts/DocsLayout.astro';
+import ToolReference from '../components/ToolReference.astro';
+
+export function getStaticPaths() {
+  return articles.map((article, index) => ({
+    params: { slug: article.slug === 'index' ? undefined : article.slug },
+    props: { article, previous: articles[index - 1], next: articles[index + 1] },
+  }));
+}
+
+const { article, previous, next } = Astro.props;
+const { Content } = article.entry;
+const headings = (await article.entry.getHeadings()).filter(({ depth }) => depth === 2);
+if (article.slug === 'mcp/tools') headings.push({ depth: 2, slug: 'registered-tools', text: 'Registered tools' });
+---
+<DocsLayout title={article.title} description={article.description} headings={headings}>
+  <article>
+    <header class="docs-article-header">
+      <h1 class="website-section-heading">{article.title}</h1>
+      <p class="website-lead text-muted">{article.description}</p>
+    </header>
+    <div class="docs-prose website-body-lg"><Content /></div>
+    {article.slug === 'mcp/tools' && <ToolReference />}
+  </article>
+  <nav class="docs-pagination" aria-label="Adjacent articles">
+    {previous ? <a href={previous.href}><span class="website-label">Previous</span><span>{previous.title}</span></a> : <span />}
+    {next && <a href={next.href}><span class="website-label">Next</span><span>{next.title}</span></a>}
+  </nav>
+</DocsLayout>

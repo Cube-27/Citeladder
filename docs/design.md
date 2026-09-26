@@ -227,6 +227,18 @@ Auth/onboarding use the website type ladder and shared focus treatment. Their fl
 
 Product previews may change only layout, typography, colour, border, radius, or elevation; strings, scripted content, factual claims, and workflows remain unchanged without approval.
 
+### Documentation
+
+The docs subdomain is a Read surface using the existing public light palette,
+Inter/General Sans, semantic tokens and shared controls. Its desktop shell has
+grouped guide navigation, a measured reading column and an on-page contents
+rail. Mobile uses inline navigation and contents disclosures. Guides, Agent,
+MCP and Changelog are the top-level entry points; Updates is the final sidebar
+group. Public font loading is shared through `PublicFonts.astro`.
+Search uses the shared dialog, input and buttons with keyboard access and
+focus restoration. Articles are server-built HTML and remain readable without
+JavaScript. No decorative motion or alternate design system is introduced.
+
 ## Component recipes
 
 ### Controls

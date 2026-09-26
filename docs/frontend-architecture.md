@@ -1,8 +1,9 @@
 # Frontend architecture
 
-The frontend has two runtime owners: the marketing Worker serves Astro SSR and
+The frontend has three runtime owners: the marketing Worker serves Astro SSR and
 public routes at `citeladder.com`; the product Worker serves the Vite/React
-Router SPA at `app.citeladder.com`. Local Compose retains frontend containers
+Router SPA at `app.citeladder.com`; the static documentation Worker serves Astro
+pages at `docs.citeladder.com`. Local Compose retains frontend containers
 and a Caddy ingress on browser port 3000 for development and clean-clone smoke.
 Together they project workspace-authorized
 backend contracts. The frontend owns navigation, ephemeral state, accessible
@@ -35,7 +36,14 @@ marketing routes reach Astro SSR.
 | Prompts, Visibility and runs | /prompts, /visibility, /runs | [Visibility](visibility-prompt.md) |
 | Commerce | /products | [Commerce](commerce-intelligence.md) |
 | Settings and account management | /settings and account routes | [Workspace access](workspace-access.md), [Billing](billing-entitlements.md) |
-| Public MCP setup | /docs/mcp | [MCP](mcp.md) |
+| Public guides, Agent documentation, MCP setup and changelog | docs.citeladder.com | Static Astro app in `frontend/apps/docs` |
+
+Documentation content lives in `frontend/apps/docs/src/content` as Markdown.
+Its validated metadata drives navigation, static routes, search and the sitemap.
+The final navigation group is Updates, containing the changelog. Search runs
+locally over a static index; it has no backend, session or provider dependency.
+The MCP reference consumes the existing generated tool catalog. The former
+marketing `/docs/mcp` page is removed; all owned links use the public docs origin.
 
 One authenticated layout retains the session, query client, workspace/project
 context and entitlement providers across app and onboarding navigation.

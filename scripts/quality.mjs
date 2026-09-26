@@ -100,7 +100,12 @@ function step(name, command, commandArgs, cwd, env = process.env) {
   const log = openSync(logPath, 'w');
   let result;
   try {
-    result = spawnSync(command, commandArgs, { cwd, env, stdio: ['ignore', log, log] });
+    result = spawnSync(command, commandArgs, {
+      cwd,
+      env,
+      windowsHide: true,
+      stdio: ['ignore', log, log],
+    });
   } finally {
     closeSync(log);
   }
@@ -178,6 +183,7 @@ function backendChecks() {
 
 function frontendChecks() {
   pnpm('Astro marketing build', ['build'], QUALITY_BUILD_ENV);
+  pnpm('Astro documentation build', ['build:docs'], QUALITY_BUILD_ENV);
   // The budget reads the build's manifest, so it only runs against a fresh
   // build; after a failed one it would judge stale output.
   if (pnpm('Vite product-app build', ['build:vite'], QUALITY_BUILD_ENV)) {

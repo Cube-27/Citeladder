@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowUpRight, Check, Grid2X2, Search } from 'lucide-react';
 
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { docsHref } from '@/lib/config/docs';
 import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
 import { MODULES, SOURCE_ROWS, type ModuleId } from './landing-data';
 import { HeroDashboardPreview } from './landing-hero-dashboard';
@@ -282,7 +283,7 @@ function McpPreview() {
           <b>Page findings and crawl evidence</b>
         </div>
       </div>
-      <a className="cl-text-link" href="/docs/mcp">
+      <a className="cl-text-link" href={docsHref('/mcp/')}>
         MCP documentation <ArrowUpRight size={16} aria-hidden />
       </a>
     </div>

@@ -30,7 +30,12 @@ from starlette.responses import (
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.config import demo_access_expired, settings
-from app.core.config.mcp import MCP_READ_SCOPE, MCP_SERVER_VERSION, mcp_settings
+from app.core.config.mcp import (
+    MCP_DOCUMENTATION_URL,
+    MCP_READ_SCOPE,
+    MCP_SERVER_VERSION,
+    mcp_settings,
+)
 from app.core.database import SessionLocal
 from app.domain.auth.service import resolve_session_user
 from app.domain.mcp.data import project_business_context
@@ -94,7 +99,7 @@ mcp_server = MCPServer(
         "evidence is reported as unavailable and must not be interpreted as "
         "zero. Never claim that CiteLadder data proves causation."
     ),
-    website_url=f"{_STARTUP_ORIGIN}/docs/mcp",
+    website_url=MCP_DOCUMENTATION_URL,
     version=MCP_SERVER_VERSION,
     auth_server_provider=mcp_oauth_provider,
     auth=AuthSettings(
@@ -111,7 +116,7 @@ mcp_server = MCPServer(
         # client sent one, so every token this provider issues carries the
         # resource this check compares against.
         validate_token_resource=True,
-        service_documentation_url=AnyHttpUrl(f"{_STARTUP_ORIGIN}/docs/mcp"),
+        service_documentation_url=AnyHttpUrl(MCP_DOCUMENTATION_URL),
         required_scopes=[MCP_READ_SCOPE],
         client_registration_options=ClientRegistrationOptions(
             enabled=True,

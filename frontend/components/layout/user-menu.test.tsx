@@ -103,7 +103,7 @@ describe('UserMenu', () => {
     // asChild renders the menuitem as the Link anchor itself.
     expect(items[settingsIndex]).toHaveAttribute('href', `/settings?workspace=${WORKSPACE}`);
     expect(items[billingIndex]).toHaveAttribute('href', `/billing?workspace=${WORKSPACE}`);
-    expect(items[mcpIndex]).toHaveAttribute('href', '/docs/mcp');
+    expect(items[mcpIndex]).toHaveAttribute('href', 'https://docs.citeladder.com/mcp/');
     expect(items[mcpIndex]).toHaveAttribute('target', '_blank');
   });
 

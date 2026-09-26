@@ -148,6 +148,7 @@ test.describe('marketing routes', () => {
     for (const path of [
       '/blog/hello-citeladder',
       '/blog/does-not-exist',
+      '/docs/mcp',
       '/compare/does-not-exist',
     ]) {
       const response = await page.goto(path);
@@ -165,8 +166,14 @@ test.describe('marketing routes', () => {
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toBeVisible();
     await expect(footer.getByRole('link', { name: 'Blog', exact: true })).toBeVisible();
-    // The repo is private — no Documentation/GitHub links in the footer.
-    await expect(footer.getByRole('link', { name: 'Documentation' })).toHaveCount(0);
+    await expect(footer.getByRole('link', { name: 'Documentation' })).toHaveAttribute(
+      'href',
+      'https://docs.citeladder.com/',
+    );
+    await expect(footer.getByRole('link', { name: 'Changelog' })).toHaveAttribute(
+      'href',
+      'https://docs.citeladder.com/changelog/',
+    );
     await expect(footer.getByRole('link', { name: 'GitHub' })).toHaveCount(0);
   });
 });

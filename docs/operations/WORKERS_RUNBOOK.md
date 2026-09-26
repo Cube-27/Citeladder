@@ -9,6 +9,31 @@ does not establish DNS, provider registration, deployment or production acceptan
 
 ## Baseline and release record
 
+### Documentation subdomain
+
+`frontend/apps/docs/wrangler.jsonc` owns the static `citeladder-docs` Worker
+and the `docs.citeladder.com` Custom Domain. It has no API, origin token,
+provider credentials or backend bindings. Its static asset configuration
+serves clean directory URLs and a real 404 page; `public/_headers` supplies
+security and caching headers.
+
+The manual `workers-docs-deploy.yml` workflow builds an immutable artifact
+from main and deploys it through the `workers-docs-production` environment.
+Configure that environment's Cloudflare account/token and the existing
+`FONTS_REPO_TOKEN` secret before delivery. Licensed fonts are added to the
+downloaded artifact immediately before deployment, not committed or uploaded.
+
+Deploy and verify the docs Worker before releasing app/marketing links to it.
+Check the Custom Domain and TLS, a deep guide URL, search, the changelog,
+`/sitemap.xml`, `/robots.txt`, and an unknown URL's 404 response. The old
+apex `/docs/mcp` page is intentionally removed without a redirect. MCP
+protocol/OAuth endpoints remain on the existing protocol origin.
+
+Worker/DNS provisioning and live acceptance remain explicit release operations;
+adding this configuration does not claim that the subdomain has been deployed.
+
+### Existing application release
+
 Before deploying, record the actual main SHA, prior frontend and backend image
 digests, VM name, static IP, DNS records, Cloudflare Worker routes/Custom
 Domains, cache/WAF rules, TLS certificate version and Caddy configuration.

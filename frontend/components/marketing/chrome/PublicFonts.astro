@@ -1,0 +1,86 @@
+<!-- Discover the fonts at first paint instead of after the stylesheet
+    loads. Inter (text) and General Sans (headings) are not in this
+    repository: `pnpm fonts:pull` copies them into public/fonts from the
+    private Cube27 font repo, and delivery does the same. A build without
+    them renders in the matched fallbacks below. -->
+<link
+  rel="preload"
+  href="/fonts/GeneralSans-Variable.woff2"
+  as="font"
+  type="font/woff2"
+  crossorigin="anonymous"
+/>
+<link
+  rel="preload"
+  href="/fonts/InterVariable.woff2"
+  as="font"
+  type="font/woff2"
+  crossorigin="anonymous"
+/>
+<style is:inline>
+  /* `font-display: fallback`: a ~100ms block period, then a ~3s window in
+     which the font may still swap in, then a permanent commit to the
+     fallback.
+
+     Not `optional`: it commits after the block period alone and will NOT
+     swap afterwards even when the font arrives moments later. A hard
+     reload (Ctrl+Shift+R) bypasses the cache, so the file has to come
+     off the network inside ~100ms and usually loses — the typeface then
+     never renders, however long you wait.
+
+     Not `swap` either, whose swap period is unbounded: on a bad
+     connection it re-lays out the page whenever the font finally lands,
+     long after the reader started reading. `fallback` bounds that to ~3s
+     — enough for a preloaded, same-origin file on any connection that
+     was going to succeed at all. */
+  @font-face {
+    font-family: 'General Sans';
+    src: url('/fonts/GeneralSans-Variable.woff2') format('woff2');
+    /* 600 is the design ceiling: a heavier request clamps to it. */
+    font-weight: 200 600;
+    font-style: normal;
+    font-display: fallback;
+  }
+
+  @font-face {
+    font-family: 'Inter';
+    src: url('/fonts/InterVariable.woff2') format('woff2');
+    font-weight: 100 600;
+    font-style: normal;
+    font-display: fallback;
+  }
+
+  /* Fallbacks matched to each face's metrics, so the swap moves as little
+     as possible. The vertical overrides are exact (the face's hhea
+     ascent/descent/line gap divided by size-adjust), so line boxes keep
+     their height whichever face renders.
+
+     `size-adjust` is approximate, and deliberately so: it is one scale
+     factor, but `src` resolves to Segoe UI on Windows, Helvetica Neue on
+     macOS and Arial elsewhere, which do not share advance widths. It is
+     the ratio of average text advance at weight 400. On a platform with
+     none of them the chain falls through to the unadjusted system
+     stack at the end of the theme tokens. */
+  @font-face {
+    font-family: 'General Sans Fallback';
+    src: local('Segoe UI'), local('Helvetica Neue'), local('Arial');
+    size-adjust: 103%;
+    ascent-override: 98%;
+    descent-override: 23%;
+    line-gap-override: 10%;
+  }
+
+  @font-face {
+    font-family: 'Inter Fallback';
+    src: local('Segoe UI'), local('Helvetica Neue'), local('Arial');
+    size-adjust: 107%;
+    ascent-override: 91%;
+    descent-override: 23%;
+    line-gap-override: 0%;
+  }
+
+  :root {
+    --font-text: 'Inter', 'Inter Fallback';
+    --font-heading: 'General Sans', 'General Sans Fallback';
+  }
+</style>

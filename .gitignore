@@ -25,6 +25,13 @@ frontend/apps/app/.wrangler/
 frontend/apps/app/.dev.vars*
 frontend/apps/marketing/.wrangler/
 frontend/apps/marketing/.dev.vars*
+frontend/apps/docs/.wrangler/
+frontend/.wrangler/
+frontend/apps/docs/.astro/
+frontend/apps/docs/dist/
+frontend/apps/docs/public/fonts/
+frontend/apps/docs/public/citeladder-logo.svg
+frontend/apps/docs/public/citeladder-favicon.ico
 /.playwright-cli/
 
 # The root package.json only delegates to frontend/ and backend/; it declares

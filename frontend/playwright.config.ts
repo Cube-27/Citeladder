@@ -16,7 +16,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'app', testIgnore: marketingSpecs },
+    { name: 'app', testIgnore: [...marketingSpecs, '**/docs.spec.ts'] },
     {
       name: 'marketing',
       testMatch: marketingSpecs,

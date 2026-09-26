@@ -11,6 +11,8 @@
     "apps/marketing/astro.config.mjs",
     "apps/marketing/src/middleware.ts",
     "apps/marketing/src/pages/**/*.{astro,ts}",
+    "apps/docs/astro.config.mjs",
+    "apps/docs/src/pages/**/*.{astro,ts}",
     "apps/app/vite.config.ts",
     "apps/app/src/main.tsx",
     "apps/app/worker.ts",
@@ -18,6 +20,7 @@
   "project": [
     "apps/app/**/*.{ts,tsx}",
     "apps/marketing/**/*.{astro,ts,tsx}",
+    "apps/docs/**/*.{astro,ts,tsx}",
     "components/**/*.{ts,tsx}",
     "lib/**/*.{ts,tsx}",
     "test/**/*.{ts,tsx}",
