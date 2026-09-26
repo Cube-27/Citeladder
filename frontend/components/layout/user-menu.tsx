@@ -7,7 +7,6 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 
 import {
   Dropdown,
-  DropdownCheckboxItem,
   DropdownContent,
   DropdownItem,
   DropdownLabel,
@@ -19,7 +18,6 @@ import { useSession } from '@/lib/auth/session-guard';
 import { ICONS } from '@/lib/icons';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
-import { setTheme, useTheme } from '@/lib/theme/theme';
 import { cn, emailInitials } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 
@@ -46,7 +44,6 @@ function useUserMenu() {
 function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter }>) {
   const { email, logout } = useUserMenu();
   const { activeWorkspaceId } = useProjectContext();
-  const theme = useTheme();
   const compact = presenter !== 'sidebar';
   const settingsHref = activeWorkspaceId
     ? workspaceDestination('/settings', null, activeWorkspaceId)
@@ -80,15 +77,6 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
           <span>MCP</span>
         </a>
       </DropdownItem>
-      <DropdownSeparator />
-      <DropdownCheckboxItem
-        checked={theme === 'dark'}
-        onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-        // Stay open so the reader sees the change and can flip it straight back.
-        onSelect={(event) => event.preventDefault()}
-      >
-        Dark theme
-      </DropdownCheckboxItem>
       <DropdownSeparator />
       <DropdownItem
         onSelect={(event) => {
