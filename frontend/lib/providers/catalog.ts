@@ -21,6 +21,8 @@ import type {
 
 /** Logical engines rendered as cards, in display order. */
 export const ENGINE_ORDER: readonly LogicalEngine[] = [
+  'chatgpt_search',
+  'gemini_consumer',
   'chatgpt',
   'gemini',
   'claude',
@@ -29,9 +31,11 @@ export const ENGINE_ORDER: readonly LogicalEngine[] = [
 
 /** Human display names for each logical engine. */
 export const ENGINE_LABELS: Record<LogicalEngine, string> = {
-  chatgpt: 'ChatGPT',
-  gemini: 'Gemini',
-  claude: 'Claude',
+  chatgpt: 'ChatGPT API',
+  gemini: 'Gemini API',
+  claude: 'Claude API',
+  chatgpt_search: 'ChatGPT Search',
+  gemini_consumer: 'Gemini',
   google_ai_overview: 'Google AI Overview',
 };
 
@@ -48,6 +52,10 @@ const SEARCH_SURFACE_ENGINES: readonly LogicalEngine[] = ['google_ai_overview'] 
 /** True when this engine key names an observed surface. */
 export function isSearchSurfaceEngine(key: string): boolean {
   return SEARCH_SURFACE_ENGINES.some((engine) => engine === key);
+}
+
+export function isConsumerEngine(key: string): boolean {
+  return key === 'chatgpt_search' || key === 'gemini_consumer' || isSearchSurfaceEngine(key);
 }
 
 /** Human display names for each transport provider. */
@@ -69,6 +77,8 @@ export const ENGINE_DOMAINS: Record<string, string> = {
   perplexity: 'perplexity.ai',
   copilot: 'microsoft.com',
   google_ai_overview: 'google.com',
+  chatgpt_search: 'openai.com',
+  gemini_consumer: 'google.com',
 };
 
 /** Local brand logo assets for engines when available. */
@@ -110,7 +120,7 @@ export function productTransportLabel(key: string): string | null {
  */
 export function productModelLabel(engine: string, model: string | null | undefined): string | null {
   if (!model) return null;
-  return isSearchSurfaceEngine(engine) ? null : model;
+  return isConsumerEngine(engine) ? null : model;
 }
 
 /** The single fixed route on an engine card. */
@@ -186,9 +196,9 @@ const PLANNED_ENGINES = [
  * measurement is.
  */
 function routeLabel(transport: TransportProvider, surfaceKind: SurfaceKind): string {
-  return surfaceKind === 'search_ai'
-    ? `Observed via ${TRANSPORT_LABELS[transport]}`
-    : `Direct (${TRANSPORT_LABELS[transport]})`;
+  if (surfaceKind === 'search_ai') return `Observed via ${TRANSPORT_LABELS[transport]}`;
+  if (surfaceKind === 'llm_scraper') return `Consumer app via ${TRANSPORT_LABELS[transport]}`;
+  return `Direct (${TRANSPORT_LABELS[transport]})`;
 }
 
 /**

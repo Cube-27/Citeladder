@@ -22,6 +22,7 @@ from app.core.config.dataforseo import (
     DEFAULT_LANGUAGE_CODE,
     DEFAULT_LOCATION_CODE,
 )
+from app.core.config.llm_scraper import PRODUCTS as LLM_SCRAPER_PRODUCTS
 
 # --- Logical engines (what the user asked for) ----------------------------
 ENGINE_CHATGPT: Final = "chatgpt"
@@ -32,6 +33,8 @@ ENGINE_CLAUDE: Final = "claude"
 # shares this vocabulary because it produces the same ``ResponseAnalysis``
 # the LLM engines do; ``surface_kind`` below carries the difference.
 ENGINE_GOOGLE_AI_OVERVIEW: Final = "google_ai_overview"
+ENGINE_CHATGPT_SEARCH: Final = "chatgpt_search"
+ENGINE_GEMINI_CONSUMER: Final = "gemini_consumer"
 # Deliberately ``tuple[str, ...]``: the arity is not part of the contract.
 # Nothing may assert "exactly three engines" off this annotation again.
 LOGICAL_ENGINES: Final[tuple[str, ...]] = (
@@ -39,6 +42,8 @@ LOGICAL_ENGINES: Final[tuple[str, ...]] = (
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
     ENGINE_GOOGLE_AI_OVERVIEW,
+    ENGINE_CHATGPT_SEARCH,
+    ENGINE_GEMINI_CONSUMER,
 )
 
 # --- Transport providers (how we physically reach the engine) -------------
@@ -62,8 +67,9 @@ ACTIVE_TRANSPORTS: Final[frozenset[str]] = frozenset(
 # DataForSEO, Google Organic and SERP API never appear as a product label.
 SURFACE_KIND_LLM: Final = "llm"
 SURFACE_KIND_SEARCH_AI: Final = "search_ai"
+SURFACE_KIND_LLM_SCRAPER: Final = "llm_scraper"
 SURFACE_KINDS: Final[frozenset[str]] = frozenset(
-    {SURFACE_KIND_LLM, SURFACE_KIND_SEARCH_AI}
+    {SURFACE_KIND_LLM, SURFACE_KIND_SEARCH_AI, SURFACE_KIND_LLM_SCRAPER}
 )
 
 # --- Measurement routes ---------------------------------------------------
@@ -197,6 +203,30 @@ MEASUREMENT_ROUTES: Final[dict[str, MeasurementRoute]] = {
         ),
     ),
 }
+
+
+for _engine, _product in LLM_SCRAPER_PRODUCTS.items():
+    MEASUREMENT_ROUTES[_engine] = MeasurementRoute(
+        logical_engine=_engine,
+        transport_provider=TRANSPORT_DATAFORSEO,
+        transport_model=f"{_product}-llm-scraper",
+        retrieval_enabled=None,
+        reasoning_effort=None,
+        reasoning_pinnable=None,
+        representative_status=REPRESENTATIVE_STATUS_UNVERIFIED,
+        surface_kind=SURFACE_KIND_LLM_SCRAPER,
+        search_context=SearchContext(
+            location_code=DEFAULT_LOCATION_CODE,
+            language_code=DEFAULT_LANGUAGE_CODE,
+            device=DEFAULT_DEVICE,
+        ),
+    )
+
+
+def uses_provider_tasks(logical_engine: str) -> bool:
+    """Asynchronous execution is independent of AI Overview semantics."""
+    route = MEASUREMENT_ROUTES.get(logical_engine)
+    return route is not None and route.surface_kind != SURFACE_KIND_LLM
 
 
 def measurement_route(logical_engine: str) -> MeasurementRoute:

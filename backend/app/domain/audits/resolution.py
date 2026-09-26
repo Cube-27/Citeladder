@@ -18,8 +18,8 @@ from app.core.config.provider_catalog import (
     SELECTABLE_ENGINES,
     is_endpoint_approved,
     is_route_approved,
-    is_search_surface,
     measurement_route,
+    uses_provider_tasks,
 )
 from app.domain.audits.errors import AuditValidationError
 from app.models.brand import Brand
@@ -241,7 +241,7 @@ def _resolve_funded_routes(engines: list[str]) -> dict[str, _ResolvedRoute]:
     """
     resolved: dict[str, _ResolvedRoute] = {}
     for engine in _normalize_engines(engines):
-        if is_search_surface(engine):
+        if uses_provider_tasks(engine):
             # Funded routing binds a PLATFORM connection in the system
             # workspace at per-task credential resolution. No platform
             # DataForSEO account is provisioned — the shipped credential model

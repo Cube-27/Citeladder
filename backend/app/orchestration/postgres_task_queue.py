@@ -268,7 +268,9 @@ class PostgresTaskQueue[
             return None
         return task
 
-    async def heartbeat(self, *, task_id: uuid.UUID, owner: str) -> bool:
+    async def heartbeat(
+        self, *, task_id: uuid.UUID, owner: str, max_expires_at: datetime | None = None
+    ) -> bool:
         now = _utcnow()
         async with self._session_factory() as session:
             task = await self._owned_task(session, task_id, owner)
@@ -280,6 +282,8 @@ class PostgresTaskQueue[
                 return False
             task.heartbeat_at = now
             task.lease_expires_at = self._lease_expiry(now)
+            if max_expires_at is not None:
+                task.lease_expires_at = min(task.lease_expires_at, max_expires_at)
             await session.commit()
             return True
 

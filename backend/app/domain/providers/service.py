@@ -42,11 +42,11 @@ from app.core.config.provider_catalog import (
     is_active_transport,
     is_endpoint_approved,
     is_route_approved,
-    is_search_surface,
     llm_reasoning_effort,
     measurement_route,
     provider_catalog_settings,
     public_provider_routes,
+    uses_provider_tasks,
 )
 from app.core.security import decrypt_secret, encrypt_secret
 from app.domain.auth.security_events import record_security_event
@@ -61,11 +61,13 @@ from app.domain.providers.connection_updates import (
     apply_scalar_updates,
     build_app_routes,
     ensure_app_features_available,
+    preserve_disabled_routes,
     record_destination_acknowledgements,
     replace_app_routes,
     rotated_secret,
 )
 from app.domain.providers.credentials import connection_paused
+from app.domain.providers.dataforseo_routes import add_missing_dataforseo_routes
 from app.domain.providers.schemas import (
     ProviderAppRouteResponse,
     ProviderConnectionCreate,
@@ -194,7 +196,34 @@ def _build_routes(
                 is_default=item.is_default,
             )
         )
+    if transport_provider == TRANSPORT_DATAFORSEO:
+        add_missing_dataforseo_routes(routes, workspace_id=workspace_id)
     return routes
+
+
+async def provision_dataforseo_routes(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    connection_id: uuid.UUID,
+) -> ProviderConnection:
+    """Explicit rollout write; callers authorize workspace membership."""
+    connection = await session.scalar(
+        _connection_query()
+        .where(
+            ProviderConnection.id == connection_id,
+            ProviderConnection.workspace_id == workspace_id,
+        )
+        .with_for_update(of=ProviderConnection)
+        .execution_options(populate_existing=True)
+    )
+    if connection is None:
+        raise ProviderConnectionNotFoundError(str(connection_id))
+    if connection.transport_provider != TRANSPORT_DATAFORSEO:
+        raise InvalidRouteError("Connection is not DataForSEO")
+    add_missing_dataforseo_routes(connection.routes, workspace_id=workspace_id)
+    await session.flush()
+    return connection
 
 
 async def list_connections(
@@ -317,11 +346,13 @@ async def _apply_connection_update(
         raise InvalidRouteError("Google AI Overview connections host no app model")
     apply_scalar_updates(connection, payload)
     if payload.routes is not None:
-        connection.routes = _build_routes(
+        replacement = _build_routes(
             workspace_id=connection.workspace_id,
             transport_provider=connection.transport_provider,
             items=payload.routes,
         )
+        preserve_disabled_routes(connection.routes, replacement)
+        connection.routes = replacement
     if payload.app_routes is not None:
         try:
             await replace_app_routes(
@@ -460,7 +491,7 @@ async def run_connection_test(
         model = measurement_route(logical_engine).transport_model
         break
 
-    if is_search_surface(logical_engine):
+    if uses_provider_tasks(logical_engine):
         return await run_search_surface_test(
             session,
             workspace_id=workspace_id,

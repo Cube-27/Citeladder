@@ -24,7 +24,9 @@ from app.core.config.costs import (
     estimate_token_count,
     route_pricing_for,
 )
-from app.core.config.provider_catalog import measurement_route
+from app.core.config.dataforseo import dataforseo_settings
+from app.core.config.llm_scraper import PRODUCTS
+from app.core.config.provider_catalog import measurement_route, uses_provider_tasks
 from app.domain.audits.estimate_errors import AuditEstimateError
 from app.domain.audits.schemas import (
     AuditEngineEstimate,
@@ -86,6 +88,8 @@ def _estimate_engine(
     except ValueError as exc:
         raise AuditEstimateError(str(exc)) from exc
     executions = prompt_count * repetitions
+    if uses_provider_tasks(engine):
+        return _provider_task_estimate(engine, prompt_count, repetitions)
     input_tokens = per_execution_input * repetitions
     output_tokens = executions * policy.max_output_tokens
     pricing = route_pricing_for(
@@ -123,6 +127,30 @@ def _estimate_engine(
         estimated_search_cost_microusd=search_cost,
         estimated_total_cost_microusd=_known_total(required),
         cost_status=_cost_status(required=required),
+        pricing_version=PRICING_CATALOG_VERSION,
+    )
+
+
+def _provider_task_estimate(
+    engine: str, prompt_count: int, repetitions: int
+) -> AuditEngineEstimate:
+    route = measurement_route(engine)
+    return AuditEngineEstimate(
+        logical_engine=engine,
+        transport_provider=route.transport_provider,
+        transport_model=route.transport_model,
+        retrieval_enabled=None,
+        prompt_count=prompt_count,
+        repetition_count=repetitions,
+        execution_count=prompt_count * repetitions,
+        maximum_attempt_count=prompt_count * repetitions,
+        estimated_input_tokens=None,
+        estimated_output_tokens=None,
+        estimated_search_calls=None,
+        estimated_token_cost_microusd=None,
+        estimated_search_cost_microusd=None,
+        estimated_total_cost_microusd=None,
+        cost_status="unknown",
         pricing_version=PRICING_CATALOG_VERSION,
     )
 
@@ -200,6 +228,14 @@ async def estimate_audit(
     executions = sum(row.execution_count for row in engine_rows)
     attempts = sum(row.maximum_attempt_count for row in engine_rows)
     totals = [row.estimated_total_cost_microusd for row in engine_rows]
+    # Paid provider tasks may legitimately recover until their frozen deadline.
+    wall_clock_seconds = (
+        dataforseo_settings.recovery_deadline_hours * 3600
+        if any(engine in PRODUCTS for engine in payload.engines)
+        else attempts
+        * policy.timeout_seconds
+        / max(1, audit_settings.worker_concurrency)
+    )
     return AuditEstimateResponse(
         retrieval_enabled=policy.retrieval_enabled,
         prompt_count=prompt_count,
@@ -207,11 +243,7 @@ async def estimate_audit(
         repetition_count=repetitions,
         execution_count=executions,
         maximum_attempt_count=attempts,
-        maximum_wall_clock_seconds=math.ceil(
-            attempts
-            * policy.timeout_seconds
-            / max(1, audit_settings.worker_concurrency)
-        ),
+        maximum_wall_clock_seconds=math.ceil(wall_clock_seconds),
         cost_status=_overall_cost_status(engine_rows),
         estimated_total_cost_microusd=_known_total(totals),
         engines=engine_rows,

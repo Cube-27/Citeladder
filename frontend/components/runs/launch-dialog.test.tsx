@@ -36,6 +36,7 @@ function stubApis(estimate: unknown = undefined) {
   vi.spyOn(providersApi, 'listConnections').mockResolvedValue([
     {
       api_key_set: true,
+      active: true,
       last_test_status: 'ok',
       routes: [{ logical_engine: 'chatgpt' }],
     },
@@ -46,9 +47,110 @@ function stubApis(estimate: unknown = undefined) {
 
 /** Pick one engine, which is what makes the selection launchable. */
 async function selectEngineAndLaunch() {
-  fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
   fireEvent.click(screen.getByRole('button', { name: 'Launch audit' }));
 }
+
+describe('Consumer engine selection', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('defaults once, preserves deselection on refetch, and launches all six independently', async () => {
+    const launch = stubApis(ESTIMATE);
+    const engines = [
+      'chatgpt_search',
+      'gemini_consumer',
+      'google_ai_overview',
+      'chatgpt',
+      'gemini',
+      'claude',
+    ];
+    vi.mocked(providersApi.listConnections).mockResolvedValue([
+      {
+        active: true,
+        api_key_set: true,
+        last_test_status: 'ok',
+        routes: engines.map((logical_engine) => ({ logical_engine, active: true })),
+      },
+    ] as never);
+    const { queryClient } = renderWithProviders(
+      <LaunchDialog
+        open
+        onOpenChange={() => undefined}
+        projectId={PROJECT_ID}
+        fixedPromptIds={PROMPT_IDS}
+      />,
+    );
+    const search = await screen.findByRole('button', { name: 'ChatGPT Search' });
+    await waitFor(() => expect(search).toHaveAttribute('aria-pressed', 'true'));
+    expect(screen.getByRole('button', { name: 'ChatGPT API' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    fireEvent.click(search);
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.providers.connections(WORKSPACE_ID),
+      });
+    });
+    expect(search).toHaveAttribute('aria-pressed', 'false');
+    for (const name of ['ChatGPT Search', 'ChatGPT API', 'Gemini API', 'Claude API']) {
+      fireEvent.click(screen.getByRole('button', { name }));
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Launch audit' }));
+    await waitFor(() =>
+      expect(launch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          engines: expect.arrayContaining(engines),
+        }),
+        { workspaceId: WORKSPACE_ID },
+      ),
+    );
+    expect(vi.mocked(launch).mock.calls[0][0].engines).toHaveLength(6);
+  });
+});
+
+describe('Engine availability changes', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('drops a selected engine from the picker and payload when its route goes inactive', async () => {
+    stubApis(ESTIMATE);
+    const connection = (active: boolean) => [
+      {
+        active: true,
+        api_key_set: true,
+        last_test_status: 'ok',
+        routes: [
+          { logical_engine: 'chatgpt_search', active },
+          { logical_engine: 'chatgpt', active: true },
+        ],
+      },
+    ];
+    vi.mocked(providersApi.listConnections).mockResolvedValue(connection(true) as never);
+    const { queryClient } = renderWithProviders(
+      <LaunchDialog
+        open
+        onOpenChange={() => undefined}
+        projectId={PROJECT_ID}
+        fixedPromptIds={PROMPT_IDS}
+      />,
+    );
+    const search = await screen.findByRole('button', { name: 'ChatGPT Search' });
+    await waitFor(() => expect(search).toHaveAttribute('aria-pressed', 'true'));
+
+    vi.mocked(providersApi.listConnections).mockResolvedValue(connection(false) as never);
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.providers.connections(WORKSPACE_ID),
+      });
+    });
+
+    expect(await screen.findByRole('button', { name: /ChatGPT Search · Connect/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: 'Launch audit' })).toBeDisabled();
+  });
+});
 
 describe('LaunchDialog fixed prompt selection', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -69,7 +171,7 @@ describe('LaunchDialog fixed prompt selection', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
     expect(await screen.findByText('14 responses planned')).toBeInTheDocument();
     // Cost is rendered from microUSD, so a formatting slip shows up as money.
     expect(
@@ -95,7 +197,7 @@ describe('LaunchDialog fixed prompt selection', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
     // Singular, and never "~$0.0000".
     expect(await screen.findByText('1 response planned')).toBeInTheDocument();
     expect(screen.getByText(/cost unpriced · unavailable/)).toBeInTheDocument();
@@ -247,7 +349,7 @@ describe('LaunchDialog prompt batching', () => {
       <LaunchDialog open onOpenChange={() => undefined} projectId={PROJECT_ID} />,
     );
 
-    await screen.findByRole('button', { name: 'ChatGPT' });
+    await screen.findByRole('button', { name: 'ChatGPT API' });
     // Seven prompts is one batch: "All 7" and "Prompts 1-7" are the same run.
     expect(screen.queryByLabelText(/Prompts to run/)).not.toBeInTheDocument();
     await selectEngineAndLaunch();
@@ -271,7 +373,7 @@ describe('LaunchDialog prompt batching', () => {
 
     await user.click(await screen.findByLabelText(/Prompts to run/));
     await user.click(screen.getByRole('option', { name: 'Prompts 21-23' }));
-    fireEvent.click(screen.getByRole('button', { name: 'ChatGPT' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ChatGPT API' }));
     expect(screen.getByRole('button', { name: 'Launch audit' })).toBeEnabled();
 
     act(() => {

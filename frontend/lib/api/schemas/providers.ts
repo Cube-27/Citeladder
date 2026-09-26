@@ -13,10 +13,17 @@ export const transportProviderSchema = z.enum(['openai', 'anthropic', 'google', 
 // OBSERVED search surface rather than a conversational engine, and it is a
 // member here before it is selectable in a run — a connection may be
 // configured for a surface whose execution path has not shipped.
-export const logicalEngineSchema = z.enum(['chatgpt', 'gemini', 'claude', 'google_ai_overview']);
+export const logicalEngineSchema = z.enum([
+  'chatgpt',
+  'gemini',
+  'claude',
+  'google_ai_overview',
+  'chatgpt_search',
+  'gemini_consumer',
+]);
 // How a surface is reached, and therefore which request shape it has. An
 // `llm` route is asked a question; a `search_ai` route is observed.
-export const surfaceKindSchema = z.enum(['llm', 'search_ai']);
+export const surfaceKindSchema = z.enum(['llm', 'search_ai', 'llm_scraper']);
 
 // A configured route on a connection: which logical engine this transport
 // serves and the concrete transport model to call.

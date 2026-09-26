@@ -13,9 +13,21 @@ from app.core.config.dataforseo import pack_credential
 from app.core.config.provider_catalog import TRANSPORT_DATAFORSEO
 from app.core.security import encrypt_secret
 from app.domain.providers.schemas import ProviderAppRouteInput
-from app.models.provider import ProviderAppRoute, ProviderConnection
+from app.models.provider import ProviderAppRoute, ProviderConnection, ProviderRoute
 from app.models.provider_disclosure import ProviderDisclosure
 from app.models.workspace import Workspace
+
+
+def preserve_disabled_routes(
+    previous: list[ProviderRoute], replacement: list[ProviderRoute]
+) -> None:
+    inactive = {route.logical_engine: route for route in previous if not route.active}
+    for route in replacement:
+        if route.logical_engine in inactive:
+            route.active = False
+            route.deactivation_reason = inactive[
+                route.logical_engine
+            ].deactivation_reason
 
 
 def record_destination_acknowledgements(

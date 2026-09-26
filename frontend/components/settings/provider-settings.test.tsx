@@ -40,10 +40,10 @@ describe('ProviderSettings', () => {
     renderWithProviders(<ProviderSettings />);
 
     expect(
-      await screen.findByRole('heading', { name: 'ChatGPT' }, { timeout: 3_000 }),
+      await screen.findByRole('heading', { name: 'ChatGPT API' }, { timeout: 3_000 }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Gemini' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Claude' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Gemini API' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Claude API' })).toBeInTheDocument();
     // The observed surface is a card like any other: it takes a credential
     // and reports connection state, even though it is never "asked" anything.
     expect(screen.getByRole('heading', { name: 'Google AI Overview' })).toBeInTheDocument();
@@ -60,7 +60,7 @@ describe('ProviderSettings', () => {
 
     renderWithProviders(<ProviderSettings />);
 
-    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT' })).closest(
+    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT API' })).closest(
       'section',
     )!;
     const utils = within(chatgptCard);
@@ -72,8 +72,8 @@ describe('ProviderSettings', () => {
     expect(utils.queryByText(/coming soon/i)).toBeNull();
 
     // The other two direct engines carry their own transport labels.
-    expect(screen.getByRole('heading', { name: 'Gemini' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Claude' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Gemini API' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Claude API' })).toBeInTheDocument();
     expect(screen.getByText('Direct (Google)')).toBeInTheDocument();
     expect(screen.getByText('Direct (Anthropic)')).toBeInTheDocument();
   });
@@ -85,7 +85,7 @@ describe('ProviderSettings', () => {
     );
 
     renderWithProviders(<ProviderSettings />);
-    await screen.findByRole('heading', { name: 'ChatGPT' });
+    await screen.findByRole('heading', { name: 'ChatGPT API' });
 
     expect(screen.queryByRole('radio')).toBeNull();
     expect(screen.queryByRole('radiogroup')).toBeNull();
@@ -141,7 +141,7 @@ describe('ProviderSettings', () => {
 
     renderWithProviders(<ProviderSettings />);
 
-    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT' })).closest(
+    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT API' })).closest(
       'section',
     )!;
     const utils = within(chatgptCard);
@@ -168,7 +168,7 @@ describe('ProviderSettings', () => {
 
     renderWithProviders(<ProviderSettings />);
 
-    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT' })).closest(
+    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT API' })).closest(
       'section',
     )!;
     const utils = within(chatgptCard);
@@ -186,7 +186,7 @@ describe('ProviderSettings', () => {
 
     renderWithProviders(<ProviderSettings />);
 
-    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT' })).closest(
+    const chatgptCard = (await screen.findByRole('heading', { name: 'ChatGPT API' })).closest(
       'section',
     )!;
     const utils = within(chatgptCard);

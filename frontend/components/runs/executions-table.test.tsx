@@ -76,7 +76,7 @@ describe('ExecutionsTable', () => {
       />,
     );
 
-    expect(screen.getByText('Gemini')).toBeVisible();
+    expect(screen.getByText('Gemini API')).toBeVisible();
     expect(screen.getByText('Google')).toBeVisible();
   });
 

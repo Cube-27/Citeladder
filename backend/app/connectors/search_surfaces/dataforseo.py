@@ -30,6 +30,7 @@ from app.connectors.search_surfaces.contracts import (
     provider_cost_microusd,
 )
 from app.core.config import dataforseo as dataforseo_config
+from app.core.config import llm_scraper
 from app.core.config.dataforseo import (
     DataForSeoCredential,
     DataForSeoCredentialError,
@@ -51,6 +52,18 @@ RESPONSE_STATUS_OK: int = dataforseo_config.STATUS_OK
 # One wording for "the body was not something we could read at all", so a
 # caller matching on it cannot accidentally match three of four sites.
 _UNREADABLE_RESPONSE: Final = "DataForSEO returned an unreadable response"
+
+
+class UncertainSubmission(ProviderError):
+    """An accepted, charged submission whose task ID was not exposed."""
+
+    def __init__(self, submission: SearchSurfaceSubmission) -> None:
+        super().__init__(
+            "DataForSEO accepted the task but returned no task id",
+            error_code=ERROR_PARSE,
+            retryable=False,
+        )
+        self.submission = submission
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,17 +182,19 @@ class DataForSeoSearchSurfaceAdapter:
         secret: str,
         base_url: str = "",
         client: httpx.AsyncClient | None = None,
+        logical_engine: str = "google_ai_overview",
     ) -> None:
         self._credential = unpack_credential(secret)
         self._base_url = base_url
         self._client = client
+        self._engine = logical_engine
 
     async def submit(self, request: SearchSurfaceRequest) -> SearchSurfaceSubmission:
         """Create one Standard-queue task. THIS is the billable moment."""
         body = await self._call(
             "POST",
-            dataforseo_config.PATH_TASK_POST,
-            json=[_task_payload(request)],
+            self._path("task_post", dataforseo_config.PATH_TASK_POST),
+            json=[self._payload(request)],
             timeout_seconds=request.timeout_seconds,
         )
         # The ENVELOPE first. DataForSEO returns application failures inside
@@ -197,20 +212,18 @@ class DataForSeoSearchSurfaceAdapter:
                 retryable=False,
             )
         task_id = str(task.get("id") or "").strip()
+        submission = SearchSurfaceSubmission(
+            provider_task_id=task_id,
+            submitted_at=datetime.now(UTC),
+            provider_cost_microusd=provider_cost_microusd(task),
+            raw_payload=body,
+        )
         if not task_id:
             # An accepted submission with no id is unusable AND already paid
             # for. Failing here sends it to reconciliation, which is the only
             # path that can find it again by tag.
-            raise ProviderError(
-                "DataForSEO accepted the task but returned no task id",
-                error_code=ERROR_PARSE,
-                retryable=False,
-            )
-        return SearchSurfaceSubmission(
-            provider_task_id=task_id,
-            submitted_at=datetime.now(UTC),
-            provider_cost_microusd=provider_cost_microusd(task),
-        )
+            raise UncertainSubmission(submission)
+        return submission
 
     async def fetch(self, provider_task_id: str) -> dict[str, Any]:
         """Retrieve one task's result. Documented by the provider as free.
@@ -219,7 +232,8 @@ class DataForSeoSearchSurfaceAdapter:
         which has no network and can therefore be tested against fixtures
         exhaustively; a transport that also decided outcomes could not.
         """
-        path = f"{dataforseo_config.PATH_TASK_GET_ADVANCED}/{provider_task_id}"
+        path = self._path("task_get/advanced", dataforseo_config.PATH_TASK_GET_ADVANCED)
+        path = f"{path}/{provider_task_id}"
         return await self._call(
             "GET", path, timeout_seconds=dataforseo_settings.request_timeout_seconds
         )
@@ -254,10 +268,34 @@ class DataForSeoSearchSurfaceAdapter:
         ]
         return await self._call(
             "POST",
-            dataforseo_config.PATH_ID_LIST,
+            llm_scraper.PATH_ID_LIST
+            if self._engine in llm_scraper.PRODUCTS
+            else dataforseo_config.PATH_ID_LIST,
             json=payload,
             timeout_seconds=dataforseo_settings.request_timeout_seconds,
         )
+
+    def _path(self, operation: str, fallback: str) -> str:
+        if self._engine in llm_scraper.PRODUCTS:
+            return llm_scraper.task_path(self._engine, operation)
+        return fallback
+
+    def _payload(self, request: SearchSurfaceRequest) -> dict[str, Any]:
+        if self._engine not in llm_scraper.PRODUCTS:
+            return _task_payload(request)
+        settings = (
+            request.request_settings
+            if request.request_settings is not None
+            else llm_scraper.request_settings(self._engine)
+        )
+        # Settings first: the prompt, market and correlation tag always win.
+        return {
+            **settings,
+            "keyword": llm_scraper.scraper_keyword(request.query),
+            "location_code": request.location_code,
+            "language_code": request.language_code,
+            "tag": request.provider_submission_ref,
+        }
 
     async def _call(
         self,

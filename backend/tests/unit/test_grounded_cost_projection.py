@@ -36,7 +36,14 @@ def _artifact(usage: dict, route: RouteIdentity = ROUTE_CHATGPT) -> RawResponseA
 
 def test_catalog_pins_an_exact_model_for_every_approved_route() -> None:
     assert APPROVED_ROUTE_IDENTITIES == frozenset(
-        {ROUTE_CHATGPT, ROUTE_CLAUDE, ROUTE_GEMINI, ROUTE_GOOGLE_AI_OVERVIEW}
+        {
+            ROUTE_CHATGPT,
+            ROUTE_CLAUDE,
+            ROUTE_GEMINI,
+            ROUTE_GOOGLE_AI_OVERVIEW,
+            RouteIdentity("chatgpt_search", "dataforseo", "chat_gpt-llm-scraper"),
+            RouteIdentity("gemini_consumer", "dataforseo", "gemini-llm-scraper"),
+        }
     )
     assert ROUTE_CHATGPT.transport_model == "gpt-5.5"
     assert ROUTE_CLAUDE.transport_model == "claude-sonnet-5"

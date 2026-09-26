@@ -2,6 +2,11 @@
 
 ## Active
 
+- [DataForSEO LLM Scraper AI Visibility](citeladder-dataforseo-llm-visibility.md)
+  — implemented locally in `codex/dataforseo-llm-visibility`; merge and CI pending. Adds six
+  independent measurement selections with customer DataForSEO credentials.
+  Initial scraper context support is US/English. Live acceptance is pending.
+
 - [Demo and production hardening](citeladder-production-hardening.md)
   — repository-side Phase 1 subset implemented locally on 26 September 2026 in
   `codex/production-hardening`; merge, CI, deployment and runtime retest pending.
@@ -19,12 +24,6 @@
 
 ## Queued
 
-- [DataForSEO LLM Scraper AI Visibility](citeladder-dataforseo-llm-visibility.md)
-  — plan saved on 26 September 2026; implementation not started. Adds ChatGPT
-  Search and Gemini consumer measurements, six independent audit selections,
-  and connected DataForSEO defaults. Customer credentials only; existing API
-  measurements and schedules remain available. Saving this plan does not
-  authorize implementation or live-provider acceptance.
 - [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026; implementation not started. Customer
   authorization (domain verification or attestation) lets Site Health crawl

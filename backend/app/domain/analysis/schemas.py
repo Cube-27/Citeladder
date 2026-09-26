@@ -576,6 +576,8 @@ class VisibilityFanoutState(StrEnum):
     QUERIES_AVAILABLE = "queries_available"
     COUNT_ONLY = "count_only"
     NO_SEARCH = "no_search"
+    UNAVAILABLE = "unavailable"
+    NO_EXPOSED_QUERIES = "no_exposed_queries"
 
 
 class VisibilityEvidenceSearchEvent(BaseModel):

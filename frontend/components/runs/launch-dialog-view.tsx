@@ -8,7 +8,7 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Select } from '@/components/ui/select';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import type { LogicalEngine, Prompt, PromptSet } from '@/lib/api/types';
-import { ENGINE_LABELS } from '@/lib/providers/catalog';
+import { ENGINE_LABELS, ENGINE_ORDER, isConsumerEngine } from '@/lib/providers/catalog';
 import {
   batchLabel,
   clampRepetitions,
@@ -232,19 +232,30 @@ export function LaunchDialogView({
                   </Button>
                 </div>
               </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {configuredEngines.map((engine) => (
-                  <FilterChip
-                    key={engine}
-                    active={selected.has(engine)}
-                    onClick={() => setEngines((current) => toggleEngine(current, engine))}
-                  >
-                    {ENGINE_LABELS[engine]}
-                  </FilterChip>
-                ))}
+            ) : null}
+            {[true, false].map((consumer) => (
+              <div key={String(consumer)} className="grid gap-2">
+                <p className={textRole('label')}>{consumer ? 'Consumer experiences' : 'APIs'}</p>
+                <div className="flex flex-wrap gap-2">
+                  {ENGINE_ORDER.filter((engine) => isConsumerEngine(engine) === consumer).map(
+                    (engine) => (
+                      <FilterChip
+                        key={engine}
+                        active={selected.has(engine)}
+                        onClick={() =>
+                          configuredEngines.includes(engine)
+                            ? setEngines((current) => toggleEngine(current, engine))
+                            : setConnectOpen(true)
+                        }
+                      >
+                        {ENGINE_LABELS[engine]}
+                        {configuredEngines.includes(engine) ? '' : ' · Connect / test'}
+                      </FilterChip>
+                    ),
+                  )}
+                </div>
               </div>
-            )}
+            ))}
           </fieldset>
           <Field
             label="Repetitions"

@@ -78,6 +78,7 @@ async def get_visibility_fanout(
     async for analysis, task, prompt, _audit, artifact in stream:
         events, _source = _select_events(artifact, task)
         _, state = _fanout_state(
+            provider_metadata=task.provider_metadata,
             events=events,
             search_used=bool(analysis.search_used),
             search_query_count=int(analysis.search_query_count or 0),

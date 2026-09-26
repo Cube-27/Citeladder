@@ -567,6 +567,8 @@ def test_coming_soon_providers_never_reach_the_active_write_surface() -> None:
         "claude",
         "gemini",
         "google_ai_overview",
+        "chatgpt_search",
+        "gemini_consumer",
     }
     coming_soon = {"grok", "perplexity", "copilot"}
     assert not coming_soon & set(MEASUREMENT_ROUTES)

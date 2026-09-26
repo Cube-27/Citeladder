@@ -7,6 +7,8 @@ import asyncio
 import contextlib
 import logging
 import uuid
+from dataclasses import replace
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,8 +39,8 @@ from app.core.config.provider_catalog import (
     CREDENTIAL_SOURCE_PLATFORM,
     ERROR_PARSE,
     PlatformCredentialUnavailableError,
-    is_search_surface,
     resolve_platform_credential,
+    uses_provider_tasks,
 )
 from app.core.config.task_queue import TASK_STATUS_LEASED, TASK_STATUS_RUNNING
 from app.core.security import decrypt_secret
@@ -63,8 +65,10 @@ from app.orchestration.provider_capacity import (
     acquire_provider_capacity,
     release_provider_capacity,
 )
+from app.workers.audit.search_surface_support import recovery_deadline
 from app.workers.audit_worker_support import (
     CallAttempt,
+    is_scraper_reconciliation,
     pace_provider_request,
 )
 from app.workers.audit_worker_support import (
@@ -136,13 +140,13 @@ class AuditExecutionMixin:
         context = await self._load_execution_context(task_id, audit_id)
         if context is None:
             return False
-        if is_search_surface(context.logical_engine):
+        if uses_provider_tasks(context.logical_engine):
             # A different execution SHAPE, not a different provider. An
             # observed surface is submitted and collected across several
             # claims of this same row, so it cannot run the single-call
             # attempt below; the branch is here, at the top, rather than
             # threaded through helpers that all assume one call.
-            return await self._run_search_surface(task_id, audit_id)
+            return await self._run_async_surface(context)
         rejection = _terminal_rejection(context)
         if rejection is not None:
             await self._fail_terminal(
@@ -185,6 +189,72 @@ class AuditExecutionMixin:
         attempt = await self._execute_with_capacity(context, capacity, adapter, request)
         await self._persist_attempt_outcome(context, attempt, request_snapshot)
         return False
+
+    async def _run_async_surface(self, context: _ExecutionContext) -> bool:
+        if context.connection_id is None or not context.connection_active:
+            return await self._run_search_surface(context.task_id, context.audit_id)
+        async with self._session_factory() as session:
+            task = await session.get(AuditTask, context.task_id)
+            if task is None:
+                return False
+            deadline = recovery_deadline(task)
+            scraper_reconciliation = is_scraper_reconciliation(task)
+            artifact_id = task.result_artifact_id
+            error_code = task.error_code
+        # A committed result or an expired deadline leaves only local work,
+        # which must never wait on provider capacity.
+        if artifact_id is not None:
+            await self._repair_surface_completion(
+                context.task_id, artifact_id, error_code
+            )
+            return False
+        if deadline and _utcnow() >= deadline:
+            return await self._run_search_surface(context.task_id, context.audit_id)
+        capacity = _capacity_request(
+            context, scraper_reconciliation=scraper_reconciliation
+        )
+        decision = await acquire_provider_capacity(
+            self._session_factory, request=capacity
+        )
+        if not decision.acquired:
+            if deadline and decision.available_at is not None:
+                decision = replace(
+                    decision, available_at=min(decision.available_at, deadline)
+                )
+            await self._park_capacity_wait(
+                task_id=context.task_id, audit_id=context.audit_id, decision=decision
+            )
+            return True
+        heartbeat = asyncio.create_task(
+            self._heartbeat_loop(context.task_id, max_expires_at=deadline)
+        )
+        try:
+            return await self._run_search_surface(context.task_id, context.audit_id)
+        finally:
+            heartbeat.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await heartbeat
+            await release_provider_capacity(
+                self._session_factory,
+                request=capacity,
+                outcome=CapacityOutcome(kind=CAPACITY_OUTCOME_FAILED),
+            )
+
+    async def _repair_surface_completion(
+        self, task_id: uuid.UUID, artifact_id: uuid.UUID, error_code: str | None
+    ) -> None:
+        """Finish the queue transition after an already-committed result."""
+        if error_code:
+            await self._queue.fail(
+                task_id=task_id,
+                owner=self.owner,
+                error_code=error_code,
+                error_detail="Provider task failed",
+            )
+        else:
+            await self._queue.succeed(
+                task_id=task_id, owner=self.owner, result_artifact_id=artifact_id
+            )
 
     async def _persist_attempt_outcome(
         self,
@@ -493,13 +563,15 @@ class AuditExecutionMixin:
             )
 
     async def _heartbeat_loop(
-        self, task_id: uuid.UUID
+        self, task_id: uuid.UUID, *, max_expires_at: datetime | None = None
     ) -> None:  # pragma: no cover - timing loop
         interval = max(1.0, audit_settings.heartbeat_interval_seconds)
         while True:
             await asyncio.sleep(interval)
             try:
-                await self._queue.heartbeat(task_id=task_id, owner=self.owner)
+                await self._queue.heartbeat(
+                    task_id=task_id, owner=self.owner, max_expires_at=max_expires_at
+                )
             except asyncio.CancelledError:
                 raise
             except Exception:

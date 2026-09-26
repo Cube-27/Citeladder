@@ -11,9 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.audits import TASK_STATUS_PENDING_RESERVATION
 from app.core.config.costs import ExpectedExecutionCost
-from app.core.config.dataforseo import DEFAULT_DEVICE, DEFAULT_LANGUAGE_CODE
+from app.core.config.dataforseo import (
+    DEFAULT_DEVICE,
+    DEFAULT_LANGUAGE_CODE,
+    dataforseo_settings,
+)
 from app.core.config.entitlements import CAPABILITY_REGISTRY
-from app.core.config.provider_catalog import is_search_surface
+from app.core.config.llm_scraper import PRODUCTS, request_settings
+from app.core.config.provider_catalog import uses_provider_tasks
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.domain.audits.frozen_plan import _FrozenPlan, _task_route_snapshot
 from app.domain.audits.funded_admission import (
@@ -32,7 +37,9 @@ from app.models.project import Project
 from app.models.prompt import Prompt
 
 
-def _frozen_search_snapshot(project: Project | None) -> dict[str, Any] | None:
+def _frozen_search_snapshot(
+    project: Project | None, engine: str
+) -> dict[str, Any] | None:
     """Freeze WHERE a search surface is observed from, at admission.
 
     A queued execution must never re-read mutable project settings. Without
@@ -49,6 +56,15 @@ def _frozen_search_snapshot(project: Project | None) -> dict[str, Any] | None:
     # the real value to be re-derived at read time — which is exactly the
     # "re-read it later" this function exists to prevent.
     return {
+        **(
+            {
+                "provider_product": PRODUCTS[engine],
+                "request_settings": request_settings(engine),
+                "recovery_deadline_hours": dataforseo_settings.recovery_deadline_hours,
+            }
+            if engine in PRODUCTS
+            else {}
+        ),
         "location_code": project.serp_location_code,
         "language_code": project.serp_language_code or DEFAULT_LANGUAGE_CODE,
         "device": project.serp_device or DEFAULT_DEVICE,
@@ -122,7 +138,9 @@ async def _create_audit_tasks(
             # The search context is frozen HERE, alongside the query, so a
             # task carries what it was actually asked to measure.
             request_snapshot=(
-                _frozen_search_snapshot(project) if is_search_surface(engine) else None
+                _frozen_search_snapshot(project, engine)
+                if uses_provider_tasks(engine)
+                else None
             ),
         )
         session.add(task)

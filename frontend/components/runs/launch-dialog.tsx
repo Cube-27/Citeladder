@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { promptsApi } from '@/lib/api/prompts';
@@ -9,7 +9,7 @@ import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@/lib/api/types';
-import { ENGINE_ORDER, isConfigured, isVerified } from '@/lib/providers/catalog';
+import { ENGINE_ORDER, isConfigured, isVerified, isConsumerEngine } from '@/lib/providers/catalog';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import {
   auditablePrompts,
@@ -27,9 +27,12 @@ function availableEngines(
   const verified = new Set<LogicalEngine>();
   const stored = new Set<LogicalEngine>();
   for (const connection of connections ?? []) {
+    if (!connection.active) continue;
     if (!isConfigured(connection)) continue;
     const target = isVerified(connection) ? verified : stored;
-    for (const route of connection.routes ?? []) target.add(route.logical_engine);
+    for (const route of connection.routes ?? []) {
+      if (route.active !== false) target.add(route.logical_engine);
+    }
   }
   return {
     configuredEngines: ENGINE_ORDER.filter((engine) => verified.has(engine)),
@@ -120,6 +123,17 @@ export function LaunchDialog({
   );
   const [promptSetId, setPromptSetId] = useState<string | null>(null);
   const [engines, setEngines] = useState<LogicalEngine[]>([]);
+  const initialized = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      initialized.current = false;
+      return;
+    }
+    if (!initialized.current && connectionsQuery.isSuccess) {
+      initialized.current = true;
+      setEngines(configuredEngines.filter(isConsumerEngine));
+    }
+  }, [open, connectionsQuery.isSuccess, configuredEngines]);
   const [repetitions, setRepetitions] = useState(DEFAULT_REPETITIONS);
   const [connectOpen, setConnectOpen] = useState(false);
   // `null` means the whole set. A caller that already fixed the prompts owns
@@ -144,11 +158,17 @@ export function LaunchDialog({
       fixedSelection.locked,
     ],
   );
+  // An engine whose route went inactive leaves the picker and the payload
+  // together; both render from this one reconciled selection.
+  const selectedEngines = useMemo(
+    () => engines.filter((engine) => configuredEngines.includes(engine)),
+    [engines, configuredEngines],
+  );
   const selection = {
     projectId,
     promptSetId: promptSelection.payloadPromptSetId,
     promptIds: promptSelection.promptIds,
-    engines,
+    engines: selectedEngines,
     repetitions,
     auditScope,
   };
@@ -198,8 +218,10 @@ export function LaunchDialog({
       batches={promptSelection.batches}
       batchIndex={batchIndex}
       setBatchIndex={setBatchIndex}
-      engines={engines}
-      setEngines={setEngines}
+      engines={selectedEngines}
+      setEngines={(update) =>
+        setEngines(typeof update === 'function' ? update(selectedEngines) : update)
+      }
       repetitions={repetitions}
       setRepetitions={setRepetitions}
       estimate={estimateQuery.data}

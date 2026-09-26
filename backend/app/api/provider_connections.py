@@ -51,6 +51,7 @@ from app.domain.providers.service import (
     get_connection,
     get_connection_states,
     list_connections,
+    provision_dataforseo_routes,
     run_connection_test,
     update_connection,
 )
@@ -163,6 +164,24 @@ async def delete_connection_endpoint(
         raise_api_error(status.HTTP_404_NOT_FOUND, _NOT_FOUND, cause=exc)
     except ProviderConnectionInUseError as exc:
         raise_api_error(status.HTTP_409_CONFLICT, str(exc), cause=exc)
+
+
+@router.post("/{connection_id}/provision-dataforseo-routes")
+async def provision_dataforseo_routes_endpoint(
+    connection_id: uuid.UUID,
+    ctx: _CredentialDep,
+    session: _SessionDep,
+) -> ProviderConnectionResponse:
+    try:
+        connection = await provision_dataforseo_routes(
+            session, workspace_id=ctx.workspace_id, connection_id=connection_id
+        )
+    except ProviderConnectionNotFoundError as exc:
+        raise_api_error(status.HTTP_404_NOT_FOUND, _NOT_FOUND, cause=exc)
+    except InvalidRouteError as exc:
+        raise_api_error(status.HTTP_400_BAD_REQUEST, str(exc), cause=exc)
+    await session.commit()
+    return connection_to_response(connection)
 
 
 @router.post(

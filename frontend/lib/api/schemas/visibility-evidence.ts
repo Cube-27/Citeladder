@@ -15,7 +15,13 @@ const uuid = () => z.uuid();
 // `VisibilityFanoutState`): `queries_available` (≥1 stored event has non-blank
 // query text), `count_only` (search used / count positive but no query text —
 // e.g. a legacy count-only row), `no_search` (neither signal present).
-export const visibilityFanoutStateSchema = z.enum(['queries_available', 'count_only', 'no_search']);
+export const visibilityFanoutStateSchema = z.enum([
+  'queries_available',
+  'count_only',
+  'no_search',
+  'unavailable',
+  'no_exposed_queries',
+]);
 
 // One normalized stored search event (backend `VisibilityEvidenceSearchEvent`).
 // Empty query strings are preserved verbatim (a count-only event); query text

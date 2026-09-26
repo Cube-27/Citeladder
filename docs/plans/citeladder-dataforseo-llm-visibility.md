@@ -2,10 +2,11 @@
 
 ## Summary and confirmed decisions
 
-Status: queued; plan saved on 26 September 2026. Feature implementation has not
-started. This document specifies future work, not shipped behavior or permission
-to execute it. The current assignment ends after saving this plan and its queued
-index entry.
+Status: implemented on 26 September 2026 in
+`codex/dataforseo-llm-visibility`. Merge, CI and live-provider acceptance remain
+pending. Live-provider acceptance is a
+separately authorized release gate. The initial scraper context allowlist is
+US/English; additional contexts require product-specific support evidence.
 
 Add DataForSEO ChatGPT and Gemini scraping alongside the existing API engines and
 Google AI Overview. Reuse the existing audit, credentials, queue, analysis, and
@@ -188,8 +189,6 @@ only on disposable data.
   live-provider acceptance.
 - Disable new admission if rollback is needed; retain historical evidence and
   allow accepted paid tasks to finish retrieval.
-- Excluded: using the existing onboarding web search/fetch research
-  provider (Keenable) as an AI-answer source, enrichment, platform-funded
-  scraping, new scoring formulas, and broader frontend redesign.
-- For the current request, save only the approved plan and queued index entry,
-  check documentation links/whitespace, and stop.
+- Keenable search/fetch research as an answer source, enrichment,
+  platform-funded scraping, new scoring formulas, and broader frontend
+  redesign are excluded.
