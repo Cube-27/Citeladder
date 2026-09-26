@@ -1,0 +1,71 @@
+{
+  "name": "domain_matches",
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "cases": [
+    {
+      "input": [
+        "shop.bestandless.com.au",
+        "bestandless.com.au"
+      ],
+      "output": true
+    },
+    {
+      "input": [
+        "bestandless.com.au",
+        "shop.bestandless.com.au"
+      ],
+      "output": false
+    },
+    {
+      "input": [
+        "notbestandless.com.au",
+        "bestandless.com.au"
+      ],
+      "output": false
+    },
+    {
+      "input": [
+        "www.example.com",
+        "https://example.com/"
+      ],
+      "output": true
+    },
+    {
+      "input": [
+        "",
+        "example.com"
+      ],
+      "output": false
+    },
+    {
+      "input": [
+        "example.com",
+        ""
+      ],
+      "output": false
+    },
+    {
+      "input": [
+        "EXAMPLE.com",
+        "example.COM"
+      ],
+      "output": true
+    },
+    {
+      "input": [
+        "a.example.com.",
+        "example.com"
+      ],
+      "output": false
+    },
+    {
+      "input": [
+        "[broken",
+        "example.com"
+      ],
+      "output": {
+        "raises": "ValueError"
+      }
+    }
+  ]
+}

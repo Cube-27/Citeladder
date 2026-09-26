@@ -1,0 +1,99 @@
+{
+  "name": "retrieval_provenance",
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "cases": [
+    {
+      "input": {
+        "request": {
+          "retrieval_enabled": true
+        },
+        "route": {
+          "retrieval_enabled": false
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "request": {
+          "retrieval_enabled": null
+        },
+        "route": {
+          "retrieval_enabled": 0
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "request": {},
+        "route": null,
+        "audit": {
+          "measurement_policy": {}
+        }
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "request": null,
+        "route": null,
+        "audit": {
+          "measurement_policy": {
+            "retrieval_enabled": "no"
+          }
+        }
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "request": [
+          "retrieval_enabled"
+        ],
+        "route": {
+          "retrieval_enabled": []
+        }
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "request": null,
+        "route": null,
+        "audit": {
+          "measurement_policy": [
+            true
+          ]
+        }
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "request": null,
+        "route": null,
+        "audit": null
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "request": {
+          "retrieval_enabled": 0.0
+        },
+        "route": null
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "request": {
+          "retrieval_enabled": {}
+        },
+        "route": null
+      },
+      "output": false
+    }
+  ]
+}

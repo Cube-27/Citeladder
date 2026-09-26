@@ -1,0 +1,11 @@
+/** Every product route the TypeScript service serves, by family. */
+import { aiReferralRoutes } from './ai-referrals.ts';
+import type { ProductRoute } from './define.ts';
+import { executionRoutes } from './executions.ts';
+import { visibilityRoutes } from './visibility.ts';
+
+export const PRODUCT_ROUTES: readonly ProductRoute[] = [
+  ...executionRoutes,
+  ...aiReferralRoutes,
+  ...visibilityRoutes,
+];

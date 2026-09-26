@@ -247,5 +247,58 @@
       "manage_members": "Workspace owner or admin access is required",
       "manage_credentials": "Workspace owner or admin access is required"
     }
+  },
+  "visibility": {
+    "logical_engines": [
+      "chatgpt",
+      "claude",
+      "gemini",
+      "google_ai_overview",
+      "chatgpt_search",
+      "gemini_consumer"
+    ],
+    "search_surface_engines": [
+      "google_ai_overview"
+    ],
+    "core_cohort": "core",
+    "organic_cohorts": [
+      "core"
+    ],
+    "requestable_cohorts": [
+      "commerce",
+      "comparison",
+      "core"
+    ],
+    "dashboard_audit_statuses": [
+      "completed",
+      "partially_completed"
+    ],
+    "brand_audit_scope": "brand",
+    "succeeded_task_status": "succeeded",
+    "measurement_policy_key": "measurement_policy",
+    "selection_max_runs": 100,
+    "evidence_default_limit": 100,
+    "evidence_max_limit": 500,
+    "overview_present_outcome": "ai_overview_present",
+    "successful_outcomes": [
+      "ai_overview_present",
+      "no_ai_overview"
+    ]
+  },
+  "analytics": {
+    "default_granularity": "day",
+    "snapshot_granularities": [
+      "day",
+      "month",
+      "week"
+    ],
+    "max_window_days": 480,
+    "preset_range_days": {
+      "30d": 30,
+      "90d": 90,
+      "1y": 365
+    },
+    "ai_referral_analyzer_version": "ai-referrals-v1",
+    "ai_referral_formula_version": "ai-referral-sessions-v1"
   }
 }

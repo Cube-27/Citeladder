@@ -93,6 +93,11 @@ describe('OpenAPI fragment parity', () => {
     );
   });
 
+  it('compares a property named like an annotation', () => {
+    const routes = (title: z.ZodType) => parityRoutes(parityResponse({ title })).slice(0, 1);
+    expect(tsFragment(routes(z.string()))).not.toEqual(tsFragment(routes(z.int())));
+  });
+
   it('refuses two contracts for one operation', () => {
     const [read] = parityRoutes();
     expect(() => openApiDocument([read!, read!])).toThrow(/Duplicate route contract/u);

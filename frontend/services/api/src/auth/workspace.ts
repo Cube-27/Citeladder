@@ -14,7 +14,8 @@ import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError, notFound } from '../errors.ts';
-import { parseUuid } from './session.ts';
+import { RequestValidationError } from '../http/params.ts';
+import { pydanticUuid, pythonUuid } from '../python/uuid.ts';
 
 export type WorkspaceCapability = keyof typeof policy.workspaces.denial_messages;
 
@@ -84,18 +85,51 @@ export function workspaceMember(
   capability?: WorkspaceCapability,
 ): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    const workspaceId = parseUuid(c.req.param('workspace_id'));
-    if (workspaceId === null) {
-      const errors = [
-        { loc: ['workspace_id'], message: 'Input should be a valid UUID', type: 'uuid_parsing' },
-      ];
-      throw new ApiError(422, 'workspace_id: Input should be a valid UUID', {
-        details: { errors },
-        retryable: false,
-      });
+    const parsed = pydanticUuid(c.req.param('workspace_id') ?? '');
+    if (!parsed.ok) {
+      throw new RequestValidationError([
+        { loc: ['workspace_id'], message: parsed.message, type: 'uuid_parsing' },
+      ]);
     }
-    const workspace = await resolveWorkspaceMember(db, c.get('user').id, workspaceId);
+    const workspace = await resolveWorkspaceMember(db, c.get('user').id, parsed.value);
     if (capability !== undefined) workspace.require(capability);
+    c.set('workspace', workspace);
+    await next();
+  };
+}
+
+/** The caller's earliest tenant membership, or 404. */
+async function defaultWorkspaceMember(db: Database, userId: string): Promise<WorkspaceContext> {
+  const member = await db
+    .selectFrom('workspace_members')
+    .innerJoin('workspaces', 'workspaces.id', 'workspace_members.workspace_id')
+    .select(['workspace_members.workspace_id', 'workspace_members.role'])
+    .where('workspace_members.user_id', '=', userId)
+    .where('workspaces.is_system', '=', false)
+    .orderBy('workspace_members.created_at', 'asc')
+    .limit(1)
+    .executeTakeFirst();
+  if (member === undefined) throw notFound('Workspace');
+  return new WorkspaceContext(member.workspace_id, member.role);
+}
+
+/**
+ * Resolve the active workspace for a flat route (mount after `sessionUser`):
+ * the `X-Workspace-Id` header when the client selects one, otherwise the
+ * caller's earliest tenant membership. Mirrors `require_active_workspace`;
+ * membership is verified either way, and a foreign workspace is a 404.
+ */
+export function activeWorkspace(db: Database): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    const selected = c.req.header('x-workspace-id');
+    let workspace: WorkspaceContext;
+    if (selected) {
+      const workspaceId = pythonUuid(selected);
+      if (workspaceId === null) throw new ApiError(400, 'Invalid X-Workspace-Id');
+      workspace = await resolveWorkspaceMember(db, c.get('user').id, workspaceId);
+    } else {
+      workspace = await defaultWorkspaceMember(db, c.get('user').id);
+    }
     c.set('workspace', workspace);
     await next();
   };

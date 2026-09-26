@@ -35,12 +35,27 @@ function isFrontend(path) {
 // Python inputs it is built from: the policy export and golden masters read
 // `app/core` and the workspace policy, and its Kysely types are generated
 // from the Alembic-migrated schema. The route-ownership gate also reads the
-// Python routers' OpenAPI families and the local ingress routes.
+// Python routers' OpenAPI families and every ingress Caddyfile, and golden
+// masters are regenerated from the Python leaves the service ports.
+const GOLDEN_MASTERED_PYTHON = new Set([
+  'backend/app/analysis/normalization.py',
+  'backend/app/analysis/position.py',
+  'backend/app/analysis/scoring.py',
+  'backend/app/connectors/answer_engines/grounding_redirect.py',
+  'backend/app/connectors/search_surfaces/contracts.py',
+  'backend/app/domain/analysis/brand_identity.py',
+  'backend/app/domain/analytics/schemas.py',
+  'backend/app/domain/audits/schemas.py',
+]);
+
 function isApiService(path) {
   return (
     path.startsWith('frontend/services/') ||
     path.startsWith('frontend/packages/') ||
     path === 'frontend/local-compose-routes.caddy' ||
+    path === 'frontend/apps/app/Caddyfile' ||
+    path === 'infra/gcp/runtime/Caddyfile' ||
+    GOLDEN_MASTERED_PYTHON.has(path) ||
     path.startsWith('backend/app/api/') ||
     path === 'backend/app/main.py' ||
     path === 'backend/scripts/export_openapi.py' ||
@@ -52,7 +67,7 @@ function isApiService(path) {
     (path.startsWith('backend/app/core/') && path.endsWith('.py')) ||
     path === 'backend/app/domain/workspaces/policy.py' ||
     path === 'backend/scripts/export_ts_platform.py' ||
-    path === 'backend/scripts/golden_masters.py' ||
+    /^backend\/scripts\/golden_masters(?:_\w+)?\.py$/u.test(path) ||
     path === 'backend/pyproject.toml' ||
     path === 'backend/uv.lock'
   );

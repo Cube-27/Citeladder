@@ -5,6 +5,8 @@
 # never touches, and because ``schemas.py`` is close enough to the module-size
 # ceiling that folding them in would leave no room for either.
 #
+# The selection's rates moved to the TypeScript API service with their route.
+#
 # Everything here is a PROJECTION of persisted rows -- ``AioObservation``,
 # ``AioEntityLink`` and the analysis rows the unchanged scorer already wrote.
 # No provider is called and nothing is recomputed (invariant 7).
@@ -78,43 +80,3 @@ class SearchSurfaceEvidence(BaseModel):
     retrieved_at: datetime | None = None
     links: list[AioLinkEvidence] = Field(default_factory=list)
     entities: list[SurfaceEntityEvidence] = Field(default_factory=list)
-
-
-class AioRateValue(BaseModel):
-    """One published rate, inseparable from what it divided by.
-
-    ``value`` is null for UNAVAILABLE and is never 0.0. A displayed 0% would
-    be a measurement claim nobody made.
-    """
-
-    numerator: int = 0
-    denominator: int = 0
-    denominator_kind: str = ""
-    value: float | None = None
-
-
-class AioCompetitorRate(BaseModel):
-    """One competitor's conditional mention rate, over overviews shown."""
-
-    name: str
-    rate: AioRateValue
-
-
-class SurfaceRatesResponse(BaseModel):
-    """The five AI Overview rates for one measurement selection.
-
-    ``excluded`` counts the observations that entered no denominator — failed
-    retrievals and parser errors. How many observations were unusable is
-    itself worth showing, and hiding it would let our own gaps read as the
-    brand's absence.
-    """
-
-    logical_engine: str = ""
-    successful: int = 0
-    with_overview: int = 0
-    excluded: int = 0
-    trigger_rate: AioRateValue = Field(default_factory=AioRateValue)
-    brand_mention_rate_when_present: AioRateValue = Field(default_factory=AioRateValue)
-    overall_brand_visibility: AioRateValue = Field(default_factory=AioRateValue)
-    owned_citation_rate_when_present: AioRateValue = Field(default_factory=AioRateValue)
-    competitor_mention_rates: list[AioCompetitorRate] = Field(default_factory=list)

@@ -22,8 +22,13 @@ import { ROUTE_CONTRACTS } from '../src/openapi/routes.ts';
 const repository = new URL('../../../../', import.meta.url);
 const frozenRoot = new URL('../golden/families/', import.meta.url);
 
-// The two ingress files: production's origin Caddy and local Compose.
-const INGRESS_FILES = ['infra/gcp/runtime/Caddyfile', 'frontend/local-compose-routes.caddy'];
+// Every ingress that proxies /api: production's origin Caddy, and locally the
+// combined-origin Compose ingress and the Vite app container.
+const INGRESS_FILES = [
+  'infra/gcp/runtime/Caddyfile',
+  'frontend/local-compose-routes.caddy',
+  'frontend/apps/app/Caddyfile',
+];
 
 // How each ingress file names the two API upstreams: the Python web process
 // on :8000 and the TypeScript service on its exported port.

@@ -1,0 +1,321 @@
+{
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "family": "ai-referrals",
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/projects/{project_id}/ai-referrals": {
+      "get": {
+        "tags": [
+          "ai-referrals"
+        ],
+        "summary": "Get Ai Referrals Endpoint",
+        "description": "Referral volume, share, and AI-source totals from a persisted snapshot.\n\n``range`` names a preset and resolves the newest persisted snapshot of\nthat LENGTH; ``from``/``to`` selects one exact persisted window. The\nresponse always reports the window it actually resolved.",
+        "operationId": "get_ai_referrals_endpoint_api_v1_projects__project_id__ai_referrals_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Range"
+            }
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "day",
+              "title": "Granularity"
+            }
+          },
+          {
+            "name": "x-workspace-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
+            }
+          },
+          {
+            "name": "citeladder_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Citeladder Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiReferralsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AiReferralSourceRow": {
+        "properties": {
+          "ai_source": {
+            "type": "string",
+            "title": "Ai Source"
+          },
+          "sessions": {
+            "type": "integer",
+            "title": "Sessions"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ai_source",
+          "sessions",
+          "share"
+        ],
+        "title": "AiReferralSourceRow",
+        "description": "One per-``ai_source`` referral breakdown row (window-level)."
+      },
+      "AiReferralsResponse": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Id"
+          },
+          "window_start": {
+            "type": "string",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "title": "Window End"
+          },
+          "granularity": {
+            "type": "string",
+            "title": "Granularity"
+          },
+          "referral_volume": {
+            "items": {
+              "$ref": "#/components/schemas/MetricSeriesPoint"
+            },
+            "type": "array",
+            "title": "Referral Volume"
+          },
+          "referral_share": {
+            "items": {
+              "$ref": "#/components/schemas/MetricSeriesPoint"
+            },
+            "type": "array",
+            "title": "Referral Share"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/AiReferralSourceRow"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "analyzer_version": {
+            "type": "string",
+            "title": "Analyzer Version"
+          },
+          "formula_version": {
+            "type": "string",
+            "title": "Formula Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "window_start",
+          "window_end",
+          "granularity",
+          "referral_volume",
+          "referral_share",
+          "sources",
+          "analyzer_version",
+          "formula_version"
+        ],
+        "title": "AiReferralsResponse",
+        "description": "``GET /projects/{id}/ai-referrals`` — persisted referral measures.\n\nServed from the persisted ``AiReferralsSnapshot`` matching\n``(window, granularity)``; an absent snapshot yields an empty payload\n(empty series and source breakdown), never a recomputation (invariant 7)."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MetricSeriesPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "MetricSeriesPoint",
+        "description": "One dated point of a metric series (``None`` = unmeasured bucket)."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

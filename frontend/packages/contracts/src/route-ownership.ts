@@ -12,7 +12,7 @@ export type RouteStack = 'python' | 'typescript';
 
 export const ROUTE_OWNERSHIP = {
   agent: 'python',
-  'ai-referrals': 'python',
+  'ai-referrals': 'typescript',
   'audit-schedules': 'python',
   audits: 'python',
   auth: 'python',
@@ -20,7 +20,7 @@ export const ROUTE_OWNERSHIP = {
   'brand-discoveries': 'python',
   commerce: 'python',
   demand: 'python',
-  executions: 'python',
+  executions: 'typescript',
   integrations: 'python',
   'mcp-connections': 'python',
   opportunities: 'python',
@@ -30,8 +30,22 @@ export const ROUTE_OWNERSHIP = {
   providers: 'python',
   'search-intelligence': 'python',
   'site-health': 'python',
-  visibility: 'python',
+  visibility: 'typescript',
   workspaces: 'python',
 } as const satisfies Record<string, RouteStack>;
 
 export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
+
+/**
+ * The ingress path patterns (Caddy `path` syntax, `*` within one segment)
+ * that reach the TypeScript service. Every ingress Caddyfile names these
+ * paths, which the route-ownership gate proves against both OpenAPI
+ * documents; the development proxy reads this list directly.
+ */
+export const TYPESCRIPT_INGRESS_PATHS = [
+  '/api/v1/executions/*',
+  '/api/v1/projects/*/ai-referrals',
+  '/api/v1/projects/*/visibility/sources/series',
+  '/api/v1/projects/*/visibility/sources/url',
+  '/api/v1/projects/*/visibility/surface-rates',
+] as const;

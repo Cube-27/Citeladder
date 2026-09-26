@@ -5,7 +5,7 @@ schema with the ORM/worker seeding so a fully-analyzed audit is reachable:
 
   - ``GET /audits/{id}/metrics`` serves the single-run snapshot;
   - ``GET /projects/{id}/visibility`` serves the dashboard projection;
-  - ``GET /executions/{id}`` serves one execution's evidence;
+  - the executions list's ids resolve in the execution-evidence reader;
   - ``GET /audits/{id}/export.{csv,md}`` download with the right media types;
   - all are auth-protected + workspace-scoped (a foreign workspace 404s).
 """
@@ -38,6 +38,7 @@ from app.core.config.provider_catalog import (
     measurement_route,
 )
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
+from app.domain.analysis.evidence import get_execution_evidence
 from app.domain.audits.creation import create_audit
 from app.models.analysis import MetricSnapshot
 from app.models.audit import Audit
@@ -178,10 +179,11 @@ async def test_endpoints_serve_projections_over_http(
     assert body["model_provenance"] == abody["model_provenance"]
     assert "mode" not in body
 
-    # Execution evidence. The executions list and the single-execution route
+    # Execution evidence. The executions list and the single-execution read
     # must share one id space: the id from GET /audits/{id}/executions must
-    # resolve at GET /executions/{id} (regression: it used to 404 because the
-    # single-execution route keyed on the internal analysis id).
+    # resolve in the evidence reader (regression: it used to 404 because the
+    # single-execution route keyed on the internal analysis id). The HTTP
+    # route moved to the TypeScript API service; MCP still reads this one.
     execs = await client.get(f"/api/v1/audits/{audit.id}/executions", headers=headers)
     assert execs.status_code == 200
     exec_rows = execs.json()
@@ -195,9 +197,13 @@ async def test_endpoints_serve_projections_over_http(
     assert first_row["retrieval_enabled"] is True
     assert "mode" not in first_row
     execution_id = exec_rows[0]["id"]
-    e = await client.get(f"/api/v1/executions/{execution_id}", headers=headers)
-    assert e.status_code == 200
-    ebody = e.json()
+    async with session_factory() as session:
+        evidence = await get_execution_evidence(
+            session,
+            workspace_id=seed.workspace_id,
+            task_id=_uuid.UUID(execution_id),
+        )
+    ebody = evidence.model_dump(mode="json")
     assert ebody["brand_mentioned"] is True
     # The returned id echoes the execution id the client passed in, and the
     # internal analysis id is surfaced separately for traceability.

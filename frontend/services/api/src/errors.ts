@@ -67,17 +67,24 @@ export class ApiError extends Error {
   readonly code: ApiErrorCode;
   readonly details?: Record<string, unknown>;
   readonly retryable?: boolean;
+  readonly headers?: Record<string, string>;
 
   constructor(
     status: ContentfulStatusCode,
     message: string,
-    options: { code?: ApiErrorCode; details?: Record<string, unknown>; retryable?: boolean } = {},
+    options: {
+      code?: ApiErrorCode;
+      details?: Record<string, unknown>;
+      retryable?: boolean;
+      headers?: Record<string, string>;
+    } = {},
   ) {
     super(message);
     this.status = status;
     this.code = options.code ?? defaultCode(status);
     this.details = options.details;
     this.retryable = options.retryable;
+    this.headers = options.headers;
   }
 
   isRetryable(): boolean {
@@ -110,6 +117,7 @@ export const onError: ErrorHandler = (error, c) => {
         details: error.details,
       }),
       error.status,
+      error.headers,
     );
   }
   if (error instanceof HTTPException) {

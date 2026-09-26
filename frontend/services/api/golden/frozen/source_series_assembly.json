@@ -1,0 +1,375 @@
+{
+  "name": "source_series_assembly",
+  "generated_by": "backend/scripts/freeze_retiring_goldens.py, retired with its Python owner in TypeScript migration PR 3",
+  "cases": [
+    {
+      "input": {
+        "rows": [
+          {
+            "key": "a.example",
+            "bucket": "2026-03-01T00:00:00+00:00",
+            "responses": 2,
+            "citations": 3
+          },
+          {
+            "key": "b.example",
+            "bucket": "2026-03-01T00:00:00+00:00",
+            "responses": 1,
+            "citations": 5
+          },
+          {
+            "key": "a.example",
+            "bucket": "2026-03-03T00:00:00+00:00",
+            "responses": 1,
+            "citations": 1
+          },
+          {
+            "key": "c.example",
+            "bucket": "2026-03-03T00:00:00+00:00",
+            "responses": 4,
+            "citations": 4
+          },
+          {
+            "key": "d.example",
+            "bucket": "2026-03-02T00:00:00+00:00",
+            "responses": 1,
+            "citations": 4
+          },
+          {
+            "key": "e.example",
+            "bucket": "2026-03-02T00:00:00+00:00",
+            "responses": 1,
+            "citations": 1
+          },
+          {
+            "key": "f.example",
+            "bucket": "2026-03-02T00:00:00+00:00",
+            "responses": 1,
+            "citations": 1
+          }
+        ],
+        "totals": {
+          "2026-03-01T00:00:00+00:00": 4,
+          "2026-03-02T00:00:00+00:00": 2,
+          "2026-03-03T00:00:00+00:00": 0
+        },
+        "dimension": "domain",
+        "granularity": "day",
+        "limit": 5
+      },
+      "output": {
+        "dimension": "domain",
+        "granularity": "day",
+        "buckets": [
+          "2026-03-01T00:00:00Z",
+          "2026-03-02T00:00:00Z",
+          "2026-03-03T00:00:00Z"
+        ],
+        "series": [
+          {
+            "key": "b.example",
+            "citations": 5,
+            "points": [
+              {
+                "at": "2026-03-01T00:00:00Z",
+                "responses": 1,
+                "share": 0.25
+              },
+              {
+                "at": "2026-03-02T00:00:00Z",
+                "responses": 0,
+                "share": 0.0
+              },
+              {
+                "at": "2026-03-03T00:00:00Z",
+                "responses": 0,
+                "share": null
+              }
+            ]
+          },
+          {
+            "key": "a.example",
+            "citations": 4,
+            "points": [
+              {
+                "at": "2026-03-01T00:00:00Z",
+                "responses": 2,
+                "share": 0.5
+              },
+              {
+                "at": "2026-03-02T00:00:00Z",
+                "responses": 0,
+                "share": 0.0
+              },
+              {
+                "at": "2026-03-03T00:00:00Z",
+                "responses": 1,
+                "share": null
+              }
+            ]
+          },
+          {
+            "key": "c.example",
+            "citations": 4,
+            "points": [
+              {
+                "at": "2026-03-01T00:00:00Z",
+                "responses": 0,
+                "share": 0.0
+              },
+              {
+                "at": "2026-03-02T00:00:00Z",
+                "responses": 0,
+                "share": 0.0
+              },
+              {
+                "at": "2026-03-03T00:00:00Z",
+                "responses": 4,
+                "share": null
+              }
+            ]
+          },
+          {
+            "key": "d.example",
+            "citations": 4,
+            "points": [
+              {
+                "at": "2026-03-01T00:00:00Z",
+                "responses": 0,
+                "share": 0.0
+              },
+              {
+                "at": "2026-03-02T00:00:00Z",
+                "responses": 1,
+                "share": 0.5
+              },
+              {
+                "at": "2026-03-03T00:00:00Z",
+                "responses": 0,
+                "share": null
+              }
+            ]
+          },
+          {
+            "key": "e.example",
+            "citations": 1,
+            "points": [
+              {
+                "at": "2026-03-01T00:00:00Z",
+                "responses": 0,
+                "share": 0.0
+              },
+              {
+                "at": "2026-03-02T00:00:00Z",
+                "responses": 1,
+                "share": 0.5
+              },
+              {
+                "at": "2026-03-03T00:00:00Z",
+                "responses": 0,
+                "share": null
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "key": "a.example",
+            "bucket": "2026-03-01T00:00:00+00:00",
+            "responses": 2,
+            "citations": 3
+          },
+          {
+            "key": "b.example",
+            "bucket": "2026-03-01T00:00:00+00:00",
+            "responses": 1,
+            "citations": 5
+          },
+          {
+            "key": "a.example",
+            "bucket": "2026-03-03T00:00:00+00:00",
+            "responses": 1,
+            "citations": 1
+          },
+          {
+            "key": "c.example",
+            "bucket": "2026-03-03T00:00:00+00:00",
+            "responses": 4,
+            "citations": 4
+          },
+          {
+            "key": "d.example",
+            "bucket": "2026-03-02T00:00:00+00:00",
+            "responses": 1,
+            "citations": 4
+          },
+          {
+            "key": "e.example",
+            "bucket": "2026-03-02T00:00:00+00:00",
+            "responses": 1,
+            "citations": 1
+          },
+          {
+            "key": "f.example",
+            "bucket": "2026-03-02T00:00:00+00:00",
+            "responses": 1,
+            "citations": 1
+          }
+        ],
+        "totals": {
+          "2026-03-01T00:00:00+00:00": 4,
+          "2026-03-02T00:00:00+00:00": 2,
+          "2026-03-03T00:00:00+00:00": 0
+        },
+        "dimension": "url",
+        "granularity": "day",
+        "limit": 2
+      },
+      "output": {
+        "dimension": "url",
+        "granularity": "day",
+        "buckets": [
+          "2026-03-01T00:00:00Z",
+          "2026-03-02T00:00:00Z",
+          "2026-03-03T00:00:00Z"
+        ],
+        "series": [
+          {
+            "key": "b.example",
+            "citations": 5,
+            "points": [
+              {
+                "at": "2026-03-01T00:00:00Z",
+                "responses": 1,
+                "share": 0.25
+              },
+              {
+                "at": "2026-03-02T00:00:00Z",
+                "responses": 0,
+                "share": 0.0
+              },
+              {
+                "at": "2026-03-03T00:00:00Z",
+                "responses": 0,
+                "share": null
+              }
+            ]
+          },
+          {
+            "key": "a.example",
+            "citations": 4,
+            "points": [
+              {
+                "at": "2026-03-01T00:00:00Z",
+                "responses": 2,
+                "share": 0.5
+              },
+              {
+                "at": "2026-03-02T00:00:00Z",
+                "responses": 0,
+                "share": 0.0
+              },
+              {
+                "at": "2026-03-03T00:00:00Z",
+                "responses": 1,
+                "share": null
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "rows": [
+          {
+            "key": "a.example",
+            "bucket": "2026-03-01T00:00:00+00:00",
+            "responses": 2,
+            "citations": 3
+          },
+          {
+            "key": "b.example",
+            "bucket": "2026-03-01T00:00:00+00:00",
+            "responses": 1,
+            "citations": 5
+          },
+          {
+            "key": "a.example",
+            "bucket": "2026-03-03T00:00:00+00:00",
+            "responses": 1,
+            "citations": 1
+          },
+          {
+            "key": "c.example",
+            "bucket": "2026-03-03T00:00:00+00:00",
+            "responses": 4,
+            "citations": 4
+          },
+          {
+            "key": "d.example",
+            "bucket": "2026-03-02T00:00:00+00:00",
+            "responses": 1,
+            "citations": 4
+          },
+          {
+            "key": "e.example",
+            "bucket": "2026-03-02T00:00:00+00:00",
+            "responses": 1,
+            "citations": 1
+          },
+          {
+            "key": "f.example",
+            "bucket": "2026-03-02T00:00:00+00:00",
+            "responses": 1,
+            "citations": 1
+          }
+        ],
+        "totals": {
+          "2026-03-01T00:00:00+00:00": 4,
+          "2026-03-02T00:00:00+00:00": 2,
+          "2026-03-03T00:00:00+00:00": 0
+        },
+        "dimension": "domain",
+        "granularity": "day",
+        "limit": 1
+      },
+      "output": {
+        "dimension": "domain",
+        "granularity": "day",
+        "buckets": [
+          "2026-03-01T00:00:00Z",
+          "2026-03-02T00:00:00Z",
+          "2026-03-03T00:00:00Z"
+        ],
+        "series": [
+          {
+            "key": "b.example",
+            "citations": 5,
+            "points": [
+              {
+                "at": "2026-03-01T00:00:00Z",
+                "responses": 1,
+                "share": 0.25
+              },
+              {
+                "at": "2026-03-02T00:00:00Z",
+                "responses": 0,
+                "share": 0.0
+              },
+              {
+                "at": "2026-03-03T00:00:00Z",
+                "responses": 0,
+                "share": null
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

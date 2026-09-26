@@ -14,12 +14,11 @@ import { demoAccessExpired, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
+import { pythonUuid } from '../python/uuid.ts';
 
 export type SessionClaims = Record<string, unknown>;
 
 export type SessionUser = { id: string; sessionVersion: number };
-
-const UUID_HEX = /^[0-9a-f]{32}$/iu;
 
 /**
  * Verify a session token as `decode_access_token` does, or return null.
@@ -47,18 +46,6 @@ export async function decodeSessionToken(
   }
 }
 
-/** `uuid.UUID(str(value))`, normalized to the canonical lowercase form. */
-export function parseUuid(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const hex = value
-    .replace(/^urn:uuid:/iu, '')
-    .replace(/^\{|\}$/gu, '')
-    .replaceAll('-', '');
-  if (!UUID_HEX.test(hex)) return null;
-  const lower = hex.toLowerCase();
-  return `${lower.slice(0, 8)}-${lower.slice(8, 12)}-${lower.slice(12, 16)}-${lower.slice(16, 20)}-${lower.slice(20)}`;
-}
-
 function unauthorized(message: string): ApiError {
   return new ApiError(401, message);
 }
@@ -70,7 +57,7 @@ export function sessionUser(config: ServiceConfig, db: Database): MiddlewareHand
     if (!token) throw unauthorized('Not authenticated');
 
     const claims = await decodeSessionToken(token, config.session.secretKey);
-    const userId = parseUuid(claims?.sub);
+    const userId = pythonUuid(claims?.sub);
     const tokenVersion = claims?.ver;
     if (userId === null || !Number.isInteger(tokenVersion)) throw unauthorized('Invalid token');
 

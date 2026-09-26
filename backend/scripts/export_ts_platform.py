@@ -11,6 +11,8 @@ Committed artifacts:
 * ``services/api/golden/openapi/parity.json`` -- the OpenAPI fragment
   FastAPI publishes for a fixture family, which proves the TS exporter and
   fragment normalization against Pydantic's schemas.
+* ``services/api/src/generated/unicode-casefold.json`` -- where Python's
+  ``str.casefold`` departs from lowercasing, which JavaScript lacks.
 * ``packages/contracts/src/generated/error-codes.ts`` -- the machine-code
   union: every error code declared by the modules in ``ERROR_CODE_MODULES``.
 
@@ -31,6 +33,7 @@ import json
 import sys
 import types
 import typing
+import unicodedata
 from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
@@ -38,6 +41,10 @@ from typing import Any
 
 from pydantic.fields import FieldInfo
 
+from app.connectors.search_surfaces.contracts import (
+    OUTCOME_AI_OVERVIEW_PRESENT,
+    SUCCESSFUL_OUTCOMES,
+)
 from app.core.config import (
     DEVELOPMENT_ENV_NAMES,
     INSECURE_SECRET_DEFAULTS,
@@ -48,10 +55,29 @@ from app.core.config import (
 )
 from app.core.config import errors as error_config
 from app.core.config import workspaces as workspace_config
+from app.core.config.analysis import (
+    VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
+    VISIBILITY_EVIDENCE_MAX_LIMIT,
+    VISIBILITY_SELECTION_MAX_RUNS,
+)
+from app.core.config.analytics import (
+    AI_REFERRAL_ANALYZER_VERSION,
+    AI_REFERRAL_FORMULA_VERSION,
+    ANALYTICS_DEFAULT_GRANULARITY,
+    ANALYTICS_MAX_WINDOW_DAYS,
+    ANALYTICS_PRESET_RANGE_DAYS,
+    ANALYTICS_SNAPSHOT_GRANULARITIES,
+)
 from app.core.config.api import (
     API_V1_PREFIX,
     READINESS_TIMEOUT_SECONDS,
     TS_API_SERVICE_PORT,
+)
+from app.core.config.audits import (
+    AUDIT_SCOPE_BRAND,
+    AUDIT_STATUS_COMPLETED,
+    AUDIT_STATUS_PARTIALLY_COMPLETED,
+    MEASUREMENT_POLICY_KEY,
 )
 from app.core.config.errors import (
     CODE_HTTP_ERROR,
@@ -59,6 +85,13 @@ from app.core.config.errors import (
     RETRYABLE_STATUSES,
     STATUS_DEFAULT_CODE,
 )
+from app.core.config.prompts import (
+    ORGANIC_PROMPT_COHORTS,
+    PROMPT_COHORT_CORE,
+    REQUESTABLE_PROMPT_COHORTS,
+)
+from app.core.config.provider_catalog import LOGICAL_ENGINES, is_search_surface
+from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.core.config.workspaces import (
     CAPABILITY_DENIAL_MESSAGES,
     CODE_WORKSPACE_ROLE_FORBIDDEN,
@@ -70,6 +103,7 @@ from scripts.openapi_fragments import family_fragment, parity_fragment
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
 SERVICE_ROOT = FRONTEND_ROOT / "services" / "api"
 CONFIG_PATH = SERVICE_ROOT / "src" / "generated" / "python-config.json"
+CASEFOLD_PATH = SERVICE_ROOT / "src" / "generated" / "unicode-casefold.json"
 GOLDEN_ROOT = SERVICE_ROOT / "golden"
 PARITY_PATH = GOLDEN_ROOT / "openapi" / "parity.json"
 FROZEN_FAMILIES_ROOT = GOLDEN_ROOT / "families"
@@ -172,6 +206,46 @@ def build_config() -> dict[str, Any]:
             "forbidden_code": CODE_WORKSPACE_ROLE_FORBIDDEN,
             "denial_messages": dict(CAPABILITY_DENIAL_MESSAGES),
         },
+        "visibility": _visibility_policy(),
+        "analytics": _analytics_policy(),
+    }
+
+
+def _visibility_policy() -> dict[str, Any]:
+    """What the persisted visibility readers select, filter and bound by."""
+    return {
+        # Catalog order, which is also the order error messages list them in.
+        "logical_engines": list(LOGICAL_ENGINES),
+        "search_surface_engines": [
+            engine for engine in LOGICAL_ENGINES if is_search_surface(engine)
+        ],
+        "core_cohort": PROMPT_COHORT_CORE,
+        "organic_cohorts": sorted(ORGANIC_PROMPT_COHORTS),
+        "requestable_cohorts": sorted(REQUESTABLE_PROMPT_COHORTS),
+        "dashboard_audit_statuses": [
+            AUDIT_STATUS_COMPLETED,
+            AUDIT_STATUS_PARTIALLY_COMPLETED,
+        ],
+        "brand_audit_scope": AUDIT_SCOPE_BRAND,
+        "succeeded_task_status": TASK_STATUS_SUCCEEDED,
+        "measurement_policy_key": MEASUREMENT_POLICY_KEY,
+        "selection_max_runs": VISIBILITY_SELECTION_MAX_RUNS,
+        "evidence_default_limit": VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
+        "evidence_max_limit": VISIBILITY_EVIDENCE_MAX_LIMIT,
+        "overview_present_outcome": OUTCOME_AI_OVERVIEW_PRESENT,
+        "successful_outcomes": sorted(SUCCESSFUL_OUTCOMES),
+    }
+
+
+def _analytics_policy() -> dict[str, Any]:
+    """The AI Referrals read vocabulary and the snapshot versions it serves."""
+    return {
+        "default_granularity": ANALYTICS_DEFAULT_GRANULARITY,
+        "snapshot_granularities": sorted(ANALYTICS_SNAPSHOT_GRANULARITIES),
+        "max_window_days": ANALYTICS_MAX_WINDOW_DAYS,
+        "preset_range_days": dict(ANALYTICS_PRESET_RANGE_DAYS),
+        "ai_referral_analyzer_version": AI_REFERRAL_ANALYZER_VERSION,
+        "ai_referral_formula_version": AI_REFERRAL_FORMULA_VERSION,
     }
 
 
@@ -212,10 +286,38 @@ def _render(payload: dict[str, Any]) -> str:
     return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
 
 
+def casefold_exceptions() -> dict[str, str]:
+    """Characters whose ``str.casefold`` differs from ``str.lower``.
+
+    JavaScript has no case folding, only lowercasing, so the TS service folds
+    a character through this table and lowercases every other one. Keyed by
+    code point (hex) so the file stays readable ASCII.
+    """
+    folds: dict[str, str] = {}
+    for code_point in range(sys.maxunicode + 1):
+        if 0xD800 <= code_point <= 0xDFFF:
+            continue
+        character = chr(code_point)
+        if character.casefold() != character.lower():
+            folds[f"{code_point:x}"] = character.casefold()
+    return folds
+
+
 def build_artifacts() -> dict[Path, str]:
     """Every artifact path mapped to its exact expected contents."""
     artifacts = {
         CONFIG_PATH: _render(build_config()),
+        # ASCII, so the table survives any editor or encoding it passes through.
+        CASEFOLD_PATH: json.dumps(
+            {
+                "generated_by": GENERATED_BY,
+                "unicode_version": unicodedata.unidata_version,
+                "folds": casefold_exceptions(),
+            },
+            indent=2,
+            ensure_ascii=True,
+        )
+        + "\n",
         ERROR_CODES_PATH: render_error_codes(),
         PARITY_PATH: _render({"generated_by": GENERATED_BY, **parity_fragment()}),
     }

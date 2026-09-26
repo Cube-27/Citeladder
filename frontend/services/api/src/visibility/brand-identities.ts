@@ -1,0 +1,74 @@
+/**
+ * The marks and websites behind recorded brand names.
+ *
+ * Ports `app/domain/analysis/brand_identity.py`, which Python keeps for the
+ * mention tables. A mention is persisted as a NAME, resolved against this
+ * project's brand and competitor records (every competitor alias included);
+ * the tracked brand wins a name collision, and a name that resolves to
+ * nothing has no mark rather than a borrowed one.
+ */
+import { policy } from '../config.ts';
+import type { Database } from '../db/database.ts';
+import { pyCasefold, pyCollapseWhitespace, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
+
+export type BrandIdentity = { logo_url: string | null; website: string | null };
+
+/** `identity_key`: whitespace-collapsed and case-folded. */
+export function identityKey(name: unknown): string {
+  return pyCasefold(pyCollapseWhitespace(pyStrOrEmpty(name)));
+}
+
+function brandLogoUrl(projectId: string): string {
+  return `${policy.api.prefix}/projects/${projectId}/logo`;
+}
+
+function competitorLogoUrl(projectId: string, competitorId: string): string {
+  return `${policy.api.prefix}/projects/${projectId}/competitors/${competitorId}/logo`;
+}
+
+function listOf(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+/** This project's marks keyed by `identityKey`; the project is already authorized. */
+export async function brandIdentities(
+  db: Database,
+  projectId: string,
+): Promise<Map<string, BrandIdentity>> {
+  const project = await db
+    .selectFrom('projects')
+    .select(['id', 'website_url'])
+    .where('id', '=', projectId)
+    .executeTakeFirst();
+  const found = new Map<string, BrandIdentity>();
+  if (project === undefined) return found;
+  const brand = await db
+    .selectFrom('brands')
+    .select(['name', 'logo_asset_id'])
+    .where('project_id', '=', projectId)
+    .executeTakeFirst();
+  if (brand?.name) {
+    found.set(identityKey(brand.name), {
+      logo_url: brand.logo_asset_id ? brandLogoUrl(project.id) : null,
+      website: project.website_url || null,
+    });
+  }
+  const competitors = await db
+    .selectFrom('competitors')
+    .select(['id', 'name', 'aliases', 'domains', 'logo_asset_id'])
+    .where('project_id', '=', projectId)
+    .orderBy('created_at')
+    .execute();
+  for (const competitor of competitors) {
+    const domains = listOf(competitor.domains).filter(pyTruthy).map(pyStrOrEmpty);
+    const identity = {
+      logo_url: competitor.logo_asset_id ? competitorLogoUrl(project.id, competitor.id) : null,
+      website: domains[0] ?? null,
+    };
+    for (const name of [competitor.name, ...listOf(competitor.aliases)]) {
+      const key = identityKey(name);
+      if (pyTruthy(name) && !found.has(key)) found.set(key, identity);
+    }
+  }
+  return found;
+}

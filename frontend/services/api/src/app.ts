@@ -1,8 +1,9 @@
 /**
  * The TypeScript API service application.
  *
- * Serves only liveness and readiness in this foundation: no product route
- * family is owned here yet, and nothing routes production traffic to it.
+ * Serves liveness, readiness and the route families the route-ownership
+ * manifest assigns to TypeScript (`routes/`); ingress sends only those paths
+ * here.
  */
 import { Hono } from 'hono';
 import { sql } from 'kysely';
@@ -11,8 +12,10 @@ import type { ServiceConfig } from './config.ts';
 import type { AppEnv } from './context.ts';
 import type { Database } from './db/database.ts';
 import { onError, onNotFound } from './errors.ts';
+import { apiNoStore } from './http/no-store.ts';
 import { getLogger } from './logging.ts';
 import { requestId } from './request-id.ts';
+import { PRODUCT_ROUTES } from './routes/index.ts';
 
 const logger = getLogger('api');
 
@@ -44,6 +47,7 @@ async function databaseReachable(db: Database, timeoutMs: number): Promise<boole
 export function createApp(config: ServiceConfig, db: Database): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.use(requestId(config.requestIdHeader));
+  app.use(apiNoStore());
   app.onError(onError);
   app.notFound(onNotFound);
 
@@ -56,6 +60,8 @@ export function createApp(config: ServiceConfig, db: Database): Hono<AppEnv> {
       ? c.json({ status: 'ready' })
       : c.json({ status: 'unavailable', database: 'down' }, 503),
   );
+
+  for (const route of PRODUCT_ROUTES) route.register(app, config, db);
 
   return app;
 }
