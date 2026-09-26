@@ -5,7 +5,8 @@
 CiteLadder's hosted MCP server is a read interface over persisted product
 owners. It owns OAuth authorization records and bounded tool delivery, not
 business data, generation or external mutation. Public client setup is served
-at /docs/mcp; engineering ownership is here.
+at `https://docs.citeladder.com/mcp/`; engineering ownership is here. The protocol
+endpoint remains on the configured apex origin, not the documentation hostname.
 
 ## Connection and consent
 

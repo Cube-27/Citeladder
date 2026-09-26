@@ -98,10 +98,11 @@ fails there. Composer chips let the user remove a reference before sending.
 
 On every Dashboard screen the top bar also opens the
 [agent panel](../frontend/components/agent/agent-panel.tsx), a right-side chat
-over the current screen. Screens offer it the same typed references through the
+over the current screen. Screens seed it through the
 [panel context](../frontend/lib/agent/panel-context.tsx) from rows they already
-hold: the open Site Health issue, or the open or visible Search Intelligence
-rows. Nothing is read from the DOM. The panel uses the same chats, runs and
+hold: the open or visible Search Intelligence rows as typed references, and
+the open Site Health issue as a prefilled question (issues have no reference
+type). Nothing is read from the DOM. The panel uses the same chats, runs and
 outputs; **Open in Agent** (or opening the output) continues the chat at
 `/agent/chats/:chatId`.
 

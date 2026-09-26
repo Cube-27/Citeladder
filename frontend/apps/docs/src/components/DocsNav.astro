@@ -1,0 +1,12 @@
+---
+import { articles, groups } from '../lib/content';
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+---
+<nav aria-label="Documentation" class="docs-nav">
+  {groups.map((group) => <section>
+    <h2 class="website-label">{group}</h2>
+    <ul>{articles.filter((article) => article.group === group).map((article) =>
+      <li><a href={article.href} aria-current={(article.href.replace(/\/$/, '') || '/') === path ? 'page' : undefined}>{article.title}</a></li>
+    )}</ul>
+  </section>)}
+</nav>

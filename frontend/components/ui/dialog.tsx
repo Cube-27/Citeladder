@@ -2,7 +2,7 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import { useInsertionEffect, useRef, type ReactNode } from 'react';
+import { useInsertionEffect, useRef, type ReactNode, type RefObject } from 'react';
 
 import { cn } from '@/lib/utils';
 import { Button } from './button';
@@ -10,7 +10,8 @@ import { Button } from './button';
 /**
  * Dialog (§8) — Radix modal. Scrim = --overlay-scrim, surface = bg-elevated,
  * shadow-modal, and the shared overlay radius. Header, body, and footer use
- * the modal-padding rhythm and include a built-in close button.
+ * the modal-padding rhythm and include a built-in close button. Focus opens on
+ * the first tabbable element (the close button) unless `initialFocusRef` is set.
  */
 export function Dialog({
   open,
@@ -20,6 +21,7 @@ export function Dialog({
   children,
   footer,
   className,
+  initialFocusRef,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -28,6 +30,7 @@ export function Dialog({
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  initialFocusRef?: RefObject<HTMLElement | null>;
 }>) {
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
@@ -51,6 +54,11 @@ export function Dialog({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="dialog-overlay bg-overlay-scrim z-overlay fixed inset-0" />
         <DialogPrimitive.Content
+          onOpenAutoFocus={(event) => {
+            if (!initialFocusRef?.current) return;
+            event.preventDefault();
+            initialFocusRef.current.focus();
+          }}
           onCloseAutoFocus={(event) => {
             const returnTarget = returnFocusRef.current;
             if (!returnTarget?.isConnected) return;

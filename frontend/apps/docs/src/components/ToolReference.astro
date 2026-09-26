@@ -1,0 +1,12 @@
+---
+import tools from '@/apps/marketing/src/data/mcp-tools.json';
+---
+<section class="docs-tool-reference docs-prose website-body-lg" aria-labelledby="registered-tools">
+  <h2 id="registered-tools">Registered tools</h2>
+  <p>The reference below is generated from the backend catalog. Your connected client’s catalog determines which tools are available on its server.</p>
+  {tools.tools.map((tool) => <details>
+    <summary><code>{tool.name}</code></summary>
+    <p>{tool.description}</p>
+    <p class="website-label">Parameters: {Object.keys(tool.input_schema.properties ?? {}).join(', ') || 'None'}</p>
+  </details>)}
+</section>

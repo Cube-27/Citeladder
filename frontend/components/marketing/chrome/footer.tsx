@@ -1,6 +1,7 @@
 import { ArrowUpRight } from 'lucide-react';
 
 import { LogoMark } from '@/components/ui/logo-mark';
+import { docsHref } from '@/lib/config/docs';
 
 import { COMPETITORS } from '@/lib/marketing-content/compare';
 import { FOOTER_LEGAL_LINKS, PARENT_COMPANY } from '@/lib/marketing-content/legal';
@@ -29,7 +30,9 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
     key: 'resources',
     label: 'Resources',
     links: [
+      { label: 'Docs', href: docsHref(), external: true },
       { label: 'Blog', href: '/blog' },
+      { label: 'Changelog', href: docsHref('/changelog/'), external: true },
       { label: 'FAQ', href: '/faq' },
     ],
   },

@@ -24,6 +24,8 @@
     "apps/app/**/*.tsx",
     "apps/marketing/**/*.ts",
     "apps/marketing/**/*.tsx",
+    "apps/docs/**/*.ts",
+    "apps/docs/**/*.tsx",
     "components/**/*.ts",
     "components/**/*.tsx",
     "lib/**/*.ts",

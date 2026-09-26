@@ -14,6 +14,7 @@ import {
   DropdownTrigger,
 } from '@/components/ui/dropdown';
 import { authApi } from '@/lib/api/auth';
+import { docsHref } from '@/lib/config/docs';
 import { useSession } from '@/lib/auth/session-guard';
 import { ICONS } from '@/lib/icons';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
@@ -72,7 +73,7 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
         </Link>
       </DropdownItem>
       <DropdownItem asChild>
-        <a href="/docs/mcp" target="_blank">
+        <a href={docsHref('/mcp/')} target="_blank" rel="noreferrer">
           <ArrowUpRight className="size-4 shrink-0" aria-hidden />
           <span>MCP</span>
         </a>

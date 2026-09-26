@@ -18,7 +18,6 @@ const staticRoutes: readonly RouteEntry[] = [
   { path: '/faq', changeFrequency: 'monthly', priority: 0.6 },
   { path: '/blog', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/compare', changeFrequency: 'monthly', priority: 0.6 },
-  { path: '/docs/mcp', changeFrequency: 'monthly', priority: 0.6 },
 ];
 
 const escapeXml = (value: string) =>

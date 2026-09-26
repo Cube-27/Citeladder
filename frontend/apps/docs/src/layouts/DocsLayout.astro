@@ -1,0 +1,73 @@
+---
+import { ArrowUpRight } from 'lucide-react';
+import { LogoMark } from '@/components/ui/logo-mark';
+import { buttonVariants } from '@/components/ui/button-variants';
+import PublicFonts from '@/components/marketing/chrome/PublicFonts.astro';
+import { docsHref } from '@/lib/config/docs';
+import DocsNav from '../components/DocsNav.astro';
+import { DocsSearch } from '../components/DocsSearch';
+import '../docs.css';
+
+interface Props {
+  title: string;
+  description: string;
+  headings?: { slug: string; text: string }[];
+  noindex?: boolean;
+}
+const { title, description, headings = [], noindex = false } = Astro.props;
+const path = Astro.url.pathname;
+const tabs = [
+  { href: '/', label: 'Guides', selected: !/^\/(agent|mcp|changelog)(\/|$)/.test(path) },
+  { href: '/agent/', label: 'Agent', selected: path.startsWith('/agent') },
+  { href: '/mcp/', label: 'MCP', selected: path.startsWith('/mcp') },
+  { href: '/changelog/', label: 'Changelog', selected: path.startsWith('/changelog') },
+];
+---
+<!doctype html>
+<html lang="en" data-public-surface>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>{title} · CiteLadder Docs</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={docsHref(path)} />
+    <link rel="icon" href="/citeladder-favicon.ico" sizes="any" />
+    <meta property="og:title" content={`${title} · CiteLadder Docs`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content={docsHref(path)} />
+    {noindex && <meta name="robots" content="noindex" />}
+    <PublicFonts />
+  </head>
+  <body class="bg-background text-foreground">
+    <a href="#main" class="skip-link">Skip to content</a>
+    <header class="docs-header">
+      <div class="docs-header-inner">
+        <a href="/" aria-label="CiteLadder documentation home" class="docs-brand"><LogoMark priority /><span class="website-label">Docs</span></a>
+        <div class="docs-search"><DocsSearch client:load /><noscript>Use the guide navigation below.</noscript></div>
+        <a href="https://app.citeladder.com" class={buttonVariants({ variant: 'ghost', size: 'md' })}>Open app <ArrowUpRight className="size-4" aria-hidden /></a>
+      </div>
+      <nav aria-label="Documentation sections" class="docs-tabs">
+        {tabs.map((tab) => <a href={tab.href} aria-current={tab.selected ? 'true' : undefined}>{tab.label}</a>)}
+      </nav>
+    </header>
+    <div class="docs-grid">
+      <aside class="docs-sidebar"><DocsNav /></aside>
+      <details class="docs-mobile-nav"><summary>Browse documentation</summary><DocsNav /></details>
+      <main id="main" class="docs-main" tabindex="-1">
+        {headings.length > 0 && <details class="docs-mobile-toc"><summary>On this page</summary><ul>{headings.map((heading) => <li><a href={`#${heading.slug}`}>{heading.text}</a></li>)}</ul></details>}
+        <slot />
+        <footer class="docs-footer website-label">
+          <span>CiteLadder documentation</span>
+          <a href="https://citeladder.com/contact">Get help</a>
+          <a href="https://citeladder.com/privacy">Privacy</a>
+        </footer>
+      </main>
+      <aside class="docs-toc" aria-label="On this page">
+        {headings.length > 0 && <><p class="website-label">On this page</p><ul>{headings.map((heading) => <li><a href={`#${heading.slug}`}>{heading.text}</a></li>)}</ul></>}
+        <a class="docs-toc-help" href="https://citeladder.com/contact">Need a hand? Get in touch <ArrowUpRight className="size-3" aria-hidden /></a>
+      </aside>
+    </div>
+  </body>
+</html>

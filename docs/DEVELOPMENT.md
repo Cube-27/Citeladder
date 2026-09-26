@@ -8,6 +8,28 @@ per-edit checklist. Preserve existing `.env` and `.env.local` files during setup
 
 ## Toolchain
 
+### Public documentation
+
+From `frontend/`, run `pnpm dev:docs` for the static docs site at
+`http://127.0.0.1:4322`. It needs no backend or live credentials. Production
+output is built with `pnpm build:docs`; `pnpm preview:docs` serves that output.
+`pnpm test:docs` rebuilds the site, then runs the isolated browser suite. Its artifacts
+land in the ignored `frontend/test-results/docs`.
+
+Articles live under `apps/docs/src/content/`. Each Markdown file supplies
+`title`, `description`, `group` and numeric `order`. Those values drive the
+route, grouped navigation, previous/next links, search index and sitemap.
+Keep changelog entries in `changelog.md`, distinguishing implementation dates
+from verified deployment. Validate content through the docs build and browser
+suite, including internal links and heading anchors.
+
+The docs asset preparation script copies the canonical logo, favicon and any
+locally available licensed fonts. Use the existing `pnpm fonts:pull` workflow
+when licensed font access is available; font binaries remain ignored. The
+repository check script includes the documentation build.
+
+### Versions
+
 | Tool | Version | Notes |
 |------|---------|-------|
 | Python | 3.12+ | Backend |

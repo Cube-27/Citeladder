@@ -194,6 +194,18 @@ jobs:
           retention-days: 7
       - name: Test duplication advisory
         run: pnpm report:duplicates:tests
+      - name: Install docs test browser
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Documentation browser checks
+        run: |
+          log="$(git rev-parse --absolute-git-dir)/docs-browser.log"
+          if pnpm test:docs > "$log" 2>&1; then
+            echo 'Documentation browser checks passed.'
+          else
+            status=$?
+            tail -n 80 "$log"
+            exit "$status"
+          fi
 
   contract:
     name: API contract (backend to frontend)
