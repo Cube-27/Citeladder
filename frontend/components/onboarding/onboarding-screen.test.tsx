@@ -584,6 +584,31 @@ describe('OnboardingScreen', () => {
     expect(visitedLocations).toEqual([onboardingUrl(), `/projects?project=${PROJECT_ID}`]);
   });
 
+  it('opens the committed project of a legacy completing discovery', async () => {
+    searchParams = `discovery=${DISCOVERY_ID}`;
+    discoveryState = {
+      ...discovery('completing', 'preparing_review'),
+      project_id: PROJECT_ID,
+    };
+    mswServer.use(
+      catalogHandler(),
+      // The committed creation is resolved through the project-detail read
+      // before the shell is navigated to, so the destination is usable on
+      // arrival rather than waiting on a list that predates the project.
+      http.get(`/api/v1/projects/${PROJECT_ID}`, () => HttpResponse.json(createdProject)),
+      http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () =>
+        HttpResponse.json(createdProject),
+      ),
+    );
+    renderOnboarding();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(`/projects?project=${PROJECT_ID}`),
+    );
+    expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
+    expect(visitedLocations).toEqual([onboardingUrl(), `/projects?project=${PROJECT_ID}`]);
+  });
+
   it('starts fresh when a persisted completion has lost its deleted project', async () => {
     searchParams = `discovery=${DISCOVERY_ID}&step=review`;
     discoveryState = discovery('project_created', 'complete');

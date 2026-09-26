@@ -25,7 +25,9 @@ out of scope (section 8).
    offering, an attribute, a buyer intent and a funnel stage. Users can pick several
    topics in one Generate request.
 7. **Review before tracking.** Generated prompts are proposals. The user multi-selects
-   accept or reject; only accepted prompts become active.
+   accept or reject; only accepted prompts become active and rejected ones are deleted.
+   Overview's next-action order stays unchanged (connect GSC/GA4 first); the separate
+   prompt setup card carries the empty-portfolio call to action.
 8. **Quality comes from a filter.** The model overgenerates; JEV (TypeSafe System One)
    gates each candidate; code keeps the best. JEV is optional at runtime and tests
    never call it. Exact thresholds need iteration from live testing.
@@ -129,8 +131,7 @@ Corrections found against the repository before implementation:
   subtopics come from attributes/use cases in confirmed business context.
 - **Proposed prompts:** a `proposed` prompt status. Proposals are excluded from audit
   admission, occupancy/capacity charging and visibility aggregates until accepted.
-  Rejected proposals are deleted (or retained as `rejected` evidence if the owner
-  wants rejection history; decide before implementation).
+  Rejected proposals are deleted (owner decision, 26 September 2026).
 
 ### 5.2 Pipeline
 

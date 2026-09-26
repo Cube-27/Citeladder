@@ -1,12 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
+import { Link, MemoryRouter, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { PromptsRouteContent } from './prompts-route-content';
 
 vi.mock('./prompt-library', () => ({
-  PromptLibrary: ({ openGenerate }: { openGenerate?: boolean }) => (
-    <p>{openGenerate ? 'generate dialog requested' : 'library'}</p>
+  PromptLibrary: ({ generateRequest }: { generateRequest?: number }) => (
+    <p>generate requests: {generateRequest ?? 0}</p>
   ),
 }));
 vi.mock('./your-prompts', () => ({ YourPrompts: () => <p>read view</p> }));
@@ -21,25 +22,35 @@ function renderAt(entry: string) {
     <MemoryRouter initialEntries={[entry]}>
       <PromptsRouteContent />
       <Location />
+      <Link to="/prompts?mode=manage&generate=1">Generate prompts</Link>
     </MemoryRouter>,
   );
 }
 
 describe('PromptsRouteContent', () => {
-  it('opens the Generate dialog once when arriving with the generate request', async () => {
+  it('requests the Generate dialog once when arriving with the generate parameter', async () => {
     renderAt('/prompts?mode=manage&generate=1&project=p1');
 
-    expect(await screen.findByText('generate dialog requested')).toBeInTheDocument();
+    expect(await screen.findByText('generate requests: 1')).toBeInTheDocument();
     // The request is consumed so a reload or back navigation does not reopen it.
     await waitFor(() =>
       expect(screen.getByTestId('location')).toHaveTextContent('/prompts?mode=manage&project=p1'),
     );
-    expect(screen.getByText('generate dialog requested')).toBeInTheDocument();
+    expect(screen.getByText('generate requests: 1')).toBeInTheDocument();
   });
 
-  it('opens the library without the dialog on a plain manage visit', async () => {
+  it('requests the dialog for each in-page navigation to the generate URL', async () => {
+    const user = userEvent.setup();
     renderAt('/prompts?mode=manage');
+    expect(await screen.findByText('generate requests: 0')).toBeInTheDocument();
 
-    expect(await screen.findByText('library')).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'Generate prompts' }));
+    expect(await screen.findByText('generate requests: 1')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(/^\/prompts\?mode=manage$/),
+    );
+
+    await user.click(screen.getByRole('link', { name: 'Generate prompts' }));
+    expect(await screen.findByText('generate requests: 2')).toBeInTheDocument();
   });
 });

@@ -244,7 +244,10 @@ export const brandDiscoverySchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
   project_id: uuid().nullable(),
-  status: z.enum(['queued', 'running', 'failed', 'ready', 'project_created']),
+  // `completing` is legacy: a discovery accepted before onboarding stopped
+  // generating prompts, until the worker drain finalizes it. Keep it while the
+  // backend retains LEGACY_DISCOVERY_STATUS_COMPLETING.
+  status: z.enum(['queued', 'running', 'failed', 'ready', 'completing', 'project_created']),
   progress: responseObject({
     phase: z.enum([
       'opening_website',

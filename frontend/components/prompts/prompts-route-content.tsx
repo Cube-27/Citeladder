@@ -15,9 +15,16 @@ function PromptsRouteSurface() {
   // Local override for the in-page toggle buttons; null = follow the URL.
   const [override, setOverride] = useState<boolean | null>(null);
   const managing = override ?? modeParam === 'manage';
-  // A one-shot request to open the Generate dialog. It is read once on arrival
-  // and removed so a reload or back navigation does not reopen the dialog.
-  const [openGenerate] = useState(() => searchParams.get(GENERATE_PROMPTS_PARAM) === '1');
+  // Each arrival with `generate=1`, on mount or by a later in-page navigation,
+  // is one request to open the Generate dialog. Counting it while rendering
+  // records it before the effect below consumes the parameter, so a reload or
+  // back navigation does not reopen the dialog.
+  const [generateRequest, setGenerateRequest] = useState(0);
+  const [countedParams, setCountedParams] = useState<URLSearchParams | null>(null);
+  if (searchParams.get(GENERATE_PROMPTS_PARAM) === '1' && countedParams !== searchParams) {
+    setCountedParams(searchParams);
+    setGenerateRequest((count) => count + 1);
+  }
   useEffect(() => {
     if (!searchParams.has(GENERATE_PROMPTS_PARAM)) return;
     const next = new URLSearchParams(searchParams);
@@ -31,7 +38,8 @@ function PromptsRouteSurface() {
     if (modeParam === 'manage') router('/prompts', { replace: true });
   };
 
-  if (managing) return <PromptLibrary onDoneManaging={exitManage} openGenerate={openGenerate} />;
+  if (managing)
+    return <PromptLibrary onDoneManaging={exitManage} generateRequest={generateRequest} />;
 
   return <YourPrompts />;
 }
