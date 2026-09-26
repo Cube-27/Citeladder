@@ -113,7 +113,11 @@ async def _change_role(
     await _authorized_operator(session, workspace_id, actor_id, lock_membership=True)
     _, member_id = await _member_by_email(session, workspace_id, email)
     await change_member_role(
-        session, workspace_id=workspace_id, member_id=member_id, role=role
+        session,
+        workspace_id=workspace_id,
+        member_id=member_id,
+        role=role,
+        actor_id=actor_id,
     )
     await session.commit()
     print("Role updated.")

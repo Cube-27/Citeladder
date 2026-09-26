@@ -32,6 +32,7 @@ from app.core.security import (
     create_access_token,
     decode_oauth_state,
 )
+from app.domain.auth.security_events import record_security_event
 from app.domain.auth.service import get_user_by_email, provision_new_account
 from app.domain.billing.bootstrap import ensure_billing_for_user_workspaces
 from app.models.user import User
@@ -215,6 +216,7 @@ async def complete_signin(
 
     user = await _resolve_account(session, provider=provider, identity=identity)
     await ensure_billing_for_user_workspaces(session, user)
+    record_security_event(session, event="auth.google_login", actor_id=user.id)
     await session.commit()
     token = create_access_token(str(user.id), token_version=user.session_version)
     logger.info(

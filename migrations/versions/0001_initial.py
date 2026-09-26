@@ -41,6 +41,20 @@ def _create_indexes(table: str, columns: tuple[str, ...]) -> None:
 
 def upgrade() -> None:
     op.create_table(
+        "enterprise_agreement_references",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("actor_id", sa.UUID(), nullable=False),
+        sa.Column("signatory_id", sa.UUID(), nullable=False),
+        sa.Column("reference", sa.String(128), nullable=False),
+        sa.Column("document_sha256", sa.String(64), nullable=False),
+        sa.Column("signed_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("workspace_id", "reference", name="uq_enterprise_agreement_reference"),
+    )
+    _create_indexes("enterprise_agreement_references", ("workspace_id",))
+    op.create_table(
         "provider_disclosures",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
@@ -7164,6 +7178,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_table("enterprise_agreement_references")
     op.drop_table("provider_disclosures")
     op.drop_table("web_acquisition_controls")
     op.drop_table("policy_acceptances")

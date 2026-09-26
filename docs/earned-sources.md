@@ -19,7 +19,7 @@ not involved here.
 audit terminalizes
   -> inventory of cited pages, redirect tokens marked unresolved
   -> atomic admission inside the project's rolling budget
-  -> polite third-party fetch, robots honoured on the host we land on
+  -> polite third-party fetch, robots checked before every redirect destination
   -> bounded page facts, quoted passages, no raw HTML retained
   -> per-project brand and competitor verdicts, roster frozen per verdict
   -> batch completion enqueues the Opportunity refresh
@@ -32,6 +32,14 @@ audit terminalizes
 Reads render persisted projections. Neither the Sources inventory nor a page
 detail fetches, enqueues or repairs. Inspection is either automatic selection
 or an explicit authorized command, never a side effect of looking.
+
+The inspector supplies a per-request gate to `SecureFetcher`: each URL,
+including same-host and cross-host redirects, must pass its destination's
+robots rules before the transport downloads it. Pacing honors the larger of
+the source-inspection floor and the declared crawl delay. Unsupported delays
+block acquisition; unavailable robots remains a retryable failure. Durable
+suppression is rechecked after waiting. The former final-host check after
+download is removed.
 
 ## Two distinctions that carry the whole feature
 

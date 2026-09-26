@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Awaitable, Callable
+from contextlib import AbstractAsyncContextManager, nullcontext
 from dataclasses import replace
 from urllib.parse import urljoin
 
@@ -139,6 +140,7 @@ class SecureFetcher:
         include_globs: list[str] | None = None,
         exclude_globs: list[str] | None = None,
         enforce_scope: bool = False,
+        request_slot: Callable[[str], AbstractAsyncContextManager[None]] | None = None,
     ) -> FetchResult:
         """Fetch one URL with manual, revalidated redirects and bounded traces."""
         enforce_admission(
@@ -169,26 +171,30 @@ class SecureFetcher:
                 enforce_scope=enforce_scope,
                 purpose=request.purpose,
             )
-            started = time.monotonic()
-            try:
-                result = await self._transport.fetch(
-                    replace(request, url=target.url),
-                    target,
-                    max_wire_bytes=max_wire,
-                    max_decoded_bytes=max_decoded,
-                    timeout_seconds=timeout,
-                )
-            except FetchError as exc:
-                self._trace(
-                    attempts,
-                    target=target,
-                    request=request,
-                    started=started,
-                    acquisition=acquisition,
-                    error=exc,
-                )
-                exc.attempts = tuple(attempts)
-                raise
+            async with request_slot(target.url) if request_slot else nullcontext():
+                if request_slot:
+                    # A stop may have been imposed while waiting for robots/pacing.
+                    await self._authorize_url(target.url)
+                started = time.monotonic()
+                try:
+                    result = await self._transport.fetch(
+                        replace(request, url=target.url),
+                        target,
+                        max_wire_bytes=max_wire,
+                        max_decoded_bytes=max_decoded,
+                        timeout_seconds=timeout,
+                    )
+                except FetchError as exc:
+                    self._trace(
+                        attempts,
+                        target=target,
+                        request=request,
+                        started=started,
+                        acquisition=acquisition,
+                        error=exc,
+                    )
+                    exc.attempts = tuple(attempts)
+                    raise
 
             location = result.redirect_location
             is_redirect = result.status_code in _REDIRECT_STATUSES and bool(location)

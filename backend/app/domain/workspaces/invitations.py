@@ -32,6 +32,7 @@ from app.core.config.workspaces import (
     INVITATION_TTL_HOURS,
     MAX_PENDING_INVITATIONS_PER_WORKSPACE,
 )
+from app.domain.auth.security_events import record_security_event
 from app.domain.workspaces.policy import ASSIGNABLE_WORKSPACE_ROLES
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceInvitation, WorkspaceMember
@@ -323,6 +324,14 @@ async def accept_invitation(
         role=invitation.role,
     )
     session.add(member)
+    await session.flush()
+    record_security_event(
+        session,
+        event="membership.join",
+        actor_id=user.id,
+        workspace_id=workspace.id,
+        target_id=member.id,
+    )
     invitation.accepted_at = now
     invitation.accepted_by_user_id = user.id
     await session.flush()

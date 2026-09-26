@@ -259,6 +259,7 @@ async def patch_workspace_member(
             workspace_id=ctx.workspace_id,
             member_id=member_id,
             role=payload.role,
+            actor_id=ctx.user.id,
         )
     except MembershipError as exc:
         await session.rollback()
@@ -283,7 +284,12 @@ async def delete_workspace_member(
 ) -> None:
     """Remove a member. The designated Owner cannot be removed."""
     try:
-        await remove_member(session, workspace_id=ctx.workspace_id, member_id=member_id)
+        await remove_member(
+            session,
+            workspace_id=ctx.workspace_id,
+            member_id=member_id,
+            actor_id=ctx.user.id,
+        )
     except MembershipError as exc:
         await session.rollback()
         _raise_membership(exc)
@@ -318,6 +324,7 @@ async def transfer_workspace_ownership(
             session,
             workspace_id=ctx.workspace_id,
             new_owner_member_id=payload.member_id,
+            actor_id=ctx.user.id,
         )
     except MembershipError as exc:
         await session.rollback()

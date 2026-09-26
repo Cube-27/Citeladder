@@ -49,6 +49,7 @@ from app.core.config.provider_catalog import (
     public_provider_routes,
 )
 from app.core.security import decrypt_secret, encrypt_secret
+from app.domain.auth.security_events import record_security_event
 from app.domain.billing.schemas import (
     ProviderConnectionStateResponse,
     ProviderConnectionStatesResponse,
@@ -269,6 +270,13 @@ async def create_connection(
         record_destination_acknowledgements(
             session, connection, payload.app_routes, actor_id
         )
+    record_security_event(
+        session,
+        event="credential.create",
+        actor_id=actor_id,
+        workspace_id=workspace_id,
+        target_id=connection.id,
+    )
     await session.commit()
     return await get_connection(
         session, workspace_id=workspace_id, connection_id=connection.id
@@ -353,6 +361,13 @@ async def update_connection(
         record_destination_acknowledgements(
             session, connection, payload.app_routes, actor_id
         )
+    record_security_event(
+        session,
+        event="credential.update",
+        actor_id=actor_id,
+        workspace_id=workspace_id,
+        target_id=connection.id,
+    )
     await session.commit()
     return await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id
@@ -364,6 +379,7 @@ async def delete_connection(
     *,
     workspace_id: uuid.UUID,
     connection_id: uuid.UUID,
+    actor_id: uuid.UUID,
 ) -> None:
     connection = await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id
@@ -380,6 +396,13 @@ async def delete_connection(
         )
     )
     await session.delete(connection)
+    record_security_event(
+        session,
+        event="credential.delete",
+        actor_id=actor_id,
+        workspace_id=workspace_id,
+        target_id=connection.id,
+    )
     try:
         await session.commit()
     except IntegrityError as exc:
