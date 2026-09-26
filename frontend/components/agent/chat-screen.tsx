@@ -1,6 +1,5 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText } from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -9,6 +8,12 @@ import { Composer } from '@/components/agent/composer';
 import { Conversation } from '@/components/agent/conversation';
 import { OutputPane } from '@/components/agent/output-pane';
 import { SkillPicker } from '@/components/agent/skill-picker';
+import {
+  useCancelRun,
+  useChatDetail,
+  useFollowUp,
+  type FollowUp,
+} from '@/components/agent/use-chat-turns';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
@@ -16,14 +21,10 @@ import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { agentWriteFailure } from '@/lib/agent/errors';
 import { agentHandoffHref } from '@/lib/agent/handoff';
-import { useRequestKey } from '@/lib/agent/idempotency';
 import { isRunActive } from '@/lib/agent/run-state';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
-import { agentMutations, agentQueries, type AgentChatDetail } from '@/lib/api/agent';
-import { queryKeys } from '@/lib/api/query-keys';
-import { AGENT_RUN_POLL_MS } from '@/lib/config/agent';
+import type { AgentChatDetail } from '@/lib/api/agent';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
 /** Below this width the output opens as a sheet instead of beside the chat. */
@@ -33,21 +34,12 @@ function compactOutput(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia(COMPACT_OUTPUT_QUERY).matches;
 }
 
-/**
- * One chat: the conversation on the left and its output on the right. Reads
- * never run the agent, so while a turn is active the persisted chat is polled
- * until the run reaches a terminal state.
- */
+/** One chat: the conversation on the left and its output on the right. */
 export function ChatScreen() {
   const { chatId = '' } = useParams();
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
   const workspaceId = activeWorkspaceId ?? '';
-  const query = useQuery({
-    ...agentQueries.chat(workspaceId, chatId),
-    enabled: Boolean(workspaceId && chatId),
-    refetchInterval: (state) =>
-      isRunActive(state.state.data?.latest_run) ? AGENT_RUN_POLL_MS : false,
-  });
+  const query = useChatDetail(workspaceId, chatId);
 
   if (query.isError)
     return (
@@ -92,7 +84,7 @@ function ChatView({
     setSheetOpen(compactOutput());
   };
   const turn = useFollowUp(workspaceId, detail);
-  const cancel = useCancel(workspaceId, chatId);
+  const cancel = useCancelRun(workspaceId, chatId);
 
   const pane = detail.output ? (
     <OutputPane
@@ -169,10 +161,10 @@ function ChatView({
   );
 }
 
-function FollowUpFailure({
+export function FollowUpFailure({
   turn,
   actionId,
-}: Readonly<{ turn: ReturnType<typeof useFollowUp>; actionId: string | null }>) {
+}: Readonly<{ turn: FollowUp; actionId: string | null }>) {
   if (!turn.failure) return null;
   return (
     <Alert tone="danger">
@@ -210,52 +202,4 @@ function ChatHeaderActions({
       ) : null}
     </>
   );
-}
-
-/** A follow-up turn: revises the chat's output when there is one. */
-function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
-  const chatId = detail.chat.id;
-  const [draft, setDraft] = useState('');
-  const [skillId, setSkillId] = useState<string | null>(null);
-  const [lastMessage, setLastMessage] = useState('');
-  const requestKey = useRequestKey();
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    ...agentMutations.sendMessage(workspaceId),
-    onSuccess: async () => {
-      requestKey.accepted();
-      setDraft('');
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(chatId) }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.agent.chatLists(detail.chat.project_id),
-        }),
-      ]);
-    },
-  });
-  const send = (message: string) => {
-    const text = message.trim();
-    if (!text) return;
-    setLastMessage(text);
-    const request = { chatId, message: text, skillId: skillId ?? undefined };
-    mutation.mutate({ ...request, idempotencyKey: requestKey.keyFor(request) });
-  };
-  return {
-    draft,
-    setDraft,
-    skillId,
-    setSkillId,
-    lastMessage,
-    send,
-    pending: mutation.isPending,
-    failure: mutation.isError ? agentWriteFailure(mutation.error) : null,
-  };
-}
-
-function useCancel(workspaceId: string, chatId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    ...agentMutations.cancelRun(workspaceId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(chatId) }),
-  });
 }

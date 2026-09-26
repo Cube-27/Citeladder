@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { agentHandoffHref } from '@/lib/agent/handoff';
+import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import type { SiteIssue, SiteIssueDetail } from '@/lib/api/types';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
@@ -44,6 +45,7 @@ export function IssueDetailRail({
   onNext: () => void;
 }>) {
   const detail = detailQuery.data;
+  useAgentPanelSeed({ prompt: askAgentPrompt(issue) });
   return (
     <section
       className="min-w-0 min-[701px]:sticky min-[701px]:top-[var(--workspace-gap)] min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))] min-[701px]:overflow-hidden"

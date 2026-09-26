@@ -96,6 +96,15 @@ drops a malformed id or URL rather than guessing. The context builder resolves
 and authorizes every reference when the run starts, so a stale or foreign id
 fails there. Composer chips let the user remove a reference before sending.
 
+On every Dashboard screen the top bar also opens the
+[agent panel](../frontend/components/agent/agent-panel.tsx), a right-side chat
+over the current screen. Screens offer it the same typed references through the
+[panel context](../frontend/lib/agent/panel-context.tsx) from rows they already
+hold: the open Site Health issue, or the open or visible Search Intelligence
+rows. Nothing is read from the DOM. The panel uses the same chats, runs and
+outputs; **Open in Agent** (or opening the output) continues the chat at
+`/agent/chats/:chatId`.
+
 ## Read tools
 
 The [tool catalog](../backend/app/domain/agent/tool_catalog.py) binds the same

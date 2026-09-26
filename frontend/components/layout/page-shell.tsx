@@ -8,6 +8,7 @@ import { pageToolbarClasses } from '@/components/ui/workspace';
 import { cn } from '@/lib/utils';
 
 import { CompactPageTitleContext } from './compact-page-title-context';
+import { navigationMode } from './nav-items';
 import { resolveTitle } from './page-titles';
 
 /**
@@ -167,10 +168,18 @@ function IdentityBand({ title, actions }: Readonly<{ title?: string; actions?: R
           </h1>
         </div>
         {actions ? (
-          // The shell paints the account glyph at the end of this same row, so
-          // route actions reserve its width instead of running underneath it.
-          // Desktop-only, because that is the only width the glyph appears at.
-          <div className="flex min-h-[var(--control-height)] shrink-0 flex-wrap items-center gap-2 min-[981px]:pe-[calc(var(--control-height)+0.75rem)]">
+          // The shell paints the theme toggle, the account glyph and, on
+          // Dashboard routes, the agent trigger at the end of this same row, so
+          // route actions reserve that width instead of running underneath it.
+          // Desktop-only, because that is the only width the glyphs appear at.
+          <div
+            className={cn(
+              'flex min-h-[var(--control-height)] shrink-0 flex-wrap items-center gap-2',
+              navigationMode(pathname) === 'dashboard'
+                ? 'min-[981px]:pe-[calc(3*var(--control-height)+1.25rem)]'
+                : 'min-[981px]:pe-[calc(2*var(--control-height)+1rem)]',
+            )}
+          >
             {actions}
           </div>
         ) : null}

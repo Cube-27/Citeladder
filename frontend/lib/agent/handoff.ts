@@ -28,7 +28,7 @@ export type AgentHandoff = {
   prompt?: string;
 };
 
-type HandoffInput = {
+export type HandoffInput = {
   actionId?: string | null;
   opportunityId?: string | null;
   demandSignalId?: string | null;
@@ -56,6 +56,30 @@ export function agentHandoffHref(input: HandoffInput): string {
   set(PARAM.prompt, input.prompt?.trim());
   const query = params.toString();
   return query ? `/agent?${query}` : '/agent';
+}
+
+/**
+ * The same references as a typed handoff, for the global agent panel. The
+ * caller's values come from persisted reads, and the server still resolves and
+ * authorizes each one when the chat is created.
+ */
+export function agentHandoff(input: HandoffInput): AgentHandoff {
+  const context: AgentContextRefs = {};
+  if (input.opportunityId) context.opportunity_id = input.opportunityId;
+  if (input.demandSignalId) context.demand_signal_id = input.demandSignalId;
+  if (input.siteUrlId) context.target_site_url_id = input.siteUrlId;
+  if (input.targetUrl) context.target_url = input.targetUrl;
+  if (input.searchIntelligence && input.searchIntelligence.rowIds.length > 0) {
+    context.search_intelligence_reference = {
+      dataset_id: input.searchIntelligence.datasetId,
+      row_ids: [...new Set(input.searchIntelligence.rowIds)],
+    };
+  }
+  return {
+    actionId: input.actionId ?? undefined,
+    context,
+    prompt: input.prompt?.trim() || undefined,
+  };
 }
 
 function uuidParam(params: URLSearchParams, key: string): string | undefined {

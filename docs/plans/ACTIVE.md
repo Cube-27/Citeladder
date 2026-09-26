@@ -2,6 +2,29 @@
 
 ## Active
 
+## Queued
+
+- [Demo and production hardening](citeladder-production-hardening.md)
+  — plan saved on 25 September 2026 from the supplied GCP and DAST reports.
+  Phase 1 hardens the current demo; Phase 2 waits for production policies.
+  Security alert implementation is deferred. Pending decisions and live
+  verification are recorded in the plan; saving it does not authorize execution.
+- [Audit remediation and enterprise readiness](citeladder-audit-remediation.md)
+  — plan saved on 25 September 2026; implementation deferred. Covers policies,
+  data lifecycle, security, MCP, crawler and operational readiness for the unified
+  Agent. Payment implementation is excluded; legal/management decisions remain
+  in the plan's final section. Saving this plan does not authorize execution.
+- [Subsequent prompt grounding](citeladder-subsequent-prompt-grounding.md)
+  — pending; relevance-ranked persisted GSC evidence for later Generate prompts.
+- [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
+  — pending; remaining evidence/action and selected-query generation work.
+
+The owner retained [shell/commercial follow-up](citeladder-authed-shell-and-commercial-architecture.md)
+for deferred sign-in selection and invitation delivery; it is not an active or
+additional queued assignment. Listed work is not authorization to execute it.
+
+## Last completed
+
 - [Workers migration — four sequential PRs](CiteLadder_Workers_Migration_Implementation_Plan.md)
   — implementation plan requested; PRs 1–4 run in separate chats after each
   predecessor merges. Follows the [architecture specification](CiteLadder_Workers_Migration_Architecture.md).
@@ -25,19 +48,6 @@
   (customer surfaces) implemented. Test-mode acceptance and the live sign-off
   follow.
   Payments stay disabled until that sign-off.
-
-## Queued
-
-- [Subsequent prompt grounding](citeladder-subsequent-prompt-grounding.md)
-  — pending; relevance-ranked persisted GSC evidence for later Generate prompts.
-- [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
-  — pending; remaining evidence/action and selected-query generation work.
-
-The owner retained [shell/commercial follow-up](citeladder-authed-shell-and-commercial-architecture.md)
-for deferred sign-in selection and invitation delivery; it is not an active or
-additional queued assignment. Listed work is not authorization to execute it.
-
-## Last completed
 
 [Discovery simplification](citeladder-discovery-simplification.md)
 — completion confirmed by the owner on 23 September 2026. This index update
@@ -74,9 +84,3 @@ endpoints, Vite owns authenticated routes, Caddy preserves same-origin API and
 bounded route ownership, and the Next runtime and migration adapters are gone.
 Focused engineering, browser, performance, and independent architecture gates
 passed; CI retains clean-container validation.
-
-[Design continuity and resource states](citeladder-design-continuity-and-resource-states.md)
-— completed on 13 September 2026. Safe shell/bootstrap recovery, Site Health
-read continuity, shareable Opportunities state, truthful analytical resource
-states, bounded loading/empty cleanup, and the Overview hierarchy are delivered
-with focused unit and controlled browser acceptance.

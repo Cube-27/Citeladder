@@ -13,7 +13,8 @@ import { ReadError } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
-import { agentHandoffHref } from '@/lib/agent/handoff';
+import { agentHandoffHref, type HandoffInput } from '@/lib/agent/handoff';
+import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import { httpErrorStatus } from '@/lib/api/errors';
 import {
   searchIntelligenceApi,
@@ -96,6 +97,7 @@ export function SearchIntelligenceDatasetView({
     activeProject?.workspace_id,
     params,
   );
+  useRowsPanelSeed(dataset.id, selected, page?.rows, title);
   const keywordDataset = [
     'ranking_keywords',
     'keyword_suggestions',
@@ -138,7 +140,9 @@ export function SearchIntelligenceDatasetView({
             <SearchIntelligenceExport dataset={dataset} params={params} />
             {rows.length > 0 ? (
               <Button size="sm" variant="secondary" asChild>
-                <ProjectLink href={rowsHandoffHref(dataset.id, rows, title)}>Ask agent</ProjectLink>
+                <ProjectLink href={agentHandoffHref(rowsHandoff(dataset.id, rows, title))}>
+                  Ask agent
+                </ProjectLink>
               </Button>
             ) : null}
             <DepthReviewAction onExpand={onExpand} />
@@ -196,24 +200,35 @@ export function SearchIntelligenceDatasetView({
   );
 }
 
+/** The agent panel starts from the open row, or else the rows on this page. */
+function useRowsPanelSeed(
+  datasetId: string,
+  selected: SearchIntelligenceRow | null,
+  pageRows: readonly SearchIntelligenceRow[] | undefined,
+  title?: string,
+): void {
+  const rows = selected ? [selected] : (pageRows ?? []);
+  useAgentPanelSeed(rows.length > 0 ? rowsHandoff(datasetId, rows, title) : null);
+}
+
 /**
  * Ask agent about saved rows. Only their ids travel; the server re-reads and
  * authorizes them. A table page never exceeds the 100-row reference cap.
  */
-function rowsHandoffHref(
+function rowsHandoff(
   datasetId: string,
   rows: readonly SearchIntelligenceRow[],
   title?: string,
-): string {
+): HandoffInput {
   const [first] = rows;
   const subject =
     rows.length === 1 && first
       ? `the Search Intelligence row for "${first.keyword || first.url || first.domain}"`
       : `these ${rows.length} ${title ?? 'Search Intelligence'} rows`;
-  return agentHandoffHref({
+  return {
     searchIntelligence: { datasetId, rowIds: rows.map((row) => row.id) },
     prompt: `Help me act on ${subject}.`,
-  });
+  };
 }
 
 function EvidenceDrawer({
@@ -231,7 +246,7 @@ function EvidenceDrawer({
     >
       {selected ? (
         <Button size="sm" variant="secondary" asChild className="w-fit">
-          <ProjectLink href={rowsHandoffHref(selected.dataset_id, [selected])}>
+          <ProjectLink href={agentHandoffHref(rowsHandoff(selected.dataset_id, [selected]))}>
             Ask agent about this row
           </ProjectLink>
         </Button>

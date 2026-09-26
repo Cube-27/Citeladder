@@ -565,7 +565,10 @@ the old keys (the demo) must be reset and re-provisioned after deploy.
 
 ### PR 4 — Global agent panel
 
-§11.4.
+§11.4. *Implemented 26 September 2026.* Screens publish typed references from
+persisted rows through a panel context; Site Health (open issue) and Search
+Intelligence (open or visible rows) publish them. The panel has no output editor;
+opening the output continues the chat in the workspace.
 
 ### Coverage (in the PR that introduces the behaviour)
 
