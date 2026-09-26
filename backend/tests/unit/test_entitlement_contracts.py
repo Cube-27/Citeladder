@@ -62,8 +62,7 @@ ALL_CAPABILITY_KEYS = (
     # admission on its own — see the key's comment in config.
     "serp_tasks_per_period",
     "site_health_page_fetches_per_period",
-    "content_creation",
-    "growth_agent",
+    "agent",
     "project_deletion",
 )
 

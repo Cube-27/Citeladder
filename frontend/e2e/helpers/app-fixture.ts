@@ -30,8 +30,7 @@ const FIXTURE_USER = {
 export const FIXTURE_WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 const PROJECT_SLOTS_GRANT_ID = '33333333-3333-4333-8333-333333333333';
-const CONTENT_CREATION_GRANT_ID = '55555555-5555-4555-8555-555555555555';
-const GROWTH_AGENT_GRANT_ID = '66666666-6666-4666-8666-666666666666';
+const AGENT_GRANT_ID = '66666666-6666-4666-8666-666666666666';
 const ENTITLEMENT_PERIOD_END = '2030-02-01T00:00:00Z';
 
 /** The one project allowance this fixture account has, used everywhere. */
@@ -63,17 +62,10 @@ const PERMITTED_ENTITLEMENT = {
       ordered_draw_grant_ids: [],
     },
     {
-      key: 'content_creation',
+      key: 'agent',
       capability_type: 'flag',
       value: true,
-      contributing_grant_ids: [CONTENT_CREATION_GRANT_ID],
-      ordered_draw_grant_ids: [],
-    },
-    {
-      key: 'growth_agent',
-      capability_type: 'flag',
-      value: true,
-      contributing_grant_ids: [GROWTH_AGENT_GRANT_ID],
+      contributing_grant_ids: [AGENT_GRANT_ID],
       ordered_draw_grant_ids: [],
     },
   ],
@@ -89,19 +81,9 @@ const PERMITTED_ENTITLEMENT = {
       catalog_revision: 'catalog-2030-01',
     },
     {
-      grant_id: CONTENT_CREATION_GRANT_ID,
+      grant_id: AGENT_GRANT_ID,
       source_kind: 'plan',
-      key: 'content_creation',
-      value: 1,
-      valid_from: '2030-01-01T00:00:00Z',
-      effective_valid_until: ENTITLEMENT_PERIOD_END,
-      revoked_at: null,
-      catalog_revision: 'catalog-2030-01',
-    },
-    {
-      grant_id: GROWTH_AGENT_GRANT_ID,
-      source_kind: 'plan',
-      key: 'growth_agent',
+      key: 'agent',
       value: 1,
       valid_from: '2030-01-01T00:00:00Z',
       effective_valid_until: ENTITLEMENT_PERIOD_END,

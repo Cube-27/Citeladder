@@ -243,19 +243,20 @@ async def test_the_agent_route_saves_without_key_echo_and_content_is_retired(
             "api_base_url": "https://models.example.com/v1",
         }
 
-    retired = await client.post(
-        "/api/v1/provider-connections",
-        json=_connection_payload(app_routes=[route("content")]),
-    )
-    assert retired.status_code == 422
+    for retired_feature in ("content", "growth_agent"):
+        retired = await client.post(
+            "/api/v1/provider-connections",
+            json=_connection_payload(app_routes=[route(retired_feature)]),
+        )
+        assert retired.status_code == 422
     response = await client.post(
         "/api/v1/provider-connections",
-        json=_connection_payload(app_routes=[route("growth_agent")]),
+        json=_connection_payload(app_routes=[route("agent")]),
     )
     assert response.status_code == 201
     body = response.json()
     assert [(item["feature"], item["verified"]) for item in body["app_routes"]] == [
-        ("growth_agent", False)
+        ("agent", False)
     ]
     _assert_no_secret(body)
 
@@ -270,7 +271,7 @@ async def test_app_route_destination_change_requires_key_and_confirmation(
         json=_connection_payload(
             app_routes=[
                 {
-                    "feature": "growth_agent",
+                    "feature": "agent",
                     "model": "customer-model",
                     "api_base_url": "https://models.example.com/v1",
                 }
@@ -280,7 +281,7 @@ async def test_app_route_destination_change_requires_key_and_confirmation(
     connection_id = created.json()["id"]
     changed_route = [
         {
-            "feature": "growth_agent",
+            "feature": "agent",
             "model": "customer-model",
             "api_base_url": "https://other.example.com/v1",
         }
@@ -474,7 +475,7 @@ async def test_stale_app_probe_failure_does_not_mark_new_route_unhealthy(
         json=_connection_payload(
             app_routes=[
                 {
-                    "feature": "growth_agent",
+                    "feature": "agent",
                     "model": "customer-model",
                     "api_base_url": "https://models.example.com/v1",
                 }

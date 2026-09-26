@@ -16,8 +16,7 @@ import type { ProviderConnection } from '@/lib/api/types';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 const CONNECTION_LABEL = 'Agent custom model';
-// The Agent's persisted route identifier predates the merged Agent runtime.
-const AGENT_ROUTE_FEATURE = 'growth_agent';
+const AGENT_ROUTE_FEATURE = 'agent';
 
 type AppModelForm = {
   baseUrl: string;

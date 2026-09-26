@@ -37,8 +37,7 @@ from app.core.config.billing_contracts import (
 from app.core.config.billing_pricing import inr_minor_from_usd_minor
 from app.core.config.entitlements import (
     CAPABILITY_REGISTRY,
-    KEY_CONTENT_CREATION,
-    KEY_GROWTH_AGENT,
+    KEY_AGENT,
     CapabilityType,
 )
 from app.core.config.provider_catalog import PUBLIC_PROVIDER_CATALOG
@@ -178,7 +177,7 @@ class AiCreditRatePayload(BaseModel):
     """One explicit finite credit rate for an exact app-model route."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
-    feature: Literal["growth_agent"]
+    feature: Literal["agent"]
     model: str = Field(min_length=1, max_length=255)
     input_credits_per_million: int = Field(ge=0)
     cached_input_credits_per_million: int = Field(ge=0)
@@ -282,13 +281,12 @@ def _plans_by_key(plans: tuple[PlanPayload, ...]) -> dict[str, PlanPayload]:
 
 
 def _validate_agent_capabilities(by_key: dict[str, PlanPayload]) -> None:
-    required_upper = {KEY_CONTENT_CREATION, KEY_GROWTH_AGENT}
     tier_1_keys = {grant.key for grant in by_key[PLAN_TIER_1].grants}
-    if required_upper & tier_1_keys:
+    if KEY_AGENT in tier_1_keys:
         raise ValueError("Tier 1 cannot grant the Agent")
     for key in (PLAN_TIER_2, PLAN_TIER_3):
         upper_keys = {grant.key for grant in by_key[key].grants}
-        if not required_upper.issubset(upper_keys):
+        if KEY_AGENT not in upper_keys:
             raise ValueError(f"{key} must grant the Agent")
 
 

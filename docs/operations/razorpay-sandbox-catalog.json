@@ -188,11 +188,7 @@
           "value": 1
         },
         {
-          "key": "content_creation",
-          "value": 1
-        },
-        {
-          "key": "growth_agent",
+          "key": "agent",
           "value": 1
         }
       ]
@@ -294,11 +290,7 @@
           "value": 1
         },
         {
-          "key": "content_creation",
-          "value": 1
-        },
-        {
-          "key": "growth_agent",
+          "key": "agent",
           "value": 1
         }
       ]

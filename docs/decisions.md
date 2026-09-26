@@ -55,8 +55,9 @@ implementation declaration.
 
 This removes two overlapping generation stacks, keeps MCP and the app from
 drifting into different reads, and gives repeated findings on one target one
-place to converge. Persisted `growth_agent` capability, route and rate keys are
-kept for catalog compatibility until a separate billing migration.
+place to converge. The retired `content_creation` and `growth_agent` keys were
+then renamed to one `agent` capability, route and rate key without read-time
+aliases; pre-launch, the demo database is reset instead (26 September 2026).
 
 Source: owner-settled [Agent workspace plan](plans/citeladder-action-center.md),
 25 September 2026. [Agent](agents.md) and [Opportunities](opportunities.md)

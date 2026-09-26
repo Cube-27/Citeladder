@@ -34,7 +34,7 @@ function entitlement(capabilities: readonly unknown[]) {
 function Probe() {
   const { isLoading, hasCapability } = useEntitlement();
   return (
-    <span data-testid="probe">{`${isLoading ? 'unresolved' : 'resolved'}:${hasCapability('growth_agent')}`}</span>
+    <span data-testid="probe">{`${isLoading ? 'unresolved' : 'resolved'}:${hasCapability('agent')}`}</span>
   );
 }
 
@@ -78,7 +78,7 @@ describe('EntitlementProvider', () => {
         HttpResponse.json(
           entitlement([
             {
-              key: 'growth_agent',
+              key: 'agent',
               type: 'flag',
               value: true,
               valid_until: null,

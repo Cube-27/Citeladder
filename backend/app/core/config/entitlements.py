@@ -80,14 +80,8 @@ KEY_SERP_TASKS_PER_PERIOD: Final = "serp_tasks_per_period"
 # Site Health page fetches per paid period. Scheduled and manual crawls share
 # one allowance; URL occupancy (``monitored_urls``) is a separate limit.
 KEY_SITE_HEALTH_PAGE_FETCHES: Final = "site_health_page_fetches_per_period"
-KEY_CONTENT_CREATION: Final = "content_creation"
-KEY_GROWTH_AGENT: Final = "growth_agent"
-# The Agent capability. Every paid tier grants ``growth_agent`` together with
-# ``content_creation`` (the catalog validator requires both), so gating the
-# merged Agent on this persisted key admits exactly the accounts either flag
-# admitted before. ``content_creation`` stays registered only because
-# persisted grants and published catalogs carry it; nothing gates on it.
-KEY_AGENT: Final = KEY_GROWTH_AGENT
+# The Agent capability: every model-backed Agent turn is admitted on it.
+KEY_AGENT: Final = "agent"
 KEY_PROJECT_DELETION: Final = "project_deletion"
 
 # Public-signup baseline. These are account-wide allowances; occupancy is
@@ -310,12 +304,7 @@ def _build_registry() -> CapabilityRegistry:
                 resolution_rule=ResolutionRule.SUM,
             ),
             CapabilityDefinition(
-                key=KEY_CONTENT_CREATION,
-                capability_type=CapabilityType.FLAG,
-                resolution_rule=ResolutionRule.ANY,
-            ),
-            CapabilityDefinition(
-                key=KEY_GROWTH_AGENT,
+                key=KEY_AGENT,
                 capability_type=CapabilityType.FLAG,
                 resolution_rule=ResolutionRule.ANY,
             ),
@@ -337,7 +326,7 @@ ENTITLEMENT_CACHE_MAX_ENTRIES: Final = 1024
 ENTITLEMENT_CACHE_MAX_TTL_SECONDS: Final = 300
 
 # One config-owned registry revision for the whole v8 entitlement layer.
-CAPABILITY_REGISTRY_REVISION: Final = "entitlements-v2"
+CAPABILITY_REGISTRY_REVISION: Final = "entitlements-v3"
 
 CAPABILITY_REGISTRY: Final = _build_registry()
 

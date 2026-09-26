@@ -65,7 +65,7 @@ class ProviderRouteInput(BaseModel):
 
 
 class ProviderAppRouteInput(BaseModel):
-    feature: Literal["growth_agent"]
+    feature: Literal["agent"]
     model: str = Field(min_length=1, max_length=255)
     api_base_url: str = Field(min_length=1, max_length=1024)
     protocol: Literal["openai_chat"] = APP_PROTOCOL_OPENAI_CHAT

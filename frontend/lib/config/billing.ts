@@ -8,8 +8,7 @@
 export const PROJECT_SLOTS_CAPABILITY = 'project_slots';
 /** Maximum wait for public pricing data before showing the unavailable state. */
 export const PUBLIC_CATALOG_TIMEOUT_MS = 3_000;
-export const CONTENT_CREATION_CAPABILITY = 'content_creation';
-export const GROWTH_AGENT_CAPABILITY = 'growth_agent';
+export const AGENT_CAPABILITY = 'agent';
 export const PROJECT_DELETION_CAPABILITY = 'project_deletion';
 
 /** Set on return from auth when a captured pricing intent should be resumed. */

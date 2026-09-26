@@ -2,12 +2,9 @@
 
 from typing import Final
 
-APP_FEATURE_GROWTH_AGENT: Final = "growth_agent"
-# The Agent is the one application model feature. It runs on the
-# ``growth_agent`` route and credit rate: the stored identifier predates the
-# merged Agent and is kept because published catalog revisions and customer
-# routes persist it.
-APP_FEATURE_AGENT: Final = APP_FEATURE_GROWTH_AGENT
+# The Agent is the one application model feature: its customer route and its
+# published credit rate are both keyed on this identifier.
+APP_FEATURE_AGENT: Final = "agent"
 APP_FEATURES: Final = frozenset({APP_FEATURE_AGENT})
 APP_PROTOCOL_OPENAI_CHAT: Final = "openai_chat"
 APP_MODEL_ALLOWED_PORTS: Final = frozenset({443})

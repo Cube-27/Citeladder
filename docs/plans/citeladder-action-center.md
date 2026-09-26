@@ -558,6 +558,10 @@ names them: marketing modules (`frontend/lib/marketing-content/` pricing, FAQ,
 `docs/operations/CiteLadder_Launch_Config.md`. Retiring the persisted
 `content_creation` / `growth_agent` capability keys is a separate billing
 migration and is not implied by the copy change.
+*Done (26 September 2026, owner-requested with PR 4):* one `agent` key replaces
+both for the capability, the app-model route and the credit rate. The owner
+chose a clean rename over read-time aliases, so an existing database that holds
+the old keys (the demo) must be reset and re-provisioned after deploy.
 
 ### PR 4 — Global agent panel
 

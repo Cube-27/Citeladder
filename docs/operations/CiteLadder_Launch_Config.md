@@ -146,8 +146,7 @@ plans:
     audit_credits_per_period: {funded: 1000, byok: 0}
     ai_credits_per_period: 0
     fanout: false
-    content_creation: false
-    growth_agent: false
+    agent: false
     support_tier: standard
     support_channel: email
 
@@ -166,8 +165,7 @@ plans:
     audit_credits_per_period: {funded: 3000, byok: 0}
     ai_credits_per_period: 500
     fanout: true
-    content_creation: true
-    growth_agent: true
+    agent: true
     support_tier: standard
     support_channel: email
 
@@ -186,8 +184,7 @@ plans:
     audit_credits_per_period: {funded: 6000, byok: 0}
     ai_credits_per_period: 1500
     fanout: true
-    content_creation: true
-    growth_agent: true
+    agent: true
     support_tier: priority
     support_channel: email
 
@@ -250,13 +247,13 @@ byok:
   remaining_platform_funded_services:
     - crawling_within_included_limits
     - basic_platform_analysis
-    - included_content_and_growth_agent_ai_credits
+    - included_agent_ai_credits
   discount_applies_to: visibility_inference_funding_only
   promise_total_provider_plus_platform_savings: false
 
 workflow_ai:
   entitlement_key: ai_credits
-  features: [content_creation, growth_agent]
+  features: [agent]
   separate_from_visibility_answer_credits: true
   model_cost_budget_usd_per_credit: 0.01
   model_cost_budget_microusd_per_credit: 10000
@@ -412,8 +409,7 @@ trial:
   promise_seven_complete_daily_refreshes: false
   daily_credit_reset: false
   claim_limit_per_billing_account_lifetime: 1
-  content_creation: false
-  growth_agent: false
+  agent: false
   ai_credits_total: 0
   expiry_stops_new_paid_execution: true
 
@@ -455,7 +451,7 @@ checkout_release_requirements:
     - verified_runtime_token_search_and_reasoning_rate_cards
     - route_capacity_configured_and_tested
     - answer_reservations_scheduled_coverage_and_settlement_verified
-  content_and_growth_agent:
+  agent:
     - verified_published_ai_credit_policy
     - model_call_caps_and_credit_enforcement_verified
   expansions:
