@@ -56,25 +56,12 @@ from app.core.telemetry import (
     generate_correlation_id,
     instrument_fastapi,
     reset_correlation_id,
+    sanitize_correlation_id,
     set_correlation_id,
 )
 from app.domain.mcp.server import McpDispatchMiddleware, mcp_app, mcp_server
 
 logger = logging.getLogger("app")
-
-
-def _sanitize_correlation_id(value: str) -> str:
-    """Reject a client-supplied correlation id that is unsafe to echo back.
-
-    The id is reflected into a response header, so any control character
-    (notably CR/LF) could split the response (header injection). Accept only a
-    bounded run of unreserved token characters; anything else is treated as
-    absent so a fresh server-generated id is used instead.
-    """
-    candidate = value.strip()
-    if 0 < len(candidate) <= 128 and all(c.isalnum() or c in "-_." for c in candidate):
-        return candidate
-    return ""
 
 
 # Explicit router stubs registered now so B2–B6 fill them in place. Each router
@@ -163,7 +150,7 @@ def create_app() -> FastAPI:
     async def correlation_middleware(request: Request, call_next) -> Response:
         header_name = settings.request_id_header
         supplied = request.headers.get(header_name) or ""
-        correlation_id = _sanitize_correlation_id(supplied) or generate_correlation_id()
+        correlation_id = sanitize_correlation_id(supplied) or generate_correlation_id()
         request.state.correlation_id = correlation_id
         token = set_correlation_id(correlation_id)
         try:

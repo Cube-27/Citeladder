@@ -14,6 +14,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import demo_access_expired, settings
+from app.core.config.workspaces import (
+    CAPABILITY_DENIAL_MESSAGES,
+    CODE_WORKSPACE_ROLE_FORBIDDEN,
+)
 from app.core.database import get_session
 from app.core.http_errors import raise_api_error, raise_not_found
 from app.core.security import decode_access_token
@@ -119,8 +123,8 @@ class WorkspaceContext:
         if not self.allows(capability):
             raise_api_error(
                 status.HTTP_403_FORBIDDEN,
-                _DENIAL[capability],
-                code="workspace_role_forbidden",
+                CAPABILITY_DENIAL_MESSAGES[capability],
+                code=CODE_WORKSPACE_ROLE_FORBIDDEN,
             )
 
 
@@ -224,20 +228,6 @@ async def require_active_workspace(
 # ``app.domain.workspaces.policy``; a route selects the alias that names what
 # it actually does. Hiding a control in the browser is never the boundary —
 # these are.
-
-#: Three capabilities refuse with the same sentence. Naming it keeps them
-#: answering identically: a caller that probes two of them must not be able to
-#: tell from the wording which one it hit.
-_OWNER_OR_ADMIN_REQUIRED = "Workspace owner or admin access is required"
-
-_DENIAL: dict[WorkspaceCapability, str] = {
-    WorkspaceCapability.READ: "Workspace access is required",
-    WorkspaceCapability.WRITE: "Workspace member access is required",
-    WorkspaceCapability.RUN: "Workspace member access is required",
-    WorkspaceCapability.MANAGE_BILLING: _OWNER_OR_ADMIN_REQUIRED,
-    WorkspaceCapability.MANAGE_MEMBERS: _OWNER_OR_ADMIN_REQUIRED,
-    WorkspaceCapability.MANAGE_CREDENTIALS: _OWNER_OR_ADMIN_REQUIRED,
-}
 
 
 def _gated(
