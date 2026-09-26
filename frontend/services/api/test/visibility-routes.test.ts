@@ -525,6 +525,10 @@ describe('GET /projects/{project_id}/visibility/sources/*', () => {
       query: { from: '2026-03-01T00:00:00Z', to: '2026-02-01T00:00:00+05:30' },
     });
     expect(reversed.body.detail).toBe("'from' must not be after 'to'");
+    // A numeric timestamp beyond the years a datetime holds is malformed input.
+    const outOfRange = await get(tenant, path, { query: { from: '99999999999999999' } });
+    expect(outOfRange.status).toBe(422);
+    expect(outOfRange.body.error).toMatchObject({ code: 'validation_error' });
   });
 
   it('reads nothing across workspaces', async () => {

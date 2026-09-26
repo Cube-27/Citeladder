@@ -15,9 +15,10 @@ function isOffset(value: unknown): value is number {
 
 /** The brand's 1-based rank among the brands named in one answer, or null. */
 export function brandPosition(brandOffset: unknown, competitorOffsets: Offsets): number | null {
-  if (brandOffset === null || brandOffset === undefined) return null;
+  // Unnamed, unresolved or malformed: no rank, never a guessed one.
+  if (!isOffset(brandOffset)) return null;
   const ahead = Object.values(competitorOffsets).filter(
-    (offset) => isOffset(offset) && offset < (brandOffset as number),
+    (offset) => isOffset(offset) && offset < brandOffset,
   ).length;
   return ahead + 1;
 }
@@ -26,11 +27,11 @@ export function brandPosition(brandOffset: unknown, competitorOffsets: Offsets):
 export function competitorPosition(score: Offsets, name: string): number | null {
   const offsets = (score.competitor_first_offsets || {}) as Offsets;
   const own = Object.hasOwn(offsets, name) ? offsets[name] : null;
-  if (own === null || own === undefined) return null;
+  if (!isOffset(own)) return null;
   const brandOffset = score.brand_first_offset;
   let ahead = Object.entries(offsets).filter(
-    ([other, offset]) => other !== name && isOffset(offset) && offset < (own as number),
+    ([other, offset]) => other !== name && isOffset(offset) && offset < own,
   ).length;
-  if (isOffset(brandOffset) && brandOffset < (own as number)) ahead += 1;
+  if (isOffset(brandOffset) && brandOffset < own) ahead += 1;
   return ahead + 1;
 }

@@ -73,6 +73,7 @@ function asObject(value: unknown): JsonObject {
 
 async function composedEntities(
   db: Database,
+  workspaceId: string,
   analysis: ScoredAnalysis | null,
   links: readonly AioLinkEvidence[],
   auditId: string,
@@ -81,6 +82,7 @@ async function composedEntities(
     .selectFrom('audits')
     .select('configuration')
     .where('id', '=', auditId)
+    .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
   // No analysis means no answer was ever scored: nothing to compose.
   if (analysis === null || audit === undefined) return [];
@@ -91,6 +93,7 @@ async function composedEntities(
     .selectFrom('citations')
     .select(['is_owned', 'matched_competitor'])
     .where('analysis_id', '=', analysis.id)
+    .where('workspace_id', '=', workspaceId)
     .execute();
   const cited = new Set(
     citations.flatMap((row) => (row.matched_competitor ? [row.matched_competitor] : [])),
@@ -101,6 +104,7 @@ async function composedEntities(
         .selectFrom('competitor_mentions')
         .select('competitor_name')
         .where('analysis_id', '=', analysis.id)
+        .where('workspace_id', '=', workspaceId)
         .execute()
     ).map((row) => row.competitor_name),
   );
@@ -191,7 +195,13 @@ export async function executionSurfaceEvidence(
     observed_at: pydanticUtcOrNull(observation.observed_at),
     retrieved_at: pydanticUtcOrNull(observation.retrieved_at),
     links,
-    entities: await composedEntities(db, input.analysis, links, observation.audit_id),
+    entities: await composedEntities(
+      db,
+      input.workspaceId,
+      input.analysis,
+      links,
+      observation.audit_id,
+    ),
   };
 }
 

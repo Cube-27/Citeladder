@@ -164,6 +164,11 @@ function fromEpochMicros(micros: bigint): ParsedDatetime {
   };
 }
 
+/** A timestamp outside the years a `datetime` holds is no timestamp at all. */
+function inRange(value: ParsedDatetime): ParsedDatetime | null {
+  return Number.isNaN(value.year) || value.year < 1 || value.year > 9999 ? null : value;
+}
+
 /** speedate's Unix-timestamp reading of a numeric string, or null. */
 function timestamp(text: string): ParsedDatetime | null {
   const match = /^([+-]?)(\d+)(?:\.(\d+))?$/u.exec(text);
@@ -175,13 +180,14 @@ function timestamp(text: string): ParsedDatetime | null {
   if (decimals === undefined) {
     const value = negative ? -integral : integral;
     const abs = value < 0n ? -value : value;
-    if (abs > MILLISECOND_WATERSHED) return fromEpochMicros(value * 1000n);
-    return fromEpochMicros(value * MICROSECONDS_PER_SECOND);
+    if (abs > MILLISECOND_WATERSHED) return inRange(fromEpochMicros(value * 1000n));
+    return inRange(fromEpochMicros(value * MICROSECONDS_PER_SECOND));
   }
   const value = Number(`${sign}${whole}.${decimals}`);
   const floor = Math.floor(value);
   const micros = Math.round((value - floor) * 1_000_000);
-  return fromEpochMicros(BigInt(floor) * MICROSECONDS_PER_SECOND + BigInt(micros));
+  if (!Number.isFinite(floor)) return null;
+  return inRange(fromEpochMicros(BigInt(floor) * MICROSECONDS_PER_SECOND + BigInt(micros)));
 }
 
 const encoder = new TextEncoder();
