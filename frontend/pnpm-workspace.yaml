@@ -1,3 +1,9 @@
+# One workspace rooted here (TypeScript migration D1). The root package is the
+# browser/marketing/docs frontend; `services/*` holds server-side TypeScript
+# services such as the API service in services/api.
+packages:
+  - services/*
+
 allowBuilds:
   esbuild: true
   msw: true

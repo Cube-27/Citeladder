@@ -1,0 +1,133 @@
+{
+  "name": "session_tokens",
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "cases": [
+    {
+      "input": {
+        "label": "valid",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJleHAiOjQxMDI0NDQ4MDAsInZlciI6M30.8z9Vy8lZOwCwD9lpLKxWu1Sqe7SdnZCzW9PW3OJNRnE"
+      },
+      "output": {
+        "claims": {
+          "sub": "6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f",
+          "exp": 4102444800,
+          "ver": 3
+        }
+      }
+    },
+    {
+      "input": {
+        "label": "valid_without_exp",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJ2ZXIiOjB9.HLqPTBQmOPxSCyu748br0HwX6BjmhbhWyptc7uyCPYU"
+      },
+      "output": {
+        "claims": {
+          "sub": "6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f",
+          "ver": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "label": "expired",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJleHAiOjk0NjY4NDgwMCwidmVyIjozfQ.UeBg5C-x0O6wkgDpEJtQzRz0isOLPDrq-_V2HjRl3m4"
+      },
+      "output": {
+        "rejected": true
+      }
+    },
+    {
+      "input": {
+        "label": "not_yet_valid",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJleHAiOjQxMDI0NDQ4MDAsInZlciI6MywibmJmIjo0MDAwMDAwMDAwfQ.Ljg78-jKtMoetn8lUy5WuhDNk9vx40HLMD6orm-ghA8"
+      },
+      "output": {
+        "rejected": true
+      }
+    },
+    {
+      "input": {
+        "label": "issued_in_future",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJleHAiOjQxMDI0NDQ4MDAsInZlciI6MywiaWF0Ijo0MDAwMDAwMDAwfQ.QDamz4fZxt6ukaKhTjKE7NiTM-dXbiviGxxE_Ug18QI"
+      },
+      "output": {
+        "rejected": true
+      }
+    },
+    {
+      "input": {
+        "label": "string_exp",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJleHAiOiI0MTAyNDQ0ODAwIiwidmVyIjozfQ.-VVuMCeT4eZPD4T5ksnD86yMEgt8l5QiHyz0Prhljfw"
+      },
+      "output": {
+        "rejected": true
+      }
+    },
+    {
+      "input": {
+        "label": "foreign_key",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJleHAiOjQxMDI0NDQ4MDAsInZlciI6M30.Guk9vPX01OOsKbPeVG8irUEcj88LXLBQt216HVxJY0g"
+      },
+      "output": {
+        "rejected": true
+      }
+    },
+    {
+      "input": {
+        "label": "other_algorithm",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJleHAiOjQxMDI0NDQ4MDAsInZlciI6M30.IV2yG6hEcCeT_UQUODP15Njfq2xZx47Pvkhcvjgwy50YoU8elAgkOvYPlVPdTt4W8qSFSYiRAqiFC0jrfAE8fw"
+      },
+      "output": {
+        "rejected": true
+      }
+    },
+    {
+      "input": {
+        "label": "tampered_signature",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJleHAiOjQxMDI0NDQ4MDAsInZlciI6M30.Az9Vy8lZOwCwD9lpLKxWu1Sqe7SdnZCzW9PW3OJNRnE"
+      },
+      "output": {
+        "rejected": true
+      }
+    },
+    {
+      "input": {
+        "label": "tampered_payload",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJleHAiOjQxMDI0NDQ4MDAsInZlciI6NH0.8z9Vy8lZOwCwD9lpLKxWu1Sqe7SdnZCzW9PW3OJNRnE"
+      },
+      "output": {
+        "rejected": true
+      }
+    },
+    {
+      "input": {
+        "label": "unsigned",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiI2ZjFjMGQyZS05YTRiLTRjMWQtOGUyZi0zYTViN2M5ZDFlMGYiLCJleHAiOjQxMDI0NDQ4MDAsInZlciI6M30."
+      },
+      "output": {
+        "rejected": true
+      }
+    },
+    {
+      "input": {
+        "label": "garbage",
+        "key": "golden-session-key-fixture-only-00000",
+        "token": "not-a-token"
+      },
+      "output": {
+        "rejected": true
+      }
+    }
+  ]
+}

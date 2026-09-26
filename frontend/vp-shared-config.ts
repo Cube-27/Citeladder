@@ -63,6 +63,8 @@ export const lintConfig: OxlintConfig = {
     '**/coverage/**',
     '**/playwright-report/**',
     '**/test-results/**',
+    // Generated service inputs, byte-checked against their generators in CI.
+    '**/services/*/src/generated/**',
   ],
   rules: {
     'no-array-constructor': 'error',
@@ -187,6 +189,8 @@ export const fmtConfig: OxfmtConfig = {
     // The marketing build rewrites Wrangler's deploy config (gitignored).
     '**/.wrangler/**',
     '**/pnpm-lock.yaml',
+    // Generated service inputs, byte-checked against their generators in CI.
+    '**/services/*/src/generated/**',
     // Re-wrapping this inflates it past the owner line budget that
     // check-frontend-architecture.mjs enforces; kept hand-formatted.
     '**/apps/app/src/globals.css',

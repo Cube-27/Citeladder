@@ -1,0 +1,152 @@
+/**
+ * The unified API error envelope (docs/api-error-contract.md).
+ *
+ * Mirrors `backend/app/core/errors.py`: every 4xx/5xx body is
+ * `{detail, error: {code, message, request_id, retryable, details?}}`, with
+ * `detail` retained for legacy clients. Codes and the retryable rule come
+ * from the Python policy export; golden masters prove the JSON is identical,
+ * key order included.
+ */
+import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
+import { HTTPException } from 'hono/http-exception';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
+
+import { policy } from './config.ts';
+import { getLogger } from './logging.ts';
+
+const logger = getLogger('api.errors');
+
+const INTERNAL_ERROR_MESSAGE = 'An unexpected error occurred';
+
+export type Envelope = {
+  detail: unknown;
+  error: {
+    code: string;
+    message: string;
+    request_id: string;
+    retryable: boolean;
+    details?: Record<string, unknown>;
+  };
+};
+
+export function isRetryableStatus(status: number): boolean {
+  return policy.errors.retryable_statuses.includes(status) || (status >= 500 && status <= 599);
+}
+
+/** The status's canonical code, or the fallback for an unmapped status. */
+export function defaultCode(status: number): string {
+  const codes: Record<string, string> = policy.errors.status_default_code;
+  return codes[String(status)] ?? policy.errors.fallback_code;
+}
+
+export function errorEnvelope(input: {
+  code: string;
+  message: string;
+  requestId: string;
+  retryable: boolean;
+  details?: Record<string, unknown> | null;
+  detail?: unknown;
+}): Envelope {
+  const error: Envelope['error'] = {
+    code: input.code,
+    message: input.message,
+    request_id: input.requestId,
+    retryable: input.retryable,
+  };
+  if (input.details != null) error.details = input.details;
+  return { detail: input.detail ?? input.message, error };
+}
+
+/** What every route raises: the TS counterpart of `ApiException`. */
+export class ApiError extends Error {
+  readonly status: ContentfulStatusCode;
+  readonly code: string;
+  readonly details?: Record<string, unknown>;
+  readonly retryable?: boolean;
+
+  constructor(
+    status: ContentfulStatusCode,
+    message: string,
+    options: { code?: string; details?: Record<string, unknown>; retryable?: boolean } = {},
+  ) {
+    super(message);
+    this.status = status;
+    this.code = options.code ?? defaultCode(status);
+    this.details = options.details;
+    this.retryable = options.retryable;
+  }
+
+  isRetryable(): boolean {
+    return this.retryable ?? isRetryableStatus(this.status);
+  }
+}
+
+/** The repeated 404, detail exactly "{resource} not found". */
+export function notFound(resource: string): ApiError {
+  return new ApiError(404, `${resource} not found`);
+}
+
+function requestIdOf(c: Context): string {
+  return (c.get('requestId') as string | undefined) ?? '';
+}
+
+function statusPhrase(response: Response): string {
+  return response.statusText || 'Error';
+}
+
+export const onError: ErrorHandler = (error, c) => {
+  const requestId = requestIdOf(c);
+  if (error instanceof ApiError) {
+    return c.json(
+      errorEnvelope({
+        code: error.code,
+        message: error.message,
+        requestId,
+        retryable: error.isRetryable(),
+        details: error.details,
+      }),
+      error.status,
+    );
+  }
+  if (error instanceof HTTPException) {
+    // The framework's own failures (malformed input a middleware refused),
+    // coded from the status exactly as the backend's shim handler does.
+    const status = error.status as ContentfulStatusCode;
+    const message = error.message || statusPhrase(error.getResponse());
+    return c.json(
+      errorEnvelope({
+        code: defaultCode(status),
+        message,
+        requestId,
+        retryable: isRetryableStatus(status),
+      }),
+      status,
+    );
+  }
+  logger.exception('unhandled_api_exception', error, {
+    method: c.req.method,
+    path: c.req.path,
+    request_id: requestId,
+  });
+  return c.json(
+    errorEnvelope({
+      code: policy.errors.internal_error_code,
+      message: INTERNAL_ERROR_MESSAGE,
+      requestId,
+      retryable: isRetryableStatus(500),
+    }),
+    500,
+  );
+};
+
+/** Unknown path: the same body Starlette's routing 404 produces. */
+export const onNotFound: NotFoundHandler = (c) =>
+  c.json(
+    errorEnvelope({
+      code: defaultCode(404),
+      message: 'Not Found',
+      requestId: requestIdOf(c),
+      retryable: false,
+    }),
+    404,
+  );
