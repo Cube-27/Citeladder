@@ -119,7 +119,7 @@ def test_late_cost_does_not_overwrite_cancellation(cost):
         error_detail="Cancelled by user",
         completed_at=completed,
     )
-    assert _apply_reported_cost(run, ResearchResponse({}, "", "", cost, None)) is True
+    assert _apply_reported_cost(run, ResearchResponse({}, "", "", cost)) is True
     assert run.status == "cancelled"
     assert run.error_code == "cancelled"
     assert run.error_detail == "Cancelled by user"
@@ -253,15 +253,9 @@ def test_normalizer_rejects_provider_rows_outside_reviewed_scope() -> None:
 
 
 def test_task_cost_wins_over_envelope_cost() -> None:
-    assert _reported_cost({"cost": 9, "tasks": [{"cost": "0.024"}]}) == (
-        Decimal("0.024"),
-        "task",
-    )
-    assert _reported_cost({"cost": "0.12", "tasks": [{}]}) == (
-        Decimal("0.12"),
-        "envelope",
-    )
-    assert _reported_cost({"tasks": [{}]}) == (None, None)
+    assert _reported_cost({"cost": 9, "tasks": [{"cost": "0.024"}]}) == Decimal("0.024")
+    assert _reported_cost({"cost": "0.12", "tasks": [{}]}) == Decimal("0.12")
+    assert _reported_cost({"tasks": [{}]}) is None
 
 
 def test_competitor_scope_is_explicit_per_dataset_kind() -> None:
@@ -444,7 +438,7 @@ def test_reported_cost_terminalizes_only_stopped_runs(cost, status, error_code) 
         error_code="",
     )
     before = datetime.now(UTC)
-    stopped = _apply_reported_cost(run, ResearchResponse({}, "", "", cost, None))
+    stopped = _apply_reported_cost(run, ResearchResponse({}, "", "", cost))
 
     assert stopped is (status != "running")
     assert run.status == status

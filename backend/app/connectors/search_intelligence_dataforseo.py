@@ -29,7 +29,6 @@ class ResearchResponse:
     response_sha256: str
     provider_task_id: str
     cost_usd: Decimal | None
-    cost_source: str | None
 
 
 def _decimal_cost(value: object) -> Decimal | None:
@@ -42,14 +41,13 @@ def _decimal_cost(value: object) -> Decimal | None:
     return result if result.is_finite() and result >= 0 else None
 
 
-def _reported_cost(body: dict[str, Any]) -> tuple[Decimal | None, str | None]:
+def _reported_cost(body: dict[str, Any]) -> Decimal | None:
     tasks = body.get("tasks")
     if isinstance(tasks, list) and len(tasks) == 1 and isinstance(tasks[0], dict):
         task_cost = _decimal_cost(tasks[0].get("cost"))
         if task_cost is not None:
-            return task_cost, "task"
-    envelope_cost = _decimal_cost(body.get("cost"))
-    return (envelope_cost, "envelope") if envelope_cost is not None else (None, None)
+            return task_cost
+    return _decimal_cost(body.get("cost"))
 
 
 def _safe_message(body: dict[str, Any]) -> str:
@@ -107,11 +105,9 @@ async def execute_live(
     canonical = json.dumps(
         body, sort_keys=True, separators=(",", ":"), ensure_ascii=False
     ).encode("utf-8")
-    cost, source = _reported_cost(body)
     return ResearchResponse(
         body=body,
         response_sha256=hashlib.sha256(canonical).hexdigest(),
         provider_task_id=str(task.get("id") or "")[:255],
-        cost_usd=cost,
-        cost_source=source,
+        cost_usd=_reported_cost(body),
     )

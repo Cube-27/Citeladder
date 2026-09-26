@@ -26,11 +26,6 @@ from app.core.config.site_health_taxonomy import (
 _TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
 
 
-def normalized_tokens(value: str) -> set[str]:
-    """Lowercase alphanumeric word tokens of ``value``."""
-    return set(_TOKEN_RE.findall(str(value or "").lower()))
-
-
 def matches_by_tokens(claim: str, visible: str) -> bool:
     """Whether a schema claim and visible text describe the same thing.
 

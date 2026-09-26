@@ -30,15 +30,5 @@ def put_cached(entitlement: ResolvedEntitlement) -> None:
     del entitlement
 
 
-def invalidate_account(account_id: uuid.UUID) -> None:
-    """No-op because no process-local entitlement state exists."""
-    del account_id
-
-
-def invalidate_registry(revision: str) -> None:
-    """No-op because no process-local entitlement state exists."""
-    del revision
-
-
 def clear_cache() -> None:
     """No-op compatibility hook."""

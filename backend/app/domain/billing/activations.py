@@ -101,7 +101,6 @@ class ActivationResult:
     status: str
     response: ActivationResponse | None
     already_settled: bool
-    grant_bundle_size: int = 0
 
 
 def _activation_key(pending_id: uuid.UUID, provider_reference: str) -> str:
@@ -359,7 +358,7 @@ async def activate_pending(
             response=_settled_response(pending),
             already_settled=True,
         )
-    bundle_size = await _settle(session, pending, provider_record)
+    await _settle(session, pending, provider_record)
     pending.status = ACTIVATION_ACTIVATED
     pending.activated_at = at
     pending.checkout_url = None
@@ -376,7 +375,6 @@ async def activate_pending(
         status=ACTIVATION_ACTIVATED,
         response=response,
         already_settled=False,
-        grant_bundle_size=bundle_size,
     )
 
 

@@ -42,7 +42,6 @@ class MeteredSubject:
 @dataclass(frozen=True, slots=True)
 class MeteredSettlement:
     charged_units: int
-    absorbed_units: int
     usage_complete: bool
 
 
@@ -198,6 +197,5 @@ async def settle_metered_usage(
     )
     return MeteredSettlement(
         charged_units=debit,
-        absorbed_units=max(requested - debit, 0),
         usage_complete=usage_complete,
     )

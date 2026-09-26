@@ -21,14 +21,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.source_pages import (
-    ENTITY_KIND_BRAND,
     INSPECTION_BLOCKED,
-    INSPECTION_FAILED,
     INSPECTION_INSPECTED,
     INSPECTION_NOT_INSPECTED,
     INSPECTION_STALE,
-    PRESENCE_PARTIAL,
-    SOURCE_PAGE_MIN_COVERAGE_CHARS,
 )
 from app.models.source_pages import (
     SourcePage,
@@ -42,56 +38,6 @@ from app.models.source_pages import (
 STATE_NOT_INSPECTED = INSPECTION_NOT_INSPECTED
 STATE_BLOCKED = INSPECTION_BLOCKED
 STATE_STALE = INSPECTION_STALE
-
-
-@dataclass(frozen=True, slots=True)
-class EntityView:
-    entity_kind: str
-    entity_name: str
-    state: str
-    match_method: str
-    match_count: int
-    passages: tuple[str, ...]
-    limitations: tuple[str, ...]
-
-
-def page_limitations(page: SourcePage, snapshot: SourcePageSnapshot | None) -> tuple:
-    """Why this page's findings should be read with caution, if they should.
-
-    Public because the grouped competitor view answers the same question about
-    the same rows. A second copy of these sentences would drift the moment one
-    of them was reworded, and the two surfaces would then disagree about what
-    an unread page means.
-    """
-    if page.inspection_state == INSPECTION_BLOCKED:
-        return (
-            "This publisher does not permit automated access, so nothing on the "
-            "page has been read.",
-        )
-    if page.inspection_state == INSPECTION_FAILED:
-        return ("The page could not be read, so who appears on it is unknown.",)
-    if page.inspection_state == INSPECTION_STALE:
-        return (
-            "This reflects an earlier inspection; the page may have changed since.",
-        )
-    if page.inspection_state != INSPECTION_INSPECTED:
-        return ("This page has not been inspected.",)
-    if (
-        snapshot is not None
-        and snapshot.extracted_chars < SOURCE_PAGE_MIN_COVERAGE_CHARS
-    ):
-        return (
-            "Very little text was readable, so an absence is not evidence that "
-            "a brand is missing.",
-        )
-    return ()
-
-
-def entity_limitations(row: SourcePageEntityPresence) -> tuple[str, ...]:
-    """A non-detection carries its own caveat; a passage speaks for itself."""
-    if row.presence == PRESENCE_PARTIAL:
-        return ("Not enough of the page was readable to judge this.",)
-    return ()
 
 
 def passage_texts(snapshot: SourcePageSnapshot | None, refs: list | None) -> tuple:
@@ -125,64 +71,6 @@ def page_title(snapshot: SourcePageSnapshot | None) -> str:
 def page_fact_strings(facts: dict | None, key: str) -> tuple[str, ...]:
     """A bounded list of strings out of ``page_facts`` -- headings, domains."""
     return tuple(str(item) for item in ((facts or {}).get(key) or []))
-
-
-def entity_view(
-    page: SourcePage,
-    snapshot: SourcePageSnapshot | None,
-    row: SourcePageEntityPresence,
-    *,
-    max_passages: int | None = None,
-) -> EntityView:
-    """One entity's verdict, resolved for a reader.
-
-    The one assembly. A second copy means a field added here reaches one
-    surface and silently not the other, and the two then disagree about the
-    same verdict on the same page.
-    """
-    passages = passage_texts(snapshot, row.passage_refs)
-    return EntityView(
-        entity_kind=row.entity_kind,
-        entity_name=row.entity_name,
-        state=entity_state(page, row),
-        match_method=row.match_method,
-        match_count=row.match_count,
-        passages=passages if max_passages is None else passages[:max_passages],
-        limitations=entity_limitations(row),
-    )
-
-
-async def presence_rows(
-    session: AsyncSession,
-    *,
-    project_id: uuid.UUID,
-    snapshot_ids: list[uuid.UUID],
-) -> dict[uuid.UUID, list[SourcePageEntityPresence]]:
-    """Presence verdicts for a set of snapshots, grouped and brand-first.
-
-    The brand-first ordering is load-bearing for every consumer -- each picks
-    the brand's own verdict out of the list -- so the ordering has one owner
-    rather than one per caller.
-    """
-    if not snapshot_ids:
-        return {}
-    rows = (
-        await session.scalars(
-            select(SourcePageEntityPresence)
-            .where(
-                SourcePageEntityPresence.project_id == project_id,
-                SourcePageEntityPresence.snapshot_id.in_(snapshot_ids),
-            )
-            .order_by(
-                SourcePageEntityPresence.entity_kind != ENTITY_KIND_BRAND,
-                SourcePageEntityPresence.entity_name.asc(),
-            )
-        )
-    ).all()
-    grouped: dict[uuid.UUID, list[SourcePageEntityPresence]] = {}
-    for row in rows:
-        grouped.setdefault(row.snapshot_id, []).append(row)
-    return grouped
 
 
 def entity_state(page: SourcePage, row: SourcePageEntityPresence | None) -> str:

@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from app.analysis.comparison import frozen_comparison_key
 from app.domain.analysis.evidence import _evidence_statement
 from app.domain.analysis.measurement import measurement_counts
-from app.domain.analysis.selection import authorize_run_set
+from app.domain.analysis.selection import RunSelection, authorize_run_set
 from app.models.analysis import Citation, MetricSnapshot, ResponseAnalysis
 from app.models.audit import Audit
 
@@ -53,15 +53,12 @@ async def apply_source_comparison(
         return
     selected = (
         _evidence_statement(
-            workspace_id=workspace_id,
-            project_id=project_id,
-            audit_id=None,
-            prompt_id=None,
-            logical_engine=engine,
-            from_at=None,
-            to_at=None,
-            limit=None,
-            cohort=cohort,
+            RunSelection(
+                workspace_id=workspace_id,
+                project_id=project_id,
+                logical_engine=engine,
+                cohort=cohort,
+            )
         )
         .where(
             ResponseAnalysis.audit_id.in_(baseline_ids),

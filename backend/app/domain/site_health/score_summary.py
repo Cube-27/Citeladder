@@ -243,7 +243,6 @@ def _measurement_sources(
             analysis_id=str(row.id),
             page_kind=row.page_kind,
             page_traits=tuple(row.page_traits or ()),
-            checklist_manifest=tuple(row.expected_checkpoint_profile or ()),
         )
         for row in rows
     ]

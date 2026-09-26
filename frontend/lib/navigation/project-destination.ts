@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect } from 'react';
 
 import { useOptionalProjectContext, useProjectContext } from '@/lib/project/project-context';
+import { isAppRoute } from '@/lib/navigation/app-route';
 
 const PROJECT_PARAM = 'project';
 const WORKSPACE_PARAM = 'workspace';
@@ -65,6 +66,7 @@ export function scopedNavigationDestination(
   projectId: string | null,
   workspaceId: string | null,
 ): string {
+  if (!isAppRoute(href)) throw new Error('Expected an internal app route');
   const hashIndex = href.indexOf('#');
   const hash = hashIndex === -1 ? '' : href.slice(hashIndex);
   const pathAndSearch = hashIndex === -1 ? href : href.slice(0, hashIndex);

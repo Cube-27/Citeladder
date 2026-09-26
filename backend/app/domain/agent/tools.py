@@ -42,7 +42,6 @@ from app.models.integrations import (
 from app.models.opportunity import Opportunity
 from app.models.site_health.snapshot import SiteHealthSnapshot
 
-TOOL_VERSION: Final = "1.0.0"
 MAX_ROADMAP_ITEMS: Final = 10
 
 

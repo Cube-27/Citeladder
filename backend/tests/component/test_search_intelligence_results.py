@@ -98,7 +98,6 @@ async def test_explicit_429_retries_with_durable_attempts(
         "retry-response",
         "task",
         Decimal("0.01"),
-        "task",
     )
     paid = AsyncMock(side_effect=[*[rate_error] * rate_limits, result])
     monkeypatch.setattr(executor, "execute_live", paid)
@@ -300,9 +299,7 @@ async def test_saved_response_preserves_cost_and_result_state(
     assert confirmed.status_code == 202
     body = {"tasks": [{"result": [result] if result is not None else None}]}
     paid_call = AsyncMock(
-        return_value=ResearchResponse(
-            body, "saved-response", "task", Decimal("0.01"), "task"
-        )
+        return_value=ResearchResponse(body, "saved-response", "task", Decimal("0.01"))
     )
     monkeypatch.setattr(executor, "execute_live", paid_call)
     async with session_factory() as session:
@@ -515,7 +512,6 @@ async def test_new_datasets_publish_exact_call_provenance_and_saved_filters(
             "response",
             "task",
             Decimal("0.001"),
-            "task",
         )
 
     paid = AsyncMock(side_effect=live)

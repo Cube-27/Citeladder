@@ -72,16 +72,9 @@ async def _record_sample_admission(
         session,
         crawl=crawl,
         site_url_id=site_url_id,
-        url=candidate.url,
-        url_hash_value=candidate.url_hash,
-        depth=candidate.depth,
-        source_kind=candidate.source_kind,
+        candidate=candidate,
         analyze=analyze,
         selection_source=selection_source,
-        value_kind=candidate.value_kind,
-        value_priority=candidate.value_priority,
-        rewrite_reason=candidate.rewrite_reason,
-        rewrite_version=candidate.rewrite_version,
     )
     if newly_activated and progress.remaining is not None:
         progress.remaining -= 1
@@ -122,15 +115,8 @@ async def _record_admission(
             session,
             crawl=crawl,
             site_url_id=site_url_id,
-            url=candidate.url,
-            url_hash_value=candidate.url_hash,
-            depth=candidate.depth,
-            source_kind=candidate.source_kind,
+            candidate=candidate,
             selection_source=SELECTION_SOURCE_BOOTSTRAP,
-            value_kind=candidate.value_kind,
-            value_priority=candidate.value_priority,
-            rewrite_reason=candidate.rewrite_reason,
-            rewrite_version=candidate.rewrite_version,
             # This URL is about to be queued for discovery just below, so its
             # analyze task is handed over by that fetch instead of racing it.
             analyze_after_discovery=enqueue_children,

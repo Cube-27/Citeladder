@@ -244,19 +244,6 @@ class NativeOpenAIClient:
         }
 
 
-def native_response_debug_shape(result: ModelResult) -> str:
-    """Credential-free stable shape used by adapter calibration fixtures."""
-    return json.dumps(
-        {
-            "adapter": result.provider_adapter,
-            "model": result.returned_model,
-            "finish_status": result.finish_status,
-            "usage": result.usage,
-        },
-        sort_keys=True,
-    )
-
-
 def _first_output_text(body: object) -> str:
     for item in _response_output(body):
         for part in _message_content(item):

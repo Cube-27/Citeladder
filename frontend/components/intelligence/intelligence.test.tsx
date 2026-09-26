@@ -6,7 +6,7 @@ import { renderWithProviders as render } from '@/test/render';
 import { Insight, type InsightModel } from './insight';
 import { ProvenanceChip } from './provenance-chip';
 
-const EVIDENCE = { href: '/issues?filter=weak', label: '47 product pages' };
+const EVIDENCE = { href: '/issues?filter=weak', label: '47 product pages' } as const;
 
 function insightFixture(overrides: Partial<InsightModel> = {}): InsightModel {
   return {

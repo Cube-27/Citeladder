@@ -16,7 +16,6 @@ not a chart, and the table below it is where the full inventory lives.
 
 from __future__ import annotations
 
-import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
@@ -24,15 +23,15 @@ from sqlalchemy import func, select
 from app.core.config.analysis import VISIBILITY_EVIDENCE_DEFAULT_LIMIT
 from app.domain.analysis.errors import TrendQueryError
 from app.domain.analysis.evidence import (
-    _assert_selected_audit,
+    _authorized_selection,
     _evidence_statement,
-    _validated_evidence_request,
 )
 from app.domain.analysis.schemas import (
     SourceSeries,
     SourceSeriesPoint,
     SourceSeriesResponse,
 )
+from app.domain.analysis.selection import RunSelection
 from app.models.analysis import Citation, ResponseAnalysis
 from app.models.audit import Audit
 from app.models.source_pages import SourcePage
@@ -46,19 +45,12 @@ _BUCKETS = {"day": "day", "week": "week", "month": "month"}
 
 async def get_visibility_source_series(
     session,
+    selection: RunSelection,
     *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
     dimension: str = "domain",
     granularity: str = "day",
-    audit_id: uuid.UUID | None = None,
-    audit_ids: list[uuid.UUID] | None = None,
-    logical_engine: str | None = None,
-    cohort: str = "core",
     domain: str | None = None,
     source_class: str | None = None,
-    from_at: datetime | None = None,
-    to_at: datetime | None = None,
     limit: int = SOURCE_SERIES_MAX_SERIES,
 ) -> SourceSeriesResponse:
     """Top-N sources by citations, as a share of the responses in each bucket."""
@@ -67,34 +59,10 @@ async def get_visibility_source_series(
     truncation = _BUCKETS.get(granularity)
     if truncation is None:
         raise TrendQueryError("'granularity' must be 'day', 'week' or 'month'")
-    from_at, to_at = _validated_evidence_request(
-        logical_engine=logical_engine,
-        from_at=from_at,
-        to_at=to_at,
-        limit=VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
-        cohort=cohort,
+    selection = await _authorized_selection(
+        session, selection, limit=VISIBILITY_EVIDENCE_DEFAULT_LIMIT
     )
-    await _assert_selected_audit(
-        session, workspace_id=workspace_id, project_id=project_id, audit_id=audit_id
-    )
-    from app.domain.analysis.selection import authorize_run_set
-
-    await authorize_run_set(
-        session, workspace_id=workspace_id, project_id=project_id, audit_ids=audit_ids
-    )
-    statement = _evidence_statement(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        audit_id=audit_id,
-        prompt_id=None,
-        logical_engine=logical_engine,
-        from_at=from_at,
-        to_at=to_at,
-        limit=None,
-        cohort=cohort,
-    )
-    if audit_ids:
-        statement = statement.where(ResponseAnalysis.audit_id.in_(audit_ids))
+    statement = _evidence_statement(selection)
     bucket = func.date_trunc(
         truncation, func.coalesce(Audit.completed_at, Audit.created_at)
     )
@@ -138,7 +106,9 @@ async def get_visibility_source_series(
             func.count(Citation.id).label("citations"),
         )
         .join(scope, scope.c.analysis_id == Citation.analysis_id)
-        .where(Citation.workspace_id == workspace_id, key.is_not(None), key != "")
+        .where(
+            Citation.workspace_id == selection.workspace_id, key.is_not(None), key != ""
+        )
     )
     if domain:
         counted = counted.where(Citation.domain == domain)
@@ -147,7 +117,7 @@ async def get_visibility_source_series(
             counted.join(
                 SourcePage,
                 (SourcePage.url_hash == Citation.url_hash)
-                & (SourcePage.project_id == project_id),
+                & (SourcePage.project_id == selection.project_id),
             ).where(SourcePage.page_format == source_class)
             if pages
             else counted.where(Citation.source_class == source_class)

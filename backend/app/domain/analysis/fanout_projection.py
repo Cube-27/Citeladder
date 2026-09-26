@@ -8,13 +8,13 @@ from uuid import UUID
 
 from app.core.config.analysis import VISIBILITY_EVIDENCE_DEFAULT_LIMIT
 from app.domain.analysis.evidence import (
-    _assert_selected_audit,
+    _authorized_selection,
     _evidence_statement,
     _fanout_state,
     _select_events,
-    _validated_evidence_request,
 )
 from app.domain.analysis.schemas import FanoutAnswer, FanoutQueryRow, FanoutResponse
+from app.domain.analysis.selection import RunSelection
 
 
 @dataclass
@@ -40,35 +40,16 @@ async def get_visibility_fanout(
     search=None,
     audit_ids=None,
 ):
-    _validated_evidence_request(
-        logical_engine=logical_engine,
-        from_at=None,
-        to_at=None,
-        limit=limit,
-        cohort=cohort,
-    )
-    await _assert_selected_audit(
-        session, workspace_id=workspace_id, project_id=project_id, audit_id=audit_id
-    )
-    from app.domain.analysis.selection import authorize_run_set
-    from app.models.analysis import ResponseAnalysis
-
-    await authorize_run_set(
-        session, workspace_id=workspace_id, project_id=project_id, audit_ids=audit_ids
-    )
-    statement = _evidence_statement(
+    selection = RunSelection(
         workspace_id=workspace_id,
         project_id=project_id,
         audit_id=audit_id,
-        prompt_id=None,
+        audit_ids=audit_ids,
         logical_engine=logical_engine,
-        from_at=None,
-        to_at=None,
-        limit=None,
         cohort=cohort,
     )
-    if audit_ids:
-        statement = statement.where(ResponseAnalysis.audit_id.in_(audit_ids))
+    selection = await _authorized_selection(session, selection, limit=limit)
+    statement = _evidence_statement(selection)
     states: Counter[str] = Counter()
     queries: defaultdict[str, _QueryCounts] = defaultdict(_QueryCounts)
     total_events = 0

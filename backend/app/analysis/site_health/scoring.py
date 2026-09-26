@@ -94,7 +94,6 @@ class AnalysisMeasurementInput:
     analysis_id: str
     page_kind: str
     page_traits: tuple[str, ...] = ()
-    checklist_manifest: tuple[dict, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -79,25 +79,6 @@ def is_answer_heading(text: str) -> bool:
     )
 
 
-def available_question_count(value: Any) -> int:
-    """Count distinct, well-formed relationships with an available answer."""
-    if not isinstance(value, list | tuple):
-        return 0
-    questions: set[str] = set()
-    for relationship in value:
-        if not isinstance(relationship, dict):
-            continue
-        question = str(relationship.get("question") or "").strip()
-        answer = str(relationship.get("answer") or "").strip()
-        if (
-            relationship.get("answer_state") == "available"
-            and is_answer_heading(question)
-            and answer
-        ):
-            questions.add(" ".join(question.casefold().split()))
-    return len(questions)
-
-
 def observed_question_count(value: Any) -> int:
     """Count distinct bounded question relationships, regardless of answer state."""
     if not isinstance(value, list | tuple):

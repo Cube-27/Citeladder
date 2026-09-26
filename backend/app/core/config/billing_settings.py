@@ -4,7 +4,7 @@ import re
 from decimal import Decimal
 from pathlib import Path
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.billing_contracts import PROVIDER_RAZORPAY
@@ -103,6 +103,11 @@ class BillingSettings(BaseSettings):
     # the upgrade is refused rather than created and left unpayable.
     plan_change_minimum_charge_minor: int = Field(default=100, ge=100)
     max_webhook_body_bytes: int = 262_144
+
+    @field_validator("contact_sales_url")
+    @classmethod
+    def validate_contact_sales_url(cls, value: str) -> str:
+        return str(HttpUrl(value))
 
     @field_validator("india_gst_rate", mode="before")
     @classmethod

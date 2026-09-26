@@ -111,7 +111,6 @@ async def test_cancellation_between_datasets_prevents_next_paid_call(
             response_sha256="first-response",
             provider_task_id="first-task",
             cost_usd=Decimal("0.001"),
-            cost_source="task",
         )
 
     monkeypatch.setattr(executor_module, "execute_live", cancel_after_first_call)

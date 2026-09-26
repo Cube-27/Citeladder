@@ -241,10 +241,7 @@ async def add_automatic_root(
         session,
         crawl=crawl,
         site_url_id=site_url_id,
-        url=canonical_url,
-        url_hash_value=url_hash_value,
-        depth=0,
-        source_kind=OBSERVATION_SOURCE_ROOT,
+        candidate=candidate,
         selection_source=SELECTION_SOURCE_BOOTSTRAP,
         # The root keeps its own analyze task rather than waiting on the root
         # discover to hand one over. It is a single page, so it cannot starve

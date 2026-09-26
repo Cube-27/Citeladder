@@ -18,6 +18,7 @@ import { billingReasonMessage } from '@/lib/billing/reason-copy';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
 
 import { Button } from '@/components/ui/button';
+import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 
@@ -67,9 +68,9 @@ export function PlanRow({
       <div className="shrink-0">
         {plan.contact_only ? (
           <Button asChild variant="secondary" size="sm">
-            <a href={plan.contact_url ?? CONTACT_SALES_HREF} target="_blank" rel="noreferrer">
+            <ExternalHttpLink href={plan.contact_url ?? CONTACT_SALES_HREF}>
               Contact sales <ExternalLink className="size-3.5" aria-hidden />
-            </a>
+            </ExternalHttpLink>
           </Button>
         ) : (
           <Button

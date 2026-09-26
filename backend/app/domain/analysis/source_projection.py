@@ -10,11 +10,11 @@ from sqlalchemy import String, cast, func, select
 from app.core.config.analysis import VISIBILITY_EVIDENCE_DEFAULT_LIMIT
 from app.domain.analysis.errors import TrendQueryError
 from app.domain.analysis.evidence import (
-    _assert_selected_audit,
+    _authorized_selection,
     _evidence_statement,
-    _validated_evidence_request,
 )
 from app.domain.analysis.schemas import SourceRow, SourcesResponse
+from app.domain.analysis.selection import RunSelection
 from app.domain.analysis.source_mentions import attach_row_mentions
 from app.domain.analysis.source_page_links import attach_page_links
 from app.models.analysis import Citation, ResponseAnalysis
@@ -24,46 +24,19 @@ from app.models.source_pages import SourcePage
 
 async def get_visibility_sources(
     session,
+    selection: RunSelection,
     *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    audit_id: uuid.UUID | None = None,
-    logical_engine: str | None = None,
-    cohort: str = "core",
-    from_at: datetime | None = None,
-    to_at: datetime | None = None,
     domain: str | None = None,
     source_class: str | None = None,
     dimension: str = "domain",
     offset: int = 0,
     limit: int = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     as_of: datetime | None = None,
-    audit_ids: list[uuid.UUID] | None = None,
     baseline_audit_ids: list[uuid.UUID] | None = None,
 ) -> SourcesResponse:
-    from_at, to_at = _validated_evidence_request(
-        logical_engine=logical_engine,
-        from_at=from_at,
-        to_at=to_at,
-        limit=limit,
-        cohort=cohort,
-    )
-    await _assert_selected_audit(
-        session, workspace_id=workspace_id, project_id=project_id, audit_id=audit_id
-    )
+    selection = await _authorized_selection(session, selection, limit=limit)
     as_of = _source_boundary(as_of)
-    scope = await _scope(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        audit_id=audit_id,
-        audit_ids=audit_ids,
-        logical_engine=logical_engine,
-        cohort=cohort,
-        from_at=from_at,
-        to_at=to_at,
-        as_of=as_of,
-    )
+    scope = _scope(selection, as_of=as_of)
     denominator, prompts = (
         await session.execute(
             select(
@@ -78,8 +51,8 @@ async def get_visibility_sources(
     pages = bool(domain) or dimension == "url"
     grouped = _grouped_sources(
         scope,
-        workspace_id=workspace_id,
-        project_id=project_id,
+        workspace_id=selection.workspace_id,
+        project_id=selection.project_id,
         domain=domain,
         source_class=source_class,
         pages=pages,
@@ -100,8 +73,8 @@ async def get_visibility_sources(
     )
     category_totals = await _category_totals(
         session,
-        workspace_id=workspace_id,
-        project_id=project_id,
+        workspace_id=selection.workspace_id,
+        project_id=selection.project_id,
         scope=scope,
         domain=domain,
         source_class=source_class,
@@ -143,15 +116,15 @@ async def get_visibility_sources(
     )
     await attach_page_links(
         session,
-        workspace_id=workspace_id,
-        project_id=project_id,
+        workspace_id=selection.workspace_id,
+        project_id=selection.project_id,
         items=response.items,
     )
     if pages:
         await attach_row_mentions(
             session,
-            workspace_id=workspace_id,
-            project_id=project_id,
+            workspace_id=selection.workspace_id,
+            project_id=selection.project_id,
             scope=scope,
             items=response.items,
         )
@@ -161,58 +134,32 @@ async def get_visibility_sources(
         await apply_source_comparison(
             session,
             response=response,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            current_ids=audit_ids or ([audit_id] if audit_id else []),
+            workspace_id=selection.workspace_id,
+            project_id=selection.project_id,
+            current_ids=selection.audit_ids
+            or ([selection.audit_id] if selection.audit_id else []),
             baseline_ids=baseline_audit_ids,
-            engine=logical_engine,
-            cohort=cohort,
+            engine=selection.logical_engine,
+            cohort=selection.cohort,
             domain=domain,
             as_of=as_of,
         )
     return response
 
 
-async def _scope(
-    session,
-    *,
-    workspace_id,
-    project_id,
-    audit_id,
-    audit_ids,
-    logical_engine,
-    cohort,
-    from_at,
-    to_at,
-    as_of,
-):
+def _scope(selection: RunSelection, *, as_of: datetime):
     """Every response the selection covers, with the prompt it answered.
 
     The denominator for every rate below it. Bounded by ``as_of`` as well as by
     the period, so paging through a table cannot silently include rows written
     by a run that finished while the reader was on page two.
     """
-    from app.domain.analysis.selection import authorize_run_set
-
-    await authorize_run_set(
-        session, workspace_id=workspace_id, project_id=project_id, audit_ids=audit_ids
-    )
     prompt_key = func.coalesce(
         cast(AuditPromptSnapshot.prompt_id, String), AuditPromptSnapshot.text
     )
-    statement = _evidence_statement(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        audit_id=audit_id,
-        prompt_id=None,
-        logical_engine=logical_engine,
-        from_at=from_at,
-        to_at=to_at,
-        limit=None,
-        cohort=cohort,
-    ).where(ResponseAnalysis.created_at <= as_of)
-    if audit_ids:
-        statement = statement.where(ResponseAnalysis.audit_id.in_(audit_ids))
+    statement = _evidence_statement(selection).where(
+        ResponseAnalysis.created_at <= as_of
+    )
     return (
         statement.with_only_columns(
             ResponseAnalysis.id.label("analysis_id"),
