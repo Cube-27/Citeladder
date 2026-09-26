@@ -15,6 +15,7 @@ from app.connectors.web_evidence.contracts import FetchResult
 from app.connectors.web_evidence.fetcher_body import is_bot_block_result
 from app.connectors.web_evidence.robots import RobotsPolicy
 from app.core.config.site_health_acquisition import (
+    ERROR_ACCESS_BLOCKED,
     ERROR_HTTP_4XX,
     ERROR_HTTP_5XX,
     ERROR_ROBOTS_DENIED,
@@ -73,15 +74,22 @@ def _serialize_redirect_chain(result: FetchResult) -> list[dict]:
 def _robots_denial_error(policy: RobotsPolicy) -> tuple[str, str]:
     """The (error_code, detail) for a robots-denied fetch.
 
-    An unretrievable robots.txt (network error, 5xx, redirect or 401/403/429)
+    An unreachable robots.txt (network error, 429, 5xx or redirect failure)
     or an unsupported crawl-delay surfaces as ``robots_unavailable`` — distinct
     from a real robots-rule disallow so the UI can explain the pause rather
-    than claim the site blocks crawlers.
+    than claim the site blocks crawlers. A 401/403 robots.txt is a standing
+    access restriction, ``access_blocked``: re-crawling cannot fix it.
     """
     if policy.unavailable:
         return (
             ERROR_ROBOTS_UNAVAILABLE,
             "robots.txt could not be retrieved; fetches paused for this site",
+        )
+    if policy.restricted:
+        return (
+            ERROR_ACCESS_BLOCKED,
+            "robots.txt is access-blocked (401/403); the crawler does not "
+            "bypass access controls",
         )
     if policy.delay_exceeds_limit:
         return (

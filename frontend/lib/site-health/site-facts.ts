@@ -48,10 +48,12 @@ export type SiteFactsStance = 'allow' | 'block' | 'unknown';
  *   - `fetched`:      a robots.txt body was read — the recorded stances are real;
  *   - `not_found`:    HTTP 404 — the site HAS no robots.txt; crawling proceeds
  *                     fail-open and the AI-crawler stance defaults to allow;
- *   - `fetch_failed`: network error / 5xx — robots.txt could not be read, so
- *                     the real stance is unknown.
+ *   - `fetch_failed`: network error / 429 / 5xx — robots.txt could not be
+ *                     read, so the real stance is unknown;
+ *   - `access_blocked`: HTTP 401/403 — an access control, not an outage; the
+ *                     stance is unknown and re-crawling will not change it.
  */
-type RobotsFetchStatus = 'fetched' | 'not_found' | 'fetch_failed';
+type RobotsFetchStatus = 'fetched' | 'not_found' | 'fetch_failed' | 'access_blocked';
 
 /** One bot's stance row, in `AI_CRAWLER_BOTS` order. */
 type SiteFactsBotStance = { bot: string; stance: SiteFactsStance };
@@ -108,7 +110,12 @@ function botStance(status: RobotsFetchStatus, value: unknown): SiteFactsStance {
  */
 function readRobotsFetchStatus(robots: Record<string, unknown>): RobotsFetchStatus {
   const token = robots.status;
-  if (token === 'fetched' || token === 'not_found' || token === 'fetch_failed') {
+  if (
+    token === 'fetched' ||
+    token === 'not_found' ||
+    token === 'fetch_failed' ||
+    token === 'access_blocked'
+  ) {
     return token;
   }
   return 'fetch_failed';

@@ -48,8 +48,24 @@ of one revision is idempotent. Updating the approved Terms revision requires
 renewed acceptance and never overwrites an earlier row. Privacy is a notice;
 optional analytics consent remains separate. The approved revision registry is
 `backend/app/core/config/legal.py`; internal proposals never enter it.
-Signed enterprise-agreement references and checkout-linked acceptance remain
-separate unfinished work, as tracked in the audit-remediation plan.
+Signed enterprise-agreement references are separate append-only records. A
+platform administrator uses `uv run python -m scripts.enterprise_agreement
+--actor <admin-email> --input <local-json-file>` from `backend/`; the command
+rolls back unless `--apply` is supplied. The JSON names `workspace_id`,
+`signatory_id`, an opaque `reference`, `document_sha256`, timezone-aware
+`signed_at`, and `authority_verified: true`. The operator must verify the
+signature and authority against the contract archive first. The signatory must
+be an active Owner/Admin of that workspace. Repeating the same reference and
+evidence is inert; conflicting evidence is refused. This records no contract
+body, changes no commercial terms, and does not substitute for ordinary user
+acceptance. Checkout-linked acceptance remains a later payment workstream.
+
+The shared security-event writer appends membership join, role change, removal,
+departure and ownership-transfer receipts in the mutation transaction. A
+rollback removes its receipt; repeated unchanged roles emit nothing. Google
+sign-in and customer provider-credential mutations also use this bounded
+writer. Event records contain identifiers and event kinds, never request
+bodies, provider credentials or prompts.
 
 [Workspace APIs](../backend/app/api/workspaces.py) use the
 [workspace domain](../backend/app/domain/workspaces/) for invitations,

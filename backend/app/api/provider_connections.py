@@ -157,6 +157,7 @@ async def delete_connection_endpoint(
             session,
             workspace_id=ctx.workspace_id,
             connection_id=connection_id,
+            actor_id=ctx.user.id,
         )
     except ProviderConnectionNotFoundError as exc:
         raise_api_error(status.HTTP_404_NOT_FOUND, _NOT_FOUND, cause=exc)

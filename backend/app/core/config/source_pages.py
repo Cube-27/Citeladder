@@ -142,6 +142,9 @@ SOURCE_PAGE_MIN_COVERAGE_CHARS: Final = 600
 # These are publishers whose goodwill is the product being pursued. A page we
 # are about to ask for a listing is the last place to be impolite.
 SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS: Final = 15
+# Outer bound on one hop once its host slot is held: the transport timeout
+# plus headroom for DNS pinning and trace bookkeeping around it.
+SOURCE_PAGE_HOP_TIMEOUT_SECONDS: Final = SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS * 2
 SOURCE_PAGE_MAX_REDIRECTS: Final = 5
 SOURCE_PAGE_MAX_WIRE_BYTES: Final = 3_000_000
 SOURCE_PAGE_MAX_DECODED_BYTES: Final = 10_000_000

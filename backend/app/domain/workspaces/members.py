@@ -18,6 +18,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.auth.security_events import record_security_event
 from app.domain.workspaces.policy import (
     ASSIGNABLE_WORKSPACE_ROLES,
     WORKSPACE_ROLE_ADMIN,
@@ -86,6 +87,7 @@ async def change_member_role(
     workspace_id: uuid.UUID,
     member_id: uuid.UUID,
     role: str,
+    actor_id: uuid.UUID,
 ) -> WorkspaceMember:
     """Set an existing member's role to an ASSIGNABLE role.
 
@@ -98,13 +100,26 @@ async def change_member_role(
     member = await _locked_member(session, workspace_id, member_id)
     if member.role == WORKSPACE_ROLE_OWNER:
         raise MembershipError("owner_role_requires_transfer")
+    if member.role == role:
+        return member
     member.role = role
+    record_security_event(
+        session,
+        event="membership.role",
+        actor_id=actor_id,
+        workspace_id=workspace_id,
+        target_id=member.user_id,
+    )
     await session.flush()
     return member
 
 
 async def remove_member(
-    session: AsyncSession, *, workspace_id: uuid.UUID, member_id: uuid.UUID
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    member_id: uuid.UUID,
+    actor_id: uuid.UUID,
 ) -> None:
     """Remove a membership. The designated Owner cannot be removed.
 
@@ -114,6 +129,13 @@ async def remove_member(
     member = await _locked_member(session, workspace_id, member_id)
     if member.role == WORKSPACE_ROLE_OWNER:
         raise MembershipError("owner_cannot_be_removed")
+    record_security_event(
+        session,
+        event="membership.remove",
+        actor_id=actor_id,
+        workspace_id=workspace_id,
+        target_id=member.user_id,
+    )
     await session.delete(member)
     await session.flush()
 
@@ -123,6 +145,7 @@ async def transfer_ownership(
     *,
     workspace_id: uuid.UUID,
     new_owner_member_id: uuid.UUID,
+    actor_id: uuid.UUID,
 ) -> tuple[WorkspaceMember, WorkspaceMember]:
     """Move the Owner designation to another member, atomically.
 
@@ -140,6 +163,13 @@ async def transfer_ownership(
     incoming = await _locked_member(session, workspace_id, new_owner_member_id)
     previous.role = WORKSPACE_ROLE_ADMIN
     incoming.role = WORKSPACE_ROLE_OWNER
+    record_security_event(
+        session,
+        event="membership.transfer",
+        actor_id=actor_id,
+        workspace_id=workspace_id,
+        target_id=incoming.user_id,
+    )
     await session.flush()
     return incoming, previous
 
@@ -164,6 +194,13 @@ async def leave_workspace(
         raise MembershipError("member_not_found")
     if member.role == WORKSPACE_ROLE_OWNER:
         raise MembershipError("owner_cannot_leave")
+    record_security_event(
+        session,
+        event="membership.leave",
+        actor_id=user_id,
+        workspace_id=workspace_id,
+        target_id=member.user_id,
+    )
     await session.delete(member)
     await session.flush()
 

@@ -1,6 +1,6 @@
 # CiteLadder audit remediation and enterprise readiness
 
-**Status: PR 1 implemented in `codex/audit-remediation`, based on `main`; PR 2 is the remaining work defined in Section 4. Neither label claims a GitHub PR exists or has merged. Public policy revisions and proposed management decisions remain unpublished pending approval.**
+**Status: PR 1 merged into main as `6c5209eb` (#156). A partial PR 2 slice is published as #158 from `codex/audit-remediation-pr2`; PR 2 as a whole remains incomplete (Section 4). Public policy revisions and proposed management decisions remain unpublished pending approval.**
 
 ## 1. Summary and boundaries
 
@@ -280,6 +280,37 @@ PR 2 handoff; do not start PR 2 as part of that cleanup.
 
 ### PR 2 — finish lifecycle, data-use and launch controls
 
+**Current implementation boundary:** enterprise agreement references, membership
+and Google-sign-in security events, customer provider-credential events, and
+per-destination robots/pacing controls for source inspection are implemented on
+the PR 2 branch.
+These are partial slices of PR 2 work items 4 (acceptance and security
+evidence) and 5 (crawler authorization, redirects and pacing) below, not
+completion of either item or PR 2.
+Lifecycle jobs/fences/export/purge/replay, owned-site authority receipts, broader
+direct-acquisition robots/pacing coverage, remaining
+security events and policy-history recovery, licensing/Google downstream-use
+controls, and package/notice closure remain outstanding.
+
+**Retention scope decision pending:** `ConsumableLedger` in
+`backend/app/models/billing.py` retains `RESTRICT` references to workspaces,
+audits/tasks, Agent runs and site crawls. `BillingAccount.workspace_id` cascades
+when a workspace is removed, and `AgentModelAttempt` in `models/agent.py`
+retains project/run/provider references as financial provenance. A parent-row
+purge cannot simply cascade these records away. The owner has been asked whether
+to allow narrow retention-related schema separation or keep billing excluded
+and block affected purges. Until resolved, no accounting FK or immutable
+financial evidence is changed and no purge operation is enabled. The remaining
+independent work above is unfinished, not implicitly blocked by this decision.
+
+**Acquisition follow-up:** applying request-level pacing across Site Health
+exposed an ordering dependency in the existing sitemap provenance: a page's
+first link observation can win the unique crawl/URL row before its sitemap
+observation. The retained sitemap-orphan coverage then reports one sitemap URL
+instead of two. The broader cutover is not retained; resolve that provenance
+dependency without editing immutable observations or weakening the test before
+completing item 5.
+
 **Entry point for the next assigned agent:** build on PR 1, not a new copy of
 its models, routes, receipt stores or security-event writer. PR 1 is published
 from branch `codex/audit-remediation`; start from its merged revision on main and
@@ -444,7 +475,7 @@ These remain explicit work for Cube27 legal/management and designated advisers. 
 | GST/e-invoice applicability, LUT validity, overseas taxes and policy-linked payment acceptance | Accountant and later payment workstream | Payment readiness; **no payment code belongs in this plan** |
 | Final legal approval of revised policies and enterprise documents | Cube27 legal/management | Claiming legal readiness |
 
-**Current status:** PR 1 is implemented locally; PR 2 holds the remaining engineering work. Unresolved decisions and external acceptance remain open.
+**Current status:** PR 1 is merged; PR 2 is partially implemented as described in Section 4. The retention scope decision, remaining engineering work and external acceptance remain open.
 
 ## 6. Owner-supplied proposals — internal, approval pending
 

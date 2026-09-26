@@ -17,12 +17,16 @@ from app.connectors.web_evidence.contracts import FetchRequest, FetchResult
 from app.connectors.web_evidence.fetcher import SecureFetcher
 from app.connectors.web_evidence.robots import RobotsPolicy
 from app.core.config.site_health_acquisition import (
+    ERROR_ACCESS_BLOCKED,
+    ERROR_ROBOTS_UNAVAILABLE,
+    ROBOTS_FETCH_STATUS_ACCESS_BLOCKED,
     ROBOTS_FETCH_STATUS_FETCH_FAILED,
     ROBOTS_FETCH_STATUS_NOT_FOUND,
 )
 from app.core.config.site_health_runtime import (
     site_health_settings,
 )
+from app.workers.site_health.helpers import _robots_denial_error
 from app.workers.site_health.phases.discover_stages import _classify_robots_fetch
 from app.workers.site_health.robots_cache import RobotsCache
 
@@ -39,17 +43,63 @@ def _cache() -> RobotsCache:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "status,allowed",
-    [(404, True), (410, True), (403, False), (429, False), (503, False)],
+    "status,allowed,state",
+    [
+        (404, True, "open"),
+        (410, True, "open"),
+        (401, False, "restricted"),
+        (403, False, "restricted"),
+        (429, False, "unreachable"),
+        (503, False, "unreachable"),
+    ],
 )
-async def test_robots_status_distinguishes_missing_from_refusal(status, allowed):
+async def test_robots_status_distinguishes_missing_from_refusal(status, allowed, state):
     cache = _result_cache(_ResultFetcherFactory(status=status))
     policy, body, fetched_status = await cache.ensure("https://example.com")
     assert policy.can_fetch("https://example.com/page") is allowed
-    # The UI must never label a paused crawl as "no robots.txt".
-    assert _classify_robots_fetch(body, fetched_status) == (
-        ROBOTS_FETCH_STATUS_NOT_FOUND if allowed else ROBOTS_FETCH_STATUS_FETCH_FAILED
+    # An access control is a standing refusal, never a retryable outage.
+    assert (policy.restricted, policy.unavailable) == (
+        state == "restricted",
+        state == "unreachable",
     )
+    # The UI must never label a paused crawl as "no robots.txt", nor an
+    # access control as a temporary outage.
+    assert (
+        _classify_robots_fetch(body, fetched_status)
+        == {
+            "open": ROBOTS_FETCH_STATUS_NOT_FOUND,
+            "restricted": ROBOTS_FETCH_STATUS_ACCESS_BLOCKED,
+            "unreachable": ROBOTS_FETCH_STATUS_FETCH_FAILED,
+        }[state]
+    )
+    if not allowed:
+        assert _robots_denial_error(policy)[0] == (
+            ERROR_ACCESS_BLOCKED if state == "restricted" else ERROR_ROBOTS_UNAVAILABLE
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status,refetched", [(503, True), (404, False)])
+async def test_only_unreachable_robots_is_rechecked_early(
+    monkeypatch: pytest.MonkeyPatch, status, refetched
+) -> None:
+    monkeypatch.setattr(site_health_settings, "robots_unreachable_recheck_seconds", 0.0)
+    factory = _ResultFetcherFactory(status=status)
+    cache = _result_cache(factory)
+
+    await cache.ensure("https://example.com")
+    await cache.ensure("https://example.com")
+
+    assert factory.calls == (2 if refetched else 1)
+
+
+def test_malformed_lines_are_ignored_and_parseable_rules_honored() -> None:
+    policy = RobotsPolicy.parse(
+        "User-agent: *\n<<< not a directive >>>\nDisallow: /private\n",
+        user_agent="bot",
+    )
+    assert policy.can_fetch("https://example.com/public")
+    assert not policy.can_fetch("https://example.com/private")
 
 
 @pytest.mark.asyncio

@@ -40,8 +40,15 @@ function StanceBadge({ stance }: Readonly<{ stance: SiteFactsStance }>) {
 
 /** Header summary chip: blocked count, unknown stance, or all-allowed. */
 function SummaryBadge({ view }: Readonly<{ view: SiteFactsView }>) {
-  // B2: only a FETCH FAILURE leaves the stance genuinely unknown — a 404
+  // B2: only an unread robots.txt leaves the stance genuinely unknown — a 404
   // means "no robots.txt", which is a definitive all-allowed, not an unknown.
+  if (view.robotsFetchStatus === 'access_blocked') {
+    return (
+      <Badge variant="status" value="danger">
+        Access blocked
+      </Badge>
+    );
+  }
   if (view.robotsFetchStatus === 'fetch_failed') {
     return (
       <Badge variant="status" value="warning">
@@ -72,15 +79,25 @@ function SiteFactsAlerts({
   if (view.robotsFetchStatus === 'not_found') {
     return (
       <Alert tone="info">
-        No robots.txt — crawling proceeds fail-open; the AI-crawler stance defaults to allow.
+        No robots.txt — public pages are crawled under normal rate limits; the AI-crawler stance
+        defaults to allow.
+      </Alert>
+    );
+  }
+  if (view.robotsFetchStatus === 'access_blocked') {
+    return (
+      <Alert tone="danger">
+        {`Access blocked — the site refused access to robots.txt (HTTP ${view.robotsStatus ?? '401/403'}). `}
+        CiteLadder does not bypass access controls, so re-crawling will not help until the
+        site&apos;s security settings allow the crawler.
       </Alert>
     );
   }
   if (view.robotsFetchStatus === 'fetch_failed') {
     return (
       <Alert tone="warning">
-        robots.txt could not be fetched, so the AI-crawler stance could not be read. Crawling
-        continued with the fail-open default.
+        robots.txt could not be read, so the AI-crawler stance is unknown. Crawling pauses
+        temporarily and robots.txt is checked again shortly.
       </Alert>
     );
   }
@@ -109,6 +126,13 @@ function RobotsFetchBadge({ status }: Readonly<{ status: SiteFactsView['robotsFe
     );
   }
   if (status === 'not_found') return <Badge>Not found</Badge>;
+  if (status === 'access_blocked') {
+    return (
+      <Badge variant="status" value="danger">
+        Access blocked
+      </Badge>
+    );
+  }
   return (
     <Badge variant="status" value="warning">
       Not fetched

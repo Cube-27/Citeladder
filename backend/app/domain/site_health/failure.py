@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.site_health_acquisition import (
+    ERROR_ACCESS_BLOCKED,
     ERROR_BOT_BLOCKED,
     ERROR_CONNECTION_FAILED,
     ERROR_DNS_RESOLUTION_FAILED,
@@ -51,9 +52,13 @@ _FAILURE_BASE_MESSAGES: Final[dict[str, str]] = {
     ERROR_ROBOTS_DENIED: (
         "The site's robots.txt disallows the crawler from fetching the start URL"
     ),
+    ERROR_ACCESS_BLOCKED: (
+        "Access blocked: the site answered robots.txt with 401/403, so the "
+        "crawler stopped rather than work around the site's access controls"
+    ),
     ERROR_ROBOTS_UNAVAILABLE: (
-        "The site's robots.txt endpoint returned a server error, so fetching "
-        "paused (a temporary disallow)"
+        "The site's robots.txt could not be read (server error, rate limit or "
+        "network failure), so fetching paused (a temporary disallow)"
     ),
     ERROR_BOT_BLOCKED: (
         "The site answered the start URL with a bot-protection challenge"

@@ -33,6 +33,7 @@ from app.domain.providers import service as provider_service
 from app.models.audit import ProviderCapacityBucket
 from app.models.provider import ProviderAppRoute, ProviderConnection
 from app.models.provider_disclosure import ProviderDisclosure
+from app.models.security_event import SecurityEvent
 from tests.component.auth_helpers import register_and_login as _register
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
@@ -338,16 +339,48 @@ async def test_app_route_destination_change_requires_key_and_confirmation(
 
 
 @pytest.mark.asyncio
-async def test_delete_connection(client: httpx.AsyncClient) -> None:
+async def test_delete_connection(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
     await _register(client, "prov6@example.com")
     created = await client.post(
         "/api/v1/provider-connections", json=_connection_payload()
     )
     conn_id = created.json()["id"]
+    rejected = await client.patch(
+        f"/api/v1/provider-connections/{conn_id}",
+        json={
+            "base_url": "https://unapproved.example.com/v1",
+        },
+    )
+    assert rejected.status_code == 400
+    # An empty PATCH changes nothing, so it leaves no credential receipt.
+    unchanged = await client.patch(f"/api/v1/provider-connections/{conn_id}", json={})
+    assert unchanged.status_code == 200
     resp = await client.delete(f"/api/v1/provider-connections/{conn_id}")
     assert resp.status_code == 204
     listed = await client.get("/api/v1/provider-connections")
     assert listed.json() == []
+    receipts = (
+        await db_session.scalars(
+            select(SecurityEvent)
+            .where(
+                SecurityEvent.target_id == uuid.UUID(conn_id),
+            )
+            .order_by(SecurityEvent.occurred_at)
+        )
+    ).all()
+    assert [row.event for row in receipts] == ["credential.create", "credential.delete"]
+    assert all(row.actor_id is not None for row in receipts)
+    _assert_no_secret(
+        [
+            {
+                column.name: getattr(row, column.name)
+                for column in SecurityEvent.__table__.columns
+            }
+            for row in receipts
+        ]
+    )
 
 
 @pytest.mark.asyncio

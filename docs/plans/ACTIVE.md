@@ -11,13 +11,26 @@
   open. Security alert implementation remains deferred. See the plan's current
   status and deployment gates; this entry does not authorize deployment.
 - [Audit remediation and enterprise readiness](citeladder-audit-remediation.md)
-  — PR 1 implemented on branch `codex/audit-remediation`; remaining work is
-  scoped as PR 2 in Section 4 for the next assigned agent. Public policy
+  — PR 1 merged in #156; a partial PR 2 slice is published as #158. Section 4
+  records the remaining work and the
+  pending retention/billing scope decision. Public policy
   revisions and management/legal proposals await approval.
   Payment implementation, deployment and external acceptance remain excluded.
 
 ## Queued
 
+- [DataForSEO LLM Scraper AI Visibility](citeladder-dataforseo-llm-visibility.md)
+  — plan saved on 26 September 2026; implementation not started. Adds ChatGPT
+  Search and Gemini consumer measurements, six independent audit selections,
+  and connected DataForSEO defaults. Customer credentials only; existing API
+  measurements and schedules remain available. Saving this plan does not
+  authorize implementation or live-provider acceptance.
+- [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)
+  — plan saved on 26 September 2026; implementation not started. Customer
+  authorization (domain verification or attestation) lets Site Health crawl
+  robots-excluded pages of the customer's own domain without bypassing access
+  controls. Also covers an expanded AI-bot crawlability report and CDN-log
+  crawl insights. Terms wording awaits legal review.
 - [Subsequent prompt grounding](citeladder-subsequent-prompt-grounding.md)
   — pending; relevance-ranked persisted GSC evidence for later Generate prompts.
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)

@@ -9,12 +9,22 @@ from app.models.security_event import SecurityEvent
 
 SecurityEventKind = Literal[
     "auth.login",
+    "auth.google_login",
     "auth.logout",
     "mcp.consent",
     "mcp.revoke",
     "mcp.workspace_revoke",
     "policy.accept",
+    "policy.enterprise_reference",
     "acquisition.control",
+    "membership.role",
+    "membership.remove",
+    "membership.leave",
+    "membership.transfer",
+    "membership.join",
+    "credential.create",
+    "credential.update",
+    "credential.delete",
 ]
 
 

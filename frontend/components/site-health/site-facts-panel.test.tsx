@@ -165,13 +165,27 @@ describe('SiteFactsPanel', () => {
     expect(screen.getAllByText('Unknown')).toHaveLength(6);
     expect(screen.queryByText('Block')).not.toBeInTheDocument();
     expect(screen.queryByText('Allow')).not.toBeInTheDocument();
-    expect(screen.getByText(/robots\.txt could not be fetched/)).toBeInTheDocument();
+    expect(screen.getByText(/robots\.txt could not be read/)).toBeInTheDocument();
 
     const files = screen.getByTestId('site-facts-well-known-files');
     expect(within(files).getByText('Not fetched')).toBeInTheDocument();
     expect(within(files).getByText('Absent')).toBeInTheDocument();
     expect(within(files).getByText('404')).toBeInTheDocument();
     expect(within(files).getByText('Unknown')).toBeInTheDocument(); // no robots status
+  });
+
+  it('reports a 403 robots.txt as access blocked, not a temporary outage', () => {
+    const accessBlocked = {
+      ...robotsUnfetched,
+      robots: { ...robotsUnfetched.robots, status: 'access_blocked', status_code: 403 },
+    };
+    render(<SiteFactsPanel crawl={crawl(accessBlocked)} dashboard={undefined} />);
+
+    expect(screen.queryByText('Stance unknown')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/HTTP 403/);
+    expect(screen.queryByText(/checked again shortly/)).not.toBeInTheDocument();
+    const files = screen.getByTestId('site-facts-well-known-files');
+    expect(within(files).getByText('Access blocked')).toBeInTheDocument();
   });
 
   it('shows a definitive all-allowed stance when the site has NO robots.txt (B2 not_found)', () => {
@@ -182,7 +196,7 @@ describe('SiteFactsPanel', () => {
     expect(screen.getByText('All 4 allowed')).toBeInTheDocument();
     expect(screen.getAllByText('Allow')).toHaveLength(4);
     expect(screen.queryByText('Stance unknown')).not.toBeInTheDocument();
-    expect(screen.getByText(/No robots\.txt — crawling proceeds fail-open/)).toBeInTheDocument();
+    expect(screen.getByText(/No robots\.txt — public pages are crawled/)).toBeInTheDocument();
 
     const files = screen.getByTestId('site-facts-well-known-files');
     expect(within(files).getByText('Not found')).toBeInTheDocument();

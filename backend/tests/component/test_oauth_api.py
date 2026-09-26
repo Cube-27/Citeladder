@@ -33,6 +33,7 @@ from app.core.config.oauth import (
 from app.core.security import create_oauth_state, decode_oauth_state, hash_password
 from app.domain.auth import oauth_service
 from app.models.billing import AccountGrant, BillingAccount
+from app.models.security_event import SecurityEvent
 from app.models.user import User
 from app.models.user_identity import UserIdentity
 from app.models.workspace import Workspace, WorkspaceMember
@@ -486,6 +487,13 @@ async def test_returning_signer_reuses_the_same_account(
         )
     ).all()
     assert len(identities) == 1
+    assert list(
+        await db_session.scalars(
+            select(SecurityEvent.actor_id).where(
+                SecurityEvent.event == "auth.google_login",
+            )
+        )
+    ) == [users[0].id, users[0].id]
 
 
 @pytest.mark.asyncio

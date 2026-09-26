@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from contextlib import asynccontextmanager
 
 import pytest
 
@@ -127,6 +128,103 @@ async def test_guard_refuses_redirect_before_destination_request():
             await fetcher.fetch(_request())
     assert visited == ["https://example.com/", "https://blocked.test/"]
     assert len(transport.requests) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "destination", ["https://example.com/private", "https://publisher.test/private"]
+)
+async def test_source_inspector_refuses_redirect_before_downloading(destination):
+    from app.connectors.web_evidence.robots import RobotsPolicy
+    from app.core.config.site_health_acquisition import SITE_HEALTH_USER_AGENT
+    from app.workers.source_pages.inspector import _Inspector
+
+    class Robots:
+        async def ensure(self, _authority):
+            return (
+                RobotsPolicy.parse(
+                    "User-agent: *\nDisallow: /private\nCrawl-delay: 3\n",
+                    user_agent=SITE_HEALTH_USER_AGENT,
+                ),
+                None,
+                200,
+            )
+
+    class Pacer:
+        def __init__(self):
+            self.calls = []
+
+        @asynccontextmanager
+        async def slot(self, authority, *, crawl_delay):
+            self.calls.append((authority, crawl_delay))
+            yield
+
+    transport = _SequenceTransport([_result(status=302, location=destination)])
+    pacer = Pacer()
+    async with SecureFetcher(
+        authorize_url=_authorize_test_url,
+        resolver=_FakeResolver(),
+        transport=transport,
+    ) as fetcher:
+        inspector = _Inspector(fetcher=fetcher, robots=Robots(), pacer=pacer)
+        outcome = await inspector.fetch("https://example.com/")
+    assert outcome.robots_state == "disallowed"
+    assert [request.url for request in transport.requests] == ["https://example.com/"]
+    assert pacer.calls == [("https://example.com:443", 3)]
+
+
+@pytest.mark.asyncio
+async def test_unreadable_redirect_robots_is_retryable_not_a_crash():
+    from app.connectors.web_evidence.robots import RobotsPolicy
+    from app.core.config.site_health_acquisition import SITE_HEALTH_USER_AGENT
+    from app.workers.source_pages.inspector import HostPacer, _Inspector
+
+    class Robots:
+        async def ensure(self, authority):
+            if "publisher.test" in authority:
+                raise OSError("connection reset")
+            return RobotsPolicy.parse("", user_agent=SITE_HEALTH_USER_AGENT), None, 200
+
+    transport = _SequenceTransport(
+        [_result(status=302, location="https://publisher.test/page")]
+    )
+    async with SecureFetcher(
+        authorize_url=_authorize_test_url,
+        resolver=_FakeResolver(),
+        transport=transport,
+    ) as fetcher:
+        inspector = _Inspector(
+            fetcher=fetcher, robots=Robots(), pacer=HostPacer(delay_seconds=0)
+        )
+        outcome = await inspector.fetch("https://example.com/")
+    assert outcome.robots_state == "unavailable"
+    assert [request.url for request in transport.requests] == ["https://example.com/"]
+
+
+@pytest.mark.asyncio
+async def test_stop_is_rechecked_after_waiting_for_request_slot():
+    stopped = False
+
+    async def authorize(_url):
+        if stopped:
+            raise FetchError("stopped", error_code="acquisition_unavailable")
+
+    @asynccontextmanager
+    async def slot(_url):
+        nonlocal stopped
+        stopped = True
+        yield
+
+    transport = _SequenceTransport([])
+    request = _request()
+    async with SecureFetcher(
+        authorize_url=authorize,
+        resolver=_FakeResolver(),
+        transport=transport,
+    ) as fetcher:
+        with pytest.raises(FetchError, match="stopped"):
+            await fetcher.fetch(request, request_slot=slot)
+    assert transport.requests == []
 
 
 @pytest.mark.asyncio

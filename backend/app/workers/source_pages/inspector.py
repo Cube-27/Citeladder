@@ -42,6 +42,10 @@ from app.connectors.web_evidence.contracts import FetchError, FetchResult
 from app.connectors.web_evidence.fetcher import SecureFetcher
 from app.connectors.web_evidence.resolver import SystemDnsResolver
 from app.connectors.web_evidence.source_page_fetch import source_page_request
+from app.core.config.site_health_acquisition import (
+    ERROR_ROBOTS_DENIED,
+    ERROR_ROBOTS_UNAVAILABLE,
+)
 from app.core.config.source_pages import (
     INSPECTION_REASON_NON_HTML,
     INSPECTION_REASON_ROBOTS,
@@ -51,8 +55,8 @@ from app.core.config.source_pages import (
     INSPECTION_REASON_UNRESOLVED_REDIRECT,
     SOURCE_PAGE_ALLOWED_CONTENT_TYPES,
     SOURCE_PAGE_FETCH_CONCURRENCY,
+    SOURCE_PAGE_HOP_TIMEOUT_SECONDS,
     SOURCE_PAGE_PER_HOST_DELAY_SECONDS,
-    SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS,
 )
 from app.domain.content_differentiation import refresh_content_differentiation_reports
 from app.domain.opportunities.placement_checks import (
@@ -91,7 +95,8 @@ logger = logging.getLogger("app.workers.source_pages")
 
 def _new_fetcher() -> SecureFetcher:
     return SecureFetcher(
-        authorize_url=authorize_acquisition, resolver=SystemDnsResolver()
+        authorize_url=authorize_acquisition,
+        resolver=SystemDnsResolver(),
     )
 
 
@@ -120,12 +125,13 @@ class HostPacer:
         self._last: dict[str, float] = {}
 
     @contextlib.asynccontextmanager
-    async def slot(self, authority: str):
+    async def slot(self, authority: str, *, crawl_delay: float = 0.0):
         lock = self._locks.setdefault(authority, asyncio.Lock())
         async with lock:
             elapsed = time.monotonic() - self._last.get(authority, 0.0)
-            if elapsed < self._delay:
-                await asyncio.sleep(self._delay - elapsed)
+            delay = max(self._delay, crawl_delay)
+            if elapsed < delay:
+                await asyncio.sleep(delay - elapsed)
             try:
                 yield
             finally:
@@ -137,6 +143,32 @@ class _Inspector:
     fetcher: SecureFetcher
     robots: RobotsCache
     pacer: HostPacer
+
+    @contextlib.asynccontextmanager
+    async def request_slot(self, url: str):
+        """Gate one hop on its destination's robots, pace it, then bound it.
+
+        The timeout starts once the host slot is held, so queueing behind
+        another inspection of the same publisher is never reported as a slow
+        transport.
+        """
+        authority = authority_key(url)
+        try:
+            policy, _body, _status = await self.robots.ensure(authority)
+        except (FetchError, OSError, ValueError) as exc:
+            raise FetchError(
+                "robots.txt unavailable", error_code=ERROR_ROBOTS_UNAVAILABLE
+            ) from exc
+        if not policy.can_fetch(url):
+            raise FetchError(
+                "Acquisition refused by robots policy",
+                error_code=ERROR_ROBOTS_UNAVAILABLE
+                if policy.unavailable
+                else ERROR_ROBOTS_DENIED,
+            )
+        async with self.pacer.slot(authority, crawl_delay=policy.crawl_delay()):
+            async with asyncio.timeout(SOURCE_PAGE_HOP_TIMEOUT_SECONDS):
+                yield
 
     async def refusal(self, url: str, *, requested_url: str) -> FetchOutcome | None:
         """Why robots stops this fetch, or ``None`` when it may proceed.
@@ -176,10 +208,12 @@ class _Inspector:
             return refusal
         request = source_page_request(url)
         try:
-            async with self.pacer.slot(authority_key(url)):
-                async with asyncio.timeout(SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS * 2):
-                    result = await self.fetcher.fetch(request)
+            result = await self.fetcher.fetch(request, request_slot=self.request_slot)
         except FetchError as exc:
+            if exc.error_code == ERROR_ROBOTS_DENIED:
+                return self._blocked(url)
+            if exc.error_code == ERROR_ROBOTS_UNAVAILABLE:
+                return self._robots_unavailable(url)
             return FetchOutcome(
                 outcome=OUTCOME_FAILED,
                 requested_url=url,
@@ -192,24 +226,7 @@ class _Inspector:
                 requested_url=url,
                 reason=INSPECTION_REASON_TRANSPORT,
             )
-        return await self._respect_final_host(url, result)
-
-    async def _respect_final_host(
-        self, url: str, result: FetchResult
-    ) -> FetchResult | FetchOutcome:
-        """Honour robots for the host we actually landed on.
-
-        The fetcher re-validates every redirect hop against the SSRF policy but
-        knows nothing about robots, so a cited URL that redirects to another
-        publisher would otherwise be read without that publisher's permission.
-        The destination is what gets stored and quoted, so the destination is
-        what has to consent.
-        """
-        final = result.final_url or url
-        if authority_key(final) == authority_key(url):
-            return result
-        refusal = await self.refusal(final, requested_url=url)
-        return result if refusal is None else refusal
+        return result
 
 
 def _inspection_reason(*, ok: bool, readable: bool) -> str | None:

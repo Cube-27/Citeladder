@@ -20,9 +20,32 @@ from app.workers.site_health.urls import authority_key
 RobotsEntry = tuple[RobotsPolicy, str | None, int | None]
 
 
+_ACCESS_RESTRICTED_STATUSES = frozenset({401, 403})
+
+
 def robots_status_denies(status: int | None) -> bool:
     """Only a missing robots file (other 4xx) permits; failures and refusals deny."""
     return status is None or status in {401, 403, 429} or not 200 <= status < 500
+
+
+def robots_policy_for(body: str | None, status: int | None) -> RobotsPolicy:
+    """The crawl policy one robots.txt response implies.
+
+    401/403 is an access control and never crawled; 429, 5xx and network
+    failures are a temporary disallow; a missing file (404/410 and other 4xx)
+    permits crawling under the ordinary pacing and admission controls.
+    """
+    if status in _ACCESS_RESTRICTED_STATUSES:
+        return RobotsPolicy.access_restricted(user_agent=SITE_HEALTH_USER_AGENT)
+    if robots_status_denies(status):
+        return RobotsPolicy.deny_all(user_agent=SITE_HEALTH_USER_AGENT)
+    return RobotsPolicy.parse(body or "", user_agent=SITE_HEALTH_USER_AGENT)
+
+
+def _lifetime(policy: RobotsPolicy) -> float:
+    if policy.unavailable:
+        return site_health_settings.robots_unreachable_recheck_seconds
+    return site_health_settings.robots_cache_ttl_seconds
 
 
 class RobotsCache:
@@ -52,10 +75,7 @@ class RobotsCache:
         if cached is None:
             return None
         fetched_at = self._fetched_at.get(authority, 0.0)
-        if (
-            time.monotonic() - fetched_at
-            >= site_health_settings.robots_cache_ttl_seconds
-        ):
+        if time.monotonic() - fetched_at >= _lifetime(cached[0]):
             return None
         return cached
 
@@ -70,13 +90,7 @@ class RobotsCache:
             if cached is not None:
                 return cached
             body, status = await self._fetch(authority)
-            if robots_status_denies(status):
-                policy = RobotsPolicy.deny_all(user_agent=SITE_HEALTH_USER_AGENT)
-            else:
-                policy = RobotsPolicy.parse(
-                    body or "", user_agent=SITE_HEALTH_USER_AGENT
-                )
-            entry = (policy, body, status)
+            entry = (robots_policy_for(body, status), body, status)
             self._entries[authority] = entry
             self._fetched_at[authority] = time.monotonic()
             self.prune()
@@ -110,9 +124,10 @@ class RobotsCache:
     def prune(self) -> None:
         """Evict expired entries, then enforce the configured size ceiling."""
         now = time.monotonic()
-        ttl = site_health_settings.robots_cache_ttl_seconds
         for authority in [
-            key for key, timestamp in self._fetched_at.items() if now - timestamp >= ttl
+            key
+            for key, timestamp in self._fetched_at.items()
+            if now - timestamp >= _lifetime(self._entries[key][0])
         ]:
             self.forget(authority)
         cap = site_health_settings.robots_cache_max_authorities

@@ -92,7 +92,13 @@ class _StubFetcher:
     async def __aexit__(self, *exc) -> None:
         return None
 
-    async def fetch(self, request, **_kwargs) -> FetchResult:
+    async def fetch(self, request, **kwargs) -> FetchResult:
+        if slot := kwargs.get("request_slot"):
+            async with slot(request.url):
+                return self._fetch(request)
+        return self._fetch(request)
+
+    def _fetch(self, request) -> FetchResult:
         self.requested.append(request.url)
         try:
             return self._responses[request.url]
@@ -134,7 +140,7 @@ def stub_inspection(monkeypatch):
 
 
 class _NoPacer:
-    def slot(self, authority: str):
+    def slot(self, authority: str, **_kwargs):
         import contextlib
 
         @contextlib.asynccontextmanager

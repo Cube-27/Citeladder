@@ -123,6 +123,9 @@ from app.models.opportunity import (
     OpportunitySnapshot,
     OpportunityVerificationEvent,
 )
+from app.models.policy_acceptance import (
+    EnterpriseAgreementReference as EnterpriseAgreementReference,
+)
 from app.models.policy_acceptance import PolicyAcceptance as PolicyAcceptance
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet, Topic
@@ -243,6 +246,7 @@ __all__ = [
     "DemandSignal",
     "DemandSnapshot",
     "DiscoveryModelConfig",
+    "EnterpriseAgreementReference",
     "ExecutionCostProjection",
     "GrantRevocation",
     "IdempotencyRecord",
