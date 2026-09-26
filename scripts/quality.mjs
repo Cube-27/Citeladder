@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 
@@ -25,7 +25,7 @@ if (!['fix', 'check'].includes(mode)) throw new Error(`Unknown quality mode: ${m
 const requestedScopes = option('--scope', 'all')
   .split(',')
   .map((scope) => scope.trim().toLowerCase());
-const validScopes = new Set(['all', 'changed', 'backend', 'frontend', 'contract']);
+const validScopes = new Set(['all', 'changed', 'backend', 'frontend', 'contract', 'api']);
 for (const scope of requestedScopes) {
   if (!validScopes.has(scope)) throw new Error(`Unknown quality scope: ${scope}`);
 }
@@ -54,11 +54,11 @@ function workingDiffPaths() {
 function changedScopes() {
   const paths = workingDiffPaths();
   const owners = classifyPaths(paths);
-  return new Set(['backend', 'frontend', 'contract'].filter((owner) => owners[owner]));
+  return new Set(['backend', 'frontend', 'contract', 'api'].filter((owner) => owners[owner]));
 }
 
 const scopes = requestedScopes.includes('all')
-  ? new Set(['backend', 'frontend', 'contract'])
+  ? new Set(['backend', 'frontend', 'contract', 'api'])
   : requestedScopes.includes('changed')
     ? changedScopes()
     : new Set(requestedScopes);
@@ -207,9 +207,44 @@ function frontendChecks() {
   pnpm('Frontend dead-code and dependency policy', ['check:dead-code']);
 }
 
+// Alembic is the only schema author (TypeScript migration D4): a TS service
+// holds generated types and queries, never migration files or DDL.
+const SCHEMA_AUTHORING =
+  /\b(?:Migrator|FileMigrationProvider)\b|\.schema\s*\.\s*(?:create|alter|drop)(?:Table|Index|Type|View|Schema)\b/u;
+
+function schemaAuthorityViolations(root) {
+  return readdirSync(root, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && !entry.parentPath.includes('node_modules'))
+    .map((entry) => join(entry.parentPath, entry.name))
+    .filter((path) => {
+      const relative = path.slice(root.length).replaceAll(sep, '/');
+      if (/\/migrations?\//u.test(relative) || relative.endsWith('.sql')) return true;
+      return /\.[cm]?[jt]s$/u.test(path) && SCHEMA_AUTHORING.test(readFileSync(path, 'utf8'));
+    });
+}
+
+function apiServiceChecks() {
+  pnpm('API service TypeScript', ['--filter', '@citeladder/api', 'typecheck']);
+  process.stdout.write('API service schema authority…\n');
+  const violations = schemaAuthorityViolations(join(frontendRoot, 'services'));
+  if (violations.length) {
+    failedSteps.push('API service schema authority');
+    process.stderr.write(
+      `Schema changes belong in Alembic migrations, not a TS service:\n${violations.join('\n')}\n`,
+    );
+  }
+  step(
+    'API service Python export',
+    backendPython(),
+    ['-m', 'scripts.export_ts_platform', '--check'],
+    backendRoot,
+  );
+}
+
 if (scopes.has('backend')) backendChecks();
 if (scopes.has('frontend')) frontendChecks();
 if (scopes.has('contract')) pnpm('API contract policy', ['check:contract']);
+if (scopes.has('api')) apiServiceChecks();
 
 if (failedSteps.length) {
   process.stderr.write(`\nFailed: ${failedSteps.join(', ')}. Logs: ${logDirectory}\n`);

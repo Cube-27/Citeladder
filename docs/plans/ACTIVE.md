@@ -23,14 +23,13 @@
   revisions and management/legal proposals await approval.
   Payment implementation, deployment and external acceptance remain excluded.
 
-## Queued
-
 - [TypeScript migration](citeladder-typescript-migration.md)
-  — draft saved on 26 September 2026; awaiting owner approval of decisions
-  D1–D6. 14 self-contained PRs (about 50 Python files retired each), least
-  risky first, moving the application layer only. Site Health, audits,
-  billing/entitlements and the Agent runtime stay Python. Not execution
-  authorization.
+  — PR 1 (TS platform foundation) implemented on 27 September 2026, applying
+  D1–D5 as drafted; D6 awaits the owner. Next: PR 2 (shared contracts and
+  route-ownership gate), which needs its own assignment. Site Health, audits,
+  billing/entitlements and the Agent runtime stay Python.
+
+## Queued
 - [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026; implementation not started. Customer
   authorization (domain verification or attestation) lets Site Health crawl

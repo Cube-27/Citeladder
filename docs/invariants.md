@@ -29,6 +29,9 @@ a focused test and a concrete deletion condition recorded in the change review.
 Split complex internals under the existing owner rather than creating parallel
 stores or policy authorities; do not relax repository gates to accommodate them.
 
+A route family, task kind or table has exactly one writing stack, Python or
+TypeScript. The change that gives it a TypeScript owner deletes the Python owner.
+
 ## 2. Product policy is configuration
 
 Thresholds, transports, limits, schemas, page kinds, classifier signals,
@@ -37,7 +40,8 @@ budgets, models, and templates live under
 `backend/app/core/config/*` or the owning frontend config. Services and workers
 do not embed alternate policy. A public check has at most one AEO pillar and
 equal weight within that pillar. Rule count and page-kind cohort size cannot
-manufacture score influence.
+manufacture score influence. A TypeScript service reads this policy through the
+generated export (`backend/scripts/export_ts_platform.py`), never a restated copy.
 
 ## 3. Workspace authorization is mandatory
 
@@ -218,7 +222,9 @@ Before launch, schema changes are folded into
 `migrations/versions/0001_initial.py`. Verify from an empty disposable database
 with `alembic upgrade head` and `alembic check`; do not add `0002+` without an
 explicit policy change. All active development semantic versions remain `1`
-under the same reset policy.
+under the same reset policy. Alembic is the only schema author in every
+language: TypeScript services hold generated Kysely types and never contain
+migrations or DDL (`scripts/quality.mjs --scope api`).
 
 ## 18. Input and extraction boundaries
 

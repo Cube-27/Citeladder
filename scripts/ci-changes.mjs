@@ -31,6 +31,25 @@ function isFrontend(path) {
   return path.startsWith('frontend/');
 }
 
+// The TypeScript API service plus the Python inputs it is built from: the
+// policy export and golden masters read `app/core` and the workspace policy,
+// and its Kysely types are generated from the Alembic-migrated schema.
+function isApiService(path) {
+  return (
+    path.startsWith('frontend/services/') ||
+    path === 'frontend/package.json' ||
+    path === 'frontend/pnpm-lock.yaml' ||
+    path === 'frontend/pnpm-workspace.yaml' ||
+    path.startsWith('migrations/') ||
+    (path.startsWith('backend/app/core/') && path.endsWith('.py')) ||
+    path === 'backend/app/domain/workspaces/policy.py' ||
+    path === 'backend/scripts/export_ts_platform.py' ||
+    path === 'backend/scripts/golden_masters.py' ||
+    path === 'backend/pyproject.toml' ||
+    path === 'backend/uv.lock'
+  );
+}
+
 function globRegex(pattern) {
   let source = '^';
   for (let index = 0; index < pattern.length;) {
@@ -146,7 +165,9 @@ function isComposeSensitive(path) {
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
     path.startsWith('frontend/apps/app/') ||
-    path.startsWith('frontend/apps/marketing/')
+    path.startsWith('frontend/apps/marketing/') ||
+    // Only Compose boots the API service's real entry point on its image.
+    path.startsWith('frontend/services/')
   );
 }
 
@@ -156,6 +177,7 @@ export function classifyPaths(paths, { full = false } = {}) {
       backend: true,
       frontend: true,
       contract: true,
+      api: true,
       e2e: true,
       security: true,
       compose: true,
@@ -176,6 +198,7 @@ export function classifyPaths(paths, { full = false } = {}) {
     backend,
     frontend,
     contract,
+    api: shared || normalized.some(isApiService),
     e2e: unowned.some((path) => !isNonBrowserTooling(path)) || e2eFiles.length > 0,
     security: shared || normalized.some(isSecuritySensitive),
     compose: normalized.some(isComposeSensitive),
@@ -220,6 +243,7 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
           'Backend (quality, pytest)',
           'Frontend (quality, coverage, build)',
           'API contract (backend to frontend)',
+          'API service (TypeScript)',
           'E2E (playwright)',
           'Security (pip-audit, detect-secrets)',
         ];

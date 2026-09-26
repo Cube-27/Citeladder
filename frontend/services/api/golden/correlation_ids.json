@@ -1,0 +1,66 @@
+{
+  "name": "correlation_ids",
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "cases": [
+    {
+      "input": "",
+      "output": ""
+    },
+    {
+      "input": "   ",
+      "output": ""
+    },
+    {
+      "input": "abc-DEF_123.xyz",
+      "output": "abc-DEF_123.xyz"
+    },
+    {
+      "input": "  padded-id  ",
+      "output": "padded-id"
+    },
+    {
+      "input": "0123456789abcdef",
+      "output": "0123456789abcdef"
+    },
+    {
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "output": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "output": ""
+    },
+    {
+      "input": "bad id",
+      "output": ""
+    },
+    {
+      "input": "crlf\r\ninjected",
+      "output": ""
+    },
+    {
+      "input": "semi;colon",
+      "output": ""
+    },
+    {
+      "input": "unicode-é-ok",
+      "output": "unicode-é-ok"
+    },
+    {
+      "input": "\u001cfile-separator-stripped",
+      "output": "file-separator-stripped"
+    },
+    {
+      "input": "﻿bom-kept",
+      "output": ""
+    },
+    {
+      "input": " nbsp-stripped ",
+      "output": "nbsp-stripped"
+    },
+    {
+      "input": "٣٤٥-arabic-digits",
+      "output": "٣٤٥-arabic-digits"
+    }
+  ]
+}

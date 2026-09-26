@@ -22,3 +22,19 @@ CODE_WORKSPACE_OWNER_REQUIRED: Final = "workspace_owner_required"
 CODE_INVITATION_INVALID: Final = "workspace_invitation_invalid"
 CODE_INVITATION_LIMIT_EXCEEDED: Final = "workspace_invitation_limit_exceeded"
 CODE_MEMBER_NOT_FOUND: Final = "workspace_member_not_found"
+
+# Role-authorization refusals (``api/deps.py``). Keyed by capability value so
+# config stays below the domain policy that defines the capability enum.
+CODE_WORKSPACE_ROLE_FORBIDDEN: Final = "workspace_role_forbidden"
+#: Three capabilities refuse with the same sentence. Naming it keeps them
+#: answering identically: a caller that probes two of them must not be able to
+#: tell from the wording which one it hit.
+_OWNER_OR_ADMIN_REQUIRED: Final = "Workspace owner or admin access is required"
+CAPABILITY_DENIAL_MESSAGES: Final[dict[str, str]] = {
+    "read": "Workspace access is required",
+    "write": "Workspace member access is required",
+    "run": "Workspace member access is required",
+    "manage_billing": _OWNER_OR_ADMIN_REQUIRED,
+    "manage_members": _OWNER_OR_ADMIN_REQUIRED,
+    "manage_credentials": _OWNER_OR_ADMIN_REQUIRED,
+}

@@ -1,0 +1,100 @@
+/**
+ * Workspace membership and the role/capability matrix.
+ *
+ * Mirrors `require_workspace_member` and `WorkspaceContext` in
+ * `backend/app/api/deps.py`. The matrix and refusal wording come from the
+ * Python policy export; a role missing from it confers nothing (fail closed).
+ * A non-member cannot tell an existing workspace from a missing one: both 404.
+ */
+import type { MiddlewareHandler } from 'hono';
+
+import { policy } from '../config.ts';
+import type { AppEnv } from '../context.ts';
+import type { Database } from '../db/database.ts';
+import { WorkspaceScope } from '../db/workspace-scope.ts';
+import { ApiError, notFound } from '../errors.ts';
+import { parseUuid } from './session.ts';
+
+export type WorkspaceCapability = keyof typeof policy.workspaces.denial_messages;
+
+const ROLE_CAPABILITIES: Record<string, readonly string[]> = policy.workspaces.roles;
+
+function roleCapabilities(role: string): readonly string[] {
+  return (Object.hasOwn(ROLE_CAPABILITIES, role) && ROLE_CAPABILITIES[role]) || [];
+}
+
+export class WorkspaceContext {
+  readonly scope: WorkspaceScope;
+  readonly role: string;
+
+  constructor(workspaceId: string, role: string) {
+    this.scope = new WorkspaceScope(workspaceId);
+    this.role = role;
+  }
+
+  get workspaceId(): string {
+    return this.scope.workspaceId;
+  }
+
+  allows(capability: WorkspaceCapability): boolean {
+    return roleCapabilities(this.role).includes(capability);
+  }
+
+  /** The caller's effective capability names for UI controls. */
+  capabilities(): readonly string[] {
+    return roleCapabilities(this.role);
+  }
+
+  /** 403 unless the caller's role permits `capability`. */
+  require(capability: WorkspaceCapability): void {
+    if (!this.allows(capability)) {
+      throw new ApiError(403, policy.workspaces.denial_messages[capability], {
+        code: policy.workspaces.forbidden_code,
+      });
+    }
+  }
+}
+
+/** The caller's membership, or 404; system workspaces never authorize. */
+export async function resolveWorkspaceMember(
+  db: Database,
+  userId: string,
+  workspaceId: string,
+): Promise<WorkspaceContext> {
+  const member = await db
+    .selectFrom('workspace_members')
+    .innerJoin('workspaces', 'workspaces.id', 'workspace_members.workspace_id')
+    .select(['workspace_members.workspace_id', 'workspace_members.role'])
+    .where('workspace_members.workspace_id', '=', workspaceId)
+    .where('workspace_members.user_id', '=', userId)
+    .where('workspaces.is_system', '=', false)
+    .executeTakeFirst();
+  if (member === undefined) throw notFound('Workspace');
+  return new WorkspaceContext(member.workspace_id, member.role);
+}
+
+/**
+ * Authorize the path `:workspace_id` for the session user (mount after
+ * `sessionUser`), optionally gated on one capability.
+ */
+export function workspaceMember(
+  db: Database,
+  capability?: WorkspaceCapability,
+): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    const workspaceId = parseUuid(c.req.param('workspace_id'));
+    if (workspaceId === null) {
+      const errors = [
+        { loc: ['workspace_id'], message: 'Input should be a valid UUID', type: 'uuid_parsing' },
+      ];
+      throw new ApiError(422, 'workspace_id: Input should be a valid UUID', {
+        details: { errors },
+        retryable: false,
+      });
+    }
+    const workspace = await resolveWorkspaceMember(db, c.get('user').id, workspaceId);
+    if (capability !== undefined) workspace.require(capability);
+    c.set('workspace', workspace);
+    await next();
+  };
+}

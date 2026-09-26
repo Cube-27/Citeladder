@@ -326,5 +326,25 @@ services:
     healthcheck:
       disable: true
 
+  # TypeScript API service (docs/plans/citeladder-typescript-migration.md).
+  # Owns no route family yet: no ingress routes to it and nothing depends on
+  # it. It reads the Alembic-migrated schema and verifies backend sessions.
+  api-service:
+    build:
+      context: .
+      dockerfile: frontend/services/api/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ${CITELADDER_ENV_FILE:-.env}
+    environment: *backend_env
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      # Loopback only: nothing may reach this service except from this host.
+      - "127.0.0.1:8100:8100"
+
 volumes:
   pg_data:
