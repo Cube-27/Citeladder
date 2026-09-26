@@ -45,7 +45,7 @@ describe('AuditSchedules', () => {
     await user.click(screen.getByRole('option', { name: 'Every N minutes' }));
     await user.clear(screen.getByLabelText('Minutes'));
     await user.type(screen.getByLabelText('Minutes'), '15');
-    await user.click(screen.getByRole('checkbox', { name: 'gemini' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Gemini API' }));
     await user.click(screen.getByRole('button', { name: 'Schedule audit' }));
 
     await waitFor(() =>

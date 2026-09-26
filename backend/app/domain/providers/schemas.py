@@ -56,7 +56,14 @@ TransportProvider = ActiveTransportProvider
 # Every engine the analysis side understands, including one whose adapter has
 # not shipped: a connection may be CONFIGURED for it before a run may SELECT
 # it. ``SELECTABLE_ENGINES`` is what gates selection.
-LogicalEngine = Literal["chatgpt", "gemini", "claude", "google_ai_overview"]
+LogicalEngine = Literal[
+    "chatgpt",
+    "gemini",
+    "claude",
+    "google_ai_overview",
+    "chatgpt_search",
+    "gemini_consumer",
+]
 
 
 class ProviderRouteInput(BaseModel):

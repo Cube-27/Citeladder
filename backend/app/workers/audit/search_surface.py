@@ -36,13 +36,16 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
 
 from app.analysis.search_surfaces.ai_overview import parse_task_payload
+from app.analysis.search_surfaces.llm_scraper import parse_scraper_payload
 from app.analysis.service import analyze_task, build_scoring_config
+from app.connectors.answer_engines.contracts import AnswerEngineResponse
 from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.search_surfaces.contracts import (
     ERROR_CREDENTIAL_UNAVAILABLE,
@@ -54,9 +57,17 @@ from app.connectors.search_surfaces.contracts import (
     SearchSurfaceRequest,
     SearchSurfaceResult,
 )
-from app.connectors.search_surfaces.dataforseo import DataForSeoSearchSurfaceAdapter
+from app.connectors.search_surfaces.dataforseo import (
+    DataForSeoSearchSurfaceAdapter,
+    UncertainSubmission,
+)
 from app.core.config import dataforseo as dataforseo_config
-from app.core.config.provider_catalog import RETRYABLE_ERRORS
+from app.core.config.llm_scraper import PRODUCTS
+from app.core.config.provider_catalog import (
+    ERROR_PARSE,
+    RETRYABLE_ERRORS,
+    is_endpoint_approved,
+)
 from app.core.config.task_queue import (
     TASK_STATUS_LEASED,
     TASK_STATUS_RUNNING,
@@ -64,10 +75,12 @@ from app.core.config.task_queue import (
 )
 from app.models.audit import Audit, AuditTask, RawResponseArtifact
 from app.models.search_surfaces import AioEntityLink, AioObservation
+from app.workers.audit.scraper_finalization import AuditScraperFinalizationMixin
 from app.workers.audit.search_surface_support import (
-    _audit_is_closed,
     _bound_credential,
     _citation_rows,
+    _context_is_owned,
+    _context_metadata,
     _frozen_connection_id,
     _frozen_search_context,
     _match_by_tag,
@@ -76,6 +89,7 @@ from app.workers.audit.search_surface_support import (
     _submission_ref,
     _surface_usage,
     _task_metadata,
+    recovery_deadline,
 )
 
 logger = logging.getLogger("app.workers.audit_worker")
@@ -92,7 +106,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class AuditSearchSurfaceMixin:
+class AuditSearchSurfaceMixin(AuditScraperFinalizationMixin):
     """The submit/park/poll/finalize path for a ``search_ai`` route."""
 
     async def _run_search_surface(
@@ -116,6 +130,21 @@ class AuditSearchSurfaceMixin:
             has_intent = bool(task.provider_submission_ref)
             has_task_id = bool(task.provider_task_id)
             uncertain = task.status == TASK_STATUS_SUBMISSION_UNCERTAIN
+            deadline = recovery_deadline(task)
+
+        if deadline is not None and _utcnow() >= deadline:
+            context = await self._load_search_context(task_id, audit_id)
+            if context is not None:
+                await self._finalize_search_surface(
+                    task_id,
+                    audit_id,
+                    SearchSurfaceResult(
+                        outcome=OUTCOME_EXECUTION_FAILURE,
+                        error_code=ERROR_SUBMISSION_UNRECONCILED,
+                    ),
+                    context=context,
+                )
+            return False
 
         if has_task_id:
             return await self._poll_search_surface(task_id, audit_id)
@@ -168,7 +197,9 @@ class AuditSearchSurfaceMixin:
             await session.commit()
 
         adapter = DataForSeoSearchSurfaceAdapter(
-            secret=context.secret, base_url=context.base_url
+            secret=context.secret,
+            base_url=context.base_url,
+            logical_engine=context.logical_engine,
         )
         request = SearchSurfaceRequest(
             query=context.prompt_text,
@@ -179,13 +210,22 @@ class AuditSearchSurfaceMixin:
             load_async_ai_overview=dataforseo_config.LOAD_ASYNC_AI_OVERVIEW,
             timeout_seconds=dataforseo_config.dataforseo_settings.request_timeout_seconds,
             provider_submission_ref=submission_ref,
+            request_settings=context.request_settings,
         )
         try:
             submission = await adapter.submit(request)
         except ProviderError as exc:
-            if exc.error_code in RETRYABLE_ERRORS:
-                # A timeout or connection fault AFTER the POST left the wire is
-                # an UNCERTAIN submission, not a failed one. The request may
+            await self._record_provider_exchange(
+                context,
+                error_code=exc.error_code,
+                submission=exc.submission
+                if isinstance(exc, UncertainSubmission)
+                else None,
+            )
+            if exc.error_code in RETRYABLE_ERRORS or exc.error_code == ERROR_PARSE:
+                # A timeout, connection fault or unreadable/id-less response
+                # AFTER the POST left the wire is an UNCERTAIN submission, not
+                # a failed one. The request may
                 # have landed and been charged, so this waits for
                 # reconciliation rather than trying again.
                 await self._park_submission_uncertain(task_id, audit_id)
@@ -200,6 +240,7 @@ class AuditSearchSurfaceMixin:
             )
             return False
 
+        await self._record_provider_exchange(context, submission=submission)
         await self._park_awaiting_result(
             task_id,
             audit_id,
@@ -233,7 +274,10 @@ class AuditSearchSurfaceMixin:
                 context=context,
             )
             return False
-        if context.poll_count >= dataforseo_config.POLL_CEILING:
+        if (
+            context.logical_engine not in PRODUCTS
+            and context.poll_count >= dataforseo_config.POLL_CEILING
+        ):
             await self._finalize_search_surface(
                 task_id,
                 audit_id,
@@ -246,11 +290,14 @@ class AuditSearchSurfaceMixin:
             return False
 
         adapter = DataForSeoSearchSurfaceAdapter(
-            secret=context.secret, base_url=context.base_url
+            secret=context.secret,
+            base_url=context.base_url,
+            logical_engine=context.logical_engine,
         )
         try:
             payload = await adapter.fetch(context.provider_task_id)
         except ProviderError as exc:
+            await self._record_provider_exchange(context, error_code=exc.error_code)
             if exc.error_code in RETRYABLE_ERRORS:
                 # Retrieval itself faulted. Spend a RETRIEVAL attempt and poll
                 # the same task again — this is the only counter that moves,
@@ -267,7 +314,24 @@ class AuditSearchSurfaceMixin:
             )
             return False
 
-        result = parse_task_payload(payload, expected_task_id=context.provider_task_id)
+        await self._record_provider_exchange(context)
+        try:
+            result = (
+                parse_scraper_payload(
+                    payload,
+                    expected_task_id=context.provider_task_id,
+                    logical_engine=context.logical_engine,
+                )
+                if context.logical_engine in PRODUCTS
+                else parse_task_payload(
+                    payload, expected_task_id=context.provider_task_id
+                )
+            )
+        except ProviderError as exc:
+            result = replace(_provider_refusal(exc), raw_payload=payload)
+        if isinstance(result, AnswerEngineResponse):
+            await self._finalize_scraper(task_id, audit_id, result)
+            return False
         if result is RESULT_STILL_PENDING:
             # The provider says it is queued or handed. No attempt is spent:
             # nothing failed, and the task is making normal progress.
@@ -327,14 +391,21 @@ class AuditSearchSurfaceMixin:
             return False
 
         adapter = DataForSeoSearchSurfaceAdapter(
-            secret=context.secret, base_url=context.base_url
+            secret=context.secret,
+            base_url=context.base_url,
+            logical_engine=context.logical_engine,
         )
         # The upper bound must be strictly in the past or the provider refuses
         # the window outright.
         upper = _utcnow() - timedelta(
             seconds=dataforseo_config.RECONCILE_WINDOW_LAG_SECONDS
         )
-        lower = upper - timedelta(hours=dataforseo_config.RECONCILE_WINDOW_HOURS)
+        lower = context.submitted_at or (
+            upper - timedelta(hours=dataforseo_config.RECONCILE_WINDOW_HOURS)
+        )
+        lower -= timedelta(seconds=dataforseo_config.RECONCILE_WINDOW_LAG_SECONDS)
+        if context.logical_engine in PRODUCTS:
+            return await self._reconcile_scraper_page(context, adapter, lower, upper)
         try:
             listing = await adapter.list_task_ids(
                 datetime_from=lower, datetime_to=upper
@@ -401,6 +472,7 @@ class AuditSearchSurfaceMixin:
         del audit_id  # parking needs only the row
 
         def _apply(task: Any) -> None:
+            _cap_recovery_time(task)
             if provider_task_id is not None:
                 task.provider_task_id = provider_task_id
             if reset_poll_count:
@@ -424,11 +496,22 @@ class AuditSearchSurfaceMixin:
         )
 
     async def _park_submission_uncertain(
-        self, task_id: uuid.UUID, audit_id: uuid.UUID, *, spend_poll: bool = False
+        self,
+        task_id: uuid.UUID,
+        audit_id: uuid.UUID,
+        *,
+        spend_poll: bool = False,
+        reconciliation: dict | None = None,
     ) -> None:
         del audit_id
 
         def _apply(task: Any) -> None:
+            _cap_recovery_time(task)
+            if reconciliation is not None:
+                task.provider_metadata = {
+                    **(task.provider_metadata or {}),
+                    "reconciliation": reconciliation,
+                }
             if spend_poll:
                 task.provider_poll_count = (task.provider_poll_count or 0) + 1
 
@@ -462,6 +545,9 @@ class AuditSearchSurfaceMixin:
         ones that never produce an analysis. That is the point of keying it on
         the task.
         """
+        if context.logical_engine in PRODUCTS:
+            await self._finalize_scraper(task_id, audit_id, result)
+            return
         succeeded = result.outcome in SUCCESSFUL_OUTCOMES
         artifact_id: uuid.UUID | None = None
         async with self._session_factory() as session:
@@ -646,7 +732,9 @@ class AuditSearchSurfaceMixin:
         async with self._session_factory() as session:
             task = await session.get(AuditTask, task_id)
             audit = await session.get(Audit, audit_id)
-            if task is None or audit is None or _audit_is_closed(audit):
+            if task is None or audit is None:
+                return None
+            if not _context_is_owned(task, audit, self.owner, _utcnow()):
                 return None
             route = dict(task.provider_route_snapshot or {})
             connection_id = task.provider_connection_id or _frozen_connection_id(route)
@@ -654,11 +742,19 @@ class AuditSearchSurfaceMixin:
                 session,
                 connection_id=connection_id,
                 revision=task.provider_credential_revision,
+                workspace_id=task.workspace_id,
             )
+            if not is_endpoint_approved(
+                task.transport_provider, str(route.get("base_url") or "")
+            ):
+                secret = ""
             return _SearchContext(
                 task_id=task_id,
                 audit_id=audit_id,
                 prompt_text=task.prompt_text or "",
+                logical_engine=task.logical_engine,
+                submitted_at=task.provider_task_submitted_at,
+                **_context_metadata(task),
                 idempotency_key=task.idempotency_key,
                 submission_ref=task.provider_submission_ref,
                 provider_task_id=task.provider_task_id,
@@ -666,9 +762,14 @@ class AuditSearchSurfaceMixin:
                 connection_id=connection_id,
                 credential_revision=revision,
                 secret=secret,
-                base_url=str(route.get("base_url") or ""),
                 **_frozen_search_context(task.request_snapshot),
             )
 
 
 __all__ = ["AuditSearchSurfaceMixin"]
+
+
+def _cap_recovery_time(task: Any) -> None:
+    deadline = recovery_deadline(task)
+    if deadline is not None:
+        task.available_at = min(task.available_at, deadline)

@@ -67,6 +67,7 @@ from app.models.audit import (
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.audit.execution import AuditExecutionMixin
 from app.workers.audit.search_surface import AuditSearchSurfaceMixin
+from app.workers.audit.search_surface_support import uses_scraper_recovery
 from app.workers.audit.terminalization import AuditTerminalizationMixin
 from app.workers.audit_worker_support import (
     assert_worker_pool_capacity,
@@ -472,7 +473,9 @@ class AuditWorker(
                 deadline_seconds = max_run_seconds_from_configuration(
                     audit.configuration
                 )
-                if self._deadline_passed(audit, deadline_seconds):
+                if not uses_scraper_recovery(task) and self._deadline_passed(
+                    audit, deadline_seconds
+                ):
                     # Same terminal release as the cancel path above.
                     await self._apply_funded_ledger(
                         session, task=task, billable=False, terminal=True

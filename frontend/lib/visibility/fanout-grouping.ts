@@ -51,15 +51,21 @@ export type SearchGroup = {
    */
   undisclosed: number;
   silent: number;
+  unavailable: number;
+  noExposedQueries: number;
 };
 
 function foldRows(executions: readonly VisibilityExecutionEvidence[]): SearchGroup {
   const rows = new Map<string, SearchRow>();
   let undisclosed = 0;
   let silent = 0;
+  let unavailable = 0;
+  let noExposedQueries = 0;
   for (const execution of executions) {
     if (execution.state === 'count_only') undisclosed += 1;
     if (execution.state === 'no_search') silent += 1;
+    if (execution.state === 'unavailable') unavailable += 1;
+    if (execution.state === 'no_exposed_queries') noExposedQueries += 1;
     for (const query of queryTexts(execution)) {
       const row = rows.get(query);
       if (row) {
@@ -86,6 +92,8 @@ function foldRows(executions: readonly VisibilityExecutionEvidence[]): SearchGro
     ),
     undisclosed,
     silent,
+    unavailable,
+    noExposedQueries,
   };
 }
 

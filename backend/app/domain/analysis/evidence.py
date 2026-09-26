@@ -607,11 +607,15 @@ def _fanout_state(
     events: list[VisibilityEvidenceSearchEvent],
     search_used: bool,
     search_query_count: int,
+    provider_metadata: dict | None = None,
 ) -> tuple[bool, VisibilityFanoutState]:
     """Derive ``(query_text_available, state)`` from the persisted signals."""
     query_text_available = any(ev.query.strip() for ev in events)
     if query_text_available:
         return True, VisibilityFanoutState.QUERIES_AVAILABLE
+    availability = (provider_metadata or {}).get("fanout_availability")
+    if availability in ("unavailable", "no_exposed_queries"):
+        return False, VisibilityFanoutState(availability)
     if search_used or search_query_count > 0:
         return False, VisibilityFanoutState.COUNT_ONLY
     return False, VisibilityFanoutState.NO_SEARCH
@@ -643,6 +647,7 @@ def _evidence_item(
 ) -> VisibilityExecutionEvidence:
     events, event_source = _select_events(artifact, task)
     query_text_available, state = _fanout_state(
+        provider_metadata=task.provider_metadata,
         events=events,
         search_used=bool(analysis.search_used),
         search_query_count=int(analysis.search_query_count or 0),

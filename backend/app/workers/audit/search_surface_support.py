@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +28,7 @@ from app.connectors.search_surfaces.contracts import (
 )
 from app.core.config import dataforseo as dataforseo_config
 from app.core.config.audits import AUDIT_STATUS_CANCELLED, AUDIT_TERMINAL_STATUSES
+from app.core.config.llm_scraper import PRODUCTS
 from app.core.security import decrypt_secret
 from app.domain.audits.cost_projection import normalize_optional_non_negative_int
 from app.models.audit import Audit, AuditTask
@@ -35,11 +37,47 @@ from app.models.provider import ProviderConnection
 logger = logging.getLogger("app.workers.audit_worker")
 
 
+def uses_scraper_recovery(task: AuditTask) -> bool:
+    return task.logical_engine in PRODUCTS and bool(task.provider_submission_ref)
+
+
+def recovery_deadline(task: AuditTask) -> datetime | None:
+    if task.provider_task_submitted_at is None:
+        return None
+    hours = (task.request_snapshot or {}).get(
+        "recovery_deadline_hours",
+        dataforseo_config.dataforseo_settings.recovery_deadline_hours,
+    )
+    return task.provider_task_submitted_at + timedelta(hours=hours)
+
+
 def _audit_is_closed(audit: Audit) -> bool:
     """True when nothing more should be done for this run."""
     return audit.status == AUDIT_STATUS_CANCELLED or (
         audit.status in AUDIT_TERMINAL_STATUSES
     )
+
+
+def _context_is_owned(task: AuditTask, audit: Audit, owner: str, now: datetime) -> bool:
+    return (
+        task.audit_id == audit.id
+        and task.workspace_id == audit.workspace_id
+        and task.lease_owner == owner
+        and task.lease_expires_at is not None
+        and task.lease_expires_at > now
+        and not _audit_is_closed(audit)
+    )
+
+
+def _context_metadata(task: AuditTask) -> dict[str, Any]:
+    metadata = task.provider_metadata or {}
+    request = task.request_snapshot or {}
+    route = task.provider_route_snapshot or {}
+    return {
+        "reconciliation": metadata.get("reconciliation"),
+        "request_settings": request.get("request_settings"),
+        "base_url": str(route.get("base_url") or ""),
+    }
 
 
 def _frozen_search_context(snapshot: dict[str, Any] | None) -> dict[str, Any]:
@@ -66,6 +104,7 @@ async def _bound_credential(
     *,
     connection_id: uuid.UUID | None,
     revision: uuid.UUID | None,
+    workspace_id: uuid.UUID,
 ) -> tuple[str, uuid.UUID | None]:
     """The bound account's secret, and the revision the task is pinned to.
 
@@ -76,6 +115,8 @@ async def _bound_credential(
     if connection_id is None:
         return "", revision
     connection = await session.get(ProviderConnection, connection_id)
+    if connection is not None and connection.workspace_id != workspace_id:
+        return "", revision
     secret = _usable_secret(connection, revision)
     if revision is None and connection is not None:
         revision = connection.credential_revision
@@ -109,6 +150,10 @@ class _SearchContext:
     location_code: int
     language_code: str
     device: str
+    logical_engine: str = "google_ai_overview"
+    submitted_at: datetime | None = None
+    reconciliation: dict[str, Any] | None = None
+    request_settings: dict[str, Any] | None = None
 
 
 def _submission_ref(idempotency_key: str) -> str:

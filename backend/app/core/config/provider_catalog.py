@@ -41,6 +41,10 @@ from app.core.config.provider_routes import (
     ENGINE_CHATGPT as ENGINE_CHATGPT,
 )
 from app.core.config.provider_routes import (
+    ENGINE_CHATGPT_SEARCH,
+    ENGINE_GEMINI_CONSUMER,
+)
+from app.core.config.provider_routes import (
     ENGINE_CLAUDE as ENGINE_CLAUDE,
 )
 from app.core.config.provider_routes import (
@@ -121,6 +125,9 @@ from app.core.config.provider_routes import (
 from app.core.config.provider_routes import (
     surface_kind as surface_kind,
 )
+from app.core.config.provider_routes import (
+    uses_provider_tasks as uses_provider_tasks,
+)
 
 
 # --- Execution-time route policy -----------------------------------------
@@ -198,6 +205,7 @@ def route_policy(logical_engine: str) -> RoutePolicy:
 # never park a pool longer than this.
 DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS: Final = 60.0
 SEARCH_INTELLIGENCE_CAPACITY_ENGINE: Final = "search_intelligence"
+SCRAPER_RECONCILIATION_CAPACITY_ENGINE: Final = "llm_scraper_reconciliation"
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,17 +245,30 @@ ROUTE_CAPACITY_POLICIES: Final[dict[tuple[str, str], RouteCapacityPolicy]] = {
     # rate exists yet. Note that on a polled surface a "call start" paced here
     # is a SUBMISSION or a POLL, not a whole execution — the two are separated
     # by the queue, not by this bucket.
-    (ENGINE_GOOGLE_AI_OVERVIEW, TRANSPORT_DATAFORSEO): RouteCapacityPolicy(
-        capacity=1.0,
-        refill_tokens_per_second=1.0,
-        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
-        max_concurrency=2,
-    ),
+    **{
+        (engine, TRANSPORT_DATAFORSEO): RouteCapacityPolicy(
+            capacity=1.0,
+            refill_tokens_per_second=1.0,
+            max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+            max_concurrency=2,
+        )
+        for engine in (
+            ENGINE_GOOGLE_AI_OVERVIEW,
+            ENGINE_CHATGPT_SEARCH,
+            ENGINE_GEMINI_CONSUMER,
+        )
+    },
     (SEARCH_INTELLIGENCE_CAPACITY_ENGINE, TRANSPORT_DATAFORSEO): RouteCapacityPolicy(
         capacity=1.0,
         refill_tokens_per_second=1.0,
         max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
         max_concurrency=2,
+    ),
+    (SCRAPER_RECONCILIATION_CAPACITY_ENGINE, TRANSPORT_DATAFORSEO): RouteCapacityPolicy(
+        capacity=1.0,
+        refill_tokens_per_second=0.15,
+        max_cooldown_seconds=DEFAULT_ROUTE_MAX_COOLDOWN_SECONDS,
+        max_concurrency=1,
     ),
 }
 
@@ -435,8 +456,26 @@ class ProviderCatalogEntry:
 
 PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
     ProviderCatalogEntry(
+        key=ENGINE_CHATGPT_SEARCH,
+        label="ChatGPT Search",
+        availability=AVAILABILITY_AVAILABLE,
+        unavailable_reason=None,
+        adapter_shipped=True,
+        grant_key="provider.chatgpt_search",
+        issuable=False,
+    ),
+    ProviderCatalogEntry(
+        key=ENGINE_GEMINI_CONSUMER,
+        label="Gemini",
+        availability=AVAILABILITY_AVAILABLE,
+        unavailable_reason=None,
+        adapter_shipped=True,
+        grant_key="provider.gemini_consumer",
+        issuable=False,
+    ),
+    ProviderCatalogEntry(
         key=ENGINE_CHATGPT,
-        label="ChatGPT",
+        label="ChatGPT API",
         availability=AVAILABILITY_AVAILABLE,
         unavailable_reason=None,
         adapter_shipped=True,
@@ -445,7 +484,7 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
     ),
     ProviderCatalogEntry(
         key=ENGINE_CLAUDE,
-        label="Claude",
+        label="Claude API",
         availability=AVAILABILITY_AVAILABLE,
         unavailable_reason=None,
         adapter_shipped=True,
@@ -454,7 +493,7 @@ PUBLIC_PROVIDER_CATALOG: Final[tuple[ProviderCatalogEntry, ...]] = (
     ),
     ProviderCatalogEntry(
         key=ENGINE_GEMINI,
-        label="Gemini",
+        label="Gemini API",
         availability=AVAILABILITY_AVAILABLE,
         unavailable_reason=None,
         adapter_shipped=True,

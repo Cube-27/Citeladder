@@ -154,6 +154,8 @@ APPROVED_ROUTE_IDENTITIES: Final[frozenset[RouteIdentity]] = frozenset(
         ROUTE_CLAUDE,
         ROUTE_GEMINI,
         ROUTE_GOOGLE_AI_OVERVIEW,
+        _approved_route("chatgpt_search"),
+        _approved_route("gemini_consumer"),
     }
 )
 

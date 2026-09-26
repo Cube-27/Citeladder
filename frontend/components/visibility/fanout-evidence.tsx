@@ -324,6 +324,10 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
       ? `${group.undisclosed} ${undisclosedNoun} searched without returning the wording`
       : null,
     group.silent ? `${group.silent} answered without searching` : null,
+    group.unavailable ? `${group.unavailable} answers have unavailable query evidence` : null,
+    group.noExposedQueries
+      ? `${group.noExposedQueries} answers exposed no queries; search activity is unknown`
+      : null,
   ]
     .filter(Boolean)
     .join(' · ');

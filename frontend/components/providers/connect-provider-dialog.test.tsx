@@ -107,10 +107,10 @@ describe('ConnectProviderDialog', () => {
     const picker = within(dialog).getByLabelText('AI engine');
     expect(picker).toHaveTextContent('ChatGPT');
     await user.click(picker);
-    expect(screen.getByRole('option', { name: 'ChatGPT' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Gemini' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Claude' })).toBeInTheDocument();
-    await user.click(screen.getByRole('option', { name: 'Claude' }));
+    expect(screen.getByRole('option', { name: 'ChatGPT API' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Gemini API' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Claude API' })).toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: 'Claude API' }));
     // The picked engine's direct route is shown before connecting.
     expect(await within(dialog).findByText(/claude-sonnet-5/)).toBeInTheDocument();
 
@@ -207,7 +207,7 @@ describe('ConnectProviderDialog', () => {
     renderWithProviders(<Harness />);
     const dialog = await findDialog();
     await user.click(within(dialog).getByLabelText('AI engine'));
-    await user.click(screen.getByRole('option', { name: 'ChatGPT' }));
+    await user.click(screen.getByRole('option', { name: 'ChatGPT API' }));
 
     await user.click(within(dialog).getByRole('button', { name: /test connection/i }));
     expect(await within(dialog).findByText('Invalid API key')).toBeInTheDocument();
@@ -289,7 +289,7 @@ describe('ConnectProviderDialog', () => {
     renderWithProviders(<Harness />);
     const dialog = await findDialog();
     await user.click(within(dialog).getByLabelText('AI engine'));
-    await user.click(screen.getByRole('option', { name: 'ChatGPT' }));
+    await user.click(screen.getByRole('option', { name: 'ChatGPT API' }));
 
     const keyInput = within(dialog).getByLabelText(/api key/i);
     expect(keyInput).toHaveAttribute('type', 'password');

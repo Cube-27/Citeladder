@@ -8,6 +8,7 @@ worker-level callers and tests.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import time
 import uuid
@@ -32,10 +33,12 @@ from app.core.config.audits import (
     AuditExecutionPolicy,
     audit_settings,
 )
+from app.core.config.llm_scraper import PRODUCTS
 from app.core.config.provider_catalog import (
     ERROR_INVALID_SURFACE,
     ERROR_RATE_LIMIT,
     ERROR_TIMEOUT,
+    SCRAPER_RECONCILIATION_CAPACITY_ENGINE,
     TRANSPORT_DATAFORSEO,
     is_active_transport,
     is_endpoint_approved,
@@ -209,7 +212,17 @@ def build_call_request(
     return request, snapshot
 
 
-def capacity_request(context: ExecutionContext) -> CapacityRequest:
+def is_scraper_reconciliation(task: AuditTask) -> bool:
+    return (
+        task.logical_engine in PRODUCTS
+        and bool(task.provider_submission_ref)
+        and not task.provider_task_id
+    )
+
+
+def capacity_request(
+    context: ExecutionContext, *, scraper_reconciliation: bool = False
+) -> CapacityRequest:
     """Build this attempt's capacity demand from frozen credential identity."""
     if context.funding is not None:
         return CapacityRequest(
@@ -225,10 +238,16 @@ def capacity_request(context: ExecutionContext) -> CapacityRequest:
         if context.transport_provider == TRANSPORT_DATAFORSEO
         else ""
     )
+    capacity_engine = context.logical_engine
+    if scraper_reconciliation:
+        capacity_engine = SCRAPER_RECONCILIATION_CAPACITY_ENGINE
+        account_identity = hashlib.sha256(
+            f"{account_identity}:{capacity_engine}".encode()
+        ).hexdigest()
     return CapacityRequest(
         task_id=context.task_id,
         attempt_number=context.attempt_number,
-        logical_engine=context.logical_engine,
+        logical_engine=capacity_engine,
         transport_provider=context.transport_provider,
         credential_kind=CREDENTIAL_KIND_BYOK,
         connection_id=context.connection_id,

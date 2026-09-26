@@ -15,7 +15,7 @@ import json
 from dataclasses import dataclass
 from typing import Final
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # --- Endpoints ------------------------------------------------------------
@@ -208,7 +208,7 @@ class KeywordTooLongError(ValueError):
     """A tracked prompt cannot be represented within the keyword limit."""
 
 
-def serialize_keyword(prompt: str) -> str:
+def serialize_keyword(prompt: str, *, limit: int = KEYWORD_MAX_CHARS) -> str:
     """Put a tracked prompt on the wire without changing what it asks.
 
     Two different things must not be conflated.
@@ -227,10 +227,10 @@ def serialize_keyword(prompt: str) -> str:
     rejected by name rather than silently shortened.
     """
     escaped = prompt.replace("%", "%25").replace("+", "%2B")
-    if len(escaped) > KEYWORD_MAX_CHARS:
+    if len(escaped) > limit:
         raise KeywordTooLongError(
             f"prompt is {len(escaped)} characters after escaping, over the "
-            f"{KEYWORD_MAX_CHARS}-character provider limit"
+            f"{limit}-character provider limit"
         )
     return escaped
 
@@ -289,6 +289,7 @@ class DataForSeoSettings(BaseSettings):
     request_timeout_seconds: float = 60.0
     # Shorter timeout for the non-billable connectivity probe.
     test_timeout_seconds: float = 20.0
+    recovery_deadline_hours: float = Field(default=72.0, gt=0, lt=24 * 28)
 
 
 dataforseo_settings = DataForSeoSettings()

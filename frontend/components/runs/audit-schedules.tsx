@@ -19,6 +19,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { ENGINE_ORDER, ENGINE_LABELS } from '@/lib/providers/catalog';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -186,10 +187,10 @@ function WorkspaceSchedules({
             <fieldset className="grid gap-1 sm:col-span-2">
               <legend className={textRole('label')}>Engines</legend>
               <div className="flex flex-wrap gap-2">
-                {(['chatgpt', 'gemini', 'claude'] as const).map((engine) => (
+                {ENGINE_ORDER.map((engine) => (
                   <Checkbox
                     key={engine}
-                    label={engine}
+                    label={ENGINE_LABELS[engine]}
                     checked={engines.includes(engine)}
                     onCheckedChange={() =>
                       setEngines((current) =>

@@ -16,7 +16,9 @@ from app.core.config.audits import (
     frozen_policy_configuration,
     system_instruction_for_mode,
 )
+from app.core.config.dataforseo import KeywordTooLongError
 from app.core.config.entitlements import CREDENTIAL_MODE_FUNDED
+from app.core.config.llm_scraper import PRODUCTS, scraper_keyword
 from app.core.config.projects import (
     BENCHMARK_MODES,
     DEFAULT_BENCHMARK_MODE,
@@ -162,6 +164,12 @@ def _freeze_plan(
     framing_mode = _resolve_benchmark_mode(benchmark_mode, project)
     policy = audit_execution_policy()
     _validate_prompt_lengths(prompts)
+    if any(engine in PRODUCTS for engine in routes):
+        try:
+            for prompt in prompts:
+                scraper_keyword(prompt.text or "")
+        except KeywordTooLongError as exc:
+            raise AuditValidationError(str(exc)) from exc
     framing = system_instruction_for_mode(
         mode=framing_mode,
         country_code=project.country_code,

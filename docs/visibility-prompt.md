@@ -83,6 +83,42 @@ the existing audit/task state owners; failed answers remain failures, not
 negative brand observations. Provider costs and successful-answer billing are
 different projections.
 
+Manual launch offers six independent engines: ChatGPT Search (`chatgpt_search`),
+Gemini (`gemini_consumer`), Google AI Overview, ChatGPT API, Gemini API, and
+Claude API. Connected consumer surfaces are selected once when the dialog opens;
+refetches preserve deliberate deselection. Saved schedules retain their engine IDs.
+One customer DataForSEO credential serves all three consumer surfaces. New and
+updated connections receive the routes together. Existing connections can be
+provisioned explicitly with the credential-admin-only
+`POST /api/v1/provider-connections/{id}/provision-dataforseo-routes`; it adds missing
+routes without reactivating disabled routes or acquiring provider data.
+
+The scrapers submit the literal tracked prompt using normal-priority Standard
+tasks and collect Advanced results. ChatGPT requests web search; Gemini receives
+no ChatGPT-only settings. The initial scraper context allowlist is US/English;
+unsupported contexts and prompts exceeding 2,000 escaped characters fail before
+submission. API engine IDs and Google AI Overview presence semantics remain separate.
+Scraper model reports are supplementary provenance, distinct from the frozen product.
+
+Paid provider tasks retain their committed submission/account identity across
+restarts. Uncertain scraper submissions use exact-tag, product-checked, bounded
+paginated reconciliation. The config-owned recovery deadline defaults to 72 hours
+from committed intent and must be less than 28 days. Recovery never resubmits a
+paid task; unrecovered tasks fail without negative brand observations. Known
+submission charges remain recorded even when retrieval fails.
+
+Scraper citations use root and nested sources, canonicalized and deduplicated.
+Retrieved-but-uncited search results and provider brand entities remain raw
+supplementary evidence; the current citation projections do not represent a
+separate retrieval dataset or query-to-source associations. Query Fanouts uses
+only returned query text, distinguishing unavailable evidence from an explicitly
+empty query list. Neither state claims that no search occurred. Accepted scraper
+submissions use their frozen recovery window even after the ordinary run deadline;
+new submissions and API tasks remain subject to that deadline. Recovery listing
+calls share a separate account-wide rate limit across both scraper products.
+Live-provider
+acceptance remains a separate, explicitly authorized release step.
+
 ## Measurement and comparisons
 
 [Analysis](../backend/app/domain/analysis/) derives versioned persisted metrics,

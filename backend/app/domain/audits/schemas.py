@@ -196,13 +196,13 @@ class AuditEngineEstimate(BaseModel):
     logical_engine: str
     transport_provider: str
     transport_model: str
-    retrieval_enabled: bool
+    retrieval_enabled: bool | None
     prompt_count: int
     repetition_count: int
     execution_count: int
     maximum_attempt_count: int
-    estimated_input_tokens: int
-    estimated_output_tokens: int
+    estimated_input_tokens: int | None
+    estimated_output_tokens: int | None
     estimated_search_calls: int | None
     estimated_token_cost_microusd: int | None
     estimated_search_cost_microusd: int | None

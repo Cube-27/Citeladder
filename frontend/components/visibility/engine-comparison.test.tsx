@@ -36,15 +36,15 @@ describe('model outcome comparison', () => {
       />,
     );
     const rows = screen.getAllByRole('row').slice(1);
-    expect(within(rows[0]).getByText('ChatGPT')).toBeVisible();
+    expect(within(rows[0]).getByText('ChatGPT API')).toBeVisible();
     rerender(
       <EngineComparison
         visibility={visibility([engine(), engine({ logical_engine: 'chatgpt' })])}
         filter="gemini"
       />,
     );
-    expect(screen.queryByText('ChatGPT')).toBeNull();
-    expect(screen.getByText('Gemini')).toBeVisible();
+    expect(screen.queryByText('ChatGPT API')).toBeNull();
+    expect(screen.getByText('Gemini API')).toBeVisible();
   });
   it('keeps no observations distinct from a measured absence', () => {
     render(
@@ -61,7 +61,7 @@ describe('model outcome comparison', () => {
     render(
       <EngineComparison visibility={visibility([engine()])} filter="all" onSelect={onSelect} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Gemini' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gemini API' }));
     expect(onSelect).toHaveBeenCalledWith('gemini');
   });
   it('discloses an empty model selection', () => {

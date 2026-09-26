@@ -14,6 +14,7 @@ never generated. ``search_ai`` results leave it alone entirely.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Final
@@ -94,6 +95,7 @@ class SearchSurfaceRequest:
     load_async_ai_overview: bool
     timeout_seconds: float
     provider_submission_ref: str
+    request_settings: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -108,6 +110,7 @@ class SearchSurfaceSubmission:
     provider_task_id: str
     submitted_at: datetime
     provider_cost_microusd: int | None
+    raw_payload: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -210,5 +213,7 @@ def provider_cost_microusd(task: dict[str, Any]) -> int | None:
     """
     cost = task.get("cost")
     if isinstance(cost, bool) or not isinstance(cost, (int, float)):
+        return None
+    if not math.isfinite(cost) or cost < 0 or cost > (2**63 - 1) / MICRO_USD_PER_USD:
         return None
     return round(float(cost) * MICRO_USD_PER_USD)
