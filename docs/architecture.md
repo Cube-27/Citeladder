@@ -72,7 +72,17 @@ Hono, Kysely) introduced by the
 [TypeScript migration](plans/citeladder-typescript-migration.md). Until a
 migration PR moves a family to it, it serves only `/health` and `/ready` and no
 ingress routes to it. Each route family, task kind and table has exactly one
-writing stack.
+writing stack. For route families (OpenAPI tags) the record is the manifest in
+`frontend/packages/contracts/src/route-ownership.ts`; the route-ownership gate
+(`frontend/services/api/scripts/check-route-ownership.ts`) holds both stacks'
+OpenAPI documents and both ingress Caddyfiles to it. A family moves to
+TypeScript only with a frozen Python fragment
+(`export_ts_platform --freeze-family`) that the service's generated fragment
+matches.
+
+`@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response
+contracts the browser app validates with, the route-ownership manifest, and the
+API error-code union exported from the Python config that declares the codes.
 
 The service does not own policy or schema. It reads `backend/app/core/config`
 through a generated, drift-checked export and verifies Python-issued sessions;
