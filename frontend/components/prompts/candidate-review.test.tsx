@@ -50,8 +50,8 @@ describe('CandidateReview', () => {
     await user.click(accept);
     expect(onAccept).toHaveBeenCalledWith(['b']);
 
-    await user.click(screen.getByRole('checkbox', { name: /select all/i }));
+    // The selection survives the request (a failure can be retried).
     await user.click(screen.getByRole('button', { name: /reject selected/i }));
-    expect(onReject).toHaveBeenCalledWith(['a', 'b']);
+    expect(onReject).toHaveBeenCalledWith(['b']);
   });
 });

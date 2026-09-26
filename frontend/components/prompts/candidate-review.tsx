@@ -55,10 +55,9 @@ export function CandidateReview({
       else next.delete(id);
       return next;
     });
-  const review = (action: (ids: string[]) => void) => {
-    action(selected);
-    setPicked(new Set());
-  };
+  // Reviewed ids leave `candidates` and so drop out of `selected`; a failed
+  // request keeps the selection for a retry.
+  const review = (action: (ids: string[]) => void) => action(selected);
 
   return (
     <section aria-labelledby="candidate-review-heading" className="grid min-w-0 gap-3">

@@ -136,6 +136,8 @@ export const businessMapEntrySchema = responseObject({
   review_state: z.enum(['suggested', 'confirmed']),
   reviewed_by: z.string().nullable().default(null),
   reviewed_at: z.string().nullable().default(null),
+  // Model identity and time for a suggestion; empty for manual entries.
+  source: z.record(z.string(), z.unknown()).default({}),
 });
 
 const businessMapExclusionSchema = responseObject({
