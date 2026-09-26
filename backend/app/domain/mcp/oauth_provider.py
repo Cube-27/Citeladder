@@ -26,7 +26,7 @@ from pydantic import AnyUrl
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config import demo_access_expired, settings
+from app.core.config import demo_access_expired, legal, settings
 from app.core.config.mcp import MCP_READ_SCOPE, mcp_public_origin, mcp_settings
 from app.core.database import SessionLocal
 from app.core.security import decrypt_secret, encrypt_secret
@@ -38,8 +38,36 @@ from app.models.mcp import (
     McpOAuthClient,
     McpOAuthGrant,
 )
+from app.models.policy_acceptance import PolicyAcceptance
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
+
+
+async def _consentable_workspaces(
+    session: AsyncSession, user_id: uuid.UUID
+) -> list[tuple[str, str]]:
+    """Readable workspaces whose current Terms revision the user has accepted."""
+    accepted = (
+        select(PolicyAcceptance.id)
+        .where(
+            PolicyAcceptance.actor_id == user_id,
+            PolicyAcceptance.workspace_id == Workspace.id,
+            PolicyAcceptance.terms_revision == legal.TERMS_REVISION,
+        )
+        .exists()
+    )
+    rows = await session.execute(
+        select(Workspace.id, Workspace.name)
+        .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
+        .where(
+            WorkspaceMember.user_id == user_id,
+            WorkspaceMember.role.in_(roles_with(WorkspaceCapability.READ)),
+            Workspace.is_system.is_(False),
+            accepted,
+        )
+        .order_by(Workspace.name, Workspace.id)
+    )
+    return [(str(row.id), row.name) for row in rows]
 
 
 class CiteLadderAuthorizationCode(AuthorizationCode):
@@ -264,25 +292,12 @@ class CiteLadderOAuthProvider:
 
     async def consent_workspaces(self, user_id: uuid.UUID) -> list[tuple[str, str]]:
         async with self._session_factory() as session:
-            rows = await session.execute(
-                select(Workspace.id, Workspace.name)
-                .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
-                .where(
-                    WorkspaceMember.user_id == user_id,
-                    WorkspaceMember.role.in_(roles_with(WorkspaceCapability.READ)),
-                    Workspace.is_system.is_(False),
-                )
-                .order_by(Workspace.name, Workspace.id)
-            )
-            return [(str(row.id), row.name) for row in rows]
+            return await _consentable_workspaces(session, user_id)
 
     async def complete_authorization(
         self, transaction: str, user_id: uuid.UUID, workspace_ids: list[str]
     ) -> str:
-        allowed = {row[0] for row in await self.consent_workspaces(user_id)}
         selected = sorted(set(workspace_ids))
-        if not selected or not set(selected).issubset(allowed):
-            raise PermissionError("Select at least one currently accessible workspace")
         now = _utcnow()
         async with self._session_factory() as session:
             request = await session.scalar(
@@ -300,6 +315,13 @@ class CiteLadderOAuthProvider:
                 raise PermissionError("Authorization request is invalid or expired")
             if not _account_allowed(user):
                 raise PermissionError("This account is not enabled for MCP access")
+            # Checked in the consuming transaction, not a separate read.
+            consentable = await _consentable_workspaces(session, user.id)
+            allowed = {identifier for identifier, _name in consentable}
+            if not selected or not set(selected).issubset(allowed):
+                raise PermissionError(
+                    "Select at least one currently accessible workspace"
+                )
             code = secrets.token_urlsafe(32)
             session.add(
                 McpAuthorizationCode(

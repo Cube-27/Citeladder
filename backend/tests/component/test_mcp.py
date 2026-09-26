@@ -15,7 +15,7 @@ from mcp.shared.auth import OAuthClientInformationFull
 from pydantic import AnyUrl
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config import settings
+from app.core.config import legal, settings
 from app.core.config.mcp import MCP_READ_SCOPE, mcp_settings
 from app.core.config.opportunities import OPPORTUNITY_TYPE_SITE
 from app.core.security import create_access_token
@@ -34,6 +34,7 @@ from app.domain.mcp.oauth_provider import (
 from app.domain.mcp.retrieval import fetch_business_record
 from app.domain.mcp.server import MCP_REGISTRATION_PATH, mcp_oauth_provider
 from app.models.opportunity import Opportunity
+from app.models.policy_acceptance import PolicyAcceptance
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.user import User
@@ -57,6 +58,13 @@ async def _seed_account(
     session.add_all(
         [
             WorkspaceMember(workspace_id=workspace.id, user_id=user.id),
+            PolicyAcceptance(
+                actor_id=user.id,
+                workspace_id=workspace.id,
+                terms_revision=legal.TERMS_REVISION,
+                privacy_notice_revision=legal.PRIVACY_NOTICE_REVISION,
+                context="authenticated_onboarding",
+            ),
             project,
         ]
     )
@@ -292,6 +300,40 @@ async def test_demo_allowlist_rejects_another_account(
         await provider.complete_authorization(
             transaction, user.id, [str(_workspace.id)]
         )
+
+
+@pytest.mark.asyncio
+async def test_consent_requires_current_terms_for_the_selected_workspace(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mcp_settings, "enabled", True)
+    monkeypatch.setattr(mcp_settings, "allowed_account_email", "member@example.test")
+    async with session_factory() as session:
+        user, workspace, _project = await _seed_account(session, "member@example.test")
+    provider = CiteLadderOAuthProvider(session_factory)
+    assert await provider.consent_workspaces(user.id) == [
+        (str(workspace.id), workspace.name)
+    ]
+    monkeypatch.setattr(legal, "TERMS_REVISION", "2099-01-01")
+    assert await provider.consent_workspaces(user.id) == []
+
+    client = _client_info()
+    await provider.register_client(client)
+    authorization_url = await provider.authorize(
+        client,
+        AuthorizationParams(
+            state=None,
+            scopes=[MCP_READ_SCOPE],
+            code_challenge="C" * 43,
+            redirect_uri=AnyUrl("http://127.0.0.1/callback"),
+            redirect_uri_provided_explicitly=True,
+            resource=resource_url(),
+        ),
+    )
+    transaction = parse_qs(urlsplit(authorization_url).query)["transaction"][0]
+    with pytest.raises(PermissionError, match="currently accessible"):
+        await provider.complete_authorization(transaction, user.id, [str(workspace.id)])
 
 
 @pytest.mark.asyncio
