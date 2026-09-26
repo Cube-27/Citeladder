@@ -56,7 +56,7 @@ export class WorkspaceContext {
 }
 
 /** The caller's membership, or 404; system workspaces never authorize. */
-async function resolveWorkspaceMember(
+export async function resolveWorkspaceMember(
   db: Database,
   userId: string,
   workspaceId: string,

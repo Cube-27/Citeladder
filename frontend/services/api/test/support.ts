@@ -62,24 +62,51 @@ export class Fixtures {
     return id;
   }
 
-  async workspace(options: { system?: boolean } = {}): Promise<string> {
-    const id = randomUUID();
-    await this.db
-      .insertInto('workspaces')
-      .values({
-        id,
-        name: `Workspace ${id}`,
-        is_system: options.system ?? false,
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      .execute();
+  /** A tenant workspace created with its Owner, as workspace creation does. */
+  async ownedWorkspace(ownerId: string): Promise<string> {
+    const id = await this.db.transaction().execute(async (trx) => {
+      const workspaceId = await this.insertWorkspace(trx, false);
+      await this.insertMember(trx, workspaceId, ownerId, 'owner');
+      return workspaceId;
+    });
     this.workspaces.push(id);
     return id;
   }
 
+  /** The reserved system workspace kind, which never has members. */
+  async systemWorkspace(): Promise<string> {
+    const id = await this.insertWorkspace(this.db, true);
+    this.workspaces.push(id);
+    return id;
+  }
+
+  /** Add a member, as an accepted invitation does. */
   async member(workspaceId: string, userId: string, role: string): Promise<void> {
-    await this.db
+    await this.insertMember(this.db, workspaceId, userId, role);
+  }
+
+  private async insertWorkspace(db: Database, system: boolean): Promise<string> {
+    const id = randomUUID();
+    await db
+      .insertInto('workspaces')
+      .values({
+        id,
+        name: `Workspace ${id}`,
+        is_system: system,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    return id;
+  }
+
+  private async insertMember(
+    db: Database,
+    workspaceId: string,
+    userId: string,
+    role: string,
+  ): Promise<void> {
+    await db
       .insertInto('workspace_members')
       .values({
         id: randomUUID(),

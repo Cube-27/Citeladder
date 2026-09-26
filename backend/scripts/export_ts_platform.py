@@ -33,7 +33,11 @@ from app.core.config import (
     WEAK_SECRET_WORDS,
     Settings,
 )
-from app.core.config.api import API_V1_PREFIX, READINESS_TIMEOUT_SECONDS
+from app.core.config.api import (
+    API_V1_PREFIX,
+    READINESS_TIMEOUT_SECONDS,
+    TS_API_SERVICE_PORT,
+)
 from app.core.config.errors import (
     CODE_HTTP_ERROR,
     CODE_INTERNAL_ERROR,
@@ -129,6 +133,7 @@ def build_config() -> dict[str, Any]:
         "api": {
             "prefix": API_V1_PREFIX,
             "readiness_timeout_seconds": READINESS_TIMEOUT_SECONDS,
+            "service_port": TS_API_SERVICE_PORT,
         },
         "errors": {
             "status_default_code": {

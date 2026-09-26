@@ -183,7 +183,8 @@
   },
   "api": {
     "prefix": "/api/v1",
-    "readiness_timeout_seconds": 2.0
+    "readiness_timeout_seconds": 2.0,
+    "service_port": 8100
   },
   "errors": {
     "status_default_code": {

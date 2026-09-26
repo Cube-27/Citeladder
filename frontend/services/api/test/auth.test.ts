@@ -96,7 +96,7 @@ describe('workspace membership', () => {
   let viewed: string;
 
   beforeAll(async () => {
-    viewed = await fixtures.workspace();
+    viewed = await fixtures.ownedWorkspace(await fixtures.user());
     await fixtures.member(viewed, userId, 'viewer');
   });
 
@@ -116,9 +116,7 @@ describe('workspace membership', () => {
   });
 
   it('cannot tell a foreign workspace from a missing one', async () => {
-    const foreign = await fixtures.workspace();
-    const other = await fixtures.user();
-    await fixtures.member(foreign, other, 'owner');
+    const foreign = await fixtures.ownedWorkspace(await fixtures.user());
     const foreignResult = await call(`/w/${foreign}`, viewerToken);
     const missingResult = await call(`/w/${randomUUID()}`, viewerToken);
     expect(foreignResult.status).toBe(404);
@@ -127,7 +125,8 @@ describe('workspace membership', () => {
   });
 
   it('never authorizes through a system workspace membership', async () => {
-    const system = await fixtures.workspace({ system: true });
+    // A stray membership row: system workspaces never have legitimate ones.
+    const system = await fixtures.systemWorkspace();
     await fixtures.member(system, userId, 'owner');
     expect((await call(`/w/${system}`, viewerToken)).status).toBe(404);
   });
@@ -139,7 +138,7 @@ describe('workspace membership', () => {
   });
 
   it('confers nothing for a role outside the matrix', async () => {
-    const odd = await fixtures.workspace();
+    const odd = await fixtures.ownedWorkspace(await fixtures.user());
     await fixtures.member(odd, userId, 'superuser');
     const { body } = await call(`/w/${odd}`, viewerToken);
     expect(body.capabilities).toEqual([]);

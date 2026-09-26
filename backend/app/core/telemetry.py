@@ -250,8 +250,8 @@ def sanitize_correlation_id(value: str) -> str:
     (notably CR/LF) could split the response (header injection). Accept only a
     bounded run of unreserved token characters; anything else is treated as
     absent so a fresh server-generated id is used instead. The TypeScript API
-    service replays this rule from golden masters
-    (``scripts/export_golden_masters.py``).
+    service replays this rule from golden masters built by
+    ``scripts/golden_masters.py`` and written by ``scripts/export_ts_platform.py``.
     """
     candidate = value.strip()
     if 0 < len(candidate) <= 128 and all(c.isalnum() or c in "-_." for c in candidate):

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { resolveWorkspaceMember, type WorkspaceContext } from '../src/auth/workspace.ts';
 import { WorkspaceScope } from '../src/db/workspace-scope.ts';
 import { Fixtures, testDatabase } from './support.ts';
 
@@ -10,13 +11,15 @@ const fixtures = new Fixtures(db);
 let ours: string;
 let theirs: string;
 
-async function project(workspaceId: string, name: string): Promise<string> {
+/** Seed a project the way a route would: only with the write capability. */
+async function project(workspace: WorkspaceContext, name: string): Promise<string> {
+  workspace.require('write');
   const id = randomUUID();
   await db
     .insertInto('projects')
     .values({
       id,
-      workspace_id: workspaceId,
+      workspace_id: workspace.workspaceId,
       name,
       brand_name: name,
       website_url: 'https://example.test',
@@ -35,10 +38,12 @@ async function project(workspaceId: string, name: string): Promise<string> {
 }
 
 beforeAll(async () => {
-  ours = await fixtures.workspace();
-  theirs = await fixtures.workspace();
-  await project(ours, 'Ours');
-  await project(theirs, 'Theirs');
+  const ourOwner = await fixtures.user();
+  const theirOwner = await fixtures.user();
+  ours = await fixtures.ownedWorkspace(ourOwner);
+  theirs = await fixtures.ownedWorkspace(theirOwner);
+  await project(await resolveWorkspaceMember(db, ourOwner, ours), 'Ours');
+  await project(await resolveWorkspaceMember(db, theirOwner, theirs), 'Theirs');
 });
 
 afterAll(async () => {

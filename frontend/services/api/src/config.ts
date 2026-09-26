@@ -117,12 +117,13 @@ export type ServiceConfig = {
   readinessTimeoutMs: number;
 };
 
-const DEFAULT_PORT = 8100;
+// The TCP port range is a protocol fact, not policy; the default is exported.
+const MAX_TCP_PORT = 65_535;
 
 function parsePort(raw: string | undefined): number {
-  if (raw === undefined || raw.trim() === '') return DEFAULT_PORT;
+  if (raw === undefined || raw.trim() === '') return policy.api.service_port;
   const port = Number(raw);
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+  if (!Number.isInteger(port) || port < 1 || port > MAX_TCP_PORT) {
     throw new ConfigError('PORT must be a TCP port number');
   }
   return port;
