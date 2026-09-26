@@ -5,6 +5,8 @@ a per-call credit hold, before any network I/O (invariants 15 and 16). The
 receipt settles the hold against the published rate; a lost or late receipt
 settles as unknown usage within the finite cap frozen at dispatch. Customer
 BYOK consumes zero platform credits and never falls back to platform funding.
+The configured development login runs the platform model unmetered: no hold,
+no debit, but the same committed dispatch evidence.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.gateway import ModelGateway, ModelResult
 from app.connectors.app_model_config import AppModelRouteConfig
+from app.core.config import settings
 from app.core.config.agent import default_agent_settings
 from app.core.config.app_models import APP_FEATURE_AGENT
 from app.core.config.entitlements import KEY_AGENT, KEY_AI_CREDITS
@@ -48,9 +51,11 @@ from app.domain.workspaces.policy import WorkspaceCapability, role_allows
 from app.domain.workspaces.service import get_membership
 from app.models.agent import AgentModelAttempt, AgentRun
 from app.models.provider import ProviderAppRoute, ProviderConnection
+from app.models.user import User
 
 FUNDING_PLATFORM = "platform"
 FUNDING_CUSTOMER_BYOK = "customer_byok"
+FUNDING_DEVELOPMENT = "development"
 
 
 class ModelUnavailableError(RuntimeError):
@@ -77,6 +82,27 @@ class ModelReceipt:
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+async def is_development_login(
+    session: AsyncSession, user_id: uuid.UUID | None
+) -> bool:
+    """Whether ``user_id`` is the deployment's provisioned development login.
+
+    Only the bootstrap-provisioned account qualifies: the configured email, an
+    active admin row, and a configured login password. A public signup using
+    the same address is never an admin, so it stays on metered funding.
+    """
+    email = settings.dev_login_email.strip().casefold()
+    if user_id is None or not email or not settings.dev_login_password:
+        return False
+    user = await session.get(User, user_id)
+    return bool(
+        user is not None
+        and user.is_active
+        and user.role == "admin"
+        and user.email.strip().casefold() == email
+    )
 
 
 async def lock_owned_run(
@@ -230,7 +256,12 @@ async def start_model_attempt(
         await session.rollback()
         raise ModelUnavailableError(reason="lease")
     hold: tuple[uuid.UUID | None, int, str] | None = (None, 0, "")
-    if app_route is None:
+    if run.funding_source == FUNDING_DEVELOPMENT:
+        # Rechecked per step like every other funding: a login demoted or
+        # reconfigured mid-turn stops here rather than running unmetered.
+        if not await is_development_login(session, run.user_id):
+            hold = None
+    elif app_route is None:
         hold = await _platform_hold(
             session, run=run, model=gateway.model, dispatch_id=dispatch_id
         )
@@ -245,7 +276,7 @@ async def start_model_attempt(
         dispatch_id=dispatch_id,
         run_attempt=run.attempt_count,
         ordinal=ordinal,
-        funding_source=FUNDING_CUSTOMER_BYOK if app_route else FUNDING_PLATFORM,
+        funding_source=run.funding_source,
         provider_connection_id=app_route.connection_id if app_route else None,
         provider_route_id=app_route.route_id if app_route else None,
         credential_revision=app_route.credential_revision if app_route else None,
@@ -260,7 +291,9 @@ async def start_model_attempt(
         dispatched_at=now,
         deadline_at=now
         + timedelta(seconds=default_agent_settings.execution_timeout_seconds),
-        settlement_status="not_applicable" if app_route else "pending",
+        settlement_status=(
+            "pending" if run.funding_source == FUNDING_PLATFORM else "not_applicable"
+        ),
     )
     run.steps_used = max(run.steps_used, ordinal)
     session.add(attempt)

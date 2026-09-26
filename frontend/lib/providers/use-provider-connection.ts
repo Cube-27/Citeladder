@@ -10,61 +10,59 @@ import type { ProviderConnection } from '@/lib/api/types';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import {
   connectionForTransport,
-  isConnectable,
   isConfigured,
   mergeRoutePayload,
-  type EngineCardModel,
+  type ProviderGroup,
 } from './catalog';
 
-/** Result of an inline "Test connection" run (the EngineCard alert model). */
+/** Result of an inline "Test connection" run. */
 export type ConnectionTestState = { status: 'ok' | 'failed'; message: string } | null;
 
-/** Shared human-readable mutation error (matches the EngineCard fallback). */
+/** Shared human-readable mutation error. */
 export function errorMessage(error: unknown): string {
   return humanizeApiError(error).message;
 }
 
 /**
- * Shared BYOK connection state machine for one logical engine (extracted from
- * `EngineCard` so the guided connect dialog can reuse it, Task 3.2).
+ * Shared BYOK connection state machine for one provider credential, rendered
+ * by every `ProviderRow` (Settings and the launch dialog's inline setup).
  *
- * Owns the write-only API-key input state (never pre-filled — the stored
+ * Owns the write-only credential input state (never pre-filled — the stored
  * secret is never on the wire), the save mutation (create or rotate the
- * direct-transport connection and record the engine's catalog route), and the
- * "Test connection" mutation with the EngineCard success/failure alert model.
+ * transport's connection and route EVERY engine it measures, so one DataForSEO
+ * login serves all its surfaces), and the "Test connection" mutation.
  *
  * SAVING ALWAYS PROBES. Storing a key does not make it executable: admission
  * only resolves a BYOK route whose LATEST probe succeeded, so a key that was
  * saved and never tested is invisible to the planner and a launch refuses with
- * `execution_credentials_unavailable`. Settings hid that because the card stays
- * on screen and users click "Test connection" themselves; the guided connect
- * dialog closes on save, so the probe never happened and the very next launch
+ * `execution_credentials_unavailable`. Settings hid that because the row stays
+ * on screen and users click "Test connection" themselves; the launch flow moves
+ * on after a save, so the probe never happened and the very next launch
  * failed. Folding the probe into the save makes "connected" mean the same
  * thing — verified — on every surface.
  *
  * A save clears the key and invalidates the shared `providers.connections()`
- * query either way; `onSaved` fires ONLY on a verified save, so a host (e.g.
- * the connect dialog) closes on success and stays open showing the failure.
+ * query either way; `onSaved` fires ONLY on a verified save, so a host
+ * collapses on success and stays open showing the failure.
  */
-export function useEngineConnection({
-  model,
+export function useProviderConnection({
+  group,
   connections,
   onSaved,
 }: Readonly<{
-  model: EngineCardModel;
+  group: ProviderGroup;
   connections: ProviderConnection[];
   onSaved?: () => void;
 }>) {
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
 
-  const route = model.route;
-  const transport = route?.transport_provider ?? null;
+  const transport = group.transport;
   // Two credential SHAPES, one state machine. Bearer transports fill
   // `apiKey`; DataForSEO authenticates with an HTTP Basic pair and fills
   // `apiLogin` + `apiPassword`. All three stay write-only and are never
   // pre-filled — the stored secret is never on the wire.
-  const credentialShape = route?.credential_shape ?? 'key';
+  const credentialShape = group.credential_shape;
   const [apiKey, setApiKey] = useState('');
   const [apiLogin, setApiLogin] = useState('');
   const [apiPassword, setApiPassword] = useState('');
@@ -96,7 +94,13 @@ export function useEngineConnection({
       ? { api_login: apiLogin.trim(), api_password: apiPassword }
       : { api_key: apiKey };
 
-  const connection = transport ? connectionForTransport(connections, transport) : undefined;
+  const connection = connectionForTransport(connections, transport);
+
+  const invalidateProviderReads = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.providers.allConnections() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.providers.allStates() }),
+    ]);
   const configured = isConfigured(connection);
 
   /**
@@ -116,16 +120,21 @@ export function useEngineConnection({
   const saveMutation = useMutation({
     onMutate: () => setTestResult(null),
     mutationFn: async () => {
-      // Availability gate, not just a null check: a planned provider has no
-      // adapter and no route, so it must not be able to construct a mutation
-      // at all — a saved key for it would be a credential we can never use.
-      if (!isConnectable(model) || !transport || !route) {
-        throw new Error('No route available.');
-      }
+      // A group only holds connectable engines; an empty one would store a
+      // credential with nothing to measure.
+      if (!group.engines.length) throw new Error('No route available.');
       if (hasPartialCredentialInput) {
         throw new Error('Enter both the API login and the API password.');
       }
-      const routes = mergeRoutePayload(connection, model.logical_engine);
+      // A new connection needs a complete credential; creating one from empty
+      // fields would store a connection nobody can use.
+      if (!connection && !hasCredentialInput) {
+        throw new Error('Enter the credentials before saving.');
+      }
+      const routes = mergeRoutePayload(
+        connection,
+        group.engines.map((engine) => engine.logical_engine),
+      );
       const credential = hasCredentialInput ? credentialPayload() : {};
       const saved = connection
         ? await providersApi.updateConnection(
@@ -154,7 +163,7 @@ export function useEngineConnection({
     },
     onSuccess: async ({ verified }) => {
       clearCredentialInput();
-      await queryClient.invalidateQueries({ queryKey: queryKeys.providers.allConnections() });
+      await invalidateProviderReads();
       if (verified?.status === 'ok') onSaved?.();
     },
   });
@@ -165,16 +174,14 @@ export function useEngineConnection({
       return probe(connection.id);
     },
     // The probe denormalizes its outcome onto the connection, and that outcome
-    // is what gates launching — so the connections query is stale afterwards.
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.providers.allConnections() }),
+    // is what gates launching and the status badge — so both reads are stale.
+    onSuccess: () => invalidateProviderReads(),
     onError: (error) => setTestResult({ status: 'failed', message: errorMessage(error) }),
   });
 
   const busy = saveMutation.isPending || testMutation.isPending;
 
   return {
-    route,
     transport,
     connection,
     configured,

@@ -10,13 +10,17 @@ import {
   ENGINE_LABELS,
   ENGINE_ORDER,
   TRANSPORT_LABELS,
+  buildEngineCards,
+  buildProviderGroups,
   connectionForTransport,
   engineLabel,
   isConfigured,
   isVerified,
   mergeRoutePayload,
+  transportForEngine,
   transportLabel,
 } from './catalog';
+import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
 
 /**
  * `lib/providers` had no tests. The load-bearing distinction here is
@@ -114,7 +118,7 @@ describe('configured vs verified', () => {
 
 describe('mergeRoutePayload', () => {
   it('adds the engine to a connection that has no routes yet', () => {
-    expect(mergeRoutePayload(undefined, 'chatgpt')).toEqual([
+    expect(mergeRoutePayload(undefined, ['chatgpt'])).toEqual([
       { logical_engine: 'chatgpt', is_default: false },
     ]);
   });
@@ -124,7 +128,7 @@ describe('mergeRoutePayload', () => {
       routes: [{ logical_engine: 'gemini', is_default: true }],
     } as Partial<ProviderConnection>);
 
-    expect(mergeRoutePayload(existing, 'chatgpt')).toEqual([
+    expect(mergeRoutePayload(existing, ['chatgpt'])).toEqual([
       { logical_engine: 'gemini', is_default: true },
       { logical_engine: 'chatgpt', is_default: false },
     ]);
@@ -136,8 +140,62 @@ describe('mergeRoutePayload', () => {
     } as Partial<ProviderConnection>);
 
     // Re-adding must not flip the existing route's default flag either.
-    expect(mergeRoutePayload(existing, 'chatgpt')).toEqual([
+    expect(mergeRoutePayload(existing, ['chatgpt'])).toEqual([
       { logical_engine: 'chatgpt', is_default: true },
     ]);
+  });
+
+  it('routes every engine a shared credential measures in one payload', () => {
+    expect(mergeRoutePayload(undefined, ['chatgpt_search', 'gemini_consumer'])).toEqual([
+      { logical_engine: 'chatgpt_search', is_default: false },
+      { logical_engine: 'gemini_consumer', is_default: false },
+    ]);
+  });
+});
+
+describe('buildProviderGroups', () => {
+  const catalog = {
+    ...providerCatalogFixture,
+    engines: [
+      ...providerCatalogFixture.engines,
+      ...(['chatgpt_search', 'gemini_consumer'] as const).map((logical_engine) => ({
+        logical_engine,
+        routes: [
+          {
+            transport_provider: 'dataforseo',
+            transport_model: `${logical_engine}-scraper`,
+            retrieval_enabled: null,
+            reasoning_effort: null,
+            surface_kind: 'llm_scraper',
+          },
+        ],
+      })),
+    ],
+  } as unknown as Parameters<typeof buildEngineCards>[0];
+
+  it('asks for each credential once, with every engine it measures', () => {
+    const groups = buildProviderGroups(buildEngineCards(catalog));
+
+    expect(
+      groups.map((group) => [
+        group.transport,
+        group.credential_shape,
+        group.engines.map((engine) => engine.logical_engine),
+      ]),
+    ).toEqual([
+      ['dataforseo', 'basic', ['chatgpt_search', 'gemini_consumer', 'google_ai_overview']],
+      ['openai', 'key', ['chatgpt']],
+      ['google', 'key', ['gemini']],
+      ['anthropic', 'key', ['claude']],
+    ]);
+    expect(transportForEngine(groups, 'gemini_consumer')).toBe('dataforseo');
+  });
+
+  it('omits an engine the catalog publishes no route for', () => {
+    const groups = buildProviderGroups(buildEngineCards(providerCatalogFixture as never));
+
+    // The fixture has no consumer-app routes: DataForSEO measures only AIO.
+    expect(groups.find((group) => group.transport === 'dataforseo')?.engines).toHaveLength(1);
+    expect(transportForEngine(groups, 'chatgpt_search')).toBeNull();
   });
 });

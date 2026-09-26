@@ -6,10 +6,8 @@ import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
  * F8 direct-provider Provider Settings e2e (Task 4).
  *
  * All backend calls are stubbed at the network layer so the spec runs without a
- * live backend (mirrors `runs.spec.ts`). It asserts the v2 direct-provider
- * retirement UI — exactly three direct engine cards (ChatGPT/OpenAI,
- * Gemini/Google, Claude/Anthropic), with no alternate or "coming soon" options —
- * and exercises saving + testing an OpenAI key.
+ * live backend (mirrors `runs.spec.ts`). It exercises saving an OpenAI key
+ * from its provider row, which probes the key as part of the save.
  *
  * The app calls only relative `/api/v1` paths (Next rewrites proxy them), so the
  * spec also asserts that every `/api/` request the browser issues is
@@ -57,7 +55,7 @@ function assertSameOriginApi(requests: Request[], baseURL: string) {
   }
 }
 
-test('provider settings: available engines save and test an OpenAI key', async ({
+test('provider settings: an OpenAI key saves and verifies from its row', async ({
   page,
   baseURL,
 }) => {
@@ -94,27 +92,25 @@ test('provider settings: available engines save and test an OpenAI key', async (
 
   await page.goto('/settings?tab=providers');
 
-  // The panel's static contract — three direct cards, their transport labels,
-  // no route radios, six "coming soon" engines, the Missing→succeeded status
-  // machine — is pinned in jsdom by components/settings/provider-settings.test.tsx.
-  // What only a real browser can show is that the save + probe round trip issues
-  // same-origin /api/ requests through the Next rewrite.
-  // Exercise the ChatGPT card: fill the key, save, then test the connection.
-  const chatgptCard = page.locator('section', {
-    has: page.getByRole('heading', { name: 'ChatGPT API', exact: true }),
+  // The list's static contract — one row per provider, the engines each
+  // measures, the unverified→connected status machine — is pinned in jsdom by
+  // components/settings/provider-settings.test.tsx. What only a real browser
+  // can show is that the save + probe round trip issues same-origin /api/
+  // requests through the Next rewrite.
+  const openaiRow = page.locator('li', {
+    has: page.getByRole('heading', { name: 'OpenAI', exact: true }),
   });
-  await expect(chatgptCard).toBeVisible();
+  await openaiRow.getByRole('button', { name: 'Connect OpenAI' }).click();
+  await openaiRow.getByPlaceholder(/paste your api key/i).fill('sk-test-key');
 
-  await chatgptCard.getByPlaceholder(/paste your api key/i).fill('sk-test-key');
-  await chatgptCard.getByRole('button', { name: /save key/i }).click();
-
-  // Saving enables verification; the status remains Missing until that succeeds.
-  const testConnection = chatgptCard.getByRole('button', {
-    name: /test connection/i,
-  });
-  await expect(testConnection).toBeEnabled();
-  await testConnection.click();
-  await expect(chatgptCard.getByText(/connection succeeded/i)).toBeVisible();
+  // Saving always probes: storing a key alone never makes it usable.
+  const probe = page.waitForRequest((request) =>
+    request.url().endsWith(`/provider-connections/${CONNECTION_ID}/test`),
+  );
+  await openaiRow.getByRole('button', { name: /save key/i }).click();
+  await probe;
+  // A verified save collapses the row.
+  await expect(openaiRow.getByPlaceholder(/api key|stored/i)).toBeHidden();
 
   // Same-origin: every /api/ request went to the page origin (no cross-origin backend).
   assertSameOriginApi(requests, baseURL!);

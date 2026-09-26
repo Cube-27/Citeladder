@@ -3,9 +3,9 @@
 import { Alert } from '@/components/ui/alert';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { errorMessage, type useEngineConnection } from '@/lib/providers/use-engine-connection';
+import { errorMessage, type useProviderConnection } from '@/lib/providers/use-provider-connection';
 
-type ConnectionState = ReturnType<typeof useEngineConnection>;
+type ConnectionState = ReturnType<typeof useProviderConnection>;
 
 /**
  * The bearer-key shape: one write-only field.
@@ -33,12 +33,12 @@ function ApiKeyField({ state }: Readonly<{ state: ConnectionState }>) {
  *
  * Rotation takes both halves. Replacing one half against a remembered other
  * half would leave the stored credential in a state nobody entered, so the
- * card asks for the pair every time it asks at all.
+ * row asks for the pair every time it asks at all.
  */
 function BasicAuthFields({ state }: Readonly<{ state: ConnectionState }>) {
   const { configured, apiLogin, setApiLogin, apiPassword, setApiPassword } = state;
   return (
-    <>
+    <div className="grid gap-3 sm:grid-cols-2">
       <Field label={configured ? 'API login (enter both fields to rotate)' : 'API login'}>
         {(props) => (
           <Input
@@ -63,22 +63,20 @@ function BasicAuthFields({ state }: Readonly<{ state: ConnectionState }>) {
           />
         )}
       </Field>
-    </>
+    </div>
   );
 }
 
 /**
- * Shared BYOK credential fields + save/test feedback for one engine
- * connection — the presentation half of `useEngineConnection`, rendered
- * identically by the Settings `EngineCard` and the guided
- * `ConnectProviderDialog`.
+ * Shared BYOK credential fields + save/test feedback for one provider
+ * credential — the presentation half of `useProviderConnection`.
  *
  * Two credential shapes are supported because two auth schemes are: a bearer
  * key, and an HTTP Basic login/password pair. Both stay write-only (never
  * pre-filled — the stored secret is never on the wire); this component is the
  * single home for that invariant's copy.
  */
-export function EngineConnectionFields({
+export function ProviderConnectionFields({
   state,
 }: Readonly<{
   state: ConnectionState;

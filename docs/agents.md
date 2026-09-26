@@ -173,7 +173,10 @@ returned usage and releases the excess. A lost or late result settles once as
 bounded unknown usage, including after cancellation or a reclaimed lease. If the
 historical rate is unavailable, settlement uses the cap frozen at dispatch.
 Customer BYOK consumes no platform credits and never falls back to platform
-funding. The Agent's capability, customer model route and credit rate are all
+funding. The deployment's provisioned development login (the configured
+`DEV_LOGIN_EMAIL` as an active admin, with a configured login password) runs the
+platform model as `development` funding: no published rate, hold or debit, but
+the same committed dispatch evidence, rechecked at every step. The Agent's capability, customer model route and credit rate are all
 keyed `agent`.
 [Billing](billing-entitlements.md) owns the ledger.
 

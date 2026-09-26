@@ -203,7 +203,9 @@ evidence. Redirects, checkout callbacks, receipts, webhook delivery, or provider
 Dashboard state alone never grant access; webhook and reconciliation must settle
 through the same idempotent activation owner. Customer BYOK consumes zero
 platform credits and never silently falls back. Platform-funded model work is
-unavailable without an explicit persisted finite rate/cap policy and allowance.
+unavailable without an explicit persisted finite rate/cap policy and allowance;
+the sole exception is the provisioned development login's unmetered `development`
+Agent funding, which still records every model attempt.
 
 Every trusted billing mutation is explicit-target, active-admin authorized,
 reasoned, idempotent, dry-run reviewed, and redacted. Operators correct by
