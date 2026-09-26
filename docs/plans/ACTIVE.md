@@ -25,14 +25,6 @@
 
 ## Queued
 
-- [TypeScript migration](citeladder-typescript-migration.md)
-  — draft saved on 26 September 2026; awaiting owner approval of the open
-  runtime/ORM/schema-ownership decisions before any implementation. TypeScript
-  becomes the default application language with Python retained for
-  specialized execution-plane workers; least-risky-first order from contracts
-  and the queue engine toward read slices, pure-DB workers, business slices,
-  Agent, and finally the crawler contract. Evidence base is the read-only
-  architecture audit at the repository root. Not execution authorization.
 - [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026; implementation not started. Customer
   authorization (domain verification or attestation) lets Site Health crawl
