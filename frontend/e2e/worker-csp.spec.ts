@@ -64,7 +64,7 @@ test('built marketing hydrates with one enforced header and blocks injected scri
     if (/violates.*(security policy|directive)/i.test(message.text()))
       violations.push(message.text());
   });
-  for (const path of ['/', '/docs/mcp', '/privacy']) {
+  for (const path of ['/', '/pricing', '/privacy']) {
     const response = await page.goto(`https://127.0.0.1:8794${path}`);
     expect(response?.status()).toBe(200);
     expect(response?.headers()['content-security-policy']).toBeTruthy();
