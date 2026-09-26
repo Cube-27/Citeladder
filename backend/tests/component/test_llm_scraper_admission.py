@@ -37,7 +37,7 @@ async def test_independent_slots_and_frozen_context(session_factory, engines):
                 transport_provider="dataforseo",
                 label="Shared account",
                 api_login="test@example.com",
-                api_password="test",
+                api_password="test",  # pragma: allowlist secret
                 routes=[],
             ),
         )
@@ -85,7 +85,7 @@ async def test_rollout_is_idempotent_scoped_and_keeps_disabled_route(session_fac
                 transport_provider="dataforseo",
                 label="Shared",
                 api_login="test@example.com",
-                api_password="test",
+                api_password="test",  # pragma: allowlist secret
                 routes=[],
             ),
         )

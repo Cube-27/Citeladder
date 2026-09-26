@@ -2,7 +2,6 @@
 # mypy: disable-error-code=attr-defined
 
 import uuid
-from dataclasses import replace
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,14 +29,23 @@ async def _persist_answer(
     session: AsyncSession, task: AuditTask, audit: Audit, result: AnswerEngineResponse
 ) -> RawResponseArtifact:
     metadata = {**(task.provider_metadata or {}), **result.provider_metadata}
-    response: AnswerEngineResponse = replace(
-        result,
+    # Built field by field: the frozen route and the retained submission
+    # charge replace the parser's catalog-derived values.
+    response = AnswerEngineResponse(
+        logical_engine=result.logical_engine,
         transport_provider=task.transport_provider,
         transport_model=task.transport_model,
+        answer_text=result.answer_text,
+        search_used=result.search_used,
+        search_events=result.search_events,
+        citations=result.citations,
         provider_metadata=metadata,
+        finish_reason=result.finish_reason,
+        raw_finish_reason=result.raw_finish_reason,
         normalized_usage=NormalizedUsage(
             provider_cost_microusd=metadata.get("provider_submission_cost_microusd")
         ),
+        latency_ms=result.latency_ms,
     )
     citations = serialize_citations(response)
     events = serialize_search_events(response)

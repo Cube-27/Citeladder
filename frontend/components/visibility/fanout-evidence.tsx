@@ -319,16 +319,16 @@ function useDebouncedNeedle(needle: string): string {
  */
 function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
   const undisclosedNoun = group.undisclosed === 1 ? 'answer' : 'answers';
+  const unavailableNoun = group.unavailable === 1 ? 'answer has' : 'answers have';
+  const noExposedNoun = group.noExposedQueries === 1 ? 'answer' : 'answers';
   const note = [
     group.undisclosed
       ? `${group.undisclosed} ${undisclosedNoun} searched without returning the wording`
       : null,
     group.silent ? `${group.silent} answered without searching` : null,
-    group.unavailable
-      ? `${group.unavailable} ${group.unavailable === 1 ? 'answer has' : 'answers have'} unavailable query evidence`
-      : null,
+    group.unavailable ? `${group.unavailable} ${unavailableNoun} unavailable query evidence` : null,
     group.noExposedQueries
-      ? `${group.noExposedQueries} ${group.noExposedQueries === 1 ? 'answer' : 'answers'} exposed no queries; search activity is unknown`
+      ? `${group.noExposedQueries} ${noExposedNoun} exposed no queries; search activity is unknown`
       : null,
   ]
     .filter(Boolean)
