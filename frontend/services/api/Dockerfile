@@ -10,6 +10,7 @@ WORKDIR /app
 # Keep this version in lockstep with packageManager in frontend/package.json.
 RUN npm install --global --ignore-scripts pnpm@12.4.2
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+COPY frontend/packages/contracts/package.json ./packages/contracts/
 COPY frontend/services/api/package.json ./services/api/
 RUN pnpm install --frozen-lockfile --ignore-scripts --prod --filter @citeladder/api
 
@@ -25,7 +26,10 @@ WORKDIR /app
 
 # Dependencies and source stay root-owned and read-only to the runtime user.
 COPY --from=dependencies --chown=0:0 /app/node_modules ./node_modules
+COPY --from=dependencies --chown=0:0 /app/packages/contracts/node_modules ./packages/contracts/node_modules
 COPY --from=dependencies --chown=0:0 /app/services/api/node_modules ./services/api/node_modules
+COPY --chown=0:0 frontend/packages/contracts/package.json ./packages/contracts/package.json
+COPY --chown=0:0 frontend/packages/contracts/src ./packages/contracts/src
 COPY --chown=0:0 frontend/services/api/package.json ./services/api/package.json
 COPY --chown=0:0 frontend/services/api/src ./services/api/src
 

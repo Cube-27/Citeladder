@@ -31,12 +31,14 @@ function isFrontend(path) {
   return path.startsWith('frontend/');
 }
 
-// The TypeScript API service plus the Python inputs it is built from: the
-// policy export and golden masters read `app/core` and the workspace policy,
-// and its Kysely types are generated from the Alembic-migrated schema.
+// The TypeScript API service, the contracts package it imports, and the
+// Python inputs it is built from: the policy export and golden masters read
+// `app/core` and the workspace policy, and its Kysely types are generated
+// from the Alembic-migrated schema.
 function isApiService(path) {
   return (
     path.startsWith('frontend/services/') ||
+    path.startsWith('frontend/packages/') ||
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
     path === 'frontend/pnpm-workspace.yaml' ||

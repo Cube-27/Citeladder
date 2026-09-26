@@ -63,8 +63,10 @@ export const lintConfig: OxlintConfig = {
     '**/coverage/**',
     '**/playwright-report/**',
     '**/test-results/**',
-    // Generated service inputs, byte-checked against their generators in CI.
+    // Generated service and contract inputs, byte-checked against their
+    // generators in CI.
     '**/services/*/src/generated/**',
+    '**/packages/*/src/generated/**',
   ],
   rules: {
     'no-array-constructor': 'error',
@@ -189,8 +191,10 @@ export const fmtConfig: OxfmtConfig = {
     // The marketing build rewrites Wrangler's deploy config (gitignored).
     '**/.wrangler/**',
     '**/pnpm-lock.yaml',
-    // Generated service inputs, byte-checked against their generators in CI.
+    // Generated service and contract inputs, byte-checked against their
+    // generators in CI.
     '**/services/*/src/generated/**',
+    '**/packages/*/src/generated/**',
     // Python-produced golden masters, byte-checked by export_ts_platform --check.
     '**/services/*/golden/**',
     // Re-wrapping this inflates it past the owner line budget that
