@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -35,7 +34,7 @@ import { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
 import { Tabs } from '@/components/ui/tabs';
 
-import { CandidateReview } from './candidate-review';
+import { PendingReviewNotice } from './candidate-review';
 import { PromptEmptyState } from './prompt-empty-state';
 import { PromptLibraryDialogs } from './prompt-library-dialogs';
 import { PromptTable, type PromptMeasurement } from './prompt-table';
@@ -125,7 +124,7 @@ export function PromptLibrary({
   };
 
   const review = usePromptCandidates({
-    promptSetId: promptSet?.id ?? null,
+    promptSet,
     workspaceId: requestScope.workspaceId,
     onReviewed: async () => {
       setStatusTab('active');
@@ -361,18 +360,11 @@ export function PromptLibrary({
         {isError ? (
           <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
         ) : null}
-        {review.candidates.length && !generateOpen ? (
-          <Alert tone="info">
-            <span className="flex flex-wrap items-center justify-between gap-2">
-              {review.candidates.length === 1
-                ? '1 generated prompt is waiting for review.'
-                : `${review.candidates.length} generated prompts are waiting for review.`}
-              <Button variant="secondary" onClick={openGenerateDialog}>
-                Review suggestions
-              </Button>
-            </span>
-          </Alert>
-        ) : null}
+        <PendingReviewNotice
+          count={review.candidates.length}
+          hidden={generateOpen}
+          onReview={openGenerateDialog}
+        />
 
         <ResizablePromptWorkspace
           railId="prompt-topic-rail"
@@ -443,19 +435,7 @@ export function PromptLibrary({
           isGenerating={generateMutation.isPending}
           generateError={generateMutation.isError ? generateMutation.error : undefined}
           generateResult={generateResult}
-          candidateReview={
-            review.candidates.length || review.notice ? (
-              <CandidateReview
-                candidates={review.candidates}
-                topics={topics}
-                onAccept={review.accept}
-                onReject={review.reject}
-                isReviewing={review.isReviewing}
-                error={review.error}
-                notice={review.notice}
-              />
-            ) : null
-          }
+          review={review}
         />
       </Stack>
     </PageShell>

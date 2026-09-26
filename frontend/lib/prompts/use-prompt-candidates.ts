@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { humanizeApiError } from '@/lib/api/errors';
 import { promptsApi } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { PromptCandidate, PromptCandidateReviewResponse } from '@/lib/api/types';
+import type { PromptCandidate, PromptCandidateReviewResponse, PromptSet } from '@/lib/api/types';
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
@@ -25,14 +25,15 @@ function reviewNotice(result: PromptCandidateReviewResponse): string {
  * Accepting adds tracked prompts, so `onReviewed` refreshes the library.
  */
 export function usePromptCandidates({
-  promptSetId,
+  promptSet,
   workspaceId,
   onReviewed,
 }: Readonly<{
-  promptSetId: string | null;
+  promptSet: PromptSet | null;
   workspaceId: string;
   onReviewed: () => Promise<void>;
 }>) {
+  const promptSetId = promptSet?.id ?? null;
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState<string | null>(null);
   const query = useQuery({

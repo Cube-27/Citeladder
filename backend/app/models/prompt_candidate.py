@@ -23,11 +23,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column, validates
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config.prompts import CANDIDATE_DISPOSITION_PENDING
 from app.core.database import Base
-from app.domain.prompts.normalization import prompt_text_hash
 from app.models.constants import FK_WORKSPACES_ID, ON_DELETE_SET_NULL
 
 _CASCADE = "CASCADE"
@@ -116,6 +115,8 @@ class PromptCandidate(Base):
         index=True,
     )
     text: Mapped[str] = mapped_column(Text)
+    # Set by the staging owner (domain/prompts/candidates.py); models do not
+    # import domain code.
     normalized_text_hash: Mapped[str] = mapped_column(String(64), default="")
     intent: Mapped[str] = mapped_column(String(32), default="")
     buyer_stage: Mapped[str] = mapped_column(String(16), default="")
@@ -144,8 +145,3 @@ class PromptCandidate(Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-
-    @validates("text")
-    def _sync_normalized_hash(self, _key: str, value: str) -> str:
-        self.normalized_text_hash = prompt_text_hash(value)
-        return value

@@ -1,9 +1,11 @@
-import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 
 import type { PromptGenerateInput, PromptImportRow } from '@/lib/api/prompts';
 import type { Prompt, PromptGenerateResponse, Topic } from '@/lib/api/types';
 import type { PromptFormValues } from '@/lib/prompts/forms';
+import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 
+import { CandidateReviewPanel } from './candidate-review';
 import { CsvImportDialog } from './csv-import-dialog';
 import { GeneratePromptsDialog } from './generate-prompts-dialog';
 import { PromptFormDialog } from './prompt-form-dialog';
@@ -29,7 +31,7 @@ type PromptLibraryDialogsProps = {
   isGenerating: boolean;
   generateError?: unknown;
   generateResult: PromptGenerateResponse | null;
-  candidateReview?: ReactNode;
+  review: ReturnType<typeof usePromptCandidates>;
 };
 
 export function PromptLibraryDialogs({
@@ -53,8 +55,9 @@ export function PromptLibraryDialogs({
   isGenerating,
   generateError,
   generateResult,
-  candidateReview,
+  review,
 }: Readonly<PromptLibraryDialogsProps>) {
+  const reviewing = review.candidates.length > 0 || Boolean(review.notice);
   return (
     <>
       <PromptFormDialog
@@ -86,7 +89,7 @@ export function PromptLibraryDialogs({
         isGenerating={isGenerating}
         error={generateError}
         result={generateResult}
-        review={candidateReview}
+        review={reviewing ? <CandidateReviewPanel review={review} topics={topics} /> : null}
       />
     </>
   );

@@ -22,6 +22,7 @@ from app.domain.audits.creation import create_audit
 from app.domain.audits.reads import list_tasks
 from app.domain.command_center.service import get_command_center
 from app.domain.entitlements.types import GrantSpec
+from app.domain.prompts.normalization import prompt_text_hash
 from app.models.project import Project
 from app.models.prompt_candidate import PromptCandidate, PromptGenerationRun
 from tests.component.audit_helpers import seed_audit_fixtures
@@ -179,6 +180,9 @@ async def test_pending_candidates_never_reach_audits_or_tracked_counts(
                     run_id=run.id,
                     prompt_set_id=seed.prompt_set_id,
                     text=f"best staged option {index} for acme",
+                    normalized_text_hash=prompt_text_hash(
+                        f"best staged option {index} for acme"
+                    ),
                     expires_at=datetime.now(UTC) + timedelta(days=1),
                 )
             )

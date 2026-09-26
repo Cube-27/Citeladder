@@ -37,7 +37,6 @@ import type {
   promptCandidateSchema,
   promptCandidateReviewResponseSchema,
   businessMapSchema,
-  offeringMapSchema,
   businessMapEntrySchema,
   promptIntentSchema,
   promptSchema,
@@ -131,7 +130,6 @@ export type PromptGenerateResponse = z.infer<typeof promptGenerateResponseSchema
 export type PromptCandidate = z.infer<typeof promptCandidateSchema>;
 export type PromptCandidateReviewResponse = z.infer<typeof promptCandidateReviewResponseSchema>;
 export type BusinessMap = z.infer<typeof businessMapSchema>;
-export type OfferingMap = z.infer<typeof offeringMapSchema>;
 export type BusinessMapEntry = z.infer<typeof businessMapEntrySchema>;
 export type Project = z.infer<typeof projectSchema>;
 export type Competitor = z.infer<typeof competitorSchema>;

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { textRole } from '@/components/ui/typography';
 import type { PromptCandidate, Topic } from '@/lib/api/types';
+import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
@@ -117,5 +118,44 @@ export function CandidateReview({
         })}
       </ul>
     </section>
+  );
+}
+
+/** The review list for the Generate dialog, bound to the candidates hook. */
+export function CandidateReviewPanel({
+  review,
+  topics,
+}: Readonly<{ review: ReturnType<typeof usePromptCandidates>; topics: Topic[] }>) {
+  return (
+    <CandidateReview
+      candidates={review.candidates}
+      topics={topics}
+      onAccept={review.accept}
+      onReject={review.reject}
+      isReviewing={review.isReviewing}
+      error={review.error}
+      notice={review.notice}
+    />
+  );
+}
+
+/** Library prompt that suggestions are waiting, while the dialog is closed. */
+export function PendingReviewNotice({
+  count,
+  hidden,
+  onReview,
+}: Readonly<{ count: number; hidden: boolean; onReview: () => void }>) {
+  if (!count || hidden) return null;
+  return (
+    <Alert tone="info">
+      <span className="flex flex-wrap items-center justify-between gap-2">
+        {count === 1
+          ? '1 generated prompt is waiting for review.'
+          : `${count} generated prompts are waiting for review.`}
+        <Button variant="secondary" onClick={onReview}>
+          Review suggestions
+        </Button>
+      </span>
+    </Alert>
   );
 }
