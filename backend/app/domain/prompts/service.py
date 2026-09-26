@@ -13,7 +13,6 @@ from typing import Any, cast
 
 from sqlalchemy import CursorResult, select
 from sqlalchemy import update as sa_update
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -21,7 +20,6 @@ from sqlalchemy.orm import selectinload
 from app.core.config.entitlements import KEY_PROMPT_SLOTS
 from app.core.config.projects import (
     PROMPT_ORIGIN_GENERATED,
-    PROMPT_ORIGIN_IMPORTED,
     PROMPT_ORIGIN_MANUAL,
 )
 from app.core.config.prompts import PROMPT_STATUS_ACTIVE
@@ -114,49 +112,7 @@ async def _enforce_activation_binding(
         )
 
 
-async def _enforce_import_binding(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    texts: Sequence[str],
-) -> None:
-    """Per-row binding gate for CSV import (atomic: all rows or none).
-
-    Every non-empty row must bind to the project vocabulary. Failures are
-    collected per row and raised together BEFORE any insert or occupancy
-    charge, so an invalid import inserts NO rows and the caller gets the
-    row-specific reasons.
-    """
-    vocabulary = await load_project_vocabulary(
-        session, workspace_id=workspace_id, project_id=project_id
-    )
-    # Mixed value types (``row`` is an int), so the entry type is spelled out —
-    # otherwise the inferred value type is the common supertype and ``code``
-    # comes back too wide to pass on as the error's code.
-    failures: list[dict[str, Any]] = []
-    for index, text in enumerate(texts):
-        if not text:
-            continue
-        result = validate_prompt_binding(text, vocabulary)
-        if not result.accepted:
-            failures.append(
-                {
-                    "row": index,
-                    "code": result.code,
-                    "message": BINDING_FAILURE_MESSAGES[result.code],
-                }
-            )
-    if failures:
-        raise TopicalBindingError(
-            f"{len(failures)} imported prompt row(s) fail topical binding; "
-            "no rows were imported",
-            code=failures[0]["code"],
-            details={"rows": failures},
-        )
-
-
-async def _prompt_set_project_id(
+async def prompt_set_project_id(
     session: AsyncSession, prompt_set_id: uuid.UUID
 ) -> uuid.UUID:
     """The set's project id, read as a scalar column (no ORM row materialized).
@@ -594,7 +550,7 @@ async def _enforce_update_binding(
     )
     if new_text is None and not activates:
         return
-    project_id = await _prompt_set_project_id(session, prompt.prompt_set_id)
+    project_id = await prompt_set_project_id(session, prompt.prompt_set_id)
     text = (new_text if new_text is not None else prompt.text).strip()
     await enforce_prompt_binding(
         session, workspace_id=workspace_id, project_id=project_id, text=text
@@ -653,92 +609,6 @@ async def delete_prompt(
     await session.commit()
 
 
-def _import_texts(rows: Sequence[Any]) -> list[str]:
-    """Strip every row's text (empty strings are filtered downstream)."""
-    return [str(row.text or "").strip() for row in rows]
-
-
-async def _insert_imported_row(
-    session: AsyncSession, *, prompt_set_id: uuid.UUID, row: Any, text: str
-) -> None:
-    """Persist one capacity-approved import row as ``imported``.
-
-    ``ON CONFLICT DO NOTHING`` on the per-set hash constraint stays the
-    final race guard — a duplicate is dropped by the DB, never a failure.
-    """
-    stmt = (
-        pg_insert(Prompt)
-        .values(
-            id=uuid.uuid4(),
-            prompt_set_id=prompt_set_id,
-            text=text,
-            normalized_text_hash=prompt_text_hash(text),
-            theme=str(row.theme or "").strip(),
-            intent=normalize_intent(row.intent),
-            branded=row.cohort == "comparison",
-            enabled=bool(row.enabled),
-            origin=PROMPT_ORIGIN_IMPORTED,
-        )
-        .on_conflict_do_nothing(constraint="uq_prompt_set_normalized_text")
-    )
-    await session.execute(stmt)
-
-
-async def import_prompts(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    prompt_set_id: uuid.UUID,
-    rows: list[Any],
-) -> PromptSet:
-    """CSV bulk-create: persist already-parsed prompt rows as ``imported``.
-
-    Rows with empty text are skipped; intents are casefolded + validated.
-    Duplicates (same normalized text as an existing prompt in the set, or a
-    repeat within the upload) are dropped — never a request failure — and
-    are filtered BEFORE occupancy is charged, so a duplicate never consumes
-    a ``prompt_slots`` slot. Every non-empty row must pass topical binding:
-    row-specific failures are raised together and, since the import is
-    atomic, an invalid upload inserts NO rows. The insert runs under the
-    account-capacity lock; the whole import is atomic, so an over-allowance
-    upload inserts nothing either. Returns the refreshed prompt set (with
-    all prompts) so the caller can project the whole set back — matching
-    the frontend import contract.
-    """
-    # NOTE: the scope check's result is deliberately DISCARDED (never held in
-    # a local): keeping the instance alive would pin it in the identity map
-    # with its already-loaded (empty) prompts collection, and the refresh at
-    # the end of the import would serve that stale collection. The binding
-    # gate reads the project id through a scalar column select instead, which
-    # materializes no ORM instance.
-    await _get_prompt_set(
-        session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
-    )
-    project_id = await _prompt_set_project_id(session, prompt_set_id)
-    texts = _import_texts(rows)
-    await _enforce_import_binding(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        texts=texts,
-    )
-    approved = await prepare_prompt_inserts(
-        session,
-        workspace_id=workspace_id,
-        prompt_set_id=prompt_set_id,
-        texts=texts,
-    )
-    for row, text in zip(rows, texts, strict=True):
-        if text and prompt_text_hash(text) in approved:
-            await _insert_imported_row(
-                session, prompt_set_id=prompt_set_id, row=row, text=text
-            )
-    await session.commit()
-    return await _get_prompt_set(
-        session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
-    )
-
-
 async def bulk_set_status(
     session: AsyncSession,
     *,
@@ -757,13 +627,13 @@ async def bulk_set_status(
     is compared to the request (no check-then-act window); on any mismatch
     we raise before committing, so no partial transition ever persists.
     """
-    # Discarded scope check (see import_prompts: holding the instance pins a
-    # stale prompts collection for the post-transition refresh); the binding
-    # gate gets the project id from a scalar column select instead.
+    # Discarded scope check (see importing.import_prompts: holding the
+    # instance pins a stale prompts collection for the post-transition
+    # refresh); the binding gate gets the project id from a scalar select.
     await _get_prompt_set(
         session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
     )
-    project_id = await _prompt_set_project_id(session, prompt_set_id)
+    project_id = await prompt_set_project_id(session, prompt_set_id)
     await _enforce_activation_binding(
         session,
         workspace_id=workspace_id,

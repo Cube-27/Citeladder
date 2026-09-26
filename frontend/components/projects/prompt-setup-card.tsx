@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
-import { PROMPTS_GENERATE_HREF, PROMPTS_MANAGE_HREF } from '@/lib/prompts/routes';
+import { PROMPTS_GENERATE_HREF, PROMPTS_HREF } from '@/lib/prompts/routes';
 
 /**
  * Shown on Overview while the project tracks no active prompts. Onboarding
@@ -32,7 +32,7 @@ export function PromptSetupCard() {
           <ProjectLink href={PROMPTS_GENERATE_HREF}>Generate prompts</ProjectLink>
         </Button>
         <Button asChild variant="secondary" size="md">
-          <ProjectLink href={PROMPTS_MANAGE_HREF}>Add or import prompts</ProjectLink>
+          <ProjectLink href={PROMPTS_HREF}>Add or import prompts</ProjectLink>
         </Button>
       </div>
     </Card>

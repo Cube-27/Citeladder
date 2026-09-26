@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { parsePromptCsv, tokenizeCsv, validRows } from './csv';
+import { toCsvForTest } from '@/lib/csv/download';
+
+import {
+  PROMPT_CSV_COLUMNS,
+  PROMPT_CSV_SAMPLE_ROWS,
+  parsePromptCsv,
+  tokenizeCsv,
+  validRows,
+} from './csv';
 
 describe('tokenizeCsv', () => {
   it('handles quoted fields, escaped quotes, and embedded newlines', () => {
@@ -12,50 +20,51 @@ describe('tokenizeCsv', () => {
   });
 
   it('strips a BOM and drops blank lines', () => {
-    const raw = '\ufefftext\n\nfoo\n';
+    const raw = '﻿text\n\nfoo\n';
     expect(tokenizeCsv(raw)).toEqual([['text'], ['foo']]);
   });
 });
 
 describe('parsePromptCsv', () => {
-  it('parses a header row with columns in any order', () => {
-    const parsed = parsePromptCsv('intent,text,cohort\ndiscovery,Best shoes?,comparison');
+  it('round-trips the downloadable sample through the parser', () => {
+    const parsed = parsePromptCsv(`﻿${toCsvForTest(PROMPT_CSV_COLUMNS, PROMPT_CSV_SAMPLE_ROWS)}`);
     expect(parsed.hasHeader).toBe(true);
-    expect(parsed.rows).toHaveLength(1);
-    expect(parsed.rows[0].input).toMatchObject({
+    expect(parsed.errors).toEqual([]);
+    expect(validRows(parsed).map((row) => [row.topic, row.text])).toEqual(PROMPT_CSV_SAMPLE_ROWS);
+  });
+
+  it('accepts topic and prompt alone, in any order, with internal defaults', () => {
+    const parsed = parsePromptCsv('prompt,topic\nBest shoes?,Running shoes');
+    expect(parsed.rows[0].errors).toEqual([]);
+    expect(parsed.rows[0].input).toEqual({
       text: 'Best shoes?',
-      intent: 'discovery',
-      cohort: 'comparison',
+      topic: 'Running shoes',
+      theme: '',
+      intent: '',
+      cohort: 'core',
       enabled: true,
     });
-    expect(parsed.rows[0].errors).toEqual([]);
   });
 
-  it('treats a file without a recognized header as positional', () => {
-    const parsed = parsePromptCsv('Best shoes?,Comfort,purchase,comparison,false');
+  it('never rejects a row for its internal columns', () => {
+    const parsed = parsePromptCsv(
+      `question,category,intent,cohort,theme\nBest shoes?,,frobnicate,weird,${'t'.repeat(300)}`,
+    );
+    expect(parsed.rows[0].errors).toEqual([]);
+    expect(parsed.rows[0].input).toMatchObject({ topic: '', intent: '', cohort: 'core' });
+    expect(parsed.rows[0].input.theme).toHaveLength(255);
+  });
+
+  it('treats a file without a recognized header as a list of prompts', () => {
+    const parsed = parsePromptCsv('Best shoes?,Running shoes');
     expect(parsed.hasHeader).toBe(false);
-    expect(parsed.rows[0].input).toMatchObject({
-      text: 'Best shoes?',
-      theme: 'Comfort',
-      intent: 'purchase',
-      cohort: 'comparison',
-      enabled: false,
-    });
+    expect(parsed.rows[0].input).toMatchObject({ text: 'Best shoes?', topic: '' });
   });
 
-  it('flags empty-text rows as errors and drops them from validRows', () => {
-    const parsed = parsePromptCsv('text\nGood prompt\n');
-    const withEmpty = parsePromptCsv('text,theme\n,Comfort\nGood,Fit');
-    expect(parsed.rows[0].errors).toEqual([]);
-    expect(withEmpty.rows[0].errors.length).toBeGreaterThan(0);
-    expect(validRows(withEmpty)).toHaveLength(1);
-    expect(validRows(withEmpty)[0].text).toBe('Good');
-  });
-
-  it('warns and clears an unknown intent', () => {
-    const parsed = parsePromptCsv('text,intent\nHi,frobnicate');
-    expect(parsed.rows[0].input.intent).toBe('');
-    expect(parsed.rows[0].warnings.length).toBeGreaterThan(0);
+  it('flags rows without a prompt or with an overlong topic and drops them', () => {
+    const parsed = parsePromptCsv(`topic,prompt\nShoes,\n${'x'.repeat(256)},Fit?\nShoes,Good`);
+    expect(parsed.rows.map((row) => row.errors.length > 0)).toEqual([true, true, false]);
+    expect(validRows(parsed).map((row) => row.text)).toEqual(['Good']);
   });
 
   it('reports a file-level error for an empty file', () => {

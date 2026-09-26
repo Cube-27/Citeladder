@@ -2,7 +2,7 @@
 
 Status: active, owner-approved direction (26 September 2026; revised the same day
 after the prompt-universe and JEV feasibility research). PR 1 merged as `54e6f4b8`
-(#161). PR 2 is next.
+(#161). PR 2 is in review.
 Scope: onboarding completion, the Prompts page workflow, and the quick **Generate
 prompts** path. The agent-driven "Build with Agent" generation is phase 2 and is
 out of scope (section 9).
@@ -208,9 +208,9 @@ copied verbatim into tracked prompts.
 ## 9. Definition of done
 
 PR 2
-- [ ] `/prompts` has no separate manage step and offers Launch audit.
-- [ ] A `topic,prompt` CSV imports; the sample CSV round-trips through the parser.
-- [ ] Manual add asks only for topic and prompt.
+- [x] `/prompts` has no separate manage step and offers Launch audit.
+- [x] A `topic,prompt` CSV imports; the sample CSV round-trips through the parser.
+- [x] Manual add asks only for topic and prompt.
 
 PR 3a
 - [ ] Business map entries are editable and carry provenance.

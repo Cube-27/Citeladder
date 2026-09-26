@@ -567,7 +567,7 @@ def _next_action(
         return CommandCenterNextAction(
             kind="configure_prompts",
             title="Configure tracking prompts",
-            href="/prompts?mode=manage",
+            href="/prompts",
         )
     if not evidence["tracked"]:
         return CommandCenterNextAction(

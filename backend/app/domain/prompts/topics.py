@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -98,6 +99,8 @@ async def create_topic(
     await _project_in_workspace(
         session, workspace_id=workspace_id, project_id=project_id
     )
+    # Serialize with CSV import, which creates topics by name under this lock.
+    await acquire_project_lock(session, project_id)
     topic = Topic(
         project_id=project_id,
         name=payload.name.strip(),
@@ -114,6 +117,47 @@ async def create_topic(
         ) from exc
     await session.refresh(topic)
     return topic
+
+
+async def resolve_topics_by_name(
+    session: AsyncSession, *, project_id: uuid.UUID, names: Iterable[str]
+) -> dict[str, uuid.UUID]:
+    """Topic id per requested name, creating unknown names as manual topics.
+
+    Keyed by the stripped name's ``lower()``, the key the project's
+    case-insensitive uniqueness index uses, so "Shoes" and "shoes" resolve to
+    one topic. Blank names are ignored. The caller must hold the project lock
+    (``acquire_project_lock``) so a concurrent create or delete cannot land
+    between the lookup and the flush; the transaction is left open.
+    """
+    wanted: dict[str, str] = {}
+    for name in names:
+        stripped = name.strip()
+        if stripped:
+            wanted.setdefault(stripped.lower(), stripped)
+    if not wanted:
+        return {}
+    existing = await session.execute(
+        select(Topic.id, Topic.name).where(Topic.project_id == project_id)
+    )
+    resolved = {
+        name.lower(): topic_id
+        for topic_id, name in existing.all()
+        if name.lower() in wanted
+    }
+    for key, name in wanted.items():
+        if key not in resolved:
+            topic = Topic(
+                id=uuid.uuid4(),
+                project_id=project_id,
+                name=name,
+                description="",
+                origin=TOPIC_ORIGIN_MANUAL,
+            )
+            session.add(topic)
+            resolved[key] = topic.id
+    await session.flush()
+    return resolved
 
 
 async def update_topic(

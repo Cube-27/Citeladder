@@ -15,6 +15,8 @@ from app.core.config.http import (
     PROMPT_IMPORT_MAX_ROWS,
     PROMPT_INTENT_MAX_CHARS,
     PROMPT_TEXT_MAX_CHARS,
+    PROMPT_THEME_MAX_CHARS,
+    TOPIC_NAME_MAX_CHARS,
 )
 from app.core.config.prompts import (
     PROMPT_COHORTS,
@@ -55,7 +57,7 @@ class PromptInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str = Field(min_length=1, max_length=PROMPT_TEXT_MAX_CHARS)
-    theme: str = Field(default="", max_length=255)
+    theme: str = Field(default="", max_length=PROMPT_THEME_MAX_CHARS)
     intent: str = Field(default="", max_length=PROMPT_INTENT_MAX_CHARS)
     cohort: PromptCohort = "core"
     enabled: bool = True
@@ -87,12 +89,24 @@ class PromptUpdate(BaseModel):
     text: str | None = Field(
         default=None, min_length=1, max_length=PROMPT_TEXT_MAX_CHARS
     )
-    theme: str | None = Field(default=None, max_length=255)
+    theme: str | None = Field(default=None, max_length=PROMPT_THEME_MAX_CHARS)
     intent: str | None = Field(default=None, max_length=PROMPT_INTENT_MAX_CHARS)
     cohort: PromptCohort | None = None
     enabled: bool | None = None
     status: PromptStatus | None = None
     topic_id: uuid.UUID | None = None
+
+
+class PromptImportRow(PromptInput):
+    """One CSV import row: the user's topic NAME plus the prompt.
+
+    ``topic`` is user vocabulary: an existing topic is matched
+    case-insensitively, an unknown name becomes a manual topic, and an empty
+    name imports the prompt unassigned. ``topic_id`` is not honoured here.
+    Theme, intent and cohort stay optional internal fields with code defaults.
+    """
+
+    topic: str = Field(default="", max_length=TOPIC_NAME_MAX_CHARS)
 
 
 class PromptImport(BaseModel):
@@ -103,7 +117,7 @@ class PromptImport(BaseModel):
     ``origin='imported'``.
     """
 
-    prompts: list[PromptInput] = Field(
+    prompts: list[PromptImportRow] = Field(
         default_factory=list, max_length=PROMPT_IMPORT_MAX_ROWS
     )
 
@@ -160,12 +174,14 @@ class PromptSetResponse(BaseModel):
 # Topics
 # --------------------------------------------------------------------------
 class TopicCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=255)
+    name: str = Field(min_length=1, max_length=TOPIC_NAME_MAX_CHARS)
     description: str = Field(default="", max_length=1024)
 
 
 class TopicUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=255)
+    name: str | None = Field(
+        default=None, min_length=1, max_length=TOPIC_NAME_MAX_CHARS
+    )
     description: str | None = Field(default=None, max_length=1024)
 
 

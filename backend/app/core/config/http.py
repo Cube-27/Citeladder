@@ -23,3 +23,6 @@ PROMPT_TEXT_MAX_CHARS: Final = 300
 # below any real query -- it exists to reject "x", not to shape phrasing.
 PROMPT_TEXT_MIN_WORDS: Final = 2
 PROMPT_INTENT_MAX_CHARS: Final = 64
+# Column widths of ``prompts.theme`` and ``topics.name``.
+PROMPT_THEME_MAX_CHARS: Final = 255
+TOPIC_NAME_MAX_CHARS: Final = 255
