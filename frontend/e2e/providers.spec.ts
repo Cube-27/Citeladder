@@ -101,7 +101,7 @@ test('provider settings: available engines save and test an OpenAI key', async (
   // same-origin /api/ requests through the Next rewrite.
   // Exercise the ChatGPT card: fill the key, save, then test the connection.
   const chatgptCard = page.locator('section', {
-    has: page.getByRole('heading', { name: 'ChatGPT' }),
+    has: page.getByRole('heading', { name: 'ChatGPT API', exact: true }),
   });
   await expect(chatgptCard).toBeVisible();
 

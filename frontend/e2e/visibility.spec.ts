@@ -413,8 +413,8 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
 
   // Shared filters remain usable: the surface dropdown still opens + selects.
   await page.getByRole('button', { name: 'Filter by surface' }).click();
-  await page.getByRole('menuitemradio', { name: 'Gemini' }).click();
-  await expect(page.getByRole('button', { name: 'Filter by surface' })).toContainText('Gemini');
+  await page.getByRole('menuitemradio', { name: 'Gemini API', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Filter by surface' })).toContainText('Gemini API');
 });
 
 for (const width of [1280, 375]) {
@@ -445,7 +445,7 @@ for (const width of [1280, 375]) {
     await page.addStyleTag({
       content: 'nextjs-portal { display: none !important; }',
     });
-    await page.getByRole('button', { name: 'Gemini', exact: true }).click();
+    await page.getByRole('button', { name: 'Gemini API', exact: true }).click();
     // The drill-down lands on Query fanouts, which is where execution evidence
     // is rendered now that the Mentions tab is gone. What this test is for is
     // unchanged: the selected run and engine must be the run and engine the
