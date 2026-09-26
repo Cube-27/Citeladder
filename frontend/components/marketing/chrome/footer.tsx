@@ -30,9 +30,9 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
     key: 'resources',
     label: 'Resources',
     links: [
+      { label: 'Docs', href: docsHref(), external: true },
       { label: 'Blog', href: '/blog' },
-      { label: 'Documentation', href: docsHref() },
-      { label: 'Changelog', href: docsHref('/changelog/') },
+      { label: 'Changelog', href: docsHref('/changelog/'), external: true },
       { label: 'FAQ', href: '/faq' },
     ],
   },

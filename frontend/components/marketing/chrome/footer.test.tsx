@@ -56,7 +56,7 @@ describe('MarketingFooter', () => {
     render(await MarketingFooter());
 
     expect(screen.queryByRole('link', { name: /github/i })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Documentation' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Docs' })).toHaveAttribute(
       'href',
       'https://docs.citeladder.com/',
     );

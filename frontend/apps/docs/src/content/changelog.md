@@ -9,7 +9,7 @@ These notes describe implemented changes in the codebase. Dates are the recorded
 
 ## September 26, 2026 — Agent panel and theme switch
 
-Dashboard screens gain an Agent panel: open it from the top bar to chat beside the screen you are viewing. Supported screens, such as Site Health issues and Search Intelligence, attach their references automatically. The panel shares chats and outputs with the Agent workspace, and **Open in Agent** continues the same chat there.
+Dashboard screens gain an Agent panel: open it from the top bar to chat beside the screen you are viewing. Search Intelligence attaches the rows you are viewing, and a Site Health issue starts the panel with a question about it. The panel shares chats and outputs with the Agent workspace, and **Open in Agent** continues the same chat there.
 
 The account menu’s theme checkbox is replaced by a one-click Light/Dark switch in the application and onboarding headers, and the dark theme moves to near-black neutrals.
 

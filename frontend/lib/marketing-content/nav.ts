@@ -3,6 +3,8 @@
  * accordions, which render the same tree). Anchors are absolute (`/#see-it`)
  * so every row resolves from a subpage, not just from `/`.
  */
+import { docsHref } from '@/lib/config/docs';
+
 export type NavDropKey = 'platform' | 'solutions' | 'resources';
 
 export type NavDropItem =
@@ -79,6 +81,12 @@ export const NAV_DROPS: readonly NavDrop[] = [
     groups: [
       {
         items: [
+          {
+            title: 'Docs',
+            desc: 'Guides for the product, the Agent and MCP',
+            href: docsHref(),
+            external: true,
+          },
           {
             title: 'Blog',
             desc: 'Practical guides to AI visibility and site evidence',

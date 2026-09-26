@@ -16,7 +16,7 @@ There are four useful entry points:
 - **New chat:** describe a question and the outcome you want.
 - **Work on this:** start from an Action, with its target and diagnosis attached.
 - **Ask agent:** carry selected references from a supported evidence screen into a new conversation.
-- **Agent panel:** on a Dashboard screen, open the Agent from the top bar to chat beside what you are viewing. Supported screens, such as an open Site Health issue, attach their references for you. Choose **Open in Agent** to continue the same chat in the full workspace.
+- **Agent panel:** on a Dashboard screen, open the Agent from the top bar to chat beside what you are viewing. On Search Intelligence, the rows you are viewing are attached for you; on a Site Health issue, the panel starts with a question about that issue. Choose **Open in Agent** to continue the same chat in the full workspace.
 
 Before sending, inspect the composer’s reference chips. Remove anything that should not be part of the task. The Agent resolves those references against the saved data you can access.
 

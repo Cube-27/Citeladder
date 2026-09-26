@@ -166,7 +166,7 @@ test.describe('marketing routes', () => {
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toBeVisible();
     await expect(footer.getByRole('link', { name: 'Blog', exact: true })).toBeVisible();
-    await expect(footer.getByRole('link', { name: 'Documentation' })).toHaveAttribute(
+    await expect(footer.getByRole('link', { name: 'Docs', exact: true })).toHaveAttribute(
       'href',
       'https://docs.citeladder.com/',
     );
