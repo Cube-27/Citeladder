@@ -1,4 +1,5 @@
 import { Sparkles } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -12,12 +13,12 @@ import { textRole } from '@/components/ui/typography';
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateResponse }>) {
-  const total = result.generated.length;
-  const active = result.generated.filter((prompt) => prompt.status === 'active').length;
+  const total = result.candidates.length;
   const topicCount = new Set(
-    result.generated.map((prompt) => prompt.topic_id).filter((id): id is string => id != null),
+    result.candidates
+      .map((candidate) => candidate.topic_id)
+      .filter((id): id is string => id != null),
   ).size;
-  const placement = active ? ` ${plural(active, 'prompt')} added to Active.` : '';
   const duplicates = result.dropped_duplicates
     ? `; ${plural(result.dropped_duplicates, 'duplicate')} skipped`
     : '';
@@ -29,10 +30,10 @@ function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateRespon
       : '';
   return (
     <Alert tone="success">
-      Generated {plural(total, 'prompt')}
+      Drafted {plural(total, 'suggestion')}
       {shortfall}
       {topicCount ? ` across ${plural(topicCount, 'topic')}` : ''}
-      {duplicates}.{placement}
+      {duplicates}. Accept the ones worth tracking.
     </Alert>
   );
 }
@@ -86,6 +87,7 @@ export function GeneratePromptsDialogView({
   error,
   result,
   maxCount,
+  review,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -100,14 +102,16 @@ export function GeneratePromptsDialogView({
   error?: unknown;
   result?: PromptGenerateResponse | null;
   maxCount: number;
+  /** The pending-candidate review list, when there is anything to review. */
+  review?: ReactNode;
 }>) {
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
       title="Generate prompts"
-      description="CiteLadder drafts prompt suggestions and creates starting topics from confirmed offerings when needed."
-      className="w-130"
+      description="CiteLadder drafts prompt suggestions for you to review and creates starting topics from confirmed offerings when needed. Only accepted prompts are tracked."
+      className={review ? 'w-180' : 'w-130'}
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
@@ -155,6 +159,7 @@ export function GeneratePromptsDialogView({
             />
           </div>
         ) : null}
+        {review}
       </div>
     </Dialog>
   );

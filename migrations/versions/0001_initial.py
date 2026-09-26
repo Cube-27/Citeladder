@@ -1307,17 +1307,20 @@ def upgrade() -> None:
         "topics",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("parent_id", sa.UUID(), nullable=True),
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("description", sa.String(length=1024), nullable=False),
         sa.Column("origin", sa.String(length=32), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["parent_id"], ["topics.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
         op.f("ix_topics_project_id"), "topics", ["project_id"], unique=False
     )
+    op.create_index(op.f("ix_topics_parent_id"), "topics", ["parent_id"], unique=False)
     op.create_index(
         "uq_topic_project_name",
         "topics",
@@ -1841,6 +1844,111 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_prompts_topic_id"), "prompts", ["topic_id"], unique=False)
     op.create_index(op.f("ix_prompts_cohort"), "prompts", ["cohort"])
+    op.create_table(
+        "prompt_generation_runs",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("prompt_set_id", sa.UUID(), nullable=False),
+        sa.Column("generator_version", sa.String(length=64), nullable=False),
+        sa.Column("request", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("provenance", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id"],
+            ["projects.workspace_id", "projects.id"],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["prompt_set_id"], ["prompt_sets.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_prompt_generation_runs_workspace_id"),
+        "prompt_generation_runs",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_prompt_generation_runs_project_id"),
+        "prompt_generation_runs",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_prompt_generation_runs_prompt_set_id"),
+        "prompt_generation_runs",
+        ["prompt_set_id"],
+        unique=False,
+    )
+    op.create_table(
+        "prompt_candidates",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("run_id", sa.UUID(), nullable=False),
+        sa.Column("prompt_set_id", sa.UUID(), nullable=False),
+        sa.Column("topic_id", sa.UUID(), nullable=True),
+        sa.Column("text", sa.Text(), nullable=False),
+        sa.Column("normalized_text_hash", sa.String(length=64), nullable=False),
+        sa.Column("intent", sa.String(length=32), nullable=False),
+        sa.Column("buyer_stage", sa.String(length=16), nullable=False),
+        sa.Column("prompt_intent", sa.String(length=16), nullable=False),
+        sa.Column("cohort", sa.String(length=32), nullable=False),
+        sa.Column("slot_id", sa.String(length=128), nullable=False),
+        sa.Column(
+            "evidence_refs", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("validation", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column(
+            "jev_decision", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("disposition", sa.String(length=16), nullable=False),
+        sa.Column("prompt_id", sa.UUID(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("reviewed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["run_id"], ["prompt_generation_runs.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["prompt_set_id"], ["prompt_sets.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["topic_id"], ["topics.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["prompt_id"], ["prompts.id"], ondelete="SET NULL"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_prompt_candidates_workspace_id"),
+        "prompt_candidates",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_prompt_candidates_run_id"),
+        "prompt_candidates",
+        ["run_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_prompt_candidates_topic_id"),
+        "prompt_candidates",
+        ["topic_id"],
+        unique=False,
+    )
+    op.create_index(
+        "uq_prompt_candidate_pending_text",
+        "prompt_candidates",
+        ["prompt_set_id", "normalized_text_hash"],
+        unique=True,
+        postgresql_where=sa.text("disposition = 'pending'"),
+    )
     op.create_table(
         "site_crawls",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -7265,6 +7373,8 @@ def downgrade() -> None:
         "traffic_query_stats",
         "site_crawls",
         "provider_capacity_leases",
+        "prompt_candidates",
+        "prompt_generation_runs",
         "prompts",
         "integration_sync_runs",
         "integration_property_mappings",

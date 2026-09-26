@@ -31,6 +31,44 @@ class DuplicateTopicError(ValueError):
     """Raised when a topic name already exists in the project."""
 
 
+class TopicHierarchyError(ValueError):
+    """Raised when a parent assignment would exceed one level of nesting."""
+
+
+async def _validate_parent(
+    session: AsyncSession,
+    *,
+    project_id: uuid.UUID,
+    parent_id: uuid.UUID,
+    topic_id: uuid.UUID | None = None,
+) -> None:
+    """Enforce same-project, depth <= 1 nesting for a parent assignment.
+
+    The caller holds the project lock, so the parent cannot gain a parent and
+    the topic cannot gain children between this check and the commit.
+    """
+    parent = (
+        await session.execute(
+            select(Topic).where(Topic.id == parent_id, Topic.project_id == project_id)
+        )
+    ).scalar_one_or_none()
+    if parent is None:
+        raise TopicNotFoundError("Parent topic not found")
+    if parent.id == topic_id:
+        raise TopicHierarchyError("A topic cannot be its own parent")
+    if parent.parent_id is not None:
+        raise TopicHierarchyError("A subtopic cannot have subtopics")
+    if topic_id is None:
+        return
+    has_children = (
+        await session.execute(
+            select(Topic.id).where(Topic.parent_id == topic_id).limit(1)
+        )
+    ).first()
+    if has_children is not None:
+        raise TopicHierarchyError("A topic with subtopics cannot become a subtopic")
+
+
 async def _project_in_workspace(
     session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
 ) -> Project:
@@ -101,8 +139,13 @@ async def create_topic(
     )
     # Serialize with CSV import, which creates topics by name under this lock.
     await acquire_project_lock(session, project_id)
+    if payload.parent_id is not None:
+        await _validate_parent(
+            session, project_id=project_id, parent_id=payload.parent_id
+        )
     topic = Topic(
         project_id=project_id,
+        parent_id=payload.parent_id,
         name=payload.name.strip(),
         description=payload.description.strip(),
         origin=TOPIC_ORIGIN_MANUAL,
@@ -176,6 +219,16 @@ async def update_topic(
 ) -> Topic:
     topic = await _get_topic(session, workspace_id=workspace_id, topic_id=topic_id)
     data = payload.model_dump(exclude_unset=True)
+    if "parent_id" in data:
+        await acquire_project_lock(session, topic.project_id)
+        if data["parent_id"] is not None:
+            await _validate_parent(
+                session,
+                project_id=topic.project_id,
+                parent_id=data["parent_id"],
+                topic_id=topic.id,
+            )
+        topic.parent_id = data["parent_id"]
     if data.get("name") is not None:
         topic.name = data["name"].strip()
     if data.get("description") is not None:

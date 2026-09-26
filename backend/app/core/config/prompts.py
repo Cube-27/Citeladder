@@ -11,9 +11,9 @@ from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # --- Prompt lifecycle ------------------------------------------------------
-# Generation creates active library entries. Measurement is still explicitly
-# initiated by running or scheduling an audit; a second approval gate here
-# adds no safety and fragments the portfolio lifecycle.
+# A prompt is tracked from creation. Generated text is reviewed before it
+# becomes a prompt (candidates, below), and measurement is still explicitly
+# initiated by running or scheduling an audit.
 PROMPT_STATUS_ACTIVE: Final = "active"
 PROMPT_STATUS_ARCHIVED: Final = "archived"
 PROMPT_STATUSES: Final[frozenset[str]] = frozenset(
@@ -48,6 +48,14 @@ TOPIC_ORIGIN_GENERATED: Final = "generated"
 TOPIC_ORIGINS: Final[frozenset[str]] = frozenset(
     {TOPIC_ORIGIN_MANUAL, TOPIC_ORIGIN_GENERATED}
 )
+
+# --- Generated-prompt candidates (review before tracking) ------------------
+# Generate writes candidates, not prompts. A user accepts (a Prompt is
+# inserted and the candidate kept as ``accepted`` with the link) or rejects
+# (the candidate is deleted). Pending candidates past their retention are
+# hidden from review and purged by the next write to the set.
+CANDIDATE_DISPOSITION_PENDING: Final = "pending"
+CANDIDATE_DISPOSITION_ACCEPTED: Final = "accepted"
 
 # --- Generation pipeline version (stamped into generation_evidence) --------
 GENERATOR_VERSION: Final = "prompt-gen-v1"
@@ -413,6 +421,23 @@ class PromptGenerationSettings(BaseSettings):
         validation_alias=AliasChoices(
             "GENERATION_EXISTING_PROMPT_CONTEXT_LIMIT",
             "generation_existing_prompt_context_limit",
+        ),
+    )
+    # How long an unreviewed candidate stays in the review list.
+    candidate_retention_hours: int = Field(
+        default=168,
+        ge=1,
+        validation_alias=AliasChoices(
+            "GENERATION_CANDIDATE_RETENTION_HOURS",
+            "generation_candidate_retention_hours",
+        ),
+    )
+    # Upper bound on accept_ids + reject_ids in one review request.
+    review_max_ids: int = Field(
+        default=500,
+        ge=1,
+        validation_alias=AliasChoices(
+            "GENERATION_REVIEW_MAX_IDS", "generation_review_max_ids"
         ),
     )
 

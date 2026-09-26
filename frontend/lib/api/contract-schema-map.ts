@@ -18,10 +18,15 @@ export const CONTRACT_SCHEMA_MAP = {
   competitorSchema: 'CompetitorResponse',
   commandCenterSchema: 'CommandCenterResponse',
   brandProfileSchema: 'BrandProfileResponse',
+  businessMapSchema: 'BusinessMapResponse',
+  offeringMapSchema: 'OfferingMap',
+  businessMapEntrySchema: 'BusinessMapEntry',
   // Prompts / topics
   promptSchema: 'PromptResponse',
   promptSetSchema: 'PromptSetResponse',
   promptGenerateResponseSchema: 'PromptGenerateResponse',
+  promptCandidateSchema: 'PromptCandidateResponse',
+  promptCandidateReviewResponseSchema: 'PromptCandidateReviewResponse',
   topicSchema: 'TopicResponse',
   // Providers
   providerConnectionSchema: 'ProviderConnectionResponse',

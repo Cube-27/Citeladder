@@ -5,8 +5,9 @@
 #   - GET/POST /prompt-sets, GET/PATCH/DELETE /prompt-sets/{id}
 #   - GET/POST /prompt-sets/{id}/prompts, PATCH/DELETE /prompts/{id}
 #   - POST /prompt-sets/{id}/import  -> CSV bulk-create
-#   - POST /prompt-sets/{id}/generate -> topic/prompt generation
-#     (Commerce is catalog-derived; other cohorts use the default agent)
+#   - POST /prompt-sets/{id}/generate -> stage generated prompt candidates
+#   - GET /prompt-sets/{id}/candidates, POST .../candidates/review
+#     -> review list; accept inserts active prompts, reject deletes
 #   - POST /prompt-sets/{id}/prompts/bulk-status -> review transitions
 #   - GET/POST /projects/{id}/topics, PATCH/DELETE /topics/{id}
 from __future__ import annotations
@@ -58,6 +59,11 @@ from app.core.http_errors import (
     raise_not_found,
 )
 from app.domain.entitlements.enforcement import OccupancyError
+from app.domain.prompts.candidates import (
+    CandidateReviewError,
+    list_pending_candidates,
+    review_candidates,
+)
 from app.domain.prompts.csv_import import parse_prompt_csv
 from app.domain.prompts.generation import (
     GenerationOutputError,
@@ -74,6 +80,9 @@ from app.domain.prompts.mappers import (
 )
 from app.domain.prompts.schemas import (
     PromptBulkStatusRequest,
+    PromptCandidateResponse,
+    PromptCandidateReviewRequest,
+    PromptCandidateReviewResponse,
     PromptCreate,
     PromptGenerateRequest,
     PromptGenerateResponse,
@@ -110,6 +119,7 @@ from app.domain.prompts.service import (
 from app.domain.prompts.topical_binding import TopicalBindingError
 from app.domain.prompts.topics import (
     DuplicateTopicError,
+    TopicHierarchyError,
     TopicNotFoundError,
     create_topic,
     delete_topic,
@@ -415,13 +425,13 @@ async def generate_prompts_endpoint(
     ctx: _RunDep,
     session: _SessionDep,
 ) -> PromptGenerateResponse:
-    """Generate prompts via the catalog script or app-level default agent.
+    """Generate prompt candidates for review via the app-level default agent.
 
     Guard order: workspace scope (foreign set -> 404) before anything runs,
     then bounds/topic ownership (422), then agent configuration when required
     (503) — an invalid payload is rejected as invalid even when no agent is
-    configured. Validated suggestions become active library resources, but
-    generation never runs or schedules an audit.
+    configured. Validated suggestions are staged as candidates; nothing is
+    tracked until accepted, and generation never runs or schedules an audit.
     """
     try:
         prompt_set = await validate_generation_request(
@@ -460,7 +470,7 @@ async def generate_prompts_endpoint(
             amount=generation_model_call_budget(payload.count),
         )
     try:
-        generated, topics, dropped = await _map_prompt_mutation(
+        candidates, topics, dropped = await _map_prompt_mutation(
             lambda: generate_prompts(
                 session,
                 workspace_id=ctx.workspace_id,
@@ -494,10 +504,54 @@ async def generate_prompts_endpoint(
         else {}
     )
     return PromptGenerateResponse(
-        generated=[prompt_to_response(p) for p in generated],
+        candidates=[PromptCandidateResponse.model_validate(c) for c in candidates],
         topics=[topic_to_response(t, counts) for t in topics],
         dropped_duplicates=dropped,
         requested_count=payload.count,
+    )
+
+
+@router.get("/prompt-sets/{prompt_set_id}/candidates")
+async def list_candidates_endpoint(
+    prompt_set_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> list[PromptCandidateResponse]:
+    """Pending, unexpired generated candidates awaiting review."""
+    try:
+        candidates = await list_pending_candidates(
+            session, workspace_id=ctx.workspace_id, prompt_set_id=prompt_set_id
+        )
+    except PromptSetNotFoundError as exc:
+        raise_not_found(_RES_PROMPT_SET, cause=exc)
+    return [PromptCandidateResponse.model_validate(c) for c in candidates]
+
+
+@router.post("/prompt-sets/{prompt_set_id}/candidates/review")
+async def review_candidates_endpoint(
+    prompt_set_id: uuid.UUID,
+    payload: PromptCandidateReviewRequest,
+    ctx: _WriteDep,
+    session: _SessionDep,
+) -> PromptCandidateReviewResponse:
+    """Accept candidates as active prompts (capacity-checked) or reject them."""
+    try:
+        review = await _map_prompt_mutation(
+            lambda: review_candidates(
+                session,
+                workspace_id=ctx.workspace_id,
+                prompt_set_id=prompt_set_id,
+                accept_ids=payload.accept_ids,
+                reject_ids=payload.reject_ids,
+            )
+        )
+    except PromptSetNotFoundError as exc:
+        raise_not_found(_RES_PROMPT_SET, cause=exc)
+    except CandidateReviewError as exc:
+        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
+    return PromptCandidateReviewResponse(
+        accepted=[prompt_to_response(p) for p in review.accepted],
+        rejected_count=review.rejected_count,
+        dropped_duplicates=review.dropped_duplicates,
+        unavailable_count=review.unavailable_count,
     )
 
 
@@ -563,9 +617,12 @@ async def create_topic_endpoint(
             payload=payload,
         )
     except TopicNotFoundError as exc:
-        raise_not_found(_RES_PROJECT, cause=exc)
+        # "Project not found" or "Parent topic not found".
+        raise _not_found(str(exc)) from exc
     except DuplicateTopicError as exc:
         raise _conflict(str(exc)) from exc
+    except TopicHierarchyError as exc:
+        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
     return topic_to_response(topic)
 
 
@@ -584,9 +641,11 @@ async def update_topic_endpoint(
             payload=payload,
         )
     except TopicNotFoundError as exc:
-        raise_not_found("Topic", cause=exc)
+        raise _not_found(str(exc)) from exc
     except DuplicateTopicError as exc:
         raise _conflict(str(exc)) from exc
+    except TopicHierarchyError as exc:
+        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
     counts = await topic_status_counts(session, project_id=topic.project_id)
     return topic_to_response(topic, counts)
 

@@ -40,6 +40,7 @@ def topic_to_response(
     return TopicResponse(
         id=topic.id,
         project_id=topic.project_id,
+        parent_id=topic.parent_id,
         name=topic.name,
         description=topic.description,
         origin=topic.origin,

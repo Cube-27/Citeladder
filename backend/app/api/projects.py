@@ -58,6 +58,13 @@ from app.domain.projects.brand_profile import (
     get_brand_profile,
     upsert_manual_brand_profile,
 )
+from app.domain.projects.business_map import (
+    BusinessMapResponse,
+    BusinessMapUpdate,
+    BusinessMapValidationError,
+    get_business_map,
+    update_business_map,
+)
 from app.domain.projects.logos import (
     BrandLogoNotFoundError,
     get_project_logo_asset,
@@ -193,6 +200,42 @@ async def put_brand_profile_endpoint(
     except (ProjectNotFoundError, BrandProfileNotFoundError) as exc:
         raise_not_found("Brand profile", cause=exc)
     return brand_profile_to_response(profile)
+
+
+@router.get("/{project_id}/business-map")
+async def get_business_map_endpoint(
+    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> BusinessMapResponse:
+    await _get_project_or_404(session, ctx.workspace_id, project_id)
+    try:
+        return await get_business_map(
+            session, workspace_id=ctx.workspace_id, project_id=project_id
+        )
+    except BrandProfileNotFoundError as exc:
+        raise_not_found("Brand profile", cause=exc)
+
+
+@router.put("/{project_id}/business-map")
+async def put_business_map_endpoint(
+    project_id: uuid.UUID,
+    payload: BusinessMapUpdate,
+    ctx: _WriteDep,
+    session: _SessionDep,
+) -> BusinessMapResponse:
+    """Replace the business map; surviving entries keep their provenance."""
+    await _get_project_or_404(session, ctx.workspace_id, project_id)
+    try:
+        return await update_business_map(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=project_id,
+            user_id=ctx.user.id,
+            payload=payload,
+        )
+    except BrandProfileNotFoundError as exc:
+        raise_not_found("Brand profile", cause=exc)
+    except BusinessMapValidationError as exc:
+        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
 
 
 @router.get(

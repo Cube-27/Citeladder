@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, ValidationError
 
+from app.domain.projects.business_map import BusinessMap
 from app.domain.projects.discovery_schemas import (
     BusinessModel,
     BuyerRegister,
@@ -61,6 +62,9 @@ class BusinessContext(BaseModel):
     service_areas: list[str] = Field(default_factory=list)
     price_tier: str | None = None
     knowledge_strength: KnowledgeStrength = "none"
+    # Reviewed per-offering facts (domain/projects/business_map.py); consumed
+    # explicitly by generation rather than sent as free context.
+    business_map: BusinessMap = Field(default_factory=BusinessMap)
     field_sources: dict[str, str] = Field(default_factory=dict)
 
     @classmethod
@@ -82,6 +86,9 @@ class BusinessContext(BaseModel):
             "language_code",
         }
         for field in cls.model_fields:
+            # Onboarding never knows the business map; it starts empty.
+            if field == "business_map":
+                continue
             if field in reviewed or field not in values:
                 values[field] = getattr(confirmed, field, None)
         values["buyer_type"] = confirmed.business_type
@@ -170,5 +177,5 @@ class BusinessContext(BaseModel):
 
     def for_generation(self) -> dict[str, Any]:
         return self.model_dump(
-            mode="json", exclude_none=True, exclude={"field_sources"}
+            mode="json", exclude_none=True, exclude={"field_sources", "business_map"}
         )

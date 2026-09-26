@@ -8,15 +8,26 @@ import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import {
+  promptCandidateReviewResponseSchema,
+  promptCandidateSchema,
   promptGenerateResponseSchema,
   promptSchema,
   promptSetSchema,
   topicSchema,
 } from './schemas/project';
 import { strictValidate } from './schemas/validation';
-import type { Prompt, PromptGenerateResponse, PromptSet, PromptStatus, Topic } from './types';
+import type {
+  Prompt,
+  PromptCandidate,
+  PromptCandidateReviewResponse,
+  PromptGenerateResponse,
+  PromptSet,
+  PromptStatus,
+  Topic,
+} from './types';
 
 const promptSetListSchema = z.array(promptSetSchema);
+const promptCandidateListSchema = z.array(promptCandidateSchema);
 
 export type PromptInput = {
   text: string;
@@ -85,7 +96,7 @@ export const promptsApi = {
    */
   createTopic: async (
     projectId: string,
-    input: { name: string; description?: string },
+    input: { name: string; description?: string; parent_id?: string },
     options?: ApiRequestOptions,
   ) => {
     const res = await apiClient.post<Topic>(
@@ -129,9 +140,9 @@ export const promptsApi = {
     return strictValidate(promptSetSchema, res, 'prompts.importRows');
   },
   /**
-   * AI topic/prompt generation via the app-level default agent. Validated
-   * suggestions become active, but generation never starts measurement.
-   * Errors: 422 invalid, 502 agent/output failure, 503 when no
+   * AI prompt generation via the app-level default agent. Validated
+   * suggestions are staged as candidates for review; nothing is tracked until
+   * accepted. Errors: 422 invalid, 502 agent/output failure, 503 when no
    * default agent is configured in the backend environment.
    */
   generate: async (
@@ -145,6 +156,31 @@ export const promptsApi = {
       options,
     );
     return strictValidate(promptGenerateResponseSchema, res, 'prompts.generate');
+  },
+  /** Pending, unexpired generated candidates awaiting review. */
+  listCandidates: async (promptSetId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<PromptCandidate[]>(
+      `/prompt-sets/${promptSetId}/candidates`,
+      options,
+    );
+    return strictValidate(promptCandidateListSchema, res, 'prompts.listCandidates');
+  },
+  /**
+   * Accept candidates as active prompts (403 when over prompt capacity) or
+   * reject them (deleted). Already-reviewed or expired ids are counted as
+   * unavailable, so a repeated submit is harmless.
+   */
+  reviewCandidates: async (
+    promptSetId: string,
+    input: { accept_ids?: string[]; reject_ids?: string[] },
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.post<PromptCandidateReviewResponse>(
+      `/prompt-sets/${promptSetId}/candidates/review`,
+      input,
+      options,
+    );
+    return strictValidate(promptCandidateReviewResponseSchema, res, 'prompts.reviewCandidates');
   },
   /** Bulk review transition (accept-all / archive-selected). */
   bulkStatus: async (

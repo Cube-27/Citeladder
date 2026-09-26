@@ -4,9 +4,10 @@ Pins the slice23 Task 4 contract: every occupancy check runs in the SAME
 transaction as the insert it guards, under the account-capacity advisory
 lock, so concurrent mutations from INDEPENDENT sessions can never push the
 committed count past the account grant — for project creates and for
-manual/imported/generated prompt inserts alike. Also pins the charging
-semantics: only rows that actually insert consume a slot (duplicates are
-free), archived/proposed/generated rows count, deletion frees capacity,
+manual/imported/accepted-candidate prompt inserts alike. Also pins the
+charging semantics: only rows that actually insert consume a slot (duplicates
+and staged candidates are free), archived/generated rows count, deletion
+frees capacity,
 and resolver allowance changes affect subsequent mutations immediately.
 """
 
@@ -36,6 +37,7 @@ from app.domain.entitlements.enforcement import (
 from app.domain.entitlements.types import GrantSpec
 from app.domain.projects.schemas import ProjectCreate
 from app.domain.projects.service import create_project
+from app.domain.prompts.candidates import review_candidates
 from app.domain.prompts.generation import generate_prompts
 from app.domain.prompts.importing import import_prompts
 from app.domain.prompts.schemas import (
@@ -268,7 +270,7 @@ async def test_concurrent_imports_never_exceed_grant(
 
 
 @pytest.mark.asyncio
-async def test_concurrent_generation_inserts_never_exceed_grant(
+async def test_concurrent_candidate_accepts_never_exceed_grant(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -320,10 +322,6 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
         )
         await session.commit()
 
-    # Both generations pause at the provider barrier so they hit the persist
-    # phase together; the account lock serializes them at the mutation.
-    barrier = asyncio.Barrier(2)
-
     def _agent_payload(run_label: str, user: str) -> str:
         # Distinct fixture texts exercise occupancy rather than quality.
         marker = "Buyer-query slots (return one row per slot): "
@@ -339,7 +337,7 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
             }
         )
 
-    class _BarrierAgent:
+    class _LabelAgent:
         model = "fake-model"
         base_url_host = "agent.test"
 
@@ -354,25 +352,40 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
             schema_name: str,
             schema: dict[str, object],
         ) -> str:
-            await barrier.wait()
             return _agent_payload(self._topic, user)
 
-    async def _run(topic: str) -> str:
+    async def _stage(topic: str) -> list[uuid.UUID]:
+        async with session_factory() as session:
+            candidates, _, _ = await generate_prompts(
+                session,
+                workspace_id=workspace_id,
+                prompt_set_id=uuid.UUID(prompt_set_id),
+                payload=PromptGenerateRequest(count=4, confirm_send_evidence=True),
+                agent=cast(DefaultAgentClient, _LabelAgent(topic)),
+            )
+            return [candidate.id for candidate in candidates]
+
+    # Staging charges nothing: both runs stage all four candidates.
+    alpha, beta = await _stage("Alpha"), await _stage("Beta")
+    assert len(alpha) == len(beta) == 4
+
+    # Both accepts race; the account lock serializes them at the insert.
+    async def _accept(candidate_ids: list[uuid.UUID]) -> str:
         async with session_factory() as session:
             try:
-                await generate_prompts(
+                await review_candidates(
                     session,
                     workspace_id=workspace_id,
                     prompt_set_id=uuid.UUID(prompt_set_id),
-                    payload=PromptGenerateRequest(count=4, confirm_send_evidence=True),
-                    agent=cast(DefaultAgentClient, _BarrierAgent(topic)),
+                    accept_ids=candidate_ids,
+                    reject_ids=[],
                 )
                 return "ok"
             except OccupancyLimitExceededError:
                 await session.rollback()
                 return "denied"
 
-    results = await asyncio.gather(_run("Alpha"), _run("Beta"))
+    results = await asyncio.gather(_accept(alpha), _accept(beta))
     assert sorted(results) == ["denied", "ok"]
 
     async with session_factory() as session:

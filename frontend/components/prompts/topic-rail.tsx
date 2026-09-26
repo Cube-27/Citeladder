@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/select';
 import { Pressable } from '@/components/ui/pressable';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { Topic } from '@/lib/api/types';
+import { orderTopicsForRail } from '@/lib/prompts/topic-tree';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 
@@ -142,10 +143,12 @@ export function TopicRail({
           selected={selectedTopicId === null}
           onSelect={() => onSelect(null)}
         />
-        {topics.map((topic) => (
+        {orderTopicsForRail(topics).map(({ topic, nested, label }) => (
           <TopicItem
             key={topic.id}
             label={topic.name}
+            accessibleName={nested ? label : undefined}
+            nested={nested}
             activeCount={topic.active_count}
             selected={selectedTopicId === topic.id}
             onSelect={() => onSelect(topic.id)}
@@ -195,7 +198,7 @@ function TopicSelect({
         className="w-full"
         options={[
           { value: '', label: 'All topics' },
-          ...topics.map((topic) => ({ value: topic.id, label: topic.name })),
+          ...orderTopicsForRail(topics).map(({ topic, label }) => ({ value: topic.id, label })),
         ]}
       />
       {topicErrorMessage(loadError, actionError) ? (
@@ -207,12 +210,17 @@ function TopicSelect({
 
 function TopicItem({
   label,
+  accessibleName,
+  nested = false,
   activeCount,
   selected,
   onSelect,
   onDelete,
 }: Readonly<{
   label: string;
+  /** Parent-qualified name for a subtopic; top-level items use their text. */
+  accessibleName?: string;
+  nested?: boolean;
   activeCount?: number;
   selected: boolean;
   onSelect: () => void;
@@ -222,12 +230,14 @@ function TopicItem({
     <div
       className={cn(
         'group flex min-w-0 items-center gap-0.5 rounded-[var(--radius-control)] pe-0.5',
+        nested && 'ms-3',
         selected ? 'bg-accent-subtle' : 'hover:bg-background-alt',
       )}
     >
       <Pressable
         type="button"
         onClick={onSelect}
+        aria-label={accessibleName}
         aria-current={selected ? 'true' : undefined}
         className={cn(
           'focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 text-left text-xs',
@@ -246,7 +256,7 @@ function TopicItem({
           type="button"
           variant="destructiveGhost"
           size="icon"
-          aria-label={`Delete topic ${label}`}
+          aria-label={`Delete topic ${accessibleName ?? label}`}
           onClick={onDelete}
           className="size-8 shrink-0"
         >

@@ -64,6 +64,15 @@ class Topic(Base):
         ForeignKey("projects.id", ondelete="CASCADE"),
         index=True,
     )
+    # One level of hierarchy (domain/prompts/topics.py enforces it): a subtopic
+    # names its parent in the same project. Deleting the parent promotes its
+    # subtopics to top level rather than deleting them.
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("topics.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(String(1024), default="")
     # manual | generated (config/prompts.py TOPIC_ORIGIN_*).
@@ -122,8 +131,8 @@ class Prompt(Base):
 
     ``origin`` records provenance (manual / imported / generated). Generated
     prompts additionally carry ``generation_evidence`` (the model + reasoning
-    that produced them). Valid generated suggestions enter the ``active``
-    audit-eligible portfolio directly; ``archived`` keeps history. The
+    that produced them); a generated prompt exists only once a user accepts
+    its ``PromptCandidate``. ``archived`` keeps history. The
     ``(prompt_set_id, normalized_text_hash)`` uniqueness makes dedupe
     conflict-safe under concurrent generation (DB-enforced, not app-checked).
     """

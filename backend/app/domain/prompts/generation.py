@@ -1,13 +1,11 @@
-# AI prompt/topic generation service (flips the /generate 501 stub).
+# AI prompt/topic generation service.
 #
-# Core and brand cohorts use the app-level default agent (``connectors/agent``)
-# while Commerce derives its fixed two-prompt demo portfolio from the uploaded
-# catalog without provider I/O. Suggestions persist with full
-# ``generation_evidence`` provenance (invariant 4) via a conflict-safe upsert
-# on the per-set normalized-text hash, so concurrent generations can never
-# double-insert a concept. Validated rows enter the active portfolio directly;
-# no provider measurement runs until the user explicitly runs or schedules an
-# audit (the planner continues to filter status='active').
+# Core and brand cohorts use the app-level default agent (``connectors/agent``);
+# Commerce buyer prompts have their own owner (``/commerce/buyer-prompts``).
+# Validated suggestions are staged as ``PromptCandidate`` rows
+# (``domain/prompts/candidates.py``) with full provenance (invariant 4); only a
+# user's accept turns a candidate into an active prompt, and no provider
+# measurement runs until the user explicitly runs or schedules an audit.
 from __future__ import annotations
 
 import hashlib
@@ -16,22 +14,20 @@ import uuid
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.connectors.agent.gateway import ModelGateway
-from app.core.config.projects import PROMPT_ORIGIN_GENERATED
 from app.core.config.prompts import (
     GENERATOR_VERSION,
-    PROMPT_STATUS_ACTIVE,
     prompt_generation_settings,
 )
 from app.core.config.visibility_prompts import BUYER_QUERY_POLICY_VERSION
 from app.domain.projects.business_context import BusinessContext
 from app.domain.projects.knowledge_base import build_brand_knowledge_data
 from app.domain.projects.shim import project_scoring_identity
+from app.domain.prompts.candidates import stage_candidates
 from app.domain.prompts.demand_grounding import (
     load_demand_grounding,
     serialize_demand_signal,
@@ -57,7 +53,7 @@ from app.domain.prompts.generation_filtering import (
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
 from app.domain.prompts.query_patterns import PromptSlot, build_prompt_slots
-from app.domain.prompts.service import PromptSetNotFoundError, prepare_prompt_inserts
+from app.domain.prompts.service import PromptSetNotFoundError
 from app.domain.prompts.topic_recovery import (
     confirmed_offerings,
     recover_topics_from_confirmed_offerings,
@@ -70,7 +66,8 @@ from app.domain.prompts.topical_binding import (
 from app.models.brand import Brand
 from app.models.demand import DemandSignal, DemandSnapshot
 from app.models.project import Project
-from app.models.prompt import Prompt, PromptSet, Topic
+from app.models.prompt import PromptSet, Topic
+from app.models.prompt_candidate import PromptCandidate
 
 __all__ = [
     "GenerationOutputError",
@@ -268,98 +265,6 @@ def _drop_unbound_suggestions(
     return kept
 
 
-async def _apply_insert_capacity(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    prompt_set_id: uuid.UUID,
-    suggestions: list[SuggestedTopic],
-) -> tuple[list[SuggestedTopic], int]:
-    """Enforce ``prompt_slots`` occupancy on parsed suggestions.
-
-    Runs the shared insert-capacity plan in the write transaction (after the
-    project and prompt-set locks; the account-capacity lock is always the
-    last lock taken), drops suggestions whose text already persists in the
-    set, and raises ``OccupancyLimitExceededError`` when the rows that can
-    actually insert would exceed the account allowance. Returns the
-    persistable suggestions plus the count dropped as already-persisted
-    duplicates (folded into the response's ``dropped_duplicates``).
-    """
-    texts = [prompt.text for topic in suggestions for prompt in topic.prompts]
-    approved = await prepare_prompt_inserts(
-        session,
-        workspace_id=workspace_id,
-        prompt_set_id=prompt_set_id,
-        texts=texts,
-    )
-    kept: list[SuggestedTopic] = []
-    dropped = 0
-    for topic in suggestions:
-        prompts = [p for p in topic.prompts if prompt_text_hash(p.text) in approved]
-        dropped += len(topic.prompts) - len(prompts)
-        if prompts:
-            kept.append(
-                SuggestedTopic(
-                    topic_id=topic.topic_id, name=topic.name, prompts=prompts
-                )
-            )
-    return kept, dropped
-
-
-async def _insert_prompts_returning(
-    session: AsyncSession,
-    *,
-    prompt_set: PromptSet,
-    topic: Topic,
-    prompts: list[SuggestedPrompt],
-    evidence_base: dict[str, Any],
-    cohort: str,
-) -> tuple[list[uuid.UUID], int]:
-    """Conflict-safe multi-row insert for one validated active topic batch.
-
-    The parse step already de-duplicated texts across the whole response, so
-    rows within a batch can never conflict with each other — only with
-    pre-existing prompts, which ``on_conflict_do_nothing`` silently skips.
-    Returns ``(inserted_ids, dropped_count)`` where dropped = rows submitted
-    minus ids the DB actually returned (in submitted order).
-    """
-    submitted_ids: list[uuid.UUID] = [uuid.uuid4() for _ in prompts]
-    rows = [
-        {
-            "id": submitted_ids[idx],
-            "prompt_set_id": prompt_set.id,
-            "topic_id": topic.id,
-            "text": prompt.text,
-            "normalized_text_hash": prompt_text_hash(prompt.text),
-            "theme": topic.name,
-            "intent": prompt.intent,
-            "buyer_stage": prompt.buyer_stage,
-            "prompt_intent": prompt.prompt_intent,
-            "cohort": cohort,
-            "branded": cohort in {"comparison", "brand_diagnostic"},
-            "enabled": True,
-            "status": PROMPT_STATUS_ACTIVE,
-            "origin": PROMPT_ORIGIN_GENERATED,
-            "generation_evidence": {
-                **evidence_base,
-                "buyer_query_slot_id": prompt.slot_id,
-            },
-        }
-        for idx, prompt in enumerate(prompts)
-    ]
-    stmt = (
-        pg_insert(Prompt)
-        .values(rows)
-        .on_conflict_do_nothing(constraint="uq_prompt_set_normalized_text")
-        .returning(Prompt.id)
-    )
-    returned = set((await session.execute(stmt)).scalars().all())
-    # Preserve deterministic response order: keep submitted order, drop the
-    # ids the DB rejected as conflicts.
-    inserted_ids = [pid for pid in submitted_ids if pid in returned]
-    return inserted_ids, len(rows) - len(inserted_ids)
-
-
 def _generation_brand_context(
     project: Project,
     demand_signals: list[DemandSignal],
@@ -393,7 +298,6 @@ def _generation_evidence(
             if agent is not None
             else None
         ),
-        "generation_run_id": str(uuid.uuid4()),
         "generator_version": GENERATOR_VERSION,
         "buyer_query_policy_version": BUYER_QUERY_POLICY_VERSION,
         "brand_context_hash": _brand_context_hash(brand_context),
@@ -564,18 +468,16 @@ async def generate_prompts(
     payload: Any,
     agent: ModelGateway | None,
     prompt_set: PromptSet | None = None,
-) -> tuple[list[Prompt], list[Topic], int]:
-    """Generate topic-organized prompt suggestions into the set.
+) -> tuple[list[PromptCandidate], list[Topic], int]:
+    """Generate topic-organized prompt candidates for review.
 
-    Returns ``(inserted_prompts, touched_topics, dropped_duplicate_count)``.
-    Caller (the API layer) resolves the agent client for model-backed cohorts;
-    Commerce passes ``None`` because its prompts are derived from the catalog.
-    ``prompt_set`` may be passed pre-loaded (from
-    ``validate_generation_request``) to avoid a second scope query; the
-    payload checks always re-run here so direct service calls stay guarded.
+    Returns ``(staged_candidates, touched_topics, dropped_duplicate_count)``.
+    The caller (the API layer) resolves the agent client. ``prompt_set`` may
+    be passed pre-loaded (from ``validate_generation_request``) to avoid a
+    second scope query; the payload checks always re-run here so direct
+    service calls stay guarded.
 
-    Every validated generated prompt is active immediately. Running or
-    scheduling an audit remains the explicit measurement decision; generation
+    Generated text is never tracked until a user accepts it, and generation
     never initiates provider measurement.
     """
     # Scope first (404 before anything runs), then confirmation + bounds.
@@ -639,7 +541,8 @@ async def generate_prompts(
     project = prompt_set.project
     topics_by_id = {topic.id: topic for topic in project.topics}
 
-    # 5. Persist prompts only under topics that still exist after provider I/O.
+    # 5. Stage candidates only under topics that still exist after provider
+    #    I/O. Nothing is charged to prompt capacity until a user accepts.
     evidence_base = _generation_evidence(
         agent=agent,
         payload=payload,
@@ -649,52 +552,24 @@ async def generate_prompts(
     )
 
     try:
-        # Model-generated text must pass topical binding before occupancy.
-        # Commerce is catalog-derived and already constrained to the validated
-        # category and product names, so it does not widen the project-wide
-        # admission vocabulary used by manual/core prompt workflows.
-        if payload.cohort != "commerce":
-            suggestions = _drop_unbound_suggestions(
-                suggestions, build_project_vocabulary(project)
-            )
-        # Occupancy gate: filter already-persisted texts and charge ONLY the
-        # rows that can actually insert, under the account-capacity lock, in
-        # this same transaction. Over-allowance raises before any insert.
-        suggestions, capacity_dropped = await _apply_insert_capacity(
+        # Model-generated text must pass topical binding before staging.
+        suggestions = _drop_unbound_suggestions(
+            suggestions, build_project_vocabulary(project)
+        )
+        staged = await stage_candidates(
             session,
             workspace_id=workspace_id,
-            prompt_set_id=prompt_set.id,
+            prompt_set=prompt_set,
+            topics_by_id=topics_by_id,
             suggestions=suggestions,
+            request=payload.model_dump(mode="json"),
+            provenance=evidence_base,
+            cohort=payload.cohort,
         )
-        touched_topics: list[Topic] = []
-        inserted_ids: list[uuid.UUID] = []
-        dropped = intra_duplicates + capacity_dropped
-        for suggestion in suggestions:
-            topic = topics_by_id.get(suggestion.topic_id)
-            if topic is None:
-                dropped += len(suggestion.prompts)
-                continue
-            if topic not in touched_topics:
-                touched_topics.append(topic)
-
-            batch_ids, batch_dropped = await _insert_prompts_returning(
-                session,
-                prompt_set=prompt_set,
-                topic=topic,
-                prompts=suggestion.prompts,
-                evidence_base=evidence_base,
-                cohort=payload.cohort,
-            )
-            inserted_ids.extend(batch_ids)
-            dropped += batch_dropped
-
-        # Hydrate the response BEFORE commit so nothing has to be refreshed
-        # afterward (a post-commit refresh could itself race a delete). With
-        # ``expire_on_commit=False`` these instances stay usable to the caller.
-        inserted = await _hydrate_inserted(session, inserted_ids)
+        touched_ids = {candidate.topic_id for candidate in staged.candidates}
+        touched_topics = [topic for topic in project.topics if topic.id in touched_ids]
         for topic in touched_topics:
             await session.refresh(topic)
-
         await session.commit()
     except IntegrityError as exc:
         # A referenced set/topic may have disappeared despite the advisory
@@ -714,21 +589,8 @@ async def generate_prompts(
             exc=exc,
         )
 
-    return inserted, touched_topics, dropped
-
-
-async def _hydrate_inserted(
-    session: AsyncSession, inserted_ids: list[uuid.UUID]
-) -> list[Prompt]:
-    """Load the freshly inserted prompts in deterministic response order."""
-    if not inserted_ids:
-        return []
-    by_id = {
-        prompt.id: prompt
-        for prompt in (
-            await session.execute(select(Prompt).where(Prompt.id.in_(inserted_ids)))
-        )
-        .scalars()
-        .all()
-    }
-    return [by_id[pid] for pid in inserted_ids if pid in by_id]
+    return (
+        staged.candidates,
+        touched_topics,
+        intra_duplicates + staged.dropped_duplicates,
+    )

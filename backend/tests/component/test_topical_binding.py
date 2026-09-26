@@ -310,12 +310,12 @@ async def test_generation_drops_off_domain_model_output(
         json={"count": 2, "confirm_send_evidence": True},
     )
     assert resp.status_code == 201
-    generated = resp.json()["generated"]
-    assert [p["text"] for p in generated] == ["Best running shoes for flat feet"]
-    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
-    assert [p["text"] for p in listed["prompts"]] == [
-        "Best running shoes for flat feet"
-    ]
+    staged = resp.json()["candidates"]
+    assert [p["text"] for p in staged] == ["Best running shoes for flat feet"]
+    pending = (
+        await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
+    ).json()
+    assert [p["text"] for p in pending] == ["Best running shoes for flat feet"]
 
 
 # ---------------------------------------------------------------------------
