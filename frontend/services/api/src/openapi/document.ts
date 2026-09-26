@@ -10,7 +10,7 @@ import type { RouteContract } from './routes.ts';
 
 export type JsonSchema = { [key: string]: unknown };
 
-export type OpenApiParameter = {
+type OpenApiParameter = {
   name: string;
   in: 'path' | 'query';
   required: boolean;
@@ -55,7 +55,7 @@ function parameters(location: OpenApiParameter['in'], object?: z.ZodObject): Ope
   }));
 }
 
-function operation(route: RouteContract): OpenApiOperation {
+function operation(route: RouteContract<string>): OpenApiOperation {
   const result: OpenApiOperation = { tags: [route.family], responses: {} };
   const declared = [...parameters('path', route.pathParams), ...parameters('query', route.query)];
   if (declared.length > 0) result.parameters = declared;
@@ -77,7 +77,7 @@ function operation(route: RouteContract): OpenApiOperation {
   return result;
 }
 
-export function openApiDocument(routes: readonly RouteContract[]): OpenApiDocument {
+export function openApiDocument(routes: readonly RouteContract<string>[]): OpenApiDocument {
   const paths: OpenApiDocument['paths'] = {};
   for (const route of routes) {
     const item = (paths[route.path] ??= {});

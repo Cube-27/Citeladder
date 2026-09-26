@@ -7,6 +7,7 @@
     "start": "node src/server.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
+    "check:routes": "node scripts/check-route-ownership.ts",
     "db:types": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern alembic_version --out-file src/generated/db-schema.ts",
     "db:types:check": "kysely-codegen --dialect postgres --url \"env(TYPES_DATABASE_URL)\" --exclude-pattern alembic_version --out-file src/generated/db-schema.ts --verify"
   },

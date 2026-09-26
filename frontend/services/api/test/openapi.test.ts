@@ -38,7 +38,7 @@ function parityResponse(overrides: z.ZodRawShape = {}) {
   });
 }
 
-function parityRoutes(response = parityResponse()): RouteContract[] {
+function parityRoutes(response = parityResponse()): RouteContract<'parity'>[] {
   const itemPath = z.object({ item_id: z.uuid() });
   return [
     {
@@ -73,7 +73,7 @@ function parityRoutes(response = parityResponse()): RouteContract[] {
   ];
 }
 
-function tsFragment(routes: RouteContract[]) {
+function tsFragment(routes: RouteContract<'parity'>[]) {
   return familyFragment(openApiDocument(routes), python.family);
 }
 

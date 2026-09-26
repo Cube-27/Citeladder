@@ -54,6 +54,7 @@ test('contracts and shared configuration invalidate both sides', () => {
     'backend/app/domain/projects/schemas.py',
     'backend/app/domain/audits/schedule_schemas.py',
     'frontend/lib/api/projects.ts',
+    'frontend/packages/contracts/src/project.ts',
     'scripts/quality.mjs',
   ]) {
     const result = classifyPaths([path]);
@@ -71,6 +72,9 @@ test('the TypeScript API service runs for its code and every Python input it is 
     'backend/app/core/config/errors.py',
     'backend/app/domain/workspaces/policy.py',
     'backend/scripts/golden_masters.py',
+    'frontend/packages/contracts/src/route-ownership.ts',
+    'backend/app/api/projects.py',
+    'frontend/local-compose-routes.caddy',
   ]) {
     assert.equal(classifyPaths([path]).api, true, path);
   }

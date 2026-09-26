@@ -22,7 +22,7 @@
  */
 import type { JsonSchema, OpenApiDocument, OpenApiOperation } from './document.ts';
 
-export type NormalizedOperation = {
+type NormalizedOperation = {
   parameters: { in: string; name: string; required: boolean; schema: unknown }[];
   requestBody: { required: boolean; content: Record<string, unknown> } | null;
   responses: Record<string, Record<string, unknown>>;
@@ -219,4 +219,17 @@ export function familyFragment(document: OpenApiDocument, family: string): Norma
     }
   }
   return fragment;
+}
+
+/** The operations that differ between two fragments, one line each. */
+export function fragmentDifferences(
+  actual: NormalizedFragment,
+  expected: NormalizedFragment,
+): string[] {
+  const keys = [...new Set([...Object.keys(actual), ...Object.keys(expected)])].sort();
+  return keys.flatMap((key) => {
+    if (!(key in actual)) return [`${key} is missing`];
+    if (!(key in expected)) return [`${key} is not in the Python fragment`];
+    return canonical(actual[key]) === canonical(expected[key]) ? [] : [`${key} differs`];
+  });
 }

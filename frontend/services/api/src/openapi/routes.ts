@@ -7,13 +7,14 @@
  * before ingress sends it traffic (TypeScript migration rule 4). No family is
  * TypeScript-owned yet, so the list is empty.
  */
+import type { RouteFamily } from '@citeladder/contracts/route-ownership';
 import type { z } from 'zod';
 
-export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
+type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
-export type RouteContract = {
+export type RouteContract<Family extends string = RouteFamily> = {
   /** The route family (OpenAPI tag) the route-ownership manifest assigns. */
-  family: string;
+  family: Family;
   method: HttpMethod;
   /** The OpenAPI path template, `/api/v1` prefix included. */
   path: string;
