@@ -28,6 +28,44 @@ the browser moves to the app hostname. A stale consent submission on the old
 host receives an explicit restart response; no cross-host POST redirect is
 permitted.
 
+## Client registration
+
+Dynamic registration stays open and unauthenticated, as RFC 7591 intends: MCP
+clients register before any CiteLadder login exists. A remote HTTPS callback on
+any host is legitimate; there is deliberately no redirect-host allowlist. The
+protections are bounds and binding instead:
+
+- The [registration guard](../backend/app/domain/mcp/registration_guard.py)
+  charges per-client burst and window budgets and a global ceiling in the shared
+  PostgreSQL usage counters before the body is read, keyed by the trusted-proxy
+  client identity. Refusals are 429 with `Retry-After`; a client already over
+  its own budget does not spend the global one. CORS preflight is not metered.
+  Limits are owned by [abuse configuration](../backend/app/core/config/abuse.py).
+- The body is capped at a registration size. The provider accepts only the
+  `authorization_code`/`refresh_token` grants and the `code` response type,
+  at most ten concrete-host HTTPS or loopback-HTTP redirects without
+  credentials, fragments or wildcards, and a bounded client name.
+- Registrations older than the configured unused-client TTL that never held a
+  grant and have no live authorization request or code are pruned in bounded
+  batches by later registrations. Identical re-registrations are not merged:
+  confidential clients must not share a minted secret, and the budgets bound
+  duplicates.
+- Authorization requires S256 PKCE and an exact match against a registered
+  redirect. The token exchange rechecks that redirect and the verifier, and a
+  code is single-use.
+
+The consent page labels the client name as an unverified self-declaration and
+names the redirect host the flow actually enforces.
+
+Client ID Metadata Documents are not supported or advertised yet. The locked SDK
+only models the metadata flag; server support needs SSRF-bounded, cached
+document fetches at authorization time, URL-shaped client IDs in the OAuth
+tables, and consent display of the document host. Advertising the flag before
+that exists would steer CIMD-capable clients into a client ID this server
+cannot resolve. It is a separate change; DCR remains the compatibility path.
+
+## Configuration and persistence
+
 [Configuration](../backend/app/core/config/mcp.py) owns enablement and bounds.
 An enabled server requires a safe public origin; disabled MCP must not break
 the rest of application startup. Protocol routes remain behind request-body and
@@ -95,9 +133,10 @@ model generation or any other mutation. Streamable HTTP delivery has no
 authority to rerun a product acquisition when a client retries.
 [Workspace access](workspace-access.md) remains the shared role/identity owner.
 
-[Protocol and authorization tests](../backend/tests/component/test_mcp.py) and
+[Protocol and authorization tests](../backend/tests/component/test_mcp.py),
+[registration tests](../backend/tests/component/test_mcp_registration.py) and
 [evidence catalog tests](../backend/tests/component/test_mcp_evidence_catalog.py)
-cover consent denial, rotation/revocation, both supported protocol lifecycles,
+cover registration limits, redirect and PKCE binding, consent denial, rotation/revocation, both supported protocol lifecycles,
 generated catalog parity, bounded enumeration, retrieval documents, disabled
 server behavior, request limits and tenant isolation. These tests do not
 establish that a particular public client or deployed origin has passed

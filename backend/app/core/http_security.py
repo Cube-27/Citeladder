@@ -1,12 +1,15 @@
-"""ASGI-level body limits and API cache-isolation headers."""
+"""ASGI-level body limits, client identity and API cache-isolation headers."""
 
 from __future__ import annotations
 
+import ipaddress
 from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from app.core.config import settings, trusted_proxy_networks
 from app.core.config.http import API_REQUEST_BODY_MAX_BYTES
 
 ASGIApp = Callable[
@@ -140,3 +143,27 @@ class ApiNoStoreMiddleware:
             await send(message)
 
         await self.app(scope, receive, add_headers)
+
+
+def trusted_client_identity(request: Request) -> str:
+    """Recover the first untrusted hop only when the direct peer is trusted."""
+    peer = request.client.host if request.client is not None else "unavailable"
+    try:
+        peer_ip = ipaddress.ip_address(peer)
+        trusted = trusted_proxy_networks(settings.trusted_proxy_cidrs)
+    except ValueError:
+        return peer
+    if not trusted or not any(peer_ip in network for network in trusted):
+        return peer
+
+    forwarded = request.headers.get("x-forwarded-for")
+    if not forwarded:
+        return peer
+    for value in reversed(forwarded.split(",")):
+        try:
+            candidate = ipaddress.ip_address(value.strip())
+        except ValueError:
+            return peer
+        if not any(candidate in network for network in trusted):
+            return candidate.compressed
+    return peer

@@ -18,6 +18,7 @@ MCP_CONSENT_CSP = (
 )
 
 MCP_READ_SCOPE = "citeladder:read"
+MCP_SCOPE_DESCRIPTIONS = {MCP_READ_SCOPE: "Read CiteLadder project data"}
 MCP_SERVER_VERSION = "1.1.0"
 MCP_DOCUMENTATION_URL = "https://docs.citeladder.com/mcp/"
 MCP_MAX_SEARCH_RESULTS = 20
@@ -25,6 +26,17 @@ MCP_DEFAULT_LIST_LIMIT = 50
 MCP_MAX_LIST_LIMIT = 200
 MCP_MAX_DOCUMENT_BYTES = 256_000
 MCP_MAX_VISIBILITY_SOURCE_OFFSET = 20_000
+
+# Dynamic client registration bounds. The body cap sits far below the protocol
+# app's general limit because registration is anonymous and persists what it
+# accepts; a real registration document is well under 2 KiB.
+MCP_REGISTRATION_MAX_BODY_BYTES = 16_384
+MCP_MAX_REDIRECT_URIS = 10
+MCP_MAX_REDIRECT_URI_LENGTH = 2_048
+MCP_MAX_CLIENT_NAME_LENGTH = 200
+MCP_SUPPORTED_GRANT_TYPES = frozenset({"authorization_code", "refresh_token"})
+MCP_SUPPORTED_RESPONSE_TYPES = frozenset({"code"})
+MCP_UNUSED_CLIENT_PRUNE_BATCH = 100
 
 
 class McpSettings(BaseSettings):
@@ -44,6 +56,9 @@ class McpSettings(BaseSettings):
     authorization_code_ttl_seconds: int = Field(default=300, ge=60, le=600)
     access_token_ttl_seconds: int = Field(default=3600, ge=300, le=86_400)
     refresh_token_ttl_seconds: int = Field(default=2_592_000, ge=3600, le=31_536_000)
+    # A registered client that never obtained a grant within this window is
+    # pruned by later registrations; the client re-registers if it returns.
+    unused_client_ttl_seconds: int = Field(default=86_400, ge=3600, le=2_592_000)
 
 
 mcp_settings = McpSettings()

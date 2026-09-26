@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import re
+import secrets
 import uuid
 from urllib.parse import parse_qs, urlsplit
 
@@ -13,6 +16,7 @@ from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
 from mcp.server.auth.provider import AuthorizationParams
 from mcp.shared.auth import OAuthClientInformationFull
 from pydantic import AnyUrl
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import legal, settings
@@ -32,7 +36,12 @@ from app.domain.mcp.oauth_provider import (
     resource_url,
 )
 from app.domain.mcp.retrieval import fetch_business_record
-from app.domain.mcp.server import MCP_REGISTRATION_PATH, mcp_oauth_provider
+from app.domain.mcp.server import (
+    MCP_REGISTRATION_PATH,
+    mcp_oauth_provider,
+    mcp_registration_guard,
+)
+from app.models.mcp import McpAuthorizationRequest
 from app.models.opportunity import Opportunity
 from app.models.policy_acceptance import PolicyAcceptance
 from app.models.project import Project
@@ -375,6 +384,7 @@ async def test_mcp_discovery_registration_and_bearer_challenge(
     monkeypatch.setattr(mcp_settings, "enabled", True)
     client.headers["Host"] = "127.0.0.1:3000"
     monkeypatch.setattr(mcp_oauth_provider, "_session_factory", session_factory)
+    monkeypatch.setattr(mcp_registration_guard, "_session_factory", session_factory)
     authorization = await client.get("/.well-known/oauth-authorization-server")
     assert authorization.status_code == 200
     assert authorization.json()["registration_endpoint"].endswith(MCP_REGISTRATION_PATH)
@@ -440,6 +450,147 @@ async def test_mcp_discovery_registration_and_bearer_challenge(
     assert "resource_metadata=" in response.headers["www-authenticate"]
 
 
+_BOUND_REDIRECT = "https://client.example.test/steal"
+
+
+def _authorize_params(client_id: str, **overrides: str) -> dict[str, str]:
+    return {
+        "response_type": "code",
+        "client_id": client_id,
+        "redirect_uri": _BOUND_REDIRECT,
+        "scope": MCP_READ_SCOPE,
+        "state": "binding-state",
+        "code_challenge": "C" * 43,
+        "code_challenge_method": "S256",
+        "resource": resource_url(),
+        **overrides,
+    }
+
+
+async def _register_public_client(client: httpx.AsyncClient) -> str:
+    """Open DCR accepts any remote HTTPS callback; binding is what protects it."""
+    registration = await client.post(
+        MCP_REGISTRATION_PATH,
+        json={
+            "client_name": "Binding test client",
+            "redirect_uris": [_BOUND_REDIRECT],
+            "token_endpoint_auth_method": "none",
+            "grant_types": ["authorization_code", "refresh_token"],
+            "response_types": ["code"],
+            "scope": MCP_READ_SCOPE,
+        },
+    )
+    assert registration.status_code == 201
+    return str(registration.json()["client_id"])
+
+
+@pytest.mark.asyncio
+async def test_authorize_binds_the_exact_registered_redirect_and_s256_pkce(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mcp_settings, "enabled", True)
+    client.headers["Host"] = "127.0.0.1:3000"
+    monkeypatch.setattr(mcp_oauth_provider, "_session_factory", session_factory)
+    monkeypatch.setattr(mcp_registration_guard, "_session_factory", session_factory)
+    client_id = await _register_public_client(client)
+
+    for redirect in (
+        "https://evil.example.test/steal",
+        "https://client.example.test/steal2",
+        "https://client.example.test/steal?next=x",
+        "https://sub.client.example.test/steal",
+        "https://client.example.test/steal/",
+        "http://client.example.test/steal",
+    ):
+        refused = await client.get(
+            "/authorize",
+            params=_authorize_params(client_id, redirect_uri=redirect),
+            follow_redirects=False,
+        )
+        # A mismatched redirect is never followed, even to report the error.
+        assert refused.status_code == 400, redirect
+        assert "location" not in refused.headers, redirect
+
+    missing_pkce = _authorize_params(client_id)
+    del missing_pkce["code_challenge"]
+    for params in (
+        missing_pkce,
+        _authorize_params(client_id, code_challenge_method="plain"),
+    ):
+        refused = await client.get("/authorize", params=params, follow_redirects=False)
+        location = refused.headers.get("location", "")
+        assert "error=invalid_request" in location
+        assert "/mcp/oauth/consent" not in location
+
+    async with session_factory() as session:
+        pending = await session.scalar(
+            select(func.count()).select_from(McpAuthorizationRequest)
+        )
+    assert pending == 0
+
+
+@pytest.mark.asyncio
+async def test_token_exchange_rechecks_redirect_and_verifier_and_is_one_time(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mcp_settings, "enabled", True)
+    monkeypatch.setattr(mcp_settings, "allowed_account_email", "binding@example.test")
+    client.headers["Host"] = "127.0.0.1:3000"
+    monkeypatch.setattr(mcp_oauth_provider, "_session_factory", session_factory)
+    monkeypatch.setattr(mcp_registration_guard, "_session_factory", session_factory)
+    async with session_factory() as session:
+        user, workspace, _project = await _seed_account(session, "binding@example.test")
+    client_id = await _register_public_client(client)
+    verifier = secrets.token_urlsafe(48)
+    challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+        .rstrip(b"=")
+        .decode()
+    )
+    authorize = await client.get(
+        "/authorize",
+        params=_authorize_params(client_id, code_challenge=challenge),
+        follow_redirects=False,
+    )
+    transaction = parse_qs(urlsplit(authorize.headers["location"]).query)[
+        "transaction"
+    ][0]
+    callback = await mcp_oauth_provider.complete_authorization(
+        transaction, user.id, [str(workspace.id)]
+    )
+    assert callback.startswith(f"{_BOUND_REDIRECT}?")
+    code = parse_qs(urlsplit(callback).query)["code"][0]
+
+    def exchange(**overrides: str) -> dict[str, str]:
+        return {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": _BOUND_REDIRECT,
+            "client_id": client_id,
+            "code_verifier": verifier,
+            **overrides,
+        }
+
+    for rejected in (
+        exchange(redirect_uri="https://evil.example.test/steal"),
+        exchange(code_verifier=secrets.token_urlsafe(48)),
+    ):
+        response = await client.post("/token", data=rejected)
+        assert response.status_code == 400
+        assert "access_token" not in response.json()
+
+    issued = await client.post("/token", data=exchange())
+    assert issued.status_code == 200
+    assert issued.json()["access_token"]
+    replayed = await client.post("/token", data=exchange())
+    assert replayed.status_code == 400
+    assert replayed.json()["error"] == "invalid_grant"
+
+
 @pytest.mark.asyncio
 async def test_browser_consent_requires_an_explicit_approval(
     client: httpx.AsyncClient,
@@ -484,6 +635,8 @@ async def test_browser_consent_requires_an_explicit_approval(
     )
     assert page.status_code == 200
     assert "MCP test client" in page.text
+    # A self-registered name is never presented as a verified identity.
+    assert "Unverified application" in page.text
     assert MCP_READ_SCOPE in page.text
     assert "http://127.0.0.1/callback" in page.text
     assert "Deny access" in page.text

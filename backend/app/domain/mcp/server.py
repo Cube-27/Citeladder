@@ -34,10 +34,13 @@ from app.core.config.mcp import (
     MCP_CONSENT_CSP,
     MCP_DOCUMENTATION_URL,
     MCP_READ_SCOPE,
+    MCP_REGISTRATION_MAX_BODY_BYTES,
+    MCP_SCOPE_DESCRIPTIONS,
     MCP_SERVER_VERSION,
     mcp_settings,
 )
 from app.core.database import SessionLocal
+from app.core.http_security import RequestBodyLimitMiddleware
 from app.domain.auth.service import resolve_session_user
 from app.domain.mcp.data import project_business_context
 from app.domain.mcp.oauth_provider import (
@@ -47,6 +50,7 @@ from app.domain.mcp.oauth_provider import (
     consent_csrf_valid,
     public_base_url,
 )
+from app.domain.mcp.registration_guard import McpRegistrationGuard
 from app.domain.mcp.tool_registrations import register_evidence_tools
 from app.models.user import User
 
@@ -89,6 +93,7 @@ MCP_REGISTRATION_PATH = "/mcp/register"
 auth_routes.REGISTRATION_PATH = MCP_REGISTRATION_PATH
 
 mcp_oauth_provider = CiteLadderOAuthProvider()
+mcp_registration_guard = McpRegistrationGuard()
 mcp_server = MCPServer(
     name="citeladder",
     title="CiteLadder Business Context",
@@ -218,8 +223,13 @@ def _consent_page(
 ) -> Response:
     """Render the approval form. Nothing here mutates the transaction."""
     scopes = "".join(
-        f"<li><code>{escape(scope)}</code></li>" for scope in pending.scopes
+        f"<li>{escape(MCP_SCOPE_DESCRIPTIONS.get(scope, scope))} "
+        f"<code>{escape(scope)}</code></li>"
+        for scope in pending.scopes
     )
+    # Every client here registered itself anonymously, so its name is a claim,
+    # not an identity. The redirect host is the one fact the flow enforces.
+    redirect_host = urlsplit(pending.redirect_uri).netloc
     csrf = consent_csrf_token(session_token, transaction)
     choices = "".join(
         '<p><label><input type="checkbox" name="workspace_id" '
@@ -248,17 +258,25 @@ button {{ margin-top: 1.75rem; width: 100%; padding: 0.75rem 1rem; border: 0;
   border-radius: 8px; background: #c15f3c; color: #fff; font: inherit;
   font-weight: 500; cursor: pointer; }}
 .deny {{ margin-top: 0.75rem; background: #e8e7e2; color: #2b2b30; }}
+.unverified {{ display: inline-block; margin-left: 0.5rem; padding: 0.05rem 0.5rem;
+  border: 1px solid #b54708; border-radius: 999px; color: #b54708;
+  font-size: 0.75rem; font-weight: 600; }}
 </style>
 </head>
 <body>
 <main>
 <h1>Authorize MCP access</h1>
-<p><strong>{escape(pending.client_name)}</strong> is asking for read-only access
-to the workspaces you select below. Joining another workspace does not grant
-this connection access. Losing membership removes access.</p>
-<h2>Requested scopes</h2>
+<p><strong>{escape(pending.client_name)}</strong>
+<span class="unverified">Unverified application</span></p>
+<p>This name was supplied by the application and has not been verified by
+CiteLadder. Approve only if you started this connection and recognize
+<strong>{escape(redirect_host)}</strong>.</p>
+<p>It is asking for read-only access to the workspaces you select below.
+Joining another workspace does not grant this connection access. Losing
+membership removes access.</p>
+<h2>Requested access</h2>
 <ul>{scopes}</ul>
-<h2>Redirects to</h2>
+<h2>Sends you back to</h2>
 <p><code>{escape(pending.redirect_uri)}</code></p>
 <form method="post" action="{_CONSENT_PATH}">
 <input type="hidden" name="transaction" value="{escape(transaction)}">
@@ -445,6 +463,9 @@ class McpDispatchMiddleware:
     def __init__(self, app: ASGIApp, protocol_app: ASGIApp) -> None:
         self._app = app
         self._protocol_app = protocol_app
+        self._registration_app = RequestBodyLimitMiddleware(
+            protocol_app, MCP_REGISTRATION_MAX_BODY_BYTES, guard_every_path=True
+        )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         # Checked per request, not at registration: with MCP off these paths
@@ -461,6 +482,18 @@ class McpDispatchMiddleware:
             if error is not None:
                 await error(scope, receive, send)
                 return
+            if scope.get("path") == MCP_REGISTRATION_PATH:
+                await self._register(scope, receive, send)
+                return
             await self._protocol_app(scope, receive, send)
             return
         await self._app(scope, receive, send)
+
+    async def _register(self, scope: Scope, receive: Receive, send: Send) -> None:
+        # Anonymous registration persists a row, so it is metered and held to
+        # a registration-sized body before the SDK handler runs.
+        refusal = await mcp_registration_guard.admit(scope)
+        if refusal is not None:
+            await refusal(scope, receive, send)
+            return
+        await self._registration_app(scope, receive, send)
