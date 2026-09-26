@@ -43,130 +43,14 @@ from tests.component.occupancy_helpers import (
     revoke_signup_baseline_grants,
     seed_occupancy_grants,
 )
+from tests.component.prompt_generation_helpers import (
+    FakeAgent,
+    make_project_and_set,
+    project_payload,
+)
 from tests.fixtures.prompt_generation import (
-    labelled_row,
-    satisfies_slot,
-    slot_text,
     slots_from_user_message,
 )
-
-VALID_AGENT_RESPONSE = json.dumps(
-    {
-        "topics": [
-            {
-                "name": "Running Shoes",
-                "prompts": [
-                    {"text": "best running shoes in australia", "intent": "discovery"},
-                    {
-                        "text": (
-                            "affordable running shoes for budget conscious families"
-                        ),
-                        "intent": "purchase",
-                    },
-                ],
-            },
-            {
-                "name": "Running Shoes",
-                "prompts": [
-                    {
-                        "text": "how to choose the right running shoe size",
-                        "intent": "service",
-                    },
-                ],
-            },
-        ]
-    }
-)
-
-
-class FakeAgent:
-    """Stands in for DefaultAgentClient; records calls, returns a canned body."""
-
-    model = "fake-model"
-    base_url_host = "agent.test"
-
-    def __init__(
-        self,
-        response: str = VALID_AGENT_RESPONSE,
-        *,
-        fallback_discriminator: str = "",
-    ) -> None:
-        self.response = response
-        self.fallback_discriminator = fallback_discriminator
-        self.calls: list[dict[str, str]] = []
-        self.schemas: list[tuple[str, dict[str, object]]] = []
-
-    async def complete_json(self, *, system: str, user: str) -> str:
-        self.calls.append({"system": system, "user": user})
-        return self._response_for(user)
-
-    async def complete_structured_json(
-        self,
-        *,
-        system: str,
-        user: str,
-        schema_name: str,
-        schema: dict[str, object],
-    ) -> str:
-        self.calls.append({"system": system, "user": user})
-        self.schemas.append((schema_name, schema))
-        return self._response_for(user)
-
-    def _response_for(self, user: str) -> str:
-        try:
-            payload = json.loads(self.response)
-        except json.JSONDecodeError:
-            return self.response
-        if "prompts" in payload:
-            return self.response
-
-        marker = "Buyer-query slots (return one row per slot): "
-        slot_line = next(line for line in user.splitlines() if line.startswith(marker))
-        slots = json.loads(slot_line.removeprefix(marker))
-        candidate_texts: list[str] = []
-        for suggested_topic in payload.get("topics", []):
-            candidate_texts.extend(
-                str(prompt.get("text") or "")
-                for prompt in suggested_topic.get("prompts", [])
-            )
-        return json.dumps(
-            {
-                "prompts": [
-                    labelled_row(
-                        slot,
-                        _slot_text(
-                            slot,
-                            candidate_texts[index]
-                            if index < len(candidate_texts)
-                            else "",
-                            index,
-                            self.fallback_discriminator,
-                        ),
-                    )
-                    for index, slot in enumerate(slots)
-                ]
-            }
-        )
-
-
-def _slot_text(
-    slot: dict[str, object],
-    candidate: str,
-    index: int,
-    discriminator: str = "",
-) -> str:
-    """Keep test-supplied text when it does the slot's job; else render one.
-
-    Validity is decided by the production gate rather than a copy of it, so a
-    fake agent can never drift into producing text the real generator would
-    reject -- which is how the old sentence-frame renderer masked the fact that
-    every exemplar in the config would have been thrown away.
-    """
-    text = " ".join(candidate.split())
-    if satisfies_slot(slot, text):
-        return text
-    fallback_id = f"{discriminator}-{index}" if discriminator else index
-    return slot_text(slot, fallback_id)
 
 
 @pytest.fixture
@@ -176,54 +60,6 @@ def fake_agent(monkeypatch: pytest.MonkeyPatch) -> FakeAgent:
     return agent
 
 
-def _project_payload(**overrides: object) -> dict:
-    payload = {
-        "name": "Acme Visibility",
-        "brand_name": "Acme Corp",
-        "brand": {"aliases": ["Acme", "ACME Inc"]},
-        "website_url": "https://acme.com",
-        "owned_domains": ["acme.com"],
-        "unintended_domains": [],
-        "competitors": [
-            {"name": "Globex", "aliases": ["Globex Co"], "domains": ["globex.com"]}
-        ],
-        "country_code": "AU",
-        "language_code": "en-AU",
-        "benchmark_mode": "controlled_localized",
-        "default_repetitions": 3,
-    }
-    payload.update(overrides)
-    return payload
-
-
-async def _make_project_and_set(
-    client: httpx.AsyncClient, email: str, *, create_default_topic: bool = True
-) -> tuple[dict, str]:
-    await _register(client, email)
-    project = (await client.post("/api/v1/projects", json=_project_payload())).json()
-    prompt_set_id = (
-        await client.post(
-            "/api/v1/prompt-sets",
-            json={"project_id": project["id"], "name": "Default"},
-        )
-    ).json()["id"]
-    # Category identity for topical binding: unbranded generated/manual texts
-    # bind through the products_services vocabulary (a partial upsert, so
-    # later per-test brand-profile PUTs keep it).
-    profile = await client.put(
-        f"/api/v1/projects/{project['id']}/brand-profile",
-        json={"products_services": ["running shoes"]},
-    )
-    assert profile.status_code == 200
-    if create_default_topic:
-        topic = await client.post(
-            f"/api/v1/projects/{project['id']}/topics",
-            json={"name": "Running Shoes"},
-        )
-        assert topic.status_code == 201
-    return project, prompt_set_id
-
-
 # --------------------------------------------------------------------------
 # Generation
 # --------------------------------------------------------------------------
@@ -231,7 +67,7 @@ async def _make_project_and_set(
 async def test_generate_creates_prompts_under_existing_topic(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
-    project, prompt_set_id = await _make_project_and_set(client, "gen1@example.com")
+    project, prompt_set_id = await make_project_and_set(client, "gen1@example.com")
     profile = await client.put(
         f"/api/v1/projects/{project['id']}/brand-profile",
         json={
@@ -292,7 +128,7 @@ async def test_generate_reserves_the_maximum_provider_call_budget(
     fake_agent: FakeAgent,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "gen-budget@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "gen-budget@example.com")
     reservation: dict[str, object] = {}
 
     async def _capture_reservation(*_args: object, **kwargs: object) -> None:
@@ -316,7 +152,7 @@ async def test_generate_persists_provenance_evidence(
     fake_agent: FakeAgent,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "gen2@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "gen2@example.com")
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
         json={"count": 3, "confirm_send_evidence": True},
@@ -357,7 +193,7 @@ async def test_generate_persists_provenance_evidence(
 async def test_generate_rejects_count_over_cap(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "gen4@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "gen4@example.com")
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
         json={"count": 9999, "confirm_send_evidence": True},
@@ -371,7 +207,7 @@ async def test_generate_rejects_count_over_cap(
 async def test_generate_creates_topics_from_confirmed_offerings_when_none_exist(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
-    project, prompt_set_id = await _make_project_and_set(
+    project, prompt_set_id = await make_project_and_set(
         client, "gen-products@example.com", create_default_topic=False
     )
 
@@ -400,7 +236,7 @@ async def test_generate_creates_topics_from_confirmed_offerings_when_none_exist(
 async def test_generate_without_topics_or_offerings_rejects_before_provider(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
-    project, prompt_set_id = await _make_project_and_set(
+    project, prompt_set_id = await make_project_and_set(
         client, "gen-no-offerings@example.com", create_default_topic=False
     )
     profile = await client.put(
@@ -424,7 +260,7 @@ async def test_generate_without_topics_or_offerings_rejects_before_provider(
 async def test_generate_rejects_foreign_topic_id(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "gen5@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "gen5@example.com")
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
         json={
@@ -441,7 +277,7 @@ async def test_generate_rejects_foreign_topic_id(
 async def test_generate_unconfigured_agent_returns_503(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "gen6@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "gen6@example.com")
 
     def _unconfigured() -> None:
         raise AgentNotConfiguredError("no key")
@@ -461,7 +297,7 @@ async def test_generate_unconfigured_agent_returns_503(
 async def test_generate_reports_upstream_rate_limits_as_retryable(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "gen-rate-limit@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "gen-rate-limit@example.com")
 
     class RateLimitedAgent:
         model = "fake-model"
@@ -501,7 +337,7 @@ async def test_generate_foreign_set_is_404_even_when_unconfigured(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Scope check wins over configuration state (no existence oracle)."""
-    _, prompt_set_id = await _make_project_and_set(client, "gen7a@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "gen7a@example.com")
     client.cookies.clear()
     await _register(client, "gen7b@example.com")
 
@@ -520,7 +356,7 @@ async def test_generate_foreign_set_is_404_even_when_unconfigured(
 async def test_generate_unparseable_output_returns_502(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "gen8@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "gen8@example.com")
     agent = FakeAgent(response="this is not json")
     monkeypatch.setattr(prompts_api, "create_model_gateway", lambda: agent)
     resp = await client.post(
@@ -536,7 +372,7 @@ async def test_generate_twice_drops_duplicates(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
     """Same model output twice: run 2 inserts nothing, reports drops."""
-    _, prompt_set_id = await _make_project_and_set(client, "gen9@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "gen9@example.com")
 
     first = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
@@ -561,7 +397,7 @@ async def test_generate_twice_drops_duplicates(
 async def test_generate_into_target_topic(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    project, prompt_set_id = await _make_project_and_set(client, "gen10@example.com")
+    project, prompt_set_id = await make_project_and_set(client, "gen10@example.com")
     topic = (
         await client.post(
             f"/api/v1/projects/{project['id']}/topics",
@@ -613,7 +449,7 @@ async def test_topic_scoped_generation_plans_only_that_topic(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Generation respects the selected canonical topic without label quotas."""
-    project, prompt_set_id = await _make_project_and_set(
+    project, prompt_set_id = await make_project_and_set(
         client, "gen-scoped@example.com"
     )
     target = (
@@ -648,7 +484,7 @@ async def test_topic_scoped_generation_plans_only_that_topic(
 async def test_generation_reuses_existing_topic_with_description(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    project, prompt_set_id = await _make_project_and_set(
+    project, prompt_set_id = await make_project_and_set(
         client, "gen-topic-description@example.com"
     )
     topic = (
@@ -731,7 +567,7 @@ async def test_generate_activates_validated_requested_count(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """The requested, validated portfolio becomes active without measuring it."""
-    project, prompt_set_id = await _make_project_and_set(client, "pool1@example.com")
+    project, prompt_set_id = await make_project_and_set(client, "pool1@example.com")
     async with session_factory() as session:
         await seed_occupancy_grants(
             session,
@@ -761,7 +597,7 @@ async def test_generate_comparison_cohort_is_active_and_branded(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """Validated comparison prompts retain their cohort signal and are active."""
-    project, prompt_set_id = await _make_project_and_set(client, "brandcap@example.com")
+    project, prompt_set_id = await make_project_and_set(client, "brandcap@example.com")
     async with session_factory() as session:
         # The ten pre-existing prompts consume the free baseline; the generated
         # comparison pair needs its own explicit allowance.
@@ -827,7 +663,7 @@ async def test_generate_comparison_cohort_is_active_and_branded(
 async def test_generate_brand_diagnostic_uses_named_cohort_rules(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "diagnostic@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "diagnostic@example.com")
     agent = FakeAgent(
         response=json.dumps(
             {
@@ -871,7 +707,7 @@ async def test_generate_counts_intra_response_duplicates(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Duplicate texts within one model response are counted as dropped."""
-    _, prompt_set_id = await _make_project_and_set(client, "dup1@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "dup1@example.com")
     agent = FakeAgent(
         response=json.dumps(
             {
@@ -928,7 +764,7 @@ async def test_generate_bounds_existing_prompt_context(
     """The existing-prompt list sent to the model is capped by config."""
     from app.core.config.prompts import prompt_generation_settings
 
-    _, prompt_set_id = await _make_project_and_set(client, "ctx1@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "ctx1@example.com")
     monkeypatch.setattr(prompt_generation_settings, "existing_prompt_context_limit", 3)
     for i in range(6):
         created = await client.post(
@@ -964,7 +800,7 @@ async def test_concurrent_generation_keeps_all_validated_rows_active(
     from app.domain.prompts.generation import generate_prompts
     from app.domain.prompts.schemas import PromptGenerateRequest
 
-    project, prompt_set_id = await _make_project_and_set(client, "conc1@example.com")
+    project, prompt_set_id = await make_project_and_set(client, "conc1@example.com")
 
     # Resolve the workspace id from the project's owning workspace.
     from app.models.project import Project
@@ -1057,7 +893,7 @@ async def test_generation_racing_prompt_set_delete_is_scoped_not_found(
     )
     from app.models.project import Project
 
-    project, prompt_set_id = await _make_project_and_set(client, "race1@example.com")
+    project, prompt_set_id = await make_project_and_set(client, "race1@example.com")
     async with session_factory() as session:
         proj = await session.get(Project, uuid.UUID(project["id"]))
         assert proj is not None
@@ -1133,7 +969,7 @@ async def test_generation_racing_topic_delete_is_scoped_validation_error(
     from app.domain.prompts.topics import delete_topic
     from app.models.project import Project
 
-    project, prompt_set_id = await _make_project_and_set(client, "race2@example.com")
+    project, prompt_set_id = await make_project_and_set(client, "race2@example.com")
     topic = (
         await client.post(
             f"/api/v1/projects/{project['id']}/topics", json={"name": "Doomed"}
@@ -1232,7 +1068,7 @@ async def test_generation_unrelated_integrity_error_is_not_remapped(
     from app.domain.prompts.schemas import PromptGenerateRequest
     from app.models.project import Project
 
-    project, prompt_set_id = await _make_project_and_set(client, "unrel1@example.com")
+    project, prompt_set_id = await make_project_and_set(client, "unrel1@example.com")
     async with session_factory() as session:
         proj = await session.get(Project, uuid.UUID(project["id"]))
         assert proj is not None
@@ -1267,7 +1103,7 @@ async def test_create_prompt_accepts_topic_id(client: httpx.AsyncClient) -> None
     Without ``topic_id`` on create it would have to POST every prompt and then
     PATCH every prompt, doubling the write count on a first-run flow.
     """
-    project, prompt_set_id = await _make_project_and_set(
+    project, prompt_set_id = await make_project_and_set(
         client, "ptopic1@example.com", create_default_topic=False
     )
     topic = (
@@ -1294,7 +1130,7 @@ async def test_create_prompt_rejects_foreign_topic_id(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """A topic from another project is a 404, not a cross-scope FK write."""
-    project_a, set_a = await _make_project_and_set(client, "ptopic2@example.com")
+    project_a, set_a = await make_project_and_set(client, "ptopic2@example.com")
     async with session_factory() as session:
         await seed_occupancy_grants(
             session,
@@ -1330,7 +1166,7 @@ async def test_create_prompt_rejects_foreign_topic_id(
 
 @pytest.mark.asyncio
 async def test_topics_crud_with_counts(client: httpx.AsyncClient) -> None:
-    project, prompt_set_id = await _make_project_and_set(
+    project, prompt_set_id = await make_project_and_set(
         client, "top1@example.com", create_default_topic=False
     )
     project_id = project["id"]
@@ -1389,7 +1225,7 @@ async def test_prompt_topic_assignment_same_project_succeeds(
     client: httpx.AsyncClient,
 ) -> None:
     """A prompt can be filed under a topic of its own project."""
-    project, prompt_set_id = await _make_project_and_set(client, "tscope1@example.com")
+    project, prompt_set_id = await make_project_and_set(client, "tscope1@example.com")
     topic = (
         await client.post(
             f"/api/v1/projects/{project['id']}/topics", json={"name": "Footwear"}
@@ -1422,7 +1258,7 @@ async def test_prompt_topic_assignment_cross_project_rejected(
     """A topic from a sibling project (same workspace) can't be attached."""
     await _register(client, "tscope2@example.com")
     project_a = (
-        await client.post("/api/v1/projects", json=_project_payload(name="A"))
+        await client.post("/api/v1/projects", json=project_payload(name="A"))
     ).json()
     prompt_set_a = (
         await client.post(
@@ -1440,7 +1276,7 @@ async def test_prompt_topic_assignment_cross_project_rejected(
     project_b = (
         await client.post(
             "/api/v1/projects",
-            json=_project_payload(
+            json=project_payload(
                 name="B", brand_name="Beta", website_url="https://beta.example"
             ),
         )
@@ -1472,7 +1308,7 @@ async def test_prompt_topic_assignment_cross_workspace_rejected(
 ) -> None:
     """A topic from another workspace can't be attached to this prompt."""
     # Workspace 1 owns the topic.
-    other_project, _ = await _make_project_and_set(client, "tscope3a@example.com")
+    other_project, _ = await make_project_and_set(client, "tscope3a@example.com")
     other_topic = (
         await client.post(
             f"/api/v1/projects/{other_project['id']}/topics", json={"name": "Theirs"}
@@ -1481,7 +1317,7 @@ async def test_prompt_topic_assignment_cross_workspace_rejected(
 
     # Workspace 2 owns the prompt.
     client.cookies.clear()
-    _, prompt_set_id = await _make_project_and_set(client, "tscope3b@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "tscope3b@example.com")
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
@@ -1501,7 +1337,7 @@ async def test_prompt_topic_assignment_unknown_topic_rejected(
     client: httpx.AsyncClient,
 ) -> None:
     """A non-existent topic id is rejected (no cross-scope FK 500)."""
-    _, prompt_set_id = await _make_project_and_set(client, "tscope4@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "tscope4@example.com")
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
@@ -1516,7 +1352,7 @@ async def test_prompt_topic_assignment_unknown_topic_rejected(
 
 @pytest.mark.asyncio
 async def test_topics_are_workspace_scoped(client: httpx.AsyncClient) -> None:
-    project, _ = await _make_project_and_set(client, "top2a@example.com")
+    project, _ = await make_project_and_set(client, "top2a@example.com")
     topic = (
         await client.post(
             f"/api/v1/projects/{project['id']}/topics", json={"name": "Mine"}
@@ -1541,7 +1377,7 @@ async def test_topics_are_workspace_scoped(client: httpx.AsyncClient) -> None:
 async def test_prompt_status_update_and_duplicate_409(
     client: httpx.AsyncClient,
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "rev1@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "rev1@example.com")
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
@@ -1568,7 +1404,7 @@ async def test_prompt_status_update_and_duplicate_409(
 async def test_bulk_status_accepts_proposed_prompts(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "rev2@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "rev2@example.com")
     generated = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/generate",
@@ -1590,7 +1426,7 @@ async def test_bulk_status_rejects_foreign_prompt_ids(
     client: httpx.AsyncClient,
 ) -> None:
     """One bad id rejects the whole batch — no partial transitions."""
-    _, prompt_set_id = await _make_project_and_set(client, "rev3@example.com")
+    _, prompt_set_id = await make_project_and_set(client, "rev3@example.com")
     prompt = (
         await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
@@ -1666,7 +1502,7 @@ async def test_generate_over_occupancy_returns_coded_403(
     fake_agent: FakeAgent,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    project, prompt_set_id = await _make_project_and_set(
+    project, prompt_set_id = await make_project_and_set(
         client, "occ-gen-403@example.com"
     )
     # Make the registered account bare, then provision a zero-slot grant: every
@@ -1702,7 +1538,7 @@ async def test_import_over_occupancy_returns_coded_403(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    project, prompt_set_id = await _make_project_and_set(
+    project, prompt_set_id = await make_project_and_set(
         client, "occ-import-403@example.com"
     )
     async with session_factory() as session:
@@ -1745,7 +1581,7 @@ async def test_import_over_occupancy_returns_coded_403(
 async def test_import_validation_does_not_echo_parser_details(
     client: httpx.AsyncClient,
 ) -> None:
-    _, prompt_set_id = await _make_project_and_set(
+    _, prompt_set_id = await make_project_and_set(
         client, "import-safe-validation@example.com"
     )
 

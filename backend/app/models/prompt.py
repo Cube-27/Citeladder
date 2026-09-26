@@ -64,6 +64,15 @@ class Topic(Base):
         ForeignKey("projects.id", ondelete="CASCADE"),
         index=True,
     )
+    # One level of hierarchy (config/prompts.py TOPIC_MAX_DEPTH): a subtopic
+    # names its parent in the same project. Deleting the parent promotes its
+    # subtopics to top level rather than deleting them.
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("topics.id", ondelete=ON_DELETE_SET_NULL),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(String(1024), default="")
     # manual | generated (config/prompts.py TOPIC_ORIGIN_*).

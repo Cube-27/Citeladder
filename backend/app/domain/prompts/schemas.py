@@ -189,11 +189,15 @@ TopicName = Annotated[
 class TopicCreate(BaseModel):
     name: TopicName
     description: str = Field(default="", max_length=1024)
+    # Makes this a subtopic of a top-level topic in the same project.
+    parent_id: uuid.UUID | None = None
 
 
 class TopicUpdate(BaseModel):
     name: TopicName | None = None
     description: str | None = Field(default=None, max_length=1024)
+    # Explicit null promotes a subtopic to top level; omitted leaves it as is.
+    parent_id: uuid.UUID | None = None
 
 
 class TopicResponse(BaseModel):
@@ -201,6 +205,7 @@ class TopicResponse(BaseModel):
 
     id: uuid.UUID
     project_id: uuid.UUID
+    parent_id: uuid.UUID | None = None
     name: str
     description: str
     origin: str

@@ -129,6 +129,7 @@ from app.models.policy_acceptance import (
 from app.models.policy_acceptance import PolicyAcceptance as PolicyAcceptance
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet, Topic
+from app.models.prompt_candidate import PromptCandidate, PromptGenerationRun
 from app.models.provider import (
     DiscoveryModelConfig,
     ProviderAppRoute,
@@ -277,6 +278,8 @@ __all__ = [
     "PerformanceDimensionStat",
     "Project",
     "Prompt",
+    "PromptCandidate",
+    "PromptGenerationRun",
     "PromptMetricSnapshot",
     "PromptSet",
     "ProviderAppRoute",

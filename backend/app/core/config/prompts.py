@@ -49,6 +49,19 @@ TOPIC_ORIGINS: Final[frozenset[str]] = frozenset(
     {TOPIC_ORIGIN_MANUAL, TOPIC_ORIGIN_GENERATED}
 )
 
+# --- Generated-prompt candidates (review before tracking) ------------------
+# Generate writes candidates, not prompts. A user accepts (a Prompt is
+# inserted and the candidate kept as ``accepted`` with the link) or rejects
+# (the candidate is deleted). Pending candidates past their retention are
+# hidden from review and purged by the next write to the set.
+CANDIDATE_DISPOSITION_PENDING: Final = "pending"
+CANDIDATE_DISPOSITION_ACCEPTED: Final = "accepted"
+
+# --- Topic hierarchy -------------------------------------------------------
+# A topic may have one parent in the same project; a subtopic cannot itself
+# have children. Prompts bind to the most specific topic.
+TOPIC_MAX_DEPTH: Final = 1
+
 # --- Generation pipeline version (stamped into generation_evidence) --------
 GENERATOR_VERSION: Final = "prompt-gen-v1"
 COMMERCE_VALIDATION_SKU_PREVIEW_LIMIT: Final = 10
@@ -413,6 +426,23 @@ class PromptGenerationSettings(BaseSettings):
         validation_alias=AliasChoices(
             "GENERATION_EXISTING_PROMPT_CONTEXT_LIMIT",
             "generation_existing_prompt_context_limit",
+        ),
+    )
+    # How long an unreviewed candidate stays in the review list.
+    candidate_retention_hours: int = Field(
+        default=168,
+        ge=1,
+        validation_alias=AliasChoices(
+            "GENERATION_CANDIDATE_RETENTION_HOURS",
+            "generation_candidate_retention_hours",
+        ),
+    )
+    # Upper bound on accept_ids + reject_ids in one review request.
+    review_max_ids: int = Field(
+        default=500,
+        ge=1,
+        validation_alias=AliasChoices(
+            "GENERATION_REVIEW_MAX_IDS", "generation_review_max_ids"
         ),
     )
 

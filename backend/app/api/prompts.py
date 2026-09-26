@@ -110,6 +110,7 @@ from app.domain.prompts.service import (
 from app.domain.prompts.topical_binding import TopicalBindingError
 from app.domain.prompts.topics import (
     DuplicateTopicError,
+    TopicHierarchyError,
     TopicNotFoundError,
     create_topic,
     delete_topic,
@@ -563,9 +564,12 @@ async def create_topic_endpoint(
             payload=payload,
         )
     except TopicNotFoundError as exc:
-        raise_not_found(_RES_PROJECT, cause=exc)
+        # "Project not found" or "Parent topic not found".
+        raise _not_found(str(exc)) from exc
     except DuplicateTopicError as exc:
         raise _conflict(str(exc)) from exc
+    except TopicHierarchyError as exc:
+        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
     return topic_to_response(topic)
 
 
@@ -584,9 +588,11 @@ async def update_topic_endpoint(
             payload=payload,
         )
     except TopicNotFoundError as exc:
-        raise_not_found("Topic", cause=exc)
+        raise _not_found(str(exc)) from exc
     except DuplicateTopicError as exc:
         raise _conflict(str(exc)) from exc
+    except TopicHierarchyError as exc:
+        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
     counts = await topic_status_counts(session, project_id=topic.project_id)
     return topic_to_response(topic, counts)
 
