@@ -30,6 +30,22 @@ score, call a model/provider or repair state.
 
 ## Acquisition and evidence guarantees
 
+The curl transport sends `CiteLadderSiteHealthBot/1.0 (+https://citeladder.com/crawler)`
+and no longer impersonates a browser. Network/server failures and explicit
+robots refusals pause acquisition; missing robots (404/410) permit it. A declared
+delay above the supported maximum blocks the host instead of shortening the
+requested delay. The shared fetcher invokes a durable suppression check before
+every URL/redirect hop, including discovery, logos, commerce and source inspection.
+An in-flight HTTP request cannot be recalled; subsequent hops recheck the stop.
+
+Trusted platform administrators can dry-run `uv run python -m scripts.acquisition_control
+--actor <admin-email> --domain <domain-or-*> --reason <reason>` from `backend/`.
+`--apply` persists the stop; `--resume --apply` removes that rule. Parent-domain
+suppression includes subdomains; removing a domain rule does not override a
+global `*` stop. This command sends no HTTP requests. Operators must not enter
+credentials or customer content in its reason. Crawler-page publication still
+requires the audit plan's remaining authorization/robots/pacing acceptance.
+
 - Crawls begin only from an explicit user request.
 - PostgreSQL is the queue. Tasks use leases, heartbeats, retries, idempotency and
   `FOR UPDATE SKIP LOCKED`; claims commit before network I/O.

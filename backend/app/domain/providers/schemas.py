@@ -65,6 +65,7 @@ class ProviderRouteInput(BaseModel):
 
 
 class ProviderAppRouteInput(BaseModel):
+    disclosure_accepted: Literal[True]
     feature: Literal["agent"]
     model: str = Field(min_length=1, max_length=255)
     api_base_url: str = Field(min_length=1, max_length=1024)

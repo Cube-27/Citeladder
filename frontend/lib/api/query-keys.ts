@@ -32,6 +32,8 @@ import {
   providerKeys,
   topicKeys,
   workspaceKeys,
+  policyKeys,
+  mcpConnectionKeys,
 } from './query-keys/core';
 import { integrationKeys } from './query-keys/integrations';
 import { opportunityKeys } from './query-keys/opportunities';
@@ -41,6 +43,8 @@ import { performanceKeys } from './query-keys/performance';
 
 export const queryKeys = {
   auth: authKeys,
+  policies: policyKeys,
+  mcpConnections: mcpConnectionKeys,
   billing: billingKeys,
   brandDiscovery: brandDiscoveryKeys,
   workspaces: workspaceKeys,

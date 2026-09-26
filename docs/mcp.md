@@ -41,9 +41,15 @@ revocation prevent reusing a grant as permanent access.
 
 ## Authorization on each read
 
-A grant binds to a CiteLadder user account.
+A grant binds to a CiteLadder user account and explicitly selected workspaces.
+The consent form starts with no workspace selected. Authorization codes carry
+the selection into the grant; token rotation preserves it. Empty legacy grants
+cannot be exchanged for access and require a new consent flow.
 [Data projections](../backend/app/domain/mcp/data.py) resolve that account's
-current workspace memberships and permitted read roles on every product read.
+current workspace memberships and permitted read roles on every product read,
+intersected with the live grant's selected workspaces. Revocation and removal of
+a workspace authorization are checked in the database even for an already loaded
+request token; joining another workspace never expands a connection.
 System workspaces remain excluded even if a stray membership exists.
 Project/object IDs never authorize themselves. Revoking membership changes
 what an existing grant may read without copying business data into MCP.
@@ -70,7 +76,9 @@ URLs, tables, SQL and filesystem paths are not resolvers.
 
 Clients discover authorized projects, inspect the available-dataset inventory,
 then page through or fetch specific evidence. The browser account menu links to
-public setup instructions; there is no separate MCP Settings editor. OAuth
+public setup instructions. Settings has an MCP connections tab: users revoke
+their connections, and workspace Owner/Admin can view and remove only their
+workspace's authorization without seeing the grant's other workspace IDs. OAuth
 return paths are restricted to the internal consent transaction and cannot
 become arbitrary redirects. Grant revocation is available through the OAuth
 revocation endpoint and supporting clients; membership removal blocks affected

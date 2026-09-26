@@ -9,10 +9,11 @@ import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
+from datetime import UTC, datetime
 from typing import Any
 
 from mcp.server.auth.middleware.auth_context import get_access_token
-from sqlalchemy import select
+from sqlalchemy import String, and_, cast, false, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.mcp import (
@@ -20,6 +21,7 @@ from app.core.config.mcp import (
     MCP_MAX_LIST_LIMIT,
 )
 from app.domain.workspaces.policy import WorkspaceCapability, roles_with
+from app.models.mcp import McpOAuthGrant
 from app.models.project import Project
 from app.models.workspace import Workspace, WorkspaceMember
 
@@ -135,39 +137,48 @@ def current_user_id() -> uuid.UUID:
 def _caller_is_member_of(workspace_column: Any) -> Any:
     """The predicate authorizing the caller to read rows in a workspace.
 
-    Every read below is workspace-scoped, and each one used to spell its own
-    ``WorkspaceMember`` join out inline. Six of the seven omitted
-    ``Workspace.is_system``, so MCP was the one reader where a stray
-    system-workspace membership row would have authorized — while
-    ``list_account_projects``, which did filter it, hid the same project. Two
-    halves of one boundary disagreeing is the shape of bug that never shows up
-    in tests.
-
-    Stated once here, mirroring ``get_membership`` (T11: system workspaces
-    cannot have memberships, so even a stray row stays inert). An EXISTS
-    subquery rather than a join, so adding it can neither duplicate rows for a
-    caller holding several memberships nor collide with a query's own joins —
-    it drops into any ``where`` unchanged.
-
-    The role filter comes from the ONE workspace policy
-    (``app.domain.workspaces.policy``), not from a list spelled here: MCP is a
-    separate entry point into the same data, and §2.3 of the account-management
-    plan requires it to reuse the policy rather than define a second matrix.
-    Every MCP tool is read-only, so the set is ``roles_with(READ)`` — but a row
-    carrying an unrecognised role authorizes nothing, and if a future role
-    loses READ it loses MCP with it, in one edit.
+    Both Agent and MCP reads require a non-system workspace and a current role
+    with READ capability. MCP also requires a live, unrevoked grant containing
+    that workspace and matching the loaded token. EXISTS predicates preserve
+    the caller's query cardinality and avoid conflicting with its own joins.
     """
-    return (
+    user_id = current_user_id()
+    membership = (
         select(WorkspaceMember.id)
         .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
         .where(
             WorkspaceMember.workspace_id == workspace_column,
-            WorkspaceMember.user_id == current_user_id(),
+            WorkspaceMember.user_id == user_id,
             WorkspaceMember.role.in_(_MCP_READER_ROLES),
             Workspace.is_system.is_(False),
         )
         .exists()
     )
+    if _IN_APP_READER.get() is not None:
+        return membership
+    token = get_access_token()
+    if token is None:
+        return false()
+    claims = token.claims or {}
+    try:
+        grant_id = uuid.UUID(str(claims.get("grant_id")))
+    except ValueError:
+        return false()
+    grant = (
+        select(McpOAuthGrant.id)
+        .where(
+            McpOAuthGrant.id == grant_id,
+            McpOAuthGrant.access_token_hash == claims.get("token_hash"),
+            McpOAuthGrant.user_id == user_id,
+            McpOAuthGrant.revoked_at.is_(None),
+            McpOAuthGrant.access_expires_at > datetime.now(UTC),
+            McpOAuthGrant.workspace_ids.contains(
+                func.jsonb_build_array(cast(workspace_column, String))
+            ),
+        )
+        .exists()
+    )
+    return and_(membership, grant)
 
 
 async def _authorized_project(session: AsyncSession, project_id: str) -> Project:

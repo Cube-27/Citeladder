@@ -9,6 +9,7 @@ immutable per-call trace. Raw bodies remain in-process only.
 from __future__ import annotations
 
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from urllib.parse import urljoin
 
@@ -99,14 +100,14 @@ class SecureFetcher:
         self,
         *,
         resolver: DnsResolver,
+        authorize_url: Callable[[str], Awaitable[None]],
         transport: AcquisitionTransport | None = None,
         settings=site_health_settings,
     ) -> None:
         self._resolver = resolver
+        self._authorize_url = authorize_url
         self._settings = settings
-        self._transport = transport or CurlCffiTransport(
-            impersonation_profile=settings.curl_cffi_impersonation_profile
-        )
+        self._transport = transport or CurlCffiTransport()
         self._owns_transport = transport is None
 
     async def __aenter__(self) -> SecureFetcher:
@@ -152,7 +153,6 @@ class SecureFetcher:
             transport=ACQUISITION_TRANSPORT_CURL_CFFI,
             rung=1,
             trigger=ACQUISITION_TRIGGER_INITIAL,
-            impersonation_profile=self._settings.curl_cffi_impersonation_profile,
             policy_version=self._settings.acquisition_policy_version,
         )
         attempts: list[FetchCallTrace] = []
@@ -160,6 +160,7 @@ class SecureFetcher:
         current_url = request.url
 
         for hop in range(max_redirects + 1):
+            await self._authorize_url(current_url)
             target = await self._resolve(
                 current_url,
                 root_registrable_domain=root_registrable_domain,

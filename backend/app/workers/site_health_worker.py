@@ -62,6 +62,7 @@ from app.core.config.task_queue import TASK_STATUS_RUNNING
 from app.core.database import SessionLocal
 from app.core.db_conflicts import is_transient_db_conflict
 from app.core.telemetry import configure_logging, instrument_worker
+from app.domain.site_health.acquisition_controls import authorize_acquisition
 from app.domain.site_health.schemas import (
     DiscoveryOutput,
 )
@@ -163,9 +164,7 @@ class SiteHealthWorker(DrainableWorkerMixin):
         # sessions, so a per-task transport threw away the connection and TLS
         # session after every page. Tests inject the same bounded contract.
         self._owns_transport = transport is None
-        self._transport: AcquisitionTransport = transport or CurlCffiTransport(
-            impersonation_profile=site_health_settings.curl_cffi_impersonation_profile
-        )
+        self._transport: AcquisitionTransport = transport or CurlCffiTransport()
         # Per-host politeness (concurrency cap + start pacing + eviction). The
         # robots-declared crawl-delay is injected as a lookup so the gate never
         # fetches anything itself.
@@ -192,6 +191,9 @@ class SiteHealthWorker(DrainableWorkerMixin):
     def _new_fetcher(self) -> SecureFetcher:
         """Build the sole curl fetcher (or the injected offline test transport)."""
         return SecureFetcher(
+            authorize_url=lambda url: authorize_acquisition(
+                url, session_factory=self._session_factory
+            ),
             resolver=self._resolver,
             transport=self._transport,
         )

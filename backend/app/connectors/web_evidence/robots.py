@@ -5,15 +5,17 @@
 # the worker never touches the raw parser. A ``RobotsPolicy`` answers three
 # questions for the frozen crawl user-agent:
 #   - can_fetch(url): is this URL allowed?
-#   - crawl_delay(): the per-host delay to honor (clamped to the config max,
-#     falling back to the config default when robots specifies none).
+#   - crawl_delay(): the per-host delay to honor, falling back to the config
+#     default when robots specifies none; excessive delays pause acquisition.
 #   - sitemaps(): the sitemap URLs robots declares (seed URLs for discovery).
 #
-# Fail-open vs fail-closed is explicit: an empty/failed robots fetch produces
-# an ALLOW-ALL policy (fail-open — standard crawler behavior), while a policy
-# built from a body that explicitly disallows still denies. The worker owns the
+# An empty robots file permits access; network/server failures and parser
+# failures deny access. A delay exceeding the supported ceiling pauses the host.
+# A policy built from a body that explicitly disallows still denies. The worker owns the
 # fetch (through the SSRF-safe fetcher); this module only parses.
 from __future__ import annotations
+
+import math
 
 from protego import Protego
 
@@ -36,7 +38,7 @@ class RobotsPolicy:
         deny_all: bool = False,
     ) -> None:
         self._parser = parser
-        self._user_agent = user_agent
+        self._user_agent = user_agent.split("/", 1)[0]
         self._allow_all = allow_all
         self._deny_all = deny_all
 
@@ -54,7 +56,10 @@ class RobotsPolicy:
     @property
     def unavailable(self) -> bool:
         """Whether this policy is the 5xx temporary-disallow stance."""
-        return self._deny_all
+        return (
+            self._deny_all
+            or self.crawl_delay() > site_health_settings.max_crawl_delay_seconds
+        )
 
     @classmethod
     def parse(cls, body: str | bytes, *, user_agent: str) -> RobotsPolicy:
@@ -66,26 +71,25 @@ class RobotsPolicy:
             return cls.allow_all(user_agent=user_agent)
         try:
             parser = Protego.parse(text)
-        except Exception:  # noqa: BLE001 - third-party Protego parse; a malformed robots.txt fails open (see below)
-            # A malformed robots file must not crash discovery: fail open.
-            return cls.allow_all(user_agent=user_agent)
+        except Exception:  # noqa: BLE001 - an unreadable policy cannot authorize acquisition
+            return cls.deny_all(user_agent=user_agent)
         return cls(parser, user_agent=user_agent)
 
     def can_fetch(self, url: str) -> bool:
-        if self._deny_all:
+        if self.unavailable:
             return False
         if self._allow_all or self._parser is None:
             return True
         try:
             return bool(self._parser.can_fetch(url, self._user_agent))
-        except Exception:  # noqa: BLE001 - third-party Protego match; an unparseable rule must not block a fetch
-            return True
+        except Exception:  # noqa: BLE001 - preserve restrictions when the parser cannot decide
+            return False
 
     def crawl_delay(self) -> float:
-        """Per-host delay in seconds, clamped to the config max.
+        """Per-host declared delay in seconds.
 
         Uses the robots-declared crawl-delay when present, else the config
-        default. Never exceeds ``max_crawl_delay_seconds``.
+        default. An excessive delay makes ``unavailable`` true.
         """
         settings = site_health_settings
         declared: float | None = None
@@ -98,7 +102,7 @@ class RobotsPolicy:
         delay = (
             declared if declared is not None else settings.default_crawl_delay_seconds
         )
-        return max(0.0, min(delay, settings.max_crawl_delay_seconds))
+        return max(0.0, delay) if math.isfinite(delay) else math.inf
 
     def sitemaps(self) -> list[str]:
         """The sitemap URLs robots declares (may be empty)."""

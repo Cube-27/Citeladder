@@ -24,7 +24,6 @@ from datetime import date, timedelta
 import pytest
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
-from mcp.server.auth.provider import AccessToken
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.analytics import ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH
@@ -33,9 +32,7 @@ from app.core.config.integrations_datasets import (
     DATASET_GSC_QUERY_DAILY,
 )
 from app.core.config.integrations_transport import INTEGRATION_PROVIDER_GSC
-from app.core.config.mcp import MCP_READ_SCOPE
 from app.domain.mcp.data import read_growth_evidence
-from app.domain.mcp.oauth_provider import resource_url
 from app.domain.traffic.service import refresh_traffic_snapshot
 from app.models.analytics import AnalyticsTask
 from app.models.integrations import IntegrationConnection
@@ -43,6 +40,7 @@ from app.models.project import Project
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 from tests.component.analytics_helpers import seed_ga4_import, seed_metric_row
+from tests.component.mcp_helpers import read_grant
 
 GSC_PROPERTY = "https://example.com/"
 ANCHOR = date(2026, 7, 28)
@@ -141,18 +139,8 @@ async def _seed_gsc_projection(
     )
 
 
-def _as_caller(user_id: uuid.UUID):
-    return auth_context_var.set(
-        AuthenticatedUser(
-            AccessToken(
-                token="unused-in-process-token",
-                client_id="test-client",
-                scopes=[MCP_READ_SCOPE],
-                subject=str(user_id),
-                resource=resource_url(),
-            )
-        )
-    )
+async def _as_caller(session: AsyncSession, user_id: uuid.UUID):
+    return auth_context_var.set(AuthenticatedUser(await read_grant(session, user_id)))
 
 
 @pytest.mark.asyncio
@@ -165,7 +153,7 @@ async def test_an_unprojected_range_is_reported_not_zeroed(
         db_session, f"mcp-empty-{uuid.uuid4().hex[:8]}@example.com"
     )
 
-    token = _as_caller(user_id)
+    token = await _as_caller(db_session, user_id)
     try:
         async with session_factory() as session:
             performance = await read_growth_evidence(
@@ -208,7 +196,7 @@ async def test_performance_reads_the_same_projection_the_dashboard_reads(
         project_id=project_id,
     )
 
-    token = _as_caller(user_id)
+    token = await _as_caller(db_session, user_id)
     try:
         async with session_factory() as session:
             snapshot = await read_growth_evidence(
@@ -257,7 +245,7 @@ async def test_a_project_in_another_account_is_not_found_by_any_tool(
         project_id=outsider_project,
     )
 
-    token = _as_caller(caller_id)
+    token = await _as_caller(db_session, caller_id)
     try:
         async with session_factory() as session:
             for tool_name in CONNECTED_TOOLS:
@@ -284,7 +272,7 @@ async def test_an_empty_argument_is_refused_not_defaulted(
         db_session, f"mcp-empty-arg-{uuid.uuid4().hex[:8]}@example.com"
     )
 
-    token = _as_caller(user_id)
+    token = await _as_caller(db_session, user_id)
     try:
         async with session_factory() as session:
             with pytest.raises(ValueError, match="range must not be empty"):

@@ -12,6 +12,14 @@ run crawls or paid pulls, change a customer site, declare implementation or
 claim an improvement without new measured evidence. Web research is out of
 scope.
 
+## Model destination admission
+
+Customer Agent destinations require acknowledgement of the recipient, transmitted
+context categories and the customer's provider terms. Changing the URL clears the
+browser acknowledgement; every submitted app route requires it server-side and
+appends an actor/workspace/destination/model/revision receipt. Credential encryption,
+endpoint validation and verified-route checks remain with the provider owner.
+
 ## Chats, runs and outputs
 
 The [Agent API](../backend/app/api/agent.py) translates authorized requests

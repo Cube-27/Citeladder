@@ -54,12 +54,14 @@ def test_robots_allow_all_classmethod():
     assert policy.sitemaps() == []
 
 
-def test_robots_crawl_delay_is_clamped_to_max():
+def test_excessive_crawl_delay_pauses_acquisition():
     huge = site_health_settings.max_crawl_delay_seconds + 1000
     policy = RobotsPolicy.parse(
         f"User-agent: *\nCrawl-delay: {int(huge)}\n", user_agent=_UA
     )
-    assert policy.crawl_delay() == site_health_settings.max_crawl_delay_seconds
+    assert policy.crawl_delay() == huge
+    assert policy.unavailable
+    assert not policy.can_fetch("https://example.com/")
 
 
 def test_robots_crawl_delay_default_when_absent():
@@ -67,13 +69,8 @@ def test_robots_crawl_delay_default_when_absent():
     assert policy.crawl_delay() == site_health_settings.default_crawl_delay_seconds
 
 
-def test_robots_malformed_parser_fails_open(monkeypatch):
-    """A robots body that makes the underlying parser raise fails open.
-
-    ``Protego.parse`` throwing on some pathological input must not crash
-    discovery: the resulting policy allows every URL, exactly like an
-    empty/unfetchable robots.txt.
-    """
+def test_robots_parser_failure_denies_acquisition(monkeypatch):
+    """A parser failure must not become an authorization to crawl."""
 
     def _raise(_text: str):
         raise ValueError("boom")
@@ -82,8 +79,8 @@ def test_robots_malformed_parser_fails_open(monkeypatch):
         "app.connectors.web_evidence.robots.Protego.parse", staticmethod(_raise)
     )
     policy = RobotsPolicy.parse("User-agent: *\nDisallow: /private/\n", user_agent=_UA)
-    assert policy.can_fetch("https://example.com/private/x")
-    assert policy.can_fetch("https://example.com/anything")
+    assert not policy.can_fetch("https://example.com/private/x")
+    assert not policy.can_fetch("https://example.com/anything")
 
 
 def test_robots_declares_sitemaps():

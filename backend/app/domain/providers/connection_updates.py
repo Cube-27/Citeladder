@@ -8,11 +8,33 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.app_models import APP_MODEL_DISCLOSURE_REVISION
 from app.core.config.dataforseo import pack_credential
 from app.core.config.provider_catalog import TRANSPORT_DATAFORSEO
 from app.core.security import encrypt_secret
+from app.domain.providers.schemas import ProviderAppRouteInput
 from app.models.provider import ProviderAppRoute, ProviderConnection
+from app.models.provider_disclosure import ProviderDisclosure
 from app.models.workspace import Workspace
+
+
+def record_destination_acknowledgements(
+    session: AsyncSession,
+    connection: ProviderConnection,
+    items: list[ProviderAppRouteInput],
+    actor_id: uuid.UUID,
+) -> None:
+    for item in items:
+        session.add(
+            ProviderDisclosure(
+                workspace_id=connection.workspace_id,
+                actor_id=actor_id,
+                connection_id=connection.id,
+                destination=item.api_base_url,
+                model=item.model,
+                disclosure_revision=APP_MODEL_DISCLOSURE_REVISION,
+            )
+        )
 
 
 class InvalidAppModelDestinationError(ValueError):

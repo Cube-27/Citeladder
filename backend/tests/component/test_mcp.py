@@ -10,7 +10,7 @@ import httpx
 import pytest
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
-from mcp.server.auth.provider import AccessToken, AuthorizationParams
+from mcp.server.auth.provider import AuthorizationParams
 from mcp.shared.auth import OAuthClientInformationFull
 from pydantic import AnyUrl
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -38,6 +38,7 @@ from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
+from tests.component.mcp_helpers import read_grant
 
 
 async def _seed_account(
@@ -104,7 +105,9 @@ async def test_oauth_grant_is_account_scoped_and_revocable(
         ),
     )
     transaction = parse_qs(urlsplit(authorization_url).query)["transaction"][0]
-    callback = await provider.complete_authorization(transaction, user.id)
+    callback = await provider.complete_authorization(
+        transaction, user.id, [str(_workspace.id)]
+    )
     callback_params = parse_qs(urlsplit(callback).query)
     assert callback_params["state"] == ["client-state"]
 
@@ -286,7 +289,9 @@ async def test_demo_allowlist_rejects_another_account(
     )
     transaction = parse_qs(urlsplit(authorization_url).query)["transaction"][0]
     with pytest.raises(PermissionError, match="not enabled"):
-        await provider.complete_authorization(transaction, user.id)
+        await provider.complete_authorization(
+            transaction, user.id, [str(_workspace.id)]
+        )
 
 
 @pytest.mark.asyncio
@@ -472,6 +477,7 @@ async def test_browser_consent_requires_an_explicit_approval(
             "transaction": transaction,
             "csrf_token": csrf.group(1),
             "decision": "approve",
+            "workspace_id": str(_workspace.id),
         },
         follow_redirects=False,
     )
@@ -490,6 +496,7 @@ async def test_browser_consent_requires_an_explicit_approval(
             "transaction": transaction,
             "csrf_token": csrf.group(1),
             "decision": "approve",
+            "workspace_id": str(_workspace.id),
         },
         follow_redirects=False,
     )
@@ -600,13 +607,8 @@ async def test_system_workspace_membership_authorizes_no_read_path(
         await session.commit()
         project_id, opportunity_id, prompt_id = project.id, opportunity.id, prompt.id
 
-    access = AccessToken(
-        token="unused-in-process-token",
-        client_id="test-client",
-        scopes=[MCP_READ_SCOPE],
-        subject=str(user.id),
-        resource=resource_url(),
-    )
+    async with session_factory() as session:
+        access = await read_grant(session, user.id)
     context_token = auth_context_var.set(AuthenticatedUser(access))
     try:
         async with session_factory() as session:

@@ -63,6 +63,7 @@ from app.domain.opportunities.verification import (
     enqueue_audit_opportunity_tasks,
     enqueue_implementation_verification,
 )
+from app.domain.site_health.acquisition_controls import authorize_acquisition
 from app.domain.source_pages.admission import claim_pages, spend_for_redirect
 from app.domain.source_pages.identity import identify_unwrapped_redirect
 from app.domain.source_pages.persistence import (
@@ -88,7 +89,9 @@ logger = logging.getLogger("app.workers.source_pages")
 
 
 def _new_fetcher() -> SecureFetcher:
-    return SecureFetcher(resolver=SystemDnsResolver())
+    return SecureFetcher(
+        authorize_url=authorize_acquisition, resolver=SystemDnsResolver()
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,12 +138,12 @@ class _Inspector:
     pacer: HostPacer
 
     async def allowed(self, url: str) -> bool:
-        """Whether robots permits this fetch. Unreachable robots fails open."""
+        """Whether robots permits this fetch. Unreachable robots pauses inspection."""
         try:
             policy, _body, _status = await self.robots.ensure(authority_key(url))
         except (FetchError, OSError, ValueError):
-            logger.debug("source-page robots unavailable; continuing", exc_info=True)
-            return True
+            logger.debug("source-page robots unavailable; paused", exc_info=True)
+            return False
         return bool(policy.can_fetch(url))
 
     def _blocked(self, url: str) -> FetchOutcome:

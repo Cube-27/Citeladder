@@ -48,6 +48,7 @@ from app.domain.commerce.schemas import (
     DiscoveryTaskResponse,
 )
 from app.domain.commerce.service import CommerceNotFoundError, require_project
+from app.domain.site_health.acquisition_controls import authorize_acquisition
 from app.domain.site_health.normalization import canonical_identity
 from app.models.analytics import AnalyticsTask
 from app.models.brand import OwnedDomain
@@ -697,7 +698,9 @@ async def _verified_urls(
             except Exception:  # noqa: BLE001 - one bad page never fails a run
                 return url, False
 
-    async with SecureFetcher(resolver=SystemDnsResolver()) as fetcher:
+    async with SecureFetcher(
+        authorize_url=authorize_acquisition, resolver=SystemDnsResolver()
+    ) as fetcher:
         return dict(
             await asyncio.gather(
                 *(verify(checked[0], fetcher) for checked in candidates)

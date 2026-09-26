@@ -33,6 +33,7 @@ from app.core.config.site_health_acquisition import (
     ERROR_RESPONSE_TOO_LARGE,
     ERROR_TIMEOUT,
     ERROR_UNSUPPORTED_CONTENT_TYPE,
+    SITE_HEALTH_USER_AGENT,
 )
 from app.core.config.site_health_rules import (
     PERSISTED_RESPONSE_HEADERS,
@@ -121,23 +122,10 @@ def _curl_resolve_entry(target: ResolvedTarget) -> str:
 
 
 def _request_headers(request: FetchRequest) -> dict[str, str]:
-    """Headers for an impersonating request, with the UA owned by the profile.
-
-    The impersonation profile MUST own the User-Agent, because the TLS/HTTP-2
-    fingerprint and the UA string have to describe the same client. Sending our
-    own crawler UA over a Chrome fingerprint is a self-contradiction and edge
-    bot-mitigation acts on it: Akamai resets the HTTP/2 stream outright (curl
-    error 92). That surfaced as ``connection_failed`` and read as "the site is
-    blocking automated traffic" when in fact our own request was inconsistent --
-    so the rung that exists to defeat fingerprinting failed on precisely the
-    hosts that fingerprint. A caller-supplied user-agent is dropped for the same
-    reason; it cannot be honoured without breaking the impersonation.
-    """
-    return {
-        name.lower(): value
-        for name, value in request.headers.items()
-        if name.lower() != "user-agent"
-    }
+    """Identify web acquisition; callers cannot impersonate browsers."""
+    headers = {name.lower(): value for name, value in request.headers.items()}
+    headers["user-agent"] = SITE_HEALTH_USER_AGENT
+    return headers
 
 
 def _transport_error_code(exc: RequestException) -> int | None:
@@ -171,8 +159,7 @@ class CurlCffiTransport:
     address has to be part of the key.
     """
 
-    def __init__(self, *, impersonation_profile: str) -> None:
-        self._impersonation_profile = impersonation_profile
+    def __init__(self) -> None:
         # Built through the module-level name so the test seam still replaces
         # every session this transport creates.
         self._pool = CurlSessionPool(
@@ -206,7 +193,6 @@ class CurlCffiTransport:
             port=target.port,
             connect_ip=target.connect_ip,
             max_wire_bytes=max_wire_bytes,
-            impersonation_profile=self._impersonation_profile,
         )
         try:
             async with self._pool.lease(
@@ -215,7 +201,6 @@ class CurlCffiTransport:
                 verify=True,
                 allow_redirects=False,
                 timeout=timeout_seconds,
-                impersonate=self._impersonation_profile,
                 curl_options=options,
                 max_clients=max(int(site_health_settings.per_host_concurrency), 1),
             ) as session:

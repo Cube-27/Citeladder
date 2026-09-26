@@ -29,6 +29,13 @@ from app.core.config.workspaces import (
     CODE_WORKSPACE_OWNER_REQUIRED,
 )
 from app.core.errors import ApiException
+from app.core.http_errors import raise_api_error
+from app.domain.auth.policies import (
+    PolicyDecision,
+    PolicyStatus,
+    accept_policy,
+    policy_status,
+)
 from app.domain.workspaces.invitations import (
     InvitationError,
     accept_invitation,
@@ -75,6 +82,27 @@ _CurrentUser = Annotated[User, Depends(get_current_user)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 _MemberDep = Annotated[WorkspaceContext, Depends(require_workspace_member)]
 _AdminDep = Annotated[WorkspaceContext, Depends(require_workspace_members_admin)]
+
+
+@router.get("/{workspace_id}/policies")
+async def current_policies(
+    workspace_id: uuid.UUID, context: _MemberDep, session: _SessionDep
+) -> PolicyStatus:
+    return await policy_status(session, context.user.id, workspace_id)
+
+
+@router.post("/{workspace_id}/policies")
+async def record_policy_acceptance(
+    workspace_id: uuid.UUID,
+    payload: PolicyDecision,
+    context: _MemberDep,
+    session: _SessionDep,
+) -> PolicyStatus:
+    try:
+        return await accept_policy(session, context.user.id, workspace_id, payload)
+    except ValueError as exc:
+        raise_api_error(409, str(exc), code="policy_revision_changed")
+
 
 # Every domain refusal, mapped ONCE to the status and the machine code a
 # client should see. A 409 is a state conflict the caller could resolve (the

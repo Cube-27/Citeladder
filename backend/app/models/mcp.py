@@ -68,6 +68,8 @@ class McpAuthorizationCode(Base):
 
     __tablename__ = "mcp_authorization_codes"
 
+    workspace_ids: Mapped[list[str]] = mapped_column(JSONB, default=list)
+
     id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
@@ -98,6 +100,8 @@ class McpOAuthGrant(Base):
     """Revocable OAuth token pair issued to one client for one account."""
 
     __tablename__ = "mcp_oauth_grants"
+
+    workspace_ids: Mapped[list[str]] = mapped_column(JSONB, default=list)
 
     id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4

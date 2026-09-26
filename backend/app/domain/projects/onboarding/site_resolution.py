@@ -28,6 +28,7 @@ from app.core.config.site_health_acquisition import (
     ERROR_RESPONSE_TOO_LARGE,
     FETCH_PURPOSE_ANALYZE,
 )
+from app.domain.site_health.acquisition_controls import authorize_acquisition
 
 
 class SiteNotFoundError(ValueError):
@@ -73,6 +74,7 @@ async def resolve_site(entered_url: str, normalized_url: str) -> ResolvedSite:
         request_urls.append(_http_variant(normalized_url))
     errors: list[str] = []
     async with SecureFetcher(
+        authorize_url=authorize_acquisition,
         resolver=SystemDnsResolver(),
         settings=ONBOARDING_DIRECT_FETCH_SETTINGS,
     ) as fetcher:

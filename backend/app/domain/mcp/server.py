@@ -211,13 +211,21 @@ async def _consent_principal(
 
 
 def _consent_page(
-    transaction: str, session_token: str, pending: PendingAuthorization
+    transaction: str,
+    session_token: str,
+    pending: PendingAuthorization,
+    workspaces: list[tuple[str, str]],
 ) -> Response:
     """Render the approval form. Nothing here mutates the transaction."""
     scopes = "".join(
         f"<li><code>{escape(scope)}</code></li>" for scope in pending.scopes
     )
     csrf = consent_csrf_token(session_token, transaction)
+    choices = "".join(
+        '<p><label><input type="checkbox" name="workspace_id" '
+        f'value="{escape(identifier)}"> {escape(name)}</label></p>'
+        for identifier, name in workspaces
+    )
     return HTMLResponse(
         f"""<!doctype html>
 <html lang="en">
@@ -246,8 +254,8 @@ button {{ margin-top: 1.75rem; width: 100%; padding: 0.75rem 1rem; border: 0;
 <main>
 <h1>Authorize MCP access</h1>
 <p><strong>{escape(pending.client_name)}</strong> is asking for read-only access
-to projects available through your CiteLadder account. Project access changes
-when your workspace memberships change.</p>
+to the workspaces you select below. Joining another workspace does not grant
+this connection access. Losing membership removes access.</p>
 <h2>Requested scopes</h2>
 <ul>{scopes}</ul>
 <h2>Redirects to</h2>
@@ -255,6 +263,7 @@ when your workspace memberships change.</p>
 <form method="post" action="{_CONSENT_PATH}">
 <input type="hidden" name="transaction" value="{escape(transaction)}">
 <input type="hidden" name="csrf_token" value="{escape(csrf)}">
+<fieldset><legend>Workspaces to authorize</legend>{choices}</fieldset>
 <button type="submit" name="decision" value="approve">Approve access</button>
 <button class="deny" type="submit" name="decision" value="deny">Deny access</button>
 </form>
@@ -280,13 +289,14 @@ async def render_browser_authorization(request: Request) -> Response:
     principal = await _consent_principal(request, transaction)
     if isinstance(principal, Response):
         return principal
-    session_token, _user = principal
+    session_token, user = principal
     pending = await mcp_oauth_provider.describe_authorization_request(transaction)
     if pending is None:
         return PlainTextResponse(
             "Authorization request is invalid or expired", status_code=403
         )
-    return _consent_page(transaction, session_token, pending)
+    workspaces = await mcp_oauth_provider.consent_workspaces(user.id)
+    return _consent_page(transaction, session_token, pending, workspaces)
 
 
 @mcp_server.custom_route(_CONSENT_PATH, methods=["POST"])
@@ -310,7 +320,9 @@ async def complete_browser_authorization(request: Request) -> Response:
             destination = await mcp_oauth_provider.deny_authorization(transaction)
         else:
             destination = await mcp_oauth_provider.complete_authorization(
-                transaction, uuid.UUID(str(user.id))
+                transaction,
+                uuid.UUID(str(user.id)),
+                [str(value) for value in form.getlist("workspace_id")],
             )
     except PermissionError as exc:
         return PlainTextResponse(str(exc), status_code=403)

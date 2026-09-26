@@ -15,6 +15,18 @@ type GtagWindow = Window & {
 
 const SCRIPT_ID = 'citeladder-google-analytics';
 
+function clearAnalyticsCookies() {
+  const hostParts = window.location.hostname.split('.');
+  const domains = ['', ...hostParts.map((_, index) => `.${hostParts.slice(index).join('.')}`)];
+  for (const cookie of document.cookie.split(';')) {
+    const name = cookie.trim().split('=')[0];
+    if (!/^(_ga(?:_|$)|_gid$|_gat(?:_|$))/.test(name)) continue;
+    for (const domain of domains) {
+      document.cookie = `${name}=; Max-Age=0; path=/${domain ? `; domain=${domain}` : ''}`;
+    }
+  }
+}
+
 function denyPendingAnalyticsDefaults(dataLayer: unknown[] | undefined) {
   for (const entry of dataLayer ?? []) {
     if (!Array.isArray(entry) || entry[0] !== 'consent' || entry[1] !== 'default') continue;
@@ -45,8 +57,11 @@ export function GoogleAnalytics({ measurementId }: Readonly<{ measurementId: str
 
   useEffect(() => {
     const withGtag = window as GtagWindow;
+    // Google's hard opt-out also stops cookieless measurement after withdrawal.
+    Reflect.set(window, `ga-disable-${measurementId}`, !allowed);
     const existing = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
     if (!allowed) {
+      clearAnalyticsCookies();
       if (!existing) return;
       // A pending tag must never replay an old granted default on load.
       if (existing.dataset.loaded !== 'true') {

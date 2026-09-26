@@ -20,6 +20,11 @@ from app.workers.site_health.urls import authority_key
 RobotsEntry = tuple[RobotsPolicy, str | None, int | None]
 
 
+def robots_status_denies(status: int | None) -> bool:
+    """Only a missing robots file (other 4xx) permits; failures and refusals deny."""
+    return status is None or status in {401, 403, 429} or not 200 <= status < 500
+
+
 class RobotsCache:
     """Fetch, cache, and evict robots policies for one worker process."""
 
@@ -57,7 +62,7 @@ class RobotsCache:
             if cached is not None:
                 return cached
             body, status = await self._fetch(authority)
-            if status is not None and 500 <= status < 600:
+            if robots_status_denies(status):
                 policy = RobotsPolicy.deny_all(user_agent=SITE_HEALTH_USER_AGENT)
             else:
                 policy = RobotsPolicy.parse(

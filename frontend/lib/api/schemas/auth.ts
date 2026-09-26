@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+export const policyStatusSchema = z.object({
+  terms_revision: z.string(),
+  privacy_notice_revision: z.string(),
+  accepted_at: z.string().nullable(),
+});
+
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 

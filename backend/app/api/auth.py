@@ -29,6 +29,7 @@ from app.domain.auth.schemas import (
     RegistrationResponse,
     SessionUser,
 )
+from app.domain.auth.security_events import record_security_event
 from app.domain.auth.service import authenticate_user, register_user
 from app.models.user import User
 
@@ -93,6 +94,8 @@ async def login(
         )
         raise_api_error(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
     token, user = authenticated
+    record_security_event(session, event="auth.login", actor_id=user.id)
+    await session.commit()
     clear_integration_oauth_cookie(response)
     clear_auth_oauth_cookie(response)
     set_session_cookie(response, token)
@@ -107,6 +110,7 @@ async def logout(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
     user.session_version += 1
+    record_security_event(session, event="auth.logout", actor_id=user.id)
     await session.commit()
     clear_session_cookie(response)
     clear_integration_oauth_cookie(response)

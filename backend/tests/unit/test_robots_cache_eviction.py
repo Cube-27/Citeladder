@@ -16,9 +16,14 @@ import pytest
 from app.connectors.web_evidence.contracts import FetchRequest, FetchResult
 from app.connectors.web_evidence.fetcher import SecureFetcher
 from app.connectors.web_evidence.robots import RobotsPolicy
+from app.core.config.site_health_acquisition import (
+    ROBOTS_FETCH_STATUS_FETCH_FAILED,
+    ROBOTS_FETCH_STATUS_NOT_FOUND,
+)
 from app.core.config.site_health_runtime import (
     site_health_settings,
 )
+from app.workers.site_health.phases.discover_stages import _classify_robots_fetch
 from app.workers.site_health.robots_cache import RobotsCache
 
 
@@ -30,6 +35,33 @@ class _UnusedFetcher:
 def _cache() -> RobotsCache:
     factory = cast(Callable[[], SecureFetcher], _UnusedFetcher())
     return RobotsCache(new_fetcher=factory)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "status,allowed",
+    [(404, True), (410, True), (403, False), (429, False), (503, False)],
+)
+async def test_robots_status_distinguishes_missing_from_refusal(status, allowed):
+    cache = _result_cache(_ResultFetcherFactory(status=status))
+    policy, body, fetched_status = await cache.ensure("https://example.com")
+    assert policy.can_fetch("https://example.com/page") is allowed
+    # The UI must never label a paused crawl as "no robots.txt".
+    assert _classify_robots_fetch(body, fetched_status) == (
+        ROBOTS_FETCH_STATUS_NOT_FOUND if allowed else ROBOTS_FETCH_STATUS_FETCH_FAILED
+    )
+
+
+@pytest.mark.asyncio
+async def test_network_failure_never_authorizes_acquisition(monkeypatch):
+    async def unavailable(_authority):
+        return None, None
+
+    cache = _cache()
+    monkeypatch.setattr(cache, "_fetch", unavailable)
+    policy, _, _ = await cache.ensure("https://example.com")
+    assert policy.unavailable
+    assert not policy.can_fetch("https://example.com/page")
 
 
 class _ResultFetcherFactory:

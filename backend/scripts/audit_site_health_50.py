@@ -29,6 +29,7 @@ from app.connectors.web_evidence.fetcher import SecureFetcher
 from app.connectors.web_evidence.resolver import SystemDnsResolver
 from app.core.config.site_health_acquisition import FETCH_PURPOSE_ANALYZE
 from app.core.database import engine
+from app.domain.site_health.acquisition_controls import authorize_acquisition
 from app.domain.site_health.service.issues import issue_group_id
 
 _reporting = importlib.import_module(
@@ -470,7 +471,9 @@ async def _fetch_corpus(
 ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any] | None]]:
     manifest: list[dict[str, Any]] = []
     observations: dict[str, dict[str, Any] | None] = {}
-    async with SecureFetcher(resolver=SystemDnsResolver()) as fetcher:
+    async with SecureFetcher(
+        resolver=SystemDnsResolver(), authorize_url=authorize_acquisition
+    ) as fetcher:
         for index, selected_row in enumerate(selected, start=1):
             item, analysis = await _audit_selected_row(
                 fetcher,

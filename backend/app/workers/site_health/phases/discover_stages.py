@@ -77,29 +77,23 @@ from app.workers.site_health.phases.contracts import (
 from app.workers.site_health.phases.contracts import (
     PhaseContext,
 )
+from app.workers.site_health.robots_cache import robots_status_denies
 from app.workers.site_health.urls import authority_key as _authority_key
 
 
 def _classify_robots_fetch(body: str | None, status: int | None) -> str:
     """SH-1 (B2): classify the robots.txt fetch for the UI.
 
-    Distinguishes "the site has NO robots.txt we must honor" (any non-5xx
-    response — fail-open, the AI-crawler stance defaults to allow) from
-    "robots.txt could not be fetched" (network error / 5xx — the stance is
-    genuinely unknown, and per RFC 9309 a 5xx is a temporary complete
-    disallow).
-
-    EVERY non-5xx status is ``not_found``, not just 404: a 401 / 403 / 429
-    robots.txt is treated by ``RobotsCache.ensure`` exactly like a 404
-    (allow-all, RFC 9309 "unavailable status" — no restrictions), so
-    labelling it ``fetch_failed`` told the UI the stance was unknown while
-    the crawl proceeded fail-open on it.
+    Mirrors ``RobotsCache.ensure`` through the one shared predicate: a missing
+    robots file (404-class) is ``not_found`` and permits crawling, while a
+    network error, 5xx, redirect or 401/403/429 refusal is ``fetch_failed``
+    because the crawl is paused on it rather than proceeding fail-open.
     """
     if body is not None:
         return ROBOTS_FETCH_STATUS_FETCHED
-    if status is not None and not (500 <= status < 600):
-        return ROBOTS_FETCH_STATUS_NOT_FOUND
-    return ROBOTS_FETCH_STATUS_FETCH_FAILED
+    if robots_status_denies(status):
+        return ROBOTS_FETCH_STATUS_FETCH_FAILED
+    return ROBOTS_FETCH_STATUS_NOT_FOUND
 
 
 def _crawler_stance(requested_url: str, robots_body: str | None) -> dict[str, str]:

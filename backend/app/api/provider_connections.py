@@ -102,7 +102,10 @@ async def create_connection_endpoint(
 ) -> ProviderConnectionResponse:
     try:
         connection = await create_connection(
-            session, workspace_id=ctx.workspace_id, payload=payload
+            session,
+            workspace_id=ctx.workspace_id,
+            payload=payload,
+            actor_id=ctx.user.id,
         )
     except (
         CredentialShapeError,
@@ -128,6 +131,7 @@ async def update_connection_endpoint(
             workspace_id=ctx.workspace_id,
             connection_id=connection_id,
             payload=payload,
+            actor_id=ctx.user.id,
         )
     except ProviderConnectionNotFoundError as exc:
         raise_api_error(status.HTTP_404_NOT_FOUND, _NOT_FOUND, cause=exc)

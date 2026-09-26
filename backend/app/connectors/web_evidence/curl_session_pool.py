@@ -2,7 +2,7 @@
 
 A curl session owns the connection pool and the TLS session cache, so building
 one per HTTP hop threw both away every time. A single-host crawl of 500 pages
-therefore paid 500+ impersonated TLS handshakes against one server, plus one
+therefore paid 500+ TLS handshakes against one server, plus one
 more per redirect hop, and that is a large share of per-page latency.
 
 The pool key is the whole reason this is safe. ``CurlOpt.RESOLVE`` -- the DNS
@@ -41,7 +41,6 @@ class SessionKey:
     port: int
     connect_ip: str
     max_wire_bytes: int
-    impersonation_profile: str
 
 
 @dataclass(slots=True)
