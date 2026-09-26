@@ -25,7 +25,10 @@ type Seed = { token: symbol; handoff: AgentHandoff };
 type AgentPanelValue = {
   open: boolean;
   setOpen: (open: boolean) => void;
+  /** The screen's context as it was when the panel last opened. */
   seed: AgentHandoff | null;
+  /** Increments on every open, so each open starts a fresh draft. */
+  openCount: number;
   /** The chat the panel shows, only for the project it was started in. */
   chat: { projectId: string; chatId: string } | null;
   setChat: (chat: { projectId: string; chatId: string } | null) => void;
@@ -36,8 +39,22 @@ type AgentPanelValue = {
 const AgentPanelContext = createContext<AgentPanelValue | null>(null);
 
 export function AgentPanelProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
   const [seed, setSeed] = useState<Seed | null>(null);
+  // Snapshotted on open: a screen refetch while the panel is open must not
+  // reset the draft the reader is writing.
+  const [openedWith, setOpenedWith] = useState<{ seed: AgentHandoff | null; count: number }>({
+    seed: null,
+    count: 0,
+  });
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (next && !open)
+        setOpenedWith((current) => ({ seed: seed?.handoff ?? null, count: current.count + 1 }));
+      setOpenState(next);
+    },
+    [open, seed],
+  );
   const [chat, setChat] = useState<AgentPanelValue['chat']>(null);
   const publishSeed = useCallback((next: Seed) => setSeed(next), []);
   // Only the screen that published the current seed may clear it, so an
@@ -50,13 +67,14 @@ export function AgentPanelProvider({ children }: Readonly<{ children: ReactNode 
     () => ({
       open,
       setOpen,
-      seed: seed?.handoff ?? null,
+      seed: openedWith.seed,
+      openCount: openedWith.count,
       chat,
       setChat,
       publishSeed,
       withdrawSeed,
     }),
-    [open, seed, chat, publishSeed, withdrawSeed],
+    [open, setOpen, openedWith, chat, publishSeed, withdrawSeed],
   );
   return <AgentPanelContext.Provider value={value}>{children}</AgentPanelContext.Provider>;
 }

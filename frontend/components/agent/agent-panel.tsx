@@ -82,8 +82,8 @@ export function AgentPanel() {
         />
       ) : (
         <PanelStart
-          // A fresh draft each time the screen's context changes.
-          key={`${activeProjectId}:${JSON.stringify(panel.seed)}`}
+          // A fresh draft for each open, from the context captured then.
+          key={`${activeProjectId}:${panel.openCount}`}
           workspaceId={activeWorkspaceId}
           projectId={activeProjectId}
           seed={panel.seed ?? EMPTY_SEED}

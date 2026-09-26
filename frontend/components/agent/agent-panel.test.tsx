@@ -1,6 +1,7 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { useEffect, useState } from 'react';
 import { Route, Routes, useParams } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
@@ -10,7 +11,7 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({ hasCapability: () => true }),
+  useEntitlement: () => ({ hasCapability: (key: string) => key === 'agent' }),
 }));
 
 import { AgentPanel } from './agent-panel';
@@ -77,9 +78,16 @@ const DETAIL = {
   output: null,
 };
 
+/** Lets a test change the screen's context, as a background refetch would. */
+const screenPrompt = { set: (_prompt: string) => {} };
+
 /** A Dashboard screen offering the typed page it is showing. */
 function IssueScreen() {
-  useAgentPanelSeed({ siteUrlId: PAGE, prompt: 'Fix the missing meta description.' });
+  const [prompt, setPrompt] = useState('Fix the missing meta description.');
+  useEffect(() => {
+    screenPrompt.set = setPrompt;
+  }, []);
+  useAgentPanelSeed({ siteUrlId: PAGE, prompt });
   return <p>Issue screen</p>;
 }
 
@@ -149,6 +157,22 @@ describe('AgentPanel', () => {
     await user.click(within(panel).getByRole('link', { name: 'Open in Agent' }));
     expect(await screen.findByText(`Workspace chat ${CHAT}`)).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('keeps an unsent draft when the screen context changes while open', async () => {
+    mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json({ skills: [] })));
+    const user = userEvent.setup();
+    renderShell('/site');
+
+    await user.click(await screen.findByRole('button', { name: 'Open agent' }));
+    const message = within(await screen.findByRole('dialog', { name: 'Agent' })).getByLabelText(
+      'Message the agent',
+    );
+    await user.clear(message);
+    await user.type(message, 'My own question');
+    act(() => screenPrompt.set('A refreshed prompt'));
+
+    expect(screen.getByLabelText('Message the agent')).toHaveValue('My own question');
   });
 
   it('is offered on Dashboard screens only', async () => {
