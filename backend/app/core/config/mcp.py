@@ -10,6 +10,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.core.config import settings
 from app.core.config.dotenv import dotenv_sources
 
+# The consent document contains no executable script. Its one registered OAuth
+# redirect origin is added to form-action by the response owner for POST returns.
+MCP_CONSENT_CSP = (
+    "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; "
+    "object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+)
+
 MCP_READ_SCOPE = "citeladder:read"
 MCP_SERVER_VERSION = "1.1.0"
 MCP_DOCUMENTATION_URL = "https://docs.citeladder.com/mcp/"

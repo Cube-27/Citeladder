@@ -2,13 +2,17 @@
 
 ## Active
 
+- [Demo and production hardening](citeladder-production-hardening.md)
+  — repository-side Phase 1 subset implemented locally on 26 September 2026 in
+  `codex/production-hardening`; merge, CI, deployment and runtime retest pending.
+  Saved-window and one-manual-refresh controls are implemented; workspace rate
+  and aggregate limits remain deferred by the owner. TLS evidence, provisioning
+  configuration, cloud dependency/retirement work and Phase 2 policies remain
+  open. Security alert implementation remains deferred. See the plan's current
+  status and deployment gates; this entry does not authorize deployment.
+
 ## Queued
 
-- [Demo and production hardening](citeladder-production-hardening.md)
-  — plan saved on 25 September 2026 from the supplied GCP and DAST reports.
-  Phase 1 hardens the current demo; Phase 2 waits for production policies.
-  Security alert implementation is deferred. Pending decisions and live
-  verification are recorded in the plan; saving it does not authorize execution.
 - [Audit remediation and enterprise readiness](citeladder-audit-remediation.md)
   — plan saved on 25 September 2026; implementation deferred. Covers policies,
   data lifecycle, security, MCP, crawler and operational readiness for the unified

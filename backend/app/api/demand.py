@@ -17,12 +17,17 @@ from app.api.deps import (
     require_active_workspace_write,
 )
 from app.core.config.demand import (
+    ERROR_DEMAND_WINDOW_NOT_SAVED,
     ERROR_QUERY_EVIDENCE_CURSOR_INVALID,
     QUERY_EVIDENCE_DEFAULT_LIMIT,
     QUERY_EVIDENCE_MAX_LIMIT,
 )
 from app.core.http_errors import raise_api_error, raise_not_found
-from app.domain.analytics.enqueue import enqueue_demand_snapshot_refresh
+from app.domain.abuse.service import UsageLimitExceededError
+from app.domain.demand.admission import (
+    DemandWindowNotSavedError,
+    enqueue_manual_refresh,
+)
 from app.domain.demand.query_classification import append_override
 from app.domain.demand.query_evidence_reads import (
     QueryEvidenceCursorError,
@@ -43,7 +48,6 @@ from app.domain.demand.schemas import (
     QueryEvidenceSummaryView,
 )
 from app.domain.demand.service import (
-    demand_source_revision,
     latest_snapshot,
     list_signals,
 )
@@ -136,21 +140,30 @@ async def recompute(
     session: _SessionDep,
 ) -> DemandRecomputeResponse:
     await _authorize(session, ctx.workspace_id, project_id)
-    revision = await demand_source_revision(
-        session,
-        workspace_id=ctx.workspace_id,
-        project_id=project_id,
-        window_start=payload.window_start,
-        window_end=payload.window_end,
-    )
-    task_id = await enqueue_demand_snapshot_refresh(
-        session,
-        workspace_id=ctx.workspace_id,
-        project_id=project_id,
-        window_start=payload.window_start,
-        window_end=payload.window_end,
-        source_revision=revision,
-    )
+    try:
+        task_id = await enqueue_manual_refresh(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=project_id,
+            window_start=payload.window_start,
+            window_end=payload.window_end,
+        )
+    except DemandWindowNotSavedError as exc:
+        raise_api_error(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            str(exc),
+            code=ERROR_DEMAND_WINDOW_NOT_SAVED,
+            cause=exc,
+        )
+    except UsageLimitExceededError as exc:
+        await session.rollback()
+        raise_api_error(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "A Search Demand refresh is already pending for this project. "
+            "Retry after it finishes.",
+            headers={"Retry-After": str(exc.retry_after_seconds)},
+            cause=exc,
+        )
     await session.commit()
     return DemandRecomputeResponse(
         task_id=task_id, status="queued" if task_id else "already_queued"

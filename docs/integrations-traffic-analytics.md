@@ -140,6 +140,18 @@ retains the evidence/authorization gate.
 
 ## Read and UI
 
+Manual Search Demand refresh accepts only a window already persisted in a
+Demand snapshot in the authorized project. One manual refresh may be pending
+per project, including leased and retry-wait work. A PostgreSQL workspace
+advisory lock spans validation, exact window/revision deduplication and enqueue
+in one transaction; duplicate retries consume no additional slot. Rejection
+returns structured 422 (unsaved window) or 429 with Retry-After (pending work).
+Sync/crawl projections remain automatic and bypass manual admission. Legacy
+queued Demand payloads without an origin marker conservatively hold a manual
+slot until terminal, without changing their execution or payload. Workspace
+rate and aggregate capacity budgets remain pending owner policy; these project
+controls do not close that capacity finding.
+
 The [Performance API client](../frontend/lib/api/performance.ts) renders
 Search Console-aligned ranges. Day/Week/Month/Custom select a range; chart
 buckets remain daily. The response supplies actual window and snapshot_id,

@@ -31,6 +31,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.config import demo_access_expired, settings
 from app.core.config.mcp import (
+    MCP_CONSENT_CSP,
     MCP_DOCUMENTATION_URL,
     MCP_READ_SCOPE,
     MCP_SERVER_VERSION,
@@ -260,7 +261,15 @@ when your workspace memberships change.</p>
 </main>
 </body>
 </html>""",
-        headers={"Cache-Control": "no-store", "X-Frame-Options": "DENY"},
+        headers={
+            "Cache-Control": "no-store",
+            "X-Frame-Options": "DENY",
+            "Content-Security-Policy": (
+                f"{MCP_CONSENT_CSP}; form-action 'self' "
+                f"{AnyHttpUrl(pending.redirect_uri).scheme}://"
+                f"{urlsplit(str(AnyHttpUrl(pending.redirect_uri))).netloc}"
+            ),
+        },
     )
 
 

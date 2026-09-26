@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -29,7 +30,9 @@ from app.core.config.entitlements import (
 )
 from app.core.config.workspaces import MAX_OWNED_WORKSPACES_PER_USER
 from app.domain.workspaces import service as workspace_service
+from app.models.billing import AccountGrant, BillingAccount
 from app.models.user import User
+from app.models.workspace import Workspace
 
 COOKIE = settings.session_cookie_name
 
@@ -67,6 +70,7 @@ async def test_register_is_generic_and_does_not_create_session(
 )
 async def test_closed_registration_is_rejected_server_side(
     client: httpx.AsyncClient,
+    db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
     setting: str,
     value: bool,
@@ -78,6 +82,8 @@ async def test_closed_registration_is_rejected_server_side(
     )
     assert response.status_code == 403
     assert response.json()["detail"] == "Registration is disabled"
+    for model in (User, Workspace, BillingAccount, AccountGrant):
+        assert await db_session.scalar(select(func.count()).select_from(model)) == 0
 
 
 @pytest.mark.asyncio

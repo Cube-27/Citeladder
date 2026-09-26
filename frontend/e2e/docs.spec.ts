@@ -87,3 +87,24 @@ test('mobile navigation and article contents remain usable', async ({ page }) =>
   await page.goto('/');
   await page.screenshot({ path: test.info().outputPath('docs-desktop.png') });
 });
+
+test('built docs enforce a script policy without breaking hydration', async ({ page }) => {
+  const violations: string[] = [];
+  page.on('console', (message) => {
+    if (/violates.*(security policy|directive)/i.test(message.text()))
+      violations.push(message.text());
+  });
+  await page.goto('/');
+  await expect(page.locator('meta[http-equiv="content-security-policy"]')).toHaveCount(1);
+  await page.getByRole('button', { name: /Search docs/ }).click();
+  await expect(
+    page.getByRole('dialog').getByRole('textbox', { name: 'Search terms' }),
+  ).toBeFocused();
+  expect(violations).toEqual([]);
+  await page.evaluate(() => {
+    const script = document.createElement('script');
+    script.textContent = 'document.documentElement.dataset.injected = "executed"';
+    document.body.append(script);
+  });
+  await expect(page.locator('html')).not.toHaveAttribute('data-injected', 'executed');
+});

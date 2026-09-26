@@ -35,6 +35,7 @@
     "test:watch": "vp test watch",
     "test:coverage": "vp test run --coverage",
     "test:e2e": "playwright test --config playwright.config.ts",
+    "test:workers": "playwright test --config playwright.workers.config.ts",
     "check:complexity": "node scripts/check-frontend-complexity.mjs",
     "check:duplicates": "node scripts/check-jscpd.mjs",
     "report:duplicates:tests": "node scripts/check-jscpd.mjs --tests",

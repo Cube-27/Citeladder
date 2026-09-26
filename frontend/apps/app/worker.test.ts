@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { handleAppRequest } from './worker';
 
 const env: Parameters<typeof handleAppRequest>[1] = {
@@ -9,7 +9,9 @@ const env: Parameters<typeof handleAppRequest>[1] = {
     fetch: async (request: Request) =>
       new URL(request.url).pathname === '/index.html'
         ? new Response('<html>app</html>', { headers: { 'Content-Type': 'text/html' } })
-        : new URL(request.url).pathname === '/app-assets/page-DqDZ7Zs-.js'
+        : ['/app-assets/page-DqDZ7Zs-.js', '/theme-preference.js'].includes(
+              new URL(request.url).pathname,
+            )
           ? new Response('export {};', { headers: { 'Content-Type': 'text/javascript' } })
           : new Response('missing', { status: 404 }),
   },
@@ -20,6 +22,47 @@ function request(path: string, method = 'GET', accept = 'text/html'): Request {
 }
 
 describe('product Worker routing', () => {
+  it('enforces document policy on root, deep links and direct HTML', async () => {
+    for (const path of ['/', '/agent/actions', '/index.html']) {
+      const document = await handleAppRequest(request(path), env);
+      const policy = Object.fromEntries(
+        document.headers
+          .get('content-security-policy')!
+          .split(';')
+          .map((directive) => {
+            const [name, ...sources] = directive.trim().split(/\s+/);
+            return [name, sources];
+          }),
+      );
+      expect(policy['object-src']).toEqual(["'none'"]);
+      expect(policy['frame-ancestors']).toEqual(["'none'"]);
+      expect(policy['script-src']).not.toContain("'unsafe-inline'");
+      expect(policy['script-src']).not.toContain("'unsafe-eval'");
+      expect(document.headers.get('cache-control')).toBe('no-store');
+    }
+  });
+
+  it('preserves an upstream consent or sandbox policy instead of weakening it', async () => {
+    const policy = "default-src 'none'; sandbox";
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('<html></html>', {
+        headers: {
+          'Content-Type': 'text/html',
+          'Content-Security-Policy': policy,
+          'Cache-Control': 'no-store',
+        },
+      }),
+    );
+    try {
+      const result = await handleAppRequest(request('/mcp/oauth/consent'), env);
+      expect(result.headers.get('content-security-policy')).toBe(policy);
+      expect(result.headers.get('cache-control')).toBe('private, no-store');
+      expect(result.headers.get('x-robots-tag')).toContain('noindex');
+    } finally {
+      fetch.mockRestore();
+    }
+  });
+
   it('serves document navigation without turning missing resources or methods into HTML', async () => {
     const document = await handleAppRequest(request('/projects'), env);
     expect(document.status).toBe(200);
@@ -34,6 +77,9 @@ describe('product Worker routing', () => {
         'cache-control',
       ),
     ).toContain('immutable');
+    expect(
+      (await handleAppRequest(request('/theme-preference.js'), env)).headers.get('cache-control'),
+    ).toBeNull();
     expect(await handleAppRequest(request('/projects', 'POST'), env).then((r) => r.status)).toBe(
       405,
     );

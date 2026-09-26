@@ -1,11 +1,15 @@
 import type { MiddlewareHandler } from 'astro';
 import { routeApexRequest } from './apex-route';
 import { workerApexEnv } from './worker-env';
+import { FALLBACK_CONTENT_SECURITY_POLICY } from '@/lib/config/content-security-policy';
 
 export const onRequest: MiddlewareHandler = async ({ request }, next) => {
   const routed = await routeApexRequest(request, workerApexEnv());
   const response = routed ?? (await next());
   const headers = new Headers(response.headers);
+  if (!headers.has('Content-Security-Policy')) {
+    headers.set('Content-Security-Policy', FALLBACK_CONTENT_SECURITY_POLICY);
+  }
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   headers.set('X-Frame-Options', 'DENY');
