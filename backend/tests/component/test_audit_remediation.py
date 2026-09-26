@@ -6,6 +6,7 @@ import pytest
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
 from sqlalchemy import func, select
+from sqlalchemy.exc import OperationalError
 
 from app.connectors.web_evidence.contracts import FetchError
 from app.core.config import legal
@@ -187,6 +188,18 @@ async def test_unparseable_hop_fails_closed_as_acquisition_unavailable(
         await authorize_acquisition(url, session_factory=session_factory)
     assert exc.value.error_code == "acquisition_unavailable"
     assert isinstance(exc.value.__cause__, ValueError)
+
+
+@pytest.mark.asyncio
+async def test_policy_store_outage_fails_closed_as_typed_fetch_error():
+    def unavailable_store():
+        raise OperationalError("SELECT 1", {}, OSError("connection refused"))
+
+    with pytest.raises(FetchError) as exc:
+        await authorize_acquisition(
+            "https://example.test/", session_factory=unavailable_store
+        )
+    assert exc.value.error_code == "acquisition_unavailable"
 
 
 @pytest.mark.asyncio

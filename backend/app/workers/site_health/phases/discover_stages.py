@@ -101,7 +101,7 @@ def _crawler_stance(requested_url: str, robots_body: str | None) -> dict[str, st
     for bot in AI_CRAWLER_BOTS:
         allowed = not robots_body or RobotsPolicy.parse(
             robots_body, user_agent=bot
-        ).can_fetch(requested_url)
+        ).permits(requested_url)
         stance[bot] = AI_CRAWLER_STANCE_ALLOW if allowed else AI_CRAWLER_STANCE_BLOCK
     return stance
 

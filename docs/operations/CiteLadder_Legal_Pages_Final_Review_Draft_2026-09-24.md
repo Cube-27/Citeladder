@@ -9,6 +9,8 @@
 **26 September remediation addendum:** the active assignment and all supplied
 proposed decisions are retained in [the remediation plan](../plans/citeladder-audit-remediation.md).
 Part 0 below is dated historical evidence, not current deployed configuration.
+Its crawler findings (Chrome impersonation, fail-open robots, capped delay) are
+superseded in code by audit-remediation PR 1; see [Site Health](../site-health.md#acquisition-and-evidence-guarantees).
 Part E records the updated internal review package. Do not publish it or advance
 policy dates until approval. Existing liability/dispute terms remain unchanged.
 

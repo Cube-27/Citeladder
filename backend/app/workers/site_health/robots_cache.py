@@ -35,9 +35,17 @@ class RobotsCache:
         self._locks: dict[str, asyncio.Lock] = {}
 
     def crawl_delay(self, url: str) -> float:
-        """Return a cached crawl delay without performing network I/O."""
+        """Return a cached pacing delay without performing network I/O.
+
+        Clamped: a longer declared delay pauses the host through
+        ``RobotsPolicy.can_fetch``; it must never park a task in the gate.
+        """
         cached = self._entries.get(authority_key(url))
-        return cached[0].crawl_delay() if cached is not None else 0.0
+        if cached is None:
+            return 0.0
+        return min(
+            cached[0].crawl_delay(), site_health_settings.max_crawl_delay_seconds
+        )
 
     def _cached(self, authority: str) -> RobotsEntry | None:
         cached = self._entries.get(authority)

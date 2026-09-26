@@ -15,9 +15,10 @@ scope.
 ## Model destination admission
 
 Customer Agent destinations require acknowledgement of the recipient, transmitted
-context categories and the customer's provider terms. Changing the URL clears the
-browser acknowledgement; every submitted app route requires it server-side and
-appends an actor/workspace/destination/model/revision receipt. Credential encryption,
+context categories and the customer's provider terms. The form requires a fresh
+acknowledgement on every save (a URL change also clears it); every submitted app
+route requires it server-side and appends an actor/workspace/destination/model/revision
+receipt. Credential encryption,
 endpoint validation and verified-route checks remain with the provider owner.
 
 ## Chats, runs and outputs

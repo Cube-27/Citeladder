@@ -60,8 +60,12 @@ def test_excessive_crawl_delay_pauses_acquisition():
         f"User-agent: *\nCrawl-delay: {int(huge)}\n", user_agent=_UA
     )
     assert policy.crawl_delay() == huge
-    assert policy.unavailable
+    assert policy.delay_exceeds_limit
     assert not policy.can_fetch("https://example.com/")
+    # A pause, not a retrieval failure or a publisher refusal: the rules still
+    # permit the URL, which is what third-party bot stance reports.
+    assert not policy.unavailable
+    assert policy.permits("https://example.com/")
 
 
 def test_robots_crawl_delay_default_when_absent():

@@ -45,6 +45,7 @@ from app.connectors.web_evidence.source_page_fetch import source_page_request
 from app.core.config.source_pages import (
     INSPECTION_REASON_NON_HTML,
     INSPECTION_REASON_ROBOTS,
+    INSPECTION_REASON_ROBOTS_UNAVAILABLE,
     INSPECTION_REASON_STATUS,
     INSPECTION_REASON_TRANSPORT,
     INSPECTION_REASON_UNRESOLVED_REDIRECT,
@@ -137,14 +138,28 @@ class _Inspector:
     robots: RobotsCache
     pacer: HostPacer
 
-    async def allowed(self, url: str) -> bool:
-        """Whether robots permits this fetch. Unreachable robots pauses inspection."""
+    async def refusal(self, url: str, *, requested_url: str) -> FetchOutcome | None:
+        """Why robots stops this fetch, or ``None`` when it may proceed.
+
+        An unreadable robots.txt is a retryable ``failed`` outcome; only a
+        publisher rule or an unsupported crawl-delay is terminal ``blocked``.
+        """
         try:
             policy, _body, _status = await self.robots.ensure(authority_key(url))
         except (FetchError, OSError, ValueError):
-            logger.debug("source-page robots unavailable; paused", exc_info=True)
-            return False
-        return bool(policy.can_fetch(url))
+            logger.debug("source-page robots unavailable; retryable", exc_info=True)
+            return self._robots_unavailable(requested_url)
+        if policy.unavailable:
+            return self._robots_unavailable(requested_url)
+        return None if policy.can_fetch(url) else self._blocked(requested_url)
+
+    def _robots_unavailable(self, url: str) -> FetchOutcome:
+        return FetchOutcome(
+            outcome=OUTCOME_FAILED,
+            requested_url=url,
+            robots_state="unavailable",
+            reason=INSPECTION_REASON_ROBOTS_UNAVAILABLE,
+        )
 
     def _blocked(self, url: str) -> FetchOutcome:
         return FetchOutcome(
@@ -156,8 +171,9 @@ class _Inspector:
 
     async def fetch(self, url: str) -> FetchResult | FetchOutcome:
         """Fetch one external URL, or describe why it could not be read."""
-        if not await self.allowed(url):
-            return self._blocked(url)
+        refusal = await self.refusal(url, requested_url=url)
+        if refusal is not None:
+            return refusal
         request = source_page_request(url)
         try:
             async with self.pacer.slot(authority_key(url)):
@@ -192,7 +208,8 @@ class _Inspector:
         final = result.final_url or url
         if authority_key(final) == authority_key(url):
             return result
-        return result if await self.allowed(final) else self._blocked(url)
+        refusal = await self.refusal(final, requested_url=url)
+        return result if refusal is None else refusal
 
 
 def _inspection_reason(*, ok: bool, readable: bool) -> str | None:

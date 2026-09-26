@@ -55,11 +55,13 @@ class RobotsPolicy:
 
     @property
     def unavailable(self) -> bool:
-        """Whether this policy is the 5xx temporary-disallow stance."""
-        return (
-            self._deny_all
-            or self.crawl_delay() > site_health_settings.max_crawl_delay_seconds
-        )
+        """Whether robots.txt could not be retrieved or read (temporary disallow)."""
+        return self._deny_all
+
+    @property
+    def delay_exceeds_limit(self) -> bool:
+        """Whether the declared crawl-delay exceeds what we can honour."""
+        return self.crawl_delay() > site_health_settings.max_crawl_delay_seconds
 
     @classmethod
     def parse(cls, body: str | bytes, *, user_agent: str) -> RobotsPolicy:
@@ -76,7 +78,12 @@ class RobotsPolicy:
         return cls(parser, user_agent=user_agent)
 
     def can_fetch(self, url: str) -> bool:
-        if self.unavailable:
+        """Whether we may fetch now: rules permit and the host is not paused."""
+        return not self.delay_exceeds_limit and self.permits(url)
+
+    def permits(self, url: str) -> bool:
+        """Whether the publisher's rules permit ``url``, ignoring crawl-delay."""
+        if self._deny_all:
             return False
         if self._allow_all or self._parser is None:
             return True
@@ -89,7 +96,8 @@ class RobotsPolicy:
         """Per-host declared delay in seconds.
 
         Uses the robots-declared crawl-delay when present, else the config
-        default. An excessive delay makes ``unavailable`` true.
+        default. Unclamped: ``delay_exceeds_limit`` pauses the host, and
+        pacing consumers must clamp to ``max_crawl_delay_seconds``.
         """
         settings = site_health_settings
         declared: float | None = None

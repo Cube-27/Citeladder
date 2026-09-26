@@ -19,10 +19,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.web_evidence.contracts import FetchError, FetchResult
+from app.connectors.web_evidence.robots import RobotsPolicy
 from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
 )
+from app.core.config.site_health_acquisition import SITE_HEALTH_USER_AGENT
 from app.core.config.source_pages import (
     INSPECTION_BLOCKED,
     INSPECTION_FAILED,
@@ -100,20 +102,18 @@ class _StubFetcher:
 
 class _AllowAllRobots:
     async def ensure(self, authority: str):
-        class _Policy:
-            def can_fetch(self, url: str) -> bool:
-                return True
-
-        return (_Policy(), "", 200)
+        return (RobotsPolicy.allow_all(user_agent=SITE_HEALTH_USER_AGENT), "", 200)
 
 
 class _DenyAllRobots:
     async def ensure(self, authority: str):
-        class _Policy:
-            def can_fetch(self, url: str) -> bool:
-                return False
+        body = "User-agent: *\nDisallow: /\n"
+        return (RobotsPolicy.parse(body, user_agent=SITE_HEALTH_USER_AGENT), body, 200)
 
-        return (_Policy(), "", 200)
+
+class _UnreachableRobots:
+    async def ensure(self, authority: str):
+        raise FetchError("robots.txt timed out", error_code="timeout")
 
 
 @pytest.fixture
@@ -369,6 +369,35 @@ async def test_a_robots_disallowed_page_is_blocked_and_never_judged(
             ).all()
         )
         assert presences == []
+    assert fetcher.requested == []
+
+
+async def test_an_unreachable_robots_file_leaves_the_page_retryable(
+    session_factory: async_sessionmaker[AsyncSession],
+    stub_inspection,
+) -> None:
+    """A robots outage is not the publisher's refusal; the page stays claimable."""
+    url = "https://publisher.com/article"
+    async with session_factory() as session:
+        scenario = await _seed_scenario(session)
+        await _freeze_roster(session, scenario)
+        await _seed_citation(
+            session, scenario, url=url, url_hash="f" * 64, domain="publisher.com"
+        )
+        await session.commit()
+    fetcher = stub_inspection(
+        {url: _result(url, _LISTICLE)}, robots=_UnreachableRobots()
+    )
+
+    await inspect_source_pages(session_factory, await _task(scenario))
+
+    async with session_factory() as session:
+        page = await session.scalar(
+            select(SourcePage).where(SourcePage.project_id == scenario.project_id)
+        )
+        assert page is not None
+        assert page.inspection_state == INSPECTION_FAILED
+        assert page.inspection_reason == "robots_unavailable"
     assert fetcher.requested == []
 
 

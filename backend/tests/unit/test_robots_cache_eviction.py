@@ -196,6 +196,25 @@ async def test_concurrent_ensure_deduplicates_fetch_and_exposes_cached_delay() -
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("declared", ["86400", "inf"])
+async def test_pacing_delay_never_exceeds_the_supported_maximum(declared) -> None:
+    # The host gate sleeps for this value while heartbeating the lease; an
+    # unclamped robots delay would park worker lanes for a day or forever.
+    cache = _result_cache(
+        _ResultFetcherFactory(
+            status=200, body=f"User-agent: *\nCrawl-delay: {declared}\n".encode()
+        )
+    )
+    authority = "https://example.com:443"
+    policy, _, _ = await cache.ensure(authority)
+    assert not policy.can_fetch(f"{authority}/page")
+    assert (
+        cache.crawl_delay(f"{authority}/page")
+        == site_health_settings.max_crawl_delay_seconds
+    )
+
+
+@pytest.mark.asyncio
 async def test_5xx_policy_is_temporary_deny_all() -> None:
     cache = _result_cache(_ResultFetcherFactory(status=503))
     authority = "https://example.com"

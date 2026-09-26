@@ -3,6 +3,7 @@
 from urllib.parse import urlsplit
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.web_evidence.contracts import FetchError
@@ -29,15 +30,22 @@ async def authorize_acquisition(
         ) from exc
     labels = host.split(".")
     scopes = ["*", *(".".join(labels[index:]) for index in range(len(labels)))]
-    async with session_factory() as session:
-        blocked = await session.scalar(
-            select(WebAcquisitionControl.domain)
-            .where(
-                WebAcquisitionControl.domain.in_(scopes),
-                WebAcquisitionControl.blocked.is_(True),
+    try:
+        async with session_factory() as session:
+            blocked = await session.scalar(
+                select(WebAcquisitionControl.domain)
+                .where(
+                    WebAcquisitionControl.domain.in_(scopes),
+                    WebAcquisitionControl.blocked.is_(True),
+                )
+                .limit(1)
             )
-            .limit(1)
-        )
+    except (SQLAlchemyError, OSError) as exc:
+        # Fail closed through the fetcher's typed contract, never a raw DB error.
+        raise FetchError(
+            "Web acquisition policy is temporarily unavailable",
+            error_code=ERROR_ACQUISITION_UNAVAILABLE,
+        ) from exc
     if blocked is not None:
         raise FetchError(
             "Web acquisition is suppressed by operator policy",
