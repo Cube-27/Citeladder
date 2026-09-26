@@ -17,6 +17,7 @@ from app.core.config.mcp import (
     MCP_REGISTRATION_MAX_BODY_BYTES,
     mcp_settings,
 )
+from app.domain.mcp import oauth_provider
 from app.domain.mcp.server import (
     MCP_REGISTRATION_PATH,
     mcp_oauth_provider,
@@ -184,7 +185,11 @@ async def test_registration_refuses_metadata_it_cannot_honor(
 async def test_registration_prunes_only_stale_clients_that_never_earned_a_grant(
     registration: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # One slot, taken by the oldest rows first: kept clients must not occupy
+    # the batch, or pruning would stall behind them forever.
+    monkeypatch.setattr(oauth_provider, "MCP_UNUSED_CLIENT_PRUNE_BATCH", 1)
     stale = datetime.now(UTC) - timedelta(
         seconds=mcp_settings.unused_client_ttl_seconds + 60
     )
@@ -194,7 +199,9 @@ async def test_registration_prunes_only_stale_clients_that_never_earned_a_grant(
         session.add(user)
         session.add_all(
             [
-                McpOAuthClient(client_id=abandoned, created_at=stale),
+                McpOAuthClient(
+                    client_id=abandoned, created_at=stale + timedelta(seconds=30)
+                ),
                 McpOAuthClient(client_id=mid_flow, created_at=stale),
                 McpOAuthClient(client_id=fresh),
             ]

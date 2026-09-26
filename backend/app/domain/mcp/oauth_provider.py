@@ -23,7 +23,7 @@ from mcp.server.auth.provider import (
 )
 from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 from pydantic import AnyUrl
-from sqlalchemy import delete, exists, or_, select
+from sqlalchemy import ColumnElement, delete, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import demo_access_expired, legal, settings
@@ -162,7 +162,7 @@ def _validate_client_metadata(client_info: OAuthClientInformationFull) -> None:
         raise _registration_error(
             "Unsupported grant_types: " + ", ".join(sorted(unsupported_grants))
         )
-    if not set(client_info.response_types) <= MCP_SUPPORTED_RESPONSE_TYPES:
+    if set(client_info.response_types) != MCP_SUPPORTED_RESPONSE_TYPES:
         raise _registration_error("response_types must be exactly ['code']")
     if len(client_info.client_name or "") > MCP_MAX_CLIENT_NAME_LENGTH:
         raise _registration_error("client_name is too long")
@@ -211,27 +211,44 @@ async def _prune_unused_clients(session: AsyncSession) -> None:
     A client with a live authorization request or code is still mid-flow and
     is kept; one that has ever held a grant is never touched.
     """
-    now = _utcnow()
-    cutoff = now - timedelta(seconds=mcp_settings.unused_client_ttl_seconds)
-    client_id = McpOAuthClient.client_id
-    stale = (
-        select(McpOAuthClient.id)
-        .where(
-            McpOAuthClient.created_at < cutoff,
-            ~exists().where(McpOAuthGrant.client_id == client_id),
-            ~exists().where(
-                McpAuthorizationRequest.client_id == client_id,
-                McpAuthorizationRequest.expires_at > now,
-            ),
-            ~exists().where(
-                McpAuthorizationCode.client_id == client_id,
-                McpAuthorizationCode.expires_at > now,
-            ),
+    # Candidates are locked before the delete: an authorization request or
+    # grant for a locked client blocks on its foreign-key check until this
+    # transaction ends, and the delete re-checks liveness in a fresh READ
+    # COMMITTED snapshot. A flow that began before the lock is seen; one that
+    # begins after it waits and then fails cleanly on the missing client.
+    cutoff = _utcnow() - timedelta(seconds=mcp_settings.unused_client_ttl_seconds)
+    candidates = list(
+        await session.scalars(
+            select(McpOAuthClient.id)
+            .where(McpOAuthClient.created_at < cutoff, *_unused_client_criteria())
+            .order_by(McpOAuthClient.created_at)
+            .limit(MCP_UNUSED_CLIENT_PRUNE_BATCH)
+            .with_for_update(skip_locked=True)
         )
-        .order_by(McpOAuthClient.created_at)
-        .limit(MCP_UNUSED_CLIENT_PRUNE_BATCH)
     )
-    await session.execute(delete(McpOAuthClient).where(McpOAuthClient.id.in_(stale)))
+    if candidates:
+        await session.execute(
+            delete(McpOAuthClient).where(
+                McpOAuthClient.id.in_(candidates), *_unused_client_criteria()
+            )
+        )
+
+
+def _unused_client_criteria() -> tuple[ColumnElement[bool], ...]:
+    """Never granted, and no authorization request or code still live."""
+    now = _utcnow()
+    client_id = McpOAuthClient.client_id
+    return (
+        ~exists().where(McpOAuthGrant.client_id == client_id),
+        ~exists().where(
+            McpAuthorizationRequest.client_id == client_id,
+            McpAuthorizationRequest.expires_at > now,
+        ),
+        ~exists().where(
+            McpAuthorizationCode.client_id == client_id,
+            McpAuthorizationCode.expires_at > now,
+        ),
+    )
 
 
 class CiteLadderOAuthProvider:
