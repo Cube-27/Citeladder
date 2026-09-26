@@ -646,8 +646,11 @@ A change in AI answers, rankings, citations, traffic or another outcome we do no
 
 ## 4. Mistaken add-on or top-up purchases
 
-No discretionary seven-day unused-purchase refund is proposed. Existing rights
-for billing error, non-delivery and applicable law remain unchanged.
+**Pending owner decision D3.** If D3 is approved, a request may be made within
+7 calendar days of purchase only if no associated credits or additional capacity
+have been used. If D3 is not approved, this section offers no discretionary
+refund. Either way, existing rights for billing error, non-delivery and
+applicable law remain unchanged.
 
 Unused entitlement expiring under the purchase terms, or becoming unavailable because the base subscription has ended, does not by itself create a refund right.
 
@@ -879,7 +882,7 @@ backdate acceptance or change an earlier agreement by editing its date.
 | DPA | Include the same Agent categories and a completed processing/security schedule. Retain existing 30-day subprocessor notice and 15-day objection baseline pending signed revision. Any urgent-replacement exception needs approval. Customer responsibility does not remove Cube27's processor/security obligations. |
 | AI | Describe platform processing as verified business/API providers only once vendor evidence exists. Explain customer endpoints, recipients and transmitted context, provider terms and human review. Describe the unified Agent; exclude retired Content/Growth runtimes. No autonomous publishing or outcome guarantees. |
 | Cookies | Describe the persistent Cookie preferences control, analytics rejection/withdrawal and essential-session preservation. Confirm actual deployed traffic and first-party cookie domains before approving the inventory. Cross-host consent must not be inferred from host-local storage. |
-| Refund | Preserve current eligibility. Proposed targets: decision within five business days after complete information, initiation within a further five. Shorter legal periods prevail. No discretionary seven-day refund. |
+| Refund | Preserve current eligibility. Proposed targets: decision within five business days after complete information, initiation within a further five. Shorter legal periods prevail. The 7-day mistaken-purchase refund follows the pending D3 decision. |
 | Cancellation | Effective at verified paid-period end. No immediate deletion on cancellation. Preserve existing refund policy. Publish retention deadlines only after lifecycle acceptance. |
 | Subprocessors | Name only factual active subprocessors, separately from customer-directed providers and independent services. Confirm route/account, role, locations, data categories, training settings, retention and deletion from evidence. Never infer deployment from repository secrets or supported integrations. |
 | Contact | Approved identity: CUBE27 IT PRIVATE LIMITED; CIN U72900PN2020PTC194984; registered office Plot No. 12, Mulberry Garden 1, Magarpatta City, Hadapsar, Pune 411013, Maharashtra, India; contact@cube27.com. Named contact/designation/business phone remain pending. Proposed complaint acknowledgement 48 hours, resolution target 30 calendar days, shorter law controlling. |

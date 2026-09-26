@@ -28,7 +28,10 @@ def _domain(value: str) -> str:
         or parsed.port
     ):
         raise ValueError("Use a bare domain or * for the global stop")
-    domain = parsed.hostname.encode("idna").decode().lower().rstrip(".")
+    try:
+        domain = parsed.hostname.encode("idna").decode().lower().rstrip(".")
+    except UnicodeError as exc:
+        raise ValueError(f"Not a valid domain name: {value}") from exc
     if "." not in domain:
         # A bare TLD such as "com" would silently suppress every host under it.
         raise ValueError("Use a registrable domain; * is the only global stop")

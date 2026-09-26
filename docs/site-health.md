@@ -40,8 +40,9 @@ An in-flight HTTP request cannot be recalled; subsequent hops recheck the stop.
 
 Trusted platform administrators can dry-run `uv run python -m scripts.acquisition_control
 --actor <admin-email> --domain <domain-or-*> --reason <reason>` from `backend/`.
-`--apply` persists the stop; `--resume --apply` removes that rule. Parent-domain
-suppression includes subdomains; removing a domain rule does not override a
+`--apply` persists the stop; `--resume --apply` marks that persisted rule
+unblocked (the row and its actor/reason remain). Parent-domain
+suppression includes subdomains; unblocking a domain rule does not override a
 global `*` stop. This command sends no HTTP requests. Operators must not enter
 credentials or customer content in its reason. Crawler-page publication still
 requires the audit plan's remaining authorization/robots/pacing acceptance.

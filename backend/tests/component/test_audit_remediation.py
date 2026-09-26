@@ -176,6 +176,20 @@ async def test_suppression_is_live_matches_subdomains_and_global_stop(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "url", ["https://[unclosed/page", f"https://{'a' * 70}.example.test/"]
+)
+async def test_unparseable_hop_fails_closed_as_acquisition_unavailable(
+    url, session_factory
+):
+    # A malformed redirect Location must be refused, never crash the caller.
+    with pytest.raises(FetchError) as exc:
+        await authorize_acquisition(url, session_factory=session_factory)
+    assert exc.value.error_code == "acquisition_unavailable"
+    assert isinstance(exc.value.__cause__, ValueError)
+
+
+@pytest.mark.asyncio
 async def test_acceptance_is_idempotent_and_old_revision_survives_renewal(
     db_session, monkeypatch
 ):
