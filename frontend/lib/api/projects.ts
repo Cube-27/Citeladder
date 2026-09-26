@@ -7,9 +7,17 @@ import { z } from 'zod';
 import { apiClient, type ApiRequestOptions } from './client';
 import { workspaceSchema } from './schemas/auth';
 import { commandCenterSchema } from './schemas/opportunities';
-import { brandProfileSchema, projectSchema } from './schemas/project';
+import { brandProfileSchema, businessMapSchema, projectSchema } from './schemas/project';
 import { strictValidate } from './schemas/validation';
-import type { BrandProfile, BrandProfileDraft, CommandCenter, Project, Workspace } from './types';
+import type {
+  BrandProfile,
+  BrandProfileDraft,
+  BusinessMap,
+  BusinessMapEntry,
+  CommandCenter,
+  Project,
+  Workspace,
+} from './types';
 
 const workspaceListSchema = z.array(workspaceSchema);
 const projectListSchema = z.array(projectSchema);
@@ -29,6 +37,19 @@ export type ProjectInput = {
 };
 
 export type BrandProfileUpdateInput = Partial<BrandProfileDraft>;
+
+type BusinessMapEntryInput = Pick<BusinessMapEntry, 'value' | 'review_state'>;
+
+/** A full business-map edit: every offering's entries and exclusions. */
+export type BusinessMapUpdateInput = {
+  offerings: Array<{
+    offering: string;
+    attributes: BusinessMapEntryInput[];
+    situations: BusinessMapEntryInput[];
+    audiences: BusinessMapEntryInput[];
+    exclusions: Array<{ first: string; second: string }>;
+  }>;
+};
 
 export const projectsApi = {
   listWorkspaces: async (options?: ApiRequestOptions) => {
@@ -85,5 +106,22 @@ export const projectsApi = {
       options,
     );
     return strictValidate(brandProfileSchema, res, 'projects.updateBrandProfile');
+  },
+  getBusinessMap: async (projectId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<BusinessMap>(`/projects/${projectId}/business-map`, options);
+    return strictValidate(businessMapSchema, res, 'projects.getBusinessMap');
+  },
+  /** Replace the business map; surviving entries keep their provenance. */
+  updateBusinessMap: async (
+    projectId: string,
+    input: BusinessMapUpdateInput,
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.put<BusinessMap>(
+      `/projects/${projectId}/business-map`,
+      input,
+      options,
+    );
+    return strictValidate(businessMapSchema, res, 'projects.updateBusinessMap');
   },
 };

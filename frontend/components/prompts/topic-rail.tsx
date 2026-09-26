@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/select';
 import { Pressable } from '@/components/ui/pressable';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { Topic } from '@/lib/api/types';
+import { orderTopicsForRail } from '@/lib/prompts/topic-tree';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 
@@ -142,10 +143,11 @@ export function TopicRail({
           selected={selectedTopicId === null}
           onSelect={() => onSelect(null)}
         />
-        {topics.map((topic) => (
+        {orderTopicsForRail(topics).map(({ topic, nested }) => (
           <TopicItem
             key={topic.id}
             label={topic.name}
+            nested={nested}
             activeCount={topic.active_count}
             selected={selectedTopicId === topic.id}
             onSelect={() => onSelect(topic.id)}
@@ -195,7 +197,7 @@ function TopicSelect({
         className="w-full"
         options={[
           { value: '', label: 'All topics' },
-          ...topics.map((topic) => ({ value: topic.id, label: topic.name })),
+          ...orderTopicsForRail(topics).map(({ topic, label }) => ({ value: topic.id, label })),
         ]}
       />
       {topicErrorMessage(loadError, actionError) ? (
@@ -207,12 +209,14 @@ function TopicSelect({
 
 function TopicItem({
   label,
+  nested = false,
   activeCount,
   selected,
   onSelect,
   onDelete,
 }: Readonly<{
   label: string;
+  nested?: boolean;
   activeCount?: number;
   selected: boolean;
   onSelect: () => void;
@@ -222,6 +226,7 @@ function TopicItem({
     <div
       className={cn(
         'group flex min-w-0 items-center gap-0.5 rounded-[var(--radius-control)] pe-0.5',
+        nested && 'ms-3',
         selected ? 'bg-accent-subtle' : 'hover:bg-background-alt',
       )}
     >

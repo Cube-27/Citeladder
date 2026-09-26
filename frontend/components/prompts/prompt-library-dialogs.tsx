@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 
 import type { PromptGenerateInput, PromptImportRow } from '@/lib/api/prompts';
 import type { Prompt, PromptGenerateResponse, Topic } from '@/lib/api/types';
@@ -29,6 +29,7 @@ type PromptLibraryDialogsProps = {
   isGenerating: boolean;
   generateError?: unknown;
   generateResult: PromptGenerateResponse | null;
+  candidateReview?: ReactNode;
 };
 
 export function PromptLibraryDialogs({
@@ -52,6 +53,7 @@ export function PromptLibraryDialogs({
   isGenerating,
   generateError,
   generateResult,
+  candidateReview,
 }: Readonly<PromptLibraryDialogsProps>) {
   return (
     <>
@@ -84,6 +86,7 @@ export function PromptLibraryDialogs({
         isGenerating={isGenerating}
         error={generateError}
         result={generateResult}
+        review={candidateReview}
       />
     </>
   );

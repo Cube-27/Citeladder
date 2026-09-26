@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -30,9 +31,11 @@ import {
   formValuesToPromptUpdate,
   type PromptFormValues,
 } from '@/lib/prompts/forms';
+import { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
 import { Tabs } from '@/components/ui/tabs';
 
+import { CandidateReview } from './candidate-review';
 import { PromptEmptyState } from './prompt-empty-state';
 import { PromptLibraryDialogs } from './prompt-library-dialogs';
 import { PromptTable, type PromptMeasurement } from './prompt-table';
@@ -121,6 +124,17 @@ export function PromptLibrary({
     await queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
   };
 
+  const review = usePromptCandidates({
+    promptSetId: promptSet?.id ?? null,
+    workspaceId: requestScope.workspaceId,
+    onReviewed: async () => {
+      setStatusTab('active');
+      // Show every newly tracked prompt, whichever topic it landed in.
+      setSelectedTopicId(null);
+      await invalidate();
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (input: PromptInput) => {
       const options = requestOptions();
@@ -187,11 +201,9 @@ export function PromptLibrary({
     onMutate: () => setGenerateResult(null),
     onSuccess: async (result) => {
       setGenerateResult(result);
-      if (result.generated.length > 0) setStatusTab('active');
-      // Reset the topic filter to "All topics" so freshly generated rows are
-      // visible even if the run landed them in a topic other than the one the
-      // user was viewing.
-      setSelectedTopicId(null);
+      review.clearNotice();
+      // Candidates are reviewed in the dialog; topics may have been created.
+      await review.refresh();
       await invalidate();
     },
   });
@@ -349,6 +361,18 @@ export function PromptLibrary({
         {isError ? (
           <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
         ) : null}
+        {review.candidates.length && !generateOpen ? (
+          <Alert tone="info">
+            <span className="flex flex-wrap items-center justify-between gap-2">
+              {review.candidates.length === 1
+                ? '1 generated prompt is waiting for review.'
+                : `${review.candidates.length} generated prompts are waiting for review.`}
+              <Button variant="secondary" onClick={openGenerateDialog}>
+                Review suggestions
+              </Button>
+            </span>
+          </Alert>
+        ) : null}
 
         <ResizablePromptWorkspace
           railId="prompt-topic-rail"
@@ -419,6 +443,19 @@ export function PromptLibrary({
           isGenerating={generateMutation.isPending}
           generateError={generateMutation.isError ? generateMutation.error : undefined}
           generateResult={generateResult}
+          candidateReview={
+            review.candidates.length || review.notice ? (
+              <CandidateReview
+                candidates={review.candidates}
+                topics={topics}
+                onAccept={review.accept}
+                onReject={review.reject}
+                isReviewing={review.isReviewing}
+                error={review.error}
+                notice={review.notice}
+              />
+            ) : null
+          }
         />
       </Stack>
     </PageShell>

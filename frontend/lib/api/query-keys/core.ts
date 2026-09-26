@@ -36,6 +36,7 @@ export const projectKeys = {
   detail: (projectId: string) => ['projects', 'detail', projectId] as const,
   commandCenter: (projectId: string) => ['projects', 'command-center', projectId] as const,
   brandProfile: (projectId: string) => ['projects', 'brand-profile', projectId] as const,
+  businessMap: (projectId: string) => ['projects', 'business-map', projectId] as const,
 };
 
 export const promptKeys = {
@@ -43,6 +44,7 @@ export const promptKeys = {
   sets: (projectId: string) => ['prompts', 'sets', projectId] as const,
   set: (promptSetId: string) => ['prompts', 'set', promptSetId] as const,
   list: (promptSetId: string) => ['prompts', 'list', promptSetId] as const,
+  candidates: (promptSetId: string) => ['prompts', 'candidates', promptSetId] as const,
 };
 
 export const topicKeys = {

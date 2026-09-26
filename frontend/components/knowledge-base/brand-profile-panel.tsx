@@ -18,9 +18,12 @@ import { humanizeApiError } from '@/lib/api/errors';
 import { textRole } from '@/components/ui/typography';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
+import { BusinessMapEditor } from './business-map-editor';
+
 const PROFILE_TABS = [
   { id: 'facts', label: 'Facts & Positioning' },
   { id: 'audience', label: 'Audience & Offerings' },
+  { id: 'map', label: 'Business map' },
   { id: 'competitors', label: 'Competitors' },
 ] as const;
 
@@ -83,7 +86,7 @@ export function BrandProfilePanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
+      <div className={activeTab === 'map' ? 'hidden' : 'flex justify-end'}>
         <Button
           variant="primary"
           onClick={() => saveMutation.mutate()}
@@ -107,16 +110,20 @@ export function BrandProfilePanel({
         rootClassName="grid gap-4"
       >
         <TabPanel value={activeTab} className="focus-ring">
-          <ProfileTabPanel
-            activeTab={activeTab}
-            draft={draft}
-            productsInput={productsInput}
-            disabled={saveMutation.isPending}
-            competitors={competitors}
-            competitorSuggestions={competitorSuggestions}
-            onDraftChange={setDraft}
-            onProductsChange={setProductsInput}
-          />
+          {activeTab === 'map' && workspaceId ? (
+            <BusinessMapEditor projectId={projectId} workspaceId={workspaceId} />
+          ) : (
+            <ProfileTabPanel
+              activeTab={activeTab}
+              draft={draft}
+              productsInput={productsInput}
+              disabled={saveMutation.isPending}
+              competitors={competitors}
+              competitorSuggestions={competitorSuggestions}
+              onDraftChange={setDraft}
+              onProductsChange={setProductsInput}
+            />
+          )}
         </TabPanel>
       </Tabs>
     </div>

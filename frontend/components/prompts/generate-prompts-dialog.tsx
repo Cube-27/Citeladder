@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import type { PromptGenerateInput } from '@/lib/api/prompts';
 import type { PromptGenerateResponse, Topic } from '@/lib/api/types';
@@ -18,6 +18,7 @@ export function GeneratePromptsDialog({
   isGenerating,
   error,
   result,
+  review,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,6 +28,7 @@ export function GeneratePromptsDialog({
   isGenerating?: boolean;
   error?: unknown;
   result?: PromptGenerateResponse | null;
+  review?: ReactNode;
 }>) {
   const [count, setCount] = useState('10');
   const [topicId, setTopicId] = useState(defaultTopicId ?? '');
@@ -55,6 +57,7 @@ export function GeneratePromptsDialog({
       error={error}
       result={result}
       maxCount={MAX_GENERATION_COUNT}
+      review={review}
     />
   );
 }

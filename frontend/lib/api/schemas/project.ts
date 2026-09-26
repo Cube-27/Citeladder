@@ -81,6 +81,8 @@ export const promptSchema = responseObject({
 export const topicSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
+  // One level of nesting: a subtopic names its top-level parent.
+  parent_id: uuid().nullable().default(null),
   name: z.string(),
   description: z.string(),
   origin: z.enum(['manual', 'generated']),
@@ -90,17 +92,68 @@ export const topicSchema = responseObject({
   updated_at: z.string(),
 });
 
-// `POST /prompt-sets/{id}/generate` result: inserted suggestions, the topics
-// they landed in (with refreshed counts), and how many duplicates the DB
-// conflict-safe dedupe dropped.
+// A generated prompt awaiting review. It is never audited, charged to prompt
+// capacity or counted until a user accepts it.
+export const promptCandidateSchema = responseObject({
+  id: uuid(),
+  run_id: uuid(),
+  prompt_set_id: uuid(),
+  topic_id: uuid().nullable().default(null),
+  text: z.string(),
+  intent: z.string().default(''),
+  buyer_stage: buyerStageSchema.default(''),
+  prompt_intent: promptIntentDetailSchema.default(''),
+  cohort: promptCohortSchema,
+  created_at: z.string(),
+  expires_at: z.string(),
+});
+
+// `POST /prompt-sets/{id}/generate` result: staged candidates, the topics
+// they belong to, and how many duplicates were dropped.
 export const promptGenerateResponseSchema = responseObject({
-  generated: z.array(promptSchema),
+  candidates: z.array(promptCandidateSchema),
   topics: z.array(topicSchema),
   dropped_duplicates: z.number().int(),
   // What was asked for. The plan can be smaller than the request when the
   // selected topics cannot support it, and saying so beats returning fewer
   // prompts with no explanation.
   requested_count: z.number().int().default(0),
+});
+
+// `POST /prompt-sets/{id}/candidates/review` result.
+export const promptCandidateReviewResponseSchema = responseObject({
+  accepted: z.array(promptSchema),
+  rejected_count: z.number().int(),
+  dropped_duplicates: z.number().int(),
+  unavailable_count: z.number().int(),
+});
+
+// Business map: per-offering facts that ground generation. Entries carry
+// provenance; a model suggestion stays `suggested` until a person confirms it.
+export const businessMapEntrySchema = responseObject({
+  value: z.string(),
+  origin: z.enum(['manual', 'model']),
+  review_state: z.enum(['suggested', 'confirmed']),
+  reviewed_by: z.string().nullable().default(null),
+  reviewed_at: z.string().nullable().default(null),
+});
+
+const businessMapExclusionSchema = responseObject({
+  first: z.string(),
+  second: z.string(),
+});
+
+export const offeringMapSchema = responseObject({
+  offering: z.string(),
+  attributes: z.array(businessMapEntrySchema),
+  situations: z.array(businessMapEntrySchema),
+  audiences: z.array(businessMapEntrySchema),
+  exclusions: z.array(businessMapExclusionSchema),
+});
+
+export const businessMapSchema = responseObject({
+  offerings: z.array(offeringMapSchema),
+  available_offerings: z.array(z.string()),
 });
 
 export const brandProfileSourceSchema = z.enum(['manual', 'web_evidence', 'ai_suggested']);
