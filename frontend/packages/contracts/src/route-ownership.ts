@@ -11,7 +11,7 @@
 export type RouteStack = 'python' | 'typescript';
 
 export const ROUTE_OWNERSHIP = {
-  actions: 'python',
+  actions: 'typescript',
   agent: 'python',
   'ai-referrals': 'typescript',
   'audit-schedules': 'python',
@@ -60,4 +60,6 @@ export const TYPESCRIPT_INGRESS_PATHS = [
   '/api/v1/projects/*/opportunities',
   '/api/v1/projects/*/opportunities/*',
   '/api/v1/opportunities/*',
+  '/api/v1/projects/*/actions',
+  '/api/v1/actions/*',
 ] as const;

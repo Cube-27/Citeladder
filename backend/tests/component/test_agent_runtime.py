@@ -27,6 +27,7 @@ from app.core.security import encrypt_secret
 from app.domain.agent import model_calls, service
 from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.ledger import consumable_usage
+from app.domain.opportunities.actions import get_action
 from app.models.agent import (
     AgentModelAttempt,
     AgentOutputRevision,
@@ -236,8 +237,11 @@ async def test_a_turn_reads_evidence_and_saves_an_output_attached_to_its_page(
     assert {row.settlement_status for row in model_attempts} == {"zero_debit"}
     # The Action reads in progress because a linked chat has an output; the
     # Agent stored no status, and the chat is listed as the Action's work.
-    action_view = await client.get(f"/api/v1/actions/{output['action_id']}")
-    assert action_view.json()["status"] == "in_progress"
+    async with session_factory() as session:
+        _row, current_status, _members = await get_action(
+            session, workspace_id=action.workspace_id, action_id=action.id
+        )
+    assert current_status == "in_progress"
     assert action.status == "open"
     linked = await client.get(
         f"/api/v1/projects/{project_id}/agent/chats",

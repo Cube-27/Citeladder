@@ -1,8 +1,8 @@
-"""Opening, scheduling and settling one declaration's placement check.
+"""Scheduling and settling the TypeScript declaration's placement check.
 
 A declaration against an earned rule says a change was made to somebody else's
-page. This owner records what that change was, freezes the reading it will be
-measured against, and later compares a fresh reading to it.
+page. TypeScript freezes the expectation; this owner compares later readings
+and schedules bounded rechecks through the source-page inspector.
 
 The anchor is the IMPLEMENTATION EVENT. The same page and the same action can
 be attempted more than once, and a check has to know which declaration it
@@ -30,22 +30,9 @@ from app.analysis.opportunities.placement_outcome import (
     PlacementReading,
     evaluate_placement,
 )
-from app.core.config.earned_actions import (
-    RULE_EARNED_PAGE_ACQUIRE,
-    RULE_EARNED_PAGE_CORRECT,
-    RULE_EARNED_PAGE_DEFEND,
-    RULE_EARNED_PAGE_RESEARCH,
-)
 from app.core.config.placement import (
-    PLACEMENT_CHANGE_BRAND_LISTED,
-    PLACEMENT_CHANGE_DISCREPANCY_RESOLVED,
-    PLACEMENT_CHANGE_PLACEMENT_RESTORED,
-    PLACEMENT_CHANGE_SOURCE_RESOLVED,
-    PLACEMENT_CHECK_KIND,
-    PLACEMENT_CHECKER_VERSION,
     PLACEMENT_DUE_PAGES_MAX,
     PLACEMENT_REASON_EXHAUSTED,
-    PLACEMENT_RECHECK_AFTER_HOURS,
     PLACEMENT_RECHECK_INTERVAL_HOURS,
     PLACEMENT_RECHECK_MAX_ATTEMPTS,
     PLACEMENT_RETRYABLE_REASONS,
@@ -54,15 +41,10 @@ from app.core.config.placement import (
     PLACEMENT_STATE_UNMET,
 )
 from app.core.config.source_pages import ENTITY_KIND_BRAND, PRESENCE_PRESENT
-from app.domain.opportunities.content_handoff import persisted_handoff
-from app.domain.opportunities.projection import stable_key
-from app.domain.opportunities.visibility_evidence import owned_domain_list
 from app.domain.source_pages.persistence import OUTCOME_INSPECTED
 from app.domain.source_pages.projection import page_fact_strings
-from app.models.opportunity import Opportunity, OpportunityImplementationEvent
 from app.models.source_pages import (
     PlacementCheck,
-    SourcePage,
     SourcePageEntityPresence,
     SourcePageSnapshot,
 )
@@ -70,145 +52,7 @@ from app.models.source_pages import (
 __all__ = [
     "due_placement_page_ids",
     "evaluate_placement_checks",
-    "open_placement_check",
-    "placement_expected_check",
 ]
-
-# What each earned rule's done-state actually is. Acquiring a listing and
-# correcting one are different outcomes, which is why the rules are separate
-# ids in the first place; verifying both as "the brand appears" would undo
-# that distinction at the last step.
-_CHANGE_BY_RULE = {
-    RULE_EARNED_PAGE_ACQUIRE: PLACEMENT_CHANGE_BRAND_LISTED,
-    RULE_EARNED_PAGE_CORRECT: PLACEMENT_CHANGE_DISCREPANCY_RESOLVED,
-    RULE_EARNED_PAGE_DEFEND: PLACEMENT_CHANGE_PLACEMENT_RESTORED,
-    RULE_EARNED_PAGE_RESEARCH: PLACEMENT_CHANGE_SOURCE_RESOLVED,
-}
-
-
-def _brand_name(handoff: dict, fallback: str) -> str:
-    """The name the page was searched for, as the verdict recorded it.
-
-    Taken from the presence row rather than from the project, because that is
-    the name frozen against the roster the reading was judged under. The
-    project's current brand name is the fallback for a page with no verdict.
-    """
-    for entity in handoff.get("page_entities") or []:
-        if (entity or {}).get("entity_kind") == ENTITY_KIND_BRAND:
-            return str(entity.get("entity_name") or fallback)
-    return fallback
-
-
-def placement_expected_check(opportunity: Opportunity, *, brand_name: str) -> dict:
-    """The server-owned verification intent for one earned declaration.
-
-    Carried on the implementation event beside the other expected-check kinds.
-    It is never evaluated from an audit or a site crawl -- a publisher's page
-    is in neither -- so a verification triggered by one records it as
-    unobservable instead of quietly passing it.
-    """
-    handoff = persisted_handoff(opportunity)
-    return {
-        "kind": PLACEMENT_CHECK_KIND,
-        "rule_id": opportunity.rule_id,
-        "expected_change": _CHANGE_BY_RULE.get(
-            opportunity.rule_id, PLACEMENT_CHANGE_SOURCE_RESOLVED
-        ),
-        "url_hash": str(handoff.get("url_hash") or ""),
-        "target_url": opportunity.target_url,
-        "brand_name": _brand_name(handoff, brand_name),
-        "discrepancies": list(handoff.get("discrepancies") or []),
-        "deterioration": list(handoff.get("deterioration") or []),
-        "baseline_snapshot_id": handoff.get("snapshot_id"),
-    }
-
-
-async def open_placement_check(
-    session: AsyncSession,
-    *,
-    declaration: OpportunityImplementationEvent,
-    opportunity: Opportunity,
-    check: dict,
-    now: datetime | None = None,
-) -> PlacementCheck | None:
-    """Record what this declaration will be measured against, and when.
-
-    Returns ``None`` when the page identity is unknown to this project, which
-    is the honest outcome: there is nothing to re-read, so nothing can confirm
-    the placement. The declaration still stands and still reports its own
-    limitation.
-    """
-    moment = now or datetime.now(UTC)
-    url_hash = str(check.get("url_hash") or "")
-    if not url_hash:
-        return None
-    page = await session.scalar(
-        select(SourcePage).where(
-            SourcePage.project_id == declaration.project_id,
-            SourcePage.url_hash == url_hash,
-        )
-    )
-    if page is None:
-        return None
-    baseline_id = _uuid(check.get("baseline_snapshot_id"))
-    row = PlacementCheck(
-        workspace_id=declaration.workspace_id,
-        project_id=declaration.project_id,
-        implementation_event_id=declaration.id,
-        opportunity_stable_key=stable_key(opportunity),
-        rule_id=opportunity.rule_id,
-        source_page_id=page.id,
-        url_hash=url_hash,
-        expected_change=str(check.get("expected_change") or ""),
-        expected_detail={
-            "brand_name": check.get("brand_name") or "",
-            "owned_domains": await owned_domain_list(
-                session, project_id=declaration.project_id
-            ),
-            "discrepancies": list(check.get("discrepancies") or []),
-            "deterioration": list(check.get("deterioration") or []),
-        },
-        baseline_snapshot_id=baseline_id,
-        baseline_roster_version=await _roster_of(session, baseline_id),
-        state=PLACEMENT_STATE_PENDING,
-        # Not immediately: a publisher does not publish the moment somebody
-        # emails them, and reading the page an hour later spends a budget unit
-        # to observe the state we already knew.
-        due_at=declaration.declared_implemented_at
-        + timedelta(hours=PLACEMENT_RECHECK_AFTER_HOURS),
-        declared_at=declaration.declared_implemented_at,
-        checker_version=PLACEMENT_CHECKER_VERSION,
-        created_at=moment,
-        updated_at=moment,
-    )
-    session.add(row)
-    await session.flush()
-    return row
-
-
-def _uuid(value: object) -> uuid.UUID | None:
-    try:
-        return uuid.UUID(str(value)) if value else None
-    except ValueError:
-        return None
-
-
-async def _roster_of(session: AsyncSession, snapshot_id: uuid.UUID | None) -> str:
-    """The roster the baseline's verdicts were judged against.
-
-    Frozen here rather than re-derived later: the project's roster changes,
-    and a comparison that silently used today's would answer a different
-    question from the one the baseline answered.
-    """
-    if snapshot_id is None:
-        return ""
-    return (
-        await session.scalar(
-            select(SourcePageEntityPresence.roster_version)
-            .where(SourcePageEntityPresence.snapshot_id == snapshot_id)
-            .limit(1)
-        )
-    ) or ""
 
 
 async def due_placement_page_ids(

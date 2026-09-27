@@ -16,6 +16,7 @@ import { apiNoStore } from './http/no-store.ts';
 import { getLogger } from './logging.ts';
 import { requestId } from './request-id.ts';
 import { PRODUCT_ROUTES } from './routes/index.ts';
+import { registerMethodGuards } from './routes/define.ts';
 
 const logger = getLogger('api');
 
@@ -61,6 +62,7 @@ export function createApp(config: ServiceConfig, db: Database): Hono<AppEnv> {
       : c.json({ status: 'unavailable', database: 'down' }, 503),
   );
 
+  registerMethodGuards(app, PRODUCT_ROUTES);
   for (const route of PRODUCT_ROUTES) route.register(app, config, db);
 
   return app;

@@ -2545,6 +2545,9 @@
         "person": "citeladder-locks"
       },
       "prompt_trailing_punctuation": " \t\n\r\u000b\f?.!,;:"
+    },
+    "declaration": {
+      "output_phase_outline": "outline"
     }
   },
   "abuse": {

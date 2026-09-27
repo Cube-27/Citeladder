@@ -107,7 +107,7 @@ function evidenceSummary(row: OpportunityRow) {
 
 type Rank = { system_rank: number; display_rank: number; order_source: 'system' | 'manual' };
 
-function projectItem(
+export function projectItem(
   row: OpportunityRow,
   rank: Rank = { system_rank: 0, display_rank: 0, order_source: 'system' },
 ) {

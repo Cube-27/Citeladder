@@ -301,11 +301,21 @@ const pageFactExpectedCheckSchema = responseObject({
   expected_value: z.unknown(),
 });
 const metricExpectedCheckSchema = responseObject({
-  kind: z.enum(['visibility_metric', 'traffic_metric']),
+  kind: z.literal('traffic_metric'),
   metric: z.string(),
   direction: z.enum(['increase', 'decrease', 'equal']),
   expected_value: z.number(),
   tolerance: z.number(),
+});
+const visibilityExpectedCheckSchema = responseObject({
+  kind: z.literal('visibility_metric'),
+  metric: z.string(),
+  direction: z.enum(['increase', 'decrease', 'equal']),
+  min_delta: z.number(),
+  tolerance: z.number(),
+  target_prompt_id: uuid().nullable(),
+  baseline_metric_snapshot_id: uuid().optional(),
+  baseline_value: z.number().optional(),
 });
 /**
  * What a declaration against somebody else's page will be measured by.
@@ -335,6 +345,7 @@ export const expectedCheckSchema = z.discriminatedUnion('kind', [
   siteRuleExpectedCheckSchema,
   pageFactExpectedCheckSchema,
   metricExpectedCheckSchema,
+  visibilityExpectedCheckSchema,
   placementExpectedCheckSchema,
 ]);
 

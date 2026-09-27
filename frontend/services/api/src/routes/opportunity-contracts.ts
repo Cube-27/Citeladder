@@ -10,7 +10,7 @@ const json = z.record(z.string(), z.unknown());
 const nullableUuid = z.uuid().nullable();
 const ints = z.record(z.string(), z.int());
 
-const opportunityItem = z.object({
+export const opportunityItem = z.object({
   id: z.uuid(),
   project_id: z.uuid(),
   rule_id: z.string(),

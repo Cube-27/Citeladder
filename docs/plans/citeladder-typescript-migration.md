@@ -13,8 +13,9 @@ together with the removal of PR 3's Pydantic error-wording emulation. PR 5
 and verification) implemented locally on 27 September 2026 at the owner's
 request. PR 6 includes the explicitly approved detector foundation for PR 7.
 PR 7 is split at the owner's direction: PR 7a (Opportunity refresh and catalog
-routes) implemented on 27 September 2026, without Python emulation. Next is
-PR 7b (Action routes and declarations), which has not started. PR 7a-cleanup
+routes) implemented on 27 September 2026, without Python emulation. PR 7b
+(Action routes and declarations) implemented locally on 27 September 2026;
+commit-only delivery, with no PR or deployment requested. PR 7a-cleanup
 removed Python emulation from PRs 3–6 on 27 September 2026 (rules 4 and 7).
 Not execution authorization; each later PR is executed only when individually
 assigned.
@@ -515,10 +516,10 @@ No routes, task kinds, schema or policy ownership move.
 Cross-stack exceptions are local to their owners: Site Health still writes
 `SiteUrl.url_hash`, Python demand readers compare normalized query keys, source
 inspection writes roster hashes, prompt writers compare prompt hashes, both
-stacks take the project lock, and the Python Action reader groups the persisted
+stacks take the project lock, and the Python Agent attaches work to the persisted
 Action by its page key. Frozen measurement identities remain shared. Their live
 goldens and narrow Unicode/serialization rules retire when the final Python
-producer/consumer moves (the Action bridge in 7b; other owners in their later
+producer/consumer moves (the Agent retains the Action bridge after 7b; other owners in their later
 assigned PRs).
 
 Deliberate departures: ordinary URL parsing uses WHATWG URL; request dates use
@@ -532,6 +533,55 @@ serialization details that their active Python counterparts still compare.
 
 Validation: `./scripts/check.ps1`, affected TS suites on disposable PostgreSQL,
 and the route-ownership gate. Deployment and cutover soaks remain pending.
+
+### PR 7b: Action routes and declarations
+
+*As implemented:* the `actions` family is TypeScript-owned in the manifest and
+all three ingress Caddyfiles. Its four routes serve persisted list/detail reads,
+workflow updates and implementation declarations. The Python OpenAPI family was
+frozen before retirement; no retired implementation output corpus is retained.
+No schema or task-kind ownership changes.
+
+Declarations take the shared project lock before the Action row lock, so a
+refresh cannot mix member and snapshot revisions. They freeze server-owned
+targets, checks, visibility baselines and placement intent atomically with the
+status event. Same-key retries are checked before resolving evidence; workspace
+key collisions across projects recover without writing losing status events.
+
+Retired application modules: `api/opportunities.py`, `action_schemas.py`,
+`implementation_events.py`, `measurement_legs.py`, `visibility_checks.py` and
+`visibility_evidence.py` (the latter five under `domain/opportunities`). The
+Python status writers, status counts, declaration DTO and placement-opening
+functions are also removed. Five Python route/declaration/measurement test
+modules and the three status-write tests move to TS PostgreSQL coverage;
+placement inspection tests seed their declaration/check input directly.
+The development seeder still runs refreshes and comparable audits, but no longer
+automatically dismisses an Action through the retired Python workflow writer.
+The Agent runtime test reads its retained bridge, and the Action 404-envelope
+case moves from Python to the TS route test.
+
+Retained bridges and deletion conditions:
+- `actions.py` reads and attach plus `analysis/opportunities/actions.py`: the
+  Agent's tool catalog and output attachment still call them; retire after the
+  last Agent caller moves. Shared page-key goldens therefore remain.
+- `action_status.py`: effective-status reads for the Agent, MCP and command
+  center remain; no Python workflow mutation remains.
+- `placement_checks.py`: the Python source-page inspector still settles and
+  reschedules the TS-created check. TS owns creation, Python owns inspection.
+- Opportunity queries, projections, content handoff and `OpportunityItem`
+  remain for the command center, Agent and seed tooling until those callers move.
+
+Deliberate corrections: visibility and placement baseline queries enforce
+workspace/project provenance; placement baselines must also belong to the
+target source page. Placement expectations include the project's primary
+website among owned domains. Measurement legs select the newest observation.
+The client visibility-check schema now accepts baseline/min-delta expectations
+instead of requiring the unrelated absolute traffic `expected_value`.
+Declaration fingerprints use normalized ISO timestamps and ordinary JSON.
+Replays compare the immutable original request fields, including timestamp
+equality at PostgreSQL microsecond precision, so Python-created declarations
+remain replayable without Python serialization emulation. Deployment and soak
+remain pending.
 
 ### PR 8: Commerce and search intelligence
 

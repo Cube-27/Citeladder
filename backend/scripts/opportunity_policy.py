@@ -13,6 +13,7 @@ from app.core.config import (
     source_pages,
     source_patterns,
 )
+from app.core.config.agent import OUTPUT_PHASE_OUTLINE
 from app.core.config.agent_skills import CONTENT_FORMAT_IDS
 from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH
 from app.core.config.audits import MEASUREMENT_POLICY_KEY
@@ -87,6 +88,7 @@ def opportunity_policy() -> dict[str, Any]:
         "measurement_policy_key": MEASUREMENT_POLICY_KEY,
         "tracking_query_params": sorted(TRACKING_QUERY_PARAMS),
         "refresh": _refresh_policy(),
+        "declaration": {"output_phase_outline": OUTPUT_PHASE_OUTLINE},
     }
 
 
