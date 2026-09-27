@@ -15,8 +15,9 @@ The [prompt API](../backend/app/api/prompts.py) and
 [generation service](../backend/app/domain/prompts/generation.py) authorize the
 workspace/project, validate topic/cohort selection, gather confirmed brand
 context and optional observed demand, call the configured model, then recheck
-ownership and stage the admitted suggestions for review. Generation does not
-start an audit.
+ownership and stage the admitted suggestions for review. A request may select
+several topics (`topic_ids`; none means every topic). Generation does not start
+an audit.
 
 Generated prompts are **candidates**, not prompts. Each Generate request records
 a `PromptGenerationRun` (request, generator version, provenance) and pending
@@ -30,17 +31,25 @@ and the candidate's validation into `generation_evidence`; reject deletes. An
 over-allowance accept writes nothing. Unreviewed candidates expire after
 `GENERATION_CANDIDATE_RETENTION_HOURS`; expired rows are hidden and purged by
 the next write. The Generate dialog shows the pending list with select-all and
-**Accept selected** / **Reject selected**.
+**Accept selected** / **Reject selected**; within a run, rows the quality judge
+flagged are listed last with advisory labels and stay selectable.
 
 Topics may have one level of subtopics (`Topic.parent_id`, same project); a
 subtopic cannot have children, and deleting a parent promotes its subtopics.
+The topic rail adds a subtopic under a chosen top-level topic.
 
 The [business map](../backend/app/domain/projects/business_map.py), edited under
 Brand knowledge and stored in `BusinessContext.business_map`, lists per
 confirmed offering its attributes, situations/constraints and audiences, plus
 excluded pairs that never combine. Entries carry origin and review state: a
 model suggestion stays `suggested` until a person confirms it, and edits keep
-each surviving entry's provenance. Generation does not read the map yet.
+each surviving entry's provenance. When a Generate request selects confirmed
+offerings with no map entries, one bounded model call
+([map suggestions](../backend/app/domain/prompts/map_suggestions.py)) proposes
+them; they ground that run and are stored `suggested` with model identity and
+the generation run id, only for offerings still empty at write time, and never
+naming the brand or a competitor. A failed suggestion call only means cells
+without facets.
 
 Onboarding creates no prompts or topics; a created project starts with an
 empty prompt set and the user chooses what to track. Generation uses existing
@@ -61,20 +70,44 @@ An offer matching the business category stays eligible alongside other offers;
 provider-only labels are rejected. Configuration and [onboarding topic admission](../backend/app/domain/projects/onboarding/topic_admission.py)
 own these decisions, not a copied vocabulary list in documentation.
 
-Generation assigns canonical topics and short slot IDs, requested count and
-cohort. The model chooses natural commercial wording and labels buyer stage and
-prompt intent; code resolves legacy intent. Technical admission checks known
-slots, topic ownership, allowed labels, cohort identity, normalized exact
-duplicates and the shared length bound. Core queries cannot name the tracked
-brand, aliases or supplied competitors; diagnostics name the brand and
-comparisons also name an accepted competitor.
+Generation plans `count × GENERATION_OVERGENERATE_FACTOR`
+[cells](../backend/app/domain/prompts/generation_cells.py): per selected topic,
+its offering plus at most two attribute, situation/constraint or audience
+entries, a target buyer stage and, for area-served businesses, a market.
+Excluded pairs never share a cell and the full product is never enumerated;
+cells are picked least-used-first and confirmed entries before suggestions. A
+subtopic uses its parent's offering map; a topic without a map gets bare cells,
+never invented facts. Each slot carries its cell as `buyer_need`, and the model
+writes the one natural question a buyer with that need would ask, labelling
+buyer stage and prompt intent (code resolves legacy intent).
 
-Commercial relevance and distinct needs are model guidance and human review
-criteria, not lexical scores. There are no word-count windows, opening quotas,
-fuzzy-similarity quality judges or automatic rewrite loops. Batching, bounded
-technical retries and partial-result behavior remain. Concurrent sibling
-batches do not coordinate their accepted text; final admission handles exact
-duplicates.
+Admission runs before any quality judgment: known slots, topic ownership,
+allowed labels, cohort identity, normalized exact duplicates, the shared length
+bound, topical binding, texts already tracked or pending, and exact copies of
+observed demand queries. Core queries cannot name the tracked brand, aliases or
+supplied competitors; diagnostics name the brand and comparisons also name an
+accepted competitor. [Selection](../backend/app/domain/prompts/generation_selection.py)
+then keeps at most `count`, spread across topic, stage, audience and market; a
+shortfall is reported, never filled. `candidates_generated` counts what passed
+admission and is never a market size. Each candidate keeps its cell in
+`evidence_refs`, copied into `generation_evidence` on accept.
+
+The [quality judge](../backend/app/domain/prompts/quality_judge.py) runs in
+**shadow mode** through the [JEV connector](../backend/app/connectors/jev.py)
+when `JEV_API_KEY` is set (blank is off; production stays unset until the
+TypeSafe subprocessor revision is published). It judges only the selected
+candidates, so it cannot change what reaches review: yes/no fit, buyer
+relevance, naturalness, standalone and sensibility; intent and stage labels
+recorded beside the model's; and a per-topic duplicate choice among tracked and
+earlier candidates. Its state omits the brand and competitors. Each decision
+stores model, question-schema and policy versions and a state hash, so an
+identical judgment already recorded in the set is reused. Decisions order and
+flag the review list and never drop a row; any JEV failure reports
+`quality_gate="unavailable"` and generation still succeeds. JEV calls are
+bounded by `JEV_MAX_CALLS_PER_GENERATION`, not the agent-call bucket.
+Commercial relevance and distinct needs remain human review criteria; there
+are no word-count windows, opening quotas or automatic rewrite loops. Batching,
+bounded technical retries and partial-result behavior remain.
 
 Prompt generation retains its requested-count, topic, cohort and
 batching semantics. Saving/activation retains explicit user-action

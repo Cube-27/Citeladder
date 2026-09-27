@@ -4,9 +4,9 @@
 
 - [Prompt generation v2](citeladder-prompt-generation-v2.md)
   — owner-approved on 26 September 2026 and revised after the prompt-universe/JEV
-  research. PR 1 (#161) and PR 2 (#162) merged; PR 3a (business map, candidate
-  staging, review) is implemented. Next: PR 3b (rebuilt generation, JEV shadow)
-  and PR 3c (policy revision, JEV gate).
+  research. PR 1 (#161), PR 2 (#162) and PR 3a (#163) merged; PR 3b
+  (business-map generation, JEV shadow) is implemented. Next: PR 3c (policy
+  revision, JEV gate).
 
 - [Demo and production hardening](citeladder-production-hardening.md)
   — repository-side Phase 1 subset implemented locally on 26 September 2026 in

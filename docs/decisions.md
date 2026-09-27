@@ -89,3 +89,17 @@ one miss would corrupt measurement.
 Source: owner decision of 26 September 2026 in the
 [prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 3a.
 [Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
+
+## Generated prompts get a shadow quality judgment
+
+Generation records bounded JEV (TypeSafe) judgments on the candidates it
+selects. This reverses "no fuzzy-similarity quality judges" for recording only:
+in shadow mode a judgment ranks and flags the review list and never drops a
+candidate, and code keeps every check code can make. It becomes a gate only
+after calibration against real accept/reject decisions and the privacy
+revision naming TypeSafe (PR 3c); until that revision is published, production
+runs without `JEV_API_KEY`.
+
+Source: owner decision of 26 September 2026 in the
+[prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 3b.
+[Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
