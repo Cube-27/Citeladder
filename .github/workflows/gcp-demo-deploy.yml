@@ -218,6 +218,7 @@ jobs:
           CLOUDFLARE_ORIGIN_KEY: ${{ secrets.CLOUDFLARE_ORIGIN_KEY }}
           DEFAULT_AGENT_API_KEY: ${{ secrets.DEFAULT_AGENT_API_KEY }}
           KEENABLE_API_KEY: ${{ secrets.KEENABLE_API_KEY }}
+          JEV_API_KEY: ${{ secrets.JEV_API_KEY }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
           GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
           GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
@@ -271,6 +272,7 @@ jobs:
           sync_optional_value citeladder-worker-origin-token-previous "$CITELADDER_ORIGIN_TOKEN_PREVIOUS"
           sync_optional_value citeladder-default-agent-api-key "$DEFAULT_AGENT_API_KEY"
           sync_optional_value citeladder-keenable-api-key "$KEENABLE_API_KEY"
+          sync_optional_value citeladder-jev-api-key "$JEV_API_KEY"
           sync_optional_value citeladder-tavily-api-key "$TAVILY_API_KEY"
           sync_value citeladder-google-oauth-client-id "$GOOGLE_OAUTH_CLIENT_ID"
           sync_value citeladder-google-oauth-client-secret "$GOOGLE_OAUTH_CLIENT_SECRET"

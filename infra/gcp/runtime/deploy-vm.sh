@@ -160,6 +160,7 @@ origin_token="$(secret citeladder-worker-origin-token)"
 origin_token_previous="$(secret citeladder-worker-origin-token-previous 2>/dev/null || true)"
 agent_key="$(secret citeladder-default-agent-api-key 2>/dev/null || true)"
 keenable_key="$(secret citeladder-keenable-api-key 2>/dev/null || true)"
+jev_key="$(secret citeladder-jev-api-key 2>/dev/null || true)"
 tavily_key="$(secret citeladder-tavily-api-key 2>/dev/null || true)"
 # Required, not best-effort: without these Google sign-in and the GSC/GA4
 # connect buttons 503 for every visitor.
@@ -234,6 +235,7 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env DEFAULT_AGENT_BASE_URL "$DEFAULT_AGENT_BASE_URL"
   write_env DEFAULT_AGENT_MODEL "$DEFAULT_AGENT_MODEL"
   [[ -z "$keenable_key" ]] || write_env KEENABLE_API_KEY "$keenable_key"
+  [[ -z "$jev_key" ]] || write_env JEV_API_KEY "$jev_key"
   [[ -z "$tavily_key" ]] || write_env TAVILY_API_KEY "$tavily_key"
   write_env INTEGRATION_GOOGLE_CLIENT_ID "$google_client_id"
   write_env INTEGRATION_GOOGLE_CLIENT_SECRET "$google_client_secret"
