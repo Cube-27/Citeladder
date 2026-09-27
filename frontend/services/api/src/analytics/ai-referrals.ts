@@ -149,7 +149,7 @@ export async function getAiReferrals(
       ...versions,
     };
   }
-  if (Boolean(snapshot.metrics) && !isObject(snapshot.metrics)) {
+  if (snapshot.metrics != null && !isObject(snapshot.metrics)) {
     throw new TypeError('stored metrics are not an object');
   }
   const metrics = isObject(snapshot.metrics) ? snapshot.metrics : {};

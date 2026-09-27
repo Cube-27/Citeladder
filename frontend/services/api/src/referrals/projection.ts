@@ -18,6 +18,7 @@
  * Dates are ISO `YYYY-MM-DD` strings, which also order correctly as text.
  */
 import { policy } from '../config.ts';
+import { compareText } from '../text-order.ts';
 
 const { analytics } = policy;
 
@@ -178,6 +179,6 @@ export function buildAiReferralsProjection(options: {
     // Provenance is the evidence THIS window folded (invariant 4).
     source_classification_ids: inWindow
       .flatMap((fact) => (fact.classification_id === null ? [] : [fact.classification_id]))
-      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+      .sort(compareText),
   };
 }

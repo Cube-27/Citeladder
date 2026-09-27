@@ -2,6 +2,7 @@ import { policy } from '../config.ts';
 import { round } from '../demand/projection.ts';
 import { record } from '../traffic/performance.ts';
 import { epochMicros, parseDatetime } from '../http/datetimes.ts';
+import { compareText } from '../text-order.ts';
 const p = policy.opportunity.placement;
 export type Evaluation = {
   observed: number;
@@ -167,11 +168,9 @@ export function gapChanges(before: string[], after: string[], hasLatest: boolean
   const a = new Set(before);
   const b = new Set(after);
   return {
-    no_longer_observed: [...a]
-      .filter((k) => !b.has(k))
-      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
-    persistent: [...a].filter((k) => b.has(k)).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
-    new: [...b].filter((k) => !a.has(k)).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+    no_longer_observed: [...a].filter((k) => !b.has(k)).sort(compareText),
+    persistent: [...a].filter((k) => b.has(k)).sort(compareText),
+    new: [...b].filter((k) => !a.has(k)).sort(compareText),
     state: 'available',
   };
 }

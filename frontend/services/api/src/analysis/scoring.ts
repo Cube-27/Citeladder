@@ -23,7 +23,7 @@ function listOf(value: unknown): unknown[] {
 
 /** `str(item) for item in values if item`. */
 function truthyStrings(values: unknown[]): string[] {
-  return values.filter(Boolean).map((value) => String(value ?? ''));
+  return values.filter(Boolean).map(String);
 }
 
 function competitorConfigs(config: JsonObject): CompetitorConfig[] {

@@ -2,10 +2,10 @@ import { policy } from '../../config.ts';
 import { round } from '../../demand/projection.ts';
 import type { AnalysisEvidence, PromptSnapshotEvidence } from './evidence.ts';
 import { byDomain } from './source-patterns.ts';
+import { compareText } from '../../text-order.ts';
 const p = policy.opportunity.earned_actions;
 const s = policy.opportunity.source_patterns;
-const sorted = (values: Iterable<string>) =>
-  [...values].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+const sorted = (values: Iterable<string>) => [...values].sort(compareText);
 function observedPath(kind: string): string {
   if (kind === s.SOURCE_CLASS_BRAND_OWNED) return p.ACTION_PATH_OWNED;
   return kind === s.SOURCE_CLASS_COMPETITOR_OWNED ? 'competitive_evidence' : p.ACTION_PATH_EARNED;
@@ -63,7 +63,7 @@ type Rollup = {
 function project(value: Rollup, eligible: number) {
   const count = value.analysis_ids.size;
   const rate = eligible ? count / eligible : 0;
-  const citations = [...value.citations].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const citations = [...value.citations].sort(([a], [b]) => compareText(a, b));
   const prompts = [...value.prompt_indices].sort((a, b) => a - b);
   return {
     canonical_domain: value.canonical_domain,

@@ -10,6 +10,7 @@ import { record } from '../traffic/performance.ts';
 import { classifyProjectQueries } from './classification.ts';
 import { stableHash, unique, type QueryInput, type SearchInput } from './projection.ts';
 import { latestQuerySnapshot, queryEvidenceRevision, type DemandScope } from './query-evidence.ts';
+import { compareText } from '../text-order.ts';
 
 export const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
@@ -170,7 +171,7 @@ export async function sourceMaterial(
     traffic: traffic.material,
     query_evidence_revision: queryRevision,
     query_classifications: [...classifications]
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .sort(([a], [b]) => compareText(a, b))
       .map(([key, v]) => ({
         query: key,
         classification: v.classification,

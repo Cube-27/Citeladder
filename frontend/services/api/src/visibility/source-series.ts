@@ -11,6 +11,7 @@ import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { pydanticUtc, utcText } from '../db/timestamps.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
+import { compareText } from '../text-order.ts';
 
 /** Lines a reader can tell apart; the design system's categorical chart tokens. */
 export const SOURCE_SERIES_MAX_SERIES = 5;
@@ -40,7 +41,7 @@ function assembleSeries(
     limit: number;
   },
 ): SourceSeriesResponse {
-  const buckets = [...input.totals.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const buckets = [...input.totals.keys()].sort(compareText);
   const ranked = new Map<string, number>();
   for (const row of rows) ranked.set(row.key, (ranked.get(row.key) ?? 0) + row.citations);
   const leading = [...ranked.entries()]

@@ -13,13 +13,13 @@ import {
   valueFactorForPrompt,
 } from './scoring.ts';
 import { summarizeSourcePattern } from './source-patterns.ts';
+import { compareText } from '../../text-order.ts';
 const p = policy.opportunity.opportunities;
 export const rules = p.OPPORTUNITY_RULES_BY_ID as Record<
   string,
   (typeof p.OPPORTUNITY_RULES_BY_ID)[keyof typeof p.OPPORTUNITY_RULES_BY_ID]
 >;
-const sortedUnique = (values: string[]) =>
-  [...new Set(values)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+const sortedUnique = (values: string[]) => [...new Set(values)].sort(compareText);
 function gapHit(
   e: VisibilityEvidence,
   rule: string,
@@ -60,7 +60,7 @@ function gapHit(
       source_pattern: summarizeSourcePattern(rows.flatMap((a) => a.citations)),
       ...(rule === 'brand_absent_high_value_prompt'
         ? { competitor_names: competitors, engines }
-        : { owned_domains: [...e.owned_domains].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)) }),
+        : { owned_domains: [...e.owned_domains].sort(compareText) }),
       audit_id: e.audit_id,
       priority_factors: {
         value_factor: value,
@@ -69,9 +69,7 @@ function gapHit(
         recommendation_strength_factor: strength,
       },
     },
-    source_analysis_ids: rows
-      .map((a) => a.analysis_id)
-      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+    source_analysis_ids: rows.map((a) => a.analysis_id).sort(compareText),
     source_issue_ids: [],
     source_metric_ids: [],
     value_factor: value,
@@ -113,7 +111,7 @@ function presentation(issue: SiteEvidence['issues'][number]): [string | null, st
     .map(record)
     .filter((a) => a.outcome === 'missing')
     .map((a) => String(a.name ?? ''))
-    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    .sort(compareText);
   const selected = entries.find(
     ([names]) => JSON.stringify(names) === JSON.stringify(missing),
   )?.[1];

@@ -1,13 +1,14 @@
 /** Pure demand decisions over recorded evidence. No model or provider calls. */
 import { policy } from '../config.ts';
 import { hash } from '../traffic/normalization.ts';
+import { compareText } from '../text-order.ts';
 
 const p = policy.demand;
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (value && typeof value === 'object')
     return `{${Object.entries(value)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .sort(([a], [b]) => compareText(a, b))
       .map(([k, v]) => `${JSON.stringify(k)}:${stableJson(v)}`)
       .join(',')}}`;
   return JSON.stringify(value);
@@ -66,8 +67,7 @@ export type Evaluation = {
   counts_by_classification: Record<string, number>;
   limitations: string[];
 };
-export const unique = (values: string[]) =>
-  [...new Set(values)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+export const unique = (values: string[]) => [...new Set(values)].sort(compareText);
 function priority(impressions: number, ctr: number | null, gap: number) {
   const demand = Math.min(1, Math.log1p(Math.max(impressions, 0)) / Math.log1p(10000));
   const weakness = ctr === null ? 1 : Math.max(0, 1 - ctr);
@@ -140,12 +140,11 @@ export function aggregate(rows: QueryInput[]) {
     classification_override_ids: unique(
       rows.flatMap((r) => (r.classification_override_id ? [r.classification_override_id] : [])),
     ),
-    observed_start:
-      rows.map((r) => r.observed_date).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))[0] ?? null,
+    observed_start: rows.map((r) => r.observed_date).sort(compareText)[0] ?? null,
     observed_end:
       rows
         .map((r) => r.observed_date)
-        .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+        .sort(compareText)
         .at(-1) ?? null,
     page_title: page?.page_title ?? '',
     page_h1_texts: page?.page_h1_texts ?? [],

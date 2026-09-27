@@ -66,16 +66,14 @@ export async function brandIdentities(
     .orderBy('created_at')
     .execute();
   for (const competitor of competitors) {
-    const domains = listOf(competitor.domains)
-      .filter(Boolean)
-      .map((value) => String(value ?? ''));
+    const domains = listOf(competitor.domains).filter(Boolean).map(String);
     const identity = {
       logo_url: competitor.logo_asset_id ? competitorLogoUrl(project.id, competitor.id) : null,
       website: domains[0] ?? null,
     };
     for (const name of [competitor.name, ...listOf(competitor.aliases)]) {
       const key = identityKey(name);
-      if (Boolean(name) && !found.has(key)) found.set(key, identity);
+      if (name && !found.has(key)) found.set(key, identity);
     }
   }
   return found;

@@ -3,6 +3,7 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { policy } from '../config.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
 import { normalizeQuery as foldQuery } from '../traffic/normalization.ts';
+import { compareText } from '../text-order.ts';
 
 export function normalizeQuery(value: string): string {
   return (foldQuery(value).match(/[\p{L}\p{N}_]+/gu) ?? []).join(' ');
@@ -34,7 +35,7 @@ function classifyQuery(
   for (const term of domains) vocabulary.add(term);
   const matched = [...vocabulary]
     .filter((term) => ` ${normalized} `.includes(` ${term} `))
-    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    .sort(compareText);
   const canonical = normalizeQuery(brand.brand_name);
   const classification = !matched.length
     ? 'non_branded'
@@ -58,9 +59,7 @@ export async function classifyProjectQueries(
   projectId: string,
   queries: string[],
 ): Promise<Map<string, Classification>> {
-  const values = [...new Set(queries.filter(Boolean).map(normalizeQuery))].sort((a, b) =>
-    a < b ? -1 : a > b ? 1 : 0,
-  );
+  const values = [...new Set(queries.filter(Boolean).map(normalizeQuery))].sort(compareText);
   const result = new Map<string, Classification>();
   if (!values.length) return result;
   const scope = new WorkspaceScope(workspaceId);

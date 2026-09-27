@@ -21,6 +21,7 @@ import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { passageTexts, projectRoster } from '../source-pages/reading.ts';
 import { record } from '../traffic/performance.ts';
+import { compareText } from '../text-order.ts';
 
 const e = policy.opportunity.earned_actions;
 const s = policy.opportunity.source_pages;
@@ -165,15 +166,11 @@ function answerIndex(visibility: VisibilityEvidence) {
     const indices = [...new Set(selected.map((row) => row.prompt_index))].sort((a, b) => a - b);
     return {
       prompt_indices: indices,
-      themes: [...new Set(indices.flatMap((index) => themes.get(index) ?? []))].sort((a, b) =>
-        a < b ? -1 : a > b ? 1 : 0,
-      ),
-      analysis_ids: selected
-        .map((row) => row.analysis_id)
-        .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+      themes: [...new Set(indices.flatMap((index) => themes.get(index) ?? []))].sort(compareText),
+      analysis_ids: selected.map((row) => row.analysis_id).sort(compareText),
       // Descriptive only: every name in an answer attaches to every page it cited.
       answer_competitors: [...new Set(selected.flatMap((row) => row.competitor_names))].sort(
-        (a, b) => (a < b ? -1 : a > b ? 1 : 0),
+        compareText,
       ),
     };
   };
@@ -250,7 +247,7 @@ export async function earnedPageHits(
 ): Promise<DetectorHit[]> {
   const workspace = new WorkspaceScope(scope.workspaceId);
   const cited = await citedByHash(db, scope.workspaceId, audit.id);
-  const hashes = [...cited.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const hashes = [...cited.keys()].sort(compareText);
   if (!hashes.length) return [];
   const pages = await workspace
     .selectFrom(db, 'source_pages')

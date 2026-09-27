@@ -6,7 +6,6 @@
  * held to the Python owner by a live golden master.
  */
 import { policy } from '../config.ts';
-
 import { casefold, collapseIdentityWhitespace, hash } from '../traffic/normalization.ts';
 
 const TRAILING = new Set(policy.opportunity.refresh.prompt_trailing_punctuation);
