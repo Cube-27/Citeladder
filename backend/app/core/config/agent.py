@@ -59,7 +59,9 @@ AGENT_OUTPUT_TITLE_MAX_CHARS: Final = 255
 AGENT_OUTPUT_BODY_MAX_CHARS: Final = 100_000
 # The chat reply is conversational; the deliverable belongs in the output.
 AGENT_REPLY_MAX_CHARS: Final = 12_000
-AGENT_CHAT_TITLE_MAX_CHARS: Final = 120
+# A chat title names the task in the chat list and page header: the first
+# sentence of the opening message, cut at a word boundary.
+AGENT_CHAT_TITLE_MAX_CHARS: Final = 60
 AGENT_IDEMPOTENCY_KEY_MAX_CHARS: Final = 128
 AGENT_LIST_DEFAULT_LIMIT: Final = 30
 AGENT_LIST_MAX_LIMIT: Final = 100

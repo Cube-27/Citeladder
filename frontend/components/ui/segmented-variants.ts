@@ -5,7 +5,7 @@ export const segmentedTrackVariants = cva(
 );
 
 export const segmentedItemVariants = cva(
-  'focus-ring type-control shrink-0 inline-flex h-[calc(var(--control-height-sm)-4px)] items-center justify-center rounded-[var(--radius-control)] px-3 whitespace-nowrap transition-[background-color,color,box-shadow] disabled:cursor-not-allowed disabled:opacity-50',
+  'focus-ring type-badge shrink-0 inline-flex h-[calc(var(--control-height-sm)-4px)] items-center justify-center rounded-[var(--radius-control)] px-3 whitespace-nowrap transition-[background-color,color,box-shadow] disabled:cursor-not-allowed disabled:opacity-50',
   {
     variants: {
       selected: {

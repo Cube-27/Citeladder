@@ -18,6 +18,7 @@ from app.domain.agent.prompting import (
 
 _CONTENT = AGENT_SKILL_REGISTRY["content_create"]
 _PLAN = AGENT_SKILL_REGISTRY["growth_plan"]
+_PROMPTS = AGENT_SKILL_REGISTRY["prompt_discovery"]
 
 
 def _output(phase: str, *, approved: bool) -> dict[str, object]:
@@ -42,6 +43,13 @@ def test_long_form_needs_an_approved_outline_whatever_the_phase() -> None:
         _CONTENT, _output("outline", approved=False), RUN_MODE_DRAFT_FROM_OUTLINE
     )
     assert not outline_required(_PLAN, None, RUN_MODE_TURN)
+
+
+def test_a_prompt_portfolio_starts_as_a_coverage_plan_to_approve() -> None:
+    assert outline_required(_PROMPTS, None, RUN_MODE_TURN)
+    assert not outline_required(
+        _PROMPTS, _output("outline", approved=True), RUN_MODE_TURN
+    )
 
 
 def test_only_returned_record_references_survive_in_visible_text() -> None:

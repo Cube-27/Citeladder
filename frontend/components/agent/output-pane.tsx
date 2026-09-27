@@ -57,7 +57,7 @@ export function OutputPane({
   if (!revision) return null;
   const locked = runActive || !canEdit;
   return (
-    <section aria-labelledby="output-title" className="grid content-start gap-3">
+    <section aria-labelledby="output-title" className="grid min-w-0 content-start gap-3">
       <header className="grid gap-2">
         <div className="flex items-start gap-2">
           <h2 id="output-title" className={textRole('sectionTitle', 'min-w-0 flex-1')}>
@@ -88,6 +88,7 @@ export function OutputPane({
         <OutlineApproval
           workspaceId={workspaceId}
           chatId={chatId}
+          kind={output.kind}
           revision={revision}
           runActive={runActive}
           canSend={canSend}
@@ -95,13 +96,14 @@ export function OutputPane({
         {editing ? null : (
           <OutputDeclaration workspaceId={workspaceId} output={output} runActive={runActive} />
         )}
-        {!editing && output.kind === 'prompt_portfolio' ? (
-          <PromptProposalAction
+        {editing ? null : (
+          <PortfolioSubmission
             workspaceId={workspaceId}
-            revisionId={revision.id}
+            kind={output.kind}
+            revision={revision}
             disabled={locked || !canSend}
           />
-        ) : null}
+        )}
       </header>
       <Tabs
         value={tab}
@@ -113,7 +115,7 @@ export function OutputPane({
           { value: 'history', label: 'History' },
         ]}
       >
-        <TabPanel value="output" className="pt-3">
+        <TabPanel value="output" className="min-w-0 pt-3">
           {draft ? (
             <OutputEditor
               workspaceId={workspaceId}
@@ -152,6 +154,24 @@ export function OutputPane({
   );
 }
 
+/** A written question portfolio (not its coverage plan) can go to Prompts review. */
+function PortfolioSubmission({
+  workspaceId,
+  kind,
+  revision,
+  disabled,
+}: Readonly<{
+  workspaceId: string;
+  kind: AgentOutput['kind'];
+  revision: AgentRevision;
+  disabled: boolean;
+}>) {
+  if (kind !== 'prompt_portfolio' || revision.phase === 'outline') return null;
+  return (
+    <PromptProposalAction workspaceId={workspaceId} revisionId={revision.id} disabled={disabled} />
+  );
+}
+
 function OutputActions({
   revision,
   locked,
@@ -182,16 +202,29 @@ function OutputActions({
   );
 }
 
-/** "Use outline & write": the explicit approval that lets a draft be written. */
+const OUTLINE_APPROVAL: Partial<Record<string, { help: string; action: string }>> = {
+  content: {
+    help: 'Review the outline, edit it if needed, then approve it to write the draft.',
+    action: 'Use outline & write',
+  },
+  prompt_portfolio: {
+    help: 'Review the coverage plan: edit the decisions, topics and answers to any questions, then approve it to write the buyer questions.',
+    action: 'Approve plan & write questions',
+  },
+};
+
+/** The explicit approval that lets the full deliverable be written. */
 function OutlineApproval({
   workspaceId,
   chatId,
+  kind,
   revision,
   runActive,
   canSend,
 }: Readonly<{
   workspaceId: string;
   chatId: string;
+  kind: AgentOutput['kind'];
   revision: AgentRevision;
   runActive: boolean;
   canSend: boolean;
@@ -202,11 +235,10 @@ function OutlineApproval({
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(chatId) }),
   });
   if (revision.phase !== 'outline' || revision.approved_at) return null;
+  const copy = OUTLINE_APPROVAL[kind] ?? OUTLINE_APPROVAL.content!;
   return (
     <div className="grid gap-2">
-      <p className={textRole('body')}>
-        Review the outline, edit it if needed, then approve it to write the draft.
-      </p>
+      <p className={textRole('body')}>{copy.help}</p>
       {approve.isError ? (
         <Alert tone="danger">{agentWriteFailure(approve.error).message}</Alert>
       ) : null}
@@ -217,7 +249,7 @@ function OutlineApproval({
           approve.mutate({ chatId, revisionId: revision.id, idempotencyKey: newIdempotencyKey() })
         }
       >
-        Use outline &amp; write
+        {copy.action}
       </Button>
     </div>
   );

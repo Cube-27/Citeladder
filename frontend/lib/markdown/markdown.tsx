@@ -24,11 +24,11 @@ export function ContentMarkdown({
   const content = markdown ?? '';
   return (
     // Generated Markdown can contain unbreakable URLs, code, and wide tables.
-    // Keep those inside the reading surface instead of creating one document-
-    // wide scrollbar that is reachable only at the bottom of a long result.
+    // Text wraps to the column; a table that still cannot fit scrolls inside
+    // its own frame, never as one scrollbar at the bottom of a long result.
     <div
       className={cn(
-        'prose-content min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden [overflow-wrap:anywhere]',
+        'prose-content min-w-0 w-full max-w-full [overflow-wrap:anywhere]',
         density === 'compact' && 'prose-compact',
       )}
     >
@@ -46,6 +46,11 @@ export function ContentMarkdown({
           h6: ({ node: _node, children, ...props }) => <h6 {...props}>{children}</h6>,
           // Untrusted output: never render images (remote-fetch beacon risk).
           img: () => null,
+          table: ({ node: _node, ...props }) => (
+            <div className="prose-table-frame">
+              <table {...props} />
+            </div>
+          ),
           // Forward the remaining DOM props (id, aria-describedby,
           // data-footnote-*) so GFM footnote back-links keep working; `node`
           // is react-markdown's AST handle, not a DOM attribute.

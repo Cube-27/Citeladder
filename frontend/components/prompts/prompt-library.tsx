@@ -209,6 +209,9 @@ export function PromptLibrary({
       await review.refresh();
       await invalidate();
     },
+    // A failed response can still follow a completed run (a dropped connection
+    // after staging), so the review list is re-read rather than assumed empty.
+    onError: () => void review.refresh(),
   });
   const { reset: resetGenerate } = generateMutation;
   useEffect(() => {

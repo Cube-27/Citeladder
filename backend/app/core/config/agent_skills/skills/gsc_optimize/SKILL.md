@@ -59,7 +59,7 @@ Give each hypothesis supporting evidence, counterevidence and the next decisive 
 ```text
 Target URL and property; actual periods and coverage;
 query-cluster opportunity table with compatible observed metrics;
-Edit ID → exact location → original text → proposed text → evidence IDs;
+Edit ID → exact location → original text → proposed text → evidence (in plain words);
 queries deliberately excluded; unchanged high-value sections;
 measurement/guardrails; draft-versus-applied status.
 ```

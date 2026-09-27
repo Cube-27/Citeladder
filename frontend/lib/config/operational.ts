@@ -57,6 +57,14 @@ export function getBootstrapReadTimeoutMs(): number {
 export const COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS = 195_000;
 
 /**
+ * Prompt generation runs several structured model batches and then JEV quality
+ * judging of the admitted pool before it responds; a measured local run took
+ * about three and a half minutes. The ordinary 30-second limit abandoned the
+ * request while the server went on to stage its candidates.
+ */
+export const PROMPT_GENERATION_REQUEST_TIMEOUT_MS = 360_000;
+
+/**
  * Bounded backoff between the API client's network-failure retries (A3). The
  * delay is multiplied by the attempt number, so attempt 2 waits one unit.
  */

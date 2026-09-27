@@ -103,13 +103,14 @@ function ChatView({
 
   return (
     <PageShell
-      title={detail.chat.title}
+      // The deliverable names the task better than the opening instruction does.
+      title={detail.output?.latest_revision?.title ?? detail.chat.title}
       actions={
         <ChatHeaderActions detail={detail} onOpenOutput={hasOutput ? openOutput : undefined} />
       }
     >
       <div className="grid gap-[var(--content-gutter)] min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <div className="grid content-start gap-4">
+        <div className="grid min-w-0 content-start gap-4">
           <Conversation
             detail={detail}
             onOpenOutput={openOutput}
@@ -141,7 +142,7 @@ function ChatView({
             }
           />
         </div>
-        {pane && paneOpen ? <div className="hidden min-[1100px]:block">{pane}</div> : null}
+        {pane && paneOpen ? <div className="hidden min-w-0 min-[1100px]:block">{pane}</div> : null}
       </div>
       {pane ? (
         <div className="min-[1100px]:hidden">

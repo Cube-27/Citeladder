@@ -30,6 +30,7 @@ from app.core.config.agent import (
 )
 from app.core.config.agent_skills import (
     AGENT_SKILL_REGISTRY,
+    CONTENT_FORMAT_OUTPUT_KINDS,
     CONTENT_FORMAT_PREAMBLE,
     CONTENT_FORMATS,
     OPERATING_CONTRACT,
@@ -161,7 +162,7 @@ def system_text(
         sections.append(_skill_index())
     else:
         sections.append(f"# Skill: {skill.label}\n\n{skill.body}")
-        if skill.output_kind in OUTLINE_FIRST_OUTPUT_KINDS:
+        if skill.output_kind in CONTENT_FORMAT_OUTPUT_KINDS:
             sections.append(_format_section(format_id))
     sections.append(
         _protocol(
@@ -213,8 +214,8 @@ def _protocol(
     kind = skill.output_kind if skill is not None else None
     output_rule = (
         "This request needs an OUTLINE first: return output.phase = outline with "
-        "a structured outline the user can edit and approve. Do not write the "
-        "draft yet."
+        "the outline your skill describes, which the user can edit and approve. "
+        "Do not write the full deliverable yet."
         if outline_required
         else "Include an output when the request asks for a deliverable (a plan, "
         "edits, a brief, a draft); leave output null for a question or analysis."

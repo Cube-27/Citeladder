@@ -34,10 +34,15 @@ OUTPUT_KINDS: Final[tuple[str, ...]] = (
     "earned_brief",
     "content",
 )
-# Long-form content is outline-first: the first output of these skills is an
-# editable outline, and the draft is written only after the user approves it.
-OUTLINE_FIRST_OUTPUT_KINDS: Final[frozenset[str]] = frozenset({"content"})
-AGENT_SKILL_CATALOG_VERSION: Final = "agent-skills-v1"
+# Outline-first kinds: the first output is an editable outline (a content
+# outline, or a prompt portfolio's coverage plan), and the full deliverable is
+# written only after the user approves it.
+OUTLINE_FIRST_OUTPUT_KINDS: Final[frozenset[str]] = frozenset(
+    {"content", "prompt_portfolio"}
+)
+# Kinds whose outline is shaped by a content format.
+CONTENT_FORMAT_OUTPUT_KINDS: Final[frozenset[str]] = frozenset({"content"})
+AGENT_SKILL_CATALOG_VERSION: Final = "agent-skills-v2"
 _REQUIRED_METADATA: Final = frozenset(
     {"id", "label", "group", "order", "version", "output_kind", "description"}
 )
