@@ -116,7 +116,10 @@ export function CandidateReview({
               <div className="grid min-w-0 gap-0.5 py-2">
                 <span className="type-body text-foreground">{candidate.text}</span>
                 {topicName ? <span className="type-caption">{topicName}</span> : null}
-                <span id={`${descriptionId}-${candidate.id}`} className="type-caption text-secondary">
+                <span
+                  id={`${descriptionId}-${candidate.id}`}
+                  className="type-caption text-secondary"
+                >
                   {qualityStatusLabel(candidate)}
                 </span>
                 {candidate.quality_flags.length ? (
