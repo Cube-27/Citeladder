@@ -69,6 +69,60 @@ function groupFields(group: Group, snapshotId: string) {
   };
 }
 
+/** PostgreSQL type of each group field, for the batched update's VALUES list. */
+const GROUP_FIELD_TYPES: Record<keyof ReturnType<typeof groupFields>, string> = {
+  target_label: 'varchar',
+  target_url: 'text',
+  target_prompt_id: 'uuid',
+  priority_score: 'float8',
+  families: 'jsonb',
+  approach: 'varchar',
+  skill_id: 'varchar',
+  diagnosis: 'jsonb',
+  member_opportunity_ids: 'jsonb',
+  opportunity_snapshot_id: 'uuid',
+  evidence_cleared_at: 'timestamptz',
+};
+const GROUP_COLUMNS = Object.keys(GROUP_FIELD_TYPES) as (keyof typeof GROUP_FIELD_TYPES)[];
+// PostgreSQL binds at most 65,535 parameters per statement. Each row binds its
+// id plus every group column; the statement adds updated_at and workspace_id.
+const MAX_BIND_PARAMETERS = 65_535;
+const UPDATE_BATCH_ROWS = Math.floor((MAX_BIND_PARAMETERS - 2) / (GROUP_COLUMNS.length + 1));
+
+/** Restamp every existing Action, one bounded statement per batch in the caller's transaction. */
+async function updateActions(
+  trx: Database,
+  scope: Scope,
+  updates: { id: string; fields: ReturnType<typeof groupFields> }[],
+  now: Date,
+) {
+  for (let start = 0; start < updates.length; start += UPDATE_BATCH_ROWS) {
+    await updateActionBatch(trx, scope, updates.slice(start, start + UPDATE_BATCH_ROWS), now);
+  }
+}
+
+async function updateActionBatch(
+  trx: Database,
+  scope: Scope,
+  updates: { id: string; fields: ReturnType<typeof groupFields> }[],
+  now: Date,
+) {
+  const values = updates.map(
+    ({ id, fields }) =>
+      sql`(${sql.join([
+        sql`${id}::uuid`,
+        ...GROUP_COLUMNS.map(
+          (column) => sql`${fields[column]}::${sql.raw(GROUP_FIELD_TYPES[column])}`,
+        ),
+      ])})`,
+  );
+  await sql`update actions
+    set ${sql.join(GROUP_COLUMNS.map((column) => sql`${sql.ref(column)} = v.${sql.ref(column)}`))},
+      updated_at = ${now}::timestamptz
+    from (values ${sql.join(values)}) as v(id, ${sql.join(GROUP_COLUMNS.map((column) => sql.ref(column)))})
+    where actions.id = v.id and actions.workspace_id = ${scope.workspaceId}::uuid`.execute(trx);
+}
+
 /**
  * Upsert the project's Actions for `rows` and return each row's Action id.
  * The caller inserts the rows with that id, after this runs.
@@ -94,15 +148,12 @@ export async function syncActions(
   );
   const now = new Date();
   const actionFor = new Map<string, string>();
+  const updates: { id: string; fields: ReturnType<typeof groupFields> }[] = [];
   for (const group of groups) {
     const found = existing.get(group.target.group_key);
     let id = found?.id;
     if (id) {
-      await trx
-        .updateTable('actions')
-        .set({ ...groupFields(group, snapshotId), updated_at: now })
-        .where('id', '=', id)
-        .execute();
+      updates.push({ id, fields: groupFields(group, snapshotId) });
     } else {
       // An Agent attach may insert this key after the locked read above; the
       // refresh then adopts that row instead of failing on the unique key.
@@ -131,6 +182,7 @@ export async function syncActions(
     }
     for (const member of group.members) actionFor.set(member.opportunity_id, id);
   }
+  await updateActions(trx, scope, updates, now);
   const seen = new Set(groups.map((group) => group.target.group_key));
   const cleared = [...existing.values()].filter((action) => !seen.has(action.group_key));
   if (cleared.length) {

@@ -94,7 +94,7 @@ Python code a moved route still shares with Python callers stays until its last
 Python caller moves (the Agent still reads AI Referrals, MCP still reads
 execution evidence); the TypeScript port is held to it by golden masters that
 `export_ts_platform` regenerates. Behavior that retired with its only Python
-caller is recorded once in `frontend/services/api/golden/frozen/`.
+caller is covered by TypeScript and PostgreSQL tests, never by frozen Python output.
 
 `@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response
 contracts the browser app validates with, the route-ownership manifest, and the

@@ -33,17 +33,13 @@ def is_grounding_redirect(value: Any) -> bool:
     raw = str(value or "").strip()
     if not raw:
         return False
+    # A bare value (no scheme) is read as a host, never searched as a substring:
+    # a publisher named ``evil-grounding-api-redirect.example`` keeps its identity.
     try:
-        parts = urlparse(raw)
+        parts = urlparse(raw if "://" in raw else f"//{raw}")
         host = (parts.hostname or "").lower().rstrip(".")
     except ValueError:
         return False
     if host == GOOGLE_REDIRECT_HOST or host.endswith(f".{GOOGLE_REDIRECT_HOST}"):
         return True
-    if host == GROUNDING_REDIRECT_MARKER:
-        return True
-    # Only when there is no host at all. The real redirect always carries the
-    # Google host matched above, so reading the marker out of any path would
-    # only ever misclassify a publisher writing about grounding redirects --
-    # and that page would silently lose its identity.
-    return not host and GROUNDING_REDIRECT_MARKER in parts.path.lower()
+    return host == GROUNDING_REDIRECT_MARKER

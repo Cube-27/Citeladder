@@ -4,6 +4,7 @@ import { brandOf, competitorsOf, earnedPageBrief } from './earned-page-brief.ts'
 import type { DetectorHit, EarnedPageEvidence, SourcePageEvidence } from './evidence.ts';
 import { linksToOwned, listedInHeadings } from './page-predicates.ts';
 import { pageCompetitorPresenceFactor, pageRecurrenceFactor } from './scoring.ts';
+import { compareText } from '../../text-order.ts';
 const p = policy.opportunity.earned_actions;
 const s = policy.opportunity.source_pages;
 const relevant = (page: SourcePageEvidence) =>
@@ -94,7 +95,7 @@ function research(page: SourcePageEvidence): [string, Record<string, unknown>] |
 }
 export function detectEarnedPageOpportunities(evidence: EarnedPageEvidence): DetectorHit[] {
   return [...evidence.pages]
-    .sort((a, b) => (a.url_hash < b.url_hash ? -1 : a.url_hash > b.url_hash ? 1 : 0))
+    .sort((a, b) => compareText(a.url_hash, b.url_hash))
     .flatMap((page) => {
       const [qualified, missing] = qualification(page);
       const selected = qualified ? selectedAction(page, evidence.owned_domains) : research(page);

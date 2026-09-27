@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -456,8 +457,14 @@ async def create_chat(
 
 
 def _title(message: str) -> str:
+    """The opening message's first sentence, cut at a word boundary."""
     first_line = message.strip().splitlines()[0] if message.strip() else "New chat"
-    return first_line[:AGENT_CHAT_TITLE_MAX_CHARS]
+    sentence = re.split(r"(?<=[.?!])\s", first_line, maxsplit=1)[0]
+    if len(sentence) <= AGENT_CHAT_TITLE_MAX_CHARS:
+        return sentence
+    cut = sentence[: AGENT_CHAT_TITLE_MAX_CHARS - 1]
+    head = cut.rsplit(" ", 1)[0] if " " in cut else cut
+    return f"{head.rstrip(' ,;:')}…"
 
 
 async def send_message(

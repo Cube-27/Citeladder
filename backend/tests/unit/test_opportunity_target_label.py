@@ -80,6 +80,12 @@ def test_prompt_text_wins_over_theme() -> None:
     assert item["target_label"] == "what is a crm"
 
 
+def test_confirmed_decline_labels_with_its_frozen_prompt() -> None:
+    # Confirmed-decline evidence stores the prompt under ``prompt``.
+    item = _project_item(_row(evidence={"prompt": "best crm for agencies"}))
+    assert item["target_label"] == "best crm for agencies"
+
+
 def test_theme_target_is_humanized() -> None:
     item = _project_item(
         _row(target_theme="crm-software_tools", evidence={"prompt_text": "  "})

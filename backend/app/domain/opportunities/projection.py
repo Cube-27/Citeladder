@@ -18,7 +18,10 @@ def _humanize_theme(theme: str) -> str:
 def _target_label(row: Opportunity) -> str | None:
     """Return the user-facing label from persisted frozen evidence only."""
     evidence = row.evidence or {}
-    prompt_text = str(evidence.get("prompt_text") or "").strip()
+    # Detector hits store ``prompt_text``; confirmed declines store ``prompt``.
+    prompt_text = str(
+        evidence.get("prompt_text") or evidence.get("prompt") or ""
+    ).strip()
     product_name = str(evidence.get("product_name") or "").strip()
     theme_label = _humanize_theme(row.target_theme or "")
     return row.target_url or prompt_text or theme_label or product_name or None

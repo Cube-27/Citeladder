@@ -82,11 +82,7 @@ function preference(left: Scored, right: Scored): number {
       : (lh.title_override ?? '') > (rh.title_override ?? '')
         ? 1
         : 0) ||
-    ((lh.remediation_override ?? '') < (rh.remediation_override ?? '')
-      ? -1
-      : (lh.remediation_override ?? '') > (rh.remediation_override ?? '')
-        ? 1
-        : 0)
+    compareText(lh.remediation_override ?? '', rh.remediation_override ?? '')
   );
 }
 
@@ -119,8 +115,7 @@ export function scoreHits(hits: DetectorHit[]): Scored[] {
   }
   return [...consolidated.values()].sort(
     ([left], [right]) =>
-      (left.rule_id < right.rule_id ? -1 : left.rule_id > right.rule_id ? 1 : 0) ||
-      (left.target_key < right.target_key ? -1 : left.target_key > right.target_key ? 1 : 0),
+      compareText(left.rule_id, right.rule_id) || compareText(left.target_key, right.target_key),
   );
 }
 

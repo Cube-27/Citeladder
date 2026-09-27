@@ -83,7 +83,7 @@ The roles are `.type-*` classes in `globals.css` (components layer, so a status 
 
 | Role | Class | Job | Size / line height | Weight | Ink |
 | --- | --- | --- | --- | --- | --- |
-| `pageTitle` | `type-page-title` | The route H1, one per page | 24/32, display | 600 | `foreground` |
+| `pageTitle` | `type-page-title` | The route H1, one per page | 18/24, display | 600 | `foreground` |
 | `figure` | `type-figure` | A metric value | 24/32, display, tabular | 600 | `foreground` |
 | `sectionTitle` | `type-section-title` | Section, card, drawer and dialog headings | 16/24 | 600 | `foreground` |
 | `figureSm` | `type-figure-sm` | A value in a dense row or cell | 16/24, tabular | 600 | `foreground` |
@@ -111,7 +111,7 @@ The ladder is strictly ordered: a section title never out-sizes the page title a
 
 Data columns and their headers are centre-aligned and tabular; text columns stay left-aligned. The header centres with its values so a column reads as one block — a sort glyph pushed to the padding edge leaves the label sitting off the numbers by its own width. This resolves the table-header precedence question previously recorded as unresolved: the shared `numeric` flag on `TableHead`/`TableCell` owns both alignment and tabular figures, and call sites do not re-declare either.
 
-Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Spacing is the 4px grid — 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 — plus 2px for hairline insets only; six-, ten- and fourteen-pixel steps are not used. Each rhythm role names one step: label to value 4, icon to text 8, title to content 12, card to card 16, card padding 20, page gutter 32, section to section 48.
+Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Spacing is the 4px grid — 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 — plus 2px for hairline insets only; six-, ten- and fourteen-pixel steps are not used. Each rhythm role names one step: label to value 4, icon to text 8, title to content 12, card to card 16, card padding 20, page gutter 32, section to section 24.
 
 | Geometry role | Value | Use |
 | --- | --- | --- |
@@ -121,7 +121,7 @@ Analytical content caps at 1392px; form-first workflow content caps at 1040px wh
 | `rounded-xs` | 4px | Chart bars, skeletons, inline code |
 | `rounded-full` | Full | Pills, badges, dots, counts, filter toggles |
 
-Vertical rhythm belongs to the container: `Stack` from `components/ui/layout.tsx` or container `gap`, not child `mt-*`. Its rungs are `section` 48px, `workspace` 16px, `compact` 12px, and `tight` 4px. A 2px optical nudge, sized glyph, or negative-margin overlap remains allowed.
+Vertical rhythm belongs to the container: `Stack` from `components/ui/layout.tsx` or container `gap`, not child `mt-*`. Its rungs are `section` 24px, `workspace` 16px, `compact` 12px, and `tight` 4px. A 2px optical nudge, sized glyph, or negative-margin overlap remains allowed.
 
 Marketing subpages and the homepage use `--section-y`: 56px base, 80px from 768px, 96px from 1280px. Adjacent homepage sections of the same tone share one rhythm rather than stacking both paddings. Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: 56px bar, centred task measure, 16px mobile gutter, shared control radius, and selection chips 36px desktop/44px touch. The flow shell owns its scrolling main region and action bar.
 
@@ -279,7 +279,7 @@ The contents panels include H2/H3 entries, omit leading step-number prefixes fro
 - **Navigation:** the active app location is raised paper (`selected` fill, `shadow-selected`) with a dark label and brand-green icon — no border and no leading mark. Hover uses the `active` fill. Preserve icon/label contrast and avoid translation. Page controls sit on a tonal band; identity and tab navigation bands stay on paper. Selected tab underlines use brand green.
 - **Menus:** shared panel/item recipes, `shadow-elevated`, 12px overlay radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
 - **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal-value` and the shared overlay radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-elevated` and the same 12px radius. Features own no shadow recipes.
-- **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the recessed `track` for compact single-select changes; the selected item is raised paper with `shadow-selected` and dark ink, unselected items are muted. Tabs and segments stay on a single row and scroll when labels exceed the available width; keyboard focus reveals the focused option. Filled tabs share spare width without shrinking below their labels; shared UI filter pills handle independent/multi-select filters.
+- **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the recessed `track` for compact single-select changes; the selected item is raised paper with `shadow-selected` and dark ink, unselected items are muted. Segment labels use the `badge` role (12/16, 500) so a page's filter row stays one row. Tabs and segments stay on a single row and scroll when labels exceed the available width; keyboard focus reveals the focused option. Filled tabs share spare width without shrinking below their labels; shared UI filter pills handle independent/multi-select filters.
 - **Analytical loading:** interval changes retain prior analytical content while the new persisted projection loads. Mark the region busy with compact feedback; no replacement skeleton or labels describing data not yet received.
 
 HeroUI is a reference for state completeness, not an installed dependency.

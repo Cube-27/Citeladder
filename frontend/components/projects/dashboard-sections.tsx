@@ -252,6 +252,8 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
 
 function Track({ data }: Readonly<{ data: CommandCenter }>) {
   const delta = data.track.citation_share.delta;
+  let deltaTone = 'text-muted';
+  if (delta !== null) deltaTone = delta >= 0 ? 'text-success' : 'text-danger';
   return (
     <Card
       aria-labelledby="citation-share-track"
@@ -275,14 +277,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
             label={availabilityLabel(data.track.observed_at ? 'unavailable' : 'not_run')}
           />
           {data.track.observed_at ? (
-            <p
-              className={cn(
-                textRole('delta'),
-                delta === null ? 'text-muted' : delta >= 0 ? 'text-success' : 'text-danger',
-              )}
-            >
-              {deltaLabel(delta)}
-            </p>
+            <p className={textRole('delta', deltaTone)}>{deltaLabel(delta)}</p>
           ) : (
             <p className={textRole('caption')}>{data.track.limitations[0]}</p>
           )}

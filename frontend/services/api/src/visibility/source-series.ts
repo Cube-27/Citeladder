@@ -45,10 +45,7 @@ function assembleSeries(
   const ranked = new Map<string, number>();
   for (const row of rows) ranked.set(row.key, (ranked.get(row.key) ?? 0) + row.citations);
   const leading = [...ranked.entries()]
-    .sort(
-      ([leftKey, left], [rightKey, right]) =>
-        right - left || (leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0),
-    )
+    .sort(([leftKey, left], [rightKey, right]) => right - left || compareText(leftKey, rightKey))
     .slice(0, input.limit)
     .map(([key]) => key);
   const byKey = new Map(leading.map((key) => [key, new Map<string, number>()]));

@@ -12,6 +12,7 @@ import { sql, type RawBuilder, type SqlBool } from 'kysely';
 
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
+import { compareText } from '../text-order.ts';
 
 const a = policy.opportunity.actions;
 
@@ -53,7 +54,7 @@ export function opportunityStatusClause(status: string | null): RawBuilder<SqlBo
       select actions.id from actions where ${effectiveStatus()} = ${status}
     )`;
   }
-  const active = [...a.ACTION_ACTIVE_STATUSES].sort();
+  const active = [...a.ACTION_ACTIVE_STATUSES].sort(compareText);
   return sql<SqlBool>`(opportunities.action_id is null or opportunities.action_id in (
     select actions.id from actions where ${effectiveStatus()} in (${sql.join(active)})
   ))`;

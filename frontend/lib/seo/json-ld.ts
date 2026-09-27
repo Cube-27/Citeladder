@@ -168,7 +168,10 @@ export function blogIndexJsonLd(posts: readonly BlogPostSummary[]): JsonLdObject
     const freshness = blogPostFreshness(post);
     return freshness ? [freshness] : [];
   });
-  const modified = dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : null;
+  const modified = dates.reduce<string | null>(
+    (latest, date) => (latest && latest > date ? latest : date),
+    null,
+  );
   return {
     '@context': 'https://schema.org',
     '@type': 'Blog',
@@ -205,7 +208,10 @@ export function compareIndexJsonLd(
   const url = absoluteUrl('/compare');
   if (!url) return null;
   const reviews = competitors.map((competitor) => competitor.lastReviewed).filter(Boolean);
-  const modified = reviews.length > 0 ? reviews.reduce((a, b) => (a > b ? a : b)) : null;
+  const modified = reviews.reduce<string | null>(
+    (latest, review) => (latest && latest > review ? latest : review),
+    null,
+  );
   return {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',

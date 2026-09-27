@@ -147,12 +147,18 @@ function declineHit(row: DeclineRow, auditId: string): DetectorHit {
 }
 
 /** The project's reviewed owned domains, in one deterministic order. */
-async function ownedDomainList(db: Database, projectId: string): Promise<string[]> {
-  const rows = await db
-    .selectFrom('owned_domains')
-    .select('domain')
-    .where('project_id', '=', projectId)
-    .orderBy('domain')
+/** Owned domains reach the workspace only through their scoped project. */
+async function ownedDomainList(
+  db: Database,
+  scope: WorkspaceScope,
+  projectId: string,
+): Promise<string[]> {
+  const rows = await scope
+    .selectFrom(db, 'projects')
+    .innerJoin('owned_domains', 'owned_domains.project_id', 'projects.id')
+    .select('owned_domains.domain')
+    .where('projects.id', '=', projectId)
+    .orderBy('owned_domains.domain')
     .execute();
   return rows.map((row) => row.domain);
 }
@@ -244,7 +250,7 @@ export async function loadVisibilityEvidence(
     .where('audit_id', '=', audit.id)
     .orderBy('prompt_index')
     .execute();
-  const owned = await ownedDomainList(db, audit.project_id);
+  const owned = await ownedDomainList(db, scope, audit.project_id);
   const metric = await scope
     .selectFrom(db, 'metric_snapshots')
     .select('id')

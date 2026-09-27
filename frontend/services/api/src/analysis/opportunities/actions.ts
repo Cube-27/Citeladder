@@ -3,6 +3,7 @@ import { round } from '../../demand/projection.ts';
 import { casefold } from '../../traffic/normalization.ts';
 import { normalizedUrlForCompare } from '../url-compare.ts';
 import { rules } from './detectors.ts';
+import { compareText } from '../../text-order.ts';
 const p = policy.opportunity.actions;
 export type ActionMember = {
   opportunity_id: string;
@@ -80,8 +81,8 @@ function group(t: ReturnType<typeof targetFor>, members: ActionMember[], availab
   const ordered = [...members].sort(
     (a, b) =>
       b.priority_score - a.priority_score ||
-      (a.rule_id < b.rule_id ? -1 : a.rule_id > b.rule_id ? 1 : 0) ||
-      (a.opportunity_id < b.opportunity_id ? -1 : a.opportunity_id > b.opportunity_id ? 1 : 0),
+      compareText(a.rule_id, b.rule_id) ||
+      compareText(a.opportunity_id, b.opportunity_id),
   );
   const familyMap: Record<string, string> = p.RULE_EVIDENCE_FAMILY;
   const legMap: Record<string, string> = p.FAMILY_MEASUREMENT_LEG;
@@ -147,11 +148,6 @@ export function groupMembers(members: ActionMember[], available: string[]) {
     .map((g) => group(g.target, g.members, available))
     .sort(
       (a, b) =>
-        b.priority_score - a.priority_score ||
-        (a.target.group_key < b.target.group_key
-          ? -1
-          : a.target.group_key > b.target.group_key
-            ? 1
-            : 0),
+        b.priority_score - a.priority_score || compareText(a.target.group_key, b.target.group_key),
     );
 }

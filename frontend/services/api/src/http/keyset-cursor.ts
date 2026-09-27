@@ -6,6 +6,8 @@
  */
 import { createHash } from 'node:crypto';
 
+import { compareText } from '../text-order.ts';
+
 /** A cursor that is malformed or belongs to another scope or filter set. */
 export class InvalidCursorError extends Error {}
 
@@ -13,7 +15,7 @@ export class InvalidCursorError extends Error {}
 function filterFingerprint(scope: string, filters: Record<string, unknown>): string {
   const cleaned = Object.entries(filters)
     .filter(([, value]) => value !== null && value !== undefined && value !== '')
-    .sort(([a], [b]) => (a < b ? -1 : 1));
+    .sort(([a], [b]) => compareText(a, b));
   return createHash('sha256')
     .update(JSON.stringify([scope, cleaned]))
     .digest('hex')
@@ -36,6 +38,8 @@ export function decodeKeysetCursor(
   scope: string,
   filters: Record<string, unknown>,
 ): string[] {
+  // Node's base64url decoder skips foreign characters; refuse them first.
+  if (!/^[A-Za-z0-9_-]+$/u.test(cursor)) throw new InvalidCursorError('invalid cursor');
   let payload: { fp?: unknown; k?: unknown } | null;
   try {
     payload = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as typeof payload;

@@ -22,8 +22,21 @@ const dateSchema = z.iso.date().refine((value) => !value.startsWith('0000-'));
 const datetimeSchema = z.iso
   .datetime({ offset: true, local: true })
   .refine((value) => !value.startsWith('0000-'));
-const DATETIME =
-  /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(?:(Z)|([+-])(\d{2}):(\d{2}))?)?$/u;
+// `date[Ttime[offset]]`, matched part by part; the schemas above validate ranges.
+const DATE_PART = /^(\d{4})-(\d{2})-(\d{2})/u;
+const TIME_PART = /^T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?/u;
+const OFFSET_PART = /^(?:(Z)|([+-])(\d{2}):(\d{2}))?$/u;
+
+/** The date, time and offset captures of an ISO value, or null when malformed. */
+function datetimeParts(text: string) {
+  const date = DATE_PART.exec(text);
+  if (!date) return null;
+  const rest = text.slice(date[0].length);
+  const time = rest ? TIME_PART.exec(rest) : null;
+  if (rest && !time) return null;
+  const zone = OFFSET_PART.exec(time ? rest.slice(time[0].length) : '');
+  return zone ? { date, time, zone } : null;
+}
 
 /** `YYYY-MM-DD` for a real calendar date, or null. */
 export function parseDate(text: string): string | null {
@@ -47,9 +60,11 @@ export function parseRequestDate(text: string): string | null {
 /** An ISO date or datetime, or null when it is malformed or out of range. */
 export function parseDatetime(text: string): ParsedDatetime | null {
   if (!dateSchema.safeParse(text).success && !datetimeSchema.safeParse(text).success) return null;
-  const match = DATETIME.exec(text);
-  if (!match) return null;
-  const [, y, mo, d, h, mi, s, fraction, zulu, sign, tzHours, tzMinutes] = match;
+  const parts = datetimeParts(text);
+  if (!parts) return null;
+  const [, y, mo, d] = parts.date;
+  const [, h, mi, s, fraction] = parts.time ?? [];
+  const [, zulu, sign, tzHours, tzMinutes] = parts.zone;
   const [year, month, day] = [Number(y), Number(mo), Number(d)];
   const [hour, minute, second] = [Number(h ?? 0), Number(mi ?? 0), Number(s ?? 0)];
   // PostgreSQL comparisons retain the first six fractional digits.

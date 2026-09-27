@@ -1,5 +1,6 @@
 /** Page grouping identity shared with the Python Action reader until PR 7b. */
 import { policy } from '../config.ts';
+import { stripTrailing } from '../text-order.ts';
 import { casefold } from '../traffic/normalization.ts';
 
 export function normalizedUrlForCompare(url: string): string {
@@ -17,17 +18,18 @@ export function normalizedUrlForCompare(url: string): string {
       .replace(/:\d*$/u, '')
       .replace(/^\[|\]$/gu, '')
       .toLowerCase();
-    const authority = `${host}${parsed.port ? `:${parsed.port}` : ''}`;
-    const path = raw[2]!.replace(/\/+$/u, '') || '/';
+    const port = parsed.port ? `:${parsed.port}` : '';
+    const path = stripTrailing(raw[2]!, '/') || '/';
     const pairs = [...new URLSearchParams(raw[3])].filter(
       ([key]) => !policy.opportunity.tracking_query_params.includes(casefold(key)),
     );
     const quote = (value: string) =>
       encodeURIComponent(value)
-        .replace(/[!'()*]/gu, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)
-        .replace(/%20/gu, '+');
+        .replaceAll(/[!'()*]/gu, (char) => `%${char.codePointAt(0)!.toString(16).toUpperCase()}`)
+        .replaceAll('%20', '+');
     const query = pairs.map(([key, value]) => `${quote(key)}=${quote(value)}`).join('&');
-    return `${parsed.protocol}//${authority}${path}${query ? `?${query}` : ''}`;
+    const search = query ? `?${query}` : '';
+    return `${parsed.protocol}//${host}${port}${path}${search}`;
   } catch {
     return text.toLowerCase();
   }

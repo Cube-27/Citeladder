@@ -21,6 +21,29 @@ function datesOf(schema: z.ZodType): Set<string> {
   return fields;
 }
 
+/** The published 422 `type` token for one zod issue at the received value `at`. */
+function issueType(issue: z.core.$ZodIssue, at: unknown, dateField: boolean): string {
+  if (at === undefined && issue.path.length > 0) return 'missing';
+  const malformed = issue.code === 'invalid_type' || issue.code === 'invalid_format';
+  if (at !== undefined && dateField && malformed)
+    return typeof at === 'string' ? 'date_parsing' : 'date_type';
+  switch (issue.code) {
+    case 'invalid_type':
+      if (at === undefined) return 'missing';
+      return issue.expected === 'object' ? 'model_attributes_type' : `${issue.expected}_type`;
+    case 'too_small':
+      return 'string_too_short';
+    case 'too_big':
+      return 'string_too_long';
+    case 'invalid_format':
+      return issue.format === 'date' ? 'date_parsing' : 'value_error';
+    case 'invalid_value':
+      return 'literal_error';
+    default:
+      return 'value_error';
+  }
+}
+
 export async function readBody<T extends z.ZodType>(c: Context, schema: T): Promise<z.output<T>> {
   const value = await readOptionalBody(c, schema);
   if (value === null)
@@ -77,26 +100,7 @@ export async function readOptionalBody<T extends z.ZodType>(
           : undefined,
       value,
     );
-    let type = 'value_error';
-    if (at === undefined && issue.path.length > 0) type = 'missing';
-    else if (issue.code === 'invalid_type')
-      type =
-        at === undefined
-          ? 'missing'
-          : issue.expected === 'object'
-            ? 'model_attributes_type'
-            : `${issue.expected}_type`;
-    else if (issue.code === 'too_small') type = 'string_too_short';
-    else if (issue.code === 'too_big') type = 'string_too_long';
-    else if (issue.code === 'invalid_format')
-      type = issue.format === 'date' ? 'date_parsing' : 'value_error';
-    else if (issue.code === 'invalid_value') type = 'literal_error';
-    if (
-      at !== undefined &&
-      isDate(String(issue.path[0])) &&
-      (issue.code === 'invalid_type' || issue.code === 'invalid_format')
-    )
-      type = typeof at === 'string' ? 'date_parsing' : 'date_type';
+    const type = issueType(issue, at, isDate(String(issue.path[0])));
     return [{ loc: issue.path.map(String), message: issue.message, type }];
   });
   throw new RequestValidationError(errors);

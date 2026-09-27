@@ -27,6 +27,7 @@ import type {
   OpenApiOperation,
   OpenApiParameter,
 } from './document.ts';
+import { compareText } from '../text-order.ts';
 
 type NormalizedOperation = {
   parameters: { in: string; name: string; required: boolean; schema: unknown }[];
@@ -64,7 +65,7 @@ function isObject(value: unknown): value is JsonSchema {
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
   if (isObject(value)) {
-    const keys = Object.keys(value).sort();
+    const keys = Object.keys(value).sort(compareText);
     return `{${keys.map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
   }
   return JSON.stringify(value);
@@ -107,7 +108,7 @@ function normalizeProperties(schema: JsonSchema): void {
     if (property.default === null) delete property.default;
   }
   const required = ((schema.required ?? []) as string[]).filter((name) => !defaulted.has(name));
-  if (required.length > 0) schema.required = required.sort();
+  if (required.length > 0) schema.required = required.sort(compareText);
   else delete schema.required;
 }
 
@@ -304,7 +305,7 @@ export function fragmentDifferences(
   actual: NormalizedFragment,
   expected: NormalizedFragment,
 ): string[] {
-  const keys = [...new Set([...Object.keys(actual), ...Object.keys(expected)])].sort();
+  const keys = [...new Set([...Object.keys(actual), ...Object.keys(expected)])].sort(compareText);
   return keys.flatMap((key) => {
     if (!(key in actual)) return [`${key} is missing`];
     if (!(key in expected)) return [`${key} is not in the Python fragment`];

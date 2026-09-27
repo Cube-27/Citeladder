@@ -3,7 +3,7 @@ id: prompt_discovery
 label: Prompt discovery
 group: demand
 order: 4
-version: 1
+version: 2
 output_kind: prompt_portfolio
 description: Create or improve the buyer questions tracked in AI visibility engines from CiteLadder business, demand and competitor evidence. Use for prompt portfolios, prompt quality audits and topic coverage; not ordinary task-prompt writing.
 ---
@@ -71,9 +71,9 @@ For each candidate test:
 7. **Evidence:** Is it observed, grounded expansion or hypothesis, with a traceable source?
 8. **Evaluability:** Can mention, recommendation, citation or factual correctness be judged consistently?
 
-Reject leading prompts such as “Why is [our brand] the best?”, exhaustive checklist prompts no real buyer would ask, arbitrary future-year additions, and prompts selected simply because the brand wins. Keep a compact rejection log with replacement reasons.
+Reject leading prompts such as “Why is [our brand] the best?”, exhaustive checklist prompts no real buyer would ask, arbitrary future-year additions, and prompts selected simply because the brand wins. Track rejected candidates and why.
 
-If unresolved business priorities materially affect the portfolio, ask one batch of focused questions and show the draft coverage map first. Otherwise complete the portfolio with clearly stated assumptions. The user need not approve every intermediate stage.
+The coverage plan (see Outputs) is the one approval point: put any focused questions there, with the assumptions you will use if the user does not answer. Keep the rejection log in your working steps, not in the deliverable.
 
 ## 5. Pilot without contaminating the benchmark
 
@@ -89,41 +89,53 @@ Produce keep/revise/add/archive proposals against existing IDs. Keep stable IDs 
 
 ## Outputs
 
-Save one readable `prompt_portfolio` deliverable through the existing output contract.
+Save one `prompt_portfolio` deliverable through the existing output contract.
 Read `read_prompt_portfolio` first: its `topics` contains the canonical topic IDs,
 including topics with no tracked questions. If `topics_truncated` is true, request
-a larger bounded page and disclose any remaining omission. Keep existing topics. If no topics
-exist, ask the user to generate starting topics in Prompts before submitting.
+a larger bounded page. Keep existing topics. If no topics exist, ask the user to
+generate starting topics in Prompts before submitting.
+
+### First: the coverage plan (outline)
+
+The first deliverable is a short coverage plan the user edits and approves; do
+not write questions yet. For each topic, list the buyer decisions worth tracking
+(one line each: who is deciding what, under which constraint) and how many
+questions you intend for it. Then list the assumptions you made and, only when
+an answer would change the plan, at most three focused questions for the user.
+Keep it to what the user needs to steer the portfolio: no evidence tables, no
+record IDs, no method narration.
+
+### After approval: the question portfolio
+
+Write the questions the approved plan asked for, honouring the user's edits and
+answers. The readable body contains:
+
+1. The proposed questions grouped by topic. For each: the question, its buying
+   stage, and one short line on the decision it tracks and why (say
+   "hypothesis" when no observed demand supports it).
+2. Meaningful gaps and anything left out on purpose, briefly.
+3. One line on next steps: review the questions in Prompts; nothing is tracked
+   until the user accepts them there.
+
+Branded and informational diagnostics, and keep/revise/archive recommendations
+for existing prompts, are short separate lists only when they are useful. Do not
+print planning-field tables, proposal IDs, evidence IDs, UUIDs or a data
+manifest in the body.
 
 For the **Review in Prompts** action, include exactly one fenced `json` block
-in the saved body with this shape (replace the topic ID with a returned UUID):
+at the end of the body with this shape (replace the topic ID with a returned
+UUID); the app hides it from the readable view:
 
 ```json
 {"prompts":[{"topic_id":"<existing-topic-uuid>","text":"A natural question expressing one useful buyer decision","buyer_stage":"consideration","prompt_intent":"recommend"}]}
 ```
 
-Include only new unbranded core questions in that block, at most 100. Other
-cohorts and keep/revise/archive recommendations belong in the readable report.
+Include only new unbranded core questions in that block, at most 100.
 Valid buyer stages: awareness, consideration, decision, implementation.
 Valid prompt intents: learn, solve, compare, recommend, validate, buy, implement.
-Do not invent topic IDs or add keys to these submission rows. All proposed
-questions remain hypotheses unless supported by observed evidence in the report.
-The user submits this saved revision for admission and quality checks, then
-explicitly accepts candidates in Prompts. Submission never activates tracking.
-
-The readable report may retain these richer planning fields:
-
-```text
-prompt_id, parent_decision_id, topic, audience, offer, intent, cohort,
-prompt_text, language, market, material_constraints,
-evidence_type, evidence_refs, business_rationale,
-expected_answer_behavior, primary_success_metric,
-existing_prompt_id, proposed_action, version, validation_status
-```
-
-Use proposal-local IDs for new rows; do not fabricate backend IDs. `validation_status` is `draft`, `reviewed-unrun` or `pilot-observed`, with supporting run references for the last. `expected_answer_behavior` might be shortlist, comparison, factual evaluation or citation-supported answer. Preserve nulls for unknown values.
-
-The report contains the coverage map, final prompts grouped by topic/cohort, meaningful gaps, removals/revisions, pilot status, how to add them in Prompts and measurement rules. The prompt records are a review table, not an import that runs by itself.
+Do not invent topic IDs or add keys to these submission rows. The user submits
+this saved revision for admission and quality checks, then explicitly accepts
+candidates in Prompts. Submission never activates tracking.
 
 ## Validation and failure conditions
 

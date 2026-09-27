@@ -6,6 +6,8 @@
  */
 import { z } from 'zod';
 
+import { PROMPT_GENERATION_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
+
 import { apiClient, type ApiRequestOptions } from './client';
 import {
   promptCandidateReviewResponseSchema,
@@ -154,7 +156,7 @@ export const promptsApi = {
     const res = await apiClient.post<PromptGenerateResponse>(
       `/prompt-sets/${promptSetId}/generate`,
       input,
-      options,
+      { timeoutMs: PROMPT_GENERATION_REQUEST_TIMEOUT_MS, ...options },
     );
     return strictValidate(promptGenerateResponseSchema, res, 'prompts.generate');
   },

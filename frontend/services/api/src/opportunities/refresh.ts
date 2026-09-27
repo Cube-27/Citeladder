@@ -140,7 +140,7 @@ async function insertOpportunities(
   scope: Scope,
   rows: NewOpportunity[],
   actions: Map<string, string>,
-  createdAt: Date,
+  createdAt: string,
 ) {
   for (let start = 0; start < rows.length; start += INSERT_BATCH) {
     await trx
@@ -195,11 +195,16 @@ async function writeRefresh(
   const successors = new Map(
     rows.map((row) => [JSON.stringify([row.rule_id, row.target_key]), row.id]),
   );
-  const supersededAt = new Date();
+  // One microsecond database time for the whole refresh, so two refreshes in
+  // the same millisecond still order by created_at rather than by random id.
+  const { rows: clock } = await sql<{
+    now: string;
+  }>`select clock_timestamp()::text as now`.execute(trx);
+  const now = clock[0]!.now;
   if (live.length) {
     await trx
       .updateTable('opportunities')
-      .set({ superseded_at: supersededAt, updated_at: supersededAt })
+      .set({ superseded_at: now, updated_at: now })
       .where(
         'id',
         'in',
@@ -207,7 +212,6 @@ async function writeRefresh(
       )
       .execute();
   }
-  const createdAt = new Date();
   const snapshot = {
     id: randomUUID(),
     ...buildSnapshot(
@@ -232,7 +236,7 @@ async function writeRefresh(
       counts_by_severity: JSON.stringify(snapshot.counts_by_severity),
       source_analysis_ids: idsJson(snapshot.source_analysis_ids),
       source_issue_ids: idsJson(snapshot.source_issue_ids),
-      created_at: createdAt,
+      created_at: now,
     })
     .execute();
   const actions = await syncActions(
@@ -246,13 +250,13 @@ async function writeRefresh(
       crawl: crawl !== null,
     }),
   );
-  await insertOpportunities(trx, scope, rows, actions, createdAt);
+  await insertOpportunities(trx, scope, rows, actions, now);
   const links = live.flatMap((row) => {
     const successor = successors.get(JSON.stringify([row.rule_id, row.target_key]));
     return successor ? [sql`(${row.id}::uuid, ${successor}::uuid)`] : [];
   });
   if (links.length) {
-    await sql`update opportunities set superseded_by_id = link.successor, updated_at = ${new Date()}
+    await sql`update opportunities set superseded_by_id = link.successor, updated_at = ${now}::timestamptz
       from (values ${sql.join(links)}) as link(id, successor)
       where opportunities.id = link.id and opportunities.workspace_id = ${scope.workspaceId}`.execute(
       trx,

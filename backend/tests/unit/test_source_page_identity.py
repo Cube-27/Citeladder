@@ -105,6 +105,22 @@ def test_a_publisher_writing_about_redirects_keeps_its_identity() -> None:
     assert identify_citation_url(url).method == URL_IDENTITY_VERBATIM
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("grounding-api-redirect/xyz", True),
+        ("vertexaisearch.cloud.google.com/grounding-api-redirect/x", True),
+        ("evil-grounding-api-redirect.example", False),
+        ("publisher.example/grounding-api-redirect/x", False),
+    ],
+)
+def test_a_bare_value_is_a_redirect_only_by_its_host(
+    value: str, expected: bool
+) -> None:
+    """Without a scheme the value is read as a host, never searched as a substring."""
+    assert is_grounding_redirect(value) is expected
+
+
 def test_a_provider_resolved_url_is_retained_not_discarded() -> None:
     """It IS the resolution; nulling it throws away work already done."""
     identity = identify_citation_url(

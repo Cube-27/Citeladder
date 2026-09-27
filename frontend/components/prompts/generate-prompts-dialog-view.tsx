@@ -191,6 +191,11 @@ export function GeneratePromptsDialogView({
       }
     >
       <div className="grid gap-4">
+        {isGenerating ? (
+          <Alert tone="info">
+            Writing and quality-checking questions can take a minute or two. Keep this open.
+          </Alert>
+        ) : null}
         {error ? <GenerateErrorAlert error={error} /> : null}
         {result && !error ? <GenerateResultAlert result={result} /> : null}
         {reviewing ? (

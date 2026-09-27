@@ -16,6 +16,7 @@ import type { MetricRow } from './accumulators.ts';
 import { hash } from './normalization.ts';
 import { record, windowDays } from './performance.ts';
 import { TrafficProjectionBuilder, type Projection } from './projection.ts';
+import { compareText } from '../text-order.ts';
 
 const p = policy.traffic;
 type Target = {
@@ -201,10 +202,10 @@ async function scan(
     'id',
   ] as const;
   const cursor = sql`(${sql.join(columns.map((c) => sql.ref(c)))})`;
-  const start = targets.map((t) => t.start).sort()[0]!;
+  const start = targets.map((t) => t.start).sort(compareText)[0]!;
   const end = targets
     .map((t) => t.end)
-    .sort()
+    .sort(compareText)
     .at(-1)!;
   let after: MetricRow | null = null;
   for (;;) {

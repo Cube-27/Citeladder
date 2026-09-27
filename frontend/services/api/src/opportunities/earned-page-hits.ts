@@ -21,7 +21,7 @@ import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { passageTexts, projectRoster } from '../source-pages/reading.ts';
 import { record } from '../traffic/performance.ts';
-import { compareText } from '../text-order.ts';
+import { compareText, scalarText } from '../text-order.ts';
 
 const e = policy.opportunity.earned_actions;
 const s = policy.opportunity.source_pages;
@@ -219,7 +219,7 @@ function pageEvidence(
     sufficient_coverage:
       page.inspection_state === s.INSPECTION_INSPECTED &&
       extracted >= s.SOURCE_PAGE_MIN_COVERAGE_CHARS,
-    title: String(facts.title ?? ''),
+    title: scalarText(facts.title),
     headings: listed('headings'),
     outbound_domains: listed('outbound_domains'),
     content_hash: latest?.content_hash ?? null,

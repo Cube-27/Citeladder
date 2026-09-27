@@ -11,6 +11,7 @@ import { record } from '../traffic/performance.ts';
 import { normalizeQuery } from './classification.ts';
 import { resolveOwnedPages } from './page-equivalence.ts';
 import { stableHash, unique } from './projection.ts';
+import { compareText } from '../text-order.ts';
 
 const p = policy.demand;
 export type DemandScope = {
@@ -53,7 +54,7 @@ async function sourceRows(db: Database, scope: DemandScope) {
     .limit(p.QUERY_EVIDENCE_MAX_ROWS + 1)
     .execute();
   const key = (r: (typeof rows)[number]) => [r.day, r.dataset, r.dimension_key, r.id].join('\0');
-  return rows.sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+  return rows.sort((a, b) => compareText(key(a), key(b)));
 }
 
 async function sourceMaterial(db: Database, scope: DemandScope) {

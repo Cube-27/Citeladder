@@ -18,6 +18,7 @@ import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { payloadWindow, requireProject, type Executor } from '../workers/executor.ts';
 import { addDays, buildAiReferralsProjection, type ReferralFact } from './projection.ts';
+import { compareText } from '../text-order.ts';
 
 const { analytics, referrals } = policy;
 const BATCH_SIZE = 1000;
@@ -36,7 +37,7 @@ function refreshWindows(
   anchor: string | null,
 ): RefreshWindow[] {
   const windows: RefreshWindow[] = [...analytics.snapshot_granularities]
-    .sort()
+    .sort(compareText)
     .map((granularity) => ({ start: windowStart, end: windowEnd, granularity, presetDays: null }));
   if (anchor === null) return windows;
   for (const days of analytics.snapshot_window_days) {
@@ -118,10 +119,10 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
   const scope = {
     workspaceId: task.workspace_id,
     projectId,
-    start: windows.map((window) => window.start).sort()[0]!,
+    start: windows.map((window) => window.start).sort(compareText)[0]!,
     end: windows
       .map((window) => window.end)
-      .sort()
+      .sort(compareText)
       .at(-1)!,
   };
 

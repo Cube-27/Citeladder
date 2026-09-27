@@ -1,6 +1,7 @@
 # Opportunities pure derivation package (no DB, no I/O — invariants 7 + 9).
 #
-# ``detectors`` projects already-persisted visibility-analysis + Site Health
-# issue rows into deterministic rule hits; ``scoring`` turns a hit's factors
-# into the priority score from config-owned tables (invariant 1);
-# ``exports`` renders projected rows as CSV/Markdown.
+# Detection, scoring, exports and the refresh moved to TypeScript
+# (``frontend/services/api/src/analysis/opportunities``). What remains serves
+# Python readers: ``actions`` (Agent attach keys), ``page_predicates`` and
+# ``placement_outcome`` (inspection-time placement checks) and
+# ``source_patterns``.

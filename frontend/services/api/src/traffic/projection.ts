@@ -105,9 +105,7 @@ export class TrafficProjectionBuilder {
 
   private flush() {
     const key = (row: MetricRow) => [row.date, row.dataset, row.dimension_key, row.id].join('\0');
-    for (const row of [...this.pending.values()].sort((a, b) =>
-      key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0,
-    ))
+    for (const row of [...this.pending.values()].sort((a, b) => compareText(key(a), key(b))))
       this.fold(row);
     this.pending.clear();
   }

@@ -46,7 +46,7 @@ Produce `growth-plan.md` with:
 
 - Objective, market, dates, scope and important unknowns.
 - Diagnosis: no more than the distinct material bottlenecks supported by evidence; label observations and hypotheses.
-- “Now / next / later” action table: action ID, target, exact work, evidence IDs, business rationale, owner role, effort, dependency, acceptance check, review condition.
+- “Now / next / later” action table: action ID, target, exact work, evidence (in plain words), business rationale, owner role, effort, dependency, acceptance check, review condition.
 - A content map when requested: audience/task, offer, existing/new destination, refresh/create/merge/no-action decision, source evidence, conversion path and brief.
 - The next copy-paste specialist prompt with the actual known project/URL/evidence references filled in.
 - Baseline and measurement plan; work completed versus proposed; blocked data requests.

@@ -2,8 +2,9 @@
 #
 # Grouping, convergence, priority and diagnosis moved with the Opportunity
 # refresh to TypeScript (migration PR 7a,
-# ``frontend/services/api/src/analysis/opportunities/actions.ts``), frozen as
-# golden masters. What remains is what an Agent-created Action needs so it
+# ``frontend/services/api/src/analysis/opportunities/actions.ts``), which owns
+# them; the refresh suite's Agent-adoption test holds the shared key. What
+# remains is what an Agent-created Action needs so it
 # lands on the same key and branch the refresh would give it. Every table
 # comes from ``core/config/actions.py``.
 from __future__ import annotations

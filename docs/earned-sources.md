@@ -172,7 +172,8 @@ The comparison itself is pure
 (`analysis/opportunities/placement_outcome.py`) and runs when an inspection
 batch commits, against the reading that batch just took. A reading judged
 against a different roster is not comparable and is not compared, which is the
-rule `earned_page_hits._prior` already applies to deterioration. Insufficient
+rule the TypeScript refresh's prior-reading lookup
+(`frontend/services/api/src/opportunities/earned-page-hits.ts`) already applies to deterioration. Insufficient
 coverage, a missing baseline, a missing brand verdict and an uncheckable
 discrepancy code are all `unavailable`, and `unavailable` never decays into
 `unmet`: a page we could not read says nothing about whether the placement went

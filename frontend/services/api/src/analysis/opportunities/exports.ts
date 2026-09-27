@@ -11,14 +11,13 @@ const columns = [
   'formula_version',
   'created_at',
 ];
+function cellText(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  return typeof value === 'object' ? JSON.stringify(value) : String(value as string | number);
+}
 /** One cell's text, with spreadsheet formula injection neutralized. */
 function cell(value: unknown): string {
-  const text =
-    value === null || value === undefined
-      ? ''
-      : typeof value === 'object'
-        ? JSON.stringify(value)
-        : String(value);
+  const text = cellText(value);
   return /^[\t\r\n]/u.test(text) || /^[ \t\r\n\v\f]*[=+@-]/u.test(text) ? `'${text}` : text;
 }
 export function rowsToCsv(items: Record<string, unknown>[]): string {

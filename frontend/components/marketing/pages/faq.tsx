@@ -56,7 +56,7 @@ export function FaqGroups() {
                 className="text-muted hover:bg-panel hover:text-foreground flex items-center justify-between gap-4 rounded-[var(--radius-control)] px-4 py-3 text-sm transition-colors duration-200"
               >
                 {group.heading}
-                <span className="text-muted text-xs tabular-nums">{group.items.length}</span>
+                <Meta>{group.items.length}</Meta>
               </a>
             ))}
           </div>

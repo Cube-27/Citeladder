@@ -177,10 +177,8 @@ async function brands(
     }
   }
   const ordered = found
-    .sort(
-      (left, right) =>
-        right.responses - left.responses ||
-        (left.name < right.name ? -1 : left.name > right.name ? 1 : 0),
+    .toSorted(
+      (left, right) => right.responses - left.responses || compareText(left.name, right.name),
     )
     .slice(0, SOURCE_URL_MAX_BRANDS);
   const identities = await brandIdentities(db, selection.projectId);

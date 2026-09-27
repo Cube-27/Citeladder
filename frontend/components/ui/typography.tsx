@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
  * reader came for) through `secondary` (sentences) to `muted` (labels, meta).
  */
 const TEXT_ROLES = {
-  /** The route `h1`. 24/32, 600, foreground, display face. One per page. */
+  /** The route `h1`. 18/24, 600, foreground, display face. One per page. */
   pageTitle: 'type-page-title',
   /** A section, card, drawer or dialog heading. 16/24, 600, foreground. */
   sectionTitle: 'type-section-title',
@@ -35,7 +35,7 @@ const TEXT_ROLES = {
   figureSm: 'type-figure-sm',
   /** A change indicator. 12/16, 500, tabular; the caller supplies the tone. */
   delta: 'type-delta',
-  /** Badges, chips, counts, key hints. 12/16, 500; the tone supplies the ink. */
+  /** Badges, chips, segment labels, counts, key hints. 12/16, 500; the tone supplies the ink. */
   badge: 'type-badge',
   /** A value or name inside text that owns its size: 500, foreground. */
   emphasis: 'type-emphasis',

@@ -1,4 +1,6 @@
 /** Domain identities and grounding redirects in recorded citation evidence. */
+import { stripTrailing } from '../text-order.ts';
+
 const GOOGLE_REDIRECT_HOST = 'vertexaisearch.cloud.google.com';
 const GROUNDING_REDIRECT_MARKER = 'grounding-api-redirect';
 
@@ -20,18 +22,22 @@ export function domainMatches(candidate: unknown, target: unknown): boolean {
   return Boolean(left && right && (left === right || left.endsWith(`.${right}`)));
 }
 
-/** Redirect tokens are not publisher identities. */
+/** Redirect tokens are not publisher identities. Matched on the parsed host,
+ * never as a substring, so a publisher named after the marker keeps its identity.
+ */
 export function isGroundingRedirect(value: unknown): boolean {
   if (typeof value !== 'string') return false;
   const raw = value.trim();
+  if (!raw) return false;
   try {
-    const host = new URL(raw).hostname.replace(/\.+$/u, '');
+    const url = new URL(raw.includes('://') ? raw : `https://${raw}`);
+    const host = stripTrailing(url.hostname, '.');
     return (
       host === GOOGLE_REDIRECT_HOST ||
       host.endsWith(`.${GOOGLE_REDIRECT_HOST}`) ||
       host === GROUNDING_REDIRECT_MARKER
     );
   } catch {
-    return !raw.includes('://') && raw.toLowerCase().includes(GROUNDING_REDIRECT_MARKER);
+    return false;
   }
 }

@@ -97,7 +97,7 @@ export function summarizeSourcePattern(citations: CitationEvidence[]) {
     competitor_source_domains: Object.fromEntries(
       [...competitors]
         .sort(([a], [b]) => compareText(a, b))
-        .map(([name, list]) => [name, list.sort(compareText)]),
+        .map(([name, list]) => [name, list.toSorted(compareText)]),
     ),
     top_citations: ordered.slice(0, p.MAX_TOP_CITATIONS).map(([domain, [source_class, c]]) => ({
       domain,

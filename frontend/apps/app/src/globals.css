@@ -365,7 +365,7 @@
   --pane-list-detail: minmax(18rem, 0.9fr) minmax(0, 2fr);
   /* The spacing scale is the 4px grid: 4 8 12 16 20 24 32 40 48 64, plus 2px
      for hairline insets only. Each rhythm role below names one step. */
-  --page-section-gap: 48px;
+  --page-section-gap: 24px;
   --workspace-gap: 16px;
   --compact-gap: 12px;
   --card-padding: 20px;
@@ -662,8 +662,8 @@ body {
 @layer components {
   .type-page-title {
     font-family: var(--font-display);
-    font-size: 1.5rem;
-    line-height: 2rem;
+    font-size: 1.125rem;
+    line-height: 1.5rem;
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--color-foreground);
@@ -821,9 +821,14 @@ body {
     line-height: 1.25rem;
   }
   .prose-content pre code { padding: 0; background: transparent; font-size: inherit; line-height: inherit; }
+  .prose-content .prose-table-frame {
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 0 0 1rem;
+  }
+  .prose-content .prose-table-frame table { margin: 0; }
   .prose-content table {
-    min-width: 100%;
-    width: max-content;
+    width: 100%;
     table-layout: auto;
     border-collapse: collapse;
     font-size: 0.875rem;
@@ -1141,9 +1146,11 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-sidebar: #0a0a0a;
   --color-shell: #0a0a0a;
   --color-shell-alt: #131313;
-  --color-foreground: #f7f7f5;
-  --color-secondary: #e2e2df;
-  --color-muted: #b4b4b0;
+  /* Text ink sits 15% below full white so long reading on the dark ground
+     does not glare; the ladder keeps its foreground > secondary > muted steps. */
+  --color-foreground: #d2d2d0;
+  --color-secondary: #c0c0be;
+  --color-muted: #999996;
   --color-subtle: var(--color-muted);
   --color-track: #1f1f1f;
   --color-selected: #333333;
