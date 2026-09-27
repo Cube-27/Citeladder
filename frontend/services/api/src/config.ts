@@ -160,7 +160,7 @@ function isDevelopmentEnv(appEnv: string): boolean {
 }
 
 /** Mirror of `secret_is_weak` in `backend/app/core/config`, from its exported policy. */
-export function secretIsWeak(value: string): boolean {
+function secretIsWeak(value: string): boolean {
   const rules = policy.secret_policy;
   return (
     new TextEncoder().encode(value).length < rules.min_bytes ||

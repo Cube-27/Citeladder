@@ -331,7 +331,7 @@ describe('GET /projects/{project_id}/visibility/surface-rates', () => {
 
     const typo = await rates(tenant, { engine: 'gooogle_ai_overview' });
     expect(typo.status).toBe(422);
-    expect(typo.body.detail).toBe("Unknown logical engine: 'gooogle_ai_overview'");
+    expect(typo.body.error).toMatchObject({ code: 'validation_error', retryable: false });
   });
 
   it('is not found for an unknown run, a foreign workspace or a foreign project', async () => {

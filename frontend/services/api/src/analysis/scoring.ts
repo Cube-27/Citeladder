@@ -1,14 +1,4 @@
-/**
- * The frozen scoring configuration and citation classification.
- *
- * Ports `ScoringConfig.from_project`, `citation_domain` and
- * `classify_citation` from `app/analysis/scoring.py`. A link on an observed
- * surface is classified by the same rule the scorer applied to the
- * references, so an owned domain is never owned in one panel and third-party
- * in the next. Python keeps the scorer; golden masters regenerate from it.
- */
-import { pyStrip, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
-import { hostname, PythonValueError, urlsplit } from '../python/urlparse.ts';
+/** Classify citation ownership from the audit's frozen scoring configuration. */
 import { domainMatches, isGroundingRedirect, normalizeDomain } from './domains.ts';
 
 type JsonObject = Record<string, unknown>;
@@ -26,23 +16,14 @@ function isObject(value: unknown): value is JsonObject {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-/** `tuple(value or [])` over a decoded JSON value. */
+/** Stored scoring configuration carries arrays, never arbitrary iterables. */
 function listOf(value: unknown): unknown[] {
-  if (!pyTruthy(value)) return [];
-  if (Array.isArray(value)) return value;
-  if (typeof value === 'string') return [...value];
-  if (isObject(value)) return Object.keys(value);
-  throw new TypeError(`${typeof value} object is not iterable`);
+  return Array.isArray(value) ? value : [];
 }
 
 /** `str(item) for item in values if item`. */
 function truthyStrings(values: unknown[]): string[] {
-  return values.filter(pyTruthy).map(pyStrOrEmpty);
-}
-
-/** Python's `left or right`. */
-function pyOr(left: unknown, right: unknown): unknown {
-  return pyTruthy(left) ? left : right;
+  return values.filter(Boolean).map((value) => String(value ?? ''));
 }
 
 function competitorConfigs(config: JsonObject): CompetitorConfig[] {
@@ -50,7 +31,7 @@ function competitorConfigs(config: JsonObject): CompetitorConfig[] {
     // The stored list holds objects; anything else fails as `.get` would.
     if (!isObject(item)) throw new TypeError('competitor entry is not an object');
     return {
-      name: pyStrOrEmpty(item.name),
+      name: String(item.name ?? ''),
       domains: truthyStrings(listOf(item.domains)),
     };
   });
@@ -63,7 +44,7 @@ function competitorConfigs(config: JsonObject): CompetitorConfig[] {
 export function scoringConfig(configuration: unknown): ScoringConfig {
   const config = isObject(configuration) ? configuration : {};
   return {
-    brandName: pyStrOrEmpty(config.brand_name),
+    brandName: String(config.brand_name ?? ''),
     ownedDomains: listOf(config.owned_domains),
     unintendedDomains: listOf(config.unintended_domains),
     competitors: competitorConfigs(config),
@@ -75,13 +56,12 @@ function domainIn(domain: string, targets: readonly unknown[]): boolean {
 }
 
 function urlDomain(value: unknown): string {
-  const raw = pyStrip(pyStrOrEmpty(value));
+  const raw = String(value ?? '').trim();
   if (!raw) return '';
   try {
-    return normalizeDomain(hostname(urlsplit(raw)) ?? '');
-  } catch (error) {
-    if (error instanceof PythonValueError) return '';
-    throw error;
+    return normalizeDomain(new URL(raw).hostname);
+  } catch {
+    return '';
   }
 }
 
@@ -89,10 +69,10 @@ function urlDomain(value: unknown): string {
 function citationDomain(citation: JsonObject): string {
   const resolved = urlDomain(citation.resolved_url);
   if (resolved) return resolved;
-  const annotationUrl = pyOr(citation.redirect_url, citation.url);
+  const annotationUrl = citation.redirect_url || citation.url;
   const direct = urlDomain(annotationUrl);
   if (direct && !isGroundingRedirect(annotationUrl)) return direct;
-  return normalizeDomain(pyOr(citation.domain, citation.title));
+  return normalizeDomain(citation.domain || citation.title);
 }
 
 export type ClassifiedCitation = JsonObject & {

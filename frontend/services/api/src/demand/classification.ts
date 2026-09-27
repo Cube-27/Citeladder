@@ -1,7 +1,7 @@
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { policy } from '../config.ts';
-import { hostname, urlsplit } from '../python/urlparse.ts';
+import { normalizeDomain } from '../analysis/domains.ts';
 import { normalizeQuery as foldQuery } from '../traffic/normalization.ts';
 
 export function normalizeQuery(value: string): string {
@@ -14,16 +14,14 @@ export type Classification = {
   classifier_version: string;
   override_id: string | null;
 };
-export function classifyQuery(
+function classifyQuery(
   query: string,
   brand: { brand_name: string; aliases: string[]; owned_domains: string[] },
 ): Classification {
   const normalized = normalizeQuery(query);
   const domains = new Set<string>();
   for (const value of brand.owned_domains) {
-    const host = (
-      hostname(urlsplit(value.includes('://') ? value : `https://${value}`)) ?? ''
-    ).replace(/^www\./u, '');
+    const host = normalizeDomain(value);
     const term = normalizeQuery(host.split('.')[0] ?? '');
     if (term) {
       domains.add(term);

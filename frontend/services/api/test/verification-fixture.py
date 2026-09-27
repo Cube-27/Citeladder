@@ -86,7 +86,7 @@ async def seed():
                     "rule_id": rule.rule_id,
                     "expected_outcome": "partial",
                 },
-                {"kind": "page_fact", "fact_key": "secure", "expected_value": 1},
+                {"kind": "page_fact", "fact_key": "secure", "expected_value": True},
             ],
             "traffic": [
                 {

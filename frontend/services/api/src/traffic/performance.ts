@@ -99,7 +99,7 @@ async function selectedDates(
     : null;
 }
 
-export function performanceWindow(
+function performanceWindow(
   snapshot: Pick<Snapshot, 'id' | 'start' | 'end' | 'metrics'> | undefined,
   window: Window | null,
 ) {

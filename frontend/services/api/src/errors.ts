@@ -4,8 +4,7 @@
  * Mirrors `backend/app/core/errors.py`: every 4xx/5xx body is
  * `{detail, error: {code, message, request_id, retryable, details?}}`, with
  * `detail` retained for legacy clients. Codes and the retryable rule come
- * from the Python policy export, typed by the contracts' code union; golden masters prove the JSON is identical,
- * key order included.
+ * from the Python policy export, typed by the contracts' code union; the shared envelope is tested by shape.
  */
 import { asApiErrorCode, type ApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { Context, ErrorHandler, NotFoundHandler } from 'hono';

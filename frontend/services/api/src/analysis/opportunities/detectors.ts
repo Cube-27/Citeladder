@@ -1,5 +1,4 @@
 import { policy } from '../../config.ts';
-import { pyCompare, pyStrOrEmpty } from '../../python/text.ts';
 import { record } from '../../traffic/performance.ts';
 import type {
   AnalysisEvidence,
@@ -19,7 +18,7 @@ export const rules = p.OPPORTUNITY_RULES_BY_ID as Record<
   string,
   (typeof p.OPPORTUNITY_RULES_BY_ID)[keyof typeof p.OPPORTUNITY_RULES_BY_ID]
 >;
-const sortedUnique = (values: string[]) => [...new Set(values)].sort(pyCompare);
+const sortedUnique = (values: string[]) => [...new Set(values)].sort();
 function gapHit(
   e: VisibilityEvidence,
   rule: string,
@@ -60,7 +59,7 @@ function gapHit(
       source_pattern: summarizeSourcePattern(rows.flatMap((a) => a.citations)),
       ...(rule === 'brand_absent_high_value_prompt'
         ? { competitor_names: competitors, engines }
-        : { owned_domains: [...e.owned_domains].sort(pyCompare) }),
+        : { owned_domains: [...e.owned_domains].sort() }),
       audit_id: e.audit_id,
       priority_factors: {
         value_factor: value,
@@ -69,7 +68,7 @@ function gapHit(
         recommendation_strength_factor: strength,
       },
     },
-    source_analysis_ids: rows.map((a) => a.analysis_id).sort(pyCompare),
+    source_analysis_ids: rows.map((a) => a.analysis_id).sort(),
     source_issue_ids: [],
     source_metric_ids: [],
     value_factor: value,
@@ -110,8 +109,8 @@ function presentation(issue: SiteEvidence['issues'][number]): [string | null, st
   const missing = atoms
     .map(record)
     .filter((a) => a.outcome === 'missing')
-    .map((a) => pyStrOrEmpty(a.name))
-    .sort(pyCompare);
+    .map((a) => String(a.name ?? ''))
+    .sort();
   const selected = entries.find(
     ([names]) => JSON.stringify(names) === JSON.stringify(missing),
   )?.[1];
@@ -160,8 +159,12 @@ export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
   }
   return hits.sort(
     (a, b) =>
-      pyCompare(a.rule_id, b.rule_id) ||
-      pyCompare(a.target_key, b.target_key) ||
-      pyCompare(a.source_issue_ids[0]!, b.source_issue_ids[0]!),
+      (a.rule_id < b.rule_id ? -1 : a.rule_id > b.rule_id ? 1 : 0) ||
+      (a.target_key < b.target_key ? -1 : a.target_key > b.target_key ? 1 : 0) ||
+      (a.source_issue_ids[0]! < b.source_issue_ids[0]!
+        ? -1
+        : a.source_issue_ids[0]! > b.source_issue_ids[0]!
+          ? 1
+          : 0),
   );
 }

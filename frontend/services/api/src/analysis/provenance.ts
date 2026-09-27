@@ -6,7 +6,6 @@
  * frozen measurement policy. Live configuration is never consulted.
  */
 import { policy } from '../config.ts';
-import { pyTruthy } from '../python/text.ts';
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -16,8 +15,8 @@ function frozenRetrievalEnabled(...snapshots: unknown[]): boolean | null {
   for (const snapshot of snapshots) {
     if (!isObject(snapshot)) continue;
     const retrievalEnabled = snapshot.retrieval_enabled;
-    if (retrievalEnabled !== null && retrievalEnabled !== undefined) {
-      return pyTruthy(retrievalEnabled);
+    if (typeof retrievalEnabled === 'boolean') {
+      return retrievalEnabled;
     }
   }
   return null;

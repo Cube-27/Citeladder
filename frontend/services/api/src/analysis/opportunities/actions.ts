@@ -1,6 +1,5 @@
 import { policy } from '../../config.ts';
 import { round } from '../../demand/projection.ts';
-import { pyCompare, pyStrip } from '../../python/text.ts';
 import { casefold } from '../../traffic/normalization.ts';
 import { normalizedUrlForCompare } from '../url-compare.ts';
 import { rules } from './detectors.ts';
@@ -19,7 +18,7 @@ export type ActionMember = {
   source_issue_ids: string[];
   source_metric_ids: string[];
 };
-export const pageGroupKey = (url: string) => `page:${normalizedUrlForCompare(url)}`;
+const pageGroupKey = (url: string) => `page:${normalizedUrlForCompare(url)}`;
 function target(
   key: string,
   kind: string,
@@ -55,7 +54,7 @@ export function targetFor(member: ActionMember) {
     );
   if (key.startsWith('prompt')) return target(key, p.TARGET_PROMPT, member);
   if (key.startsWith('demand:') && member.target_theme)
-    return target(`query:${pyStrip(casefold(member.target_theme))}`, p.TARGET_QUERY, member);
+    return target(`query:${casefold(member.target_theme).trim()}`, p.TARGET_QUERY, member);
   return target(key, p.TARGET_QUERY, member);
 }
 function actionPriority(strongest: number, families: number): number {
@@ -81,8 +80,8 @@ function group(t: ReturnType<typeof targetFor>, members: ActionMember[], availab
   const ordered = [...members].sort(
     (a, b) =>
       b.priority_score - a.priority_score ||
-      pyCompare(a.rule_id, b.rule_id) ||
-      pyCompare(a.opportunity_id, b.opportunity_id),
+      (a.rule_id < b.rule_id ? -1 : a.rule_id > b.rule_id ? 1 : 0) ||
+      (a.opportunity_id < b.opportunity_id ? -1 : a.opportunity_id > b.opportunity_id ? 1 : 0),
   );
   const familyMap: Record<string, string> = p.RULE_EVIDENCE_FAMILY;
   const legMap: Record<string, string> = p.FAMILY_MEASUREMENT_LEG;
@@ -148,6 +147,11 @@ export function groupMembers(members: ActionMember[], available: string[]) {
     .map((g) => group(g.target, g.members, available))
     .sort(
       (a, b) =>
-        b.priority_score - a.priority_score || pyCompare(a.target.group_key, b.target.group_key),
+        b.priority_score - a.priority_score ||
+        (a.target.group_key < b.target.group_key
+          ? -1
+          : a.target.group_key > b.target.group_key
+            ? 1
+            : 0),
     );
 }

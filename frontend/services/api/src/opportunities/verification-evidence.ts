@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -21,33 +22,7 @@ type Context = {
 };
 const checksOf = (d: Declaration) =>
   Array.isArray(d.expected_checks) ? d.expected_checks.map(record) : [];
-const kindName = (check: Record<string, unknown>) =>
-  check.kind === null || check.kind === undefined ? 'None' : String(check.kind);
-// Page facts are JSON. Python equality treats boolean facts as numeric 0/1.
-function factMatches(actual: unknown, expected: unknown): boolean {
-  if (actual === expected) return true;
-  if (
-    (typeof actual === 'number' || typeof actual === 'boolean') &&
-    (typeof expected === 'number' || typeof expected === 'boolean')
-  )
-    return Number(actual) === Number(expected);
-  if (Array.isArray(actual) || Array.isArray(expected))
-    return (
-      Array.isArray(actual) &&
-      Array.isArray(expected) &&
-      actual.length === expected.length &&
-      actual.every((value, i) => factMatches(value, expected[i]))
-    );
-  if (actual && expected && typeof actual === 'object' && typeof expected === 'object') {
-    const a = record(actual);
-    const b = record(expected);
-    return (
-      Object.keys(a).length === Object.keys(b).length &&
-      Object.entries(a).every(([key, value]) => Object.hasOwn(b, key) && factMatches(value, b[key]))
-    );
-  }
-  return false;
-}
+const kindName = (check: Record<string, unknown>) => String(check.kind ?? 'unknown');
 async function siteCheck(ctx: Context, crawlId: string, check: Record<string, unknown>) {
   const kind = kindName(check);
   const d = ctx.declaration;
@@ -117,7 +92,7 @@ async function siteCheck(ctx: Context, crawlId: string, check: Record<string, un
       ctx.result.limitations.push(`page_fact: ${key} unavailable`);
       return;
     }
-    matched = factMatches(facts[key], check.expected_value ?? null);
+    matched = isDeepStrictEqual(facts[key], check.expected_value ?? null);
   }
   ctx.result.observed++;
   ctx.result.analysis_ids.add(analysis.id);

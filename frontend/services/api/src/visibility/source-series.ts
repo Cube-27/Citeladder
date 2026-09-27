@@ -10,7 +10,6 @@ import { sql } from 'kysely';
 
 import type { Database } from '../db/database.ts';
 import { pydanticUtc, utcText } from '../db/timestamps.ts';
-import { pyCompare } from '../python/text.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 
 /** Lines a reader can tell apart; the design system's categorical chart tokens. */
@@ -29,10 +28,10 @@ export type SourceSeriesResponse = {
 };
 
 /** One grouped `(source, bucket)` row; `bucket` is Pydantic's UTC rendering. */
-export type SeriesRow = { key: string; bucket: string; responses: number; citations: number };
+type SeriesRow = { key: string; bucket: string; responses: number; citations: number };
 
 /** Fold the grouped rows into one dense series per leading source. */
-export function assembleSeries(
+function assembleSeries(
   rows: readonly SeriesRow[],
   input: {
     totals: ReadonlyMap<string, number>;
@@ -41,11 +40,14 @@ export function assembleSeries(
     limit: number;
   },
 ): SourceSeriesResponse {
-  const buckets = [...input.totals.keys()].sort(pyCompare);
+  const buckets = [...input.totals.keys()].sort();
   const ranked = new Map<string, number>();
   for (const row of rows) ranked.set(row.key, (ranked.get(row.key) ?? 0) + row.citations);
   const leading = [...ranked.entries()]
-    .sort(([leftKey, left], [rightKey, right]) => right - left || pyCompare(leftKey, rightKey))
+    .sort(
+      ([leftKey, left], [rightKey, right]) =>
+        right - left || (leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0),
+    )
     .slice(0, input.limit)
     .map(([key]) => key);
   const byKey = new Map(leading.map((key) => [key, new Map<string, number>()]));

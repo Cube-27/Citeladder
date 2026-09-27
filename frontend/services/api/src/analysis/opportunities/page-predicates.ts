@@ -1,19 +1,18 @@
-import { casefold } from '../../traffic/normalization.ts';
-import { pyCollapseWhitespace, pyStrip } from '../../python/text.ts';
 import { domainMatches } from '../domains.ts';
 
-/** Python Unicode word characters are letters, numbers and underscore. */
+/** Compare whole normalized words, including compact brand aliases. */
 function normalizeAlias(value: string): string {
-  return pyCollapseWhitespace(
-    pyCollapseWhitespace(casefold(value.normalize('NFKC')).replaceAll('&', ' and ')).replace(
-      /[^\p{L}\p{N}_ ]/gu,
-      ' ',
-    ),
-  );
+  return value
+    .normalize('NFKC')
+    .toLowerCase()
+    .replaceAll('&', ' and ')
+    .replace(/[^\p{L}\p{N}_ ]/gu, ' ')
+    .trim()
+    .replace(/\s+/gu, ' ');
 }
 export function listedInHeadings(name: string, headings: string[]): boolean {
   const text = normalizeAlias(headings.join(' | '));
-  const alias = pyStrip(normalizeAlias(name));
+  const alias = normalizeAlias(name).trim();
   if (!alias || !text) return false;
   const tokens = text.split(' ');
   const needle = alias.replaceAll(' ', '');

@@ -9,7 +9,6 @@
  */
 import { domainMatches } from '../analysis/domains.ts';
 import { policy } from '../config.ts';
-import { pyStrip } from '../python/text.ts';
 
 const { referrals } = policy;
 
@@ -31,7 +30,7 @@ export type ReferralSignals = {
 const ENGINES: Readonly<Record<string, string>> = referrals.source_to_logical_engine;
 
 // The rule literals are ASCII, where lowercasing and case folding agree.
-const normalize = (value: string | null | undefined) => pyStrip(value ?? '').toLowerCase();
+const normalize = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
 
 function match(
   rule: { rule_id: string; ai_source: string; confidence: string },

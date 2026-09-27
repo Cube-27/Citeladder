@@ -1,11 +1,10 @@
 import { policy } from '../../config.ts';
 import { round } from '../../demand/projection.ts';
-import { pyCompare } from '../../python/text.ts';
 import type { AnalysisEvidence, PromptSnapshotEvidence } from './evidence.ts';
 import { byDomain } from './source-patterns.ts';
 const p = policy.opportunity.earned_actions;
 const s = policy.opportunity.source_patterns;
-const sorted = (values: Iterable<string>) => [...values].sort(pyCompare);
+const sorted = (values: Iterable<string>) => [...values].sort();
 function observedPath(kind: string): string {
   if (kind === s.SOURCE_CLASS_BRAND_OWNED) return p.ACTION_PATH_OWNED;
   return kind === s.SOURCE_CLASS_COMPETITOR_OWNED ? 'competitive_evidence' : p.ACTION_PATH_EARNED;
@@ -63,7 +62,7 @@ type Rollup = {
 function project(value: Rollup, eligible: number) {
   const count = value.analysis_ids.size;
   const rate = eligible ? count / eligible : 0;
-  const citations = [...value.citations].sort(([a], [b]) => pyCompare(a, b));
+  const citations = [...value.citations].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   const prompts = [...value.prompt_indices].sort((a, b) => a - b);
   return {
     canonical_domain: value.canonical_domain,
@@ -158,7 +157,12 @@ export function buildSourceProjection(
     .map((v) => project(v, rows.length))
     .sort(
       (a, b) =>
-        b.answer_count - a.answer_count || pyCompare(a.canonical_domain, b.canonical_domain),
+        b.answer_count - a.answer_count ||
+        (a.canonical_domain < b.canonical_domain
+          ? -1
+          : a.canonical_domain > b.canonical_domain
+            ? 1
+            : 0),
     );
   return [
     mix(observed, rows.length, answers),

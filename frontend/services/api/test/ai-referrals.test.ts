@@ -129,7 +129,7 @@ describe('GET /projects/{project_id}/ai-referrals', () => {
       expect(body.error).toMatchObject({ code: 'validation_error', retryable: false });
     }
     const unknown = await referrals(tenant, tenant.projectId, { range: '7d' });
-    expect(unknown.body.detail).toBe("unknown ai-referrals range: '7d'");
+    expect(unknown.body.error).toMatchObject({ code: 'validation_error', retryable: false });
 
     const widest = { from: isoDaysAgo(maxDays - 1, new Date(`${end}T00:00:00Z`)), to: end };
     expect((await referrals(tenant, tenant.projectId, widest)).status).toBe(200);

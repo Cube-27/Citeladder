@@ -1,12 +1,5 @@
-/**
- * Date and datetime request values at microsecond precision.
- *
- * A JavaScript `Date` holds milliseconds, while PostgreSQL stores and the
- * readers compare microseconds, so a parsed timestamp keeps its wall-clock
- * fields and UTC offset. Accepted shapes are ISO 8601 calendar dates and
- * `YYYY-MM-DD[T ]HH:MM[:SS[.ffffff]][Z|±HH[:]MM]`; a date alone reads as
- * naive midnight, as the Python readers did.
- */
+/** ISO request timestamps retain PostgreSQL microsecond precision. */
+import { z } from 'zod';
 
 /** A parsed `datetime`: wall-clock fields plus the UTC offset, if any. */
 export type ParsedDatetime = {
@@ -24,25 +17,16 @@ export type ParsedDatetime = {
 const MICROSECONDS_PER_SECOND = 1_000_000n;
 const SECONDS_PER_DAY = 86_400;
 
-const DATE = /^(\d{4})-(\d{2})-(\d{2})$/u;
+// PostgreSQL calendar timestamps have no year zero.
+const dateSchema = z.iso.date().refine((value) => !value.startsWith('0000-'));
+const datetimeSchema = z.iso.datetime({ offset: true, local: true })
+  .refine((value) => !value.startsWith('0000-'));
 const DATETIME =
-  /^(\d{4})-(\d{2})-(\d{2})(?:[Tt ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d+))?)?(?:([Zz])|([+-])(\d{2}):?(\d{2}))?)?$/u;
-
-function daysInMonth(year: number, month: number): number {
-  if (month === 2) return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 29 : 28;
-  return [4, 6, 9, 11].includes(month) ? 30 : 31;
-}
-
-function validDate(year: number, month: number, day: number): boolean {
-  return year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(year, month);
-}
+  /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(?:(Z)|([+-])(\d{2}):(\d{2}))?)?$/u;
 
 /** `YYYY-MM-DD` for a real calendar date, or null. */
 export function parseDate(text: string): string | null {
-  const match = DATE.exec(text);
-  if (!match) return null;
-  const [year, month, day] = match.slice(1, 4).map(Number) as [number, number, number];
-  return validDate(year, month, day) ? text : null;
+  return dateSchema.safeParse(text).success ? text : null;
 }
 
 /** Date inputs may carry an ISO midnight; a nonzero time cannot be discarded. */
@@ -59,20 +43,15 @@ export function parseRequestDate(text: string): string | null {
     : null;
 }
 
-export function dateErrorType(value: unknown): string {
-  if (typeof value !== 'string') return 'date_type';
-  return parseDatetime(value) ? 'date_from_datetime_inexact' : 'date_from_datetime_parsing';
-}
-
 /** An ISO date or datetime, or null when it is malformed or out of range. */
 export function parseDatetime(text: string): ParsedDatetime | null {
+  if (!dateSchema.safeParse(text).success && !datetimeSchema.safeParse(text).success) return null;
   const match = DATETIME.exec(text);
   if (!match) return null;
   const [, y, mo, d, h, mi, s, fraction, zulu, sign, tzHours, tzMinutes] = match;
   const [year, month, day] = [Number(y), Number(mo), Number(d)];
   const [hour, minute, second] = [Number(h ?? 0), Number(mi ?? 0), Number(s ?? 0)];
-  if (!validDate(year, month, day) || hour > 23 || minute > 59 || second > 59) return null;
-  // Digits past the sixth are dropped, as `datetime` truncates.
+  // PostgreSQL comparisons retain the first six fractional digits.
   const microsecond = fraction ? Number(fraction.slice(0, 6).padEnd(6, '0')) : 0;
   let offsetSeconds: number | null = null;
   if (zulu) offsetSeconds = 0;
@@ -89,7 +68,7 @@ function pad(value: number, width = 2): string {
   return String(value).padStart(width, '0');
 }
 
-/** `datetime.isoformat()`. */
+/** ISO serialization without losing sub-millisecond precision. */
 export function isoformat(value: ParsedDatetime): string {
   const date = `${pad(value.year, 4)}-${pad(value.month)}-${pad(value.day)}`;
   const time = `${pad(value.hour)}:${pad(value.minute)}:${pad(value.second)}`;
@@ -110,7 +89,7 @@ export function epochMicros(value: ParsedDatetime): bigint {
   return shifted - BigInt(value.offsetSeconds ?? 0) * MICROSECONDS_PER_SECOND;
 }
 
-/** The value converted to UTC, as `astimezone(UTC)` would. */
+/** The value converted to UTC, preserving microseconds. */
 export function toUtc(value: ParsedDatetime): ParsedDatetime {
   const micros = epochMicros(value);
   const seconds =

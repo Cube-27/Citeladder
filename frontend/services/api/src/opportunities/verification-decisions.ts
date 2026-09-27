@@ -1,6 +1,5 @@
 import { policy } from '../config.ts';
 import { round } from '../demand/projection.ts';
-import { pyCompare } from '../python/text.ts';
 import { record } from '../traffic/performance.ts';
 import { epochMicros, parseDatetime } from '../http/datetimes.ts';
 const p = policy.opportunity.placement;
@@ -22,7 +21,7 @@ export const evaluation = (): Evaluation => ({
   metric_ids: new Set(),
   limitations: [],
 });
-export function metricMatches(
+function metricMatches(
   direction: unknown,
   value: number,
   expected: number,
@@ -32,9 +31,8 @@ export function metricMatches(
   if (direction === 'decrease') return value <= expected + tolerance;
   return direction === 'equal' && Math.abs(value - expected) <= tolerance;
 }
-// Python's numeric checks include bool; keep that shipped behavior in this port.
-const numeric = (value: unknown): value is number | boolean =>
-  typeof value === 'number' || typeof value === 'boolean';
+const numeric = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
 function metricValue(
   snapshot: { visibility_score: unknown; metrics: unknown },
   index: number | null,
@@ -169,9 +167,9 @@ export function gapChanges(before: string[], after: string[], hasLatest: boolean
   const a = new Set(before);
   const b = new Set(after);
   return {
-    no_longer_observed: [...a].filter((k) => !b.has(k)).sort(pyCompare),
-    persistent: [...a].filter((k) => b.has(k)).sort(pyCompare),
-    new: [...b].filter((k) => !a.has(k)).sort(pyCompare),
+    no_longer_observed: [...a].filter((k) => !b.has(k)).sort(),
+    persistent: [...a].filter((k) => b.has(k)).sort(),
+    new: [...b].filter((k) => !a.has(k)).sort(),
     state: 'available',
   };
 }
