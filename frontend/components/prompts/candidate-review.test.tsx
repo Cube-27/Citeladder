@@ -18,6 +18,8 @@ const candidate = (id: string, text: string): PromptCandidate => ({
   cohort: 'core',
   created_at: '',
   expires_at: '',
+  quality_judged: false,
+  quality_flags: [],
 });
 
 const candidates = [
@@ -53,5 +55,20 @@ describe('CandidateReview', () => {
     // The selection survives the request (a failure can be retried).
     await user.click(screen.getByRole('button', { name: /reject selected/i }));
     expect(onReject).toHaveBeenCalledWith(['b']);
+  });
+
+  it('shows quality flags as advisory labels without hiding the suggestion', () => {
+    render(
+      <CandidateReview
+        candidates={[{ ...candidates[0], quality_judged: true, quality_flags: ['natural'] }]}
+        topics={[]}
+        onAccept={vi.fn()}
+        onReject={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('best trail shoes for wet weather')).toBeInTheDocument();
+    expect(screen.getByText('May read unnaturally')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /best trail shoes/i })).toBeEnabled();
   });
 });

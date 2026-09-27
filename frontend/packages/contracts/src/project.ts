@@ -106,6 +106,10 @@ export const promptCandidateSchema = responseObject({
   cohort: promptCohortSchema,
   created_at: z.string(),
   expires_at: z.string(),
+  // Shadow quality judge: whether this candidate was judged, and the
+  // questions it looked weak on. Flags inform review; they never drop a row.
+  quality_judged: z.boolean().default(false),
+  quality_flags: z.array(z.string()).default([]),
 });
 
 // `POST /prompt-sets/{id}/generate` result: staged candidates, the topics
@@ -118,6 +122,10 @@ export const promptGenerateResponseSchema = responseObject({
   // selected topics cannot support it, and saying so beats returning fewer
   // prompts with no explanation.
   requested_count: z.number().int().default(0),
+  // Suggestions that passed admission before selection. Never a market size.
+  candidates_generated: z.number().int().default(0),
+  // off (no judge configured) | shadow (decisions recorded) | unavailable.
+  quality_gate: z.enum(['off', 'shadow', 'unavailable']).default('off'),
 });
 
 // `POST /prompt-sets/{id}/candidates/review` result.

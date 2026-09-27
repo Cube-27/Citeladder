@@ -4,10 +4,12 @@ import { Check, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { textRole } from '@/components/ui/typography';
 import type { PromptCandidate, Topic } from '@/lib/api/types';
+import { qualityFlagLabel } from '@/lib/prompts/candidate-quality';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -15,7 +17,8 @@ const plural = (count: number, word: string) => `${count} ${word}${count === 1 ?
 /**
  * Generated prompts awaiting review. Only accepted candidates become tracked
  * prompts; rejected ones are deleted. Selection is local and forgets ids that
- * are no longer pending.
+ * are no longer pending. Rows arrive ranked; quality flags are advisory and
+ * never hide a suggestion.
  */
 export function CandidateReview({
   candidates,
@@ -111,6 +114,15 @@ export function CandidateReview({
               <div className="grid min-w-0 gap-0.5 py-2">
                 <span className="text-foreground text-sm">{candidate.text}</span>
                 {topicName ? <span className="text-muted text-xs">{topicName}</span> : null}
+                {candidate.quality_flags.length ? (
+                  <span className="flex flex-wrap gap-1">
+                    {candidate.quality_flags.map((flag) => (
+                      <Badge key={flag} variant="status" value="warning">
+                        {qualityFlagLabel(flag)}
+                      </Badge>
+                    ))}
+                  </span>
+                ) : null}
               </div>
             </li>
           );

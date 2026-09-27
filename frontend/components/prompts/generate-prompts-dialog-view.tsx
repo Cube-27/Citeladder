@@ -3,11 +3,12 @@ import type { ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import type { PromptGenerateResponse, Topic } from '@/lib/api/types';
+import { orderTopicsForRail } from '@/lib/prompts/topic-tree';
 import { textRole } from '@/components/ui/typography';
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -28,12 +29,16 @@ function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateRespon
     result.requested_count > total
       ? ` (${total} of ${result.requested_count} requested — add topics for more)`
       : '';
+  const judge =
+    result.quality_gate === 'unavailable'
+      ? ' Quality checks were unavailable this time, so no suggestion is flagged.'
+      : '';
   return (
     <Alert tone="success">
       Drafted {plural(total, 'suggestion')}
       {shortfall}
       {topicCount ? ` across ${plural(topicCount, 'topic')}` : ''}
-      {duplicates}. Accept the ones worth tracking.
+      {duplicates}. Accept the ones worth tracking.{judge}
     </Alert>
   );
 }
@@ -78,9 +83,9 @@ export function GeneratePromptsDialogView({
   onOpenChange,
   topics,
   count,
-  topicId,
+  selectedTopicIds,
   setCount,
-  setTopicId,
+  toggleTopic,
   countValid,
   onSubmit,
   isGenerating,
@@ -93,9 +98,10 @@ export function GeneratePromptsDialogView({
   onOpenChange: (open: boolean) => void;
   topics: Topic[];
   count: string;
-  topicId: string;
+  /** Selected topics; empty means every topic. */
+  selectedTopicIds: ReadonlySet<string>;
   setCount: (value: string) => void;
-  setTopicId: (value: string) => void;
+  toggleTopic: (id: string, checked: boolean) => void;
   countValid: boolean;
   onSubmit: () => void;
   isGenerating?: boolean;
@@ -146,18 +152,26 @@ export function GeneratePromptsDialogView({
           />
         </div>
         {topics.length > 0 ? (
-          <div className="grid gap-1.5">
-            <span className={textRole('label')}>Topic</span>
-            <Select
-              value={topicId}
-              onValueChange={setTopicId}
-              ariaLabel="Topic"
-              options={[
-                { value: '', label: 'All existing topics' },
-                ...topics.map((topic) => ({ value: topic.id, label: topic.name })),
-              ]}
-            />
-          </div>
+          <fieldset className="grid min-w-0 gap-1.5">
+            <legend className={textRole('label')}>Topics</legend>
+            <span className="text-muted text-xs">
+              {selectedTopicIds.size
+                ? `${plural(selectedTopicIds.size, 'topic')} selected.`
+                : 'None selected: suggestions cover every topic.'}
+            </span>
+            <div className="grid max-h-48 min-w-0 overflow-y-auto">
+              {orderTopicsForRail(topics).map(({ topic, nested }) => (
+                <Checkbox
+                  key={topic.id}
+                  label={topic.name}
+                  className={nested ? 'ms-6' : undefined}
+                  checked={selectedTopicIds.has(topic.id)}
+                  onCheckedChange={(checked) => toggleTopic(topic.id, checked === true)}
+                  disabled={isGenerating}
+                />
+              ))}
+            </div>
+          </fieldset>
         ) : null}
         {review}
       </div>

@@ -28,7 +28,8 @@ function topicErrorMessage(loadError?: boolean, actionError?: string | null): st
  * selection model:
  *  - Desktop (lg+): a contained `bg-panel` rail listing the
  *    project's topics with per-status counts, an "All topics" bucket, an inline
- *    add-topic form, and per-topic delete.
+ *    add-topic form (optionally under a top-level topic, one level deep), and
+ *    per-topic delete.
  *  - Narrow (< lg): a compact full-width Topics picker stacked above the
  *    status tabs — the desktop rail would crush the table, so the rail
  *    collapses to a selector, preserving the IA with no overlap.
@@ -53,10 +54,11 @@ export function TopicRail({
   selectedTopicId: string | null;
   onSelect: (topicId: string | null) => void;
   /**
-   * Create a topic. Returning a promise lets the rail keep the add form open
-   * (with the typed name intact) when creation fails.
+   * Create a topic, or a subtopic when `parentId` is set. Returning a promise
+   * lets the rail keep the add form open (with the typed name intact) when
+   * creation fails.
    */
-  onCreate: (name: string) => Promise<void> | void;
+  onCreate: (name: string, parentId: string | null) => Promise<void> | void;
   onDelete: (topic: Topic) => void;
   isCreating?: boolean;
   /** Set when the topics list failed to load. */
@@ -66,15 +68,19 @@ export function TopicRail({
 }>) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
+  const [parentId, setParentId] = useState('');
+  // Subtopics nest one level deep, so only top-level topics can be parents.
+  const parents = topics.filter((topic) => !topic.parent_id);
 
   const submit = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
     try {
-      await onCreate(trimmed);
+      await onCreate(trimmed, parentId || null);
       // Only reset on success — a failed create keeps the form open with the
       // typed name so the user can retry without re-typing.
       setName('');
+      setParentId('');
       setAdding(false);
     } catch {
       // Error surfaced via `actionError`; leave the form populated.
@@ -112,29 +118,46 @@ export function TopicRail({
 
         {adding ? (
           <form
-            className="flex items-center gap-1.5 px-1 pb-1"
+            className="grid gap-1.5 px-1 pb-1"
             onSubmit={(event) => {
               event.preventDefault();
               void submit();
             }}
           >
-            <Input
-              // oxlint-disable-next-line jsx-a11y/no-autofocus -- Add topic explicitly opens this form; focus follows the invoking action.
-              autoFocus
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Topic name"
-              aria-label="Topic name"
-              className="h-8"
-            />
-            <Button
-              type="submit"
-              variant="secondary"
-              size="sm"
-              disabled={isCreating || !name.trim()}
-            >
-              Add
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Input
+                // oxlint-disable-next-line jsx-a11y/no-autofocus -- Add topic explicitly opens this form; focus follows the invoking action.
+                autoFocus
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Topic name"
+                aria-label="Topic name"
+                className="h-8"
+              />
+              <Button
+                type="submit"
+                variant="secondary"
+                size="sm"
+                disabled={isCreating || !name.trim()}
+              >
+                Add
+              </Button>
+            </div>
+            {parents.length ? (
+              <Select
+                value={parentId}
+                onValueChange={setParentId}
+                ariaLabel="Add under"
+                className="w-full"
+                options={[
+                  { value: '', label: 'Top-level topic' },
+                  ...parents.map((topic) => ({
+                    value: topic.id,
+                    label: `Subtopic of ${topic.name}`,
+                  })),
+                ]}
+              />
+            ) : null}
           </form>
         ) : null}
 
