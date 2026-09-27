@@ -39,7 +39,6 @@ from app.core.config.analytics import (
     ANALYTICS_QUEUE_SPEC,
     ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION,
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY,
-    ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
     ERROR_EXECUTOR_NOT_WIRED,
@@ -57,7 +56,6 @@ from app.core.telemetry import configure_logging, instrument_worker
 from app.domain.commerce.competitors import run_competitor_discovery
 from app.domain.commerce.projector import project_catalog_analysis
 from app.domain.demand.search_intelligence.executor import execute_search_intelligence
-from app.domain.opportunities.recompute import recompute as recompute_opportunities
 from app.models.analytics import AnalyticsTask
 from app.orchestration.executor_errors import CapacityWaitError, TerminalExecutorError
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
@@ -89,27 +87,12 @@ type AnalyticsExecutor = Callable[
 ]
 
 
-async def _refresh_opportunities(
-    session_factory: async_sessionmaker[AsyncSession], task: AnalyticsTask
-) -> None:
-    if task.project_id is None:
-        raise ValueError("Opportunity refresh requires project_id")
-    async with session_factory() as session:
-        await recompute_opportunities(
-            session,
-            workspace_id=task.workspace_id,
-            project_id=task.project_id,
-            skip_if_current=True,
-        )
-
-
 # Kind dispatch table (invariant 2: one owner of kind -> executor routing).
-# Exactly ``ANALYTICS_PYTHON_TASK_KINDS``: the referral chain's kinds belong to
-# the TypeScript analytics worker (TypeScript migration PR 4).
+# Exactly ``ANALYTICS_PYTHON_TASK_KINDS``: every other kind belongs to the
+# TypeScript analytics worker (TypeScript migration PRs 4-7).
 EXECUTORS: dict[str, AnalyticsExecutor] = {
     ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION: project_catalog_analysis,
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY: run_competitor_discovery,
-    ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH: _refresh_opportunities,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION: inspect_source_pages,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE: execute_search_intelligence,
 }

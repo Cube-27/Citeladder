@@ -23,6 +23,7 @@ import { refreshAiReferralsSnapshot } from '../referrals/snapshot.ts';
 import { TaskCancelledError, type Executor } from './executor.ts';
 import { projectPerformanceRange, refreshTrafficSnapshot } from '../traffic/snapshot.ts';
 import { recomputeDemand } from '../demand/snapshot.ts';
+import { refreshOpportunities } from '../opportunities/refresh.ts';
 import { verifyImplementationEvents } from '../opportunities/verification.ts';
 
 const logger = getLogger('workers.analytics');
@@ -38,6 +39,7 @@ export const EXECUTORS: Readonly<Record<string, Executor>> = {
   traffic_snapshot_refresh: refreshTrafficSnapshot,
   performance_range_projection: projectPerformanceRange,
   demand_snapshot_refresh: recomputeDemand,
+  opportunity_refresh: refreshOpportunities,
   opportunity_verification: verifyImplementationEvents,
 };
 

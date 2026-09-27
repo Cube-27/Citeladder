@@ -1,10 +1,17 @@
-"""Action persistence: recompute sync, workspace-scoped reads, agent attach."""
+"""Action reads and the Agent's attach, beside the TypeScript refresh.
+
+The Opportunity refresh re-derives evidence Actions in TypeScript (migration
+PR 7a). ``actions`` therefore has two writers across the stack boundary, with
+one handoff contract: this module only ever inserts an ``agent``-origin row
+for a page or planned-page target, with ``ON CONFLICT DO NOTHING`` on
+``(project_id, group_key)``, and never changes an existing row. The refresh
+owns every evidence-derived field, member stamp and evidence clearing.
+"""
 
 from __future__ import annotations
 
 import re
 import uuid
-from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -13,30 +20,16 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.normalization import normalize_domain
-from app.analysis.opportunities.actions import (
-    ActionGroup,
-    ActionMember,
-    group_members,
-    page_group_key,
-    select_approach,
-)
+from app.analysis.opportunities.actions import page_group_key, select_approach
 from app.core.config.actions import (
     ACTION_ACTIVE_STATUSES,
     ACTION_LABEL_MAX_CHARS,
     ACTION_LIST_DEFAULT_LIMIT,
     ACTION_LIST_MAX_LIMIT,
     ACTION_ORIGIN_AGENT,
-    ACTION_ORIGIN_EVIDENCE,
     ACTION_TARGET_KINDS,
     AGENT_ORIGIN_DEFAULT_SKILL,
     AGENT_TARGET_KINDS,
-    FAMILY_AI_VISIBILITY,
-    FAMILY_COMMERCE,
-    FAMILY_LINK_GRAPH,
-    FAMILY_SEARCH_CONSOLE,
-    FAMILY_SITE_CHANGES,
-    FAMILY_SITE_HEALTH,
-    FAMILY_SOURCES,
     PLANNED_PAGE_TOPIC_MAX_CHARS,
     TARGET_PAGE,
 )
@@ -64,136 +57,6 @@ _LIST_SCOPE = "actions"
 # A NULL priority (agent work with no evidence yet) sorts after every scored
 # Action; the keyset compares this surrogate rather than NULL.
 _UNSCORED = -1.0
-
-
-def available_families(
-    *, has_audit: bool, has_demand: bool, has_crawl: bool
-) -> frozenset[str]:
-    """Which evidence families one recompute actually had a source for."""
-    families: set[str] = set()
-    if has_audit:
-        families |= {FAMILY_AI_VISIBILITY, FAMILY_SOURCES, FAMILY_COMMERCE}
-    if has_demand:
-        families.add(FAMILY_SEARCH_CONSOLE)
-    if has_crawl:
-        families |= {FAMILY_SITE_HEALTH, FAMILY_LINK_GRAPH, FAMILY_SITE_CHANGES}
-    return frozenset(families)
-
-
-def _member(row: Opportunity) -> ActionMember:
-    evidence = row.evidence or {}
-    prompt_text = evidence.get("prompt_text") or evidence.get("prompt")
-    return ActionMember(
-        opportunity_id=row.id,
-        rule_id=row.rule_id,
-        target_key=row.target_key,
-        target_url=row.target_url,
-        target_prompt_id=row.target_prompt_id,
-        target_theme=row.target_theme,
-        label_hint=prompt_text if isinstance(prompt_text, str) else None,
-        title=row.title or row.rule_id,
-        priority_score=float(row.priority_score or 0.0),
-        source_analysis_ids=tuple(row.source_analysis_ids or ()),
-        source_issue_ids=tuple(row.source_issue_ids or ()),
-        source_metric_ids=tuple(row.source_metric_ids or ()),
-    )
-
-
-async def sync_actions(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    new_rows: Sequence[Opportunity],
-    snapshot_id: uuid.UUID,
-    families: frozenset[str],
-) -> None:
-    """Re-derive every Action of a project from its new live Opportunity set.
-
-    Runs inside the recompute transaction, after the new rows and snapshot are
-    flushed and under the recompute's project lock, so members, priority and
-    diagnosis always describe the snapshot that superseded the old rows.
-    Identity and origin never change; an Action no member targets any more
-    keeps its row with its evidence cleared.
-    """
-    groups = group_members(
-        (_member(row) for row in new_rows), available_families=families
-    )
-    existing = {
-        action.group_key: action
-        for action in (
-            await session.scalars(
-                select(Action)
-                .where(
-                    Action.workspace_id == workspace_id,
-                    Action.project_id == project_id,
-                )
-                .with_for_update()
-            )
-        ).all()
-    }
-    now = _utcnow()
-    seen: set[str] = set()
-    actions_by_key: dict[str, Action] = {}
-    for group in groups:
-        seen.add(group.target.group_key)
-        action = existing.get(group.target.group_key)
-        if action is None:
-            action = Action(
-                workspace_id=workspace_id,
-                project_id=project_id,
-                group_key=group.target.group_key,
-                target_kind=group.target.kind,
-                origin=ACTION_ORIGIN_EVIDENCE,
-            )
-            session.add(action)
-        _apply_group(action, group, snapshot_id=snapshot_id)
-        actions_by_key[group.target.group_key] = action
-    await session.flush()
-    _stamp_members(groups, actions_by_key, new_rows)
-    for group_key, action in existing.items():
-        if group_key in seen:
-            continue
-        action.member_opportunity_ids = []
-        action.families = []
-        action.priority_score = None
-        action.opportunity_snapshot_id = snapshot_id
-        if (
-            action.evidence_cleared_at is None
-            and action.origin == ACTION_ORIGIN_EVIDENCE
-        ):
-            action.evidence_cleared_at = now
-
-
-def _stamp_members(
-    groups: Sequence[ActionGroup],
-    actions_by_key: dict[str, Action],
-    rows: Sequence[Opportunity],
-) -> None:
-    """Point each new row at its Action, in the recompute that wrote it."""
-    action_for_row: dict[uuid.UUID, uuid.UUID] = {}
-    for group in groups:
-        action_id = actions_by_key[group.target.group_key].id
-        for member in group.members:
-            action_for_row[member.opportunity_id] = action_id
-    for row in rows:
-        row.action_id = action_for_row.get(row.id)
-
-
-def _apply_group(action: Action, group: ActionGroup, *, snapshot_id: uuid.UUID) -> None:
-    action.target_label = group.target.label
-    action.target_url = group.target.url
-    action.target_prompt_id = group.target.prompt_id
-    action.priority_score = group.priority_score
-    action.families = list(group.families)
-    action.approach = group.approach
-    action.skill_id = group.skill_id
-    action.diagnosis = group.diagnosis
-    action.member_opportunity_ids = [
-        str(member.opportunity_id) for member in group.members
-    ]
-    action.opportunity_snapshot_id = snapshot_id
-    action.evidence_cleared_at = None
 
 
 async def list_actions(

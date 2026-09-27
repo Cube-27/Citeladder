@@ -1,10 +1,9 @@
-# Opportunities API request/response DTOs.
+# The Opportunity DTOs Python readers still share with the TypeScript owner.
 #
-# Every response model mirrors the checked-in strict frontend zod schema in
-# ``frontend/lib/api/schemas.ts`` field-for-field so the two contracts can
-# never drift (the frontend parses each payload with ``.strict()`` — an extra
-# or missing key fails loud). The service builds these from persisted rows
-# only; nothing here re-scores, fetches, or fabricates a metric.
+# The Opportunity routes and their DTOs moved to the TypeScript service
+# (TypeScript migration PR 7a). ``OpportunityItem`` remains for the command
+# center's action list and the Action detail's members, and
+# ``VerificationEventView`` for the Action routes, until their owners move.
 from __future__ import annotations
 
 import uuid
@@ -23,21 +22,6 @@ class _Model(BaseModel):
 # =========================================================================
 # Requests
 # =========================================================================
-class OpportunityOrderUpdate(_Model):
-    ordered_opportunity_ids: list[uuid.UUID]
-    expected_version: int = Field(ge=0)
-
-
-class OpportunityOrderResponse(_Model):
-    version: int
-    ordered_opportunity_ids: list[uuid.UUID]
-
-
-class RecomputeRequest(_Model):
-    """Optional recompute scope — omit both for the latest dashboard sources."""
-
-    audit_id: uuid.UUID | None = None
-    site_crawl_id: uuid.UUID | None = None
 
 
 class VerificationEventView(_Model):
@@ -55,31 +39,6 @@ class VerificationEventView(_Model):
     created_at: datetime
 
 
-class OpportunityHistoryEvent(_Model):
-    id: uuid.UUID
-    seen_at: str
-
-
-class OpportunityHistoryGroup(_Model):
-    rule_id: str
-    target_key: str
-    title: str
-    current_state: str
-    transition: str
-    occurrence_count: int
-    first_seen: str
-    last_seen: str
-    timeline: list[OpportunityHistoryEvent]
-
-
-class OpportunityHistoryResponse(_Model):
-    items: list[OpportunityHistoryGroup]
-    since_previous: dict[str, int]
-
-
-# =========================================================================
-# Responses
-# =========================================================================
 class OpportunityItem(_Model):
     """One live opportunity row as rendered by the priority-sorted catalog."""
 
@@ -106,80 +65,3 @@ class OpportunityItem(_Model):
     evidence_summary: dict[str, int | list[str]] = Field(default_factory=dict)
     created_at: str
     updated_at: str
-
-
-class OpportunityDetail(OpportunityItem):
-    """Full evidence bundle + provenance for one opportunity."""
-
-    remediation: str
-    evidence: dict
-    source_analysis_ids: list[str]
-    source_issue_ids: list[str]
-    source_metric_ids: list[str]
-    source_traffic_ids: list[str]
-    analyzer_version: str
-    rule_version: str
-    formula_version: str
-    content_handoff: dict[str, Any]
-    superseded_by_id: uuid.UUID | None
-    superseded_at: str | None
-
-
-class OpportunitiesPage(_Model):
-    items: list[OpportunityItem]
-    next_cursor: str | None
-
-
-class OpportunitySummary(_Model):
-    """Latest recompute snapshot projection (``computed=false`` when none)."""
-
-    computed: bool
-    run_id: uuid.UUID | None
-    audit_id: uuid.UUID | None
-    site_crawl_id: uuid.UUID | None
-    demand_snapshot_id: uuid.UUID | None
-    demand_source_revision: str | None
-    coverage: dict[str, Any]
-    limitations: list[str]
-    source_mix: dict[str, Any]
-    action_path_mix: dict[str, Any]
-    domain_rollups: list[dict[str, Any]]
-    counts_by_type: dict[str, int]
-    counts_by_severity: dict[str, int]
-    total_count: int
-    median_priority: float | None
-    analyzer_version: str
-    rule_version: str
-    formula_version: str
-    computed_at: str | None
-    # Read-time freshness (no persisted marker): newest usable audit/crawl
-    # evidence timestamp, and whether it post-dates the latest snapshot.
-    evidence_updated_at: str | None
-    stale: bool
-    activation_state: Literal[
-        "waiting_for_evidence", "queued", "refreshing", "ready", "delayed"
-    ]
-
-
-class RecomputeResponse(_Model):
-    """The immutable snapshot written by one recompute run."""
-
-    id: uuid.UUID
-    run_id: uuid.UUID
-    audit_id: uuid.UUID | None
-    site_crawl_id: uuid.UUID | None
-    demand_snapshot_id: uuid.UUID | None
-    demand_source_revision: str | None
-    coverage: dict[str, Any]
-    limitations: list[str]
-    source_mix: dict[str, Any]
-    action_path_mix: dict[str, Any]
-    domain_rollups: list[dict[str, Any]]
-    counts_by_type: dict[str, int]
-    counts_by_severity: dict[str, int]
-    total_count: int
-    median_priority: float | None
-    analyzer_version: str
-    rule_version: str
-    formula_version: str
-    created_at: str

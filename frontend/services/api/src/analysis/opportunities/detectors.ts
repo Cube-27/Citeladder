@@ -1,5 +1,5 @@
 import { policy } from '../../config.ts';
-import { pyCompare } from '../../python/text.ts';
+import { pyCompare, pyStrOrEmpty } from '../../python/text.ts';
 import { record } from '../../traffic/performance.ts';
 import type {
   AnalysisEvidence,
@@ -39,9 +39,10 @@ function gapHit(
   const engines = sortedUnique(rows.map((a) => a.logical_engine).filter(Boolean));
   return {
     rule_id: rule,
-    target_key: snapshot?.prompt_id
-      ? `prompt:${snapshot.prompt_id}`
-      : `prompt-index:${e.audit_id}:${index}`,
+    target_key:
+      snapshot?.prompt_id != null
+        ? `prompt:${snapshot.prompt_id}`
+        : `prompt-index:${e.audit_id}:${index}`,
     target_prompt_id: snapshot?.prompt_id ?? null,
     target_url: null,
     target_theme: snapshot?.theme || null,
@@ -109,7 +110,7 @@ function presentation(issue: SiteEvidence['issues'][number]): [string | null, st
   const missing = atoms
     .map(record)
     .filter((a) => a.outcome === 'missing')
-    .map((a) => String(a.name || ''))
+    .map((a) => pyStrOrEmpty(a.name))
     .sort(pyCompare);
   const selected = entries.find(
     ([names]) => JSON.stringify(names) === JSON.stringify(missing),
@@ -123,7 +124,13 @@ export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
   for (const issue of e.issues) {
     const rule = mapping[issue.rule_id];
     const url = urls.get(issue.site_url_id);
-    if (issue.finding_class !== 'defect' || !rule || !rules[rule]!.enabled || !url) continue;
+    if (
+      issue.finding_class !== policy.opportunity.refresh.finding_class_defect ||
+      !rule ||
+      !rules[rule]!.enabled ||
+      !url
+    )
+      continue;
     const [title_override, remediation_override] = presentation(issue);
     hits.push({
       rule_id: rule,

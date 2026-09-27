@@ -1,4 +1,10 @@
-"""Live decision fixtures for the PR7 opportunity foundation retained in Python."""
+"""Live decision fixtures for Opportunity code whose Python owners remain.
+
+The detectors, scoring, source mix, earned pages and exports moved to
+TypeScript in migration PR 7a. What stays live is source classification, the
+Action page key, placement comparison and page predicates, plus the values
+both stacks compute and compare (``opportunity_sources``).
+"""
 
 import dataclasses
 import itertools
@@ -7,27 +13,17 @@ import uuid
 from typing import Any
 
 from app.analysis.comparison import frozen_comparison_key
-from app.analysis.opportunities import (
-    actions,
-    detectors,
-    earned_pages,
-    exports,
-    scoring,
-    source_mix,
-    source_patterns,
-)
+from app.analysis.opportunities import actions, source_patterns
 from app.analysis.opportunities import placement_outcome as placement
-from app.analysis.opportunities.earned_page_evidence import (
-    EarnedPageEvidence,
-    PageEntityEvidence,
-    PriorPageEvidence,
-    SourcePageEvidence,
-)
 from app.analysis.opportunities.page_predicates import (
     links_to_owned,
     listed_in_headings,
 )
-from app.core.config import earned_actions, opportunities, source_pages
+from app.analysis.site_health.indexing import normalized_url_for_compare
+from app.core.config import earned_actions
+from app.domain.prompts.locks import _PROJECT_NAMESPACE, _advisory_lock_key
+from app.domain.prompts.normalization import prompt_text_hash
+from app.domain.source_pages.roster import project_roster
 
 
 def _json(value: Any) -> Any:
@@ -93,69 +89,11 @@ def opportunity_detectors() -> list[dict[str, Any]]:
             {"input": {"op": op, "args": _json(args)}, "output": _json(output)}
         )
 
-    _scoring_cases(add)
-    citations = _source_cases(add)
-    _visibility_cases(add, citations)
-    _site_cases(add)
-    _earned_cases(add)
+    _source_cases(add)
     _placement_cases(add)
     _action_cases(add)
     _predicate_cases(add)
-    _export_cases(add)
     return cases
-
-
-def _scoring_cases(add):
-    for intent in [None, "", "  BUY ", *opportunities.INTENT_VALUE_WEIGHTS, "unknown"]:
-        add("intent", [intent], scoring.value_factor_for_intent(intent))
-    for stage, intent, legacy in itertools.product(
-        [None, "", *opportunities.BUYER_STAGE_VALUE_WEIGHTS],
-        [None, "", *opportunities.PROMPT_INTENT_VALUE_WEIGHTS],
-        ["buy", "unknown"],
-    ):
-        add(
-            "prompt_value",
-            [stage, intent, legacy],
-            scoring.value_factor_for_prompt(stage, intent, legacy),
-        )
-    for count, rate in itertools.product([-2, 0, 1, 5, 999], [-1, 0, 0.5, 1, 2]):
-        add(
-            "gap",
-            [count, rate, 1.2],
-            scoring.gap_factor_visibility(
-                competitor_count=count,
-                owned_citation_rate=rate,
-                recommendation_strength=1.2,
-            ),
-        )
-    for count in [-1, 0, 1, 2, 99]:
-        add(
-            "competitor_factor", [count], scoring.page_competitor_presence_factor(count)
-        )
-        for eligible in [0, 1, 3, 20]:
-            add(
-                "recurrence",
-                [count, eligible],
-                scoring.page_recurrence_factor(
-                    answer_count=count, eligible_answers=eligible
-                ),
-            )
-    for severity, value in itertools.product(
-        [*opportunities.SEVERITY_WEIGHTS, "unknown"], [0, 1, 1.125, 2.675]
-    ):
-        add(
-            "priority",
-            [severity, value, 1.1],
-            scoring.priority_score(
-                severity=severity, value_factor=value, gap_factor=1.1
-            ),
-        )
-    for values in [
-        [],
-        [{"state": key} for key in opportunities.RECOMMENDATION_STRENGTH_FACTORS],
-        [{"state": "unknown"}],
-    ]:
-        add("recommendation", [values], scoring.recommendation_strength_factor(values))
 
 
 def _source_cases(add) -> list[source_patterns.CitationEvidence]:
@@ -215,109 +153,6 @@ def _source_cases(add) -> list[source_patterns.CitationEvidence]:
     return citations
 
 
-def _visibility_cases(add, citations: list[source_patterns.CitationEvidence]):
-    snapshot = detectors.PromptSnapshotEvidence(
-        0, _uid(2), "Which café?", "Theme", "buy", "decision", "comparison", _uid(3)
-    )
-    rows: tuple[detectors.AnalysisEvidence, ...]
-    for mentioned, owned, rivals, domains in itertools.product(
-        [False, True], [0, 1], [(), ("Rival", "", "Rival")], [(), ("brand.test",)]
-    ):
-        rows = (
-            detectors.AnalysisEvidence(
-                _uid(4),
-                0,
-                "engine",
-                owned,
-                mentioned,
-                rivals,
-                tuple(citations),
-                _uid(5),
-                ({"entity_kind": "competitor", "state": "recommended"},),
-            ),
-        )
-        evidence = detectors.VisibilityEvidence(_uid(1), rows, (snapshot,), domains)
-        add(
-            "brand_absent",
-            [evidence],
-            detectors.detect_brand_absent_high_value_prompt(evidence),
-        )
-        add(
-            "owned_not_cited",
-            [evidence],
-            detectors.detect_owned_page_not_cited(evidence),
-        )
-    for snapshots in [(), (dataclasses.replace(snapshot, prompt_id=None),)]:
-        rows = (
-            detectors.AnalysisEvidence(_uid(9), 2, "", 0, False, ("𐀀", "é")),
-            detectors.AnalysisEvidence(_uid(8), 0, "engine", 0, False, ("Rival",)),
-        )
-        evidence = detectors.VisibilityEvidence(
-            _uid(1), rows, snapshots, ("brand.test",)
-        )
-        add(
-            "brand_absent",
-            [evidence],
-            detectors.detect_brand_absent_high_value_prompt(evidence),
-        )
-    for gap in [set(), {0}, {1}]:
-        for sources in [(), tuple(citations), (citations[3],)]:
-            rows = tuple(
-                detectors.AnalysisEvidence(
-                    _uid(20 + i),
-                    0,
-                    "engine",
-                    0,
-                    False,
-                    ("Rival",),
-                    sources,
-                    _uid(30 + i),
-                )
-                for i in range(4)
-            )
-            add(
-                "source_mix",
-                [rows, (snapshot,), sorted(gap)],
-                source_mix.build_source_projection(
-                    analyses=rows, snapshots=(snapshot,), gap_prompt_indices=gap
-                ),
-            )
-
-
-def _site_cases(add):
-    for mapped in [*opportunities.SITE_ISSUE_TO_OPPORTUNITY_RULE_ID, "unmapped"]:
-        for finding in ["defect", "observation"]:
-            issue = detectors.SiteIssueEvidence(
-                _uid(1), mapped, "high", "technical", _uid(2), None, finding
-            )
-            evidence = detectors.SiteEvidence(
-                _uid(3),
-                (issue,),
-                (detectors.SiteUrlEvidence(_uid(2), "https://brand.test/a"),),
-                {"state": "partial"},
-                ("Missing pages",),
-            )
-            add("site", [evidence], detectors.detect_site_issue_opportunities(evidence))
-    for rule, choices in opportunities.SITE_ISSUE_ATOM_PRESENTATION.items():
-        for atoms in [[], *choices]:
-            issue = detectors.SiteIssueEvidence(
-                _uid(1),
-                rule,
-                "high",
-                "technical",
-                _uid(2),
-                {"atoms": [{"name": name, "outcome": "missing"} for name in atoms]},
-            )
-            evidence = detectors.SiteEvidence(
-                _uid(3),
-                (issue,),
-                (detectors.SiteUrlEvidence(_uid(2), "https://brand.test/a"),),
-                {},
-                (),
-            )
-            add("site", [evidence], detectors.detect_site_issue_opportunities(evidence))
-
-
 def _predicate_cases(add):
     for name, headings in [
         ("Best&Less", ("Best and Less",)),
@@ -337,133 +172,6 @@ def _predicate_cases(add):
         (("evilbrand.test",), ("brand.test",)),
     ]:
         add("links", [outbound, owned], links_to_owned(outbound, owned))
-
-
-def _export_cases(add):
-    variants: list[list[dict[str, Any]]] = [
-        [],
-        [
-            {
-                "title": '\t=HYPERLINK("x")',
-                "remediation": "a|b\r\nc\\d",
-                "priority_score": -2.0,
-                "target": "é𐀀",
-                "rule_version": True,
-            }
-        ],
-        [{"title": "  +formula", "target": None, "priority_score": 30.0}],
-    ]
-    for rows in variants:
-        add("csv", [rows], exports.rows_to_csv(rows))
-        add("markdown", [rows], exports.rows_to_markdown(rows))
-
-
-def _earned_cases(add):
-    brand = PageEntityEvidence("brand", "Best & Less", "not_detected", "exact", 0)
-    competitor = PageEntityEvidence(
-        "competitor", "Rival", "present", "exact", 2, ("Rival is listed.",)
-    )
-    page = SourcePageEvidence(
-        "hash",
-        "https://publisher.test/list",
-        "publisher.test",
-        "listicle",
-        "heading",
-        "inspected",
-        None,
-        str(_uid(1)),
-        5000,
-        True,
-        "Best tools",
-        ("Rival",),
-        ("rival.test",),
-        "current",
-        (brand, competitor),
-        None,
-        True,
-        answer_count=3,
-        prompt_indices=(0,),
-        analysis_ids=(str(_uid(2)),),
-        recurrence_count=3,
-    )
-    variants = [page]
-    variants.extend(
-        dataclasses.replace(page, answer_count=answer, recurrence_count=recurrence)
-        for answer, recurrence in itertools.product([0, 1, 2, 3], repeat=2)
-    )
-    for headings, domains in itertools.product(
-        [(), ("Rival",), ("Best and Less",)],
-        [(), ("rival.test",), ("docs.brand.test",)],
-    ):
-        variants.append(
-            dataclasses.replace(
-                page,
-                entities=(dataclasses.replace(brand, presence="present"), competitor),
-                headings=headings,
-                outbound_domains=domains,
-            )
-        )
-    for presence in ["present", "ambiguous", "partial", "not_detected"]:
-        for prior in [None, PriorPageEvidence(str(_uid(3)), True, 5, (), "old")]:
-            variants.append(
-                dataclasses.replace(
-                    page,
-                    entities=(
-                        dataclasses.replace(brand, presence=presence),
-                        competitor,
-                    ),
-                    prior=prior,
-                )
-            )
-    for state in [
-        source_pages.INSPECTION_NOT_INSPECTED,
-        source_pages.INSPECTION_QUEUED,
-        source_pages.INSPECTION_FAILED,
-        "blocked",
-        "inspected",
-    ]:
-        for requested in [False, True]:
-            variants.append(
-                dataclasses.replace(
-                    page,
-                    inspection_state=state,
-                    requested=requested,
-                    sufficient_coverage=False,
-                )
-            )
-    field_variants: dict[str, list[Any]] = {
-        "answer_count": [0, 1, 2, 4],
-        "recurrence_count": [0, 1, 2, 4],
-        "snapshot_id": [None],
-        "roster_current": [False],
-        "entities": [()],
-        "page_format": ["unresolved", "article"],
-        "headings": [(), ("Best and Less",)],
-        "outbound_domains": [(), ("brand.test",)],
-        "themes": [("theme",) * 20],
-    }
-    for field, values in field_variants.items():
-        variants.extend(dataclasses.replace(page, **{field: value}) for value in values)
-    variants += [
-        dataclasses.replace(
-            page,
-            entities=(
-                dataclasses.replace(
-                    brand, presence="present", passages=("Brand passage",) * 10
-                ),
-                competitor,
-            ),
-            answer_competitors=("other",) * 20,
-        )
-    ]
-    for item in variants:
-        evidence = EarnedPageEvidence((item,), ("brand.test",), 8, 1, 5)
-        add("qualification", [item], earned_pages.qualification(item))
-        add(
-            "earned",
-            [evidence],
-            earned_pages.detect_earned_page_opportunities(evidence),
-        )
 
 
 def _placement_cases(add):
@@ -511,45 +219,6 @@ def _placement_cases(add):
 
 
 def _action_cases(add):
-    members = [
-        actions.ActionMember(
-            _uid(i + 1),
-            rule.rule_id,
-            "url:https://brand.test/a/",
-            "https://brand.test/a/",
-            None,
-            "theme",
-            None,
-            rule.title,
-            50 + i,
-            (str(i),),
-        )
-        for i, rule in enumerate(opportunities.OPPORTUNITY_RULES)
-    ]
-    for rows in [[], members, list(reversed(members))]:
-        add(
-            "groups",
-            [rows, ["ai_visibility", "site_health"]],
-            actions.group_members(
-                rows, available_families=frozenset({"ai_visibility", "site_health"})
-            ),
-        )
-    for key, url, prompt, theme in [
-        ("product:x", None, None, ""),
-        ("category:x", None, None, ""),
-        ("prompt-index:x:1", None, None, ""),
-        ("demand:x", None, None, " STRASSE Straße "),
-        ("prompt:x", None, _uid(2), ""),
-        ("other", None, None, ""),
-    ]:
-        member = dataclasses.replace(
-            members[0],
-            target_key=key,
-            target_url=url,
-            target_prompt_id=prompt,
-            target_theme=theme,
-        )
-        add("target", [member], actions.target_for(member))
     for url in [
         "https://BRAND.test:443/a///?utm_source=x&q=é#fragment",
         "https://brand.test:99999/a",
@@ -558,3 +227,55 @@ def _action_cases(add):
         "https://[::1]/a",
     ]:
         add("page_key", [url], actions.page_group_key(url))
+
+
+def opportunity_sources() -> list[dict[str, Any]]:
+    """Values both stacks compute and compare (roster, hashes, lock key, page URL)."""
+    cases: list[dict[str, Any]] = []
+
+    def add(op, args, output):
+        cases.append(
+            {"input": {"op": op, "args": _json(args)}, "output": _json(output)}
+        )
+
+    configs: list[dict[str, Any]] = [
+        {},
+        {"brand_name": "Café", "brand_aliases": ["Straße", "b", "A"]},
+        {"brand_name": None, "brand_aliases": None, "competitors": None},
+        {
+            "brand_name": "𐀀 Brand",
+            "competitors": [
+                {"name": "Zed", "aliases": ["z2", "Z1"]},
+                {"name": "Acme", "aliases": []},
+                {"name": "Acme"},
+            ],
+        },
+    ]
+    for config in configs:
+        add("roster", [config], project_roster(config))
+    for text in [
+        "Best  shoes?",
+        "  CAF\u00c9 Stra\u00dfe!! ",
+        "\u00a0tab\tnl\n. ,;:",
+        "\U00010000?",
+        "",
+        "\ufb01?!",
+    ]:
+        add("prompt_hash", [text], prompt_text_hash(text))
+    for index in [0, 1, 7, 99]:
+        add(
+            "lock_key",
+            [str(_uid(index))],
+            str(_advisory_lock_key(_PROJECT_NAMESPACE, _uid(index))),
+        )
+    for url in [
+        "https://BRAND.test:443/a///?utm_source=x&q=é#fragment",
+        "http://brand.test:80",
+        "https://brand.test:8443/a/b/",
+        "HTTPS://Brand.Test/?b=2&a=1&fbclid=z",
+        "relative/A",
+        "  mailto:x@y  ",
+        "",
+    ]:
+        add("url_compare", [url], normalized_url_for_compare(url))
+    return cases

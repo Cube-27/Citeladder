@@ -124,7 +124,8 @@ def _parity_app() -> FastAPI:
         item_id: UUID,
         limit: int = Query(default=20, ge=1, le=100),
         cursor: str | None = None,
-    ) -> None: ...
+    ) -> None:
+        del item_id  # only the declared signature matters to the schema
 
     @router.post(
         "/parity",
@@ -134,7 +135,8 @@ def _parity_app() -> FastAPI:
     async def create_item(body: _ParityCreate) -> None: ...
 
     @router.delete("/parity/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-    async def delete_item(item_id: UUID) -> None: ...
+    async def delete_item(item_id: UUID) -> None:
+        del item_id
 
     app = FastAPI()
     app.include_router(router, prefix=API_V1_PREFIX)

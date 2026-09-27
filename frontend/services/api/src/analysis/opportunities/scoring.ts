@@ -7,7 +7,7 @@ const normalized = (value: string | null) => pyStrip(value ?? '').toLowerCase();
 function weight(table: Record<string, number>, key: string, fallback: number): number {
   return table[key] ?? fallback;
 }
-export function valueFactorForIntent(intent: string | null): number {
+function valueFactorForIntent(intent: string | null): number {
   return weight(p.INTENT_VALUE_WEIGHTS, normalized(intent), p.INTENT_VALUE_DEFAULT);
 }
 export function valueFactorForPrompt(
@@ -25,11 +25,12 @@ export function valueFactorForPrompt(
   return [valueFactorForIntent(l), 'legacy_intent', l];
 }
 export function recommendationStrengthFactor(assessments: Record<string, unknown>[]): number {
-  return assessments.length
-    ? Math.max(
-        ...assessments.map((a) => weight(p.RECOMMENDATION_STRENGTH_FACTORS, String(a.state), 1)),
-      )
-    : 1;
+  // A loop, not `Math.max(...spread)`: an audit's assessments are unbounded.
+  let strongest = -Infinity;
+  for (const a of assessments) {
+    strongest = Math.max(strongest, weight(p.RECOMMENDATION_STRENGTH_FACTORS, String(a.state), 1));
+  }
+  return assessments.length ? strongest : 1;
 }
 export function gapFactorVisibility(competitors: number, ownedRate: number, strength = 1): number {
   const count = Math.min(Math.max(Math.trunc(competitors), 0), p.GAP_COMPETITOR_CAP);

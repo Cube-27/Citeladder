@@ -11,7 +11,7 @@ const relevant = (page: SourcePageEvidence) =>
   page.answer_count >= 1 && page.prompt_indices.length > 0;
 const recurrent = (page: SourcePageEvidence, min: number) =>
   Math.max(page.recurrence_count, page.answer_count) >= min;
-export function qualification(page: SourcePageEvidence): [boolean, string[]] {
+function qualification(page: SourcePageEvidence): [boolean, string[]] {
   const missing: string[] = [];
   if (page.inspection_state !== s.INSPECTION_INSPECTED || page.snapshot_id === null)
     missing.push('not_inspected');

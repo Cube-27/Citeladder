@@ -150,7 +150,7 @@ function pyNumberRepr(value: number): string {
 }
 
 /** `repr(value)` for a finite number known to be a Python `float` (`30` prints `'30.0'`). */
-export function pyFloatRepr(value: number): string {
+function pyFloatRepr(value: number): string {
   const [mantissa, exponent] = value.toExponential().split('e') as [string, string];
   const power = Number(exponent);
   // Python uses scientific notation below 1e-4 and from 1e16; JavaScript below 1e-6 and from 1e21.
@@ -162,7 +162,7 @@ export function pyFloatRepr(value: number): string {
 }
 
 /** `repr(value)` for a decoded JSON value, as Python prints the object it decodes to. */
-export function pyReprValue(value: unknown): string {
+function pyReprValue(value: unknown): string {
   if (value === null || value === undefined) return 'None';
   if (typeof value === 'boolean') return value ? 'True' : 'False';
   if (typeof value === 'number') return pyNumberRepr(value);

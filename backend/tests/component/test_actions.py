@@ -1,4 +1,8 @@
-"""Action identity across recompute, agent attach, and workspace isolation."""
+"""Action status, agent attach and workspace isolation over a refreshed live set.
+
+The refresh that groups Opportunities into Actions is TypeScript (migration
+PR 7a, ``opportunity-refresh.test.ts``); ``seed_live_set`` writes its result.
+"""
 
 from __future__ import annotations
 
@@ -6,17 +10,16 @@ import asyncio
 import uuid
 
 import pytest
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.domain.opportunities import action_status, actions, queries, recompute
+from app.domain.opportunities import action_status, actions, queries
 from app.domain.opportunities.errors import (
     OpportunityNotFoundError,
     OpportunityValidationError,
 )
 from app.models.opportunity import Action, ActionStatusEvent, Opportunity
-from app.models.site_health.analysis import SiteIssue
-from tests.component.opportunity_helpers import URL_A, URL_B, _seed_scenario
+from tests.component.opportunity_helpers import URL_B, _seed_scenario, seed_live_set
 
 
 async def _actions(session: AsyncSession, project_id: uuid.UUID) -> dict[str, Action]:
@@ -26,69 +29,11 @@ async def _actions(session: AsyncSession, project_id: uuid.UUID) -> dict[str, Ac
     return {row.target_label: row for row in rows}
 
 
-async def test_recompute_groups_members_and_keeps_action_identity(
+async def test_a_dismissed_action_leaves_the_queue_with_one_event(
     db_session: AsyncSession,
 ) -> None:
     scn = await _seed_scenario(db_session)
-    await recompute.recompute(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
-    first = await _actions(db_session, scn.project_id)
-
-    page_a = first[URL_A]
-    assert page_a.approach == "fix_technical"
-    assert page_a.families == ["site_health"]
-    assert page_a.diagnosis["families"]["search_console"] == "unavailable"
-    prompt_actions = [row for row in first.values() if row.target_kind == "prompt"]
-    assert sum(len(row.member_opportunity_ids) for row in prompt_actions) == 2
-    first_ids = {label: row.id for label, row in first.items()}
-    first_members = list(page_a.member_opportunity_ids)
-
-    await recompute.recompute(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
-    db_session.expire_all()
-    second = await _actions(db_session, scn.project_id)
-
-    assert {label: row.id for label, row in second.items()} == first_ids
-    # The members are the NEW live rows, not the superseded ones.
-    assert second[URL_A].member_opportunity_ids != first_members
-
-
-async def test_an_action_whose_evidence_stops_firing_keeps_its_identity(
-    db_session: AsyncSession,
-) -> None:
-    scn = await _seed_scenario(db_session)
-    await recompute.recompute(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
-    page_b_id = (await _actions(db_session, scn.project_id))[URL_B].id
-
-    await db_session.execute(delete(SiteIssue).where(SiteIssue.id == scn.issue_thin_id))
-    await db_session.commit()
-    await recompute.recompute(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
-    db_session.expire_all()
-
-    cleared = await db_session.get(Action, page_b_id)
-    assert cleared is not None
-    assert cleared.member_opportunity_ids == []
-    assert cleared.priority_score is None
-    assert cleared.evidence_cleared_at is not None
-    listed, _ = await actions.list_actions(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
-    assert page_b_id not in {row.id for row, _status in listed}
-
-
-async def test_a_dismissed_action_keeps_its_status_across_recompute(
-    db_session: AsyncSession,
-) -> None:
-    scn = await _seed_scenario(db_session)
-    await recompute.recompute(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
+    await seed_live_set(db_session, scn)
     page_b_id = (await _actions(db_session, scn.project_id))[URL_B].id
 
     for _ in range(2):  # a repeated decision appends one event
@@ -99,9 +44,6 @@ async def test_a_dismissed_action_keeps_its_status_across_recompute(
             status="dismissed",
             changed_by_user_id=scn.user_id,
         )
-    await recompute.recompute(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
     db_session.expire_all()
 
     kept = await db_session.get(Action, page_b_id)
@@ -118,7 +60,7 @@ async def test_a_dismissed_action_keeps_its_status_across_recompute(
         status="dismissed",
     )
     assert [(row.id, status) for row, status in dismissed] == [(page_b_id, "dismissed")]
-    # The recomputed rows point at the Action, and leave the default queue.
+    # The member rows point at the Action, and leave the default queue.
     members = (
         await db_session.scalars(
             select(Opportunity.action_id).where(
@@ -146,9 +88,7 @@ async def test_a_user_cannot_store_a_derived_or_declared_status(
     db_session: AsyncSession,
 ) -> None:
     scn = await _seed_scenario(db_session)
-    await recompute.recompute(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
+    await seed_live_set(db_session, scn)
     action = next(iter((await _actions(db_session, scn.project_id)).values()))
 
     for status in ("in_progress", "implemented", "done"):
@@ -166,9 +106,7 @@ async def test_a_user_cannot_overwrite_a_declared_status(
     db_session: AsyncSession,
 ) -> None:
     scn = await _seed_scenario(db_session)
-    await recompute.recompute(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
+    await seed_live_set(db_session, scn)
     action = next(iter((await _actions(db_session, scn.project_id)).values()))
     action.status = "implemented"
     await db_session.commit()
@@ -196,9 +134,7 @@ async def test_agent_work_on_a_page_with_evidence_attaches_to_its_action(
     db_session: AsyncSession,
 ) -> None:
     scn = await _seed_scenario(db_session)
-    await recompute.recompute(
-        db_session, workspace_id=scn.workspace_id, project_id=scn.project_id
-    )
+    await seed_live_set(db_session, scn)
     evidence_action = (await _actions(db_session, scn.project_id))[URL_B]
 
     attached = await actions.attach_or_create_action(
@@ -264,9 +200,7 @@ async def test_agent_work_cannot_target_a_domain_the_project_does_not_own(
 async def test_actions_are_workspace_isolated(db_session: AsyncSession) -> None:
     owner = await _seed_scenario(db_session)
     other = await _seed_scenario(db_session)
-    await recompute.recompute(
-        db_session, workspace_id=owner.workspace_id, project_id=owner.project_id
-    )
+    await seed_live_set(db_session, owner)
     action = next(iter((await _actions(db_session, owner.project_id)).values()))
 
     with pytest.raises(OpportunityNotFoundError):

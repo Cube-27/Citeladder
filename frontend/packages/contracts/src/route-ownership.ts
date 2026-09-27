@@ -11,6 +11,7 @@
 export type RouteStack = 'python' | 'typescript';
 
 export const ROUTE_OWNERSHIP = {
+  actions: 'python',
   agent: 'python',
   'ai-referrals': 'typescript',
   'audit-schedules': 'python',
@@ -23,7 +24,7 @@ export const ROUTE_OWNERSHIP = {
   executions: 'typescript',
   integrations: 'python',
   'mcp-connections': 'python',
-  opportunities: 'python',
+  opportunities: 'typescript',
   performance: 'typescript',
   'performance-sync': 'python',
   readiness: 'python',
@@ -56,4 +57,7 @@ export const TYPESCRIPT_INGRESS_PATHS = [
   '/api/v1/projects/*/visibility/sources/series',
   '/api/v1/projects/*/visibility/sources/url',
   '/api/v1/projects/*/visibility/surface-rates',
+  '/api/v1/projects/*/opportunities',
+  '/api/v1/projects/*/opportunities/*',
+  '/api/v1/opportunities/*',
 ] as const;

@@ -31,7 +31,8 @@ function empty(state: string, eligible: number, limitations: string[]) {
     limitations,
   };
 }
-const emptySourceProjection = () => empty('not_applicable', 0, ['No qualifying visibility gap.']);
+export const emptySourceProjection = () =>
+  empty('not_applicable', 0, ['No qualifying visibility gap.']);
 function mix(counts: Map<string, number>, eligible: number, answers: number) {
   const total = [...counts.values()].reduce((a, b) => a + b, 0);
   const keys = sorted(counts.keys());

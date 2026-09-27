@@ -3,6 +3,25 @@ import { pyCompare } from '../../python/text.ts';
 import { domainMatches, normalizeDomain } from '../domains.ts';
 import type { CitationEvidence } from './evidence.ts';
 const p = policy.opportunity.source_patterns;
+/**
+ * True when `google` is the registrable label: only a public suffix follows
+ * it (`core/config/source_patterns.is_google_search_surface`). Not a prefix
+ * test, so `google.evil.com` is an ordinary publisher.
+ */
+function isGoogleSearchSurface(domain: string): boolean {
+  const [first, ...suffix] = domain.split('.');
+  if (first !== 'google' || suffix.length === 0) return false;
+  return (
+    suffix.length === 1 ||
+    (suffix.length === 2 && p._PUBLIC_SECOND_LEVEL_LABELS.includes(suffix[0]!))
+  );
+}
+/** `SOURCE_CLASS_ORDER.index`, which raises for a class outside the taxonomy. */
+function classRank(kind: string): number {
+  const rank = p.SOURCE_CLASS_ORDER.indexOf(kind);
+  if (rank < 0) throw new Error(`${kind} is not in SOURCE_CLASS_ORDER`);
+  return rank;
+}
 export function classifySourceDomain(
   domain: string,
   owned: boolean,
@@ -11,13 +30,7 @@ export function classifySourceDomain(
   if (owned) return p.SOURCE_CLASS_BRAND_OWNED;
   if (competitor) return p.SOURCE_CLASS_COMPETITOR_OWNED;
   const normalized = normalizeDomain(domain);
-  const labels = normalized.split('.');
-  if (
-    labels[0] === 'google' &&
-    (labels.length === 2 ||
-      (labels.length === 3 && p._PUBLIC_SECOND_LEVEL_LABELS.includes(labels[1]!)))
-  )
-    return p.SOURCE_CLASS_SEARCH_SURFACE;
+  if (isGoogleSearchSurface(normalized)) return p.SOURCE_CLASS_SEARCH_SURFACE;
   for (const [kind, domains] of p.SOURCE_CLASS_DOMAIN_TABLES as [string, string[]][]) {
     if (domains.some((d) => domainMatches(normalized, d))) return kind;
   }
@@ -71,8 +84,7 @@ export function summarizeSourcePattern(citations: CitationEvidence[]) {
   if (independent.size >= p.MULTIPLE_INDEPENDENT_DOMAIN_MIN)
     patterns.push(p.PATTERN_MULTIPLE_INDEPENDENT_DOMAINS);
   const ordered = [...domains].sort(
-    ([a, [ak]], [b, [bk]]) =>
-      p.SOURCE_CLASS_ORDER.indexOf(ak) - p.SOURCE_CLASS_ORDER.indexOf(bk) || pyCompare(a, b),
+    ([a, [ak]], [b, [bk]]) => classRank(ak) - classRank(bk) || pyCompare(a, b),
   );
   return {
     taxonomy_version: p.SOURCE_TAXONOMY_VERSION,

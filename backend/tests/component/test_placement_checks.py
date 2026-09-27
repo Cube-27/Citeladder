@@ -64,6 +64,7 @@ from tests.component.opportunity_helpers import (
     Scenario,
     _seed_scenario,
     seed_action_for,
+    seed_live_set,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -147,10 +148,7 @@ async def _seed(
     await grant_test_capabilities(_EMAIL)
     async with session_factory() as session:
         scenario = await _seed_scenario(session, email=_EMAIL)
-    await client.post(
-        f"/api/v1/projects/{scenario.project_id}/opportunities/recompute",
-        headers={"X-Workspace-Id": str(scenario.workspace_id)},
-    )
+        await seed_live_set(session, scenario)
     async with session_factory() as session:
         page = SourcePage(
             workspace_id=scenario.workspace_id,

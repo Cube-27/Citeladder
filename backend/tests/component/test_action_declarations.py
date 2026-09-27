@@ -34,6 +34,7 @@ from tests.component.opportunity_helpers import (
     Scenario,
     _seed_scenario,
     seed_action_for,
+    seed_live_set,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -42,22 +43,18 @@ _EMAIL = "action-declarations@example.com"
 _PUBLISHER_URL = "https://review.example/best-crm-tools"
 
 
-async def _seed_and_recompute(
+async def _seed_and_refresh(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> tuple[Scenario, Action, SiteUrl]:
-    """A recomputed scenario and the Action grouping its Site Health page row."""
+    """A refreshed scenario and the Action grouping its Site Health page row."""
     from tests.component.auth_helpers import grant_test_capabilities, register_and_login
 
     await register_and_login(client, _EMAIL)
     await grant_test_capabilities(_EMAIL)
     async with session_factory() as session:
         scenario = await _seed_scenario(session, email=_EMAIL)
-    recompute = await client.post(
-        f"/api/v1/projects/{scenario.project_id}/opportunities/recompute",
-        headers={"X-Workspace-Id": str(scenario.workspace_id)},
-    )
-    assert recompute.status_code == 200
+        await seed_live_set(session, scenario)
     async with session_factory() as session:
         opportunity = await session.scalar(
             select(Opportunity).where(
@@ -132,7 +129,7 @@ async def test_declaring_an_action_freezes_its_checks_and_status(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    scenario, action, site_url = await _seed_and_recompute(client, session_factory)
+    scenario, action, site_url = await _seed_and_refresh(client, session_factory)
     revision_id = await _seed_revision(
         session_factory, scenario, action_id=action.id, phase="draft"
     )
@@ -182,7 +179,7 @@ async def test_a_declaration_names_only_this_actions_shippable_revision(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    scenario, action, _site_url = await _seed_and_recompute(client, session_factory)
+    scenario, action, _site_url = await _seed_and_refresh(client, session_factory)
     foreign = await _seed_revision(
         session_factory, scenario, action_id=None, phase="draft"
     )
@@ -217,7 +214,7 @@ async def test_caller_supplied_checks_and_targets_are_rejected(
     A caller that could name its own expectation could declare itself verified
     against one it knows already holds.
     """
-    scenario, action, site_url = await _seed_and_recompute(client, session_factory)
+    scenario, action, site_url = await _seed_and_refresh(client, session_factory)
 
     response = await client.post(
         f"/api/v1/actions/{action.id}/declaration",
@@ -236,7 +233,7 @@ async def test_another_workspaces_action_cannot_be_declared(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    scenario, _action, _site_url = await _seed_and_recompute(client, session_factory)
+    scenario, _action, _site_url = await _seed_and_refresh(client, session_factory)
     async with session_factory() as session:
         foreign = await _seed_scenario(session)
         foreign_opportunity = Opportunity(
@@ -268,7 +265,7 @@ async def test_concurrent_declarations_store_exactly_one(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    scenario, action, _site_url = await _seed_and_recompute(client, session_factory)
+    scenario, action, _site_url = await _seed_and_refresh(client, session_factory)
     declared_at = datetime.now(UTC)
 
     async def declare(key: str) -> str:
@@ -310,7 +307,7 @@ async def test_observations_derive_measuring_and_done(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """The verifier appends observations; the Action status is read from them."""
-    scenario, action, site_url = await _seed_and_recompute(client, session_factory)
+    scenario, action, site_url = await _seed_and_refresh(client, session_factory)
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, scenario.crawl_id)
         assert crawl is not None
@@ -511,7 +508,7 @@ async def test_an_earned_action_declares_against_the_publisher_page(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """A third-party target never routes through the owned-page resolver."""
-    scenario, _action, _site_url = await _seed_and_recompute(client, session_factory)
+    scenario, _action, _site_url = await _seed_and_refresh(client, session_factory)
     action_id = await _seed_earned_page_action(session_factory, scenario)
 
     response = await client.post(
@@ -537,7 +534,7 @@ async def test_the_database_refuses_a_row_claiming_both_target_kinds(
 ) -> None:
     """An owned change and an external placement verify against different
     evidence, so a row claiming both would report two outcomes as one."""
-    scenario, action, site_url = await _seed_and_recompute(client, session_factory)
+    scenario, action, site_url = await _seed_and_refresh(client, session_factory)
     async with session_factory() as session:
         snapshot_id = await session.scalar(
             select(OpportunitySnapshot.id).where(
@@ -568,7 +565,7 @@ async def test_an_action_with_no_current_finding_cannot_be_declared(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """With no member there is no check, so the declaration could never measure."""
-    scenario, _action, _site_url = await _seed_and_recompute(client, session_factory)
+    scenario, _action, _site_url = await _seed_and_refresh(client, session_factory)
     async with session_factory() as session:
         planned = Action(
             workspace_id=scenario.workspace_id,

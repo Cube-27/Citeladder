@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 
 from app.domain.opportunities.common import _iso
-from app.domain.opportunities.content_handoff import project_content_handoff
 from app.models.opportunity import Opportunity, OpportunityOrder
 
 
@@ -111,39 +110,3 @@ def ordered_items(
         )
         for index, row in enumerate(ordered, start=1)
     ]
-
-
-def project_detail(row: Opportunity) -> dict:
-    return {
-        **project_item(row),
-        "remediation": row.remediation or "",
-        "evidence": row.evidence or {},
-        "source_analysis_ids": list(row.source_analysis_ids or []),
-        "source_issue_ids": list(row.source_issue_ids or []),
-        "source_metric_ids": list(row.source_metric_ids or []),
-        "source_traffic_ids": list(row.source_traffic_ids or []),
-        "analyzer_version": row.analyzer_version,
-        "rule_version": row.rule_version,
-        "formula_version": row.formula_version,
-        "content_handoff": project_content_handoff(row),
-        "superseded_by_id": row.superseded_by_id,
-        "superseded_at": _iso(row.superseded_at),
-    }
-
-
-def project_export_row(row: Opportunity) -> dict:
-    evidence = row.evidence or {}
-    target = row.target_url or evidence.get("prompt_text") or row.target_key
-    return {
-        "id": str(row.id),
-        "rule_id": row.rule_id,
-        "opportunity_type": row.opportunity_type,
-        "severity": row.severity,
-        "priority_score": row.priority_score,
-        "title": row.title or "",
-        "target": target,
-        "remediation": row.remediation or "",
-        "rule_version": row.rule_version,
-        "formula_version": row.formula_version,
-        "created_at": _iso(row.created_at),
-    }

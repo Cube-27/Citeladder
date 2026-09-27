@@ -10,6 +10,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { opportunityGolden } from './opportunity-golden.ts';
 import { verificationGolden } from './verification-golden.ts';
+import { sourcesGolden } from './sources-golden.ts';
 import { frozenComparisonKey } from '../src/analysis/comparison.ts';
 
 import {
@@ -140,6 +141,7 @@ function mentionPositions(score: Record<string, unknown>): unknown {
 
 const PORTS: Record<string, (input: never) => unknown> = {
   opportunity_detectors: opportunityGolden,
+  opportunity_sources: sourcesGolden,
   opportunity_comparisons: (input: Parameters<typeof frozenComparisonKey>) =>
     frozenComparisonKey(...input),
   opportunity_verification: verificationGolden,

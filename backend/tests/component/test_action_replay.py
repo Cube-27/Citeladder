@@ -22,7 +22,7 @@ from app.models.workspace import WorkspaceMember
 from tests.component.opportunity_helpers import _seed_scenario
 from tests.component.test_action_declarations import (
     _headers,
-    _seed_and_recompute,
+    _seed_and_refresh,
     _seed_earned_page_action,
 )
 
@@ -34,7 +34,7 @@ async def test_replay_remains_bound_to_authorized_action_and_original_body(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario, action, _ = await _seed_and_recompute(client, session_factory)
+    scenario, action, _ = await _seed_and_refresh(client, session_factory)
     other_id = await _seed_earned_page_action(session_factory, scenario)
     async with session_factory() as session:
         foreign = await _seed_scenario(session)
@@ -94,7 +94,7 @@ async def test_two_actions_racing_for_one_key_roll_back_the_losing_effects(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scenario, action, _ = await _seed_and_recompute(client, session_factory)
+    scenario, action, _ = await _seed_and_refresh(client, session_factory)
     other_id = await _seed_earned_page_action(session_factory, scenario)
     barrier = asyncio.Barrier(2)
     flush = declarations._flush_declaration
@@ -161,7 +161,7 @@ async def test_concurrent_identical_declarations_replay_once(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    scenario, action, _ = await _seed_and_recompute(client, session_factory)
+    scenario, action, _ = await _seed_and_refresh(client, session_factory)
     payload = {"declared_implemented_at": datetime.now(UTC).isoformat()}
 
     async def request():

@@ -127,7 +127,8 @@ asyncio.run(main())
   );
   expect(completed.query_ids).toEqual(queries.body.items.map((r) => r.id));
   expect(completed.query_cursor).toBe(queries.body.next_cursor);
-  expect(completed.ran).toBeGreaterThan(0);
+  // The TS worker drains the whole chain, Opportunity refresh included.
+  expect(completed.ran).toBe(0);
   expect(completed.readiness).toMatchObject({
     stage: 'analysis_ready',
     connection_count: 2,

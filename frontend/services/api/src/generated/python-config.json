@@ -310,6 +310,7 @@
       "classify_referrals",
       "demand_snapshot_refresh",
       "ingest_referrals",
+      "opportunity_refresh",
       "opportunity_verification",
       "performance_range_projection",
       "referral_retention_sweep",
@@ -318,7 +319,6 @@
     "python_task_kinds": [
       "commerce_catalog_projection",
       "commerce_competitor_discovery",
-      "opportunity_refresh",
       "search_intelligence_acquisition",
       "source_page_inspection"
     ],
@@ -2501,7 +2501,51 @@
       "utm_medium",
       "utm_source",
       "utm_term"
-    ]
+    ],
+    "refresh": {
+      "task_kind": "opportunity_refresh",
+      "evidence_crawl_statuses": [
+        "completed",
+        "partially_completed",
+        "cancelled"
+      ],
+      "crawl_status_completed": "completed",
+      "finding_class_defect": "defect",
+      "change_analyzer_version": "site-change-v2",
+      "change_class_regression": "potential-regression",
+      "change_class_critical": "critical-regression",
+      "change_max_observations": 50000,
+      "change_state_available": "available",
+      "content_change_field": "content_change",
+      "source_page_outcome_inspected": "inspected",
+      "content_format_ids": [
+        "content_page",
+        "product_page",
+        "category_page",
+        "about_us",
+        "article",
+        "blog",
+        "faq",
+        "glossary_term",
+        "listicle",
+        "case_study",
+        "comparison",
+        "content_refresh",
+        "youtube",
+        "tiktok",
+        "linkedin",
+        "x",
+        "instagram",
+        "reddit",
+        "newsletter",
+        "original_research"
+      ],
+      "project_lock": {
+        "namespace": 1347571530,
+        "person": "citeladder-locks"
+      },
+      "prompt_trailing_punctuation": " \t\n\r\u000b\f?.!,;:"
+    }
   },
   "abuse": {
     "active_job_retry_after_seconds": {
