@@ -216,8 +216,12 @@ export function PromptLibrary({
   }, [generateRequest, resetGenerate]);
 
   const createTopicMutation = useMutation({
-    mutationFn: (name: string) =>
-      topicsApi.create(requestScope.projectId, { name }, requestOptions()),
+    mutationFn: ({ name, parentId }: { name: string; parentId: string | null }) =>
+      topicsApi.create(
+        requestScope.projectId,
+        parentId ? { name, parent_id: parentId } : { name },
+        requestOptions(),
+      ),
     onSuccess: invalidate,
   });
 
@@ -374,8 +378,8 @@ export function PromptLibrary({
               topics={topics}
               selectedTopicId={selectedTopicId}
               onSelect={setSelectedTopicId}
-              onCreate={async (name) => {
-                await createTopicMutation.mutateAsync(name);
+              onCreate={async (name, parentId) => {
+                await createTopicMutation.mutateAsync({ name, parentId });
               }}
               onDelete={(topic) => deleteTopicMutation.mutate(topic)}
               isCreating={createTopicMutation.isPending}

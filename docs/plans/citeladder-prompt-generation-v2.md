@@ -2,9 +2,11 @@
 
 Status: active, owner-approved direction (26 September 2026; revised the same day
 after the prompt-universe and JEV feasibility research). PR 1 merged as `54e6f4b8`
-(#161); PR 2 merged as `42c73cfe` (#162). PR 3a is implemented on
-`prompt-gen-v2-pr3a`; model-suggested map entries and subtopic creation in the
-topic rail are left to PR 3b, which produces and consumes them.
+(#161); PR 2 merged as `42c73cfe` (#162); PR 3a merged as `adadf505`
+(#163). PR 3b is implemented on `prompt-gen-v2-pr3b`, including model-suggested
+map entries and subtopic creation in the topic rail. In shadow mode JEV judges
+only the selected candidates, so it cannot change which candidates reach
+review. PR 3c is next.
 Scope: onboarding completion, the Prompts page workflow, and the quick **Generate
 prompts** path. The agent-driven "Build with Agent" generation is phase 2 and is
 out of scope (section 9).
@@ -220,8 +222,8 @@ PR 3a
 - [x] Candidates never reach audits, capacity or visibility (tested at PostgreSQL).
 
 PR 3b
-- [ ] Multi-topic generation from compatible business-map cells.
-- [ ] JEV decisions recorded in shadow; unset key means off; tests never call JEV.
+- [x] Multi-topic generation from compatible business-map cells.
+- [x] JEV decisions recorded in shadow; unset key means off; tests never call JEV.
 
 PR 3c
 - [ ] Policy revision approved and published before production JEV traffic.

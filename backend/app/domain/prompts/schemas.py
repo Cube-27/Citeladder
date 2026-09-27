@@ -222,14 +222,16 @@ class TopicResponse(BaseModel):
 class PromptGenerateRequest(BaseModel):
     """Body for ``POST /prompt-sets/{id}/generate``.
 
-    Prompt generation is an automatic bounded derivation. ``topic_id`` scopes
-    generation to one existing topic; running or scheduling measurement remains
-    the separate user decision.
+    Prompt generation is an automatic bounded derivation. ``topic_ids`` scopes
+    generation to existing topics (``topic_id`` is the single-topic form and
+    is merged with it); none selected means every topic. Running or scheduling
+    measurement remains the separate user decision.
     """
 
     count: int = Field(
         default_factory=lambda: prompt_generation_settings.default_count, ge=1
     )
+    topic_ids: list[uuid.UUID] = Field(default_factory=list)
     topic_id: uuid.UUID | None = None
     intents: list[PromptIntent] = Field(default_factory=list)
     cohort: PromptCohort = "core"
@@ -251,6 +253,12 @@ class PromptCandidateResponse(BaseModel):
     cohort: str
     created_at: datetime
     expires_at: datetime
+    # Shadow quality judge (JEV): ``judged``; ``off`` (no judge configured for
+    # its run); ``unavailable`` (the judge failed or timed out for its run);
+    # ``not_judged`` (past the call cap, or a run from before the judge).
+    # Flags name the questions it looked weak on; they never drop a row.
+    quality_status: Literal["judged", "off", "unavailable", "not_judged"] = "not_judged"
+    quality_flags: list[str] = Field(default_factory=list)
 
 
 class PromptGenerateResponse(BaseModel):
@@ -263,6 +271,13 @@ class PromptGenerateResponse(BaseModel):
     # Suggestions dropped as duplicates: intra-response collapses plus texts
     # already tracked in the set or already pending review.
     dropped_duplicates: int = 0
+    # Suggestions that passed deterministic admission before the diversified
+    # selection kept at most ``requested_count``. Generation overgenerates;
+    # this is never a market size.
+    candidates_generated: int = 0
+    # off (no JEV key) | shadow (decisions recorded) | unavailable (JEV
+    # failed for at least one candidate; generation still succeeded).
+    quality_gate: str = "off"
 
 
 class PromptCandidateReviewRequest(BaseModel):

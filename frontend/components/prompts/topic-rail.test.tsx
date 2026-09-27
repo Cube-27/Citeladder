@@ -74,12 +74,35 @@ describe('TopicRail', () => {
     await user.click(nav.getByRole('button', { name: 'Add topic' }));
     await user.type(nav.getByRole('textbox', { name: 'Topic name' }), 'Apparel');
     await user.click(nav.getByRole('button', { name: 'Add' }));
-    expect(onCreate).toHaveBeenCalledWith('Apparel');
+    expect(onCreate).toHaveBeenCalledWith('Apparel', null);
 
     await user.click(nav.getByRole('button', { name: 'Delete topic Footwear' }));
     expect(onDelete).toHaveBeenCalledWith(topic);
 
     rail.unmount();
+  });
+
+  it('creates a subtopic under a chosen top-level topic', async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn();
+    const parent = makeTopic();
+    const child = makeTopic({
+      id: '66666666-6666-4666-8666-666666666666',
+      name: 'Trail',
+      parent_id: parent.id,
+    });
+    renderRail({ topics: [parent, child], onCreate });
+    const nav = within(screen.getByRole('navigation', { name: 'Topics' }));
+
+    await user.click(nav.getByRole('button', { name: 'Add topic' }));
+    await user.type(nav.getByRole('textbox', { name: 'Topic name' }), 'Road');
+    await user.click(nav.getByRole('combobox', { name: 'Add under' }));
+    // Subtopics nest one level deep: a subtopic is never offered as a parent.
+    expect(screen.queryByRole('option', { name: 'Subtopic of Trail' })).toBeNull();
+    await user.click(screen.getByRole('option', { name: 'Subtopic of Footwear' }));
+    await user.click(nav.getByRole('button', { name: 'Add' }));
+
+    expect(onCreate).toHaveBeenCalledWith('Road', parent.id);
   });
 
   it('marks the selected topic with aria-current', () => {
@@ -160,7 +183,7 @@ describe('TopicRail error handling', () => {
     await user.type(field, 'Apparel');
     await user.click(nav.getByRole('button', { name: 'Add' }));
 
-    expect(onCreate).toHaveBeenCalledWith('Apparel');
+    expect(onCreate).toHaveBeenCalledWith('Apparel', null);
     // Form stays open with the value intact so the user can retry.
     expect(nav.getByRole('textbox', { name: 'Topic name' })).toHaveValue('Apparel');
   });
@@ -176,7 +199,7 @@ describe('TopicRail error handling', () => {
     await user.type(nav.getByRole('textbox', { name: 'Topic name' }), 'Apparel');
     await user.click(nav.getByRole('button', { name: 'Add' }));
 
-    expect(onCreate).toHaveBeenCalledWith('Apparel');
+    expect(onCreate).toHaveBeenCalledWith('Apparel', null);
     // Form collapses on success.
     expect(nav.queryByRole('textbox', { name: 'Topic name' })).not.toBeInTheDocument();
   });

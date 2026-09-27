@@ -728,11 +728,11 @@ def test_one_unreadable_row_no_longer_voids_its_whole_batch() -> None:
     """An unknown slot is dropped without discarding a valid planned row."""
     import json
 
-    from app.domain.prompts.generation_contract import parse_planned_output
-    from app.domain.prompts.query_patterns import build_prompt_slots
+    from app.domain.prompts.generation_contract import parse_generation_output
+    from tests.fixtures.prompt_generation import bare_slots
 
-    slots = build_prompt_slots(
-        topics=[{"id": "t1", "name": "Linen Dresses", "description": ""}],
+    slots = bare_slots(
+        [{"id": "t1", "name": "Linen Dresses", "description": ""}],
         count=2,
         cohort="core",
     )
@@ -755,9 +755,11 @@ def test_one_unreadable_row_no_longer_voids_its_whole_batch() -> None:
             ]
         }
     )
-    rows, dropped = parse_planned_output(raw, slots=slots)
+    rows, dropped = parse_generation_output(raw, slots=slots)
 
-    assert [row.text for row in rows] == ["Best linen dresses for a summer wedding"]
+    assert [p.text for t in rows for p in t.prompts] == [
+        "Best linen dresses for a summer wedding"
+    ]
     assert dropped == 1
 
 

@@ -121,7 +121,9 @@ async def test_generate_stages_candidates_until_accepted(
     assert "Acme Corp" in sent
     assert "Globex" in sent
     assert "Value-priced family footwear" in sent
-    assert "exactly 3 prompts" in sent
+    # Overgenerated: two cells per requested prompt, selection keeps three.
+    assert "exactly 6 prompts" in sent
+    assert '"buyer_need":{"offering":"Running Shoes"}' in sent
     assert "Buyer-query slots" in sent
     assert '["running shoes"]' in sent
 
@@ -151,7 +153,8 @@ async def test_generate_reserves_the_maximum_provider_call_budget(
 
     assert response.status_code == 201
     assert reservation["operation"] == "agent.provider_call"
-    assert reservation["amount"] == 2
+    # One batch of six cells, one re-ask, one business-map suggestion call.
+    assert reservation["amount"] == 3
 
 
 @pytest.mark.asyncio
@@ -186,7 +189,7 @@ async def test_generate_persists_provenance_evidence(
     for prompt in prompts:
         evidence = prompt.generation_evidence
         assert evidence is not None
-        assert evidence["generator_version"] == "prompt-gen-v1"
+        assert evidence["generator_version"] == "prompt-gen-v2"
         assert evidence["buyer_query_policy_version"] == "buyer-query-policy-1"
         assert "buyer_query_archetype" not in evidence
         assert evidence["generation_mode"] == "model"
@@ -387,31 +390,34 @@ async def test_generate_unparseable_output_returns_502(
 async def test_generate_twice_drops_duplicates(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
-    """Same output again drops texts pending review, then texts tracked."""
+    """Known texts (pending or tracked) are never staged again.
+
+    The fake agent writes the same six cells every run; overgeneration lets
+    the second run fill from the three it has not staged yet.
+    """
     _, prompt_set_id = await make_project_and_set(client, "gen9@example.com")
 
-    first = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
-        json={"count": 3, "confirm_send_evidence": True},
-    )
-    assert first.status_code == 201
-    assert len(first.json()["candidates"]) == 3
+    def _generate():
+        return client.post(
+            f"/api/v1/prompt-sets/{prompt_set_id}/generate",
+            json={"count": 3, "confirm_send_evidence": True},
+        )
 
-    second = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
-        json={"count": 3, "confirm_send_evidence": True},
-    )
-    assert second.status_code == 201
-    assert second.json()["candidates"] == []
-    assert second.json()["dropped_duplicates"] == 3
+    first = (await _generate()).json()
+    assert len(first["candidates"]) == 3
+    assert first["candidates_generated"] == 6
 
-    await accept_all(client, prompt_set_id, first.json())
-    third = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
-        json={"count": 3, "confirm_send_evidence": True},
-    )
-    assert third.json()["candidates"] == []
-    assert third.json()["dropped_duplicates"] == 3
+    second = (await _generate()).json()
+    assert len(second["candidates"]) == 3
+    assert second["dropped_duplicates"] == 3
+    assert not {c["text"] for c in first["candidates"]} & {
+        c["text"] for c in second["candidates"]
+    }
+
+    await accept_all(client, prompt_set_id, first)
+    third = (await _generate()).json()
+    assert third["candidates"] == []
+    assert third["dropped_duplicates"] == 6
 
     listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
     assert len(listed["prompts"]) == 3  # no dupes, and no reused topics broke
@@ -863,18 +869,20 @@ async def test_concurrent_generation_stages_both_runs_without_duplicates(
             return await FakeAgent(
                 response=self._response,
                 fallback_discriminator=self._discriminator,
-            ).complete_json(system=system, user=user)
+            ).complete_structured_json(
+                system=system, user=user, schema_name=schema_name, schema=schema
+            )
 
     async def _run(topic: str, n: int) -> int:
         async with session_factory() as session:
-            inserted, _, _ = await generate_prompts(
+            result = await generate_prompts(
                 session,
                 workspace_id=workspace_id,
                 prompt_set_id=uuid.UUID(prompt_set_id),
                 payload=PromptGenerateRequest(count=n, confirm_send_evidence=True),
                 agent=cast(DefaultAgentClient, _CountingAgent(topic, n)),
             )
-            return len(inserted)
+            return len(result.candidates)
 
     alpha_count, beta_count = await asyncio.gather(_run("Alpha", 15), _run("Beta", 15))
 
@@ -942,7 +950,9 @@ async def test_generation_racing_prompt_set_delete_is_scoped_not_found(
             await delete_done.wait()
             return await FakeAgent(
                 response=_agent_response_with_n_prompts(3, topic="Race")
-            ).complete_json(system=system, user=user)
+            ).complete_structured_json(
+                system=system, user=user, schema_name=schema_name, schema=schema
+            )
 
     async def _generate() -> BaseException | None:
         async with session_factory() as session:
@@ -1020,7 +1030,9 @@ async def test_generation_racing_topic_delete_is_scoped_validation_error(
             await delete_done.wait()
             return await FakeAgent(
                 response=_agent_response_with_n_prompts(2, topic="Whatever")
-            ).complete_json(system=system, user=user)
+            ).complete_structured_json(
+                system=system, user=user, schema_name=schema_name, schema=schema
+            )
 
     async def _generate() -> BaseException | None:
         async with session_factory() as session:

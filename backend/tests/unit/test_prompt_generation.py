@@ -14,13 +14,13 @@ from app.domain.prompts.generation import (
     GenerationOutputError,
     SuggestedPrompt,
     SuggestedTopic,
-    _cap_suggestions_to_count,
     _drop_cross_batch_duplicates,
     build_generation_user_message,
     parse_generation_output,
 )
+from app.domain.prompts.generation_selection import select_diversified
 from app.domain.prompts.normalization import normalize_prompt_text, prompt_text_hash
-from app.domain.prompts.query_patterns import build_prompt_slots
+from tests.fixtures.prompt_generation import bare_slots
 
 TOPIC_ID = uuid.uuid4()
 SECOND_TOPIC_ID = uuid.uuid4()
@@ -36,7 +36,7 @@ BRAND_CONTEXT = {
     "language_code": "en-AU",
     "knowledge_base": {"description": "Australian footwear retailer."},
 }
-SLOTS = build_prompt_slots(topics=ALLOWED_TOPICS, count=4, cohort="core")
+SLOTS = bare_slots(ALLOWED_TOPICS, count=4, cohort="core")
 
 
 def test_normalization_and_hash_are_stable() -> None:
@@ -156,25 +156,42 @@ def test_user_message_contains_only_canonical_topic_ids() -> None:
     assert "create a topic" not in message.casefold()
 
 
-def test_cap_preserves_topic_ids_and_model_order() -> None:
+def test_selection_spreads_topics_and_stages_before_repeating_one() -> None:
+    def prompt(text: str, stage: str, review_state: str = "confirmed"):
+        return SuggestedPrompt(
+            text=text,
+            buyer_stage=stage,
+            evidence_refs=[{"kind": "business_map_cell", "review_state": review_state}],
+        )
+
     suggestions = [
         SuggestedTopic(
             topic_id=TOPIC_ID,
             name="Footwear",
-            prompts=[SuggestedPrompt(text=f"prompt {index}") for index in range(3)],
+            prompts=[
+                prompt("footwear a", "consideration"),
+                prompt("footwear b", "consideration"),
+                prompt("footwear c", "decision"),
+            ],
         ),
         SuggestedTopic(
             topic_id=SECOND_TOPIC_ID,
             name="Activewear",
-            prompts=[SuggestedPrompt(text="prompt 4")],
+            prompts=[
+                prompt("activewear a", "decision", "suggested"),
+                prompt("activewear b", "awareness"),
+            ],
         ),
     ]
 
-    capped = _cap_suggestions_to_count(suggestions, 2)
+    selected = select_diversified(suggestions, 3)
 
-    assert len(capped) == 1
-    assert capped[0].topic_id == TOPIC_ID
-    assert [prompt.text for prompt in capped[0].prompts] == ["prompt 0", "prompt 1"]
+    # One per topic before a second from either; a second consideration row
+    # waits behind a new stage; an unreviewed-map row waits behind confirmed.
+    assert [(t.topic_id, [p.text for p in t.prompts]) for t in selected] == [
+        (TOPIC_ID, ["footwear a", "footwear c"]),
+        (SECOND_TOPIC_ID, ["activewear b"]),
+    ]
 
 
 def test_cross_batch_duplicates_are_removed_and_counted_for_every_cohort() -> None:
@@ -272,10 +289,7 @@ def test_shared_validator_preserves_named_cohort_identity_and_text_limit() -> No
 
 
 def test_slot_count_is_not_limited_by_recipes() -> None:
-    assert (
-        len(build_prompt_slots(topics=ALLOWED_TOPICS[:1], count=100, cohort="core"))
-        == 100
-    )
+    assert len(bare_slots(ALLOWED_TOPICS[:1], count=100, cohort="core")) == 100
 
 
 @pytest.mark.parametrize(
@@ -289,9 +303,7 @@ def test_slot_count_is_not_limited_by_recipes() -> None:
     ],
 )
 def test_explicit_filters_restrict_labels_without_relabelling(legacy, labels) -> None:
-    slots = build_prompt_slots(
-        topics=ALLOWED_TOPICS, count=2, cohort="core", intents=(legacy,)
-    )
+    slots = bare_slots(ALLOWED_TOPICS, count=2, cohort="core", intents=(legacy,))
     assert slots[0].allowed_prompt_intents == labels
     raw = json.dumps(
         {
@@ -320,14 +332,12 @@ def test_a_named_cohort_keeps_its_labels_under_an_unrelated_intent_filter() -> N
     all, so every slot was rejected and a well-formed request 502'd before a
     single provider call.
     """
-    from app.domain.prompts.query_patterns import _allowed_intents, build_prompt_slots
+    from app.domain.prompts.query_patterns import _allowed_intents
 
     topics = [{"id": "t1", "name": "Linen Dresses", "description": ""}]
     for intents in [("purchase",), ("discovery",), ("service",), ("local",), ()]:
         assert _allowed_intents("comparison", intents) == ("compare",)
-        slots = build_prompt_slots(
-            topics=topics, count=3, cohort="comparison", intents=intents
-        )
+        slots = bare_slots(topics, count=3, cohort="comparison", intents=intents)
         assert len(slots) == 3
         assert all(slot.allowed_prompt_intents == ("compare",) for slot in slots)
 
@@ -341,11 +351,10 @@ def test_an_over_long_row_is_dropped_without_voiding_its_siblings() -> None:
     import json
 
     from app.core.config.http import PROMPT_TEXT_MAX_CHARS
-    from app.domain.prompts.generation_contract import parse_planned_output
-    from app.domain.prompts.query_patterns import build_prompt_slots
+    from app.domain.prompts.generation_contract import parse_generation_output
 
-    slots = build_prompt_slots(
-        topics=[{"id": "t1", "name": "Linen Dresses", "description": ""}],
+    slots = bare_slots(
+        [{"id": "t1", "name": "Linen Dresses", "description": ""}],
         count=2,
         cohort="core",
     )
@@ -367,8 +376,10 @@ def test_an_over_long_row_is_dropped_without_voiding_its_siblings() -> None:
             ]
         }
     )
-    accepted, dropped = parse_planned_output(raw, slots=slots)
-    assert [row.text for row in accepted] == ["Best linen dresses for a summer wedding"]
+    accepted, dropped = parse_generation_output(raw, slots=slots)
+    assert [p.text for t in accepted for p in t.prompts] == [
+        "Best linen dresses for a summer wedding"
+    ]
     assert dropped == 1
 
 
@@ -376,11 +387,10 @@ def test_a_degenerate_row_cannot_reach_a_paid_answer_engine() -> None:
     """There is a ceiling on prompt text; there has to be a floor too."""
     import json
 
-    from app.domain.prompts.generation_contract import parse_planned_output
-    from app.domain.prompts.query_patterns import build_prompt_slots
+    from app.domain.prompts.generation_contract import parse_generation_output
 
-    slots = build_prompt_slots(
-        topics=[{"id": "t1", "name": "Linen Dresses", "description": ""}],
+    slots = bare_slots(
+        [{"id": "t1", "name": "Linen Dresses", "description": ""}],
         count=2,
         cohort="core",
     )
@@ -402,8 +412,10 @@ def test_a_degenerate_row_cannot_reach_a_paid_answer_engine() -> None:
             ]
         }
     )
-    accepted, dropped = parse_planned_output(raw, slots=slots)
-    assert [row.text for row in accepted] == ["Best linen dresses for a summer wedding"]
+    accepted, dropped = parse_generation_output(raw, slots=slots)
+    assert [p.text for t in accepted for p in t.prompts] == [
+        "Best linen dresses for a summer wedding"
+    ]
     assert dropped == 1
 
 
@@ -416,11 +428,10 @@ def test_an_unfilled_template_slot_never_becomes_a_measured_prompt() -> None:
     """
     import json
 
-    from app.domain.prompts.generation_contract import parse_planned_output
-    from app.domain.prompts.query_patterns import build_prompt_slots
+    from app.domain.prompts.generation_contract import parse_generation_output
 
-    slots = build_prompt_slots(
-        topics=[{"id": "t1", "name": "Connected E-Bikes", "description": ""}],
+    slots = bare_slots(
+        [{"id": "t1", "name": "Connected E-Bikes", "description": ""}],
         count=5,
         cohort="core",
     )
@@ -460,8 +471,8 @@ def test_an_unfilled_template_slot_never_becomes_a_measured_prompt() -> None:
             ]
         }
     )
-    accepted, dropped = parse_planned_output(raw, slots=slots)
-    assert [row.text for row in accepted] == [
+    accepted, dropped = parse_generation_output(raw, slots=slots)
+    assert [p.text for t in accepted for p in t.prompts] == [
         "Where to test ride a connected e-bike in Bengaluru"
     ]
     assert dropped == 4

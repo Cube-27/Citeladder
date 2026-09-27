@@ -352,18 +352,20 @@ async def test_concurrent_candidate_accepts_never_exceed_grant(
             schema_name: str,
             schema: dict[str, object],
         ) -> str:
+            if schema_name == "business_map_suggestions":
+                return json.dumps({"offerings": []})
             return _agent_payload(self._topic, user)
 
     async def _stage(topic: str) -> list[uuid.UUID]:
         async with session_factory() as session:
-            candidates, _, _ = await generate_prompts(
+            result = await generate_prompts(
                 session,
                 workspace_id=workspace_id,
                 prompt_set_id=uuid.UUID(prompt_set_id),
                 payload=PromptGenerateRequest(count=4, confirm_send_evidence=True),
                 agent=cast(DefaultAgentClient, _LabelAgent(topic)),
             )
-            return [candidate.id for candidate in candidates]
+            return [candidate.id for candidate in result.candidates]
 
     # Staging charges nothing: both runs stage all four candidates.
     alpha, beta = await _stage("Alpha"), await _stage("Beta")

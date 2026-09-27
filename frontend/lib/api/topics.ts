@@ -19,7 +19,8 @@ export const topicsApi = {
   },
   create: async (
     projectId: string,
-    input: { name: string; description?: string },
+    // `parent_id` makes a subtopic of a top-level topic (one level deep).
+    input: { name: string; description?: string; parent_id?: string },
     options?: ApiRequestOptions,
   ) => {
     const res = await apiClient.post<Topic>(`/projects/${projectId}/topics`, input, options);

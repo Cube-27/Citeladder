@@ -59,3 +59,45 @@ def response_for(user: str) -> str:
             ]
         }
     )
+
+
+def bare_slots(
+    topics: list[dict[str, str]],
+    *,
+    count: int,
+    cohort: str,
+    intents: tuple[str, ...] = (),
+    brand_name: str = "",
+    competitor_names: tuple[str, ...] = (),
+):
+    """Slots for topics without a business map (bare cells, round-robin)."""
+    import uuid
+
+    from app.domain.prompts.generation_cells import CellTopic, plan_generation_cells
+    from app.domain.prompts.query_patterns import slots_for_cells
+
+    def _topic_id(raw: str) -> uuid.UUID:
+        try:
+            return uuid.UUID(raw)
+        except ValueError:
+            return uuid.uuid5(uuid.NAMESPACE_OID, raw)
+
+    cells = plan_generation_cells(
+        [
+            CellTopic(
+                topic_id=_topic_id(topic["id"]),
+                name=topic["name"],
+                description=topic.get("description", ""),
+                offering_map=None,
+            )
+            for topic in topics
+        ],
+        total=count,
+    )
+    return slots_for_cells(
+        cells,
+        cohort=cohort,
+        intents=intents,
+        brand_name=brand_name,
+        competitor_names=competitor_names,
+    )

@@ -42,6 +42,7 @@ class CandidateReviewError(ValueError):
 
 @dataclass(frozen=True)
 class StagedCandidates:
+    run_id: uuid.UUID
     candidates: list[PromptCandidate]
     dropped_duplicates: int
 
@@ -89,6 +90,20 @@ async def _existing_prompt_hashes(
     return set(result.scalars().all())
 
 
+async def pending_text_hashes(
+    session: AsyncSession, *, workspace_id: uuid.UUID, prompt_set_id: uuid.UUID
+) -> set[str]:
+    """Normalized texts already waiting for review in the set (a read)."""
+    result = await session.execute(
+        select(PromptCandidate.normalized_text_hash).where(
+            PromptCandidate.workspace_id == workspace_id,
+            PromptCandidate.prompt_set_id == prompt_set_id,
+            *_pending_clause(datetime.now(UTC)),
+        )
+    )
+    return set(result.scalars().all())
+
+
 def _candidate_row(
     *,
     workspace_id: uuid.UUID,
@@ -98,6 +113,7 @@ def _candidate_row(
     prompt: SuggestedPrompt,
     cohort: str,
     now: datetime,
+    jev_decision: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "id": uuid.uuid4(),
@@ -112,11 +128,12 @@ def _candidate_row(
         "prompt_intent": prompt.prompt_intent,
         "cohort": cohort,
         "slot_id": prompt.slot_id,
-        "evidence_refs": [],
+        "evidence_refs": list(prompt.evidence_refs),
         # Only suggestions that passed every deterministic admission rule
         # (parse, cohort identity, brand/competitor rules, exact duplicates,
         # topical binding) reach staging.
         "validation": {"admission": "passed", "topical_binding": BINDING_CODE_ACCEPTED},
+        "jev_decision": jev_decision,
         "disposition": CANDIDATE_DISPOSITION_PENDING,
         "created_at": now,
         "expires_at": now
@@ -157,12 +174,14 @@ async def stage_candidates(
     request: dict[str, Any],
     provenance: dict[str, Any],
     cohort: str,
+    decisions: dict[str, dict[str, Any]] | None = None,
 ) -> StagedCandidates:
     """Record one generation run and its pending candidates.
 
     The caller holds the project and prompt-set locks. Suggestions whose text
     is already a prompt in the set, or already pending review, are dropped
-    and counted; nothing is charged to prompt capacity.
+    and counted; nothing is charged to prompt capacity. ``decisions`` holds
+    shadow quality decisions keyed by normalized text hash.
     """
     await purge_expired_candidates(
         session, workspace_id=workspace_id, prompt_set_id=prompt_set.id
@@ -197,6 +216,7 @@ async def stage_candidates(
             prompt=prompt,
             cohort=cohort,
             now=now,
+            jev_decision=(decisions or {}).get(prompt_text_hash(prompt.text)),
         )
         for topic_id, prompt in stageable
     ]
@@ -214,8 +234,26 @@ async def stage_candidates(
         returned = set((await session.execute(stmt)).scalars().all())
         inserted_ids = [row["id"] for row in rows if row["id"] in returned]
         dropped += len(rows) - len(inserted_ids)
-    candidates = await _load_in_order(session, inserted_ids)
-    return StagedCandidates(candidates=candidates, dropped_duplicates=dropped)
+    candidates = review_order(await _load_in_order(session, inserted_ids))
+    return StagedCandidates(
+        run_id=run.id, candidates=candidates, dropped_duplicates=dropped
+    )
+
+
+def _review_rank(candidate: PromptCandidate) -> tuple[bool, float]:
+    decision = candidate.jev_decision or {}
+    score = decision.get("rank_score")
+    return (
+        bool(decision.get("flags")),
+        -score if isinstance(score, float | int) else 0.0,
+    )
+
+
+def review_order(candidates: list[PromptCandidate]) -> list[PromptCandidate]:
+    """Newest run first; within a run, shadow-flagged rows last, then by the
+    judge's rank score. Stable, so unjudged runs keep their order."""
+    by_rank = sorted(candidates, key=_review_rank)
+    return sorted(by_rank, key=lambda c: c.created_at, reverse=True)
 
 
 async def _load_in_order(
@@ -260,7 +298,24 @@ async def list_pending_candidates(
         )
         .order_by(PromptCandidate.created_at.desc(), PromptCandidate.text)
     )
-    return list(result.scalars().all())
+    return review_order(list(result.scalars().all()))
+
+
+async def run_quality_gates(
+    session: AsyncSession, *, workspace_id: uuid.UUID, run_ids: set[uuid.UUID]
+) -> dict[uuid.UUID, str | None]:
+    """Each run's recorded quality gate (None for runs from before the judge)."""
+    if not run_ids:
+        return {}
+    rows = await session.execute(
+        select(PromptGenerationRun.id, PromptGenerationRun.provenance).where(
+            PromptGenerationRun.workspace_id == workspace_id,
+            PromptGenerationRun.id.in_(run_ids),
+        )
+    )
+    return {
+        run_id: (provenance or {}).get("quality_gate") for run_id, provenance in rows
+    }
 
 
 def _validate_review_ids(
@@ -283,6 +338,7 @@ def _accepted_evidence(
         "buyer_query_slot_id": candidate.slot_id,
         "candidate_id": str(candidate.id),
         "candidate_validation": dict(candidate.validation or {}),
+        "evidence_refs": list(candidate.evidence_refs or []),
     }
     if candidate.jev_decision is not None:
         evidence["jev_decision"] = candidate.jev_decision

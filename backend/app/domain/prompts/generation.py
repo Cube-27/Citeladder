@@ -1,16 +1,32 @@
-# AI prompt/topic generation service.
+# AI prompt generation on the business map (prompt generation v2).
+#
+# Pipeline for one Generate request (count N, topic_ids, cohort):
+#   topics  selected, or recovered from confirmed offerings
+#   cells   compatible offering x facet x stage x market cells from the
+#           business map; N x overgenerate_factor (generation_cells.py)
+#   1 GENERATE  batched model calls, one natural buyer question per cell
+#   2 ADMIT     parse, cohort identity, brand/competitor rules, length, exact
+#               duplicates, topical binding, verbatim evidence copies
+#   3 SELECT    top N diversified across topic, stage, audience and market;
+#               a shortfall is reported, never filled
+#   4 JEV       shadow quality decisions for the selected candidates: they
+#               rank and flag the review list and never drop anything
+#               (quality_judge.py)
+#   5 STAGE     PromptCandidate rows with provenance (candidates.py)
+#
+# JEV judges only what selection kept, so in shadow mode it cannot change
+# which candidates reach review; it becomes a gate only in PR 3c.
 #
 # Core and brand cohorts use the app-level default agent (``connectors/agent``);
 # Commerce buyer prompts have their own owner (``/commerce/buyer-prompts``).
-# Validated suggestions are staged as ``PromptCandidate`` rows
-# (``domain/prompts/candidates.py``) with full provenance (invariant 4); only a
-# user's accept turns a candidate into an active prompt, and no provider
-# measurement runs until the user explicitly runs or schedules an audit.
+# Only a user's accept turns a candidate into an active prompt, and no
+# provider measurement runs until the user explicitly runs or schedules one.
 from __future__ import annotations
 
 import hashlib
 import json
 import uuid
+from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import select
@@ -19,18 +35,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.connectors.agent.gateway import ModelGateway
+from app.connectors.jev import JevClient
+from app.core.config.jev import QUALITY_GATE_OFF
 from app.core.config.prompts import (
     GENERATOR_VERSION,
     prompt_generation_settings,
 )
 from app.core.config.visibility_prompts import BUYER_QUERY_POLICY_VERSION
 from app.domain.projects.business_context import BusinessContext
+from app.domain.projects.business_map import (
+    BusinessMap,
+    OfferingMap,
+    with_model_suggestions,
+)
 from app.domain.projects.knowledge_base import build_brand_knowledge_data
 from app.domain.projects.shim import project_scoring_identity
-from app.domain.prompts.candidates import stage_candidates
+from app.domain.prompts.candidates import pending_text_hashes, stage_candidates
 from app.domain.prompts.demand_grounding import (
     load_demand_grounding,
     serialize_demand_signal,
+)
+from app.domain.prompts.generation_cells import (
+    CellTopic,
+    offering_for_topic,
+    plan_generation_cells,
 )
 from app.domain.prompts.generation_contract import (
     GenerationOutput,
@@ -38,8 +66,9 @@ from app.domain.prompts.generation_contract import (
     SuggestedPrompt,
     SuggestedTopic,
     build_generation_user_message,
-    generation_model_call_budget,
     parse_generation_output,
+    planned_slot_count,
+    slot_call_budget,
 )
 from app.domain.prompts.generation_errors import (
     GenerationValidationError,
@@ -50,9 +79,17 @@ from app.domain.prompts.generation_filtering import (
     filter_for_cohort,
     generation_system_prompt,
 )
+from app.domain.prompts.generation_selection import (
+    count_prompts,
+    drop_texts,
+    observed_query_hashes,
+    select_diversified,
+)
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
+from app.domain.prompts.map_suggestions import suggest_offering_maps
 from app.domain.prompts.normalization import prompt_text_hash
-from app.domain.prompts.query_patterns import PromptSlot, build_prompt_slots
+from app.domain.prompts.quality_judge import JudgeResult, judge_candidates
+from app.domain.prompts.query_patterns import PromptSlot, slots_for_cells
 from app.domain.prompts.service import PromptSetNotFoundError
 from app.domain.prompts.topic_recovery import (
     confirmed_offerings,
@@ -71,6 +108,7 @@ from app.models.prompt_candidate import PromptCandidate
 
 __all__ = [
     "GenerationOutputError",
+    "GenerationResult",
     "GenerationValidationError",
     "SuggestedPrompt",
     "SuggestedTopic",
@@ -80,6 +118,41 @@ __all__ = [
     "validate_generation_request",
 ]
 
+_TOPIC_NOT_IN_PROJECT = "topic_id is not a topic of this project"
+
+
+@dataclass(frozen=True)
+class GenerationResult:
+    candidates: list[PromptCandidate]
+    topics: list[Topic]
+    # Duplicates dropped: intra-response, already tracked or already pending.
+    dropped_duplicates: int
+    # Suggestions that passed deterministic admission before selection.
+    candidates_generated: int
+    quality_gate: str = QUALITY_GATE_OFF
+
+
+@dataclass
+class _Context:
+    """Everything read before provider I/O (the read transaction commits)."""
+
+    brand_context: dict[str, Any]
+    demand_snapshot: DemandSnapshot | None
+    demand_signals: list[DemandSignal]
+    cell_topics: list[CellTopic]
+    offerings_to_map: list[str]
+    known_hashes: set[str]
+    vocabulary: BindingVocabulary
+    markets: list[str]
+
+
+@dataclass
+class _Drafts:
+    suggestions: list[SuggestedTopic]
+    dropped_duplicates: int
+    generated: int
+    map_suggestions: list[OfferingMap]
+
 
 def _brand_context_hash(brand_context: dict[str, Any]) -> str:
     canonical = json.dumps(brand_context, sort_keys=True, default=str)
@@ -87,7 +160,7 @@ def _brand_context_hash(brand_context: dict[str, Any]) -> str:
 
 
 # --------------------------------------------------------------------------
-# Orchestration
+# Scope and request validation
 # --------------------------------------------------------------------------
 async def _load_prompt_set_with_project(
     session: AsyncSession,
@@ -126,61 +199,39 @@ async def _load_prompt_set_with_project(
     return prompt_set
 
 
-def _drop_cross_batch_duplicates(
-    existing: list[SuggestedTopic], incoming: list[SuggestedTopic]
-) -> tuple[list[SuggestedTopic], int]:
-    """Remove and count normalized exact duplicates across accepted batches."""
-    previous = {
-        prompt_text_hash(prompt.text) for topic in existing for prompt in topic.prompts
-    }
-    retained: list[SuggestedTopic] = []
-    dropped = 0
-    for topic in incoming:
-        prompts: list[SuggestedPrompt] = []
-        for prompt in topic.prompts:
-            if prompt_text_hash(prompt.text) in previous:
-                dropped += 1
-            else:
-                prompts.append(prompt)
-        if prompts:
-            retained.append(
-                SuggestedTopic(
-                    topic_id=topic.topic_id, name=topic.name, prompts=prompts
-                )
-            )
-    return retained, dropped
+def requested_topic_ids(payload: Any) -> list[uuid.UUID]:
+    """``topic_ids`` plus the single-topic ``topic_id`` field, de-duplicated."""
+    ids = [*payload.topic_ids, payload.topic_id]
+    return list(dict.fromkeys(topic_id for topic_id in ids if topic_id is not None))
 
 
-def _resolve_target_topic(prompt_set: PromptSet, payload: Any) -> Topic | None:
-    """Resolve ``payload.topic_id`` against the prompt set's project topics.
+def _resolve_target_topics(prompt_set: PromptSet, payload: Any) -> list[Topic]:
+    """The selected topics, or every project topic when none are selected.
 
-    Returns ``None`` for unscoped generation. Raises
-    ``GenerationValidationError`` (422 at the API layer) when a ``topic_id`` is
-    given but is not a topic of this set's project — including the case where a
-    topic that existed at validation time was deleted before persistence, so a
-    disappearance surfaces as a scoped 422 rather than an FK 500.
+    Raises ``GenerationValidationError`` (422) when a selected id is not a
+    topic of this set's project — including a topic deleted before
+    persistence, so a disappearance is a scoped 422, never an FK 500.
     """
-    if payload.topic_id is None:
-        return None
-    target_topic = next(
-        (t for t in prompt_set.project.topics if t.id == payload.topic_id), None
-    )
-    if target_topic is None:
-        raise GenerationValidationError("topic_id is not a topic of this project")
-    return target_topic
+    by_id = {topic.id: topic for topic in prompt_set.project.topics}
+    wanted = requested_topic_ids(payload)
+    if not wanted:
+        return list(prompt_set.project.topics)
+    if any(topic_id not in by_id for topic_id in wanted):
+        raise GenerationValidationError(_TOPIC_NOT_IN_PROJECT)
+    return [by_id[topic_id] for topic_id in wanted]
 
 
-def _validate_generation_payload(prompt_set: PromptSet, payload: Any) -> Topic | None:
-    """Bounds + topic-ownership checks (422 at the API layer).
-
-    Returns the target topic when ``payload.topic_id`` is set.
-    """
+def _validate_generation_payload(prompt_set: PromptSet, payload: Any) -> None:
+    """Bounds + topic-ownership checks (422 at the API layer)."""
     max_count = prompt_generation_settings.max_count
     if payload.count > max_count:
         raise GenerationValidationError(
             f"count must be at most {max_count} (requested {payload.count})"
         )
-    target_topic = _resolve_target_topic(prompt_set, payload)
+    max_topics = prompt_generation_settings.max_topic_ids
+    if len(requested_topic_ids(payload)) > max_topics:
+        raise GenerationValidationError(f"Select at most {max_topics} topics")
+    _resolve_target_topics(prompt_set, payload)
     if payload.cohort == "commerce":
         raise GenerationValidationError(
             "Commerce buyer prompts are generated from /commerce/buyer-prompts"
@@ -189,7 +240,6 @@ def _validate_generation_payload(prompt_set: PromptSet, payload: Any) -> Topic |
         raise GenerationValidationError(
             "Add at least one confirmed offering before generating prompts"
         )
-    return target_topic
 
 
 async def validate_generation_request(
@@ -211,60 +261,9 @@ async def validate_generation_request(
     return prompt_set
 
 
-def _cap_suggestions_to_count(
-    suggestions: list[SuggestedTopic], count: int
-) -> list[SuggestedTopic]:
-    """Trim parsed suggestions to at most ``count`` prompts total.
-
-    A misbehaving model can return more prompts than requested; enforce the
-    cap before persistence, preserving topic grouping and response order
-    (topics are truncated once the budget is spent, and an emptied topic is
-    dropped).
-    """
-    if count <= 0:
-        return []
-    remaining = count
-    capped: list[SuggestedTopic] = []
-    for topic in suggestions:
-        if remaining <= 0:
-            break
-        kept = topic.prompts[:remaining]
-        if kept:
-            capped.append(
-                SuggestedTopic(topic_id=topic.topic_id, name=topic.name, prompts=kept)
-            )
-            remaining -= len(kept)
-    return capped
-
-
-def _drop_unbound_suggestions(
-    suggestions: list[SuggestedTopic], vocabulary: BindingVocabulary
-) -> list[SuggestedTopic]:
-    """Drop suggested prompts that fail topical binding (model output is
-    not trusted merely because a model produced it).
-
-    Runs before any occupancy charge or insert: an off-domain suggestion is
-    never persisted and never consumes a ``prompt_slots`` slot. Topics
-    emptied by the drop are removed; when every suggestion is off-domain the
-    generation persists nothing (an empty 201), matching the duplicate-drop
-    sanitize semantics.
-    """
-    kept: list[SuggestedTopic] = []
-    for topic in suggestions:
-        prompts = [
-            p
-            for p in topic.prompts
-            if validate_prompt_binding(p.text, vocabulary).accepted
-        ]
-        if prompts:
-            kept.append(
-                SuggestedTopic(
-                    topic_id=topic.topic_id, name=topic.name, prompts=prompts
-                )
-            )
-    return kept
-
-
+# --------------------------------------------------------------------------
+# Context read before provider I/O
+# --------------------------------------------------------------------------
 def _generation_brand_context(
     project: Project,
     demand_signals: list[DemandSignal],
@@ -280,50 +279,101 @@ def _generation_brand_context(
     return context
 
 
-def _generation_evidence(
-    *,
-    agent: ModelGateway | None,
-    payload: Any,
-    brand_context: dict[str, Any],
-    demand_snapshot: DemandSnapshot | None,
-    demand_signals: list[DemandSignal],
-) -> dict[str, Any]:
-    return {
-        "generation_mode": "deterministic" if agent is None else "model",
-        "model_identity": (
-            {
-                "transport_host": agent.base_url_host,
-                "transport_model": agent.model,
-            }
-            if agent is not None
-            else None
-        ),
-        "generator_version": GENERATOR_VERSION,
-        "buyer_query_policy_version": BUYER_QUERY_POLICY_VERSION,
-        "brand_context_hash": _brand_context_hash(brand_context),
-        "requested_count": payload.count,
-        "requested_intents": [intent for intent in payload.intents if intent],
-        "cohort": payload.cohort,
-        "demand_snapshot_id": str(demand_snapshot.id) if demand_snapshot else None,
-        "demand_signal_ids": [str(signal.id) for signal in demand_signals],
-        "demand_signal_coverage": (
-            dict(demand_snapshot.coverage or {}) if demand_snapshot else {}
-        ),
-    }
-
-
-def _allowed_generation_topics(
-    project: Project, target_topic: Topic | None
-) -> list[dict[str, str]]:
-    topics = [target_topic] if target_topic is not None else project.topics
+def _cell_topics(
+    project: Project, topics: list[Topic], business_map: BusinessMap
+) -> list[CellTopic]:
+    names = {topic.id: topic.name for topic in project.topics}
     return [
-        {
-            "id": str(topic.id),
-            "name": topic.name,
-            "description": topic.description or "",
-        }
+        CellTopic(
+            topic_id=topic.id,
+            name=topic.name,
+            description=topic.description or "",
+            offering_map=offering_for_topic(
+                business_map,
+                topic.name,
+                names.get(topic.parent_id) if topic.parent_id else None,
+            ),
+        )
         for topic in topics
     ]
+
+
+def _offerings_to_map(project: Project, cell_topics: list[CellTopic]) -> list[str]:
+    """Confirmed offerings among the selected topics that have no map yet."""
+    offerings = {name.casefold(): name for name in confirmed_offerings(project)}
+    wanted: dict[str, str] = {}
+    for topic in cell_topics:
+        key = topic.name.casefold()
+        if topic.offering_map is None and key in offerings:
+            wanted.setdefault(key, offerings[key])
+    return list(wanted.values())
+
+
+async def _read_context(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    prompt_set: PromptSet,
+    payload: Any,
+) -> _Context:
+    project = prompt_set.project
+    demand_snapshot, demand_signals = await load_demand_grounding(
+        session, workspace_id=workspace_id, project_id=project.id, limit=payload.count
+    )
+    business = BusinessContext.from_project(project)
+    cell_topics = _cell_topics(
+        project, _resolve_target_topics(prompt_set, payload), business.business_map
+    )
+    pending = await pending_text_hashes(
+        session, workspace_id=workspace_id, prompt_set_id=prompt_set.id
+    )
+    return _Context(
+        brand_context=_generation_brand_context(
+            project, demand_signals, demand_snapshot
+        ),
+        demand_snapshot=demand_snapshot,
+        demand_signals=demand_signals,
+        cell_topics=cell_topics,
+        offerings_to_map=_offerings_to_map(project, cell_topics),
+        known_hashes={p.normalized_text_hash for p in prompt_set.prompts} | pending,
+        vocabulary=build_project_vocabulary(project),
+        markets=list(business.service_areas),
+    )
+
+
+# --------------------------------------------------------------------------
+# Provider I/O: suggest map entries, write one question per cell, admit
+# --------------------------------------------------------------------------
+def _drop_cross_batch_duplicates(
+    existing: list[SuggestedTopic], incoming: list[SuggestedTopic]
+) -> tuple[list[SuggestedTopic], int]:
+    """Remove and count normalized exact duplicates across accepted batches."""
+    previous = {
+        prompt_text_hash(prompt.text) for topic in existing for prompt in topic.prompts
+    }
+    return drop_texts(incoming, previous)
+
+
+def _drop_unbound_suggestions(
+    suggestions: list[SuggestedTopic], vocabulary: BindingVocabulary
+) -> list[SuggestedTopic]:
+    """Drop suggested prompts that fail topical binding (model output is
+    not trusted merely because a model produced it). Topics emptied by the
+    drop are removed."""
+    kept: list[SuggestedTopic] = []
+    for topic in suggestions:
+        prompts = [
+            p
+            for p in topic.prompts
+            if validate_prompt_binding(p.text, vocabulary).accepted
+        ]
+        if prompts:
+            kept.append(
+                SuggestedTopic(
+                    topic_id=topic.topic_id, name=topic.name, prompts=prompts
+                )
+            )
+    return kept
 
 
 def _existing_generation_context(
@@ -361,26 +411,24 @@ async def _collect_model_suggestions(
         brand_context,
     )
     batch_size = min(prompt_generation_settings.model_batch_size, len(planned_slots))
-    maximum_calls = generation_model_call_budget(len(planned_slots))
     last_error: GenerationOutputError | None = None
-    for _call in range(maximum_calls):
+    for _call in range(slot_call_budget(len(planned_slots))):
         accepted = _accepted_slot_ids(suggestions)
         remaining = [slot for slot in planned_slots if slot.slot_id not in accepted]
         if not remaining:
             break
         batch_slots = remaining[:batch_size]
-        user_message = build_generation_user_message(
-            brand_context=brand_context,
-            slots=batch_slots,
-            existing_prompts=_existing_generation_context(
-                prompt_set,
-                suggestions,
-                limit=prompt_generation_settings.existing_prompt_context_limit,
-            ),
-        )
         raw = await agent.complete_structured_json(
             system=generation_system_prompt(payload.cohort, brand_context),
-            user=user_message,
+            user=build_generation_user_message(
+                brand_context=brand_context,
+                slots=batch_slots,
+                existing_prompts=_existing_generation_context(
+                    prompt_set,
+                    suggestions,
+                    limit=prompt_generation_settings.existing_prompt_context_limit,
+                ),
+            ),
             schema_name="prompt_generation",
             schema=GenerationOutput.model_json_schema(),
         )
@@ -389,46 +437,43 @@ async def _collect_model_suggestions(
         except GenerationOutputError as exc:
             last_error = exc
             continue
-        dropped += batch_dropped
         batch, duplicate_count = _drop_cross_batch_duplicates(suggestions, batch)
-        dropped += duplicate_count
-        batch = filter_for_cohort(
-            batch, payload.cohort, brand_context, validator=validator
+        dropped += batch_dropped + duplicate_count
+        suggestions.extend(
+            filter_for_cohort(batch, payload.cohort, brand_context, validator=validator)
         )
-        suggestions.extend(batch)
     if not suggestions and last_error is not None:
         raise last_error
     return suggestions, dropped
 
 
-async def _generate_suggestions(
-    session: AsyncSession,
-    *,
-    prompt_set: PromptSet,
-    payload: Any,
-    agent: ModelGateway | None,
-    workspace_id: uuid.UUID,
-) -> tuple[
-    list[SuggestedTopic],
-    int,
-    dict[str, Any],
-    DemandSnapshot | None,
-    list[DemandSignal],
-]:
-    target_topic = _resolve_target_topic(prompt_set, payload)
-    demand_snapshot, demand_signals = await load_demand_grounding(
-        session,
-        workspace_id=workspace_id,
-        project_id=prompt_set.project.id,
-        limit=payload.count,
+def _effective_cell_topics(
+    cell_topics: list[CellTopic], map_suggestions: list[OfferingMap]
+) -> list[CellTopic]:
+    """Ground topics without a map in this run's (unreviewed) suggestions."""
+    by_key = {item.offering.casefold(): item for item in map_suggestions}
+    return [
+        CellTopic(
+            topic_id=topic.topic_id,
+            name=topic.name,
+            description=topic.description,
+            offering_map=topic.offering_map or by_key.get(topic.name.casefold()),
+        )
+        for topic in cell_topics
+    ]
+
+
+def _planned_slots(
+    payload: Any, context: _Context, map_suggestions: list[OfferingMap]
+) -> list[PromptSlot]:
+    cells = plan_generation_cells(
+        _effective_cell_topics(context.cell_topics, map_suggestions),
+        total=planned_slot_count(payload.count),
+        markets=context.markets,
     )
-    brand_context = _generation_brand_context(
-        prompt_set.project, demand_signals, demand_snapshot
-    )
-    allowed_topics = _allowed_generation_topics(prompt_set.project, target_topic)
-    planned_slots = build_prompt_slots(
-        topics=allowed_topics,
-        count=payload.count,
+    brand_context = context.brand_context
+    return slots_for_cells(
+        cells,
         cohort=payload.cohort,
         intents=tuple(intent for intent in payload.intents if intent),
         brand_name=str(brand_context.get("brand_name") or ""),
@@ -438,26 +483,137 @@ async def _generate_suggestions(
             if item.get("name")
         ),
     )
+
+
+async def _draft(
+    *,
+    agent: ModelGateway,
+    prompt_set: PromptSet,
+    payload: Any,
+    context: _Context,
+) -> _Drafts:
+    map_suggestions = await suggest_offering_maps(
+        agent, offerings=context.offerings_to_map, brand_context=context.brand_context
+    )
+    planned_slots = _planned_slots(payload, context, map_suggestions)
     if not planned_slots:
         raise GenerationOutputError("No prompt labels support this request")
-    await session.commit()
-    if agent is None:
-        raise GenerationOutputError("Model gateway is required for this cohort")
-    suggestions, intra_duplicates = await _collect_model_suggestions(
+    suggestions, dropped = await _collect_model_suggestions(
         agent=agent,
         prompt_set=prompt_set,
         payload=payload,
-        brand_context=brand_context,
+        brand_context=context.brand_context,
         planned_slots=planned_slots,
     )
-    capped = _cap_suggestions_to_count(suggestions, payload.count)
-    return (
-        capped,
-        intra_duplicates,
-        brand_context,
-        demand_snapshot,
-        demand_signals,
+    suggestions = _drop_unbound_suggestions(suggestions, context.vocabulary)
+    suggestions, known = drop_texts(suggestions, context.known_hashes)
+    suggestions, _verbatim = drop_texts(
+        suggestions,
+        observed_query_hashes(context.brand_context.get("demand_signals") or []),
     )
+    return _Drafts(
+        suggestions=select_diversified(suggestions, payload.count),
+        dropped_duplicates=dropped + known,
+        generated=count_prompts(suggestions),
+        map_suggestions=map_suggestions,
+    )
+
+
+# --------------------------------------------------------------------------
+# Staging (write transaction, under locks)
+# --------------------------------------------------------------------------
+def _generation_evidence(
+    *,
+    agent: ModelGateway,
+    payload: Any,
+    context: _Context,
+    drafts: _Drafts,
+    quality_gate: str,
+) -> dict[str, Any]:
+    snapshot = context.demand_snapshot
+    return {
+        "generation_mode": "model",
+        "model_identity": {
+            "transport_host": agent.base_url_host,
+            "transport_model": agent.model,
+        },
+        "generator_version": GENERATOR_VERSION,
+        "buyer_query_policy_version": BUYER_QUERY_POLICY_VERSION,
+        "brand_context_hash": _brand_context_hash(context.brand_context),
+        "requested_count": payload.count,
+        "requested_topic_ids": [str(t) for t in requested_topic_ids(payload)],
+        "requested_intents": [intent for intent in payload.intents if intent],
+        "cohort": payload.cohort,
+        "candidates_generated": drafts.generated,
+        "quality_gate": quality_gate,
+        "business_map_suggested_offerings": [
+            item.offering for item in drafts.map_suggestions
+        ],
+        "demand_snapshot_id": str(snapshot.id) if snapshot else None,
+        "demand_signal_ids": [str(signal.id) for signal in context.demand_signals],
+        "demand_signal_coverage": dict(snapshot.coverage or {}) if snapshot else {},
+    }
+
+
+def _record_map_suggestions(
+    project: Project, suggestions: list[OfferingMap], run_id: str
+) -> None:
+    profile = project.brand.profile if project.brand is not None else None
+    if profile is None or not suggestions:
+        return
+    updated = with_model_suggestions(
+        profile.business_context,
+        suggestions,
+        offerings=list(profile.products_services or []),
+        run_id=run_id,
+    )
+    if updated is not None:
+        profile.business_context = updated
+
+
+async def _stage(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    prompt_set_id: uuid.UUID,
+    payload: Any,
+    evidence: dict[str, Any],
+    drafts: _Drafts,
+    judged: JudgeResult,
+) -> tuple[list[PromptCandidate], list[Topic]]:
+    # The objects loaded before provider I/O are stale (the set/project/topic
+    # could have been renamed or deleted mid-request). Take the PROJECT lock
+    # (serializes topic deletes) then the PROMPT-SET lock — the fixed order
+    # every writer uses — and re-resolve everything fresh, row-locking the
+    # set. ``expire_all`` stops the identity map serving a deleted topic.
+    await acquire_project_lock(session, project_id)
+    await acquire_prompt_set_lock(session, prompt_set_id)
+    session.expire_all()
+    prompt_set = await _load_prompt_set_with_project(
+        session, workspace_id=workspace_id, prompt_set_id=prompt_set_id, for_update=True
+    )
+    _resolve_target_topics(prompt_set, payload)
+    project = prompt_set.project
+    staged = await stage_candidates(
+        session,
+        workspace_id=workspace_id,
+        prompt_set=prompt_set,
+        topics_by_id={topic.id: topic for topic in project.topics},
+        suggestions=drafts.suggestions,
+        request=payload.model_dump(mode="json"),
+        provenance=evidence,
+        cohort=payload.cohort,
+        decisions=judged.decisions,
+    )
+    _record_map_suggestions(project, drafts.map_suggestions, str(staged.run_id))
+    touched_ids = {candidate.topic_id for candidate in staged.candidates}
+    touched = [topic for topic in project.topics if topic.id in touched_ids]
+    for topic in touched:
+        await session.refresh(topic)
+    await session.commit()
+    drafts.dropped_duplicates += staged.dropped_duplicates
+    return staged.candidates, touched
 
 
 async def generate_prompts(
@@ -467,18 +623,17 @@ async def generate_prompts(
     prompt_set_id: uuid.UUID,
     payload: Any,
     agent: ModelGateway | None,
+    judge: JevClient | None = None,
     prompt_set: PromptSet | None = None,
-) -> tuple[list[PromptCandidate], list[Topic], int]:
+) -> GenerationResult:
     """Generate topic-organized prompt candidates for review.
 
-    Returns ``(staged_candidates, touched_topics, dropped_duplicate_count)``.
     The caller (the API layer) resolves the agent client. ``prompt_set`` may
     be passed pre-loaded (from ``validate_generation_request``) to avoid a
     second scope query; the payload checks always re-run here so direct
-    service calls stay guarded.
-
-    Generated text is never tracked until a user accepts it, and generation
-    never initiates provider measurement.
+    service calls stay guarded. ``judge`` is the JEV client, or ``None`` when
+    the quality judge is off. Generated text is never tracked until a user
+    accepts it, and generation never initiates provider measurement.
     """
     # Scope first (404 before anything runs), then confirmation + bounds.
     if prompt_set is None:
@@ -487,110 +642,68 @@ async def generate_prompts(
         )
     _validate_generation_payload(prompt_set, payload)
     if not prompt_set.project.topics:
-        project_id = prompt_set.project.id
         await recover_topics_from_confirmed_offerings(
-            session, workspace_id=workspace_id, project_id=project_id
+            session, workspace_id=workspace_id, project_id=prompt_set.project.id
         )
         session.expire_all()
         prompt_set = await _load_prompt_set_with_project(
             session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
         )
         _validate_generation_payload(prompt_set, payload)
-    project_id = prompt_set.project.id
-    (
-        suggestions,
-        intra_duplicates,
-        brand_context,
-        demand_snapshot,
-        demand_signals,
-    ) = await _generate_suggestions(
+    context = await _read_context(
+        session, workspace_id=workspace_id, prompt_set=prompt_set, payload=payload
+    )
+    # Commit before any network I/O.
+    await session.commit()
+    if agent is None:
+        raise GenerationOutputError("Model gateway is required for this cohort")
+    drafts = await _draft(
+        agent=agent, prompt_set=prompt_set, payload=payload, context=context
+    )
+    judged = await judge_candidates(
         session,
+        judge=judge,
+        workspace_id=workspace_id,
         prompt_set=prompt_set,
-        payload=payload,
-        agent=agent,
-        workspace_id=workspace_id,
+        suggestions=drafts.suggestions,
+        brand_context=context.brand_context,
     )
-
-    # 4. Re-open the write transaction. The objects loaded before the provider
-    #    call are now stale (the set/project/topic could have been renamed or
-    #    deleted mid-request), so acquire the SHARED prompt-set advisory lock
-    #    (the same one the delete paths take) and then re-resolve everything
-    #    fresh, row-locking the set. Deletes block on the advisory lock until we
-    #    commit, so nothing can vanish between re-resolution and insertion. A
-    #    disappearance that slipped in before we took the lock maps to the same
-    #    scoped domain errors the endpoint already handles (404 / 422) — and an
-    #    FK violation at insert (belt-and-suspenders) is mapped the same way,
-    #    never an unhandled 500.
-    #
-    #    Lock order is fixed everywhere to preclude deadlock: PROJECT lock
-    #    first (serializes topic deletes), then the PROMPT-SET lock.
-    await acquire_project_lock(session, project_id)
-    await acquire_prompt_set_lock(session, prompt_set_id)
-    # Drop every identity-map instance loaded in the pre-provider transaction so
-    # the re-resolution below reads committed state from the DB. Without this the
-    # selectin-loaded ``project.topics`` collection can be served from the stale
-    # identity map, letting a topic deleted mid-request appear to still exist.
-    session.expire_all()
-    prompt_set = await _load_prompt_set_with_project(
-        session,
-        workspace_id=workspace_id,
-        prompt_set_id=prompt_set_id,
-        for_update=True,
-    )
-    _resolve_target_topic(prompt_set, payload)
-    project = prompt_set.project
-    topics_by_id = {topic.id: topic for topic in project.topics}
-
-    # 5. Stage candidates only under topics that still exist after provider
-    #    I/O. Nothing is charged to prompt capacity until a user accepts.
-    evidence_base = _generation_evidence(
+    evidence = _generation_evidence(
         agent=agent,
         payload=payload,
-        brand_context=brand_context,
-        demand_snapshot=demand_snapshot,
-        demand_signals=demand_signals,
+        context=context,
+        drafts=drafts,
+        quality_gate=judged.quality_gate,
     )
-
     try:
-        # Model-generated text must pass topical binding before staging.
-        suggestions = _drop_unbound_suggestions(
-            suggestions, build_project_vocabulary(project)
-        )
-        staged = await stage_candidates(
+        candidates, touched = await _stage(
             session,
             workspace_id=workspace_id,
-            prompt_set=prompt_set,
-            topics_by_id=topics_by_id,
-            suggestions=suggestions,
-            request=payload.model_dump(mode="json"),
-            provenance=evidence_base,
-            cohort=payload.cohort,
+            project_id=prompt_set.project.id,
+            prompt_set_id=prompt_set_id,
+            payload=payload,
+            evidence=evidence,
+            drafts=drafts,
+            judged=judged,
         )
-        touched_ids = {candidate.topic_id for candidate in staged.candidates}
-        touched_topics = [topic for topic in project.topics if topic.id in touched_ids]
-        for topic in touched_topics:
-            await session.refresh(topic)
-        await session.commit()
     except IntegrityError as exc:
         # A referenced set/topic may have disappeared despite the advisory
-        # lock (e.g. lock skipped on a non-PostgreSQL dialect). Rather than
-        # blindly mapping EVERY integrity error to a 404 — which would mask
-        # genuine constraint bugs (unique/check/unrelated FK violations) as a
-        # phantom "prompt set not found" — roll back and re-check ONLY the
-        # scoped entities this request depends on. A disappeared set maps to a
-        # scoped 404; a disappeared target topic maps to a scoped 422; any
-        # other integrity error is unrelated and re-raised unchanged (500).
+        # lock. Re-check ONLY the scoped entities this request depends on: a
+        # vanished set is a 404, a vanished selected topic a 422, and any
+        # other integrity error is re-raised unchanged (500).
         await session.rollback()
         await reraise_scoped_integrity_error(
             session,
             workspace_id=workspace_id,
             prompt_set_id=prompt_set_id,
-            topic_id=payload.topic_id,
+            topic_ids=requested_topic_ids(payload),
             exc=exc,
         )
-
-    return (
-        staged.candidates,
-        touched_topics,
-        intra_duplicates + staged.dropped_duplicates,
+        raise
+    return GenerationResult(
+        candidates=candidates,
+        topics=touched,
+        dropped_duplicates=drafts.dropped_duplicates,
+        candidates_generated=drafts.generated,
+        quality_gate=judged.quality_gate,
     )

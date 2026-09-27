@@ -39,6 +39,7 @@ from app.connectors.agent.client import AgentNotConfiguredError
 from app.connectors.agent.factory import create_model_gateway
 from app.connectors.agent.gateway import ModelGateway
 from app.connectors.answer_engines.errors import ProviderError
+from app.connectors.jev import create_jev_client
 from app.core.config.abuse import abuse_settings
 from app.core.config.errors import (
     ERROR_AGENT_CALL_FAILED,
@@ -63,10 +64,12 @@ from app.domain.prompts.candidates import (
     CandidateReviewError,
     list_pending_candidates,
     review_candidates,
+    run_quality_gates,
 )
 from app.domain.prompts.csv_import import parse_prompt_csv
 from app.domain.prompts.generation import (
     GenerationOutputError,
+    GenerationResult,
     GenerationValidationError,
     generate_prompts,
     validate_generation_request,
@@ -74,6 +77,7 @@ from app.domain.prompts.generation import (
 from app.domain.prompts.generation_contract import generation_model_call_budget
 from app.domain.prompts.importing import import_prompts
 from app.domain.prompts.mappers import (
+    candidate_to_response,
     prompt_set_to_response,
     prompt_to_response,
     topic_to_response,
@@ -127,6 +131,7 @@ from app.domain.prompts.topics import (
     topic_status_counts,
     update_topic,
 )
+from app.models.prompt import PromptSet
 
 router = APIRouter(tags=["prompts"])
 
@@ -415,6 +420,33 @@ async def import_prompts_endpoint(
     return prompt_set_to_response(prompt_set)
 
 
+async def _generate_with_judge(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    prompt_set_id: uuid.UUID,
+    payload: PromptGenerateRequest,
+    agent: ModelGateway | None,
+    prompt_set: PromptSet,
+) -> GenerationResult:
+    # The shadow quality judge is off when JEV_API_KEY is blank. Its calls
+    # are bounded by jev_max_calls_per_generation, not the agent-call bucket.
+    judge = create_jev_client()
+    try:
+        return await generate_prompts(
+            session,
+            workspace_id=workspace_id,
+            prompt_set_id=prompt_set_id,
+            payload=payload,
+            agent=agent,
+            judge=judge,
+            prompt_set=prompt_set,
+        )
+    finally:
+        if judge is not None:
+            await judge.aclose()
+
+
 @router.post(
     "/prompt-sets/{prompt_set_id}/generate",
     status_code=status.HTTP_201_CREATED,
@@ -470,8 +502,8 @@ async def generate_prompts_endpoint(
             amount=generation_model_call_budget(payload.count),
         )
     try:
-        candidates, topics, dropped = await _map_prompt_mutation(
-            lambda: generate_prompts(
+        result = await _map_prompt_mutation(
+            lambda: _generate_with_judge(
                 session,
                 workspace_id=ctx.workspace_id,
                 prompt_set_id=prompt_set_id,
@@ -499,14 +531,18 @@ async def generate_prompts_endpoint(
     except ProviderError as exc:
         raise _generation_provider_error(exc) from exc
     counts = (
-        await topic_status_counts(session, project_id=topics[0].project_id)
-        if topics
+        await topic_status_counts(session, project_id=result.topics[0].project_id)
+        if result.topics
         else {}
     )
     return PromptGenerateResponse(
-        candidates=[PromptCandidateResponse.model_validate(c) for c in candidates],
-        topics=[topic_to_response(t, counts) for t in topics],
-        dropped_duplicates=dropped,
+        candidates=[
+            candidate_to_response(c, result.quality_gate) for c in result.candidates
+        ],
+        topics=[topic_to_response(t, counts) for t in result.topics],
+        dropped_duplicates=result.dropped_duplicates,
+        candidates_generated=result.candidates_generated,
+        quality_gate=result.quality_gate,
         requested_count=payload.count,
     )
 
@@ -522,7 +558,12 @@ async def list_candidates_endpoint(
         )
     except PromptSetNotFoundError as exc:
         raise_not_found(_RES_PROMPT_SET, cause=exc)
-    return [PromptCandidateResponse.model_validate(c) for c in candidates]
+    gates = await run_quality_gates(
+        session,
+        workspace_id=ctx.workspace_id,
+        run_ids={candidate.run_id for candidate in candidates},
+    )
+    return [candidate_to_response(c, gates.get(c.run_id)) for c in candidates]
 
 
 @router.post("/prompt-sets/{prompt_set_id}/candidates/review")

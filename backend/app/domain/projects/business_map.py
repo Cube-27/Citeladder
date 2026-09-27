@@ -23,6 +23,7 @@ from app.core.config.brand_profile import (
     BUSINESS_MAP_VALUE_MAX_CHARS,
 )
 from app.domain.projects.brand_profile import get_brand_profile
+from app.domain.prompts.locks import acquire_project_lock
 
 BusinessMapOrigin = Literal["manual", "model"]
 BusinessMapReviewState = Literal["suggested", "confirmed"]
@@ -227,6 +228,53 @@ def merge_business_map(
     return BusinessMap(offerings=list(result.values()))
 
 
+def _has_entries(offering: OfferingMap) -> bool:
+    return any(getattr(offering, dimension) for dimension in DIMENSIONS)
+
+
+def with_model_suggestions(
+    business_context: object,
+    suggestions: list[OfferingMap],
+    *,
+    offerings: list[str],
+    run_id: str,
+) -> dict[str, Any] | None:
+    """``business_context`` with suggestions added where a map is still empty.
+
+    Called under the project lock at write time. An offering that gained
+    entries since the suggestion was requested (a person edited the map
+    concurrently) keeps them untouched, and an offering no longer confirmed
+    is skipped. Returns ``None`` when nothing changes.
+    """
+    allowed = {_key(name): name for name in offerings}
+    current = read_business_map(business_context)
+    by_key = {_key(item.offering): item for item in current.offerings}
+    changed = False
+    for suggestion in suggestions:
+        key = _key(suggestion.offering)
+        existing = by_key.get(key)
+        if key not in allowed or (existing is not None and _has_entries(existing)):
+            continue
+        stamped = {
+            dimension: [
+                entry.model_copy(
+                    update={"source": {**entry.source, "generation_run_id": run_id}}
+                )
+                for entry in getattr(suggestion, dimension)
+            ]
+            for dimension in DIMENSIONS
+        }
+        by_key[key] = OfferingMap(offering=allowed[key], **stamped)
+        changed = True
+    if not changed:
+        return None
+    merged = BusinessMap(offerings=list(by_key.values()))
+    return {
+        **(dict(business_context) if isinstance(business_context, dict) else {}),
+        "business_map": merged.model_dump(mode="json"),
+    }
+
+
 def _response(business_map: BusinessMap, offerings: list[str]) -> BusinessMapResponse:
     return BusinessMapResponse(
         offerings=business_map.offerings, available_offerings=offerings
@@ -256,6 +304,10 @@ async def update_business_map(
     profile = await get_brand_profile(
         session, workspace_id=workspace_id, project_id=project_id
     )
+    # Generation records model suggestions under the project lock; taking it
+    # here and re-reading keeps either writer from overwriting the other.
+    await acquire_project_lock(session, project_id)
+    await session.refresh(profile)
     offerings = list(profile.products_services or [])
     merged = merge_business_map(
         payload,

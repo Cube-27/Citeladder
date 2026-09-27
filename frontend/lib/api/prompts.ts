@@ -60,8 +60,8 @@ export type PromptUpdateInput = Partial<Omit<PromptInput, 'topic_id'>> & {
 
 export type PromptGenerateInput = {
   count?: number;
-  // Scope generation to one existing topic; omitted = model proposes topics.
-  topic_id?: string;
+  // Scope generation to existing topics; omitted or empty = every topic.
+  topic_ids?: string[];
   intents?: Prompt['intent'][];
   cohort?: Prompt['cohort'];
 };

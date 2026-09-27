@@ -30,13 +30,22 @@ export function GeneratePromptsDialog({
   result?: PromptGenerateResponse | null;
   review?: ReactNode;
 }>) {
+  const initialTopics = () => new Set(defaultTopicId ? [defaultTopicId] : []);
   const [count, setCount] = useState('10');
-  const [topicId, setTopicId] = useState(defaultTopicId ?? '');
+  // No selection means every topic.
+  const [topicIds, setTopicIds] = useState<ReadonlySet<string>>(initialTopics);
   const [previousOpen, setPreviousOpen] = useState(open);
   if (open !== previousOpen) {
     setPreviousOpen(open);
-    if (open) setTopicId(defaultTopicId ?? '');
+    if (open) setTopicIds(initialTopics());
   }
+  const toggleTopic = (id: string, checked: boolean) =>
+    setTopicIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   const parsedCount = Number(count);
   const countValid =
     Number.isInteger(parsedCount) && parsedCount >= 1 && parsedCount <= MAX_GENERATION_COUNT;
@@ -46,12 +55,15 @@ export function GeneratePromptsDialog({
       onOpenChange={onOpenChange}
       topics={topics}
       count={count}
-      topicId={topicId}
+      selectedTopicIds={topicIds}
       setCount={setCount}
-      setTopicId={setTopicId}
+      toggleTopic={toggleTopic}
       countValid={countValid}
       onSubmit={() => {
-        if (countValid) void onGenerate({ count: parsedCount, topic_id: topicId || undefined });
+        if (!countValid) return;
+        // Only ids still present count; a deleted topic drops out silently.
+        const ids = topics.map((topic) => topic.id).filter((id) => topicIds.has(id));
+        void onGenerate({ count: parsedCount, topic_ids: ids });
       }}
       isGenerating={isGenerating}
       error={error}
