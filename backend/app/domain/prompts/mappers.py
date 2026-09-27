@@ -8,11 +8,13 @@ import uuid
 
 from app.core.config.prompts import PROMPT_STATUS_ACTIVE
 from app.domain.prompts.schemas import (
+    PromptCandidateResponse,
     PromptResponse,
     PromptSetResponse,
     TopicResponse,
 )
 from app.models.prompt import Prompt, PromptSet, Topic
+from app.models.prompt_candidate import PromptCandidate
 
 
 def prompt_to_response(prompt: Prompt) -> PromptResponse:
@@ -48,4 +50,14 @@ def topic_to_response(
         proposed_count=0,
         created_at=topic.created_at,
         updated_at=topic.updated_at,
+    )
+
+
+def candidate_to_response(candidate: PromptCandidate) -> PromptCandidateResponse:
+    decision = candidate.jev_decision or {}
+    return PromptCandidateResponse.model_validate(candidate).model_copy(
+        update={
+            "quality_judged": bool(decision),
+            "quality_flags": [str(flag) for flag in decision.get("flags") or []],
+        }
     )

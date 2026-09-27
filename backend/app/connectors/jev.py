@@ -18,6 +18,7 @@ from typing import Any
 import httpx
 
 from app.connectors.answer_engines.errors import ProviderError, parse_retry_after
+from app.core.config.jev import JevSettings, jev_settings
 from app.core.config.provider_catalog import (
     ERROR_AUTH,
     ERROR_CLIENT,
@@ -120,6 +121,9 @@ class JevClient:
         return self
 
     async def __aexit__(self, *_exc: object) -> None:
+        await self.aclose()
+
+    async def aclose(self) -> None:
         await self._client.aclose()
 
     async def decide(
@@ -164,3 +168,17 @@ class JevClient:
             )
             raise error
         return _parse_decision(response)
+
+
+def create_jev_client(settings: JevSettings = jev_settings) -> JevClient | None:
+    """A JEV client when ``JEV_API_KEY`` is set; ``None`` (judge off) otherwise."""
+    if not settings.enabled:
+        return None
+    return JevClient(
+        api_key=settings.api_key.get_secret_value().strip(),
+        base_url=settings.base_url,
+        model=settings.model,
+        timeout_seconds=settings.timeout_seconds,
+        max_attempts=settings.max_attempts,
+        backoff_seconds=settings.backoff_seconds,
+    )

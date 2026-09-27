@@ -113,6 +113,7 @@ def _candidate_row(
     prompt: SuggestedPrompt,
     cohort: str,
     now: datetime,
+    jev_decision: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "id": uuid.uuid4(),
@@ -132,6 +133,7 @@ def _candidate_row(
         # (parse, cohort identity, brand/competitor rules, exact duplicates,
         # topical binding) reach staging.
         "validation": {"admission": "passed", "topical_binding": BINDING_CODE_ACCEPTED},
+        "jev_decision": jev_decision,
         "disposition": CANDIDATE_DISPOSITION_PENDING,
         "created_at": now,
         "expires_at": now
@@ -172,12 +174,14 @@ async def stage_candidates(
     request: dict[str, Any],
     provenance: dict[str, Any],
     cohort: str,
+    decisions: dict[str, dict[str, Any]] | None = None,
 ) -> StagedCandidates:
     """Record one generation run and its pending candidates.
 
     The caller holds the project and prompt-set locks. Suggestions whose text
     is already a prompt in the set, or already pending review, are dropped
-    and counted; nothing is charged to prompt capacity.
+    and counted; nothing is charged to prompt capacity. ``decisions`` holds
+    shadow quality decisions keyed by normalized text hash.
     """
     await purge_expired_candidates(
         session, workspace_id=workspace_id, prompt_set_id=prompt_set.id
@@ -212,6 +216,7 @@ async def stage_candidates(
             prompt=prompt,
             cohort=cohort,
             now=now,
+            jev_decision=(decisions or {}).get(prompt_text_hash(prompt.text)),
         )
         for topic_id, prompt in stageable
     ]
@@ -229,10 +234,26 @@ async def stage_candidates(
         returned = set((await session.execute(stmt)).scalars().all())
         inserted_ids = [row["id"] for row in rows if row["id"] in returned]
         dropped += len(rows) - len(inserted_ids)
-    candidates = await _load_in_order(session, inserted_ids)
+    candidates = review_order(await _load_in_order(session, inserted_ids))
     return StagedCandidates(
         run_id=run.id, candidates=candidates, dropped_duplicates=dropped
     )
+
+
+def _review_rank(candidate: PromptCandidate) -> tuple[bool, float]:
+    decision = candidate.jev_decision or {}
+    score = decision.get("rank_score")
+    return (
+        bool(decision.get("flags")),
+        -score if isinstance(score, float | int) else 0.0,
+    )
+
+
+def review_order(candidates: list[PromptCandidate]) -> list[PromptCandidate]:
+    """Newest run first; within a run, shadow-flagged rows last, then by the
+    judge's rank score. Stable, so unjudged runs keep their order."""
+    by_rank = sorted(candidates, key=_review_rank)
+    return sorted(by_rank, key=lambda c: c.created_at, reverse=True)
 
 
 async def _load_in_order(
@@ -277,7 +298,7 @@ async def list_pending_candidates(
         )
         .order_by(PromptCandidate.created_at.desc(), PromptCandidate.text)
     )
-    return list(result.scalars().all())
+    return review_order(list(result.scalars().all()))
 
 
 def _validate_review_ids(

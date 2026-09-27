@@ -118,17 +118,6 @@ JEV_DUPLICATE_INSTRUCTIONS: Final = (
 JEV_DUPLICATE_NONE: Final = "none"
 JEV_DUPLICATE_NONE_DESCRIPTION: Final = "No listed prompt asks the same thing"
 
-# Short reasons shown on a flagged candidate, keyed by the noul question (or
-# ``duplicate_of``). User-facing copy for the review list.
-JEV_FLAG_REASONS: Final[dict[str, str]] = {
-    "fits_business": "May not fit the business",
-    "buyer_relevant": "May not be a real buyer question",
-    "natural": "May read unnaturally",
-    "standalone": "May need missing context",
-    "sensible": "May not make sense",
-    "duplicate_of": "May repeat another prompt",
-}
-
 
 class JevSettings(BaseSettings):
     """Env-overridable JEV knobs (``JEV_*``). A blank key means off."""

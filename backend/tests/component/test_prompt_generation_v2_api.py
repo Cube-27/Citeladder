@@ -10,8 +10,13 @@ import uuid
 
 import httpx
 import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.api.prompts as prompts_api
+from app.connectors.answer_engines.errors import ProviderError
+from app.connectors.jev import JevDecision
+from app.models.prompt_candidate import PromptCandidate
 from tests.component.prompt_generation_helpers import (
     FakeAgent,
     accept_all,
@@ -165,3 +170,115 @@ async def test_an_observed_query_is_never_copied_into_a_candidate(
     assert response.status_code == 201
     texts = [c["text"].casefold() for c in response.json()["candidates"]]
     assert texts and copied not in texts
+
+
+class _FakeJudge:
+    """Stands in for JevClient: flags one question, or fails every call."""
+
+    model = "jev-latest"
+
+    def __init__(self, *, weak_text: str = "", fail: bool = False) -> None:
+        self.weak_text = weak_text
+        self.fail = fail
+        self.states: list[dict] = []
+        self.closed = False
+
+    async def decide(self, state: dict, questions: dict) -> JevDecision:
+        self.states.append(state)
+        if self.fail:
+            raise ProviderError("down", error_code="server_error", retryable=False)
+        weak = state["candidate"]["question"] == self.weak_text
+        answers = {
+            key: {"type": "noul", "noul": 0.1 if weak and key == "natural" else 0.9}
+            for key in questions
+            if questions[key]["type"] == "noul"
+        }
+        return JevDecision(model="jev-1.13.0", answers=answers)
+
+    async def aclose(self) -> None:
+        self.closed = True
+
+
+@pytest.mark.asyncio
+async def test_without_a_jev_key_the_judge_is_off(
+    client: httpx.AsyncClient, fake_agent: FakeAgent
+) -> None:
+    _, prompt_set_id = await make_project_and_set(client, "v2-jev-off@example.com")
+
+    body = (
+        await client.post(
+            f"/api/v1/prompt-sets/{prompt_set_id}/generate", json={"count": 2}
+        )
+    ).json()
+
+    assert body["quality_gate"] == "off"
+    assert all(c["quality_judged"] is False for c in body["candidates"])
+
+
+@pytest.mark.asyncio
+async def test_shadow_decisions_rank_and_flag_without_dropping(
+    client: httpx.AsyncClient,
+    fake_agent: FakeAgent,
+    monkeypatch: pytest.MonkeyPatch,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    weak = "best running shoes in australia"
+    judge = _FakeJudge(weak_text=weak)
+    monkeypatch.setattr(prompts_api, "create_jev_client", lambda: judge)
+    _, prompt_set_id = await make_project_and_set(client, "v2-jev@example.com")
+
+    body = (
+        await client.post(
+            f"/api/v1/prompt-sets/{prompt_set_id}/generate", json={"count": 3}
+        )
+    ).json()
+
+    assert body["quality_gate"] == "shadow"
+    assert judge.closed
+    # Only the selected candidates are judged, and none are dropped.
+    assert len(judge.states) == len(body["candidates"]) == 3
+    assert body["candidates"][-1]["text"] == weak
+    assert body["candidates"][-1]["quality_flags"] == ["natural"]
+    listed = (
+        await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
+    ).json()
+    assert [c["id"] for c in listed] == [c["id"] for c in body["candidates"]]
+
+    async with session_factory() as session:
+        stored = (
+            (
+                await session.execute(
+                    select(PromptCandidate).where(
+                        PromptCandidate.prompt_set_id == uuid.UUID(prompt_set_id)
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    decision = next(c.jev_decision for c in stored if c.text == weak)
+    assert decision["mode"] == "shadow"
+    assert decision["model"] == "jev-1.13.0"
+    assert decision["question_schema_version"]
+    assert decision["state_hash"]
+    accepted = await accept_all(client, prompt_set_id, body)
+    assert all(p["generation_evidence"]["jev_decision"] for p in accepted)
+    assert accepted[0]["generation_evidence"]["quality_gate"] == "shadow"
+
+
+@pytest.mark.asyncio
+async def test_jev_failure_never_fails_generation(
+    client: httpx.AsyncClient,
+    fake_agent: FakeAgent,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(prompts_api, "create_jev_client", lambda: _FakeJudge(fail=True))
+    _, prompt_set_id = await make_project_and_set(client, "v2-jev-down@example.com")
+
+    response = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/generate", json={"count": 2}
+    )
+
+    assert response.status_code == 201
+    assert response.json()["quality_gate"] == "unavailable"
+    assert len(response.json()["candidates"]) == 2

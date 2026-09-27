@@ -9,7 +9,13 @@
 #               duplicates, topical binding, verbatim evidence copies
 #   3 SELECT    top N diversified across topic, stage, audience and market;
 #               a shortfall is reported, never filled
-#   4 STAGE     PromptCandidate rows with provenance (candidates.py)
+#   4 JEV       shadow quality decisions for the selected candidates: they
+#               rank and flag the review list and never drop anything
+#               (quality_judge.py)
+#   5 STAGE     PromptCandidate rows with provenance (candidates.py)
+#
+# JEV judges only what selection kept, so in shadow mode it cannot change
+# which candidates reach review; it becomes a gate only in PR 3c.
 #
 # Core and brand cohorts use the app-level default agent (``connectors/agent``);
 # Commerce buyer prompts have their own owner (``/commerce/buyer-prompts``).
@@ -29,6 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.connectors.agent.gateway import ModelGateway
+from app.connectors.jev import JevClient
 from app.core.config.jev import QUALITY_GATE_OFF
 from app.core.config.prompts import (
     GENERATOR_VERSION,
@@ -81,6 +88,7 @@ from app.domain.prompts.generation_selection import (
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.map_suggestions import suggest_offering_maps
 from app.domain.prompts.normalization import prompt_text_hash
+from app.domain.prompts.quality_judge import JudgeResult, judge_candidates
 from app.domain.prompts.query_patterns import PromptSlot, slots_for_cells
 from app.domain.prompts.service import PromptSetNotFoundError
 from app.domain.prompts.topic_recovery import (
@@ -515,7 +523,12 @@ async def _draft(
 # Staging (write transaction, under locks)
 # --------------------------------------------------------------------------
 def _generation_evidence(
-    *, agent: ModelGateway, payload: Any, context: _Context, drafts: _Drafts
+    *,
+    agent: ModelGateway,
+    payload: Any,
+    context: _Context,
+    drafts: _Drafts,
+    quality_gate: str,
 ) -> dict[str, Any]:
     snapshot = context.demand_snapshot
     return {
@@ -532,6 +545,7 @@ def _generation_evidence(
         "requested_intents": [intent for intent in payload.intents if intent],
         "cohort": payload.cohort,
         "candidates_generated": drafts.generated,
+        "quality_gate": quality_gate,
         "business_map_suggested_offerings": [
             item.offering for item in drafts.map_suggestions
         ],
@@ -566,6 +580,7 @@ async def _stage(
     payload: Any,
     evidence: dict[str, Any],
     drafts: _Drafts,
+    judged: JudgeResult,
 ) -> tuple[list[PromptCandidate], list[Topic]]:
     # The objects loaded before provider I/O are stale (the set/project/topic
     # could have been renamed or deleted mid-request). Take the PROJECT lock
@@ -589,6 +604,7 @@ async def _stage(
         request=payload.model_dump(mode="json"),
         provenance=evidence,
         cohort=payload.cohort,
+        decisions=judged.decisions,
     )
     _record_map_suggestions(project, drafts.map_suggestions, str(staged.run_id))
     touched_ids = {candidate.topic_id for candidate in staged.candidates}
@@ -607,6 +623,7 @@ async def generate_prompts(
     prompt_set_id: uuid.UUID,
     payload: Any,
     agent: ModelGateway | None,
+    judge: JevClient | None = None,
     prompt_set: PromptSet | None = None,
 ) -> GenerationResult:
     """Generate topic-organized prompt candidates for review.
@@ -614,7 +631,8 @@ async def generate_prompts(
     The caller (the API layer) resolves the agent client. ``prompt_set`` may
     be passed pre-loaded (from ``validate_generation_request``) to avoid a
     second scope query; the payload checks always re-run here so direct
-    service calls stay guarded. Generated text is never tracked until a user
+    service calls stay guarded. ``judge`` is the JEV client, or ``None`` when
+    the quality judge is off. Generated text is never tracked until a user
     accepts it, and generation never initiates provider measurement.
     """
     # Scope first (404 before anything runs), then confirmation + bounds.
@@ -642,8 +660,20 @@ async def generate_prompts(
     drafts = await _draft(
         agent=agent, prompt_set=prompt_set, payload=payload, context=context
     )
+    judged = await judge_candidates(
+        session,
+        judge=judge,
+        workspace_id=workspace_id,
+        prompt_set=prompt_set,
+        suggestions=drafts.suggestions,
+        brand_context=context.brand_context,
+    )
     evidence = _generation_evidence(
-        agent=agent, payload=payload, context=context, drafts=drafts
+        agent=agent,
+        payload=payload,
+        context=context,
+        drafts=drafts,
+        quality_gate=judged.quality_gate,
     )
     try:
         candidates, touched = await _stage(
@@ -654,6 +684,7 @@ async def generate_prompts(
             payload=payload,
             evidence=evidence,
             drafts=drafts,
+            judged=judged,
         )
     except IntegrityError as exc:
         # A referenced set/topic may have disappeared despite the advisory
@@ -674,4 +705,5 @@ async def generate_prompts(
         topics=touched,
         dropped_duplicates=drafts.dropped_duplicates,
         candidates_generated=drafts.generated,
+        quality_gate=judged.quality_gate,
     )

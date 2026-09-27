@@ -253,6 +253,10 @@ class PromptCandidateResponse(BaseModel):
     cohort: str
     created_at: datetime
     expires_at: datetime
+    # Shadow quality judge (JEV): whether this candidate was judged, and the
+    # questions it looked weak on. Flags inform review; they never drop a row.
+    quality_judged: bool = False
+    quality_flags: list[str] = Field(default_factory=list)
 
 
 class PromptGenerateResponse(BaseModel):
@@ -269,6 +273,9 @@ class PromptGenerateResponse(BaseModel):
     # selection kept at most ``requested_count``. Generation overgenerates;
     # this is never a market size.
     candidates_generated: int = 0
+    # off (no JEV key) | shadow (decisions recorded) | unavailable (JEV
+    # failed for at least one candidate; generation still succeeded).
+    quality_gate: str = "off"
 
 
 class PromptCandidateReviewRequest(BaseModel):
