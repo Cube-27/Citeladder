@@ -14,7 +14,16 @@ import { createHash } from 'node:crypto';
 import { normalizeDomain } from '../analysis/domains.ts';
 import { policy } from '../config.ts';
 import { pyStrip } from '../python/text.ts';
-import { hostname, parseQsl, port, urlencode, urlsplit, urlunsplit } from '../python/urlparse.ts';
+import {
+  hostname,
+  parseQsl,
+  port,
+  PythonValueError,
+  urlencode,
+  urlsplit,
+  urlunsplit,
+  type SplitResult,
+} from '../python/urlparse.ts';
 
 const { referrals } = policy;
 
@@ -43,11 +52,22 @@ function paramAllowed(name: string): boolean {
   );
 }
 
-/** A landing/referrer URL stripped to its persistable, PII-free form. */
+/**
+ * A landing/referrer URL stripped to its persistable, PII-free form. A URL
+ * `urlsplit` rejects (an unbalanced IPv6 bracket, say) persists as empty: in
+ * Python it failed the whole artifact's ingest on every retry, so one garbage
+ * referrer blocked the chain. The row's `dimension_key` keeps the original.
+ */
 export function sanitizeReferralUrl(url: string | null): string {
   const text = pyStrip(url ?? '');
   if (!text) return '';
-  const parts = urlsplit(text);
+  let parts: SplitResult;
+  try {
+    parts = urlsplit(text);
+  } catch (error) {
+    if (error instanceof PythonValueError) return '';
+    throw error;
+  }
   let netloc = '';
   if (parts.netloc) {
     // Rebuild the authority from host and port only: userinfo never survives.

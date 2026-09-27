@@ -66,9 +66,10 @@ durable-memory promotion retain their explicit user-decision boundaries.
 
 ## Languages and the TypeScript service
 
-Python (FastAPI, SQLAlchemy, Alembic) owns every worker and task kind and
-every route family except those assigned to TypeScript: route families by the
-manifest, analytics task kinds by `ANALYTICS_TS_OWNED_TASK_KINDS`.
+Python (FastAPI, SQLAlchemy, Alembic) owns every route family and task kind
+except those assigned to TypeScript: route families by the manifest, analytics
+task kinds by `ANALYTICS_TS_OWNED_TASK_KINDS`. Every worker process is Python
+except the TypeScript analytics worker, which claims exactly those kinds.
 `frontend/services/api` is the TypeScript API service (Node, Hono, Kysely)
 introduced by the [TypeScript migration](plans/citeladder-typescript-migration.md).
 It serves the read-only `executions`, `ai-referrals` and `visibility` families

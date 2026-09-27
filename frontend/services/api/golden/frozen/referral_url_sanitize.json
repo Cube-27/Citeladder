@@ -81,6 +81,10 @@
     {
       "input": "https://example.com:/empty-port",
       "output": "https://example.com/empty-port"
+    },
+    {
+      "input": "https://example.com/?ref=%EF%BB%BFx&utm_source=%EF%BB%BF&utm_term=a%EF%BB%BF",
+      "output": "https://example.com/?ref=%EF%BB%BFx&utm_source=%EF%BB%BF&utm_term=a%EF%BB%BF"
     }
   ]
 }

@@ -254,7 +254,8 @@ function unquote(text: string): string {
   let decoded = '';
   let bytes: number[] = [];
   const flush = () => {
-    decoded += new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+    // Python keeps a leading U+FEFF; the WHATWG decoder would drop it.
+    decoded += new TextDecoder('utf-8', { ignoreBOM: true }).decode(new Uint8Array(bytes));
     bytes = [];
   };
   for (let index = 0; index < text.length; index += 1) {
