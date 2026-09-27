@@ -9,7 +9,7 @@ def test_core_instruction_sets_commercial_objective_without_quotas() -> None:
     instruction = cohort_system_prompt("b2b_saas")
     assert "spreadsheets" in instruction
     assert "Avoid generic definitions" in instruction
-    assert "replace weak or repetitive items yourself" in instruction
+    assert "replace category restatements and repetitive buying" in instruction
     assert "do not name the tracked business" in instruction
     assert "not generation quotas" in instruction
     assert "seven archetypes" not in instruction
