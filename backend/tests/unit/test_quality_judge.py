@@ -26,9 +26,10 @@ BRAND_CONTEXT = {
 }
 
 
-def _requests(tracked: list[str], texts: list[str]):
+def _inputs(tracked: list[str], texts: list[str]):
     prompt_set = SimpleNamespace(
-        prompts=[SimpleNamespace(topic_id=TOPIC_ID, text=text) for text in tracked]
+        id=uuid.uuid4(),
+        prompts=[SimpleNamespace(topic_id=TOPIC_ID, text=text) for text in tracked],
     )
     suggestions = [
         SuggestedTopic(
@@ -50,6 +51,11 @@ def _requests(tracked: list[str], texts: list[str]):
             ],
         )
     ]
+    return prompt_set, suggestions
+
+
+def _requests(tracked: list[str], texts: list[str]):
+    prompt_set, suggestions = _inputs(tracked, texts)
     return build_requests(
         suggestions=suggestions,
         prompt_set=prompt_set,  # type: ignore[arg-type]
@@ -87,6 +93,7 @@ def test_weak_answers_and_a_confident_duplicate_flag_the_candidate() -> None:
     decision = JevDecision(
         model="jev-1.13.0",
         answers={
+            "decision_value": {"type": "noul", "noul": 0.9},
             "fits_business": {"type": "noul", "noul": 0.9},
             "buyer_relevant": {"type": "noul", "noul": 0.1},
             "natural": {"type": "noul", "noul": 0.8},
@@ -108,7 +115,7 @@ def test_weak_answers_and_a_confident_duplicate_flag_the_candidate() -> None:
     assert record["duplicate_of"]["text"] == "new one"
     assert record["intent"]["choice"] == "learn"
     assert record["state_hash"] == second.state_hash
-    assert record["rank_score"] == 0.73
+    assert record["rank_score"] == 0.7583
 
 
 def test_a_duplicate_choice_that_was_not_offered_cannot_fail_the_gate() -> None:
@@ -188,3 +195,50 @@ async def test_slow_or_malformed_decisions_are_unavailable_not_failures(
 
     assert set(decisions) == {fast.key}
     assert failed is True
+
+
+@pytest.mark.asyncio
+async def test_reused_judgments_do_not_consume_the_call_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core.config.jev import jev_settings
+    from app.domain.prompts import quality_judge
+
+    texts = ["judged before", "never judged"]
+    earlier, fresh = _requests([], texts)
+    recorded = decision_record(earlier, JevDecision(model="jev", answers={}))
+
+    async def _recorded(*_args: object, **_kwargs: object) -> dict:
+        return {earlier.state_hash: recorded}
+
+    class _Session:
+        async def commit(self) -> None:
+            return None
+
+    class _Judge:
+        model = "jev-latest"
+
+        def __init__(self) -> None:
+            self.questions: list[str] = []
+
+        async def decide(self, state: dict, questions: dict) -> JevDecision:
+            self.questions.append(state["candidate"]["question"])
+            return JevDecision(model="jev", answers={})
+
+    monkeypatch.setattr(quality_judge, "_recorded_decisions", _recorded)
+    monkeypatch.setattr(jev_settings, "max_calls_per_generation", 1)
+    judge = _Judge()
+    prompt_set, suggestions = _inputs([], texts)
+
+    result = await quality_judge.judge_candidates(
+        _Session(),  # type: ignore[arg-type]
+        judge=judge,  # type: ignore[arg-type]
+        workspace_id=uuid.uuid4(),
+        prompt_set=prompt_set,  # type: ignore[arg-type]
+        suggestions=suggestions,
+        brand_context=BRAND_CONTEXT,
+    )
+
+    assert judge.questions == ["never judged"]
+    assert set(result.decisions) == {earlier.key, fresh.key}
+    assert result.quality_gate == jev_settings.mode

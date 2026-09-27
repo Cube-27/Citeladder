@@ -5,6 +5,7 @@ import { Archive, Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Pressable } from '@/components/ui/pressable';
 import {
   Dropdown,
   DropdownContent,
@@ -40,8 +41,8 @@ export type PromptMeasurement = {
 const PAGE_SIZE = 10;
 
 /**
- * Prompt table (F7). Dense analytics table with columns text / topic / stage /
- * intent / measured visibility / enabled and per-row actions (edit, delete,
+ * Prompt table (F7). Questions, topics, measured visibility and enabled state;
+ * classification is secondary detail, with per-row actions (edit, delete,
  * enable/disable toggle, and — when `onSetStatus` is wired — archive or restore
  * transitions).
  *
@@ -91,8 +92,6 @@ export function PromptTable({
           <TableRow>
             <TableHead>Prompt</TableHead>
             <TableHead>Topic</TableHead>
-            <TableHead>Stage</TableHead>
-            <TableHead>Intent</TableHead>
             {measured ? <TableHead numeric>Visibility</TableHead> : null}
             {/* A mean mention ordinal, not a competitive rank — the rankings
                 table owns that word. Named for what it measures. */}
@@ -106,21 +105,27 @@ export function PromptTable({
           {pagedPrompts.map((prompt) => (
             <TableRow key={prompt.id}>
               <TableCell className="max-w-130 min-w-60">
-                <Tooltip content={prompt.text}>
-                  <span className="text-foreground line-clamp-2 block">{prompt.text}</span>
+                <Tooltip
+                  content={[
+                    prompt.buyer_stage ? buyerStageLabels[prompt.buyer_stage] : '',
+                    intentLabels[prompt.intent],
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                >
+                  <Pressable className="text-foreground block">
+                    {prompt.text}
+                    <span className="sr-only">
+                      {' '}
+                      Stage: {buyerStageLabels[prompt.buyer_stage] || 'Not set'}. Intent:{' '}
+                      {intentLabels[prompt.intent] || 'Not set'}.
+                    </span>
+                  </Pressable>
                 </Tooltip>
               </TableCell>
               <TableCell className="max-w-45">
                 <TopicBadge name={prompt.topic_id ? topicNames.get(prompt.topic_id) : undefined} />
               </TableCell>
-              <TableCell className="text-secondary">
-                {prompt.buyer_stage ? (
-                  buyerStageLabels[prompt.buyer_stage]
-                ) : (
-                  <UnavailableValue state="not_set" />
-                )}
-              </TableCell>
-              <TableCell className="text-secondary">{intentLabels[prompt.intent]}</TableCell>
               {measured ? <MeasuredCells measurement={measurements?.get(prompt.id)} /> : null}
               <TableCell>
                 <Switch

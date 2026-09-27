@@ -69,11 +69,11 @@ def test_confirmed_entries_ground_cells_before_unreviewed_suggestions() -> None:
     cells = plan_generation_cells([_topic(offering)], total=3)
 
     assert [(c.attribute, c.suggested) for c in cells] == [
-        ("", False),
         ("wide fit", False),
         ("vegan", True),
+        ("", False),
     ]
-    assert cells[2].evidence_ref()["review_state"] == "suggested"
+    assert cells[1].evidence_ref()["review_state"] == "suggested"
 
 
 def test_a_topic_without_a_map_gets_bare_cells_not_invented_facts() -> None:
@@ -84,7 +84,7 @@ def test_a_topic_without_a_map_gets_bare_cells_not_invented_facts() -> None:
     assert len(cells) == 5
     assert all(c.offering == "Running shoes" for c in cells)
     assert all(not (c.attribute or c.situation or c.audience) for c in cells)
-    assert {c.market for c in cells} == {"Sydney", "Melbourne"}
+    assert {c.market for c in cells} == {"", "Sydney", "Melbourne"}
 
 
 def test_a_subtopic_is_grounded_in_its_parent_offering() -> None:

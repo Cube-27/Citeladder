@@ -20,6 +20,7 @@ export type CheckboxProps = AccessibleCheckbox & {
   id?: string;
   name?: string;
   required?: boolean;
+  'aria-describedby'?: string;
 };
 
 export function Checkbox({
@@ -32,6 +33,7 @@ export function Checkbox({
   name,
   required,
   'aria-label': ariaLabel,
+  'aria-describedby': ariaDescribedBy,
 }: Readonly<CheckboxProps>) {
   if ((label == null || typeof label === 'boolean') && !ariaLabel) {
     throw new Error('Checkbox requires a visible label or aria-label.');
@@ -46,6 +48,7 @@ export function Checkbox({
       onCheckedChange={onCheckedChange}
       disabled={disabled}
       aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
       className="focus-ring group grid min-h-[var(--control-height)] min-w-[var(--control-height)] shrink-0 place-items-center rounded-[var(--radius-control)] disabled:cursor-not-allowed disabled:opacity-60"
     >
       <span className="border-border-bold bg-input group-data-[state=checked]:border-accent group-data-[state=checked]:bg-accent group-data-[state=indeterminate]:border-accent group-data-[state=indeterminate]:bg-accent text-accent-fg grid size-4 place-items-center rounded-xs border transition-[background-color,border-color] duration-[var(--transition-fast)]">

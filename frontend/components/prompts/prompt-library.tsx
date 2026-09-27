@@ -71,13 +71,16 @@ const STATUS_TABS: { id: PromptStatus; label: string }[] = [
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this component only orchestrates queries/mutations; toolbar, topic rail, table, empty state, and dialogs are extracted.
 export function PromptLibrary({
   generateRequest = 0,
+  reviewRequest = false,
 }: Readonly<{
   /** Increments once per URL request to open the Generate dialog. */
   generateRequest?: number;
+  reviewRequest?: boolean;
 }>) {
   const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
-  const { projectId, promptSet, prompts, isLoading, isError, ensurePromptSet } = usePromptSet();
+  const { projectId, promptSet, prompts, isLoading, isError, ensurePromptSet, retry } =
+    usePromptSet();
   const requestScope = resolveProjectRequestScope(workspaceId, projectId);
   const requestOptions = () => {
     if (!requestScope.enabled) throw new Error('Project is not available.');
@@ -92,6 +95,7 @@ export function PromptLibrary({
   const [editing, setEditing] = useState<Prompt | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
+  const [reviewOnly, setReviewOnly] = useState(false);
   const [generateResult, setGenerateResult] = useState<PromptGenerateResponse | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -213,7 +217,8 @@ export function PromptLibrary({
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- open the dialog for a URL request.
     setGenerateResult(null);
     setGenerateOpen(true);
-  }, [generateRequest, resetGenerate]);
+    setReviewOnly(reviewRequest);
+  }, [generateRequest, reviewRequest, resetGenerate]);
 
   const createTopicMutation = useMutation({
     mutationFn: ({ name, parentId }: { name: string; parentId: string | null }) =>
@@ -307,6 +312,7 @@ export function PromptLibrary({
     />
   );
   const openGenerateDialog = () => {
+    setReviewOnly(false);
     setGenerateResult(null);
     generateMutation.reset();
     setGenerateOpen(true);
@@ -367,7 +373,10 @@ export function PromptLibrary({
         <PendingReviewNotice
           count={review.candidates.length}
           hidden={generateOpen}
-          onReview={openGenerateDialog}
+          onReview={() => {
+            openGenerateDialog();
+            setReviewOnly(true);
+          }}
         />
 
         <ResizablePromptWorkspace
@@ -440,6 +449,12 @@ export function PromptLibrary({
           generateError={generateMutation.isError ? generateMutation.error : undefined}
           generateResult={generateResult}
           review={review}
+          reviewOnly={reviewOnly}
+          setsLoading={isLoading}
+          setsError={isError}
+          retrySets={() => {
+            void retry();
+          }}
         />
       </Stack>
     </PageShell>

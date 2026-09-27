@@ -233,6 +233,7 @@ class PromptGenerateRequest(BaseModel):
     )
     topic_ids: list[uuid.UUID] = Field(default_factory=list)
     topic_id: uuid.UUID | None = None
+    agent_revision_id: uuid.UUID | None = None
     intents: list[PromptIntent] = Field(default_factory=list)
     cohort: PromptCohort = "core"
 

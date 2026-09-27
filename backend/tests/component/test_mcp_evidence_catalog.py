@@ -29,7 +29,7 @@ from app.domain.mcp.evidence_readers import (
 from app.domain.mcp.retrieval import fetch_business_record
 from app.domain.mcp.server import mcp_server
 from app.models.project import Project
-from app.models.prompt import Prompt, PromptSet
+from app.models.prompt import Prompt, PromptSet, Topic
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 from tests.component.mcp_helpers import read_grant
@@ -75,7 +75,8 @@ async def test_prompt_portfolio_pages_without_skips_and_fetches_a_document(
 ) -> None:
     user, _workspace, project = await _account(db_session, "portfolio")
     prompt_set = PromptSet(project_id=project.id, name="Complete set")
-    db_session.add(prompt_set)
+    empty_topic = Topic(project_id=project.id, name="No tracked questions yet")
+    db_session.add_all([prompt_set, empty_topic])
     await db_session.flush()
     db_session.add_all(
         [
@@ -118,6 +119,14 @@ async def test_prompt_portfolio_pages_without_skips_and_fetches_a_document(
     assert len(identities) == len(set(identities)) == 51
     assert first["pagination"]["has_more"] is True
     assert second["pagination"]["has_more"] is False
+    assert first["topics"] == [
+        {
+            "id": str(empty_topic.id),
+            "name": empty_topic.name,
+            "description": empty_topic.description,
+        }
+    ]
+    assert first["topics_truncated"] is False
     assert document["metadata"]["record_type"] == "prompt"
     assert document["metadata"]["project_id"] == str(project.id)
     assert document["url"].startswith("http")

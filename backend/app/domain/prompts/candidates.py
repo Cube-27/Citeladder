@@ -31,6 +31,7 @@ from app.core.config.prompts import (
     prompt_generation_settings,
 )
 from app.domain.prompts.generation_contract import SuggestedPrompt, SuggestedTopic
+from app.domain.prompts.generation_selection import select_diversified
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
 from app.domain.prompts.quality_policy import gated_out
@@ -230,6 +231,7 @@ async def stage_candidates(
     provenance: dict[str, Any],
     cohort: str,
     decisions: dict[str, dict[str, Any]] | None = None,
+    selection_limit: int | None = None,
 ) -> StagedCandidates:
     """Record one generation run and its pending candidates.
 
@@ -260,6 +262,11 @@ async def stage_candidates(
         for prompt in topic.prompts
     ]
     existing = await _existing_prompt_hashes(session, prompt_set.id, hashes)
+    # Re-read pending texts under the caller's locks so a copy staged since the
+    # context read cannot take a selection slot; the insert still ignores races.
+    existing |= await pending_text_hashes(
+        session, workspace_id=workspace_id, prompt_set_id=prompt_set.id
+    )
     stageable, dropped = _stageable(suggestions, topics_by_id, existing)
     now = datetime.now(UTC)
     rows = [
@@ -276,6 +283,8 @@ async def stage_candidates(
         for topic_id, prompt in stageable
     ]
     rows, gated = await _record_gate_rejections(session, rows, now)
+    if selection_limit is not None:
+        rows = _selected_rows(rows, suggestions, selection_limit, decisions)
     inserted_ids: list[uuid.UUID] = []
     if rows:
         stmt = (
@@ -297,6 +306,33 @@ async def stage_candidates(
         dropped_duplicates=dropped,
         gate_rejected=gated,
     )
+
+
+def _selected_rows(
+    rows: list[dict[str, Any]],
+    suggestions: list[SuggestedTopic],
+    limit: int,
+    decisions: dict[str, dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    available = {row["normalized_text_hash"] for row in rows}
+    eligible = [
+        topic.model_copy(
+            update={
+                "prompts": [
+                    prompt
+                    for prompt in topic.prompts
+                    if prompt_text_hash(prompt.text) in available
+                ]
+            }
+        )
+        for topic in suggestions
+    ]
+    selected = {
+        prompt_text_hash(prompt.text)
+        for topic in select_diversified(eligible, limit, decisions)
+        for prompt in topic.prompts
+    }
+    return [row for row in rows if row["normalized_text_hash"] in selected]
 
 
 def _review_rank(candidate: PromptCandidate) -> tuple[bool, float]:

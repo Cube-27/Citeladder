@@ -12,6 +12,11 @@ function parse(href: string) {
 }
 
 describe('agent handoff', () => {
+  it('carries the prompt discovery skill without sending a chat', () => {
+    expect(
+      parse(agentHandoffHref({ skillId: 'prompt_discovery', prompt: 'Build buyer questions' })),
+    ).toMatchObject({ skillId: 'prompt_discovery', prompt: 'Build buyer questions', context: {} });
+  });
   it('round-trips typed references and a prefilled question', () => {
     const handoff = parse(
       agentHandoffHref({

@@ -49,7 +49,7 @@ confirmed offering its attributes, situations/constraints and audiences, plus
 excluded pairs that never combine. Entries carry origin and review state: a
 model suggestion stays `suggested` until a person confirms it, and edits keep
 each surviving entry's provenance. When a Generate request selects confirmed
-offerings with no map entries, one bounded model call
+offerings with absent or facet-empty map entries, one bounded model call
 ([map suggestions](../backend/app/domain/prompts/map_suggestions.py)) proposes
 them; they ground that run and are stored `suggested` with model identity and
 the generation run id, only for offerings still empty at write time, and never
@@ -80,11 +80,19 @@ Generation plans `count × GENERATION_OVERGENERATE_FACTOR`
 its offering plus at most two attribute, situation/constraint or audience
 entries, a target buyer stage and, for area-served businesses, a market.
 Excluded pairs never share a cell and the full product is never enumerated;
-cells are picked least-used-first and confirmed entries before suggestions. A
+Non-bare cells precede bare cells, confirmed facets precede suggestions, and
+values spread least-used-first. Location-free cells remain eligible. A
 subtopic uses its parent's offering map; a topic without a map gets bare cells,
 never invented facts. Each slot carries its cell as `buyer_need`, and the model
-writes the one natural question a buyer with that need would ask, labelling
+writes a natural question expressing a useful buyer decision, labelling
 buyer stage and prompt intent (code resolves legacy intent).
+Category-plus-market restatements and cosmetic question wrappers are discouraged.
+Business context retains field-level review provenance in model inputs. Inferred
+values remain provisional and fields without a source are unverified, including
+when the same values appear in the compact knowledge-base projection.
+Generated buyer scenarios are hypotheses, not observed demand or new business
+facts; cell provenance records that distinction. Geography belongs in the
+wording only when it materially changes the answer.
 
 Admission runs before any quality judgment: known slots, topic ownership,
 allowed labels, cohort identity, normalized exact duplicates, the shared length
@@ -92,7 +100,9 @@ bound, topical binding, texts already tracked or pending, and exact copies of
 observed demand queries. Core queries cannot name the tracked brand, aliases or
 supplied competitors; diagnostics name the brand and comparisons also name an
 accepted competitor. [Selection](../backend/app/domain/prompts/generation_selection.py)
-then keeps at most `count`, spread across topic, stage, audience and market; a
+keeps at most `count` after judgment, preferring passing judgments while treating
+uncertain and unjudged candidates equally, then spread across topic, stage, audience,
+situation, attribute and market; a
 shortfall is reported, never filled. `candidates_generated` counts what passed
 admission and is never a market size. Each candidate keeps its cell in
 `evidence_refs`, copied into `generation_evidence` on accept.
@@ -100,8 +110,9 @@ admission and is never a market size. Each candidate keeps its cell in
 The [quality judge](../backend/app/domain/prompts/quality_judge.py) runs
 through the [JEV connector](../backend/app/connectors/jev.py) when
 `JEV_API_KEY` is set (blank is off; production stays unset until the TypeSafe
-subprocessor revision is published). It judges only the selected candidates:
-yes/no fit, buyer relevance, naturalness, standalone and sensibility; intent
+subprocessor revision is published). It judges the admitted draft pool within
+the configured call cap: yes/no fit, buyer relevance, decision value,
+naturalness, standalone and sensibility; intent
 and stage labels recorded beside the model's; and a per-topic duplicate choice
 among tracked and earlier candidates. Its state omits the brand and
 competitors. Each decision stores model, question-schema and policy versions,
@@ -116,7 +127,8 @@ below `JEV_FLAG_BELOW`, a duplicate at or above `JEV_DUPLICATE_FLAG_AT`, or a
 missing answer (`incomplete`); the row is shown flagged. **Pass**: everything
 else. With `JEV_MODE=gate` (the default) a failed candidate never reaches
 review: it is stored only as a text-free `gate_rejected` outcome record and
-counted in `quality_rejected`, and the shortfall is reported, never filled.
+counted in `quality_rejected`. Selection can use other surviving drafts from
+the same pool; any remaining shortfall is reported without a rewrite loop.
 `JEV_MODE=shadow` records and flags without removing anything. The thresholds
 (policy `jev-gate-1`) are provisional until calibrated from review outcomes
 with `scripts/jev_calibration.py`, an aggregate, text-free operator report; a
@@ -125,7 +137,8 @@ the candidate it failed on: it reports `quality_gate="unavailable"`, that
 unjudged candidate stays reviewable, candidates judged in the same request are
 still gated, and generation still succeeds. A duplicate choice that was not
 offered, or an answer outside [0, 1], counts as unavailable (`incomplete`). JEV calls are bounded by
-`JEV_MAX_CALLS_PER_GENERATION`, not the agent-call bucket.
+`JEV_MAX_CALLS_PER_GENERATION`, not the agent-call bucket. Exhausting that cap
+reports partial unavailability; unjudged rows never claim to be checked.
 Commercial relevance and distinct needs remain human review criteria; there
 are no word-count windows, opening quotas or automatic rewrite loops. Batching,
 bounded technical retries and partial-result behavior remain.
@@ -137,6 +150,25 @@ context/source and actual provider/model provenance; historical prompts are not
 rewritten by a newer generator.
 
 ## Prompts page, manual entry and CSV import
+
+**Build with Agent** opens a project-scoped chat with Prompt discovery selected.
+Its saved portfolio has an explicit **Review in Prompts** action. The existing
+generation endpoint accepts `agent_revision_id`, loads that authorized project's
+saved portfolio, validates its bounded core rows against current topic IDs, and
+applies the same admission, JEV and candidate staging path without another text
+generation call. Run provenance retains the exact output/revision/run references.
+It never activates prompts. Repeated submission drops tracked or pending copies.
+The handoff uses the deployment's default generation count and opens
+`/prompts?review=1`. Review intent survives loading; failed reads offer retry,
+and an empty or expired batch is explained rather than opening generation setup.
+Prompt-set creation waits for its list read and serializes local attempts per project.
+
+Generation setup and candidate review are separate dialog states; review offers
+accept/reject and an explicit Generate more action. Each row distinguishes judged
+(checked or flagged), checking off, unchecked and unavailable states, including
+after reopening; its quality description is associated with its checkbox. The library
+prioritizes question text, topic, measurement and enabled state; classification
+is secondary detail on the question, available on keyboard focus and to screen readers.
 
 `/prompts` opens directly on the prompt library: topics rail, Active/Archived
 tabs, and each prompt's topic and latest measured visibility. Its actions are

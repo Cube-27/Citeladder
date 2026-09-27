@@ -7,6 +7,10 @@ import { useState } from 'react';
 import { OutputDeclaration } from '@/components/agent/action-declaration';
 import { OutputEditor, type OutputDraft } from '@/components/agent/output-editor';
 import { OutputHistory } from '@/components/agent/output-history';
+import {
+  PromptProposalAction,
+  promptPortfolioReport,
+} from '@/components/agent/prompt-proposal-action';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -91,6 +95,13 @@ export function OutputPane({
         {editing ? null : (
           <OutputDeclaration workspaceId={workspaceId} output={output} runActive={runActive} />
         )}
+        {!editing && output.kind === 'prompt_portfolio' ? (
+          <PromptProposalAction
+            workspaceId={workspaceId}
+            revisionId={revision.id}
+            disabled={locked || !canSend}
+          />
+        ) : null}
       </header>
       <Tabs
         value={tab}
@@ -113,7 +124,14 @@ export function OutputPane({
               onDone={() => setDraft(null)}
             />
           ) : (
-            <ContentMarkdown markdown={revision.body} density="compact" />
+            <ContentMarkdown
+              markdown={
+                output.kind === 'prompt_portfolio'
+                  ? promptPortfolioReport(revision.body)
+                  : revision.body
+              }
+              density="compact"
+            />
           )}
         </TabPanel>
         <TabPanel value="sources" className="pt-3">

@@ -51,8 +51,9 @@ async def _two_offering_project(client: httpx.AsyncClient, email: str):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("empty_entry", [False, True])
 async def test_multi_topic_generation_writes_one_question_per_map_cell(
-    client: httpx.AsyncClient, fake_agent: FakeAgent
+    client: httpx.AsyncClient, fake_agent: FakeAgent, empty_entry: bool
 ) -> None:
     project, prompt_set_id, shoes_id, sandals_id = await _two_offering_project(
         client, "v2-cells@example.com"
@@ -66,7 +67,8 @@ async def test_multi_topic_generation_writes_one_question_per_map_cell(
                     "attributes": [{"value": "wide fit"}],
                     "situations": [{"value": "trail running"}],
                     "exclusions": [{"first": "wide fit", "second": "trail running"}],
-                }
+                },
+                *([{"offering": "sandals"}] if empty_entry else []),
             ]
         },
     )
@@ -219,6 +221,29 @@ async def test_without_a_jev_key_the_judge_is_off(
 
 
 @pytest.mark.asyncio
+async def test_a_capped_judge_reports_partial_coverage(
+    client: httpx.AsyncClient,
+    fake_agent: FakeAgent,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    judge = _FakeJudge()
+    monkeypatch.setattr(prompts_api, "create_jev_client", lambda: judge)
+    monkeypatch.setattr(jev_settings, "max_calls_per_generation", 1)
+    _, prompt_set_id = await make_project_and_set(client, "v2-jev-cap@example.com")
+    response = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/generate", json={"count": 2}
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert len(judge.states) == 1
+    assert body["quality_gate"] == "unavailable"
+    assert {row["quality_status"] for row in body["candidates"]} == {
+        "judged",
+        "unavailable",
+    }
+
+
+@pytest.mark.asyncio
 async def test_shadow_decisions_rank_and_flag_without_dropping(
     client: httpx.AsyncClient,
     fake_agent: FakeAgent,
@@ -239,8 +264,9 @@ async def test_shadow_decisions_rank_and_flag_without_dropping(
 
     assert body["quality_gate"] == "shadow"
     assert judge.closed
-    # Only the selected candidates are judged, and none are dropped.
-    assert len(judge.states) == len(body["candidates"]) == 3
+    # Judge the pool first; shadow does not use judgments to select or drop.
+    assert len(judge.states) == body["candidates_generated"] == 6
+    assert len(body["candidates"]) == 3
     assert body["candidates"][-1]["text"] == weak
     assert body["candidates"][-1]["quality_flags"] == ["natural"]
     assert {c["quality_status"] for c in body["candidates"]} == {"judged"}
@@ -320,11 +346,11 @@ async def test_the_gate_removes_strong_fails_and_keeps_text_free_outcomes(
 
     body = (
         await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/generate", json={"count": 3}
+            f"/api/v1/prompt-sets/{prompt_set_id}/generate", json={"count": 2}
         )
     ).json()
 
-    # The strong fail never reaches review; the shortfall is reported.
+    # The strong fail never reaches review; the spare pool fills the request.
     assert body["quality_gate"] == "gate"
     assert body["quality_rejected"] == 1
     assert weak not in {c["text"] for c in body["candidates"]}

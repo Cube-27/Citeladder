@@ -71,8 +71,10 @@ The Projects-owned BusinessContext composes those facts for later prompt
 generation without duplicating their storage.
 
 The [onboarding screen](../frontend/components/onboarding/onboarding-screen.tsx)
-enters the project as soon as a committed project ID is available. It seeds the
-detail cache and navigates through the shared project destination owner.
+enters the project as soon as a committed project ID is available, through the
+shared project destination owner. It invalidates the old list without waiting
+for another detail request; the destination owns its bounded read and retry UI.
+A successful completion missing its project ID returns a recoverable error.
 After confirmation, the review controls are replaced immediately by page-level
 creation progress. A retryable completion failure returns to the recoverable
 review surface; a persisted terminal failure remains visible rather than

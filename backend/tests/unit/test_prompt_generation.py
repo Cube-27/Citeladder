@@ -194,6 +194,26 @@ def test_selection_spreads_topics_and_stages_before_repeating_one() -> None:
     ]
 
 
+def test_selection_does_not_reward_missing_judgments_over_uncertain_ones() -> None:
+    texts = ["uncertain question", "unchecked question", "passing question"]
+    suggestions = [
+        SuggestedTopic(
+            topic_id=TOPIC_ID,
+            name="Footwear",
+            prompts=[SuggestedPrompt(text=text) for text in texts],
+        )
+    ]
+    decisions = {
+        prompt_text_hash(texts[0]): {"mode": "gate", "verdict": "uncertain"},
+        prompt_text_hash(texts[2]): {"mode": "gate", "verdict": "pass"},
+    }
+    selected = select_diversified(suggestions, 2, decisions)
+    assert [prompt.text for topic in selected for prompt in topic.prompts] == [
+        "uncertain question",
+        "passing question",
+    ]
+
+
 def test_cross_batch_duplicates_are_removed_and_counted_for_every_cohort() -> None:
     existing = [
         SuggestedTopic(

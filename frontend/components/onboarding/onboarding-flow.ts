@@ -11,10 +11,8 @@ import {
   type BrandDiscovery,
   type DiscoveryProfile,
 } from '@/lib/api/brand-discoveries';
-import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { brandDiscoveryKeys } from '@/lib/api/query-keys/brand-discovery';
-import type { Project } from '@/lib/api/types';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import {
   brandStepSchema,
@@ -35,15 +33,6 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { hasConfirmedIcp } from './icp-confirmation';
 
 export type OnboardingStep = 0 | 1 | 2;
-
-/** Insert or replace one project in a cached list, deduplicated by id. */
-function upsertProject(current: Project[], project: Project): Project[] {
-  const index = current.findIndex((candidate) => candidate.id === project.id);
-  if (index === -1) return [...current, project];
-  const next = [...current];
-  next[index] = project;
-  return next;
-}
 
 function selectedDomains(domains: ReviewDomain[]): string[] {
   return domains.flatMap((item) => (item.selected ? [item.domain] : []));
@@ -205,40 +194,24 @@ export function useOnboardingFlow(transactionKey: string) {
     );
   }, [discoveryState]);
 
-  // Resolve the committed project and reconcile its list before navigating.
-  // Cancel older list reads so they cannot overwrite the creation hand-off.
+  // The completion response is the committed write receipt. Do not hold the
+  // user here for another detail request: the destination owns that bounded
+  // read and its retry UI, including when the project list predates creation.
   const openProject = useCallback(
     async (projectId: string) => {
       if (!mounted.current || openingProject.current === projectId) return;
       openingProject.current = projectId;
-      let project: Project | null = null;
-      try {
-        project = await queryClient.fetchQuery({
-          queryKey: queryKeys.projects.detail(projectId),
-          queryFn: ({ signal }) => projectsApi.getProject(projectId, { signal, workspaceId: null }),
-        });
-      } catch {
-        // The project exists — the server said so. A failed read of it is a
-        // transport problem, and the destination below can resolve the id
-        // itself (with its own retry) rather than stranding the reader here.
-      }
-      if (!mounted.current) return;
-      if (project) {
-        const listKey = queryKeys.projects.list(project.workspace_id);
+      if (activeWorkspaceId) {
+        const listKey = queryKeys.projects.list(activeWorkspaceId);
         await queryClient.cancelQueries({ queryKey: listKey });
         if (!mounted.current) return;
-        const created = project;
-        queryClient.setQueryData<Project[]>(listKey, (current) =>
-          current === undefined ? current : upsertProject(current, created),
-        );
         void queryClient.invalidateQueries({ queryKey: listKey });
       }
-      const targetProjectId = project?.id ?? projectId;
-      setActiveProjectId(targetProjectId);
-      startOnboardingNavigationHandoff(targetProjectId);
-      router(projectDestination('/projects', null, targetProjectId), { replace: true });
+      setActiveProjectId(projectId);
+      startOnboardingNavigationHandoff(projectId);
+      router(projectDestination('/projects', null, projectId), { replace: true });
     },
-    [queryClient, router, setActiveProjectId],
+    [activeWorkspaceId, queryClient, router, setActiveProjectId],
   );
 
   const complete = useMutation({
@@ -248,7 +221,7 @@ export function useOnboardingFlow(transactionKey: string) {
       }
       const timingStarted = startOnboardingCompletionRequest();
       try {
-        return await brandDiscoveriesApi.complete(
+        const result = await brandDiscoveriesApi.complete(
           discoveryState.id,
           {
             name: brand.brand_name.trim(),
@@ -259,6 +232,12 @@ export function useOnboardingFlow(transactionKey: string) {
           `complete:${discoveryState.id}`,
           { workspaceId: activeWorkspaceId },
         );
+        if (result.status !== 'failed' && !result.project_id) {
+          throw new Error(
+            'Project creation did not return a project. Try Create project again; your reviewed details are preserved.',
+          );
+        }
+        return result;
       } finally {
         finishOnboardingCompletionRequest(timingStarted);
       }

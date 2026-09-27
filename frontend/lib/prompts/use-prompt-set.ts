@@ -13,8 +13,8 @@ import { useActiveProject, useActiveWorkspaceId } from '@/lib/project/project-co
  *
  * Prompts are scoped to a `PromptSet` under the active project (F5 context).
  * The active project may already embed a prompt set (`project.prompt_sets`);
- * otherwise we list them and, if none exists, expose an idempotent
- * `ensurePromptSet` that creates a default one through the API. The list query
+ * otherwise we list them and, if none exists, `ensurePromptSet` creates a
+ * default one. Local create attempts serialize per project. The list query
  * is the source of truth once loaded so a freshly-created set is picked up.
  */
 export function usePromptSet() {
@@ -36,11 +36,22 @@ export function usePromptSet() {
   const promptSet: PromptSet | null = sets[0] ?? null;
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      promptsApi.createPromptSet(
+    scope: { id: `ensure-prompt-set:${workspaceId}:${projectId}` },
+    mutationFn: async () => {
+      if (!projectId || !workspaceId) throw new Error('Project is not available.');
+      // Resolve the list before interpreting an empty cache as an empty project.
+      // fetchQuery also joins an initial read already in flight.
+      const available = await queryClient.fetchQuery({
+        queryKey: queryKeys.prompts.sets(projectId),
+        queryFn: ({ signal }) => promptsApi.listPromptSets(projectId, { signal, workspaceId }),
+        staleTime: 0,
+      });
+      if (available[0]) return available[0];
+      return promptsApi.createPromptSet(
         { project_id: projectId as string, name: 'Default prompt set' },
         { workspaceId },
-      ),
+      );
+    },
     onSuccess: async (created) => {
       if (projectId) {
         queryClient.setQueryData<PromptSet[]>(queryKeys.prompts.sets(projectId), (prev) =>
@@ -62,6 +73,7 @@ export function usePromptSet() {
     prompts: promptSet?.prompts ?? [],
     isLoading: Boolean(projectId) && listQuery.isLoading,
     isError: listQuery.isError,
+    retry: listQuery.refetch,
     ensurePromptSet,
     isEnsuring: createMutation.isPending,
   };

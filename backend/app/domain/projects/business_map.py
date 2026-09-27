@@ -228,8 +228,10 @@ def merge_business_map(
     return BusinessMap(offerings=list(result.values()))
 
 
-def _has_entries(offering: OfferingMap) -> bool:
-    return any(getattr(offering, dimension) for dimension in DIMENSIONS)
+def has_map_entries(offering: OfferingMap | None) -> bool:
+    return offering is not None and any(
+        getattr(offering, dimension) for dimension in DIMENSIONS
+    )
 
 
 def with_model_suggestions(
@@ -253,7 +255,7 @@ def with_model_suggestions(
     for suggestion in suggestions:
         key = _key(suggestion.offering)
         existing = by_key.get(key)
-        if key not in allowed or (existing is not None and _has_entries(existing)):
+        if key not in allowed or has_map_entries(existing):
             continue
         stamped = {
             dimension: [

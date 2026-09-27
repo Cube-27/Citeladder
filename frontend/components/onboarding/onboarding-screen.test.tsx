@@ -224,6 +224,38 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('OnboardingScreen', () => {
+  it('opens a committed project without waiting for a second project-detail read', async () => {
+    discoveryState = discovery('ready', 'preparing_review');
+    searchParams = `discovery=${DISCOVERY_ID}&step=review`;
+    let detailReads = 0;
+    mswServer.use(
+      catalogHandler(),
+      http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, () =>
+        HttpResponse.json({
+          discovery_id: DISCOVERY_ID,
+          status: 'project_created',
+          project_id: PROJECT_ID,
+          crawl_id: null,
+          activation_state: 'queued',
+          page_limit: null,
+          warnings: [],
+        }),
+      ),
+      http.get(`/api/v1/projects/${PROJECT_ID}`, () => {
+        detailReads += 1;
+        return HttpResponse.error();
+      }),
+    );
+    renderOnboarding();
+    const button = await screen.findByRole('button', { name: 'Create project' });
+    await waitFor(() => expect(button).toBeEnabled());
+    await userEvent.setup().click(button);
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(`/projects?project=${PROJECT_ID}`),
+    );
+    expect(detailReads).toBe(0);
+  });
+
   it('keeps draft URL updates paused while completion is in flight', async () => {
     discoveryState = discovery('ready', 'preparing_review');
     const destination = `/onboarding?discovery=${DISCOVERY_ID}&step=review`;

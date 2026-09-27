@@ -6,8 +6,17 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 import { PromptsRouteContent } from './prompts-route-content';
 
 vi.mock('./prompt-library', () => ({
-  PromptLibrary: ({ generateRequest }: { generateRequest?: number }) => (
-    <p>generate requests: {generateRequest ?? 0}</p>
+  PromptLibrary: ({
+    generateRequest,
+    reviewRequest,
+  }: {
+    generateRequest?: number;
+    reviewRequest?: boolean;
+  }) => (
+    <>
+      <p>generate requests: {generateRequest ?? 0}</p>
+      <p>review mode: {String(Boolean(reviewRequest))}</p>
+    </>
   ),
 }));
 
@@ -27,6 +36,14 @@ function renderAt(entry: string) {
 }
 
 describe('PromptsRouteContent', () => {
+  it('consumes an Agent review link while retaining review intent', async () => {
+    renderAt('/prompts?review=1&project=p1');
+    expect(await screen.findByText('generate requests: 1')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/prompts?project=p1'),
+    );
+    expect(screen.getByText('review mode: true')).toBeInTheDocument();
+  });
   it('requests the Generate dialog once when arriving with the generate parameter', async () => {
     renderAt('/prompts?generate=1&project=p1');
 

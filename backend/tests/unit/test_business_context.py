@@ -55,7 +55,18 @@ def test_reviewed_fields_override_inference_and_survive_project_roundtrip() -> N
     assert loaded.field_sources["category"] == "reviewed"
     assert loaded.field_sources["buyer_type"] == "reviewed"
     assert loaded.field_sources["business_model"] == "inferred"
-    assert "field_sources" not in loaded.for_generation()
+    # The model-facing projection must preserve the distinction after loading.
+    sources = loaded.for_generation()["field_sources"]
+    assert sources["category"] == "reviewed"
+    assert sources["buyer_type"] == "reviewed"
+    assert sources["business_model"] == "inferred"
+
+
+def test_legacy_context_without_sources_is_not_promoted_to_reviewed() -> None:
+    context = BusinessContext.from_persisted({"category": "Retail"})
+    projected = context.for_generation()
+    assert projected["category"] == "Retail"
+    assert projected["field_sources"] == {}
 
 
 def test_invalid_legacy_facet_does_not_break_valid_persisted_context() -> None:

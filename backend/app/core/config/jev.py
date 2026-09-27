@@ -25,7 +25,7 @@ from app.core.config.dotenv import dotenv_sources
 
 # Version of the question set below. Stored on every decision so a decision is
 # only ever compared with decisions that asked the same questions.
-JEV_QUESTION_SCHEMA_VERSION: Final = "prompt-quality-questions-1"
+JEV_QUESTION_SCHEMA_VERSION: Final = "prompt-quality-questions-2"
 # Version of the flag and gate thresholds (settings below). Stored on every
 # decision; a stored decision is never re-flagged under a newer policy.
 JEV_POLICY_VERSION: Final = "jev-gate-1"
@@ -54,6 +54,20 @@ JEV_FLAG_INCOMPLETE: Final = "incomplete"
 # judgments code cannot make. Keys are for code only and are not sent as
 # meaning, so each instruction is complete on its own.
 JEV_NOUL_QUESTIONS: Final[dict[str, dict[str, object]]] = {
+    "decision_value": {
+        "instructions": (
+            "Does `candidate.question` express a meaningful buyer decision or "
+            "selection need, beyond restating a product category and location? "
+            "A question wrapper or words like best, online or stores alone do "
+            "not add decision value. Concise requests can pass when a real "
+            "problem, tradeoff, suitability need or purchasing constraint "
+            "makes the answer useful. Do not require long or niche requests."
+        ),
+        "criteria": {
+            "true": "A useful buying decision that could change the options chosen",
+            "false": "A department label, category lookup or cosmetic variation",
+        },
+    },
     "fits_business": {
         "instructions": (
             "Is `candidate.question` a question whose good answer could "

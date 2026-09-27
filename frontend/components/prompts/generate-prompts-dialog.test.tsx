@@ -26,6 +26,21 @@ const TOPICS = [
 ];
 
 describe('GeneratePromptsDialog', () => {
+  it('opens pending review without a competing generation form', async () => {
+    render(
+      <GeneratePromptsDialog
+        open
+        onOpenChange={vi.fn()}
+        topics={TOPICS}
+        onGenerate={vi.fn()}
+        review={<p>Saved questions to review</p>}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: 'Review suggested questions' })).toBeVisible();
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Generate more' }));
+    expect(screen.getByRole('spinbutton', { name: 'Number of prompts' })).toBeVisible();
+  });
   it('sends every selected topic, starting from the rail selection', async () => {
     const user = userEvent.setup();
     const onGenerate = vi.fn();

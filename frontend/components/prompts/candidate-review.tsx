@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { textRole } from '@/components/ui/typography';
 import type { PromptCandidate, Topic } from '@/lib/api/types';
-import { qualityFlagLabel } from '@/lib/prompts/candidate-quality';
+import { qualityFlagLabel, qualityStatusLabel } from '@/lib/prompts/candidate-quality';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -37,6 +37,7 @@ export function CandidateReview({
   error?: string;
   notice?: string | null;
 }>) {
+  const descriptionId = useId();
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
   const selected = useMemo(
     () => candidates.filter((candidate) => picked.has(candidate.id)).map((c) => c.id),
@@ -64,7 +65,7 @@ export function CandidateReview({
 
   return (
     <section aria-labelledby="candidate-review-heading" className="grid min-w-0 gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="bg-elevated sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 py-2">
         <h3 id="candidate-review-heading" className={textRole('bodyStrong')}>
           Review {plural(candidates.length, 'suggestion')}
         </h3>
@@ -100,13 +101,14 @@ export function CandidateReview({
         />
         <span className="text-muted text-xs tabular-nums">{selected.length} selected</span>
       </div>
-      <ul className="grid min-w-0 gap-1" aria-label="Suggested prompts">
+      <ul className="divide-border grid min-w-0 divide-y" aria-label="Suggested prompts">
         {candidates.map((candidate) => {
           const topicName = candidate.topic_id ? topicNames.get(candidate.topic_id) : undefined;
           return (
-            <li key={candidate.id} className="flex min-w-0 items-start gap-1">
+            <li key={candidate.id} className="flex min-w-0 items-start gap-2 py-3">
               <Checkbox
                 aria-label={`Select “${candidate.text}”`}
+                aria-describedby={`${descriptionId}-${candidate.id}`}
                 checked={picked.has(candidate.id)}
                 onCheckedChange={(checked) => toggle(candidate.id, checked === true)}
                 disabled={isReviewing}
@@ -114,6 +116,9 @@ export function CandidateReview({
               <div className="grid min-w-0 gap-0.5 py-2">
                 <span className="text-foreground text-sm">{candidate.text}</span>
                 {topicName ? <span className="text-muted text-xs">{topicName}</span> : null}
+                <span id={`${descriptionId}-${candidate.id}`} className="text-secondary text-xs">
+                  {qualityStatusLabel(candidate)}
+                </span>
                 {candidate.quality_flags.length ? (
                   <span className="flex flex-wrap gap-1">
                     {candidate.quality_flags.map((flag) => (
@@ -136,7 +141,42 @@ export function CandidateReview({
 export function CandidateReviewPanel({
   review,
   topics,
-}: Readonly<{ review: ReturnType<typeof usePromptCandidates>; topics: Topic[] }>) {
+  setsLoading,
+  setsError,
+  retrySets,
+}: Readonly<{
+  review: ReturnType<typeof usePromptCandidates>;
+  topics: Topic[];
+  setsLoading?: boolean;
+  setsError?: boolean;
+  retrySets?: () => void;
+}>) {
+  if (setsLoading || review.isLoading) return <output>Loading suggestions…</output>;
+  if (setsError || review.loadError)
+    return (
+      <Alert tone="danger">
+        {review.loadError || 'Could not load prompt sets.'}
+        <Button
+          variant="secondary"
+          onClick={
+            setsError
+              ? retrySets
+              : () => {
+                  void review.refresh();
+                }
+          }
+        >
+          Retry
+        </Button>
+      </Alert>
+    );
+  if (!review.candidates.length && !review.notice)
+    return (
+      <Alert tone="info">
+        No pending suggestions remain. They may have expired or already been reviewed. Use Generate
+        more to create a new batch.
+      </Alert>
+    );
   return (
     <CandidateReview
       candidates={review.candidates}

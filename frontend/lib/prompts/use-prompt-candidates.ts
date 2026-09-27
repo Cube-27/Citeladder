@@ -64,6 +64,8 @@ export function usePromptCandidates({
 
   return {
     candidates,
+    isLoading: Boolean(promptSetId && workspaceId) && query.isPending,
+    loadError: query.isError ? humanizeApiError(query.error).message : undefined,
     refresh,
     accept: (ids: string[]) => mutation.mutate({ accept_ids: ids }),
     reject: (ids: string[]) => mutation.mutate({ reject_ids: ids }),

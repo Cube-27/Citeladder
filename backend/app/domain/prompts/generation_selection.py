@@ -14,6 +14,7 @@ import uuid
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Any
 
 from app.domain.prompts.generation_contract import SuggestedPrompt, SuggestedTopic
 from app.domain.prompts.normalization import prompt_text_hash
@@ -31,6 +32,8 @@ class _Row:
             ("topic", str(self.topic.topic_id)),
             ("buyer_stage", self.prompt.buyer_stage),
             ("audience", str(ref.get("audience") or "")),
+            ("situation", str(ref.get("situation_or_constraint") or "")),
+            ("attribute", str(ref.get("attribute") or "")),
             ("market", str(ref.get("market") or "")),
         )
         # An absent facet is not a value to spread across.
@@ -84,13 +87,17 @@ def count_prompts(suggestions: list[SuggestedTopic]) -> int:
 
 
 def select_diversified(
-    suggestions: list[SuggestedTopic], count: int
+    suggestions: list[SuggestedTopic],
+    count: int,
+    decisions: dict[str, dict[str, Any]] | None = None,
 ) -> list[SuggestedTopic]:
-    """Keep at most ``count``, least-used features first.
+    """Prefer passing rows, then spread the least-used features.
 
-    Confirmed-map rows are preferred to rows grounded in unreviewed
-    suggestions; ties keep model (cell) order, so the result is deterministic.
+    The caller has already removed gated-out rows. Within equal quality and
+    coverage, prefer confirmed-map rows. Ties keep model (cell) order. Shadow
+    judgments never affect selection.
     """
+    decisions = decisions or {}
     remaining = _rows(suggestions)
     usage: Counter[tuple[str, str]] = Counter()
     chosen: list[_Row] = []
@@ -98,8 +105,10 @@ def select_diversified(
         best = min(
             remaining,
             key=lambda row: (
-                row.suggested(),
+                _quality_rank(decisions.get(prompt_text_hash(row.prompt.text))),
+                usage[("topic", str(row.topic.topic_id))],
                 sum(usage[feature] for feature in row.features()),
+                row.suggested(),
                 row.order,
             ),
         )
@@ -108,3 +117,11 @@ def select_diversified(
         usage.update(best.features())
     chosen.sort(key=lambda row: row.order)
     return _regroup(chosen)
+
+
+def _quality_rank(decision: dict[str, Any] | None) -> int:
+    # Only a gating pass earns priority. Missing judgments are not evidence
+    # that a candidate is better than one with an uncertain judgment.
+    if decision is None or decision.get("mode") == "shadow":
+        return 1
+    return 0 if decision.get("verdict") == "pass" else 1
