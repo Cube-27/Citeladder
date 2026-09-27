@@ -1,9 +1,5 @@
-# Performance API DTOs — projections only (invariant 7).
-#
-# These response models are the backend source of truth for the C6 schema
-# reconcile: every shape mirrors the frontend zod schemas in
-# ``frontend/lib/api/schemas/performance.ts`` EXACTLY — no missing keys, no
-# extra keys (the frontend ``strictValidate`` fails loud on any drift).
+# Performance reader DTOs retained for the Python Agent. The public API is
+# owned by the TypeScript service, checked against the frozen Python fragment.
 #
 # Nullability is CONTRACTUAL, and every null means "not measured", never a
 # zero the reader could mistake for an observation:
@@ -164,12 +160,3 @@ class PerformanceTablePage(BaseModel):
     next_cursor: str | None
     total_count: int
     page_size: int
-
-
-class PerformanceRangeTaskResponse(BaseModel):
-    """The custom/comparison range projection task's identity and state."""
-
-    task_id: uuid.UUID
-    status: str
-    window_start: str
-    window_end: str

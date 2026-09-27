@@ -1,0 +1,1112 @@
+{
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "family": "performance",
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/projects/{project_id}/performance": {
+      "get": {
+        "tags": [
+          "performance"
+        ],
+        "summary": "Get Performance Endpoint",
+        "description": "The selected window's exact GSC totals and daily series, plus its peer.\n\nReturns the resolved ``snapshot_id`` and the window ACTUALLY covered, so\nthe surface always states the dates it is showing and every table request\ncan carry the same snapshot identity. An unprojected range comes back\nwith a null snapshot id and ``not_run`` — the caller then queues the range\nprojection for exactly that window.",
+        "operationId": "get_performance_endpoint_api_v1_projects__project_id__performance_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Range"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "compare",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Compare"
+            }
+          },
+          {
+            "name": "compare_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Compare From"
+            }
+          },
+          {
+            "name": "compare_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Compare To"
+            }
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Granularity"
+            }
+          },
+          {
+            "name": "x-workspace-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
+            }
+          },
+          {
+            "name": "citeladder_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Citeladder Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerformanceDashboardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/performance/table": {
+      "get": {
+        "tags": [
+          "performance"
+        ],
+        "summary": "Get Performance Table Endpoint",
+        "description": "One keyset page of one dimension of one snapshot (contract C4).\n\n``snapshot_id`` is the identity the dashboard returned, so a table and\nthe chart above it always read the same persisted projection. Sorting is\nrestricted to the config whitelist and hits stored aggregates only; the\nexact ``total_count`` comes from the snapshot's persisted per-dimension\ncounts, never from a ``COUNT(*)``. A cursor replayed against a different\nsnapshot/dimension/sort/page size returns 400; an invalid dimension,\nsort, or page size returns 422; an unknown or cross-workspace snapshot\nreturns an empty page.",
+        "operationId": "get_performance_table_endpoint_api_v1_projects__project_id__performance_table_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "dimension",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dimension"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "compare_snapshot_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Compare Snapshot Id"
+            }
+          },
+          {
+            "name": "x-workspace-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
+            }
+          },
+          {
+            "name": "citeladder_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Citeladder Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerformanceTablePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/performance/range": {
+      "post": {
+        "tags": [
+          "performance"
+        ],
+        "summary": "Enqueue Performance Range Endpoint",
+        "description": "Queue the display projection for one custom or comparison window.\n\nIdempotent on ``(project, from, to)``: asking twice returns the SAME task\nid, so the client polls one identity whether it queued the work or joined\nan in-flight request. The task reads only already-persisted evidence —\nit syncs no provider, replaces no preset or current snapshot, refreshes\nno Demand snapshot, enqueues no opportunity or verification work, and\nchanges no other product projection.",
+        "operationId": "enqueue_performance_range_endpoint_api_v1_projects__project_id__performance_range_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "x-workspace-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
+            }
+          },
+          {
+            "name": "citeladder_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Citeladder Session"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerformanceRangeTaskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/performance/range/{task_id}": {
+      "get": {
+        "tags": [
+          "performance"
+        ],
+        "summary": "Get Performance Range Endpoint",
+        "description": "The persisted state of one range-projection task (poll target).\n\nScoped to the workspace, the project AND this task kind, so a task id\nalone never reveals another tenant's work — nor any other analytics\ntask's status and payload through a Performance route (invariant 5).",
+        "operationId": "get_performance_range_endpoint_api_v1_projects__project_id__performance_range__task_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "x-workspace-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace-Id"
+            }
+          },
+          {
+            "name": "citeladder_session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Citeladder Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerformanceRangeTaskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MetricSeriesPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "MetricSeriesPoint",
+        "description": "One dated point of a metric series (``None`` = unmeasured bucket)."
+      },
+      "PerformanceCoverage": {
+        "properties": {
+          "earliest_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Date"
+          },
+          "latest_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Date"
+          },
+          "covered_days": {
+            "type": "integer",
+            "title": "Covered Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "earliest_date",
+          "latest_date",
+          "covered_days"
+        ],
+        "title": "PerformanceCoverage",
+        "description": "The project's observed evidence extent (persisted with the snapshot).\n\nLets the surface say \"outside the imported history\" instead of showing a\nrange that measured nothing as though it measured zero, and gates the\nyear-over-year comparison, which needs more than a year of evidence."
+      },
+      "PerformanceDashboardResponse": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Id"
+          },
+          "range": {
+            "type": "string",
+            "title": "Range"
+          },
+          "granularity": {
+            "type": "string",
+            "title": "Granularity"
+          },
+          "compare": {
+            "type": "string",
+            "title": "Compare"
+          },
+          "selected": {
+            "$ref": "#/components/schemas/PerformanceWindow"
+          },
+          "comparison": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PerformanceWindow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/PerformanceCoverage"
+          },
+          "dimension_counts": {
+            "$ref": "#/components/schemas/PerformanceDimensionCounts"
+          },
+          "unavailable_dimensions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unavailable Dimensions"
+          },
+          "formula_version": {
+            "type": "string",
+            "title": "Formula Version"
+          },
+          "normalization_version": {
+            "type": "string",
+            "title": "Normalization Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "range",
+          "granularity",
+          "compare",
+          "selected",
+          "comparison",
+          "coverage",
+          "dimension_counts",
+          "unavailable_dimensions",
+          "formula_version",
+          "normalization_version"
+        ],
+        "title": "PerformanceDashboardResponse",
+        "description": "``GET /projects/{id}/performance`` — the selected window, and its peer.\n\nServed from persisted ``TrafficSnapshot`` rows. An unresolved range\nyields an empty window payload (null snapshot id, ``not_run``), never a\nrecomputation and never a 404."
+      },
+      "PerformanceDimensionCounts": {
+        "properties": {
+          "query": {
+            "type": "integer",
+            "title": "Query"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "country": {
+            "type": "integer",
+            "title": "Country"
+          },
+          "device": {
+            "type": "integer",
+            "title": "Device"
+          },
+          "search_appearance": {
+            "type": "integer",
+            "title": "Search Appearance"
+          },
+          "day": {
+            "type": "integer",
+            "title": "Day"
+          },
+          "bing_query": {
+            "type": "integer",
+            "title": "Bing Query"
+          },
+          "bing_page": {
+            "type": "integer",
+            "title": "Bing Page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "page",
+          "country",
+          "device",
+          "search_appearance",
+          "day",
+          "bing_query",
+          "bing_page"
+        ],
+        "title": "PerformanceDimensionCounts",
+        "description": "Exact persisted row count per table, written with the rows counted.\n\nBing's two counts stand apart from the Search Console six because they\ndescribe a different engine's panel, never a wider Search Console total."
+      },
+      "PerformanceMetrics": {
+        "properties": {
+          "clicks": {
+            "type": "integer",
+            "title": "Clicks"
+          },
+          "impressions": {
+            "type": "integer",
+            "title": "Impressions"
+          },
+          "ctr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ctr"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clicks",
+          "impressions",
+          "ctr",
+          "position"
+        ],
+        "title": "PerformanceMetrics",
+        "description": "One table row's GSC measures."
+      },
+      "PerformanceRangeTaskResponse": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Task Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "window_start": {
+            "type": "string",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "title": "Window End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "status",
+          "window_start",
+          "window_end"
+        ],
+        "title": "PerformanceRangeTaskResponse",
+        "description": "The custom/comparison range projection task's identity and state."
+      },
+      "PerformanceSeries": {
+        "properties": {
+          "clicks": {
+            "items": {
+              "$ref": "#/components/schemas/MetricSeriesPoint"
+            },
+            "type": "array",
+            "title": "Clicks"
+          },
+          "impressions": {
+            "items": {
+              "$ref": "#/components/schemas/MetricSeriesPoint"
+            },
+            "type": "array",
+            "title": "Impressions"
+          },
+          "ctr": {
+            "items": {
+              "$ref": "#/components/schemas/MetricSeriesPoint"
+            },
+            "type": "array",
+            "title": "Ctr"
+          },
+          "position": {
+            "items": {
+              "$ref": "#/components/schemas/MetricSeriesPoint"
+            },
+            "type": "array",
+            "title": "Position"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clicks",
+          "impressions",
+          "ctr",
+          "position"
+        ],
+        "title": "PerformanceSeries",
+        "description": "The four GSC chart series, bucketed by day (nullable points).\n\nGA4 is deliberately absent: it renders as a compact non-interactive\nsummary row, not as chart series, so the chart's four selectable metrics\nall come from one provider and one dataset."
+      },
+      "PerformanceTablePage": {
+        "properties": {
+          "dimension": {
+            "type": "string",
+            "title": "Dimension"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PerformanceTableRow"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dimension",
+          "items",
+          "next_cursor",
+          "total_count",
+          "page_size"
+        ],
+        "title": "PerformanceTablePage",
+        "description": "The keyset envelope (contract C4) plus the exact persisted total.\n\n``total_count`` is read from the snapshot's persisted per-dimension\ncounts — never a ``COUNT(*)`` issued per page navigation."
+      },
+      "PerformanceTableRow": {
+        "properties": {
+          "dimension_key": {
+            "type": "string",
+            "title": "Dimension Key"
+          },
+          "display_value": {
+            "type": "string",
+            "title": "Display Value"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/PerformanceMetrics"
+          },
+          "comparison_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PerformanceMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "dimension_key",
+          "display_value",
+          "metrics",
+          "comparison_metrics"
+        ],
+        "title": "PerformanceTableRow",
+        "description": "One persisted dimension row, optionally paired with its comparison.\n\n``comparison_metrics`` is null when no comparison snapshot was named, or\nwhen this key has no row in it — a key absent from the comparison period\nwas NOT observed there, which is different from having been observed at\nzero, so the difference column renders unavailable rather than falling\nback to the row's own value."
+      },
+      "PerformanceTotals": {
+        "properties": {
+          "clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clicks"
+          },
+          "impressions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impressions"
+          },
+          "ctr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ctr"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "sessions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sessions"
+          },
+          "conversions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clicks",
+          "impressions",
+          "ctr",
+          "position",
+          "sessions",
+          "conversions"
+        ],
+        "title": "PerformanceTotals",
+        "description": "Window totals: the four GSC measures plus the compact GA4 pair."
+      },
+      "PerformanceWindow": {
+        "properties": {
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "window_start": {
+            "type": "string",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "title": "Window End"
+          },
+          "evidence_state": {
+            "type": "string",
+            "enum": [
+              "not_run",
+              "observed_zero",
+              "available"
+            ],
+            "title": "Evidence State"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/PerformanceTotals"
+          },
+          "series": {
+            "$ref": "#/components/schemas/PerformanceSeries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "snapshot_id",
+          "window_start",
+          "window_end",
+          "evidence_state",
+          "totals",
+          "series"
+        ],
+        "title": "PerformanceWindow",
+        "description": "One resolved window: its snapshot identity, dates, totals and series.\n\n``snapshot_id`` is null when the window has no persisted projection. The\nclient passes a non-null id straight back on every tabular request, so a\nchart and its tables always read the SAME persisted projection rather\nthan each recomputing calendar bounds."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

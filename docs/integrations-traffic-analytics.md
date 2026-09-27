@@ -53,7 +53,8 @@ and Demand, then the appropriate Opportunity and verification successors.
 Source identity and contributing revisions belong in refresh idempotency.
 [Analytics worker](../backend/app/workers/analytics_worker.py) owns dispatch
 of the Python kinds; the [TypeScript analytics worker](../frontend/services/api/src/workers/analytics-worker.ts)
-owns the AI Referrals chain (ingest, classify, snapshot refresh, retention).
+owns the AI Referrals chain (ingest, classify, snapshot refresh, retention),
+Traffic snapshot refresh, Performance range projection and Demand snapshot refresh.
 Each domain owns its derived projection.
 
 [Performance](../backend/app/domain/traffic/performance.py) reads persisted
@@ -99,7 +100,7 @@ Text, minimum-volume and intent filters run across persisted rows. Cursors bind 
 
 ## Query evidence and Demand
 
-[Demand service](../backend/app/domain/demand/service.py) builds immutable,
+[Query evidence](../frontend/services/api/src/demand/query-evidence.ts) builds immutable,
 versioned QueryEvidenceSnapshot/Row projections from latest gsc_query_page_daily
 evidence before detector computation. Rows retain exact metric/artifact IDs,
 query, date, metrics, importer identity and owned-page resolution. Identical
@@ -186,5 +187,5 @@ Performance setup. AI Referrals retains its range and granularity controls when
 the selected projection is empty because another persisted range or granularity
 may still be available; measured zero retains them as well.
 [Sync tests](../backend/tests/component/test_integration_sync_enqueue.py) and
-[Performance tests](../backend/tests/component/test_performance_api.py) cover
+[Performance tests](../frontend/services/api/test/traffic.test.ts) cover
 frozen targets and persisted reads. Live provider acceptance is separate.

@@ -237,6 +237,16 @@ export type WorkerSettings = {
   retryDelaySeconds: number;
 };
 
+export function activeJobRetrySeconds(
+  env: Record<string, string | undefined> = process.env,
+): number {
+  return resolveSpec(
+    'active_job_retry_after_seconds',
+    policy.abuse.active_job_retry_after_seconds,
+    env,
+  ) as number;
+}
+
 /** The analytics worker knobs (`ANALYTICS_*`), refusing a heartbeat slower than the lease. */
 export function loadWorkerSettings(
   env: Record<string, string | undefined> = process.env,

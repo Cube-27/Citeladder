@@ -6,6 +6,7 @@
  * lifecycle around it: run marking, heartbeats and the terminal write.
  */
 import type { Database } from '../db/database.ts';
+import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 
@@ -32,6 +33,17 @@ function payloadField(task: QueueTask, name: string): unknown {
 export function requireProject(task: QueueTask): string {
   if (task.project_id === null) throw new Error(`${task.task_kind} task missing project_id`);
   return task.project_id;
+}
+
+export async function taskProject(db: Database, task: QueueTask): Promise<string> {
+  const id = requireProject(task);
+  const project = await new WorkspaceScope(task.workspace_id)
+    .selectFrom(db, 'projects')
+    .select('id')
+    .where('id', '=', id)
+    .executeTakeFirst();
+  if (!project) throw new Error('Analytics task project is outside its workspace');
+  return id;
 }
 
 /** The payload's `import_artifact_id`; fails the attempt when absent or malformed. */

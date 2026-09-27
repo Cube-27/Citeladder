@@ -29,6 +29,12 @@ from app.core.errors import error_envelope
 from app.core.security import TokenDecodeError, decode_access_token
 from app.core.telemetry import sanitize_correlation_id
 from scripts import golden_masters_analysis as analysis
+from scripts.golden_masters_demand import (
+    canonical_pages,
+    page_equivalence,
+    query_normalizations,
+)
+from scripts.golden_masters_performance import performance_windows
 
 # A fixture-only signing key; it signs nothing outside these fixtures.
 GOLDEN_SESSION_KEY = "golden-session-key-fixture-only-00000"  # pragma: allowlist secret
@@ -175,6 +181,10 @@ def secret_strength() -> list[dict[str, Any]]:
 
 
 GOLDEN_MASTERS: dict[str, Callable[[], list[dict[str, Any]]]] = {
+    "query_normalizations": query_normalizations,
+    "canonical_pages": canonical_pages,
+    "page_equivalence": page_equivalence,
+    "performance_windows": performance_windows,
     "ai_referral_sources": analysis.ai_referral_sources,
     "brand_identity_keys": analysis.brand_identity_keys,
     "citation_classifications": analysis.citation_classifications,
@@ -188,7 +198,6 @@ GOLDEN_MASTERS: dict[str, Callable[[], list[dict[str, Any]]]] = {
     "python_int_or_zero": analysis.python_int_or_zero,
     "python_str_or_empty": analysis.python_str_or_empty,
     "python_string_reprs": analysis.python_string_reprs,
-    "referral_classifications": analysis.referral_classifications,
     "retrieval_provenance": analysis.retrieval_provenance,
     "secret_strength": secret_strength,
     "session_tokens": session_tokens,

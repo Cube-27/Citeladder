@@ -52,8 +52,10 @@ from app.core.config import (
     WEAK_SECRET_WORDS,
     Settings,
 )
+from app.core.config import demand as demand_config
 from app.core.config import errors as error_config
 from app.core.config import workspaces as workspace_config
+from app.core.config.abuse import AbuseSettings
 from app.core.config.analysis import (
     ANALYZER_VERSION,
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
@@ -138,6 +140,7 @@ from app.core.config.workspaces import (
 from app.domain.workspaces.policy import WORKSPACE_ROLES, effective_capabilities
 from scripts.golden_masters import GOLDEN_MASTERS
 from scripts.openapi_fragments import family_fragment, parity_fragment
+from scripts.traffic_policy import demand_policy, traffic_policy
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
 SERVICE_ROOT = FRONTEND_ROOT / "services" / "api"
@@ -256,6 +259,13 @@ def build_config() -> dict[str, Any]:
         "analytics": _analytics_policy(),
         "task_queue": _task_queue_policy(),
         "referrals": _referral_policy(),
+        "traffic": traffic_policy(),
+        "demand": demand_policy(),
+        "abuse": {
+            "active_job_retry_after_seconds": _setting(
+                "active_job_retry_after_seconds", AbuseSettings
+            )
+        },
     }
 
 
@@ -372,7 +382,11 @@ ANALYTICS_WORKER_SETTINGS = (
 # The config modules whose error codes a TypeScript owner may emit: the
 # generic envelope vocabulary and the workspace authorization codes. A PR that
 # ports a route family adds that family's owning config module here.
-ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (error_config, workspace_config)
+ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
+    error_config,
+    workspace_config,
+    demand_config,
+)
 _ERROR_CODE_PREFIXES = ("CODE_", "ERROR_")
 
 
@@ -412,6 +426,13 @@ def build_artifacts() -> dict[Path, str]:
         CONFIG_PATH: _render(build_config()),
         ERROR_CODES_PATH: render_error_codes(),
         PARITY_PATH: _render({"generated_by": GENERATED_BY, **parity_fragment()}),
+        SERVICE_ROOT / "src" / "generated" / "query-casefold.json": _render(
+            {
+                char: char.casefold()
+                for codepoint in range(sys.maxunicode + 1)
+                if (char := chr(codepoint)).casefold() != char.lower()
+            }
+        ),
     }
     for name, build in GOLDEN_MASTERS.items():
         payload = {"name": name, "generated_by": GENERATED_BY, "cases": build()}

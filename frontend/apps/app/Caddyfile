@@ -17,7 +17,7 @@
   # covered by the MCP matcher.
   # Route families the TypeScript API service owns (route-ownership manifest
   # in packages/contracts); the longer paths sort ahead of @backend.
-  @ts_api path /api/v1/executions/* /api/v1/projects/*/ai-referrals /api/v1/projects/*/visibility/sources/series /api/v1/projects/*/visibility/sources/url /api/v1/projects/*/visibility/surface-rates
+  @ts_api path /api/v1/executions/* /api/v1/projects/*/ai-referrals /api/v1/projects/*/visibility/sources/series /api/v1/projects/*/visibility/sources/url /api/v1/projects/*/visibility/surface-rates /api/v1/projects/*/performance /api/v1/projects/*/performance/table /api/v1/projects/*/performance/range /api/v1/projects/*/performance/range/* /api/v1/projects/*/demand/* /api/v1/projects/*/demand/query-evidence/summary
   handle @ts_api {
     reverse_proxy {$API_SERVICE_ORIGIN}
   }

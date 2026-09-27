@@ -2,9 +2,9 @@
 
 from typing import Final
 
-DEMAND_ANALYZER_VERSION: Final = "demand-analyzer-2"
+DEMAND_ANALYZER_VERSION: Final = "demand-analyzer-1"
 DEMAND_FORMULA_VERSION: Final = "demand-priority-1"
-DEMAND_RULE_VERSION: Final = "demand-rules-2"
+DEMAND_RULE_VERSION: Final = "demand-rules-1"
 DEMAND_MANUAL_ACTIVE_PER_PROJECT: Final = 1
 ERROR_DEMAND_WINDOW_NOT_SAVED: Final = "demand_window_not_saved"
 

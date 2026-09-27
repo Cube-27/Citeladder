@@ -26,20 +26,11 @@ from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.analytics import ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH
-from app.core.config.integrations_datasets import (
-    DATASET_GSC_DAY_DAILY,
-    DATASET_GSC_QUERY_DAILY,
-)
-from app.core.config.integrations_transport import INTEGRATION_PROVIDER_GSC
 from app.domain.mcp.data import read_growth_evidence
-from app.domain.traffic.service import refresh_traffic_snapshot
-from app.models.analytics import AnalyticsTask
-from app.models.integrations import IntegrationConnection
 from app.models.project import Project
+from app.models.traffic import PerformanceDimensionStat, TrafficSnapshot
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
-from tests.component.analytics_helpers import seed_ga4_import, seed_metric_row
 from tests.component.mcp_helpers import read_grant
 
 GSC_PROPERTY = "https://example.com/"
@@ -83,60 +74,47 @@ async def _seed_gsc_projection(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
 ) -> None:
-    """A real import chain, refreshed into a real snapshot.
-
-    Seeding a ``TrafficSnapshot`` row by hand would test the reader against a
-    shape no projection ever wrote; running the refresh keeps the tool honest
-    about what the pipeline actually produces.
-    """
-    days = await seed_ga4_import(
-        session,
+    """Saved reader fixture; the real two-stack producer chain is tested in TS."""
+    snapshot = TrafficSnapshot(
         workspace_id=workspace_id,
         project_id=project_id,
-        dataset=DATASET_GSC_DAY_DAILY,
-        provider=INTEGRATION_PROVIDER_GSC,
-        property_ref=GSC_PROPERTY,
-        window=WINDOW,
+        window_start=WINDOW[0],
+        window_end=WINDOW[1],
+        granularity="day",
+        preset_window_days=28,
+        metrics={
+            "totals": {
+                "clicks": 30,
+                "impressions": 300,
+                "ctr": 0.1,
+                "position": 4.5,
+            },
+        },
+        dimension_counts={"query": 1},
+        coverage={
+            "earliest_date": ANCHOR.isoformat(),
+            "latest_date": ANCHOR.isoformat(),
+            "covered_days": 1,
+        },
+        source_metric_row_ids=[],
+        source_artifact_ids=[],
     )
-    await seed_metric_row(
-        session,
-        seed=days,
-        row_date=ANCHOR,
-        dimension_values=[ANCHOR.isoformat()],
-        metrics={"clicks": 30, "impressions": 300, "ctr": 0.1, "position": 4.5},
-    )
-    queries = await seed_ga4_import(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        dataset=DATASET_GSC_QUERY_DAILY,
-        provider=INTEGRATION_PROVIDER_GSC,
-        property_ref=GSC_PROPERTY,
-        window=WINDOW,
-        connection=await session.get(IntegrationConnection, days.connection_id),
-        resync_seq=1,
-    )
-    await seed_metric_row(
-        session,
-        seed=queries,
-        row_date=ANCHOR,
-        dimension_values=["citeladder pricing", ANCHOR.isoformat()],
-        metrics={"clicks": 12, "impressions": 90, "ctr": 0.13, "position": 3.2},
-    )
-    await session.commit()
-    await refresh_traffic_snapshot(
-        session_factory,
-        AnalyticsTask(
+    session.add(snapshot)
+    await session.flush()
+    session.add(
+        PerformanceDimensionStat(
             workspace_id=workspace_id,
             project_id=project_id,
-            task_kind=ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
-            payload={
-                "window_start": WINDOW[0].isoformat(),
-                "window_end": WINDOW[1].isoformat(),
-            },
-            idempotency_key=f"mcp-refresh-{uuid.uuid4()}",
-        ),
+            snapshot_id=snapshot.id,
+            dimension="query",
+            dimension_key="citeladder pricing",
+            display_value="citeladder pricing",
+            metrics={"clicks": 12, "impressions": 90},
+            source_metric_row_ids=[],
+            source_artifact_ids=[],
+        )
     )
+    await session.commit()
 
 
 async def _as_caller(session: AsyncSession, user_id: uuid.UUID):
@@ -200,7 +178,10 @@ async def test_performance_reads_the_same_projection_the_dashboard_reads(
     try:
         async with session_factory() as session:
             snapshot = await read_growth_evidence(
-                session, str(project_id), "performance.read_snapshot"
+                session,
+                str(project_id),
+                "performance.read_snapshot",
+                {"range": "month"},
             )
             table = await read_growth_evidence(
                 session,

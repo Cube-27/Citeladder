@@ -1,0 +1,171 @@
+{
+  "name": "performance_windows",
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "cases": [
+    {
+      "input": {
+        "snapshot": null,
+        "window": [
+          "2026-01-01",
+          "2026-01-02"
+        ]
+      },
+      "output": {
+        "snapshot_id": null,
+        "window_start": "2026-01-01",
+        "window_end": "2026-01-02",
+        "evidence_state": "not_run",
+        "totals": {
+          "clicks": null,
+          "impressions": null,
+          "ctr": null,
+          "position": null,
+          "sessions": null,
+          "conversions": null
+        },
+        "series": {
+          "clicks": [],
+          "impressions": [],
+          "ctr": [],
+          "position": []
+        }
+      }
+    },
+    {
+      "input": {
+        "snapshot": {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "start": "2026-01-01",
+          "end": "2026-01-02",
+          "metrics": {}
+        },
+        "window": [
+          "2026-01-01",
+          "2026-01-02"
+        ]
+      },
+      "output": {
+        "snapshot_id": "00000000-0000-0000-0000-000000000001",
+        "window_start": "2026-01-01",
+        "window_end": "2026-01-02",
+        "evidence_state": "not_run",
+        "totals": {
+          "clicks": null,
+          "impressions": null,
+          "ctr": null,
+          "position": null,
+          "sessions": null,
+          "conversions": null
+        },
+        "series": {
+          "clicks": [],
+          "impressions": [],
+          "ctr": [],
+          "position": []
+        }
+      }
+    },
+    {
+      "input": {
+        "snapshot": {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "start": "2026-01-01",
+          "end": "2026-01-02",
+          "metrics": {
+            "totals": {
+              "clicks": 0,
+              "impressions": 0
+            }
+          }
+        },
+        "window": [
+          "2026-01-01",
+          "2026-01-02"
+        ]
+      },
+      "output": {
+        "snapshot_id": "00000000-0000-0000-0000-000000000001",
+        "window_start": "2026-01-01",
+        "window_end": "2026-01-02",
+        "evidence_state": "observed_zero",
+        "totals": {
+          "clicks": 0,
+          "impressions": 0,
+          "ctr": null,
+          "position": null,
+          "sessions": null,
+          "conversions": null
+        },
+        "series": {
+          "clicks": [],
+          "impressions": [],
+          "ctr": [],
+          "position": []
+        }
+      }
+    },
+    {
+      "input": {
+        "snapshot": {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "start": "2026-01-01",
+          "end": "2026-01-02",
+          "metrics": {
+            "totals": {
+              "clicks": 3.9,
+              "impressions": 101,
+              "ctr": 0.0297029702970297,
+              "position": null,
+              "sessions": 0
+            },
+            "series": {
+              "clicks": [
+                {
+                  "date": "2026-01-01",
+                  "value": 3
+                },
+                {
+                  "date": "2026-01-02",
+                  "value": null
+                }
+              ]
+            }
+          }
+        },
+        "window": [
+          "2026-01-01",
+          "2026-01-02"
+        ]
+      },
+      "output": {
+        "snapshot_id": "00000000-0000-0000-0000-000000000001",
+        "window_start": "2026-01-01",
+        "window_end": "2026-01-02",
+        "evidence_state": "available",
+        "totals": {
+          "clicks": 3,
+          "impressions": 101,
+          "ctr": 0.0297029702970297,
+          "position": null,
+          "sessions": 0,
+          "conversions": null
+        },
+        "series": {
+          "clicks": [
+            {
+              "date": "2026-01-01",
+              "value": 3.0
+            },
+            {
+              "date": "2026-01-02",
+              "value": null
+            }
+          ],
+          "impressions": [],
+          "ctr": [],
+          "position": []
+        }
+      }
+    }
+  ]
+}

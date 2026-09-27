@@ -73,7 +73,7 @@ async def test_unchanged_demand_snapshot_remains_fresh_and_ready(
         coverage={},
         summary={},
         formula_version="demand-priority-1",
-        analyzer_version="demand-analyzer-2",
+        analyzer_version="demand-analyzer-1",
     )
     db_session.add(demand)
     await db_session.flush()

@@ -136,6 +136,7 @@ TRAFFIC_PROJECTED_DATASETS: Final[frozenset[str]] = frozenset(
 # says how many of its lists were sampled — a bounded record of the whole,
 # not a quiet loss of the rest (invariant 7 — sampled is not complete).
 TRAFFIC_PROVENANCE_ID_LIMIT: Final = 500
+TRAFFIC_METRIC_ROW_BATCH_SIZE: Final = 1000
 
 # --- Sort whitelists (``?sort=`` hits stored aggregates only, invariant 7) ---
 # Paging/sorting the /traffic/pages and /traffic/queries endpoints is

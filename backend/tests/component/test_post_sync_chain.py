@@ -11,6 +11,7 @@ Python worker never claims a TypeScript-owned kind. Requires a real Postgres.
 
 from __future__ import annotations
 
+import uuid
 from datetime import date
 
 import pytest
@@ -19,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
+    ANALYTICS_TS_OWNED_TASK_KINDS,
 )
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.domain.analytics.enqueue import enqueue_post_sync_projections
@@ -32,6 +34,42 @@ from tests.component.analytics_helpers import (
 )
 
 _GA4_DATE = "20260720"  # GA4 date dimension values arrive as YYYYMMDD.
+
+
+@pytest.mark.asyncio
+async def test_python_leaves_every_typescript_kind_queued(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        workspace_id, project_id = await seed_workspace_project(session)
+        ids = []
+        for kind in ANALYTICS_TS_OWNED_TASK_KINDS:
+            row = AnalyticsTask(
+                workspace_id=workspace_id,
+                project_id=project_id,
+                task_kind=kind,
+                payload={},
+                idempotency_key=str(uuid.uuid4()),
+            )
+            session.add(row)
+            await session.flush()
+            ids.append(row.id)
+        await session.commit()
+    assert (
+        await AnalyticsWorker(
+            session_factory=session_factory, owner="python-complement"
+        ).run_until_idle()
+        == 0
+    )
+    async with session_factory() as session:
+        rows = (
+            await session.scalars(
+                select(AnalyticsTask).where(AnalyticsTask.id.in_(ids))
+            )
+        ).all()
+        assert all(
+            row.status == TASK_STATUS_QUEUED and row.lease_owner is None for row in rows
+        )
 
 
 async def _ingest_tasks(session: AsyncSession) -> list[AnalyticsTask]:

@@ -66,6 +66,7 @@ export class ApiError extends Error {
   readonly status: ContentfulStatusCode;
   readonly code: ApiErrorCode;
   readonly details?: Record<string, unknown>;
+  readonly detail?: unknown;
   readonly retryable?: boolean;
   readonly headers?: Record<string, string>;
 
@@ -75,6 +76,7 @@ export class ApiError extends Error {
     options: {
       code?: ApiErrorCode;
       details?: Record<string, unknown>;
+      detail?: unknown;
       retryable?: boolean;
       headers?: Record<string, string>;
     } = {},
@@ -83,6 +85,7 @@ export class ApiError extends Error {
     this.status = status;
     this.code = options.code ?? defaultCode(status);
     this.details = options.details;
+    this.detail = options.detail;
     this.retryable = options.retryable;
     this.headers = options.headers;
   }
@@ -115,6 +118,7 @@ export const onError: ErrorHandler = (error, c) => {
         requestId,
         retryable: error.isRetryable(),
         details: error.details,
+        detail: error.detail,
       }),
       error.status,
       error.headers,

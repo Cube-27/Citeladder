@@ -216,6 +216,53 @@ datetime diagnostics, uuid-crate messages, the casefold table and the frozen
 `performance_range_projection`, `demand_snapshot_refresh`. Golden masters on
 projection output.
 
+*As implemented:* the pre-code inventory was 38 directly scoped Python files
+(23 application files and 15 tests), below the roughly 50-file budget; no split
+was needed. TypeScript owns the four Performance projection/read routes, all
+five Demand routes, and `traffic_snapshot_refresh`,
+`performance_range_projection`, `demand_snapshot_refresh`. The generated kind
+set, manifest and all three API ingress Caddyfiles agree. `/performance/sync`
+and `/readiness` remain Python under separate `performance-sync` and `readiness`
+manifest entries: they call integrations-owned enqueue/admission and readiness
+readers. Compose continues using the existing TS analytics worker image.
+
+The traffic fold, demand projection/admission/evidence writers and demand router
+retired, along with their Python-only component/unit tests. Their retained
+contracts are covered by frozen Python projection/classification goldens and TS
+PostgreSQL tests, including the cold-connect chain through both workers.
+`analytics/classification.py` also lost its final runtime caller and retired;
+its existing golden is now frozen. Config, models, Alembic, enqueue helpers and
+the Python queue/sweeper remain authoritative.
+
+Python bridges remain only for their current callers: `traffic.performance`,
+`traffic.query_support` and their DTOs serve the Agent; the trimmed
+`traffic.service` lists integrations sync targets; `demand.query_evidence_reads`
+and query normalization serve MCP; `demand.selection` serves prompts and
+opportunities; `demand.page_equivalence` serves implementation events.
+`demand.search_intelligence` stays untouched for PR 8. Remove each bridge when
+its last Python caller moves. Shared page equivalence, URL/query normalization
+and Performance window conversion have live goldens; the real cross-runtime
+reader test checks Performance results/cursors and query-evidence paging.
+Current-demand selection remains the Python consumer's window-first selector;
+the migrated `/demand/latest` preserves its existing creation-time ordering.
+
+Deliberate departures: boolean/non-finite provider metrics no longer coerce to
+counts or crash a fold; invalid additive values contribute zero and unavailable
+positions remain null. An override with no searchable characters returns a
+structured 422 instead of Python's unhandled `ValueError`. Concurrent demand
+retries serialize with a transaction advisory lock and reuse the immutable
+snapshot instead of racing its unique constraint. A display-only range
+projection that meets a concurrently written snapshot keeps that row instead of
+overwriting it. Each has TS coverage.
+At the owner's direction, the existing demand analyzer/rule identifiers were
+changed from `*-2` to `*-1`; no database reset or migration was performed.
+Every project's demand `source_hash` therefore changes on deploy, and existing
+`*-2` snapshots are superseded on their first refresh; reads are
+version-agnostic.
+The casefold export here preserves persisted query identities, not Pydantic
+error wording. Deployment and the one-week error-rate/latency soak remain
+pending; PR 6 has not started.
+
 ### PR 6: Opportunity detectors
 
 `analysis/opportunities/*` (pure detectors) and `opportunity_verification`.

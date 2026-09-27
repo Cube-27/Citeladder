@@ -22,7 +22,7 @@ https://__ORIGIN_DOMAIN_NAME__ {
   @app header X-CiteLadder-Public-Host __APP_DOMAIN_NAME__
   # Route families the TypeScript API service owns (route-ownership manifest
   # in frontend/packages/contracts); every other path stays on :8000.
-  @ts_api path /api/v1/executions/* /api/v1/projects/*/ai-referrals /api/v1/projects/*/visibility/sources/series /api/v1/projects/*/visibility/sources/url /api/v1/projects/*/visibility/surface-rates
+  @ts_api path /api/v1/executions/* /api/v1/projects/*/ai-referrals /api/v1/projects/*/visibility/sources/series /api/v1/projects/*/visibility/sources/url /api/v1/projects/*/visibility/surface-rates /api/v1/projects/*/performance /api/v1/projects/*/performance/table /api/v1/projects/*/performance/range /api/v1/projects/*/performance/range/* /api/v1/projects/*/demand/* /api/v1/projects/*/demand/query-evidence/summary
   route {
     handle @authorized {
       handle @apex {

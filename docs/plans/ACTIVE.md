@@ -29,9 +29,11 @@
   `ai-referrals`, `visibility`) implemented on 27 September 2026, applying
   D1–D5 as drafted; D6 awaits the owner. PR 4 (queue engine and referral
   analytics kinds, plus removal of PR 3's error-wording emulation) implemented
-  on 27 September 2026. Deployment of PRs 3–4 is pending. Next: PR 5
-  (traffic, performance and demand projections), which needs its own
-  assignment. Site Health, audits,
+  on 27 September 2026. PR 5 (traffic, performance and demand projections)
+  is implemented without a split; integrations sync/readiness and shared
+  Python readers remain with their existing owners. Deployment of PRs 3–5
+  and their one-week cutover soaks are pending. Next: PR 6, which needs its
+  own assignment. Site Health, audits,
   billing/entitlements and the Agent runtime stay Python.
 
 ## Queued

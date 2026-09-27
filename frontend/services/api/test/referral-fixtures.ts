@@ -59,28 +59,36 @@ export async function seedImport(
     window: [string, string];
     resyncSeq?: number;
     previous?: ImportSeed;
+    provider?: string;
   },
 ): Promise<ImportSeed> {
   const now = new Date();
   let connectionId = options.previous?.connectionId;
   let mappingId = options.previous?.mappingId;
   if (connectionId === undefined || mappingId === undefined) {
-    const grantId = randomUUID();
-    await db
-      .insertInto('integration_oauth_grants')
-      .values({
-        id: grantId,
-        workspace_id: options.workspaceId,
-        transport: 'google',
-        access_token_encrypted: 'fernet-access',
-        refresh_token_encrypted: 'fernet-refresh',
-        granted_scopes: JSON.stringify(['scope-ga4']),
-        status: 'connected',
-        token_revision: 0,
-        created_at: now,
-        updated_at: now,
-      })
-      .execute();
+    const grant = await db
+      .selectFrom('integration_oauth_grants')
+      .select('id')
+      .where('workspace_id', '=', options.workspaceId)
+      .where('transport', '=', 'google')
+      .executeTakeFirst();
+    const grantId = grant?.id ?? randomUUID();
+    if (!grant)
+      await db
+        .insertInto('integration_oauth_grants')
+        .values({
+          id: grantId,
+          workspace_id: options.workspaceId,
+          transport: 'google',
+          access_token_encrypted: 'fernet-access',
+          refresh_token_encrypted: 'fernet-refresh',
+          granted_scopes: JSON.stringify(['scope-ga4']),
+          status: 'connected',
+          token_revision: 0,
+          created_at: now,
+          updated_at: now,
+        })
+        .execute();
     connectionId = randomUUID();
     await db
       .insertInto('integration_connections')
@@ -88,7 +96,7 @@ export async function seedImport(
         id: connectionId,
         workspace_id: options.workspaceId,
         grant_id: grantId,
-        provider: 'ga4',
+        provider: options.provider ?? 'ga4',
         label: 'GA4',
         account_ref: `ga4-${connectionId}`,
         dataset_capabilities: JSON.stringify({}),
@@ -103,7 +111,7 @@ export async function seedImport(
         id: mappingId,
         workspace_id: options.workspaceId,
         connection_id: connectionId,
-        provider: 'ga4',
+        provider: options.provider ?? 'ga4',
         property_ref: PROPERTY_REF,
         project_id: options.projectId,
         status: 'active',
@@ -147,7 +155,7 @@ export async function seedImport(
       workspace_id: options.workspaceId,
       sync_run_id: syncRunId,
       connection_id: connectionId,
-      provider: 'ga4',
+      provider: options.provider ?? 'ga4',
       dataset: options.dataset,
       query_snapshot: JSON.stringify({}),
       payload_hash: randomUUID().replaceAll('-', '').repeat(2),
