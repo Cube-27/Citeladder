@@ -78,7 +78,8 @@ export async function getSourceSeries(
   },
 ): Promise<SourceSeriesResponse> {
   const selection = await authorizedSelection(db, requested);
-  const bucket = sql`date_trunc(${options.granularity}, ${observedAt})`;
+  // Buckets are UTC days/weeks, whatever the session time zone is.
+  const bucket = sql`date_trunc(${options.granularity}, ${observedAt}, 'UTC')`;
   const scope = evidenceScope(db, selection)
     .select(['ra.id as analysis_id', bucket.as('bucket')])
     .as('scope');

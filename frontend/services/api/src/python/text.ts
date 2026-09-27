@@ -110,26 +110,42 @@ export function pyDecimalDigit(character: string): number {
   return (character.codePointAt(0)! - start) % 10;
 }
 
-/** `int(text)` for a `str`, or null where Python raises `ValueError`. */
-function pyIntFromStr(text: string): number | null {
+/** `int(text)` for a `str`, exact at any size, or null where Python raises `ValueError`. */
+function pyIntFromStr(text: string): bigint | null {
   let body = pyStrip(text);
-  let sign = 1;
+  let negative = false;
   if (body.startsWith('+') || body.startsWith('-')) {
-    if (body.startsWith('-')) sign = -1;
+    negative = body.startsWith('-');
     body = body.slice(1);
   }
   if (!/^\p{Nd}+(?:_\p{Nd}+)*$/u.test(body)) return null;
-  let value = 0;
-  for (const character of body.replaceAll('_', '')) value = value * 10 + pyDecimalDigit(character);
-  return sign * value;
+  let value = 0n;
+  for (const character of body.replaceAll('_', '')) {
+    value = value * 10n + BigInt(pyDecimalDigit(character));
+  }
+  return negative ? -value : value;
 }
 
-/** `int(value or 0)` for a decoded JSON value, or null where Python raises. */
+/**
+ * `int(value or 0)` for a decoded JSON value, or null where Python raises.
+ *
+ * Python's `int` is unbounded, but a served JSON number is exact only up to
+ * 2^53. Past that the port refuses the value (a `RangeError`, served as a
+ * 500) rather than emitting a rounded count; a JSON number there has already
+ * been rounded by decoding, so it is refused the same way.
+ */
 export function pyIntOrZero(value: unknown): number | null {
   if (!pyTruthy(value)) return 0;
-  if (typeof value === 'number') return Math.trunc(value);
   if (typeof value === 'boolean') return 1;
-  return typeof value === 'string' ? pyIntFromStr(value) : null;
+  let parsed: bigint | number | null = null;
+  if (typeof value === 'number') parsed = Math.trunc(value);
+  else if (typeof value === 'string') parsed = pyIntFromStr(value);
+  if (parsed === null) return null;
+  const exact = Number(parsed);
+  if (!Number.isSafeInteger(exact) || BigInt(exact) !== BigInt(parsed)) {
+    throw new RangeError('integer exceeds the exact JSON number range');
+  }
+  return exact;
 }
 
 /**

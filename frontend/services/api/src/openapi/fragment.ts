@@ -51,6 +51,7 @@ const ANNOTATIONS = new Set([
 ]);
 const HTTP_METHODS = new Set(['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace']);
 const COMPONENT_REF = '#/components/schemas/';
+const PARAMETER_REF = '#/components/parameters/';
 const LOCAL_DEF_REF = '#/$defs/';
 
 type Definitions = { components: Record<string, JsonSchema>; defs: Record<string, JsonSchema> };
@@ -229,17 +230,35 @@ function normalizeOperation(
   };
 }
 
+type ParameterOrRef = OpenApiParameter | { $ref: string };
+
+/** A parameter, with a `#/components/parameters/` reference resolved. */
+function resolveParameter(
+  parameter: ParameterOrRef,
+  parameters: Record<string, OpenApiParameter>,
+): OpenApiParameter {
+  if (!('$ref' in parameter)) return parameter;
+  const target = parameter.$ref.startsWith(PARAMETER_REF)
+    ? parameters[parameter.$ref.slice(PARAMETER_REF.length)]
+    : undefined;
+  if (!target) throw new Error(`Unresolvable parameter reference: ${parameter.$ref}`);
+  return target;
+}
+
 /** The family's operations, normalized; keys are `METHOD /path`. */
 export function familyFragment(document: OpenApiDocument, family: string): NormalizedFragment {
   const components = document.components?.schemas ?? {};
+  const declared = document.components?.parameters ?? {};
+  const resolve = (list: ParameterOrRef[] | undefined) =>
+    (list ?? []).map((parameter) => resolveParameter(parameter, declared));
   const fragment: NormalizedFragment = {};
   for (const [path, item] of Object.entries(document.paths)) {
     // Path-level parameters apply to every operation under the path; an
     // operation's own parameter with the same location and name wins.
-    const shared = (item as { parameters?: OpenApiParameter[] }).parameters ?? [];
+    const shared = resolve((item as { parameters?: ParameterOrRef[] }).parameters);
     for (const [method, operation] of Object.entries(item)) {
       if (!HTTP_METHODS.has(method) || !operation.tags?.includes(family)) continue;
-      const own = operation.parameters ?? [];
+      const own = resolve(operation.parameters);
       const inherited = shared.filter(
         (parameter) =>
           !own.some((entry) => entry.in === parameter.in && entry.name === parameter.name),

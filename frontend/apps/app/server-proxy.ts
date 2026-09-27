@@ -21,20 +21,28 @@ export function createServerProxy(
   );
 }
 
+// The paths every ingress sends to the Python backend, as Caddy path patterns.
+const BACKEND_PATHS = [
+  '/api',
+  '/api/*',
+  '/mcp',
+  '/mcp/*',
+  '/authorize',
+  '/token',
+  '/revoke',
+  '/.well-known/oauth-authorization-server',
+  '/.well-known/oauth-protected-resource/mcp',
+] as const;
+
 function proxyRoutes(target: string, apiService: string): Record<string, ProxyOptions> {
   const options = (origin: string): ProxyOptions => ({ target: origin, changeOrigin: true });
-  // Vite tries keys in insertion order, so the narrower TypeScript paths lead.
-  // Each key is Caddy's own matcher, so dev routes a path as production does
-  // (case-sensitively: Vite compiles proxy keys without flags).
-  const typescript = Object.fromEntries(
-    TYPESCRIPT_INGRESS_PATHS.map((path) => [caddyPathSource(path), options(apiService)]),
-  );
-  return {
-    ...typescript,
-    '^/api(?:/|\\?|$)': options(target),
-    '^/mcp(?:/|\\?|$)': options(target),
-    '^/(?:authorize|token|revoke)(?:\\?|$)': options(target),
-    '^/\\.well-known/(?:oauth-authorization-server|oauth-protected-resource/mcp)(?:\\?|$)':
-      options(target),
-  };
+  // Each key is Caddy's own matcher, folding case as Caddy does, so dev routes
+  // a path as production does. Vite tries keys in insertion order, so the
+  // narrower TypeScript paths lead.
+  const routes = (paths: readonly string[], origin: string) =>
+    paths.map((path) => [caddyPathSource(path, { caseless: true }), options(origin)] as const);
+  return Object.fromEntries([
+    ...routes(TYPESCRIPT_INGRESS_PATHS, apiService),
+    ...routes(BACKEND_PATHS, target),
+  ]);
 }

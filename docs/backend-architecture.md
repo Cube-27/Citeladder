@@ -33,9 +33,10 @@ The default agent is one OpenAI-compatible chat-completions client configured by
 there is no per-provider adapter. Requests use the portable subset: messages,
 an output cap sent as `max_completion_tokens` (retried once as `max_tokens` when
 the provider rejects the former by name), and JSON Schema instructions in the
-prompt rather than a provider-specific response format. Callers validate the
-returned JSON against their own schemas and evidence contracts before
-persistence.
+prompt rather than a provider-specific response format. Customer (BYOK) app
+routes and their connection test follow the same rules through
+`app/connectors/output_cap.py`. Callers validate the returned JSON against
+their own schemas and evidence contracts before persistence.
 
 ## Task queue contract
 

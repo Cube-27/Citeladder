@@ -156,6 +156,27 @@ async def test_output_cap_falls_back_once_and_is_remembered() -> None:
 
 
 @pytest.mark.asyncio
+async def test_failed_fallback_is_not_remembered() -> None:
+    sent: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        sent.append(next(k for k in body if k.startswith("max_")))
+        if "max_completion_tokens" in body:
+            return httpx.Response(
+                400, json={"error": {"param": "max_completion_tokens"}}
+            )
+        return httpx.Response(401, json={"error": {"code": "invalid_api_key"}})
+
+    client = _client(handler)
+    for _ in range(2):
+        with pytest.raises(ProviderError):
+            await client.complete_json(system="s", user="u")
+
+    assert sent == ["max_completion_tokens", "max_tokens"] * 2
+
+
+@pytest.mark.asyncio
 async def test_unrelated_client_error_is_not_retried(
     caplog: pytest.LogCaptureFixture,
 ) -> None:

@@ -148,4 +148,25 @@ describe('OpenAPI fragment parity', () => {
     };
     expect(familyFragment(shared, 'items')).toEqual(familyFragment(inline, 'items'));
   });
+
+  it('resolves a referenced path-level parameter before operation overrides', () => {
+    const id = { name: 'id', in: 'path', required: true, schema: { type: 'string' } } as const;
+    const operation = { tags: ['items'], responses: { '200': {} } };
+    const referenced = {
+      openapi: '3.1.0',
+      paths: {
+        '/api/v1/items/{id}': {
+          parameters: [{ $ref: '#/components/parameters/ItemId' }],
+          get: operation,
+          put: { ...operation, parameters: [{ ...id, schema: { type: 'integer' } }] },
+        },
+      },
+      components: { parameters: { ItemId: id } },
+    } as unknown as OpenApiDocument;
+    const fragment = familyFragment(referenced, 'items');
+    expect(fragment['GET /api/v1/items/{id}']?.parameters).toEqual([id]);
+    expect(fragment['PUT /api/v1/items/{id}']?.parameters).toEqual([
+      { ...id, schema: { type: 'integer' } },
+    ]);
+  });
 });

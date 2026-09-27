@@ -29,7 +29,10 @@ export type OpenApiOperation = {
 export type OpenApiDocument = {
   openapi: string;
   paths: Record<string, Record<string, OpenApiOperation>>;
-  components?: { schemas?: Record<string, JsonSchema> };
+  components?: {
+    schemas?: Record<string, JsonSchema>;
+    parameters?: Record<string, OpenApiParameter>;
+  };
 };
 
 const OPENAPI_VERSION = '3.1.0';

@@ -33,6 +33,11 @@ from app.connectors.answer_engines.errors import (
     classify_provider_status,
     parse_retry_after,
 )
+from app.connectors.output_cap import (
+    LEGACY_OUTPUT_CAP_PARAM,
+    OUTPUT_CAP_PARAM,
+    rejects_output_cap,
+)
 from app.core.config.agent import DefaultAgentSettings, default_agent_settings
 from app.core.config.provider_catalog import (
     ERROR_CONNECTION,
@@ -42,12 +47,6 @@ from app.core.config.provider_catalog import (
 
 logger = logging.getLogger(__name__)
 
-# The output cap is the one parameter whose name splits providers: current
-# OpenAI models reject ``max_tokens``, while Mistral and some gateways accept
-# only it. The current name is sent first and the legacy name once, only when
-# the provider's rejection names the parameter it refused.
-_OUTPUT_CAP_PARAMS = ("max_completion_tokens", "max_tokens")
-_CAP_REJECTION_STATUSES = frozenset({400, 422})
 # Routes (base URL, model) already known to need the legacy name.
 _LEGACY_CAP_ROUTES: set[tuple[str, str]] = set()
 # Provider error fields logged as diagnostics: short identifier tokens only,
@@ -158,19 +157,8 @@ class DefaultAgentClient:
     async def _complete_result(self, *, system: str, user: str) -> ModelResult:
         """Run one completion without logging prompt data."""
         settings = self._settings
-        route = (settings.base_url.rstrip("/"), settings.model)
-        params = (
-            _OUTPUT_CAP_PARAMS[1:]
-            if route in _LEGACY_CAP_ROUTES
-            else _OUTPUT_CAP_PARAMS
-        )
         started = time.monotonic()
-        for index, cap_param in enumerate(params):
-            response = await self._post(cap_param, system=system, user=user)
-            if index + 1 < len(params) and _rejects_param(response, cap_param):
-                _LEGACY_CAP_ROUTES.add(route)
-                continue
-            break
+        response = await self._post_with_cap_fallback(system=system, user=user)
         latency_ms = int((time.monotonic() - started) * 1000)
         if response.status_code >= 400:
             error_code, retryable = classify_provider_status(response.status_code)
@@ -226,6 +214,21 @@ class DefaultAgentClient:
             usage=usage,
             latency_ms=latency_ms,
         )
+
+    async def _post_with_cap_fallback(
+        self, *, system: str, user: str
+    ) -> httpx.Response:
+        route = (self._settings.base_url.rstrip("/"), self._settings.model)
+        if route in _LEGACY_CAP_ROUTES:
+            return await self._post(LEGACY_OUTPUT_CAP_PARAM, system=system, user=user)
+        response = await self._post(OUTPUT_CAP_PARAM, system=system, user=user)
+        if not rejects_output_cap(response.status_code, response.text):
+            return response
+        response = await self._post(LEGACY_OUTPUT_CAP_PARAM, system=system, user=user)
+        # Remember the legacy name only once a request with it succeeded.
+        if response.status_code < 400:
+            _LEGACY_CAP_ROUTES.add(route)
+        return response
 
     async def _post(self, cap_param: str, *, system: str, user: str) -> httpx.Response:
         settings = self._settings
@@ -286,13 +289,6 @@ class DefaultAgentClient:
             "code": str(getattr(exc, "error_code", ERROR_CONNECTION)),
             "retryable": bool(getattr(exc, "retryable", False)),
         }
-
-
-def _rejects_param(response: httpx.Response, param: str) -> bool:
-    """Whether a client error names ``param`` as the field it refused."""
-    if response.status_code not in _CAP_REJECTION_STATUSES:
-        return False
-    return param in response.text
 
 
 def _provider_error_tokens(response: httpx.Response) -> dict[str, str]:

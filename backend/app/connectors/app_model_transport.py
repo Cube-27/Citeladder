@@ -12,6 +12,11 @@ from curl_cffi import CurlOpt
 from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.exceptions import RequestException, Timeout
 
+from app.connectors.output_cap import (
+    LEGACY_OUTPUT_CAP_PARAM,
+    OUTPUT_CAP_PARAM,
+    rejects_output_cap,
+)
 from app.connectors.web_evidence.contracts import DnsResolver, ResolvedTarget
 from app.connectors.web_evidence.resolver import SystemDnsResolver
 from app.connectors.web_evidence.targets import validate_resolved_target
@@ -28,11 +33,19 @@ class AppModelTransportError(RuntimeError):
     """Safe classified failure; never includes URLs, keys, or provider bodies."""
 
     def __init__(
-        self, code: str, message: str, *, status_code: int | None = None
+        self,
+        code: str,
+        message: str,
+        *,
+        status_code: int | None = None,
+        refused_output_cap: bool = False,
     ) -> None:
         super().__init__(message)
         self.code = code
         self.status_code = status_code
+        # The provider refused ``max_completion_tokens`` by name; a flag, so
+        # the error still carries nothing of the provider's body.
+        self.refused_output_cap = refused_output_cap
 
 
 @dataclass(frozen=True, slots=True)
@@ -208,6 +221,7 @@ class CurlAppModelJsonTransport:
                 "provider_error",
                 f"Model provider returned HTTP {response.status_code}",
                 status_code=response.status_code,
+                refused_output_cap=rejects_output_cap(response.status_code, body),
             )
         try:
             decoded = json.loads(body)
@@ -224,3 +238,32 @@ class CurlAppModelJsonTransport:
             body=decoded,
             latency_ms=int((time.monotonic() - started) * 1000),
         )
+
+
+async def post_with_output_cap(
+    transport: AppModelJsonTransport,
+    *,
+    target: ResolvedTarget,
+    api_key: str,
+    payload: dict[str, Any],
+    output_cap: int,
+    timeout_seconds: float,
+    max_response_bytes: int,
+) -> AppModelJsonResponse:
+    """POST with the current output-cap name, retrying once with the legacy one."""
+
+    async def post(cap_param: str) -> AppModelJsonResponse:
+        return await transport.post(
+            target=target,
+            api_key=api_key,
+            payload={**payload, cap_param: output_cap},
+            timeout_seconds=timeout_seconds,
+            max_response_bytes=max_response_bytes,
+        )
+
+    try:
+        return await post(OUTPUT_CAP_PARAM)
+    except AppModelTransportError as exc:
+        if not exc.refused_output_cap:
+            raise
+    return await post(LEGACY_OUTPUT_CAP_PARAM)

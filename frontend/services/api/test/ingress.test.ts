@@ -121,13 +121,25 @@ reverse_proxy @ts_glob {$API_SERVICE_ORIGIN:127.0.0.1:8100}
     expect(reach(snippet, `${PROJECT.toUpperCase()}/AI-REFERRALS`)).toEqual(['typescript']);
   });
 
-  it('treats a wildcard inside a prefix pattern as a literal, as Caddy does', () => {
+  it('globs a pattern with more than one wildcard, as Caddy does', () => {
     const snippet = `
 @ts_api path /api/v1/projects/*/visibility*
 reverse_proxy @ts_api {$API_SERVICE_ORIGIN:127.0.0.1:8100}
 reverse_proxy {$BACKEND_ORIGIN:127.0.0.1:8000}
 `;
-    expect(reach(snippet, `${PROJECT}/visibility`)).toEqual(['python']);
+    expect(reach(snippet, `${PROJECT}/visibility-trends`)).toEqual(['typescript']);
+    // The trailing wildcard of a glob stays inside its segment.
+    expect(reach(snippet, `${PROJECT}/visibility/sources`)).toEqual(['python']);
+  });
+
+  it('matches the cleaned request path, as Caddy does', () => {
+    const snippet = `
+@ts_api path /api/v1/projects/*/ai-referrals
+reverse_proxy @ts_api {$API_SERVICE_ORIGIN:127.0.0.1:8100}
+reverse_proxy {$BACKEND_ORIGIN:127.0.0.1:8000}
+`;
+    const messy = PROJECT.replace('/api/v1/', '/api//v1/./x/../');
+    expect(reach(snippet, `${messy}/ai-referrals`)).toEqual(['typescript']);
     expect(() =>
       reach(
         `@x path /api/v?

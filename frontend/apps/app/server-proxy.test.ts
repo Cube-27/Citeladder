@@ -19,4 +19,19 @@ describe('dev server proxy', () => {
     expect(upstream(`${PROJECT}/ai-referrals-extra`)).toBe('http://backend.test');
     expect(upstream('/api/v1/projects')).toBe('http://backend.test');
   });
+
+  it('folds case as Caddy does and keeps every backend path', () => {
+    expect(upstream('/API/V1/Executions/abc')).toBe('http://api-service.test');
+    expect(upstream('/Api/v1/projects?x=1')).toBe('http://backend.test');
+    for (const path of [
+      '/api',
+      '/mcp/sse',
+      '/token?grant=1',
+      '/.well-known/oauth-authorization-server',
+    ]) {
+      expect(upstream(path)).toBe('http://backend.test');
+    }
+    expect(upstream('/apix')).toBeUndefined();
+    expect(upstream('/.well-knownXoauth-authorization-server')).toBeUndefined();
+  });
 });
