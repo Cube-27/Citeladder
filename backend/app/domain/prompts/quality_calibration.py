@@ -176,6 +176,10 @@ def _by_category(rows: list[ReviewedDecision]) -> dict[str, dict[str, Any]]:
     return report
 
 
+def _with(rows: list[ReviewedDecision], disposition: str) -> list[ReviewedDecision]:
+    return [row for row in rows if row.disposition == disposition]
+
+
 def calibration_report(decisions: list[ReviewedDecision]) -> dict[str, Any]:
     """Aggregate comparison of JEV verdicts with user review outcomes."""
     current = [
@@ -183,22 +187,15 @@ def calibration_report(decisions: list[ReviewedDecision]) -> dict[str, Any]:
         for d in decisions
         if d.decision.get("question_schema_version") == JEV_QUESTION_SCHEMA_VERSION
     ]
-    reviewed = [
-        d
-        for d in current
-        if d.disposition
-        in (CANDIDATE_DISPOSITION_ACCEPTED, CANDIDATE_DISPOSITION_REJECTED)
-    ]
+    accepted = _with(current, CANDIDATE_DISPOSITION_ACCEPTED)
+    rejected = _with(current, CANDIDATE_DISPOSITION_REJECTED)
+    reviewed = accepted + rejected
     matrix = Counter(f"{_verdict(r.decision)}/{r.disposition}" for r in reviewed)
-    accepted = [r for r in reviewed if r.disposition == CANDIDATE_DISPOSITION_ACCEPTED]
-    rejected = [r for r in reviewed if r.disposition == CANDIDATE_DISPOSITION_REJECTED]
     return {
         "question_schema_version": JEV_QUESTION_SCHEMA_VERSION,
         "thresholds": jev_settings.thresholds(),
         "other_schema_decisions": len(decisions) - len(current),
-        "gate_rejected": sum(
-            d.disposition == CANDIDATE_DISPOSITION_GATE_REJECTED for d in current
-        ),
+        "gate_rejected": len(_with(current, CANDIDATE_DISPOSITION_GATE_REJECTED)),
         "accepted": len(accepted),
         "rejected": len(rejected),
         "verdict_by_outcome": dict(sorted(matrix.items())),

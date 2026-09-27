@@ -200,6 +200,25 @@ def _stageable(
     return stageable, duplicates
 
 
+async def _record_gate_rejections(
+    session: AsyncSession, rows: list[dict[str, Any]], now: datetime
+) -> tuple[list[dict[str, Any]], int]:
+    """Store gate-failed rows as text-free outcomes; return the reviewable rest."""
+    gated = [row for row in rows if gated_out(row["jev_decision"])]
+    for row in gated:
+        row.update(
+            text="",
+            normalized_text_hash="",
+            jev_decision=_text_free_decision(row["jev_decision"]),
+            disposition=CANDIDATE_DISPOSITION_GATE_REJECTED,
+            reviewed_at=now,
+            expires_at=_outcome_expiry(now),
+        )
+    if gated:
+        await session.execute(pg_insert(PromptCandidate).values(gated))
+    return [row for row in rows if not gated_out(row["jev_decision"])], len(gated)
+
+
 async def stage_candidates(
     session: AsyncSession,
     *,
@@ -256,19 +275,7 @@ async def stage_candidates(
         )
         for topic_id, prompt in stageable
     ]
-    gated = [row for row in rows if gated_out(row["jev_decision"])]
-    rows = [row for row in rows if not gated_out(row["jev_decision"])]
-    for row in gated:
-        row.update(
-            text="",
-            normalized_text_hash="",
-            jev_decision=_text_free_decision(row["jev_decision"]),
-            disposition=CANDIDATE_DISPOSITION_GATE_REJECTED,
-            reviewed_at=now,
-            expires_at=_outcome_expiry(now),
-        )
-    if gated:
-        await session.execute(pg_insert(PromptCandidate).values(gated))
+    rows, gated = await _record_gate_rejections(session, rows, now)
     inserted_ids: list[uuid.UUID] = []
     if rows:
         stmt = (
@@ -288,7 +295,7 @@ async def stage_candidates(
         run_id=run.id,
         candidates=candidates,
         dropped_duplicates=dropped,
-        gate_rejected=len(gated),
+        gate_rejected=gated,
     )
 
 
