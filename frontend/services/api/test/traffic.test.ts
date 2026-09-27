@@ -1,0 +1,403 @@
+import { randomUUID } from 'node:crypto';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { policy } from '../src/config.ts';
+import { refreshTrafficSnapshot, projectPerformanceRange } from '../src/traffic/snapshot.ts';
+import { buildTrafficProjection, TrafficProjectionBuilder } from '../src/traffic/projection.ts';
+import { TaskCancelledError } from '../src/workers/executor.ts';
+import { Fixtures, testDatabase } from './support.ts';
+import {
+  importSeed,
+  metric,
+  requests,
+  task,
+  tenant,
+  WINDOW,
+  type Tenant,
+} from './traffic-fixtures.ts';
+
+const db = testDatabase(),
+  fixtures = new Fixtures(db);
+const context = { db, maxAttempts: 3, checkCancelled: async () => {} };
+let t: Tenant, request: ReturnType<typeof requests>;
+beforeEach(async () => {
+  t = await tenant(db, fixtures);
+  request = requests(db, t);
+});
+afterAll(async () => {
+  await fixtures.cleanup();
+  await db.destroy();
+});
+async function refreshed() {
+  const seed = await importSeed(db, t);
+  const id = await metric(db, seed, {});
+  await refreshTrafficSnapshot(await task(db, t, 'traffic_snapshot_refresh'), context);
+  return { seed, id };
+}
+
+describe('traffic projections and Performance', () => {
+  it('refreshes every preset/granularity atomically, preserves provenance and enqueues one demand and verification handoff', async () => {
+    const { id } = await refreshed();
+    const rows = await db
+      .selectFrom('traffic_snapshots')
+      .selectAll()
+      .where('project_id', '=', t.projectId)
+      .execute();
+    expect(rows).toHaveLength(9);
+    expect(
+      rows.every((r) => JSON.stringify(r.source_metric_row_ids) === JSON.stringify([id])),
+    ).toBe(true);
+    const successors = await db
+      .selectFrom('analytics_tasks')
+      .select('task_kind')
+      .where('project_id', '=', t.projectId)
+      .where('task_kind', '!=', 'traffic_snapshot_refresh')
+      .execute();
+    expect(successors.map((r) => r.task_kind).sort()).toEqual([
+      'demand_snapshot_refresh',
+      'opportunity_verification',
+    ]);
+    const before = rows.map((r) => r.id).sort();
+    await refreshTrafficSnapshot(await task(db, t, 'traffic_snapshot_refresh'), context);
+    expect(
+      (
+        await db
+          .selectFrom('traffic_snapshots')
+          .select('id')
+          .where('project_id', '=', t.projectId)
+          .execute()
+      )
+        .map((r) => r.id)
+        .sort(),
+    ).toEqual(before);
+  });
+
+  it('keeps headers GSC-only, Bing separate, and unavailable different from measured zero', async () => {
+    const seed = await importSeed(db, t);
+    await metric(db, seed, { metrics: { impressions: 0, clicks: 0 } });
+    await metric(db, seed, {
+      dataset: 'gsc_query_daily',
+      values: ['query', WINDOW[1]],
+      metrics: { impressions: 900, clicks: 30 },
+    });
+    await metric(db, seed, {
+      dataset: 'bing_query_daily',
+      values: ['query', WINDOW[1]],
+      metrics: { impressions: 800, clicks: 20 },
+    });
+    await refreshTrafficSnapshot(await task(db, t, 'traffic_snapshot_refresh'), context);
+    const { body } = await request('performance?range=month');
+    expect(body.selected).toMatchObject({
+      evidence_state: 'observed_zero',
+      totals: { clicks: 0, impressions: 0, sessions: null, ctr: null },
+    });
+    expect(body.unavailable_dimensions).toContain('search_appearance');
+    for (const [dimension, clicks] of [
+      ['query', 30],
+      ['bing_query', 20],
+    ] as const) {
+      const page = await request(
+        `performance/table?snapshot_id=${body.selected.snapshot_id}&dimension=${dimension}`,
+      );
+      expect(page.body.items[0]?.metrics.clicks).toBe(clicks);
+    }
+  });
+
+  it.each(['day', 'week', 'month', '3_months', '6_months', 'last_synced'])(
+    'resolves %s dates independently of bucket size',
+    async (range) => {
+      await refreshed();
+      const daily = await request(`performance?range=${range}&granularity=day`);
+      const weekly = await request(`performance?range=${range}&granularity=week`);
+      expect(daily.response.status).toBe(200);
+      expect([weekly.body.selected.window_start, weekly.body.selected.window_end]).toEqual([
+        daily.body.selected.window_start,
+        daily.body.selected.window_end,
+      ]);
+      if (range.endsWith('months')) expect(daily.body.selected.snapshot_id).toBeNull();
+    },
+  );
+
+  it('unprojected reads remain empty and never enqueue; previous/custom comparisons use exact windows', async () => {
+    const initial = await request(
+      'performance?range=custom&from=2026-07-01&to=2026-07-28&compare=previous',
+    );
+    expect(initial.body.selected.snapshot_id).toBeNull();
+    expect(initial.body.comparison).toMatchObject({
+      window_start: '2026-06-03',
+      window_end: '2026-06-30',
+      snapshot_id: null,
+    });
+    expect(
+      await db
+        .selectFrom('analytics_tasks')
+        .select('id')
+        .where('project_id', '=', t.projectId)
+        .execute(),
+    ).toEqual([]);
+    await refreshed();
+    expect(
+      (await request('performance?range=month&compare=custom&compare_from=2026-06-01')).response
+        .status,
+    ).toBe(422);
+    expect(
+      (await request('performance?range=month&compare=year_over_year')).body.comparison?.window_end,
+    ).toBe('2025-07-29');
+  });
+
+  it.each([
+    'range=bad',
+    'compare=bad',
+    'granularity=',
+    'from=2026-07-01',
+    'from=2026-07-30&to=2026-07-01',
+  ])('rejects invalid query %s', async (query) => {
+    expect((await request(`performance?${query}`)).response.status).toBe(422);
+  });
+
+  it('binds cursor to filters, uses persisted counts and retains null comparison for unobserved keys', async () => {
+    const seed = await importSeed(db, t);
+    for (let i = 0; i < 12; i++)
+      await metric(db, seed, {
+        dataset: 'gsc_query_daily',
+        values: [`query ${i}`, WINDOW[1]],
+        metrics: { impressions: 100, clicks: i, position: i % 2 ? null : 5 },
+      });
+    await refreshTrafficSnapshot(await task(db, t, 'traffic_snapshot_refresh'), context);
+    const dashboard = await request('performance?range=custom&from=2026-07-01&to=2026-07-28');
+    const id = dashboard.body.selected.snapshot_id;
+    const first = await request(`performance/table?snapshot_id=${id}`);
+    expect(first.body.total_count).toBe(12);
+    expect(first.body.items.map((r: { metrics: { clicks: number } }) => r.metrics.clicks)).toEqual([
+      11, 10, 9, 8, 7, 6, 5, 4, 3, 2,
+    ]);
+    const second = await request(
+      `performance/table?snapshot_id=${id}&cursor=${encodeURIComponent(first.body.next_cursor!)}`,
+    );
+    expect(second.body.items.map((r: { metrics: { clicks: number } }) => r.metrics.clicks)).toEqual(
+      [1, 0],
+    );
+    expect(second.body.next_cursor).toBeNull();
+    for (const changed of ['page_size=25', 'sort=clicks', 'dimension=page'])
+      expect(
+        (
+          await request(
+            `performance/table?snapshot_id=${id}&${changed}&cursor=${encodeURIComponent(first.body.next_cursor!)}`,
+          )
+        ).response.status,
+      ).toBe(400);
+    for (const invalid of ['page_size=12', 'sort=bogus', 'dimension=bogus'])
+      expect(
+        (await request(`performance/table?snapshot_id=${id}&${invalid}`)).response.status,
+      ).toBe(422);
+    expect(first.body.items[0]?.comparison_metrics).toBeNull();
+  });
+
+  it('range requests dedupe, project all missing grains and preserve existing rows without downstream effects', async () => {
+    const seed = await importSeed(db, t);
+    await metric(db, seed, {});
+    const url = 'performance/range?from=2026-07-01&to=2026-07-28';
+    const one = await request(url, { method: 'POST' }),
+      two = await request(url, { method: 'POST' });
+    expect(one.response.status).toBe(202);
+    expect(two.body.task_id).toBe(one.body.task_id);
+    const row = await db
+      .selectFrom('analytics_tasks')
+      .selectAll()
+      .where('id', '=', one.body.task_id)
+      .executeTakeFirstOrThrow();
+    await projectPerformanceRange(row, context);
+    const before = await db
+      .selectFrom('traffic_snapshots')
+      .selectAll()
+      .where('project_id', '=', t.projectId)
+      .orderBy('id')
+      .execute();
+    await metric(db, seed, { revision: 1, metrics: { clicks: 99, impressions: 100 } });
+    await projectPerformanceRange(row, context);
+    expect(
+      await db
+        .selectFrom('traffic_snapshots')
+        .selectAll()
+        .where('project_id', '=', t.projectId)
+        .orderBy('id')
+        .execute(),
+    ).toEqual(before);
+    expect(before).toHaveLength(3);
+    expect(
+      await db
+        .selectFrom('analytics_tasks')
+        .select('id')
+        .where('project_id', '=', t.projectId)
+        .execute(),
+    ).toHaveLength(1);
+    expect((await request(`performance/range/${row.id}`)).body.task_id).toBe(row.id);
+    expect(
+      (await request('performance/range?from=2020-01-01&to=2026-01-01', { method: 'POST' }))
+        .response.status,
+    ).toBe(422);
+  });
+
+  it('rejects foreign workspace/project/task IDs and viewer writes', async () => {
+    await refreshed();
+    const other = await tenant(db, fixtures);
+    expect((await request('performance', { authenticated: false })).response.status).toBe(401);
+    expect((await request('performance', { workspace: other.workspaceId })).response.status).toBe(
+      404,
+    );
+    expect((await request('performance', { project: other.projectId })).response.status).toBe(404);
+    const foreign = await task(db, other, 'performance_range_projection');
+    expect((await request(`performance/range/${foreign.id}`)).response.status).toBe(404);
+    const viewer = await fixtures.user();
+    await fixtures.member(t.workspaceId, viewer, 'viewer');
+    expect(
+      (
+        await request('performance/range?from=2026-07-01&to=2026-07-28', {
+          method: 'POST',
+          user: viewer,
+        })
+      ).response.status,
+    ).toBe(403);
+    await expect(
+      refreshTrafficSnapshot({ ...foreign, workspace_id: t.workspaceId }, context),
+    ).rejects.toThrow();
+    expect(
+      await db
+        .selectFrom('traffic_snapshots')
+        .select('id')
+        .where('project_id', '=', other.projectId)
+        .execute(),
+    ).toEqual([]);
+    expect((await request(`performance/table?snapshot_id=${randomUUID()}`)).body.items).toEqual([]);
+  });
+
+  it('streams revisions across SQL batch boundaries and cancels without publishing partial projections', async () => {
+    const seed = await importSeed(db, t);
+    const values = Array.from(
+      { length: policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE + 1 },
+      (_, i) => ({
+        id: randomUUID(),
+        workspace_id: t.workspaceId,
+        project_id: t.projectId,
+        property_ref: 'property',
+        provider: 'gsc',
+        dataset: seed.dataset,
+        date: WINDOW[1],
+        dimension_key: WINDOW[1],
+        metrics: JSON.stringify({ impressions: 100, clicks: i }),
+        source_artifact_id: seed.artifactId,
+        resync_seq: i,
+        importer_version: 'test',
+        created_at: new Date(),
+      }),
+    );
+    await db.insertInto('integration_metric_rows').values(values).execute();
+    const row = await task(db, t, 'traffic_snapshot_refresh');
+    let boundaries = 0;
+    await expect(
+      refreshTrafficSnapshot(row, {
+        ...context,
+        checkCancelled: async () => {
+          if (++boundaries === 2) throw new TaskCancelledError();
+        },
+      }),
+    ).rejects.toBeInstanceOf(TaskCancelledError);
+    expect(
+      await db
+        .selectFrom('traffic_snapshots')
+        .select('id')
+        .where('project_id', '=', t.projectId)
+        .execute(),
+    ).toEqual([]);
+    await refreshTrafficSnapshot(row, context);
+    expect((await request('performance?range=month')).body.selected.totals.clicks).toBe(
+      policy.traffic.TRAFFIC_METRIC_ROW_BATCH_SIZE,
+    );
+  });
+
+  it('samples provenance separately by source and keeps exact stat counts above the limit', () => {
+    const limit = policy.traffic.TRAFFIC_PROVENANCE_ID_LIMIT;
+    const rows = Array.from({ length: limit + 1 }, (_, i) => ({
+      id: `gsc-${String(i).padStart(5, '0')}`,
+      source_artifact_id: 'gsc-artifact',
+      property_ref: String(i),
+      provider: 'gsc',
+      dataset: 'gsc_day_daily',
+      date: WINDOW[1],
+      dimension_key: WINDOW[1],
+      resync_seq: 0,
+      metrics: { clicks: 1, impressions: 10 },
+    }));
+    const ga4 = rows.map((r) => ({
+      ...r,
+      id: r.id.replace('gsc', 'ga4'),
+      dataset: 'ga4_channel_daily',
+      dimension_key: 'Organic Search | 20260728',
+      metrics: { sessions: 2 },
+    }));
+    const projection = buildTrafficProjection({
+      windowStart: WINDOW[0],
+      windowEnd: WINDOW[1],
+      granularity: 'day',
+      rows: [...rows, ...ga4],
+    });
+    expect(projection.metrics.totals).toMatchObject({
+      clicks: limit + 1,
+      sessions: 2 * (limit + 1),
+    });
+    expect(projection.metrics.provenance).toMatchObject({
+      metric_row_total: 2 * limit,
+      metric_rows_sampled: true,
+      sampled_stat_rows: 1,
+    });
+    expect(projection.dimensions[0]?.metrics.source_metric_row_count).toBe(limit + 1);
+    expect(projection.source_metric_row_ids).toEqual(ga4.slice(0, limit).map((r) => r.id));
+  });
+
+  it('does not turn an empty provider page into the project root', () => {
+    const projection = buildTrafficProjection({
+      windowStart: WINDOW[0],
+      windowEnd: WINDOW[1],
+      granularity: 'day',
+      projectOrigin: 'https://example.test',
+      rows: [
+        {
+          id: 'row',
+          source_artifact_id: 'artifact',
+          property_ref: 'p',
+          provider: 'gsc',
+          dataset: 'gsc_page_daily',
+          date: WINDOW[1],
+          dimension_key: ` | ${WINDOW[1]}`,
+          resync_seq: 0,
+          metrics: { clicks: 3, impressions: 100 },
+        },
+      ],
+    });
+    expect(projection.pages).toEqual([]);
+    expect(projection.dimension_counts.page).toBe(0);
+    expect(projection.metrics.totals.clicks).toBeNull();
+  });
+
+  it('rejects non-finite and boolean provider numbers instead of Python coercion/failure', () => {
+    const row = {
+      id: 'row',
+      source_artifact_id: 'artifact',
+      property_ref: 'p',
+      provider: 'gsc',
+      dataset: 'gsc_day_daily',
+      date: WINDOW[1],
+      dimension_key: WINDOW[1],
+      resync_seq: 0,
+      metrics: { clicks: true, impressions: Number.NaN, position: Infinity },
+    };
+    const options = { windowStart: WINDOW[0], windowEnd: WINDOW[1], granularity: 'day' };
+    expect(buildTrafficProjection({ ...options, rows: [row] }).metrics.totals).toMatchObject({
+      clicks: 0,
+      impressions: 0,
+      position: null,
+    });
+    const builder = new TrafficProjectionBuilder(options);
+    builder.addBatch([row]);
+    expect(builder.build()).toEqual(buildTrafficProjection({ ...options, rows: [row] }));
+  });
+});

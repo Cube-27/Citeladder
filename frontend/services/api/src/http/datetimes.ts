@@ -45,6 +45,25 @@ export function parseDate(text: string): string | null {
   return validDate(year, month, day) ? text : null;
 }
 
+/** Date inputs may carry an ISO midnight; a nonzero time cannot be discarded. */
+export function parseRequestDate(text: string): string | null {
+  const day = parseDate(text);
+  if (day) return day;
+  const instant = parseDatetime(text);
+  return instant &&
+    instant.hour === 0 &&
+    instant.minute === 0 &&
+    instant.second === 0 &&
+    instant.microsecond === 0
+    ? text.slice(0, 10)
+    : null;
+}
+
+export function dateErrorType(value: unknown): string {
+  if (typeof value !== 'string') return 'date_type';
+  return parseDatetime(value) ? 'date_from_datetime_inexact' : 'date_from_datetime_parsing';
+}
+
 /** An ISO date or datetime, or null when it is malformed or out of range. */
 export function parseDatetime(text: string): ParsedDatetime | null {
   const match = DATETIME.exec(text);

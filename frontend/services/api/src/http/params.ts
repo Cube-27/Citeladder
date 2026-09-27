@@ -10,14 +10,19 @@
  * for a list), and an empty value is validated, never treated as absent.
  */
 import { ApiError } from '../errors.ts';
-import { parseDate, parseDatetime, type ParsedDatetime } from './datetimes.ts';
+import {
+  dateErrorType,
+  parseRequestDate,
+  parseDatetime,
+  type ParsedDatetime,
+} from './datetimes.ts';
 import { parseUuid } from './uuid.ts';
 
 type Scalar =
   | { kind: 'uuid' }
   | { kind: 'date' }
   | { kind: 'datetime' }
-  | { kind: 'int'; ge: number; le: number }
+  | { kind: 'int'; ge?: number; le?: number }
   | { kind: 'str'; minLength?: number; maxLength?: number }
   | { kind: 'literal'; values: readonly string[] };
 
@@ -66,9 +71,9 @@ function validateScalar(scalar: Scalar, raw: string): Outcome {
       return value === null ? failure('uuid_parsing', UUID_MESSAGE) : { ok: true, value };
     }
     case 'date': {
-      const value = parseDate(raw);
+      const value = parseRequestDate(raw);
       return value === null
-        ? failure('date_parsing', 'Input should be a valid date in the format YYYY-MM-DD')
+        ? failure(dateErrorType(raw), 'Input should be a valid date in the format YYYY-MM-DD')
         : { ok: true, value };
     }
     case 'datetime': {
@@ -82,13 +87,13 @@ function validateScalar(scalar: Scalar, raw: string): Outcome {
       if (!/^[+-]?\d+$/u.test(text))
         return failure('int_parsing', 'Input should be a valid integer');
       const value = Number(text);
-      if (value < scalar.ge) {
+      if (scalar.ge !== undefined && value < scalar.ge) {
         return failure(
           'greater_than_equal',
           `Input should be greater than or equal to ${scalar.ge}`,
         );
       }
-      if (value > scalar.le) {
+      if (scalar.le !== undefined && value > scalar.le) {
         return failure('less_than_equal', `Input should be less than or equal to ${scalar.le}`);
       }
       return { ok: true, value };

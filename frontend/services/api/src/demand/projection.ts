@@ -1,0 +1,270 @@
+/** Pure demand decisions over recorded evidence. No model or provider calls. */
+import { policy } from '../config.ts';
+import { pyCompare } from '../python/text.ts';
+import { hash } from '../traffic/normalization.ts';
+
+const p = policy.demand;
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object')
+    return `{${Object.entries(value)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([k, v]) => `${JSON.stringify(k)}:${stableJson(v)}`)
+      .join(',')}}`;
+  return JSON.stringify(value);
+}
+export const stableHash = (value: unknown) => hash(stableJson(value));
+/** Round the exact IEEE-754 value to decimal, ties to even, like Python round. */
+export function round(value: number, digits: number): number {
+  if (!Number.isFinite(value) || value === 0) return value;
+  const bytes = new DataView(new ArrayBuffer(8));
+  bytes.setFloat64(0, Math.abs(value));
+  const bits = bytes.getBigUint64(0);
+  const exponent = Number((bits >> 52n) & 0x7ffn);
+  let numerator =
+    ((bits & ((1n << 52n) - 1n)) | (exponent ? 1n << 52n : 0n)) * 10n ** BigInt(digits);
+  const shift = (exponent || 1) - 1023 - 52;
+  const denominator = shift < 0 ? 1n << BigInt(-shift) : 1n;
+  if (shift > 0) numerator <<= BigInt(shift);
+  let quotient = numerator / denominator;
+  const twice = (numerator % denominator) * 2n;
+  if (twice > denominator || (twice === denominator && quotient % 2n !== 0n)) quotient += 1n;
+  return (Math.sign(value) * Number(quotient)) / 10 ** digits;
+}
+export type SearchInput = {
+  source_metric_row_ids: string[];
+  source_artifact_ids: string[];
+  target_kind: string;
+  target: string;
+  impressions: number;
+  clicks: number;
+};
+export type QueryInput = {
+  observed_date: string;
+  property_ref: string;
+  normalized_query: string;
+  resolved_page_url: string;
+  resolution_outcome: string;
+  classification: string;
+  classifier_version: string;
+  classification_override_id: string | null;
+  impressions: number;
+  clicks: number;
+  position: number | null;
+  source_metric_row_id: string;
+  source_artifact_id: string;
+  page_title: string;
+  page_h1_texts: string[];
+  page_primary_content: string;
+  page_content_usable: boolean;
+  page_analysis_id: string | null;
+  page_artifact_id: string | null;
+};
+export type Candidate = {
+  identity_hash: string;
+  signal_type: string;
+  state: string;
+  topic_cluster: string;
+  page_url: string;
+  evidence: Record<string, unknown>;
+  metrics: Record<string, number | null>;
+  coverage: Record<string, string>;
+  limitations: string[];
+  priority_score: number;
+  priority_inputs: Record<string, number | string>;
+};
+export type Evaluation = {
+  state: string;
+  candidates: Candidate[];
+  counts_by_classification: Record<string, number>;
+  limitations: string[];
+};
+export const unique = (values: string[]) => [...new Set(values)].sort();
+function priority(impressions: number, ctr: number | null, gap: number) {
+  const demand = Math.min(1, Math.log1p(Math.max(impressions, 0)) / Math.log1p(10000));
+  const weakness = ctr === null ? 1 : Math.max(0, 1 - ctr);
+  return {
+    priority_score: round(100 * demand * weakness * gap, 2),
+    priority_inputs: {
+      demand: round(demand, 6),
+      weakness: round(weakness, 6),
+      gap,
+      formula_version: p.DEMAND_FORMULA_VERSION,
+    },
+  };
+}
+export function detectSearchSignals(rows: SearchInput[]): Candidate[] {
+  return [...rows]
+    .sort((a, b) => pyCompare(a.target_kind, b.target_kind) || pyCompare(a.target, b.target))
+    .flatMap((row) => {
+      const ctr = row.impressions ? row.clicks / row.impressions : null;
+      if (
+        row.impressions < p.DEMAND_MIN_IMPRESSIONS ||
+        (ctr !== null && ctr > p.DEMAND_LOW_CTR_THRESHOLD)
+      )
+        return [];
+      return [
+        {
+          identity_hash: stableHash({
+            type: p.DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR,
+            target_kind: row.target_kind,
+            target: row.target,
+            rule_version: p.DEMAND_RULE_VERSION,
+          }),
+          signal_type: p.DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR,
+          state: p.DEMAND_SIGNAL_STATE_ACTIVE,
+          topic_cluster: row.target_kind === 'query' ? row.target : '',
+          page_url: row.target_kind === 'page' ? row.target : '',
+          evidence: {
+            target_kind: row.target_kind,
+            target: row.target,
+            source_metric_row_ids: row.source_metric_row_ids,
+            source_artifact_ids: row.source_artifact_ids,
+          },
+          metrics: { impressions: row.impressions, clicks: row.clicks, ctr },
+          coverage: { search_demand: 'observed' },
+          limitations: ['GSC detail rows may omit privacy-filtered queries.'],
+          ...priority(row.impressions, ctr, p.DEMAND_SEARCH_GAP_WEIGHT),
+        },
+      ];
+    });
+}
+export function aggregate(rows: QueryInput[]) {
+  const impressions = rows.reduce((n, r) => n + r.impressions, 0);
+  const clicks = rows.reduce((n, r) => n + r.clicks, 0);
+  const positioned = rows.filter((r) => r.position !== null && r.impressions > 0);
+  const page = rows.find((r) => r.page_content_usable) ?? rows[0];
+  return {
+    impressions,
+    clicks,
+    ctr: impressions ? clicks / impressions : null,
+    position:
+      impressions && positioned.length
+        ? positioned.reduce((n, r) => n + r.position! * r.impressions, 0) / impressions
+        : null,
+    source_metric_row_ids: unique(rows.map((r) => r.source_metric_row_id)),
+    source_artifact_ids: unique(rows.map((r) => r.source_artifact_id)),
+    classifier_versions: unique(rows.map((r) => r.classifier_version)),
+    classification_override_ids: unique(
+      rows.flatMap((r) => (r.classification_override_id ? [r.classification_override_id] : [])),
+    ),
+    observed_start: rows.map((r) => r.observed_date).sort()[0] ?? null,
+    observed_end:
+      rows
+        .map((r) => r.observed_date)
+        .sort()
+        .at(-1) ?? null,
+    page_title: page?.page_title ?? '',
+    page_h1_texts: page?.page_h1_texts ?? [],
+    page_primary_content: page?.page_primary_content ?? '',
+    page_content_usable: page?.page_content_usable ?? false,
+    page_analysis_id: page?.page_analysis_id ?? null,
+    page_artifact_id: page?.page_artifact_id ?? null,
+  };
+}
+export function classificationCounts(rows: QueryInput[]) {
+  const counts: Record<string, number> = { branded: 0, non_branded: 0, ambiguous: 0 };
+  for (const row of rows) counts[row.classification] = (counts[row.classification] ?? 0) + 1;
+  return counts;
+}
+export function grouped<T>(rows: T[], key: (row: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const k = key(row);
+    const group = groups.get(k) ?? [];
+    group.push(row);
+    groups.set(k, group);
+  }
+  return groups;
+}
+export function queryCandidate(
+  type: string,
+  query: string,
+  page: string,
+  metrics: Record<string, number | null>,
+  sources: { source_metric_row_ids: string[]; source_artifact_ids: string[] },
+  evidence: Record<string, unknown>,
+  gap: number,
+): Candidate {
+  return {
+    identity_hash: stableHash({ type, query, page_url: page, rule_version: p.DEMAND_RULE_VERSION }),
+    signal_type: type,
+    state: p.DEMAND_SIGNAL_STATE_ACTIVE,
+    topic_cluster: query,
+    page_url: page,
+    evidence: {
+      target_kind: 'query',
+      target: query,
+      resolved_page_url: page,
+      source_metric_row_ids: sources.source_metric_row_ids,
+      source_artifact_ids: sources.source_artifact_ids,
+      ...evidence,
+    },
+    metrics,
+    coverage: { query_evidence: 'observed' },
+    limitations: ['GSC detail rows may omit privacy-filtered queries.'],
+    ...priority(metrics.impressions!, metrics.ctr ?? null, gap),
+  };
+}
+export function detectStrikingDistance(rows: QueryInput[]): Evaluation {
+  let abstained = 0;
+  const eligible = rows.filter((r) => {
+    const usable =
+      r.classification !== 'ambiguous' &&
+      ['exact', 'resolved'].includes(r.resolution_outcome) &&
+      r.position !== null;
+    if (!usable) abstained++;
+    return usable;
+  });
+  const groups = grouped(eligible, (r) =>
+    JSON.stringify([r.classification, r.normalized_query, r.resolved_page_url]),
+  );
+  const candidates: Candidate[] = [];
+  // Python's tuple order over the group identity, not the JSON key's.
+  const ordered = [...groups.values()].sort(
+    ([a], [b]) =>
+      pyCompare(a!.classification, b!.classification) ||
+      pyCompare(a!.normalized_query, b!.normalized_query) ||
+      pyCompare(a!.resolved_page_url, b!.resolved_page_url),
+  );
+  for (const group of ordered) {
+    const row = group[0]!;
+    const a = aggregate(group);
+    const branded = row.classification === 'branded';
+    if (
+      !branded &&
+      !(
+        row.classification === 'non_branded' &&
+        a.impressions >= p.DEMAND_STRIKING_DISTANCE_MIN_IMPRESSIONS &&
+        a.position !== null &&
+        a.position >= p.DEMAND_STRIKING_DISTANCE_MIN_POSITION &&
+        a.position <= p.DEMAND_STRIKING_DISTANCE_MAX_POSITION
+      )
+    )
+      continue;
+    candidates.push(
+      queryCandidate(
+        branded ? p.DEMAND_SIGNAL_BRANDED_QUERY : p.DEMAND_SIGNAL_STRIKING_DISTANCE,
+        row.normalized_query,
+        row.resolved_page_url,
+        { impressions: a.impressions, clicks: a.clicks, ctr: a.ctr, position: a.position },
+        a,
+        {
+          classifier_versions: a.classifier_versions,
+          classification_override_ids: a.classification_override_ids,
+        },
+        branded ? 0 : p.DEMAND_STRIKING_DISTANCE_GAP_WEIGHT,
+      ),
+    );
+  }
+  return {
+    state: abstained ? 'partial' : rows.length ? 'available' : 'unavailable',
+    candidates,
+    counts_by_classification: classificationCounts(rows),
+    limitations: abstained
+      ? [
+          `${abstained} rows abstained on ambiguous classification, unresolved page identity, or missing position.`,
+        ]
+      : [],
+  };
+}

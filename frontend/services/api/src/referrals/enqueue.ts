@@ -18,13 +18,19 @@ type Enqueue = {
   workspaceId: string;
   projectId: string | null;
   kind: string;
-  payload: Record<string, string>;
+  payload: Record<string, unknown>;
   keyParts: readonly (string | number)[];
   maxAttempts: number;
+  idempotencyKey?: string;
 };
 
+/** The deterministic `analytics:<kind>:<identity parts>` idempotency key. */
+export function taskKey(kind: string, parts: readonly (string | number)[]): string {
+  return ['analytics', kind, ...parts].join(':');
+}
+
 /** Insert one queue row unless its key exists; the new id, or null. */
-async function enqueueTask(db: Database, task: Enqueue): Promise<string | null> {
+export async function enqueueTask(db: Database, task: Enqueue): Promise<string | null> {
   const now = new Date();
   const inserted = await db
     .insertInto('analytics_tasks')
@@ -34,7 +40,7 @@ async function enqueueTask(db: Database, task: Enqueue): Promise<string | null> 
       project_id: task.projectId,
       task_kind: task.kind,
       payload: JSON.stringify(task.payload),
-      idempotency_key: ['analytics', task.kind, ...task.keyParts].join(':'),
+      idempotency_key: task.idempotencyKey ?? taskKey(task.kind, task.keyParts),
       status: policy.task_queue.statuses.queued,
       priority: 0,
       randomized_position: 0,

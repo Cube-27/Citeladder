@@ -21,6 +21,8 @@ import { ingestReferrals } from '../referrals/ingest.ts';
 import { referralRetentionSweep } from '../referrals/retention.ts';
 import { refreshAiReferralsSnapshot } from '../referrals/snapshot.ts';
 import { TaskCancelledError, type Executor } from './executor.ts';
+import { projectPerformanceRange, refreshTrafficSnapshot } from '../traffic/snapshot.ts';
+import { recomputeDemand } from '../demand/snapshot.ts';
 
 const logger = getLogger('workers.analytics');
 const { statuses, terminal } = policy.task_queue;
@@ -32,6 +34,9 @@ export const EXECUTORS: Readonly<Record<string, Executor>> = {
   classify_referrals: classifyReferrals,
   ai_referrals_snapshot_refresh: refreshAiReferralsSnapshot,
   referral_retention_sweep: referralRetentionSweep,
+  traffic_snapshot_refresh: refreshTrafficSnapshot,
+  performance_range_projection: projectPerformanceRange,
+  demand_snapshot_refresh: recomputeDemand,
 };
 
 /** A claimed kind with no executor: a deploy bug, failed without retries. */

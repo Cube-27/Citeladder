@@ -3,9 +3,13 @@ import { aiReferralRoutes } from './ai-referrals.ts';
 import type { ProductRoute } from './define.ts';
 import { executionRoutes } from './executions.ts';
 import { visibilityRoutes } from './visibility.ts';
+import { performanceRoutes } from './performance.ts';
+import { demandRoutes } from './demand.ts';
 
 export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...executionRoutes,
   ...aiReferralRoutes,
   ...visibilityRoutes,
+  ...performanceRoutes,
+  ...demandRoutes,
 ];

@@ -308,19 +308,19 @@
     "ts_owned_task_kinds": [
       "ai_referrals_snapshot_refresh",
       "classify_referrals",
+      "demand_snapshot_refresh",
       "ingest_referrals",
-      "referral_retention_sweep"
+      "performance_range_projection",
+      "referral_retention_sweep",
+      "traffic_snapshot_refresh"
     ],
     "python_task_kinds": [
       "commerce_catalog_projection",
       "commerce_competitor_discovery",
-      "demand_snapshot_refresh",
       "opportunity_refresh",
       "opportunity_verification",
-      "performance_range_projection",
       "search_intelligence_acquisition",
-      "source_page_inspection",
-      "traffic_snapshot_refresh"
+      "source_page_inspection"
     ],
     "worker_settings": {
       "lease_ttl_seconds": {
@@ -585,6 +585,460 @@
     "dimension_arity": {
       "ga4_referrer_daily": 2,
       "ga4_source_medium_daily": 3
+    }
+  },
+  "traffic": {
+    "DATASET_BING_PAGE_DAILY": "bing_page_daily",
+    "DATASET_BING_QUERY_DAILY": "bing_query_daily",
+    "DATASET_GA4_CHANNEL_DAILY": "ga4_channel_daily",
+    "DATASET_GA4_LANDING_DAILY": "ga4_landing_daily",
+    "DATASET_GA4_REFERRER_DAILY": "ga4_referrer_daily",
+    "DATASET_GA4_SOURCE_MEDIUM_DAILY": "ga4_source_medium_daily",
+    "DATASET_GSC_COUNTRY_DAILY": "gsc_country_daily",
+    "DATASET_GSC_DAY_DAILY": "gsc_day_daily",
+    "DATASET_GSC_DEVICE_DAILY": "gsc_device_daily",
+    "DATASET_GSC_PAGE_DAILY": "gsc_page_daily",
+    "DATASET_GSC_QUERY_DAILY": "gsc_query_daily",
+    "DATASET_GSC_SEARCH_APPEARANCE_DAILY": "gsc_search_appearance_daily",
+    "TRAFFIC_DEFAULT_WINDOW_DAYS": 28,
+    "TRAFFIC_MAX_WINDOW_DAYS": 480,
+    "TRAFFIC_GRANULARITY_DAY": "day",
+    "TRAFFIC_GRANULARITY_WEEK": "week",
+    "TRAFFIC_GRANULARITY_MONTH": "month",
+    "TRAFFIC_SNAPSHOT_GRANULARITIES": [
+      "day",
+      "month",
+      "week"
+    ],
+    "TRAFFIC_DEFAULT_GRANULARITY": "day",
+    "TRAFFIC_FORMULA_VERSION": "traffic-formula-1",
+    "TRAFFIC_NORMALIZATION_VERSION": "traffic-normalization-1",
+    "TRAFFIC_GA4_ORGANIC_CHANNEL_GROUPS": [
+      "Organic Search"
+    ],
+    "TRAFFIC_GA4_ORGANIC_MEDIUMS": [
+      "organic"
+    ],
+    "TRAFFIC_GA4_REFERRAL_DATASETS": [
+      "ga4_referrer_daily",
+      "ga4_source_medium_daily"
+    ],
+    "TRAFFIC_CONSUMED_DATASETS": [
+      "ga4_channel_daily",
+      "ga4_landing_daily",
+      "ga4_source_medium_daily",
+      "gsc_country_daily",
+      "gsc_day_daily",
+      "gsc_device_daily",
+      "gsc_page_daily",
+      "gsc_query_daily"
+    ],
+    "TRAFFIC_REFRESH_TRIGGER_DATASETS": [
+      "bing_page_daily",
+      "bing_query_daily",
+      "ga4_channel_daily",
+      "ga4_landing_daily",
+      "ga4_source_medium_daily",
+      "gsc_country_daily",
+      "gsc_day_daily",
+      "gsc_device_daily",
+      "gsc_page_daily",
+      "gsc_query_daily"
+    ],
+    "TRAFFIC_PROJECTED_DATASETS": [
+      "bing_page_daily",
+      "bing_query_daily",
+      "ga4_channel_daily",
+      "ga4_landing_daily",
+      "ga4_source_medium_daily",
+      "gsc_country_daily",
+      "gsc_day_daily",
+      "gsc_device_daily",
+      "gsc_page_daily",
+      "gsc_query_daily"
+    ],
+    "TRAFFIC_PROVENANCE_ID_LIMIT": 500,
+    "TRAFFIC_METRIC_ROW_BATCH_SIZE": 1000,
+    "TRAFFIC_PAGE_SORT_WHITELIST": [
+      "clicks",
+      "conversions",
+      "ctr",
+      "impressions",
+      "position",
+      "sessions"
+    ],
+    "TRAFFIC_QUERY_SORT_WHITELIST": [
+      "clicks",
+      "ctr",
+      "impressions",
+      "position"
+    ],
+    "TRAFFIC_DEFAULT_SORT": "-impressions",
+    "TRAFFIC_TABLE_PAGE_SIZE": 50,
+    "TRAFFIC_SYNC_PROVIDERS": [
+      "bing",
+      "ga4",
+      "gsc"
+    ],
+    "PERFORMANCE_RANGE_DAY": "day",
+    "PERFORMANCE_RANGE_WEEK": "week",
+    "PERFORMANCE_RANGE_MONTH": "month",
+    "PERFORMANCE_RANGE_3_MONTHS": "3_months",
+    "PERFORMANCE_RANGE_6_MONTHS": "6_months",
+    "PERFORMANCE_RANGE_LAST_SYNCED": "last_synced",
+    "PERFORMANCE_RANGE_CUSTOM": "custom",
+    "PERFORMANCE_PRESET_RANGE_DAYS": {
+      "day": 1,
+      "week": 7,
+      "month": 28
+    },
+    "PERFORMANCE_EXTENDED_RANGE_DAYS": {
+      "3_months": 90,
+      "6_months": 180
+    },
+    "PERFORMANCE_RANGES": [
+      "3_months",
+      "6_months",
+      "custom",
+      "day",
+      "last_synced",
+      "month",
+      "week"
+    ],
+    "PERFORMANCE_DEFAULT_RANGE": "last_synced",
+    "PERFORMANCE_SNAPSHOT_WINDOW_DAYS": [
+      1,
+      7,
+      28
+    ],
+    "PERFORMANCE_DIMENSION_QUERY": "query",
+    "PERFORMANCE_DIMENSION_PAGE": "page",
+    "PERFORMANCE_DIMENSION_COUNTRY": "country",
+    "PERFORMANCE_DIMENSION_DEVICE": "device",
+    "PERFORMANCE_DIMENSION_SEARCH_APPEARANCE": "search_appearance",
+    "PERFORMANCE_DIMENSION_DAY": "day",
+    "PERFORMANCE_DIMENSION_ORDER": [
+      "query",
+      "page",
+      "country",
+      "device",
+      "search_appearance",
+      "day"
+    ],
+    "PERFORMANCE_DIMENSION_BING_QUERY": "bing_query",
+    "PERFORMANCE_DIMENSION_BING_PAGE": "bing_page",
+    "PERFORMANCE_BING_DIMENSION_ORDER": [
+      "bing_query",
+      "bing_page"
+    ],
+    "PERFORMANCE_TABLE_DIMENSION_ORDER": [
+      "query",
+      "page",
+      "country",
+      "device",
+      "search_appearance",
+      "day",
+      "bing_query",
+      "bing_page"
+    ],
+    "PERFORMANCE_DIMENSIONS": [
+      "bing_page",
+      "bing_query",
+      "country",
+      "day",
+      "device",
+      "page",
+      "query",
+      "search_appearance"
+    ],
+    "PERFORMANCE_DEFAULT_DIMENSION": "query",
+    "PERFORMANCE_DIMENSION_DATASETS": {
+      "query": "gsc_query_daily",
+      "page": "gsc_page_daily",
+      "country": "gsc_country_daily",
+      "device": "gsc_device_daily",
+      "search_appearance": "gsc_search_appearance_daily",
+      "day": "gsc_day_daily",
+      "bing_query": "bing_query_daily",
+      "bing_page": "bing_page_daily"
+    },
+    "PERFORMANCE_UNAVAILABLE_DIMENSIONS": [
+      "search_appearance"
+    ],
+    "PERFORMANCE_DATASET_DIMENSIONS": {
+      "gsc_query_daily": "query",
+      "gsc_page_daily": "page",
+      "gsc_country_daily": "country",
+      "gsc_device_daily": "device",
+      "gsc_search_appearance_daily": "search_appearance",
+      "gsc_day_daily": "day",
+      "bing_query_daily": "bing_query",
+      "bing_page_daily": "bing_page"
+    },
+    "PERFORMANCE_SORT_METRICS": [
+      "clicks",
+      "impressions",
+      "ctr",
+      "position"
+    ],
+    "PERFORMANCE_SORT_KEY_DIMENSION": "dimension_key",
+    "PERFORMANCE_SORT_WHITELIST": [
+      "clicks",
+      "ctr",
+      "dimension_key",
+      "impressions",
+      "position"
+    ],
+    "PERFORMANCE_PAGE_SIZE_OPTIONS": [
+      10,
+      25,
+      50,
+      100
+    ],
+    "PERFORMANCE_DEFAULT_PAGE_SIZE": 10,
+    "PERFORMANCE_MAX_PAGE_SIZE": 100,
+    "PERFORMANCE_DIMENSION_DEFAULT_SORT": {
+      "query": "-clicks",
+      "page": "-clicks",
+      "country": "-clicks",
+      "device": "-clicks",
+      "search_appearance": "-clicks",
+      "day": "dimension_key",
+      "bing_query": "-clicks",
+      "bing_page": "-clicks"
+    },
+    "PERFORMANCE_CUSTOM_RANGE_MAX_DAYS": 480,
+    "PERFORMANCE_COMPARE_NONE": "none",
+    "PERFORMANCE_COMPARE_PREVIOUS": "previous",
+    "PERFORMANCE_COMPARE_YEAR_OVER_YEAR": "year_over_year",
+    "PERFORMANCE_COMPARE_CUSTOM": "custom",
+    "PERFORMANCE_COMPARE_MODES": [
+      "custom",
+      "none",
+      "previous",
+      "year_over_year"
+    ],
+    "PERFORMANCE_DEFAULT_COMPARE": "none",
+    "PERFORMANCE_YEAR_OVER_YEAR_SHIFT_DAYS": 364,
+    "implementation_verifier_version": "implementation-verifier-2",
+    "dimension_key_separator": " | ",
+    "dimension_arity": {
+      "gsc_page_daily": 2,
+      "gsc_day_daily": 1,
+      "gsc_query_daily": 2,
+      "gsc_query_page_daily": 3,
+      "gsc_search_appearance_daily": 2,
+      "gsc_device_daily": 2,
+      "gsc_country_daily": 2,
+      "ga4_channel_daily": 2,
+      "ga4_source_medium_daily": 3,
+      "ga4_referrer_daily": 2,
+      "ga4_landing_daily": 4,
+      "ga4_ecommerce_source_medium_daily": 3,
+      "ga4_item_source_medium_daily": 4,
+      "ga4_item_channel_group_daily": 3,
+      "bing_page_daily": 2,
+      "bing_query_daily": 2
+    },
+    "url_schemes": [
+      "http",
+      "https"
+    ],
+    "url_ports": [
+      80,
+      443
+    ],
+    "ignored_query_keys": [
+      "_hsenc",
+      "_hsmi",
+      "fbclid",
+      "gclid",
+      "intpromo",
+      "mc_cid",
+      "mc_eid",
+      "msclkid",
+      "ref",
+      "ref_src",
+      "utm_campaign",
+      "utm_content",
+      "utm_medium",
+      "utm_source",
+      "utm_term",
+      "variant",
+      "variant_id"
+    ]
+  },
+  "demand": {
+    "query_page_dataset": "gsc_query_page_daily",
+    "active_task_statuses": [
+      "awaiting_provider_result",
+      "capacity_wait",
+      "leased",
+      "queued",
+      "retry_wait",
+      "running",
+      "submission_uncertain"
+    ],
+    "opportunity_versions": [
+      "opp-analyzer-3",
+      "opp-rules-3",
+      "opp-formula-2"
+    ],
+    "stop_words": [
+      "a",
+      "about",
+      "an",
+      "and",
+      "any",
+      "are",
+      "best",
+      "but",
+      "can",
+      "content",
+      "create",
+      "for",
+      "from",
+      "get",
+      "give",
+      "guide",
+      "has",
+      "have",
+      "how",
+      "in",
+      "into",
+      "is",
+      "its",
+      "make",
+      "more",
+      "new",
+      "not",
+      "of",
+      "on",
+      "our",
+      "out",
+      "page",
+      "post",
+      "some",
+      "that",
+      "the",
+      "their",
+      "them",
+      "then",
+      "there",
+      "these",
+      "they",
+      "this",
+      "to",
+      "top",
+      "use",
+      "using",
+      "want",
+      "was",
+      "were",
+      "what",
+      "when",
+      "where",
+      "which",
+      "who",
+      "why",
+      "will",
+      "with",
+      "write",
+      "writing",
+      "you",
+      "your"
+    ],
+    "DEMAND_ANALYZER_VERSION": "demand-analyzer-1",
+    "DEMAND_FORMULA_VERSION": "demand-priority-1",
+    "DEMAND_RULE_VERSION": "demand-rules-1",
+    "DEMAND_MANUAL_ACTIVE_PER_PROJECT": 1,
+    "ERROR_DEMAND_WINDOW_NOT_SAVED": "demand_window_not_saved",
+    "DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR": "high_impression_low_ctr",
+    "DEMAND_SIGNAL_BRANDED_QUERY": "branded_query_performance",
+    "DEMAND_SIGNAL_STRIKING_DISTANCE": "striking_distance",
+    "DEMAND_SIGNAL_CANNIBALIZATION": "query_cannibalization",
+    "DEMAND_SIGNAL_CTR_GAP": "property_relative_ctr_gap",
+    "DEMAND_SIGNAL_QUERY_PAGE_RELEVANCE": "query_page_relevance",
+    "DEMAND_SIGNAL_EMERGING_QUERY": "emerging_query",
+    "DEMAND_SIGNAL_DECLINING_QUERY": "declining_query",
+    "DEMAND_SIGNAL_TYPES": [
+      "branded_query_performance",
+      "declining_query",
+      "emerging_query",
+      "high_impression_low_ctr",
+      "property_relative_ctr_gap",
+      "query_cannibalization",
+      "query_page_relevance",
+      "striking_distance"
+    ],
+    "DEMAND_OPPORTUNITY_SIGNAL_TYPES": [
+      "declining_query",
+      "emerging_query",
+      "high_impression_low_ctr",
+      "property_relative_ctr_gap",
+      "query_cannibalization",
+      "query_page_relevance",
+      "striking_distance"
+    ],
+    "DEMAND_SIGNAL_STATE_ACTIVE": "active",
+    "DEMAND_SIGNAL_STATE_RESOLVED": "resolved",
+    "DEMAND_MIN_IMPRESSIONS": 10,
+    "DEMAND_LOW_CTR_THRESHOLD": 0.02,
+    "DEMAND_SEARCH_GAP_WEIGHT": 1.0,
+    "DEMAND_STRIKING_DISTANCE_MIN_IMPRESSIONS": 50,
+    "DEMAND_STRIKING_DISTANCE_MIN_POSITION": 4.0,
+    "DEMAND_STRIKING_DISTANCE_MAX_POSITION": 15.0,
+    "DEMAND_STRIKING_DISTANCE_GAP_WEIGHT": 1.25,
+    "DEMAND_CANNIBALIZATION_MIN_PAGE_IMPRESSIONS": 20,
+    "DEMAND_CANNIBALIZATION_MIN_PAGE_SHARE": 0.1,
+    "DEMAND_CANNIBALIZATION_GAP_WEIGHT": 1.35,
+    "DEMAND_CTR_GAP_MIN_COHORT_ROWS": 20,
+    "DEMAND_CTR_GAP_MIN_COHORT_IMPRESSIONS": 500,
+    "DEMAND_CTR_GAP_MIN_CANDIDATE_IMPRESSIONS": 100,
+    "DEMAND_CTR_GAP_RELATIVE_THRESHOLD": 0.25,
+    "DEMAND_CTR_GAP_ABSOLUTE_THRESHOLD": 0.02,
+    "DEMAND_CTR_GAP_WEIGHT": 1.4,
+    "DEMAND_QUERY_RELEVANCE_MIN_IMPRESSIONS": 100,
+    "DEMAND_QUERY_RELEVANCE_TITLE_COVERAGE_MAX": 0.5,
+    "DEMAND_QUERY_RELEVANCE_H1_COVERAGE_MAX": 0.5,
+    "DEMAND_QUERY_RELEVANCE_PRIMARY_COVERAGE_MAX": 0.75,
+    "DEMAND_TREND_WINDOW_DAYS": 14,
+    "DEMAND_TREND_REQUIRED_DAYS": 28,
+    "DEMAND_TREND_MIN_TOTAL_IMPRESSIONS": 50,
+    "DEMAND_TREND_MIN_WINDOW_IMPRESSIONS": 10,
+    "DEMAND_TREND_EMERGING_RATIO": 1.5,
+    "DEMAND_TREND_DECLINING_RATIO": 0.67,
+    "DEMAND_TREND_MIN_ABSOLUTE_CHANGE": 20,
+    "DEMAND_TREND_GAP_WEIGHT": 1.1,
+    "DEMAND_LIST_MAX_LIMIT": 200,
+    "QUERY_EVIDENCE_ANALYZER_VERSION": "query-evidence-1",
+    "ERROR_QUERY_EVIDENCE_CURSOR_INVALID": "query_evidence_cursor_invalid",
+    "QUERY_EVIDENCE_DEFAULT_LIMIT": 100,
+    "QUERY_EVIDENCE_MAX_LIMIT": 500,
+    "QUERY_EVIDENCE_MAX_ROWS": 5000,
+    "QUERY_EVIDENCE_MAX_ARTIFACTS": 100,
+    "QUERY_EVIDENCE_STATE_AVAILABLE": "available",
+    "QUERY_EVIDENCE_STATE_OBSERVED_ZERO": "observed_zero",
+    "QUERY_EVIDENCE_STATE_UNAVAILABLE": "unavailable",
+    "PAGE_EQUIVALENCE_RESOLVER_VERSION": "owned-page-resolver-1",
+    "PAGE_EQUIVALENCE_MAX_CANDIDATES": 16,
+    "PAGE_EQUIVALENCE_MAX_ARTIFACTS": 1000,
+    "PAGE_EQUIVALENCE_QUERY_CHUNK_SIZE": 500,
+    "BRANDED_QUERY_CLASSIFIER_VERSION": "branded-query-1",
+    "BRANDED_QUERY_CLASSES": [
+      "ambiguous",
+      "branded",
+      "non_branded"
+    ]
+  },
+  "abuse": {
+    "active_job_retry_after_seconds": {
+      "env": [
+        "ABUSE_ACTIVE_JOB_RETRY_AFTER_SECONDS"
+      ],
+      "type": "int",
+      "default": 60,
+      "minimum": 1
     }
   }
 }

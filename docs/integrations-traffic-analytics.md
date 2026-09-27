@@ -186,5 +186,5 @@ Performance setup. AI Referrals retains its range and granularity controls when
 the selected projection is empty because another persisted range or granularity
 may still be available; measured zero retains them as well.
 [Sync tests](../backend/tests/component/test_integration_sync_enqueue.py) and
-[Performance tests](../backend/tests/component/test_performance_api.py) cover
+[Performance tests](../frontend/services/api/test/traffic.test.ts) cover
 frozen targets and persisted reads. Live provider acceptance is separate.

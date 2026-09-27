@@ -36,7 +36,19 @@ import {
   type ReferralFact,
 } from '../src/referrals/projection.ts';
 import { PythonValueError } from '../src/python/urlparse.ts';
+import { canonicalPage } from '../src/traffic/normalization.ts';
 import { sanitizeCorrelationId } from '../src/request-id.ts';
+import { buildTrafficProjection } from '../src/traffic/projection.ts';
+import { performanceWindow } from '../src/traffic/performance.ts';
+import { classifyQuery, normalizeQuery } from '../src/demand/classification.ts';
+import { resolveFromArtifacts } from '../src/demand/page-equivalence.ts';
+import {
+  detectSearchSignals,
+  detectStrikingDistance,
+  type SearchInput,
+  type QueryInput,
+} from '../src/demand/projection.ts';
+import { detectCannibalization, detectCtrGap, detectTrends } from '../src/demand/detectors.ts';
 import { identityKey } from '../src/visibility/brand-identities.ts';
 import { assembleSeries, type SourceDimension } from '../src/visibility/source-series.ts';
 
@@ -136,6 +148,32 @@ const PORTS: Record<string, (input: never) => unknown> = {
   citation_classifications: (input: { citation: Record<string, unknown>; config: unknown }) =>
     raising(() => classifyCitation(input.citation, scoringConfig(input.config))),
   correlation_ids: (input: string) => sanitizeCorrelationId(input),
+  traffic_projections: buildTrafficProjection,
+  query_normalizations: normalizeQuery,
+  canonical_pages: (input: { url: string; origin: string | null }) =>
+    canonicalPage(input.url, input.origin),
+  performance_windows: (input: {
+    snapshot: Parameters<typeof performanceWindow>[0] | null;
+    window: Parameters<typeof performanceWindow>[1];
+  }) => performanceWindow(input.snapshot ?? undefined, input.window),
+  query_classifications: (input: { query: string; brand: Parameters<typeof classifyQuery>[1] }) =>
+    classifyQuery(input.query, input.brand),
+  page_equivalence: (input: {
+    requested: string;
+    candidates: Parameters<typeof resolveFromArtifacts>[1];
+    artifacts: Parameters<typeof resolveFromArtifacts>[2];
+  }) => resolveFromArtifacts(input.requested, input.candidates, input.artifacts),
+  demand_projections: (input: {
+    search: SearchInput[];
+    queries: QueryInput[];
+    window_end: string;
+  }) => ({
+    search: detectSearchSignals(input.search),
+    striking_distance: detectStrikingDistance(input.queries),
+    cannibalization: detectCannibalization(input.queries),
+    property_relative_ctr_gap: detectCtrGap(input.queries),
+    query_trends: detectTrends(input.queries, input.window_end),
+  }),
   domain_matches: ([candidate, target]: [unknown, unknown]) =>
     raising(() => domainMatches(candidate, target)),
   error_envelopes: (input: {

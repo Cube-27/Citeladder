@@ -9,10 +9,12 @@
  * parameters (422), as FastAPI resolves dependencies before parameters.
  */
 import type { Context, Hono } from 'hono';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 
 import { sessionUser } from '../auth/session.ts';
 import { activeWorkspace } from '../auth/workspace.ts';
+import type { WorkspaceCapability } from '../auth/workspace.ts';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
@@ -25,7 +27,7 @@ import {
 } from '../http/params.ts';
 import type { RouteContract } from '../openapi/routes.ts';
 
-export type RouteHandler<Path extends ParamSpecs, Query extends ParamSpecs> = (
+type RouteHandler<Path extends ParamSpecs, Query extends ParamSpecs> = (
   context: { c: Context<AppEnv>; db: Database },
   params: RequestParams<Path, Query>,
 ) => Promise<unknown>;
@@ -46,8 +48,12 @@ function scalarSchema(spec: ParamSpec): z.ZodType {
       return z.iso.date();
     case 'datetime':
       return z.iso.datetime({ offset: true });
-    case 'int':
-      return z.int().min(scalar.ge).max(scalar.le);
+    case 'int': {
+      let schema = z.int();
+      if (scalar.ge !== undefined) schema = schema.min(scalar.ge);
+      if (scalar.le !== undefined) schema = schema.max(scalar.le);
+      return schema;
+    }
     case 'str': {
       let schema = z.string();
       if (scalar.minLength !== undefined) schema = schema.min(scalar.minLength);
@@ -83,44 +89,62 @@ function honoPath(path: string): string {
 
 // Starlette answers a matched path requested with another method 405, before
 // any dependency runs.
-function methodNotAllowed(): never {
-  throw new ApiError(405, 'Method Not Allowed', { headers: { allow: 'GET' } });
+function methodNotAllowed(method: string): never {
+  throw new ApiError(405, 'Method Not Allowed', { headers: { allow: method } });
 }
 
-export function defineGetRoute<
-  const Path extends ParamSpecs,
-  const Query extends ParamSpecs,
->(route: {
+function defineRoute<const Path extends ParamSpecs, const Query extends ParamSpecs>(route: {
   family: RouteContract['family'];
   path: string;
   params: { path: Path; query: Query };
   response: z.ZodType;
   handle: RouteHandler<Path, Query>;
+  method?: 'get' | 'post';
+  status?: ContentfulStatusCode;
+  body?: z.ZodType;
+  capability?: WorkspaceCapability;
 }): ProductRoute {
+  const method = route.method ?? 'get';
+  const status = route.status ?? 200;
   const contract: RouteContract = {
     family: route.family,
-    method: 'get',
+    method,
     path: route.path,
     pathParams: parameterObject(route.params.path),
     query: parameterObject(route.params.query),
     headers: ACTIVE_WORKSPACE_HEADERS,
     cookies: SESSION_COOKIE,
-    responses: { 200: route.response },
+    ...(route.body ? { body: route.body } : {}),
+    responses: { [status]: route.response },
   };
   const register = (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => {
     const pattern = honoPath(route.path);
     // Hono serves HEAD from GET handlers; FastAPI declares GET alone.
     app.use(pattern, async (c, next) => {
-      if (c.req.method !== 'GET') methodNotAllowed();
+      if (c.req.method !== method.toUpperCase()) methodNotAllowed(method.toUpperCase());
       await next();
     });
-    app.get(pattern, sessionUser(config, db), activeWorkspace(db), async (c) => {
-      const params = validateParams(route.params, {
-        path: c.req.param() as Record<string, string>,
-        search: new URL(c.req.url).search,
-      });
-      return c.json(await route.handle({ c, db }, params));
-    });
+    app.on(
+      method.toUpperCase(),
+      pattern,
+      sessionUser(config, db),
+      activeWorkspace(db),
+      async (c) => {
+        if (method === 'post') c.get('workspace').require(route.capability ?? 'run');
+        const params = validateParams(route.params, {
+          path: c.req.param() as Record<string, string>,
+          search: new URL(c.req.url).search,
+        });
+        return c.json(await route.handle({ c, db }, params), status);
+      },
+    );
   };
   return { contract, params: route.params, register };
+}
+
+export const defineGetRoute = defineRoute;
+export function definePostRoute<const Path extends ParamSpecs, const Query extends ParamSpecs>(
+  route: Parameters<typeof defineRoute<Path, Query>>[0],
+): ProductRoute {
+  return defineRoute({ ...route, method: 'post' });
 }
