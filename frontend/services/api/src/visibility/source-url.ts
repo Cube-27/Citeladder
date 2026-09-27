@@ -11,7 +11,6 @@ import { sql } from 'kysely';
 
 import type { Database } from '../db/database.ts';
 import { pydanticUtcOrNull, utcText } from '../db/timestamps.ts';
-import { pyCompare } from '../python/text.ts';
 import { brandIdentities, identityKey } from './brand-identities.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 
@@ -94,7 +93,12 @@ async function engines(db: Database, cited: Cited): Promise<SourceUrlDetail['eng
     }))
     .sort(
       (left, right) =>
-        right.retrievals - left.retrievals || pyCompare(left.logical_engine, right.logical_engine),
+        right.retrievals - left.retrievals ||
+        (left.logical_engine < right.logical_engine
+          ? -1
+          : left.logical_engine > right.logical_engine
+            ? 1
+            : 0),
     );
 }
 
@@ -118,9 +122,7 @@ async function promptRows(db: Database, cited: Cited): Promise<SourceUrlDetail['
     topic: row.theme || null,
     responses: Number(row.responses),
     last_seen: pydanticUtcOrNull(row.last_seen),
-    engines: (row.engines ?? [])
-      .filter((engine): engine is string => Boolean(engine))
-      .sort(pyCompare),
+    engines: (row.engines ?? []).filter((engine): engine is string => Boolean(engine)).sort(),
   }));
 }
 
@@ -175,7 +177,11 @@ async function brands(
     }
   }
   const ordered = found
-    .sort((left, right) => right.responses - left.responses || pyCompare(left.name, right.name))
+    .sort(
+      (left, right) =>
+        right.responses - left.responses ||
+        (left.name < right.name ? -1 : left.name > right.name ? 1 : 0),
+    )
     .slice(0, SOURCE_URL_MAX_BRANDS);
   const identities = await brandIdentities(db, selection.projectId);
   return ordered.map((entry) => {

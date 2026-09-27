@@ -7,11 +7,11 @@
  * resolved rather than the one requested.
  */
 import { sql } from 'kysely';
+import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
-import { pyIntOrZero, pyRepr, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
 import { metricSeriesPoints, type MetricSeriesPoint } from './metric-series.ts';
 
 const analytics = policy.analytics;
@@ -48,14 +48,14 @@ export type AiReferralsQuery = {
 function validateGranularity(value: string): string {
   const granularity = value || analytics.default_granularity;
   if (!analytics.snapshot_granularities.includes(granularity)) {
-    throw new AiReferralsQueryError(`unknown granularity: ${pyRepr(granularity)}`);
+    throw new AiReferralsQueryError(`unknown granularity: ${granularity}`);
   }
   return granularity;
 }
 
 function validateRange(value: string | null): void {
   if (value !== null && !Object.hasOwn(PRESET_DAYS, value)) {
-    throw new AiReferralsQueryError(`unknown ai-referrals range: ${pyRepr(value)}`);
+    throw new AiReferralsQueryError(`unknown ai-referrals range: ${value}`);
   }
 }
 
@@ -73,12 +73,10 @@ function validateWindow(fromDate: string | null, toDate: string | null): void {
   }
 }
 
-/** `int(value or 0)` over a stored JSON value; anything else is a 500. */
-function pyInt(value: unknown): number {
-  const parsed = pyIntOrZero(value);
-  if (parsed === null) throw new TypeError('stored session count is not an integer');
-  return parsed;
-}
+/** Stored counts must be exact integers; missing is not observed zero. */
+const sessionCount = z
+  .union([z.number(), z.string().trim().min(1)])
+  .pipe(z.coerce.number<string | number>().int().nonnegative().max(Number.MAX_SAFE_INTEGER));
 
 function laxShare(value: unknown): number | null {
   return metricSeriesPoints([{ value }])[0]!.value;
@@ -88,8 +86,8 @@ function laxShare(value: unknown): number | null {
 export function aiReferralSources(raw: unknown) {
   const rows: unknown[] = Array.isArray(raw) ? raw : [];
   return rows.filter(isObject).map((row) => ({
-    ai_source: pyStrOrEmpty(row.ai_source),
-    sessions: pyInt(row.sessions),
+    ai_source: String(row.ai_source ?? ''),
+    sessions: sessionCount.parse(row.sessions),
     share: laxShare(row.share),
   }));
 }
@@ -151,7 +149,7 @@ export async function getAiReferrals(
       ...versions,
     };
   }
-  if (pyTruthy(snapshot.metrics) && !isObject(snapshot.metrics)) {
+  if (Boolean(snapshot.metrics) && !isObject(snapshot.metrics)) {
     throw new TypeError('stored metrics are not an object');
   }
   const metrics = isObject(snapshot.metrics) ? snapshot.metrics : {};

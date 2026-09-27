@@ -10,12 +10,7 @@
  * for a list), and an empty value is validated, never treated as absent.
  */
 import { ApiError } from '../errors.ts';
-import {
-  dateErrorType,
-  parseRequestDate,
-  parseDatetime,
-  type ParsedDatetime,
-} from './datetimes.ts';
+import { parseRequestDate, parseDatetime, type ParsedDatetime } from './datetimes.ts';
 import { parseUuid } from './uuid.ts';
 
 type Scalar =
@@ -61,7 +56,7 @@ export type ValidationEntry = { loc: string[]; message: string; type: string };
 
 type Outcome = { ok: true; value: unknown } | { ok: false; type: string; message: string };
 
-export const UUID_MESSAGE = 'Input should be a valid UUID';
+export const UUID_MESSAGE = 'Expected a UUID';
 
 const failure = (type: string, message: string): Outcome => ({ ok: false, type, message });
 
@@ -74,65 +69,53 @@ function validateScalar(scalar: Scalar, raw: string): Outcome {
     case 'date': {
       const value = parseRequestDate(raw);
       return value === null
-        ? failure(dateErrorType(raw), 'Input should be a valid date in the format YYYY-MM-DD')
+        ? failure('date_parsing', 'Expected a date in YYYY-MM-DD format')
         : { ok: true, value };
     }
     case 'datetime': {
       const value = parseDatetime(raw);
       return value === null
-        ? failure('datetime_parsing', 'Input should be a valid ISO 8601 datetime or date')
+        ? failure('datetime_parsing', 'Expected an ISO 8601 date or datetime')
         : { ok: true, value };
     }
     case 'int': {
       const text = raw.trim();
-      if (!/^[+-]?\d+$/u.test(text))
-        return failure('int_parsing', 'Input should be a valid integer');
+      if (!/^[+-]?\d+$/u.test(text) || !Number.isSafeInteger(Number(text)))
+        return failure('int_parsing', 'Expected a safe integer');
       const value = Number(text);
       if (scalar.ge !== undefined && value < scalar.ge) {
-        return failure(
-          'greater_than_equal',
-          `Input should be greater than or equal to ${scalar.ge}`,
-        );
+        return failure('greater_than_equal', `Must be at least ${scalar.ge}`);
       }
       if (scalar.le !== undefined && value > scalar.le) {
-        return failure('less_than_equal', `Input should be less than or equal to ${scalar.le}`);
+        return failure('less_than_equal', `Must be at most ${scalar.le}`);
       }
       return { ok: true, value };
     }
     case 'float': {
       const value = raw.trim() === '' ? Number.NaN : Number(raw);
       return !Number.isFinite(value)
-        ? failure(
-            'float_parsing',
-            'Input should be a valid number, unable to parse string as a number',
-          )
+        ? failure('float_parsing', 'Expected a finite number')
         : { ok: true, value };
     }
     case 'str': {
       // Lengths count code points, not UTF-16 units.
       const length = [...raw].length;
       if (scalar.minLength !== undefined && length < scalar.minLength) {
-        return failure(
-          'string_too_short',
-          `String should have at least ${scalar.minLength} characters`,
-        );
+        return failure('string_too_short', `Must contain at least ${scalar.minLength} characters`);
       }
       if (scalar.maxLength !== undefined && length > scalar.maxLength) {
-        return failure(
-          'string_too_long',
-          `String should have at most ${scalar.maxLength} characters`,
-        );
+        return failure('string_too_long', `Must contain at most ${scalar.maxLength} characters`);
       }
       return { ok: true, value: raw };
     }
     case 'literal':
       return scalar.values.includes(raw)
         ? { ok: true, value: raw }
-        : failure('literal_error', `Input should be one of: ${scalar.values.join(', ')}`);
+        : failure('literal_error', `Expected one of: ${scalar.values.join(', ')}`);
   }
 }
 
-/** Read one declared parameter from the raw values Starlette would expose. */
+/** Read one declared parameter from the raw request values. */
 function readParam(
   name: string,
   spec: ParamSpec,
@@ -142,7 +125,7 @@ function readParam(
   const key = spec.alias ?? name;
   const received = all(key);
   if (received.length === 0) {
-    if (spec.required) errors.push({ loc: [key], message: 'Field required', type: 'missing' });
+    if (spec.required) errors.push({ loc: [key], message: 'Required', type: 'missing' });
     return spec.default ?? null;
   }
   if (spec.list) {
@@ -187,7 +170,7 @@ export type RequestParams<Path extends ParamSpecs, Query extends ParamSpecs> = {
 
 /**
  * Validate one request's path and query parameters, or throw the 422.
- * `search` is the raw query string, decoded as `parse_qsl` decodes it.
+ * `search` is the raw query string, decoded by URLSearchParams.
  */
 export function validateParams<Path extends ParamSpecs, Query extends ParamSpecs>(
   specs: { path: Path; query: Query },

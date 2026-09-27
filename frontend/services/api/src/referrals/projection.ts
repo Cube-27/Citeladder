@@ -2,8 +2,8 @@
  * The AI Referrals snapshot projection: pure folds over referral facts.
  *
  * Ports the builder of the retired `domain/analytics/ai_referrals_snapshot.py`
- * and the calendar buckets it shared with the traffic projection. Frozen
- * golden masters hold it to Python's output. Every formula:
+ * and the calendar buckets it shared with the traffic projection.
+ * PostgreSQL worker tests cover the persisted projection. Every formula:
  *
  * - One fact per canonical source/medium metric row, keeping the highest
  *   `resync_seq` per row identity; a fact with no row identity (its metric
@@ -40,7 +40,7 @@ export type AiReferralsProjection = {
   source_classification_ids: string[];
 };
 
-export class ProjectionError extends Error {}
+class ProjectionError extends Error {}
 
 const DAY_MS = 86_400_000;
 const toDate = (day: string) => new Date(`${day}T00:00:00Z`);
@@ -87,8 +87,7 @@ function latestFacts(facts: readonly ReferralFact[]): ReferralFact[] {
     const existing = latest.get(key);
     if (existing === undefined || fact.resync_seq > existing.resync_seq) latest.set(key, fact);
   }
-  // Python orders `str(None)` as "None", after every lowercase hex UUID.
-  const idKey = (fact: ReferralFact) => fact.classification_id ?? 'None';
+  const idKey = (fact: ReferralFact) => fact.classification_id ?? '';
   return [...latest.values()].sort((a, b) =>
     a.occurred_date === b.occurred_date
       ? idKey(a) < idKey(b)

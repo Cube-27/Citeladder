@@ -23,7 +23,6 @@ import { classifyCitation, scoringConfig } from '../analysis/scoring.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { pydanticUtcOrNull, utcText } from '../db/timestamps.ts';
-import { pyCompare, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
 import { authorizeRunSet, isLogicalEngine, unknownEngine } from './selection.ts';
 
 type JsonObject = Record<string, unknown>;
@@ -66,7 +65,7 @@ export type ScoredAnalysis = {
 };
 
 function asObject(value: unknown): JsonObject {
-  if (!pyTruthy(value)) return {};
+  if (!value) return {};
   if (typeof value === 'object' && !Array.isArray(value)) return value as JsonObject;
   throw new TypeError('stored score is not an object');
 }
@@ -179,7 +178,9 @@ export async function executionSurfaceEvidence(
       .where('workspace_id', '=', input.workspaceId)
       .execute()
   ).sort(
-    (left, right) => left.element_index - right.element_index || pyCompare(left.url, right.url),
+    (left, right) =>
+      left.element_index - right.element_index ||
+      (left.url < right.url ? -1 : left.url > right.url ? 1 : 0),
   );
   return {
     outcome: observation.outcome,
@@ -314,8 +315,8 @@ export async function surfaceRates(
     overall_brand_visibility: overallBrandVisibility(counts),
     owned_citation_rate_when_present: ownedCitationRateWhenPresent(counts),
     competitor_mention_rates: competitors
-      .map((row) => ({ name: pyStrOrEmpty(row.competitor_name), overviews: Number(row.overviews) }))
-      .sort((left, right) => pyCompare(left.name, right.name))
+      .map((row) => ({ name: String(row.competitor_name ?? ''), overviews: Number(row.overviews) }))
+      .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
       .map(({ name, overviews }) => ({ name, rate: competitorMentionRate(counts, overviews) })),
   };
 }

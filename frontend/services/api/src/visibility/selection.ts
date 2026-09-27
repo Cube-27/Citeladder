@@ -13,7 +13,6 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { timestamptz } from '../db/timestamps.ts';
 import { epochMicros, toUtc, type ParsedDatetime } from '../http/datetimes.ts';
-import { pyRepr } from '../python/text.ts';
 
 const visibility = policy.visibility;
 
@@ -39,7 +38,7 @@ export function isLogicalEngine(engine: string): boolean {
 }
 
 export function unknownEngine(engine: string): TrendQueryError {
-  return new TrendQueryError(`Unknown logical engine: ${pyRepr(engine)}`);
+  return new TrendQueryError(`Unknown logical engine: ${engine}`);
 }
 
 function requireAware(label: string, value: ParsedDatetime | null): void {
@@ -97,7 +96,7 @@ export async function authorizedSelection(
 ): Promise<RunSelection> {
   validateEngineAndRange(selection);
   if (!visibility.requestable_cohorts.includes(selection.cohort)) {
-    throw new TrendQueryError(`Unknown prompt cohort: ${pyRepr(selection.cohort)}`);
+    throw new TrendQueryError(`Unknown prompt cohort: ${selection.cohort}`);
   }
   const normalized = {
     ...selection,

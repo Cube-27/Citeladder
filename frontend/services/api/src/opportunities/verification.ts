@@ -65,13 +65,11 @@ async function verificationSource(db: Database, task: QueueTask, project: string
   if (!observed) throw new Error('Implementation verification source is not terminal');
   return { kind, id, observed_at: `${observed}Z` };
 }
-/** Match Python int(datetime.timestamp() * 1_000_000), including float rounding. */
-export function sourceRevision(text: string): string {
+/** Exact source timestamp used by verification idempotency. */
+function sourceRevision(text: string): string {
   const parsed = parseDatetime(text);
   if (!parsed) throw new Error('Invalid verification timestamp');
-  const micros = epochMicros(parsed);
-  const seconds = Number(micros / 1_000_000n) + Number(micros % 1_000_000n) / 1_000_000;
-  return Math.trunc(seconds * 1_000_000).toString();
+  return epochMicros(parsed).toString();
 }
 async function declarations(
   db: Database,

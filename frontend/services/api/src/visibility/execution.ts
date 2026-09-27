@@ -11,7 +11,6 @@ import { sql } from 'kysely';
 import { executionFrozenProvenance } from '../analysis/provenance.ts';
 import type { Database } from '../db/database.ts';
 import { pydanticUtc, utcText } from '../db/timestamps.ts';
-import { pyTruthy } from '../python/text.ts';
 import { AnalysisNotFoundError } from './selection.ts';
 import { executionSurfaceEvidence, type SearchSurfaceEvidence } from './surface.ts';
 
@@ -68,21 +67,13 @@ function scoreObject(score: unknown): Record<string, unknown> | null {
   throw new TypeError('stored score is not an object');
 }
 
-/** `list(score.get("competitors_mentioned") or [])`, which must hold names. */
+/** Stored competitor mentions are names, not arbitrary iterable values. */
 function competitorsMentioned(score: Record<string, unknown> | null): string[] {
   const names = score?.competitors_mentioned;
-  if (!pyTruthy(names)) return [];
-  // `list()` iterates a str, list or dict (its keys); any other stored scalar
-  // is a TypeError in Python, so it fails here too rather than reading as [].
-  if (typeof names !== 'string' && (names === null || typeof names !== 'object')) {
+  if (names === null || names === undefined) return [];
+  if (!Array.isArray(names) || !names.every((name) => typeof name === 'string'))
     throw new TypeError('stored competitors_mentioned is not a list of names');
-  }
-  const listed =
-    typeof names === 'string' ? [...names] : Array.isArray(names) ? names : Object.keys(names);
-  if (!listed.every((name) => typeof name === 'string')) {
-    throw new TypeError('stored competitors_mentioned is not a list of names');
-  }
-  return listed;
+  return names;
 }
 
 export async function getExecutionEvidence(

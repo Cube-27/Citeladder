@@ -6,7 +6,7 @@ import { canonicalPage } from '../traffic/normalization.ts';
 import { record } from '../traffic/performance.ts';
 
 const p = policy.demand;
-export type PageCandidate = {
+type PageCandidate = {
   site_url_id: string;
   normalized_url: string;
   evidence: string[];
@@ -19,7 +19,7 @@ export type PageResolution = {
   candidates: PageCandidate[];
   resolver_version: string;
 };
-export type PageArtifact = {
+type PageArtifact = {
   requested_url: string;
   final_url: string;
   normalized_facts: unknown;
@@ -60,7 +60,7 @@ function variants(canonical: string): string[] {
   ].sort();
 }
 
-export function resolveFromArtifacts(
+function resolveFromArtifacts(
   requested: string,
   candidates: PageCandidate[],
   artifacts: PageArtifact[],

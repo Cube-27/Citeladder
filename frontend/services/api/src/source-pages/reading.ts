@@ -11,15 +11,15 @@
 import { createHash } from 'node:crypto';
 
 import { policy } from '../config.ts';
-import { pyCompare } from '../python/text.ts';
+import { compareIdentityText } from '../analysis/comparison.ts';
 import { record } from '../traffic/performance.ts';
 
 const strings = (value: unknown): string[] =>
-  Array.isArray(value) ? value.map((item) => String(item)).sort(pyCompare) : [];
+  Array.isArray(value) ? value.map((item) => String(item)).sort(compareIdentityText) : [];
 
 function compareLists(left: string[], right: string[]): number {
   for (let index = 0; index < Math.min(left.length, right.length); index += 1) {
-    const order = pyCompare(left[index]!, right[index]!);
+    const order = compareIdentityText(left[index]!, right[index]!);
     if (order) return order;
   }
   return left.length - right.length;
@@ -34,7 +34,7 @@ function pythonJson(value: unknown): string {
     );
   }
   if (Array.isArray(value)) return `[${value.map(pythonJson).join(', ')}]`;
-  const entries = Object.entries(record(value)).sort(([a], [b]) => pyCompare(a, b));
+  const entries = Object.entries(record(value)).sort(([a], [b]) => compareIdentityText(a, b));
   return `{${entries.map(([key, item]) => `${pythonJson(key)}: ${pythonJson(item)}`).join(', ')}}`;
 }
 

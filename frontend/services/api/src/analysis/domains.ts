@@ -1,52 +1,37 @@
-/**
- * Domain normalization and the grounding-redirect predicate.
- *
- * Ports of `app/analysis/normalization.py` (`normalize_domain`,
- * `domain_matches`) and `app/connectors/answer_engines/grounding_redirect.py`.
- * Python keeps both for the audit pipeline, so golden masters regenerated from
- * them hold this port to the same answers (TypeScript migration rule 2).
- */
-import { pyStrip, pyStrOrEmpty } from '../python/text.ts';
-import { hostname, PythonValueError, urlparsePath, urlsplit } from '../python/urlparse.ts';
-
+/** Domain identities and grounding redirects in recorded citation evidence. */
 const GOOGLE_REDIRECT_HOST = 'vertexaisearch.cloud.google.com';
 const GROUNDING_REDIRECT_MARKER = 'grounding-api-redirect';
 
-/**
- * Lowercase host without `www.`, from a bare domain, a URL or a domain-shaped
- * title. Throws `PythonValueError` where Python raises (a malformed IPv6 host).
- */
+/** Lowercase host without www., accepting a bare domain or an absolute URL. */
 export function normalizeDomain(value: unknown): string {
-  let text = pyStrip(pyStrOrEmpty(value)).toLowerCase();
-  if (!text) return '';
-  if (!text.includes('://')) text = `https://${text}`;
-  const host = hostname(urlsplit(text)) ?? '';
-  return host.startsWith('www.') ? host.slice('www.'.length) : host;
+  if (typeof value !== 'string' || !value.trim()) return '';
+  const text = value.trim();
+  try {
+    const url = new URL(text.includes('://') ? text : `https://${text}`);
+    return url.hostname.replace(/^www\./u, '');
+  } catch {
+    return '';
+  }
 }
 
-/** True if `candidate` equals `target` or is a subdomain of it. */
 export function domainMatches(candidate: unknown, target: unknown): boolean {
   const left = normalizeDomain(candidate);
   const right = normalizeDomain(target);
-  if (!left || !right) return false;
-  return left === right || left.endsWith(`.${right}`);
+  return Boolean(left && right && (left === right || left.endsWith(`.${right}`)));
 }
 
-/** True when a URL is a grounding redirect token rather than a publisher URL. */
+/** Redirect tokens are not publisher identities. */
 export function isGroundingRedirect(value: unknown): boolean {
-  const raw = pyStrip(pyStrOrEmpty(value));
-  if (!raw) return false;
-  let host: string;
-  let path: string;
+  if (typeof value !== 'string') return false;
+  const raw = value.trim();
   try {
-    const parts = urlsplit(raw);
-    host = (hostname(parts) ?? '').toLowerCase().replace(/\.+$/u, '');
-    path = urlparsePath(parts);
-  } catch (error) {
-    if (error instanceof PythonValueError) return false;
-    throw error;
+    const host = new URL(raw).hostname.replace(/\.+$/u, '');
+    return (
+      host === GOOGLE_REDIRECT_HOST ||
+      host.endsWith(`.${GOOGLE_REDIRECT_HOST}`) ||
+      host === GROUNDING_REDIRECT_MARKER
+    );
+  } catch {
+    return !raw.includes('://') && raw.toLowerCase().includes(GROUNDING_REDIRECT_MARKER);
   }
-  if (host === GOOGLE_REDIRECT_HOST || host.endsWith(`.${GOOGLE_REDIRECT_HOST}`)) return true;
-  if (host === GROUNDING_REDIRECT_MARKER) return true;
-  return !host && path.toLowerCase().includes(GROUNDING_REDIRECT_MARKER);
 }

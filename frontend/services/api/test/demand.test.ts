@@ -6,7 +6,6 @@ import { resolveOwnedPages } from '../src/demand/page-equivalence.ts';
 import { buildQueryEvidence } from '../src/demand/query-evidence.ts';
 import { recomputeDemand } from '../src/demand/snapshot.ts';
 import { hash } from '../src/traffic/normalization.ts';
-import { round } from '../src/demand/projection.ts';
 import { enqueue, seedProject } from './referral-fixtures.ts';
 import { Fixtures, testDatabase } from './support.ts';
 import {
@@ -408,9 +407,9 @@ describe('demand projections and admission', () => {
   });
 
   it.each([
-    ['bad', 'date_from_datetime_parsing'],
-    ['2026-02-30', 'date_from_datetime_parsing'],
-    ['2026-07-01T12:00:00Z', 'date_from_datetime_inexact'],
+    ['bad', 'date_parsing'],
+    ['2026-02-30', 'date_parsing'],
+    ['2026-07-01T12:00:00Z', 'date_parsing'],
     [null, 'date_type'],
   ])('preserves date validation location and type for %s', async (date, type) => {
     const result = await request('demand/recompute', {
@@ -493,10 +492,4 @@ describe('demand projections and admission', () => {
     expect(snapshot.limitations).toContain('query_evidence_row_limit');
     // Seeds the full row cap; parallel suites need more than the default budget.
   }, 30_000);
-
-  it('keeps Python rounding for exact halfway and binary decimal cases', () => {
-    expect([round(0.125, 2), round(0.375, 2), round(2.675, 2), round(-0.125, 2)]).toEqual([
-      0.12, 0.38, 2.67, -0.12,
-    ]);
-  });
 });

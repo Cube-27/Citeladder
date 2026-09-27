@@ -9,7 +9,6 @@ import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
 import { isoUtc, isoUtcOrNull, utcText, utcTextOf } from '../db/timestamps.ts';
-import { pyCollapseWhitespace, pyStrip, pyStrOrEmpty } from '../python/text.ts';
 import { record } from '../traffic/performance.ts';
 
 const r = policy.opportunity.refresh;
@@ -75,7 +74,7 @@ export const OPPORTUNITY_COLUMNS = [
 const list = (value: unknown): unknown[] => (Array.isArray(value) ? [...value] : []);
 
 function humanizeTheme(theme: string): string {
-  const words = pyStrip(pyCollapseWhitespace(theme.replaceAll('_', ' ').replaceAll('-', ' ')));
+  const words = theme.replaceAll('_', ' ').replaceAll('-', ' ').trim().replace(/\s+/gu, ' ').trim();
   if (!words) return '';
   const [first = '', ...rest] = [...words];
   return `${first.toUpperCase()}${rest.join('')} theme`;
@@ -84,8 +83,8 @@ function humanizeTheme(theme: string): string {
 /** The user-facing target label, from persisted frozen evidence only. */
 function targetLabel(row: Pick<OpportunityRow, 'evidence' | 'target_theme' | 'target_url'>) {
   const evidence = record(row.evidence);
-  const prompt = pyStrip(pyStrOrEmpty(evidence.prompt_text));
-  const product = pyStrip(pyStrOrEmpty(evidence.product_name));
+  const prompt = String(evidence.prompt_text ?? '').trim();
+  const product = String(evidence.product_name ?? '').trim();
   return row.target_url || prompt || humanizeTheme(row.target_theme ?? '') || product || null;
 }
 
