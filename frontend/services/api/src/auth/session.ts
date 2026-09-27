@@ -14,7 +14,7 @@ import { demoAccessExpired, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
-import { pythonUuid } from '../python/uuid.ts';
+import { parseUuid } from '../http/uuid.ts';
 
 export type SessionClaims = Record<string, unknown>;
 
@@ -57,7 +57,7 @@ export function sessionUser(config: ServiceConfig, db: Database): MiddlewareHand
     if (!token) throw unauthorized('Not authenticated');
 
     const claims = await decodeSessionToken(token, config.session.secretKey);
-    const userId = pythonUuid(claims?.sub);
+    const userId = parseUuid(claims?.sub);
     const tokenVersion = claims?.ver;
     if (userId === null || !Number.isInteger(tokenVersion)) throw unauthorized('Invalid token');
 

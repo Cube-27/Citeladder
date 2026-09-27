@@ -268,6 +268,10 @@ repository root, `node scripts/quality.mjs --mode check --scope api` checks type
 schema authority, export freshness and route ownership (`pnpm check:routes` against
 FastAPI's exported OpenAPI, the frozen fragments and every ingress Caddyfile); CI
 additionally verifies the generated types and runs the suite against PostgreSQL.
+`docker compose up analytics-worker-ts` (or `node src/worker.ts` in
+`frontend/services/api`) runs the TypeScript analytics worker, which claims the
+kinds in `ANALYTICS_TS_OWNED_TASK_KINDS`; the Python `analytics_worker` above no
+longer claims them, so run both when working on the referral chain.
 `docker compose up api-service` runs the service on `127.0.0.1:8100`; both local
 ingresses send it the TypeScript-owned paths. `pnpm dev` proxies the same paths
 to `API_SERVICE_ORIGIN` (default `http://localhost:8100`), so run the service

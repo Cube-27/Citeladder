@@ -244,7 +244,7 @@ Example database restore on the VM (replace the object exactly):
 
 ```bash
 cd /opt/citeladder
-services=(caddy web audit-worker audit-scheduler site-health-worker brand-discovery-worker agent-worker analytics-worker queue-sweeper integration-worker integration-dispatcher)
+services=(caddy web audit-worker audit-scheduler site-health-worker brand-discovery-worker agent-worker analytics-worker analytics-worker-ts queue-sweeper integration-worker integration-dispatcher)
 sudo docker compose --env-file runtime.env -f compose.gcp.yml stop "${services[@]}"
 bucket=$(sudo sed -n "s/^BACKUP_BUCKET='\(.*\)'$/\1/p" runtime.env)
 gcloud storage cp "gs://${bucket}/predeploy/<TIMESTAMP>.sql.gz" /tmp/citeladder-restore.sql.gz

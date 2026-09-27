@@ -27,8 +27,10 @@
   — PR 1 (TS platform foundation), PR 2 (shared contracts and
   route-ownership gate) and PR 3 (first live reads: `executions`,
   `ai-referrals`, `visibility`) implemented on 27 September 2026, applying
-  D1–D5 as drafted; D6 awaits the owner. Deployment of PR 3 is pending. Next:
-  PR 4 (queue engine and referral analytics kinds), which needs its own
+  D1–D5 as drafted; D6 awaits the owner. PR 4 (queue engine and referral
+  analytics kinds, plus removal of PR 3's error-wording emulation) implemented
+  on 27 September 2026. Deployment of PRs 3–4 is pending. Next: PR 5
+  (traffic, performance and demand projections), which needs its own
   assignment. Site Health, audits,
   billing/entitlements and the Agent runtime stay Python.
 

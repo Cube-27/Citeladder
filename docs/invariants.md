@@ -32,7 +32,9 @@ stores or policy authorities; do not relax repository gates to accommodate them.
 A route family, task kind or table has exactly one writing stack, Python or
 TypeScript. The change that gives it a TypeScript owner deletes the Python owner.
 For route families the route-ownership manifest is the single record, and
-ingress must route each family's paths only to the stack it names.
+ingress must route each family's paths only to the stack it names. For
+analytics task kinds it is `ANALYTICS_TS_OWNED_TASK_KINDS` in
+`core/config/analytics.py`: each stack's worker claims only its own kinds.
 
 ## 2. Product policy is configuration
 

@@ -173,3 +173,137 @@ export function hostname(parts: SplitResult): string | null {
     ? host.slice(0, percent).toLowerCase() + host.slice(percent)
     : host.toLowerCase();
 }
+
+/** `SplitResult.port`: the port number, null when absent; throws when malformed. */
+export function port(parts: SplitResult): number | null {
+  const at = parts.netloc.lastIndexOf('@');
+  const hostinfo = at >= 0 ? parts.netloc.slice(at + 1) : parts.netloc;
+  const open = hostinfo.indexOf('[');
+  let raw: string;
+  if (open >= 0) {
+    const bracketed = hostinfo.slice(open + 1);
+    const close = bracketed.indexOf(']');
+    const after = close >= 0 ? bracketed.slice(close + 1) : '';
+    const colon = after.indexOf(':');
+    raw = colon >= 0 ? after.slice(colon + 1) : '';
+  } else {
+    const colon = hostinfo.indexOf(':');
+    raw = colon >= 0 ? hostinfo.slice(colon + 1) : '';
+  }
+  if (!raw) return null;
+  if (!/^[0-9]+$/u.test(raw)) {
+    throw new PythonValueError(`Port could not be cast to integer value as '${raw}'`);
+  }
+  const value = Number(raw);
+  if (value > 65_535) throw new PythonValueError('Port out of range 0-65535');
+  return value;
+}
+
+const USES_NETLOC = new Set([
+  '',
+  'ftp',
+  'http',
+  'gopher',
+  'nntp',
+  'telnet',
+  'imap',
+  'wais',
+  'file',
+  'mms',
+  'https',
+  'shttp',
+  'snews',
+  'prospero',
+  'rtsp',
+  'rtsps',
+  'rtspu',
+  'rsync',
+  'svn',
+  'svn+ssh',
+  'sftp',
+  'nfs',
+  'git',
+  'git+ssh',
+  'ws',
+  'wss',
+  'itms-services',
+]);
+
+/** `urllib.parse.urlunsplit`. */
+export function urlunsplit(parts: SplitResult): string {
+  let url = parts.path;
+  if (parts.netloc) {
+    if (url && !url.startsWith('/')) url = `/${url}`;
+    url = `//${parts.netloc}${url}`;
+  } else if (url.startsWith('//')) {
+    url = `//${url}`;
+  } else if (parts.scheme && USES_NETLOC.has(parts.scheme) && (!url || url.startsWith('/'))) {
+    url = `//${url}`;
+  }
+  if (parts.scheme) url = `${parts.scheme}:${url}`;
+  if (parts.query) url = `${url}?${parts.query}`;
+  if (parts.fragment) url = `${url}#${parts.fragment}`;
+  return url;
+}
+
+const utf8 = new TextEncoder();
+
+/** `unquote(text)`: percent escapes in ASCII runs decode as UTF-8, invalid bytes as U+FFFD. */
+function unquote(text: string): string {
+  if (!text.includes('%')) return text;
+  let decoded = '';
+  let bytes: number[] = [];
+  const flush = () => {
+    // Python keeps a leading U+FEFF; the WHATWG decoder would drop it.
+    decoded += new TextDecoder('utf-8', { ignoreBOM: true }).decode(new Uint8Array(bytes));
+    bytes = [];
+  };
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    const hex = text.slice(index + 1, index + 3);
+    if (code >= 0x80) {
+      // A non-ASCII character passes through and ends the byte run.
+      flush();
+      decoded += text[index];
+    } else if (text[index] === '%' && /^[0-9a-f]{2}$/iu.test(hex)) {
+      bytes.push(Number.parseInt(hex, 16));
+      index += 2;
+    } else {
+      bytes.push(code);
+    }
+  }
+  flush();
+  return decoded;
+}
+
+/** `parse_qsl(query, keep_blank_values=True)`. */
+export function parseQsl(query: string): [string, string][] {
+  const pairs: [string, string][] = [];
+  for (const field of query.split('&')) {
+    if (!field) continue;
+    const equals = field.indexOf('=');
+    const [name, value] =
+      equals >= 0 ? [field.slice(0, equals), field.slice(equals + 1)] : [field, ''];
+    pairs.push([unquote(name.replaceAll('+', ' ')), unquote(value.replaceAll('+', ' '))]);
+  }
+  return pairs;
+}
+
+const ALWAYS_SAFE = /^[A-Za-z0-9_.~-]$/u;
+
+/** `quote_plus(text)` with no extra safe characters. */
+function quotePlus(text: string): string {
+  let quoted = '';
+  for (const byte of utf8.encode(text)) {
+    const character = String.fromCharCode(byte);
+    if (byte === 0x20) quoted += '+';
+    else if (ALWAYS_SAFE.test(character)) quoted += character;
+    else quoted += `%${byte.toString(16).toUpperCase().padStart(2, '0')}`;
+  }
+  return quoted;
+}
+
+/** `urlencode(pairs)`. */
+export function urlencode(pairs: readonly (readonly [string, string])[]): string {
+  return pairs.map(([name, value]) => `${quotePlus(name)}=${quotePlus(value)}`).join('&');
+}

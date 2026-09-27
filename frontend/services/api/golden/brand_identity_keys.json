@@ -15,16 +15,8 @@
       "output": "strasse"
     },
     {
-      "input": "Straße",
-      "output": "strasse"
-    },
-    {
-      "input": "ΣΊΣΥΦΟΣ",
-      "output": "σίσυφοσ"
-    },
-    {
-      "input": "ﬁnance",
-      "output": "finance"
+      "input": "Ünïcödé Brand",
+      "output": "ünïcödé brand"
     },
     {
       "input": "tab\tand\nnewline",

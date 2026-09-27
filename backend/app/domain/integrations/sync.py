@@ -424,8 +424,8 @@ async def _next_resync_seq(
     A per-connection monotonic counter makes revisions comparable across
     overlapping windows: later enqueue means strictly higher revision, and
     every reader already resolves a metric identity by taking the row with the
-    highest ``resync_seq`` (``traffic.projection``, ``analytics.ingest``'s
-    ``metric_row_not_superseded``, ``demand.query_evidence``). Never a sum, so
+    highest ``resync_seq`` (``traffic.projection``,
+    the TypeScript referral ingest, ``demand.query_evidence``). Never a sum, so
     distinct revisions of the same day cannot double-count.
 
     Re-deriving the SAME run stays a no-op: the run owns its allocated

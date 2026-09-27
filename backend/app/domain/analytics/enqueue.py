@@ -5,8 +5,9 @@
 # after derivation (contract C5). It is DATASET-AWARE: each fresh artifact
 # routes by its dataset id to the projection chains that consume it —
 # referral-dimension artifacts enqueue ``ingest_referrals`` (the referral
-# chain's first task; the executors chain ``classify_referrals`` and
-# ``ai_referrals_snapshot_refresh`` on completion), traffic-consumed artifacts
+# chain's first task; the TypeScript analytics worker runs the chain and
+# enqueues ``classify_referrals`` and ``ai_referrals_snapshot_refresh`` on
+# completion, TypeScript migration PR 4), traffic-consumed artifacts
 # trigger one ``traffic_snapshot_refresh`` per distinct affected sync
 # window. Retired Commerce attribution datasets enqueue no replacement here.
 # The mapping is additive and many-to-many (``ga4_source_medium_daily``
@@ -29,12 +30,9 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.analytics import (
-    ANALYTICS_TASK_KIND_AI_REFERRALS_SNAPSHOT_REFRESH,
-    ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
     ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
     ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
-    ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
@@ -140,28 +138,6 @@ async def enqueue_ingest_referrals(
     )
 
 
-async def enqueue_classify_referrals(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    import_artifact_id: uuid.UUID,
-    priority: int = 0,
-) -> uuid.UUID | None:
-    """Enqueue classification of the events one artifact ingested (A6)."""
-    return await _enqueue_task(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        task_kind=ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
-        payload={"import_artifact_id": str(import_artifact_id)},
-        idempotency_key=_idempotency_key(
-            ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS, project_id, import_artifact_id
-        ),
-        priority=priority,
-    )
-
-
 async def _enqueue_window_snapshot_refresh(
     session: AsyncSession,
     *,
@@ -174,7 +150,7 @@ async def _enqueue_window_snapshot_refresh(
     source_revision: str | None = None,
     priority: int = 0,
 ) -> uuid.UUID | None:
-    """The shared body of the two window snapshot-refresh enqueues (A7/A8).
+    """The shared body of the window snapshot-refresh enqueues.
 
     The payload is window-level; the executor expands the configured
     snapshot granularities. The idempotency key carries the triggering
@@ -241,36 +217,6 @@ async def enqueue_traffic_snapshot_refresh(
     return await _enqueue_window_snapshot_refresh(
         session,
         task_kind=ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        window_start=window_start,
-        window_end=window_end,
-        resync_seq=resync_seq,
-        source_revision=source_revision,
-        priority=priority,
-    )
-
-
-async def enqueue_ai_referrals_snapshot_refresh(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    window_start: date,
-    window_end: date,
-    resync_seq: int,
-    source_revision: str | None = None,
-    priority: int = 0,
-) -> uuid.UUID | None:
-    """Enqueue an AI Referrals snapshot rebuild for one window.
-
-    The executor expands ``ANALYTICS_SNAPSHOT_GRANULARITIES``; the
-    revision-keyed dedupe rule is documented on
-    ``_enqueue_window_snapshot_refresh``.
-    """
-    return await _enqueue_window_snapshot_refresh(
-        session,
-        task_kind=ANALYTICS_TASK_KIND_AI_REFERRALS_SNAPSHOT_REFRESH,
         workspace_id=workspace_id,
         project_id=project_id,
         window_start=window_start,
@@ -389,32 +335,6 @@ async def enqueue_performance_range_projection(
             "performance range projection deduped against no visible task"
         )
     return existing
-
-
-async def enqueue_referral_retention_sweep(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    sweep_key: str,
-    priority: int = 0,
-) -> uuid.UUID | None:
-    """Enqueue one workspace-scoped retention sweep (A6).
-
-    ``sweep_key`` is the caller-chosen period token (e.g. an ISO date) that
-    makes the sweep deterministic per period — at most one sweep row per
-    ``(workspace_id, sweep_key)`` is ever queued.
-    """
-    return await _enqueue_task(
-        session,
-        workspace_id=workspace_id,
-        project_id=None,
-        task_kind=ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
-        payload={"sweep_key": sweep_key},
-        idempotency_key=_idempotency_key(
-            ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP, workspace_id, sweep_key
-        ),
-        priority=priority,
-    )
 
 
 # --- C5 post-sync hook (called by the integrations worker after derivation) --

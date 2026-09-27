@@ -250,7 +250,7 @@ mv /opt/citeladder/ingress.env.new /opt/citeladder/ingress.env
 cd /opt/citeladder
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 stopped_services=(caddy web api-service audit-worker audit-scheduler site-health-worker \
-  brand-discovery-worker agent-worker analytics-worker \
+  brand-discovery-worker agent-worker analytics-worker analytics-worker-ts \
   queue-sweeper integration-worker integration-dispatcher)
 
 docker compose --env-file runtime.env -f compose.gcp.yml pull

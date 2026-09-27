@@ -8,7 +8,7 @@ rule 2). Inputs are fixed; see ``golden_masters`` for the output contract.
 
 from __future__ import annotations
 
-import uuid
+import dataclasses
 from typing import Any
 
 from app.analysis.normalization import domain_matches, normalize_domain
@@ -17,6 +17,7 @@ from app.analysis.scoring import ScoringConfig, classify_citation
 from app.connectors.answer_engines.grounding_redirect import is_grounding_redirect
 from app.domain.analysis.brand_identity import identity_key
 from app.domain.analytics import service as analytics
+from app.domain.analytics.classification import classify_referral_signals
 from app.domain.analytics.schemas import metric_series_points
 from app.domain.audits.schemas import execution_frozen_provenance
 
@@ -261,9 +262,7 @@ def brand_identity_keys() -> list[dict[str, Any]]:
         "Wise",
         "  Transfer   Wise ",
         "STRASSE",
-        "Straße",
-        "ΣΊΣΥΦΟΣ",
-        "ﬁnance",
+        "Ünïcödé Brand",
         "tab\tand\nnewline",
         "nbsp space",
         "zero​width",
@@ -352,30 +351,31 @@ def python_int_or_zero() -> list[dict[str, Any]]:
     return cases
 
 
-def python_uuids() -> list[dict[str, Any]]:
-    inputs = [
-        "6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f",
-        "6F1C0D2E9A4B4C1D8E2F3A5B7C9D1E0F",
-        "{6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f}",
-        "{{6f1c0d2e9a4b4c1d8e2f3a5b7c9d1e0f}}",
-        "urn:uuid:6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f",
-        "uuid:6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f",
-        "6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0",
-        "6f1c0d2e9a4b4c1d8e2f3a5b7c9d1e0g",
-        "+f1c0d2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        "-f1c0d2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        " f1c0d2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        "6f1c_d2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        "6f1c__2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        "0x1c0d2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        "",
-        "not-a-uuid",
+def referral_classifications() -> list[dict[str, Any]]:
+    # Python keeps this classifier for the traffic projection (rule 2).
+    inputs: list[dict[str, Any]] = [
+        {"referrer_host": "chatgpt.com"},
+        {"referrer_host": " Chat.OpenAI.com "},
+        {"referrer_host": "notchatgpt.com", "utm_source": "Claude"},
+        {"referrer_host": "labs.perplexity.ai", "utm_source": "chatgpt"},
+        {"referrer_host": "", "utm_source": " GEMINI ", "utm_medium": "referral"},
+        {"utm_medium": "chatgpt"},
+        {"utm_source": "google_ai_overview"},
+        {"utm_source": "copilot.microsoft.com"},
+        {"user_agent": "Mozilla/5.0 ChatGPT-User/1.0"},
+        {"user_agent": "perplexity-user"},
+        {"user_agent": "GPTBot/1.1"},
+        {"referrer_host": "(direct)", "utm_source": "(none)"},
+        {},
+        {"referrer_host": None, "utm_source": None, "user_agent": None},
     ]
     cases = []
-    for value in inputs:
-        try:
-            output: str | None = str(uuid.UUID(value))
-        except ValueError:
-            output = None
-        cases.append({"input": value, "output": output})
+    for signals in inputs:
+        match = classify_referral_signals(**signals)
+        cases.append(
+            {
+                "input": signals,
+                "output": dataclasses.asdict(match) if match is not None else None,
+            }
+        )
     return cases

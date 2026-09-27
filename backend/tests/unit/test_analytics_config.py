@@ -19,9 +19,11 @@ from app.core.config.analytics import (
     AI_SOURCES,
     ANALYTICS_DEFAULT_GRANULARITY,
     ANALYTICS_MAX_WINDOW_DAYS,
+    ANALYTICS_PYTHON_TASK_KINDS,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_TTL_S,
     ANALYTICS_TASK_KINDS,
+    ANALYTICS_TS_OWNED_TASK_KINDS,
     CONFIDENCE_BUCKETS,
     MATCH_SIGNALS,
     REFERRAL_RAW_ALLOWLIST,
@@ -103,8 +105,11 @@ def test_traffic_refresh_trigger_datasets() -> None:
 
 
 def test_analytics_task_kinds_have_registered_executors() -> None:
-    # Every configured kind must be drainable, including newly added kinds.
-    assert ANALYTICS_TASK_KINDS == set(EXECUTORS)
+    # Every configured kind is drainable by exactly one stack: Python runs the
+    # complement of the TypeScript-owned kinds, and only that complement.
+    assert ANALYTICS_TS_OWNED_TASK_KINDS <= ANALYTICS_TASK_KINDS
+    assert ANALYTICS_PYTHON_TASK_KINDS == set(EXECUTORS)
+    assert not ANALYTICS_PYTHON_TASK_KINDS & ANALYTICS_TS_OWNED_TASK_KINDS
 
 
 def test_traffic_sort_whitelists() -> None:

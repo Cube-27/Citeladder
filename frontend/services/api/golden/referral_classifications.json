@@ -1,0 +1,149 @@
+{
+  "name": "referral_classifications",
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "cases": [
+    {
+      "input": {
+        "referrer_host": "chatgpt.com"
+      },
+      "output": {
+        "ai_source": "chatgpt",
+        "logical_engine": "chatgpt",
+        "matched_rule_id": "host-chatgpt-com",
+        "match_signal": "referrer",
+        "confidence": "exact"
+      }
+    },
+    {
+      "input": {
+        "referrer_host": " Chat.OpenAI.com "
+      },
+      "output": {
+        "ai_source": "chatgpt",
+        "logical_engine": "chatgpt",
+        "matched_rule_id": "host-chat-openai-com",
+        "match_signal": "referrer",
+        "confidence": "exact"
+      }
+    },
+    {
+      "input": {
+        "referrer_host": "notchatgpt.com",
+        "utm_source": "Claude"
+      },
+      "output": {
+        "ai_source": "claude",
+        "logical_engine": "claude",
+        "matched_rule_id": "utm-source-claude",
+        "match_signal": "utm",
+        "confidence": "exact"
+      }
+    },
+    {
+      "input": {
+        "referrer_host": "labs.perplexity.ai",
+        "utm_source": "chatgpt"
+      },
+      "output": {
+        "ai_source": "perplexity",
+        "logical_engine": null,
+        "matched_rule_id": "host-perplexity-ai",
+        "match_signal": "referrer",
+        "confidence": "exact"
+      }
+    },
+    {
+      "input": {
+        "referrer_host": "",
+        "utm_source": " GEMINI ",
+        "utm_medium": "referral"
+      },
+      "output": {
+        "ai_source": "gemini",
+        "logical_engine": "gemini",
+        "matched_rule_id": "utm-source-gemini",
+        "match_signal": "utm",
+        "confidence": "exact"
+      }
+    },
+    {
+      "input": {
+        "utm_medium": "chatgpt"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "utm_source": "google_ai_overview"
+      },
+      "output": {
+        "ai_source": "google_ai_overview",
+        "logical_engine": "google_ai_overview",
+        "matched_rule_id": "utm-source-google-ai-overview",
+        "match_signal": "utm",
+        "confidence": "exact"
+      }
+    },
+    {
+      "input": {
+        "utm_source": "copilot.microsoft.com"
+      },
+      "output": {
+        "ai_source": "copilot",
+        "logical_engine": null,
+        "matched_rule_id": "utm-source-copilot-microsoft-com",
+        "match_signal": "utm",
+        "confidence": "exact"
+      }
+    },
+    {
+      "input": {
+        "user_agent": "Mozilla/5.0 ChatGPT-User/1.0"
+      },
+      "output": {
+        "ai_source": "chatgpt",
+        "logical_engine": "chatgpt",
+        "matched_rule_id": "ua-chatgpt-user",
+        "match_signal": "user_agent",
+        "confidence": "heuristic"
+      }
+    },
+    {
+      "input": {
+        "user_agent": "perplexity-user"
+      },
+      "output": {
+        "ai_source": "perplexity",
+        "logical_engine": null,
+        "matched_rule_id": "ua-perplexity-user",
+        "match_signal": "user_agent",
+        "confidence": "heuristic"
+      }
+    },
+    {
+      "input": {
+        "user_agent": "GPTBot/1.1"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "referrer_host": "(direct)",
+        "utm_source": "(none)"
+      },
+      "output": null
+    },
+    {
+      "input": {},
+      "output": null
+    },
+    {
+      "input": {
+        "referrer_host": null,
+        "utm_source": null,
+        "user_agent": null
+      },
+      "output": null
+    }
+  ]
+}
