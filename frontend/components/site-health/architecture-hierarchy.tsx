@@ -92,17 +92,17 @@ function HierarchyList({
               {crawlId ? (
                 <ProjectLink
                   href={`/site/crawls/${crawlId}/pages/${node.site_url_id}`}
-                  className="text-accent-text min-w-0 text-sm [overflow-wrap:anywhere] hover:underline"
+                  className="type-body text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline"
                 >
                   {node.url}
                 </ProjectLink>
               ) : (
-                <span className="text-foreground min-w-0 text-sm [overflow-wrap:anywhere]">
+                <span className="type-body text-foreground min-w-0 [overflow-wrap:anywhere]">
                   {node.url}
                 </span>
               )}
               <PageKindBadge pageKind={node.page_kind} />
-              <span className="text-muted text-xs">{PARENT_SOURCE_LABELS[node.parent_source]}</span>
+              <span className="type-caption">{PARENT_SOURCE_LABELS[node.parent_source]}</span>
             </div>
             {children.length > 0 ? (
               <HierarchyList nodes={children} grouped={grouped} crawlId={crawlId} />

@@ -123,18 +123,18 @@ function DimensionLedger({
                     <span className={textRole('emphasis', 'text-foreground')}>
                       {dimension.label}
                     </span>
-                    <span className="text-muted truncate text-xs" title={dimension.description}>
+                    <span className="type-caption truncate" title={dimension.description}>
                       {dimension.description}
                     </span>
                     {dimension.reason === 'measured_at_site_scope' ? (
-                      <span className="text-muted text-xs">Measured at site scope</span>
+                      <span className="type-caption">Measured at site scope</span>
                     ) : null}
                   </div>
                 </TableCell>
                 <TableCell numeric>{formatScore(dimension.score)}</TableCell>
                 <TableCell className="min-w-32">
                   {dimension.score === null ? (
-                    <span className="text-muted text-xs">
+                    <span className="type-caption">
                       {dimension.reason === 'measured_at_site_scope'
                         ? 'Site-scoped evidence'
                         : statusLabel(dimension.dimension_measurement_state)}
@@ -268,7 +268,7 @@ function TrendCard({ data }: Readonly<{ data: SiteHealthOverview['trend'] }>) {
           className="h-auto w-full"
         />
         {data.state === 'unavailable' ? (
-          <p className="text-muted text-xs">Run a second comparable crawl to establish a trend.</p>
+          <p className="type-caption">Run a second comparable crawl to establish a trend.</p>
         ) : null}
         <CohortCompositionContext reason={data.reason} composition={data.cohort_composition} />
       </CardContent>
@@ -296,7 +296,7 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
       </CardHeader>
       <CardContent className="grid gap-3 pt-0">
         {data.metrics.map((metric) => (
-          <div key={metric.key} className="flex items-center justify-between gap-3 text-sm">
+          <div key={metric.key} className="type-body flex items-center justify-between gap-3">
             <span className="text-secondary">
               {CHANGE_METRIC_LABELS[metric.key] ?? metric.label}
             </span>
@@ -311,7 +311,7 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
           </div>
         ))}
         {data.state === 'unavailable' ? (
-          <p className="text-muted text-xs">No comparable snapshot yet.</p>
+          <p className="type-caption">No comparable snapshot yet.</p>
         ) : null}
         <CohortCompositionContext reason={data.reason} composition={data.cohort_composition} />
       </CardContent>
@@ -401,7 +401,7 @@ function WebFundamentalsDrawer({
           <section key={area.key} className="grid gap-3 py-4 first:pt-0">
             <header className="grid gap-1">
               <div className="flex items-center justify-between gap-3">
-                <h2 className={textRole('objectTitle', 'capitalize')}>{area.key}</h2>
+                <h2 className={textRole('sectionTitle', 'capitalize')}>{area.key}</h2>
                 <Badge variant="status" value={measurementTone(area.state)}>
                   {statusLabel(area.state)}
                 </Badge>
@@ -417,8 +417,8 @@ function WebFundamentalsDrawer({
               ) : (
                 area.top_findings.map((finding) => (
                   <div key={finding.rule_id} className="grid gap-1">
-                    <span className={textRole('bodyStrong')}>{finding.title}</span>
-                    <span className="text-muted text-xs">
+                    <span className={textRole('itemTitle')}>{finding.title}</span>
+                    <span className="type-caption">
                       {finding.affected_pages} affected pages · {finding.remediation}
                     </span>
                   </div>

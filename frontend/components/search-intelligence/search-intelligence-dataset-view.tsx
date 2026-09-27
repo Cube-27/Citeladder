@@ -176,7 +176,10 @@ export function SearchIntelligenceDatasetView({
             />
           </div>
           <output
-            className={textRole('meta', 'flex h-6 items-center px-[var(--table-cell-padding-x)]')}
+            className={textRole(
+              'caption',
+              'flex h-6 items-center px-[var(--table-cell-padding-x)]',
+            )}
             aria-live="polite"
           >
             {query.isFetching ? 'Updating saved rows…' : `${rows.length} rows shown`}
@@ -261,7 +264,7 @@ function EvidenceDrawer({
         </ProjectLink>
       ) : null}
       {selected ? (
-        <dl className="grid gap-3 text-sm">
+        <dl className="type-body grid gap-3">
           {Object.entries(selected).map(([key, item]) => (
             <div key={key} className="border-border-subtle grid gap-1 border-b pb-2">
               <dt className="text-muted">{key.replaceAll('_', ' ')}</dt>
@@ -284,7 +287,7 @@ function EmptyDataset({
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-2 py-[var(--workspace-gap)]">
-        <p className={textRole('bodyStrong')}>
+        <p className={textRole('itemTitle')}>
           {dataset.coverage === 'unknown'
             ? 'Provider evidence is unavailable for this saved scope.'
             : 'The provider returned no data for this saved scope.'}
@@ -293,7 +296,7 @@ function EmptyDataset({
           Requests can incur charges even when no results are returned. Check the website and market
           in Analysis settings before reviewing another fetch.
         </p>
-        <p className={textRole('meta')}>
+        <p className={textRole('caption')}>
           {dataset.target_hostname}
           {dataset.comparison_origin
             ? ` · compared with ${new URL(dataset.comparison_origin).hostname}`
@@ -369,7 +372,7 @@ function DatasetHeader({
     <CardHeader bordered className="flex-row items-center justify-between">
       <div>
         <CardTitle>{title}</CardTitle>
-        <p className={textRole('meta')}>
+        <p className={textRole('caption')}>
           {formatSearchNumber(dataset.unique_rows_saved)} saved rows
           {dataset.provider_total !== null
             ? ` of ${formatSearchNumber(dataset.provider_total)} available`

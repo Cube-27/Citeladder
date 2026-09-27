@@ -99,7 +99,7 @@ function WorkspaceSchedules({
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
         <div className="grid gap-1">
           <CardTitle>Scheduled audits</CardTitle>
-          <p className="text-muted text-xs">
+          <p className="type-caption">
             Runs use the selected prompt set and your connected engines.
           </p>
         </div>
@@ -113,7 +113,7 @@ function WorkspaceSchedules({
             {schedulesQuery.data.map((schedule) => (
               <li
                 key={schedule.id}
-                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
+                className="type-body flex flex-wrap items-center justify-between gap-2 px-3 py-2"
               >
                 <span className={textRole('emphasis', 'text-foreground')}>
                   {CADENCE_LABELS[schedule.cadence]}
@@ -133,7 +133,7 @@ function WorkspaceSchedules({
           </ul>
         ) : null}
         {!schedulesQuery.data?.length && !schedulesQuery.isLoading ? (
-          <p className="text-muted text-sm">No scheduled audits yet.</p>
+          <p className="type-body">No scheduled audits yet.</p>
         ) : null}
         {promptSets.length === 0 ? (
           <Alert tone="info">Add prompts before scheduling an audit.</Alert>

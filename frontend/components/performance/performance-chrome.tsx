@@ -104,7 +104,7 @@ export function PerformanceToolbar({
         }
       />
 
-      <span className="text-muted text-sm" data-testid="performance-window">
+      <span className="type-body" data-testid="performance-window">
         {selectedLabel}
       </span>
       {/* Reset belongs to the comparison: it is what returns "Compare" to
@@ -135,7 +135,7 @@ export function PerformanceActions({
 }>) {
   return (
     <>
-      <span className="text-muted text-xs">
+      <span className="type-caption">
         {latestDate ? `Data through ${latestDate}` : 'No imported history'}
       </span>
       <Button

@@ -10,7 +10,7 @@ import { dimensionLabel, severityLabel } from '@/lib/site-health/issues';
 export function IssueMetadata({ issue }: Readonly<{ issue: SiteIssue }>) {
   const tone = issueSeverityTone(issue.severity);
   return (
-    <span className={textRole('label', 'flex flex-wrap items-center gap-1.5 uppercase')}>
+    <span className={textRole('label', 'flex flex-wrap items-center gap-2 uppercase')}>
       <span className={issue.finding_class === 'defect' ? tone : 'text-secondary'}>
         {issue.finding_class === 'defect' ? severityLabel(issue.severity) : 'Advisory'}
       </span>

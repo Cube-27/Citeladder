@@ -52,7 +52,7 @@ export function TargetShelfBand({ query }: Readonly<{ query: CommerceQueries['sh
                   // Deliberately a heading: the KPI, not its label, is what a
                   // reader scans this band for. `target-shelf-band.test.tsx`
                   // pins the role, and the unmeasured branch must NOT have it.
-                  <CardTitle className={textRole('metric', 'leading-none')}>{value}</CardTitle>
+                  <CardTitle className={textRole('figure')}>{value}</CardTitle>
                 )}
               </dd>
             </Stack>

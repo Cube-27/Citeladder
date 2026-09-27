@@ -42,7 +42,7 @@ export function BingPanel({
     <section className="grid gap-3" aria-label="Bing performance" data-testid="bing-panel">
       <div className="grid gap-0.5">
         <h2 className={textRole('sectionTitle')}>Bing</h2>
-        <p className={cn(textRole('meta'))}>
+        <p className={cn(textRole('caption'))}>
           Bing Webmaster Tools, counted separately. These figures are never added to the Search
           Console totals above.
         </p>

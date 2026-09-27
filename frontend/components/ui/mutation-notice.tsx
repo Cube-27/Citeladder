@@ -39,7 +39,7 @@ export function MutationNotice({
             </Button>
           </div>
         ) : null}
-        {correlation ? <span className="text-muted text-xs">Support: {correlation}</span> : null}
+        {correlation ? <span className="type-caption">Support: {correlation}</span> : null}
       </div>
     </Alert>
   );

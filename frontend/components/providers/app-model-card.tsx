@@ -232,7 +232,7 @@ export function AppModelCard({ connections }: Readonly<{ connections: ProviderCo
     <section className={panelClasses({}, 'grid gap-4')} aria-labelledby="app-model-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
-          <h2 id="app-model-title" className={textRole('bodyStrong')}>
+          <h2 id="app-model-title" className={textRole('itemTitle')}>
             Custom model (Agent)
           </h2>
           <p className={textRole('body')}>

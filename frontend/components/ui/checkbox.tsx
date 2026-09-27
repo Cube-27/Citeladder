@@ -68,7 +68,7 @@ export function Checkbox({
   }
 
   return (
-    <label className={cn('inline-flex items-center gap-2 text-sm', className)}>
+    <label className={cn('type-body text-foreground inline-flex items-center gap-2', className)}>
       {control}
       <span className={cn(disabled && 'opacity-60')}>{label}</span>
     </label>

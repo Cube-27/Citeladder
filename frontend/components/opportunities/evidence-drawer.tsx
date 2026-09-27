@@ -84,9 +84,9 @@ export function EvidenceDrawer({
 function OpportunityDetailBody({ detail }: Readonly<{ detail: OpportunityDetail }>) {
   return (
     <div className="grid gap-4">
-      <div className="grid gap-2.5">
-        <h2 className={textRole('objectTitle', 'leading-snug tracking-tight')}>{detail.title}</h2>
-        <div className="flex flex-wrap items-center gap-1.5">
+      <div className="grid gap-2">
+        <h2 className={textRole('sectionTitle')}>{detail.title}</h2>
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="status" value={severityBadgeValue(detail.severity)}>
             {severityLabel(detail.severity)} impact
           </Badge>
@@ -98,9 +98,7 @@ function OpportunityDetailBody({ detail }: Readonly<{ detail: OpportunityDetail 
         <section className="grid gap-2">
           <Label>Recommended improvements</Label>
           <div className={panelClasses({ tone: 'well', pad: 'compact' })}>
-            <p className="text-secondary text-sm leading-relaxed whitespace-pre-line">
-              {detail.remediation}
-            </p>
+            <p className="type-body whitespace-pre-line">{detail.remediation}</p>
           </div>
         </section>
       ) : null}

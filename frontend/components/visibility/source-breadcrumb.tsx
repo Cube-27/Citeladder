@@ -34,7 +34,7 @@ export function SourceBreadcrumb({
               <Pressable
                 onClick={crumb.onClick}
                 className={textRole(
-                  'meta',
+                  'caption',
                   'text-secondary hover:text-accent-text w-auto transition-colors',
                 )}
               >
@@ -44,7 +44,7 @@ export function SourceBreadcrumb({
             </li>
           ))}
           <li className="min-w-0">
-            <span aria-current="page" className={textRole('objectTitle', 'block truncate')}>
+            <span aria-current="page" className={textRole('sectionTitle', 'block truncate')}>
               {current}
             </span>
           </li>

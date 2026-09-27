@@ -139,17 +139,17 @@ function AttachedAction({
   const action = query.data;
   return (
     <section aria-label="Working on" className={panelClasses({ pad: 'compact' }, 'grid gap-1')}>
-      <span className={textRole('eyebrow')}>Working on</span>
+      <span className={textRole('label')}>Working on</span>
       <div className="flex flex-wrap items-center gap-2">
         <ProjectLink
           href={`/agent/actions/${action.id}`}
-          className={textRole('bodyStrong', 'hover:text-accent-text')}
+          className={textRole('itemTitle', 'hover:text-accent-text')}
         >
           {action.target_label}
         </ProjectLink>
         <ActionStatusBadge status={action.status} />
       </div>
-      <span className={textRole('meta')}>
+      <span className={textRole('caption')}>
         {[targetKindLabel(action.target_kind), approachLabel(action.approach)]
           .filter(Boolean)
           .join(' · ')}
@@ -188,11 +188,11 @@ function TopActionRow({ action }: Readonly<{ action: Action }>) {
       <div className="grid min-w-0 flex-1 gap-0.5">
         <ProjectLink
           href={`/agent/actions/${action.id}`}
-          className={textRole('bodyStrong', 'hover:text-accent-text truncate')}
+          className={textRole('itemTitle', 'hover:text-accent-text truncate')}
         >
           {action.target_label}
         </ProjectLink>
-        <span className={textRole('meta')}>
+        <span className={textRole('caption')}>
           {[approachLabel(action.approach), `${action.families.length} evidence systems`]
             .filter(Boolean)
             .join(' · ')}

@@ -14,7 +14,9 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { SectionTitle, textRole } from '@/components/ui/typography';
+import { MetricValue } from '@/components/ui/metric-value';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { availabilityLabel } from '@/lib/format';
 import { AccentEyebrow, eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Project } from '@/lib/api/types';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -51,8 +53,8 @@ export function DashboardHeader({
             className="size-12 rounded-[var(--radius-control)]"
           />
           <div className="grid min-w-0 gap-1">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className={textRole('sectionTitle', 'truncate tracking-[-0.02em]')}>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className={textRole('sectionTitle', 'truncate')}>
                 {data.project.brand_name || data.project.name}
               </h2>
               {website ? (
@@ -71,7 +73,7 @@ export function DashboardHeader({
               ) : null}
             </div>
             {data.measurement ? (
-              <p className={textRole('meta')}>
+              <p className={textRole('caption')}>
                 Tracked <DisplayTime value={data.measurement.completed_at} /> ·{' '}
                 {data.measurement.logical_engines.join(', ')}
               </p>
@@ -133,7 +135,7 @@ export function DashboardActions({
   onDownload: () => void;
 }>) {
   return (
-    <div className="flex flex-wrap items-center gap-2.5">
+    <div className="flex flex-wrap items-center gap-2">
       <ProjectControls activeProject={activeProject} onEditProject={onEditProject} />
       {data.report_available ? (
         <PdfButton downloading={downloading} onDownload={onDownload} />
@@ -154,18 +156,18 @@ function FactSummary({
   supporting?: string;
 }>) {
   return (
-    <div className={cn(hairlineBandItemClasses, 'grid gap-1.5')}>
+    <div className={cn(hairlineBandItemClasses, 'grid gap-2')}>
       <p className={eyebrowClasses}>{label}</p>
       {value.trim() ? (
         <div className="min-w-0">
           <Tooltip content={value}>
-            <p className={textRole('body', 'line-clamp-2 overflow-hidden leading-snug')}>{value}</p>
+            <p className={textRole('body', 'line-clamp-2 overflow-hidden')}>{value}</p>
           </Tooltip>
         </div>
       ) : (
         <UnavailableValue state={emptyState} className="inline-flex justify-self-start" />
       )}
-      {supporting ? <p className={textRole('meta')}>{supporting}</p> : null}
+      {supporting ? <p className={textRole('caption')}>{supporting}</p> : null}
     </div>
   );
 }
@@ -181,7 +183,7 @@ function PdfButton({
       onClick={onDownload}
       pending={downloading}
       pendingLabel="Preparing…"
-      className="gap-1.5"
+      className="gap-2"
     >
       <Download className="size-4" aria-hidden />
       Executive PDF
@@ -193,7 +195,10 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <>
       <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <section aria-labelledby="project-state" className="grid content-start gap-3">
+        <Card
+          aria-labelledby="project-state"
+          className="grid content-start gap-3 p-[var(--card-padding)]"
+        >
           <div className="flex items-center justify-between gap-3">
             <SectionTitle id="project-state">Project state</SectionTitle>
             <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
@@ -203,7 +208,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
             <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
             <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
           </div>
-        </section>
+        </Card>
         <Track data={data} />
       </div>
       <Movement data={data} />
@@ -229,8 +234,8 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
           </span>
         </div>
         <Stack gap="tight">
-          <p className={textRole('sectionTitle', 'leading-snug')}>{data.next_action.title}</p>
-          <p className={textRole('meta')}>
+          <p className={textRole('sectionTitle')}>{data.next_action.title}</p>
+          <p className={textRole('caption')}>
             Prioritized from deterministic evidence and current visibility coverage.
           </p>
         </Stack>
@@ -253,32 +258,34 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
       className="flex flex-col justify-between gap-3 p-[var(--card-padding)]"
     >
       <Stack gap="compact">
-        <div className="flex items-center justify-between">
-          <span className={eyebrowClasses}>AI Visibility Track</span>
-          <span className={textRole('label')}>
-            {data.track.observed_at ? `${data.track.engine_coverage} engine(s)` : 'No run'}
-          </span>
+        <div className="flex items-center justify-between gap-3">
+          <SectionTitle id="citation-share-track">Citation share</SectionTitle>
+          {data.track.observed_at ? (
+            <span className={textRole('label')}>{data.track.engine_coverage} engine(s)</span>
+          ) : null}
         </div>
         <Stack gap="tight">
-          <SectionTitle id="citation-share-track">Citation share</SectionTitle>
-          <div className="flex items-baseline gap-3">
-            {data.track.citation_share.value === null ? (
-              <UnavailableValue state={data.track.observed_at ? 'unavailable' : 'not_run'} />
-            ) : (
-              <p className={textRole('metric', 'leading-none')}>
-                {metricValue(data.track.citation_share.value, '%')}
-              </p>
-            )}
-            {delta !== null ? (
-              <span className={textRole('delta', delta >= 0 ? 'text-success' : 'text-danger')}>
-                {delta > 0 ? '+' : ''}
-                {delta.toFixed(1)}%
-              </span>
-            ) : null}
-          </div>
-          <p className={textRole('meta')}>
-            {data.track.observed_at ? deltaLabel(delta) : data.track.limitations[0]}
-          </p>
+          <span className={eyebrowClasses}>AI Visibility Track</span>
+          <MetricValue
+            value={
+              data.track.citation_share.value === null
+                ? null
+                : metricValue(data.track.citation_share.value, '%')
+            }
+            label={availabilityLabel(data.track.observed_at ? 'unavailable' : 'not_run')}
+          />
+          {data.track.observed_at ? (
+            <p
+              className={cn(
+                textRole('delta'),
+                delta === null ? 'text-muted' : delta >= 0 ? 'text-success' : 'text-danger',
+              )}
+            >
+              {deltaLabel(delta)}
+            </p>
+          ) : (
+            <p className={textRole('caption')}>{data.track.limitations[0]}</p>
+          )}
         </Stack>
       </Stack>
       <div className="flex justify-end">
@@ -299,7 +306,6 @@ function Movement({ data }: Readonly<{ data: CommandCenter }>) {
         title="Movement"
         headingId="movement"
         description="Only comparable persisted measurements are shown."
-        ruled
       />
       <MovementChart movements={data.movements} />
     </section>
@@ -324,7 +330,6 @@ export function ActionsAndProof({
           title="Ranked actions"
           headingId="ranked-actions"
           description="Shared order · drag or use the arrow controls."
-          ruled
           actions={
             <Button asChild variant="ghost" size="sm">
               <ProjectLink href="/agent/actions">
@@ -334,7 +339,7 @@ export function ActionsAndProof({
           }
         />
         {actions.length ? (
-          <ol className={ledgerClasses('ruled')}>
+          <ol className={ledgerClasses('open')}>
             {actions.map((action, index) => (
               <ActionRow
                 key={action.id}
@@ -358,11 +363,11 @@ export function ActionsAndProof({
       </section>
       <section
         aria-labelledby="progress-proof"
-        className="border-border flex flex-col justify-between gap-4 border-y py-4 sm:flex-row sm:items-center"
+        className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
       >
         <div className="grid gap-1">
           <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>
-          <p className="text-muted max-w-[65ch] text-xs leading-relaxed">
+          <p className="type-caption max-w-[65ch]">
             {data.resolved_actions.count} action(s) resolved since the comparable run. Metric
             movement is shown alongside completion without claiming causation.
           </p>

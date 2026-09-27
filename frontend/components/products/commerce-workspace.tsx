@@ -42,10 +42,10 @@ export function BulkActions({
   return (
     <Card className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2">
       <div className="grid gap-0.5">
-        <span aria-live="polite" className={textRole('bodyStrong')}>
+        <span aria-live="polite" className={textRole('itemTitle')}>
           {count ? `${count} ${noun} selected` : 'No targets selected'}
         </span>
-        <span className="text-muted text-xs">
+        <span className="type-caption">
           {count
             ? 'Find competitors for every checked target.'
             : 'Check categories or products to use bulk actions.'}

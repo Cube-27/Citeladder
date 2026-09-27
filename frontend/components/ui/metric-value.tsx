@@ -1,6 +1,6 @@
 import { Spinner } from '@/components/ui/spinner';
 import { MISSING_MARK } from '@/lib/format';
-import { textRole, type TextRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
@@ -11,11 +11,9 @@ import { cn } from '@/lib/utils';
  *   - **loading** — a spinner. Not a placeholder: a refetch in flight does not
  *     mean the value is missing, and rendering "Not measured" for the second
  *     it takes states something the surface does not know yet.
- *   - **missing** — the shared missing mark, at the SHARED placeholder size and
- *     weight rather than the numeral's. `label` becomes its accessible name, so
- *     the fact is still announced without the phrase being set at 28px, where
- *     it read as a headline announcement of an absence rather than a footnote
- *     about one figure.
+ *   - **missing** — the shared missing mark at the numeral's role in muted ink.
+ *     `label` becomes its accessible name, so the state is still announced
+ *     without a phrase set at numeral size.
  *   - **measured** — the value, at the caller's numeral role.
  *
  * Every state occupies the SAME box. The slot reserves the numeral's line
@@ -26,8 +24,8 @@ import { cn } from '@/lib/utils';
 
 /** Line box per numeral role, so the slot is the same height in every state. */
 const SLOT_HEIGHT = {
-  metric: 'min-h-8',
-  metricSm: 'min-h-6',
+  figure: 'min-h-8',
+  figureSm: 'min-h-6',
 } as const;
 
 export type MetricValueSize = keyof typeof SLOT_HEIGHT;
@@ -35,7 +33,7 @@ export type MetricValueSize = keyof typeof SLOT_HEIGHT;
 export function MetricValue({
   value,
   label,
-  size = 'metric',
+  size = 'figure',
   loading = false,
   tone,
   className,
@@ -54,16 +52,16 @@ export function MetricValue({
   if (loading) {
     return (
       <div className={slot}>
-        <Spinner size={size === 'metric' ? 'md' : 'sm'} label="Loading" className={tone} />
+        <Spinner size={size === 'figure' ? 'md' : 'sm'} label="Loading" className={tone} />
       </div>
     );
   }
   if (value === null) {
-    // The shared placeholder role: same size and weight wherever a figure is
-    // absent, on every surface.
+    // The mark takes the numeral's own role in muted ink, so an absent figure
+    // sits in the same place and size as a present one and never out-ranks it.
     return (
       <div className={slot}>
-        <span className={textRole(PLACEHOLDER_ROLE, tone)}>
+        <span className={textRole(size, cn('text-muted', tone))}>
           <span aria-hidden>{MISSING_MARK}</span>
           <span className="sr-only">{label}</span>
         </span>
@@ -76,6 +74,3 @@ export function MetricValue({
     </div>
   );
 }
-
-/** One role for every missing-figure label in the app. 12/400. */
-const PLACEHOLDER_ROLE: TextRole = 'meta';

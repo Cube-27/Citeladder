@@ -101,7 +101,7 @@ export function Insight({
       <div className="flex items-center justify-between gap-3">
         <span
           className={cn(
-            textRole('label', 'inline-flex items-center rounded-xs px-1.5 py-0.5'),
+            textRole('label', 'inline-flex items-center rounded-xs px-2 py-0.5'),
             PRIORITY_TONE[insight.priority],
           )}
         >
@@ -111,9 +111,7 @@ export function Insight({
       </div>
 
       {/* 2. Claim */}
-      <h3 className={textRole('bodyStrong', 'font-display leading-[1.35] text-balance')}>
-        {insight.claim}
-      </h3>
+      <h3 className={textRole('itemTitle', 'text-balance')}>{insight.claim}</h3>
 
       {/* 3. Evidence */}
       <div className="flex flex-col gap-1">
@@ -125,16 +123,14 @@ export function Insight({
       {!hideWhyThisMatters ? (
         <div className="flex flex-col gap-1">
           <p className={eyebrowClasses}>Why this matters</p>
-          <p className="text-muted text-xs leading-relaxed">{insight.whyThisMatters}</p>
+          <p className="type-caption">{insight.whyThisMatters}</p>
         </div>
       ) : null}
 
       {/* 5. Potential impact */}
       <div className="border-border-subtle flex items-center justify-between border-t pt-3">
         <span className={eyebrowClasses}>Potential impact</span>
-        <span className={textRole('label', 'font-display')}>
-          {IMPACT_COPY[insight.potentialImpact]}
-        </span>
+        <span className={textRole('label')}>{IMPACT_COPY[insight.potentialImpact]}</span>
       </div>
 
       {/* 6. Two actions: inspect (evidence) and act (caller-supplied). */}

@@ -62,7 +62,7 @@ function DemandEvidenceContent({
               href={demandSignalHandoffHref(signal)}
               className="inline-flex items-center"
             >
-              <ArrowUpRight className="mr-1.5 size-3.5" />
+              <ArrowUpRight className="mr-2 size-3.5" />
               Ask agent
             </ProjectLink>
           </Button>
@@ -72,13 +72,13 @@ function DemandEvidenceContent({
       <div className="grid gap-[var(--workspace-gap)]">
         {/* Header Info */}
         <div className="border-border-subtle grid gap-2 border-b pb-4">
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="neutral">{details.targetKind}</Badge>
             <SignalChip signalType={signal.signal_type} />
           </div>
-          <h2 className={textRole('objectTitle', 'break-words')}>{details.target}</h2>
+          <h2 className={textRole('sectionTitle', 'break-words')}>{details.target}</h2>
           {details.linkablePageUrl && (
-            <div className="text-muted flex items-center gap-1.5 text-xs">
+            <div className="type-caption flex items-center gap-2">
               <span className={textRole('emphasis', 'shrink-0')}>Resolved URL:</span>
               <ExternalHttpLink
                 href={details.linkablePageUrl}
@@ -100,8 +100,8 @@ function DemandEvidenceContent({
             className={panelClasses({ pad: 'compact' }, 'grid grid-cols-2 gap-2 sm:grid-cols-4')}
           >
             <div>
-              <span className="text-muted text-xs">Impressions</span>
-              <p className={textRole('metricSm')}>
+              <span className="type-caption">Impressions</span>
+              <p className={textRole('figureSm')}>
                 {typeof details.metrics.impressions === 'number' ? (
                   formatCount(details.metrics.impressions)
                 ) : (
@@ -110,8 +110,8 @@ function DemandEvidenceContent({
               </p>
             </div>
             <div>
-              <span className="text-muted text-xs">Clicks</span>
-              <p className={textRole('metricSm')}>
+              <span className="type-caption">Clicks</span>
+              <p className={textRole('figureSm')}>
                 {typeof details.metrics.clicks === 'number' ? (
                   formatCount(details.metrics.clicks)
                 ) : (
@@ -120,8 +120,8 @@ function DemandEvidenceContent({
               </p>
             </div>
             <div>
-              <span className="text-muted text-xs">CTR</span>
-              <p className={textRole('metricSm')}>
+              <span className="type-caption">CTR</span>
+              <p className={textRole('figureSm')}>
                 {typeof details.metrics.ctr === 'number' ? (
                   `${(details.metrics.ctr * 100).toFixed(1)}%`
                 ) : (
@@ -130,8 +130,8 @@ function DemandEvidenceContent({
               </p>
             </div>
             <div>
-              <span className="text-muted text-xs">Avg Position</span>
-              <p className={textRole('metricSm')}>
+              <span className="type-caption">Avg Position</span>
+              <p className={textRole('figureSm')}>
                 {typeof details.metrics.position === 'number' ? (
                   details.metrics.position.toFixed(1)
                 ) : (
@@ -145,17 +145,17 @@ function DemandEvidenceContent({
         {/* Cannibalization Breakdown if applicable */}
         {details.pages.length > 0 && (
           <section className="grid gap-2">
-            <div className={textRole('label', 'flex items-center gap-1.5')}>
+            <div className={textRole('label', 'flex items-center gap-2')}>
               <Split className="text-warning size-3.5" />
               <span>Competing URL Breakdown ({details.pages.length} Pages)</span>
             </div>
             <div className={ledgerClasses('boxed')}>
               {details.pages.map((page) => (
-                <div key={page.url} className="grid gap-1 p-2.5 text-xs">
+                <div key={page.url} className="type-caption grid gap-1 p-3">
                   <div className={textRole('emphasis', 'text-foreground break-all')}>
                     {page.url}
                   </div>
-                  <div className="text-muted flex items-center justify-between text-xs">
+                  <div className="type-caption flex items-center justify-between">
                     <span>{formatCount(page.impressions)} impressions</span>
                     <span className={textRole('emphasis', 'text-foreground tabular-nums')}>
                       {(page.share * 100).toFixed(0)}% query share
@@ -171,7 +171,7 @@ function DemandEvidenceContent({
         {details.cohortMedianCtr !== null && (
           <section className="grid gap-2">
             <h3 className={textRole('label')}>Position Cohort Benchmark</h3>
-            <div className={panelClasses({ pad: 'compact' }, 'grid gap-2 text-xs')}>
+            <div className={panelClasses({ pad: 'compact' }, 'type-caption grid gap-2')}>
               <div className="flex justify-between">
                 <span className="text-muted">Position Band:</span>
                 {details.positionBand !== null ? (
@@ -204,15 +204,12 @@ function DemandEvidenceContent({
 
         {/* Provenance & Audit Info */}
         <section className="border-border-subtle grid gap-2 border-t pt-3">
-          <div className={textRole('label', 'flex items-center gap-1.5')}>
+          <div className={textRole('label', 'flex items-center gap-2')}>
             <ShieldCheck className="text-accent size-3.5" />
             <span>Audit Trail & Provenance</span>
           </div>
           <div
-            className={panelClasses(
-              { tone: 'well', pad: 'compact' },
-              'text-muted grid gap-1.5 text-xs',
-            )}
+            className={panelClasses({ tone: 'well', pad: 'compact' }, 'type-caption grid gap-2')}
           >
             <div className="flex justify-between">
               <span>Signal ID:</span>

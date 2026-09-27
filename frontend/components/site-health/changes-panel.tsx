@@ -51,7 +51,7 @@ function Evidence({ row }: Readonly<{ row: ChangeObservation }>) {
       <summary className={textRole('label', 'text-accent-text cursor-pointer')}>
         View evidence
       </summary>
-      <dl className="grid gap-1 text-xs">
+      <dl className="type-caption grid gap-1">
         <div>
           <dt className="text-muted inline">Before: </dt>
           <dd className="inline">{valueLabel(row.before_value)}</dd>
@@ -141,9 +141,7 @@ function changesState(
 ) {
   const loading = summary.isLoading || (pairAvailable && changes.isLoading);
   if (loading)
-    return (
-      <output className="text-secondary block text-sm">Loading persisted website changes…</output>
-    );
+    return <output className="type-body block">Loading persisted website changes…</output>;
   if (summary.isError || changes.isError)
     return <Alert tone="danger">Could not load Website Changes.</Alert>;
   return comparisonState(summary.data, pairAvailable);
@@ -199,13 +197,11 @@ function ChangesTable({
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 pt-0">
-          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {Object.entries(CLASS_LABELS).map(([key, label]) => (
               <div key={key}>
                 <span className={cn(eyebrowClasses, 'block')}>{label}</span>
-                <span className={textRole('objectTitle', 'mt-0.5 block tabular-nums')}>
-                  {counts?.[key] ?? 0}
-                </span>
+                <span className={textRole('figureSm', 'mt-0.5 block')}>{counts?.[key] ?? 0}</span>
               </div>
             ))}
           </div>
@@ -234,7 +230,7 @@ function ChangesTable({
                     <TableCell>
                       <Badge>{CLASS_LABELS[row.change_class]}</Badge>
                       {row.expected ? (
-                        <span className="text-success-text ml-2 text-xs">Expected</span>
+                        <span className="type-caption text-success-text ml-2">Expected</span>
                       ) : null}
                     </TableCell>
                     <TableCell>

@@ -55,9 +55,7 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
     <div className={panelClasses({}, 'grid gap-3')}>
       <div className="grid gap-0.5">
         <h2 className={textRole('sectionTitle')}>Usage</h2>
-        <p className="text-muted text-xs">
-          Measured against the allowances your active grants provide.
-        </p>
+        <p className="type-caption">Measured against the allowances your active grants provide.</p>
       </div>
       <div className="grid gap-3">
         <UsageBody enabled={enabled} query={usageQuery} />
@@ -93,7 +91,7 @@ function UsageBody({
     );
   }
   if (query.data.items.length === 0) {
-    return <p className="text-muted text-sm">No measurable allowances on this account yet.</p>;
+    return <p className="type-body">No measurable allowances on this account yet.</p>;
   }
   return (
     <>

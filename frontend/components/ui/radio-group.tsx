@@ -59,7 +59,7 @@ export function RadioGroup<T extends string>({
       aria-label={ariaLabel}
       data-radio-variant={variant}
       className={cn(
-        variant === 'chip' ? 'flex flex-wrap items-center gap-1.5' : 'grid gap-2',
+        variant === 'chip' ? 'flex flex-wrap items-center gap-2' : 'grid gap-2',
         className,
       )}
     >
@@ -67,7 +67,10 @@ export function RadioGroup<T extends string>({
         <RadioChips options={options} />
       ) : (
         options.map((option) => (
-          <label key={option.value} className="inline-flex items-center gap-2 text-sm">
+          <label
+            key={option.value}
+            className="type-body text-foreground inline-flex items-center gap-2"
+          >
             <RadioGroupPrimitive.Item
               value={option.value}
               disabled={option.disabled}
@@ -91,7 +94,7 @@ function RadioRow<T extends string>({ option }: Readonly<{ option: RadioOption<T
     <RadioGroupPrimitive.Item
       value={option.value}
       disabled={option.disabled}
-      className="group focus-ring hover:bg-background-alt data-[state=checked]:text-accent-text text-foreground flex min-h-9 w-full items-center justify-between gap-3 rounded-[var(--radius-control)] px-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50"
+      className="group focus-ring hover:bg-background-alt data-[state=checked]:text-accent-text text-foreground type-control flex min-h-9 w-full items-center justify-between gap-3 rounded-[var(--radius-control)] px-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
     >
       <span className="min-w-0">{option.label}</span>
       <span
@@ -119,7 +122,7 @@ function RadioChips<T extends string>({
   }
   return [...groups.entries()].map(([label, groupOptions]) => (
     <div key={label} className="flex w-full flex-wrap items-center gap-2">
-      <span className="text-muted w-20 shrink-0 text-xs font-medium">{label}</span>
+      <span className="type-label w-20 shrink-0">{label}</span>
       {groupOptions.map((option) => (
         <RadioChip key={option.value} option={option} />
       ))}
@@ -135,7 +138,7 @@ function RadioChip<T extends string>({ option }: Readonly<{ option: RadioOption<
       className={cn(
         chipBaseClasses,
         chipRestingClasses,
-        'data-[state=checked]:border-accent-border data-[state=checked]:bg-accent-soft data-[state=checked]:text-accent-text disabled:cursor-not-allowed disabled:opacity-50',
+        'data-[state=checked]:bg-accent-soft data-[state=checked]:text-accent-text disabled:cursor-not-allowed disabled:opacity-50',
       )}
     >
       <span aria-hidden className="grid size-3.5 shrink-0 place-items-center">

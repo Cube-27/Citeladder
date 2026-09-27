@@ -94,14 +94,14 @@ function PageMeasurements({ detail }: Readonly<{ detail: PageDetail }>) {
   if (isMobile) {
     return (
       <div className="grid min-w-0 gap-[var(--workspace-gap)]">
-        <section className="border-border-subtle grid gap-4 border-y py-4">
+        <section className="grid gap-4">
           <EditorialSectionHeader
             title="Delivery Metrics"
             description="Static HTTP-level measurements"
           />
           <DeliveryMetrics delivery={detail.delivery} />
         </section>
-        <section className="border-border-subtle grid gap-4 border-y py-4">
+        <section className="grid gap-4">
           {detail.internal_links ? (
             <EditorialSectionHeader
               title="Internal Links"
@@ -154,7 +154,7 @@ function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
           <ExternalHttpLink
             href={detail.display_url}
             className={textRole(
-              'bodyStrong',
+              'itemTitle',
               'tabular-nums text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline',
             )}
           >
@@ -165,7 +165,7 @@ function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
           <PageKindBadge pageKind={detail.page_kind} />
         </DetailFact>
         <DetailFact label="Last Audit">
-          <span className={textRole('bodyStrong')}>
+          <span className={textRole('itemTitle')}>
             {formatAudited(detail.last_audited, timeZone)}
           </span>
         </DetailFact>
@@ -186,7 +186,7 @@ function DetailFact({
 }: Readonly<{ label: string; children: React.ReactNode; className?: string }>) {
   return (
     <div className={cn('grid min-w-0 content-start gap-1', className)}>
-      <dt className={textRole('meta')}>{label}</dt>
+      <dt className={textRole('caption')}>{label}</dt>
       <dd className="min-w-0">{children}</dd>
     </div>
   );
@@ -217,12 +217,12 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
   ];
   return (
     <div className="grid gap-3">
-      <p className={textRole('meta', 'max-[980px]:hidden')}>Static HTTP-level measurements</p>
+      <p className={textRole('caption', 'max-[980px]:hidden')}>Static HTTP-level measurements</p>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
         {items.map((item) => (
           <div key={item.label} className="grid gap-0.5">
             <Label>{item.label}</Label>
-            <dd className={textRole('metricSm', 'tabular-nums')}>
+            <dd className={textRole('figureSm', 'tabular-nums')}>
               {item.value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : item.value}
             </dd>
           </div>
@@ -238,8 +238,8 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
     <Card>
       <CardContent className="grid gap-3">
         <div className="flex items-center justify-between">
-          <h2 className={textRole('objectTitle')}>All Issues ({issues.length})</h2>
-          <span className="text-muted text-xs">Sorted by severity</span>
+          <h2 className={textRole('sectionTitle')}>All Issues ({issues.length})</h2>
+          <span className="type-caption">Sorted by severity</span>
         </div>
         {ordered.length === 0 ? (
           <p className={textRole('body')}>No issues detected on this page.</p>
@@ -249,10 +249,8 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
               <li key={issue.occurrence_id} className="grid gap-2 py-3">
                 <span className="flex items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-3">
-                    <span className="text-muted w-6 shrink-0 text-xs tabular-nums">
-                      {index + 1}
-                    </span>
-                    <span className={textRole('bodyStrong')}>{issue.issue_title}</span>
+                    <span className="type-caption w-6 shrink-0 tabular-nums">{index + 1}</span>
+                    <span className={textRole('itemTitle')}>{issue.issue_title}</span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
                     <Badge
@@ -267,7 +265,7 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
                     </Badge>
                   </span>
                 </span>
-                <div className="pl-9">
+                <div className="pl-10">
                   <IssueEvidence occurrence={issue} />
                 </div>
               </li>

@@ -51,18 +51,16 @@ function ExtraRow({
       )}
     >
       <div className="grid min-w-0 gap-0.5">
-        <span className={textRole('bodyStrong')}>{entry.name}</span>
-        {entry.description ? <p className="text-muted text-xs">{entry.description}</p> : null}
-        <span className={textRole('meta')}>
+        <span className={textRole('itemTitle')}>{entry.name}</span>
+        {entry.description ? <p className="type-caption">{entry.description}</p> : null}
+        <span className={textRole('caption')}>
           {entry.unit_price
             ? `${formatMoney(entry.unit_price, catalog.currency_minor_units)} each, one-time, before tax · `
             : ''}
           usable for {entry.expiry_days} days or until your plan ends, whichever is first
         </span>
         {!purchasable && entry.unavailable_reason ? (
-          <span className="text-muted text-xs">
-            {billingReasonMessage(entry.unavailable_reason)}
-          </span>
+          <span className="type-caption">{billingReasonMessage(entry.unavailable_reason)}</span>
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -101,11 +99,11 @@ function ActiveExtras({ entitlement }: Readonly<{ entitlement: BillingEntitlemen
   );
   if (grants.length === 0) return null;
   return (
-    <div className="grid gap-1.5">
-      <h3 className={textRole('bodyStrong')}>Active purchases</h3>
+    <div className="grid gap-2">
+      <h3 className={textRole('itemTitle')}>Active purchases</h3>
       <ul className="grid gap-1">
         {grants.map((grant) => (
-          <li key={grant.grant_id} className={textRole('meta')}>
+          <li key={grant.grant_id} className={textRole('caption')}>
             +{grant.value} {capabilityLabel(grant.key).toLowerCase()} · usable until{' '}
             <DisplayTime value={grant.effective_valid_until} dateOnly fallback="your plan ends" />
           </li>
@@ -141,11 +139,11 @@ export function ExtraPurchases({
         <h2 id="extras-title" className={textRole('sectionTitle')}>
           Add-ons and top-ups
         </h2>
-        <p className="text-muted text-xs">
+        <p className="type-caption">
           One-time purchases. They work only while your paid plan is active and never renew.
         </p>
       </div>
-      <div className="grid gap-2.5">
+      <div className="grid gap-2">
         {addons.map((entry) => (
           <ExtraRow
             key={entry.key}

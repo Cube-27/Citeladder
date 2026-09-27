@@ -67,8 +67,8 @@ export function SearchIntelligenceCompetitors({
               return (
                 <TableRow key={competitor.identity}>
                   <TableCell>
-                    <span className={textRole('bodyStrong', 'block')}>{competitor.label}</span>
-                    <span className={textRole('meta')}>
+                    <span className={textRole('itemTitle', 'block')}>{competitor.label}</span>
+                    <span className={textRole('caption')}>
                       {footprint?.target_hostname ?? competitor.hostname}
                     </span>
                   </TableCell>

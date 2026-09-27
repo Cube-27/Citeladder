@@ -80,7 +80,7 @@ export function PageShell({
         className={cn(
           pageGutterClasses,
           measure === 'workflow' && 'max-w-[var(--workflow-max-width)]',
-          'pt-[var(--page-section-gap)]',
+          'pt-[var(--content-gutter)] pb-[var(--page-section-gap)]',
           className,
         )}
       >
@@ -158,12 +158,9 @@ function IdentityBand({ title, actions }: Readonly<{ title?: string; actions?: R
         )}
       >
         <div className="min-w-0 flex-1 max-[700px]:sr-only">
-          {/* The route H1 sits at the object-title rung, not the 26px page-title
-              rung. At 26px it was the largest thing on every screen and competed
-              with the work below it for first read; the rail and the band's own
-              rule already say where the reader is, so the heading labels the
-              paper rather than announcing it. It stays the one H1 per route. */}
-          <h1 className={textRole('objectTitle', 'min-w-0 [overflow-wrap:break-word]')}>
+          {/* The route H1 is the top of the type ladder: nothing on the page
+              out-ranks it except a figure. It stays the one H1 per route. */}
+          <h1 className={textRole('pageTitle', 'min-w-0 [overflow-wrap:break-word]')}>
             {resolved}
           </h1>
         </div>

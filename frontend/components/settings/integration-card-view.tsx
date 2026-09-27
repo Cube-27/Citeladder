@@ -79,8 +79,8 @@ function GrantHeader({
     <CardHeader className="border-border-subtle flex-row items-center justify-between gap-3 border-b pb-3">
       <div className="grid min-w-0 gap-0.5">
         <CardEyebrow>OAuth grant</CardEyebrow>
-        <h3 className={textRole('objectTitle')}>{meta.title}</h3>
-        <p className="text-muted truncate text-xs">{meta.blurb}</p>
+        <h3 className={textRole('sectionTitle')}>{meta.title}</h3>
+        <p className="type-caption truncate">{meta.blurb}</p>
       </div>
       <div className="shrink-0">
         {badge.variant === 'status' ? (
@@ -141,7 +141,7 @@ function ConnectedCard({
         <GrantHeader family={family} grant={grant} />
         <CardContent className="grid gap-3 pt-4">
           <GrantAlert family={family} status={grant.status} />
-          <div className="bg-well/60 border-border text-muted flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
+          <div className="type-caption bg-well/60 border-border flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2">
             <Info className="text-secondary size-3.5 shrink-0" aria-hidden />
             <span>
               One OAuth grant shared by {grant.connections.length}{' '}
@@ -166,7 +166,7 @@ function ConnectedCard({
           >
             Reconnect
           </Button>
-          <span className="text-muted text-right text-xs">
+          <span className="type-caption text-right">
             Reconnecting renews consent for the whole grant.
           </span>
         </div>

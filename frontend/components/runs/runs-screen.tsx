@@ -192,7 +192,7 @@ function RunsContent({
       <CardHeader className="flex-row flex-wrap items-baseline justify-between gap-2 border-b-0 pb-3">
         <CardTitle>All runs</CardTitle>
         {anyActive ? (
-          <span className="text-muted inline-flex items-center gap-1.5 text-xs tabular-nums">
+          <span className="type-caption inline-flex items-center gap-2 tabular-nums">
             <span
               className="bg-accent inline-block size-1.5 animate-pulse rounded-full"
               aria-hidden
@@ -203,7 +203,7 @@ function RunsContent({
       </CardHeader>
       <CardContent className="p-0">
         {filteredAudits.length === 0 ? (
-          <p className="text-secondary border-border-subtle border-t px-[var(--card-padding)] py-10 text-center text-sm">
+          <p className="type-body border-border-subtle border-t px-[var(--card-padding)] py-10 text-center">
             {`No ${filterLabel} runs.`}
           </p>
         ) : (

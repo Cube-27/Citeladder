@@ -90,7 +90,7 @@ export function ChartLegend({
   onActivate: (key: string | null) => void;
 }>) {
   return (
-    <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+    <ul className="flex flex-wrap items-center gap-x-4 gap-y-2">
       {Object.entries(config).map(([key, entry]) => (
         <li key={key}>
           <button
@@ -100,7 +100,7 @@ export function ChartLegend({
             onFocus={() => onActivate(key)}
             onBlur={() => onActivate(null)}
             className={cn(
-              'focus-ring flex items-center gap-1.5 transition-opacity',
+              'focus-ring type-caption flex items-center gap-2 transition-opacity',
               active && active !== key ? 'opacity-45' : 'opacity-100',
             )}
           >
@@ -109,7 +109,7 @@ export function ChartLegend({
               style={{ background: entry.color }}
               aria-hidden
             />
-            <span className={textRole('meta', 'max-w-[18ch] truncate')}>{entry.label}</span>
+            <span className={textRole('caption', 'max-w-[18ch] truncate')}>{entry.label}</span>
           </button>
         </li>
       ))}
@@ -135,11 +135,14 @@ export function ChartTooltipContent({
   const measured = payload.filter((entry) => typeof entry.value === 'number');
   if (!measured.length) return null;
   return (
-    <div className="tooltip-panel bg-surface-inverse text-on-inverse shadow-elevated rounded-[var(--radius-overlay)] px-2 py-1.5">
-      <p className="text-xs font-medium">{label}</p>
+    <div className="tooltip-panel bg-surface-inverse text-on-inverse shadow-elevated rounded-[var(--radius-overlay)] px-3 py-2">
+      <p className="type-badge">{label}</p>
       <ul className="grid gap-0.5">
         {measured.map((entry) => (
-          <li key={entry.dataKey ?? entry.name} className="flex items-center gap-1.5 text-xs">
+          <li
+            key={entry.dataKey ?? entry.name}
+            className="type-caption text-on-inverse flex items-center gap-2"
+          >
             <span
               className="size-2 shrink-0 rounded-full"
               style={{ background: entry.color }}

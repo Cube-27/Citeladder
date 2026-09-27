@@ -64,15 +64,12 @@ function TrendCard({
             <CardTitle>{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
-          <span className="text-muted text-xs">{badge}</span>
+          <span className="type-caption">{badge}</span>
         </div>
       </CardHeader>
       <CardContent>
         <div className="flex gap-3">
-          <div
-            className="text-muted flex flex-col justify-between py-1 text-xs tabular-nums"
-            aria-hidden
-          >
+          <div className="type-caption flex flex-col justify-between py-1 tabular-nums" aria-hidden>
             {yLabels.map((label) => (
               <span key={label}>{label}</span>
             ))}
@@ -84,10 +81,10 @@ function TrendCard({
               width={680}
               height={145}
               domainMax={domainMax}
-              className="h-[145px] w-full"
+              className="h-36 w-full"
             />
             {points.length > 1 ? (
-              <div className="text-muted flex justify-between text-xs tabular-nums" aria-hidden>
+              <div className="type-caption flex justify-between tabular-nums" aria-hidden>
                 <span>{firstLabel}</span>
                 <span>{lastLabel}</span>
               </div>

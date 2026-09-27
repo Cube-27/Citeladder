@@ -74,7 +74,7 @@ function DemandLoading() {
               {DEMAND_LOADING_METRICS.map((placeholder) => (
                 <div
                   key={placeholder}
-                  className="grid gap-2 px-0 py-2.5 sm:px-4 lg:first:ps-0 lg:last:pe-0"
+                  className="grid gap-2 px-0 py-3 sm:px-4 lg:first:ps-0 lg:last:pe-0"
                 >
                   <Skeleton className="h-3 w-24" />
                   <Skeleton className="h-9 w-20" />
@@ -95,7 +95,7 @@ function DemandLoading() {
       </Card>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           <Skeleton className="h-8 w-24 rounded-full" />
           <Skeleton className="h-8 w-32 rounded-full" />
           <Skeleton className="h-8 w-28 rounded-full" />
@@ -289,7 +289,7 @@ function SearchDemandView({
                   ? '1 demand signal observed'
                   : `${snapshot.signals.length} demand signals observed`}
               </span>
-              <span className="text-muted inline-flex items-center gap-1 text-xs">
+              <span className="type-caption inline-flex items-center gap-1">
                 <Calendar className="size-3.5" aria-hidden="true" />
                 {windowLabel}
               </span>

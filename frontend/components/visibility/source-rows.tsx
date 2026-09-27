@@ -38,7 +38,7 @@ function SourceName({
       <span className="grid min-w-0">
         <span className="truncate">{name}</span>
         {secondary ? (
-          <span className={textRole('meta', 'text-secondary truncate')}>{secondary}</span>
+          <span className={textRole('caption', 'text-secondary truncate')}>{secondary}</span>
         ) : null}
       </span>
     </span>
@@ -297,7 +297,7 @@ function MentionedChips({
         </Tooltip>
       ))}
       {overflow > 0 ? (
-        <span className={textRole('meta', 'text-secondary tabular-nums')}>+{overflow}</span>
+        <span className={textRole('caption', 'text-secondary tabular-nums')}>+{overflow}</span>
       ) : null}
     </span>
   );

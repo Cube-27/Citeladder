@@ -61,7 +61,7 @@ export function EvidenceError({
             <ICONS.warning className="size-5" aria-hidden />
           </IconChip>
           <h3 className={textRole('sectionTitle')}>Couldn&apos;t load this evidence</h3>
-          <p className="text-secondary max-w-xs text-sm">
+          <p className="type-body max-w-xs">
             The request failed or timed out. Your filters are unchanged.
           </p>
           <Button variant="primary" size="sm" onClick={onRetry}>
@@ -88,7 +88,7 @@ export function EvidenceEmpty({
             <Inbox className="size-5" aria-hidden />
           </IconChip>
           <h3 className={textRole('sectionTitle')}>{heading}</h3>
-          <p className="text-secondary max-w-sm text-sm">{body}</p>
+          <p className="type-body max-w-sm">{body}</p>
           <Button asChild variant="ghost" size="sm">
             <ProjectLink href="/runs">View Runs</ProjectLink>
           </Button>
@@ -112,7 +112,7 @@ export function EvidenceFilteredEmpty({
             <SearchX className="size-5" aria-hidden />
           </IconChip>
           <h3 className={textRole('sectionTitle')}>No results match these filters</h3>
-          <p className="text-secondary max-w-sm text-sm">{body}</p>
+          <p className="type-body max-w-sm">{body}</p>
           {onClear ? (
             <Button variant="ghost" size="sm" onClick={onClear}>
               Clear filters
@@ -126,7 +126,7 @@ export function EvidenceFilteredEmpty({
 
 export function TruncationNotice({ limit }: Readonly<{ limit: number }>) {
   return (
-    <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2 text-xs">
+    <div className="type-caption border-border-subtle flex items-center gap-2 border-t px-4 py-2">
       <Info className="size-4 shrink-0" aria-hidden />
       <span>Showing newest {limit} executions; refine filters to narrow results.</span>
     </div>

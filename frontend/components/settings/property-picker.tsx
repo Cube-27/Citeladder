@@ -54,17 +54,15 @@ function PropertyOption({
       disabled={disabled}
       aria-pressed={selected}
       className={cn(
-        'border-border flex w-full items-center gap-3 rounded-[var(--radius-control)] border px-3 py-2 text-start',
-        'focus-ring hover:bg-well',
+        'flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-start',
+        'focus-ring hover:bg-active',
         'disabled:pointer-events-none disabled:opacity-60',
-        selected && 'border-accent bg-well',
+        selected && 'bg-accent-soft hover:bg-accent-soft',
       )}
     >
       <span className="min-w-0 flex-1">
-        <span className={textRole('bodyStrong', 'block truncate')}>{property.label}</span>
-        <span className="text-muted block truncate text-xs tabular-nums">
-          {property.property_ref}
-        </span>
+        <span className={textRole('itemTitle', 'block truncate')}>{property.label}</span>
+        <span className="type-caption block truncate tabular-nums">{property.property_ref}</span>
       </span>
       {pending ? <Spinner className="text-muted" /> : null}
       {selected && !pending ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
@@ -163,7 +161,7 @@ export function PropertyPicker({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+      <div className="flex flex-wrap items-center gap-2 pt-0.5">
         {selected ? (
           <span className={tagClasses('outline', 'max-w-full truncate tabular-nums')}>
             {selected}
@@ -181,7 +179,6 @@ export function PropertyPicker({
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 px-1.5 text-xs"
           onClick={() => setOpen(true)}
           disabled={disabled}
           data-testid={`select-property-${connection.provider}`}

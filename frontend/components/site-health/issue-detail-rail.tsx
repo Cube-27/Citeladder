@@ -56,9 +56,7 @@ export function IssueDetailRail({
         <header className="border-border-subtle grid min-w-0 shrink-0 gap-3 border-b p-[var(--card-padding)]">
           <div className="flex min-w-0 items-start justify-between gap-[var(--workspace-gap)] max-[700px]:flex-col">
             <div className="grid min-w-0 gap-2">
-              <h2 className={textRole('sectionTitle', 'tracking-[-0.02em]')}>
-                {issueTitle(issue)}
-              </h2>
+              <h2 className={textRole('sectionTitle')}>{issueTitle(issue)}</h2>
               <IssueMetadata issue={issue} />
             </div>
             <div
@@ -72,7 +70,7 @@ export function IssueDetailRail({
                 affected
               </span>
               {issue.page_kinds.length > 0 ? (
-                <span className="text-muted flex max-w-56 flex-wrap items-center gap-1 text-xs">
+                <span className="type-caption flex max-w-56 flex-wrap items-center gap-1">
                   <span>Affects</span>
                   {issue.page_kinds.map((kind, index) => (
                     <span key={kind} className="contents">
@@ -88,22 +86,16 @@ export function IssueDetailRail({
         </header>
         <div className="content-scroll grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)] min-[701px]:flex-1 min-[701px]:overflow-y-auto">
           {issue.description ? (
-            <p className="text-secondary text-sm whitespace-pre-line">{issue.description}</p>
+            <p className="type-body whitespace-pre-line">{issue.description}</p>
           ) : null}
           {issue.remediation ? (
             // Guidance, not a field. The `well` tone is the recessed INPUT
             // surface, so remediation copy inside it read as a disabled
-            // textarea the reader could not edit. Hung off an accent edge it
-            // reads as advice, and keeps the blue that marks helpful
-            // interaction everywhere else.
-            <div
-              className={panelClasses(
-                { tone: 'none', pad: 'none', edge: 'flush' },
-                'border-accent-border grid gap-1 border-s-2 ps-3',
-              )}
-            >
+            // textarea the reader could not edit. On the accent fill it reads
+            // as advice.
+            <div className={panelClasses({ tone: 'accent', pad: 'compact' }, 'grid gap-1')}>
               <span className={textRole('label')}>How to fix</span>
-              <p className="text-secondary text-sm whitespace-pre-line">{issue.remediation}</p>
+              <p className="type-body whitespace-pre-line">{issue.remediation}</p>
             </div>
           ) : null}
           <OccurrenceList
@@ -185,7 +177,7 @@ function OccurrenceList({
   // them the pages it affects.
   if (isPending || !detail) {
     return (
-      <ul aria-busy="true" className={ledgerClasses('ruled')}>
+      <ul aria-busy="true" className={ledgerClasses('open')}>
         {OCCURRENCE_PLACEHOLDERS.map((placeholder) => (
           <li key={placeholder} className="grid gap-2 p-3">
             <Skeleton className="h-4 w-3/5" />
@@ -198,7 +190,7 @@ function OccurrenceList({
   if (detail.occurrences.length === 0)
     return <p className={textRole('body')}>No affected URLs found.</p>;
   return (
-    <ul className={ledgerClasses('ruled')}>
+    <ul className={ledgerClasses('open')}>
       {detail.occurrences.map((occurrence) => (
         <li key={occurrence.occurrence_id} className="grid gap-3 p-3">
           <ProjectLink
@@ -206,19 +198,14 @@ function OccurrenceList({
             className="hover:text-accent flex min-w-0 flex-col gap-0.5"
           >
             <span className="flex min-w-0 items-center gap-2">
-              <span className={textRole('bodyStrong', 'truncate')}>
+              <span className={textRole('itemTitle', 'truncate')}>
                 {pageDisplayTitle(occurrence.title, occurrence.display_url)}
               </span>
               {occurrence.page_kind ? (
-                <span className="text-muted shrink-0 text-xs">
-                  {pageKindLabel(occurrence.page_kind)}
-                </span>
+                <span className="type-caption shrink-0">{pageKindLabel(occurrence.page_kind)}</span>
               ) : null}
             </span>
-            <span
-              className="text-muted truncate text-xs tabular-nums"
-              title={occurrence.display_url}
-            >
+            <span className="type-caption truncate tabular-nums" title={occurrence.display_url}>
               {occurrence.display_url}
             </span>
           </ProjectLink>

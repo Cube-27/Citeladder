@@ -110,7 +110,7 @@ function ChatHistory({
 
   return (
     <section aria-labelledby="agent-chat-history" className="flex min-h-0 flex-col gap-2">
-      <h2 id="agent-chat-history" className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-2')}>
+      <h2 id="agent-chat-history" className={cn(eyebrowClasses, 'text-secondary px-3 pt-2')}>
         Chats
       </h2>
       <SearchField
@@ -163,10 +163,10 @@ function ChatRows({
 }>) {
   if (state === 'loading') return null;
   if (state === 'error')
-    return <p className={textRole('meta', 'px-2.5')}>Chats could not be loaded.</p>;
+    return <p className={textRole('caption', 'px-3')}>Chats could not be loaded.</p>;
   if (rows.length === 0)
     return (
-      <p className={textRole('meta', 'px-2.5')}>
+      <p className={textRole('caption', 'px-3')}>
         {state === 'filtered' ? 'No chats match this search.' : 'No chats yet.'}
       </p>
     );
@@ -182,7 +182,7 @@ function ChatRows({
               onClick={onNavigate}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'focus-ring grid gap-0.5 rounded-[var(--radius-control)] border px-2.5 py-1.5',
+                'focus-ring grid gap-0.5 rounded-[var(--radius-control)] border px-3 py-2',
                 active
                   ? 'border-border bg-panel'
                   : 'hover:bg-active border-transparent text-secondary',
@@ -205,7 +205,7 @@ function ChatMeta({ chat }: Readonly<{ chat: AgentChatSummary }>) {
       : null;
   if (!chat.target_label && !marker) return null;
   return (
-    <span className={textRole('meta', 'truncate')}>
+    <span className={textRole('caption', 'truncate')}>
       {[chat.target_label, marker].filter(Boolean).join(' · ')}
     </span>
   );

@@ -51,7 +51,7 @@ function SectionCard({
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
-        {caption ? <p className={textRole('meta', 'text-secondary')}>{caption}</p> : null}
+        {caption ? <p className={textRole('caption', 'text-secondary')}>{caption}</p> : null}
       </CardHeader>
       <CardContent className="p-0">
         <SectionBody loading={loading} errored={errored} empty={empty}>
@@ -118,7 +118,7 @@ export function EnginesCard({
                   <span className="grid">
                     <span>{engineLabel(row.logical_engine) || row.logical_engine}</span>
                     {productModelLabel(row.logical_engine, row.transport_model) ? (
-                      <span className={textRole('meta', 'text-secondary')}>
+                      <span className={textRole('caption', 'text-secondary')}>
                         {productModelLabel(row.logical_engine, row.transport_model)}
                       </span>
                     ) : null}

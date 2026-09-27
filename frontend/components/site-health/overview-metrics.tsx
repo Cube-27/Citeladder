@@ -195,8 +195,8 @@ function OverviewMetricCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="grid gap-1">
-          <Icon aria-hidden className="text-subtle size-4" />
-          <p className={textRole('bodyStrong')}>{title}</p>
+          <Icon aria-hidden className="text-muted size-4" />
+          <p className={textRole('itemTitle')}>{title}</p>
         </div>
         {value === null ? (
           <UnavailableValue state="not_measured" />
@@ -213,10 +213,10 @@ function OverviewMetricCard({
         )}
       </div>
       <div className="grid gap-1">
-        {caveat ? <p className="text-muted text-xs">{caveat}</p> : null}
-        <p className="text-secondary text-xs">{detail}</p>
+        {caveat ? <p className="type-caption">{caveat}</p> : null}
+        <p className="type-caption">{detail}</p>
       </div>
-      <Button asChild variant="ghost" size="sm" className="-ms-2.5 mt-auto justify-self-start">
+      <Button asChild variant="ghost" size="sm" className="-ms-3 mt-auto justify-self-start">
         <ProjectLink href={href}>View details</ProjectLink>
       </Button>
     </div>

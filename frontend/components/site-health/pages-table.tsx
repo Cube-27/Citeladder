@@ -195,7 +195,7 @@ export function PagesTable({
             }}
             className="focus-ring cursor-pointer"
           >
-            <TableCell numeric className="text-muted text-xs tabular-nums">
+            <TableCell numeric className="type-caption tabular-nums">
               {index + 1}
             </TableCell>
             {/* A URL is one unbreakable token, so an untruncated cell takes its
@@ -214,7 +214,7 @@ export function PagesTable({
                 >
                   {pageDisplayTitle(page.title, page.display_url)}
                 </span>
-                <span className="text-muted truncate text-xs tabular-nums" title={page.display_url}>
+                <span className="type-caption truncate tabular-nums" title={page.display_url}>
                   {page.display_url}
                 </span>
               </span>
@@ -255,23 +255,20 @@ export function PagesTable({
                 <TableCell
                   key={column.sort}
                   numeric
-                  className={cn(
-                    'tabular-nums',
-                    value === null ? 'text-muted text-xs' : 'text-secondary',
-                  )}
+                  className={cn('tabular-nums', value === null ? 'type-caption' : 'text-secondary')}
                 >
                   {value === null ? <UnavailableValue state="not_measured" /> : value}
                 </TableCell>
               );
             })}
-            <TableCell className="text-secondary text-xs">
+            <TableCell className="type-caption">
               {page.main_content_indexable === null ? (
                 <UnavailableValue state="not_measured" />
               ) : (
                 formatIndexability(page.main_content_indexable)
               )}
             </TableCell>
-            <TableCell className="text-secondary text-xs whitespace-nowrap">
+            <TableCell className="type-caption whitespace-nowrap">
               <Measured value={formatAudited(page.last_audited, timeZone)} />
             </TableCell>
             <TableCell>

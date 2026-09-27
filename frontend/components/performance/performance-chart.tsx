@@ -136,9 +136,7 @@ export function PerformanceChart({
     // The region still states which absence this is, using the summary that
     // already distinguishes "no metrics selected" from "nothing measured".
     return (
-      <div className={cn('text-muted flex min-h-[72px] items-center text-sm', className)}>
-        {summary}
-      </div>
+      <div className={cn('type-body flex min-h-[72px] items-center', className)}>{summary}</div>
     );
   }
 
@@ -280,7 +278,7 @@ export function PerformanceChart({
           return (
             <span
               key={`x-label-${idx}`}
-              className={cn('absolute text-xs tabular-nums', alignClass)}
+              className={cn('type-caption absolute tabular-nums', alignClass)}
               style={{ left: `${pct}%` }}
             >
               {label}
@@ -294,7 +292,7 @@ export function PerformanceChart({
           {series.map((entry) => {
             const domain = domainFor(entry);
             return (
-              <li key={entry.key} className="text-muted flex items-center gap-1.5 text-xs">
+              <li key={entry.key} className="type-caption flex items-center gap-2">
                 <span
                   aria-hidden
                   className="inline-block h-0.5 w-4 rounded-full"
@@ -335,7 +333,7 @@ function ChartTooltip({
   const selectedDate = dateSource?.selected[index]?.date ?? null;
   const comparisonDate = dateSource?.comparison?.[index]?.date ?? null;
   return (
-    <output className="bg-panel border-border shadow-elevated pointer-events-none absolute top-2 right-2 grid gap-1 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
+    <output className="type-caption bg-elevated border-border shadow-elevated pointer-events-none absolute top-2 right-2 grid gap-1 rounded-[var(--radius-overlay)] border px-3 py-2">
       <p className="text-secondary">
         Day <span className="tabular-nums">{index + 1}</span>
         {selectedDate ? ` · ${selectedDate}` : ''}

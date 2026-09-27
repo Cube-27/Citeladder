@@ -32,33 +32,25 @@ export function NavLink({
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] border px-2.5 text-sm transition-colors duration-150',
-        // Navigation is a label, not reading copy, so both states sit at the
-        // shared label weight rather than body regular — the destinations stay
-        // scannable against the group titles above them. The role owns the
-        // weight; 600 stays reserved for headings, and the active row is
-        // carried by the paper surface, leading mark, and icon.
+        'group relative flex h-[var(--nav-item-height)] items-center gap-2 rounded-[var(--radius-control)] px-3 transition-colors duration-150',
+        // Navigation takes the control role. The active row is raised paper
+        // with a soft drop and the brand icon — never an outline or a leading
+        // bar, which read as a second, competing selection mark.
         active
-          ? textRole(
-              'label',
-              'app-nav-current border-border bg-panel text-foreground before:bg-brand-forest before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full',
-            )
-          : textRole(
-              'label',
-              'border-transparent text-secondary hover:bg-active hover:text-foreground',
-            ),
+          ? textRole('control', 'bg-selected shadow-selected text-foreground')
+          : textRole('control', 'text-secondary hover:bg-active hover:text-foreground'),
       )}
     >
       <Icon
         className={cn(
           'size-4 shrink-0 transition-colors duration-150',
-          active ? 'text-foreground' : 'text-subtle group-hover:text-foreground',
+          active ? 'text-brand-forest' : 'text-muted group-hover:text-foreground',
         )}
         aria-hidden
       />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.count === undefined ? null : (
-        <span className={textRole('meta', 'tabular-nums')}>{item.count}</span>
+        <span className={textRole('caption', 'tabular-nums')}>{item.count}</span>
       )}
     </Link>
   );

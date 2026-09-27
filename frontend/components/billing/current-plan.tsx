@@ -102,8 +102,8 @@ export function CurrentPlan({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid min-w-0 gap-1">
           <p className={eyebrowClasses}>Current plan</p>
-          <div className="flex items-center gap-2.5">
-            <p className={textRole('objectTitle')}>
+          <div className="flex items-center gap-2">
+            <p className={textRole('sectionTitle')}>
               {currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
             </p>
             <Badge variant="status" value={entitlement ? 'success' : 'info'}>

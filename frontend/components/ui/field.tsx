@@ -49,12 +49,12 @@ export function Field({
         'aria-describedby': describedBy,
       })}
       {hint && !error ? (
-        <span id={hintId} className="text-muted text-xs">
+        <span id={hintId} className="type-caption">
           {hint}
         </span>
       ) : null}
       {error ? (
-        <span id={errorId} role="alert" className="text-danger-text text-xs">
+        <span id={errorId} role="alert" className="type-caption text-danger-text">
           {error}
         </span>
       ) : null}

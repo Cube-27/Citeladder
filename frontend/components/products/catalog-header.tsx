@@ -41,7 +41,7 @@ function StatValue({ value }: Readonly<{ value: string }>) {
   return value === PLACEHOLDER ? (
     <UnavailableValue state="not_measured" />
   ) : (
-    <Metric className="text-2xl">{value}</Metric>
+    <Metric>{value}</Metric>
   );
 }
 

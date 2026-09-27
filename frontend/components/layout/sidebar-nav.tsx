@@ -88,9 +88,7 @@ function DashboardNav({ onNavigate }: Readonly<{ onNavigate?: () => void }>) {
         return (
           <div key={group.title} className="flex flex-col gap-0">
             {showHeading ? (
-              <p className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-3.5 pb-1')}>
-                {group.title}
-              </p>
+              <p className={cn(eyebrowClasses, 'text-secondary px-3 pt-4 pb-1')}>{group.title}</p>
             ) : null}
             <StationLinks group={group} onNavigate={onNavigate} />
           </div>

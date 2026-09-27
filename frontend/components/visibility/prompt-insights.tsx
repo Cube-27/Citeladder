@@ -46,8 +46,8 @@ export function CompetitorSuggestions({
   return (
     <div className="flex flex-col gap-3 pt-2">
       <div className="grid gap-0.5">
-        <h3 className={textRole('objectTitle')}>Competitor suggestions</h3>
-        <p className="text-muted text-xs">
+        <h3 className={textRole('sectionTitle')}>Competitor suggestions</h3>
+        <p className="type-caption">
           Observed repeatedly in third-party citations. Verify relevance before adding.
         </p>
       </div>
@@ -59,11 +59,11 @@ export function CompetitorSuggestions({
           {suggestionsQuery.data.map((candidate) => (
             <li
               key={candidate.id}
-              className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 text-sm"
+              className="type-body flex flex-wrap items-center justify-between gap-2 px-4 py-3"
             >
               <div className="grid gap-0.5">
-                <p className={textRole('bodyStrong')}>{candidate.name}</p>
-                <p className="text-muted text-xs">
+                <p className={textRole('itemTitle')}>{candidate.name}</p>
+                <p className="type-caption">
                   {candidate.domain} · {candidate.prompt_count} prompts / {candidate.engine_count}{' '}
                   engines
                 </p>
@@ -81,7 +81,7 @@ export function CompetitorSuggestions({
         </ul>
       ) : null}
       {!suggestionsQuery.data?.length && !suggestionsQuery.isLoading ? (
-        <p className="text-muted text-xs">No repeated citation candidates yet.</p>
+        <p className="type-caption">No repeated citation candidates yet.</p>
       ) : null}
       {acceptMutation.isError ? (
         <Alert tone="danger">Could not add that competitor. Try again.</Alert>

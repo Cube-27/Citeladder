@@ -59,8 +59,8 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
             {rows.map((skill) => (
               <li key={skill.id} className="grid gap-1 py-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className={textRole('bodyStrong')}>{skill.label}</h3>
-                  <span className={textRole('meta')}>
+                  <h3 className={textRole('itemTitle')}>{skill.label}</h3>
+                  <span className={textRole('caption')}>
                     Produces: {outputKindLabel(skill.output_kind)}
                   </span>
                 </div>

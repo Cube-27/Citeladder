@@ -89,10 +89,10 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 </div>
               </div>
 
-              <div className="border-border flex shrink-0 items-center justify-between gap-2 border-t p-[var(--sidebar-pad-x)]">
+              <div className="flex shrink-0 items-center justify-between gap-2 p-[var(--sidebar-pad-x)]">
                 <Link
                   to={overviewHref}
-                  className="focus-ring flex items-center rounded-xs px-2.5 py-1 transition-opacity hover:opacity-90"
+                  className="focus-ring flex items-center rounded-xs px-3 py-1 transition-opacity hover:opacity-90"
                   aria-label="CiteLadder command center"
                 >
                   <LogoMark variant="sidebar" priority />
@@ -116,8 +116,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                     <Menu className="size-4" aria-hidden />
                   </Button>
                 </div>
-                <div className="text-secondary min-w-0 truncate text-sm">{compactTitle}</div>
-                <div className="flex items-center justify-end gap-2.5 justify-self-end">
+                <div className="type-body min-w-0 truncate">{compactTitle}</div>
+                <div className="flex items-center justify-end gap-2 justify-self-end">
                   <AgentPanelTrigger />
                   <ThemeSwitch />
                   <UserMenuTrigger presenter="compact" />

@@ -49,13 +49,13 @@ export function Composer({
       }}
     >
       {chips.length > 0 ? (
-        <ul aria-label="Context for this request" className="flex flex-wrap gap-1.5">
+        <ul aria-label="Context for this request" className="flex flex-wrap gap-2">
           {chips.map((chip) => (
             <li
               key={chip.key}
-              className="bg-background-alt text-secondary inline-flex max-w-full items-center gap-1 rounded-full px-2.5 py-0.5"
+              className="bg-background-alt text-secondary inline-flex max-w-full items-center gap-1 rounded-full px-3 py-0.5"
             >
-              <span className={textRole('meta', 'truncate text-secondary')}>{chip.label}</span>
+              <span className={textRole('caption', 'truncate text-secondary')}>{chip.label}</span>
               {onRemoveChip ? (
                 <Pressable
                   className="focus-ring hover:text-foreground rounded-full"

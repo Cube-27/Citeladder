@@ -45,14 +45,14 @@ function ProgressHeader({
 }>) {
   return (
     <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-      <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-2">
         <Badge variant="run-status" value={auditBadgeValue(audit.status)}>
           {auditStatusLabel(audit.status)}
         </Badge>
         <MeasurementContext provenance={audit.model_provenance} />
         {polling ? (
           <span
-            className="text-muted inline-flex items-center gap-1.5 text-xs tabular-nums"
+            className="type-caption inline-flex items-center gap-2 tabular-nums"
             aria-live="polite"
           >
             <span className="activity-dot bg-accent inline-block size-1.5" aria-hidden />
@@ -106,7 +106,7 @@ function ProgressBar({
 
   return (
     <div className="grid gap-1">
-      <div className="text-muted flex justify-between text-xs">
+      <div className="type-caption flex justify-between">
         <span>Progress</span>
         <span>{percent}%</span>
       </div>
@@ -140,7 +140,7 @@ function ProgressMetrics({ audit }: Readonly<{ audit: Audit }>) {
       </div>
       <div className="grid gap-1">
         <Label>Created</Label>
-        <span className={textRole('bodyStrong')}>{formatDateTime(audit.created_at, timeZone)}</span>
+        <span className={textRole('itemTitle')}>{formatDateTime(audit.created_at, timeZone)}</span>
       </div>
     </dl>
   );
@@ -161,7 +161,7 @@ function ProgressNotices({
 }>) {
   return (
     <>
-      {errorMessage ? <p className="text-danger-text text-sm">{errorMessage}</p> : null}
+      {errorMessage ? <p className="type-body text-danger-text">{errorMessage}</p> : null}
       {cancelNotice ? <MutationNotice notice={cancelNotice} onRetry={onCancelRetry} /> : null}
       {rerunNotice ? <MutationNotice notice={rerunNotice} onRetry={onRerunRetry} /> : null}
     </>

@@ -23,7 +23,7 @@ export function CohortCompositionContext({
       : composition.removed_page_kinds.map(pageKindLabel).join(', ');
 
   return (
-    <div className={panelClasses({ tone: 'tonal', pad: 'compact' }, 'grid gap-2 text-xs')}>
+    <div className={panelClasses({ tone: 'tonal', pad: 'compact' }, 'type-caption grid gap-2')}>
       <p className={textRole('emphasis', 'text-foreground')}>Scored cohort composition changed.</p>
       <p className="text-secondary">
         Added page kinds: {addedKinds}. Removed page kinds: {removedKinds}. Score movement is not

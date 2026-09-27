@@ -32,15 +32,15 @@ function Outcome({
   const Icon = passed ? CheckCircle2 : XCircle;
   return (
     <div
-      className={panelClasses({ tone: 'well', pad: 'compact' }, 'flex min-w-0 items-start gap-2.5')}
+      className={panelClasses({ tone: 'well', pad: 'compact' }, 'flex min-w-0 items-start gap-2')}
     >
       <Icon
         className={cn('mt-0.5 size-4 shrink-0', passed ? 'text-score-high' : 'text-muted')}
         aria-hidden
       />
       <div className="min-w-0">
-        <p className={textRole('bodyStrong')}>{label}</p>
-        <p className="text-muted text-xs leading-relaxed">{detail}</p>
+        <p className={textRole('itemTitle')}>{label}</p>
+        <p className="type-caption">{detail}</p>
       </div>
     </div>
   );
@@ -69,11 +69,11 @@ function EvidencePromptHeader({
   const transport = productTransportLabel(evidence.transport_provider);
 
   return (
-    <section className="border-border-subtle grid min-w-0 gap-2.5 border-b pb-4">
+    <section className="border-border-subtle grid min-w-0 gap-2 border-b pb-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Badge variant="neutral">Prompt #{promptBadgeNumber}</Badge>
-          <span className="text-muted text-xs tabular-nums">rep {displayRepetition}</span>
+          <span className="type-caption tabular-nums">rep {displayRepetition}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="neutral">
@@ -86,7 +86,7 @@ function EvidencePromptHeader({
           />
         </div>
       </div>
-      <p className={textRole('body', 'leading-snug')}>{displayPrompt}</p>
+      <p className={textRole('body')}>{displayPrompt}</p>
     </section>
   );
 }
@@ -220,13 +220,9 @@ function EvidenceAnswerBody({
     return <ContentMarkdown markdown={normalizeEvidenceMarkdown(text)} density="compact" />;
   }
   if (measuredAbsence) {
-    return (
-      <span className="text-secondary text-sm">No AI Overview was shown for this search.</span>
-    );
+    return <span className="type-body">No AI Overview was shown for this search.</span>;
   }
-  return (
-    <span className="text-muted text-sm">No answer text was captured for this execution.</span>
-  );
+  return <span className="type-body">No answer text was captured for this execution.</span>;
 }
 
 /** Present, absent and not-applicable are three tones, not a boolean. */
@@ -254,7 +250,7 @@ function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }
     <section className="grid gap-3">
       <div className="grid gap-0.5">
         <Label>Why it scored this way</Label>
-        <p className="text-muted text-xs">
+        <p className="type-caption">
           Deterministic checks against the persisted answer and source evidence.
         </p>
       </div>
@@ -284,7 +280,7 @@ function CitationItem({
   const title = citation.title || citation.domain || citation.url;
 
   return (
-    <li className="flex gap-3 p-3.5">
+    <li className="flex gap-3 p-4">
       <span className={textRole('label', 'tabular-nums mt-0.5 w-5 shrink-0')}>{ordinal}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
@@ -295,17 +291,17 @@ function CitationItem({
                 target="_blank"
                 rel="noreferrer"
                 className={textRole(
-                  'bodyStrong',
-                  'hover:text-accent-text inline-flex max-w-full items-center gap-1.5 transition-colors hover:underline',
+                  'itemTitle',
+                  'hover:text-accent-text inline-flex max-w-full items-center gap-2 transition-colors hover:underline',
                 )}
               >
                 <span className="truncate">{title}</span>
                 <ExternalLink className="size-3 shrink-0" aria-hidden />
               </a>
             ) : (
-              <p className={textRole('bodyStrong', 'truncate')}>{title || 'Untitled source'}</p>
+              <p className={textRole('itemTitle', 'truncate')}>{title || 'Untitled source'}</p>
             )}
-            <p className="text-muted truncate text-xs">{citation.domain}</p>
+            <p className="type-caption truncate">{citation.domain}</p>
           </div>
           <Badge
             className="shrink-0"
@@ -327,12 +323,12 @@ function EvidenceCitationsList({
     <section className="grid gap-3">
       <div className="flex items-center justify-between gap-2">
         <Label>Citations</Label>
-        <span className="text-muted text-xs">
+        <span className="type-caption">
           {citations.length} {citations.length === 1 ? 'source' : 'sources'}
         </span>
       </div>
       {citations.length === 0 ? (
-        <div className="border-border text-muted rounded-[var(--radius-card)] border border-dashed p-4 text-center text-sm">
+        <div className="type-body bg-background-alt rounded-[var(--radius-card)] p-4 text-center">
           No citations were captured from this response.
         </div>
       ) : (
@@ -348,7 +344,7 @@ function EvidenceCitationsList({
 
 function EvidenceFooter({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   return (
-    <footer className="border-border-subtle text-muted flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 text-xs">
+    <footer className="type-caption border-border-subtle flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3">
       <span className="inline-flex items-center gap-1">
         <Search className="size-3" aria-hidden />
         {evidence.prompt_class.replace(/_/g, ' ')} prompt
@@ -403,9 +399,9 @@ function EvidenceStat({
   positive,
 }: Readonly<{ label: string; value: string; positive?: boolean }>) {
   return (
-    <div className="border-border bg-well grid min-w-0 gap-0.5 rounded-[var(--radius-control)] border px-3 py-2.5">
-      <span className="text-muted text-xs">{label}</span>
-      <span className={cn(textRole('bodyStrong', 'truncate'), outcomeToneClass(positive))}>
+    <div className="border-border bg-well grid min-w-0 gap-0.5 rounded-[var(--radius-control)] border px-3 py-3">
+      <span className="type-caption">{label}</span>
+      <span className={cn(textRole('itemTitle', 'truncate'), outcomeToneClass(positive))}>
         {value}
       </span>
     </div>

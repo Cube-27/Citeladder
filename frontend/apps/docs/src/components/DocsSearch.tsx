@@ -57,7 +57,9 @@ export function DocsSearch() {
       >
         <Search className="size-4" aria-hidden />
         <span>Search docs</span>
-        <kbd className="ml-auto hidden text-xs sm:inline">Ctrl K</kbd>
+        <kbd className="type-badge bg-well text-muted ml-auto hidden rounded-xs px-1 py-0.5 sm:inline">
+          Ctrl K
+        </kbd>
       </Button>
       <Dialog
         open={open}
@@ -76,7 +78,7 @@ export function DocsSearch() {
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Try outline approval or citations"
         />
-        <output className={textRole('meta', 'block py-4')}>
+        <output className={textRole('caption', 'block py-4')}>
           {searchStatus(failed, entries, query, results.length)}
         </output>
         {failed && (
@@ -97,9 +99,9 @@ export function DocsSearch() {
                 href={result.href}
                 className="focus-ring hover:bg-accent-soft grid gap-1 rounded-[var(--radius-control)] p-3"
               >
-                <span className={textRole('bodyStrong')}>{result.title}</span>
+                <span className={textRole('itemTitle')}>{result.title}</span>
                 <span className={textRole('body')}>{result.description}</span>
-                <span className={textRole('meta')}>{result.group}</span>
+                <span className={textRole('caption')}>{result.group}</span>
               </a>
             </li>
           ))}

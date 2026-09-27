@@ -54,7 +54,7 @@ export function AnalyticsToolbar<Range extends string, Granularity extends strin
             className={cn(range !== defaultRange && ACTIVE_CLASS)}
           >
             <span className="text-muted">Range:</span>
-            <span className="font-medium">{rangeLabel}</span>
+            <span className="text-foreground">{rangeLabel}</span>
             <ChevronDown className="text-muted size-3" aria-hidden />
           </Button>
         </DropdownTrigger>
@@ -79,7 +79,7 @@ export function AnalyticsToolbar<Range extends string, Granularity extends strin
         options={granularityOptions}
         ariaLabel="Chart interval"
       />
-      <output className="text-muted flex items-center gap-1.5 text-xs">
+      <output className="type-caption flex items-center gap-2">
         {fetching ? (
           <>
             <Spinner size="sm" />

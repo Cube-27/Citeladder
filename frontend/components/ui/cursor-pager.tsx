@@ -22,7 +22,7 @@ export function CursorPager({
   return (
     <>
       {page ? (
-        <span className="text-secondary mr-1 text-xs" aria-live="polite">
+        <span className="type-caption mr-1" aria-live="polite">
           Page {page}
         </span>
       ) : null}

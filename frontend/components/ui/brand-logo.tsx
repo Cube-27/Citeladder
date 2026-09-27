@@ -7,11 +7,11 @@ import { brandInitials } from '@/lib/brand/initials';
 import { cn } from '@/lib/utils';
 
 const SIZE = {
-  xs: { pixels: 14, className: 'size-3.5 rounded-xs text-xs' },
-  sm: { pixels: 20, className: 'size-5 rounded-xs text-xs' },
-  md: { pixels: 24, className: 'size-6 rounded-[var(--radius-control)] text-xs' },
-  lg: { pixels: 32, className: 'size-8 rounded-[var(--radius-control)] text-sm' },
-  xl: { pixels: 40, className: 'size-10 rounded-[var(--radius-card)] text-base' },
+  xs: { pixels: 14, className: 'size-3.5 rounded-xs type-badge' },
+  sm: { pixels: 20, className: 'size-5 rounded-xs type-badge' },
+  md: { pixels: 24, className: 'size-6 rounded-[var(--radius-control)] type-badge' },
+  lg: { pixels: 32, className: 'size-8 rounded-[var(--radius-control)] type-control' },
+  xl: { pixels: 40, className: 'size-10 rounded-[var(--radius-card)] type-figure-sm' },
 } as const;
 
 /**
@@ -52,7 +52,7 @@ export function BrandLogo({
     <span
       aria-hidden
       className={cn(
-        'relative grid shrink-0 place-items-center overflow-hidden font-medium uppercase',
+        'relative grid shrink-0 place-items-center overflow-hidden uppercase',
         spec.className,
         className,
       )}
@@ -69,7 +69,7 @@ export function BrandLogo({
           height={spec.pixels}
           // The plate stays: fetched marks are frequently transparent with dark
           // glyphs, and the app-shell rows these sit in are tonal, not white.
-          className="bg-panel size-full object-contain p-[2px]"
+          className="bg-panel size-full object-contain p-0.5"
           onError={() => setFailed((prev) => ({ ...prev, [src]: true }))}
         />
       ) : (

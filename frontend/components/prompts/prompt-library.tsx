@@ -408,9 +408,7 @@ export function PromptLibrary({
                   <>
                     {tab.label}
                     {statusCounts[tab.id] > 0 ? (
-                      <span className="text-muted ml-1.5 text-xs tabular-nums">
-                        {statusCounts[tab.id]}
-                      </span>
+                      <span className="type-caption ml-2 tabular-nums">{statusCounts[tab.id]}</span>
                     ) : null}
                   </>
                 ),

@@ -82,12 +82,12 @@ function DashboardLoading() {
           </div>
 
           <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <div className="grid content-start gap-3">
+            <Card className="grid content-start gap-3 p-[var(--card-padding)]">
               <div className="flex items-center justify-between gap-3">
                 <Skeleton className="h-5 w-28" />
-                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-5 w-24 rounded-xs" />
               </div>
-              <div className="border-border-subtle divide-border-subtle grid divide-y border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              <div className="divide-border-subtle grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
                 {DASHBOARD_METRIC_PLACEHOLDERS.map((placeholder) => (
                   <div key={placeholder} className="grid gap-2 py-3 sm:px-4 sm:first:ps-0">
                     <Skeleton className="h-3 w-20" />
@@ -96,7 +96,7 @@ function DashboardLoading() {
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
 
             <Card className="flex flex-col justify-between gap-4 p-[var(--card-padding)]">
               <div className="grid gap-3">
@@ -112,7 +112,7 @@ function DashboardLoading() {
             </Card>
           </div>
 
-          <div className="border-border-subtle grid gap-3 border-t pt-3">
+          <div className="grid gap-3">
             <div className="grid gap-2">
               <Skeleton className="h-5 w-24" />
               <Skeleton className="h-4 w-80 max-w-full" />
@@ -130,7 +130,7 @@ function DashboardLoading() {
             <Skeleton className="h-9 w-24 rounded-[var(--radius-control)]" />
           </Card>
 
-          <div className="border-border-subtle grid gap-3 border-t pt-3">
+          <div className="grid gap-3">
             <div className="flex items-center justify-between gap-3">
               <div className="grid flex-1 gap-2">
                 <Skeleton className="h-5 w-28" />
@@ -138,7 +138,7 @@ function DashboardLoading() {
               </div>
               <Skeleton className="h-8 w-20 rounded-[var(--radius-control)]" />
             </div>
-            <div className="divide-border-subtle border-border-subtle grid divide-y border-y">
+            <div className="divide-border-subtle grid divide-y">
               {DASHBOARD_ACTION_PLACEHOLDERS.map((placeholder) => (
                 <div key={placeholder} className="grid gap-2 py-3">
                   <Skeleton className="h-5 w-3/5" />
@@ -151,7 +151,7 @@ function DashboardLoading() {
 
         <div className="grid gap-3">
           <Skeleton className="h-5 w-28" />
-          <div className="border-border-subtle grid gap-4 border-y py-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-3">
             {DASHBOARD_METRIC_PLACEHOLDERS.map((placeholder) => (
               <div key={placeholder} className="grid gap-2">
                 <Skeleton className="h-3 w-24" />
@@ -200,7 +200,7 @@ function DashboardData({
       }
     >
       <Stack gap="section">
-        <div className="grid gap-[var(--workspace-gap)]" data-tour="command-center">
+        <div className="grid gap-[var(--page-section-gap)]" data-tour="command-center">
           <DashboardHeader data={data} activeProject={activeProject} />
           {data.active_prompt_count === 0 ? <PromptSetupCard /> : null}
           {actions.downloadError ? (

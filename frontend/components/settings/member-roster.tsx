@@ -99,12 +99,12 @@ function MemberRow({
   return (
     <TableRow>
       <TableCell>
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-2">
           <span
             aria-hidden
             className={textRole(
               'label',
-              'bg-accent text-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full text-xs uppercase',
+              'type-caption bg-accent text-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full uppercase',
             )}
           >
             {emailInitials(member.email)}
@@ -127,7 +127,7 @@ function MemberRow({
         )}
       </TableCell>
       <TableCell>
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-2">
           {isOwner ? null : (
             <>
               <Button

@@ -173,7 +173,7 @@ export function BillingScreen() {
 
   return (
     <PageShell>
-      <div className="grid gap-[var(--workspace-gap)]">
+      <div className="grid gap-[var(--page-section-gap)]">
         <CheckoutStatus checkout={checkout} />
         {canManage ? null : (
           <Alert tone="info">
@@ -318,7 +318,7 @@ function ChoosePlan({
         <h2 id="choose-plan-title" className={textRole('sectionTitle')}>
           Choose a plan
         </h2>
-        <p className="text-muted text-xs">
+        <p className="type-caption">
           Your billing country sets the currency and tax; you review the exact quote before paying.
           Audits run on your own provider keys, billed by those providers directly.
         </p>
@@ -330,7 +330,7 @@ function ChoosePlan({
         setDetails={setDetails}
         idPrefix="settings"
       />
-      <div className="grid gap-2.5">
+      <div className="grid gap-2">
         {catalog.plans.map((plan) => (
           <PlanRow
             key={plan.key}

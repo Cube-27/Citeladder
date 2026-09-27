@@ -31,9 +31,9 @@ export function OnPageEntities({
   );
   if (!quoted.length) return null;
   return (
-    <div className="grid gap-1.5">
+    <div className="grid gap-2">
       <p className={eyebrowClasses}>{heading}</p>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {quoted.map((entity) => (
           <Badge key={entity.entity_name} variant="classification" value="competitor">
             {entity.entity_name}

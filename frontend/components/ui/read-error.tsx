@@ -43,16 +43,16 @@ export function ReadError({
       </Button>
     );
   } else if (accessFailure) {
-    recovery = <p className="text-xs">Check your workspace access, then try again.</p>;
+    recovery = (
+      <p className="type-caption text-current">Check your workspace access, then try again.</p>
+    );
   }
   return (
     <Alert tone="danger" className={className}>
       <div className="grid gap-3">
         <p>{detail.message}</p>
         {recovery}
-        {detail.requestId ? (
-          <p className="text-muted text-xs">Reference: {detail.requestId}</p>
-        ) : null}
+        {detail.requestId ? <p className="type-caption">Reference: {detail.requestId}</p> : null}
       </div>
     </Alert>
   );

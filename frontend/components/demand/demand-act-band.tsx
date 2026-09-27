@@ -29,11 +29,11 @@ export function DemandActBand({ signals }: Readonly<{ signals: readonly DemandSi
               'flex flex-col gap-2 sm:flex-row sm:items-center',
             )}
           >
-            <div className="grid min-w-0 flex-1 gap-1.5">
-              <span className={textRole('bodyStrong', 'break-all')}>
+            <div className="grid min-w-0 flex-1 gap-2">
+              <span className={textRole('itemTitle', 'break-all')}>
                 {group.page ?? 'No page resolved'}
               </span>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {group.signalTypes.map((type) => (
                   <SignalChip key={type} signalType={type} />
                 ))}

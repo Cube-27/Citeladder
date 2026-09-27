@@ -23,7 +23,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
         The start URL could not be fetched — the crawl never reached any page. Each row is one
         network call the crawler made.
       </p>
-      <ul className={ledgerClasses('ruled')}>
+      <ul className={ledgerClasses('open')}>
         {errors.map((error) => {
           const signature = JSON.stringify([
             error.method,
@@ -41,21 +41,19 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
               data-testid="root-error-row"
               className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2"
             >
-              <span className={textRole('bodyStrong', 'tabular-nums')}>{error.method}</span>
-              <span className="text-muted min-w-0 flex-1 truncate text-sm tabular-nums">
-                {error.target}
-              </span>
+              <span className={textRole('itemTitle', 'tabular-nums')}>{error.method}</span>
+              <span className="type-body min-w-0 flex-1 truncate tabular-nums">{error.target}</span>
               {error.error_code ? (
-                <span className="text-danger-text text-sm tabular-nums">{error.error_code}</span>
+                <span className="type-body text-danger-text tabular-nums">{error.error_code}</span>
               ) : null}
-              <span className="text-muted text-sm tabular-nums">
+              <span className="type-body tabular-nums">
                 {error.status_code !== null ? (
                   `HTTP ${error.status_code}`
                 ) : (
                   <UnavailableValue state="not_measured" />
                 )}
               </span>
-              <span className="text-muted text-sm tabular-nums">
+              <span className="type-body tabular-nums">
                 {/* B6: 0 ms is an unmeasured hop (DNS failure never reached the
                   wire), not an instant response — show the placeholder. */}
                 {error.latency_ms !== null && error.latency_ms > 0 ? (

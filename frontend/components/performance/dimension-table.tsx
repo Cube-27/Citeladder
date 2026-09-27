@@ -101,7 +101,7 @@ function SortableHead({
           {label}
         </span>
         {sublabel ? (
-          <span className={cn('max-w-[10rem] truncate', textRole('meta'))} title={sublabel}>
+          <span className={cn('max-w-[10rem] truncate', textRole('caption'))} title={sublabel}>
             {sublabel}
           </span>
         ) : null}
@@ -134,7 +134,7 @@ function StaticHead({ label, sublabel }: Readonly<{ label: string; sublabel: str
     <TableHead numeric className="min-w-[7.5rem]">
       <span className="inline-flex w-full flex-col items-center gap-0.5 text-center">
         <span>{label}</span>
-        <span className={cn('max-w-[10rem] truncate', textRole('meta'))} title={sublabel}>
+        <span className={cn('max-w-[10rem] truncate', textRole('caption'))} title={sublabel}>
           {sublabel}
         </span>
       </span>
@@ -231,10 +231,7 @@ export function DimensionTable({
         // out identically, so switching QUERIES -> PAGES does not reflow
         // the metric columns under the pointer. Without it each tab sizes
         // to its own longest cell and the whole table jumps.
-        className={cn(
-          'w-full table-fixed text-xs [&_td]:text-xs [&_th]:text-xs',
-          comparing ? 'min-w-[48rem]' : 'min-w-[32rem]',
-        )}
+        className={cn('w-full table-fixed', comparing ? 'min-w-[48rem]' : 'min-w-[32rem]')}
       >
         <colgroup>
           <col className="w-[32%] min-w-[14rem]" />
@@ -309,8 +306,8 @@ export function DimensionTable({
               <TableCell className="bg-panel sticky left-0 z-10">
                 <span
                   className={cn(
-                    dimension === 'page' && 'tabular-nums text-xs break-all',
-                    dimension === 'day' && 'tabular-nums text-xs',
+                    dimension === 'page' && 'tabular-nums break-all',
+                    dimension === 'day' && 'tabular-nums',
                   )}
                 >
                   {formatDimensionValue(dimension, row.display_value)}

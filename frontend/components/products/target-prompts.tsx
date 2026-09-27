@@ -106,8 +106,10 @@ export function TargetPrompts({
         />
         {/* Manual entry is the fallback for an unconfigured model, so it is
             folded away rather than given equal billing beside Generate. */}
-        <details className="text-sm">
-          <summary className="text-secondary cursor-pointer">Add a prompt manually</summary>
+        <details className="type-body">
+          <summary className="type-control text-accent-text cursor-pointer">
+            Add a prompt manually
+          </summary>
           <div className="grid gap-2 pt-2">
             <Textarea
               aria-label="Manual buyer prompt"

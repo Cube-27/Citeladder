@@ -123,13 +123,13 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
                     query-string URL is one unbreakable token and would size
                     the column to its full width. */}
                 <span
-                  className="text-foreground block max-w-[40rem] truncate text-xs tabular-nums"
+                  className="type-caption text-foreground block max-w-[40rem] truncate tabular-nums"
                   title={row.display_url}
                 >
                   {row.display_url}
                 </span>
               </TableCell>
-              <TableCell className="text-secondary text-xs">
+              <TableCell className="type-caption">
                 {row.source ? statusLabel(row.source) : <UnavailableValue state="unknown" />}
               </TableCell>
             </TableRow>
@@ -144,7 +144,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
       <Label>Pages discovered so far</Label>
       {body}
       {crawl.status === 'running' || crawl.status === 'queued' ? (
-        <p className="text-muted text-xs">More URLs appear as discovery continues.</p>
+        <p className="type-caption">More URLs appear as discovery continues.</p>
       ) : null}
       <CursorTableFooter
         {...pageRange(pager.page, pager.pageSize, rows.length)}

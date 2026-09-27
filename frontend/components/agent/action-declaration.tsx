@@ -155,7 +155,7 @@ export function OutputDeclaration({
   if (output.phase === 'outline' || !revision) return null;
   if (!output.action_id)
     return (
-      <p className={textRole('meta')}>
+      <p className={textRole('caption')}>
         Name the page or topic this output is for to declare it implemented.
       </p>
     );
@@ -231,7 +231,7 @@ export function DeclarationStatus({
           ))}
         </ul>
       ) : (
-        <p className={textRole('meta')}>
+        <p className={textRole('caption')}>
           No current finding targets this Action, so there is nothing to measure automatically.
         </p>
       )}
@@ -256,8 +256,8 @@ function LegRow({ leg }: Readonly<{ leg: MeasurementLeg }>) {
   const owner = LEG_OWNER[leg.leg];
   return (
     <li className="grid gap-0.5">
-      <span className={textRole('bodyStrong')}>{measurementLegLabel(leg.leg)}</span>
-      <span className={textRole('meta')}>
+      <span className={textRole('itemTitle')}>{measurementLegLabel(leg.leg)}</span>
+      <span className={textRole('caption')}>
         <LegWait leg={leg} />
         {leg.state === 'observed' || !owner ? null : (
           <>

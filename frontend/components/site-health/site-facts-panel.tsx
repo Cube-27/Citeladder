@@ -165,9 +165,9 @@ function LlmsTxtBadge({ fetched, present }: Readonly<{ fetched: boolean; present
 
 function StatusValue({ status }: Readonly<{ status: number | null }>) {
   if (status === null) {
-    return <UnavailableValue state="unknown" className="text-sm" />;
+    return <UnavailableValue state="unknown" />;
   }
-  return <span className={textRole('bodyStrong', 'tabular-nums')}>{status}</span>;
+  return <span className={textRole('itemTitle', 'tabular-nums')}>{status}</span>;
 }
 
 /**
@@ -200,13 +200,13 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
     <Card data-testid="site-facts-panel">
       <CardContent className="grid gap-2 p-3">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <span className={textRole('bodyStrong')}>AI crawler access</span>
+          <span className={textRole('itemTitle')}>AI crawler access</span>
           <SummaryBadge view={view} />
-          <span className="text-secondary flex items-center gap-1.5 text-xs">
+          <span className="type-caption flex items-center gap-2">
             <span>robots.txt</span>
             <StatusValue status={view.robotsStatus} />
           </span>
-          <span className="text-secondary flex items-center gap-1.5 text-xs">
+          <span className="type-caption flex items-center gap-2">
             <span>llms.txt</span>
             <StatusValue status={view.llmsTxtStatus} />
           </span>
@@ -233,7 +233,7 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
                   key={bot}
                   data-testid={`site-facts-stance-${bot.toLowerCase()}`}
                   className={cn(
-                    'flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-2.5 py-2',
+                    'flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-3 py-2',
                     stance === 'block'
                       ? 'border-danger-border bg-danger-bg'
                       : 'border-border-subtle bg-background-alt',
@@ -241,7 +241,7 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
                 >
                   <span className={textRole('label', 'tabular-nums truncate')}>{bot}</span>
                   <StanceBadge stance={stance} />
-                  <span className="text-muted basis-full text-xs">{engineLabel(bot)}</span>
+                  <span className="type-caption basis-full">{engineLabel(bot)}</span>
                 </div>
               ))}
             </div>

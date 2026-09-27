@@ -60,10 +60,10 @@ export function Conversation({
         >
           <FileText className="text-accent-text size-4 shrink-0" aria-hidden />
           <span className="grid min-w-0 gap-0.5">
-            <span className={textRole('bodyStrong', 'truncate')}>
+            <span className={textRole('itemTitle', 'truncate')}>
               {output.latest_revision.title}
             </span>
-            <span className={textRole('meta')}>
+            <span className={textRole('caption')}>
               {outputKindLabel(output.kind)} · {OUTPUT_PHASE_LABEL[output.phase]} · Revision{' '}
               {output.latest_revision.number}
             </span>
@@ -106,9 +106,9 @@ function MessageBubble({
     <article aria-label="Agent reply" className="grid gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <span className={textRole('label')}>Agent</span>
-        {skill ? <span className={textRole('meta')}>Skill: {skill}</span> : null}
+        {skill ? <span className={textRole('caption')}>Skill: {skill}</span> : null}
         {message.evidence_refs.length > 0 ? (
-          <span className={textRole('meta')}>
+          <span className={textRole('caption')}>
             {message.evidence_refs.length} evidence{' '}
             {message.evidence_refs.length === 1 ? 'reference' : 'references'}
           </span>
@@ -117,13 +117,13 @@ function MessageBubble({
       <ContentMarkdown markdown={message.content} density="compact" />
       {message.steps.length > 0 ? (
         <details className="group">
-          <summary className={textRole('meta', 'cursor-pointer')}>
+          <summary className={textRole('caption', 'cursor-pointer')}>
             Run complete · {message.steps.length} {message.steps.length === 1 ? 'step' : 'steps'}
             {tools > 0 ? ` · ${tools} data ${readsLabel}` : ''}
           </summary>
           <ul className="grid gap-1 ps-4 pt-2">
             {message.steps.map((step, index) => (
-              <li key={`${step.kind}-${index}`} className={textRole('meta')}>
+              <li key={`${step.kind}-${index}`} className={textRole('caption')}>
                 {stepLabel(step)}
               </li>
             ))}
@@ -170,7 +170,7 @@ function RunState({
     case 'failed':
       return <Alert tone="danger">{runErrorCopy(outcome.code)}</Alert>;
     case 'cancelled':
-      return <p className={textRole('meta')}>Stopped. Nothing from this turn was saved.</p>;
+      return <p className={textRole('caption')}>Stopped. Nothing from this turn was saved.</p>;
     default:
       return null;
   }

@@ -132,7 +132,7 @@ function IssuesLoadedRegion({
           <CardContent className="grid gap-3 py-[var(--empty-state-padding)]">
             <AccentEyebrow>Issues</AccentEyebrow>
             <h2 className={textRole('sectionTitle')}>No Site Health crawl yet</h2>
-            <p className="text-secondary max-w-md text-sm">
+            <p className="type-body max-w-md">
               Run Site Health to discover and analyze this project&apos;s pages — grouped issues
               will appear here once a crawl finishes.
             </p>

@@ -101,13 +101,13 @@ function RevisionRow({
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <span className={textRole('bodyStrong')}>Revision {revision.number}</span>
-        <span className={textRole('meta')}>
+        <span className={textRole('itemTitle')}>Revision {revision.number}</span>
+        <span className={textRole('caption')}>
           {revision.author === 'user' ? 'Your edit' : 'Agent'} ·{' '}
           {OUTPUT_PHASE_LABEL[revision.phase]}
           {revision.approved_at ? ' · Approved' : ''} · <DisplayTime value={revision.created_at} />
         </span>
-        {latest ? <span className={textRole('meta')}>Current</span> : null}
+        {latest ? <span className={textRole('caption')}>Current</span> : null}
         <span className="flex-1" />
         <Button variant="ghost" size="sm" aria-expanded={open} onClick={onToggle}>
           {open ? 'Hide' : 'View'}
@@ -120,7 +120,7 @@ function RevisionRow({
       </div>
       {open ? (
         <div className="grid gap-2">
-          <h4 className={textRole('bodyStrong')}>{revision.title}</h4>
+          <h4 className={textRole('itemTitle')}>{revision.title}</h4>
           <ContentMarkdown markdown={revision.body} density="compact" />
         </div>
       ) : null}

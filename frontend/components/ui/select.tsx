@@ -67,7 +67,7 @@ export function Select<T extends string>({
         aria-required={required || undefined}
         id={id}
         className={cn(
-          'focus-ring bg-input text-foreground data-[placeholder]:text-muted flex h-[var(--control-height)] min-w-0 items-center justify-between gap-2 rounded-[var(--radius-control)] px-2.5 text-field shadow-smudge transition-[box-shadow] hover:shadow-smudge-hover disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:shadow-smudge-danger',
+          'focus-ring bg-input text-foreground data-[placeholder]:text-muted flex h-[var(--control-height)] min-w-0 items-center justify-between gap-2 rounded-[var(--radius-control)] px-3 text-field shadow-smudge transition-[box-shadow] hover:shadow-smudge-hover disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:shadow-smudge-danger',
           className,
         )}
       >
@@ -95,7 +95,7 @@ export function Select<T extends string>({
                 key={option.value}
                 value={radixValue(option.value) ?? EMPTY_VALUE}
                 disabled={option.disabled}
-                className={cn(menuItemVariants(), 'cursor-default py-1.5 pr-8 pl-2.5 select-none')}
+                className={cn(menuItemVariants(), 'cursor-default py-2 pr-8 pl-3 select-none')}
               >
                 <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
                 <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex items-center">

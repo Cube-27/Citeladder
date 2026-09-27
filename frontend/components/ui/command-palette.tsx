@@ -56,7 +56,7 @@ type Command = {
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
 const ROW =
-  'flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-3 text-left text-sm h-9';
+  'type-control flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 text-left h-9';
 
 function subscribeToPlatform() {
   return () => {};
@@ -97,8 +97,8 @@ export function CommandPaletteTrigger({
       className={cn('text-muted min-w-0 w-full justify-start text-left [&>span]:w-full', className)}
     >
       <Search className="text-muted size-4 shrink-0" aria-hidden />
-      <span className="min-w-0 truncate text-sm font-normal">Search or jump to…</span>
-      <kbd className="bg-background-alt border-border/60 text-muted ms-auto hidden shrink-0 rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs font-medium sm:inline">
+      <span className="min-w-0 truncate">Search or jump to…</span>
+      <kbd className="bg-well text-muted type-badge ms-auto hidden shrink-0 rounded-xs px-1 py-0.5 sm:inline">
         {isMac ? '⌘K' : 'Ctrl K'}
       </kbd>
     </Button>
@@ -301,10 +301,10 @@ export function CommandPalette() {
               event.preventDefault();
               restoreFocus();
             }}
-            className="border-border/60 bg-elevated/95 shadow-modal-value z-modal fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-[var(--radius-overlay)] border backdrop-blur-xl focus:outline-none"
+            className="border-border bg-elevated/95 shadow-modal-value z-modal fixed top-24 left-1/2 flex max-h-3/5 w-full max-w-xl -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-[var(--radius-overlay)] border backdrop-blur-xl focus:outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
-            <div className="border-border/60 flex items-center gap-3 border-b px-4">
+            <div className="border-border-subtle flex items-center gap-3 border-b px-4">
               <Search className="text-muted size-4 shrink-0" aria-hidden />
               <input
                 ref={inputRef}
@@ -322,9 +322,9 @@ export function CommandPalette() {
                 // `:focus-visible` outline would draw a permanent blue ring
                 // around the header for no information. `!` is needed because
                 // that rule is unlayered and would otherwise beat a utility.
-                className="text-foreground placeholder:text-muted h-11 min-w-0 flex-1 bg-transparent text-sm outline-none focus-visible:outline-none!"
+                className="type-body text-foreground placeholder:text-muted h-11 min-w-0 flex-1 bg-transparent outline-none focus-visible:outline-none!"
               />
-              <kbd className="border-border/60 text-muted shrink-0 rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs tabular-nums">
+              <kbd className="bg-well text-muted type-badge shrink-0 rounded-xs px-1 py-0.5 tabular-nums">
                 esc
               </kbd>
             </div>
@@ -380,7 +380,7 @@ export function CommandPalette() {
                           )}
                           <span className="min-w-0 flex-1 truncate">{command.label}</span>
                           {command.hint ? (
-                            <span className="text-muted shrink-0 text-xs">{command.hint}</span>
+                            <span className="type-caption shrink-0">{command.hint}</span>
                           ) : null}
                           {isActive ? (
                             <CornerDownLeft className="text-muted size-4 shrink-0" aria-hidden />
@@ -395,18 +395,18 @@ export function CommandPalette() {
 
             {/* Keyboard legend — the palette is a keyboard surface first, so
                 it states its own controls rather than assuming they are known. */}
-            <div className="border-border/60 text-muted flex shrink-0 items-center gap-4 border-t px-4 py-2.5 text-xs font-medium">
-              <span className="flex items-center gap-1.5">
-                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs tabular-nums">
+            <div className="border-border-subtle type-caption flex shrink-0 items-center gap-4 border-t px-4 py-3">
+              <span className="flex items-center gap-1">
+                <kbd className="bg-well text-muted type-badge rounded-xs px-1 py-0.5 tabular-nums">
                   ↑
                 </kbd>
-                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs tabular-nums">
+                <kbd className="bg-well text-muted type-badge rounded-xs px-1 py-0.5 tabular-nums">
                   ↓
                 </kbd>
                 navigate
               </span>
-              <span className="flex items-center gap-1.5">
-                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs tabular-nums">
+              <span className="flex items-center gap-1">
+                <kbd className="bg-well text-muted type-badge rounded-xs px-1 py-0.5 tabular-nums">
                   ↵
                 </kbd>
                 select

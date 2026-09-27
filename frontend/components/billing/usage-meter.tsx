@@ -32,9 +32,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
           <span className={textRole('label')}>{label}</span>
           <span className={textRole('label')}>Not available</span>
         </div>
-        <p className="text-muted text-xs">
-          This allowance could not be resolved, so no usage is shown.
-        </p>
+        <p className="type-caption">This allowance could not be resolved, so no usage is shown.</p>
       </div>
     );
   }
@@ -49,7 +47,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
           </span>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-muted text-xs">Unlimited</span>
+          <span className="type-caption">Unlimited</span>
           <ExpiryLine item={item} />
         </div>
       </div>
@@ -64,7 +62,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   const tone = usageToneClass(ratio);
 
   return (
-    <div className="border-border-subtle grid gap-1.5 border-b pb-3.5 last:border-b-0 last:pb-0">
+    <div className="border-border-subtle grid gap-2 border-b pb-4 last:border-b-0 last:pb-0">
       <div className="flex items-center justify-between gap-3">
         <span className={textRole('label')}>{label}</span>
         <span className={textRole('label', 'tabular-nums')}>
@@ -86,7 +84,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
         />
       </div>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-muted text-xs">
+        <span className="type-caption">
           {remaining} remaining
           {item.reserved ? ` · ${item.reserved} reserved` : ''}
         </span>
@@ -103,14 +101,14 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
 function ExpiryLine({ item }: Readonly<{ item: UsageItem }>) {
   if (item.resets_at) {
     return (
-      <p className="text-muted text-xs">
+      <p className="type-caption">
         Resets <DisplayTime value={item.resets_at} dateOnly />.
       </p>
     );
   }
   if (item.earliest_expiry) {
     return (
-      <p className="text-muted text-xs">
+      <p className="type-caption">
         Earliest expiry <DisplayTime value={item.earliest_expiry} dateOnly /> — unused credits are
         forfeited then.
       </p>

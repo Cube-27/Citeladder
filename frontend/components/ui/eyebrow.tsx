@@ -3,9 +3,8 @@ import type { ComponentPropsWithoutRef } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Eyebrow (kicker) recipes — sans micro-labels at the product secondary rung
- * (the `text-role-meta` size — 13/18 in the product, 12/16 on public
- * surfaces — medium, muted, sentence case).
+ * Eyebrow (kicker) recipes — the `label` role (13/18, 500, muted, sentence
+ * case).
  *
  * Labels inherit the shared sans face; numeric labels may opt into tabular
  * numerals without introducing a second font family.
@@ -15,7 +14,7 @@ import { cn } from '@/lib/utils';
  * element is semantic at the call site. <AccentEyebrow> is the accent-toned
  * variant used atop setup and status pages.
  */
-export const eyebrowClasses = 'font-sans text-role-meta font-medium tracking-normal text-muted';
+export const eyebrowClasses = 'type-label';
 
 export function AccentEyebrow({
   children,
@@ -25,7 +24,7 @@ export function AccentEyebrow({
   return (
     <span
       {...props}
-      className={cn(eyebrowClasses, 'text-accent-text inline-flex items-center gap-1.5', className)}
+      className={cn(eyebrowClasses, 'text-accent-text inline-flex items-center gap-2', className)}
     >
       {children}
     </span>

@@ -153,9 +153,7 @@ export function IssuesCatalog({
     issuesBody = <Alert tone="danger">Could not load issues for this crawl. Please refresh.</Alert>;
   } else if (rows.length === 0) {
     issuesBody = (
-      <p className="text-secondary py-[var(--empty-state-padding)] text-sm">
-        No issues match this view.
-      </p>
+      <p className="type-body py-[var(--empty-state-padding)]">No issues match this view.</p>
     );
   }
 
@@ -287,9 +285,9 @@ function IssueSummary({
 
 function SummaryMeasure({ value, label }: Readonly<{ value: number; label: string }>) {
   return (
-    <span className="flex items-baseline gap-1.5">
+    <span className="flex items-baseline gap-2">
       <span className={textRole('sectionTitle', 'tabular-nums')}>{value}</span>{' '}
-      <span className="text-muted text-xs">{label}</span>
+      <span className="type-caption">{label}</span>
     </span>
   );
 }
@@ -344,12 +342,12 @@ function IssueGroupList({
           >
             <span className="flex items-center justify-between gap-3">
               <IssueMetadata issue={issue} />
-              <span className="text-muted text-xs whitespace-nowrap">
+              <span className="type-caption whitespace-nowrap">
                 {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}
               </span>
             </span>
-            <span className={textRole('bodyStrong')}>{issueTitle(issue)}</span>
-            <span className="text-secondary line-clamp-2 text-xs">{issue.description}</span>
+            <span className={textRole('itemTitle')}>{issueTitle(issue)}</span>
+            <span className="type-caption line-clamp-2">{issue.description}</span>
           </Pressable>
         );
       })}

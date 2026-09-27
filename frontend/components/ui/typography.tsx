@@ -1,53 +1,44 @@
 import type { ComponentPropsWithoutRef } from 'react';
 
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 /**
  * The closed set of product text roles.
  *
- * A call site names the *job* the text does and gets its size, weight and ink
- * from that job. It never writes `text-sm font-medium text-foreground` and
- * picks a hierarchy of its own — that is how a card's title, its body copy, its
- * metric and its timestamp all ended up at weight 500, which left weight
- * carrying no information at all.
+ * A call site names the *job* the text does and gets size, leading, weight,
+ * tracking and ink from that job. The recipes live once, as `.type-*` classes
+ * in `apps/app/src/globals.css`; this map only names them, so retuning a role
+ * is one CSS edit and no call site changes.
  *
- * Size, weight, leading, and ink travel together. These stay class recipes so
- * the call site keeps whichever element is semantic.
+ * Weights carry hierarchy with size: 400 for sentences, 500 for labels and
+ * controls, 600 for titles and figures. Ink steps from `foreground` (what the
+ * reader came for) through `secondary` (sentences) to `muted` (labels, meta).
  */
 const TEXT_ROLES = {
-  /** The route `h1`. 26/500/foreground. */
-  pageTitle: 'font-display text-page-title font-medium tracking-[-0.65px] text-foreground',
-  /** A screen section `h2`. 18/500/foreground in the product (16 on public surfaces). */
-  sectionTitle: 'font-display text-role-section font-medium tracking-[-0.0125em] text-foreground',
-  /** A card or object `h3`. 16/500/foreground. */
-  objectTitle: 'font-display text-base font-medium tracking-[-0.0125em] text-foreground',
-  /** Reading copy — descriptions, prose, table cell text. 14/22/400/ink in the product. */
-  body: 'text-role-body font-normal text-secondary',
-  /** Copy that genuinely leads its block. Use sparingly. 14/500/foreground. */
-  bodyStrong: 'text-sm font-medium text-foreground',
-  /** Timestamps, counts, help text, footnotes. 13/500/muted in the product (12 on public surfaces). */
-  meta: 'text-role-meta font-medium text-muted',
-  /** A field label. 14/500/ink. */
-  label: 'text-sm font-medium text-foreground',
-  /** Shared metadata label. */
-  eyebrow: eyebrowClasses,
-  /** A primary numeral. 24/500/foreground, tabular. Size, not weight, carries it. */
-  metric: 'font-sans text-2xl font-medium tracking-[-0.5px] text-foreground tabular-nums',
-  /** A secondary numeral inside a dense row. 16/500/foreground, tabular. */
-  metricSm: 'font-sans text-base font-medium text-foreground tabular-nums',
-  /**
-   * A change indicator. Deliberately ink-less: the caller supplies the tone
-   * role (`text-success-text`, `text-danger-text`), because the sign of the
-   * change is the meaning. 12/400, tabular.
-   */
-  delta: 'text-xs font-normal tabular-nums',
-  /**
-   * A value or name inside a row that owns its own size — a label/value pair,
-   * a table cell, a list line. Sets weight and ink only, so it never fights the
-   * size it inherits. Pass a tone to override the ink.
-   */
-  emphasis: 'font-medium text-foreground',
+  /** The route `h1`. 24/32, 600, foreground, display face. One per page. */
+  pageTitle: 'type-page-title',
+  /** A section, card, drawer or dialog heading. 16/24, 600, foreground. */
+  sectionTitle: 'type-section-title',
+  /** The title of a row, list item or insight. 14/20, 600, foreground. */
+  itemTitle: 'type-item-title',
+  /** Sentences: descriptions, prose, table cell text. 14/20, 400, secondary. */
+  body: 'type-body',
+  /** Buttons, navigation, tabs, links. 14/20, 500; ink comes from state. */
+  control: 'type-control',
+  /** Names a value: metric, field and column labels. 13/18, 500, muted. */
+  label: 'type-label',
+  /** Timestamps, counts, help, footnotes. 12/16, 400, muted. */
+  caption: 'type-caption',
+  /** A metric value. 24/32, 600, foreground, tabular. */
+  figure: 'type-figure',
+  /** A value inside a dense row or cell. 16/24, 600, foreground, tabular. */
+  figureSm: 'type-figure-sm',
+  /** A change indicator. 12/16, 500, tabular; the caller supplies the tone. */
+  delta: 'type-delta',
+  /** Badges, chips, counts, key hints. 12/16, 500; the tone supplies the ink. */
+  badge: 'type-badge',
+  /** A value or name inside text that owns its size: 500, foreground. */
+  emphasis: 'type-emphasis',
 } as const;
 
 export type TextRole = keyof typeof TEXT_ROLES;
@@ -57,40 +48,40 @@ export function textRole(role: TextRole, className?: string) {
   return cn(TEXT_ROLES[role], className);
 }
 
-/** Section heading (card / block level) — the `objectTitle` role. */
+/** Section heading (card / block level) — the `sectionTitle` role. */
 export function SectionTitle({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'h2'>>) {
   return (
-    <h2 {...props} className={textRole('objectTitle', className)}>
+    <h2 {...props} className={textRole('sectionTitle', className)}>
       {children}
     </h2>
   );
 }
 
-/** Metadata label — the `eyebrow` role. */
+/** A label naming a value — the `label` role. */
 export function Label({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={textRole('eyebrow', className)}>
+    <span {...props} className={textRole('label', className)}>
       {children}
     </span>
   );
 }
 
-/** Primary numeral with tabular figures — the `metric` role. */
+/** Primary numeral with tabular figures — the `figure` role. */
 export function Metric({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={textRole('metric', className)}>
+    <span {...props} className={textRole('figure', className)}>
       {children}
     </span>
   );

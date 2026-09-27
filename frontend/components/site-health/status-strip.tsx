@@ -115,7 +115,7 @@ function StripContent({
       <div className="grid gap-3 py-[var(--empty-state-padding)]">
         <AccentEyebrow>Site health</AccentEyebrow>
         <h2 className={textRole('sectionTitle')}>No crawl yet</h2>
-        <p className="text-secondary max-w-md text-sm">
+        <p className="type-body max-w-md">
           Discover and analyze your site&apos;s pages for AI search optimization. Start a crawl to
           see your pages, scores, and issues here — this screen updates in place as the crawl
           progresses.
@@ -223,7 +223,7 @@ function ProgressRow({
           <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
             {statusLabel(crawl.status)}
           </Badge>
-          <span className="text-secondary flex min-w-0 items-center gap-2 text-sm">
+          <span className="type-body flex min-w-0 items-center gap-2">
             {active ? (
               <span
                 aria-hidden
@@ -240,8 +240,8 @@ function ProgressRow({
         </div>
         <dl className="ml-auto flex flex-wrap items-center gap-x-6 gap-y-1">
           {counts.map((count) => (
-            <div key={count.label} className="flex items-center gap-1.5 text-sm">
-              <dt className="text-muted">{count.label}</dt>
+            <div key={count.label} className="type-body flex items-center gap-2">
+              <dt className="type-label">{count.label}</dt>
               <dd className="m-0">
                 {count.value === null ? (
                   <UnavailableValue state="not_measured" />
@@ -297,7 +297,7 @@ function DiscoveryStrip({
   return (
     <ProgressRow crawl={crawl} narration={narration} counts={counts} active={!cancelPending}>
       {sampleMode ? (
-        <p className="text-muted text-sm">
+        <p className="type-body">
           We&apos;ll automatically analyze a {entitlement.sample_url_limit}-page sample of your
           site. Choosing which pages to monitor needs a monitored-URL allowance.
         </p>

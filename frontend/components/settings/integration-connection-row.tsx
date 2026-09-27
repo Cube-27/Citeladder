@@ -84,11 +84,11 @@ function ConnectionActions({
           <Icon className="size-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <div className={textRole('bodyStrong', 'truncate')}>{label}</div>
+          <div className={textRole('itemTitle', 'truncate')}>{label}</div>
           <PropertyPicker connection={connection} disabled={busy} />
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
+      <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
         <Button
           variant="secondary"
           size="sm"
@@ -101,7 +101,7 @@ function ConnectionActions({
         <Button
           variant="secondary"
           size="sm"
-          className="min-w-[86px]"
+          className="min-w-22"
           onClick={onSync}
           title={hasProperty ? undefined : 'Select a property first'}
           disabled={syncDisabled}
@@ -128,11 +128,11 @@ function ConnectionMetadata({
   runActive: boolean;
 }>) {
   return (
-    <div className="border-border-subtle/70 flex flex-wrap items-center justify-between gap-2 border-t pt-2.5">
+    <div className="border-border-subtle flex flex-wrap items-center justify-between gap-2 border-t pt-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
           <span className={eyebrowClasses}>Last synced</span>
-          <span className="text-secondary text-xs tabular-nums">
+          <span className="type-caption tabular-nums">
             <DisplayTime value={connection.last_synced_at} fallback="Never" />
           </span>
         </div>
@@ -143,7 +143,7 @@ function ConnectionMetadata({
           <Badge variant="run-status" value={SYNC_RUN_BADGE[activeRun.status]}>
             {activeRun.status.replace('_', ' ')}
           </Badge>
-          <span className="text-muted text-xs whitespace-nowrap tabular-nums">
+          <span className="type-caption whitespace-nowrap tabular-nums">
             {activeRun.status === 'running' ? (
               `${formatCount(activeRun.row_count)} rows · window ${formatShortDate(activeRun.window_start)}–${formatShortDate(activeRun.window_end)}`
             ) : (
@@ -191,8 +191,8 @@ function DisconnectDialog({
       title={`Disconnect ${label}`}
       description={
         <>
-          Remove <span className="text-xs tabular-nums">{connection.account_ref}</span> from this
-          workspace?
+          Remove <span className="type-emphasis tabular-nums">{connection.account_ref}</span> from
+          this workspace?
         </>
       }
       footer={
@@ -232,8 +232,8 @@ function DisconnectDialog({
           <>
             <p className={textRole('body')}>
               CiteLadder stops syncing {label} for{' '}
-              <span className="text-xs tabular-nums">{connection.account_ref}</span> and removes
-              this connection. Previously imported data is kept.
+              <span className="type-emphasis tabular-nums">{connection.account_ref}</span> and
+              removes this connection. Previously imported data is kept.
             </p>
             <p className={textRole('body')}>
               <strong>
@@ -304,12 +304,12 @@ function ConnectionRowView({
       />
       <ConnectionMetadata connection={connection} activeRun={activeRun} runActive={runActive} />
       {testState ? (
-        <div className="pt-2.5">
+        <div className="pt-3">
           <Alert tone={testState.ok ? 'success' : 'danger'}>{testState.message}</Alert>
         </div>
       ) : null}
       {syncMutation.isError ? (
-        <div className="pt-2.5">
+        <div className="pt-3">
           <Alert tone="danger">{humanizeApiError(syncMutation.error).message}</Alert>
         </div>
       ) : null}

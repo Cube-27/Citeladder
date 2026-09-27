@@ -53,7 +53,7 @@ export function DateField({
   return (
     <div
       className={cn(
-        'focus-frame bg-input flex h-[var(--control-height)] w-full items-center gap-2 rounded-[var(--radius-control)] px-2.5 transition-[box-shadow]',
+        'focus-frame bg-input flex h-[var(--control-height)] w-full items-center gap-2 rounded-[var(--radius-control)] px-3 transition-[box-shadow]',
         // The hover deepening and the danger ring are both box-shadow values,
         // so they are chosen together: an invalid field keeps its danger edge
         // on hover instead of the hover rule outranking it.

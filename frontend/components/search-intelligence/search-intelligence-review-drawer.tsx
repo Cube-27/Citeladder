@@ -276,34 +276,34 @@ export function SearchIntelligenceReviewDrawer({
       {review ? (
         <Stack gap="workspace">
           <Stack as="section" gap="compact">
-            <h3 className={textRole('objectTitle')}>Frozen scope</h3>
+            <h3 className={textRole('sectionTitle')}>Frozen scope</h3>
             <p>
               {searchScopeLabel(String(review.frozen_scope.research_scope))}. Indirect links are{' '}
               {indirectLinkPolicy(review.frozen_scope.research_scope)} from live backlink datasets.
               History is the provider’s monthly domain coverage, including its own link population.
             </p>
-            <dl className="grid grid-cols-2 gap-[var(--compact-gap)] text-sm">
+            <dl className="type-body grid grid-cols-2 gap-[var(--compact-gap)]">
               <div>
-                <dt className="text-muted">Provider calls</dt>
-                <dd className="text-xl tabular-nums">{review.planned_calls}</dd>
+                <dt className="type-label">Provider calls</dt>
+                <dd className="type-figure">{review.planned_calls}</dd>
               </div>
               <div>
-                <dt className="text-muted">Maximum rows</dt>
-                <dd className="text-xl tabular-nums">{formatCount(review.planned_rows)}</dd>
+                <dt className="type-label">Maximum rows</dt>
+                <dd className="type-figure">{formatCount(review.planned_rows)}</dd>
               </div>
               <div>
-                <dt className="text-muted">Estimated total</dt>
-                <dd className="text-xl tabular-nums">${estimateUsd(review.estimated_cost_usd)}</dd>
+                <dt className="type-label">Estimated total</dt>
+                <dd className="type-figure">${estimateUsd(review.estimated_cost_usd)}</dd>
               </div>
               <div>
-                <dt className="text-muted">Pricing version</dt>
+                <dt className="type-label">Pricing version</dt>
                 <dd>{review.pricing_version}</dd>
               </div>
             </dl>
           </Stack>
           <Stack as="section" gap="compact">
-            <h3 className={textRole('objectTitle')}>Charged call plan</h3>
-            <ul className="grid gap-2 text-sm">
+            <h3 className={textRole('sectionTitle')}>Charged call plan</h3>
+            <ul className="type-body grid gap-2">
               {review.call_plan.map((call, index) => (
                 <li
                   className="border-border-subtle rounded-[var(--radius-control)] border p-2"
@@ -335,7 +335,7 @@ export function SearchIntelligenceReviewDrawer({
             </ul>
           </Stack>
           {review.reused_datasets.length ? (
-            <p className="text-muted text-sm">
+            <p className="type-body">
               {review.reused_datasets.length} fresh dataset(s) will be reused without provider
               calls.
             </p>
@@ -384,7 +384,7 @@ export function SearchIntelligenceReviewDrawer({
                 setAcquisitionVolume(value);
             }}
           />
-          <label htmlFor="search-owned-target" className="grid gap-1 text-sm">
+          <label htmlFor="search-owned-target" className="type-label grid gap-2">
             <span>Owned target</span>
             <Select
               id="search-owned-target"
@@ -398,7 +398,7 @@ export function SearchIntelligenceReviewDrawer({
             />
           </label>
           <div className="grid grid-cols-2 gap-3">
-            <label htmlFor="search-location-code" className="grid gap-1 text-sm">
+            <label htmlFor="search-location-code" className="type-label grid gap-2">
               <span>Market</span>
               <Select
                 id="search-location-code"
@@ -416,7 +416,7 @@ export function SearchIntelligenceReviewDrawer({
                 }
               />
             </label>
-            <label htmlFor="search-language" className="grid gap-1 text-sm">
+            <label htmlFor="search-language" className="type-label grid gap-2">
               <span>Language</span>
               <Input
                 id="search-language"
@@ -425,7 +425,7 @@ export function SearchIntelligenceReviewDrawer({
               />
             </label>
           </div>
-          <label htmlFor="search-keyword-seed" className="grid gap-1 text-sm">
+          <label htmlFor="search-keyword-seed" className="type-label grid gap-2">
             <span>Keyword suggestion seed</span>
             <Input
               id="search-keyword-seed"

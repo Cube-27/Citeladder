@@ -127,8 +127,8 @@ function ScoreCard({
           />
           <Stack gap="tight">
             <p className={eyebrowClasses}>{label}</p>
-            <span className={textRole('metric', 'leading-none')}>{formatScore(value)} / 100</span>
-            {sub ? <span className={textRole('meta')}>{sub}</span> : null}
+            <span className={textRole('figure')}>{formatScore(value)} / 100</span>
+            {sub ? <span className={textRole('caption')}>{sub}</span> : null}
           </Stack>
         </div>
       )}

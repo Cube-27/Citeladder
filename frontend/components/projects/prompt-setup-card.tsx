@@ -23,7 +23,7 @@ export function PromptSetupCard() {
         <h2 id="prompt-setup-heading" className={textRole('sectionTitle')}>
           Choose the questions you want to track
         </h2>
-        <p className={textRole('meta')}>
+        <p className={textRole('caption')}>
           Generate buyer questions from your confirmed offerings, or add your own.
         </p>
       </Stack>

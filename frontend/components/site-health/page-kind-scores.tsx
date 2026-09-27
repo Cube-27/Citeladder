@@ -72,7 +72,7 @@ export function PageKindScores({
               {rows.map((row) => (
                 <TableRow key={row.page_kind}>
                   <TableCell>
-                    <PageKindBadge pageKind={row.page_kind} className="text-xs" />
+                    <PageKindBadge pageKind={row.page_kind} />
                   </TableCell>
                   <TableCell numeric className="text-secondary tabular-nums">
                     {row.analyzed_count}
@@ -122,7 +122,7 @@ function MeasurementValue({
     return (
       <span className="grid gap-0.5">
         <span>{formatScore(score)}</span>
-        {caveat ? <span className={textRole('meta', 'normal-case')}>{caveat}</span> : null}
+        {caveat ? <span className={textRole('caption', 'normal-case')}>{caveat}</span> : null}
       </span>
     );
   }
