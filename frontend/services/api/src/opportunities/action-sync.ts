@@ -84,15 +84,29 @@ const GROUP_FIELD_TYPES: Record<keyof ReturnType<typeof groupFields>, string> = 
   evidence_cleared_at: 'timestamptz',
 };
 const GROUP_COLUMNS = Object.keys(GROUP_FIELD_TYPES) as (keyof typeof GROUP_FIELD_TYPES)[];
+// PostgreSQL binds at most 65,535 parameters per statement. Each row binds its
+// id plus every group column; the statement adds updated_at and workspace_id.
+const MAX_BIND_PARAMETERS = 65_535;
+const UPDATE_BATCH_ROWS = Math.floor((MAX_BIND_PARAMETERS - 2) / (GROUP_COLUMNS.length + 1));
 
-/** Restamp every existing Action in one statement. */
+/** Restamp every existing Action, one bounded statement per batch in the caller's transaction. */
 async function updateActions(
   trx: Database,
   scope: Scope,
   updates: { id: string; fields: ReturnType<typeof groupFields> }[],
   now: Date,
 ) {
-  if (!updates.length) return;
+  for (let start = 0; start < updates.length; start += UPDATE_BATCH_ROWS) {
+    await updateActionBatch(trx, scope, updates.slice(start, start + UPDATE_BATCH_ROWS), now);
+  }
+}
+
+async function updateActionBatch(
+  trx: Database,
+  scope: Scope,
+  updates: { id: string; fields: ReturnType<typeof groupFields> }[],
+  now: Date,
+) {
   const values = updates.map(
     ({ id, fields }) =>
       sql`(${sql.join([

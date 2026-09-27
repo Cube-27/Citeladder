@@ -111,7 +111,7 @@ The ladder is strictly ordered: a section title never out-sizes the page title a
 
 Data columns and their headers are centre-aligned and tabular; text columns stay left-aligned. The header centres with its values so a column reads as one block — a sort glyph pushed to the padding edge leaves the label sitting off the numbers by its own width. This resolves the table-header precedence question previously recorded as unresolved: the shared `numeric` flag on `TableHead`/`TableCell` owns both alignment and tabular figures, and call sites do not re-declare either.
 
-Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Spacing is the 4px grid — 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 — plus 2px for hairline insets only; six-, ten- and fourteen-pixel steps are not used. Each rhythm role names one step: label to value 4, icon to text 8, title to content 12, card to card 16, card padding 20, page gutter 32, section to section 48.
+Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Spacing is the 4px grid — 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 — plus 2px for hairline insets only; six-, ten- and fourteen-pixel steps are not used. Each rhythm role names one step: label to value 4, icon to text 8, title to content 12, card to card 16, card padding 20, page gutter 32, section to section 24.
 
 | Geometry role | Value | Use |
 | --- | --- | --- |
