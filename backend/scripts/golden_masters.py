@@ -175,6 +175,7 @@ def secret_strength() -> list[dict[str, Any]]:
 
 
 GOLDEN_MASTERS: dict[str, Callable[[], list[dict[str, Any]]]] = {
+    "ai_referral_sources": analysis.ai_referral_sources,
     "brand_identity_keys": analysis.brand_identity_keys,
     "citation_classifications": analysis.citation_classifications,
     "correlation_ids": correlation_ids,
@@ -184,6 +185,8 @@ GOLDEN_MASTERS: dict[str, Callable[[], list[dict[str, Any]]]] = {
     "mention_positions": analysis.mention_positions,
     "metric_series_points": analysis.metric_series,
     "normalized_domains": analysis.normalized_domains,
+    "python_int_or_zero": analysis.python_int_or_zero,
+    "python_str_or_empty": analysis.python_str_or_empty,
     "python_string_reprs": analysis.python_string_reprs,
     "python_uuids": analysis.python_uuids,
     "retrieval_provenance": analysis.retrieval_provenance,

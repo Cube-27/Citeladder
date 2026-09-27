@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -141,6 +142,19 @@ def _empty_ai_referrals(
     )
 
 
+def ai_referral_sources(raw: Any) -> list[AiReferralSourceRow]:
+    """The persisted per-source rows as served; a malformed row value raises."""
+    return [
+        AiReferralSourceRow(
+            ai_source=str(row.get("ai_source") or ""),
+            sessions=int(row.get("sessions") or 0),
+            share=row.get("share"),
+        )
+        for row in raw or []
+        if isinstance(row, dict)
+    ]
+
+
 async def get_ai_referrals(
     session: AsyncSession,
     *,
@@ -178,15 +192,6 @@ async def get_ai_referrals(
         )
 
     metrics = snapshot.metrics or {}
-    sources = [
-        AiReferralSourceRow(
-            ai_source=str(row.get("ai_source") or ""),
-            sessions=int(row.get("sessions") or 0),
-            share=row.get("share"),
-        )
-        for row in metrics.get("sources") or []
-        if isinstance(row, dict)
-    ]
     return AiReferralsResponse(
         project_id=project_id,
         window_start=snapshot.window_start.isoformat(),
@@ -194,7 +199,7 @@ async def get_ai_referrals(
         granularity=snapshot.granularity,
         referral_volume=metric_series_points(metrics.get("referral_volume")),
         referral_share=metric_series_points(metrics.get("referral_share")),
-        sources=sources,
+        sources=ai_referral_sources(metrics.get("sources")),
         analyzer_version=snapshot.analyzer_version,
         formula_version=snapshot.formula_version,
     )

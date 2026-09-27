@@ -10,7 +10,7 @@ import type { RouteContract } from './routes.ts';
 
 export type JsonSchema = { [key: string]: unknown };
 
-type OpenApiParameter = {
+export type OpenApiParameter = {
   name: string;
   in: 'path' | 'query' | 'header' | 'cookie';
   required: boolean;

@@ -22,6 +22,8 @@
  * known non-routing directive is refused.
  */
 
+import { caddyPathMatches } from '@citeladder/contracts/caddy-path';
+
 export type Upstreams = { python: readonly string[]; typescript: readonly string[] };
 
 /** Where a path can end: a stack, another upstream, a fixed response, or nowhere. */
@@ -102,22 +104,6 @@ function collectMatchers(nodes: Node[], matchers: Map<string, Matcher>): void {
   }
 }
 
-function pathMatches(pattern: string, path: string): boolean {
-  const target = path.toLowerCase();
-  const glob = pattern.toLowerCase();
-  const inner = glob.slice(1, -1);
-  if (!glob.includes('*')) return target === glob;
-  if (glob.length > 1 && glob.startsWith('*') && glob.endsWith('*') && !inner.includes('*')) {
-    return target.includes(inner);
-  }
-  if (glob.endsWith('*') && !glob.slice(0, -1).includes('*')) {
-    return target.startsWith(glob.slice(0, -1));
-  }
-  if (glob.startsWith('*') && !glob.slice(1).includes('*')) return target.endsWith(glob.slice(1));
-  const escaped = glob.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/gu, '\\$&'));
-  return new RegExp(`^${escaped.join('[^/]*')}$`, 'u').test(target);
-}
-
 /** true, false, or null when a non-path condition leaves it undecided. */
 function evaluate(entry: Matcher | undefined, path: string): boolean | null {
   if (!entry) return true;
@@ -125,7 +111,7 @@ function evaluate(entry: Matcher | undefined, path: string): boolean | null {
   for (const test of entry.conditions) {
     if (test === null) undecided = true;
     else if (test.kind === 'path') {
-      if (!test.patterns.some((pattern) => pathMatches(pattern, path))) return false;
+      if (!test.patterns.some((pattern) => caddyPathMatches(pattern, path))) return false;
     } else if (!test.pattern.test(path)) return false;
   }
   return undecided ? null : true;

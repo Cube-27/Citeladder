@@ -21,7 +21,12 @@
  * schema, not the error envelope both stacks actually send; the envelope has
  * its own golden masters.
  */
-import type { JsonSchema, OpenApiDocument, OpenApiOperation } from './document.ts';
+import type {
+  JsonSchema,
+  OpenApiDocument,
+  OpenApiOperation,
+  OpenApiParameter,
+} from './document.ts';
 
 type NormalizedOperation = {
   parameters: { in: string; name: string; required: boolean; schema: unknown }[];
@@ -44,6 +49,7 @@ const ANNOTATIONS = new Set([
   'title',
   'writeOnly',
 ]);
+const HTTP_METHODS = new Set(['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace']);
 const COMPONENT_REF = '#/components/schemas/';
 const LOCAL_DEF_REF = '#/$defs/';
 
@@ -133,16 +139,19 @@ function splitTypeArray(schema: JsonSchema): JsonSchema {
   return result;
 }
 
-function normalizeSchema(node: unknown, definitions: Definitions, seen: Set<string>): unknown {
+function normalizeSchema(node: unknown, definitions: Definitions, seen: string[]): unknown {
   if (Array.isArray(node)) return node.map((item) => normalizeSchema(item, definitions, seen));
   if (!isObject(node)) return node;
   if (typeof node.$ref === 'string') {
     const ref = node.$ref;
-    // A recursive schema stays a reference at its second visit.
-    if (seen.has(ref)) return { $ref: ref };
+    // A recursive schema becomes a back-reference at its second visit, named
+    // by how many references up the chain it points, not by the component
+    // name: Pydantic and zod name the same recursive schema differently.
+    const depth = seen.indexOf(ref);
+    if (depth >= 0) return { $recursion: seen.length - depth };
     const merged: JsonSchema = { ...resolveRef(ref, definitions), ...node };
     delete merged.$ref;
-    return normalizeSchema(merged, definitions, new Set([...seen, ref]));
+    return normalizeSchema(merged, definitions, [...seen, ref]);
   }
   const source = splitTypeArray(node);
   const schema: JsonSchema = {};
@@ -170,11 +179,7 @@ function normalizeSchema(node: unknown, definitions: Definitions, seen: Set<stri
 
 function normalizeRoot(schema: unknown, components: Record<string, JsonSchema>): unknown {
   const defs = isObject(schema) && isObject(schema.$defs) ? schema.$defs : {};
-  return normalizeSchema(
-    schema,
-    { components, defs: defs as Record<string, JsonSchema> },
-    new Set(),
-  );
+  return normalizeSchema(schema, { components, defs: defs as Record<string, JsonSchema> }, []);
 }
 
 function normalizeContent(
@@ -229,10 +234,21 @@ export function familyFragment(document: OpenApiDocument, family: string): Norma
   const components = document.components?.schemas ?? {};
   const fragment: NormalizedFragment = {};
   for (const [path, item] of Object.entries(document.paths)) {
+    // Path-level parameters apply to every operation under the path; an
+    // operation's own parameter with the same location and name wins.
+    const shared = (item as { parameters?: OpenApiParameter[] }).parameters ?? [];
     for (const [method, operation] of Object.entries(item)) {
-      if (operation.tags?.includes(family)) {
-        fragment[`${method.toUpperCase()} ${path}`] = normalizeOperation(operation, components);
-      }
+      if (!HTTP_METHODS.has(method) || !operation.tags?.includes(family)) continue;
+      const own = operation.parameters ?? [];
+      const inherited = shared.filter(
+        (parameter) =>
+          !own.some((entry) => entry.in === parameter.in && entry.name === parameter.name),
+      );
+      const parameters = [...inherited, ...own];
+      fragment[`${method.toUpperCase()} ${path}`] = normalizeOperation(
+        parameters.length > 0 ? { ...operation, parameters } : operation,
+        components,
+      );
     }
   }
   return fragment;

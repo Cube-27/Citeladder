@@ -1,3 +1,4 @@
+import { caddyPathSource } from '@citeladder/contracts/caddy-path';
 import { TYPESCRIPT_INGRESS_PATHS } from '@citeladder/contracts/route-ownership';
 import type { ProxyOptions } from 'vite';
 import { resolveBackendOrigin } from '../../lib/config/backend-origin.ts';
@@ -20,17 +21,13 @@ export function createServerProxy(
   );
 }
 
-/** A Caddy path pattern (`*` within one segment) as an anchored proxy key. */
-function ingressPattern(path: string): string {
-  const segments = path.split('*').map((part) => part.replaceAll(/[.+?^${}()|[\]\\]/g, '\\$&'));
-  return `^${segments.join('[^/]+')}(?:\\?|$)`;
-}
-
 function proxyRoutes(target: string, apiService: string): Record<string, ProxyOptions> {
   const options = (origin: string): ProxyOptions => ({ target: origin, changeOrigin: true });
   // Vite tries keys in insertion order, so the narrower TypeScript paths lead.
+  // Each key is Caddy's own matcher, so dev routes a path as production does
+  // (case-sensitively: Vite compiles proxy keys without flags).
   const typescript = Object.fromEntries(
-    TYPESCRIPT_INGRESS_PATHS.map((path) => [ingressPattern(path), options(apiService)]),
+    TYPESCRIPT_INGRESS_PATHS.map((path) => [caddyPathSource(path), options(apiService)]),
   );
   return {
     ...typescript,

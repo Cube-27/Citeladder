@@ -102,4 +102,50 @@ describe('OpenAPI fragment parity', () => {
     const [read] = parityRoutes();
     expect(() => openApiDocument([read!, read!])).toThrow(/Duplicate route contract/u);
   });
+
+  it('compares a recursive schema by shape, not by the name each stack gives it', () => {
+    const tree = (name: string, ref: string, children: object): OpenApiDocument => ({
+      openapi: '3.1.0',
+      paths: {
+        '/api/v1/tree': {
+          get: {
+            tags: ['tree'],
+            responses: { '200': { content: { 'application/json': { schema: { $ref: ref } } } } },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          [name]: { type: 'object', properties: { label: { type: 'string' }, children } },
+        },
+      },
+    });
+    const node = (ref: string) => ({ type: 'array', items: { $ref: ref } });
+    const pydantic = tree('Node', '#/components/schemas/Node', node('#/components/schemas/Node'));
+    const zod = tree(
+      'TreeNode',
+      '#/components/schemas/TreeNode',
+      node('#/components/schemas/TreeNode'),
+    );
+    const flat = tree('Node', '#/components/schemas/Node', {
+      type: 'array',
+      items: { type: 'string' },
+    });
+    expect(familyFragment(zod, 'tree')).toEqual(familyFragment(pydantic, 'tree'));
+    expect(familyFragment(flat, 'tree')).not.toEqual(familyFragment(pydantic, 'tree'));
+  });
+
+  it('applies path-level parameters to every operation under the path', () => {
+    const id = { name: 'id', in: 'path', required: true, schema: { type: 'string' } } as const;
+    const operation = { tags: ['items'], responses: { '200': {} } };
+    const shared = {
+      openapi: '3.1.0',
+      paths: { '/api/v1/items/{id}': { parameters: [id], get: operation } },
+    } as unknown as OpenApiDocument;
+    const inline: OpenApiDocument = {
+      openapi: '3.1.0',
+      paths: { '/api/v1/items/{id}': { get: { ...operation, parameters: [id] } } },
+    };
+    expect(familyFragment(shared, 'items')).toEqual(familyFragment(inline, 'items'));
+  });
 });

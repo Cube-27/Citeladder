@@ -103,4 +103,37 @@ https://origin.example {
     expect(reach(site, EXECUTION)).toEqual(['python', 'respond', 'typescript']);
     expect(reach(site, PROJECT)).toEqual(['python', 'respond']);
   });
+
+  it("applies Caddy's shape precedence before globbing a path pattern", () => {
+    const snippet = `
+@backend path /api/*
+reverse_proxy @backend {$BACKEND_ORIGIN:127.0.0.1:8000}
+@ts_prefix path /api/v1/executions/*
+reverse_proxy @ts_prefix {$API_SERVICE_ORIGIN:127.0.0.1:8100}
+@ts_glob path /api/v1/projects/*/ai-referrals
+reverse_proxy @ts_glob {$API_SERVICE_ORIGIN:127.0.0.1:8100}
+`;
+    // A trailing wildcard is a prefix match, so it crosses segments.
+    expect(reach(snippet, `${EXECUTION}/events`)).toEqual(['typescript']);
+    // A mid-path wildcard is path.Match: one segment, never across '/'.
+    expect(reach(snippet, `${PROJECT}/ai-referrals`)).toEqual(['typescript']);
+    expect(reach(snippet, `${PROJECT}/x/ai-referrals`)).toEqual(['python']);
+    expect(reach(snippet, `${PROJECT.toUpperCase()}/AI-REFERRALS`)).toEqual(['typescript']);
+  });
+
+  it('treats a wildcard inside a prefix pattern as a literal, as Caddy does', () => {
+    const snippet = `
+@ts_api path /api/v1/projects/*/visibility*
+reverse_proxy @ts_api {$API_SERVICE_ORIGIN:127.0.0.1:8100}
+reverse_proxy {$BACKEND_ORIGIN:127.0.0.1:8000}
+`;
+    expect(reach(snippet, `${PROJECT}/visibility`)).toEqual(['python']);
+    expect(() =>
+      reach(
+        `@x path /api/v?
+respond @x 404`,
+        '/api/v1',
+      ),
+    ).toThrow("Unsupported Caddy path pattern '/api/v?'");
+  });
 });

@@ -101,17 +101,67 @@ export function pyTruthy(value: unknown): boolean {
   return Boolean(value);
 }
 
+/** The value of one Unicode decimal digit (`\p{Nd}`) as `int()` reads it, or -1. */
+export function pyDecimalDigit(character: string): number {
+  if (!/^\p{Nd}$/u.test(character)) return -1;
+  // Decimal digits are encoded as contiguous runs of ten, starting at zero.
+  let start = character.codePointAt(0)!;
+  while (/^\p{Nd}$/u.test(String.fromCodePoint(start - 1))) start -= 1;
+  return (character.codePointAt(0)! - start) % 10;
+}
+
+/** `int(text)` for a `str`, or null where Python raises `ValueError`. */
+function pyIntFromStr(text: string): number | null {
+  let body = pyStrip(text);
+  let sign = 1;
+  if (body.startsWith('+') || body.startsWith('-')) {
+    if (body.startsWith('-')) sign = -1;
+    body = body.slice(1);
+  }
+  if (!/^\p{Nd}+(?:_\p{Nd}+)*$/u.test(body)) return null;
+  let value = 0;
+  for (const character of body.replaceAll('_', '')) value = value * 10 + pyDecimalDigit(character);
+  return sign * value;
+}
+
+/** `int(value or 0)` for a decoded JSON value, or null where Python raises. */
+export function pyIntOrZero(value: unknown): number | null {
+  if (!pyTruthy(value)) return 0;
+  if (typeof value === 'number') return Math.trunc(value);
+  if (typeof value === 'boolean') return 1;
+  return typeof value === 'string' ? pyIntFromStr(value) : null;
+}
+
 /**
- * `str(value or "")` for a decoded JSON value: falsy values become the empty
- * string, and a number prints as Python prints the integral and
- * short-decimal values stored JSON carries.
+ * `repr(value)` for a finite JSON number. A decoded JSONB value carries no
+ * int/float tag, so an integral number prints as an `int` (JSONB renders
+ * `1e16` as `10000000000000000`, which Python also reads as an `int`); only a
+ * stored `2.0` would print differently, as `'2.0'`.
  */
+function pyNumberRepr(value: number): string {
+  if (Number.isInteger(value)) return BigInt(value).toString();
+  const [mantissa, exponent] = value.toExponential().split('e') as [string, string];
+  const power = Number(exponent);
+  // Python switches to scientific notation below 1e-4; JavaScript below 1e-6.
+  if (power >= -4) return String(value);
+  return `${mantissa}e-${String(-power).padStart(2, '0')}`;
+}
+
+/** `repr(value)` for a decoded JSON value, as Python prints the object it decodes to. */
+function pyReprValue(value: unknown): string {
+  if (value === null || value === undefined) return 'None';
+  if (typeof value === 'boolean') return value ? 'True' : 'False';
+  if (typeof value === 'number') return pyNumberRepr(value);
+  if (typeof value === 'string') return pyRepr(value);
+  if (Array.isArray(value)) return `[${value.map(pyReprValue).join(', ')}]`;
+  const entries = Object.entries(value as Record<string, unknown>);
+  return `{${entries.map(([key, item]) => `${pyRepr(key)}: ${pyReprValue(item)}`).join(', ')}}`;
+}
+
+/** `str(value or "")` for a decoded JSON value: falsy values become the empty string. */
 export function pyStrOrEmpty(value: unknown): string {
   if (!pyTruthy(value)) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'boolean') return 'True';
-  if (typeof value === 'number') return Number.isInteger(value) ? value.toFixed(0) : String(value);
-  return JSON.stringify(value);
+  return typeof value === 'string' ? value : pyReprValue(value);
 }
 
 /** Python's `str` ordering: by code point, where JavaScript compares UTF-16 units. */
