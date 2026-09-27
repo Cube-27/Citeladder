@@ -220,6 +220,10 @@ def decision_record(request: _Request, decision: JevDecision) -> dict[str, Any]:
     }
     duplicate = _choice_answer(decision.answers.get("duplicate_of"))
     if duplicate is not None:
+        # A choice that was not offered is an unavailable answer, never a
+        # duplicate the gate may act on.
+        if duplicate["choice"] not in (JEV_DUPLICATE_NONE, *request.options):
+            duplicate["choice"] = None
         duplicate["text"] = request.options.get(str(duplicate["choice"]))
     judged = [value for value in nouls.values() if isinstance(value, float | int)]
     return apply_policy(

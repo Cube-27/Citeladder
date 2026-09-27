@@ -50,3 +50,23 @@ def test_only_a_gate_mode_fail_skips_review(monkeypatch: pytest.MonkeyPatch) -> 
 
     monkeypatch.setattr(jev_settings, "mode", "shadow")
     assert not gated_out(apply_policy(_record(low=0.05)))
+
+
+@pytest.mark.parametrize(
+    "duplicate",
+    [
+        {"choice": None, "probabilities": {}},
+        {"choice": "p1", "probabilities": {}},
+        {"choice": "p1", "probabilities": {"p1": 1.7}},
+    ],
+)
+def test_an_unusable_duplicate_answer_is_incomplete_never_a_pass(
+    duplicate: dict,
+) -> None:
+    record = _record()
+    record["duplicate_of"] = duplicate
+
+    decided = apply_policy(record)
+
+    assert decided["flags"] == ["incomplete"]
+    assert decided["verdict"] == "uncertain"

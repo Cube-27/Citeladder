@@ -19,6 +19,7 @@ are compared. The report is aggregate: it never reads or prints prompt text.
 
 from __future__ import annotations
 
+import uuid
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -53,6 +54,8 @@ class ReviewedDecision:
     decision: dict[str, Any]
     disposition: str
     category: str
+    # Source candidate, for tracing a figure back to its exact row.
+    candidate_id: uuid.UUID | None = None
 
 
 async def load_reviewed_decisions(
@@ -66,6 +69,7 @@ async def load_reviewed_decisions(
     """
     statement = (
         select(
+            PromptCandidate.id,
             PromptCandidate.jev_decision,
             PromptCandidate.disposition,
             BrandProfile.business_context["category"].astext,
@@ -89,9 +93,12 @@ async def load_reviewed_decisions(
     rows = (await session.execute(statement)).all()
     return [
         ReviewedDecision(
-            decision=decision, disposition=disposition, category=category or ""
+            decision=decision,
+            disposition=disposition,
+            category=category or "",
+            candidate_id=candidate_id,
         )
-        for decision, disposition, category in rows
+        for candidate_id, decision, disposition, category in rows
         if isinstance(decision, dict)
     ]
 
@@ -195,6 +202,11 @@ def calibration_report(decisions: list[ReviewedDecision]) -> dict[str, Any]:
         "question_schema_version": JEV_QUESTION_SCHEMA_VERSION,
         "thresholds": jev_settings.thresholds(),
         "other_schema_decisions": len(decisions) - len(current),
+        # The policy each decision was recorded under; the figures below
+        # re-judge every decision under ``thresholds`` to evaluate them.
+        "recorded_policy_versions": dict(
+            Counter(str(d.decision.get("policy_version")) for d in current)
+        ),
         "gate_rejected": len(_with(current, CANDIDATE_DISPOSITION_GATE_REJECTED)),
         "accepted": len(accepted),
         "rejected": len(rejected),

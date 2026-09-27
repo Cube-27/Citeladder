@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.connectors.jev import JevDecision
+from app.core.config.jev import JEV_NOUL_QUESTIONS
 from app.domain.prompts.generation_contract import SuggestedPrompt, SuggestedTopic
 from app.domain.prompts.quality_judge import build_requests, decision_record
 
@@ -108,6 +109,22 @@ def test_weak_answers_and_a_confident_duplicate_flag_the_candidate() -> None:
     assert record["intent"]["choice"] == "learn"
     assert record["state_hash"] == second.state_hash
     assert record["rank_score"] == 0.73
+
+
+def test_a_duplicate_choice_that_was_not_offered_cannot_fail_the_gate() -> None:
+    (request,) = _requests(["tracked question"], ["new one"])
+    answers = {key: {"type": "noul", "noul": 0.9} for key in JEV_NOUL_QUESTIONS}
+    answers["duplicate_of"] = {
+        "type": "choice",
+        "choice": "p9",
+        "probabilities": {"p9": 0.99},
+    }
+
+    record = decision_record(request, JevDecision(model="jev", answers=answers))
+
+    assert record["duplicate_of"]["choice"] is None
+    assert record["verdict"] == "uncertain"
+    assert record["flags"] == ["incomplete"]
 
 
 def test_malformed_choice_answers_are_recorded_as_unavailable_values() -> None:

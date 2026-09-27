@@ -18,6 +18,7 @@ record for the candidate being staged.
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from app.core.config.jev import (
@@ -34,22 +35,33 @@ from app.core.config.jev import (
 
 
 def _number(value: object) -> float | None:
+    """A finite probability in [0, 1]; anything else is unavailable (None)."""
     if isinstance(value, bool) or not isinstance(value, float | int):
         return None
-    return float(value)
+    number = float(value)
+    return number if math.isfinite(number) and 0.0 <= number <= 1.0 else None
 
 
-def duplicate_probability(duplicate: object) -> float | None:
-    """Probability of the chosen duplicate, or None when `none`/unanswered."""
+def _duplicate(duplicate: object) -> tuple[float | None, bool]:
+    """(probability of the chosen duplicate, answer unavailable).
+
+    No duplicate question, or a ``none`` choice, is (None, False). A choice
+    that is missing or lacks a valid probability is unavailable, never "none".
+    """
     if not isinstance(duplicate, dict):
-        return None
+        return None, False
     choice = duplicate.get("choice")
-    if choice in (None, JEV_DUPLICATE_NONE):
-        return None
-    return _number((duplicate.get("probabilities") or {}).get(choice))
+    if choice == JEV_DUPLICATE_NONE:
+        return None, False
+    if not isinstance(choice, str):
+        return None, True
+    probability = _number((duplicate.get("probabilities") or {}).get(choice))
+    return probability, probability is None
 
 
-def _flags(answers: dict[str, Any], duplicate_p: float | None) -> list[str]:
+def _flags(
+    answers: dict[str, Any], duplicate_p: float | None, duplicate_missing: bool
+) -> list[str]:
     values = {key: _number(answers.get(key)) for key in JEV_NOUL_QUESTIONS}
     flags = [
         key
@@ -58,7 +70,7 @@ def _flags(answers: dict[str, Any], duplicate_p: float | None) -> list[str]:
     ]
     if duplicate_p is not None and duplicate_p >= jev_settings.duplicate_flag_at:
         flags.append("duplicate_of")
-    if any(value is None for value in values.values()):
+    if duplicate_missing or any(value is None for value in values.values()):
         flags.append(JEV_FLAG_INCOMPLETE)
     return flags
 
@@ -77,8 +89,8 @@ def _verdict(
 def apply_policy(record: dict[str, Any]) -> dict[str, Any]:
     """``record`` with mode, policy version, thresholds, flags and verdict."""
     answers = record.get("answers") or {}
-    duplicate_p = duplicate_probability(record.get("duplicate_of"))
-    flags = _flags(answers, duplicate_p)
+    duplicate_p, duplicate_missing = _duplicate(record.get("duplicate_of"))
+    flags = _flags(answers, duplicate_p, duplicate_missing)
     return {
         **record,
         "mode": jev_settings.mode,

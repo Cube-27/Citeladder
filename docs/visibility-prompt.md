@@ -120,9 +120,11 @@ counted in `quality_rejected`, and the shortfall is reported, never filled.
 `JEV_MODE=shadow` records and flags without removing anything. The thresholds
 (policy `jev-gate-1`) are provisional until calibrated from review outcomes
 with `scripts/jev_calibration.py`, an aggregate, text-free operator report; a
-threshold change bumps `JEV_POLICY_VERSION`. A JEV failure removes nothing:
-it reports `quality_gate="unavailable"`, the unjudged candidate stays
-reviewable and generation still succeeds. JEV calls are bounded by
+threshold change bumps `JEV_POLICY_VERSION`. A JEV failure never removes
+the candidate it failed on: it reports `quality_gate="unavailable"`, that
+unjudged candidate stays reviewable, candidates judged in the same request are
+still gated, and generation still succeeds. A duplicate choice that was not
+offered, or an answer outside [0, 1], counts as unavailable (`incomplete`). JEV calls are bounded by
 `JEV_MAX_CALLS_PER_GENERATION`, not the agent-call bucket.
 Commercial relevance and distinct needs remain human review criteria; there
 are no word-count windows, opening quotas or automatic rewrite loops. Batching,
