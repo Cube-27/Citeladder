@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-import type { Topic } from '@/lib/api/types';
+import type { PromptGenerateResponse, Topic } from '@/lib/api/types';
 
 import { GeneratePromptsDialog } from './generate-prompts-dialog';
 
@@ -57,5 +57,30 @@ describe('GeneratePromptsDialog', () => {
     await user.click(screen.getByRole('button', { name: /generate/i }));
 
     expect(onGenerate).toHaveBeenCalledWith({ count: 10, topic_ids: [] });
+  });
+
+  it('explains a shortfall caused by the quality gate', () => {
+    const result: PromptGenerateResponse = {
+      candidates: [],
+      topics: [],
+      requested_count: 3,
+      dropped_duplicates: 0,
+      candidates_generated: 6,
+      quality_gate: 'gate',
+      quality_rejected: 3,
+    };
+    render(
+      <GeneratePromptsDialog
+        open
+        onOpenChange={vi.fn()}
+        topics={TOPICS}
+        onGenerate={vi.fn()}
+        result={result}
+      />,
+    );
+
+    const alert = screen.getByText(/removed by quality checks/i);
+    expect(alert).toHaveTextContent('3 weak suggestions removed by quality checks');
+    expect(alert).not.toHaveTextContent(/add topics/i);
   });
 });

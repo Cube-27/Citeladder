@@ -106,9 +106,10 @@ export const promptCandidateSchema = responseObject({
   cohort: promptCohortSchema,
   created_at: z.string(),
   expires_at: z.string(),
-  // Shadow quality judge: judged; off (no judge for its run); unavailable
-  // (the judge failed or timed out); not_judged (past the call cap, or a run
-  // from before the judge). Flags inform review; they never drop a row.
+  // Quality judge: judged; off (no judge for its run); unavailable (the judge
+  // failed or timed out); not_judged (past the call cap, or a run from before
+  // the judge). A listed row was never failed by the gate; its flags inform
+  // review.
   quality_status: z.enum(['judged', 'off', 'unavailable', 'not_judged']).default('not_judged'),
   quality_flags: z.array(z.string()).default([]),
 });
@@ -125,8 +126,11 @@ export const promptGenerateResponseSchema = responseObject({
   requested_count: z.number().int().default(0),
   // Suggestions that passed admission before selection. Never a market size.
   candidates_generated: z.number().int().default(0),
-  // off (no judge configured) | shadow (decisions recorded) | unavailable.
-  quality_gate: z.enum(['off', 'shadow', 'unavailable']).default('off'),
+  // off (no judge configured) | shadow (decisions recorded) | gate (strong
+  // fails removed before review) | unavailable.
+  quality_gate: z.enum(['off', 'shadow', 'gate', 'unavailable']).default('off'),
+  // Suggestions the quality gate removed before review.
+  quality_rejected: z.number().int().default(0),
 });
 
 // `POST /prompt-sets/{id}/candidates/review` result.
