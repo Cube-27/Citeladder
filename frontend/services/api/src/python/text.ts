@@ -155,7 +155,7 @@ function pyNumberRepr(value: number): string {
 }
 
 /** `repr(value)` for a decoded JSON value, as Python prints the object it decodes to. */
-function pyReprValue(value: unknown): string {
+export function pyReprValue(value: unknown): string {
   if (value === null || value === undefined) return 'None';
   if (typeof value === 'boolean') return value ? 'True' : 'False';
   if (typeof value === 'number') return pyNumberRepr(value);

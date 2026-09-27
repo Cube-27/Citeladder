@@ -40,7 +40,6 @@ from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION,
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY,
     ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
-    ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
     ERROR_EXECUTOR_NOT_WIRED,
@@ -59,7 +58,6 @@ from app.domain.commerce.competitors import run_competitor_discovery
 from app.domain.commerce.projector import project_catalog_analysis
 from app.domain.demand.search_intelligence.executor import execute_search_intelligence
 from app.domain.opportunities.recompute import recompute as recompute_opportunities
-from app.domain.opportunities.verification import verify_implementation_events
 from app.models.analytics import AnalyticsTask
 from app.orchestration.executor_errors import CapacityWaitError, TerminalExecutorError
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
@@ -112,7 +110,6 @@ EXECUTORS: dict[str, AnalyticsExecutor] = {
     ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION: project_catalog_analysis,
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY: run_competitor_discovery,
     ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH: _refresh_opportunities,
-    ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION: verify_implementation_events,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION: inspect_source_pages,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE: execute_search_intelligence,
 }

@@ -1,0 +1,5406 @@
+{
+  "name": "opportunity_comparisons",
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "cases": [
+    {
+      "input": [
+        null,
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        null,
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {},
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": "61f2fce6447d11e29494ba1f19330e973a0dde9bc886a59ac7dbfbfad090e261"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": "a65132d9834131ad9f0151b15c47e9d2b83739b8b49fef23554d315a099aa0e4"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": "6ff81897d907dc83b60cab000e40d2a1c72c26a91eeecfec9e0414ab3998bf65"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": "be6c7b68033ee55038fb333c4fa26648a636ca48106a80ead72190fc1dcb2e96"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": "61f2fce6447d11e29494ba1f19330e973a0dde9bc886a59ac7dbfbfad090e261"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": "a65132d9834131ad9f0151b15c47e9d2b83739b8b49fef23554d315a099aa0e4"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": "6ff81897d907dc83b60cab000e40d2a1c72c26a91eeecfec9e0414ab3998bf65"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": "be6c7b68033ee55038fb333c4fa26648a636ca48106a80ead72190fc1dcb2e96"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        null,
+        true,
+        true
+      ],
+      "output": "61f2fce6447d11e29494ba1f19330e973a0dde9bc886a59ac7dbfbfad090e261"
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        null,
+        true,
+        false
+      ],
+      "output": "a65132d9834131ad9f0151b15c47e9d2b83739b8b49fef23554d315a099aa0e4"
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        null,
+        false,
+        true
+      ],
+      "output": "6ff81897d907dc83b60cab000e40d2a1c72c26a91eeecfec9e0414ab3998bf65"
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        null,
+        false,
+        false
+      ],
+      "output": "be6c7b68033ee55038fb333c4fa26648a636ca48106a80ead72190fc1dcb2e96"
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": "61f2fce6447d11e29494ba1f19330e973a0dde9bc886a59ac7dbfbfad090e261"
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": "a65132d9834131ad9f0151b15c47e9d2b83739b8b49fef23554d315a099aa0e4"
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": "6ff81897d907dc83b60cab000e40d2a1c72c26a91eeecfec9e0414ab3998bf65"
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": "be6c7b68033ee55038fb333c4fa26648a636ca48106a80ead72190fc1dcb2e96"
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          },
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "panel_hash": "panel",
+          "benchmark_mode": "brand",
+          "language_code": "en",
+          "country_code": "US",
+          "competitors": [],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "brand_aliases": [
+            "Straße"
+          ],
+          "brand_name": "Café 𐀀"
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": "6ff81897d907dc83b60cab000e40d2a1c72c26a91eeecfec9e0414ab3998bf65"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": "be6c7b68033ee55038fb333c4fa26648a636ca48106a80ead72190fc1dcb2e96"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": "6ff81897d907dc83b60cab000e40d2a1c72c26a91eeecfec9e0414ab3998bf65"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": "be6c7b68033ee55038fb333c4fa26648a636ca48106a80ead72190fc1dcb2e96"
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {},
+          "measurement_policy": {
+            "retrieval_enabled": true,
+            "max_output_tokens": 1024,
+            "answer_instruction": "é"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        null,
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        null,
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        null,
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        null,
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        "engine",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        "engine",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        "engine",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        "engine",
+        false,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        "missing",
+        true,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        "missing",
+        true,
+        false
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        "missing",
+        false,
+        true
+      ],
+      "output": null
+    },
+    {
+      "input": [
+        {
+          "brand_name": "Café 𐀀",
+          "brand_aliases": [
+            "Straße"
+          ],
+          "owned_domains": [
+            "brand.test"
+          ],
+          "competitors": [],
+          "country_code": "US",
+          "language_code": "en",
+          "benchmark_mode": "brand",
+          "panel_hash": "panel",
+          "engine_routes": {
+            "engine": {
+              "transport_provider": "provider",
+              "transport_model": "model"
+            }
+          },
+          "measurement_policy": {
+            "retrieval_enabled": "true"
+          }
+        },
+        "missing",
+        false,
+        false
+      ],
+      "output": null
+    }
+  ]
+}

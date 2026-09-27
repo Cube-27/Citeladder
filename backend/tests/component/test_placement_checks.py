@@ -25,7 +25,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.actions import TARGET_EARNED_PAGE
-from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION
 from app.core.config.earned_actions import RULE_EARNED_PAGE_ACQUIRE
 from app.core.config.placement import (
     PLACEMENT_CHANGE_BRAND_LISTED,
@@ -50,18 +49,10 @@ from app.domain.opportunities.placement_checks import (
     due_placement_page_ids,
     evaluate_placement_checks,
 )
-from app.domain.opportunities.verification import (
-    TRIGGER_SOURCE_PAGE,
-    verify_implementation_events,
-)
-from app.domain.opportunities.verification_result import build_verification_result
 from app.domain.source_pages.admission import claim_pages
-from app.models.analytics import AnalyticsTask
 from app.models.opportunity import (
     Opportunity,
-    OpportunityImplementationEvent,
     OpportunitySnapshot,
-    OpportunityVerificationEvent,
 )
 from app.models.source_pages import (
     PlacementCheck,
@@ -353,53 +344,6 @@ async def test_a_listing_that_went_live_settles_the_check(
     assert check.due_at is None
 
 
-async def test_placement_and_visibility_are_reported_as_two_observations(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """The defect being prevented is reporting them as one.
-
-    A listing can go live while the score sits still, and the score can move
-    for reasons nothing to do with it. Folding placement into the visibility
-    leg would make one of those disagreements invisible.
-    """
-    scenario, opportunity, page, _baseline = await _seed(client, session_factory)
-    await _declare(client, session_factory, scenario, opportunity, key="declare-report")
-    async with session_factory() as session:
-        fresh = await session.get(SourcePage, page.id)
-        assert fresh is not None
-        await _snapshot(
-            session,
-            scenario,
-            fresh,
-            fetched_at=datetime.now(UTC) + timedelta(minutes=5),
-            brand_present=True,
-            brand_matches=3,
-        )
-        await session.commit()
-    await _settle(session_factory, scenario)
-
-    async with session_factory() as session:
-        declaration = await session.scalar(
-            select(OpportunityImplementationEvent).where(
-                OpportunityImplementationEvent.project_id == scenario.project_id
-            )
-        )
-        assert declaration is not None
-        result = await build_verification_result(
-            session, declaration=declaration, post_audit_id=None
-        )
-
-    assert result["placement"]["state"] == PLACEMENT_STATE_SATISFIED
-    # Beside the legs, not inside them.
-    assert "placement" not in result["legs"]
-    assert set(result["legs"]) == {
-        "visibility",
-        "ai_referral_traffic",
-        "branded_search_demand",
-    }
-
-
 async def test_a_due_recheck_makes_its_page_claimable_and_pays_for_it(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
@@ -456,102 +400,6 @@ async def test_a_reading_that_found_nothing_keeps_asking_until_it_stops(
     # Still due: a publisher does not act the day somebody emails them, and a
     # first empty reading is an observation rather than a contradiction.
     assert check.due_at is not None
-
-
-async def test_a_settled_check_becomes_a_verification_observation(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """The observation reaches the declaration through the ordinary verifier.
-
-    It is triggered by the inspection batch rather than by an audit, because
-    an audit cannot see a publisher's page: a verification triggered by one
-    records the placement check as unobservable rather than passing it.
-    """
-    scenario, opportunity, page, _baseline = await _seed(client, session_factory)
-    await _declare(client, session_factory, scenario, opportunity, key="declare-verify")
-    async with session_factory() as session:
-        fresh = await session.get(SourcePage, page.id)
-        assert fresh is not None
-        await _snapshot(
-            session,
-            scenario,
-            fresh,
-            fetched_at=datetime.now(UTC) + timedelta(minutes=5),
-            brand_present=True,
-            brand_matches=3,
-        )
-        await session.commit()
-    await _settle(session_factory, scenario)
-
-    task = AnalyticsTask(
-        workspace_id=scenario.workspace_id,
-        project_id=scenario.project_id,
-        task_kind=ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
-        payload={
-            "trigger_kind": TRIGGER_SOURCE_PAGE,
-            "trigger_id": str(scenario.audit_id),
-        },
-        idempotency_key=f"placement-verify:{scenario.project_id}",
-        status="queued",
-    )
-    async with session_factory() as session:
-        session.add(task)
-        await session.commit()
-        session.expunge(task)
-    await verify_implementation_events(session_factory, task)
-
-    async with session_factory() as session:
-        event = await session.scalar(
-            select(OpportunityVerificationEvent).where(
-                OpportunityVerificationEvent.project_id == scenario.project_id
-            )
-        )
-        assert event is not None
-        assert event.observation_kind == "verified"
-        assert event.result["placement"]["state"] == PLACEMENT_STATE_SATISFIED
-
-
-async def test_an_audit_cannot_observe_a_publishers_page(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """An audit measures answers, not third-party pages.
-
-    Before this, every non-site, non-traffic declaration fell through to "did
-    the project score move", so a healthy project verified an earned action it
-    had never taken. The check is now unobservable from an audit, and an
-    unobservable check verifies nothing.
-    """
-    scenario, opportunity, _page, _baseline = await _seed(client, session_factory)
-    await _declare(client, session_factory, scenario, opportunity, key="declare-audit")
-
-    task = AnalyticsTask(
-        workspace_id=scenario.workspace_id,
-        project_id=scenario.project_id,
-        task_kind=ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
-        payload={"trigger_kind": "audit", "trigger_id": str(scenario.audit_id)},
-        idempotency_key=f"audit-verify:{scenario.project_id}",
-        status="queued",
-    )
-    async with session_factory() as session:
-        session.add(task)
-        await session.commit()
-        session.expunge(task)
-    await verify_implementation_events(session_factory, task)
-
-    async with session_factory() as session:
-        events = list(
-            (
-                await session.scalars(
-                    select(OpportunityVerificationEvent).where(
-                        OpportunityVerificationEvent.project_id == scenario.project_id
-                    )
-                )
-            ).all()
-        )
-
-    assert events == []
 
 
 async def _thin_snapshot(

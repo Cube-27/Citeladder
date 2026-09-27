@@ -72,7 +72,6 @@ __all__ = [
     "evaluate_placement_checks",
     "open_placement_check",
     "placement_expected_check",
-    "placement_section",
 ]
 
 # What each earned rule's done-state actually is. Acquiring a listing and
@@ -435,46 +434,3 @@ async def evaluate_placement_checks(
         _reschedule(check, moment=moment)
         observed += 1
     return observed
-
-
-async def placement_section(
-    session: AsyncSession, *, declaration: OpportunityImplementationEvent
-) -> dict | None:
-    """The placement observation, for the verification result's own section.
-
-    Deliberately NOT one of the comparable legs. "The listing is live" and
-    "visibility moved" are two observations about two different things and are
-    free to disagree; folding one into the other is what made a verification
-    result claim more than it knew.
-    """
-    check = await session.scalar(
-        select(PlacementCheck).where(
-            PlacementCheck.implementation_event_id == declaration.id
-        )
-    )
-    if check is None:
-        return None
-    return {
-        # The persisted state verbatim. Renaming it into a second four-value
-        # vocabulary here added no information and gave the fallback a chance
-        # to report an unrecognised state as "we could not compare" -- the one
-        # answer this module must never infer. The words a reader sees are the
-        # frontend's label table, which already owns that job.
-        "state": check.state,
-        "expected_change": check.expected_change,
-        "rule_id": check.rule_id,
-        "url_hash": check.url_hash,
-        "target_url": declaration.target_external_url,
-        "reason": check.state_reason,
-        "baseline_snapshot_id": str(check.baseline_snapshot_id)
-        if check.baseline_snapshot_id
-        else None,
-        "observation_snapshot_id": str(check.observation_snapshot_id)
-        if check.observation_snapshot_id
-        else None,
-        "observed_at": check.observed_at.isoformat() if check.observed_at else None,
-        "attempts": check.attempts,
-        "max_attempts": PLACEMENT_RECHECK_MAX_ATTEMPTS,
-        "due_at": check.due_at.isoformat() if check.due_at else None,
-        "checker_version": check.checker_version,
-    }

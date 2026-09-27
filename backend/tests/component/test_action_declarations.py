@@ -19,9 +19,7 @@ from app.domain.opportunities.implementation_events import (
     ImplementationDeclaration,
     declare_action_implemented,
 )
-from app.domain.opportunities.verification import verify_implementation_events
 from app.models.agent import AgentChat, AgentOutput, AgentOutputRevision
-from app.models.analytics import AnalyticsTask
 from app.models.opportunity import (
     Action,
     ActionStatusEvent,
@@ -385,19 +383,42 @@ async def test_observations_derive_measuring_and_done(
         "partial", [{**site_check, "expected_outcome": "fail"}, traffic_check]
     )
 
-    await verify_implementation_events(
-        session_factory,
-        AnalyticsTask(
-            workspace_id=scenario.workspace_id,
-            project_id=scenario.project_id,
-            task_kind="opportunity_verification",
-            payload={
-                "trigger_kind": "site_crawl",
-                "trigger_id": str(scenario.crawl_id),
-            },
-            idempotency_key="test-verifier",
-        ),
-    )
+    # Verification runs in TS; this test owns the persisted Action read contract.
+    async with session_factory() as session:
+        for action_id, kind in [
+            (verified, "verified"),
+            (contradicted, "contradicted"),
+            (partial, "observed"),
+        ]:
+            declaration_id = await session.scalar(
+                select(OpportunityImplementationEvent.id).where(
+                    OpportunityImplementationEvent.workspace_id
+                    == scenario.workspace_id,
+                    OpportunityImplementationEvent.action_id == action_id,
+                )
+            )
+            session.add(
+                OpportunityVerificationEvent(
+                    workspace_id=scenario.workspace_id,
+                    project_id=scenario.project_id,
+                    implementation_event_id=declaration_id,
+                    observation_kind=kind,
+                    observed_at=boundary + timedelta(minutes=1),
+                    crawl_id=scenario.crawl_id,
+                    result={
+                        "causality_notice": (
+                            "Later observations are not proof that this "
+                            "implementation caused the change."
+                        )
+                    },
+                    verifier_version="implementation-verifier-1",
+                    limitations=["traffic_metric: unavailable from a site crawl"]
+                    if kind == "observed"
+                    else [],
+                    idempotency_key=f"read-contract:{action_id}",
+                )
+            )
+        await session.commit()
 
     async def read(action_id: uuid.UUID) -> dict:
         response = await client.get(

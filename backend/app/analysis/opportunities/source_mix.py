@@ -14,6 +14,9 @@ from app.core.config.earned_actions import (
     ACTION_PATH_EARNED,
     ACTION_PATH_OWNED,
     EARNED_COMPETITOR_FACTOR_MAX,
+    EARNED_COMPETITOR_FACTOR_STEP,
+    EARNED_SOURCE_DEFAULT_ROLE,
+    EARNED_SOURCE_DEFAULT_SKILL,
     EARNED_SOURCE_MIN_ANSWERS,
     EARNED_SOURCE_MIN_USAGE_RATE,
     EARNED_SUGGESTED_ROLE_BY_CLASS,
@@ -200,7 +203,10 @@ def _project_rollup(value: dict[str, Any], eligible: int) -> dict[str, Any]:
     rate = answer_count / eligible if eligible else 0.0
     competitor_count = len(value["competitors"])
     usage_factor = min(EARNED_USAGE_FACTOR_MAX, 1.0 + rate)
-    competitor_factor = min(EARNED_COMPETITOR_FACTOR_MAX, 1.0 + competitor_count * 0.1)
+    competitor_factor = min(
+        EARNED_COMPETITOR_FACTOR_MAX,
+        1.0 + competitor_count * EARNED_COMPETITOR_FACTOR_STEP,
+    )
     citations = sorted(value["citations"].items())
     prompts = sorted(value["prompt_indices"])
     return {
@@ -232,9 +238,9 @@ def _project_rollup(value: dict[str, Any], eligible: int) -> dict[str, Any]:
         "usage_factor": round(usage_factor, 4),
         "competitor_cooccurrence_factor": round(competitor_factor, 4),
         "suggested_role": EARNED_SUGGESTED_ROLE_BY_CLASS.get(
-            value["source_class"], "Marketing"
+            value["source_class"], EARNED_SOURCE_DEFAULT_ROLE
         ),
         "suggested_skill_id": EARNED_SUGGESTED_SKILL_BY_CLASS.get(
-            value["source_class"], "article"
+            value["source_class"], EARNED_SOURCE_DEFAULT_SKILL
         ),
     }

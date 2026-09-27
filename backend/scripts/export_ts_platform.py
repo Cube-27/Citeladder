@@ -140,6 +140,7 @@ from app.core.config.workspaces import (
 from app.domain.workspaces.policy import WORKSPACE_ROLES, effective_capabilities
 from scripts.golden_masters import GOLDEN_MASTERS
 from scripts.openapi_fragments import family_fragment, parity_fragment
+from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
@@ -261,6 +262,7 @@ def build_config() -> dict[str, Any]:
         "referrals": _referral_policy(),
         "traffic": traffic_policy(),
         "demand": demand_policy(),
+        "opportunity": opportunity_policy(),
         "abuse": {
             "active_job_retry_after_seconds": _setting(
                 "active_job_retry_after_seconds", AbuseSettings

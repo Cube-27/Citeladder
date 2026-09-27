@@ -310,6 +310,7 @@
       "classify_referrals",
       "demand_snapshot_refresh",
       "ingest_referrals",
+      "opportunity_verification",
       "performance_range_projection",
       "referral_retention_sweep",
       "traffic_snapshot_refresh"
@@ -318,7 +319,6 @@
       "commerce_catalog_projection",
       "commerce_competitor_discovery",
       "opportunity_refresh",
-      "opportunity_verification",
       "search_intelligence_acquisition",
       "source_page_inspection"
     ],
@@ -820,7 +820,7 @@
     ],
     "PERFORMANCE_DEFAULT_COMPARE": "none",
     "PERFORMANCE_YEAR_OVER_YEAR_SHIFT_DAYS": 364,
-    "implementation_verifier_version": "implementation-verifier-2",
+    "implementation_verifier_version": "implementation-verifier-1",
     "dimension_key_separator": " | ",
     "dimension_arity": {
       "gsc_page_daily": 2,
@@ -880,9 +880,9 @@
       "submission_uncertain"
     ],
     "opportunity_versions": [
-      "opp-analyzer-3",
-      "opp-rules-3",
-      "opp-formula-2"
+      "opp-analyzer-1",
+      "opp-rules-1",
+      "opp-formula-1"
     ],
     "stop_words": [
       "a",
@@ -1029,6 +1029,1478 @@
       "ambiguous",
       "branded",
       "non_branded"
+    ]
+  },
+  "opportunity": {
+    "opportunities": {
+      "DEMAND_SIGNAL_CANNIBALIZATION": "query_cannibalization",
+      "DEMAND_SIGNAL_CTR_GAP": "property_relative_ctr_gap",
+      "DEMAND_SIGNAL_DECLINING_QUERY": "declining_query",
+      "DEMAND_SIGNAL_EMERGING_QUERY": "emerging_query",
+      "DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR": "high_impression_low_ctr",
+      "DEMAND_SIGNAL_QUERY_PAGE_RELEVANCE": "query_page_relevance",
+      "DEMAND_SIGNAL_STRIKING_DISTANCE": "striking_distance",
+      "ACTION_PATH_EARNED": "earned",
+      "ACTION_PATH_OWNED": "owned",
+      "RULE_EARNED_PAGE_ACQUIRE": "earned_page_acquire_listing",
+      "RULE_EARNED_PAGE_CORRECT": "earned_page_correct_listing",
+      "RULE_EARNED_PAGE_DEFEND": "earned_page_defend_listing",
+      "RULE_EARNED_PAGE_RESEARCH": "earned_page_research_source",
+      "PROMPT_INTENT_COMPARISON": "comparison",
+      "PROMPT_INTENT_DISCOVERY": "discovery",
+      "PROMPT_INTENT_LOCAL": "local",
+      "PROMPT_INTENT_PURCHASE": "purchase",
+      "PROMPT_INTENT_SERVICE": "service",
+      "ANALYZER_VERSION": "opp-analyzer-1",
+      "RULE_VERSION": "opp-rules-1",
+      "RULE_PRODUCT_NOT_MENTIONED": "product_not_mentioned",
+      "RULE_CITED_ALTERNATIVES": "cited_alternatives_without_uploaded_presence",
+      "RULE_CATALOG_FIELDS_MISSING": "catalog_fields_missing",
+      "FORMULA_VERSION": "opp-formula-1",
+      "CONFIRMED_DECLINE_MIN_FACTOR": 0.1,
+      "CONFIRMED_DECLINE_GAP_NORMALIZER": 10.0,
+      "DEMAND_SIGNAL_GAP_FACTOR": 2.0,
+      "OPPORTUNITY_TYPE_VISIBILITY": "visibility",
+      "OPPORTUNITY_TYPE_COMMERCE": "commerce",
+      "OPPORTUNITY_TYPE_SITE": "site",
+      "OPPORTUNITY_TYPE_TRAFFIC": "traffic",
+      "OPPORTUNITY_TYPE_TOPIC": "topic",
+      "OPPORTUNITY_TYPES": [
+        "commerce",
+        "site",
+        "topic",
+        "traffic",
+        "visibility"
+      ],
+      "SEVERITY_CRITICAL": "critical",
+      "SEVERITY_HIGH": "high",
+      "SEVERITY_MEDIUM": "medium",
+      "SEVERITY_LOW": "low",
+      "SEVERITY_INFO": "info",
+      "OPPORTUNITY_SEVERITIES": [
+        "critical",
+        "high",
+        "info",
+        "low",
+        "medium"
+      ],
+      "CODE_OPPORTUNITY_ORDER_CONFLICT": "opportunity_order_conflict",
+      "CODE_IMPLEMENTATION_TARGET_CONFLICT": "implementation_target_conflict",
+      "CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT": "implementation_idempotency_conflict",
+      "IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN": 160,
+      "IMPLEMENTATION_TARGETS_MAX": 64,
+      "IMPLEMENTATION_VERIFIER_VERSION": "implementation-verifier-1",
+      "IMPLEMENTATION_VERIFICATION_BATCH_MAX": 100,
+      "IMPLEMENTATION_VERIFICATION_HISTORY_MAX": 50,
+      "VISIBILITY_METRIC_PROJECT_SCORE": "visibility_score",
+      "VISIBILITY_CHECK_MIN_DELTA": 1.0,
+      "OPPORTUNITY_RULES_BY_ID": {
+        "brand_absent_high_value_prompt": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "Publish or update an owned page that directly answers this prompt: lead with a clear, quotable definition, then add structured data so answer engines can attribute it. Re-run an audit to confirm owned citations appear.",
+          "rule_id": "brand_absent_high_value_prompt",
+          "severity": "high",
+          "title": "Brand absent on high-value prompt"
+        },
+        "owned_page_not_cited": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "Strengthen the owned page that should win this prompt: align its title, headings, and opening answer with the prompt intent so answer engines have a citable owned source.",
+          "rule_id": "owned_page_not_cited",
+          "severity": "medium",
+          "title": "Owned page not cited for target prompt"
+        },
+        "earned_source_recurs_beside_gap": {
+          "action_path": "earned",
+          "enabled": false,
+          "opportunity_type": "visibility",
+          "remediation": "Inspect the cited pages, decide whether the brand belongs there, then prepare a human-led contribution, profile update, or editorial inclusion request. This observation does not establish domain-wide absence or guarantee a later citation.",
+          "rule_id": "earned_source_recurs_beside_gap",
+          "severity": "medium",
+          "title": "Earned source recurs beside visibility gaps"
+        },
+        "confirmed_prompt_decline": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "Refresh the owned page that best answers this prompt. Lead with a direct answer, close the measured visibility or citation gap, and use this opportunity as evidence context for Content generation.",
+          "rule_id": "confirmed_prompt_decline",
+          "severity": "high",
+          "title": "Prompt visibility has a confirmed decline"
+        },
+        "missing_structured_data": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Add schema.org structured data (JSON-LD preferred) so answer engines can parse and attribute the page's content.",
+          "rule_id": "missing_structured_data",
+          "severity": "medium",
+          "title": "Missing structured data on owned page"
+        },
+        "thin_content": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Add substantive, answer-oriented body content to the page so answer engines have enough text to quote and cite.",
+          "rule_id": "thin_content",
+          "severity": "low",
+          "title": "Thin content on owned page"
+        },
+        "schema_type_mismatch": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "The page already ships structured data, but not the schema.org type expected for its page type (e.g. Product on a product page, FAQPage on an FAQ page). Add the expected type to the existing JSON-LD so answer engines can classify and cite the page correctly.",
+          "rule_id": "schema_type_mismatch",
+          "severity": "high",
+          "title": "Structured data missing the expected schema type"
+        },
+        "schema_properties_incomplete": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Complete the required and recommended properties for the page's expected schema type, using the exact missing-property evidence as the implementation checklist.",
+          "rule_id": "schema_properties_incomplete",
+          "severity": "medium",
+          "title": "Schema properties are incomplete"
+        },
+        "schema_visible_content_conflict": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Align the visible title, headings, and page claims with the corresponding schema.org values; do not leave competing facts for answer engines to resolve.",
+          "rule_id": "schema_visible_content_conflict",
+          "severity": "high",
+          "title": "Visible content conflicts with schema"
+        },
+        "content_structure_incomplete": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Strengthen the page's substantive content, answer-first opening, and question-led headings using the persisted rule evidence.",
+          "rule_id": "content_structure_incomplete",
+          "severity": "low",
+          "title": "Answer-oriented content structure is incomplete"
+        },
+        "citability_trust_incomplete": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Add the missing author, date, source, or organization identity signals so readers and answer engines can assess provenance.",
+          "rule_id": "citability_trust_incomplete",
+          "severity": "medium",
+          "title": "Citability and trust signals are incomplete"
+        },
+        "product_not_mentioned": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "commerce",
+          "remediation": "No answer engine mentioned this product anywhere in the latest audit. Add product-named prompts that mirror how buyers ask, and strengthen the product's owned pages with quotable specs, pricing, and comparisons so engines have a citable source.",
+          "rule_id": "product_not_mentioned",
+          "severity": "high",
+          "title": "Catalog product never mentioned by answer engines"
+        },
+        "cited_alternatives_without_uploaded_presence": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "commerce",
+          "remediation": "Third-party sources were cited for this category while no uploaded product or uploaded product destination appeared. Strengthen the uploaded product pages with clear, citable comparison evidence.",
+          "rule_id": "cited_alternatives_without_uploaded_presence",
+          "severity": "high",
+          "title": "Cited alternatives appear without uploaded products"
+        },
+        "catalog_fields_missing": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "commerce",
+          "remediation": "Complete the named catalog fields so product identity, availability, and destination evidence are explicit.",
+          "rule_id": "catalog_fields_missing",
+          "severity": "medium",
+          "title": "Catalog fields are missing"
+        },
+        "search_demand_content_gap": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Improve the matching owned page and search snippet for this measured query or page. Keep the answer aligned with the observed intent and verify the later GSC window.",
+          "rule_id": "search_demand_content_gap",
+          "severity": "medium",
+          "title": "Search demand is not earning expected clicks"
+        },
+        "striking_distance_query": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Strengthen the resolved page for this non-branded query and verify its next GSC window.",
+          "rule_id": "striking_distance_query",
+          "severity": "medium",
+          "title": "Query is within striking distance"
+        },
+        "query_cannibalization": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Consolidate or differentiate the qualifying resolved pages, then verify which page earns the query.",
+          "rule_id": "query_cannibalization",
+          "severity": "medium",
+          "title": "Multiple pages compete for one query"
+        },
+        "property_relative_ctr_gap": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Improve the page title and snippet against its property-relative position cohort, then verify CTR.",
+          "rule_id": "property_relative_ctr_gap",
+          "severity": "medium",
+          "title": "CTR trails comparable property queries"
+        },
+        "emerging_query": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Expand the owned answer while demand is rising and verify the next adjacent GSC window.",
+          "rule_id": "emerging_query",
+          "severity": "low",
+          "title": "Search demand is emerging"
+        },
+        "declining_query": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Refresh the owned answer for the declining query and verify recovery in a later GSC window.",
+          "rule_id": "declining_query",
+          "severity": "medium",
+          "title": "Search demand is declining"
+        },
+        "site_link_near_orphan": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Add relevant followed internal links from the suggested source pages to make this page easier to discover and reach.",
+          "rule_id": "site_link_near_orphan",
+          "severity": "medium",
+          "title": "Indexable page has too few followed internal links"
+        },
+        "site_link_weak_authority": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Strengthen this page with relevant followed links from the suggested higher-authority pages.",
+          "rule_id": "site_link_weak_authority",
+          "severity": "low",
+          "title": "Page has weak internal-link authority"
+        },
+        "site_change_potential_regression": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Review the exact before/after evidence, restore the intended page signal, and verify it in a later comparable crawl.",
+          "rule_id": "site_change_potential_regression",
+          "severity": "high",
+          "title": "A crawl-observed page signal regressed"
+        },
+        "site_change_critical_regression": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Review the exact before/after evidence and restore the critical page signal before verifying it in a later comparable crawl.",
+          "rule_id": "site_change_critical_regression",
+          "severity": "critical",
+          "title": "A critical crawl-observed page signal regressed"
+        },
+        "site_change_metadata_inconsistency": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Review the inspected text change and update the modification date only when it accurately describes the published content.",
+          "rule_id": "site_change_metadata_inconsistency",
+          "severity": "medium",
+          "title": "Content change and modification date disagree"
+        },
+        "site_change_cosmetic_refresh": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Confirm whether non-text content changed; otherwise restore an accurate modification date.",
+          "rule_id": "site_change_cosmetic_refresh",
+          "severity": "low",
+          "title": "Modification date moved without inspected text change"
+        },
+        "low_share_of_voice_theme": {
+          "action_path": "owned",
+          "enabled": false,
+          "opportunity_type": "topic",
+          "remediation": "Increase owned coverage across this theme: publish answer-oriented pages for the theme's highest-value prompts.",
+          "rule_id": "low_share_of_voice_theme",
+          "severity": "medium",
+          "title": "Low share of voice in theme"
+        },
+        "high_traffic_low_visibility": {
+          "action_path": "owned",
+          "enabled": false,
+          "opportunity_type": "traffic",
+          "remediation": "Prioritize this high-traffic page for AEO improvements: add quotable answers and structured data where engines already send visitors.",
+          "rule_id": "high_traffic_low_visibility",
+          "severity": "medium",
+          "title": "High-traffic page with low answer-engine visibility"
+        },
+        "earned_page_acquire_listing": {
+          "action_path": "earned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "This page was read and your brand is not on it while a competitor is. Approach the publisher with the facts this brief carries and ask to be included, then declare the placement so it can be checked.",
+          "rule_id": "earned_page_acquire_listing",
+          "severity": "high",
+          "title": "Competitors listed on a cited page you are absent from"
+        },
+        "earned_page_correct_listing": {
+          "action_path": "earned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "Your brand appears on this page, and the quoted passage disagrees with your reviewed facts. Send the publisher the correction and the evidence for it, then declare the change so the specific claim can be re-checked.",
+          "rule_id": "earned_page_correct_listing",
+          "severity": "medium",
+          "title": "Cited page describes your brand incorrectly"
+        },
+        "earned_page_defend_listing": {
+          "action_path": "earned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "An earlier inspection of this page found your brand in a position it no longer holds. Compare the two snapshots in the brief, then ask the publisher to restore or update the entry.",
+          "rule_id": "earned_page_defend_listing",
+          "severity": "low",
+          "title": "Your placement on a cited page has deteriorated"
+        },
+        "earned_page_research_source": {
+          "action_path": "earned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "Answer engines keep citing this page and CiteLadder could not establish what kind of page it is or whether you can be listed on it. Open it and decide; an unresolved source is the one kind that never resolves itself.",
+          "rule_id": "earned_page_research_source",
+          "severity": "low",
+          "title": "Recurring cited source needs a human look"
+        }
+      },
+      "EARNED_RULE_IDS": [
+        "earned_page_acquire_listing",
+        "earned_page_correct_listing",
+        "earned_page_defend_listing",
+        "earned_page_research_source",
+        "earned_source_recurs_beside_gap"
+      ],
+      "DEMAND_SIGNAL_RULE_IDS": {
+        "high_impression_low_ctr": "search_demand_content_gap",
+        "striking_distance": "striking_distance_query",
+        "query_cannibalization": "query_cannibalization",
+        "property_relative_ctr_gap": "property_relative_ctr_gap",
+        "query_page_relevance": "property_relative_ctr_gap",
+        "emerging_query": "emerging_query",
+        "declining_query": "declining_query"
+      },
+      "SITE_STRUCTURED_DATA_RULE_IDS": [
+        "aeo.structured_data_present"
+      ],
+      "SITE_SCHEMA_TYPE_RULE_IDS": [
+        "aeo.schema_expected_for_type"
+      ],
+      "SITE_THIN_CONTENT_RULE_IDS": [
+        "technical.thin_content"
+      ],
+      "SITE_ISSUE_TO_OPPORTUNITY_RULE_ID": {
+        "aeo.structured_data_present": "missing_structured_data",
+        "aeo.schema_expected_for_type": "schema_type_mismatch",
+        "aeo.schema_required_valid": "schema_properties_incomplete",
+        "aeo.schema_recommended_present": "schema_properties_incomplete",
+        "aeo.product_evidence_facts": "schema_properties_incomplete",
+        "aeo.listing_item_facts": "schema_properties_incomplete",
+        "aeo.schema_matches_content": "schema_visible_content_conflict",
+        "technical.thin_content": "thin_content",
+        "aeo.answer_first": "content_structure_incomplete",
+        "aeo.question_headings": "content_structure_incomplete",
+        "aeo.heading_hierarchy": "content_structure_incomplete",
+        "aeo.editorial_lead_present": "content_structure_incomplete",
+        "aeo.entity_value_proposition": "content_structure_incomplete",
+        "aeo.product_answer_facts": "content_structure_incomplete",
+        "aeo.listing_answer_set": "content_structure_incomplete",
+        "aeo.visible_attribution": "citability_trust_incomplete",
+        "aeo.content_date_present": "citability_trust_incomplete",
+        "aeo.offer_freshness_signal": "citability_trust_incomplete",
+        "aeo.assortment_freshness_signal": "citability_trust_incomplete",
+        "aeo.source_support_present": "citability_trust_incomplete",
+        "aeo.organization_identity": "citability_trust_incomplete",
+        "aeo.trust_path_present": "citability_trust_incomplete",
+        "aeo.product_brand_identity": "citability_trust_incomplete"
+      },
+      "SITE_ISSUE_ATOM_PRESENTATION": {
+        "aeo.entity_value_proposition": [
+          [
+            [
+              "entity_identity"
+            ],
+            [
+              "Name the organization in the page introduction",
+              "Add a clear, reader-visible organization identity to the page's primary content; keep the existing value proposition intact."
+            ]
+          ],
+          [
+            [
+              "value_proposition"
+            ],
+            [
+              "State what the organization provides",
+              "Add a substantive, reader-visible explanation of what the identified organization provides or helps visitors accomplish."
+            ]
+          ],
+          [
+            [
+              "entity_identity",
+              "value_proposition"
+            ],
+            [
+              "Identify the organization and what it provides",
+              "Add a clear organization identity and a substantive explanation of what it provides in the page's primary content."
+            ]
+          ],
+          [
+            [
+              "contact_path"
+            ],
+            [
+              "Provide a usable contact path",
+              "Add a reader-visible contact method or a clearly labelled contact form."
+            ]
+          ],
+          [
+            [
+              "contact_path",
+              "entity_identity"
+            ],
+            [
+              "Identify the organization and provide a contact path",
+              "Name the organization in primary content and add a reader-visible contact method or clearly labelled contact form."
+            ]
+          ]
+        ]
+      },
+      "SEVERITY_WEIGHTS": {
+        "critical": 4.0,
+        "high": 3.0,
+        "medium": 2.0,
+        "low": 1.0,
+        "info": 0.5
+      },
+      "SEVERITY_WEIGHT_DEFAULT": 1.0,
+      "INTENT_VALUE_WEIGHTS": {
+        "discovery": 1.0,
+        "comparison": 1.5,
+        "purchase": 2.0,
+        "service": 1.5,
+        "local": 1.25
+      },
+      "INTENT_VALUE_DEFAULT": 1.0,
+      "BUYER_STAGE_VALUE_WEIGHTS": {
+        "awareness": 1.0,
+        "consideration": 1.35,
+        "decision": 1.75,
+        "implementation": 1.2
+      },
+      "PROMPT_INTENT_VALUE_WEIGHTS": {
+        "learn": 1.0,
+        "solve": 1.1,
+        "compare": 1.4,
+        "recommend": 1.55,
+        "validate": 1.5,
+        "buy": 1.75,
+        "implement": 1.2
+      },
+      "RECOMMENDATION_STRENGTH_FACTORS": {
+        "recommended_against": 1.5,
+        "recommended": 1.35,
+        "hedged": 1.15,
+        "mentioned": 1.0,
+        "absent": 1.0,
+        "not_assessed": 1.0,
+        "unavailable": 1.0
+      },
+      "GAP_COMPETITOR_WEIGHT": 1.0,
+      "GAP_COMPETITOR_CAP": 3,
+      "GAP_OWNED_CITATION_WEIGHT": 1.0,
+      "SITE_VALUE_FACTOR": 1.0,
+      "SITE_GAP_FACTOR": 1.0,
+      "COMMERCE_VALUE_FACTOR": 1.0,
+      "COMMERCE_GAP_FACTOR": 1.0,
+      "PRIORITY_SCALE": 10.0,
+      "PRIORITY_ROUNDING_DECIMALS": 1,
+      "MIN_PRIORITY_TO_SURFACE": 10.0,
+      "RECOMPUTE_MAX_ANALYSES": 5000,
+      "RECOMPUTE_MAX_ISSUES": 5000,
+      "LIST_DEFAULT_LIMIT": 50,
+      "LIST_MAX_LIMIT": 200,
+      "MAX_EXPORT_ITEMS": 20000
+    },
+    "earned_actions": {
+      "PAGE_FORMAT_ARTICLE": "article",
+      "PAGE_FORMAT_COMPARISON": "comparison",
+      "PAGE_FORMAT_DIRECTORY": "directory",
+      "PAGE_FORMAT_DISCUSSION": "discussion",
+      "PAGE_FORMAT_LISTICLE": "listicle",
+      "PAGE_FORMAT_REFERENCE": "reference",
+      "PAGE_FORMAT_REVIEW": "review",
+      "PAGE_FORMAT_VIDEO": "video",
+      "SOURCE_CLASS_COMMUNITY": "community",
+      "SOURCE_CLASS_EDITORIAL_THIRD_PARTY": "editorial_third_party",
+      "SOURCE_CLASS_INSTITUTIONAL": "institutional",
+      "SOURCE_CLASS_REVIEW_MARKETPLACE": "review_marketplace",
+      "SOURCE_CLASS_SOCIAL": "social",
+      "SOURCE_CLASS_VIDEO": "video",
+      "ACTION_PATH_OWNED": "owned",
+      "ACTION_PATH_EARNED": "earned",
+      "ACTION_PATHS": [
+        "earned",
+        "owned"
+      ],
+      "SOURCE_ROLLUP_MAX_DOMAINS": 100,
+      "SOURCE_ROLLUP_MAX_URLS": 6,
+      "SOURCE_ROLLUP_MAX_PROMPTS": 12,
+      "RULE_EARNED_SOURCE_RECURS": "earned_source_recurs_beside_gap",
+      "EARNED_SOURCE_MIN_ANSWERS": 2,
+      "EARNED_SOURCE_MIN_USAGE_RATE": 0.1,
+      "EARNED_USAGE_FACTOR_MAX": 2.0,
+      "EARNED_COMPETITOR_FACTOR_MAX": 1.5,
+      "EARNED_COMPETITOR_FACTOR_STEP": 0.1,
+      "EARNED_SOURCE_DEFAULT_ROLE": "Marketing",
+      "EARNED_SOURCE_DEFAULT_SKILL": "article",
+      "EARNED_SUGGESTED_SKILL_BY_CLASS": {
+        "review_marketplace": "comparison",
+        "editorial_third_party": "article",
+        "community": "reddit",
+        "social": "linkedin",
+        "institutional": "article",
+        "video": "youtube"
+      },
+      "EARNED_SUGGESTED_ROLE_BY_CLASS": {
+        "review_marketplace": "Marketing",
+        "editorial_third_party": "PR",
+        "community": "Founder",
+        "social": "Marketing",
+        "institutional": "PR",
+        "video": "Marketing"
+      },
+      "RULE_EARNED_PAGE_ACQUIRE": "earned_page_acquire_listing",
+      "RULE_EARNED_PAGE_CORRECT": "earned_page_correct_listing",
+      "RULE_EARNED_PAGE_DEFEND": "earned_page_defend_listing",
+      "RULE_EARNED_PAGE_RESEARCH": "earned_page_research_source",
+      "EARNED_PAGE_RULE_IDS": [
+        "earned_page_acquire_listing",
+        "earned_page_correct_listing",
+        "earned_page_defend_listing",
+        "earned_page_research_source"
+      ],
+      "EARNED_PAGE_TARGET_PREFIX": "earned-page:",
+      "DISCREPANCY_NOT_LISTED_AS_ENTRY": "not_listed_as_entry",
+      "DISCREPANCY_OWNED_DOMAIN_MISSING": "owned_domain_missing",
+      "EARNED_PAGE_INCLUDABLE_FORMATS": [
+        "comparison",
+        "directory",
+        "listicle",
+        "review"
+      ],
+      "EARNED_PAGE_MIN_RECURRENCE": 2,
+      "EARNED_PAGE_RESEARCH_MIN_RECURRENCE": 3,
+      "EARNED_PAGE_USAGE_FACTOR_MAX": 2.0,
+      "EARNED_PAGE_COMPETITOR_FACTOR_MAX": 1.6,
+      "EARNED_PAGE_COMPETITOR_FACTOR_STEP": 0.2,
+      "EARNED_PAGE_SKILL_BY_FORMAT": {
+        "comparison": "comparison",
+        "listicle": "listicle",
+        "directory": "about_us",
+        "review": "case_study",
+        "discussion": "reddit",
+        "reference": "faq",
+        "article": "article",
+        "video": "youtube"
+      },
+      "EARNED_PAGE_ROLE_BY_FORMAT": {
+        "comparison": "Marketing",
+        "listicle": "PR",
+        "directory": "Marketing",
+        "review": "PR",
+        "discussion": "Founder",
+        "reference": "Marketing",
+        "article": "PR",
+        "video": "Marketing"
+      },
+      "EARNED_PAGE_DEFAULT_SKILL": "article",
+      "EARNED_PAGE_DEFAULT_ROLE": "PR",
+      "EARNED_PAGE_MAX_PASSAGES": 4,
+      "EARNED_PAGE_MAX_COMPETITORS": 12,
+      "EARNED_PAGE_MAX_PROMPTS": 12,
+      "EARNED_PAGE_DETECTOR_MAX_PAGES": 500
+    },
+    "actions": {
+      "RULE_EARNED_PAGE_ACQUIRE": "earned_page_acquire_listing",
+      "RULE_EARNED_PAGE_CORRECT": "earned_page_correct_listing",
+      "RULE_EARNED_PAGE_DEFEND": "earned_page_defend_listing",
+      "RULE_EARNED_PAGE_RESEARCH": "earned_page_research_source",
+      "OPPORTUNITY_RULES_BY_ID": {
+        "brand_absent_high_value_prompt": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "Publish or update an owned page that directly answers this prompt: lead with a clear, quotable definition, then add structured data so answer engines can attribute it. Re-run an audit to confirm owned citations appear.",
+          "rule_id": "brand_absent_high_value_prompt",
+          "severity": "high",
+          "title": "Brand absent on high-value prompt"
+        },
+        "owned_page_not_cited": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "Strengthen the owned page that should win this prompt: align its title, headings, and opening answer with the prompt intent so answer engines have a citable owned source.",
+          "rule_id": "owned_page_not_cited",
+          "severity": "medium",
+          "title": "Owned page not cited for target prompt"
+        },
+        "earned_source_recurs_beside_gap": {
+          "action_path": "earned",
+          "enabled": false,
+          "opportunity_type": "visibility",
+          "remediation": "Inspect the cited pages, decide whether the brand belongs there, then prepare a human-led contribution, profile update, or editorial inclusion request. This observation does not establish domain-wide absence or guarantee a later citation.",
+          "rule_id": "earned_source_recurs_beside_gap",
+          "severity": "medium",
+          "title": "Earned source recurs beside visibility gaps"
+        },
+        "confirmed_prompt_decline": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "Refresh the owned page that best answers this prompt. Lead with a direct answer, close the measured visibility or citation gap, and use this opportunity as evidence context for Content generation.",
+          "rule_id": "confirmed_prompt_decline",
+          "severity": "high",
+          "title": "Prompt visibility has a confirmed decline"
+        },
+        "missing_structured_data": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Add schema.org structured data (JSON-LD preferred) so answer engines can parse and attribute the page's content.",
+          "rule_id": "missing_structured_data",
+          "severity": "medium",
+          "title": "Missing structured data on owned page"
+        },
+        "thin_content": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Add substantive, answer-oriented body content to the page so answer engines have enough text to quote and cite.",
+          "rule_id": "thin_content",
+          "severity": "low",
+          "title": "Thin content on owned page"
+        },
+        "schema_type_mismatch": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "The page already ships structured data, but not the schema.org type expected for its page type (e.g. Product on a product page, FAQPage on an FAQ page). Add the expected type to the existing JSON-LD so answer engines can classify and cite the page correctly.",
+          "rule_id": "schema_type_mismatch",
+          "severity": "high",
+          "title": "Structured data missing the expected schema type"
+        },
+        "schema_properties_incomplete": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Complete the required and recommended properties for the page's expected schema type, using the exact missing-property evidence as the implementation checklist.",
+          "rule_id": "schema_properties_incomplete",
+          "severity": "medium",
+          "title": "Schema properties are incomplete"
+        },
+        "schema_visible_content_conflict": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Align the visible title, headings, and page claims with the corresponding schema.org values; do not leave competing facts for answer engines to resolve.",
+          "rule_id": "schema_visible_content_conflict",
+          "severity": "high",
+          "title": "Visible content conflicts with schema"
+        },
+        "content_structure_incomplete": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Strengthen the page's substantive content, answer-first opening, and question-led headings using the persisted rule evidence.",
+          "rule_id": "content_structure_incomplete",
+          "severity": "low",
+          "title": "Answer-oriented content structure is incomplete"
+        },
+        "citability_trust_incomplete": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Add the missing author, date, source, or organization identity signals so readers and answer engines can assess provenance.",
+          "rule_id": "citability_trust_incomplete",
+          "severity": "medium",
+          "title": "Citability and trust signals are incomplete"
+        },
+        "product_not_mentioned": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "commerce",
+          "remediation": "No answer engine mentioned this product anywhere in the latest audit. Add product-named prompts that mirror how buyers ask, and strengthen the product's owned pages with quotable specs, pricing, and comparisons so engines have a citable source.",
+          "rule_id": "product_not_mentioned",
+          "severity": "high",
+          "title": "Catalog product never mentioned by answer engines"
+        },
+        "cited_alternatives_without_uploaded_presence": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "commerce",
+          "remediation": "Third-party sources were cited for this category while no uploaded product or uploaded product destination appeared. Strengthen the uploaded product pages with clear, citable comparison evidence.",
+          "rule_id": "cited_alternatives_without_uploaded_presence",
+          "severity": "high",
+          "title": "Cited alternatives appear without uploaded products"
+        },
+        "catalog_fields_missing": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "commerce",
+          "remediation": "Complete the named catalog fields so product identity, availability, and destination evidence are explicit.",
+          "rule_id": "catalog_fields_missing",
+          "severity": "medium",
+          "title": "Catalog fields are missing"
+        },
+        "search_demand_content_gap": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Improve the matching owned page and search snippet for this measured query or page. Keep the answer aligned with the observed intent and verify the later GSC window.",
+          "rule_id": "search_demand_content_gap",
+          "severity": "medium",
+          "title": "Search demand is not earning expected clicks"
+        },
+        "striking_distance_query": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Strengthen the resolved page for this non-branded query and verify its next GSC window.",
+          "rule_id": "striking_distance_query",
+          "severity": "medium",
+          "title": "Query is within striking distance"
+        },
+        "query_cannibalization": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Consolidate or differentiate the qualifying resolved pages, then verify which page earns the query.",
+          "rule_id": "query_cannibalization",
+          "severity": "medium",
+          "title": "Multiple pages compete for one query"
+        },
+        "property_relative_ctr_gap": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Improve the page title and snippet against its property-relative position cohort, then verify CTR.",
+          "rule_id": "property_relative_ctr_gap",
+          "severity": "medium",
+          "title": "CTR trails comparable property queries"
+        },
+        "emerging_query": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Expand the owned answer while demand is rising and verify the next adjacent GSC window.",
+          "rule_id": "emerging_query",
+          "severity": "low",
+          "title": "Search demand is emerging"
+        },
+        "declining_query": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "traffic",
+          "remediation": "Refresh the owned answer for the declining query and verify recovery in a later GSC window.",
+          "rule_id": "declining_query",
+          "severity": "medium",
+          "title": "Search demand is declining"
+        },
+        "site_link_near_orphan": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Add relevant followed internal links from the suggested source pages to make this page easier to discover and reach.",
+          "rule_id": "site_link_near_orphan",
+          "severity": "medium",
+          "title": "Indexable page has too few followed internal links"
+        },
+        "site_link_weak_authority": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Strengthen this page with relevant followed links from the suggested higher-authority pages.",
+          "rule_id": "site_link_weak_authority",
+          "severity": "low",
+          "title": "Page has weak internal-link authority"
+        },
+        "site_change_potential_regression": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Review the exact before/after evidence, restore the intended page signal, and verify it in a later comparable crawl.",
+          "rule_id": "site_change_potential_regression",
+          "severity": "high",
+          "title": "A crawl-observed page signal regressed"
+        },
+        "site_change_critical_regression": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Review the exact before/after evidence and restore the critical page signal before verifying it in a later comparable crawl.",
+          "rule_id": "site_change_critical_regression",
+          "severity": "critical",
+          "title": "A critical crawl-observed page signal regressed"
+        },
+        "site_change_metadata_inconsistency": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Review the inspected text change and update the modification date only when it accurately describes the published content.",
+          "rule_id": "site_change_metadata_inconsistency",
+          "severity": "medium",
+          "title": "Content change and modification date disagree"
+        },
+        "site_change_cosmetic_refresh": {
+          "action_path": "owned",
+          "enabled": true,
+          "opportunity_type": "site",
+          "remediation": "Confirm whether non-text content changed; otherwise restore an accurate modification date.",
+          "rule_id": "site_change_cosmetic_refresh",
+          "severity": "low",
+          "title": "Modification date moved without inspected text change"
+        },
+        "low_share_of_voice_theme": {
+          "action_path": "owned",
+          "enabled": false,
+          "opportunity_type": "topic",
+          "remediation": "Increase owned coverage across this theme: publish answer-oriented pages for the theme's highest-value prompts.",
+          "rule_id": "low_share_of_voice_theme",
+          "severity": "medium",
+          "title": "Low share of voice in theme"
+        },
+        "high_traffic_low_visibility": {
+          "action_path": "owned",
+          "enabled": false,
+          "opportunity_type": "traffic",
+          "remediation": "Prioritize this high-traffic page for AEO improvements: add quotable answers and structured data where engines already send visitors.",
+          "rule_id": "high_traffic_low_visibility",
+          "severity": "medium",
+          "title": "High-traffic page with low answer-engine visibility"
+        },
+        "earned_page_acquire_listing": {
+          "action_path": "earned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "This page was read and your brand is not on it while a competitor is. Approach the publisher with the facts this brief carries and ask to be included, then declare the placement so it can be checked.",
+          "rule_id": "earned_page_acquire_listing",
+          "severity": "high",
+          "title": "Competitors listed on a cited page you are absent from"
+        },
+        "earned_page_correct_listing": {
+          "action_path": "earned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "Your brand appears on this page, and the quoted passage disagrees with your reviewed facts. Send the publisher the correction and the evidence for it, then declare the change so the specific claim can be re-checked.",
+          "rule_id": "earned_page_correct_listing",
+          "severity": "medium",
+          "title": "Cited page describes your brand incorrectly"
+        },
+        "earned_page_defend_listing": {
+          "action_path": "earned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "An earlier inspection of this page found your brand in a position it no longer holds. Compare the two snapshots in the brief, then ask the publisher to restore or update the entry.",
+          "rule_id": "earned_page_defend_listing",
+          "severity": "low",
+          "title": "Your placement on a cited page has deteriorated"
+        },
+        "earned_page_research_source": {
+          "action_path": "earned",
+          "enabled": true,
+          "opportunity_type": "visibility",
+          "remediation": "Answer engines keep citing this page and CiteLadder could not establish what kind of page it is or whether you can be listed on it. Open it and decide; an unresolved source is the one kind that never resolves itself.",
+          "rule_id": "earned_page_research_source",
+          "severity": "low",
+          "title": "Recurring cited source needs a human look"
+        }
+      },
+      "ACTION_GROUPING_VERSION": "action-grouping-1",
+      "ACTION_DIAGNOSIS_VERSION": "action-diagnosis-1",
+      "ACTION_PRIORITY_VERSION": "action-priority-1",
+      "TARGET_PAGE": "page",
+      "TARGET_EARNED_PAGE": "earned_page",
+      "TARGET_PRODUCT": "product",
+      "TARGET_CATEGORY": "category",
+      "TARGET_QUERY": "query",
+      "TARGET_PROMPT": "prompt",
+      "TARGET_PLANNED_PAGE": "planned_page",
+      "ACTION_TARGET_KINDS": [
+        "page",
+        "earned_page",
+        "product",
+        "category",
+        "query",
+        "prompt",
+        "planned_page"
+      ],
+      "AGENT_TARGET_KINDS": [
+        "page",
+        "planned_page"
+      ],
+      "PLANNED_PAGE_TOPIC_MAX_CHARS": 120,
+      "ACTION_ORIGIN_EVIDENCE": "evidence",
+      "ACTION_ORIGIN_AGENT": "agent",
+      "ACTION_STATUS_OPEN": "open",
+      "ACTION_STATUS_IN_PROGRESS": "in_progress",
+      "ACTION_STATUS_IMPLEMENTED": "implemented",
+      "ACTION_STATUS_MEASURING": "measuring",
+      "ACTION_STATUS_DONE": "done",
+      "ACTION_STATUS_DISMISSED": "dismissed",
+      "ACTION_STATUSES": [
+        "open",
+        "in_progress",
+        "implemented",
+        "measuring",
+        "done",
+        "dismissed"
+      ],
+      "ACTION_USER_STATUSES": [
+        "dismissed",
+        "open"
+      ],
+      "ACTION_ACTIVE_STATUSES": [
+        "in_progress",
+        "open"
+      ],
+      "FAMILY_AI_VISIBILITY": "ai_visibility",
+      "FAMILY_SOURCES": "sources",
+      "FAMILY_SEARCH_CONSOLE": "search_console",
+      "FAMILY_SITE_HEALTH": "site_health",
+      "FAMILY_LINK_GRAPH": "link_graph",
+      "FAMILY_SITE_CHANGES": "site_changes",
+      "FAMILY_COMMERCE": "commerce",
+      "EVIDENCE_FAMILIES": [
+        "ai_visibility",
+        "sources",
+        "search_console",
+        "site_health",
+        "link_graph",
+        "site_changes",
+        "commerce"
+      ],
+      "RULE_EVIDENCE_FAMILY": {
+        "brand_absent_high_value_prompt": "ai_visibility",
+        "owned_page_not_cited": "ai_visibility",
+        "confirmed_prompt_decline": "ai_visibility",
+        "earned_source_recurs_beside_gap": "sources",
+        "earned_page_acquire_listing": "sources",
+        "earned_page_correct_listing": "sources",
+        "earned_page_defend_listing": "sources",
+        "earned_page_research_source": "sources",
+        "missing_structured_data": "site_health",
+        "thin_content": "site_health",
+        "schema_type_mismatch": "site_health",
+        "schema_properties_incomplete": "site_health",
+        "schema_visible_content_conflict": "site_health",
+        "content_structure_incomplete": "site_health",
+        "citability_trust_incomplete": "site_health",
+        "site_link_near_orphan": "link_graph",
+        "site_link_weak_authority": "link_graph",
+        "site_change_potential_regression": "site_changes",
+        "site_change_critical_regression": "site_changes",
+        "site_change_metadata_inconsistency": "site_changes",
+        "site_change_cosmetic_refresh": "site_changes",
+        "search_demand_content_gap": "search_console",
+        "striking_distance_query": "search_console",
+        "query_cannibalization": "search_console",
+        "property_relative_ctr_gap": "search_console",
+        "emerging_query": "search_console",
+        "declining_query": "search_console",
+        "low_share_of_voice_theme": "ai_visibility",
+        "high_traffic_low_visibility": "search_console",
+        "product_not_mentioned": "commerce",
+        "cited_alternatives_without_uploaded_presence": "commerce",
+        "catalog_fields_missing": "commerce"
+      },
+      "_UNMAPPED_RULES": [],
+      "CONVERGENCE_BONUS_PER_FAMILY": 0.15,
+      "CONVERGENCE_MULTIPLIER_CAP": 1.6,
+      "ACTION_PRIORITY_ROUNDING_DECIMALS": 1,
+      "APPROACH_FIX_TECHNICAL": "fix_technical",
+      "APPROACH_CONSOLIDATE": "consolidate",
+      "APPROACH_EARNED_PLACEMENT": "earned_placement",
+      "APPROACH_RESEARCH": "research",
+      "APPROACH_IMPROVE_LINKS": "improve_links",
+      "APPROACH_CREATE_NEW": "create_new",
+      "APPROACH_IMPROVE_EXISTING": "improve_existing",
+      "APPROACH_TREE": [
+        {
+          "approach": "research",
+          "rule_ids": [
+            "earned_page_research_source"
+          ],
+          "skill_id": "ai_visibility",
+          "donts": [
+            "Do not pitch the publisher before the page has been reviewed."
+          ],
+          "target_kinds": []
+        },
+        {
+          "approach": "earned_placement",
+          "rule_ids": [
+            "earned_page_acquire_listing",
+            "earned_page_correct_listing",
+            "earned_page_defend_listing"
+          ],
+          "skill_id": "earned_authority",
+          "donts": [
+            "Do not change an owned page to fix a third-party listing.",
+            "Do not send outreach from CiteLadder; drafts only."
+          ],
+          "target_kinds": []
+        },
+        {
+          "approach": "fix_technical",
+          "rule_ids": [
+            "missing_structured_data",
+            "schema_properties_incomplete",
+            "schema_type_mismatch",
+            "schema_visible_content_conflict",
+            "site_change_critical_regression",
+            "site_change_potential_regression"
+          ],
+          "skill_id": "technical_health",
+          "donts": [
+            "Do not rewrite the page copy to work around a technical defect.",
+            "Do not add markup that states facts the visible page does not."
+          ],
+          "target_kinds": []
+        },
+        {
+          "approach": "consolidate",
+          "rule_ids": [
+            "query_cannibalization"
+          ],
+          "skill_id": "gsc_optimize",
+          "donts": [
+            "Do not create another URL for this demand."
+          ],
+          "target_kinds": []
+        },
+        {
+          "approach": "create_new",
+          "rule_ids": [
+            "brand_absent_high_value_prompt"
+          ],
+          "skill_id": "content_create",
+          "donts": [
+            "Do not create a new URL if an existing page already answers this question; improve that page instead."
+          ],
+          "target_kinds": [
+            "prompt"
+          ]
+        },
+        {
+          "approach": "improve_links",
+          "rule_ids": [
+            "site_link_near_orphan",
+            "site_link_weak_authority"
+          ],
+          "skill_id": "internal_links",
+          "donts": [
+            "Do not add links from unrelated pages to hit a link count."
+          ],
+          "target_kinds": []
+        },
+        {
+          "approach": "improve_existing",
+          "rule_ids": [
+            "declining_query",
+            "emerging_query",
+            "property_relative_ctr_gap",
+            "search_demand_content_gap",
+            "striking_distance_query"
+          ],
+          "skill_id": "gsc_optimize",
+          "donts": [
+            "Do not create another URL: an indexable page already maps to this demand."
+          ],
+          "target_kinds": []
+        }
+      ],
+      "DEFAULT_APPROACH": {
+        "approach": "improve_existing",
+        "rule_ids": [],
+        "skill_id": "content_create",
+        "donts": [
+          "Do not create another URL for a target that already has a page."
+        ],
+        "target_kinds": []
+      },
+      "AGENT_ORIGIN_DEFAULT_SKILL": "content_create",
+      "LEG_VISIBILITY_RUN": "next_visibility_run",
+      "LEG_SEARCH_CONSOLE_WINDOW": "next_search_console_window",
+      "LEG_CRAWL": "next_crawl",
+      "LEG_PLACEMENT_RECHECK": "placement_recheck",
+      "LEG_COMMERCE_AUDIT": "next_commerce_audit",
+      "FAMILY_MEASUREMENT_LEG": {
+        "ai_visibility": "next_visibility_run",
+        "sources": "placement_recheck",
+        "search_console": "next_search_console_window",
+        "site_health": "next_crawl",
+        "link_graph": "next_crawl",
+        "site_changes": "next_crawl",
+        "commerce": "next_commerce_audit"
+      },
+      "CHECK_KIND_MEASUREMENT_LEG": {
+        "site_rule": "next_crawl",
+        "page_fact": "next_crawl",
+        "visibility_metric": "next_visibility_run",
+        "traffic_metric": "next_search_console_window",
+        "placement": "placement_recheck"
+      },
+      "LEG_STATE_WAITING": "waiting",
+      "LEG_STATE_NOT_SCHEDULED": "not_scheduled",
+      "LEG_STATE_SYNC_NEEDED": "sync_needed",
+      "LEG_STATE_OBSERVED": "observed",
+      "SEARCH_CONSOLE_MEASUREMENT_WINDOW_DAYS": 28,
+      "SEARCH_CONSOLE_FINALIZATION_LAG_DAYS": 3,
+      "FAMILY_STATE_OBSERVED": "observed",
+      "FAMILY_STATE_NO_FINDING": "no_finding",
+      "FAMILY_STATE_UNAVAILABLE": "unavailable",
+      "ACTION_LIST_DEFAULT_LIMIT": 50,
+      "ACTION_LIST_MAX_LIMIT": 200,
+      "ACTION_LABEL_MAX_CHARS": 255
+    },
+    "placement": {
+      "PLACEMENT_CHECKER_VERSION": "placement-checker-1",
+      "PLACEMENT_CHECK_KIND": "placement",
+      "PLACEMENT_CHANGE_BRAND_LISTED": "brand_listed",
+      "PLACEMENT_CHANGE_DISCREPANCY_RESOLVED": "discrepancy_resolved",
+      "PLACEMENT_CHANGE_PLACEMENT_RESTORED": "placement_restored",
+      "PLACEMENT_CHANGE_SOURCE_RESOLVED": "source_resolved",
+      "PLACEMENT_STATE_PENDING": "pending",
+      "PLACEMENT_STATE_SATISFIED": "satisfied",
+      "PLACEMENT_STATE_UNMET": "unmet",
+      "PLACEMENT_STATE_UNAVAILABLE": "unavailable",
+      "PLACEMENT_REASON_NO_BASELINE": "no_frozen_baseline",
+      "PLACEMENT_REASON_ROSTER_CHANGED": "roster_changed",
+      "PLACEMENT_REASON_COVERAGE": "insufficient_coverage",
+      "PLACEMENT_REASON_NO_VERDICT": "no_brand_verdict",
+      "PLACEMENT_REASON_UNKNOWN_CHANGE": "unknown_expected_change",
+      "PLACEMENT_REASON_EXHAUSTED": "recheck_attempts_exhausted",
+      "PLACEMENT_RETRYABLE_REASONS": [
+        "insufficient_coverage",
+        "no_brand_verdict"
+      ],
+      "PLACEMENT_RECHECK_AFTER_HOURS": 72,
+      "PLACEMENT_RECHECK_INTERVAL_HOURS": 168,
+      "PLACEMENT_RECHECK_MAX_ATTEMPTS": 4,
+      "PLACEMENT_DUE_PAGES_MAX": 100
+    },
+    "source_patterns": {
+      "SOURCE_TAXONOMY_VERSION": "source-taxonomy-1",
+      "SOURCE_MIX_PROJECTION_VERSION": "opportunity-source-mix-1",
+      "CONTENT_HANDOFF_TEMPLATE_VERSION": "opportunity-content-handoff-1",
+      "SOURCE_CLASS_BRAND_OWNED": "brand_owned",
+      "SOURCE_CLASS_COMPETITOR_OWNED": "competitor_owned",
+      "SOURCE_CLASS_COMMUNITY": "community",
+      "SOURCE_CLASS_VIDEO": "video",
+      "SOURCE_CLASS_SOCIAL": "social",
+      "SOURCE_CLASS_INSTITUTIONAL": "institutional",
+      "SOURCE_CLASS_REVIEW_MARKETPLACE": "review_marketplace",
+      "SOURCE_CLASS_EDITORIAL_THIRD_PARTY": "editorial_third_party",
+      "SOURCE_CLASS_OTHER_THIRD_PARTY": "other_third_party",
+      "SOURCE_CLASS_SEARCH_SURFACE": "search_surface",
+      "SOURCE_ORIGIN_EXTERNAL": "external",
+      "SOURCE_ORIGIN_GOOGLE_OWNED": "google_owned",
+      "GOOGLE_OWNED_PLATFORM_DOMAINS": [
+        "blogger.com",
+        "blogspot.com",
+        "goo.gl",
+        "youtu.be",
+        "youtube.com"
+      ],
+      "SOURCE_CLASS_ORDER": [
+        "brand_owned",
+        "competitor_owned",
+        "review_marketplace",
+        "editorial_third_party",
+        "community",
+        "social",
+        "institutional",
+        "video",
+        "search_surface",
+        "other_third_party"
+      ],
+      "COMMUNITY_DOMAINS": [
+        "discourse.org",
+        "news.ycombinator.com",
+        "producthunt.com",
+        "quora.com",
+        "reddit.com",
+        "slashdot.org",
+        "stackexchange.com",
+        "stackoverflow.com"
+      ],
+      "VIDEO_DOMAINS": [
+        "dailymotion.com",
+        "twitch.tv",
+        "vimeo.com",
+        "youtu.be",
+        "youtube.com"
+      ],
+      "SOCIAL_DOMAINS": [
+        "facebook.com",
+        "instagram.com",
+        "linkedin.com",
+        "tiktok.com",
+        "twitter.com",
+        "x.com"
+      ],
+      "INSTITUTIONAL_DOMAINS": [
+        "cdc.gov",
+        "europa.eu",
+        "gov.uk",
+        "nih.gov",
+        "who.int",
+        "wikipedia.org"
+      ],
+      "REVIEW_MARKETPLACE_DOMAINS": [
+        "capterra.com",
+        "clutch.co",
+        "g2.com",
+        "gartner.com",
+        "getapp.com",
+        "glassdoor.com",
+        "producthunt.com",
+        "softwareadvice.com",
+        "sourceforge.net",
+        "trustpilot.com",
+        "trustradius.com",
+        "yelp.com"
+      ],
+      "EDITORIAL_DOMAINS": [
+        "arstechnica.com",
+        "businessinsider.com",
+        "cnet.com",
+        "economictimes.indiatimes.com",
+        "forbes.com",
+        "pcmag.com",
+        "techcrunch.com",
+        "techradar.com",
+        "theverge.com",
+        "venturebeat.com",
+        "wired.com",
+        "yourstory.com",
+        "zdnet.com"
+      ],
+      "SOURCE_CLASS_DOMAIN_TABLES": [
+        [
+          "review_marketplace",
+          [
+            "capterra.com",
+            "clutch.co",
+            "g2.com",
+            "gartner.com",
+            "getapp.com",
+            "glassdoor.com",
+            "producthunt.com",
+            "softwareadvice.com",
+            "sourceforge.net",
+            "trustpilot.com",
+            "trustradius.com",
+            "yelp.com"
+          ]
+        ],
+        [
+          "institutional",
+          [
+            "cdc.gov",
+            "europa.eu",
+            "gov.uk",
+            "nih.gov",
+            "who.int",
+            "wikipedia.org"
+          ]
+        ],
+        [
+          "social",
+          [
+            "facebook.com",
+            "instagram.com",
+            "linkedin.com",
+            "tiktok.com",
+            "twitter.com",
+            "x.com"
+          ]
+        ],
+        [
+          "video",
+          [
+            "dailymotion.com",
+            "twitch.tv",
+            "vimeo.com",
+            "youtu.be",
+            "youtube.com"
+          ]
+        ],
+        [
+          "community",
+          [
+            "discourse.org",
+            "news.ycombinator.com",
+            "producthunt.com",
+            "quora.com",
+            "reddit.com",
+            "slashdot.org",
+            "stackexchange.com",
+            "stackoverflow.com"
+          ]
+        ],
+        [
+          "editorial_third_party",
+          [
+            "arstechnica.com",
+            "businessinsider.com",
+            "cnet.com",
+            "economictimes.indiatimes.com",
+            "forbes.com",
+            "pcmag.com",
+            "techcrunch.com",
+            "techradar.com",
+            "theverge.com",
+            "venturebeat.com",
+            "wired.com",
+            "yourstory.com",
+            "zdnet.com"
+          ]
+        ]
+      ],
+      "PATTERN_COMPETITOR_OWNED_SOURCES": "competitor_owned_sources_cited",
+      "PATTERN_INDEPENDENT_VALIDATION": "independent_validation_present",
+      "PATTERN_COMMUNITY_EVIDENCE": "community_evidence_present",
+      "PATTERN_VIDEO_EVIDENCE": "video_evidence_present",
+      "PATTERN_MULTIPLE_INDEPENDENT_DOMAINS": "multiple_independent_domains",
+      "MULTIPLE_INDEPENDENT_DOMAIN_MIN": 3,
+      "MAX_TOP_CITATIONS": 6,
+      "ACTION_STRENGTHEN_OWNED_ANSWER": "strengthen_owned_answer_page",
+      "ACTION_PURSUE_INDEPENDENT_EVIDENCE": "pursue_independent_evidence",
+      "ACTION_PURSUE_COMMUNITY_EVIDENCE": "pursue_community_evidence",
+      "ACTION_INVESTIGATE_COMPETITOR_SOURCES": "investigate_competitor_sources",
+      "ACTION_DEFAULT": "strengthen_owned_answer_page",
+      "PATTERN_TO_ACTION": [
+        [
+          "multiple_independent_domains",
+          "pursue_independent_evidence"
+        ],
+        [
+          "competitor_owned_sources_cited",
+          "investigate_competitor_sources"
+        ],
+        [
+          "independent_validation_present",
+          "pursue_independent_evidence"
+        ],
+        [
+          "community_evidence_present",
+          "pursue_community_evidence"
+        ],
+        [
+          "video_evidence_present",
+          "pursue_community_evidence"
+        ]
+      ],
+      "_PUBLIC_SECOND_LEVEL_LABELS": [
+        "ac",
+        "co",
+        "com",
+        "edu",
+        "gov",
+        "net",
+        "org"
+      ]
+    },
+    "source_pages": {
+      "SOURCE_PAGE_INSPECTOR_VERSION": "source-page-inspector-1",
+      "SOURCE_PAGE_PRESENCE_VERSION": "source-page-presence-1",
+      "SOURCE_PAGE_FORMAT_VERSION": "source-page-format-1",
+      "INSPECTION_NOT_INSPECTED": "not_inspected",
+      "INSPECTION_QUEUED": "queued",
+      "INSPECTION_INSPECTED": "inspected",
+      "INSPECTION_BLOCKED": "blocked",
+      "INSPECTION_FAILED": "failed",
+      "INSPECTION_STALE": "stale",
+      "INSPECTION_REASON_ROBOTS": "robots_disallowed",
+      "INSPECTION_REASON_ROBOTS_UNAVAILABLE": "robots_unavailable",
+      "INSPECTION_REASON_NON_HTML": "non_html",
+      "INSPECTION_REASON_STATUS": "status_rejected",
+      "INSPECTION_REASON_TRANSPORT": "transport_error",
+      "INSPECTION_REASON_UNRESOLVED_REDIRECT": "unresolved_redirect",
+      "PAGE_FORMAT_COMPARISON": "comparison",
+      "PAGE_FORMAT_LISTICLE": "listicle",
+      "PAGE_FORMAT_REVIEW": "review",
+      "PAGE_FORMAT_DIRECTORY": "directory",
+      "PAGE_FORMAT_DISCUSSION": "discussion",
+      "PAGE_FORMAT_REFERENCE": "reference",
+      "PAGE_FORMAT_ARTICLE": "article",
+      "PAGE_FORMAT_VIDEO": "video",
+      "PAGE_FORMAT_HOMEPAGE": "homepage",
+      "PAGE_FORMAT_CATEGORY": "category",
+      "PAGE_FORMAT_PRODUCT": "product",
+      "PAGE_FORMAT_PROFILE": "profile",
+      "PAGE_FORMAT_ALTERNATIVE": "alternative",
+      "PAGE_FORMAT_HOW_TO": "how_to",
+      "PAGE_FORMAT_UNRESOLVED": "unresolved",
+      "PAGE_FORMAT_METHOD_STRUCTURED_DATA": "structured_data",
+      "PAGE_FORMAT_METHOD_HEADING_EVIDENCE": "heading_evidence",
+      "PAGE_FORMAT_METHOD_URL_PATTERN": "url_pattern",
+      "PAGE_FORMAT_METHOD_NONE": "none",
+      "PAGE_FORMAT_METHOD_STRENGTH": [
+        "structured_data",
+        "heading_evidence",
+        "url_pattern",
+        "none"
+      ],
+      "PRESENCE_PRESENT": "present",
+      "PRESENCE_NOT_DETECTED": "not_detected",
+      "PRESENCE_AMBIGUOUS": "ambiguous",
+      "PRESENCE_PARTIAL": "partial",
+      "PRESENCE_MATCH_EXACT_ALIAS": "exact_alias",
+      "PRESENCE_MATCH_NORMALIZED_ALIAS": "normalized_alias",
+      "PRESENCE_MATCH_NONE": "none",
+      "ENTITY_KIND_BRAND": "brand",
+      "ENTITY_KIND_COMPETITOR": "competitor",
+      "SOURCE_PAGE_MIN_COVERAGE_CHARS": 600
+    },
+    "measurement_policy_key": "measurement_policy",
+    "tracking_query_params": [
+      "_hsenc",
+      "_hsmi",
+      "fbclid",
+      "gclid",
+      "intpromo",
+      "mc_cid",
+      "mc_eid",
+      "msclkid",
+      "ref",
+      "ref_src",
+      "utm_campaign",
+      "utm_content",
+      "utm_medium",
+      "utm_source",
+      "utm_term"
     ]
   },
   "abuse": {
