@@ -28,13 +28,14 @@ is http://web:8000. Browser calls remain same-origin /api/v1.
 Fernet-encrypted provider/OAuth secrets and least-privilege worker environments
 keep credential custody separate from product projections.
 
-Default-agent structured requests use `DEFAULT_AGENT_STRUCTURED_OUTPUT_MODE`.
-`auto` selects strict JSON Schema for the native OpenAI Responses adapter and
-prompt-only JSON for OpenAI-compatible chat endpoints; it does not infer support
-from the provider host. Explicit `json_schema` and `json_object` modes send the
-corresponding provider format, while `prompt_json` sends schema instructions
-without a format field. Callers still validate the returned JSON against their
-own schemas and evidence contracts before persistence.
+The default agent is one OpenAI-compatible chat-completions client configured by
+`DEFAULT_AGENT_API_KEY`, `DEFAULT_AGENT_BASE_URL` and `DEFAULT_AGENT_MODEL`;
+there is no per-provider adapter. Requests use the portable subset: messages,
+an output cap sent as `max_completion_tokens` (retried once as `max_tokens` when
+the provider rejects the former by name), and JSON Schema instructions in the
+prompt rather than a provider-specific response format. Callers validate the
+returned JSON against their own schemas and evidence contracts before
+persistence.
 
 ## Task queue contract
 
