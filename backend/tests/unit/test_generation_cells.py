@@ -104,7 +104,9 @@ def test_model_suggestions_fill_only_empty_confirmed_offerings() -> None:
         ).model_dump(mode="json"),
     }
     suggestions = [
-        OfferingMap(offering="running shoes", attributes=[_entry("vegan", "suggested")]),
+        OfferingMap(
+            offering="running shoes", attributes=[_entry("vegan", "suggested")]
+        ),
         OfferingMap(offering="Sandals", audiences=[_entry("hikers", "suggested")]),
         OfferingMap(offering="Boots", attributes=[_entry("steel toe", "suggested")]),
     ]
