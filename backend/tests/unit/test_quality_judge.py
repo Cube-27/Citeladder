@@ -1,4 +1,4 @@
-"""JEV shadow judgments: core state, duplicate options, flags and state hash."""
+"""JEV judgments: core state, duplicate options, flags and state hash."""
 
 from __future__ import annotations
 
@@ -138,7 +138,9 @@ def test_malformed_choice_answers_are_recorded_as_unavailable_values() -> None:
     assert record["intent"] == {"choice": None, "probabilities": {}, "confidence": None}
     assert record["duplicate_of"]["probabilities"] == {"none": 0.4}
     assert record["duplicate_of"]["text"] is None
-    assert record["flags"] == []
+    # Missing answers never pass and never fail: the row is shown flagged.
+    assert record["flags"] == ["incomplete"]
+    assert record["verdict"] == "uncertain"
 
 
 @pytest.mark.asyncio

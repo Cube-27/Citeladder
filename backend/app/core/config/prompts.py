@@ -52,10 +52,22 @@ TOPIC_ORIGINS: Final[frozenset[str]] = frozenset(
 # --- Generated-prompt candidates (review before tracking) ------------------
 # Generate writes candidates, not prompts. A user accepts (a Prompt is
 # inserted and the candidate kept as ``accepted`` with the link) or rejects
-# (the candidate is deleted). Pending candidates past their retention are
-# hidden from review and purged by the next write to the set.
+# it. Pending candidates past their retention are hidden from review and
+# purged by the next write to the set.
+#
+# A rejected candidate that carries a quality-judge decision is kept as an
+# OUTCOME record for calibrating the judge: ``rejected`` (by a user) or
+# ``gate_rejected`` (by the hard gate, never shown for review). Outcome rows
+# keep the decision, topic and admission record but not the question text, and
+# are purged after ``rejected_outcome_retention_days``. A rejected candidate
+# without a decision has nothing to calibrate and is deleted.
 CANDIDATE_DISPOSITION_PENDING: Final = "pending"
 CANDIDATE_DISPOSITION_ACCEPTED: Final = "accepted"
+CANDIDATE_DISPOSITION_REJECTED: Final = "rejected"
+CANDIDATE_DISPOSITION_GATE_REJECTED: Final = "gate_rejected"
+CANDIDATE_OUTCOME_DISPOSITIONS: Final[frozenset[str]] = frozenset(
+    {CANDIDATE_DISPOSITION_REJECTED, CANDIDATE_DISPOSITION_GATE_REJECTED}
+)
 
 # --- Generation pipeline version (stamped into generation_evidence) --------
 GENERATOR_VERSION: Final = "prompt-gen-v2"
@@ -462,6 +474,16 @@ class PromptGenerationSettings(BaseSettings):
         validation_alias=AliasChoices(
             "GENERATION_CANDIDATE_RETENTION_HOURS",
             "generation_candidate_retention_hours",
+        ),
+    )
+    # How long a rejected candidate's outcome record (decision, no text) is
+    # kept for judge calibration before it is purged.
+    rejected_outcome_retention_days: int = Field(
+        default=180,
+        ge=1,
+        validation_alias=AliasChoices(
+            "GENERATION_REJECTED_OUTCOME_RETENTION_DAYS",
+            "generation_rejected_outcome_retention_days",
         ),
     )
     # Upper bound on accept_ids + reject_ids in one review request.

@@ -253,10 +253,11 @@ class PromptCandidateResponse(BaseModel):
     cohort: str
     created_at: datetime
     expires_at: datetime
-    # Shadow quality judge (JEV): ``judged``; ``off`` (no judge configured for
-    # its run); ``unavailable`` (the judge failed or timed out for its run);
+    # Quality judge (JEV): ``judged``; ``off`` (no judge configured for its
+    # run); ``unavailable`` (the judge failed or timed out for its run);
     # ``not_judged`` (past the call cap, or a run from before the judge).
-    # Flags name the questions it looked weak on; they never drop a row.
+    # Flags name the questions it looked weak on; a listed row was never
+    # failed by the gate, so flags inform review and never drop it.
     quality_status: Literal["judged", "off", "unavailable", "not_judged"] = "not_judged"
     quality_flags: list[str] = Field(default_factory=list)
 
@@ -275,13 +276,16 @@ class PromptGenerateResponse(BaseModel):
     # selection kept at most ``requested_count``. Generation overgenerates;
     # this is never a market size.
     candidates_generated: int = 0
-    # off (no JEV key) | shadow (decisions recorded) | unavailable (JEV
-    # failed for at least one candidate; generation still succeeded).
+    # off (no JEV key) | shadow (decisions recorded) | gate (strong fails
+    # removed before review) | unavailable (JEV failed for at least one
+    # candidate, which stays reviewable; generation still succeeded).
     quality_gate: str = "off"
+    # Candidates the hard quality gate removed before review.
+    quality_rejected: int = 0
 
 
 class PromptCandidateReviewRequest(BaseModel):
-    """Accept (insert as active prompts) and/or reject (delete) candidates."""
+    """Accept (insert as active prompts) and/or reject candidates."""
 
     accept_ids: list[uuid.UUID] = Field(default_factory=list)
     reject_ids: list[uuid.UUID] = Field(default_factory=list)

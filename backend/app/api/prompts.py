@@ -543,6 +543,7 @@ async def generate_prompts_endpoint(
         dropped_duplicates=result.dropped_duplicates,
         candidates_generated=result.candidates_generated,
         quality_gate=result.quality_gate,
+        quality_rejected=result.quality_rejected,
         requested_count=payload.count,
     )
 

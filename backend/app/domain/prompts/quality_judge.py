@@ -1,4 +1,4 @@
-"""JEV shadow judgments for selected prompt candidates.
+"""JEV judgments for selected prompt candidates.
 
 Each selected candidate gets one ``decide`` call asking bounded questions:
 fits_business, buyer_relevant, natural, standalone and sensible (yes/no),
@@ -7,10 +7,12 @@ row), and a per-topic duplicate choice among tracked prompts and earlier
 candidates of the same topic. The core state carries the confirmed business
 facts, topic, buyer need and question -- never the brand or competitor names.
 
-Shadow mode: a decision ranks the review list and flags weak rows; nothing is
-dropped because of it. A JEV failure never fails generation; it reports
-``quality_gate="unavailable"``. Calls happen after the read transaction has
-committed and before the write transaction opens (commit before network I/O).
+``quality_policy`` turns each decision into flags and a verdict; in gate mode
+a strong fail never reaches review, in shadow mode nothing is dropped. A JEV
+failure never fails generation; it reports ``quality_gate="unavailable"`` and
+the unjudged candidate stays reviewable. Calls happen after the read
+transaction has committed and before the write transaction opens (commit
+before network I/O).
 """
 
 from __future__ import annotations
@@ -37,17 +39,16 @@ from app.core.config.jev import (
     JEV_INTENT_INSTRUCTIONS,
     JEV_NOUL_QUESTIONS,
     JEV_QUESTION_SCHEMA_VERSION,
-    JEV_SHADOW_POLICY_VERSION,
     JEV_STAGE_DESCRIPTIONS,
     JEV_STAGE_INSTRUCTIONS,
     QUALITY_GATE_OFF,
-    QUALITY_GATE_SHADOW,
     QUALITY_GATE_UNAVAILABLE,
     jev_settings,
 )
 from app.core.config.visibility_prompts import BUYER_STAGES, PROMPT_INTENT_VOCABULARY
 from app.domain.prompts.generation_contract import SuggestedTopic
 from app.domain.prompts.normalization import prompt_text_hash
+from app.domain.prompts.quality_policy import apply_policy
 from app.models.prompt import PromptSet
 from app.models.prompt_candidate import PromptCandidate
 
@@ -178,22 +179,6 @@ def build_requests(
     return requests
 
 
-def _flags(answers: dict[str, Any], duplicate: dict[str, Any] | None) -> list[str]:
-    flags = [
-        key
-        for key in JEV_NOUL_QUESTIONS
-        if isinstance(answers.get(key), float | int)
-        and answers[key] < jev_settings.flag_below
-    ]
-    if duplicate and duplicate.get("choice") not in (None, JEV_DUPLICATE_NONE):
-        probability = (duplicate.get("probabilities") or {}).get(duplicate["choice"])
-        if isinstance(probability, float | int) and (
-            probability >= jev_settings.duplicate_flag_at
-        ):
-            flags.append("duplicate_of")
-    return flags
-
-
 def _probability(value: object) -> float | None:
     """A finite probability in [0, 1], else None (unavailable).
 
@@ -228,7 +213,7 @@ def _choice_answer(answer: object) -> dict[str, Any] | None:
 
 
 def decision_record(request: _Request, decision: JevDecision) -> dict[str, Any]:
-    """The persisted shadow decision for one candidate."""
+    """The persisted decision for one candidate, under the current policy."""
     nouls = {
         key: _probability((decision.answers.get(key) or {}).get("noul"))
         for key in JEV_NOUL_QUESTIONS
@@ -237,21 +222,20 @@ def decision_record(request: _Request, decision: JevDecision) -> dict[str, Any]:
     if duplicate is not None:
         duplicate["text"] = request.options.get(str(duplicate["choice"]))
     judged = [value for value in nouls.values() if isinstance(value, float | int)]
-    return {
-        "mode": QUALITY_GATE_SHADOW,
-        "model": decision.model,
-        "question_schema_version": JEV_QUESTION_SCHEMA_VERSION,
-        "policy_version": JEV_SHADOW_POLICY_VERSION,
-        "state_hash": request.state_hash,
-        "answers": nouls,
-        "intent": _choice_answer(decision.answers.get("intent")),
-        "stage": _choice_answer(decision.answers.get("stage")),
-        "duplicate_of": duplicate,
-        "flags": _flags(nouls, duplicate),
-        # Ranking signal about the questions asked, never a business score.
-        "rank_score": round(sum(judged) / len(judged), 4) if judged else None,
-        "usage": decision.usage,
-    }
+    return apply_policy(
+        {
+            "model": decision.model,
+            "question_schema_version": JEV_QUESTION_SCHEMA_VERSION,
+            "state_hash": request.state_hash,
+            "answers": nouls,
+            "intent": _choice_answer(decision.answers.get("intent")),
+            "stage": _choice_answer(decision.answers.get("stage")),
+            "duplicate_of": duplicate,
+            # Ranking signal about the questions asked, never a business score.
+            "rank_score": round(sum(judged) / len(judged), 4) if judged else None,
+            "usage": decision.usage,
+        }
+    )
 
 
 async def _recorded_decisions(
@@ -334,7 +318,7 @@ async def judge_candidates(
     suggestions: list[SuggestedTopic],
     brand_context: dict[str, Any],
 ) -> JudgeResult:
-    """Record shadow decisions; the caller has committed its read transaction."""
+    """Judge selected candidates; the caller has committed its read transaction."""
     if judge is None:
         return JudgeResult(decisions={}, quality_gate=QUALITY_GATE_OFF)
     requests = build_requests(
@@ -351,8 +335,12 @@ async def judge_candidates(
     )
     # End the read before any network I/O.
     await session.commit()
+    # A reused judgment is re-flagged under the current policy for this new
+    # candidate; the stored decision it came from is left as recorded.
     decisions = {
-        r.key: recorded[r.state_hash] for r in requests if r.state_hash in recorded
+        r.key: apply_policy(recorded[r.state_hash])
+        for r in requests
+        if r.state_hash in recorded
     }
     fresh, failed = await _decide_all(
         judge, [r for r in requests if r.state_hash not in recorded]
@@ -360,5 +348,5 @@ async def judge_candidates(
     decisions.update(fresh)
     return JudgeResult(
         decisions=decisions,
-        quality_gate=QUALITY_GATE_UNAVAILABLE if failed else QUALITY_GATE_SHADOW,
+        quality_gate=QUALITY_GATE_UNAVAILABLE if failed else jev_settings.mode,
     )

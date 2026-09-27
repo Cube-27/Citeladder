@@ -50,7 +50,11 @@ from app.domain.projects.business_map import (
 )
 from app.domain.projects.knowledge_base import build_brand_knowledge_data
 from app.domain.projects.shim import project_scoring_identity
-from app.domain.prompts.candidates import pending_text_hashes, stage_candidates
+from app.domain.prompts.candidates import (
+    StagedCandidates,
+    pending_text_hashes,
+    stage_candidates,
+)
 from app.domain.prompts.demand_grounding import (
     load_demand_grounding,
     serialize_demand_signal,
@@ -130,6 +134,8 @@ class GenerationResult:
     # Suggestions that passed deterministic admission before selection.
     candidates_generated: int
     quality_gate: str = QUALITY_GATE_OFF
+    # Candidates the hard quality gate removed before review.
+    quality_rejected: int = 0
 
 
 @dataclass
@@ -581,7 +587,7 @@ async def _stage(
     evidence: dict[str, Any],
     drafts: _Drafts,
     judged: JudgeResult,
-) -> tuple[list[PromptCandidate], list[Topic]]:
+) -> tuple[StagedCandidates, list[Topic]]:
     # The objects loaded before provider I/O are stale (the set/project/topic
     # could have been renamed or deleted mid-request). Take the PROJECT lock
     # (serializes topic deletes) then the PROMPT-SET lock — the fixed order
@@ -613,7 +619,7 @@ async def _stage(
         await session.refresh(topic)
     await session.commit()
     drafts.dropped_duplicates += staged.dropped_duplicates
-    return staged.candidates, touched
+    return staged, touched
 
 
 async def generate_prompts(
@@ -676,7 +682,7 @@ async def generate_prompts(
         quality_gate=judged.quality_gate,
     )
     try:
-        candidates, touched = await _stage(
+        staged, touched = await _stage(
             session,
             workspace_id=workspace_id,
             project_id=prompt_set.project.id,
@@ -701,9 +707,10 @@ async def generate_prompts(
         )
         raise
     return GenerationResult(
-        candidates=candidates,
+        candidates=staged.candidates,
         topics=touched,
         dropped_duplicates=drafts.dropped_duplicates,
         candidates_generated=drafts.generated,
         quality_gate=judged.quality_gate,
+        quality_rejected=staged.gate_rejected,
     )
