@@ -35,8 +35,10 @@
   is implemented without a split; integrations sync/readiness and shared
   Python readers remain with their existing owners. PR 6 is implemented locally:
   verification is TS-owned, with an owner-approved detector foundation for PR 7.
-  PR 7 is split: 7a (Opportunity refresh and catalog routes) is implemented
-  locally; 7b (Action routes and declarations) needs its own assignment.
+  PR 7 is split: 7a (Opportunity refresh and catalog routes) is implemented.
+  Next are 7a-cleanup (remove Python emulation from PRs 3–6; greenfield rule
+  7) and then 7b (Action routes and declarations); each needs its own
+  assignment.
   Deployment of PRs 3–7a and their one-week cutover soaks are pending.
   Site Health, audits, billing/entitlements and the Agent runtime stay Python.
 

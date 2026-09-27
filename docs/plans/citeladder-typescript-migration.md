@@ -13,8 +13,9 @@ together with the removal of PR 3's Pydantic error-wording emulation. PR 5
 and verification) implemented locally on 27 September 2026 at the owner's
 request. PR 6 includes the explicitly approved detector foundation for PR 7.
 PR 7 is split at the owner's direction: PR 7a (Opportunity refresh and catalog
-routes) implemented locally on 27 September 2026; PR 7b (Action routes and
-declarations) has not started.
+routes) implemented on 27 September 2026, without Python emulation. Next is
+PR 7a-cleanup (remove Python emulation from PRs 3–6, rules 4 and 7), then PR 7b
+(Action routes and declarations); neither has started.
 Not execution authorization; each later PR is executed only when individually
 assigned.
 
@@ -127,6 +128,19 @@ entitlements. None of them can move without billing moving first.
    append-only evidence. Providers use recorded fixtures only.
 6. **Telemetry parity.** Span and attribute names used by dashboards survive the
    move; each cutover soaks one week comparing error rate and latency.
+7. **Greenfield, not debt-preserving.** Python is a behavior reference, not a
+   template. Each TS owner is designed as if new:
+   - its own module boundaries, types and data flow, following TypeScript
+     service conventions (the reference is an all-TypeScript product like
+     `every-app/open-seo`)
+   - no file-by-file transliteration, and no carrying over Python
+     workarounds, compatibility shims, dead branches or helper layers just
+     because Python has them
+   - Python semantics are kept only where rule 4 names a cross-stack contract
+
+   Where Python behavior was a defect or accident, fix it and record the
+   departure. A PR is judged by how much debt it removes, not by how exactly
+   it reproduces Python.
 
 ## 5. PR sequence
 
@@ -446,7 +460,7 @@ PostgreSQL coverage (`opportunity-refresh.test.ts`) exercises:
 - a 401, and non-member 404s on every route
 
 Retired Python tests:
-- 11 detector/recompute/projection modules and `test_action_grouping`: their behavior is frozen or ported.
+- 11 detector/recompute/projection modules and `test_action_grouping`: their behavior is covered by the TS PostgreSQL suite.
 - `test_opportunities_api` becomes `test_actions_api`, keeping only the Action routes.
 - The Action, command-center, declaration, placement and replay tests now seed the live set directly (`seed_live_set`) instead of recomputing.
 - The dev seeder enqueues the refresh and waits, bounded, for the TS worker.
@@ -457,6 +471,41 @@ Deliberate departures:
 
 Spans and attributes are unchanged; the refresh adds no provider I/O. Deployment
 and soak remain pending.
+
+### PR 7a-cleanup: Remove Python emulation (before 7b)
+
+PRs 3–6 were built under the old parity rule and carry Python emulation into
+TypeScript. This PR removes it across the whole TS service before any further
+owner moves. It moves no routes or kinds.
+
+- **Delete the frozen golden corpora** in `frontend/services/api/golden/frozen/`
+  (about 27k lines): `opportunity_verification`, `traffic_projections`,
+  `demand_projections`, `ai_referrals_projections`, `query_classifications`,
+  `aio_rates`, `source_series_assembly`, `referral_event_rows`,
+  `referral_classifications`. Behavior stays covered by the existing
+  PostgreSQL route and worker tests. Add a focused TS unit test only where a
+  real decision would otherwise go untested.
+- **Replace `src/python/`** (`text.ts` and `urlparse.ts`, about 500 lines of
+  `repr`, `strip`, `casefold`, `int()` and `urlsplit` emulation, imported by
+  about 35 modules) with plain TypeScript: WHATWG `URL`, `trim`, ordinary
+  comparisons and zod coercion. Delete `python-text.test.ts`.
+- **Cut live goldens to real contracts** (rule 4). Keep the route fragments
+  (`golden/families/`), the OpenAPI gate harness, session-token interop and
+  `opportunity_sources`. Keep the error envelope only as a shape contract.
+  Drop pure-emulation sets (`python_int_or_zero`, error wording, correlation
+  ids and the like). For each classification set (citations, mention
+  positions, domains, comparisons, detectors), keep it only if Python still
+  writes a value that TS compares; otherwise delete it.
+- **Remove Pydantic-worded validation** in `http/params.ts` and
+  `http/datetimes.ts`. Keep status, code and `loc`, but use plain messages and
+  standard ISO parsing.
+- **Delete the matching Python builders**: `backend/scripts/golden_masters*.py`
+  down to the kept sets, and their registration in `export_ts_platform.py`.
+- **Update the earlier PRs' "As implemented" notes** only where they claim
+  golden coverage that no longer exists. Point to this PR.
+
+Validation: `./scripts/check.ps1`, the affected TS suites and the route-ownership
+gate. Expect a large net deletion.
 
 ### PR 8: Commerce and search intelligence
 
