@@ -8,7 +8,7 @@ const p = policy.opportunity.source_patterns;
  * it (`core/config/source_patterns.is_google_search_surface`). Not a prefix
  * test, so `google.evil.com` is an ordinary publisher.
  */
-export function isGoogleSearchSurface(domain: string): boolean {
+function isGoogleSearchSurface(domain: string): boolean {
   const [first, ...suffix] = domain.split('.');
   if (first !== 'google' || suffix.length === 0) return false;
   return (

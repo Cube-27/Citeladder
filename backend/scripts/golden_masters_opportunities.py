@@ -1,18 +1,16 @@
 """Live decision fixtures for Opportunity code whose Python owners remain.
 
-The detectors, scoring, source mix, earned pages and exports retired with
-TypeScript migration PR 7a; their fixtures are frozen under
-``golden/frozen/``. What stays live is source classification, the
-Action page key, placement comparison and page predicates, plus the
-shared helpers the TypeScript refresh reads through (``opportunity_sources``).
+The detectors, scoring, source mix, earned pages and exports moved to
+TypeScript in migration PR 7a. What stays live is source classification, the
+Action page key, placement comparison and page predicates, plus the values
+both stacks compute and compare (``opportunity_sources``).
 """
 
 import dataclasses
 import itertools
 import json
-import types
 import uuid
-from typing import Any, cast
+from typing import Any
 
 from app.analysis.comparison import frozen_comparison_key
 from app.analysis.opportunities import actions, source_patterns
@@ -23,14 +21,8 @@ from app.analysis.opportunities.page_predicates import (
 )
 from app.analysis.site_health.indexing import normalized_url_for_compare
 from app.core.config import earned_actions
-from app.core.config.source_patterns import is_google_search_surface
 from app.domain.prompts.locks import _PROJECT_NAMESPACE, _advisory_lock_key
 from app.domain.prompts.normalization import prompt_text_hash
-from app.domain.site_health.normalization import (
-    encode_keyset_cursor,
-    filter_fingerprint,
-)
-from app.domain.source_pages.projection import passage_texts
 from app.domain.source_pages.roster import project_roster
 
 
@@ -238,7 +230,7 @@ def _action_cases(add):
 
 
 def opportunity_sources() -> list[dict[str, Any]]:
-    """Helpers the TypeScript refresh and reads share with retained Python owners."""
+    """Values both stacks compute and compare (roster, hashes, lock key, page URL)."""
     cases: list[dict[str, Any]] = []
 
     def add(op, args, output):
@@ -248,7 +240,7 @@ def opportunity_sources() -> list[dict[str, Any]]:
 
     configs: list[dict[str, Any]] = [
         {},
-        {"brand_name": "Café", "brand_aliases": ["Straße", "b", "A", 5]},
+        {"brand_name": "Café", "brand_aliases": ["Straße", "b", "A"]},
         {"brand_name": None, "brand_aliases": None, "competitors": None},
         {
             "brand_name": "𐀀 Brand",
@@ -256,22 +248,11 @@ def opportunity_sources() -> list[dict[str, Any]]:
                 {"name": "Zed", "aliases": ["z2", "Z1"]},
                 {"name": "Acme", "aliases": []},
                 {"name": "Acme"},
-                {"name": None, "aliases": [True, 1.5]},
             ],
         },
     ]
     for config in configs:
         add("roster", [config], project_roster(config))
-    passages = [{"text": "  first "}, {"text": ""}, None, {"text": 3}, {"x": 1}]
-    for refs in [None, [], [0, 1, 2, 3, 4], [4, 0, 0, 9, -1], [True, False], [1.0]]:
-        add(
-            "passages",
-            [passages, refs],
-            passage_texts(
-                cast(Any, types.SimpleNamespace(evidence_passages=passages)), refs
-            ),
-        )
-    add("passages", [None, [0]], passage_texts(None, [0]))
     for text in [
         "Best  shoes?",
         "  CAF\u00c9 Stra\u00dfe!! ",
@@ -287,33 +268,6 @@ def opportunity_sources() -> list[dict[str, Any]]:
             [str(_uid(index))],
             str(_advisory_lock_key(_PROJECT_NAMESPACE, _uid(index))),
         )
-    filter_cases: list[tuple[str, dict[str, object]]] = [
-        ("opportunities", {"project_id": str(_uid(1)), "type": None, "status": ""}),
-        ("opportunities", {"min_priority": 30.0, "rule_id": "x", "action_path": "e"}),
-        ("opportunities", {"min_priority": 12.5, "type": "café"}),
-        ("actions", {"project_id": str(_uid(1)), "status": "open", "target": None}),
-    ]
-    for scope, filters in filter_cases:
-        add("fingerprint", [scope, filters], filter_fingerprint(scope, filters))
-        add(
-            "cursor",
-            [scope, filters, ["30.0", str(_uid(2))]],
-            encode_keyset_cursor(
-                scope=scope, filters=filters, sort_values=["30.0", str(_uid(2))]
-            ),
-        )
-    for domain in [
-        "",
-        "google",
-        "google.com",
-        "google.co.uk",
-        "google.com.au",
-        "google.evil.com",
-        "google.evil.co.uk",
-        "mail.google.com",
-        "google.xyz.com.au",
-    ]:
-        add("google_surface", [domain], is_google_search_surface(domain))
     for url in [
         "https://BRAND.test:443/a///?utm_source=x&q=é#fragment",
         "http://brand.test:80",

@@ -15,9 +15,7 @@ import {
   encodeKeysetCursor,
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
-import { parseFloatText } from '../http/params.ts';
 import { parseUuid } from '../http/uuid.ts';
-import { pyFloat, pyFloatRepr, pyRepr } from '../python/text.ts';
 import { opportunityStatusClause, validateStatus } from './action-status.ts';
 import {
   OPPORTUNITY_COLUMNS,
@@ -57,15 +55,15 @@ function invalid(message: string): never {
 
 function validateFilters(filters: OpportunityFilters): void {
   if (filters.type !== null && !o.OPPORTUNITY_TYPES.includes(filters.type))
-    invalid(`unknown opportunity type: ${pyRepr(filters.type)}`);
+    invalid(`unknown opportunity type: ${filters.type}`);
   if (filters.severity !== null && !o.OPPORTUNITY_SEVERITIES.includes(filters.severity))
-    invalid(`unknown opportunity severity: ${pyRepr(filters.severity)}`);
+    invalid(`unknown opportunity severity: ${filters.severity}`);
   if (filters.status !== null) validateStatus(filters.status);
   if (filters.rule_id !== null && !Object.hasOwn(o.OPPORTUNITY_RULES_BY_ID, filters.rule_id))
-    invalid(`unknown opportunity rule_id: ${pyRepr(filters.rule_id)}`);
+    invalid(`unknown opportunity rule_id: ${filters.rule_id}`);
   const path = filters.action_path;
   if (path !== undefined && path !== null && !e.ACTION_PATHS.includes(path))
-    invalid(`unknown action path: ${pyRepr(path)}`);
+    invalid(`unknown action path: ${path}`);
 }
 
 function filtered(db: Database, scope: Scope, filters: OpportunityFilters) {
@@ -95,7 +93,7 @@ function cursorFilters(scope: Scope, filters: OpportunityFilters) {
     severity: filters.severity || null,
     status: filters.status || null,
     rule_id: filters.rule_id || null,
-    min_priority: filters.min_priority === null ? null : pyFloat(filters.min_priority),
+    min_priority: filters.min_priority,
     action_path: filters.action_path ?? null,
   };
 }
@@ -105,11 +103,10 @@ function badCursor(error: unknown): never {
   throw new ApiError(400, error.message, { code: 'invalid_cursor' });
 }
 
-/** Python `float(text)` of a cursor's score, or an invalid cursor. */
+/** A cursor's score, or an invalid cursor. */
 function cursorScore(text: string): number {
-  const score = parseFloatText(text);
-  if (score === null)
-    throw new InvalidCursorError(`could not convert string to float: ${pyRepr(text)}`);
+  const score = Number(text);
+  if (text === '' || !Number.isFinite(score)) throw new InvalidCursorError('invalid cursor');
   return score;
 }
 
@@ -136,7 +133,7 @@ export async function listOpportunities(
       );
       score = cursorScore(scoreText);
       const parsed = parseUuid(idText);
-      if (parsed === null) throw new InvalidCursorError('badly formed hexadecimal UUID string');
+      if (parsed === null) throw new InvalidCursorError('invalid cursor');
       id = parsed;
     } catch (error) {
       badCursor(error);
@@ -158,7 +155,7 @@ export async function listOpportunities(
     rows = rows.slice(0, limit);
     const last = rows.at(-1)!;
     nextCursor = encodeKeysetCursor(LIST_SCOPE, fingerprint, [
-      pyFloatRepr(last.priority_score),
+      String(last.priority_score),
       last.id,
     ]);
   }
@@ -211,7 +208,7 @@ function activeAt(occurrences: Occurrence[], at: string | null): Occurrence | un
   );
 }
 
-export function historyGroup(
+function historyGroup(
   key: [string, string],
   occurrences: Occurrence[],
   latest: string | null,

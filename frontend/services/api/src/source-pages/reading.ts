@@ -1,24 +1,22 @@
 /**
- * How a persisted source-page reading is quoted and which roster judged it
- * (`app/domain/source_pages/projection.passage_texts` and
- * `roster.project_roster`).
+ * Which roster judged a persisted source-page reading, and the passages it
+ * quoted.
  *
- * Python owns source-page inspection and keeps these owners; the earned-page
- * detector reads the same persisted verdicts, so the copies are held to
- * Python by live goldens.
+ * Python source-page inspection stamps `roster_version` on every presence it
+ * writes (`app/domain/source_pages/roster.project_roster`), and the
+ * earned-page detector only compares readings taken on the current roster, so
+ * `projectRoster` must hash exactly what Python hashes. A live golden holds it
+ * to Python.
  */
 import { createHash } from 'node:crypto';
 
 import { policy } from '../config.ts';
-import { pyJsonDumps, pyStr } from '../python/json.ts';
-import { pyCompare, pyStrip, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
+import { pyCompare } from '../python/text.ts';
 import { record } from '../traffic/performance.ts';
 
-/** `value or []` for a decoded JSON list. */
-const listOrEmpty = (value: unknown): unknown[] =>
-  pyTruthy(value) && Array.isArray(value) ? value : [];
+const strings = (value: unknown): string[] =>
+  Array.isArray(value) ? value.map((item) => String(item)).sort(pyCompare) : [];
 
-/** Python ordering of two lists of strings. */
 function compareLists(left: string[], right: string[]): number {
   for (let index = 0; index < Math.min(left.length, right.length); index += 1) {
     const order = pyCompare(left[index]!, right[index]!);
@@ -27,25 +25,35 @@ function compareLists(left: string[], right: string[]): number {
   return left.length - right.length;
 }
 
+/** Python's default `json.dumps` (ASCII-escaped, `', '`/`': '`) for strings, lists and sorted objects. */
+function pythonJson(value: unknown): string {
+  if (typeof value === 'string') {
+    return JSON.stringify(value).replaceAll(
+      /[^\x20-\x7e]/g,
+      (unit) => `\\u${unit.charCodeAt(0).toString(16).padStart(4, '0')}`,
+    );
+  }
+  if (Array.isArray(value)) return `[${value.map(pythonJson).join(', ')}]`;
+  const entries = Object.entries(record(value)).sort(([a], [b]) => pyCompare(a, b));
+  return `{${entries.map(([key, item]) => `${pythonJson(key)}: ${pythonJson(item)}`).join(', ')}}`;
+}
+
 /** A stable fingerprint of the brand and competitor names an audit measured. */
 export function projectRoster(configuration: unknown): string {
   const config = record(configuration);
-  const aliases = (value: unknown) => listOrEmpty(value).map(pyStr).sort(pyCompare);
-  const competitors = listOrEmpty(config.competitors)
+  const competitors = (Array.isArray(config.competitors) ? config.competitors : [])
     .map((item) => {
       const competitor = record(item);
-      return [pyStrOrEmpty(competitor.name), ...aliases(competitor.aliases)];
+      return [String(competitor.name || ''), ...strings(competitor.aliases)];
     })
     .sort(compareLists);
   const identity = {
-    brand: pyStrOrEmpty(config.brand_name),
-    brand_aliases: aliases(config.brand_aliases),
+    brand: String(config.brand_name || ''),
+    brand_aliases: strings(config.brand_aliases),
     competitors,
     detector: policy.opportunity.source_pages.SOURCE_PAGE_PRESENCE_VERSION,
   };
-  const digest = createHash('sha256')
-    .update(pyJsonDumps(identity, { sortKeys: true }))
-    .digest('hex');
+  const digest = createHash('sha256').update(pythonJson(identity)).digest('hex');
   return `roster-${digest.slice(0, 32)}`;
 }
 
@@ -53,14 +61,9 @@ export function projectRoster(configuration: unknown): string {
 export function passageTexts(passages: unknown, refs: unknown): string[] {
   const rows = Array.isArray(passages) ? passages : [];
   const indexes = Array.isArray(refs) ? refs : [];
-  const out: string[] = [];
-  for (const ref of indexes) {
-    // `isinstance(index, int)`: a bool is an int, a float is not.
-    const index = typeof ref === 'boolean' ? Number(ref) : ref;
-    if (typeof index !== 'number' || !Number.isInteger(index)) continue;
-    if (index < 0 || index >= rows.length) continue;
-    const text = pyStrip(pyStrOrEmpty(record(rows[index]).text));
-    if (text) out.push(text);
-  }
-  return out;
+  return indexes.flatMap((index) => {
+    if (typeof index !== 'number' || !Number.isInteger(index) || index < 0) return [];
+    const text = record(rows[index]).text;
+    return typeof text === 'string' && text.trim() ? [text.trim()] : [];
+  });
 }

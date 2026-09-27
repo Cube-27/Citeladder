@@ -19,7 +19,6 @@ import type {
 } from '../analysis/opportunities/evidence.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
-import { parsePyJsonColumn, pyStr } from '../python/json.ts';
 import { pyCompare, pyStrOrEmpty } from '../python/text.ts';
 import { passageTexts, projectRoster } from '../source-pages/reading.ts';
 import { record } from '../traffic/performance.ts';
@@ -29,7 +28,7 @@ const s = policy.opportunity.source_pages;
 /** Latest plus the one before it: deterioration compares against the last usable one. */
 const SNAPSHOTS_PER_PAGE = 2;
 
-export type Snapshot = {
+type Snapshot = {
   id: string;
   source_page_id: string;
   extracted_chars: number;
@@ -37,7 +36,7 @@ export type Snapshot = {
   page_facts: unknown;
   evidence_passages: unknown;
 };
-export type Presence = {
+type Presence = {
   snapshot_id: string;
   entity_kind: string;
   entity_name: string;
@@ -108,16 +107,15 @@ async function presences(
       'match_method',
       'match_count',
       'roster_version',
+      'passage_refs',
     ])
-    .select(sql<string | null>`passage_refs::text`.as('refs_text'))
     .where('project_id', '=', projectId)
     .where('snapshot_id', 'in', snapshotIds)
     .orderBy(sql`entity_kind <> ${s.ENTITY_KIND_BRAND}`)
     .orderBy('entity_name')
     .execute();
   for (const row of rows) {
-    const found = { ...row, passage_refs: parsePyJsonColumn(row.refs_text) };
-    grouped.set(row.snapshot_id, [...(grouped.get(row.snapshot_id) ?? []), found]);
+    grouped.set(row.snapshot_id, [...(grouped.get(row.snapshot_id) ?? []), row]);
   }
   return grouped;
 }
@@ -156,7 +154,7 @@ function prior(
 }
 
 /** The audit's answers, indexed once for every page that cites them. */
-export function answerIndex(visibility: VisibilityEvidence) {
+function answerIndex(visibility: VisibilityEvidence) {
   const byId = new Map(visibility.analyses.map((row) => [row.analysis_id, row]));
   const themes = new Map(
     visibility.prompt_snapshots
@@ -178,7 +176,7 @@ export function answerIndex(visibility: VisibilityEvidence) {
   };
 }
 
-export type Page = {
+type Page = {
   id: string;
   url_hash: string;
   canonical_url: string;
@@ -192,7 +190,7 @@ export type Page = {
   inspection_requested_at: Date | null;
 };
 
-export function pageEvidence(
+function pageEvidence(
   page: Page,
   context: {
     snapshots: Snapshot[];
@@ -206,7 +204,7 @@ export function pageEvidence(
   const rows = latest ? (context.presences.get(latest.id) ?? []) : [];
   const facts = record(latest?.page_facts);
   const listed = (key: string) =>
-    Array.isArray(facts[key]) ? (facts[key] as unknown[]).map(pyStr) : [];
+    Array.isArray(facts[key]) ? (facts[key] as unknown[]).map(String) : [];
   const extracted = latest?.extracted_chars ?? 0;
   return {
     url_hash: page.url_hash,

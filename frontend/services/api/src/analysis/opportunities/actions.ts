@@ -1,6 +1,6 @@
 import { policy } from '../../config.ts';
 import { round } from '../../demand/projection.ts';
-import { pyCompare, pyFloat, pyStrip } from '../../python/text.ts';
+import { pyCompare, pyStrip } from '../../python/text.ts';
 import { casefold } from '../../traffic/normalization.ts';
 import { normalizedUrlForCompare } from '../url-compare.ts';
 import { rules } from './detectors.ts';
@@ -106,7 +106,7 @@ function group(t: ReturnType<typeof targetFor>, members: ActionMember[], availab
         rule_id: m.rule_id,
         title: m.title,
         family: familyMap[m.rule_id],
-        priority_score: pyFloat(m.priority_score),
+        priority_score: m.priority_score,
         source_analysis_ids: [...m.source_analysis_ids],
         source_issue_ids: [...m.source_issue_ids],
         source_metric_ids: [...m.source_metric_ids],

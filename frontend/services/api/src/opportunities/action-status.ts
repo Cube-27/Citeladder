@@ -12,7 +12,6 @@ import { sql, type RawBuilder, type SqlBool } from 'kysely';
 
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
-import { pyRepr } from '../python/text.ts';
 
 const a = policy.opportunity.actions;
 
@@ -59,6 +58,6 @@ export function opportunityStatusClause(status: string | null): RawBuilder<SqlBo
 
 export function validateStatus(status: string): void {
   if (!a.ACTION_STATUSES.includes(status)) {
-    throw new ApiError(422, `unknown action status: ${pyRepr(status)}`);
+    throw new ApiError(422, `unknown action status: ${status}`);
   }
 }

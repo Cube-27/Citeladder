@@ -6,30 +6,6 @@
  * brand a mention resolves to or what a served value reads as. Golden
  * masters prove each helper against the Python builtin.
  */
-/**
- * A Python `float` whose value is whole: a decoded JSON number carries no
- * float tag, so the mark says `30.0` rather than `30` (see `json.ts`).
- */
-export class PyFloat {
-  readonly value: number;
-
-  constructor(value: number) {
-    this.value = value;
-  }
-
-  /** A plain JSON consumer sees the number itself. */
-  toJSON(): number {
-    return this.value;
-  }
-}
-
-/** `value` marked as a Python `float`. */
-export const pyFloat = (value: number): PyFloat => new PyFloat(value);
-
-/** A nullable float column, marked. */
-export const pyFloatOrNull = (value: number | null | undefined): PyFloat | null =>
-  value === null || value === undefined ? null : new PyFloat(value);
-
 function range(first: number, last: number): number[] {
   return Array.from({ length: last - first + 1 }, (_, offset) => first + offset);
 }
@@ -107,7 +83,6 @@ export function pyRepr(value: string): string {
 
 /** Python truthiness of a decoded JSON value. */
 export function pyTruthy(value: unknown): boolean {
-  if (value instanceof PyFloat) return value.value !== 0;
   if (Array.isArray(value)) return value.length > 0;
   if (value !== null && typeof value === 'object') return Object.keys(value).length > 0;
   return Boolean(value);
@@ -157,7 +132,6 @@ function pyIntFromStr(text: string): number | null {
 export function pyIntOrZero(value: unknown): number | null {
   if (!pyTruthy(value)) return 0;
   if (typeof value === 'boolean') return 1;
-  if (value instanceof PyFloat) return pyIntOrZero(value.value);
   if (typeof value === 'string') return pyIntFromStr(value);
   if (typeof value !== 'number') return null;
   const whole = Math.trunc(value);
@@ -176,7 +150,7 @@ function pyNumberRepr(value: number): string {
 }
 
 /** `repr(value)` for a finite number known to be a Python `float` (`30` prints `'30.0'`). */
-export function pyFloatRepr(value: number): string {
+function pyFloatRepr(value: number): string {
   const [mantissa, exponent] = value.toExponential().split('e') as [string, string];
   const power = Number(exponent);
   // Python uses scientific notation below 1e-4 and from 1e16; JavaScript below 1e-6 and from 1e21.
@@ -188,8 +162,7 @@ export function pyFloatRepr(value: number): string {
 }
 
 /** `repr(value)` for a decoded JSON value, as Python prints the object it decodes to. */
-export function pyReprValue(value: unknown): string {
-  if (value instanceof PyFloat) return pyFloatRepr(value.value);
+function pyReprValue(value: unknown): string {
   if (value === null || value === undefined) return 'None';
   if (typeof value === 'boolean') return value ? 'True' : 'False';
   if (typeof value === 'number') return pyNumberRepr(value);

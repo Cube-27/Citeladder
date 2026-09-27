@@ -24,7 +24,6 @@ import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { notFound } from '../errors.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
-import { pyJson } from '../python/json.ts';
 import { taskProject, type Executor } from '../workers/executor.ts';
 import { syncActions } from './action-sync.ts';
 import { earnedPageHits } from './earned-page-hits.ts';
@@ -151,7 +150,7 @@ async function insertOpportunities(
           ...row,
           workspace_id: scope.workspaceId,
           project_id: scope.projectId,
-          evidence: pyJson(row.evidence),
+          evidence: JSON.stringify(row.evidence),
           source_analysis_ids: idsJson(row.source_analysis_ids),
           source_issue_ids: idsJson(row.source_issue_ids),
           source_metric_ids: idsJson(row.source_metric_ids),
@@ -224,13 +223,13 @@ async function writeRefresh(
       ...snapshot,
       workspace_id: scope.workspaceId,
       project_id: scope.projectId,
-      coverage: snapshot.coverage === null ? null : pyJson(snapshot.coverage),
-      limitations: pyJson(snapshot.limitations),
-      source_mix: pyJson(snapshot.source_mix),
-      action_path_mix: pyJson(snapshot.action_path_mix),
-      domain_rollups: pyJson(snapshot.domain_rollups),
-      counts_by_type: pyJson(snapshot.counts_by_type),
-      counts_by_severity: pyJson(snapshot.counts_by_severity),
+      coverage: snapshot.coverage === null ? null : JSON.stringify(snapshot.coverage),
+      limitations: JSON.stringify(snapshot.limitations),
+      source_mix: JSON.stringify(snapshot.source_mix),
+      action_path_mix: JSON.stringify(snapshot.action_path_mix),
+      domain_rollups: JSON.stringify(snapshot.domain_rollups),
+      counts_by_type: JSON.stringify(snapshot.counts_by_type),
+      counts_by_severity: JSON.stringify(snapshot.counts_by_severity),
       source_analysis_ids: idsJson(snapshot.source_analysis_ids),
       source_issue_ids: idsJson(snapshot.source_issue_ids),
       created_at: createdAt,

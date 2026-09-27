@@ -5,8 +5,6 @@
  * `visibility_evidence.py`). Projections of existing rows only; nothing here
  * detects, scores or writes.
  */
-import { sql } from 'kysely';
-
 import { policy } from '../config.ts';
 import type {
   AnalysisEvidence,
@@ -17,8 +15,7 @@ import type {
 } from '../analysis/opportunities/evidence.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
-import { parsePyJsonColumn } from '../python/json.ts';
-import { pyCompare, pyFloat, pyFloatOrNull, pyTruthy } from '../python/text.ts';
+import { pyCompare } from '../python/text.ts';
 import { record } from '../traffic/performance.ts';
 import { siteCoverage, type CoverageCrawl } from './refresh-compute.ts';
 
@@ -35,8 +32,7 @@ export async function loadSiteEvidence(
   const scope = new WorkspaceScope(workspaceId);
   const issues = await scope
     .selectFrom(db, 'site_issues')
-    .select(['id', 'rule_id', 'severity', 'category', 'finding_class', 'site_url_id'])
-    .select(sql<string | null>`evidence::text`.as('evidence_text'))
+    .select(['id', 'rule_id', 'severity', 'category', 'finding_class', 'site_url_id', 'evidence'])
     .where('crawl_id', '=', crawl.id)
     .where('finding_class', '=', r.finding_class_defect)
     .orderBy('created_at')
@@ -56,18 +52,15 @@ export async function loadSiteEvidence(
   const [coverage, limitations] = siteCoverage(crawl);
   return {
     crawl_id: crawl.id,
-    issues: issues.map((issue) => {
-      const evidence = parsePyJsonColumn(issue.evidence_text);
-      return {
-        issue_id: issue.id,
-        rule_id: issue.rule_id,
-        severity: issue.severity || '',
-        category: issue.category || '',
-        finding_class: issue.finding_class,
-        site_url_id: issue.site_url_id,
-        evidence: pyTruthy(evidence) ? (evidence as Record<string, unknown>) : {},
-      };
-    }),
+    issues: issues.map((issue) => ({
+      issue_id: issue.id,
+      rule_id: issue.rule_id,
+      severity: issue.severity || '',
+      category: issue.category || '',
+      finding_class: issue.finding_class,
+      site_url_id: issue.site_url_id,
+      evidence: record(issue.evidence),
+    })),
     urls: urls.map((url) => ({ site_url_id: url.id, normalized_url: url.normalized_url })),
     coverage,
     limitations,
@@ -93,28 +86,17 @@ export async function confirmedDeclineHits(
       'repetition_agreement',
       'trend_confidence',
       'source_analysis_ids',
-    ])
-    .select([
-      sql<string>`rolling_four::text`.as('rolling_text'),
-      sql<string>`components::text`.as('components_text'),
+      'rolling_four',
+      'components',
     ])
     .where('audit_id', '=', auditId)
     .where('decline_confirmed', 'is', true)
     .orderBy('prompt_index')
     .execute();
-  return rows.map((row) =>
-    declineHit(
-      {
-        ...row,
-        rolling_four: parsePyJsonColumn(row.rolling_text),
-        components: parsePyJsonColumn(row.components_text),
-      },
-      auditId,
-    ),
-  );
+  return rows.map((row) => declineHit(row, auditId));
 }
 
-export type DeclineRow = {
+type DeclineRow = {
   id: string;
   prompt_id: string | null;
   prompt_index: number;
@@ -130,7 +112,7 @@ export type DeclineRow = {
 };
 
 /** One confirmed prompt decline as an Opportunity hit. */
-export function declineHit(row: DeclineRow, auditId: string): DetectorHit {
+function declineHit(row: DeclineRow, auditId: string): DetectorHit {
   return {
     rule_id: 'confirmed_prompt_decline',
     target_key:
@@ -143,11 +125,11 @@ export function declineHit(row: DeclineRow, auditId: string): DetectorHit {
     evidence: {
       prompt: row.prompt_text,
       rolling_four: row.rolling_four,
-      immediate_delta: pyFloatOrNull(row.immediate_delta),
+      immediate_delta: row.immediate_delta,
       engines: Object.keys(record(row.per_engine_scores)).sort(pyCompare),
-      engine_agreement: pyFloat(row.engine_agreement),
-      repetition_agreement: pyFloat(row.repetition_agreement),
-      trend_confidence: pyFloat(row.trend_confidence),
+      engine_agreement: row.engine_agreement,
+      repetition_agreement: row.repetition_agreement,
+      trend_confidence: row.trend_confidence,
       components: row.components,
       content_goal: 'Improve the owned answer for this prompt.',
     },

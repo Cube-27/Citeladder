@@ -61,7 +61,7 @@ async function latestEvidence(db: Database, scope: Scope) {
   return { evidenceAt, demand: demand ?? null };
 }
 
-export function isStale(
+function isStale(
   snapshot: SnapshotRow | null,
   evidenceAt: string | null,
   demand: { id: string; source_hash: string } | null,
@@ -75,7 +75,7 @@ export function isStale(
   return newer || changed;
 }
 
-export function activationState(
+function activationState(
   evidenceAt: string | null,
   snapshot: SnapshotRow | null,
   stale: boolean,

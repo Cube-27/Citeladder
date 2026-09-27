@@ -1,5 +1,5 @@
 import { policy } from '../../config.ts';
-import { pyCompare, pyFloat, pyStrOrEmpty } from '../../python/text.ts';
+import { pyCompare, pyStrOrEmpty } from '../../python/text.ts';
 import { record } from '../../traffic/performance.ts';
 import type {
   AnalysisEvidence,
@@ -63,10 +63,10 @@ function gapHit(
         : { owned_domains: [...e.owned_domains].sort(pyCompare) }),
       audit_id: e.audit_id,
       priority_factors: {
-        value_factor: pyFloat(value),
+        value_factor: value,
         value_source: source,
         value_key: key,
-        recommendation_strength_factor: pyFloat(strength),
+        recommendation_strength_factor: strength,
       },
     },
     source_analysis_ids: rows.map((a) => a.analysis_id).sort(pyCompare),

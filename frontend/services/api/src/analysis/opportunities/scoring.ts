@@ -7,7 +7,7 @@ const normalized = (value: string | null) => pyStrip(value ?? '').toLowerCase();
 function weight(table: Record<string, number>, key: string, fallback: number): number {
   return table[key] ?? fallback;
 }
-export function valueFactorForIntent(intent: string | null): number {
+function valueFactorForIntent(intent: string | null): number {
   return weight(p.INTENT_VALUE_WEIGHTS, normalized(intent), p.INTENT_VALUE_DEFAULT);
 }
 export function valueFactorForPrompt(

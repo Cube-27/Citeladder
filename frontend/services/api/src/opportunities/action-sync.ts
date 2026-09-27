@@ -18,7 +18,6 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { groupMembers, type ActionMember } from '../analysis/opportunities/actions.ts';
 import type { Database } from '../db/database.ts';
-import { pyJson } from '../python/json.ts';
 import { record } from '../traffic/performance.ts';
 import type { NewOpportunity } from './refresh-compute.ts';
 import type { Scope } from './sources.ts';
@@ -26,7 +25,7 @@ import type { Scope } from './sources.ts';
 const a = policy.opportunity.actions;
 
 /** One new row as the grouping reads it. */
-export function actionMember(
+function actionMember(
   row: Omit<NewOpportunity, 'source_analysis_ids' | 'source_issue_ids' | 'source_metric_ids'> & {
     source_analysis_ids: string[] | null;
     source_issue_ids: string[] | null;
@@ -60,11 +59,11 @@ function groupFields(group: Group, snapshotId: string) {
     target_url: group.target.url,
     target_prompt_id: group.target.prompt_id,
     priority_score: group.priority_score,
-    families: pyJson(group.families),
+    families: JSON.stringify(group.families),
     approach: group.approach,
     skill_id: group.skill_id,
-    diagnosis: pyJson(group.diagnosis),
-    member_opportunity_ids: pyJson(group.members.map((member) => member.opportunity_id)),
+    diagnosis: JSON.stringify(group.diagnosis),
+    member_opportunity_ids: JSON.stringify(group.members.map((member) => member.opportunity_id)),
     opportunity_snapshot_id: snapshotId,
     evidence_cleared_at: null,
   };

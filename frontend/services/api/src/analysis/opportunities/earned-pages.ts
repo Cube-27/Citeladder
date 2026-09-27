@@ -1,5 +1,5 @@
 import { policy } from '../../config.ts';
-import { pyCompare, pyFloat } from '../../python/text.ts';
+import { pyCompare } from '../../python/text.ts';
 import { rules } from './detectors.ts';
 import { brandOf, competitorsOf, earnedPageBrief } from './earned-page-brief.ts';
 import type { DetectorHit, EarnedPageEvidence, SourcePageEvidence } from './evidence.ts';
@@ -11,7 +11,7 @@ const relevant = (page: SourcePageEvidence) =>
   page.answer_count >= 1 && page.prompt_indices.length > 0;
 const recurrent = (page: SourcePageEvidence, min: number) =>
   Math.max(page.recurrence_count, page.answer_count) >= min;
-export function qualification(page: SourcePageEvidence): [boolean, string[]] {
+function qualification(page: SourcePageEvidence): [boolean, string[]] {
   const missing: string[] = [];
   if (page.inspection_state !== s.INSPECTION_INSPECTED || page.snapshot_id === null)
     missing.push('not_inspected');
@@ -113,8 +113,8 @@ export function detectEarnedPageOpportunities(evidence: EarnedPageEvidence): Det
           evidence: {
             content_handoff: earnedPageBrief(rule, page, evidence, qualified, missing, extra),
             priority_factors: {
-              page_recurrence_factor: pyFloat(value),
-              page_competitor_presence_factor: pyFloat(gap),
+              page_recurrence_factor: value,
+              page_competitor_presence_factor: gap,
             },
           },
           source_analysis_ids: [...page.analysis_ids],

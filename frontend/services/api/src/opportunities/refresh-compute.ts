@@ -4,9 +4,7 @@
  * and the snapshot's read projection (`recompute.py`, `snapshot_build.py`,
  * `snapshot_projection.py`, `site_coverage.py`).
  *
- * Pure functions over loaded evidence, held to the retired Python by frozen
- * goldens that compare Python floats exactly; persisted JSON carries `PyFloat`
- * marks where Python wrote a float.
+ * Pure functions over loaded evidence.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -17,7 +15,7 @@ import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
 import { priorityScore } from '../analysis/opportunities/scoring.ts';
 import { emptySourceProjection } from '../analysis/opportunities/source-mix.ts';
 import { isoUtc } from '../db/timestamps.ts';
-import { pyCompare, pyFloat, pyIntOrZero } from '../python/text.ts';
+import { pyCompare } from '../python/text.ts';
 import { promptTextHash } from '../prompts/normalization.ts';
 import { record } from '../traffic/performance.ts';
 
@@ -37,11 +35,8 @@ export type CoverageCrawl = {
   failed_url_count: number | null;
 };
 
-function integer(value: unknown): number {
-  const parsed = pyIntOrZero(value);
-  if (parsed === null) throw new TypeError(`int() cannot read ${String(value)}`);
-  return parsed;
-}
+/** A stored count, or 0 when absent. */
+const integer = (value: unknown): number => Math.trunc(Number(value) || 0);
 
 /** Exactly how much of a terminal crawl feeds detection. */
 export function siteCoverage(crawl: CoverageCrawl | null): [Json, string[]] {
@@ -56,7 +51,7 @@ export function siteCoverage(crawl: CoverageCrawl | null): [Json, string[]] {
     selected_url_count: selected,
     analyzed_url_count: analyzed,
     failed_url_count: integer(crawl.failed_url_count),
-    analysis_ratio: selected ? pyFloat(round(analyzed / selected, 4)) : null,
+    analysis_ratio: selected ? round(analyzed / selected, 4) : null,
   };
   const limitations: string[] = [];
   if (crawl.status !== r.crawl_status_completed) {

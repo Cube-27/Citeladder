@@ -9,7 +9,6 @@ import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
 import { isoUtc, isoUtcOrNull, utcText, utcTextOf } from '../db/timestamps.ts';
-import { pyStr } from '../python/json.ts';
 import { pyCollapseWhitespace, pyStrip, pyStrOrEmpty } from '../python/text.ts';
 import { record } from '../traffic/performance.ts';
 
@@ -109,7 +108,7 @@ function evidenceSummary(row: OpportunityRow) {
 
 type Rank = { system_rank: number; display_rank: number; order_source: 'system' | 'manual' };
 
-export function projectItem(
+function projectItem(
   row: OpportunityRow,
   rank: Rank = { system_rank: 0, display_rank: 0, order_source: 'system' },
 ) {
@@ -171,7 +170,7 @@ const persistedHandoff = (row: Pick<OpportunityRow, 'evidence'>): Record<string,
 
 const DEFAULT_FORMAT = 'content_page';
 
-export function projectContentHandoff(row: OpportunityRow): Record<string, unknown> {
+function projectContentHandoff(row: OpportunityRow): Record<string, unknown> {
   const persisted = persistedHandoff(row);
   const versions = {
     detector: row.analyzer_version,
@@ -183,7 +182,7 @@ export function projectContentHandoff(row: OpportunityRow): Record<string, unkno
   };
   if (Object.keys(persisted).length) {
     const skill = persisted.suggested_skill_id
-      ? pyStr(persisted.suggested_skill_id)
+      ? String(persisted.suggested_skill_id)
       : DEFAULT_FORMAT;
     persisted.suggested_skill_id = r.content_format_ids.includes(skill) ? skill : DEFAULT_FORMAT;
     persisted.opportunity_id = row.id;

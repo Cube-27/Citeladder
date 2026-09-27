@@ -1,19 +1,14 @@
 /**
  * Opportunity hits mapped from other owners' persisted signals: approved
  * Change Intelligence regressions, promoted Demand signals and Commerce
- * catalog/shelf gaps (`change_hits.py`, `demand_hits.py`, `commerce_hits.py`).
- *
- * JSON these copy verbatim is read as text so a Python float stays a float.
+ * catalog/shelf gaps.
  */
-import { sql } from 'kysely';
-
 import { policy } from '../config.ts';
 import { rules } from '../analysis/opportunities/detectors.ts';
 import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
-import { parsePyJsonColumn } from '../python/json.ts';
-import { pyCompare, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
+import { pyCompare } from '../python/text.ts';
 import { record } from '../traffic/performance.ts';
 import type { DemandSource, Scope } from './sources.ts';
 
@@ -70,8 +65,7 @@ export async function changeHits(
   const scope = new WorkspaceScope(workspaceId);
   const snapshot = await scope
     .selectFrom(db, 'site_change_snapshots')
-    .select(['id', 'crawl_a_id', 'crawl_b_id', 'complete_pair'])
-    .select(sql<string>`coverage::text`.as('coverage_text'))
+    .select(['id', 'crawl_a_id', 'crawl_b_id', 'complete_pair', 'coverage'])
     .where('project_id', '=', crawl.project_id)
     .where('crawl_b_id', '=', crawl.id)
     .where('state', '=', r.change_state_available)
@@ -86,11 +80,7 @@ export async function changeHits(
   const rows = await scope
     .selectFrom(db, 'site_change_observations')
     .select(['id', 'site_url_id', 'field', 'change_class', 'normalized_url'])
-    .select(['source_analysis_a_id', 'source_analysis_b_id'])
-    .select([
-      sql<string | null>`before_value::text`.as('before_text'),
-      sql<string | null>`after_value::text`.as('after_text'),
-    ])
+    .select(['source_analysis_a_id', 'source_analysis_b_id', 'before_value', 'after_value'])
     .where('snapshot_id', '=', snapshot.id)
     .where('expected', 'is', false)
     .where((eb) =>
@@ -104,25 +94,17 @@ export async function changeHits(
     .orderBy('id')
     .limit(r.change_max_observations)
     .execute();
-  const pair = { ...snapshot, coverage: parsePyJsonColumn(snapshot.coverage_text) };
-  return rows.flatMap((row) => {
-    const found = changeHit(pair, {
-      ...row,
-      before_value: parsePyJsonColumn(row.before_text),
-      after_value: parsePyJsonColumn(row.after_text),
-    });
-    return found ? [found] : [];
-  });
+  return rows.flatMap((row) => changeHit(snapshot, row) ?? []);
 }
 
-export type ChangePair = {
+type ChangePair = {
   id: string;
   crawl_a_id: string | null;
   crawl_b_id: string;
   complete_pair: boolean;
   coverage: unknown;
 };
-export type ChangeRow = {
+type ChangeRow = {
   id: string;
   site_url_id: string;
   field: string;
@@ -135,7 +117,7 @@ export type ChangeRow = {
 };
 
 /** One approved regression as a hit; null for a change nothing promotes. */
-export function changeHit(pair: ChangePair, row: ChangeRow): DetectorHit | null {
+function changeHit(pair: ChangePair, row: ChangeRow): DetectorHit | null {
   const rule = changeRule({
     change_class: row.change_class,
     field: row.field,
@@ -199,14 +181,15 @@ function demandTargets(
 }
 
 /** One promoted Demand signal as an Opportunity hit; null without a target. */
-export function demandHit(snapshotId: string, signal: DemandSignal): DetectorHit | null {
+function demandHit(snapshotId: string, signal: DemandSignal): DetectorHit | null {
   const evidence = record(signal.evidence);
-  const target = pyStrOrEmpty(evidence.target);
+  const text = (value: unknown) => (typeof value === 'string' ? value : '');
+  const target = text(evidence.target);
   if (!target) return null;
   const [targetUrl, targetTheme] = demandTargets(
-    pyStrOrEmpty(evidence.target_kind),
+    text(evidence.target_kind),
     target,
-    pyStrOrEmpty(evidence.resolved_page_url),
+    text(evidence.resolved_page_url),
   );
   const ruleIds: Record<string, string> = o.DEMAND_SIGNAL_RULE_IDS;
   const metricIds = evidence.source_metric_row_ids;
@@ -227,7 +210,7 @@ export function demandHit(snapshotId: string, signal: DemandSignal): DetectorHit
     },
     source_analysis_ids: [],
     source_issue_ids: [],
-    source_metric_ids: pyTruthy(metricIds) && Array.isArray(metricIds) ? [...metricIds] : [],
+    source_metric_ids: Array.isArray(metricIds) ? [...metricIds] : [],
     value_factor: Math.max(0.01, Math.min(1, (signal.priority_score || 0) / 100)),
     gap_factor: o.DEMAND_SIGNAL_GAP_FACTOR,
   });
@@ -243,11 +226,7 @@ export async function demandHits(
   const signals = await new WorkspaceScope(scope.workspaceId)
     .selectFrom(db, 'demand_signals')
     .select(['id', 'signal_type', 'identity_hash', 'priority_score', 'limitations'])
-    .select([
-      sql<string>`metrics::text`.as('metrics_text'),
-      sql<string>`coverage::text`.as('coverage_text'),
-      sql<string>`evidence::text`.as('evidence_text'),
-    ])
+    .select(['metrics', 'coverage', 'evidence'])
     .where('project_id', '=', scope.projectId)
     .where('snapshot_id', '=', snapshot.id)
     .where('signal_type', 'in', policy.demand.DEMAND_OPPORTUNITY_SIGNAL_TYPES)
@@ -255,15 +234,7 @@ export async function demandHits(
     .orderBy('identity_hash')
     .orderBy('id')
     .execute();
-  return signals.flatMap((signal) => {
-    const found = demandHit(snapshot.id, {
-      ...signal,
-      metrics: parsePyJsonColumn(signal.metrics_text),
-      coverage: parsePyJsonColumn(signal.coverage_text),
-      evidence: parsePyJsonColumn(signal.evidence_text),
-    });
-    return found ? [found] : [];
-  });
+  return signals.flatMap((signal) => demandHit(snapshot.id, signal) ?? []);
 }
 
 // ---------------------------------------------------------------------------
@@ -298,7 +269,7 @@ type ShelfSnapshot = {
   product_visibility: number;
 };
 
-export function unmentionedHits(snapshots: ShelfSnapshot[], auditId: string): DetectorHit[] {
+function unmentionedHits(snapshots: ShelfSnapshot[], auditId: string): DetectorHit[] {
   const rule = rules[o.RULE_PRODUCT_NOT_MENTIONED]!;
   if (!rule.enabled) return [];
   return snapshots
@@ -317,10 +288,7 @@ const CATALOG_FIELDS = ['name', 'description', 'brand', 'price', 'currency'] as 
 type CatalogProduct = Record<(typeof CATALOG_FIELDS)[number], unknown> & { id: string };
 
 /** A product with an empty catalog field and at least one observation. */
-export function missingFieldHit(
-  product: CatalogProduct,
-  observationIds: string[],
-): DetectorHit | null {
+function missingFieldHit(product: CatalogProduct, observationIds: string[]): DetectorHit | null {
   const missing = CATALOG_FIELDS.filter(
     (field) => product[field] === null || product[field] === '',
   );

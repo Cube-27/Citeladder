@@ -65,21 +65,6 @@ export const UUID_MESSAGE = 'Input should be a valid UUID';
 
 const failure = (type: string, message: string): Outcome => ({ ok: false, type, message });
 
-const FLOAT =
-  /^[+-]?(?:\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\.\d+(?:_\d+)*)(?:[eE][+-]?\d+(?:_\d+)*)?$/u;
-const FLOAT_SPECIAL = /^([+-]?)(inf|infinity|nan)$/iu;
-
-/** A float as Pydantic reads a query string: trimmed, `_` separators, `inf`/`nan`. */
-export function parseFloatText(raw: string): number | null {
-  const text = raw.trim();
-  const special = FLOAT_SPECIAL.exec(text);
-  if (special) {
-    if (special[2]!.toLowerCase() === 'nan') return Number.NaN;
-    return special[1] === '-' ? -Infinity : Infinity;
-  }
-  return FLOAT.test(text) ? Number(text.replaceAll('_', '')) : null;
-}
-
 function validateScalar(scalar: Scalar, raw: string): Outcome {
   switch (scalar.kind) {
     case 'uuid': {
@@ -115,8 +100,8 @@ function validateScalar(scalar: Scalar, raw: string): Outcome {
       return { ok: true, value };
     }
     case 'float': {
-      const value = parseFloatText(raw);
-      return value === null
+      const value = raw.trim() === '' ? Number.NaN : Number(raw);
+      return !Number.isFinite(value)
         ? failure(
             'float_parsing',
             'Input should be a valid number, unable to parse string as a number',
