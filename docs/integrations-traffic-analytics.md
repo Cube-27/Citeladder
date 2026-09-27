@@ -51,8 +51,10 @@ chunks, bounded by the resolved history_window allowance.
 Post-sync work uses existing analytics tasks to refresh Traffic, AI Referrals
 and Demand, then the appropriate Opportunity and verification successors.
 Source identity and contributing revisions belong in refresh idempotency.
-[Analytics worker](../backend/app/workers/analytics_worker.py) owns dispatch;
-each domain owns its derived projection.
+[Analytics worker](../backend/app/workers/analytics_worker.py) owns dispatch
+of the Python kinds; the [TypeScript analytics worker](../frontend/services/api/src/workers/analytics-worker.ts)
+owns the AI Referrals chain (ingest, classify, snapshot refresh, retention).
+Each domain owns its derived projection.
 
 [Performance](../backend/app/domain/traffic/performance.py) reads persisted
 TrafficSnapshot and PerformanceDimensionStat rows. GSC date-only gsc_day_daily
@@ -67,7 +69,7 @@ display snapshot from stored evidence only; it does not sync providers, refresh
 Demand or enqueue verification. Exact windows cannot fall back to an unrelated
 snapshot.
 
-[AI Referrals](../backend/app/domain/analytics/ai_referrals_snapshot.py) uses
+[AI Referrals](../frontend/services/api/src/referrals/projection.ts) uses
 ga4_source_medium_daily as the canonical session grain. AI-source sessions are
 the numerator; all sessions of that same report are the denominator. Alternate
 referrer reports retain provenance but are not added again. Public rows show

@@ -6,8 +6,11 @@ owner. PR 2 (shared contracts and route-ownership gate) implemented on
 27 September 2026 at the owner's request. PR 3 (first live reads) implemented
 on 27 September 2026 at the owner's request: `executions`, `ai-referrals` and
 `visibility` are TypeScript-owned, served through every ingress, with the
-GCP runtime running the service image. Not execution authorization; each later
-PR is executed only when individually assigned.
+GCP runtime running the service image. PR 4 (queue engine and referral
+analytics kinds) implemented on 27 September 2026 at the owner's request,
+together with the removal of PR 3's Pydantic error-wording emulation. Not
+execution authorization; each later PR is executed only when individually
+assigned.
 
 ## 1. Goal, scope and pace
 
@@ -182,6 +185,26 @@ cross-claimed. A TS analytics worker takes `ingest_referrals`,
 `referral_retention_sweep` (`domain/analytics`). Kind ownership lives in
 `core/config/analytics.py`, and the Python worker claims the complement. The
 Python sweeper keeps expiring leases for every queue.
+
+*As implemented:* the TS queue ports what a claiming worker runs (the claim,
+`mark_running`, heartbeat and the worker's locked finalize) for
+`analytics_tasks`; expiry, parking, retry and cancel stay with the Python queue
+that the sweeper and other workers use, so no second copy exists without a
+caller. `ANALYTICS_TS_OWNED_TASK_KINDS` is a config constant exported to TS,
+so both images always agree; rollback is reverting that constant. The worker
+runs from the API service image as `analytics-worker-ts`. The two-stack proof
+is a PostgreSQL test of concurrent claimers with disjoint kind sets through
+the shared claim SQL, plus a Python test that its worker leaves TS-owned rows
+queued. Classification stays in Python for the traffic projection (rule 2,
+live golden); the sanitizer, event mapping and snapshot projection retired
+with their executors and are frozen goldens. Nothing enqueues
+`referral_retention_sweep` yet, in either stack; the executor is ported, the
+scheduling gap predates this PR.
+
+The same PR removed PR 3's Pydantic error-wording emulation (speedate
+datetime diagnostics, uuid-crate messages, the casefold table and the frozen
+`request_parameters` golden): parity is the 422 contract (status, code, `loc`,
+`type`), not message text.
 
 > **Stop point B.** Reads and the first worker kinds are TS; the queue is proven
 > with two stacks.
