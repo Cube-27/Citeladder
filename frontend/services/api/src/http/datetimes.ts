@@ -19,7 +19,8 @@ const SECONDS_PER_DAY = 86_400;
 
 // PostgreSQL calendar timestamps have no year zero.
 const dateSchema = z.iso.date().refine((value) => !value.startsWith('0000-'));
-const datetimeSchema = z.iso.datetime({ offset: true, local: true })
+const datetimeSchema = z.iso
+  .datetime({ offset: true, local: true })
   .refine((value) => !value.startsWith('0000-'));
 const DATETIME =
   /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(?:(Z)|([+-])(\d{2}):(\d{2}))?)?$/u;

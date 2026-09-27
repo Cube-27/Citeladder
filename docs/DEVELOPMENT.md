@@ -262,7 +262,7 @@ TYPES_DATABASE_URL="<same disposable database>" pnpm db:types   # regenerate Kys
 ```
 
 After changing an exported setting, error code, the workspace role matrix or a
-golden-mastered behavior, regenerate the Python-owned inputs from `backend/` with
+shared cross-stack identity contract, regenerate the Python-owned inputs from `backend/` with
 `uv run python -m scripts.export_ts_platform` and commit them. From the
 repository root, `node scripts/quality.mjs --mode check --scope api` checks types,
 schema authority, export freshness and route ownership (`pnpm check:routes` against
