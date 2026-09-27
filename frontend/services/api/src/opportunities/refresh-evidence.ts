@@ -125,7 +125,9 @@ function declineHit(row: DeclineRow, auditId: string): DetectorHit {
       prompt: row.prompt_text,
       rolling_four: row.rolling_four,
       immediate_delta: row.immediate_delta,
-      engines: Object.keys(record(row.per_engine_scores)).sort(),
+      engines: Object.keys(record(row.per_engine_scores)).sort((a, b) =>
+        a < b ? -1 : a > b ? 1 : 0,
+      ),
       engine_agreement: row.engine_agreement,
       repetition_agreement: row.repetition_agreement,
       trend_confidence: row.trend_confidence,
@@ -257,7 +259,9 @@ export async function loadVisibilityEvidence(
       logical_engine: row.logical_engine || '',
       owned_citation_count: credits.owned.get(row.id) ?? 0,
       brand_mentioned: Boolean(row.brand_mentioned),
-      competitor_names: [...(credits.competitors.get(row.id) ?? [])].sort(),
+      competitor_names: [...(credits.competitors.get(row.id) ?? [])].sort((a, b) =>
+        a < b ? -1 : a > b ? 1 : 0,
+      ),
       citations: citations.get(row.id) ?? [],
       artifact_id: row.artifact_id,
       entity_assessments: Array.isArray(row.entity_assessments)
@@ -274,7 +278,7 @@ export async function loadVisibilityEvidence(
       prompt_intent: row.prompt_intent || '',
       snapshot_id: row.id,
     })),
-    owned_domains: [...owned].sort(),
+    owned_domains: [...owned].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
   };
   return [evidence, metric?.id ?? null];
 }

@@ -167,9 +167,11 @@ export function gapChanges(before: string[], after: string[], hasLatest: boolean
   const a = new Set(before);
   const b = new Set(after);
   return {
-    no_longer_observed: [...a].filter((k) => !b.has(k)).sort(),
-    persistent: [...a].filter((k) => b.has(k)).sort(),
-    new: [...b].filter((k) => !a.has(k)).sort(),
+    no_longer_observed: [...a]
+      .filter((k) => !b.has(k))
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+    persistent: [...a].filter((k) => b.has(k)).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+    new: [...b].filter((k) => !a.has(k)).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
     state: 'available',
   };
 }

@@ -122,7 +122,9 @@ async function promptRows(db: Database, cited: Cited): Promise<SourceUrlDetail['
     topic: row.theme || null,
     responses: Number(row.responses),
     last_seen: pydanticUtcOrNull(row.last_seen),
-    engines: (row.engines ?? []).filter((engine): engine is string => Boolean(engine)).sort(),
+    engines: (row.engines ?? [])
+      .filter((engine): engine is string => Boolean(engine))
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
   }));
 }
 

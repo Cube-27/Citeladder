@@ -178,6 +178,6 @@ export function buildAiReferralsProjection(options: {
     // Provenance is the evidence THIS window folded (invariant 4).
     source_classification_ids: inWindow
       .flatMap((fact) => (fact.classification_id === null ? [] : [fact.classification_id]))
-      .sort(),
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
   };
 }

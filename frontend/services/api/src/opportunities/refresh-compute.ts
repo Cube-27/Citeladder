@@ -64,7 +64,8 @@ export function siteCoverage(crawl: CoverageCrawl | null): [Json, string[]] {
   return [coverage, limitations];
 }
 
-const mergedIds = (left: string[], right: string[]) => [...new Set([...left, ...right])].sort();
+const mergedIds = (left: string[], right: string[]) =>
+  [...new Set([...left, ...right])].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
 /** Compare the tie-break fields; positive when `left` wins. */
 function preference(left: Scored, right: Scored): number {
@@ -155,7 +156,7 @@ function median(sorted: number[]): number {
 }
 
 const sourceIds = (scored: Scored[], field: 'source_analysis_ids' | 'source_issue_ids') =>
-  [...new Set(scored.flatMap(([hit]) => hit[field]))].sort();
+  [...new Set(scored.flatMap(([hit]) => hit[field]))].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
 export type SnapshotSources = {
   auditId: string | null;
@@ -171,10 +172,12 @@ export function buildSnapshot(
   projections: [Json, Json, Json[]],
 ) {
   const countsByType: Record<string, number> = Object.fromEntries(
-    [...o.OPPORTUNITY_TYPES].sort().map((name) => [name, 0]),
+    [...o.OPPORTUNITY_TYPES].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).map((name) => [name, 0]),
   );
   const countsBySeverity: Record<string, number> = Object.fromEntries(
-    [...o.OPPORTUNITY_SEVERITIES].sort().map((name) => [name, 0]),
+    [...o.OPPORTUNITY_SEVERITIES]
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+      .map((name) => [name, 0]),
   );
   for (const row of rows) {
     countsByType[row.opportunity_type]! += 1;
@@ -218,7 +221,9 @@ export function stampSourceProjections(
   for (const projection of projections) {
     projection.audit_id = auditId;
     projection.prompt_snapshot_ids = selected.map((row) => row.snapshot_id || null);
-    projection.gap_keys = selected.map((row) => promptTextHash(row.text)).sort();
+    projection.gap_keys = selected
+      .map((row) => promptTextHash(row.text))
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   }
 }
 

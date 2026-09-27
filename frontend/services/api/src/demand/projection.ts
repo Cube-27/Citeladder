@@ -66,7 +66,8 @@ export type Evaluation = {
   counts_by_classification: Record<string, number>;
   limitations: string[];
 };
-export const unique = (values: string[]) => [...new Set(values)].sort();
+export const unique = (values: string[]) =>
+  [...new Set(values)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 function priority(impressions: number, ctr: number | null, gap: number) {
   const demand = Math.min(1, Math.log1p(Math.max(impressions, 0)) / Math.log1p(10000));
   const weakness = ctr === null ? 1 : Math.max(0, 1 - ctr);
@@ -139,11 +140,12 @@ export function aggregate(rows: QueryInput[]) {
     classification_override_ids: unique(
       rows.flatMap((r) => (r.classification_override_id ? [r.classification_override_id] : [])),
     ),
-    observed_start: rows.map((r) => r.observed_date).sort()[0] ?? null,
+    observed_start:
+      rows.map((r) => r.observed_date).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))[0] ?? null,
     observed_end:
       rows
         .map((r) => r.observed_date)
-        .sort()
+        .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
         .at(-1) ?? null,
     page_title: page?.page_title ?? '',
     page_h1_texts: page?.page_h1_texts ?? [],

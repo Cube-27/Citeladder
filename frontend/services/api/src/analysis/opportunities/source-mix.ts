@@ -4,7 +4,8 @@ import type { AnalysisEvidence, PromptSnapshotEvidence } from './evidence.ts';
 import { byDomain } from './source-patterns.ts';
 const p = policy.opportunity.earned_actions;
 const s = policy.opportunity.source_patterns;
-const sorted = (values: Iterable<string>) => [...values].sort();
+const sorted = (values: Iterable<string>) =>
+  [...values].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 function observedPath(kind: string): string {
   if (kind === s.SOURCE_CLASS_BRAND_OWNED) return p.ACTION_PATH_OWNED;
   return kind === s.SOURCE_CLASS_COMPETITOR_OWNED ? 'competitive_evidence' : p.ACTION_PATH_EARNED;

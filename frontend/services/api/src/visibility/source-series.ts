@@ -40,7 +40,7 @@ function assembleSeries(
     limit: number;
   },
 ): SourceSeriesResponse {
-  const buckets = [...input.totals.keys()].sort();
+  const buckets = [...input.totals.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const ranked = new Map<string, number>();
   for (const row of rows) ranked.set(row.key, (ranked.get(row.key) ?? 0) + row.citations);
   const leading = [...ranked.entries()]

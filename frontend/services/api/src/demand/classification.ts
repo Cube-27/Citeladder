@@ -32,7 +32,9 @@ function classifyQuery(
     [brand.brand_name, ...brand.aliases].map(normalizeQuery).filter(Boolean),
   );
   for (const term of domains) vocabulary.add(term);
-  const matched = [...vocabulary].filter((term) => ` ${normalized} `.includes(` ${term} `)).sort();
+  const matched = [...vocabulary]
+    .filter((term) => ` ${normalized} `.includes(` ${term} `))
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const canonical = normalizeQuery(brand.brand_name);
   const classification = !matched.length
     ? 'non_branded'
@@ -56,7 +58,9 @@ export async function classifyProjectQueries(
   projectId: string,
   queries: string[],
 ): Promise<Map<string, Classification>> {
-  const values = [...new Set(queries.filter(Boolean).map(normalizeQuery))].sort();
+  const values = [...new Set(queries.filter(Boolean).map(normalizeQuery))].sort((a, b) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  );
   const result = new Map<string, Classification>();
   if (!values.length) return result;
   const scope = new WorkspaceScope(workspaceId);
