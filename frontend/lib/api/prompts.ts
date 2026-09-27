@@ -59,6 +59,7 @@ export type PromptUpdateInput = Partial<Omit<PromptInput, 'topic_id'>> & {
 };
 
 export type PromptGenerateInput = {
+  agent_revision_id?: string;
   count?: number;
   // Scope generation to existing topics; omitted or empty = every topic.
   topic_ids?: string[];

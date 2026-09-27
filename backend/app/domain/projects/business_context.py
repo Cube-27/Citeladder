@@ -176,6 +176,5 @@ class BusinessContext(BaseModel):
         return self.model_dump(mode="json", exclude_none=True, exclude=separate_columns)
 
     def for_generation(self) -> dict[str, Any]:
-        return self.model_dump(
-            mode="json", exclude_none=True, exclude={"field_sources", "business_map"}
-        )
+        """Keep review provenance so inferred fields are not promoted to facts."""
+        return self.model_dump(mode="json", exclude_none=True, exclude={"business_map"})

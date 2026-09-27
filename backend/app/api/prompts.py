@@ -429,7 +429,7 @@ async def _generate_with_judge(
     agent: ModelGateway | None,
     prompt_set: PromptSet,
 ) -> GenerationResult:
-    # The shadow quality judge is off when JEV_API_KEY is blank. Its calls
+    # The quality judge is off when JEV_API_KEY is blank. Its calls
     # are bounded by jev_max_calls_per_generation, not the agent-call bucket.
     judge = create_jev_client()
     try:
@@ -447,6 +447,35 @@ async def _generate_with_judge(
             await judge.aclose()
 
 
+async def _generation_agent(
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    payload: PromptGenerateRequest,
+) -> ModelGateway | None:
+    """Configure and budget only requests that need model generation."""
+    agent: ModelGateway | None = None
+    if payload.cohort != "commerce" and payload.agent_revision_id is None:
+        try:
+            agent = create_model_gateway()
+        except AgentNotConfiguredError as exc:
+            raise_coded_error(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                ERROR_AGENT_NOT_CONFIGURED,
+                "No default agent is configured. Set the configured provider's "
+                "API key in the backend environment.",
+                cause=exc,
+            )
+        await enforce_workspace_request(
+            session,
+            workspace_id=workspace_id,
+            operation="agent.provider_call",
+            limit=abuse_settings.agent_call_limit,
+            window_seconds=abuse_settings.agent_call_window_seconds,
+            amount=generation_model_call_budget(payload.count),
+        )
+    return agent
+
+
 @router.post(
     "/prompt-sets/{prompt_set_id}/generate",
     status_code=status.HTTP_201_CREATED,
@@ -457,13 +486,10 @@ async def generate_prompts_endpoint(
     ctx: _RunDep,
     session: _SessionDep,
 ) -> PromptGenerateResponse:
-    """Generate prompt candidates for review via the app-level default agent.
+    """Generate candidates or admit a saved Agent proposal for explicit review.
 
-    Guard order: workspace scope (foreign set -> 404) before anything runs,
-    then bounds/topic ownership (422), then agent configuration when required
-    (503) — an invalid payload is rejected as invalid even when no agent is
-    configured. Validated suggestions are staged as candidates; nothing is
-    tracked until accepted, and generation never runs or schedules an audit.
+    Scope and request validation precede model configuration and network I/O.
+    Nothing is tracked until accepted; generation never schedules an audit.
     """
     try:
         prompt_set = await validate_generation_request(
@@ -481,26 +507,7 @@ async def generate_prompts_endpoint(
             str(exc),
             cause=exc,
         )
-    agent: ModelGateway | None = None
-    if payload.cohort != "commerce":
-        try:
-            agent = create_model_gateway()
-        except AgentNotConfiguredError as exc:
-            raise_coded_error(
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-                ERROR_AGENT_NOT_CONFIGURED,
-                "No default agent is configured. Set the configured provider's "
-                "API key in the backend environment.",
-                cause=exc,
-            )
-        await enforce_workspace_request(
-            session,
-            workspace_id=ctx.workspace_id,
-            operation="agent.provider_call",
-            limit=abuse_settings.agent_call_limit,
-            window_seconds=abuse_settings.agent_call_window_seconds,
-            amount=generation_model_call_budget(payload.count),
-        )
+    agent = await _generation_agent(session, ctx.workspace_id, payload)
     try:
         result = await _map_prompt_mutation(
             lambda: _generate_with_judge(

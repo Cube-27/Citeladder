@@ -32,6 +32,10 @@ type PromptLibraryDialogsProps = {
   generateError?: unknown;
   generateResult: PromptGenerateResponse | null;
   review: ReturnType<typeof usePromptCandidates>;
+  reviewOnly?: boolean;
+  setsLoading?: boolean;
+  setsError?: boolean;
+  retrySets?: () => void;
 };
 
 export function PromptLibraryDialogs({
@@ -56,8 +60,19 @@ export function PromptLibraryDialogs({
   generateError,
   generateResult,
   review,
+  reviewOnly,
+  setsLoading,
+  setsError,
+  retrySets,
 }: Readonly<PromptLibraryDialogsProps>) {
-  const reviewing = review.candidates.length > 0 || Boolean(review.notice);
+  const reviewing =
+    reviewOnly ||
+    setsLoading ||
+    setsError ||
+    review.isLoading ||
+    Boolean(review.loadError) ||
+    review.candidates.length > 0 ||
+    Boolean(review.notice);
   return (
     <>
       <PromptFormDialog
@@ -89,7 +104,17 @@ export function PromptLibraryDialogs({
         isGenerating={isGenerating}
         error={generateError}
         result={generateResult}
-        review={reviewing ? <CandidateReviewPanel review={review} topics={topics} /> : null}
+        review={
+          reviewing ? (
+            <CandidateReviewPanel
+              review={review}
+              topics={topics}
+              setsLoading={setsLoading}
+              setsError={setsError}
+              retrySets={retrySets}
+            />
+          ) : null
+        }
       />
     </>
   );

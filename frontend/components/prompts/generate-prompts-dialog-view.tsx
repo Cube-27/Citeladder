@@ -1,5 +1,5 @@
 import { Sparkles } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -28,19 +28,14 @@ function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateRespon
     : '';
   // Say so when the request could not be filled, rather than letting a short
   // set read as the number that was asked for.
-  // Topics only help when the gate did not account for the whole gap.
-  const topicsHint =
-    result.requested_count > total + result.quality_rejected ? ' — add topics for more' : '';
   const shortfall =
-    result.requested_count > total
-      ? ` (${total} of ${result.requested_count} requested${topicsHint})`
-      : '';
+    result.requested_count > total ? ` (${total} of ${result.requested_count} requested)` : '';
   const judge =
     result.quality_gate === 'unavailable'
       ? ' Quality checks may have been unavailable for some suggestions, so an unflagged row may not have been checked.'
       : '';
   return (
-    <Alert tone="success">
+    <Alert tone={result.quality_gate === 'unavailable' ? 'warning' : 'info'}>
       Drafted {plural(total, 'suggestion')}
       {shortfall}
       {topicCount ? ` across ${plural(topicCount, 'topic')}` : ''}
@@ -85,6 +80,57 @@ function GenerateErrorAlert({ error }: Readonly<{ error: unknown }>) {
   );
 }
 
+function useGenerationStep(open: boolean, result?: PromptGenerateResponse | null) {
+  const [showSetup, setShowSetup] = useState(false);
+  const [previousResult, setPreviousResult] = useState(result);
+  const [previousOpen, setPreviousOpen] = useState(open);
+  if (previousOpen !== open) {
+    setPreviousOpen(open);
+    if (open) setShowSetup(false);
+  }
+  if (previousResult !== result) {
+    setPreviousResult(result);
+    setShowSetup(false);
+  }
+  return [showSetup, setShowSetup] as const;
+}
+
+function GenerationFooter({
+  reviewing,
+  hasResult,
+  onClose,
+  onMore,
+  onSubmit,
+  isGenerating,
+  countValid,
+}: Readonly<{
+  reviewing: boolean;
+  hasResult: boolean;
+  onClose: () => void;
+  onMore: () => void;
+  onSubmit: () => void;
+  isGenerating?: boolean;
+  countValid: boolean;
+}>) {
+  return (
+    <>
+      <Button variant="ghost" onClick={onClose}>
+        {reviewing || hasResult ? 'Close' : 'Cancel'}
+      </Button>
+      {reviewing ? (
+        <Button variant="secondary" onClick={onMore}>
+          Generate more
+        </Button>
+      ) : (
+        <Button variant="primary" onClick={onSubmit} disabled={isGenerating || !countValid}>
+          <Sparkles className="size-4" aria-hidden />
+          {isGenerating ? 'Generating…' : 'Generate'}
+        </Button>
+      )}
+    </>
+  );
+}
+
 export function GeneratePromptsDialogView({
   open,
   onOpenChange,
@@ -118,69 +164,79 @@ export function GeneratePromptsDialogView({
   /** The pending-candidate review list, when there is anything to review. */
   review?: ReactNode;
 }>) {
+  const [showSetup, setShowSetup] = useGenerationStep(open, result);
+  const reviewing = Boolean(review) && !showSetup;
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Generate prompts"
-      description="CiteLadder drafts prompt suggestions for you to review and creates starting topics from confirmed offerings when needed. Only accepted prompts are tracked."
-      className={review ? 'w-180' : 'w-130'}
+      title={reviewing ? 'Review suggested questions' : 'Generate prompts'}
+      description={
+        reviewing
+          ? 'Choose the questions your buyers would actually ask. Only accepted questions enter your tracked library.'
+          : 'Draft distinct buying questions from your business context, then choose what to track.'
+      }
+      className={reviewing ? 'w-200' : 'w-130'}
       footer={
-        <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            {result ? 'Close' : 'Cancel'}
-          </Button>
-          <Button variant="primary" onClick={onSubmit} disabled={isGenerating || !countValid}>
-            <Sparkles className="size-4" aria-hidden />
-            {isGenerating ? 'Generating…' : 'Generate'}
-          </Button>
-        </>
+        <GenerationFooter
+          reviewing={reviewing}
+          hasResult={Boolean(result)}
+          onClose={() => onOpenChange(false)}
+          onMore={() => setShowSetup(true)}
+          onSubmit={onSubmit}
+          isGenerating={isGenerating}
+          countValid={countValid}
+        />
       }
     >
       <div className="grid gap-4">
-        {topics.length === 0 ? (
-          <Alert tone="info">
-            No topics exist yet. CiteLadder will create them from your confirmed offerings, then
-            generate prompts.
-          </Alert>
-        ) : null}
         {error ? <GenerateErrorAlert error={error} /> : null}
         {result && !error ? <GenerateResultAlert result={result} /> : null}
-        <div className="grid gap-1.5">
-          <span className={textRole('label')}>Number of prompts (1–{maxCount})</span>
-          <Input
-            type="number"
-            min={1}
-            max={maxCount}
-            value={count}
-            onChange={(event) => setCount(event.target.value)}
-            aria-label="Number of prompts"
-            aria-invalid={!countValid}
-          />
-        </div>
-        {topics.length > 0 ? (
-          <fieldset className="grid min-w-0 gap-1.5">
-            <legend className={textRole('label')}>Topics</legend>
-            <span className="text-muted text-xs">
-              {selectedTopicIds.size
-                ? `${plural(selectedTopicIds.size, 'topic')} selected.`
-                : 'None selected: suggestions cover every topic.'}
-            </span>
-            <div className="grid max-h-48 min-w-0 overflow-y-auto">
-              {orderTopicsForRail(topics).map(({ topic, nested }) => (
-                <Checkbox
-                  key={topic.id}
-                  label={topic.name}
-                  className={nested ? 'ms-6' : undefined}
-                  checked={selectedTopicIds.has(topic.id)}
-                  onCheckedChange={(checked) => toggleTopic(topic.id, checked === true)}
-                  disabled={isGenerating}
-                />
-              ))}
+        {reviewing ? (
+          review
+        ) : (
+          <>
+            <div className="grid gap-1.5">
+              <span className={textRole('label')}>Number of prompts (1–{maxCount})</span>
+              <Input
+                type="number"
+                min={1}
+                max={maxCount}
+                value={count}
+                onChange={(event) => setCount(event.target.value)}
+                aria-label="Number of prompts"
+                aria-invalid={!countValid}
+              />
             </div>
-          </fieldset>
-        ) : null}
-        {review}
+            {topics.length > 0 ? (
+              <fieldset className="grid min-w-0 gap-1.5">
+                <legend className={textRole('label')}>Topics</legend>
+                <span className="text-muted text-xs">
+                  {selectedTopicIds.size
+                    ? `${plural(selectedTopicIds.size, 'topic')} selected.`
+                    : 'None selected: suggestions cover every topic.'}
+                </span>
+                <div className="grid max-h-48 min-w-0 overflow-y-auto">
+                  {orderTopicsForRail(topics).map(({ topic, nested }) => (
+                    <Checkbox
+                      key={topic.id}
+                      label={topic.name}
+                      className={nested ? 'ms-6' : undefined}
+                      checked={selectedTopicIds.has(topic.id)}
+                      onCheckedChange={(checked) => toggleTopic(topic.id, checked === true)}
+                      disabled={isGenerating}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+            ) : (
+              <Alert tone="info">
+                No topics exist yet. CiteLadder will create them from your confirmed offerings, then
+                generate prompts.
+              </Alert>
+            )}
+          </>
+        )}
       </div>
     </Dialog>
   );

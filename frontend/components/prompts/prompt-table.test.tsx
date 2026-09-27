@@ -39,12 +39,18 @@ function renderTable(prompts: Prompt[]) {
 }
 
 describe('PromptTable pagination', () => {
-  it('keeps prompt classification concise without a branded column', () => {
-    renderTable([makePrompt(1, { branded: true })]);
+  it('keeps classification available on the question without extra columns', async () => {
+    renderTable([makePrompt(1, { branded: true, buyer_stage: 'consideration' })]);
 
     expect(screen.queryByRole('columnheader', { name: 'Branded' })).not.toBeInTheDocument();
     expect(screen.queryByText('Branded')).not.toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Stage' })).toBeInTheDocument();
+    const question = screen.getByText('Prompt number 1');
+    expect(question).toHaveTextContent(/Stage: Consideration/);
+    expect(question).toHaveTextContent(/Intent: Discovery/);
+    await userEvent.setup().tab();
+    expect(question).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Discovery');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Consideration');
   });
 
   it('names each row by its topic rather than its internal theme', () => {

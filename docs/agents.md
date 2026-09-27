@@ -89,6 +89,13 @@ replaced in the visible reply and output text.
 
 ## Workspace and handoffs
 
+Prompts offers **Build with Agent**, preselecting Prompt discovery. The
+`read_prompt_portfolio` tool includes a bounded canonical topic list, including
+empty topics, and reports topic truncation. A saved prompt portfolio includes
+typed core-question rows tied to those IDs. **Review in Prompts** explicitly
+submits the saved revision to the Prompts owner's admission and quality checks;
+users still accept candidates separately. The Agent gains no write tool.
+
 The product shell switches between Dashboard and Agent modes, derived from the
 route. Agent mode holds New chat, Actions, Skills, Context and the searchable
 chat history under `/agent`; the Skills catalog shows what each skill produces,

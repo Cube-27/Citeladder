@@ -180,7 +180,7 @@ def build_generation_user_message(
     )
     _append_json_context(
         lines,
-        "Confirmed business context: ",
+        "Business context with field review provenance: ",
         brand_context.get("business_context") or {},
     )
     _append_json_context(
@@ -199,8 +199,11 @@ def build_generation_user_message(
         f"prompt_intent labels: {', '.join(PROMPT_INTENT_VOCABULARY)}",
         "Each slot's buyer_need names one offering and, when present, an "
         "attribute, a situation or constraint, an audience and a market. Write "
-        "the single natural question a real buyer with exactly that need would "
-        "ask an AI assistant; paraphrase the need, never list it. "
+        "one natural question that helps a buyer make a decision about that "
+        "offering. Use supported facets when useful; never just paraphrase "
+        "the category. A bare cell permits a plausible buying scenario, "
+        "labelled as a hypothesis in its provenance, not invented business facts. "
+        "The market need not appear in the text unless it changes the answer. "
         "target_buyer_stage is a target, not a label to force.",
         "Buyer-query slots (return one row per slot): "
         + json.dumps(

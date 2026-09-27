@@ -7,15 +7,12 @@
 #   1 GENERATE  batched model calls, one natural buyer question per cell
 #   2 ADMIT     parse, cohort identity, brand/competitor rules, length, exact
 #               duplicates, topical binding, verbatim evidence copies
-#   3 SELECT    top N diversified across topic, stage, audience and market;
-#               a shortfall is reported, never filled
-#   4 JEV       shadow quality decisions for the selected candidates: they
-#               rank and flag the review list and never drop anything
-#               (quality_judge.py)
+#   3 JEV       bounded quality judgments on the admitted pool
+#   4 SELECT    top N eligible, diversified candidates after gating
 #   5 STAGE     PromptCandidate rows with provenance (candidates.py)
 #
-# JEV judges only what selection kept, so in shadow mode it cannot change
-# which candidates reach review; it becomes a gate only in PR 3c.
+# Shadow judgments do not change selection; gate judgments do. Saved Agent
+# proposals enter at admission, referencing the exact authorized revision.
 #
 # Core and brand cohorts use the app-level default agent (``connectors/agent``);
 # Commerce buyer prompts have their own owner (``/commerce/buyer-prompts``).
@@ -46,10 +43,12 @@ from app.domain.projects.business_context import BusinessContext
 from app.domain.projects.business_map import (
     BusinessMap,
     OfferingMap,
+    has_map_entries,
     with_model_suggestions,
 )
 from app.domain.projects.knowledge_base import build_brand_knowledge_data
 from app.domain.projects.shim import project_scoring_identity
+from app.domain.prompts.agent_proposals import load_agent_proposal
 from app.domain.prompts.candidates import (
     StagedCandidates,
     pending_text_hashes,
@@ -87,7 +86,6 @@ from app.domain.prompts.generation_selection import (
     count_prompts,
     drop_texts,
     observed_query_hashes,
-    select_diversified,
 )
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.map_suggestions import suggest_offering_maps
@@ -229,6 +227,10 @@ def _resolve_target_topics(prompt_set: PromptSet, payload: Any) -> list[Topic]:
 
 def _validate_generation_payload(prompt_set: PromptSet, payload: Any) -> None:
     """Bounds + topic-ownership checks (422 at the API layer)."""
+    if getattr(payload, "agent_revision_id", None) and payload.cohort != "core":
+        raise GenerationValidationError(
+            "Agent portfolios currently submit unbranded core prompts"
+        )
     max_count = prompt_generation_settings.max_count
     if payload.count > max_count:
         raise GenerationValidationError(
@@ -310,7 +312,7 @@ def _offerings_to_map(project: Project, cell_topics: list[CellTopic]) -> list[st
     wanted: dict[str, str] = {}
     for topic in cell_topics:
         key = topic.name.casefold()
-        if topic.offering_map is None and key in offerings:
+        if not has_map_entries(topic.offering_map) and key in offerings:
             wanted.setdefault(key, offerings[key])
     return list(wanted.values())
 
@@ -463,7 +465,11 @@ def _effective_cell_topics(
             topic_id=topic.topic_id,
             name=topic.name,
             description=topic.description,
-            offering_map=topic.offering_map or by_key.get(topic.name.casefold()),
+            offering_map=(
+                topic.offering_map
+                if has_map_entries(topic.offering_map)
+                else by_key.get(topic.name.casefold(), topic.offering_map)
+            ),
         )
         for topic in cell_topics
     ]
@@ -511,6 +517,17 @@ async def _draft(
         brand_context=context.brand_context,
         planned_slots=planned_slots,
     )
+    return _admit_drafts(suggestions, context, payload.cohort, dropped, map_suggestions)
+
+
+def _admit_drafts(
+    suggestions: list[SuggestedTopic],
+    context: _Context,
+    cohort: str,
+    dropped: int = 0,
+    map_suggestions: list[OfferingMap] | None = None,
+) -> _Drafts:
+    suggestions = filter_for_cohort(suggestions, cohort, context.brand_context)
     suggestions = _drop_unbound_suggestions(suggestions, context.vocabulary)
     suggestions, known = drop_texts(suggestions, context.known_hashes)
     suggestions, _verbatim = drop_texts(
@@ -518,10 +535,10 @@ async def _draft(
         observed_query_hashes(context.brand_context.get("demand_signals") or []),
     )
     return _Drafts(
-        suggestions=select_diversified(suggestions, payload.count),
+        suggestions=suggestions,
         dropped_duplicates=dropped + known,
         generated=count_prompts(suggestions),
-        map_suggestions=map_suggestions,
+        map_suggestions=map_suggestions or [],
     )
 
 
@@ -530,7 +547,7 @@ async def _draft(
 # --------------------------------------------------------------------------
 def _generation_evidence(
     *,
-    agent: ModelGateway,
+    agent: ModelGateway | None,
     payload: Any,
     context: _Context,
     drafts: _Drafts,
@@ -542,7 +559,9 @@ def _generation_evidence(
         "model_identity": {
             "transport_host": agent.base_url_host,
             "transport_model": agent.model,
-        },
+        }
+        if agent
+        else None,
         "generator_version": GENERATOR_VERSION,
         "buyer_query_policy_version": BUYER_QUERY_POLICY_VERSION,
         "brand_context_hash": _brand_context_hash(context.brand_context),
@@ -611,6 +630,7 @@ async def _stage(
         provenance=evidence,
         cohort=payload.cohort,
         decisions=judged.decisions,
+        selection_limit=payload.count,
     )
     _record_map_suggestions(project, drafts.map_suggestions, str(staged.run_id))
     touched_ids = {candidate.topic_id for candidate in staged.candidates}
@@ -659,13 +679,28 @@ async def generate_prompts(
     context = await _read_context(
         session, workspace_id=workspace_id, prompt_set=prompt_set, payload=payload
     )
+    revision_id = getattr(payload, "agent_revision_id", None)
+    proposal = (
+        await load_agent_proposal(
+            session,
+            workspace_id=workspace_id,
+            project_id=prompt_set.project_id,
+            revision_id=revision_id,
+            topics=context.cell_topics,
+        )
+        if revision_id
+        else None
+    )
     # Commit before any network I/O.
     await session.commit()
-    if agent is None:
+    if proposal is not None:
+        drafts = _admit_drafts(proposal.suggestions, context, payload.cohort)
+    elif agent is not None:
+        drafts = await _draft(
+            agent=agent, prompt_set=prompt_set, payload=payload, context=context
+        )
+    else:
         raise GenerationOutputError("Model gateway is required for this cohort")
-    drafts = await _draft(
-        agent=agent, prompt_set=prompt_set, payload=payload, context=context
-    )
     judged = await judge_candidates(
         session,
         judge=judge,
@@ -681,6 +716,8 @@ async def generate_prompts(
         drafts=drafts,
         quality_gate=judged.quality_gate,
     )
+    if proposal is not None:
+        evidence.update(proposal.provenance)
     try:
         staged, touched = await _stage(
             session,

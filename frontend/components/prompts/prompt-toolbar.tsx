@@ -3,6 +3,8 @@
 import { Filter, Sparkles, Upload } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
+import { ProjectLink } from '@/components/layout/scoped-link';
+import { agentHandoffHref } from '@/lib/agent/handoff';
 import { Button } from '@/components/ui/button';
 import {
   Dropdown,
@@ -171,6 +173,17 @@ export function PromptActions({
       </Button>
       <Button variant="secondary" size="sm" onClick={onAdd}>
         Add prompt
+      </Button>
+      <Button asChild variant="secondary" size="sm">
+        <ProjectLink
+          href={agentHandoffHref({
+            skillId: 'prompt_discovery',
+            prompt:
+              'Build a portfolio of distinct buyer questions for this project. Keep the existing topics. Read the current prompt portfolio and business evidence, identify meaningful buying decisions and gaps, and prepare new unbranded questions for prompt review.',
+          })}
+        >
+          Build with Agent
+        </ProjectLink>
       </Button>
       <LaunchAuditButton variant="primary" size="sm" disabled={!hasActivePrompts} />
     </>

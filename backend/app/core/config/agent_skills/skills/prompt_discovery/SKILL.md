@@ -89,7 +89,29 @@ Produce keep/revise/add/archive proposals against existing IDs. Keep stable IDs 
 
 ## Outputs
 
-Create `prompt-portfolio.md`, `prompt-portfolio.csv` and `prompt-portfolio.json`:
+Save one readable `prompt_portfolio` deliverable through the existing output contract.
+Read `read_prompt_portfolio` first: its `topics` contains the canonical topic IDs,
+including topics with no tracked questions. If `topics_truncated` is true, request
+a larger bounded page and disclose any remaining omission. Keep existing topics. If no topics
+exist, ask the user to generate starting topics in Prompts before submitting.
+
+For the **Review in Prompts** action, include exactly one fenced `json` block
+in the saved body with this shape (replace the topic ID with a returned UUID):
+
+```json
+{"prompts":[{"topic_id":"<existing-topic-uuid>","text":"A natural question expressing one useful buyer decision","buyer_stage":"consideration","prompt_intent":"recommend"}]}
+```
+
+Include only new unbranded core questions in that block, at most 100. Other
+cohorts and keep/revise/archive recommendations belong in the readable report.
+Valid buyer stages: awareness, consideration, decision, implementation.
+Valid prompt intents: learn, solve, compare, recommend, validate, buy, implement.
+Do not invent topic IDs or add keys to these submission rows. All proposed
+questions remain hypotheses unless supported by observed evidence in the report.
+The user submits this saved revision for admission and quality checks, then
+explicitly accepts candidates in Prompts. Submission never activates tracking.
+
+The readable report may retain these richer planning fields:
 
 ```text
 prompt_id, parent_decision_id, topic, audience, offer, intent, cohort,

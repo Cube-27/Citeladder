@@ -36,7 +36,7 @@ from app.domain.mcp.schemas import page
 from app.domain.site_health import service as site_health_service
 from app.models.analysis import Citation
 from app.models.project import Project
-from app.models.prompt import Prompt, PromptSet
+from app.models.prompt import Prompt, PromptSet, Topic
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.links import SitePageLinkMetric
 from app.models.source_pages import (
@@ -102,6 +102,7 @@ async def read_prompt_portfolio(
             "record_uri": f"citeladder://prompt/{prompt.id}",
             "prompt_set_id": str(prompt.prompt_set_id),
             "prompt_set_name": prompt_set.name,
+            "topic_id": str(prompt.topic_id) if prompt.topic_id else None,
             "text": prompt.text,
             "theme": prompt.theme,
             "intent": prompt.intent,
@@ -116,9 +117,22 @@ async def read_prompt_portfolio(
         }
         for prompt, prompt_set in emitted
     ]
+    topics = (
+        await session.scalars(
+            select(Topic)
+            .where(Topic.project_id == project.id)
+            .order_by(Topic.name, Topic.id)
+            .limit(bounded + 1)
+        )
+    ).all()
     return {
         "state": "available",
         "project_id": str(project.id),
+        "topics": [
+            {"id": str(topic.id), "name": topic.name, "description": topic.description}
+            for topic in topics[:bounded]
+        ],
+        "topics_truncated": len(topics) > bounded,
         "items": items,
         "pagination": page(items=items, next_cursor=next_cursor),
     }

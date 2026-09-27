@@ -20,12 +20,14 @@ const PARAM = {
   dataset: 'si_dataset_id',
   rows: 'si_row_id',
   prompt: 'prompt',
+  skill: 'skill',
 } as const;
 
 export type AgentHandoff = {
   actionId?: string;
   context: AgentContextRefs;
   prompt?: string;
+  skillId?: string;
 };
 
 export type HandoffInput = {
@@ -36,6 +38,7 @@ export type HandoffInput = {
   targetUrl?: string | null;
   searchIntelligence?: { datasetId: string; rowIds: readonly string[] } | null;
   prompt?: string | null;
+  skillId?: string | null;
 };
 
 /** `/agent` with the typed references a new chat should start from. */
@@ -54,6 +57,7 @@ export function agentHandoffHref(input: HandoffInput): string {
     for (const row of input.searchIntelligence.rowIds) params.append(PARAM.rows, row);
   }
   set(PARAM.prompt, input.prompt?.trim());
+  set(PARAM.skill, input.skillId);
   const query = params.toString();
   return query ? `/agent?${query}` : '/agent';
 }
@@ -79,6 +83,7 @@ export function agentHandoff(input: HandoffInput): AgentHandoff {
     actionId: input.actionId ?? undefined,
     context,
     prompt: input.prompt?.trim() || undefined,
+    ...(input.skillId ? { skillId: input.skillId } : {}),
   };
 }
 
@@ -115,7 +120,13 @@ export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
     context.search_intelligence_reference = { dataset_id: dataset, row_ids: rows };
   }
   const prompt = params.get(PARAM.prompt)?.trim() || undefined;
-  return { actionId: uuidParam(params, PARAM.action), context, prompt };
+  const skillId = params.get(PARAM.skill) === 'prompt_discovery' ? 'prompt_discovery' : undefined;
+  return {
+    actionId: uuidParam(params, PARAM.action),
+    context,
+    prompt,
+    ...(skillId ? { skillId } : {}),
+  };
 }
 
 /** Human labels for the references a composer shows as removable chips. */

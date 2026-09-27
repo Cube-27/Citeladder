@@ -65,7 +65,7 @@ function NewChat({
   const handoff = useMemo(() => parseAgentHandoff(searchParams), [searchParams]);
   const [message, setMessage] = useState(handoff.prompt ?? '');
   const [context, setContext] = useState(handoff.context);
-  const [skillId, setSkillId] = useState<string | null>(null);
+  const [skillId, setSkillId] = useState<string | null>(handoff.skillId ?? null);
   const access = useAgentAccess();
   const navigate = useNavigate();
   const projectHref = useProjectHref();

@@ -28,6 +28,31 @@ const candidates = [
 ];
 
 describe('CandidateReview', () => {
+  it('associates distinct quality states with selectable suggestions', async () => {
+    render(
+      <CandidateReview
+        candidates={[
+          { ...candidates[0], quality_status: 'unavailable' },
+          { ...candidates[1], quality_status: 'judged' },
+          candidate('c', 'Which shoes suit walking to work?'),
+          { ...candidate('d', 'Which shoes suit a first marathon?'), quality_status: 'not_judged' },
+        ]}
+        topics={[]}
+        onAccept={vi.fn()}
+        onReject={vi.fn()}
+      />,
+    );
+    const choices = screen.getAllByRole('checkbox', { name: /Select “/ });
+    const descriptions = choices.map((choice) => {
+      expect(choice).toHaveAccessibleDescription();
+      expect(choice).toBeEnabled();
+      return document.getElementById(choice.getAttribute('aria-describedby')!)?.textContent;
+    });
+    // Disabled judging and skipped/failed checks must not become the same state.
+    expect(new Set(descriptions).size).toBe(4);
+    await userEvent.setup().click(choices[2]);
+    expect(screen.getByRole('button', { name: /accept selected/i })).toBeEnabled();
+  });
   it('accepts only the selected suggestions and rejects after select-all', async () => {
     const user = userEvent.setup();
     const onAccept = vi.fn();

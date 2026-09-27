@@ -66,7 +66,7 @@ _BUSINESS_FIELDS = (
     "service_areas",
     "primary_market",
 )
-_CELL_META = {"kind", "review_state", "target_buyer_stage"}
+_CELL_META = {"kind", "id", "review_state", "target_buyer_stage", "evidence_type"}
 
 
 @dataclass(frozen=True)
@@ -322,7 +322,7 @@ async def judge_candidates(
     suggestions: list[SuggestedTopic],
     brand_context: dict[str, Any],
 ) -> JudgeResult:
-    """Judge selected candidates; the caller has committed its read transaction."""
+    """Judge the admitted pool; the caller has committed its read transaction."""
     if judge is None:
         return JudgeResult(decisions={}, quality_gate=QUALITY_GATE_OFF)
     requests = build_requests(
@@ -330,7 +330,7 @@ async def judge_candidates(
         prompt_set=prompt_set,
         brand_context=brand_context,
         model=judge.model,
-    )[: jev_settings.max_calls_per_generation]
+    )
     recorded = await _recorded_decisions(
         session,
         workspace_id=workspace_id,
@@ -346,11 +346,16 @@ async def judge_candidates(
         for r in requests
         if r.state_hash in recorded
     }
-    fresh, failed = await _decide_all(
-        judge, [r for r in requests if r.state_hash not in recorded]
-    )
+    # Only calls count against the cap; reused judgments are free.
+    uncached = [r for r in requests if r.state_hash not in recorded]
+    calls = uncached[: jev_settings.max_calls_per_generation]
+    fresh, failed = await _decide_all(judge, calls)
     decisions.update(fresh)
     return JudgeResult(
         decisions=decisions,
-        quality_gate=QUALITY_GATE_UNAVAILABLE if failed else jev_settings.mode,
+        quality_gate=(
+            QUALITY_GATE_UNAVAILABLE
+            if failed or len(calls) < len(uncached)
+            else jev_settings.mode
+        ),
     )

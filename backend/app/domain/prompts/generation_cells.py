@@ -2,13 +2,13 @@
 
 A cell is one offering plus at most ``GENERATION_CELL_MAX_FACETS`` of its
 attribute, situation/constraint and audience entries, a target buyer stage
-and (for area-served businesses) a market. Only compatible combinations are
+and optionally a market. Only compatible combinations are
 built: a pair the business map excludes never shares a cell, and the full
 Cartesian product is never enumerated beyond the bounded per-offering map.
 
 Cells are chosen greedily so each pick uses the values used least so far,
 which spreads a small request across the map instead of exhausting the first
-attribute. Confirmed entries are always preferred to unreviewed suggestions;
+attribute. Faceted cells lead, preferring confirmed entries within that group;
 an offering without a map still yields bare cells (topic only), never padded
 with invented facts.
 """
@@ -78,6 +78,7 @@ class GenerationCell:
             **self.buyer_need(),
             "target_buyer_stage": self.buyer_stage,
             "review_state": "suggested" if self.suggested else "confirmed",
+            "evidence_type": "hypothesis",
         }
 
 
@@ -161,13 +162,13 @@ class _Spread:
     def __init__(self, combos: list[_Combo], markets: Sequence[str]) -> None:
         self._combos = combos
         self._remaining = list(range(len(combos)))
-        self._markets = list(markets) or [""]
+        self._markets = ["", *dict.fromkeys(market for market in markets if market)]
         self._usage: Counter[tuple[str, str]] = Counter()
 
-    def _score(self, index: int) -> tuple[int, int, int]:
+    def _score(self, index: int) -> tuple[bool, bool, int, int]:
         combo = self._combos[index]
         usage = sum(self._usage[facet] for facet in combo.facets)
-        return (1 if combo.suggested else 0, usage, index)
+        return (not bool(combo.facets), bool(combo.suggested), usage, index)
 
     def _least_used(self, facet: str, values: Iterable[str]) -> str:
         return min(values, key=lambda value: self._usage[(facet, value)])
