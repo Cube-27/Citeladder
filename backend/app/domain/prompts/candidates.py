@@ -42,6 +42,7 @@ class CandidateReviewError(ValueError):
 
 @dataclass(frozen=True)
 class StagedCandidates:
+    run_id: uuid.UUID
     candidates: list[PromptCandidate]
     dropped_duplicates: int
 
@@ -89,6 +90,20 @@ async def _existing_prompt_hashes(
     return set(result.scalars().all())
 
 
+async def pending_text_hashes(
+    session: AsyncSession, *, workspace_id: uuid.UUID, prompt_set_id: uuid.UUID
+) -> set[str]:
+    """Normalized texts already waiting for review in the set (a read)."""
+    result = await session.execute(
+        select(PromptCandidate.normalized_text_hash).where(
+            PromptCandidate.workspace_id == workspace_id,
+            PromptCandidate.prompt_set_id == prompt_set_id,
+            *_pending_clause(datetime.now(UTC)),
+        )
+    )
+    return set(result.scalars().all())
+
+
 def _candidate_row(
     *,
     workspace_id: uuid.UUID,
@@ -112,7 +127,7 @@ def _candidate_row(
         "prompt_intent": prompt.prompt_intent,
         "cohort": cohort,
         "slot_id": prompt.slot_id,
-        "evidence_refs": [],
+        "evidence_refs": list(prompt.evidence_refs),
         # Only suggestions that passed every deterministic admission rule
         # (parse, cohort identity, brand/competitor rules, exact duplicates,
         # topical binding) reach staging.
@@ -215,7 +230,9 @@ async def stage_candidates(
         inserted_ids = [row["id"] for row in rows if row["id"] in returned]
         dropped += len(rows) - len(inserted_ids)
     candidates = await _load_in_order(session, inserted_ids)
-    return StagedCandidates(candidates=candidates, dropped_duplicates=dropped)
+    return StagedCandidates(
+        run_id=run.id, candidates=candidates, dropped_duplicates=dropped
+    )
 
 
 async def _load_in_order(
@@ -283,6 +300,7 @@ def _accepted_evidence(
         "buyer_query_slot_id": candidate.slot_id,
         "candidate_id": str(candidate.id),
         "candidate_validation": dict(candidate.validation or {}),
+        "evidence_refs": list(candidate.evidence_refs or []),
     }
     if candidate.jev_decision is not None:
         evidence["jev_decision"] = candidate.jev_decision

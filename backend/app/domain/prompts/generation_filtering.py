@@ -1,4 +1,4 @@
-"""Build and apply the shared generation validator; retain Commerce admission."""
+"""Build and apply the shared generation validator (cohort identity rules)."""
 
 from __future__ import annotations
 
@@ -8,8 +8,7 @@ from app.core.config.prompts import PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS
 from app.core.config.visibility_prompts import (
     cohort_system_prompt,
 )
-from app.domain.prompts.generation_contract import SuggestedPrompt, SuggestedTopic
-from app.domain.prompts.portfolio import contains_tracked_name
+from app.domain.prompts.generation_contract import SuggestedTopic
 from app.domain.prompts.portfolio_validation import (
     PortfolioValidator,
     brand_terms,
@@ -58,50 +57,6 @@ def build_validator(
     )
 
 
-def _commerce_product_names(
-    brand_context: dict[str, Any], *, category: str | None = None
-) -> list[str]:
-    products = brand_context.get("commerce_products", [])
-    category_identity = str(category or "").strip().casefold()
-    names = [
-        str(product.get("name") or "")
-        for product in products
-        if not category_identity
-        or str(product.get("category") or "").strip().casefold() == category_identity
-    ]
-    return sorted(names, key=lambda name: len(name.casefold()), reverse=True)
-
-
-def _filter_commerce_prompts(
-    suggestions: list[SuggestedTopic], brand_context: dict[str, Any]
-) -> list[SuggestedTopic]:
-    """Keep named buyer questions; unnamed category prompts are not measurable."""
-    filtered: list[SuggestedTopic] = []
-    for topic in suggestions:
-        all_names = _commerce_product_names(brand_context, category=topic.name)
-        chosen: dict[tuple[str, str], SuggestedPrompt] = {}
-        for prompt in topic.prompts:
-            intent = prompt.intent
-            matched_name = next(
-                (
-                    name
-                    for name in all_names
-                    if contains_tracked_name(prompt.text, [name])
-                ),
-                None,
-            )
-            if intent in {"discovery", "comparison"} and matched_name:
-                chosen.setdefault((matched_name.casefold(), intent), prompt)
-        prompts = list(chosen.values())
-        if prompts:
-            filtered.append(
-                SuggestedTopic(
-                    topic_id=topic.topic_id, name=topic.name, prompts=prompts
-                )
-            )
-    return filtered
-
-
 def _drop_invalid_prompts(
     suggestions: list[SuggestedTopic],
     *,
@@ -140,9 +95,11 @@ def filter_for_cohort(
     *,
     validator: PortfolioValidator | None = None,
 ) -> list[SuggestedTopic]:
-    """Admit one cohort with exact-duplicate state shared across batches."""
-    if cohort == "commerce":
-        return _filter_commerce_prompts(suggestions, brand_context)
+    """Admit one cohort with exact-duplicate state shared across batches.
+
+    Commerce buyer prompts are not generated here; they have their own owner
+    (``/commerce/buyer-prompts``) and Generate rejects the cohort.
+    """
     if validator is None:
         validator = build_validator(
             frozenset(str(topic.topic_id) for topic in suggestions), brand_context

@@ -1,4 +1,4 @@
-"""Strict topic-ID prompt generation contract."""
+"""Strict slot-ID prompt generation contract (one slot per business-map cell)."""
 
 from __future__ import annotations
 
@@ -9,14 +9,13 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.connectors.web_evidence.brand_evidence import evidence_block_lines
-from app.core.config.prompts import prompt_generation_settings
+from app.core.config.prompts import (
+    MAP_SUGGESTION_MODEL_CALLS,
+    prompt_generation_settings,
+)
 from app.core.config.visibility_prompts import BUYER_STAGES, PROMPT_INTENT_VOCABULARY
 from app.domain.projects.knowledge_base import serialize_brand_knowledge_context
-from app.domain.prompts.query_patterns import (
-    PlannedPrompt,
-    PromptSlot,
-    resolve_planned_prompts,
-)
+from app.domain.prompts.query_patterns import PromptSlot, resolve_planned_prompts
 
 
 class GenerationOutputError(RuntimeError):
@@ -29,6 +28,8 @@ class SuggestedPrompt(BaseModel):
     buyer_stage: str = ""
     prompt_intent: str = ""
     slot_id: str = ""
+    # The business-map cell (and any other evidence) that grounded this text.
+    evidence_refs: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class SuggestedTopic(BaseModel):
@@ -60,10 +61,21 @@ class GenerationOutput(BaseModel):
     prompts: list[GeneratedPrompt] = Field(default_factory=list)
 
 
+def planned_slot_count(count: int) -> int:
+    """Cells planned for a request of ``count`` prompts (overgeneration)."""
+    return count * prompt_generation_settings.overgenerate_factor
+
+
+def slot_call_budget(slot_count: int) -> int:
+    """Maximum prompt-writing calls for ``slot_count`` slots: one per batch
+    plus one re-ask for slots a batch left unusable."""
+    batch_size = max(1, min(prompt_generation_settings.model_batch_size, slot_count))
+    return (slot_count + batch_size - 1) // batch_size + 1
+
+
 def generation_model_call_budget(count: int) -> int:
     """Return the maximum provider calls one bounded generation may make."""
-    batch_size = min(prompt_generation_settings.model_batch_size, count)
-    return (count + batch_size - 1) // batch_size + 1
+    return slot_call_budget(planned_slot_count(count)) + MAP_SUGGESTION_MODEL_CALLS
 
 
 def parse_generation_output(
@@ -82,6 +94,7 @@ def parse_generation_output(
     except (json.JSONDecodeError, ValidationError) as exc:
         raise GenerationOutputError(f"Unparseable agent output: {exc}") from exc
 
+    slots_by_id = {slot.slot_id: slot for slot in slots}
     grouped: dict[str, list[SuggestedPrompt]] = {}
     planned, dropped = resolve_planned_prompts(
         [
@@ -102,6 +115,11 @@ def parse_generation_output(
                 buyer_stage=prompt.buyer_stage,
                 prompt_intent=prompt.prompt_intent,
                 slot_id=prompt.slot_id,
+                evidence_refs=(
+                    [dict(slots_by_id[prompt.slot_id].evidence_ref)]
+                    if slots_by_id[prompt.slot_id].evidence_ref
+                    else []
+                ),
             )
         )
     suggestions = [
@@ -113,26 +131,6 @@ def parse_generation_output(
     if not suggestions:
         raise GenerationOutputError("Agent output contained no usable prompts")
     return suggestions, dropped
-
-
-def parse_planned_output(
-    raw: str, *, slots: list[PromptSlot]
-) -> tuple[list[PlannedPrompt], int]:
-    """Parse the shared slot contract for onboarding's portfolio validator."""
-    try:
-        output = GenerationOutput.model_validate_json(raw)
-    except ValidationError as exc:
-        raise GenerationOutputError(f"Unparseable agent output: {exc}") from exc
-    planned, dropped = resolve_planned_prompts(
-        [
-            (prompt.slot_id, prompt.text, prompt.buyer_stage, prompt.prompt_intent)
-            for prompt in output.prompts
-        ],
-        slots,
-    )
-    if not planned:
-        raise GenerationOutputError("Agent output contained no usable prompts")
-    return planned, dropped
 
 
 def _append_json_context(lines: list[str], label: str, payload: object) -> None:
@@ -164,13 +162,12 @@ def build_generation_user_message(
     existing_prompts: list[str],
     rejected_reasons: tuple[str, ...] = (),
 ) -> str:
-    """The one user message both generation paths send.
+    """The prompt-writing user message: context, then one slot per cell.
 
-    Onboarding built a much thinner payload of its own -- brand name, market,
-    business model, register -- so the initial portfolio was written without the
-    knowledge base, confirmed business context or competitor list that the
-    "Generate prompts" button had been sending all along. Same planner, same
-    instruction, same context.
+    Each slot carries a ``buyer_need`` from the business map. The model writes
+    the one natural question a buyer with exactly that need would ask;
+    observed demand queries ground wording but are never copied verbatim
+    (admission drops exact copies).
     """
     competitors = [item["name"] for item in brand_context.get("competitors", [])]
     lines = [
@@ -188,7 +185,8 @@ def build_generation_user_message(
     )
     _append_json_context(
         lines,
-        "Available demand evidence (reference observations, not mandatory wording): ",
+        "Available demand evidence (reference observations; never copy an "
+        "observed query verbatim): ",
         list(brand_context.get("demand_signals") or []),
     )
     lines += [
@@ -199,6 +197,11 @@ def build_generation_user_message(
         f"Language: {brand_context.get('language_code') or 'unspecified'}",
         f"buyer_stage labels: {', '.join(BUYER_STAGES)}",
         f"prompt_intent labels: {', '.join(PROMPT_INTENT_VOCABULARY)}",
+        "Each slot's buyer_need names one offering and, when present, an "
+        "attribute, a situation or constraint, an audience and a market. Write "
+        "the single natural question a real buyer with exactly that need would "
+        "ask an AI assistant; paraphrase the need, never list it. "
+        "target_buyer_stage is a target, not a label to force.",
         "Buyer-query slots (return one row per slot): "
         + json.dumps(
             [slot.as_model_input() for slot in slots],
@@ -206,12 +209,6 @@ def build_generation_user_message(
             separators=(",", ":"),
         ),
     ]
-    _append_json_context(
-        lines,
-        "Uploaded catalog products (use only products whose category matches the "
-        "target topic): ",
-        list(brand_context.get("commerce_products") or []),
-    )
     lines.append(f"Return exactly {len(slots)} prompts in total.")
     _append_retry_context(lines, rejected_reasons, existing_prompts)
     return "\n".join(lines)

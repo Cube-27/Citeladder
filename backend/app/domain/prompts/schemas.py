@@ -222,14 +222,16 @@ class TopicResponse(BaseModel):
 class PromptGenerateRequest(BaseModel):
     """Body for ``POST /prompt-sets/{id}/generate``.
 
-    Prompt generation is an automatic bounded derivation. ``topic_id`` scopes
-    generation to one existing topic; running or scheduling measurement remains
-    the separate user decision.
+    Prompt generation is an automatic bounded derivation. ``topic_ids`` scopes
+    generation to existing topics (``topic_id`` is the single-topic form and
+    is merged with it); none selected means every topic. Running or scheduling
+    measurement remains the separate user decision.
     """
 
     count: int = Field(
         default_factory=lambda: prompt_generation_settings.default_count, ge=1
     )
+    topic_ids: list[uuid.UUID] = Field(default_factory=list)
     topic_id: uuid.UUID | None = None
     intents: list[PromptIntent] = Field(default_factory=list)
     cohort: PromptCohort = "core"
@@ -263,6 +265,10 @@ class PromptGenerateResponse(BaseModel):
     # Suggestions dropped as duplicates: intra-response collapses plus texts
     # already tracked in the set or already pending review.
     dropped_duplicates: int = 0
+    # Suggestions that passed deterministic admission before the diversified
+    # selection kept at most ``requested_count``. Generation overgenerates;
+    # this is never a market size.
+    candidates_generated: int = 0
 
 
 class PromptCandidateReviewRequest(BaseModel):

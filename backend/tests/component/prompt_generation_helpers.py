@@ -62,6 +62,9 @@ class FakeAgent:
         self.fallback_discriminator = fallback_discriminator
         self.calls: list[dict[str, str]] = []
         self.schemas: list[tuple[str, dict[str, object]]] = []
+        # Business-map suggestion calls, kept apart from prompt-writing calls.
+        self.map_calls: list[dict[str, str]] = []
+        self.map_response = json.dumps({"offerings": []})
 
     async def complete_json(self, *, system: str, user: str) -> str:
         self.calls.append({"system": system, "user": user})
@@ -75,6 +78,9 @@ class FakeAgent:
         schema_name: str,
         schema: dict[str, object],
     ) -> str:
+        if schema_name == "business_map_suggestions":
+            self.map_calls.append({"system": system, "user": user})
+            return self.map_response
         self.calls.append({"system": system, "user": user})
         self.schemas.append((schema_name, schema))
         return self._response_for(user)

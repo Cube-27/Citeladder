@@ -470,7 +470,7 @@ async def generate_prompts_endpoint(
             amount=generation_model_call_budget(payload.count),
         )
     try:
-        candidates, topics, dropped = await _map_prompt_mutation(
+        result = await _map_prompt_mutation(
             lambda: generate_prompts(
                 session,
                 workspace_id=ctx.workspace_id,
@@ -499,14 +499,17 @@ async def generate_prompts_endpoint(
     except ProviderError as exc:
         raise _generation_provider_error(exc) from exc
     counts = (
-        await topic_status_counts(session, project_id=topics[0].project_id)
-        if topics
+        await topic_status_counts(session, project_id=result.topics[0].project_id)
+        if result.topics
         else {}
     )
     return PromptGenerateResponse(
-        candidates=[PromptCandidateResponse.model_validate(c) for c in candidates],
-        topics=[topic_to_response(t, counts) for t in topics],
-        dropped_duplicates=dropped,
+        candidates=[
+            PromptCandidateResponse.model_validate(c) for c in result.candidates
+        ],
+        topics=[topic_to_response(t, counts) for t in result.topics],
+        dropped_duplicates=result.dropped_duplicates,
+        candidates_generated=result.candidates_generated,
         requested_count=payload.count,
     )
 

@@ -1,13 +1,12 @@
-"""Code-owned topic/count/cohort slots and structural output resolution."""
+"""Code-owned slots (one per business-map cell) and structural output resolution."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 
 from app.core.config.http import PROMPT_TEXT_MAX_CHARS, PROMPT_TEXT_MIN_WORDS
 from app.core.config.prompts import (
-    PROMPT_COHORT_BRAND_DIAGNOSTIC,
     PROMPT_COHORT_COMPARISON,
     PROMPT_COHORT_CORE,
 )
@@ -17,6 +16,7 @@ from app.core.config.visibility_prompts import (
     PROMPT_INTENT_COMPARE,
     PROMPT_INTENT_LEGACY,
 )
+from app.domain.prompts.generation_cells import GenerationCell
 from app.domain.prompts.normalization import prompt_text_hash
 from app.domain.prompts.portfolio import contains_tracked_name
 from app.domain.prompts.style import contains_placeholder, words
@@ -32,6 +32,10 @@ class PromptSlot:
     allowed_prompt_intents: tuple[str, ...]
     brand_name: str = ""
     competitor_names: tuple[str, ...] = ()
+    # The business-map cell this slot expresses (generation_cells.py).
+    buyer_need: dict[str, str] = field(default_factory=dict)
+    target_buyer_stage: str = ""
+    evidence_ref: dict[str, object] = field(default_factory=dict)
 
     def as_model_input(self) -> dict[str, object]:
         payload: dict[str, object] = {
@@ -41,6 +45,10 @@ class PromptSlot:
             "cohort": self.cohort,
             "allowed_prompt_intents": list(self.allowed_prompt_intents),
         }
+        if self.buyer_need:
+            payload["buyer_need"] = dict(self.buyer_need)
+        if self.target_buyer_stage:
+            payload["target_buyer_stage"] = self.target_buyer_stage
         if self.cohort != PROMPT_COHORT_CORE:
             payload["brand"] = self.brand_name
             payload["competitors"] = list(self.competitor_names)
@@ -56,20 +64,6 @@ class PlannedPrompt:
     buyer_stage: str
     prompt_intent: str
     cohort: str
-
-
-def _topic_fields(topic: Any) -> tuple[str, str, str]:
-    if isinstance(topic, dict):
-        return (
-            str(topic.get("id") or topic.get("topic_id") or ""),
-            str(topic.get("name") or ""),
-            str(topic.get("description") or ""),
-        )
-    return (
-        str(getattr(topic, "id", None) or getattr(topic, "topic_id", "")),
-        str(getattr(topic, "name", "")),
-        str(getattr(topic, "description", "") or ""),
-    )
 
 
 def _allowed_intents(cohort: str, intents: tuple[str, ...]) -> tuple[str, ...]:
@@ -96,42 +90,34 @@ def _allowed_intents(cohort: str, intents: tuple[str, ...]) -> tuple[str, ...]:
     )
 
 
-def build_prompt_slots(
+def slots_for_cells(
+    cells: Sequence[GenerationCell],
     *,
-    topics: list[Any],
-    count: int,
     cohort: str,
     intents: tuple[str, ...] = (),
     brand_name: str = "",
     competitor_names: tuple[str, ...] = (),
-    unbound_brand_diagnostic: bool = False,
 ) -> list[PromptSlot]:
-    """Cover topics round-robin; labels restrict choices without allocating them."""
+    """One slot per cell; labels restrict choices without allocating them."""
     allowed = _allowed_intents(cohort, intents)
-    if count <= 0 or not topics or not allowed:
+    if not allowed:
         return []
-    topic_rows = [_topic_fields(topic) for topic in topics]
-    slots: list[PromptSlot] = []
-    for index in range(count):
-        topic_id, name, description = topic_rows[index % len(topic_rows)]
-        slots.append(
-            PromptSlot(
-                slot_id=f"q{index + 1}",
-                topic_id=(
-                    None
-                    if cohort == PROMPT_COHORT_BRAND_DIAGNOSTIC
-                    and unbound_brand_diagnostic
-                    else topic_id
-                ),
-                topic_name=name,
-                topic_description=description,
-                cohort=cohort,
-                allowed_prompt_intents=allowed,
-                brand_name=brand_name,
-                competitor_names=competitor_names,
-            )
+    return [
+        PromptSlot(
+            slot_id=f"q{index + 1}",
+            topic_id=str(cell.topic_id),
+            topic_name=cell.topic_name,
+            topic_description=cell.topic_description,
+            cohort=cohort,
+            allowed_prompt_intents=allowed,
+            brand_name=brand_name,
+            competitor_names=competitor_names,
+            buyer_need=cell.buyer_need(),
+            target_buyer_stage=cell.buyer_stage,
+            evidence_ref=cell.evidence_ref(),
         )
-    return slots
+        for index, cell in enumerate(cells)
+    ]
 
 
 def _identity_is_valid(text: str, slot: PromptSlot) -> bool:

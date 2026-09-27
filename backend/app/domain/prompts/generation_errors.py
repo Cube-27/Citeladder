@@ -22,7 +22,7 @@ async def reraise_scoped_integrity_error(
     *,
     workspace_id: uuid.UUID,
     prompt_set_id: uuid.UUID,
-    topic_id: uuid.UUID | None,
+    topic_ids: list[uuid.UUID],
     exc: IntegrityError,
 ) -> None:
     """Map only vanished scoped entities; preserve unrelated constraints."""
@@ -39,20 +39,20 @@ async def reraise_scoped_integrity_error(
     if set_exists is None:
         raise PromptSetNotFoundError("Prompt set not found") from exc
 
-    if topic_id is not None:
-        topic_exists = (
+    if topic_ids:
+        found = (
             await session.execute(
                 select(Topic.id)
                 .join(Project, Project.id == Topic.project_id)
                 .join(PromptSet, PromptSet.project_id == Project.id)
                 .where(
-                    Topic.id == topic_id,
+                    Topic.id.in_(topic_ids),
                     PromptSet.id == prompt_set_id,
                     Project.workspace_id == workspace_id,
                 )
             )
-        ).scalar_one_or_none()
-        if topic_exists is None:
+        ).scalars()
+        if set(found) != set(topic_ids):
             raise GenerationValidationError(
                 "topic_id is not a topic of this project"
             ) from exc
