@@ -348,6 +348,24 @@ ANALYTICS_TASK_KINDS: Final[frozenset[str]] = frozenset(
     }
 )
 
+# Which stack's worker claims each kind (TypeScript migration PR 4). The
+# TypeScript analytics worker claims exactly these kinds and the Python worker
+# claims the complement, so every kind has one writer. Both images read this
+# one set (TS through the generated policy export), which makes rollback a
+# change to this constant rather than a data repair. Lease expiry stays with
+# the Python sweeper for every kind.
+ANALYTICS_TS_OWNED_TASK_KINDS: Final[frozenset[str]] = frozenset(
+    {
+        ANALYTICS_TASK_KIND_INGEST_REFERRALS,
+        ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
+        ANALYTICS_TASK_KIND_AI_REFERRALS_SNAPSHOT_REFRESH,
+        ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
+    }
+)
+ANALYTICS_PYTHON_TASK_KINDS: Final[frozenset[str]] = (
+    ANALYTICS_TASK_KINDS - ANALYTICS_TS_OWNED_TASK_KINDS
+)
+
 # Error token stamped when a claimed kind has no registered executor — a
 # permanent-until-deploy condition, so the worker never retries it.
 ERROR_EXECUTOR_NOT_WIRED: Final = "executor_not_wired"

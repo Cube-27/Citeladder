@@ -27,6 +27,7 @@ stale, which is how CI keeps the two stacks from drifting.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import sys
 import types
@@ -37,6 +38,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings
 
 from app.connectors.search_surfaces.contracts import (
     OUTCOME_AI_OVERVIEW_PRESENT,
@@ -53,6 +55,7 @@ from app.core.config import (
 from app.core.config import errors as error_config
 from app.core.config import workspaces as workspace_config
 from app.core.config.analysis import (
+    ANALYZER_VERSION,
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     VISIBILITY_EVIDENCE_MAX_LIMIT,
     VISIBILITY_SELECTION_MAX_RUNS,
@@ -60,10 +63,28 @@ from app.core.config.analysis import (
 from app.core.config.analytics import (
     AI_REFERRAL_ANALYZER_VERSION,
     AI_REFERRAL_FORMULA_VERSION,
+    AI_REFERRAL_HOST_RULES,
+    AI_REFERRAL_RULE_VERSION,
+    AI_REFERRAL_UA_RULES,
+    AI_REFERRAL_UTM_RULES,
+    AI_SOURCE_OTHER,
+    AI_SOURCE_TO_LOGICAL_ENGINE,
     ANALYTICS_DEFAULT_GRANULARITY,
     ANALYTICS_MAX_WINDOW_DAYS,
     ANALYTICS_PRESET_RANGE_DAYS,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
+    ANALYTICS_SNAPSHOT_WINDOW_DAYS,
+    ANALYTICS_TS_OWNED_TASK_KINDS,
+    ERROR_EXECUTOR_NOT_WIRED,
+    MATCH_SIGNAL_REFERRER,
+    MATCH_SIGNAL_USER_AGENT,
+    MATCH_SIGNAL_UTM,
+    REFERRAL_RAW_ALLOWLIST,
+    REFERRAL_RETENTION_DAYS,
+    REFERRAL_SANITIZE_VERSION,
+    REFERRAL_URL_PARAM_ALLOWLIST,
+    REFERRAL_URL_PARAM_ALLOWLIST_PREFIXES,
+    AnalyticsSettings,
 )
 from app.core.config.api import (
     API_V1_PREFIX,
@@ -82,13 +103,33 @@ from app.core.config.errors import (
     RETRYABLE_STATUSES,
     STATUS_DEFAULT_CODE,
 )
+from app.core.config.integrations_datasets import (
+    DATASET_GA4_REFERRER_DAILY,
+    DATASET_GA4_SOURCE_MEDIUM_DAILY,
+    DIMENSION_KEY_SEPARATOR,
+    INTEGRATION_DATASET_TEMPLATES,
+)
 from app.core.config.prompts import (
     ORGANIC_PROMPT_COHORTS,
     PROMPT_COHORT_CORE,
     REQUESTABLE_PROMPT_COHORTS,
 )
-from app.core.config.provider_catalog import LOGICAL_ENGINES, is_search_surface
-from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
+from app.core.config.provider_catalog import (
+    ERROR_UNKNOWN,
+    LOGICAL_ENGINES,
+    is_search_surface,
+)
+from app.core.config.task_queue import (
+    ERROR_MAX_ATTEMPTS,
+    TASK_CLAIMABLE_STATUSES,
+    TASK_STATUS_FAILED,
+    TASK_STATUS_LEASED,
+    TASK_STATUS_QUEUED,
+    TASK_STATUS_RETRY_WAIT,
+    TASK_STATUS_RUNNING,
+    TASK_STATUS_SUCCEEDED,
+    TASK_TERMINAL_STATUSES,
+)
 from app.core.config.workspaces import (
     CAPABILITY_DENIAL_MESSAGES,
     CODE_WORKSPACE_ROLE_FORBIDDEN,
@@ -132,10 +173,10 @@ EXPORTED_SETTINGS = (
 )
 
 
-def _env_names(name: str, field: FieldInfo) -> list[str]:
+def _env_names(name: str, field: FieldInfo, prefix: str = "") -> list[str]:
     """Environment names pydantic-settings accepts (case-insensitively)."""
     alias = field.validation_alias
-    choices = getattr(alias, "choices", None) or [name]
+    choices = getattr(alias, "choices", None) or [f"{prefix}{name}"]
     return list(dict.fromkeys(str(choice).upper() for choice in choices))
 
 
@@ -147,23 +188,31 @@ def _type_descriptor(annotation: Any) -> dict[str, Any]:
         type(None),
     }:
         return {"type": "datetime", "nullable": True}
-    for candidate, label in ((bool, "bool"), (int, "int"), (str, "str")):
+    for candidate, label in (
+        (bool, "bool"),
+        (int, "int"),
+        (float, "float"),
+        (str, "str"),
+    ):
         if annotation is candidate:
             return {"type": label}
     msg = f"Unsupported exported setting type: {annotation!r}"
     raise TypeError(msg)
 
 
-def _setting(name: str) -> dict[str, Any]:
-    field = Settings.model_fields[name]
-    entry: dict[str, Any] = {"env": _env_names(name, field)}
+def _setting(name: str, model: type[BaseSettings] = Settings) -> dict[str, Any]:
+    field = model.model_fields[name]
+    prefix = str(model.model_config.get("env_prefix") or "")
+    entry: dict[str, Any] = {"env": _env_names(name, field, prefix)}
     entry.update(_type_descriptor(field.annotation))
     entry["default"] = field.default
-    # Pydantic records ``Field(ge=..., le=...)`` as metadata objects that
-    # expose ``ge``/``le`` attributes.
+    # Pydantic records ``Field(ge=..., gt=..., le=...)`` as metadata objects
+    # that expose those attributes.
     for constraint in field.metadata:
         if (minimum := getattr(constraint, "ge", None)) is not None:
             entry["minimum"] = minimum
+        if (exclusive := getattr(constraint, "gt", None)) is not None:
+            entry["exclusive_minimum"] = exclusive
         if (maximum := getattr(constraint, "le", None)) is not None:
             entry["maximum"] = maximum
     return entry
@@ -204,6 +253,8 @@ def build_config() -> dict[str, Any]:
         },
         "visibility": _visibility_policy(),
         "analytics": _analytics_policy(),
+        "task_queue": _task_queue_policy(),
+        "referrals": _referral_policy(),
     }
 
 
@@ -242,7 +293,78 @@ def _analytics_policy() -> dict[str, Any]:
         "preset_range_days": dict(ANALYTICS_PRESET_RANGE_DAYS),
         "ai_referral_analyzer_version": AI_REFERRAL_ANALYZER_VERSION,
         "ai_referral_formula_version": AI_REFERRAL_FORMULA_VERSION,
+        "snapshot_window_days": list(ANALYTICS_SNAPSHOT_WINDOW_DAYS),
+        "ts_owned_task_kinds": sorted(ANALYTICS_TS_OWNED_TASK_KINDS),
+        "worker_settings": {
+            name: _setting(name, AnalyticsSettings)
+            for name in ANALYTICS_WORKER_SETTINGS
+        },
+        "executor_not_wired_error": ERROR_EXECUTOR_NOT_WIRED,
+        "retry_error": ERROR_UNKNOWN,
     }
+
+
+def _task_queue_policy() -> dict[str, Any]:
+    """The shared queue-row status vocabulary the TS claim and finalize write."""
+    return {
+        "statuses": {
+            "queued": TASK_STATUS_QUEUED,
+            "leased": TASK_STATUS_LEASED,
+            "running": TASK_STATUS_RUNNING,
+            "retry_wait": TASK_STATUS_RETRY_WAIT,
+            "succeeded": TASK_STATUS_SUCCEEDED,
+            "failed": TASK_STATUS_FAILED,
+        },
+        "claimable": sorted(TASK_CLAIMABLE_STATUSES),
+        "terminal": sorted(TASK_TERMINAL_STATUSES),
+        "max_attempts_error": ERROR_MAX_ATTEMPTS,
+    }
+
+
+_REFERRAL_DATASETS = (DATASET_GA4_REFERRER_DAILY, DATASET_GA4_SOURCE_MEDIUM_DAILY)
+
+
+def _referral_policy() -> dict[str, Any]:
+    """The referral chain's rule tables, redaction contract and versions."""
+    return {
+        "rule_version": AI_REFERRAL_RULE_VERSION,
+        "analyzer_version": ANALYZER_VERSION,
+        "sanitize_version": REFERRAL_SANITIZE_VERSION,
+        "other_source": AI_SOURCE_OTHER,
+        "source_to_logical_engine": dict(AI_SOURCE_TO_LOGICAL_ENGINE),
+        "match_signals": {
+            "referrer": MATCH_SIGNAL_REFERRER,
+            "utm": MATCH_SIGNAL_UTM,
+            "user_agent": MATCH_SIGNAL_USER_AGENT,
+        },
+        # Config order is the priority order within each tier.
+        "host_rules": [dataclasses.asdict(rule) for rule in AI_REFERRAL_HOST_RULES],
+        "utm_rules": [dataclasses.asdict(rule) for rule in AI_REFERRAL_UTM_RULES],
+        "ua_rules": [dataclasses.asdict(rule) for rule in AI_REFERRAL_UA_RULES],
+        "raw_allowlist": sorted(REFERRAL_RAW_ALLOWLIST),
+        "url_param_allowlist": sorted(REFERRAL_URL_PARAM_ALLOWLIST),
+        "url_param_allowlist_prefixes": list(REFERRAL_URL_PARAM_ALLOWLIST_PREFIXES),
+        "retention_days": REFERRAL_RETENTION_DAYS,
+        "datasets": {
+            "referrer_daily": DATASET_GA4_REFERRER_DAILY,
+            "source_medium_daily": DATASET_GA4_SOURCE_MEDIUM_DAILY,
+        },
+        "dimension_key_separator": DIMENSION_KEY_SEPARATOR,
+        "dimension_arity": {
+            dataset: len(INTEGRATION_DATASET_TEMPLATES[dataset].dimensions)
+            for dataset in _REFERRAL_DATASETS
+        },
+    }
+
+
+# The analytics worker knobs the TS worker reads (``ANALYTICS_`` env prefix).
+ANALYTICS_WORKER_SETTINGS = (
+    "lease_ttl_seconds",
+    "heartbeat_interval_seconds",
+    "task_max_attempts",
+    "poll_interval_seconds",
+    "retry_delay_seconds",
+)
 
 
 # The config modules whose error codes a TypeScript owner may emit: the
