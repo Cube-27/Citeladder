@@ -21,6 +21,7 @@ from app.connectors.agent.gateway import ModelGateway
 from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.brand_profile import BUSINESS_MAP_VALUE_MAX_CHARS
 from app.core.config.prompts import (
+    GENERATOR_VERSION,
     MAP_SUGGESTION_MAX_PER_DIMENSION,
     MAP_SUGGESTION_SYSTEM_PROMPT,
 )
@@ -146,6 +147,7 @@ async def suggest_offering_maps(
         return []
     requested = {name.casefold(): name for name in offerings}
     source = {
+        "generator_version": GENERATOR_VERSION,
         "transport_host": agent.base_url_host,
         "transport_model": agent.model,
         "suggested_at": datetime.now(UTC).isoformat(),

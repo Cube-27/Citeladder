@@ -23,6 +23,7 @@ from app.core.config.brand_profile import (
     BUSINESS_MAP_VALUE_MAX_CHARS,
 )
 from app.domain.projects.brand_profile import get_brand_profile
+from app.domain.prompts.locks import acquire_project_lock
 
 BusinessMapOrigin = Literal["manual", "model"]
 BusinessMapReviewState = Literal["suggested", "confirmed"]
@@ -303,6 +304,10 @@ async def update_business_map(
     profile = await get_brand_profile(
         session, workspace_id=workspace_id, project_id=project_id
     )
+    # Generation records model suggestions under the project lock; taking it
+    # here and re-reading keeps either writer from overwriting the other.
+    await acquire_project_lock(session, project_id)
+    await session.refresh(profile)
     offerings = list(profile.products_services or [])
     merged = merge_business_map(
         payload,

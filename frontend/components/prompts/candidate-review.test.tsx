@@ -18,7 +18,7 @@ const candidate = (id: string, text: string): PromptCandidate => ({
   cohort: 'core',
   created_at: '',
   expires_at: '',
-  quality_judged: false,
+  quality_status: 'off',
   quality_flags: [],
 });
 
@@ -60,7 +60,7 @@ describe('CandidateReview', () => {
   it('shows quality flags as advisory labels without hiding the suggestion', () => {
     render(
       <CandidateReview
-        candidates={[{ ...candidates[0], quality_judged: true, quality_flags: ['natural'] }]}
+        candidates={[{ ...candidates[0], quality_status: 'judged', quality_flags: ['natural'] }]}
         topics={[]}
         onAccept={vi.fn()}
         onReject={vi.fn()}

@@ -37,8 +37,9 @@ class _Row:
         return tuple(feature for feature in features if feature[1])
 
     def suggested(self) -> bool:
+        """Any grounding that is not explicitly confirmed ranks after confirmed."""
         return any(
-            ref.get("review_state") == "suggested" for ref in self.prompt.evidence_refs
+            ref.get("review_state") != "confirmed" for ref in self.prompt.evidence_refs
         )
 
 

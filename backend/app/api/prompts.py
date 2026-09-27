@@ -64,6 +64,7 @@ from app.domain.prompts.candidates import (
     CandidateReviewError,
     list_pending_candidates,
     review_candidates,
+    run_quality_gates,
 )
 from app.domain.prompts.csv_import import parse_prompt_csv
 from app.domain.prompts.generation import (
@@ -535,7 +536,9 @@ async def generate_prompts_endpoint(
         else {}
     )
     return PromptGenerateResponse(
-        candidates=[candidate_to_response(c) for c in result.candidates],
+        candidates=[
+            candidate_to_response(c, result.quality_gate) for c in result.candidates
+        ],
         topics=[topic_to_response(t, counts) for t in result.topics],
         dropped_duplicates=result.dropped_duplicates,
         candidates_generated=result.candidates_generated,
@@ -555,7 +558,12 @@ async def list_candidates_endpoint(
         )
     except PromptSetNotFoundError as exc:
         raise_not_found(_RES_PROMPT_SET, cause=exc)
-    return [candidate_to_response(c) for c in candidates]
+    gates = await run_quality_gates(
+        session,
+        workspace_id=ctx.workspace_id,
+        run_ids={candidate.run_id for candidate in candidates},
+    )
+    return [candidate_to_response(c, gates.get(c.run_id)) for c in candidates]
 
 
 @router.post("/prompt-sets/{prompt_set_id}/candidates/review")

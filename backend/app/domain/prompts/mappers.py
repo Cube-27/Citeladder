@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import uuid
 
+from app.core.config.jev import QUALITY_GATE_OFF, QUALITY_GATE_UNAVAILABLE
 from app.core.config.prompts import PROMPT_STATUS_ACTIVE
 from app.domain.prompts.schemas import (
     PromptCandidateResponse,
@@ -53,11 +54,22 @@ def topic_to_response(
     )
 
 
-def candidate_to_response(candidate: PromptCandidate) -> PromptCandidateResponse:
+def _quality_status(decision: dict, run_quality_gate: str | None) -> str:
+    if decision:
+        return "judged"
+    if run_quality_gate in (QUALITY_GATE_OFF, QUALITY_GATE_UNAVAILABLE):
+        return run_quality_gate
+    return "not_judged"
+
+
+def candidate_to_response(
+    candidate: PromptCandidate, run_quality_gate: str | None
+) -> PromptCandidateResponse:
+    """``run_quality_gate`` is the candidate's run gate (None when unknown)."""
     decision = candidate.jev_decision or {}
     return PromptCandidateResponse.model_validate(candidate).model_copy(
         update={
-            "quality_judged": bool(decision),
+            "quality_status": _quality_status(decision, run_quality_gate),
             "quality_flags": [str(flag) for flag in decision.get("flags") or []],
         }
     )

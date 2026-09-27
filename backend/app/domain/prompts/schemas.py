@@ -253,9 +253,11 @@ class PromptCandidateResponse(BaseModel):
     cohort: str
     created_at: datetime
     expires_at: datetime
-    # Shadow quality judge (JEV): whether this candidate was judged, and the
-    # questions it looked weak on. Flags inform review; they never drop a row.
-    quality_judged: bool = False
+    # Shadow quality judge (JEV): ``judged``; ``off`` (no judge configured for
+    # its run); ``unavailable`` (the judge failed or timed out for its run);
+    # ``not_judged`` (past the call cap, or a run from before the judge).
+    # Flags name the questions it looked weak on; they never drop a row.
+    quality_status: Literal["judged", "off", "unavailable", "not_judged"] = "not_judged"
     quality_flags: list[str] = Field(default_factory=list)
 
 

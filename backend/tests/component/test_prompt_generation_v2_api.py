@@ -212,7 +212,7 @@ async def test_without_a_jev_key_the_judge_is_off(
     ).json()
 
     assert body["quality_gate"] == "off"
-    assert all(c["quality_judged"] is False for c in body["candidates"])
+    assert {c["quality_status"] for c in body["candidates"]} == {"off"}
 
 
 @pytest.mark.asyncio
@@ -239,6 +239,7 @@ async def test_shadow_decisions_rank_and_flag_without_dropping(
     assert len(judge.states) == len(body["candidates"]) == 3
     assert body["candidates"][-1]["text"] == weak
     assert body["candidates"][-1]["quality_flags"] == ["natural"]
+    assert {c["quality_status"] for c in body["candidates"]} == {"judged"}
     listed = (
         await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
     ).json()
@@ -282,3 +283,7 @@ async def test_jev_failure_never_fails_generation(
     assert response.status_code == 201
     assert response.json()["quality_gate"] == "unavailable"
     assert len(response.json()["candidates"]) == 2
+    listed = (
+        await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
+    ).json()
+    assert {c["quality_status"] for c in listed} == {"unavailable"}

@@ -301,6 +301,23 @@ async def list_pending_candidates(
     return review_order(list(result.scalars().all()))
 
 
+async def run_quality_gates(
+    session: AsyncSession, *, workspace_id: uuid.UUID, run_ids: set[uuid.UUID]
+) -> dict[uuid.UUID, str | None]:
+    """Each run's recorded quality gate (None for runs from before the judge)."""
+    if not run_ids:
+        return {}
+    rows = await session.execute(
+        select(PromptGenerationRun.id, PromptGenerationRun.provenance).where(
+            PromptGenerationRun.workspace_id == workspace_id,
+            PromptGenerationRun.id.in_(run_ids),
+        )
+    )
+    return {
+        run_id: (provenance or {}).get("quality_gate") for run_id, provenance in rows
+    }
+
+
 def _validate_review_ids(
     accept_ids: list[uuid.UUID], reject_ids: list[uuid.UUID]
 ) -> None:
