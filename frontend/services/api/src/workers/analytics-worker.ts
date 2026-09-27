@@ -23,6 +23,7 @@ import { refreshAiReferralsSnapshot } from '../referrals/snapshot.ts';
 import { TaskCancelledError, type Executor } from './executor.ts';
 import { projectPerformanceRange, refreshTrafficSnapshot } from '../traffic/snapshot.ts';
 import { recomputeDemand } from '../demand/snapshot.ts';
+import { verifyImplementationEvents } from '../opportunities/verification.ts';
 
 const logger = getLogger('workers.analytics');
 const { statuses, terminal } = policy.task_queue;
@@ -37,6 +38,7 @@ export const EXECUTORS: Readonly<Record<string, Executor>> = {
   traffic_snapshot_refresh: refreshTrafficSnapshot,
   performance_range_projection: projectPerformanceRange,
   demand_snapshot_refresh: recomputeDemand,
+  opportunity_verification: verifyImplementationEvents,
 };
 
 /** A claimed kind with no executor: a deploy bug, failed without retries. */

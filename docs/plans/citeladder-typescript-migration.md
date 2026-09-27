@@ -8,9 +8,12 @@ on 27 September 2026 at the owner's request: `executions`, `ai-referrals` and
 `visibility` are TypeScript-owned, served through every ingress, with the
 GCP runtime running the service image. PR 4 (queue engine and referral
 analytics kinds) implemented on 27 September 2026 at the owner's request,
-together with the removal of PR 3's Pydantic error-wording emulation. Not
-execution authorization; each later PR is executed only when individually
-assigned.
+together with the removal of PR 3's Pydantic error-wording emulation. PR 5
+(traffic, performance and demand projections) and PR 6 (Opportunity detectors
+and verification) implemented locally on 27 September 2026 at the owner's
+request. PR 6 includes the explicitly approved detector foundation for PR 7.
+Not execution authorization; each later PR is executed only when individually
+assigned. PR 7 has not started.
 
 ## 1. Goal, scope and pace
 
@@ -261,12 +264,91 @@ Every project's demand `source_hash` therefore changes on deploy, and existing
 version-agnostic.
 The casefold export here preserves persisted query identities, not Pydantic
 error wording. Deployment and the one-week error-rate/latency soak remain
-pending; PR 6 has not started.
+pending.
 
 ### PR 6: Opportunity detectors
 
 `analysis/opportunities/*` (pure detectors) and `opportunity_verification`.
 Every detector has golden-master coverage. No routes move.
+
+*As implemented:* the pre-code inventory found 19 substantive application
+modules (11 detector modules and eight transitive leaves), an empty package
+initializer, and 13 directly relevant test modules. Only one application file
+and one test file are retired, below the retirement budget. The owner chose
+option 2 after the inventory confirmed that the detector port has no TS runtime
+caller in this PR: it is an explicitly approved, golden-tested foundation for
+PR 7. The verifier is the live TS runtime cutover.
+
+The inventory and rule 2 bridges are below. Paths are relative to `backend/app`;
+all listed Python modules remain unless marked retired. Removal requires the
+last Python caller to move, not simply PR 7 landing.
+
+| Python module | Remaining Python callers / disposition |
+| --- | --- |
+| `analysis/opportunities/actions.py` | `domain/opportunities/actions.py` |
+| `analysis/opportunities/detectors.py` | `source_mix`, `earned_pages`; domain visibility evidence, commerce/change/earned-page/demand hits, snapshot build and recompute |
+| `analysis/opportunities/earned_page_brief.py` | `earned_pages` |
+| `analysis/opportunities/earned_page_evidence.py` | `earned_page_brief`, `earned_pages`, domain earned-page hits |
+| `analysis/opportunities/earned_pages.py` | domain earned-page hits |
+| `analysis/opportunities/exports.py` | `api/opportunities.py` |
+| `analysis/opportunities/page_predicates.py` | `earned_pages`, `placement_outcome` |
+| `analysis/opportunities/placement_outcome.py` | domain placement checks, used by Python source-page inspection |
+| `analysis/opportunities/scoring.py` | detectors, earned pages and domain recompute |
+| `analysis/opportunities/source_mix.py` | domain summary, snapshot projection and recompute |
+| `analysis/opportunities/source_patterns.py` | detectors, source mix, domain visibility evidence and `analysis/service.py` |
+| `analysis/comparison.py` | analysis service, domain visibility/trends/matched/source comparisons, comparison projection, prompt outcomes and command center |
+| `analysis/csv_cells.py` | Opportunity, analysis and Site Health exports |
+| `analysis/normalization.py` | `analysis/entity_assessment`, `analysis/scoring`, Opportunity source patterns/page predicates, source-page presence; domain analysis visibility, integrations mappings, Opportunity actions, project onboarding and prompt portfolio; answer-engine normalization |
+| `analysis/site_health/indexing.py` | Opportunity actions and Site Health rules/schema rules |
+| `domain/opportunities/verification.py` | enqueue helpers only: `domain/site_health/terminal_refresh.py` and `workers/source_pages/inspector.py`; terminal refresh retains the audit helper admission path |
+| `domain/opportunities/verification_result.py` | retired; sole executor caller moved to TS |
+| `domain/opportunities/visibility_checks.py` | implementation declarations freeze their baseline |
+| `domain/opportunities/placement_checks.py` | declarations and source-page inspector; only `placement_section` retired into TS |
+
+`opportunity_verification` joins `ANALYTICS_TS_OWNED_TASK_KINDS`; the TS
+analytics worker claims it and Python claims the complement. Python admission,
+models, Alembic, sweeper, source inspection, Opportunity refresh and routes stay
+with their existing owners. The executor reads persisted evidence and appends
+verification observations with the same trigger revision, processing versions
+and idempotency format. It adds no provider I/O or new spans; existing queue
+worker telemetry remains in force. Route ownership and both Caddyfiles are
+unchanged.
+
+Live `opportunity_detectors` and `opportunity_comparisons` goldens cover the
+retained pure Python owners, including thresholds, ties, empty evidence,
+Unicode, URL normalization and canonical JSON hashes. Frozen
+`opportunity_verification` goldens retain the retired verifier's decisions,
+measurement states, comparison windows and microsecond/timezone behavior.
+PostgreSQL coverage exercises Python enqueue → TS claim/complete → Python read,
+concurrent replay, exact provenance, finalized/current evidence, missing prompt
+targets, changed audit cohorts and referral/demand before/after states.
+
+The nine pure detector test modules remain (`test_action_grouping`,
+`test_earned_page_detector`, `test_opportunity_scoring`,
+`test_opportunity_exports`, `test_opportunity_source_mix`,
+`test_opportunity_site_detectors`, `test_placement_outcome`,
+`test_source_patterns`, `test_visibility_detectors`).
+`test_opportunity_verification_result.py` is retired into frozen goldens and TS
+PostgreSQL coverage. Verifier-only cases leave `test_visibility_metric_check`
+and `test_placement_checks` with the same behavior covered in TS; their Python
+helper, declaration, inspection and recheck tests remain. The Action declaration
+reader test now consumes seeded observations. `test_post_sync_chain` additionally
+proves real Python enqueue deduplication and exclusion from Python claims.
+
+Deliberate departures: every verification query now enforces workspace scope,
+including referenced audits, baselines and metrics that the former Python
+verifier fetched by ID; existing rule-row scope is retained. Foreign provenance
+yields unavailable evidence and is covered at PostgreSQL. At the owner's explicit direction,
+`opp-analyzer-3`, `opp-rules-3`, `opp-formula-2`,
+`implementation-verifier-2` and `source-taxonomy-2` become their `*-1`
+identifiers. This changes newly derived identities and verification enqueue/event
+idempotency keys; old rows are retained, and an old source may produce a new
+version-1 observation. No database reset or schema migration is performed.
+Python remains the policy authority; generated TS policy is drift-checked.
+Source-page extractor versions are outside this normalization.
+
+Deployment and the one-week error-rate/latency soak remain pending.
+PR 7 has not started.
 
 ### PR 7: Opportunity store, refresh and routes
 

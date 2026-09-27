@@ -33,9 +33,10 @@
   analytics kinds, plus removal of PR 3's error-wording emulation) implemented
   on 27 September 2026. PR 5 (traffic, performance and demand projections)
   is implemented without a split; integrations sync/readiness and shared
-  Python readers remain with their existing owners. Deployment of PRs 3–5
-  and their one-week cutover soaks are pending. Next: PR 6, which needs its
-  own assignment. Site Health, audits,
+  Python readers remain with their existing owners. PR 6 is implemented locally:
+  verification is TS-owned, with an owner-approved detector foundation for PR 7.
+  Deployment of PRs 3–6 and their one-week cutover soaks are pending.
+  PR 7 has not started and needs its own assignment. Site Health, audits,
   billing/entitlements and the Agent runtime stay Python.
 
 ## Queued

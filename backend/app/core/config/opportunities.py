@@ -38,12 +38,12 @@ from app.core.config.projects import (
 # catalog change, and ``FORMULA_VERSION`` on any scoring change so a derived
 # row is always traceable to the exact logic that produced it (mirrors
 # ``SCORING_RULE_VERSION`` in ``config/analysis.py``).
-ANALYZER_VERSION: Final = "opp-analyzer-3"
-RULE_VERSION: Final = "opp-rules-3"
+ANALYZER_VERSION: Final = "opp-analyzer-1"
+RULE_VERSION: Final = "opp-rules-1"
 RULE_PRODUCT_NOT_MENTIONED: Final = "product_not_mentioned"
 RULE_CITED_ALTERNATIVES: Final = "cited_alternatives_without_uploaded_presence"
 RULE_CATALOG_FIELDS_MISSING: Final = "catalog_fields_missing"
-FORMULA_VERSION: Final = "opp-formula-2"
+FORMULA_VERSION: Final = "opp-formula-1"
 CONFIRMED_DECLINE_MIN_FACTOR: Final = 0.1
 CONFIRMED_DECLINE_GAP_NORMALIZER: Final = 10.0
 DEMAND_SIGNAL_GAP_FACTOR: Final = 2.0
@@ -94,7 +94,7 @@ CODE_IMPLEMENTATION_TARGET_CONFLICT: Final = "implementation_target_conflict"
 CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT: Final = "implementation_idempotency_conflict"
 IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN: Final = 160
 IMPLEMENTATION_TARGETS_MAX: Final = 64
-IMPLEMENTATION_VERIFIER_VERSION: Final = "implementation-verifier-2"
+IMPLEMENTATION_VERIFIER_VERSION: Final = "implementation-verifier-1"
 IMPLEMENTATION_VERIFICATION_BATCH_MAX: Final = 100
 IMPLEMENTATION_VERIFICATION_HISTORY_MAX: Final = 50
 # Visibility expectations are movements against a baseline frozen at

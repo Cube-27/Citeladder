@@ -34,6 +34,10 @@ from scripts.golden_masters_demand import (
     page_equivalence,
     query_normalizations,
 )
+from scripts.golden_masters_opportunities import (
+    opportunity_comparisons,
+    opportunity_detectors,
+)
 from scripts.golden_masters_performance import performance_windows
 
 # A fixture-only signing key; it signs nothing outside these fixtures.
@@ -181,6 +185,8 @@ def secret_strength() -> list[dict[str, Any]]:
 
 
 GOLDEN_MASTERS: dict[str, Callable[[], list[dict[str, Any]]]] = {
+    "opportunity_detectors": opportunity_detectors,
+    "opportunity_comparisons": opportunity_comparisons,
     "query_normalizations": query_normalizations,
     "canonical_pages": canonical_pages,
     "page_equivalence": page_equivalence,
