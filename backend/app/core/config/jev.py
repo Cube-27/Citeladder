@@ -141,6 +141,10 @@ class JevSettings(BaseSettings):
     # Upper bound on decide() calls one Generate request may make. Candidates
     # past the cap are staged without a decision.
     max_calls_per_generation: int = Field(default=100, ge=1, le=500)
+    # Overall wall-clock bound on all shadow decisions for one generation;
+    # calls still running at the deadline are cancelled and reported as
+    # unavailable, so a slow judge never holds a Generate request open.
+    generation_deadline_seconds: float = Field(default=30.0, gt=0, le=120)
     # Tracked/earlier prompts offered to the per-topic duplicate choice.
     duplicate_options_max: int = Field(default=20, ge=1, le=100)
     # Shadow flagging: a yes/no answer below this probability flags the row.

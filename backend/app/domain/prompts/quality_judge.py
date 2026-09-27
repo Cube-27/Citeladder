@@ -193,20 +193,38 @@ def _flags(answers: dict[str, Any], duplicate: dict[str, Any] | None) -> list[st
     return flags
 
 
+def _number(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, float | int):
+        return None
+    return float(value)
+
+
 def _choice_answer(answer: object) -> dict[str, Any] | None:
+    """A choice answer with malformed parts replaced by unavailable values."""
     if not isinstance(answer, dict):
         return None
+    choice = answer.get("choice")
+    probabilities = answer.get("probabilities")
     return {
-        "choice": answer.get("choice"),
-        "probabilities": answer.get("probabilities") or {},
-        "confidence": answer.get("confidence"),
+        "choice": choice if isinstance(choice, str) else None,
+        "probabilities": (
+            {
+                str(option): number
+                for option, value in probabilities.items()
+                if (number := _number(value)) is not None
+            }
+            if isinstance(probabilities, dict)
+            else {}
+        ),
+        "confidence": _number(answer.get("confidence")),
     }
 
 
 def decision_record(request: _Request, decision: JevDecision) -> dict[str, Any]:
     """The persisted shadow decision for one candidate."""
     nouls = {
-        key: decision.answers.get(key, {}).get("noul") for key in JEV_NOUL_QUESTIONS
+        key: _number((decision.answers.get(key) or {}).get("noul"))
+        for key in JEV_NOUL_QUESTIONS
     }
     duplicate = _choice_answer(decision.answers.get("duplicate_of"))
     if duplicate is not None:
@@ -256,6 +274,13 @@ async def _recorded_decisions(
 async def _decide_all(
     judge: JevClient, requests: list[_Request]
 ) -> tuple[dict[str, dict[str, Any]], bool]:
+    """Decide every request within one overall deadline.
+
+    Returns the decisions obtained and whether any request went without one
+    (provider failure, malformed answer, or the deadline cancelling it).
+    """
+    if not requests:
+        return {}, False
     semaphore = asyncio.Semaphore(jev_settings.concurrency)
 
     async def _one(request: _Request) -> tuple[str, dict[str, Any] | None]:
@@ -267,10 +292,29 @@ async def _decide_all(
                     "jev decision unavailable", extra={"error_code": exc.error_code}
                 )
                 return request.key, None
-        return request.key, decision_record(request, decision)
+        try:
+            return request.key, decision_record(request, decision)
+        except (AttributeError, KeyError, TypeError, ValueError) as exc:
+            # A malformed answer is an unavailable judgment, never a failure.
+            logger.warning(
+                "jev decision malformed", extra={"error_type": type(exc).__name__}
+            )
+            return request.key, None
 
-    results = await asyncio.gather(*(_one(request) for request in requests))
-    decisions = {key: record for key, record in results if record is not None}
+    tasks = [asyncio.create_task(_one(request)) for request in requests]
+    done, pending = await asyncio.wait(
+        tasks, timeout=jev_settings.generation_deadline_seconds
+    )
+    for task in pending:
+        task.cancel()
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+        logger.warning("jev deadline reached", extra={"pending": len(pending)})
+    decisions = {
+        key: record
+        for key, record in (task.result() for task in done)
+        if record is not None
+    }
     return decisions, len(decisions) < len(requests)
 
 

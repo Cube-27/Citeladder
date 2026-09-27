@@ -31,7 +31,7 @@ function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateRespon
       : '';
   const judge =
     result.quality_gate === 'unavailable'
-      ? ' Quality checks were unavailable this time, so no suggestion is flagged.'
+      ? ' Quality checks may have been unavailable for some suggestions, so an unflagged row may not have been checked.'
       : '';
   return (
     <Alert tone="success">

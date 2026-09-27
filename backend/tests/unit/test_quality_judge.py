@@ -5,6 +5,8 @@ from __future__ import annotations
 import uuid
 from types import SimpleNamespace
 
+import pytest
+
 from app.connectors.jev import JevDecision
 from app.domain.prompts.generation_contract import SuggestedPrompt, SuggestedTopic
 from app.domain.prompts.quality_judge import build_requests, decision_record
@@ -105,3 +107,58 @@ def test_weak_answers_and_a_confident_duplicate_flag_the_candidate() -> None:
     assert record["intent"]["choice"] == "learn"
     assert record["state_hash"] == second.state_hash
     assert record["rank_score"] == 0.73
+
+
+def test_malformed_choice_answers_are_recorded_as_unavailable_values() -> None:
+    (request,) = _requests(["tracked question"], ["new one"])
+    decision = JevDecision(
+        model="jev-1.13.0",
+        answers={
+            "natural": {"type": "noul", "noul": "high"},
+            "intent": {"type": "choice", "choice": 3, "probabilities": [0.5]},
+            "duplicate_of": {
+                "type": "choice",
+                "choice": {"p1": 1},
+                "probabilities": {"p1": "most", "none": 0.4},
+                "confidence": "sure",
+            },
+        },
+    )
+
+    record = decision_record(request, decision)
+
+    assert record["answers"]["natural"] is None
+    assert record["intent"] == {"choice": None, "probabilities": {}, "confidence": None}
+    assert record["duplicate_of"]["probabilities"] == {"none": 0.4}
+    assert record["duplicate_of"]["text"] is None
+    assert record["flags"] == []
+
+
+@pytest.mark.asyncio
+async def test_slow_or_malformed_decisions_are_unavailable_not_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import asyncio
+
+    from app.core.config.jev import jev_settings
+    from app.domain.prompts import quality_judge
+
+    monkeypatch.setattr(jev_settings, "generation_deadline_seconds", 0.05)
+    fast, slow, broken = _requests([], ["fast one", "slow one", "broken one"])
+
+    class _Judge:
+        async def decide(self, state: dict, questions: dict) -> JevDecision:
+            question = state["candidate"]["question"]
+            if question == "slow one":
+                await asyncio.sleep(10)
+            if question == "broken one":
+                return SimpleNamespace(model="x", answers=None, usage={})  # type: ignore[return-value]
+            return JevDecision(model="jev", answers={})
+
+    decisions, failed = await quality_judge._decide_all(
+        _Judge(),  # type: ignore[arg-type]
+        [fast, slow, broken],
+    )
+
+    assert set(decisions) == {fast.key}
+    assert failed is True
