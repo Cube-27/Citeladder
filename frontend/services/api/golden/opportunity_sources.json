@@ -1,0 +1,620 @@
+{
+  "name": "opportunity_sources",
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "cases": [
+    {
+      "input": {
+        "op": "roster",
+        "args": [
+          {}
+        ]
+      },
+      "output": "roster-bb7078c14682e9f0d482088d1c96f714"
+    },
+    {
+      "input": {
+        "op": "roster",
+        "args": [
+          {
+            "brand_name": "Café",
+            "brand_aliases": [
+              "Straße",
+              "b",
+              "A",
+              5
+            ]
+          }
+        ]
+      },
+      "output": "roster-7dea8ae8aeb73a0f3ae9933f844136b1"
+    },
+    {
+      "input": {
+        "op": "roster",
+        "args": [
+          {
+            "brand_name": null,
+            "brand_aliases": null,
+            "competitors": null
+          }
+        ]
+      },
+      "output": "roster-bb7078c14682e9f0d482088d1c96f714"
+    },
+    {
+      "input": {
+        "op": "roster",
+        "args": [
+          {
+            "brand_name": "𐀀 Brand",
+            "competitors": [
+              {
+                "name": "Zed",
+                "aliases": [
+                  "z2",
+                  "Z1"
+                ]
+              },
+              {
+                "name": "Acme",
+                "aliases": []
+              },
+              {
+                "name": "Acme"
+              },
+              {
+                "name": null,
+                "aliases": [
+                  true,
+                  1.5
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "output": "roster-01e67a0bdef06e7753c07b89aeecf9b2"
+    },
+    {
+      "input": {
+        "op": "passages",
+        "args": [
+          [
+            {
+              "text": "  first "
+            },
+            {
+              "text": ""
+            },
+            null,
+            {
+              "text": 3
+            },
+            {
+              "x": 1
+            }
+          ],
+          null
+        ]
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "op": "passages",
+        "args": [
+          [
+            {
+              "text": "  first "
+            },
+            {
+              "text": ""
+            },
+            null,
+            {
+              "text": 3
+            },
+            {
+              "x": 1
+            }
+          ],
+          []
+        ]
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "op": "passages",
+        "args": [
+          [
+            {
+              "text": "  first "
+            },
+            {
+              "text": ""
+            },
+            null,
+            {
+              "text": 3
+            },
+            {
+              "x": 1
+            }
+          ],
+          [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        ]
+      },
+      "output": [
+        "first",
+        "3"
+      ]
+    },
+    {
+      "input": {
+        "op": "passages",
+        "args": [
+          [
+            {
+              "text": "  first "
+            },
+            {
+              "text": ""
+            },
+            null,
+            {
+              "text": 3
+            },
+            {
+              "x": 1
+            }
+          ],
+          [
+            4,
+            0,
+            0,
+            9,
+            -1
+          ]
+        ]
+      },
+      "output": [
+        "first",
+        "first"
+      ]
+    },
+    {
+      "input": {
+        "op": "passages",
+        "args": [
+          [
+            {
+              "text": "  first "
+            },
+            {
+              "text": ""
+            },
+            null,
+            {
+              "text": 3
+            },
+            {
+              "x": 1
+            }
+          ],
+          [
+            true,
+            false
+          ]
+        ]
+      },
+      "output": [
+        "first"
+      ]
+    },
+    {
+      "input": {
+        "op": "passages",
+        "args": [
+          [
+            {
+              "text": "  first "
+            },
+            {
+              "text": ""
+            },
+            null,
+            {
+              "text": 3
+            },
+            {
+              "x": 1
+            }
+          ],
+          [
+            1.0
+          ]
+        ]
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "op": "passages",
+        "args": [
+          null,
+          [
+            0
+          ]
+        ]
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "op": "prompt_hash",
+        "args": [
+          "Best  shoes?"
+        ]
+      },
+      "output": "0d235a98d5de2f9955799c22b066824c875a56b88e88f039ae2a5e267259c141"
+    },
+    {
+      "input": {
+        "op": "prompt_hash",
+        "args": [
+          "  CAFÉ Straße!! "
+        ]
+      },
+      "output": "261bd0b06ea1f4269fb051c5d9d7f3ebf4e740b9d9a936d75e879621795b31e8"
+    },
+    {
+      "input": {
+        "op": "prompt_hash",
+        "args": [
+          " tab\tnl\n. ,;:"
+        ]
+      },
+      "output": "0a96b6bd8c0c3f47c17e848fc1ee4d1622383c92081c4cc4c18a757cccb94554"
+    },
+    {
+      "input": {
+        "op": "prompt_hash",
+        "args": [
+          "𐀀?"
+        ]
+      },
+      "output": "31237b174ba6047a15db0d343ad9550da611b7b7bce867a23522f81a05df3eda"
+    },
+    {
+      "input": {
+        "op": "prompt_hash",
+        "args": [
+          ""
+        ]
+      },
+      "output": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "input": {
+        "op": "prompt_hash",
+        "args": [
+          "ﬁ?!"
+        ]
+      },
+      "output": "b4bdc848109722a383d0a972c6eb859f2abd29565b8c4cc7199e7c9eb708f1b7"
+    },
+    {
+      "input": {
+        "op": "lock_key",
+        "args": [
+          "00000000-0000-4000-8000-000000000000"
+        ]
+      },
+      "output": "-2771567520052981105"
+    },
+    {
+      "input": {
+        "op": "lock_key",
+        "args": [
+          "00000000-0000-4000-8000-000000000001"
+        ]
+      },
+      "output": "-5830689100028789624"
+    },
+    {
+      "input": {
+        "op": "lock_key",
+        "args": [
+          "00000000-0000-4000-8000-000000000007"
+        ]
+      },
+      "output": "6250509794036836759"
+    },
+    {
+      "input": {
+        "op": "lock_key",
+        "args": [
+          "00000000-0000-4000-8000-000000000099"
+        ]
+      },
+      "output": "-3809816047051049154"
+    },
+    {
+      "input": {
+        "op": "fingerprint",
+        "args": [
+          "opportunities",
+          {
+            "project_id": "00000000-0000-4000-8000-000000000001",
+            "type": null,
+            "status": ""
+          }
+        ]
+      },
+      "output": "b9ef9493bb762bda"
+    },
+    {
+      "input": {
+        "op": "cursor",
+        "args": [
+          "opportunities",
+          {
+            "project_id": "00000000-0000-4000-8000-000000000001",
+            "type": null,
+            "status": ""
+          },
+          [
+            "30.0",
+            "00000000-0000-4000-8000-000000000002"
+          ]
+        ]
+      },
+      "output": "eyJmcCI6ImI5ZWY5NDkzYmI3NjJiZGEiLCJrIjpbIjMwLjAiLCIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDIiXX0="
+    },
+    {
+      "input": {
+        "op": "fingerprint",
+        "args": [
+          "opportunities",
+          {
+            "min_priority": 30.0,
+            "rule_id": "x",
+            "action_path": "e"
+          }
+        ]
+      },
+      "output": "820e38283caf4c2d"
+    },
+    {
+      "input": {
+        "op": "cursor",
+        "args": [
+          "opportunities",
+          {
+            "min_priority": 30.0,
+            "rule_id": "x",
+            "action_path": "e"
+          },
+          [
+            "30.0",
+            "00000000-0000-4000-8000-000000000002"
+          ]
+        ]
+      },
+      "output": "eyJmcCI6IjgyMGUzODI4M2NhZjRjMmQiLCJrIjpbIjMwLjAiLCIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDIiXX0="
+    },
+    {
+      "input": {
+        "op": "fingerprint",
+        "args": [
+          "opportunities",
+          {
+            "min_priority": 12.5,
+            "type": "café"
+          }
+        ]
+      },
+      "output": "bdc22f0b9213639c"
+    },
+    {
+      "input": {
+        "op": "cursor",
+        "args": [
+          "opportunities",
+          {
+            "min_priority": 12.5,
+            "type": "café"
+          },
+          [
+            "30.0",
+            "00000000-0000-4000-8000-000000000002"
+          ]
+        ]
+      },
+      "output": "eyJmcCI6ImJkYzIyZjBiOTIxMzYzOWMiLCJrIjpbIjMwLjAiLCIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDIiXX0="
+    },
+    {
+      "input": {
+        "op": "fingerprint",
+        "args": [
+          "actions",
+          {
+            "project_id": "00000000-0000-4000-8000-000000000001",
+            "status": "open",
+            "target": null
+          }
+        ]
+      },
+      "output": "82ba09685d599b92"
+    },
+    {
+      "input": {
+        "op": "cursor",
+        "args": [
+          "actions",
+          {
+            "project_id": "00000000-0000-4000-8000-000000000001",
+            "status": "open",
+            "target": null
+          },
+          [
+            "30.0",
+            "00000000-0000-4000-8000-000000000002"
+          ]
+        ]
+      },
+      "output": "eyJmcCI6IjgyYmEwOTY4NWQ1OTliOTIiLCJrIjpbIjMwLjAiLCIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDIiXX0="
+    },
+    {
+      "input": {
+        "op": "google_surface",
+        "args": [
+          ""
+        ]
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "op": "google_surface",
+        "args": [
+          "google"
+        ]
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "op": "google_surface",
+        "args": [
+          "google.com"
+        ]
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "op": "google_surface",
+        "args": [
+          "google.co.uk"
+        ]
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "op": "google_surface",
+        "args": [
+          "google.com.au"
+        ]
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "op": "google_surface",
+        "args": [
+          "google.evil.com"
+        ]
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "op": "google_surface",
+        "args": [
+          "google.evil.co.uk"
+        ]
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "op": "google_surface",
+        "args": [
+          "mail.google.com"
+        ]
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "op": "google_surface",
+        "args": [
+          "google.xyz.com.au"
+        ]
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "op": "url_compare",
+        "args": [
+          "https://BRAND.test:443/a///?utm_source=x&q=é#fragment"
+        ]
+      },
+      "output": "https://brand.test/a?q=%C3%A9"
+    },
+    {
+      "input": {
+        "op": "url_compare",
+        "args": [
+          "http://brand.test:80"
+        ]
+      },
+      "output": "http://brand.test/"
+    },
+    {
+      "input": {
+        "op": "url_compare",
+        "args": [
+          "https://brand.test:8443/a/b/"
+        ]
+      },
+      "output": "https://brand.test:8443/a/b"
+    },
+    {
+      "input": {
+        "op": "url_compare",
+        "args": [
+          "HTTPS://Brand.Test/?b=2&a=1&fbclid=z"
+        ]
+      },
+      "output": "https://brand.test/?b=2&a=1"
+    },
+    {
+      "input": {
+        "op": "url_compare",
+        "args": [
+          "relative/A"
+        ]
+      },
+      "output": "relative/a"
+    },
+    {
+      "input": {
+        "op": "url_compare",
+        "args": [
+          "  mailto:x@y  "
+        ]
+      },
+      "output": "mailto:x@y"
+    },
+    {
+      "input": {
+        "op": "url_compare",
+        "args": [
+          ""
+        ]
+      },
+      "output": ""
+    }
+  ]
+}

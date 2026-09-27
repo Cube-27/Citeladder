@@ -22,10 +22,20 @@ function datesOf(schema: z.ZodType): Set<string> {
 }
 
 export async function readBody<T extends z.ZodType>(c: Context, schema: T): Promise<z.output<T>> {
+  const value = await readOptionalBody(c, schema);
+  if (value === null)
+    throw new RequestValidationError([{ loc: [], message: 'Field required', type: 'missing' }]);
+  return value;
+}
+
+/** A body FastAPI declares `Model | None = None`: empty or `null` reads as null. */
+export async function readOptionalBody<T extends z.ZodType>(
+  c: Context,
+  schema: T,
+): Promise<z.output<T> | null> {
   let value: unknown;
   const raw = await c.req.text();
-  if (!raw)
-    throw new RequestValidationError([{ loc: [], message: 'Field required', type: 'missing' }]);
+  if (!raw) return null;
   try {
     value = JSON.parse(raw);
   } catch (error) {
@@ -41,8 +51,7 @@ export async function readBody<T extends z.ZodType>(c: Context, schema: T): Prom
       },
     ]);
   }
-  if (value === null)
-    throw new RequestValidationError([{ loc: [], message: 'Field required', type: 'missing' }]);
+  if (value === null) return null;
   const dates = datesOf(schema);
   const isDate = (key: string) => dates.has(key);
   if (value && typeof value === 'object' && !Array.isArray(value))

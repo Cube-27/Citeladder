@@ -2,8 +2,10 @@
 
 ``seed_dev_data`` builds rows; this module runs the REAL workers over them:
 the two audits, the Site Health crawl trio, and the opportunity/comparison
-pass. Split out so row construction and worker orchestration are separately
-readable, and so neither module carries the other's imports.
+pass. The Opportunity refresh is the TypeScript analytics worker's
+(migration PR 7a): the seeder enqueues it and waits for that worker. Split
+out so row construction and worker orchestration are separately readable,
+and so neither module carries the other's imports.
 
 Nothing here is reachable from the API or a worker image (``setuptools`` ships
 ``app*`` only). It is gated exactly like ``app/`` -- ruff, mypy, the CC/LOC
@@ -24,6 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.actions import ACTION_STATUS_DISMISSED
+from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH
 from app.core.config.audits import AUDIT_TRIGGER_SYSTEM, audit_settings
 from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.config.provider_catalog import (
@@ -35,6 +38,11 @@ from app.core.config.site_health_contracts import (
     CRAWL_STATUS_COMPLETED,
     CRAWL_TERMINAL_STATUSES,
 )
+from app.core.config.task_queue import (
+    TASK_STATUS_CANCELLED,
+    TASK_STATUS_FAILED,
+    TASK_STATUS_SUCCEEDED,
+)
 from app.core.database import SessionLocal
 from app.domain.audits.creation import create_audit
 from app.domain.billing.bootstrap import ensure_workspace_billing
@@ -42,12 +50,13 @@ from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.opportunities import action_status
 from app.domain.opportunities.queries import list_opportunities
-from app.domain.opportunities.recompute import recompute as recompute_opportunities
+from app.domain.opportunities.queue import enqueue_opportunity_refresh
 from app.domain.site_health.planner import create_crawl
 from app.domain.site_health.selection import (
     BULK_SELECT_MODE_ALL,
     bulk_select_monitored_set,
 )
+from app.models.analytics import AnalyticsTask
 from app.models.site_health.crawl import SiteCrawl
 from app.models.user import User
 from app.workers.audit import execution as audit_execution
@@ -73,6 +82,10 @@ logger = logging.getLogger("seed_dev_data")
 #: POST real, billable tasks to a live provider with a fake dev key. Seeding it
 #: needs a stubbed search-surface adapter first.
 ALL_ENGINES = [ENGINE_CHATGPT, ENGINE_CLAUDE, ENGINE_GEMINI]
+
+#: How long the seeder waits for the TypeScript analytics worker to refresh.
+SEED_REFRESH_TIMEOUT_SECONDS = 120
+_REFRESH_TERMINAL = (TASK_STATUS_SUCCEEDED, TASK_STATUS_FAILED, TASK_STATUS_CANCELLED)
 
 
 @contextlib.contextmanager
@@ -329,6 +342,51 @@ async def _dismiss_first_action(
         )
 
 
+async def _refresh_opportunities(
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    trigger_kind: str,
+    trigger_id: uuid.UUID,
+) -> bool:
+    """Enqueue a source's refresh and wait for the TypeScript worker to run it.
+
+    The finished audit or crawl already enqueued the same idempotent task, so
+    this only makes sure it exists. Returns whether it succeeded in time; a seed
+    run without the TypeScript analytics worker leaves it queued.
+    """
+    async with SessionLocal() as session:
+        await enqueue_opportunity_refresh(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            trigger_kind=trigger_kind,
+            trigger_id=trigger_id,
+        )
+        await session.commit()
+    deadline = asyncio.get_running_loop().time() + SEED_REFRESH_TIMEOUT_SECONDS
+    while asyncio.get_running_loop().time() < deadline:
+        async with SessionLocal() as session:
+            status = await session.scalar(
+                select(AnalyticsTask.status).where(
+                    AnalyticsTask.workspace_id == workspace_id,
+                    AnalyticsTask.task_kind == ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
+                    AnalyticsTask.payload["trigger_id"].astext == str(trigger_id),
+                )
+            )
+        if status in _REFRESH_TERMINAL:
+            return status == TASK_STATUS_SUCCEEDED
+        await asyncio.sleep(1)
+    logger.warning(
+        "Opportunity refresh for %s %s did not finish in %ss; is the "
+        "TypeScript analytics worker running?",
+        trigger_kind,
+        trigger_id,
+        SEED_REFRESH_TIMEOUT_SECONDS,
+    )
+    return False
+
+
 async def run_actions_and_comparison(
     *,
     workspace_id: uuid.UUID,
@@ -344,22 +402,16 @@ async def run_actions_and_comparison(
     deterministic adapter generations improve the evidence mix without changing
     prompt or engine identity, which is what keeps the pair comparable.
     """
-    async with SessionLocal() as session:
-        await recompute_opportunities(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            audit_id=audit_id,
-            site_crawl_id=site_crawl_id,
+    # The crawl finished after the audit, so its refresh reads both.
+    if await _refresh_opportunities(
+        workspace_id=workspace_id,
+        project_id=project_id,
+        trigger_kind="site_crawl",
+        trigger_id=site_crawl_id,
+    ):
+        await _dismiss_first_action(
+            workspace_id=workspace_id, project_id=project_id, demo_user_id=demo_user_id
         )
-        # Same caller-owns-the-transaction contract as the grant above: this
-        # used to share a session with `update_status`, which commits. Without
-        # its own commit the action set is rolled back and the dismiss step
-        # below finds nothing to dismiss.
-        await session.commit()
-    await _dismiss_first_action(
-        workspace_id=workspace_id, project_id=project_id, demo_user_id=demo_user_id
-    )
 
     comparison_audit_id = audit_id
     with seeded_adapter():
@@ -378,17 +430,12 @@ async def run_actions_and_comparison(
         finally:
             set_seed_audit_generation(0)
 
-    async with SessionLocal() as session:
-        await recompute_opportunities(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            audit_id=comparison_audit_id,
-            site_crawl_id=site_crawl_id,
-        )
-        # This one never committed, even before the stages were split: the
-        # comparable recompute was discarded on every seed run.
-        await session.commit()
+    await _refresh_opportunities(
+        workspace_id=workspace_id,
+        project_id=project_id,
+        trigger_kind="audit",
+        trigger_id=comparison_audit_id,
+    )
     logger.info(
         "Completed comparable audit %s with action history for project %s",
         comparison_audit_id,

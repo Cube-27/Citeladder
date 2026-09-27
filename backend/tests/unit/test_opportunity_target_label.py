@@ -6,13 +6,14 @@ prompt deleted after detection still yields its frozen snapshot text.
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import cast
 
 from app.core.config.opportunities import FORMULA_VERSION
-from app.domain.opportunities.projection import _humanize_theme
+from app.domain.opportunities.projection import _humanize_theme, stable_key
 from app.domain.opportunities.projection import project_item as _project_item
 from app.models.opportunity import Opportunity
 
@@ -106,3 +107,11 @@ def test_humanize_theme_edges() -> None:
     assert _humanize_theme("   ") == ""
     assert _humanize_theme("crm") == "Crm theme"
     assert _humanize_theme("-odd--tokens_") == "Odd tokens theme"
+
+
+def test_stable_order_key_is_collision_safe() -> None:
+    left = Opportunity(rule_id="rule:target", target_key="key")
+    right = Opportunity(rule_id="rule", target_key="target:key")
+
+    assert stable_key(left) != stable_key(right)
+    assert json.loads(stable_key(left)) == ["rule:target", "key"]

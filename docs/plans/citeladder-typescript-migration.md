@@ -12,8 +12,11 @@ together with the removal of PR 3's Pydantic error-wording emulation. PR 5
 (traffic, performance and demand projections) and PR 6 (Opportunity detectors
 and verification) implemented locally on 27 September 2026 at the owner's
 request. PR 6 includes the explicitly approved detector foundation for PR 7.
+PR 7 is split at the owner's direction: PR 7a (Opportunity refresh and catalog
+routes) implemented locally on 27 September 2026; PR 7b (Action routes and
+declarations) has not started.
 Not execution authorization; each later PR is executed only when individually
-assigned. PR 7 has not started.
+assigned.
 
 ## 1. Goal, scope and pace
 
@@ -342,17 +345,107 @@ yields unavailable evidence and is covered at PostgreSQL. At the owner's explici
 `opp-analyzer-3`, `opp-rules-3`, `opp-formula-2`,
 `implementation-verifier-2` and `source-taxonomy-2` become their `*-1`
 identifiers. This changes newly derived identities and verification enqueue/event
-idempotency keys; old rows are retained, and an old source may produce a new
-version-1 observation. No database reset or schema migration is performed.
+idempotency keys. The local database has been reset and the GCP database will be
+reset before deployment, so no legacy `*-2`/`*-3` rows exist and the
+normalization needs no legacy-row handling. No schema migration is performed.
 Python remains the policy authority; generated TS policy is drift-checked.
 Source-page extractor versions are outside this normalization.
 
 Deployment and the one-week error-rate/latency soak remain pending.
-PR 7 has not started.
 
 ### PR 7: Opportunity store, refresh and routes
 
 `domain/opportunities`, `api/opportunities`, `opportunity_refresh`.
+
+The inventory estimated about 105 changed files, so the owner split PR 7:
+**7a** moves the refresh and the Opportunity catalog routes; **7b** moves the
+Action routes and declarations.
+
+*As implemented (7a):* `opportunity_refresh` joins
+`ANALYTICS_TS_OWNED_TASK_KINDS` and the TypeScript analytics worker claims it;
+Python admission (`domain/opportunities/queue.py`) and every enqueueing source
+are unchanged. The `opportunities` family moves to TypeScript in the
+route-ownership manifest, and all three Caddyfiles route list, summary,
+recompute, history, detail, order and CSV/Markdown export to it. The Action
+routes are retagged `actions` and stay Python. The Python fragment was frozen as
+`golden/families/opportunities.json` while Python still served it, and the gate
+proves parity.
+
+Replacement-gate inventory (paths relative to `backend/app`):
+
+| Python module | Disposition |
+| --- | --- |
+| `domain/opportunities/recompute`, `change_hits`, `commerce_hits`, `demand_hits`, `earned_page_hits`, `site_coverage`, `snapshot_build`, `snapshot_projection`, `summary`, `history`, `commands`, `export` | moved and retired |
+| `analysis/opportunities/detectors`, `earned_page_brief`, `earned_page_evidence`, `earned_pages`, `exports`, `scoring`, `source_mix` | retired; the PR 6 TS ports are now live |
+| `analysis/opportunities/actions.py` | bridge: `page_group_key`, `select_approach` for Agent attach; grouping retired |
+| `domain/opportunities/actions.py` | bridge until 7b: Action reads and Agent attach; `sync_actions` retired |
+| `domain/opportunities/queries.py` | bridge: `list_opportunities` for the command center and dev seed |
+| `domain/opportunities/projection.py` | bridge: `project_item`, `stable_key` for queries and placement checks |
+| `domain/opportunities/schemas.py` | bridge: `OpportunityItem`, `VerificationEventView` |
+| `domain/opportunities/visibility_evidence.py` | bridge: `owned_domain_list` for placement checks |
+| `domain/opportunities/common.py`, `errors.py` | retained for the remaining owners; retired-only messages/errors removed |
+| `api/opportunities.py` | Action routes only, until 7b |
+| `queue`, `verification`, `action_status`, `action_schemas`, `implementation_events`, `measurement_legs`, `page_links`, `placement_checks`, `visibility_checks`, `content_handoff` | unchanged; 7b or later owners |
+| `workers/analytics_worker.py` | `_refresh_opportunities` executor retired |
+
+A bridge is removed when its last Python caller moves. For the command center
+and dev seed this is not simply PR 7b landing.
+
+Rule 1 exception: `actions` has two writers across the stack boundary. The TS
+refresh derives evidence Actions and restamps derivation columns (members,
+families, priority, approach, diagnosis, snapshot, evidence clearing). Python
+writes workflow status and declarations until 7b. The Python Agent inserts only
+`agent`-origin rows with insert … on conflict do nothing on
+`(project_id, group_key)`. The TS insert adopts such a row on the same key, so a
+concurrent attach never aborts a refresh. Both stacks take the same blake2b
+project advisory lock (`citeladder-locks` person, exported in policy). 7b
+retires the Python status and declaration writers; the Agent insert remains
+until the Agent moves.
+
+Byte parity: persisted JSON (evidence, snapshot projections, Action diagnosis)
+keeps Python float/int distinctions through `PyFloat` marks, `pyJson`/
+`pyJsonDumps` and a source-preserving JSONB reader. Frozen goldens hold the
+retired decisions: `opportunity_refresh` (79), `opportunity_reads` (82) and
+`opportunity_retired_detectors` (432). They include whole-number float cases.
+A live `opportunity_sources` golden covers the helpers both stacks share
+(roster hash, passages, prompt hash, lock key, keyset cursor and fingerprint,
+Google surface, URL comparison). PR 6's inline copies of
+`is_google_search_surface` and `normalized_url_for_compare` are consolidated
+behind it. The four PR 6 edge notes were resolved as follows:
+- empty-string `prompt_id` uses Python `is not None`
+- atom names coerce like `str()`
+- scoring avoids `Math.max(...spread)`
+- an unknown source class throws like `.index`
+
+Refresh policy is exported (`refresh` section), never restated.
+
+PostgreSQL coverage (`opportunity-refresh.test.ts`) exercises:
+- Python enqueue (deduplicated) → TS claim → Python read through the retained bridges
+- exact snapshot/row provenance and versions
+- replay as a no-op
+- two workers racing for one task
+- concurrent recomputes serialized by the lock
+- supersede-not-mutate with Action identity kept and vanished evidence cleared
+- dismissed status surviving a refresh
+- Agent-row adoption
+- keyset paging, filters, cursor and token errors
+- order versioning with a coded 409
+- export headers
+- a foreign-audit 404
+- a 401, and non-member 404s on every route
+
+Retired Python tests:
+- 11 detector/recompute/projection modules and `test_action_grouping`: their behavior is frozen or ported.
+- `test_opportunities_api` becomes `test_actions_api`, keeping only the Action routes.
+- The Action, command-center, declaration, placement and replay tests now seed the live set directly (`seed_live_set`) instead of recomputing.
+- The dev seeder enqueues the refresh and waits, bounded, for the TS worker.
+
+Deliberate departures:
+- Commerce hit queries gain an `ORDER BY` for determinism.
+- Citation, mention, source-page and presence reads add workspace predicates the Python loaders relied on joins for.
+
+Spans and attributes are unchanged; the refresh adds no provider I/O. Deployment
+and soak remain pending.
 
 ### PR 8: Commerce and search intelligence
 

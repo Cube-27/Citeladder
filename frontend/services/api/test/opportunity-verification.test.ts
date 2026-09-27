@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { verifyImplementationEvents } from '../src/opportunities/verification.ts';
 import {
@@ -14,6 +14,9 @@ import type { QueueTask } from '../src/queue/task-queue.ts';
 import type { Json } from '../src/generated/db-schema.ts';
 import { testDatabase } from './support.ts';
 import { sql } from 'kysely';
+// Each Python fixture call starts an interpreter.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 const db = testDatabase();
 type Seed = {
   workspaceId: string;

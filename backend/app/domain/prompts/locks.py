@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # overlap with another entity class negligibly unlikely at application scale.
 _PROMPT_SET_NAMESPACE = 0x50524F4D  # "PROM"
 _PROJECT_NAMESPACE = 0x50524F4A  # "PROJ"
+_LOCK_PERSON = b"citeladder-locks"
 
 
 def _advisory_lock_key(namespace: int, entity_id: uuid.UUID) -> int:
@@ -33,7 +34,7 @@ def _advisory_lock_key(namespace: int, entity_id: uuid.UUID) -> int:
     digest = hashlib.blake2b(
         namespace.to_bytes(4, "big") + entity_id.bytes,
         digest_size=8,
-        person=b"citeladder-locks",
+        person=_LOCK_PERSON,
     ).digest()
     return int.from_bytes(digest, "big", signed=True)
 

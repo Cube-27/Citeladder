@@ -48,6 +48,8 @@ function scalarSchema(spec: ParamSpec): z.ZodType {
       return z.iso.date();
     case 'datetime':
       return z.iso.datetime({ offset: true });
+    case 'float':
+      return z.number();
     case 'int': {
       let schema = z.int();
       if (scalar.ge !== undefined) schema = schema.min(scalar.ge);
@@ -99,10 +101,12 @@ function defineRoute<const Path extends ParamSpecs, const Query extends ParamSpe
   params: { path: Path; query: Query };
   response: z.ZodType;
   handle: RouteHandler<Path, Query>;
-  method?: 'get' | 'post';
+  method?: 'get' | 'post' | 'put';
   status?: ContentfulStatusCode;
   body?: z.ZodType;
   capability?: WorkspaceCapability;
+  /** The handler builds its own `Response` (a file download, not JSON). */
+  raw?: boolean;
 }): ProductRoute {
   const method = route.method ?? 'get';
   const status = route.status ?? 200;
@@ -130,12 +134,13 @@ function defineRoute<const Path extends ParamSpecs, const Query extends ParamSpe
       sessionUser(config, db),
       activeWorkspace(db),
       async (c) => {
-        if (method === 'post') c.get('workspace').require(route.capability ?? 'run');
+        if (method !== 'get') c.get('workspace').require(route.capability ?? 'run');
         const params = validateParams(route.params, {
           path: c.req.param() as Record<string, string>,
           search: new URL(c.req.url).search,
         });
-        return c.json(await route.handle({ c, db }, params), status);
+        const result = await route.handle({ c, db }, params);
+        return route.raw ? (result as Response) : c.json(result, status);
       },
     );
   };
@@ -147,4 +152,9 @@ export function definePostRoute<const Path extends ParamSpecs, const Query exten
   route: Parameters<typeof defineRoute<Path, Query>>[0],
 ): ProductRoute {
   return defineRoute({ ...route, method: 'post' });
+}
+export function definePutRoute<const Path extends ParamSpecs, const Query extends ParamSpecs>(
+  route: Parameters<typeof defineRoute<Path, Query>>[0],
+): ProductRoute {
+  return defineRoute({ ...route, method: 'put' });
 }

@@ -1,4 +1,9 @@
-"""Workspace-scoped persisted Opportunity list/detail queries."""
+"""The workspace-scoped persisted Opportunity list, for Python readers.
+
+The Opportunity routes read through the TypeScript owner (TypeScript
+migration PR 7a); this bridge serves the command center and the development
+seed until they move.
+"""
 
 from __future__ import annotations
 
@@ -24,19 +29,14 @@ from app.domain.opportunities.action_status import (
 )
 from app.domain.opportunities.common import (
     _LIST_SCOPE,
-    _OPPORTUNITY_NOT_FOUND,
     _clamp_limit,
     _require_project,
 )
 from app.domain.opportunities.errors import (
     InvalidCursorError,
-    OpportunityNotFoundError,
     OpportunityValidationError,
 )
-from app.domain.opportunities.projection import (
-    ordered_items,
-    project_detail,
-)
+from app.domain.opportunities.projection import ordered_items
 from app.domain.site_health.normalization import (
     decode_keyset_cursor,
     encode_keyset_cursor,
@@ -139,47 +139,6 @@ async def _load_order(
     )
 
 
-async def load_filtered_rows(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    opportunity_type: str | None,
-    severity: str | None,
-    status: str | None,
-    rule_id: str | None,
-    min_priority: float | None,
-    limit: int,
-) -> list[Opportunity]:
-    """Load the bounded persisted row set shared by catalog and exports."""
-    await _require_project(session, workspace_id=workspace_id, project_id=project_id)
-    _validate_filters(
-        opportunity_type=opportunity_type,
-        severity=severity,
-        status=status,
-        rule_id=rule_id,
-    )
-    clauses = _filter_clauses(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        opportunity_type=opportunity_type,
-        severity=severity,
-        status=status,
-        rule_id=rule_id,
-        min_priority=min_priority,
-    )
-    return list(
-        (
-            await session.scalars(
-                select(Opportunity)
-                .where(*clauses)
-                .order_by(Opportunity.priority_score.desc(), Opportunity.id.desc())
-                .limit(limit)
-            )
-        ).all()
-    )
-
-
 async def list_opportunities(
     session: AsyncSession,
     *,
@@ -262,18 +221,3 @@ async def list_opportunities(
         )
     order = await _load_order(session, workspace_id=workspace_id, project_id=project_id)
     return {"items": ordered_items(rows, order), "next_cursor": next_cursor}
-
-
-async def get_opportunity(
-    session: AsyncSession, *, workspace_id: uuid.UUID, opportunity_id: uuid.UUID
-) -> dict:
-    row = await session.scalar(
-        select(Opportunity).where(
-            Opportunity.id == opportunity_id,
-            Opportunity.workspace_id == workspace_id,
-        )
-    )
-    if row is None:
-        raise OpportunityNotFoundError(_OPPORTUNITY_NOT_FOUND)
-    detail = project_detail(row)
-    return detail

@@ -23,12 +23,13 @@ type Scalar =
   | { kind: 'date' }
   | { kind: 'datetime' }
   | { kind: 'int'; ge?: number; le?: number }
+  | { kind: 'float' }
   | { kind: 'str'; minLength?: number; maxLength?: number }
   | { kind: 'literal'; values: readonly string[] };
 
 type ScalarValue<S extends Scalar> = S extends { kind: 'datetime' }
   ? ParsedDatetime
-  : S extends { kind: 'int' }
+  : S extends { kind: 'int' | 'float' }
     ? number
     : S extends { kind: 'literal'; values: readonly (infer V)[] }
       ? V
@@ -64,6 +65,21 @@ export const UUID_MESSAGE = 'Input should be a valid UUID';
 
 const failure = (type: string, message: string): Outcome => ({ ok: false, type, message });
 
+const FLOAT =
+  /^[+-]?(?:\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\.\d+(?:_\d+)*)(?:[eE][+-]?\d+(?:_\d+)*)?$/u;
+const FLOAT_SPECIAL = /^([+-]?)(inf|infinity|nan)$/iu;
+
+/** A float as Pydantic reads a query string: trimmed, `_` separators, `inf`/`nan`. */
+export function parseFloatText(raw: string): number | null {
+  const text = raw.trim();
+  const special = FLOAT_SPECIAL.exec(text);
+  if (special) {
+    if (special[2]!.toLowerCase() === 'nan') return Number.NaN;
+    return special[1] === '-' ? -Infinity : Infinity;
+  }
+  return FLOAT.test(text) ? Number(text.replaceAll('_', '')) : null;
+}
+
 function validateScalar(scalar: Scalar, raw: string): Outcome {
   switch (scalar.kind) {
     case 'uuid': {
@@ -97,6 +113,15 @@ function validateScalar(scalar: Scalar, raw: string): Outcome {
         return failure('less_than_equal', `Input should be less than or equal to ${scalar.le}`);
       }
       return { ok: true, value };
+    }
+    case 'float': {
+      const value = parseFloatText(raw);
+      return value === null
+        ? failure(
+            'float_parsing',
+            'Input should be a valid number, unable to parse string as a number',
+          )
+        : { ok: true, value };
     }
     case 'str': {
       // Lengths count code points, not UTF-16 units.

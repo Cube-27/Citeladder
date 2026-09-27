@@ -10,6 +10,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { opportunityGolden } from './opportunity-golden.ts';
 import { verificationGolden } from './verification-golden.ts';
+import { readsGolden, refreshGolden, sourcesGolden } from './refresh-golden.ts';
+import { parsePyJson, pyJson } from '../src/python/json.ts';
 import { frozenComparisonKey } from '../src/analysis/comparison.ts';
 
 import {
@@ -140,6 +142,11 @@ function mentionPositions(score: Record<string, unknown>): unknown {
 
 const PORTS: Record<string, (input: never) => unknown> = {
   opportunity_detectors: opportunityGolden,
+  opportunity_sources: sourcesGolden,
+  // Frozen: the Python owners retired with TypeScript migration PR 7a.
+  opportunity_retired_detectors: opportunityGolden,
+  opportunity_refresh: refreshGolden,
+  opportunity_reads: readsGolden,
   opportunity_comparisons: (input: Parameters<typeof frozenComparisonKey>) =>
     frozenComparisonKey(...input),
   opportunity_verification: verificationGolden,
@@ -238,10 +245,18 @@ function fixtureFiles(directory: URL): URL[] {
     .map((name) => new URL(name, directory));
 }
 
+// Sets whose persisted JSON keeps Python's float spelling (`30.0`, not `30`):
+// parsed with float marks and compared as Python serializes them.
+const FLOAT_AWARE = new Set(['opportunity_refresh', 'opportunity_sources']);
+
 const files = [...fixtureFiles(goldenRoot), ...fixtureFiles(new URL('frozen/', goldenRoot))];
-const fixtures = files.map(
-  (file) => JSON.parse(readFileSync(file, 'utf8')) as { name: string; cases: GoldenCase[] },
-);
+const fixtures = files.map((file) => {
+  const text = readFileSync(file, 'utf8');
+  const golden = JSON.parse(text) as { name: string; cases: GoldenCase[] };
+  return FLOAT_AWARE.has(golden.name)
+    ? { ...(parsePyJson(text) as typeof golden), floats: true }
+    : { ...golden, floats: false };
+});
 
 describe('golden masters', () => {
   it('has a TypeScript port for every Python fixture set', () => {
@@ -253,7 +268,8 @@ describe('golden masters', () => {
     it.each(golden.cases.map((entry, index) => [index, entry] as const))(
       `${golden.name} case %i`,
       async (_index, entry) => {
-        expect(JSON.stringify(await port?.(entry.input))).toBe(JSON.stringify(entry.output));
+        const serialize = golden.floats ? pyJson : JSON.stringify;
+        expect(serialize(await port?.(entry.input))).toBe(serialize(entry.output));
       },
     );
   }

@@ -16,6 +16,10 @@ export function utcText(value: Expression<unknown>): RawBuilder<string | null> {
   return sql<string | null>`to_char(${value} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US')`;
 }
 
+/** `utcText` of a NOT NULL column. */
+export const utcTextOf = (value: Expression<unknown>): RawBuilder<string> =>
+  utcText(value) as RawBuilder<string>;
+
 /** Pydantic's JSON for an aware UTC `datetime`, from `utcText` output. */
 export function pydanticUtc(text: string): string {
   return `${text.endsWith('.000000') ? text.slice(0, -'.000000'.length) : text}Z`;
@@ -33,4 +37,13 @@ export function timestamptz(value: ParsedDatetime): RawBuilder<Date> {
 /** A `date` column as `YYYY-MM-DD`, which is `date.isoformat()`. */
 export function isoDateText(value: Expression<unknown>): RawBuilder<string> {
   return sql<string>`to_char(${value}, 'YYYY-MM-DD')`;
+}
+
+/** `datetime.isoformat()` of an aware UTC value, from `utcText` output. */
+export function isoUtc(text: string): string {
+  return `${text.endsWith('.000000') ? text.slice(0, -'.000000'.length) : text}+00:00`;
+}
+
+export function isoUtcOrNull(text: string | null): string | null {
+  return text === null ? null : isoUtc(text);
 }

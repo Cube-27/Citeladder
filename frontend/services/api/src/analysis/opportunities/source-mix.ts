@@ -1,6 +1,6 @@
 import { policy } from '../../config.ts';
 import { round } from '../../demand/projection.ts';
-import { pyCompare } from '../../python/text.ts';
+import { pyCompare, pyFloat } from '../../python/text.ts';
 import type { AnalysisEvidence, PromptSnapshotEvidence } from './evidence.ts';
 import { byDomain } from './source-patterns.ts';
 const p = policy.opportunity.earned_actions;
@@ -27,11 +27,12 @@ function empty(state: string, eligible: number, limitations: string[]) {
     observation_count: 0,
     answers_with_sources: 0,
     eligible_analyzed_answers: eligible,
-    coverage_rate: eligible ? 0 : null,
+    coverage_rate: eligible ? pyFloat(0) : null,
     limitations,
   };
 }
-const emptySourceProjection = () => empty('not_applicable', 0, ['No qualifying visibility gap.']);
+export const emptySourceProjection = () =>
+  empty('not_applicable', 0, ['No qualifying visibility gap.']);
 function mix(counts: Map<string, number>, eligible: number, answers: number) {
   const total = [...counts.values()].reduce((a, b) => a + b, 0);
   const keys = sorted(counts.keys());
@@ -40,11 +41,13 @@ function mix(counts: Map<string, number>, eligible: number, answers: number) {
     projection_version: s.SOURCE_MIX_PROJECTION_VERSION,
     taxonomy_version: s.SOURCE_TAXONOMY_VERSION,
     counts: Object.fromEntries(keys.map((k) => [k, counts.get(k)])),
-    percentages: Object.fromEntries(keys.map((k) => [k, round((counts.get(k)! * 100) / total, 1)])),
+    percentages: Object.fromEntries(
+      keys.map((k) => [k, pyFloat(round((counts.get(k)! * 100) / total, 1))]),
+    ),
     observation_count: total,
     answers_with_sources: answers,
     eligible_analyzed_answers: eligible,
-    coverage_rate: eligible ? round(answers / eligible, 4) : null,
+    coverage_rate: eligible ? pyFloat(round(answers / eligible, 4)) : null,
     limitations: [],
   };
 }
@@ -75,7 +78,7 @@ function project(value: Rollup, eligible: number) {
     competitors: sorted(value.competitors).slice(0, p.SOURCE_ROLLUP_MAX_PROMPTS),
     usage_numerator: count,
     usage_denominator: eligible,
-    usage_percentage: round(rate * 100, 1),
+    usage_percentage: pyFloat(round(rate * 100, 1)),
     coverage_state: 'available',
     analysis_ids: sorted(value.analysis_ids),
     artifact_ids: sorted(value.artifact_ids),
@@ -88,13 +91,15 @@ function project(value: Rollup, eligible: number) {
       value.pathway === p.ACTION_PATH_EARNED &&
       count >= p.EARNED_SOURCE_MIN_ANSWERS &&
       rate >= p.EARNED_SOURCE_MIN_USAGE_RATE,
-    usage_factor: round(Math.min(p.EARNED_USAGE_FACTOR_MAX, 1 + rate), 4),
-    competitor_cooccurrence_factor: round(
-      Math.min(
-        p.EARNED_COMPETITOR_FACTOR_MAX,
-        1 + value.competitors.size * p.EARNED_COMPETITOR_FACTOR_STEP,
+    usage_factor: pyFloat(round(Math.min(p.EARNED_USAGE_FACTOR_MAX, 1 + rate), 4)),
+    competitor_cooccurrence_factor: pyFloat(
+      round(
+        Math.min(
+          p.EARNED_COMPETITOR_FACTOR_MAX,
+          1 + value.competitors.size * p.EARNED_COMPETITOR_FACTOR_STEP,
+        ),
+        4,
       ),
-      4,
     ),
     suggested_role:
       (p.EARNED_SUGGESTED_ROLE_BY_CLASS as Record<string, string>)[value.source_class] ??

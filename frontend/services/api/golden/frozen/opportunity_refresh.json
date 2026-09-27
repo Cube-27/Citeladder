@@ -1,0 +1,5451 @@
+{
+  "name": "opportunity_refresh",
+  "generated_by": "Python PR7a pre-cutover domain/opportunities and analysis/opportunities",
+  "cases": [
+    {
+      "input": {
+        "op": "coverage",
+        "args": [
+          null
+        ]
+      },
+      "output": [
+        {},
+        []
+      ]
+    },
+    {
+      "input": {
+        "op": "coverage",
+        "args": [
+          {
+            "status": "completed",
+            "score_summary": {
+              "selected_count": 3
+            },
+            "analysis_requested_count": 9,
+            "analyzed_url_count": 3,
+            "failed_url_count": 0
+          }
+        ]
+      },
+      "output": [
+        {
+          "crawl_status": "completed",
+          "selected_url_count": 3,
+          "analyzed_url_count": 3,
+          "failed_url_count": 0,
+          "analysis_ratio": 1.0
+        },
+        []
+      ]
+    },
+    {
+      "input": {
+        "op": "coverage",
+        "args": [
+          {
+            "status": "partially_completed",
+            "score_summary": {
+              "selected_count": 3
+            },
+            "analysis_requested_count": 9,
+            "analyzed_url_count": 1,
+            "failed_url_count": 2
+          }
+        ]
+      },
+      "output": [
+        {
+          "crawl_status": "partially_completed",
+          "selected_url_count": 3,
+          "analyzed_url_count": 1,
+          "failed_url_count": 2,
+          "analysis_ratio": 0.3333
+        },
+        [
+          "Site Health evidence is partial (partially_completed); only completed analyses are included.",
+          "Coverage: 1 of 3 selected URLs analyzed."
+        ]
+      ]
+    },
+    {
+      "input": {
+        "op": "coverage",
+        "args": [
+          {
+            "status": "cancelled",
+            "score_summary": null,
+            "analysis_requested_count": 7,
+            "analyzed_url_count": 2,
+            "failed_url_count": null
+          }
+        ]
+      },
+      "output": [
+        {
+          "crawl_status": "cancelled",
+          "selected_url_count": 7,
+          "analyzed_url_count": 2,
+          "failed_url_count": 0,
+          "analysis_ratio": 0.2857
+        },
+        [
+          "Site Health evidence is partial (cancelled); only completed analyses are included.",
+          "Coverage: 2 of 7 selected URLs analyzed."
+        ]
+      ]
+    },
+    {
+      "input": {
+        "op": "coverage",
+        "args": [
+          {
+            "status": "completed",
+            "score_summary": {
+              "selected_count": null
+            },
+            "analysis_requested_count": 5,
+            "analyzed_url_count": 0,
+            "failed_url_count": 0
+          }
+        ]
+      },
+      "output": [
+        {
+          "crawl_status": "completed",
+          "selected_url_count": 0,
+          "analyzed_url_count": 0,
+          "failed_url_count": 0,
+          "analysis_ratio": null
+        },
+        []
+      ]
+    },
+    {
+      "input": {
+        "op": "coverage",
+        "args": [
+          {
+            "status": "completed",
+            "score_summary": {},
+            "analysis_requested_count": 0,
+            "analyzed_url_count": 0,
+            "failed_url_count": 0
+          }
+        ]
+      },
+      "output": [
+        {
+          "crawl_status": "completed",
+          "selected_url_count": 0,
+          "analyzed_url_count": 0,
+          "failed_url_count": 0,
+          "analysis_ratio": null
+        },
+        []
+      ]
+    },
+    {
+      "input": {
+        "op": "coverage",
+        "args": [
+          {
+            "status": "completed",
+            "score_summary": {
+              "selected_count": "4"
+            },
+            "analysis_requested_count": null,
+            "analyzed_url_count": 4,
+            "failed_url_count": 0
+          }
+        ]
+      },
+      "output": [
+        {
+          "crawl_status": "completed",
+          "selected_url_count": 4,
+          "analyzed_url_count": 4,
+          "failed_url_count": 0,
+          "analysis_ratio": 1.0
+        },
+        []
+      ]
+    },
+    {
+      "input": {
+        "op": "coverage",
+        "args": [
+          {
+            "status": "completed",
+            "score_summary": {
+              "selected_count": 6.0
+            },
+            "analysis_requested_count": 1,
+            "analyzed_url_count": 2,
+            "failed_url_count": 1
+          }
+        ]
+      },
+      "output": [
+        {
+          "crawl_status": "completed",
+          "selected_url_count": 6,
+          "analyzed_url_count": 2,
+          "failed_url_count": 1,
+          "analysis_ratio": 0.3333
+        },
+        [
+          "Coverage: 2 of 6 selected URLs analyzed."
+        ]
+      ]
+    },
+    {
+      "input": {
+        "op": "coverage",
+        "args": [
+          {
+            "status": "completed",
+            "score_summary": {
+              "selected_count": 7
+            },
+            "analysis_requested_count": 1,
+            "analyzed_url_count": 7,
+            "failed_url_count": 0
+          }
+        ]
+      },
+      "output": [
+        {
+          "crawl_status": "completed",
+          "selected_url_count": 7,
+          "analyzed_url_count": 7,
+          "failed_url_count": 0,
+          "analysis_ratio": 1.0
+        },
+        []
+      ]
+    },
+    {
+      "input": {
+        "op": "score",
+        "args": [
+          [
+            {
+              "rule_id": "brand_absent_high_value_prompt",
+              "target_key": "t:a",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [
+                "b",
+                "a"
+              ],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.0,
+              "gap_factor": 1.0,
+              "title_override": null,
+              "remediation_override": null
+            }
+          ]
+        ]
+      },
+      "output": [
+        [
+          {
+            "rule_id": "brand_absent_high_value_prompt",
+            "target_key": "t:a",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [
+              "b",
+              "a"
+            ],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.0,
+            "gap_factor": 1.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          30.0
+        ]
+      ]
+    },
+    {
+      "input": {
+        "op": "score",
+        "args": [
+          [
+            {
+              "rule_id": "brand_absent_high_value_prompt",
+              "target_key": "t:0",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "catalog_fields_missing",
+              "target_key": "t:1",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "citability_trust_incomplete",
+              "target_key": "t:2",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "cited_alternatives_without_uploaded_presence",
+              "target_key": "t:3",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "confirmed_prompt_decline",
+              "target_key": "t:4",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "content_structure_incomplete",
+              "target_key": "t:5",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "declining_query",
+              "target_key": "t:6",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "earned_page_acquire_listing",
+              "target_key": "t:7",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "earned_page_correct_listing",
+              "target_key": "t:8",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "earned_page_defend_listing",
+              "target_key": "t:9",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "earned_page_research_source",
+              "target_key": "t:10",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "earned_source_recurs_beside_gap",
+              "target_key": "t:11",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.35,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            }
+          ]
+        ]
+      },
+      "output": [
+        [
+          {
+            "rule_id": "brand_absent_high_value_prompt",
+            "target_key": "t:0",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          81.0
+        ],
+        [
+          {
+            "rule_id": "catalog_fields_missing",
+            "target_key": "t:1",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          54.0
+        ],
+        [
+          {
+            "rule_id": "citability_trust_incomplete",
+            "target_key": "t:2",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          54.0
+        ],
+        [
+          {
+            "rule_id": "cited_alternatives_without_uploaded_presence",
+            "target_key": "t:3",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          81.0
+        ],
+        [
+          {
+            "rule_id": "confirmed_prompt_decline",
+            "target_key": "t:4",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          81.0
+        ],
+        [
+          {
+            "rule_id": "content_structure_incomplete",
+            "target_key": "t:5",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          27.0
+        ],
+        [
+          {
+            "rule_id": "declining_query",
+            "target_key": "t:6",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          54.0
+        ],
+        [
+          {
+            "rule_id": "earned_page_acquire_listing",
+            "target_key": "t:7",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          81.0
+        ],
+        [
+          {
+            "rule_id": "earned_page_correct_listing",
+            "target_key": "t:8",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          54.0
+        ],
+        [
+          {
+            "rule_id": "earned_page_defend_listing",
+            "target_key": "t:9",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          27.0
+        ],
+        [
+          {
+            "rule_id": "earned_page_research_source",
+            "target_key": "t:10",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          27.0
+        ],
+        [
+          {
+            "rule_id": "earned_source_recurs_beside_gap",
+            "target_key": "t:11",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.35,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          54.0
+        ]
+      ]
+    },
+    {
+      "input": {
+        "op": "score",
+        "args": [
+          [
+            {
+              "rule_id": "catalog_fields_missing",
+              "target_key": "t:x",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 0.0001,
+              "gap_factor": 0.0001,
+              "title_override": null,
+              "remediation_override": null
+            }
+          ]
+        ]
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "op": "score",
+        "args": [
+          [
+            {
+              "rule_id": "citability_trust_incomplete",
+              "target_key": "t:dup",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [
+                "z"
+              ],
+              "source_issue_ids": [],
+              "source_metric_ids": [
+                "m2"
+              ],
+              "value_factor": 1.0,
+              "gap_factor": 1.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "citability_trust_incomplete",
+              "target_key": "t:dup",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [
+                "a",
+                "z"
+              ],
+              "source_issue_ids": [
+                "i1"
+              ],
+              "source_metric_ids": [
+                "m1"
+              ],
+              "value_factor": 1.75,
+              "gap_factor": 2.0,
+              "title_override": null,
+              "remediation_override": null
+            }
+          ]
+        ]
+      },
+      "output": [
+        [
+          {
+            "rule_id": "citability_trust_incomplete",
+            "target_key": "t:dup",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [
+              "a",
+              "z"
+            ],
+            "source_issue_ids": [
+              "i1"
+            ],
+            "source_metric_ids": [
+              "m1",
+              "m2"
+            ],
+            "value_factor": 1.75,
+            "gap_factor": 2.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          70.0
+        ]
+      ]
+    },
+    {
+      "input": {
+        "op": "score",
+        "args": [
+          [
+            {
+              "rule_id": "cited_alternatives_without_uploaded_presence",
+              "target_key": "t:tie",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.0,
+              "gap_factor": 1.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "cited_alternatives_without_uploaded_presence",
+              "target_key": "t:tie",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.0,
+              "gap_factor": 1.0,
+              "title_override": "B title",
+              "remediation_override": null
+            },
+            {
+              "rule_id": "cited_alternatives_without_uploaded_presence",
+              "target_key": "t:tie",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.0,
+              "gap_factor": 1.0,
+              "title_override": "A title",
+              "remediation_override": "fix"
+            }
+          ]
+        ]
+      },
+      "output": [
+        [
+          {
+            "rule_id": "cited_alternatives_without_uploaded_presence",
+            "target_key": "t:tie",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.0,
+            "gap_factor": 1.0,
+            "title_override": "A title",
+            "remediation_override": "fix"
+          },
+          30.0
+        ]
+      ]
+    },
+    {
+      "input": {
+        "op": "score",
+        "args": [
+          [
+            {
+              "rule_id": "confirmed_prompt_decline",
+              "target_key": "t:β",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.0,
+              "gap_factor": 1.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "confirmed_prompt_decline",
+              "target_key": "t:b",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.0,
+              "gap_factor": 1.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "confirmed_prompt_decline",
+              "target_key": "t:𐀀",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.0,
+              "gap_factor": 1.0,
+              "title_override": null,
+              "remediation_override": null
+            },
+            {
+              "rule_id": "confirmed_prompt_decline",
+              "target_key": "t:é",
+              "target_prompt_id": null,
+              "target_url": null,
+              "target_theme": null,
+              "evidence": {
+                "note": "e",
+                "factor": 1.0,
+                "count": 2
+              },
+              "source_analysis_ids": [],
+              "source_issue_ids": [],
+              "source_metric_ids": [],
+              "value_factor": 1.0,
+              "gap_factor": 1.0,
+              "title_override": null,
+              "remediation_override": null
+            }
+          ]
+        ]
+      },
+      "output": [
+        [
+          {
+            "rule_id": "confirmed_prompt_decline",
+            "target_key": "t:b",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.0,
+            "gap_factor": 1.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          30.0
+        ],
+        [
+          {
+            "rule_id": "confirmed_prompt_decline",
+            "target_key": "t:é",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.0,
+            "gap_factor": 1.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          30.0
+        ],
+        [
+          {
+            "rule_id": "confirmed_prompt_decline",
+            "target_key": "t:β",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.0,
+            "gap_factor": 1.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          30.0
+        ],
+        [
+          {
+            "rule_id": "confirmed_prompt_decline",
+            "target_key": "t:𐀀",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.0,
+            "gap_factor": 1.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          30.0
+        ]
+      ]
+    },
+    {
+      "input": {
+        "op": "score",
+        "args": [
+          []
+        ]
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "op": "new_row",
+        "args": [
+          {
+            "rule_id": "brand_absent_high_value_prompt",
+            "target_key": "t:1",
+            "target_prompt_id": "00000000-0000-4000-8000-000000000009",
+            "target_url": "https://x.test/a",
+            "target_theme": "theme",
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.0,
+            "gap_factor": 1.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          30.0
+        ]
+      },
+      "output": {
+        "rule_id": "brand_absent_high_value_prompt",
+        "opportunity_type": "visibility",
+        "severity": "high",
+        "priority_score": 30.0,
+        "title": "Brand absent on high-value prompt",
+        "remediation": "Publish or update an owned page that directly answers this prompt: lead with a clear, quotable definition, then add structured data so answer engines can attribute it. Re-run an audit to confirm owned citations appear.",
+        "target_key": "t:1",
+        "target_prompt_id": "00000000-0000-4000-8000-000000000009",
+        "target_url": "https://x.test/a",
+        "target_theme": "theme",
+        "evidence": {
+          "note": "e",
+          "factor": 1.0,
+          "count": 2
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [],
+        "source_traffic_ids": null,
+        "analyzer_version": "opp-analyzer-1",
+        "rule_version": "opp-rules-1",
+        "formula_version": "opp-formula-1"
+      }
+    },
+    {
+      "input": {
+        "op": "new_row",
+        "args": [
+          {
+            "rule_id": "content_structure_incomplete",
+            "target_key": "t:2",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.0,
+            "gap_factor": 1.0,
+            "title_override": "Custom",
+            "remediation_override": null
+          },
+          12.5
+        ]
+      },
+      "output": {
+        "rule_id": "content_structure_incomplete",
+        "opportunity_type": "site",
+        "severity": "low",
+        "priority_score": 12.5,
+        "title": "Custom",
+        "remediation": "Strengthen the page's substantive content, answer-first opening, and question-led headings using the persisted rule evidence.",
+        "target_key": "t:2",
+        "target_prompt_id": null,
+        "target_url": null,
+        "target_theme": null,
+        "evidence": {
+          "note": "e",
+          "factor": 1.0,
+          "count": 2
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [],
+        "source_traffic_ids": null,
+        "analyzer_version": "opp-analyzer-1",
+        "rule_version": "opp-rules-1",
+        "formula_version": "opp-formula-1"
+      }
+    },
+    {
+      "input": {
+        "op": "new_row",
+        "args": [
+          {
+            "rule_id": "declining_query",
+            "target_key": "t:3",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [],
+            "source_issue_ids": [],
+            "source_metric_ids": [],
+            "value_factor": 1.0,
+            "gap_factor": 1.0,
+            "title_override": null,
+            "remediation_override": "Do it"
+          },
+          7.0
+        ]
+      },
+      "output": {
+        "rule_id": "declining_query",
+        "opportunity_type": "traffic",
+        "severity": "medium",
+        "priority_score": 7.0,
+        "title": "Search demand is declining",
+        "remediation": "Do it",
+        "target_key": "t:3",
+        "target_prompt_id": null,
+        "target_url": null,
+        "target_theme": null,
+        "evidence": {
+          "note": "e",
+          "factor": 1.0,
+          "count": 2
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [],
+        "source_traffic_ids": null,
+        "analyzer_version": "opp-analyzer-1",
+        "rule_version": "opp-rules-1",
+        "formula_version": "opp-formula-1"
+      }
+    },
+    {
+      "input": {
+        "op": "new_row",
+        "args": [
+          {
+            "rule_id": "earned_page_acquire_listing",
+            "target_key": "t:4",
+            "target_prompt_id": null,
+            "target_url": null,
+            "target_theme": null,
+            "evidence": {
+              "note": "e",
+              "factor": 1.0,
+              "count": 2
+            },
+            "source_analysis_ids": [
+              "a"
+            ],
+            "source_issue_ids": [
+              "i"
+            ],
+            "source_metric_ids": [
+              "m"
+            ],
+            "value_factor": 1.0,
+            "gap_factor": 1.0,
+            "title_override": null,
+            "remediation_override": null
+          },
+          100.0
+        ]
+      },
+      "output": {
+        "rule_id": "earned_page_acquire_listing",
+        "opportunity_type": "visibility",
+        "severity": "high",
+        "priority_score": 100.0,
+        "title": "Competitors listed on a cited page you are absent from",
+        "remediation": "This page was read and your brand is not on it while a competitor is. Approach the publisher with the facts this brief carries and ask to be included, then declare the placement so it can be checked.",
+        "target_key": "t:4",
+        "target_prompt_id": null,
+        "target_url": null,
+        "target_theme": null,
+        "evidence": {
+          "note": "e",
+          "factor": 1.0,
+          "count": 2
+        },
+        "source_analysis_ids": [
+          "a"
+        ],
+        "source_issue_ids": [
+          "i"
+        ],
+        "source_metric_ids": [
+          "m"
+        ],
+        "source_traffic_ids": null,
+        "analyzer_version": "opp-analyzer-1",
+        "rule_version": "opp-rules-1",
+        "formula_version": "opp-formula-1"
+      }
+    },
+    {
+      "input": {
+        "op": "snapshot",
+        "args": [
+          {
+            "auditId": null,
+            "crawl": null,
+            "demand": null
+          },
+          [],
+          [],
+          [
+            {
+              "state": "available",
+              "percentages": {
+                "a": 50.0,
+                "b": 12.5
+              },
+              "coverage_rate": 1.0
+            },
+            {
+              "state": "available",
+              "percentages": {
+                "a": 50.0,
+                "b": 12.5
+              },
+              "coverage_rate": 1.0
+            },
+            [
+              {
+                "canonical_domain": "d.test",
+                "usage_percentage": 100.0,
+                "usage_factor": 2.0
+              }
+            ]
+          ]
+        ]
+      },
+      "output": {
+        "audit_id": null,
+        "site_crawl_id": null,
+        "demand_snapshot_id": null,
+        "demand_source_revision": null,
+        "coverage": null,
+        "limitations": [],
+        "source_mix": {
+          "state": "available",
+          "percentages": {
+            "a": 50.0,
+            "b": 12.5
+          },
+          "coverage_rate": 1.0
+        },
+        "action_path_mix": {
+          "state": "available",
+          "percentages": {
+            "a": 50.0,
+            "b": 12.5
+          },
+          "coverage_rate": 1.0
+        },
+        "domain_rollups": [
+          {
+            "canonical_domain": "d.test",
+            "usage_percentage": 100.0,
+            "usage_factor": 2.0
+          }
+        ],
+        "counts_by_type": {
+          "commerce": 0,
+          "site": 0,
+          "topic": 0,
+          "traffic": 0,
+          "visibility": 0
+        },
+        "counts_by_severity": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0
+        },
+        "total_count": 0,
+        "median_priority": null,
+        "analyzer_version": "opp-analyzer-1",
+        "rule_version": "opp-rules-1",
+        "formula_version": "opp-formula-1",
+        "source_analysis_ids": [],
+        "source_issue_ids": []
+      }
+    },
+    {
+      "input": {
+        "op": "snapshot",
+        "args": [
+          {
+            "auditId": "00000000-0000-4000-8000-000000000041",
+            "crawl": {
+              "id": "00000000-0000-4000-8000-000000000042",
+              "status": "partially_completed",
+              "score_summary": {
+                "selected_count": 3
+              },
+              "analysis_requested_count": 9,
+              "analyzed_url_count": 1,
+              "failed_url_count": 2
+            },
+            "demand": {
+              "id": "00000000-0000-4000-8000-000000000040",
+              "source_hash": "rev"
+            }
+          },
+          [
+            {
+              "opportunity_type": "commerce",
+              "severity": "critical"
+            }
+          ],
+          [
+            [
+              {
+                "rule_id": "brand_absent_high_value_prompt",
+                "target_key": "t:0",
+                "target_prompt_id": null,
+                "target_url": null,
+                "target_theme": null,
+                "evidence": {
+                  "note": "e",
+                  "factor": 1.0,
+                  "count": 2
+                },
+                "source_analysis_ids": [
+                  "a0"
+                ],
+                "source_issue_ids": [
+                  "i0"
+                ],
+                "source_metric_ids": [],
+                "value_factor": 1.0,
+                "gap_factor": 1.0,
+                "title_override": null,
+                "remediation_override": null
+              },
+              30.0
+            ]
+          ],
+          [
+            {
+              "state": "available",
+              "percentages": {
+                "a": 50.0,
+                "b": 12.5
+              },
+              "coverage_rate": 1.0
+            },
+            {
+              "state": "available",
+              "percentages": {
+                "a": 50.0,
+                "b": 12.5
+              },
+              "coverage_rate": 1.0
+            },
+            [
+              {
+                "canonical_domain": "d.test",
+                "usage_percentage": 100.0,
+                "usage_factor": 2.0
+              }
+            ]
+          ]
+        ]
+      },
+      "output": {
+        "audit_id": "00000000-0000-4000-8000-000000000041",
+        "site_crawl_id": "00000000-0000-4000-8000-000000000042",
+        "demand_snapshot_id": "00000000-0000-4000-8000-000000000040",
+        "demand_source_revision": "rev",
+        "coverage": {
+          "crawl_status": "partially_completed",
+          "selected_url_count": 3,
+          "analyzed_url_count": 1,
+          "failed_url_count": 2,
+          "analysis_ratio": 0.3333
+        },
+        "limitations": [
+          "Site Health evidence is partial (partially_completed); only completed analyses are included.",
+          "Coverage: 1 of 3 selected URLs analyzed."
+        ],
+        "source_mix": {
+          "state": "available",
+          "percentages": {
+            "a": 50.0,
+            "b": 12.5
+          },
+          "coverage_rate": 1.0
+        },
+        "action_path_mix": {
+          "state": "available",
+          "percentages": {
+            "a": 50.0,
+            "b": 12.5
+          },
+          "coverage_rate": 1.0
+        },
+        "domain_rollups": [
+          {
+            "canonical_domain": "d.test",
+            "usage_percentage": 100.0,
+            "usage_factor": 2.0
+          }
+        ],
+        "counts_by_type": {
+          "commerce": 1,
+          "site": 0,
+          "topic": 0,
+          "traffic": 0,
+          "visibility": 0
+        },
+        "counts_by_severity": {
+          "critical": 1,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0
+        },
+        "total_count": 1,
+        "median_priority": 30.0,
+        "analyzer_version": "opp-analyzer-1",
+        "rule_version": "opp-rules-1",
+        "formula_version": "opp-formula-1",
+        "source_analysis_ids": [
+          "a0"
+        ],
+        "source_issue_ids": [
+          "i0"
+        ]
+      }
+    },
+    {
+      "input": {
+        "op": "snapshot",
+        "args": [
+          {
+            "auditId": null,
+            "crawl": {
+              "id": "00000000-0000-4000-8000-000000000042",
+              "status": "completed",
+              "score_summary": {
+                "selected_count": 3
+              },
+              "analysis_requested_count": 9,
+              "analyzed_url_count": 3,
+              "failed_url_count": 0
+            },
+            "demand": null
+          },
+          [
+            {
+              "opportunity_type": "commerce",
+              "severity": "critical"
+            },
+            {
+              "opportunity_type": "site",
+              "severity": "high"
+            }
+          ],
+          [
+            [
+              {
+                "rule_id": "brand_absent_high_value_prompt",
+                "target_key": "t:0",
+                "target_prompt_id": null,
+                "target_url": null,
+                "target_theme": null,
+                "evidence": {
+                  "note": "e",
+                  "factor": 1.0,
+                  "count": 2
+                },
+                "source_analysis_ids": [
+                  "a0"
+                ],
+                "source_issue_ids": [
+                  "i0"
+                ],
+                "source_metric_ids": [],
+                "value_factor": 1.0,
+                "gap_factor": 1.0,
+                "title_override": null,
+                "remediation_override": null
+              },
+              10.0
+            ],
+            [
+              {
+                "rule_id": "catalog_fields_missing",
+                "target_key": "t:1",
+                "target_prompt_id": null,
+                "target_url": null,
+                "target_theme": null,
+                "evidence": {
+                  "note": "e",
+                  "factor": 1.0,
+                  "count": 2
+                },
+                "source_analysis_ids": [
+                  "a1"
+                ],
+                "source_issue_ids": [
+                  "i1"
+                ],
+                "source_metric_ids": [],
+                "value_factor": 1.0,
+                "gap_factor": 1.0,
+                "title_override": null,
+                "remediation_override": null
+              },
+              20.0
+            ]
+          ],
+          [
+            {
+              "state": "available",
+              "percentages": {
+                "a": 50.0,
+                "b": 12.5
+              },
+              "coverage_rate": 1.0
+            },
+            {
+              "state": "available",
+              "percentages": {
+                "a": 50.0,
+                "b": 12.5
+              },
+              "coverage_rate": 1.0
+            },
+            [
+              {
+                "canonical_domain": "d.test",
+                "usage_percentage": 100.0,
+                "usage_factor": 2.0
+              }
+            ]
+          ]
+        ]
+      },
+      "output": {
+        "audit_id": null,
+        "site_crawl_id": "00000000-0000-4000-8000-000000000042",
+        "demand_snapshot_id": null,
+        "demand_source_revision": null,
+        "coverage": {
+          "crawl_status": "completed",
+          "selected_url_count": 3,
+          "analyzed_url_count": 3,
+          "failed_url_count": 0,
+          "analysis_ratio": 1.0
+        },
+        "limitations": [],
+        "source_mix": {
+          "state": "available",
+          "percentages": {
+            "a": 50.0,
+            "b": 12.5
+          },
+          "coverage_rate": 1.0
+        },
+        "action_path_mix": {
+          "state": "available",
+          "percentages": {
+            "a": 50.0,
+            "b": 12.5
+          },
+          "coverage_rate": 1.0
+        },
+        "domain_rollups": [
+          {
+            "canonical_domain": "d.test",
+            "usage_percentage": 100.0,
+            "usage_factor": 2.0
+          }
+        ],
+        "counts_by_type": {
+          "commerce": 1,
+          "site": 1,
+          "topic": 0,
+          "traffic": 0,
+          "visibility": 0
+        },
+        "counts_by_severity": {
+          "critical": 1,
+          "high": 1,
+          "info": 0,
+          "low": 0,
+          "medium": 0
+        },
+        "total_count": 2,
+        "median_priority": 15.0,
+        "analyzer_version": "opp-analyzer-1",
+        "rule_version": "opp-rules-1",
+        "formula_version": "opp-formula-1",
+        "source_analysis_ids": [
+          "a0",
+          "a1"
+        ],
+        "source_issue_ids": [
+          "i0",
+          "i1"
+        ]
+      }
+    },
+    {
+      "input": {
+        "op": "snapshot",
+        "args": [
+          {
+            "auditId": "00000000-0000-4000-8000-000000000041",
+            "crawl": null,
+            "demand": {
+              "id": "00000000-0000-4000-8000-000000000040",
+              "source_hash": "rev"
+            }
+          },
+          [
+            {
+              "opportunity_type": "commerce",
+              "severity": "critical"
+            },
+            {
+              "opportunity_type": "site",
+              "severity": "high"
+            },
+            {
+              "opportunity_type": "topic",
+              "severity": "info"
+            },
+            {
+              "opportunity_type": "traffic",
+              "severity": "low"
+            }
+          ],
+          [
+            [
+              {
+                "rule_id": "brand_absent_high_value_prompt",
+                "target_key": "t:0",
+                "target_prompt_id": null,
+                "target_url": null,
+                "target_theme": null,
+                "evidence": {
+                  "note": "e",
+                  "factor": 1.0,
+                  "count": 2
+                },
+                "source_analysis_ids": [
+                  "a0"
+                ],
+                "source_issue_ids": [
+                  "i0"
+                ],
+                "source_metric_ids": [],
+                "value_factor": 1.0,
+                "gap_factor": 1.0,
+                "title_override": null,
+                "remediation_override": null
+              },
+              10.25
+            ],
+            [
+              {
+                "rule_id": "catalog_fields_missing",
+                "target_key": "t:1",
+                "target_prompt_id": null,
+                "target_url": null,
+                "target_theme": null,
+                "evidence": {
+                  "note": "e",
+                  "factor": 1.0,
+                  "count": 2
+                },
+                "source_analysis_ids": [
+                  "a1"
+                ],
+                "source_issue_ids": [
+                  "i1"
+                ],
+                "source_metric_ids": [],
+                "value_factor": 1.0,
+                "gap_factor": 1.0,
+                "title_override": null,
+                "remediation_override": null
+              },
+              20.5
+            ],
+            [
+              {
+                "rule_id": "citability_trust_incomplete",
+                "target_key": "t:2",
+                "target_prompt_id": null,
+                "target_url": null,
+                "target_theme": null,
+                "evidence": {
+                  "note": "e",
+                  "factor": 1.0,
+                  "count": 2
+                },
+                "source_analysis_ids": [
+                  "a0"
+                ],
+                "source_issue_ids": [
+                  "i2"
+                ],
+                "source_metric_ids": [],
+                "value_factor": 1.0,
+                "gap_factor": 1.0,
+                "title_override": null,
+                "remediation_override": null
+              },
+              11.0
+            ],
+            [
+              {
+                "rule_id": "cited_alternatives_without_uploaded_presence",
+                "target_key": "t:3",
+                "target_prompt_id": null,
+                "target_url": null,
+                "target_theme": null,
+                "evidence": {
+                  "note": "e",
+                  "factor": 1.0,
+                  "count": 2
+                },
+                "source_analysis_ids": [
+                  "a1"
+                ],
+                "source_issue_ids": [
+                  "i3"
+                ],
+                "source_metric_ids": [],
+                "value_factor": 1.0,
+                "gap_factor": 1.0,
+                "title_override": null,
+                "remediation_override": null
+              },
+              3.0
+            ]
+          ],
+          [
+            {
+              "state": "available",
+              "percentages": {
+                "a": 50.0,
+                "b": 12.5
+              },
+              "coverage_rate": 1.0
+            },
+            {
+              "state": "available",
+              "percentages": {
+                "a": 50.0,
+                "b": 12.5
+              },
+              "coverage_rate": 1.0
+            },
+            [
+              {
+                "canonical_domain": "d.test",
+                "usage_percentage": 100.0,
+                "usage_factor": 2.0
+              }
+            ]
+          ]
+        ]
+      },
+      "output": {
+        "audit_id": "00000000-0000-4000-8000-000000000041",
+        "site_crawl_id": null,
+        "demand_snapshot_id": "00000000-0000-4000-8000-000000000040",
+        "demand_source_revision": "rev",
+        "coverage": null,
+        "limitations": [],
+        "source_mix": {
+          "state": "available",
+          "percentages": {
+            "a": 50.0,
+            "b": 12.5
+          },
+          "coverage_rate": 1.0
+        },
+        "action_path_mix": {
+          "state": "available",
+          "percentages": {
+            "a": 50.0,
+            "b": 12.5
+          },
+          "coverage_rate": 1.0
+        },
+        "domain_rollups": [
+          {
+            "canonical_domain": "d.test",
+            "usage_percentage": 100.0,
+            "usage_factor": 2.0
+          }
+        ],
+        "counts_by_type": {
+          "commerce": 1,
+          "site": 1,
+          "topic": 1,
+          "traffic": 1,
+          "visibility": 0
+        },
+        "counts_by_severity": {
+          "critical": 1,
+          "high": 1,
+          "info": 1,
+          "low": 1,
+          "medium": 0
+        },
+        "total_count": 4,
+        "median_priority": 10.6,
+        "analyzer_version": "opp-analyzer-1",
+        "rule_version": "opp-rules-1",
+        "formula_version": "opp-formula-1",
+        "source_analysis_ids": [
+          "a0",
+          "a1"
+        ],
+        "source_issue_ids": [
+          "i0",
+          "i1",
+          "i2",
+          "i3"
+        ]
+      }
+    },
+    {
+      "input": {
+        "op": "snapshot",
+        "args": [
+          {
+            "auditId": "00000000-0000-4000-8000-000000000041",
+            "crawl": {
+              "id": "00000000-0000-4000-8000-000000000042",
+              "status": "completed",
+              "score_summary": {},
+              "analysis_requested_count": 0,
+              "analyzed_url_count": 0,
+              "failed_url_count": 0
+            },
+            "demand": null
+          },
+          [
+            {
+              "opportunity_type": "commerce",
+              "severity": "critical"
+            },
+            {
+              "opportunity_type": "site",
+              "severity": "high"
+            }
+          ],
+          [
+            [
+              {
+                "rule_id": "brand_absent_high_value_prompt",
+                "target_key": "t:0",
+                "target_prompt_id": null,
+                "target_url": null,
+                "target_theme": null,
+                "evidence": {
+                  "note": "e",
+                  "factor": 1.0,
+                  "count": 2
+                },
+                "source_analysis_ids": [
+                  "a0"
+                ],
+                "source_issue_ids": [
+                  "i0"
+                ],
+                "source_metric_ids": [],
+                "value_factor": 1.0,
+                "gap_factor": 1.0,
+                "title_override": null,
+                "remediation_override": null
+              },
+              1.05
+            ],
+            [
+              {
+                "rule_id": "catalog_fields_missing",
+                "target_key": "t:1",
+                "target_prompt_id": null,
+                "target_url": null,
+                "target_theme": null,
+                "evidence": {
+                  "note": "e",
+                  "factor": 1.0,
+                  "count": 2
+                },
+                "source_analysis_ids": [
+                  "a1"
+                ],
+                "source_issue_ids": [
+                  "i1"
+                ],
+                "source_metric_ids": [],
+                "value_factor": 1.0,
+                "gap_factor": 1.0,
+                "title_override": null,
+                "remediation_override": null
+              },
+              1.1
+            ]
+          ],
+          [
+            {
+              "state": "available",
+              "percentages": {
+                "a": 50.0,
+                "b": 12.5
+              },
+              "coverage_rate": 1.0
+            },
+            {
+              "state": "available",
+              "percentages": {
+                "a": 50.0,
+                "b": 12.5
+              },
+              "coverage_rate": 1.0
+            },
+            [
+              {
+                "canonical_domain": "d.test",
+                "usage_percentage": 100.0,
+                "usage_factor": 2.0
+              }
+            ]
+          ]
+        ]
+      },
+      "output": {
+        "audit_id": "00000000-0000-4000-8000-000000000041",
+        "site_crawl_id": "00000000-0000-4000-8000-000000000042",
+        "demand_snapshot_id": null,
+        "demand_source_revision": null,
+        "coverage": {
+          "crawl_status": "completed",
+          "selected_url_count": 0,
+          "analyzed_url_count": 0,
+          "failed_url_count": 0,
+          "analysis_ratio": null
+        },
+        "limitations": [],
+        "source_mix": {
+          "state": "available",
+          "percentages": {
+            "a": 50.0,
+            "b": 12.5
+          },
+          "coverage_rate": 1.0
+        },
+        "action_path_mix": {
+          "state": "available",
+          "percentages": {
+            "a": 50.0,
+            "b": 12.5
+          },
+          "coverage_rate": 1.0
+        },
+        "domain_rollups": [
+          {
+            "canonical_domain": "d.test",
+            "usage_percentage": 100.0,
+            "usage_factor": 2.0
+          }
+        ],
+        "counts_by_type": {
+          "commerce": 1,
+          "site": 1,
+          "topic": 0,
+          "traffic": 0,
+          "visibility": 0
+        },
+        "counts_by_severity": {
+          "critical": 1,
+          "high": 1,
+          "info": 0,
+          "low": 0,
+          "medium": 0
+        },
+        "total_count": 2,
+        "median_priority": 1.1,
+        "analyzer_version": "opp-analyzer-1",
+        "rule_version": "opp-rules-1",
+        "formula_version": "opp-formula-1",
+        "source_analysis_ids": [
+          "a0",
+          "a1"
+        ],
+        "source_issue_ids": [
+          "i0",
+          "i1"
+        ]
+      }
+    },
+    {
+      "input": {
+        "op": "stamp",
+        "args": [
+          "00000000-0000-4000-8000-000000000041",
+          [
+            {
+              "prompt_index": 0,
+              "snapshot_id": "00000000-0000-4000-8000-000000000050",
+              "text": "Best  shoes?"
+            },
+            {
+              "prompt_index": 1,
+              "snapshot_id": null,
+              "text": "CAFÉ Straße!!"
+            },
+            {
+              "prompt_index": 2,
+              "snapshot_id": "00000000-0000-4000-8000-000000000051",
+              "text": "z"
+            }
+          ],
+          [],
+          [
+            {
+              "state": "available"
+            },
+            {
+              "state": "unavailable"
+            }
+          ]
+        ]
+      },
+      "output": [
+        {
+          "state": "available",
+          "audit_id": "00000000-0000-4000-8000-000000000041",
+          "prompt_snapshot_ids": [],
+          "gap_keys": []
+        },
+        {
+          "state": "unavailable",
+          "audit_id": "00000000-0000-4000-8000-000000000041",
+          "prompt_snapshot_ids": [],
+          "gap_keys": []
+        }
+      ]
+    },
+    {
+      "input": {
+        "op": "stamp",
+        "args": [
+          "00000000-0000-4000-8000-000000000041",
+          [
+            {
+              "prompt_index": 0,
+              "snapshot_id": "00000000-0000-4000-8000-000000000050",
+              "text": "Best  shoes?"
+            },
+            {
+              "prompt_index": 1,
+              "snapshot_id": null,
+              "text": "CAFÉ Straße!!"
+            },
+            {
+              "prompt_index": 2,
+              "snapshot_id": "00000000-0000-4000-8000-000000000051",
+              "text": "z"
+            }
+          ],
+          [
+            0
+          ],
+          [
+            {
+              "state": "available"
+            },
+            {
+              "state": "unavailable"
+            }
+          ]
+        ]
+      },
+      "output": [
+        {
+          "state": "available",
+          "audit_id": "00000000-0000-4000-8000-000000000041",
+          "prompt_snapshot_ids": [
+            "00000000-0000-4000-8000-000000000050"
+          ],
+          "gap_keys": [
+            "0d235a98d5de2f9955799c22b066824c875a56b88e88f039ae2a5e267259c141"
+          ]
+        },
+        {
+          "state": "unavailable",
+          "audit_id": "00000000-0000-4000-8000-000000000041",
+          "prompt_snapshot_ids": [
+            "00000000-0000-4000-8000-000000000050"
+          ],
+          "gap_keys": [
+            "0d235a98d5de2f9955799c22b066824c875a56b88e88f039ae2a5e267259c141"
+          ]
+        }
+      ]
+    },
+    {
+      "input": {
+        "op": "stamp",
+        "args": [
+          "00000000-0000-4000-8000-000000000041",
+          [
+            {
+              "prompt_index": 0,
+              "snapshot_id": "00000000-0000-4000-8000-000000000050",
+              "text": "Best  shoes?"
+            },
+            {
+              "prompt_index": 1,
+              "snapshot_id": null,
+              "text": "CAFÉ Straße!!"
+            },
+            {
+              "prompt_index": 2,
+              "snapshot_id": "00000000-0000-4000-8000-000000000051",
+              "text": "z"
+            }
+          ],
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            {
+              "state": "available"
+            },
+            {
+              "state": "unavailable"
+            }
+          ]
+        ]
+      },
+      "output": [
+        {
+          "state": "available",
+          "audit_id": "00000000-0000-4000-8000-000000000041",
+          "prompt_snapshot_ids": [
+            "00000000-0000-4000-8000-000000000050",
+            null,
+            "00000000-0000-4000-8000-000000000051"
+          ],
+          "gap_keys": [
+            "0d235a98d5de2f9955799c22b066824c875a56b88e88f039ae2a5e267259c141",
+            "261bd0b06ea1f4269fb051c5d9d7f3ebf4e740b9d9a936d75e879621795b31e8",
+            "594e519ae499312b29433b7dd8a97ff068defcba9755b6d5d00e84c524d67b06"
+          ]
+        },
+        {
+          "state": "unavailable",
+          "audit_id": "00000000-0000-4000-8000-000000000041",
+          "prompt_snapshot_ids": [
+            "00000000-0000-4000-8000-000000000050",
+            null,
+            "00000000-0000-4000-8000-000000000051"
+          ],
+          "gap_keys": [
+            "0d235a98d5de2f9955799c22b066824c875a56b88e88f039ae2a5e267259c141",
+            "261bd0b06ea1f4269fb051c5d9d7f3ebf4e740b9d9a936d75e879621795b31e8",
+            "594e519ae499312b29433b7dd8a97ff068defcba9755b6d5d00e84c524d67b06"
+          ]
+        }
+      ]
+    },
+    {
+      "input": {
+        "op": "stamp",
+        "args": [
+          "00000000-0000-4000-8000-000000000041",
+          [
+            {
+              "prompt_index": 0,
+              "snapshot_id": "00000000-0000-4000-8000-000000000050",
+              "text": "Best  shoes?"
+            },
+            {
+              "prompt_index": 1,
+              "snapshot_id": null,
+              "text": "CAFÉ Straße!!"
+            },
+            {
+              "prompt_index": 2,
+              "snapshot_id": "00000000-0000-4000-8000-000000000051",
+              "text": "z"
+            }
+          ],
+          [
+            1,
+            7
+          ],
+          [
+            {
+              "state": "available"
+            },
+            {
+              "state": "unavailable"
+            }
+          ]
+        ]
+      },
+      "output": [
+        {
+          "state": "available",
+          "audit_id": "00000000-0000-4000-8000-000000000041",
+          "prompt_snapshot_ids": [
+            null
+          ],
+          "gap_keys": [
+            "261bd0b06ea1f4269fb051c5d9d7f3ebf4e740b9d9a936d75e879621795b31e8"
+          ]
+        },
+        {
+          "state": "unavailable",
+          "audit_id": "00000000-0000-4000-8000-000000000041",
+          "prompt_snapshot_ids": [
+            null
+          ],
+          "gap_keys": [
+            "261bd0b06ea1f4269fb051c5d9d7f3ebf4e740b9d9a936d75e879621795b31e8"
+          ]
+        }
+      ]
+    },
+    {
+      "input": {
+        "op": "current",
+        "args": [
+          null,
+          {
+            "auditId": null,
+            "crawlId": null,
+            "demand": null
+          }
+        ]
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "op": "current",
+        "args": [
+          {
+            "audit_id": "00000000-0000-4000-8000-000000000041",
+            "site_crawl_id": "00000000-0000-4000-8000-000000000042",
+            "demand_snapshot_id": "00000000-0000-4000-8000-000000000040",
+            "demand_source_revision": "rev",
+            "analyzer_version": "opp-analyzer-1",
+            "rule_version": "opp-rules-1",
+            "formula_version": "opp-formula-1"
+          },
+          {
+            "auditId": "00000000-0000-4000-8000-000000000041",
+            "crawlId": "00000000-0000-4000-8000-000000000042",
+            "demand": {
+              "id": "00000000-0000-4000-8000-000000000040",
+              "source_hash": "rev"
+            }
+          }
+        ]
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "op": "current",
+        "args": [
+          {
+            "audit_id": "00000000-0000-4000-8000-000000000041",
+            "site_crawl_id": "00000000-0000-4000-8000-000000000042",
+            "demand_snapshot_id": "00000000-0000-4000-8000-000000000040",
+            "demand_source_revision": "rev",
+            "analyzer_version": "opp-analyzer-1",
+            "rule_version": "opp-rules-1",
+            "formula_version": "opp-formula-1"
+          },
+          {
+            "auditId": "00000000-0000-4000-8000-000000000041",
+            "crawlId": "00000000-0000-4000-8000-000000000042",
+            "demand": {
+              "id": "00000000-0000-4000-8000-000000000040",
+              "source_hash": "other"
+            }
+          }
+        ]
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "op": "current",
+        "args": [
+          {
+            "audit_id": "00000000-0000-4000-8000-000000000041",
+            "site_crawl_id": "00000000-0000-4000-8000-000000000042",
+            "demand_snapshot_id": "00000000-0000-4000-8000-000000000040",
+            "demand_source_revision": "rev",
+            "analyzer_version": "opp-analyzer-1",
+            "rule_version": "opp-rules-1",
+            "formula_version": "opp-formula-1"
+          },
+          {
+            "auditId": null,
+            "crawlId": "00000000-0000-4000-8000-000000000042",
+            "demand": {
+              "id": "00000000-0000-4000-8000-000000000040",
+              "source_hash": "rev"
+            }
+          }
+        ]
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "op": "current",
+        "args": [
+          {
+            "audit_id": "00000000-0000-4000-8000-000000000041",
+            "site_crawl_id": "00000000-0000-4000-8000-000000000042",
+            "demand_snapshot_id": "00000000-0000-4000-8000-000000000040",
+            "demand_source_revision": "rev",
+            "analyzer_version": "opp-analyzer-1",
+            "rule_version": "old",
+            "formula_version": "opp-formula-1"
+          },
+          {
+            "auditId": "00000000-0000-4000-8000-000000000041",
+            "crawlId": "00000000-0000-4000-8000-000000000042",
+            "demand": {
+              "id": "00000000-0000-4000-8000-000000000040",
+              "source_hash": "rev"
+            }
+          }
+        ]
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "op": "current",
+        "args": [
+          {
+            "audit_id": "00000000-0000-4000-8000-000000000041",
+            "site_crawl_id": "00000000-0000-4000-8000-000000000042",
+            "demand_snapshot_id": null,
+            "demand_source_revision": null,
+            "analyzer_version": "opp-analyzer-1",
+            "rule_version": "opp-rules-1",
+            "formula_version": "opp-formula-1"
+          },
+          {
+            "auditId": "00000000-0000-4000-8000-000000000041",
+            "crawlId": "00000000-0000-4000-8000-000000000042",
+            "demand": null
+          }
+        ]
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "op": "decline",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000060",
+            "prompt_id": "00000000-0000-4000-8000-000000000061",
+            "prompt_index": 0,
+            "prompt_text": "p",
+            "rolling_four": [
+              50.0,
+              40.5,
+              30.0,
+              12.0
+            ],
+            "immediate_delta": -12.0,
+            "per_engine_scores": {
+              "gemini": 1.0,
+              "chatgpt": 2.0
+            },
+            "engine_agreement": 1.0,
+            "repetition_agreement": 0.5,
+            "trend_confidence": 0.75,
+            "components": {
+              "a": 1.0,
+              "b": 2
+            },
+            "source_analysis_ids": [
+              "x",
+              "y"
+            ]
+          },
+          "00000000-0000-4000-8000-000000000041"
+        ]
+      },
+      "output": {
+        "rule_id": "confirmed_prompt_decline",
+        "target_key": "prompt:00000000-0000-4000-8000-000000000061",
+        "target_prompt_id": "00000000-0000-4000-8000-000000000061",
+        "target_url": null,
+        "target_theme": null,
+        "evidence": {
+          "prompt": "p",
+          "rolling_four": [
+            50.0,
+            40.5,
+            30.0,
+            12.0
+          ],
+          "immediate_delta": -12.0,
+          "engines": [
+            "chatgpt",
+            "gemini"
+          ],
+          "engine_agreement": 1.0,
+          "repetition_agreement": 0.5,
+          "trend_confidence": 0.75,
+          "components": {
+            "a": 1.0,
+            "b": 2
+          },
+          "content_goal": "Improve the owned answer for this prompt."
+        },
+        "source_analysis_ids": [
+          "x",
+          "y"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000060"
+        ],
+        "value_factor": 0.75,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "decline",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000062",
+            "prompt_id": null,
+            "prompt_index": 3,
+            "prompt_text": "q",
+            "rolling_four": [],
+            "immediate_delta": null,
+            "per_engine_scores": {},
+            "engine_agreement": 0.0,
+            "repetition_agreement": 0.0,
+            "trend_confidence": 0.05,
+            "components": {},
+            "source_analysis_ids": null
+          },
+          "00000000-0000-4000-8000-000000000041"
+        ]
+      },
+      "output": {
+        "rule_id": "confirmed_prompt_decline",
+        "target_key": "prompt-index:00000000-0000-4000-8000-000000000041:3",
+        "target_prompt_id": null,
+        "target_url": null,
+        "target_theme": null,
+        "evidence": {
+          "prompt": "q",
+          "rolling_four": [],
+          "immediate_delta": null,
+          "engines": [],
+          "engine_agreement": 0.0,
+          "repetition_agreement": 0.0,
+          "trend_confidence": 0.05,
+          "components": {},
+          "content_goal": "Improve the owned answer for this prompt."
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000062"
+        ],
+        "value_factor": 0.1,
+        "gap_factor": 0.1,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "decline",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000063",
+            "prompt_id": null,
+            "prompt_index": 4,
+            "prompt_text": "r",
+            "rolling_four": [
+              1,
+              2
+            ],
+            "immediate_delta": 80.0,
+            "per_engine_scores": {
+              "b": 1,
+              "a": 2
+            },
+            "engine_agreement": 0.25,
+            "repetition_agreement": 1.0,
+            "trend_confidence": 1.0,
+            "components": {
+              "nested": {
+                "v": 3.0
+              }
+            },
+            "source_analysis_ids": []
+          },
+          "00000000-0000-4000-8000-000000000041"
+        ]
+      },
+      "output": {
+        "rule_id": "confirmed_prompt_decline",
+        "target_key": "prompt-index:00000000-0000-4000-8000-000000000041:4",
+        "target_prompt_id": null,
+        "target_url": null,
+        "target_theme": null,
+        "evidence": {
+          "prompt": "r",
+          "rolling_four": [
+            1,
+            2
+          ],
+          "immediate_delta": 80.0,
+          "engines": [
+            "a",
+            "b"
+          ],
+          "engine_agreement": 0.25,
+          "repetition_agreement": 1.0,
+          "trend_confidence": 1.0,
+          "components": {
+            "nested": {
+              "v": 3.0
+            }
+          },
+          "content_goal": "Improve the owned answer for this prompt."
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000063"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": true,
+            "coverage": {
+              "ratio": 1.0,
+              "pages": 3
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000080",
+            "site_url_id": "00000000-0000-4000-8000-000000000090",
+            "normalized_url": "https://s.test/0",
+            "source_analysis_a_id": null,
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "potential-regression",
+            "field": "title",
+            "after_value": {
+              "t": "x"
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "site_change_potential_regression",
+        "target_key": "site-change:00000000-0000-4000-8000-000000000090:title",
+        "target_prompt_id": null,
+        "target_url": "https://s.test/0",
+        "target_theme": null,
+        "evidence": {
+          "change_snapshot_id": "00000000-0000-4000-8000-000000000070",
+          "change_observation_id": "00000000-0000-4000-8000-000000000080",
+          "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+          "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+          "field": "title",
+          "before_value": {
+            "v": 2.0,
+            "n": 1
+          },
+          "after_value": {
+            "t": "x"
+          },
+          "change_class": "potential-regression",
+          "complete_pair": true,
+          "coverage": {
+            "ratio": 1.0,
+            "pages": 3
+          }
+        },
+        "source_analysis_ids": [
+          "00000000-0000-4000-8000-000000000096"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000070",
+          "00000000-0000-4000-8000-000000000080"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": true,
+            "coverage": {
+              "ratio": 1.0,
+              "pages": 3
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000081",
+            "site_url_id": "00000000-0000-4000-8000-000000000091",
+            "normalized_url": "https://s.test/1",
+            "source_analysis_a_id": "00000000-0000-4000-8000-000000000095",
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "critical-regression",
+            "field": "noindex",
+            "after_value": null
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "site_change_critical_regression",
+        "target_key": "site-change:00000000-0000-4000-8000-000000000091:noindex",
+        "target_prompt_id": null,
+        "target_url": "https://s.test/1",
+        "target_theme": null,
+        "evidence": {
+          "change_snapshot_id": "00000000-0000-4000-8000-000000000070",
+          "change_observation_id": "00000000-0000-4000-8000-000000000081",
+          "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+          "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+          "field": "noindex",
+          "before_value": {
+            "v": 2.0,
+            "n": 1
+          },
+          "after_value": null,
+          "change_class": "critical-regression",
+          "complete_pair": true,
+          "coverage": {
+            "ratio": 1.0,
+            "pages": 3
+          }
+        },
+        "source_analysis_ids": [
+          "00000000-0000-4000-8000-000000000095",
+          "00000000-0000-4000-8000-000000000096"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000070",
+          "00000000-0000-4000-8000-000000000081"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": true,
+            "coverage": {
+              "ratio": 1.0,
+              "pages": 3
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000082",
+            "site_url_id": "00000000-0000-4000-8000-000000000092",
+            "normalized_url": "https://s.test/2",
+            "source_analysis_a_id": null,
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "content",
+            "field": "content_change",
+            "after_value": {
+              "comparison_coverage": "complete",
+              "metadata_consistency": "inconsistent",
+              "content_change_classification": "unchanged",
+              "score": 1.0
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "site_change_cosmetic_refresh",
+        "target_key": "site-change:00000000-0000-4000-8000-000000000092:content_change",
+        "target_prompt_id": null,
+        "target_url": "https://s.test/2",
+        "target_theme": null,
+        "evidence": {
+          "change_snapshot_id": "00000000-0000-4000-8000-000000000070",
+          "change_observation_id": "00000000-0000-4000-8000-000000000082",
+          "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+          "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+          "field": "content_change",
+          "before_value": {
+            "v": 2.0,
+            "n": 1
+          },
+          "after_value": {
+            "comparison_coverage": "complete",
+            "metadata_consistency": "inconsistent",
+            "content_change_classification": "unchanged",
+            "score": 1.0
+          },
+          "change_class": "content",
+          "complete_pair": true,
+          "coverage": {
+            "ratio": 1.0,
+            "pages": 3
+          }
+        },
+        "source_analysis_ids": [
+          "00000000-0000-4000-8000-000000000096"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000070",
+          "00000000-0000-4000-8000-000000000082"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": true,
+            "coverage": {
+              "ratio": 1.0,
+              "pages": 3
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000083",
+            "site_url_id": "00000000-0000-4000-8000-000000000093",
+            "normalized_url": "https://s.test/3",
+            "source_analysis_a_id": "00000000-0000-4000-8000-000000000095",
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "content",
+            "field": "content_change",
+            "after_value": {
+              "comparison_coverage": "complete",
+              "metadata_consistency": "inconsistent",
+              "content_change_classification": "substantial"
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "site_change_metadata_inconsistency",
+        "target_key": "site-change:00000000-0000-4000-8000-000000000093:content_change",
+        "target_prompt_id": null,
+        "target_url": "https://s.test/3",
+        "target_theme": null,
+        "evidence": {
+          "change_snapshot_id": "00000000-0000-4000-8000-000000000070",
+          "change_observation_id": "00000000-0000-4000-8000-000000000083",
+          "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+          "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+          "field": "content_change",
+          "before_value": {
+            "v": 2.0,
+            "n": 1
+          },
+          "after_value": {
+            "comparison_coverage": "complete",
+            "metadata_consistency": "inconsistent",
+            "content_change_classification": "substantial"
+          },
+          "change_class": "content",
+          "complete_pair": true,
+          "coverage": {
+            "ratio": 1.0,
+            "pages": 3
+          }
+        },
+        "source_analysis_ids": [
+          "00000000-0000-4000-8000-000000000095",
+          "00000000-0000-4000-8000-000000000096"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000070",
+          "00000000-0000-4000-8000-000000000083"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": true,
+            "coverage": {
+              "ratio": 1.0,
+              "pages": 3
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000084",
+            "site_url_id": "00000000-0000-4000-8000-000000000094",
+            "normalized_url": "https://s.test/4",
+            "source_analysis_a_id": null,
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "content",
+            "field": "content_change",
+            "after_value": {
+              "comparison_coverage": "partial",
+              "metadata_consistency": "inconsistent"
+            }
+          }
+        ]
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": true,
+            "coverage": {
+              "ratio": 1.0,
+              "pages": 3
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000085",
+            "site_url_id": "00000000-0000-4000-8000-000000000095",
+            "normalized_url": "https://s.test/5",
+            "source_analysis_a_id": "00000000-0000-4000-8000-000000000095",
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "content",
+            "field": "content_change",
+            "after_value": [
+              "not",
+              "a",
+              "dict"
+            ]
+          }
+        ]
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": "00000000-0000-4000-8000-000000000071",
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": true,
+            "coverage": {
+              "ratio": 1.0,
+              "pages": 3
+            }
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000086",
+            "site_url_id": "00000000-0000-4000-8000-000000000096",
+            "normalized_url": "https://s.test/6",
+            "source_analysis_a_id": null,
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "other",
+            "field": "title",
+            "after_value": {
+              "t": 1
+            }
+          }
+        ]
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": null,
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": false,
+            "coverage": {}
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000080",
+            "site_url_id": "00000000-0000-4000-8000-000000000090",
+            "normalized_url": "https://s.test/0",
+            "source_analysis_a_id": null,
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "potential-regression",
+            "field": "title",
+            "after_value": {
+              "t": "x"
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "site_change_potential_regression",
+        "target_key": "site-change:00000000-0000-4000-8000-000000000090:title",
+        "target_prompt_id": null,
+        "target_url": "https://s.test/0",
+        "target_theme": null,
+        "evidence": {
+          "change_snapshot_id": "00000000-0000-4000-8000-000000000070",
+          "change_observation_id": "00000000-0000-4000-8000-000000000080",
+          "crawl_a_id": "None",
+          "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+          "field": "title",
+          "before_value": {
+            "v": 2.0,
+            "n": 1
+          },
+          "after_value": {
+            "t": "x"
+          },
+          "change_class": "potential-regression",
+          "complete_pair": false,
+          "coverage": {}
+        },
+        "source_analysis_ids": [
+          "00000000-0000-4000-8000-000000000096"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000070",
+          "00000000-0000-4000-8000-000000000080"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": null,
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": false,
+            "coverage": {}
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000081",
+            "site_url_id": "00000000-0000-4000-8000-000000000091",
+            "normalized_url": "https://s.test/1",
+            "source_analysis_a_id": "00000000-0000-4000-8000-000000000095",
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "critical-regression",
+            "field": "noindex",
+            "after_value": null
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "site_change_critical_regression",
+        "target_key": "site-change:00000000-0000-4000-8000-000000000091:noindex",
+        "target_prompt_id": null,
+        "target_url": "https://s.test/1",
+        "target_theme": null,
+        "evidence": {
+          "change_snapshot_id": "00000000-0000-4000-8000-000000000070",
+          "change_observation_id": "00000000-0000-4000-8000-000000000081",
+          "crawl_a_id": "None",
+          "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+          "field": "noindex",
+          "before_value": {
+            "v": 2.0,
+            "n": 1
+          },
+          "after_value": null,
+          "change_class": "critical-regression",
+          "complete_pair": false,
+          "coverage": {}
+        },
+        "source_analysis_ids": [
+          "00000000-0000-4000-8000-000000000095",
+          "00000000-0000-4000-8000-000000000096"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000070",
+          "00000000-0000-4000-8000-000000000081"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": null,
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": false,
+            "coverage": {}
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000082",
+            "site_url_id": "00000000-0000-4000-8000-000000000092",
+            "normalized_url": "https://s.test/2",
+            "source_analysis_a_id": null,
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "content",
+            "field": "content_change",
+            "after_value": {
+              "comparison_coverage": "complete",
+              "metadata_consistency": "inconsistent",
+              "content_change_classification": "unchanged",
+              "score": 1.0
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "site_change_cosmetic_refresh",
+        "target_key": "site-change:00000000-0000-4000-8000-000000000092:content_change",
+        "target_prompt_id": null,
+        "target_url": "https://s.test/2",
+        "target_theme": null,
+        "evidence": {
+          "change_snapshot_id": "00000000-0000-4000-8000-000000000070",
+          "change_observation_id": "00000000-0000-4000-8000-000000000082",
+          "crawl_a_id": "None",
+          "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+          "field": "content_change",
+          "before_value": {
+            "v": 2.0,
+            "n": 1
+          },
+          "after_value": {
+            "comparison_coverage": "complete",
+            "metadata_consistency": "inconsistent",
+            "content_change_classification": "unchanged",
+            "score": 1.0
+          },
+          "change_class": "content",
+          "complete_pair": false,
+          "coverage": {}
+        },
+        "source_analysis_ids": [
+          "00000000-0000-4000-8000-000000000096"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000070",
+          "00000000-0000-4000-8000-000000000082"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": null,
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": false,
+            "coverage": {}
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000083",
+            "site_url_id": "00000000-0000-4000-8000-000000000093",
+            "normalized_url": "https://s.test/3",
+            "source_analysis_a_id": "00000000-0000-4000-8000-000000000095",
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "content",
+            "field": "content_change",
+            "after_value": {
+              "comparison_coverage": "complete",
+              "metadata_consistency": "inconsistent",
+              "content_change_classification": "substantial"
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "site_change_metadata_inconsistency",
+        "target_key": "site-change:00000000-0000-4000-8000-000000000093:content_change",
+        "target_prompt_id": null,
+        "target_url": "https://s.test/3",
+        "target_theme": null,
+        "evidence": {
+          "change_snapshot_id": "00000000-0000-4000-8000-000000000070",
+          "change_observation_id": "00000000-0000-4000-8000-000000000083",
+          "crawl_a_id": "None",
+          "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+          "field": "content_change",
+          "before_value": {
+            "v": 2.0,
+            "n": 1
+          },
+          "after_value": {
+            "comparison_coverage": "complete",
+            "metadata_consistency": "inconsistent",
+            "content_change_classification": "substantial"
+          },
+          "change_class": "content",
+          "complete_pair": false,
+          "coverage": {}
+        },
+        "source_analysis_ids": [
+          "00000000-0000-4000-8000-000000000095",
+          "00000000-0000-4000-8000-000000000096"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000070",
+          "00000000-0000-4000-8000-000000000083"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": null,
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": false,
+            "coverage": {}
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000084",
+            "site_url_id": "00000000-0000-4000-8000-000000000094",
+            "normalized_url": "https://s.test/4",
+            "source_analysis_a_id": null,
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "content",
+            "field": "content_change",
+            "after_value": {
+              "comparison_coverage": "partial",
+              "metadata_consistency": "inconsistent"
+            }
+          }
+        ]
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": null,
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": false,
+            "coverage": {}
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000085",
+            "site_url_id": "00000000-0000-4000-8000-000000000095",
+            "normalized_url": "https://s.test/5",
+            "source_analysis_a_id": "00000000-0000-4000-8000-000000000095",
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "content",
+            "field": "content_change",
+            "after_value": [
+              "not",
+              "a",
+              "dict"
+            ]
+          }
+        ]
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "op": "change",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000070",
+            "crawl_a_id": null,
+            "crawl_b_id": "00000000-0000-4000-8000-000000000072",
+            "complete_pair": false,
+            "coverage": {}
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000086",
+            "site_url_id": "00000000-0000-4000-8000-000000000096",
+            "normalized_url": "https://s.test/6",
+            "source_analysis_a_id": null,
+            "source_analysis_b_id": "00000000-0000-4000-8000-000000000096",
+            "before_value": {
+              "v": 2.0,
+              "n": 1
+            },
+            "change_class": "other",
+            "field": "title",
+            "after_value": {
+              "t": 1
+            }
+          }
+        ]
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "op": "demand",
+        "args": [
+          "00000000-0000-4000-8000-000000000099",
+          {
+            "id": "00000000-0000-4000-8000-000000000100",
+            "signal_type": "declining_query",
+            "identity_hash": "h0",
+            "priority_score": 50.0,
+            "metrics": {
+              "clicks": 3,
+              "ctr": 0.5,
+              "position": 4.0
+            },
+            "coverage": null,
+            "limitations": null,
+            "evidence": {
+              "target_kind": "page",
+              "target": "https://p.test/a",
+              "resolved_page_url": ""
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "declining_query",
+        "target_key": "demand:h0",
+        "target_prompt_id": null,
+        "target_url": "https://p.test/a",
+        "target_theme": null,
+        "evidence": {
+          "demand_snapshot_id": "00000000-0000-4000-8000-000000000099",
+          "demand_signal_id": "00000000-0000-4000-8000-000000000100",
+          "signal_type": "declining_query",
+          "metrics": {
+            "clicks": 3,
+            "ctr": 0.5,
+            "position": 4.0
+          },
+          "coverage": {},
+          "limitations": [],
+          "query_relevance": null
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [],
+        "value_factor": 0.5,
+        "gap_factor": 2.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "demand",
+        "args": [
+          "00000000-0000-4000-8000-000000000099",
+          {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "signal_type": "emerging_query",
+            "identity_hash": "h1",
+            "priority_score": 250.0,
+            "metrics": {
+              "clicks": 3,
+              "ctr": 0.5,
+              "position": 4.0
+            },
+            "coverage": {
+              "days": 28.0
+            },
+            "limitations": [
+              "x"
+            ],
+            "evidence": {
+              "target_kind": "query",
+              "target": "best shoes",
+              "resolved_page_url": "https://p.test/r",
+              "query_relevance": {
+                "score": 1.0,
+                "state": "available"
+              },
+              "source_metric_row_ids": [
+                "m1",
+                "m2"
+              ]
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "emerging_query",
+        "target_key": "demand:h1",
+        "target_prompt_id": null,
+        "target_url": "https://p.test/r",
+        "target_theme": "best shoes",
+        "evidence": {
+          "demand_snapshot_id": "00000000-0000-4000-8000-000000000099",
+          "demand_signal_id": "00000000-0000-4000-8000-000000000101",
+          "signal_type": "emerging_query",
+          "metrics": {
+            "clicks": 3,
+            "ctr": 0.5,
+            "position": 4.0
+          },
+          "coverage": {
+            "days": 28.0
+          },
+          "limitations": [
+            "x"
+          ],
+          "query_relevance": {
+            "score": 1.0,
+            "state": "available"
+          }
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "m1",
+          "m2"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 2.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "demand",
+        "args": [
+          "00000000-0000-4000-8000-000000000099",
+          {
+            "id": "00000000-0000-4000-8000-000000000102",
+            "signal_type": "high_impression_low_ctr",
+            "identity_hash": "h2",
+            "priority_score": null,
+            "metrics": {
+              "clicks": 3,
+              "ctr": 0.5,
+              "position": 4.0
+            },
+            "coverage": null,
+            "limitations": [
+              "x"
+            ],
+            "evidence": {
+              "target_kind": "query",
+              "target": "best shoes",
+              "resolved_page_url": ""
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "search_demand_content_gap",
+        "target_key": "demand:h2",
+        "target_prompt_id": null,
+        "target_url": null,
+        "target_theme": "best shoes",
+        "evidence": {
+          "demand_snapshot_id": "00000000-0000-4000-8000-000000000099",
+          "demand_signal_id": "00000000-0000-4000-8000-000000000102",
+          "signal_type": "high_impression_low_ctr",
+          "metrics": {
+            "clicks": 3,
+            "ctr": 0.5,
+            "position": 4.0
+          },
+          "coverage": {},
+          "limitations": [
+            "x"
+          ],
+          "query_relevance": null
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [],
+        "value_factor": 0.01,
+        "gap_factor": 2.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "demand",
+        "args": [
+          "00000000-0000-4000-8000-000000000099",
+          {
+            "id": "00000000-0000-4000-8000-000000000103",
+            "signal_type": "property_relative_ctr_gap",
+            "identity_hash": "h3",
+            "priority_score": 0.5,
+            "metrics": {
+              "clicks": 3,
+              "ctr": 0.5,
+              "position": 4.0
+            },
+            "coverage": {
+              "days": 28.0
+            },
+            "limitations": [
+              "x"
+            ],
+            "evidence": {
+              "target_kind": "theme",
+              "target": "t",
+              "resolved_page_url": "",
+              "query_relevance": {
+                "score": 1.0,
+                "state": "available"
+              },
+              "source_metric_row_ids": [
+                "m1",
+                "m2"
+              ]
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "property_relative_ctr_gap",
+        "target_key": "demand:h3",
+        "target_prompt_id": null,
+        "target_url": null,
+        "target_theme": null,
+        "evidence": {
+          "demand_snapshot_id": "00000000-0000-4000-8000-000000000099",
+          "demand_signal_id": "00000000-0000-4000-8000-000000000103",
+          "signal_type": "property_relative_ctr_gap",
+          "metrics": {
+            "clicks": 3,
+            "ctr": 0.5,
+            "position": 4.0
+          },
+          "coverage": {
+            "days": 28.0
+          },
+          "limitations": [
+            "x"
+          ],
+          "query_relevance": {
+            "score": 1.0,
+            "state": "available"
+          }
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "m1",
+          "m2"
+        ],
+        "value_factor": 0.01,
+        "gap_factor": 2.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "demand",
+        "args": [
+          "00000000-0000-4000-8000-000000000099",
+          {
+            "id": "00000000-0000-4000-8000-000000000104",
+            "signal_type": "query_cannibalization",
+            "identity_hash": "h4",
+            "priority_score": 10.0,
+            "metrics": {
+              "clicks": 3,
+              "ctr": 0.5,
+              "position": 4.0
+            },
+            "coverage": null,
+            "limitations": [
+              "x"
+            ],
+            "evidence": {
+              "target_kind": "page",
+              "target": "",
+              "resolved_page_url": ""
+            }
+          }
+        ]
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "op": "demand",
+        "args": [
+          "00000000-0000-4000-8000-000000000099",
+          {
+            "id": "00000000-0000-4000-8000-000000000105",
+            "signal_type": "query_page_relevance",
+            "identity_hash": "h5",
+            "priority_score": 100.0,
+            "metrics": {
+              "clicks": 3,
+              "ctr": 0.5,
+              "position": 4.0
+            },
+            "coverage": {
+              "days": 28.0
+            },
+            "limitations": [
+              "x"
+            ],
+            "evidence": {
+              "target_kind": "query",
+              "target": 5,
+              "resolved_page_url": "",
+              "query_relevance": {
+                "score": 1.0,
+                "state": "available"
+              },
+              "source_metric_row_ids": [
+                "m1",
+                "m2"
+              ]
+            }
+          }
+        ]
+      },
+      "output": {
+        "rule_id": "property_relative_ctr_gap",
+        "target_key": "demand:h5",
+        "target_prompt_id": null,
+        "target_url": null,
+        "target_theme": "5",
+        "evidence": {
+          "demand_snapshot_id": "00000000-0000-4000-8000-000000000099",
+          "demand_signal_id": "00000000-0000-4000-8000-000000000105",
+          "signal_type": "query_page_relevance",
+          "metrics": {
+            "clicks": 3,
+            "ctr": 0.5,
+            "position": 4.0
+          },
+          "coverage": {
+            "days": 28.0
+          },
+          "limitations": [
+            "x"
+          ],
+          "query_relevance": {
+            "score": 1.0,
+            "state": "available"
+          }
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "m1",
+          "m2"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 2.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "unmentioned",
+        "args": [
+          [
+            {
+              "id": "00000000-0000-4000-8000-000000000110",
+              "target_id": "00000000-0000-4000-8000-000000000111",
+              "target_kind": "product",
+              "product_visibility": 0
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000112",
+              "target_id": "00000000-0000-4000-8000-000000000113",
+              "target_kind": "product",
+              "product_visibility": 3
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000114",
+              "target_id": "00000000-0000-4000-8000-000000000115",
+              "target_kind": "category",
+              "product_visibility": 0
+            }
+          ],
+          "00000000-0000-4000-8000-000000000041"
+        ]
+      },
+      "output": [
+        {
+          "rule_id": "product_not_mentioned",
+          "target_key": "product:00000000-0000-4000-8000-000000000111",
+          "target_prompt_id": null,
+          "target_url": null,
+          "target_theme": null,
+          "evidence": {
+            "product_id": "00000000-0000-4000-8000-000000000111",
+            "product_visibility": 0,
+            "audit_id": "00000000-0000-4000-8000-000000000041"
+          },
+          "source_analysis_ids": [],
+          "source_issue_ids": [],
+          "source_metric_ids": [
+            "00000000-0000-4000-8000-000000000110"
+          ],
+          "value_factor": 1.0,
+          "gap_factor": 1.0,
+          "title_override": null,
+          "remediation_override": null
+        }
+      ]
+    },
+    {
+      "input": {
+        "op": "missing_fields",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000120",
+            "name": "Shoe",
+            "description": "",
+            "brand": null,
+            "price": null,
+            "currency": "USD"
+          },
+          [
+            "00000000-0000-4000-8000-000000000121",
+            "00000000-0000-4000-8000-000000000122"
+          ]
+        ]
+      },
+      "output": {
+        "rule_id": "catalog_fields_missing",
+        "target_key": "product:00000000-0000-4000-8000-000000000120",
+        "target_prompt_id": null,
+        "target_url": null,
+        "target_theme": null,
+        "evidence": {
+          "product_id": "00000000-0000-4000-8000-000000000120",
+          "product_name": "Shoe",
+          "missing_fields": [
+            "description",
+            "brand",
+            "price"
+          ]
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000121",
+          "00000000-0000-4000-8000-000000000122"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "missing_fields",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000123",
+            "name": "Full",
+            "description": "d",
+            "brand": "b",
+            "price": "10.00",
+            "currency": "USD"
+          },
+          [
+            "00000000-0000-4000-8000-000000000124"
+          ]
+        ]
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "op": "missing_fields",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000125",
+            "name": null,
+            "description": "d",
+            "brand": "b",
+            "price": "0",
+            "currency": ""
+          },
+          []
+        ]
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "op": "missing_fields",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000126",
+            "name": "",
+            "description": null,
+            "brand": "",
+            "price": null,
+            "currency": null
+          },
+          [
+            "00000000-0000-4000-8000-000000000127"
+          ]
+        ]
+      },
+      "output": {
+        "rule_id": "catalog_fields_missing",
+        "target_key": "product:00000000-0000-4000-8000-000000000126",
+        "target_prompt_id": null,
+        "target_url": null,
+        "target_theme": null,
+        "evidence": {
+          "product_id": "00000000-0000-4000-8000-000000000126",
+          "product_name": "",
+          "missing_fields": [
+            "name",
+            "description",
+            "brand",
+            "price",
+            "currency"
+          ]
+        },
+        "source_analysis_ids": [],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "00000000-0000-4000-8000-000000000127"
+        ],
+        "value_factor": 1.0,
+        "gap_factor": 1.0,
+        "title_override": null,
+        "remediation_override": null
+      }
+    },
+    {
+      "input": {
+        "op": "families",
+        "args": [
+          {
+            "audit": false,
+            "demand": false,
+            "crawl": false
+          }
+        ]
+      },
+      "output": []
+    },
+    {
+      "input": {
+        "op": "families",
+        "args": [
+          {
+            "audit": false,
+            "demand": false,
+            "crawl": true
+          }
+        ]
+      },
+      "output": [
+        "link_graph",
+        "site_changes",
+        "site_health"
+      ]
+    },
+    {
+      "input": {
+        "op": "families",
+        "args": [
+          {
+            "audit": false,
+            "demand": true,
+            "crawl": false
+          }
+        ]
+      },
+      "output": [
+        "search_console"
+      ]
+    },
+    {
+      "input": {
+        "op": "families",
+        "args": [
+          {
+            "audit": false,
+            "demand": true,
+            "crawl": true
+          }
+        ]
+      },
+      "output": [
+        "link_graph",
+        "search_console",
+        "site_changes",
+        "site_health"
+      ]
+    },
+    {
+      "input": {
+        "op": "families",
+        "args": [
+          {
+            "audit": true,
+            "demand": false,
+            "crawl": false
+          }
+        ]
+      },
+      "output": [
+        "ai_visibility",
+        "commerce",
+        "sources"
+      ]
+    },
+    {
+      "input": {
+        "op": "families",
+        "args": [
+          {
+            "audit": true,
+            "demand": false,
+            "crawl": true
+          }
+        ]
+      },
+      "output": [
+        "ai_visibility",
+        "commerce",
+        "link_graph",
+        "site_changes",
+        "site_health",
+        "sources"
+      ]
+    },
+    {
+      "input": {
+        "op": "families",
+        "args": [
+          {
+            "audit": true,
+            "demand": true,
+            "crawl": false
+          }
+        ]
+      },
+      "output": [
+        "ai_visibility",
+        "commerce",
+        "search_console",
+        "sources"
+      ]
+    },
+    {
+      "input": {
+        "op": "families",
+        "args": [
+          {
+            "audit": true,
+            "demand": true,
+            "crawl": true
+          }
+        ]
+      },
+      "output": [
+        "ai_visibility",
+        "commerce",
+        "link_graph",
+        "search_console",
+        "site_changes",
+        "site_health",
+        "sources"
+      ]
+    },
+    {
+      "input": {
+        "op": "member",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000130",
+            "rule_id": "brand_absent_high_value_prompt",
+            "target_key": "t:0",
+            "target_url": null,
+            "target_prompt_id": null,
+            "target_theme": "th",
+            "evidence": {
+              "prompt_text": "P"
+            },
+            "title": "T",
+            "priority_score": 30.0,
+            "source_analysis_ids": [
+              "a"
+            ],
+            "source_issue_ids": null,
+            "source_metric_ids": [
+              "m"
+            ]
+          }
+        ]
+      },
+      "output": {
+        "opportunity_id": "00000000-0000-4000-8000-000000000130",
+        "rule_id": "brand_absent_high_value_prompt",
+        "target_key": "t:0",
+        "target_url": null,
+        "target_prompt_id": null,
+        "target_theme": "th",
+        "label_hint": "P",
+        "title": "T",
+        "priority_score": 30.0,
+        "source_analysis_ids": [
+          "a"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "m"
+        ]
+      }
+    },
+    {
+      "input": {
+        "op": "member",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000131",
+            "rule_id": "catalog_fields_missing",
+            "target_key": "t:1",
+            "target_url": null,
+            "target_prompt_id": null,
+            "target_theme": "th",
+            "evidence": {
+              "prompt": "Q"
+            },
+            "title": "",
+            "priority_score": null,
+            "source_analysis_ids": [
+              "a"
+            ],
+            "source_issue_ids": null,
+            "source_metric_ids": [
+              "m"
+            ]
+          }
+        ]
+      },
+      "output": {
+        "opportunity_id": "00000000-0000-4000-8000-000000000131",
+        "rule_id": "catalog_fields_missing",
+        "target_key": "t:1",
+        "target_url": null,
+        "target_prompt_id": null,
+        "target_theme": "th",
+        "label_hint": "Q",
+        "title": "catalog_fields_missing",
+        "priority_score": 0.0,
+        "source_analysis_ids": [
+          "a"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "m"
+        ]
+      }
+    },
+    {
+      "input": {
+        "op": "member",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000132",
+            "rule_id": "citability_trust_incomplete",
+            "target_key": "t:2",
+            "target_url": null,
+            "target_prompt_id": null,
+            "target_theme": "th",
+            "evidence": {
+              "prompt_text": 5,
+              "prompt": "Q"
+            },
+            "title": null,
+            "priority_score": 0.0,
+            "source_analysis_ids": [
+              "a"
+            ],
+            "source_issue_ids": null,
+            "source_metric_ids": [
+              "m"
+            ]
+          }
+        ]
+      },
+      "output": {
+        "opportunity_id": "00000000-0000-4000-8000-000000000132",
+        "rule_id": "citability_trust_incomplete",
+        "target_key": "t:2",
+        "target_url": null,
+        "target_prompt_id": null,
+        "target_theme": "th",
+        "label_hint": null,
+        "title": "citability_trust_incomplete",
+        "priority_score": 0.0,
+        "source_analysis_ids": [
+          "a"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "m"
+        ]
+      }
+    },
+    {
+      "input": {
+        "op": "member",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000133",
+            "rule_id": "cited_alternatives_without_uploaded_presence",
+            "target_key": "t:3",
+            "target_url": null,
+            "target_prompt_id": null,
+            "target_theme": "th",
+            "evidence": null,
+            "title": "X",
+            "priority_score": 12.5,
+            "source_analysis_ids": [
+              "a"
+            ],
+            "source_issue_ids": null,
+            "source_metric_ids": [
+              "m"
+            ]
+          }
+        ]
+      },
+      "output": {
+        "opportunity_id": "00000000-0000-4000-8000-000000000133",
+        "rule_id": "cited_alternatives_without_uploaded_presence",
+        "target_key": "t:3",
+        "target_url": null,
+        "target_prompt_id": null,
+        "target_theme": "th",
+        "label_hint": null,
+        "title": "X",
+        "priority_score": 12.5,
+        "source_analysis_ids": [
+          "a"
+        ],
+        "source_issue_ids": [],
+        "source_metric_ids": [
+          "m"
+        ]
+      }
+    },
+    {
+      "input": {
+        "op": "earned_page",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000310",
+            "url_hash": "uh",
+            "canonical_url": "https://pub.test/list",
+            "registrable_domain": "pub.test",
+            "page_format": "listicle",
+            "page_format_method": "url_pattern",
+            "inspection_state": "inspected",
+            "inspection_reason": null,
+            "source_class": "editorial_third_party",
+            "recurrence_count": 4,
+            "inspection_requested_at": null
+          },
+          [
+            {
+              "id": "00000000-0000-4000-8000-000000000300",
+              "source_page_id": "00000000-0000-4000-8000-000000000310",
+              "extracted_chars": 900,
+              "content_hash": "h2",
+              "page_facts": {
+                "title": "Best tools",
+                "headings": [
+                  "A",
+                  "B",
+                  3
+                ],
+                "outbound_domains": [
+                  "x.test"
+                ]
+              },
+              "evidence_passages": [
+                {
+                  "text": "  brand here "
+                },
+                {
+                  "text": ""
+                },
+                null,
+                {
+                  "text": "competitor"
+                }
+              ]
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000301",
+              "source_page_id": "00000000-0000-4000-8000-000000000310",
+              "extracted_chars": 800,
+              "content_hash": "h1",
+              "page_facts": {},
+              "evidence_passages": [
+                {
+                  "text": "old"
+                }
+              ]
+            }
+          ],
+          {
+            "00000000-0000-4000-8000-000000000300": [
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000300",
+                "entity_kind": "brand",
+                "entity_name": "Brand",
+                "presence": "present",
+                "match_method": "exact_alias",
+                "match_count": 2,
+                "roster_version": "roster-current",
+                "passage_refs": [
+                  0,
+                  1,
+                  9,
+                  true,
+                  -1
+                ]
+              },
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000300",
+                "entity_kind": "competitor",
+                "entity_name": "Acme",
+                "presence": "present",
+                "match_method": "exact_alias",
+                "match_count": 1,
+                "roster_version": "roster-current",
+                "passage_refs": [
+                  3
+                ]
+              },
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000300",
+                "entity_kind": "competitor",
+                "entity_name": "Zed",
+                "presence": "not_detected",
+                "match_method": "exact_alias",
+                "match_count": 1,
+                "roster_version": "roster-current",
+                "passage_refs": null
+              }
+            ],
+            "00000000-0000-4000-8000-000000000301": [
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000301",
+                "entity_kind": "brand",
+                "entity_name": "Brand",
+                "presence": "present",
+                "match_method": "exact_alias",
+                "match_count": 3,
+                "roster_version": "roster-current",
+                "passage_refs": [
+                  0
+                ]
+              },
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000301",
+                "entity_kind": "competitor",
+                "entity_name": "Acme",
+                "presence": "not_detected",
+                "match_method": "exact_alias",
+                "match_count": 1,
+                "roster_version": "roster-current",
+                "passage_refs": []
+              }
+            ]
+          },
+          {
+            "audit_id": "00000000-0000-4000-8000-000000000041",
+            "analyses": [
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000200",
+                "prompt_index": 0,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000201",
+                "prompt_index": 1,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Zed",
+                  "Acme"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000202",
+                "prompt_index": 2,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000203",
+                "prompt_index": 0,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Zed",
+                  "Acme"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000204",
+                "prompt_index": 1,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              }
+            ],
+            "prompt_snapshots": [
+              {
+                "prompt_index": 0,
+                "prompt_id": null,
+                "text": "p0",
+                "theme": "theme0",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              },
+              {
+                "prompt_index": 1,
+                "prompt_id": null,
+                "text": "p1",
+                "theme": "",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              },
+              {
+                "prompt_index": 2,
+                "prompt_id": null,
+                "text": "p2",
+                "theme": "theme2",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              }
+            ],
+            "owned_domains": [
+              "brand.test"
+            ]
+          },
+          [
+            "00000000-0000-4000-8000-000000000200",
+            "00000000-0000-4000-8000-000000000201",
+            "00000000-0000-4000-8000-000000000203"
+          ],
+          "roster-current"
+        ]
+      },
+      "output": {
+        "url_hash": "uh",
+        "canonical_url": "https://pub.test/list",
+        "registrable_domain": "pub.test",
+        "page_format": "listicle",
+        "page_format_method": "url_pattern",
+        "inspection_state": "inspected",
+        "inspection_reason": null,
+        "snapshot_id": "00000000-0000-4000-8000-000000000300",
+        "extracted_chars": 900,
+        "sufficient_coverage": true,
+        "title": "Best tools",
+        "headings": [
+          "A",
+          "B",
+          "3"
+        ],
+        "outbound_domains": [
+          "x.test"
+        ],
+        "content_hash": "h2",
+        "entities": [
+          {
+            "entity_kind": "brand",
+            "entity_name": "Brand",
+            "presence": "present",
+            "match_method": "exact_alias",
+            "match_count": 2,
+            "passages": [
+              "brand here"
+            ]
+          },
+          {
+            "entity_kind": "competitor",
+            "entity_name": "Acme",
+            "presence": "present",
+            "match_method": "exact_alias",
+            "match_count": 1,
+            "passages": [
+              "competitor"
+            ]
+          },
+          {
+            "entity_kind": "competitor",
+            "entity_name": "Zed",
+            "presence": "not_detected",
+            "match_method": "exact_alias",
+            "match_count": 1,
+            "passages": []
+          }
+        ],
+        "prior": {
+          "snapshot_id": "00000000-0000-4000-8000-000000000301",
+          "brand_present": true,
+          "brand_match_count": 3,
+          "present_competitors": [],
+          "content_hash": "h1"
+        },
+        "roster_current": true,
+        "source_class": "editorial_third_party",
+        "recurrence_count": 4,
+        "answer_count": 3,
+        "prompt_indices": [
+          0,
+          1
+        ],
+        "themes": [
+          "theme0"
+        ],
+        "analysis_ids": [
+          "00000000-0000-4000-8000-000000000200",
+          "00000000-0000-4000-8000-000000000201",
+          "00000000-0000-4000-8000-000000000203"
+        ],
+        "answer_competitors": [
+          "Acme",
+          "Beta",
+          "Zed"
+        ],
+        "requested": false
+      }
+    },
+    {
+      "input": {
+        "op": "earned_page",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000310",
+            "url_hash": "uh",
+            "canonical_url": "https://pub.test/list",
+            "registrable_domain": "pub.test",
+            "page_format": "listicle",
+            "page_format_method": "url_pattern",
+            "inspection_state": "inspected",
+            "inspection_reason": null,
+            "source_class": "editorial_third_party",
+            "recurrence_count": 4,
+            "inspection_requested_at": null
+          },
+          [
+            {
+              "id": "00000000-0000-4000-8000-000000000300",
+              "source_page_id": "00000000-0000-4000-8000-000000000310",
+              "extracted_chars": 900,
+              "content_hash": "h2",
+              "page_facts": {
+                "title": "Best tools",
+                "headings": [
+                  "A",
+                  "B",
+                  3
+                ],
+                "outbound_domains": [
+                  "x.test"
+                ]
+              },
+              "evidence_passages": [
+                {
+                  "text": "  brand here "
+                },
+                {
+                  "text": ""
+                },
+                null,
+                {
+                  "text": "competitor"
+                }
+              ]
+            }
+          ],
+          {
+            "00000000-0000-4000-8000-000000000300": [
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000300",
+                "entity_kind": "brand",
+                "entity_name": "Brand",
+                "presence": "present",
+                "match_method": "exact_alias",
+                "match_count": 2,
+                "roster_version": "roster-current",
+                "passage_refs": [
+                  0,
+                  1,
+                  9,
+                  true,
+                  -1
+                ]
+              },
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000300",
+                "entity_kind": "competitor",
+                "entity_name": "Acme",
+                "presence": "present",
+                "match_method": "exact_alias",
+                "match_count": 1,
+                "roster_version": "roster-current",
+                "passage_refs": [
+                  3
+                ]
+              },
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000300",
+                "entity_kind": "competitor",
+                "entity_name": "Zed",
+                "presence": "not_detected",
+                "match_method": "exact_alias",
+                "match_count": 1,
+                "roster_version": "roster-current",
+                "passage_refs": null
+              }
+            ],
+            "00000000-0000-4000-8000-000000000301": [
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000301",
+                "entity_kind": "brand",
+                "entity_name": "Brand",
+                "presence": "present",
+                "match_method": "exact_alias",
+                "match_count": 3,
+                "roster_version": "roster-current",
+                "passage_refs": [
+                  0
+                ]
+              },
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000301",
+                "entity_kind": "competitor",
+                "entity_name": "Acme",
+                "presence": "not_detected",
+                "match_method": "exact_alias",
+                "match_count": 1,
+                "roster_version": "roster-current",
+                "passage_refs": []
+              }
+            ]
+          },
+          {
+            "audit_id": "00000000-0000-4000-8000-000000000041",
+            "analyses": [
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000200",
+                "prompt_index": 0,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000201",
+                "prompt_index": 1,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Zed",
+                  "Acme"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000202",
+                "prompt_index": 2,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000203",
+                "prompt_index": 0,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Zed",
+                  "Acme"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000204",
+                "prompt_index": 1,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              }
+            ],
+            "prompt_snapshots": [
+              {
+                "prompt_index": 0,
+                "prompt_id": null,
+                "text": "p0",
+                "theme": "theme0",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              },
+              {
+                "prompt_index": 1,
+                "prompt_id": null,
+                "text": "p1",
+                "theme": "",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              },
+              {
+                "prompt_index": 2,
+                "prompt_id": null,
+                "text": "p2",
+                "theme": "theme2",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              }
+            ],
+            "owned_domains": [
+              "brand.test"
+            ]
+          },
+          [
+            "00000000-0000-4000-8000-000000000204"
+          ],
+          "roster-current"
+        ]
+      },
+      "output": {
+        "url_hash": "uh",
+        "canonical_url": "https://pub.test/list",
+        "registrable_domain": "pub.test",
+        "page_format": "listicle",
+        "page_format_method": "url_pattern",
+        "inspection_state": "inspected",
+        "inspection_reason": null,
+        "snapshot_id": "00000000-0000-4000-8000-000000000300",
+        "extracted_chars": 900,
+        "sufficient_coverage": true,
+        "title": "Best tools",
+        "headings": [
+          "A",
+          "B",
+          "3"
+        ],
+        "outbound_domains": [
+          "x.test"
+        ],
+        "content_hash": "h2",
+        "entities": [
+          {
+            "entity_kind": "brand",
+            "entity_name": "Brand",
+            "presence": "present",
+            "match_method": "exact_alias",
+            "match_count": 2,
+            "passages": [
+              "brand here"
+            ]
+          },
+          {
+            "entity_kind": "competitor",
+            "entity_name": "Acme",
+            "presence": "present",
+            "match_method": "exact_alias",
+            "match_count": 1,
+            "passages": [
+              "competitor"
+            ]
+          },
+          {
+            "entity_kind": "competitor",
+            "entity_name": "Zed",
+            "presence": "not_detected",
+            "match_method": "exact_alias",
+            "match_count": 1,
+            "passages": []
+          }
+        ],
+        "prior": null,
+        "roster_current": true,
+        "source_class": "editorial_third_party",
+        "recurrence_count": 4,
+        "answer_count": 1,
+        "prompt_indices": [
+          1
+        ],
+        "themes": [],
+        "analysis_ids": [
+          "00000000-0000-4000-8000-000000000204"
+        ],
+        "answer_competitors": [
+          "Beta"
+        ],
+        "requested": false
+      }
+    },
+    {
+      "input": {
+        "op": "earned_page",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000310",
+            "url_hash": "uh",
+            "canonical_url": "https://pub.test/list",
+            "registrable_domain": "pub.test",
+            "page_format": "listicle",
+            "page_format_method": "url_pattern",
+            "inspection_state": "inspected",
+            "inspection_reason": null,
+            "source_class": "editorial_third_party",
+            "recurrence_count": 4,
+            "inspection_requested_at": null
+          },
+          [],
+          {},
+          {
+            "audit_id": "00000000-0000-4000-8000-000000000041",
+            "analyses": [
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000200",
+                "prompt_index": 0,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000201",
+                "prompt_index": 1,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Zed",
+                  "Acme"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000202",
+                "prompt_index": 2,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000203",
+                "prompt_index": 0,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Zed",
+                  "Acme"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000204",
+                "prompt_index": 1,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              }
+            ],
+            "prompt_snapshots": [
+              {
+                "prompt_index": 0,
+                "prompt_id": null,
+                "text": "p0",
+                "theme": "theme0",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              },
+              {
+                "prompt_index": 1,
+                "prompt_id": null,
+                "text": "p1",
+                "theme": "",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              },
+              {
+                "prompt_index": 2,
+                "prompt_id": null,
+                "text": "p2",
+                "theme": "theme2",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              }
+            ],
+            "owned_domains": [
+              "brand.test"
+            ]
+          },
+          [],
+          "roster-current"
+        ]
+      },
+      "output": {
+        "url_hash": "uh",
+        "canonical_url": "https://pub.test/list",
+        "registrable_domain": "pub.test",
+        "page_format": "listicle",
+        "page_format_method": "url_pattern",
+        "inspection_state": "inspected",
+        "inspection_reason": null,
+        "snapshot_id": null,
+        "extracted_chars": 0,
+        "sufficient_coverage": false,
+        "title": "",
+        "headings": [],
+        "outbound_domains": [],
+        "content_hash": null,
+        "entities": [],
+        "prior": null,
+        "roster_current": false,
+        "source_class": "editorial_third_party",
+        "recurrence_count": 4,
+        "answer_count": 0,
+        "prompt_indices": [],
+        "themes": [],
+        "analysis_ids": [],
+        "answer_competitors": [],
+        "requested": false
+      }
+    },
+    {
+      "input": {
+        "op": "earned_page",
+        "args": [
+          {
+            "id": "00000000-0000-4000-8000-000000000310",
+            "url_hash": "uh",
+            "canonical_url": "https://pub.test/list",
+            "registrable_domain": "pub.test",
+            "page_format": "listicle",
+            "page_format_method": "url_pattern",
+            "inspection_state": "queued",
+            "inspection_reason": null,
+            "source_class": "editorial_third_party",
+            "recurrence_count": 4,
+            "inspection_requested_at": "requested"
+          },
+          [
+            {
+              "id": "00000000-0000-4000-8000-000000000300",
+              "source_page_id": "00000000-0000-4000-8000-000000000310",
+              "extracted_chars": 900,
+              "content_hash": "h2",
+              "page_facts": {
+                "title": "Best tools",
+                "headings": [
+                  "A",
+                  "B",
+                  3
+                ],
+                "outbound_domains": [
+                  "x.test"
+                ]
+              },
+              "evidence_passages": [
+                {
+                  "text": "  brand here "
+                },
+                {
+                  "text": ""
+                },
+                null,
+                {
+                  "text": "competitor"
+                }
+              ]
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000301",
+              "source_page_id": "00000000-0000-4000-8000-000000000310",
+              "extracted_chars": 800,
+              "content_hash": "h1",
+              "page_facts": {},
+              "evidence_passages": [
+                {
+                  "text": "old"
+                }
+              ]
+            }
+          ],
+          {
+            "00000000-0000-4000-8000-000000000300": [
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000300",
+                "entity_kind": "brand",
+                "entity_name": "Brand",
+                "presence": "present",
+                "match_method": "exact_alias",
+                "match_count": 1,
+                "roster_version": "roster-old",
+                "passage_refs": [
+                  0
+                ]
+              }
+            ],
+            "00000000-0000-4000-8000-000000000301": [
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000301",
+                "entity_kind": "brand",
+                "entity_name": "Brand",
+                "presence": "present",
+                "match_method": "exact_alias",
+                "match_count": 3,
+                "roster_version": "roster-current",
+                "passage_refs": [
+                  0
+                ]
+              },
+              {
+                "snapshot_id": "00000000-0000-4000-8000-000000000301",
+                "entity_kind": "competitor",
+                "entity_name": "Acme",
+                "presence": "not_detected",
+                "match_method": "exact_alias",
+                "match_count": 1,
+                "roster_version": "roster-current",
+                "passage_refs": []
+              }
+            ]
+          },
+          {
+            "audit_id": "00000000-0000-4000-8000-000000000041",
+            "analyses": [
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000200",
+                "prompt_index": 0,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000201",
+                "prompt_index": 1,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Zed",
+                  "Acme"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000202",
+                "prompt_index": 2,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000203",
+                "prompt_index": 0,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Zed",
+                  "Acme"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              },
+              {
+                "analysis_id": "00000000-0000-4000-8000-000000000204",
+                "prompt_index": 1,
+                "logical_engine": "e",
+                "owned_citation_count": 0,
+                "brand_mentioned": false,
+                "competitor_names": [
+                  "Beta"
+                ],
+                "citations": [],
+                "artifact_id": null,
+                "entity_assessments": []
+              }
+            ],
+            "prompt_snapshots": [
+              {
+                "prompt_index": 0,
+                "prompt_id": null,
+                "text": "p0",
+                "theme": "theme0",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              },
+              {
+                "prompt_index": 1,
+                "prompt_id": null,
+                "text": "p1",
+                "theme": "",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              },
+              {
+                "prompt_index": 2,
+                "prompt_id": null,
+                "text": "p2",
+                "theme": "theme2",
+                "intent": "",
+                "buyer_stage": "",
+                "prompt_intent": "",
+                "snapshot_id": null
+              }
+            ],
+            "owned_domains": [
+              "brand.test"
+            ]
+          },
+          [
+            "00000000-0000-4000-8000-000000000202",
+            "00000000-0000-4000-8000-000000000999"
+          ],
+          "roster-current"
+        ]
+      },
+      "output": {
+        "url_hash": "uh",
+        "canonical_url": "https://pub.test/list",
+        "registrable_domain": "pub.test",
+        "page_format": "listicle",
+        "page_format_method": "url_pattern",
+        "inspection_state": "queued",
+        "inspection_reason": null,
+        "snapshot_id": "00000000-0000-4000-8000-000000000300",
+        "extracted_chars": 900,
+        "sufficient_coverage": false,
+        "title": "Best tools",
+        "headings": [
+          "A",
+          "B",
+          "3"
+        ],
+        "outbound_domains": [
+          "x.test"
+        ],
+        "content_hash": "h2",
+        "entities": [
+          {
+            "entity_kind": "brand",
+            "entity_name": "Brand",
+            "presence": "present",
+            "match_method": "exact_alias",
+            "match_count": 1,
+            "passages": [
+              "brand here"
+            ]
+          }
+        ],
+        "prior": {
+          "snapshot_id": "00000000-0000-4000-8000-000000000301",
+          "brand_present": true,
+          "brand_match_count": 3,
+          "present_competitors": [],
+          "content_hash": "h1"
+        },
+        "roster_current": false,
+        "source_class": "editorial_third_party",
+        "recurrence_count": 4,
+        "answer_count": 2,
+        "prompt_indices": [
+          2
+        ],
+        "themes": [
+          "theme2"
+        ],
+        "analysis_ids": [
+          "00000000-0000-4000-8000-000000000202"
+        ],
+        "answer_competitors": [
+          "Beta"
+        ],
+        "requested": true
+      }
+    }
+  ]
+}

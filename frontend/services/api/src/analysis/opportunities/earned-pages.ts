@@ -1,5 +1,5 @@
 import { policy } from '../../config.ts';
-import { pyCompare } from '../../python/text.ts';
+import { pyCompare, pyFloat } from '../../python/text.ts';
 import { rules } from './detectors.ts';
 import { brandOf, competitorsOf, earnedPageBrief } from './earned-page-brief.ts';
 import type { DetectorHit, EarnedPageEvidence, SourcePageEvidence } from './evidence.ts';
@@ -113,8 +113,8 @@ export function detectEarnedPageOpportunities(evidence: EarnedPageEvidence): Det
           evidence: {
             content_handoff: earnedPageBrief(rule, page, evidence, qualified, missing, extra),
             priority_factors: {
-              page_recurrence_factor: value,
-              page_competitor_presence_factor: gap,
+              page_recurrence_factor: pyFloat(value),
+              page_competitor_presence_factor: pyFloat(gap),
             },
           },
           source_analysis_ids: [...page.analysis_ids],

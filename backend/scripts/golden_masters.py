@@ -37,6 +37,7 @@ from scripts.golden_masters_demand import (
 from scripts.golden_masters_opportunities import (
     opportunity_comparisons,
     opportunity_detectors,
+    opportunity_sources,
 )
 from scripts.golden_masters_performance import performance_windows
 
@@ -187,6 +188,7 @@ def secret_strength() -> list[dict[str, Any]]:
 GOLDEN_MASTERS: dict[str, Callable[[], list[dict[str, Any]]]] = {
     "opportunity_detectors": opportunity_detectors,
     "opportunity_comparisons": opportunity_comparisons,
+    "opportunity_sources": opportunity_sources,
     "query_normalizations": query_normalizations,
     "canonical_pages": canonical_pages,
     "page_equivalence": page_equivalence,

@@ -1,8 +1,8 @@
 import { policy } from '../../config.ts';
 import { round } from '../../demand/projection.ts';
-import { pyCompare, pyStrip } from '../../python/text.ts';
-import { hostname, parseQsl, port, urlencode, urlsplit } from '../../python/urlparse.ts';
+import { pyCompare, pyFloat, pyStrip } from '../../python/text.ts';
 import { casefold } from '../../traffic/normalization.ts';
+import { normalizedUrlForCompare } from '../url-compare.ts';
 import { rules } from './detectors.ts';
 const p = policy.opportunity.actions;
 export type ActionMember = {
@@ -19,28 +19,7 @@ export type ActionMember = {
   source_issue_ids: string[];
   source_metric_ids: string[];
 };
-function normalizedUrl(raw: string): string {
-  const text = pyStrip(raw);
-  try {
-    const parts = urlsplit(text);
-    const host = hostname(parts);
-    const n = port(parts);
-    if (!parts.scheme || !host) return text.toLowerCase();
-    const defaultPort =
-      (parts.scheme === 'http' && n === 80) || (parts.scheme === 'https' && n === 443);
-    const authority = n !== null && !defaultPort ? `${host}:${n}` : host;
-    const path = parts.path.replace(/\/+$/u, '') || '/';
-    const query = urlencode(
-      parseQsl(parts.query).filter(
-        ([key]) => !policy.opportunity.tracking_query_params.includes(casefold(key)),
-      ),
-    );
-    return `${parts.scheme}://${authority}${path}${query ? `?${query}` : ''}`;
-  } catch {
-    return text.toLowerCase();
-  }
-}
-export const pageGroupKey = (url: string) => `page:${normalizedUrl(url)}`;
+export const pageGroupKey = (url: string) => `page:${normalizedUrlForCompare(url)}`;
 function target(
   key: string,
   kind: string,
@@ -127,7 +106,7 @@ function group(t: ReturnType<typeof targetFor>, members: ActionMember[], availab
         rule_id: m.rule_id,
         title: m.title,
         family: familyMap[m.rule_id],
-        priority_score: m.priority_score,
+        priority_score: pyFloat(m.priority_score),
         source_analysis_ids: [...m.source_analysis_ids],
         source_issue_ids: [...m.source_issue_ids],
         source_metric_ids: [...m.source_metric_ids],

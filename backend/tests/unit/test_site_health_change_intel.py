@@ -12,7 +12,6 @@ from app.core.config.site_health_contracts import (
     RULE_OUTCOME_PARTIAL,
     RULE_OUTCOME_SATISFIED,
 )
-from app.domain.opportunities.change_hits import _rule_id
 from app.domain.site_health.change_intel import (
     _comparison_state,
     _content_comparison_record,
@@ -287,29 +286,6 @@ def test_legacy_cap_equality_and_extractor_mismatch_are_insufficient() -> None:
     assert change.after_value["comparison_coverage"] == "unknown"
     assert change.after_value["coverage_reason"] == "extractor_incompatible"
     assert change.after_value["metadata_consistency"] == "unknown"
-
-
-def test_content_change_promotion_requires_complete_comparison_coverage() -> None:
-    incomplete = SimpleNamespace(
-        change_class="neutral",
-        field="content_change",
-        after_value={
-            "comparison_coverage": "unknown",
-            "metadata_consistency": "inconsistent",
-            "content_change_classification": "substantial_change",
-        },
-    )
-    complete = SimpleNamespace(
-        change_class="neutral",
-        field="content_change",
-        after_value={
-            **incomplete.after_value,
-            "comparison_coverage": "complete",
-        },
-    )
-
-    assert _rule_id(incomplete) is None
-    assert _rule_id(complete) == "site_change_metadata_inconsistency"
 
 
 def test_short_nonempty_content_produces_one_comparison_shingle() -> None:

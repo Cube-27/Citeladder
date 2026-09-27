@@ -11,10 +11,16 @@ both from subsequent observed evidence. It cannot establish causation.
 
 ## Evidence to action
 
-The [API](../backend/app/api/opportunities.py) translates authorized requests
-into the [domain owner](../backend/app/domain/opportunities/). Detectors consume
-persisted source snapshots; recomputation writes ranked Opportunities and
-immutable snapshots with rule/formula versions and exact source identities.
+The [TypeScript routes](../frontend/services/api/src/routes/opportunities.ts)
+serve the workspace-authorized catalog, detail, summary, history, manual order,
+exports and on-demand recompute. The
+[refresh](../frontend/services/api/src/opportunities/refresh.ts) is the one
+writer of Opportunities and snapshots: the TypeScript analytics worker claims
+`opportunity_refresh` tasks that Python sources enqueue through the
+[admission bridge](../backend/app/domain/opportunities/queue.py). Detectors
+consume persisted source snapshots; recomputation writes ranked Opportunities
+and immutable snapshots with rule/formula versions and exact source identities,
+under the project advisory lock Python prompt writes share.
 An ordinary list/detail read never refreshes a source or recomputes a ranking.
 
 Site Health owns acquisition and deterministic findings. Demand owns imported
@@ -55,13 +61,19 @@ There is no separate Opportunities screen.
 An [Action](../backend/app/domain/opportunities/actions.py) is the unit of work
 over this store: the live Opportunities that share one target (an owned, earned
 or planned page, a product or category, a Search Console query or a visibility
-prompt), plus any Agent work on that target. Recompute re-derives every Action
+prompt), plus any Agent work on that target. The refresh re-derives every Action
+([action sync](../frontend/services/api/src/opportunities/action-sync.ts))
 inside the same transaction and project lock as the snapshot it describes, so
 members, priority and diagnosis always match that snapshot. Grouping,
 convergence across evidence families, priority and the deterministic diagnosis
 (approach and recommended skill) are pure functions of the members under
 [Action policy](../backend/app/core/config/actions.py), stamped with their
 versions. A model does not score or diagnose an Action.
+
+`actions` has two writers across the stack boundary. The refresh derives
+evidence Actions and restamps every row's members; the Python Agent only inserts
+its own `agent`-origin row, and does nothing when the target key already exists.
+The refresh adopts an Agent row on the same key instead of opening a second one.
 
 An Action's identity and origin never change. When no live Opportunity targets
 it any more, the row keeps its identity with its evidence cleared. The Agent
@@ -188,6 +200,9 @@ ranking and verification policy;
 expected-change vocabulary, the check states and the recheck schedule.
 [Site Health](site-health.md), [Demand](integrations-traffic-analytics.md) and
 [Visibility](visibility-prompt.md) remain the source authorities.
+[Refresh PostgreSQL tests](../frontend/services/api/test/opportunity-refresh.test.ts)
+exercise Python enqueue → TypeScript claim → Python read, replay, concurrent
+claims and recomputes, supersession, the Agent handoff and non-member 404s.
 [Verification PostgreSQL tests](../frontend/services/api/test/opportunity-verification.test.ts)
 and [frozen Python goldens](../frontend/services/api/golden/frozen/opportunity_verification.json)
 exercise comparison, unavailable-state behavior, workspace isolation and the

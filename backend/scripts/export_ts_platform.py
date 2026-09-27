@@ -54,6 +54,7 @@ from app.core.config import (
 )
 from app.core.config import demand as demand_config
 from app.core.config import errors as error_config
+from app.core.config import opportunities as opportunities_config
 from app.core.config import workspaces as workspace_config
 from app.core.config.abuse import AbuseSettings
 from app.core.config.analysis import (
@@ -388,6 +389,7 @@ ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
     error_config,
     workspace_config,
     demand_config,
+    opportunities_config,
 )
 _ERROR_CODE_PREFIXES = ("CODE_", "ERROR_")
 

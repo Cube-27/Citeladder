@@ -13,9 +13,6 @@ from app.domain.opportunities.errors import OpportunityNotFoundError
 from app.models.project import Project
 
 _PROJECT_NOT_FOUND = "Project not found"
-_OPPORTUNITY_NOT_FOUND = "Opportunity not found"
-_AUDIT_NOT_FOUND = "Audit not found"
-_CRAWL_NOT_FOUND = "Crawl not found"
 _LIST_SCOPE = "opportunities"
 
 

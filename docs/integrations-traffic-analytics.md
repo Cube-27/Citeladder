@@ -131,8 +131,9 @@ missing terms caused the CTR result. The Search Demand evidence drawer renders
 the three measured coverage values and missing title/H1 terms, or the explicit
 unavailable reason when the page could not be inspected.
 
-`opportunities/demand_hits.py` alone maps actionable signals to Opportunity
-rules; branded and ambiguous cohorts cannot become actionable hits.
+The Opportunity refresh's
+[demand hits](../frontend/services/api/src/opportunities/refresh-hits.ts) alone
+map actionable signals to Opportunity rules; branded and ambiguous cohorts cannot become actionable hits.
 
 JourneyDefinition and reviewed conversion-journey mapping were proposed in older
 documentation but are not implemented persistence/API owners. Do not describe
