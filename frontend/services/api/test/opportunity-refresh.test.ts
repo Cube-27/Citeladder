@@ -457,7 +457,7 @@ describe('Opportunity routes', () => {
       expect([query, (await read(query)).status]).toEqual([query, 422]);
 
     const thin = byRule(await live(s), 'thin_content');
-    await python('dismiss', s.workspace_id, thin.action_id!, s.user_id);
+    await updateActionStatus(db, s.workspace_id, thin.action_id!, 'dismissed', s.user_id);
     expect((await read('status=dismissed')).body.items.map((item) => item.rule_id)).toEqual([
       'thin_content',
     ]);
