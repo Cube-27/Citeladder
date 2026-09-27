@@ -18,6 +18,7 @@ import app.api.prompts as prompts_api
 from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.jev import JevDecision
 from app.core.config.jev import jev_settings
+from app.domain.prompts.quality_calibration import load_reviewed_decisions
 from app.models.prompt_candidate import PromptCandidate
 from tests.component.prompt_generation_helpers import (
     FakeAgent,
@@ -351,6 +352,14 @@ async def test_the_gate_removes_strong_fails_and_keeps_text_free_outcomes(
         assert outcome.text == ""
         assert outcome.jev_decision["verdict"] in {"fail", "pass"}
     assert outcomes["gate_rejected"].jev_decision["verdict"] == "fail"
+    async with session_factory() as session:
+        reviewed = await load_reviewed_decisions(session)
+    mine = sorted(
+        r.disposition
+        for r in reviewed
+        if r.decision in [o.jev_decision for o in outcomes.values()]
+    )
+    assert mine == ["gate_rejected", "rejected"]
 
     # Past retention, the next write to the set purges outcome records.
     async with session_factory() as session:
