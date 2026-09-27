@@ -11,8 +11,6 @@ Committed artifacts:
 * ``services/api/golden/openapi/parity.json`` -- the OpenAPI fragment
   FastAPI publishes for a fixture family, which proves the TS exporter and
   fragment normalization against Pydantic's schemas.
-* ``services/api/src/generated/unicode-casefold.json`` -- where Python's
-  ``str.casefold`` departs from lowercasing, which JavaScript lacks.
 * ``packages/contracts/src/generated/error-codes.ts`` -- the machine-code
   union: every error code declared by the modules in ``ERROR_CODE_MODULES``.
 
@@ -33,7 +31,6 @@ import json
 import sys
 import types
 import typing
-import unicodedata
 from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
@@ -103,7 +100,6 @@ from scripts.openapi_fragments import family_fragment, parity_fragment
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
 SERVICE_ROOT = FRONTEND_ROOT / "services" / "api"
 CONFIG_PATH = SERVICE_ROOT / "src" / "generated" / "python-config.json"
-CASEFOLD_PATH = SERVICE_ROOT / "src" / "generated" / "unicode-casefold.json"
 GOLDEN_ROOT = SERVICE_ROOT / "golden"
 PARITY_PATH = GOLDEN_ROOT / "openapi" / "parity.json"
 FROZEN_FAMILIES_ROOT = GOLDEN_ROOT / "families"
@@ -286,38 +282,10 @@ def _render(payload: dict[str, Any]) -> str:
     return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
 
 
-def casefold_exceptions() -> dict[str, str]:
-    """Characters whose ``str.casefold`` differs from ``str.lower``.
-
-    JavaScript has no case folding, only lowercasing, so the TS service folds
-    a character through this table and lowercases every other one. Keyed by
-    code point (hex) so the file stays readable ASCII.
-    """
-    folds: dict[str, str] = {}
-    for code_point in range(sys.maxunicode + 1):
-        if 0xD800 <= code_point <= 0xDFFF:
-            continue
-        character = chr(code_point)
-        if character.casefold() != character.lower():
-            folds[f"{code_point:x}"] = character.casefold()
-    return folds
-
-
 def build_artifacts() -> dict[Path, str]:
     """Every artifact path mapped to its exact expected contents."""
     artifacts = {
         CONFIG_PATH: _render(build_config()),
-        # ASCII, so the table survives any editor or encoding it passes through.
-        CASEFOLD_PATH: json.dumps(
-            {
-                "generated_by": GENERATED_BY,
-                "unicode_version": unicodedata.unidata_version,
-                "folds": casefold_exceptions(),
-            },
-            indent=2,
-            ensure_ascii=True,
-        )
-        + "\n",
         ERROR_CODES_PATH: render_error_codes(),
         PARITY_PATH: _render({"generated_by": GENERATED_BY, **parity_fragment()}),
     }

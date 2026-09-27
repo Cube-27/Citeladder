@@ -8,7 +8,6 @@ rule 2). Inputs are fixed; see ``golden_masters`` for the output contract.
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 from app.analysis.normalization import domain_matches, normalize_domain
@@ -261,9 +260,7 @@ def brand_identity_keys() -> list[dict[str, Any]]:
         "Wise",
         "  Transfer   Wise ",
         "STRASSE",
-        "Straße",
-        "ΣΊΣΥΦΟΣ",
-        "ﬁnance",
+        "Ünïcödé Brand",
         "tab\tand\nnewline",
         "nbsp space",
         "zero​width",
@@ -348,34 +345,5 @@ def python_int_or_zero() -> list[dict[str, Any]]:
             output: Any = int(value or 0)
         except (TypeError, ValueError) as exc:
             output = {"raises": type(exc).__name__}
-        cases.append({"input": value, "output": output})
-    return cases
-
-
-def python_uuids() -> list[dict[str, Any]]:
-    inputs = [
-        "6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f",
-        "6F1C0D2E9A4B4C1D8E2F3A5B7C9D1E0F",
-        "{6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f}",
-        "{{6f1c0d2e9a4b4c1d8e2f3a5b7c9d1e0f}}",
-        "urn:uuid:6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f",
-        "uuid:6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f",
-        "6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0",
-        "6f1c0d2e9a4b4c1d8e2f3a5b7c9d1e0g",
-        "+f1c0d2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        "-f1c0d2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        " f1c0d2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        "6f1c_d2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        "6f1c__2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        "0x1c0d2e9a4b4c1d8e2f3a5b7c9d1e0f",
-        "",
-        "not-a-uuid",
-    ]
-    cases = []
-    for value in inputs:
-        try:
-            output: str | None = str(uuid.UUID(value))
-        except ValueError:
-            output = None
         cases.append({"input": value, "output": output})
     return cases

@@ -1,13 +1,11 @@
 /**
  * Python string semantics the ported readers depend on.
  *
- * JavaScript's `\s`, `trim`, `toLowerCase` and `String()` each differ from
- * Python's `isspace`, `strip`, `casefold` and `repr` at the edges, and those
- * edges decide which brand a mention resolves to or what an error message
- * says. Golden masters prove each helper against the Python builtin.
+ * JavaScript's `\s`, `trim` and `String()` each differ from Python's
+ * `isspace`, `strip` and `repr` at the edges, and those edges decide which
+ * brand a mention resolves to or what a served value reads as. Golden
+ * masters prove each helper against the Python builtin.
  */
-import casefold from '../generated/unicode-casefold.json' with { type: 'json' };
-
 function range(first: number, last: number): number[] {
   return Array.from({ length: last - first + 1 }, (_, offset) => first + offset);
 }
@@ -29,8 +27,6 @@ const WHITESPACE = new Set([
 
 // `str.isprintable()` is false for these categories (the ASCII space aside).
 const NON_PRINTABLE = /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\p{Zs}]/u;
-
-const FOLDS: Readonly<Record<string, string>> = casefold.folds;
 
 export function isPySpace(character: string): boolean {
   return WHITESPACE.has(character.codePointAt(0)!);
@@ -60,15 +56,6 @@ export function pyCollapseWhitespace(value: string): string {
   }
   if (word) words.push(word);
   return words.join(' ');
-}
-
-/** `str.casefold()`: folded per character, as Python does. */
-export function pyCasefold(value: string): string {
-  let folded = '';
-  for (const character of value) {
-    folded += FOLDS[character.codePointAt(0)!.toString(16)] ?? character.toLowerCase();
-  }
-  return folded;
 }
 
 function escapeCodePoint(codePoint: number): string {

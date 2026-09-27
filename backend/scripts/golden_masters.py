@@ -188,7 +188,6 @@ GOLDEN_MASTERS: dict[str, Callable[[], list[dict[str, Any]]]] = {
     "python_int_or_zero": analysis.python_int_or_zero,
     "python_str_or_empty": analysis.python_str_or_empty,
     "python_string_reprs": analysis.python_string_reprs,
-    "python_uuids": analysis.python_uuids,
     "retrieval_provenance": analysis.retrieval_provenance,
     "secret_strength": secret_strength,
     "session_tokens": session_tokens,

@@ -14,8 +14,8 @@ import type { AppEnv } from '../context.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError, notFound } from '../errors.ts';
-import { RequestValidationError } from '../http/params.ts';
-import { pydanticUuid, pythonUuid } from '../python/uuid.ts';
+import { RequestValidationError, UUID_MESSAGE } from '../http/params.ts';
+import { parseUuid } from '../http/uuid.ts';
 
 export type WorkspaceCapability = keyof typeof policy.workspaces.denial_messages;
 
@@ -85,13 +85,13 @@ export function workspaceMember(
   capability?: WorkspaceCapability,
 ): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    const parsed = pydanticUuid(c.req.param('workspace_id') ?? '');
-    if (!parsed.ok) {
+    const workspaceId = parseUuid(c.req.param('workspace_id') ?? '');
+    if (workspaceId === null) {
       throw new RequestValidationError([
-        { loc: ['workspace_id'], message: parsed.message, type: 'uuid_parsing' },
+        { loc: ['workspace_id'], message: UUID_MESSAGE, type: 'uuid_parsing' },
       ]);
     }
-    const workspace = await resolveWorkspaceMember(db, c.get('user').id, parsed.value);
+    const workspace = await resolveWorkspaceMember(db, c.get('user').id, workspaceId);
     if (capability !== undefined) workspace.require(capability);
     c.set('workspace', workspace);
     await next();
@@ -124,7 +124,7 @@ export function activeWorkspace(db: Database): MiddlewareHandler<AppEnv> {
     const selected = c.req.header('x-workspace-id');
     let workspace: WorkspaceContext;
     if (selected) {
-      const workspaceId = pythonUuid(selected);
+      const workspaceId = parseUuid(selected);
       if (workspaceId === null) throw new ApiError(400, 'Invalid X-Workspace-Id');
       workspace = await resolveWorkspaceMember(db, c.get('user').id, workspaceId);
     } else {

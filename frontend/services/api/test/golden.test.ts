@@ -27,13 +27,9 @@ import { metricSeriesPoints } from '../src/analytics/metric-series.ts';
 import { decodeSessionToken } from '../src/auth/session.ts';
 import { secretIsWeak } from '../src/config.ts';
 import { defaultCode, errorEnvelope, isRetryableStatus } from '../src/errors.ts';
-import { isoformat, type ParsedDatetime } from '../src/http/datetimes.ts';
-import { RequestValidationError, validateParams } from '../src/http/params.ts';
 import { pyIntOrZero, pyRepr, pyStrOrEmpty } from '../src/python/text.ts';
 import { PythonValueError } from '../src/python/urlparse.ts';
-import { pythonUuid } from '../src/python/uuid.ts';
 import { sanitizeCorrelationId } from '../src/request-id.ts';
-import { PRODUCT_ROUTES } from '../src/routes/index.ts';
 import { identityKey } from '../src/visibility/brand-identities.ts';
 import { assembleSeries, type SourceDimension } from '../src/visibility/source-series.ts';
 
@@ -50,47 +46,6 @@ function raising<T>(port: () => T): T | { raises: string } {
   } catch (error) {
     if (error instanceof PythonValueError) return { raises: 'ValueError' };
     throw error;
-  }
-}
-
-function jsonValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(jsonValue);
-  if (value !== null && typeof value === 'object' && 'offsetSeconds' in value) {
-    return isoformat(value as ParsedDatetime);
-  }
-  return value;
-}
-
-/** The route whose FastAPI operation a request-parameter fixture names. */
-const OPERATION_PATHS: Record<string, string> = {
-  execution: '/api/v1/executions/{execution_id}',
-  ai_referrals: '/api/v1/projects/{project_id}/ai-referrals',
-  source_series: '/api/v1/projects/{project_id}/visibility/sources/series',
-  source_url: '/api/v1/projects/{project_id}/visibility/sources/url',
-  surface_rates: '/api/v1/projects/{project_id}/visibility/surface-rates',
-};
-
-function requestParameters(input: {
-  operation: string;
-  path: Record<string, string>;
-  query: string;
-}): unknown {
-  const route = PRODUCT_ROUTES.find(
-    (candidate) => candidate.contract.path === OPERATION_PATHS[input.operation],
-  );
-  if (!route) throw new Error(`No route for ${input.operation}`);
-  try {
-    const { path, query } = validateParams(route.params, {
-      path: input.path,
-      search: input.query,
-    });
-    const values = Object.fromEntries(
-      Object.entries({ ...path, ...query }).map(([name, value]) => [name, jsonValue(value)]),
-    );
-    return { values };
-  } catch (error) {
-    if (!(error instanceof RequestValidationError)) throw error;
-    return { errors: error.details?.errors, message: error.message };
   }
 }
 
@@ -180,7 +135,6 @@ const PORTS: Record<string, (input: never) => unknown> = {
     pyIntOrZero(input) ?? { raises: typeof input === 'string' ? 'ValueError' : 'TypeError' },
   python_str_or_empty: (input: unknown) => pyStrOrEmpty(input),
   python_string_reprs: (input: string) => pyRepr(input),
-  python_uuids: (input: string) => pythonUuid(input),
   retrieval_provenance: (input: { request?: unknown; route?: unknown; audit?: unknown }) =>
     executionFrozenProvenance({
       requestSnapshot: input.request ?? null,
@@ -195,7 +149,6 @@ const PORTS: Record<string, (input: never) => unknown> = {
   },
   // Frozen: the Python owner retired with TypeScript migration PR 3.
   aio_rates: aioRates,
-  request_parameters: requestParameters,
   source_series_assembly: sourceSeriesAssembly,
 };
 

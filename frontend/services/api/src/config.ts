@@ -8,7 +8,7 @@
  * only applies the same environment overrides pydantic-settings would.
  */
 import pythonConfig from './generated/python-config.json' with { type: 'json' };
-import { epochMicros, parseDatetimeParam } from './http/datetimes.ts';
+import { epochMicros, parseDatetime } from './http/datetimes.ts';
 
 type SettingSpec = {
   env: string[];
@@ -58,16 +58,15 @@ function parseBoolean(name: string, raw: string): boolean {
   throw new ConfigError(`${name} must be a boolean`);
 }
 
-function parseDatetime(name: string, raw: string): Date | null {
+function parseDatetimeSetting(name: string, raw: string): Date | null {
   if (!raw.trim()) return null;
-  // pydantic's own parser, so a value Python refuses at boot (a calendar-
-  // invalid 2026-02-30, a free-form date) is refused here too.
-  const parsed = parseDatetimeParam(raw.trim());
-  if (!parsed.ok) throw new ConfigError(`${name} must be a timestamp`);
+  // A calendar-invalid or free-form value is refused, as Python refuses it.
+  const parsed = parseDatetime(raw.trim());
+  if (parsed === null) throw new ConfigError(`${name} must be a timestamp`);
   // A naive timestamp is kept as "present but unusable"; demo access then
   // fails closed exactly as `demo_access_expired` does for a naive value.
-  if (parsed.value.offsetSeconds === null) return new Date(Number.NaN);
-  return new Date(Number(epochMicros(parsed.value) / 1000n));
+  if (parsed.offsetSeconds === null) return new Date(Number.NaN);
+  return new Date(Number(epochMicros(parsed) / 1000n));
 }
 
 function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
@@ -77,7 +76,7 @@ function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
     case 'bool':
       return parseBoolean(name, raw);
     case 'datetime':
-      return parseDatetime(name, raw);
+      return parseDatetimeSetting(name, raw);
     case 'literal':
       if (!spec.values?.includes(raw)) {
         throw new ConfigError(`${name} must be one of ${spec.values?.join(', ')}`);

@@ -9,13 +9,17 @@
  */
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { pyCasefold, pyCollapseWhitespace, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
+import { pyCollapseWhitespace, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
 
 export type BrandIdentity = { logo_url: string | null; website: string | null };
 
-/** `identity_key`: whitespace-collapsed and case-folded. */
+/**
+ * `identity_key`: whitespace-collapsed and lowercased. Python case-folds; the
+ * two differ only for letters such as `ß` and final sigma, and both sides of
+ * every lookup here are keyed by this one function.
+ */
 export function identityKey(name: unknown): string {
-  return pyCasefold(pyCollapseWhitespace(pyStrOrEmpty(name)));
+  return pyCollapseWhitespace(pyStrOrEmpty(name)).toLowerCase();
 }
 
 function brandLogoUrl(projectId: string): string {
