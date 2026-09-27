@@ -2,6 +2,7 @@
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { record } from '../traffic/performance.ts';
+import { scalarText } from '../text-order.ts';
 import type { OpportunityRow } from './projection.ts';
 import type { Scope } from './sources.ts';
 
@@ -27,7 +28,7 @@ function placementCheck(member: OpportunityRow, brandName: string): ExpectedChec
     kind: p.PLACEMENT_CHECK_KIND,
     rule_id: member.rule_id,
     expected_change: changes[member.rule_id] ?? p.PLACEMENT_CHANGE_SOURCE_RESOLVED,
-    url_hash: String(handoff.url_hash ?? ''),
+    url_hash: scalarText(handoff.url_hash),
     target_url: member.target_url,
     brand_name: brand?.entity_name || brandName,
     discrepancies: handoff.discrepancies ?? [],
@@ -94,11 +95,12 @@ async function memberCheck(
   if (o.EARNED_RULE_IDS.includes(member.rule_id)) return placementCheck(member, brandName);
   const evidence = record(member.evidence);
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_SITE) {
+    const siteUrlId = scalarText(evidence.site_url_id);
     return {
       kind: 'site_rule',
-      rule_id: String(evidence.issue_rule_id || member.rule_id),
+      rule_id: scalarText(evidence.issue_rule_id) || member.rule_id,
       expected_outcome: 'pass',
-      ...(evidence.site_url_id ? { target_site_url_id: String(evidence.site_url_id) } : {}),
+      ...(siteUrlId ? { target_site_url_id: siteUrlId } : {}),
     };
   }
   if (member.opportunity_type === o.OPPORTUNITY_TYPE_TRAFFIC)

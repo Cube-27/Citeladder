@@ -324,12 +324,12 @@ async def _refresh_opportunities(
     project_id: uuid.UUID,
     trigger_kind: str,
     trigger_id: uuid.UUID,
-) -> bool:
+) -> None:
     """Enqueue a source's refresh and wait for the TypeScript worker to run it.
 
     The finished audit or crawl already enqueued the same idempotent task, so
-    this only makes sure it exists. Returns whether it succeeded in time; a seed
-    run without the TypeScript analytics worker leaves it queued.
+    this only makes sure it exists. A failed or unfinished refresh is logged;
+    a seed run without the TypeScript analytics worker leaves it queued.
     """
     async with SessionLocal() as session:
         await enqueue_opportunity_refresh(
@@ -351,7 +351,14 @@ async def _refresh_opportunities(
                 )
             )
         if status in _REFRESH_TERMINAL:
-            return status == TASK_STATUS_SUCCEEDED
+            if status != TASK_STATUS_SUCCEEDED:
+                logger.warning(
+                    "Opportunity refresh for %s %s ended %s",
+                    trigger_kind,
+                    trigger_id,
+                    status,
+                )
+            return
         await asyncio.sleep(1)
     logger.warning(
         "Opportunity refresh for %s %s did not finish in %ss; is the "
@@ -360,14 +367,12 @@ async def _refresh_opportunities(
         trigger_id,
         SEED_REFRESH_TIMEOUT_SECONDS,
     )
-    return False
 
 
 async def run_actions_and_comparison(
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-    demo_user_id: uuid.UUID,
     active_prompt_ids: list[uuid.UUID],
     audit_id: uuid.UUID,
     site_crawl_id: uuid.UUID,

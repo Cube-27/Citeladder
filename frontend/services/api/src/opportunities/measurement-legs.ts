@@ -93,14 +93,10 @@ export function searchConsoleState(
   ready.setUTCDate(ready.getUTCDate() + a.SEARCH_CONSOLE_FINALIZATION_LAG_DAYS);
   const observed =
     window && window.start >= day && window.end >= complete.toISOString().slice(0, 10);
-  return {
-    state: observed
-      ? a.LEG_STATE_OBSERVED
-      : now >= ready
-        ? a.LEG_STATE_SYNC_NEEDED
-        : a.LEG_STATE_WAITING,
-    due_at: ready,
-  };
+  let state = a.LEG_STATE_WAITING;
+  if (observed) state = a.LEG_STATE_OBSERVED;
+  else if (now >= ready) state = a.LEG_STATE_SYNC_NEEDED;
+  return { state, due_at: ready };
 }
 
 async function searchLeg(db: Database, row: Declaration, now: Date): Promise<Leg> {
@@ -143,12 +139,10 @@ async function placementLeg(db: Database, row: Declaration): Promise<Leg> {
     .where('implementation_event_id', '=', row.id)
     .executeTakeFirst();
   if (!check) return empty(a.LEG_PLACEMENT_RECHECK);
-  const state =
-    check.state !== policy.opportunity.placement.PLACEMENT_STATE_PENDING && !check.due_at
-      ? a.LEG_STATE_OBSERVED
-      : check.due_at
-        ? a.LEG_STATE_WAITING
-        : a.LEG_STATE_NOT_SCHEDULED;
+  let state = a.LEG_STATE_NOT_SCHEDULED;
+  if (check.due_at) state = a.LEG_STATE_WAITING;
+  else if (check.state !== policy.opportunity.placement.PLACEMENT_STATE_PENDING)
+    state = a.LEG_STATE_OBSERVED;
   return {
     leg: a.LEG_PLACEMENT_RECHECK,
     state,

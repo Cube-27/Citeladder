@@ -8,6 +8,7 @@ import { normalizeDomain } from '../analysis/domains.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { MemberCheck } from './declaration-checks.ts';
 import { stableKey } from './projection.ts';
+import { compareText, scalarText } from '../text-order.ts';
 
 const p = policy.opportunity.placement;
 
@@ -17,7 +18,7 @@ export async function openPlacementCheck(
   { check, member }: MemberCheck,
   website: string,
 ) {
-  const hash = String(check.url_hash ?? '');
+  const hash = scalarText(check.url_hash);
   if (!hash) return;
   const page = await db
     .selectFrom('source_pages')
@@ -59,7 +60,7 @@ export async function openPlacementCheck(
     .execute();
   const owned = [
     ...new Set([website, ...domains.map((row) => row.domain)].map(normalizeDomain).filter(Boolean)),
-  ].sort();
+  ].sort(compareText);
   const now = new Date();
   const declaredAt = db
     .selectFrom('opportunity_implementation_events')
@@ -78,7 +79,7 @@ export async function openPlacementCheck(
       rule_id: member.rule_id,
       source_page_id: page.id,
       url_hash: hash,
-      expected_change: String(check.expected_change ?? ''),
+      expected_change: scalarText(check.expected_change),
       expected_detail: JSON.stringify({
         brand_name: check.brand_name ?? '',
         owned_domains: owned,

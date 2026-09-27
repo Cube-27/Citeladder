@@ -3,7 +3,7 @@ import { sql, type Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { OpportunityImplementationEvents } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
-import { utcTextOf } from '../db/timestamps.ts';
+import { pydanticUtc, utcTextOf } from '../db/timestamps.ts';
 import { measurementLegs } from './measurement-legs.ts';
 
 export async function declarationView(
@@ -36,7 +36,7 @@ export async function declarationView(
     opportunity_snapshot_id: row.opportunity_snapshot_id,
     target_site_url_ids: row.target_site_url_ids,
     target_external_url: row.target_external_url,
-    declared_implemented_at: `${timestamp.at}Z`,
+    declared_implemented_at: pydanticUtc(timestamp.at),
     expected_checks: row.expected_checks,
     state: latest?.observation_kind ?? 'declared',
     limitations: latest?.limitations ?? [],
