@@ -33,7 +33,7 @@ export function VerificationObservations({
     // line only: painting the whole block red because the roll-up says
     // "contradicted" would tint a placement that is live, which is the one
     // thing these separate observations exist to be able to say.
-    <div className="text-muted grid gap-1.5 text-xs">
+    <div className="type-caption grid gap-2">
       <p className={stateTone(implementation.state)}>
         {implementation.state === 'declared'
           ? 'Declared for verification.'
@@ -69,7 +69,7 @@ function Placement({ result }: Readonly<{ result: VerificationResult | undefined
   return (
     <div className="grid gap-0.5">
       <p className={eyebrowClasses}>Placement</p>
-      <p className={textRole('bodyStrong', 'text-xs')}>{report.headline}</p>
+      <p className={textRole('itemTitle')}>{report.headline}</p>
       {report.detail ? <p>{report.detail}</p> : null}
     </div>
   );

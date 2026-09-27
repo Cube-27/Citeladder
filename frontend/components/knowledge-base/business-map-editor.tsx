@@ -172,7 +172,7 @@ function OfferingEditor({
       aria-labelledby={headingId}
       className="bg-well grid gap-4 rounded-[var(--radius-control)] p-[var(--card-padding)]"
     >
-      <h3 id={headingId} className={textRole('bodyStrong')}>
+      <h3 id={headingId} className={textRole('itemTitle')}>
         {draft.offering}
       </h3>
       {DIMENSIONS.map(({ key, label, placeholder }) => (
@@ -227,7 +227,7 @@ function EntryList({
           {entries.map((entry) => (
             <li
               key={entry.value}
-              className="bg-panel flex items-center gap-1.5 rounded-[var(--radius-control)] py-1 pr-1 pl-3 text-sm"
+              className="type-body text-foreground bg-panel flex items-center gap-2 rounded-[var(--radius-control)] py-1 pr-1 pl-3"
             >
               <span>{entry.value}</span>
               {entry.review_state === 'suggested' ? (
@@ -316,7 +316,10 @@ function ExclusionEditor({
       {exclusions.length ? (
         <ul className="grid gap-1" aria-label="Excluded combinations">
           {exclusions.map((pair) => (
-            <li key={`${pair.first}|${pair.second}`} className="flex items-center gap-2 text-sm">
+            <li
+              key={`${pair.first}|${pair.second}`}
+              className="type-body text-foreground flex items-center gap-2"
+            >
               <span>
                 {pair.first} + {pair.second}
               </span>

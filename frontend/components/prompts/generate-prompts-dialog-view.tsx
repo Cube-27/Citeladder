@@ -197,7 +197,7 @@ export function GeneratePromptsDialogView({
           review
         ) : (
           <>
-            <div className="grid gap-1.5">
+            <div className="grid gap-2">
               <span className={textRole('label')}>Number of prompts (1–{maxCount})</span>
               <Input
                 type="number"
@@ -210,9 +210,9 @@ export function GeneratePromptsDialogView({
               />
             </div>
             {topics.length > 0 ? (
-              <fieldset className="grid min-w-0 gap-1.5">
+              <fieldset className="grid min-w-0 gap-2">
                 <legend className={textRole('label')}>Topics</legend>
-                <span className="text-muted text-xs">
+                <span className="type-caption">
                   {selectedTopicIds.size
                     ? `${plural(selectedTopicIds.size, 'topic')} selected.`
                     : 'None selected: suggestions cover every topic.'}

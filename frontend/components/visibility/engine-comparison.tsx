@@ -65,7 +65,7 @@ export function EngineComparison({
                     ) : (
                       engineLabel(engine.logical_engine)
                     )}
-                    <p className={textRole('meta', 'text-secondary')}>
+                    <p className={textRole('caption', 'text-secondary')}>
                       {visibility.model_provenance
                         .filter((item) => item.logical_engine === engine.logical_engine)
                         .map((item) => item.transport_model)

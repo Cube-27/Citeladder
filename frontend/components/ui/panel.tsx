@@ -18,6 +18,8 @@ const PANEL_TONE = {
   well: 'bg-well',
   /** Quietly separated, for a row that is chrome rather than content. */
   tonal: 'bg-background-alt',
+  /** Advice: a suggested next step or a quoted prompt. */
+  accent: 'bg-accent-soft',
   /** The caller supplies the fill because it carries a status meaning. */
   none: '',
 } as const;
@@ -30,19 +32,18 @@ const PANEL_PAD = {
 } as const;
 
 /**
- * Panels normally carry their own border and radius. `flush` is for a panel
- * TILED inside another surface — a strip of cards filling a card — where the
- * container already draws the outer edge and a per-tile radius would show as
- * notches along the seams.
+ * Panels normally carry their own radius. `flush` is for a panel TILED inside
+ * another surface — a strip of cards filling a card — where the container
+ * already draws the outer edge and a per-tile radius would show as notches
+ * along the seams.
  *
- * The edge is the object rung, not the subtle one. `subtle` is for a RULE
- * inside a surface — a row hairline, a menu separator, a chart gridline —
- * where something else already establishes the boundary. A panel has nothing
- * else: the `panel` tone is white inside a white card, so a hairline a shade
- * off the fill left the box with no edge at all.
+ * A box is separated by a fill OR an edge, never both. Only the white `panel`
+ * tone draws an edge, because it is white inside a white card and has nothing
+ * else; a tinted panel's fill is its boundary, and an outline around it is one
+ * more line on the screen carrying no information.
  */
 const PANEL_EDGE = {
-  rounded: 'border-border rounded-[var(--radius-control)] border',
+  rounded: 'rounded-[var(--radius-control)]',
   flush: '',
 } as const;
 
@@ -58,5 +59,11 @@ export function panelClasses(
   }: { tone?: PanelTone; pad?: PanelPad; edge?: PanelEdge } = {},
   className?: string,
 ) {
-  return cn(PANEL_EDGE[edge], PANEL_TONE[tone], PANEL_PAD[pad], className);
+  return cn(
+    PANEL_EDGE[edge],
+    tone === 'panel' && edge === 'rounded' && 'border-border border',
+    PANEL_TONE[tone],
+    PANEL_PAD[pad],
+    className,
+  );
 }

@@ -53,10 +53,10 @@ export function TimeZoneSetting() {
   return (
     <section aria-labelledby="display-timezone-heading" className="grid max-w-lg gap-3">
       <div>
-        <h2 id="display-timezone-heading" className={textRole('objectTitle')}>
+        <h2 id="display-timezone-heading" className={textRole('sectionTitle')}>
           Display timezone
         </h2>
-        <p className="text-muted text-sm">Timestamps currently display in {displayZone}.</p>
+        <p className="type-body">Timestamps currently display in {displayZone}.</p>
       </div>
       <Select
         value={choice}

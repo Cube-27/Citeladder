@@ -100,7 +100,7 @@ export function TopicRail({
       <nav
         id={desktopId}
         aria-label="Topics"
-        className="bg-panel hidden min-w-0 content-start gap-1 rounded-[var(--radius-card)] p-1.5 lg:sticky lg:top-4 lg:grid"
+        className="bg-panel hidden min-w-0 content-start gap-1 rounded-[var(--radius-card)] p-2 lg:sticky lg:top-4 lg:grid"
       >
         <div className="flex items-center justify-between px-1">
           <h3 className={eyebrowClasses}>Topics</h3>
@@ -118,13 +118,13 @@ export function TopicRail({
 
         {adding ? (
           <form
-            className="grid gap-1.5 px-1 pb-1"
+            className="grid gap-2 px-1 pb-1"
             onSubmit={(event) => {
               event.preventDefault();
               void submit();
             }}
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <Input
                 // oxlint-disable-next-line jsx-a11y/no-autofocus -- Add topic explicitly opens this form; focus follows the invoking action.
                 autoFocus
@@ -209,7 +209,7 @@ function TopicSelect({
 }>) {
   const labelId = useId();
   return (
-    <div className="grid gap-1.5 lg:hidden">
+    <div className="grid gap-2 lg:hidden">
       <span id={labelId} className={eyebrowClasses}>
         Topics
       </span>
@@ -263,7 +263,7 @@ function TopicItem({
         aria-label={accessibleName}
         aria-current={selected ? 'true' : undefined}
         className={cn(
-          'focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 text-left text-xs',
+          'focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-3 py-2 text-left type-control',
           selected ? textRole('emphasis', 'text-accent-text') : 'text-foreground',
         )}
       >
@@ -271,7 +271,7 @@ function TopicItem({
           <span className="min-w-0 flex-1 truncate">{label}</span>
         </Tooltip>
         {typeof activeCount === 'number' ? (
-          <span className="text-muted shrink-0 text-xs tabular-nums">{activeCount}</span>
+          <span className="type-caption shrink-0 tabular-nums">{activeCount}</span>
         ) : null}
       </Pressable>
       {onDelete ? (

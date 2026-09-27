@@ -173,15 +173,10 @@ export function ActivityProgress({
             </div>
 
             <div className={cn('min-w-0 pb-4', index === renderedSteps.length - 1 && 'pb-0')}>
-              <p
-                className={cn(
-                  'text-sm font-medium',
-                  step.state === 'pending' ? 'text-muted' : 'text-foreground',
-                )}
-              >
+              <p className={cn('type-item-title', step.state === 'pending' && 'text-muted')}>
                 {step.label}
               </p>
-              {step.detail ? <p className="text-secondary mt-0.5 text-xs">{step.detail}</p> : null}
+              {step.detail ? <p className="type-caption mt-0.5">{step.detail}</p> : null}
             </div>
           </li>
         ))}

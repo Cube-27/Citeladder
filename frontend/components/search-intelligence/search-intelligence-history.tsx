@@ -48,20 +48,20 @@ export function SearchIntelligenceHistory({
     .sort((left, right) => left.date.localeCompare(right.date));
   if (observations.length < 2)
     return (
-      <p className={textRole('meta')}>
+      <p className={textRole('caption')}>
         History needs at least two saved observations to show a trend.
       </p>
     );
   const data = fillMonths(observations);
   return (
     <section className="grid gap-4 md:grid-cols-2" aria-label="Saved backlink history">
-      <p className={textRole('meta', 'md:col-span-2')}>
+      <p className={textRole('caption', 'md:col-span-2')}>
         Monthly domain-level history for {dataset.target_domain}, {observations[0].date} to{' '}
         {observations.at(-1)?.date}. Coverage includes the provider’s historical link population and
         may differ from the live summary. Missing observations are gaps.
       </p>
       <div className="grid min-w-0 content-start gap-2">
-        <h3 className={textRole('bodyStrong', 'min-h-6 text-chart-1')}>Total backlinks</h3>
+        <h3 className={textRole('itemTitle', 'min-h-6 text-chart-1')}>Total backlinks</h3>
         <ChartContainer
           config={{ backlinks: { label: 'Backlinks', color: 'var(--color-chart-1)' } }}
           height={200}
@@ -82,8 +82,8 @@ export function SearchIntelligenceHistory({
       </div>
       <div className="grid min-w-0 content-start gap-2">
         <div className="flex min-h-6 flex-wrap items-center gap-x-4 gap-y-1">
-          <h3 className={textRole('bodyStrong')}>Monthly changes</h3>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          <h3 className={textRole('itemTitle')}>Monthly changes</h3>
+          <div className="type-caption flex flex-wrap gap-x-4 gap-y-1">
             <span className="text-chart-2">New backlinks</span>
             <span className="text-chart-3">Lost backlinks</span>
           </div>

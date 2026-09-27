@@ -76,12 +76,12 @@ export function PlanChanges({
         <h2 id="plan-changes-title" className={textRole('sectionTitle')}>
           Change plan
         </h2>
-        <p className="text-muted text-xs">
+        <p className="type-caption">
           Upgrades start as soon as the prorated charge for the rest of this period is paid.
           Downgrades take effect at your next renewal, with no refund for the current period.
         </p>
       </div>
-      <div className="grid gap-2.5">
+      <div className="grid gap-2">
         {options.map((option) => (
           <div
             key={option.key}
@@ -91,9 +91,9 @@ export function PlanChanges({
             )}
           >
             <div className="grid min-w-0 gap-0.5">
-              <span className={textRole('bodyStrong')}>{option.plan.name}</span>
+              <span className={textRole('itemTitle')}>{option.plan.name}</span>
               {option.plan.base_price ? (
-                <span className={textRole('meta')}>
+                <span className={textRole('caption')}>
                   {formatMoney(option.plan.base_price, catalog.currency_minor_units)} / month before
                   tax
                 </span>
@@ -123,7 +123,7 @@ export function PlanChanges({
       {options.some(
         (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
       ) ? (
-        <p className="text-muted text-xs">Upgrades are unavailable while checkout is closed.</p>
+        <p className="type-caption">Upgrades are unavailable while checkout is closed.</p>
       ) : null}
       {controls.downgradeError ? (
         <Alert tone="danger">{humanizeApiError(controls.downgradeError).message}</Alert>

@@ -52,12 +52,12 @@ export function OrphanMetric({
           aria-label={`View ${total} orphaned ${total === 1 ? 'page' : 'pages'}`}
           className="text-accent-text justify-self-start hover:underline"
         >
-          <span className={textRole('pageTitle', 'tracking-[-0.02em] tabular-nums')}>{total}</span>
+          <span className={textRole('figure')}>{total}</span>
         </Pressable>
       ) : (
-        <span className={textRole('pageTitle', 'tracking-[-0.02em] tabular-nums')}>{total}</span>
+        <span className={textRole('figure')}>{total}</span>
       )}
-      <span className="text-muted text-xs">{ORPHAN_SCOPE_NOTE}</span>
+      <span className="type-caption">{ORPHAN_SCOPE_NOTE}</span>
     </div>
   );
 }
@@ -93,18 +93,18 @@ export function OrphanPageDrawer({
               {crawlId ? (
                 <ProjectLink
                   href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
-                  className="text-accent-text truncate text-sm hover:underline"
+                  className="type-body text-accent-text truncate hover:underline"
                 >
                   {page.title || page.url}
                 </ProjectLink>
               ) : (
-                <span className="text-secondary truncate text-sm">{page.title || page.url}</span>
+                <span className="type-body truncate">{page.title || page.url}</span>
               )}
-              <span className="text-muted truncate text-xs">{page.url}</span>
+              <span className="type-caption truncate">{page.url}</span>
             </li>
           ))}
         </ul>
-        {undisclosed > 0 ? <p className="text-muted text-xs">and {undisclosed} more</p> : null}
+        {undisclosed > 0 ? <p className="type-caption">and {undisclosed} more</p> : null}
       </Stack>
     </Drawer>
   );
@@ -121,9 +121,9 @@ export function EvidenceMetric({
       {value === PLACEHOLDER ? (
         <UnavailableValue state="not_measured" />
       ) : (
-        <span className={textRole('pageTitle', 'tracking-[-0.02em] tabular-nums')}>{value}</span>
+        <span className={textRole('figure')}>{value}</span>
       )}
-      {supporting ? <span className="text-muted text-xs">{supporting}</span> : null}
+      {supporting ? <span className="type-caption">{supporting}</span> : null}
     </div>
   );
 }

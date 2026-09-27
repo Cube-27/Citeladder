@@ -338,7 +338,7 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
       {group.label ? (
         <TableRow>
           <TableCell colSpan={3} className="bg-surface-2">
-            <span className={textRole('bodyStrong')}>{group.label}</span>
+            <span className={textRole('itemTitle')}>{group.label}</span>
           </TableCell>
         </TableRow>
       ) : null}
@@ -358,7 +358,7 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
       ))}
       {note ? (
         <TableRow>
-          <TableCell colSpan={3} className={textRole('meta', 'text-secondary')}>
+          <TableCell colSpan={3} className={textRole('caption', 'text-secondary')}>
             {note}
           </TableCell>
         </TableRow>

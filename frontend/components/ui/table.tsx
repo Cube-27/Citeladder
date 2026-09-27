@@ -19,12 +19,10 @@ import { cn } from '@/lib/utils';
  * flush content, and a second border a pixel inside the card's — at a radius
  * that cannot match it — is the seam this deliberately does not make.
  *
- * The header label recipe (`tableHeadClasses`) is deliberately NOT the shared
- * `eyebrowClasses` micro-label: it uses the product table-header composite
- * (12/16, medium, text-secondary, sentence case), and keeping the strings separate
- * stops a future eyebrow change from silently restyling every table.
+ * Column headers take the `label` role (13/18, 500, muted): a header names the
+ * values beneath it, exactly as a metric label does.
  */
-const tableHeadClasses = 'text-support text-secondary font-medium whitespace-nowrap';
+const tableHeadClasses = 'type-label whitespace-nowrap';
 export function Table({
   children,
   className,
@@ -41,7 +39,7 @@ export function Table({
       ref={wrapperRef}
       className={cn('bg-panel relative w-full max-w-full min-w-0 overflow-auto', wrapperClassName)}
     >
-      <table className={cn('w-full border-collapse text-sm', className)}>{children}</table>
+      <table className={cn('type-body w-full border-collapse', className)}>{children}</table>
     </div>
   );
 }
@@ -121,7 +119,7 @@ export function TableCell({
     <td
       {...props}
       className={cn(
-        'text-foreground border-border-subtle px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle text-sm',
+        'type-body text-foreground border-border-subtle px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
         // Row rule, dropped on the last row.
         'border-b [tr:last-child>&]:border-b-0',
         numeric && 'text-center tabular-nums',
@@ -146,7 +144,7 @@ export function TableRecordMetricCell({
       numeric
       data-label={label}
       className={cn(
-        'grid grid-cols-[1fr_auto] gap-3 border-b-0 px-4 py-1 before:text-left before:text-xs before:text-muted before:content-[attr(data-label)]',
+        'grid grid-cols-[1fr_auto] gap-3 border-b-0 px-4 py-1 type-label-before before:text-left before:content-[attr(data-label)]',
         'md:table-cell md:border-b md:px-[var(--table-cell-padding-x)] md:py-[var(--table-cell-padding-y)] md:before:hidden',
         className,
       )}

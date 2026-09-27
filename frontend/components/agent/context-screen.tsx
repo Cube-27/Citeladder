@@ -148,7 +148,7 @@ function InstructionsEditor({
         />
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className={textRole('meta')}>
+        <span className={textRole('caption')}>
           {savedAt ? (
             <>
               Saved <DisplayTime value={savedAt} />

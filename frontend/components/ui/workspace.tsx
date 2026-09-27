@@ -18,8 +18,7 @@ import { cn } from '@/lib/utils';
  * flush with the page margin; splitting them across two breakpoints leaves the
  * second row indented.
  */
-export const hairlineBandClasses =
-  'border-border divide-border-subtle grid divide-y border-y sm:divide-x sm:divide-y-0';
+export const hairlineBandClasses = 'divide-border-subtle grid divide-y sm:divide-x sm:divide-y-0';
 
 /**
  * The pane's second row. Tabs, filter chips and toolbars are all shorter than
@@ -31,7 +30,7 @@ export const hairlineBandClasses =
 export const pageToolbarClasses =
   'flex min-h-[var(--tab-height)] flex-wrap content-center items-center gap-2';
 
-export const hairlineBandItemClasses = 'min-w-0 py-2.5 sm:px-4 sm:first:ps-0 sm:last:pe-0';
+export const hairlineBandItemClasses = 'min-w-0 py-3 sm:px-4 sm:first:ps-0 sm:last:pe-0';
 
 /**
  * The ledger: a vertical list of peers separated by rules rather than boxed
@@ -39,13 +38,12 @@ export const hairlineBandItemClasses = 'min-w-0 py-2.5 sm:px-4 sm:first:ps-0 sm:
  * hung off a rule, and boxed at two different radii — so the same list of
  * evidence rows looked like a different component on each screen.
  *
- *   `open`  — the list sits on whatever surface already contains it.
- *   `ruled` — hung between two hairlines, to separate it from its neighbours.
- *   `boxed` — a standalone object with its own fill and edge.
+ *   `open`  — the list sits on whatever surface already contains it; rows are
+ *             divided, the list itself is never outlined.
+ *   `boxed` — a standalone object with its own fill and edge (a card).
  */
 const LEDGER_SHELL = {
   open: '',
-  ruled: 'border-border border-y',
   boxed: 'bg-panel border-border overflow-hidden rounded-[var(--radius-card)] border',
 } as const;
 
@@ -79,7 +77,7 @@ export function MetricGroup({
  * cell is not a plain label/value pair still has to sit on this grid.
  */
 export const metricItemClasses =
-  'min-w-0 px-0 py-2.5 sm:px-4 sm:odd:ps-0 sm:even:pe-0 sm:last:pe-0 lg:px-4 lg:odd:ps-4 lg:even:pe-4 lg:first:ps-0 lg:last:pe-0';
+  'min-w-0 px-0 py-3 sm:px-4 sm:odd:ps-0 sm:even:pe-0 sm:last:pe-0 lg:px-4 lg:odd:ps-4 lg:even:pe-4 lg:first:ps-0 lg:last:pe-0';
 
 export function MetricItem({
   label,
@@ -100,8 +98,8 @@ export function MetricItem({
         <span className="truncate">{label}</span>
         {marker}
       </dt>
-      <dd className={cn(textRole('metric'), 'mt-1')}>{value}</dd>
-      {detail ? <dd className="text-muted mt-1 text-xs">{detail}</dd> : null}
+      <dd className={cn(textRole('figure'), 'mt-1')}>{value}</dd>
+      {detail ? <dd className={textRole('caption', 'mt-1')}>{detail}</dd> : null}
     </div>
   );
 }
@@ -110,17 +108,14 @@ export function MetricItem({
  * The section header for an authenticated screen: an optional meta label, the
  * title, one line of description, and the section's actions on the same row.
  *
- * `ruled` hangs the header off a hairline. That rule — not a border around the
- * content beneath it — is what separates one section from the next now that the
- * canvas is paper; boxing a section and then boxing its contents was how screens
- * ended up three frames deep.
+ * Sections are separated by the page's section gap, never by a rule above the
+ * header.
  */
 export function EditorialSectionHeader({
   title,
   headingId,
   description,
   actions,
-  ruled = false,
   className,
 }: Readonly<{
   title: ReactNode;
@@ -128,22 +123,15 @@ export function EditorialSectionHeader({
   headingId?: string;
   description?: ReactNode;
   actions?: ReactNode;
-  ruled?: boolean;
   className?: string;
 }>) {
   return (
-    <header
-      className={cn(
-        'flex flex-wrap items-end justify-between gap-4',
-        ruled && 'border-border border-t pt-3',
-        className,
-      )}
-    >
+    <header className={cn('flex flex-wrap items-end justify-between gap-4', className)}>
       <div className="grid gap-1">
         <h2 id={headingId} className={textRole('sectionTitle')}>
           {title}
         </h2>
-        {description ? <p className="text-secondary max-w-[72ch] text-sm">{description}</p> : null}
+        {description ? <p className={textRole('body', 'max-w-[72ch]')}>{description}</p> : null}
       </div>
       {actions}
     </header>

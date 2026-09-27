@@ -77,7 +77,7 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
               <TableCell>
                 <ProjectLink
                   href={`/runs/${audit.id}`}
-                  className={textRole('bodyStrong', 'text-accent-text hover:underline')}
+                  className={textRole('itemTitle', 'text-accent-text hover:underline')}
                 >
                   View
                 </ProjectLink>

@@ -107,9 +107,9 @@ function MetricCardComparison({
     comparison.evidence_state === 'not_run' ? `${compareLabel} — not imported` : compareLabel;
   return (
     <div className="border-border-subtle grid gap-0.5 border-t pt-1">
-      <span className={textRole('meta')}>{statusLabel}</span>
+      <span className={textRole('caption')}>{statusLabel}</span>
       <MetricValue
-        size="metricSm"
+        size="figureSm"
         value={measured(metricKey, comparisonValue)}
         label={NOT_MEASURED}
         loading={loading}
@@ -151,7 +151,7 @@ function MetricCard({
       data-testid={`metric-card-${card.key}`}
       className={cn(
         panelClasses({ tone: 'panel', pad: 'compact', edge: 'flush' }),
-        'text-foreground relative flex min-h-[96px] flex-col justify-between gap-1 p-3.5 text-left transition-colors',
+        'text-foreground relative flex min-h-[96px] flex-col justify-between gap-1 p-4 text-left transition-colors',
         index === 0 && 'rounded-tl-[var(--radius-card)]',
         seamClasses(index),
         // Selected is a quiet accent wash, not a filled tile. Unselected is
@@ -164,7 +164,7 @@ function MetricCard({
         <span
           aria-hidden
           className={cn(
-            'inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border transition-colors',
+            'inline-flex size-4 shrink-0 items-center justify-center rounded-xs border transition-colors',
             isActive
               ? 'border-accent bg-accent text-accent-fg'
               : 'border-border-strong bg-panel text-transparent',
@@ -183,7 +183,7 @@ function MetricCard({
           one number the range is already stated once in the toolbar, and
           repeating it on four cards is noise. */}
       <div className="grid gap-1">
-        {comparison ? <span className={textRole('meta')}>{selectedLabel}</span> : null}
+        {comparison ? <span className={textRole('caption')}>{selectedLabel}</span> : null}
         <MetricValue value={measured(card.key, value)} label={NOT_MEASURED} loading={loading} />
         {/* The series key: the metric's chart colour, shown only while the
             metric is actually plotted. A colour chip on an unplotted metric
@@ -208,7 +208,7 @@ function MetricCard({
       <div className="mt-auto flex justify-end pt-1">
         <Tooltip content={METRIC_HELP[card.key]}>
           <span
-            className="text-muted hover:text-foreground inline-flex size-4 shrink-0 items-center justify-center rounded-full text-xs transition-colors"
+            className="type-caption hover:text-foreground inline-flex size-4 shrink-0 items-center justify-center rounded-full transition-colors"
             aria-label={METRIC_HELP[card.key]}
           >
             <HelpCircle className="size-3.5" aria-hidden />
@@ -307,17 +307,17 @@ export function Ga4SummaryRow({
         const comparisonValue = comparison ? comparison.totals[entry.key] : undefined;
         return (
           <div key={entry.key} className="flex items-baseline gap-2">
-            <dt className="text-muted text-xs">{entry.label}</dt>
+            <dt className="type-caption">{entry.label}</dt>
             <dd>
               <MetricValue
-                size="metricSm"
+                size="figureSm"
                 value={value === null ? null : formatCount(value)}
                 label={NOT_MEASURED}
                 loading={loading}
               />
             </dd>
             {comparison ? (
-              <dd className="text-muted text-xs tabular-nums">
+              <dd className="type-caption tabular-nums">
                 {comparisonValue === null || comparisonValue === undefined
                   ? `${compareLabel}: ${NOT_MEASURED.toLowerCase()}`
                   : `${compareLabel}: ${formatCount(comparisonValue)}`}
@@ -326,7 +326,7 @@ export function Ga4SummaryRow({
           </div>
         );
       })}
-      <p className="text-muted text-xs">Google Analytics 4</p>
+      <p className="type-caption">Google Analytics 4</p>
     </dl>
   );
 }

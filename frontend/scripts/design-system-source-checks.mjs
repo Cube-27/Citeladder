@@ -85,6 +85,13 @@ const TOKEN_COLORED_ROLES = [
   '.flow-meta',
 ];
 
+const RAW_TYPE_SCALE =
+  /(?<![\w-])(?:[\w-]+:)*text-(?:2xs|xs|sm|base|lg|xl|[2-9]xl|support|page-title|heading-sm|role-(?:meta|body|section))(?![\w-])/;
+const RAW_TYPE_METRICS =
+  /(?<![\w-])(?:[\w-]+:)*(?:leading-|tracking-|font-(?:display|sans)(?![\w-]))/;
+const OFF_GRID_SPACING =
+  /(?<![\w-])(?:[\w-]+:)*-?(?:gap|gap-x|gap-y|space-x|space-y|p|px|py|pt|pb|pl|pr|ps|pe|m|mx|my|mt|mb|ml|mr|ms|me)-(?:1\.5|2\.5|3\.5|7|9|11|\[\d+(?:\.\d+)?px\])(?![\w.-])/;
+
 function staticBindings(program) {
   const bindings = new Map();
   walk(program, (node) => {
@@ -389,6 +396,35 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
     }
     if (/\btext-\[[^\]]+\]/.test(entry.classes)) {
       violations.push(`${label}:${entry.line}: product type must use shared semantic type roles`);
+    }
+    // The type ladder is the `.type-*` roles in globals.css, reached through
+    // `textRole()` or the class itself. A raw size, leading, tracking or face
+    // at a call site is a private rung of the ladder: that is how a caption
+    // came to out-size the value it described.
+    if (!label.startsWith('components/ui/') && RAW_TYPE_SCALE.test(entry.classes)) {
+      violations.push(
+        `${label}:${entry.line}: text size belongs to a type role (components/ui/typography.tsx)`,
+      );
+    }
+    if (!label.startsWith('components/ui/') && RAW_TYPE_METRICS.test(entry.classes)) {
+      violations.push(
+        `${label}:${entry.line}: leading, tracking and face belong to a type role (components/ui/typography.tsx)`,
+      );
+    }
+    if (/(?<![\w-])(?:[\w-]+:)*text-subtle(?![\w-])/.test(entry.classes)) {
+      violations.push(
+        `${label}:${entry.line}: the subtle ink is retired; labels and meta use muted`,
+      );
+    }
+    // Spacing is the 4px grid (2px only as a hairline inset). Six- and
+    // ten-pixel steps are how one screen's rhythm stopped matching the next.
+    if (OFF_GRID_SPACING.test(entry.classes)) {
+      violations.push(`${label}:${entry.line}: spacing must sit on the 4px grid`);
+    }
+    // A line is a token at full strength: an alpha-faded edge is an eleventh
+    // grey that no longer matches the separation ladder.
+    if (/(?<![\w-])(?:[\w-]+:)*border-[a-z-]+\/\d+(?![\w-])/.test(entry.classes)) {
+      violations.push(`${label}:${entry.line}: borders use a line token, never a faded colour`);
     }
     if (/\b(?:(?:sm|md|lg|xl):)?(?:gap|p|px|py)-(?:5|6|8)\b/.test(entry.classes)) {
       violations.push(

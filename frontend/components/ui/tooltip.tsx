@@ -39,7 +39,7 @@ export function Tooltip({
           align={align}
           sideOffset={6}
           className={cn(
-            'tooltip-panel bg-surface-inverse text-on-inverse shadow-elevated z-modal max-w-[18rem] rounded-[var(--radius-overlay)] px-2 py-1.5 text-xs font-normal',
+            'tooltip-panel bg-surface-inverse text-on-inverse shadow-elevated z-modal max-w-[18rem] rounded-[var(--radius-overlay)] px-3 py-2 type-caption text-on-inverse',
             className,
           )}
         >

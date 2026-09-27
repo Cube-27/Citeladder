@@ -45,7 +45,7 @@ export function TablePagination({
 }>) {
   return (
     <div className="border-border flex items-center justify-between gap-2 border-t px-[var(--table-cell-padding-x)] py-2">
-      <span className="text-muted text-xs">
+      <span className="type-caption">
         <span className="tabular-nums">
           {from}–{to}
         </span>{' '}

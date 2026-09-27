@@ -67,7 +67,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
     <Dropdown>
       <DropdownTrigger
         className={cn(
-          'focus-ring hover:bg-active hover:text-foreground flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
+          'focus-ring hover:bg-active hover:text-foreground flex w-full items-center gap-2 rounded-[var(--radius-control)] px-3 py-1 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
           className,
         )}
         disabled={isLoading}
@@ -79,9 +79,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
           size="sm"
           className="bg-foreground text-background size-6.5 rounded-[var(--radius-control)]"
         />
-        <span className={textRole('bodyStrong', 'min-w-0 flex-1 truncate tracking-tight')}>
-          {label}
-        </span>
+        <span className={textRole('itemTitle', 'min-w-0 flex-1 truncate')}>{label}</span>
         <ChevronsUpDown className="text-muted size-3.5 shrink-0" aria-hidden />
       </DropdownTrigger>
       <DropdownContent align="start" className="w-56">

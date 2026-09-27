@@ -50,7 +50,7 @@ export function SignalLegend({ signals }: Readonly<{ signals: readonly DemandSig
             <dt className="shrink-0">
               <SignalChip signalType={type} />
             </dt>
-            <dd className={textRole('meta')}>{signalTypeMeta(type).definition}</dd>
+            <dd className={textRole('caption')}>{signalTypeMeta(type).definition}</dd>
           </div>
         ))}
       </dl>
@@ -106,7 +106,7 @@ function SignalRow({
   const target = signalTarget(signal);
   return (
     <TableRow>
-      <TableCell className={textRole('meta', 'tabular-nums')}>#{rank}</TableCell>
+      <TableCell className={textRole('caption', 'tabular-nums')}>#{rank}</TableCell>
       <TableCell className="max-w-80 break-words">{target}</TableCell>
       <TableCell>
         <SignalChip signalType={signal.signal_type} />
@@ -124,7 +124,7 @@ function SignalRow({
         <Position value={numericMetric(signal, 'position')} />
       </TableCell>
       <TableCell>
-        <div className="flex justify-end gap-1.5">
+        <div className="flex justify-end gap-2">
           <Button
             variant="ghost"
             size="sm"

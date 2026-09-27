@@ -35,8 +35,8 @@ import {
  */
 function RowStatus({ errors }: Readonly<{ errors: readonly string[] }>) {
   if (errors.length > 0)
-    return <span className="text-danger-text text-xs">{errors.join(' ')}</span>;
-  return <span className="text-success-text text-xs">Ready</span>;
+    return <span className="type-caption text-danger-text">{errors.join(' ')}</span>;
+  return <span className="type-caption text-success-text">Ready</span>;
 }
 
 function downloadSample() {

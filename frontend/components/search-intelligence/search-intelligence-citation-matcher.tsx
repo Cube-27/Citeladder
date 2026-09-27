@@ -62,7 +62,7 @@ export function SearchIntelligenceCitationMatcher({
     <Card>
       <CardHeader>
         <CardTitle>Match backlinks to Visibility citations</CardTitle>
-        <p className="text-muted text-sm">
+        <p className="type-body">
           Select the exact persisted audits to intersect with this referring-domain snapshot.
         </p>
       </CardHeader>
@@ -72,7 +72,7 @@ export function SearchIntelligenceCitationMatcher({
           {audits.data?.slice(0, 20).map((audit) => (
             <label
               key={audit.id}
-              className="border-border-subtle flex items-center justify-between gap-3 border-b py-2 text-sm"
+              className="type-body border-border-subtle flex items-center justify-between gap-3 border-b py-2"
             >
               <Checkbox
                 checked={selectedAudits.includes(audit.id)}

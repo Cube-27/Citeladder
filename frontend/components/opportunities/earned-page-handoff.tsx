@@ -46,7 +46,7 @@ export function EarnedPageHandoff({ detail }: Readonly<{ detail: OpportunityDeta
           {intent ??
             `Prepare a human-led earned asset for ${handoff.canonical_domain ?? 'the cited source'}.`}
         </p>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
           {handoff.canonical_domain ? (
             <Badge variant="neutral">{handoff.canonical_domain}</Badge>
           ) : null}
@@ -97,7 +97,7 @@ function Brand({ handoff }: Readonly<{ handoff: OpportunityDetail['content_hando
   const brand = brandVerdict(handoff.page_entities);
   if (!brand) return null;
   return (
-    <div className="grid gap-1.5">
+    <div className="grid gap-2">
       <p className={eyebrowClasses}>You on this page</p>
       <BrandLine brand={brand} extractedChars={handoff.extracted_chars ?? 0} />
     </div>
@@ -112,14 +112,14 @@ function BrandLine({
   const basis = absenceBasis(brand.presence, brand.match_method, extractedChars);
   return (
     <>
-      <p className={textRole('bodyStrong')}>
+      <p className={textRole('itemTitle')}>
         {brand.entity_name}
         {verdict ? ` — ${verdict.toLowerCase()}` : ''}
       </p>
       {brand.passages.map((passage) => (
         <Passage key={passage}>{passage}</Passage>
       ))}
-      {basis ? <p className="text-muted text-xs">{basis}</p> : null}
+      {basis ? <p className="type-caption">{basis}</p> : null}
     </>
   );
 }
@@ -134,16 +134,16 @@ function BrandLine({
 function NamedInAnswers({ names }: Readonly<{ names?: string[] }>) {
   if (!names?.length) return null;
   return (
-    <div className="grid gap-1.5">
+    <div className="grid gap-2">
       <p className={eyebrowClasses}>Named in the answers, not on the page</p>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {names.map((name) => (
           <Badge key={name} variant="neutral">
             {name}
           </Badge>
         ))}
       </div>
-      <p className="text-muted text-xs">
+      <p className="type-caption">
         These appeared somewhere in an answer that cited this page. They are not a finding about the
         page and did not affect this task&apos;s priority.
       </p>
@@ -158,9 +158,9 @@ function Coverage({ handoff }: Readonly<{ handoff: OpportunityDetail['content_ha
   return (
     <div className="grid gap-1">
       <p className={eyebrowClasses}>Coverage</p>
-      {sentence ? <p className={textRole('meta')}>{sentence}</p> : null}
+      {sentence ? <p className={textRole('caption')}>{sentence}</p> : null}
       {frequency ? (
-        <p className={textRole('meta')}>
+        <p className={textRole('caption')}>
           Cited by {frequency.answers_citing_page} of {frequency.eligible_answers} analyzed answers.
         </p>
       ) : null}

@@ -52,7 +52,12 @@
   --color-panel-tonal: #f7f9fb;
   --color-elevated: #ffffff;
   --color-well: #e9edf1;
-  --color-active: #e9edf1;
+  --color-active: #eef1f5;
+  /* Selection. A segmented track and the selected item on it must differ at
+     a glance, so the pair is its own role rather than borrowed surfaces:
+     `track` is the recessed groove, `selected` the raised paper on it. */
+  --color-track: #e6eaf0;
+  --color-selected: #ffffff;
   --color-input: #ffffff;
   /* The sidebar is a region of the ground now, not a surface of its own. The
      token stays because check:policy requires it, and it holds the ground value
@@ -106,17 +111,19 @@
 
      `border` used to sit a hair under `subtle`, so the two rungs collapsed and
      every object edge dissolved into its own contents. It now steps clear. */
-  --color-border: #d9e0ea;
-  --color-border-subtle: #e8edf3;
+  --color-border: #d3dae4;
+  --color-border-subtle: #e5e9ef;
   --color-border-strong: #c3ccd9;
-  --color-border-bold: #94a3b8;
+  --color-border-bold: #8a95a5;
 
-  /* Neutral ink roles step with the type ladder: headings foreground, body
-     secondary, small meta/labels muted, rare de-emphasis subtle. */
-  --color-foreground: #1a1f36;
-  --color-secondary: #30313d;
-  --color-muted: #475467;
-  --color-subtle: #525e70;
+  /* Three inks, clearly apart: `foreground` for what the reader came for
+     (titles, values), `secondary` for sentences, `muted` for labels and
+     metadata. The old fourth rung (`subtle`) sat darker than `muted`, so the
+     ladder had no order; it now resolves to `muted`. */
+  --color-foreground: #0f172a;
+  --color-secondary: #334155;
+  --color-muted: #5b6678;
+  --color-subtle: var(--color-muted);
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
 
@@ -130,7 +137,7 @@
   --color-accent-subtle: #dcfce7;
   --color-accent-soft: #f0fdf4;
   --color-accent-border: #86efac;
-  --color-recommendation: var(--color-surface);
+  --color-recommendation: var(--color-accent-soft);
   --color-accent-text: #14532d;
   --color-focus: var(--color-brand-forest);
   --color-focus-ring: rgb(22 163 74 / 20%);
@@ -289,11 +296,12 @@
      the surface in front rather than as one more control in a row. */
   --shadow-raised:
     0 0 0 1px rgb(26 31 54 / 0.24), 0 2px 8px -2px rgb(26 31 54 / 0.1);
-  /* A card is separated by its border and the tone under it; this is only the
-     hair of contact shadow that stops a bordered white box from looking
-     printed onto the ground. If a card ever needs to read as "above" rather
-     than "on", that is a different object, not a bigger shadow here. */
+  /* Product cards carry no resting shadow; this remains for the marketing
+     previews that still use it. */
   --shadow-card: 0 1px 2px -1px rgb(17 28 69 / 0.06);
+  /* The raised selected item (segmented control, active navigation). A soft
+     drop only: a selected item is never outlined. */
+  --shadow-selected: 0 1px 2px rgb(15 23 42 / 0.1), 0 1px 1px rgb(15 23 42 / 0.04);
   --shadow-elevated:
     0 12px 32px rgb(26 31 54 / 0.12), 0 2px 6px rgb(26 31 54 / 0.06);
   --shadow-modal-value:
@@ -311,8 +319,6 @@
   --text-lg--line-height: 1.625rem;
   --text-xl: 1.25rem;
   --text-xl--line-height: 1.75rem;
-  --text-page-title: 1.625rem;
-  --text-page-title--line-height: 2rem;
   --text-2xl: 1.5rem;
   --text-2xl--line-height: 2rem;
   --text-3xl: 1.75rem;
@@ -320,17 +326,9 @@
   --text-4xl: 2rem;
   --text-4xl--line-height: 2.5rem;
   --text-heading-sm: 1.125rem; /* 18px — compact headings */
-  /* Role sizes. These defaults are the public surfaces' values; the product
-     document rebinds them (see the product type ladder below). */
-  --text-role-meta: 0.75rem;
-  --text-role-meta--line-height: 1rem;
-  --text-role-body: 0.875rem;
-  --text-role-body--line-height: 1.25rem;
-  --text-role-section: 1rem;
-  --text-role-section--line-height: 1.5rem;
+  /* Field text: 14px on public surfaces, 16px in the product (below). */
   --text-field: 0.875rem;
   --text-field--line-height: 1.25rem;
-  --font-weight-overlay-title: 600;
 
   --leading-tight: 1.25;
 
@@ -349,33 +347,36 @@
 
 :root {
   color-scheme: light;
-  --sidebar-width: 232px;
+  --sidebar-width: 240px;
   --compact-topbar-height: 56px;
   --sticky-header-offset: 0px;
-  --nav-item-height: 32px;
+  --nav-item-height: 36px;
   /* Sidebar rhythm. The rail's four bands share one inset so no band invents
      its own; the group gap is small because the section label carries the
      separation between groups. */
   --sidebar-pad-x: 8px;
-  --sidebar-pad-y: 6px;
+  --sidebar-pad-y: 8px;
   --sidebar-group-gap: 4px;
   --sidebar-item-gap: 2px;
-  --content-gutter: 28px;
+  --content-gutter: 32px;
   --content-max-width: 1392px;
   --workflow-max-width: 1040px;
   /* The sanctioned two-column split. A screen picks a role, never a ratio. */
   --pane-list-detail: minmax(18rem, 0.9fr) minmax(0, 2fr);
-  --page-section-gap: 24px;
+  /* The spacing scale is the 4px grid: 4 8 12 16 20 24 32 40 48 64, plus 2px
+     for hairline insets only. Each rhythm role below names one step. */
+  --page-section-gap: 48px;
   --workspace-gap: 16px;
   --compact-gap: 12px;
-  --card-padding: 16px;
+  --card-padding: 20px;
   --card-padding-compact: 12px;
   --card-padding-large: 20px;
   /* The content pane's cast edge against the ground. One hairline that follows
      the pane's radius, so the seam between rail and paper is drawn once — the
      sidebar deliberately carries no border of its own, or the two rules would
      stack into a 2px trench at the one seam this model exists to soften. */
-  --shadow-pane: -1px 0 0 var(--color-border);
+  /* No seam: the tonal step between ground and paper is the separation. */
+  --shadow-pane: none;
   --modal-padding: 24px;
   --empty-state-padding: 24px;
   --control-height-sm: 32px;
@@ -393,12 +394,12 @@
      band, so content always begins one rule below a row of known height. */
   --page-band-identity: var(--compact-topbar-height);
   --page-header-padding-top: 24px;
-  --page-header-padding-bottom: 20px;
-  --page-header-gap: 20px;
+  --page-header-padding-bottom: 24px;
+  --page-header-gap: 16px;
   --table-row-height: 44px;
   --table-header-height: 36px;
   --table-cell-padding-x: 12px;
-  --table-cell-padding-y: 10px;
+  --table-cell-padding-y: 12px;
   /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
   --radius-control: 6px;
   --radius-card: 8px;
@@ -475,8 +476,8 @@
 
 @media (min-width: 981px) and (max-width: 1200px) {
   :root {
-    --sidebar-width: 210px;
-    --content-gutter: 22px;
+    --sidebar-width: 224px;
+    --content-gutter: 24px;
   }
 }
 
@@ -648,6 +649,214 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-synthesis: none;
   text-size-adjust: 100%;
+}
+
+/* The product type roles. Eleven styles and one modifier are the whole
+   product ladder: every product text element takes exactly one, and the role
+   owns size, leading, weight, tracking and ink together. Weights are 400
+   (sentences), 500 (labels, controls) and 600 (titles, figures).
+
+   They sit in the components layer so a status utility (`text-success-text`,
+   `text-danger-text`) still overrides the ink where the value's meaning is its
+   colour. Edit a role here and every screen moves with it. */
+@layer components {
+  .type-page-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--color-foreground);
+  }
+  .type-section-title {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    color: var(--color-foreground);
+  }
+  .type-item-title {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--color-foreground);
+  }
+  .type-body {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--color-secondary);
+  }
+  /* Buttons, navigation, tabs, links: the ink belongs to the control's state. */
+  .type-control,
+  .type-control-file::file-selector-button {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+  /* `.type-label-before` sets the role on a generated `::before` label (the
+     labelled record cells a table becomes on a phone). */
+  .type-label,
+  .type-label-before::before {
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--color-muted);
+  }
+  .type-caption {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--color-muted);
+  }
+  .type-figure {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground);
+  }
+  .type-figure-sm {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground);
+  }
+  /* A change indicator: caption size, label weight; the caller's tone is the ink. */
+  .type-delta {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Badges, chips, counts and key hints: caption size at label weight; the
+     badge's tone supplies the ink. */
+  .type-badge {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+  /* Rendered Markdown (Agent output, evidence answers). Built from the same
+     rungs as the roles above: reading text 16/24 (14/20 compact), headings
+     24 / 16 / 14 at 600. Code and quotes are filled, never outlined; tables
+     draw row dividers only. Generated headings start at h2 (see markdown.tsx). */
+  .prose-content {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 400;
+    color: var(--color-secondary);
+  }
+  .prose-content > :last-child { margin-bottom: 0; }
+  .prose-content :where(h2, h3, h4, h5, h6) {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--color-foreground);
+    margin: 1.5rem 0 0.75rem;
+  }
+  .prose-content > :where(h2, h3, h4, h5, h6):first-child { margin-top: 0; }
+  .prose-content h2 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 2rem;
+    letter-spacing: -0.02em;
+  }
+  .prose-content h3 { font-size: 1rem; line-height: 1.5rem; }
+  .prose-content :where(h4, h5, h6) { font-size: 0.875rem; line-height: 1.25rem; }
+  .prose-content :where(p, ul, ol, pre, table, blockquote) { margin: 0 0 1rem; }
+  .prose-content :where(ul, ol) { margin-left: 1.5rem; }
+  .prose-content ul { list-style: disc; }
+  .prose-content ol { list-style: decimal; }
+  .prose-content li + li { margin-top: 0.5rem; }
+  .prose-content strong { font-weight: 600; color: var(--color-foreground); }
+  .prose-content a {
+    color: var(--color-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .prose-content a:hover { color: var(--color-accent-hover); }
+  .prose-content blockquote {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-control);
+    background: var(--color-background-alt);
+    color: var(--color-secondary);
+    font-style: italic;
+  }
+  .prose-content code {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    padding: 0.125rem 0.25rem;
+    border-radius: var(--radius-xs);
+    background: var(--color-well);
+    font-variant-numeric: tabular-nums;
+  }
+  .prose-content pre {
+    max-width: 100%;
+    white-space: pre-wrap;
+    padding: 1rem;
+    border-radius: var(--radius-control);
+    background: var(--color-well);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .prose-content pre code { padding: 0; background: transparent; font-size: inherit; line-height: inherit; }
+  .prose-content table {
+    min-width: 100%;
+    width: max-content;
+    table-layout: auto;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .prose-content th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
+    font-weight: 500;
+    color: var(--color-muted);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .prose-content td {
+    padding: 0.75rem 1rem;
+    color: var(--color-foreground);
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+  .prose-content tr:last-child td { border-bottom: 0; }
+  .prose-compact { font-size: 0.875rem; line-height: 1.25rem; }
+  .prose-compact :where(h2, h3, h4, h5, h6) { margin: 1rem 0 0.5rem; }
+  .prose-compact h2 { font-family: var(--font-sans); font-size: 1rem; line-height: 1.5rem; letter-spacing: 0; }
+  .prose-compact :is(h3, h4, h5, h6) { font-size: 0.875rem; line-height: 1.25rem; }
+  .prose-compact :where(p, ul, ol, pre, table, blockquote) { margin-bottom: 0.75rem; }
+  .prose-compact pre { padding: 0.75rem; font-size: 0.75rem; line-height: 1rem; }
+  .prose-compact :is(th, td) { padding: 0.5rem 0.75rem; }
+
+  /* Modifier: a value or name inside text that owns its size. */
+  .type-emphasis {
+    font-weight: 500;
+    color: var(--color-foreground);
+  }
 }
 
 @layer base {
@@ -905,20 +1114,11 @@ input.focus-input:-webkit-autofill:focus-visible {
   --skeleton-highlight: var(--color-panel);
 }
 
-/* The product type ladder: weights stop at 500 and hierarchy comes from size.
-   Captions step up to 13px so they sit one rung under 14px body, body copy
-   opens to a 22px line, section headings step above card titles (18 vs 16),
-   and field text is 16px (which also stops iOS zooming on focus). Scoped like
-   the palette above so the public surfaces keep their own sizes. */
+/* The product reads its type from the `.type-*` roles. Field text is 16px,
+   which also stops iOS zooming on focus. */
 :root:not([data-public-surface]) {
-  --text-role-meta: 0.8125rem;
-  --text-role-meta--line-height: 1.125rem;
-  --text-role-body--line-height: 1.375rem;
-  --text-role-section: 1.125rem;
-  --text-role-section--line-height: 1.625rem;
   --text-field: 1rem;
   --text-field--line-height: 1.5rem;
-  --font-weight-overlay-title: 500;
 }
 
 /* Light is the default. Dark is a per-device reader preference applied to the
@@ -944,7 +1144,9 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-foreground: #f7f7f5;
   --color-secondary: #e2e2df;
   --color-muted: #b4b4b0;
-  --color-subtle: #92928d;
+  --color-subtle: var(--color-muted);
+  --color-track: #1f1f1f;
+  --color-selected: #333333;
   --color-border-subtle: #1f1f1f;
   --color-border: #2b2b2b;
   --color-border-strong: #5c5c59;
@@ -966,7 +1168,7 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-action-hover: var(--color-accent-hover);
   --color-action-active: var(--color-accent-active);
   --color-action-fg: var(--color-accent-fg);
-  --color-recommendation: var(--color-surface);
+  --color-recommendation: var(--color-accent-soft);
   --color-surface-inverse: #76df9c;
   --color-on-inverse: #0d2618;
   --color-success: #80dfa2;
@@ -1037,6 +1239,7 @@ input.focus-input:-webkit-autofill:focus-visible {
   --shadow-smudge: 0 0 0 1px rgb(255 255 255 / 10%), 0 1px 2px rgb(0 0 0 / 25%);
   --shadow-smudge-hover: 0 0 0 1px rgb(255 255 255 / 16%), 0 1px 2px rgb(0 0 0 / 35%);
   --shadow-card: 0 1px 2px rgb(0 0 0 / 16%);
+  --shadow-selected: 0 1px 2px rgb(0 0 0 / 40%);
   --shadow-raised: 0 0 0 1px rgb(255 255 255 / 24%), 0 2px 5px rgb(0 0 0 / 35%);
   --shadow-smudge-danger: 0 0 0 1px var(--color-danger), 0 1px 2px rgb(0 0 0 / 25%);
   --shadow-elevated: 0 12px 32px rgb(0 0 0 / 40%);
@@ -1058,6 +1261,7 @@ input.focus-input:-webkit-autofill:focus-visible {
   .shadow-smudge-danger,
   .hover\:shadow-smudge-danger:hover { box-shadow: var(--shadow-smudge-danger); }
   .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-selected { box-shadow: var(--shadow-selected); }
   .shadow-elevated { box-shadow: var(--shadow-elevated); }
 }
 .focus-input[aria-invalid='true'],
@@ -1142,10 +1346,6 @@ input.focus-input[aria-invalid='true']:-webkit-autofill:focus-visible {
    a notch instead of softening anything. */
 .app-pane-workspace {
   border-radius: var(--radius-workspace) 0 0;
-}
-
-.app-nav-current {
-  box-shadow: var(--shadow-card);
 }
 
 /* A 16px corner against the viewport edge reads as a rendering artefact rather

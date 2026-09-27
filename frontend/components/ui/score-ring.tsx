@@ -10,9 +10,9 @@ import { scoreBand, scoreBandStroke, scoreBandText } from './score-band';
  * shows the tabular display number. Carries an ARIA label with the percentage
  * (role="img") so the value is announced to assistive tech.
  *
- * `numeralSize` sets the center numeral: `md` = `text-heading-sm`, `lg` =
- * `text-xl`, `hero` = `text-2xl` (29px) for the Visibility hero card — the
- * ceiling, so the ring never out-shouts the page title. Pair the larger
+ * `numeralSize` sets the center numeral: `md` = the `figureSm` role, `lg` and
+ * `hero` = the `figure` role — the ceiling, so the ring never out-shouts the
+ * page title. Pair the larger
  * numerals with a larger `size`/`strokeWidth`. The numeral stays
  * `aria-hidden`; the ring's svg keeps the accessible label either way.
  *
@@ -20,9 +20,9 @@ import { scoreBand, scoreBandStroke, scoreBandText } from './score-band';
  * transition so the ring simply appears at its final value.
  */
 const NUMERAL_SIZE_CLASS: Record<'md' | 'lg' | 'hero', string> = {
-  hero: 'text-2xl',
-  lg: 'text-xl',
-  md: 'text-heading-sm',
+  hero: 'type-figure',
+  lg: 'type-figure',
+  md: 'type-figure-sm',
 };
 
 export function ScoreRing({
@@ -41,7 +41,7 @@ export function ScoreRing({
   /** Accessible label; defaults to "Visibility score: N%". */
   label?: string;
   showValue?: boolean;
-  /** Center numeral: `md` = text-heading-sm (default), `lg` = text-xl, `hero` = text-2xl. */
+  /** Center numeral: `md` = figureSm (default), `lg` and `hero` = figure. */
   numeralSize?: 'md' | 'lg' | 'hero';
   className?: string;
 }>) {
@@ -104,7 +104,7 @@ export function ScoreRing({
         <span
           aria-hidden
           className={cn(
-            'tabular-nums absolute inset-0 flex items-center justify-center font-medium',
+            'absolute inset-0 flex items-center justify-center',
             NUMERAL_SIZE_CLASS[numeralSize],
             scoreBandText[band],
           )}

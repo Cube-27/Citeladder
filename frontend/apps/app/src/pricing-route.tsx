@@ -391,7 +391,7 @@ export default function PricingRoute() {
       title="Review your selection"
       measure="workflow"
       actions={
-        <a className="text-sm underline" href={websitePricing}>
+        <a className="type-control text-accent-text underline" href={websitePricing}>
           View public pricing
         </a>
       }

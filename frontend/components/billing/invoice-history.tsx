@@ -53,7 +53,7 @@ export function InvoiceHistory({
       {downloadError ? <Alert tone="danger">Receipt download failed. Please retry.</Alert> : null}
       {loading ? <Skeleton className="h-16 w-full" /> : null}
       {!loading && !error && invoices.length === 0 ? (
-        <p className={textRole('meta')}>No invoices have been issued yet.</p>
+        <p className={textRole('caption')}>No invoices have been issued yet.</p>
       ) : null}
       <div className="grid gap-2">
         {invoices.map((invoice) => (
@@ -61,7 +61,7 @@ export function InvoiceHistory({
             key={invoice.invoice_id}
             className="border-border flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
           >
-            <div className="grid gap-1 text-sm">
+            <div className="type-body grid gap-1">
               <span className={textRole('emphasis')}>
                 {invoice.status === 'credited'
                   ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
@@ -72,7 +72,7 @@ export function InvoiceHistory({
                 <DisplayTime value={invoice.paid_at} dateOnly /> ·{' '}
                 {formatMoney(invoice.amount_paid, 2)}
               </span>
-              <span className="text-muted text-xs">
+              <span className="type-caption">
                 GST: {invoice.tax_treatment.replaceAll('_', ' ')} · CGST{' '}
                 {formatMoney(invoice.cgst, 2)} · SGST {formatMoney(invoice.sgst, 2)} · IGST{' '}
                 {formatMoney(invoice.igst, 2)}

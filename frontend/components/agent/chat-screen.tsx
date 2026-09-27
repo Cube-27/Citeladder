@@ -108,7 +108,7 @@ function ChatView({
         <ChatHeaderActions detail={detail} onOpenOutput={hasOutput ? openOutput : undefined} />
       }
     >
-      <div className="grid gap-[var(--page-section-gap)] min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+      <div className="grid gap-[var(--content-gutter)] min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <div className="grid content-start gap-4">
           <Conversation
             detail={detail}

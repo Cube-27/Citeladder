@@ -1,4 +1,5 @@
 import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row';
+import { panelClasses } from '@/components/ui/panel';
 import { OpportunitySourcePattern } from '@/components/opportunities/opportunity-source-pattern';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/typography';
@@ -27,20 +28,20 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
     <section className="grid gap-2">
       <Label>Evidence</Label>
       {promptText ? (
-        <blockquote className="border-accent-border bg-accent-subtle rounded-[var(--radius-control)] border-l px-3 py-2.5">
-          <p className="text-foreground text-sm leading-snug">“{promptText}”</p>
+        <blockquote className={panelClasses({ tone: 'accent', pad: 'compact' })}>
+          <p className="type-body text-foreground">“{promptText}”</p>
         </blockquote>
       ) : null}
       {url ? (
-        <p className="text-accent-text bg-background-alt rounded-[var(--radius-control)] px-3 py-2 text-xs break-all tabular-nums">
+        <p className="type-caption text-accent-text bg-background-alt rounded-[var(--radius-control)] px-3 py-2 break-all tabular-nums">
           {url}
         </p>
       ) : null}
       {theme ? <OpportunityKvRow label="Topic" value={theme} /> : null}
       {competitors.length > 0 ? (
         <div className="grid gap-1">
-          <span className="text-muted text-xs">Competitors mentioned</span>
-          <div className="flex flex-wrap gap-1.5">
+          <span className="type-caption">Competitors mentioned</span>
+          <div className="flex flex-wrap gap-2">
             {competitors.map((name) => (
               <Badge key={name} variant="classification" value="competitor">
                 {name}

@@ -241,7 +241,7 @@ export function RankingRowsTable({
                       <span className={textRole('label', tagClasses())}>You</span>
                     ) : null}
                   </span>
-                  <span className={textRole('meta', 'text-secondary md:hidden')}>
+                  <span className={textRole('caption', 'text-secondary md:hidden')}>
                     {formatRate(row.share_of_voice)} share of voice ·{' '}
                     {formatRate(row.citation_rate)} citations
                   </span>

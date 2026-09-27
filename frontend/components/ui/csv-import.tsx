@@ -82,8 +82,8 @@ export function CsvImportFileInput({
   onSelect: (file: File | undefined) => void;
 }>) {
   return (
-    <label className="grid gap-1.5">
-      <span className="text-secondary text-xs font-medium">CSV file</span>
+    <label className="grid gap-2">
+      <span className="type-label">CSV file</span>
       <input
         ref={inputRef}
         type="file"
@@ -94,7 +94,7 @@ export function CsvImportFileInput({
           onSelect(file);
           event.currentTarget.value = '';
         }}
-        className="focus-ring border-border bg-well text-foreground file:bg-background-alt file:text-foreground block w-full rounded-[var(--radius-control)] border px-2 py-1.5 text-sm file:me-2 file:rounded-[var(--radius-control)] file:border-0 file:px-2 file:py-1 file:text-sm"
+        className="focus-ring border-border bg-well text-foreground file:bg-background-alt file:text-foreground type-body type-control-file block w-full rounded-[var(--radius-control)] border px-2 py-2 file:me-2 file:rounded-[var(--radius-control)] file:border-0 file:px-2 file:py-1"
       />
     </label>
   );
@@ -114,7 +114,7 @@ export function CsvImportPreview({
 }>) {
   return (
     <div className="grid gap-2">
-      <div className="text-secondary flex items-center gap-3 text-sm">
+      <div className="type-body flex items-center gap-3">
         <span>
           Parsed <strong className="text-foreground">{rowCount}</strong> row
           {rowCount === 1 ? '' : 's'}

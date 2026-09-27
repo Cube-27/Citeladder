@@ -11,7 +11,7 @@ Tests verify shared ownership, accessibility, and product correctness—not exac
 CiteLadder (`citeladder.com`) is an evidence-led enterprise system. Its **Prism Evidence Workspace** puts neutral ground behind the chrome and a distinct work surface behind the content, using navy ink in light mode, Emerald actions by default, semantic evidence washes, useful density, and deliberate negative space. Prioritise current state → movement → next action → evidence, not equal-weight KPI cards. Voice is direct, confident, specific, and evidence-led: one idea per sentence.
 
 - **Logo:** `frontend/components/ui/logo-mark.tsx` owns every surface's lockup: `frontend/public/citeladder-logo.svg` for the wordmark and the matching inline glyph for mark-only mode. `BRAND_LOGO_SIZES` owns standard heights; explicit `size` supports exceptional layouts. The mark inherits `currentColor`; non-empty `alt` supplies either rendering's accessible name. `frontend/public/citeladder-favicon.ico` owns browser/installable-app icons with the same black silhouette across frames.
-- **Typography:** self-hosted variable faces on every surface: Inter for body, UI and data type, General Sans for headings and display roles, both capped at weight 600 by their `@font-face` ranges; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, weights stop at 500 and hierarchy comes from size: 13px meta, 14/22 body, 16px object titles, 18px section titles, 16px field text; public surfaces keep their own role sizes through the `--text-role-*` / `--text-field` tokens.
+- **Typography:** self-hosted variable faces on every surface: Inter for body, UI and data type, General Sans for headings and display roles, both capped at weight 600 by their `@font-face` ranges; 14px working baseline. Each semantic role owns size, leading, weight, tracking, and ink together. In the product, hierarchy comes from size and weight together through the closed `.type-*` roles (see Product app ladder); field text is 16px (`--text-field`, 14px on public surfaces).
 - **Icons:** Lucide only; import concepts from `frontend/lib/icons.ts` where available. Call sites set size only: `size-3`/`size-3.5` for dense tables, toolbars, and chips; `size-4` for chrome; `size-5` for empty states and marketing wells; larger only for decorative marks. The global stroke ladder derives approximately 1.3px stems from size. Keep `currentColor`; do not override stroke weight locally.
 - **Surface identity:** Light is the default. The app and onboarding headers carry a one-click circular light/dark toggle beside the account menu (`frontend/lib/theme/theme.ts` owns the per-device preference; the semantic tokens rebind under `[data-theme='dark']`). There is no automatic system-theme following. Marketing is light-only and never applies the preference. Emerald is the sole action accent on public and product surfaces. The logo and provider marks retain their fixed brand colours. The product (app, onboarding, auth) uses white paper over neutral grey ground in light and near-black neutrals in dark. Controls retain white fills and distinct edges. Marketing and docs remain light-only with their own editorial ink. Auth/onboarding use centred task flows.
 
@@ -29,7 +29,7 @@ CiteLadder (`citeladder.com`) is an evidence-led enterprise system. Its **Prism 
 
 Do not add raw hex colours, `@theme`, shared control recipes, or unregistered animations outside `globals.css`. Homepage-only neutral and preview values belong to the scoped `.cl-landing` tokens there; shared chrome and other marketing pages keep the semantic palette. Do not redefine shared geometry per surface. Reuse primitives before creating another. Public/auth type roles may have their own scale; embedded product previews reset to the app ladder.
 
-`pnpm check:policy` guards raw colours, stray `@theme`, legacy identifiers, ownership boundaries, `font-*` outside `components/ui/`, size-named radii (`rounded-sm|md|lg|xl`), and per-surface geometry redeclarations. Tailwind's default radius scale is cleared in `@theme`. The capability/ownership map remains in [frontend-architecture.md](frontend-architecture.md), under Component capability.
+`pnpm check:policy` guards raw colours, stray `@theme`, legacy identifiers, ownership boundaries, `font-*` weights, raw text sizes, leading, tracking and faces outside `components/ui/`, the retired `subtle` ink, off-grid spacing, alpha-faded borders, size-named radii (`rounded-sm|md|lg|xl`), and per-surface geometry redeclarations. Tailwind's default radius scale is cleared in `@theme`. The capability/ownership map remains in [frontend-architecture.md](frontend-architecture.md), under Component capability.
 
 ## Colour
 
@@ -40,12 +40,15 @@ Consume semantic roles, never page-local values.
 | Ground | `background`, `shell`, `sidebar` `#F3F5F7` | Neutral ground beneath shell and public surfaces |
 | Structure | `panel-tonal`, `background-alt` `#F7F9FB`; `well`, `active` `#E9EDF1` | Insets, wells, tonal panels; hover/selected states |
 | Paper | `panel`, `input`, `elevated` `#FFFFFF` | Work surfaces, inputs, semantic objects, overlays |
-| Ink | `ink-strong` `#1A1F36`; `ink` `#30313D`; `muted` `#596579`; `subtle` `#667085` | Headings/primary values; body/row values; labels/support; tertiary metadata/placeholders |
-| Boundaries | `line-subtle` `#E8EDF3`; `line` `#D9E0EA`; `line-strong` `#C3CCD9`; `field-line` `#94A3B8` | Four rungs that must stay visibly distinct. `line-subtle` is a rule *inside* a surface (row hairlines, divides between peers, menu separators, chart gridlines); `line` is the edge *of* a box (card, panel, table wrapper, band, pane seam) and is the default; `line-strong` is deliberate emphasis; `field-line` bounds inputs. |
+| Ink | `foreground` `#0F172A`; `secondary` `#334155`; `muted` `#5B6678` | Three clearly separated inks: titles and values; sentences; labels and metadata. The former fourth rung, `subtle`, resolves to `muted` and is retired. |
+| Boundaries | `border-subtle` `#E5E9EF`; `border` `#D3DAE4`; `border-strong` `#C3CCD9`; `border-bold` `#8A95A5` | `border-subtle` divides rows or peers *inside* one surface; `border` is the edge *of* a card, white panel, table wrapper or overlay; `border-strong` is deliberate emphasis; `border-bold` bounds inputs. |
+| Selection | `track` `#E6EAF0`; `selected` `#FFFFFF`; `shadow-selected` | The recessed groove of a segmented control and the raised paper of the selected item on it or in navigation. |
 | Interaction | Emerald: forest `#14532D`; hover `#166534`; pressed `#0B3D20`; brand `#16A34A`; soft `#F0FDF4`; line `#86EFAC`. | Primary actions on every surface, links, tabs, selection, active navigation, focus, first chart series |
 | Evidence | success, warning, error, info, `chart-secondary`, `chart-grid` | Persisted status/data, always labelled or paired with an icon |
 
-Hierarchy is carried by boundary and tone, not by elevation: a box is separated by its edge and the tone beneath it, and shadow is reserved for surfaces that genuinely float (menus, sheets, dialogs, tooltips). A `Card` carries at most a contact shadow — a hair that stops a bordered white box from looking printed onto the ground — never a lift. If something needs to read as *above* rather than *on*, it is a different object, not a larger shadow.
+Hierarchy is carried by boundary and tone, not by elevation: a box is separated by its edge or its fill, and shadow is reserved for surfaces that genuinely float (menus, sheets, dialogs, tooltips) and for the raised selected item (`shadow-selected`). A `Card` has no resting shadow.
+
+**Borders.** A line may draw exactly three things: the edge of a card, white panel, table wrapper or overlay; the edge of a control or field; and a divider between rows or peers inside one surface (including the full-width rule closing each page band). Nothing else is outlined. Selection is fill plus `shadow-selected`, never an outline or a leading bar. A tinted box is separated by its fill, never by fill and edge. Sections are separated by space, not by a rule above or around them. The pane has no seam against the ground. Lines use a token at full strength, never an alpha-faded colour.
 
 Reading text must meet 4.5:1 contrast. `subtle` metadata belongs on reading surfaces; active/tonal surfaces use `muted` or `ink` to retain contrast. Cyan, coral, lime, and amber express evidence/status, not route decoration. Never communicate meaning through colour alone.
 
@@ -55,7 +58,7 @@ The homepage may use marketing-only geometry roles: `--radius-marketing-card` (2
 
 ## Typography
 
-Use Inter for text and General Sans for headings (`font-display` and `h1`–`h6`) exclusively; metrics, dates, ranks, and percentages use tabular numerals, not monospace. Body weight is 400, labels/navigation/actions and product headings 500, metrics 600 (the ceiling), subject to the documented role exceptions. Do not assemble page-local size/weight/ink hierarchies.
+Use Inter for text and General Sans for the page title, figures and public headings; metrics, dates, ranks, and percentages use tabular numerals, not monospace. Weights are 400 (sentences), 500 (labels, controls, badges) and 600 (titles, figures). Do not assemble page-local size/weight/ink hierarchies.
 
 ### Website and focused-flow ladder
 
@@ -76,49 +79,49 @@ Roles own all typography properties. The general ladder is mobile-first: base be
 
 ### Product app ladder
 
-Call `textRole(role, layoutClasses?)` from `components/ui/typography.tsx`; name the text's job rather than overriding its typography. `<strong>`, `<b>`, and `<th>` inherit their weight step from `globals.css`.
+The roles are `.type-*` classes in `globals.css` (components layer, so a status utility such as `text-danger-text` can still set the ink). Reach them through `textRole(role, layoutClasses?)` from `components/ui/typography.tsx` or the class itself; name the text's job rather than overriding its typography. Call sites outside `components/ui/` never set a size, leading, tracking, face or weight.
 
-| Role | Job | Size / line height | Weight | Ink |
-| --- | --- | --- | --- | --- |
-| `pageTitle` | Reserved; no longer the route H1 | 26/32px | 500 | `ink-strong` |
-| `sectionTitle` | Section H2 | 16/24px | 500 | `ink-strong` |
-| `objectTitle` | Entity heading; the in-pane route H1 | 18/26px | 500 | `ink-strong` |
-| `bodyStrong` | Leading copy | 14/20px | 500 | `ink` |
-| `body` | Reading copy, descriptions, cells | 14/20px | 400 | `ink` |
-| `label` | Field/column labels | 14/20px | 500 | `muted` |
-| `meta` | Timestamps, counts, help, footnotes | 12/16px | 500 | `subtle` |
-| `eyebrow` | Short metadata label | 12/16px | 500 | `muted` |
-| `emphasis` | Ambient-size value/name | Inherited | 500 | `ink-strong` |
-| `metric` | Primary numeral | 28/36px | 600 | `ink-strong`, tabular |
-| `metricSm` | Dense-row numeral | 16/22px | 500 | `ink`, tabular |
-| `delta` | Change indicator | 12/16px | 500 | Caller's tone, tabular |
+| Role | Class | Job | Size / line height | Weight | Ink |
+| --- | --- | --- | --- | --- | --- |
+| `pageTitle` | `type-page-title` | The route H1, one per page | 24/32, display | 600 | `foreground` |
+| `figure` | `type-figure` | A metric value | 24/32, display, tabular | 600 | `foreground` |
+| `sectionTitle` | `type-section-title` | Section, card, drawer and dialog headings | 16/24 | 600 | `foreground` |
+| `figureSm` | `type-figure-sm` | A value in a dense row or cell | 16/24, tabular | 600 | `foreground` |
+| `itemTitle` | `type-item-title` | Row, list-item and insight titles | 14/20 | 600 | `foreground` |
+| `body` | `type-body` | Sentences, descriptions, table cells | 14/20 | 400 | `secondary` |
+| `control` | `type-control` | Buttons, navigation, tabs, links | 14/20 | 500 | by state |
+| `label` | `type-label` | Names a value: metric, field and column labels | 13/18 | 500 | `muted` |
+| `caption` | `type-caption` | Timestamps, counts, help, footnotes | 12/16 | 400 | `muted` |
+| `badge` | `type-badge` | Badges, chips, counts, key hints | 12/16 | 500 | the tone |
+| `delta` | `type-delta` | Change indicator | 12/16, tabular | 500 | the caller's tone |
+| `emphasis` | `type-emphasis` | A value inside text that owns its size | inherited | 500 | `foreground` |
 
-Twelve pixels is reserved for short metadata, provenance, badges, and table headers; the table-header role ambiguity is recorded below. Availability labels use `UnavailableValue`, never metric type: muted, 12/16px, regular weight, zero tracking on every surface.
+The ladder is strictly ordered: a section title never out-sizes the page title and a caption never out-sizes the value it describes. A missing figure is the muted dash at the figure's own role (`MetricValue`), so absence sits where the value would. Rendered Markdown uses `.prose-content`, built from the same rungs (reading text 16/24, compact 14/20). Availability labels in running text use `UnavailableValue`.
 
 ## Data and geometry
 
 | Context | Desktop | Laptop / compact |
 | --- | --- | --- |
-| Sidebar | 232px | 210px |
+| Sidebar | 240px | 224px |
 | Compact topbar | — | 56px |
-| Content gutter | 28px | 22px / 16px |
-| Navigation row | 32px | 44px minimum target |
-| Control | 30–40px | 44px minimum target |
+| Content gutter | 32px | 24px / 16px |
+| Navigation row | 36px | 44px minimum target |
+| Control | 32 / 36 / 40px | 44px minimum target |
 | Table row | 44px | Labelled record |
 
 Data columns and their headers are centre-aligned and tabular; text columns stay left-aligned. The header centres with its values so a column reads as one block — a sort glyph pushed to the padding edge leaves the label sitting off the numbers by its own width. This resolves the table-header precedence question previously recorded as unresolved: the shared `numeric` flag on `TableHead`/`TableCell` owns both alignment and tabular figures, and call sites do not re-declare either.
 
-Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Sidebar content shares an 18px inset. Compact gutters are 16px; dialogs/drawers use 20px. Internal groups use 16–24px.
+Analytical content caps at 1392px; form-first workflow content caps at 1040px while retaining full-width page bands. Spacing is the 4px grid — 4, 8, 12, 16, 20, 24, 32, 40, 48, 64 — plus 2px for hairline insets only; six-, ten- and fourteen-pixel steps are not used. Each rhythm role names one step: label to value 4, icon to text 8, title to content 12, card to card 16, card padding 20, page gutter 32, section to section 48.
 
 | Geometry role | Value | Use |
 | --- | --- | --- |
 | `--radius-control` | 6px | Controls and fields |
-| `--radius-card` | 8px | Semantic objects |
+| `--radius-card` | 8px | Cards and semantic objects |
 | `--radius-overlay` | 12px | Menus, tooltips, dialogs, drawers |
 | `rounded-xs` | 4px | Chart bars, skeletons, inline code |
 | `rounded-full` | Full | Pills, badges, dots, counts, filter toggles |
 
-Vertical rhythm belongs to the container: `Stack` from `components/ui/layout.tsx` or container `gap`, not child `mt-*`. Its rungs are `section` 24px, `workspace` 16px, `compact` 12px, and `tight` 4px. A 2px optical nudge, sized glyph, or negative-margin overlap remains allowed.
+Vertical rhythm belongs to the container: `Stack` from `components/ui/layout.tsx` or container `gap`, not child `mt-*`. Its rungs are `section` 48px, `workspace` 16px, `compact` 12px, and `tight` 4px. A 2px optical nudge, sized glyph, or negative-margin overlap remains allowed.
 
 Marketing subpages and the homepage use `--section-y`: 56px base, 80px from 768px, 96px from 1280px. Adjacent homepage sections of the same tone share one rhythm rather than stacking both paddings. Auth/onboarding use `[data-flow-surface]` geometry from `website-type.css`: 56px bar, centred task measure, 16px mobile gutter, shared control radius, and selection chips 36px desktop/44px touch. The flow shell owns its scrolling main region and action bar.
 
@@ -137,7 +140,7 @@ Use the state actually known; never punctuation alone or a fabricated zero.
 
 Observed zero remains `0`. Chart series retain unavailable-point gaps and explain them accessibly. Authored prose punctuation is unaffected.
 
-Where the label appears depends on the surface. Metric cards, chart states, non-tabular values and workflow states a reader can act on (**Not run**, **Failed**) print the word: there is one of them, and it is the answer. A **metric cell in a table** does not: a column repeats its placeholder once per row to make a point it only needs to make once, and at `--text-xs` inside a `text-sm` tabular column it reads as a different kind of value rather than an absent one. Those cells use `MissingValue` from `components/ui/unavailable-value.tsx` — a muted en dash, with the state as assistive text and the reason available on hover and focus. It is never blank: an empty cell and a measured zero look identical, and those are opposite findings.
+Where the label appears depends on the surface. A state is written once where it is decided: a section or card whose values share one state (**Not run** before the first audit) says so once, in its header badge or notice, and its metric slots show the muted dash at the figure's own size (`MetricValue`) with the state as the accessible name — never the same fact again as a badge, a card label, a caption and a sentence. Chart states and workflow states a reader can act on (**Failed**) print the word. A **metric cell in a table** does not: a column repeats its placeholder once per row to make a point it only needs to make once, and at `--text-xs` inside a `text-sm` tabular column it reads as a different kind of value rather than an absent one. Those cells use `MissingValue` from `components/ui/unavailable-value.tsx` — a muted en dash, with the state as assistive text and the reason available on hover and focus. It is never blank: an empty cell and a measured zero look identical, and those are opposite findings.
 
 State a shared reason once, on the column header or the section, not in every cell that lacks a value. Core columns stay present across loading, filtering and pagination; omit a column only where it is unsupported or irrelevant for the entire view, never because the current page happens to be empty. A table or chart with nothing to show uses one contextual empty state that distinguishes first use, no results, loading and error — those four are different findings and a reader who cannot tell them apart cannot tell whether to change the filter or retry.
 
@@ -243,7 +246,7 @@ JavaScript. No decorative motion or alternate design system is introduced.
 
 ### Controls
 
-Shared buttons use the 6px control radius: app heights 30px compact, 34px default, 40px large; touch targets at least 44px. App buttons have no decorative inset border. Marketing primary buttons use the same solid-forest `primary` variant, minimum 44px (`min-h-[2.75rem]`), and shared hover ramp. Secondary, neutral, ghost, and danger variants remain shared.
+Shared buttons use the 6px control radius and the `control` type role: app heights 32px compact, 36px default, 40px large; touch targets at least 44px. App buttons have no decorative inset border. Marketing primary buttons use the same solid-forest `primary` variant, minimum 44px (`min-h-[2.75rem]`), and shared hover ramp. Secondary, neutral, ghost, and danger variants remain shared.
 
 Controls need direct labels, immediate pressed feedback, and visible focus: accent on their own border plus one attached soft glow, no gap or second floating ring. Inputs use semantic input/border roles; labels stay beside controls, helpers explain constraints, and errors provide recovery. Placeholder-only labels are forbidden. Composed inputs have one shared-frame focus ring, not an additional native-input outline.
 
@@ -257,9 +260,9 @@ Every chart is `aria-hidden` and carries a written description instead. A null p
 
 ### Panels, badges, and evidence
 
-Structural sections remain open or tonal. `Card` is a real white semantic object with the shared card radius, a `line` edge, and the contact shadow described above — it is separated by its border, not by lift. `Card` sets no display mode; opt into aligned-footer layouts at call sites without breaking sticky scrolling. Never nest a `Card` inside another `Card`, modal, drawer, or sheet.
+Structural sections remain open or tonal. `Card` is a real white semantic object with the shared card radius and a `border` edge, 20px padding, and no shadow. Its `recommendation` tone (accent-soft fill, accent-border edge) marks the page's single next action. Cards in one row share their height, and a row is either all cards or all open bands, never both. `Card` sets no display mode; opt into aligned-footer layouts at call sites without breaking sticky scrolling. Never nest a `Card` inside another `Card`, modal, drawer, or sheet.
 
-For a bordered, filled, padded box inside a card/section, use `panelClasses({ tone, pad })` from `components/ui/panel.tsx`. Drawer field groups/lists use unboxed sections/rows. Multi-category editors use shared underline tabs and one linear field flow, not dashboard grids.
+For a filled, padded box inside a card/section, use `panelClasses({ tone, pad })` from `components/ui/panel.tsx`. Only its white `panel` tone draws an edge; `well`, `tonal` and `accent` are separated by their fill. Drawer field groups/lists use unboxed sections/rows. Multi-category editors use shared underline tabs and one linear field flow, not dashboard grids.
 
 Badges pair labels with state marks. Evidence rows identify source, measurement context, and an action opening the persisted record. Loading/empty states preserve layout and explain absence through the availability vocabulary.
 
@@ -273,10 +276,10 @@ The contents panels include H2/H3 entries, omit leading step-number prefixes fro
 
 ### Navigation and overlays
 
-- **Navigation:** active app location uses a bordered paper pill with a contact shadow, dark label, brand-green icon, and 2px leading mark. Hover uses an accent-soft pill. Preserve icon/label contrast and avoid translation. Page controls sit on a tonal band; identity and tab navigation bands stay on paper. Selected tab underlines use brand green.
+- **Navigation:** the active app location is raised paper (`selected` fill, `shadow-selected`) with a dark label and brand-green icon — no border and no leading mark. Hover uses the `active` fill. Preserve icon/label contrast and avoid translation. Page controls sit on a tonal band; identity and tab navigation bands stay on paper. Selected tab underlines use brand green.
 - **Menus:** shared panel/item recipes, `shadow-elevated`, 12px overlay radius, short system-curve entrance. Filters/page-kind selectors use shared custom Radix menus, not browser-native `<select>` popups. Single-select filters use radio items. Feature components never import Radix directly.
 - **Sheets/dialogs:** `components/ui/drawer.tsx` owns right-side modal sheets; use `shadow-modal-value` and the shared overlay radius. Scrim dims/locks the page; outside click, Escape, and close dismiss. Restore trigger focus, including controlled dialogs. Owners provide padding/footer separation; consumers do not recreate chrome. Tooltips use `shadow-elevated` and the same 12px radius. Features own no shadow recipes.
-- **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the shared track for compact single-select changes. Tabs and segments stay on a single row and scroll when labels exceed the available width; keyboard focus reveals the focused option. Filled tabs share spare width without shrinking below their labels; shared UI filter pills handle independent/multi-select filters.
+- **Selection:** underline tabs navigate views or mutually exclusive tables with keyboard navigation and preserved selected-tab focus. Segmented controls use the recessed `track` for compact single-select changes; the selected item is raised paper with `shadow-selected` and dark ink, unselected items are muted. Tabs and segments stay on a single row and scroll when labels exceed the available width; keyboard focus reveals the focused option. Filled tabs share spare width without shrinking below their labels; shared UI filter pills handle independent/multi-select filters.
 - **Analytical loading:** interval changes retain prior analytical content while the new persisted projection loads. Mark the region busy with compact feedback; no replacement skeleton or labels describing data not yet received.
 
 HeroUI is a reference for state completeness, not an installed dependency.

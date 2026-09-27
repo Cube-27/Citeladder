@@ -186,11 +186,11 @@ function ActionsTable({ actions }: Readonly<{ actions: Action[] }>) {
               <div className="grid min-w-0 gap-0.5">
                 <ProjectLink
                   href={`/agent/actions/${action.id}`}
-                  className={textRole('bodyStrong', 'hover:text-accent-text truncate')}
+                  className={textRole('itemTitle', 'hover:text-accent-text truncate')}
                 >
                   {action.target_label}
                 </ProjectLink>
-                <span className={textRole('meta')}>
+                <span className={textRole('caption')}>
                   {[
                     targetKindLabel(action.target_kind),
                     action.origin === 'agent' ? 'From agent work' : null,

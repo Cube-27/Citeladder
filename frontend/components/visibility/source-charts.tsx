@@ -35,7 +35,7 @@ export function UsageCard({
       <BusyBar active={query.isFetching} label="Updating usage" />
       <CardHeader>
         <CardTitle>{urls ? 'Source usage by URL' : 'Source usage by domain'}</CardTitle>
-        <p className={textRole('meta', 'text-secondary')}>
+        <p className={textRole('caption', 'text-secondary')}>
           {`How often each of the leading ${urls ? 'pages' : 'domains'} was used as a source, as a share of the answers in each period.`}
         </p>
       </CardHeader>
@@ -71,7 +71,9 @@ function UsagePlot({
   if (!series.length) {
     return (
       <div className={cn(USAGE_PLOT_BOX, 'grid place-items-center')}>
-        <p className={textRole('meta', 'text-secondary')}>No sources were used in this period.</p>
+        <p className={textRole('caption', 'text-secondary')}>
+          No sources were used in this period.
+        </p>
       </div>
     );
   }

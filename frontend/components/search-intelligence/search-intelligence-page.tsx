@@ -349,16 +349,16 @@ function RunNotice({ run }: Readonly<{ run: SearchIntelligenceRun | null }>) {
   if (!run) return null;
   if (run.status === 'queued' || run.status === 'running')
     return (
-      <div className="border-accent/30 bg-accent/5 flex items-center gap-2 rounded-[var(--radius-control)] border p-3 text-sm">
+      <div className="type-body bg-accent-soft text-accent-text flex items-center gap-2 rounded-[var(--radius-control)] p-3">
         <RefreshCw className="size-4 animate-spin" aria-hidden />
         Acquisition in progress: {run.completed_calls} of {run.planned_calls} calls complete.
       </div>
     );
   if (!['partial', 'failed', 'uncertain'].includes(run.status)) return null;
   return (
-    <output className="border-warning/40 bg-warning/10 block rounded-[var(--radius-control)] border p-3 text-sm">
+    <output className="type-body bg-warning-bg block rounded-[var(--radius-control)] p-3">
       <Stack gap="tight">
-        <p className={textRole('bodyStrong', 'capitalize')}>Acquisition {run.status}</p>
+        <p className={textRole('itemTitle', 'capitalize')}>Acquisition {run.status}</p>
         <p className="text-muted">
           {run.error_detail ||
             `${run.completed_calls} of ${run.planned_calls} reviewed calls completed. Published datasets remain available below.`}
@@ -392,13 +392,13 @@ function CostDetails({
         {runs.map((run) => (
           <Card key={run.id}>
             <CardContent className="grid gap-3">
-              <p className={textRole('bodyStrong', 'capitalize')}>
+              <p className={textRole('itemTitle', 'capitalize')}>
                 {run.action.replaceAll('_', ' ')} · {run.status.replaceAll('_', ' ')}
               </p>
-              <p className={textRole('meta')}>
+              <p className={textRole('caption')}>
                 <DisplayTime value={run.created_at} />
               </p>
-              <dl className="grid grid-cols-2 gap-3 text-sm">
+              <dl className="type-body grid grid-cols-2 gap-3">
                 <div>
                   <dt className={textRole('label')}>Estimated</dt>
                   <dd>${formatSearchNumber(run.estimated_cost_usd, 6)}</dd>

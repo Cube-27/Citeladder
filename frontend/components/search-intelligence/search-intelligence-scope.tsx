@@ -60,14 +60,14 @@ export function ScopeBand({
 }>) {
   return (
     <div className="flex w-full flex-wrap items-center gap-3 py-2 min-[981px]:py-0">
-      <span className={textRole('bodyStrong')}>
+      <span className={textRole('itemTitle')}>
         {latest?.target_hostname ?? data.owned_targets[0]?.hostname}
       </span>
-      <span className={textRole('meta')}>
+      <span className={textRole('caption')}>
         {tab === 'backlinks' ? 'All referring countries' : savedMarketLabel(latest, data)}
       </span>
       {marketControl}
-      <span className={textRole('meta', 'ml-auto')}>
+      <span className={textRole('caption', 'ml-auto')}>
         {latest?.published_at ? (
           <>
             Saved <DisplayTime value={latest.published_at} />

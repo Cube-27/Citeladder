@@ -102,9 +102,7 @@ export function AeoReadinessPanel({
   const [detailKey, setDetailKey] = useState<string | null>(null);
 
   if (readiness.isLoading) {
-    return (
-      <output className="text-secondary block text-sm">Loading persisted AEO evaluations…</output>
-    );
+    return <output className="type-body block">Loading persisted AEO evaluations…</output>;
   }
   if (readiness.isError) return <Alert tone="danger">Could not load AEO Readiness.</Alert>;
   if (!readiness.data || readiness.data.crawl_id === null) {
@@ -134,7 +132,7 @@ function ReadinessLedger({
   return (
     <Card>
       <CardHeader bordered className="gap-1">
-        <CardTitle className="text-lg">Readiness dimensions</CardTitle>
+        <CardTitle>Readiness dimensions</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <Table className="block md:table" wrapperClassName="overflow-hidden md:overflow-auto">
@@ -159,7 +157,7 @@ function ReadinessLedger({
                   <TableCell className="block min-w-0 border-b-0 px-4 py-2 md:table-cell md:min-w-64 md:border-b md:px-[var(--table-cell-padding-x)] md:py-[var(--table-cell-padding-y)]">
                     <Stack gap="tight">
                       <span className={textRole('emphasis')}>{dimension.label}</span>
-                      <span className="text-muted text-xs">{dimension.description}</span>
+                      <span className="type-caption">{dimension.description}</span>
                     </Stack>
                   </TableCell>
                   <TableRecordMetricCell label="Score">
@@ -230,7 +228,7 @@ function DimensionDrawer({
 function CheckLedger({ checks }: Readonly<{ checks: ReadinessCheck[] }>) {
   return (
     <section className="grid gap-2">
-      <h3 className={textRole('objectTitle')}>Checks</h3>
+      <h3 className={textRole('sectionTitle')}>Checks</h3>
       {checks.length === 0 ? (
         <p className={textRole('body')}>No determinate checks were recorded.</p>
       ) : (
@@ -249,13 +247,13 @@ function CheckRow({ check }: Readonly<{ check: ReadinessCheck }>) {
   return (
     <li className="grid gap-1 py-3 first:pt-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className={textRole('bodyStrong')}>{check.title}</span>
-        <span className="text-secondary text-xs">{state}</span>
+        <span className={textRole('itemTitle')}>{check.title}</span>
+        <span className="type-caption">{state}</span>
       </div>
       <p className={textRole('body')}>
         {check.remediation || 'No remediation guidance is recorded for this check.'}
       </p>
-      <p className="text-muted text-xs tabular-nums">
+      <p className="type-caption tabular-nums">
         {check.satisfied_count} satisfied · {check.partial_count} partial · {check.missing_count}{' '}
         missing · {check.unknown_count} unknown
       </p>
@@ -296,7 +294,7 @@ function QualityCell({
   if (dimension.dimension_measurement_state === 'not_measured') {
     return <UnavailableValue state="not_measured" />;
   }
-  return <span className="text-muted text-xs">{state}</span>;
+  return <span className="type-caption">{state}</span>;
 }
 
 function FailingPages({
@@ -308,22 +306,22 @@ function FailingPages({
   return (
     <section className="grid gap-2">
       <div className="grid gap-0.5">
-        <h3 className={textRole('objectTitle')}>Pages to fix</h3>
-        <p className="text-muted text-xs">{failingPagesCaption(shown, total)}</p>
+        <h3 className={textRole('sectionTitle')}>Pages to fix</h3>
+        <p className="type-caption">{failingPagesCaption(shown, total)}</p>
       </div>
       <ul className={ledgerClasses()}>
         {dimension.evidence_pages.map((page) => (
-          <li key={page.site_url_id} className="grid gap-1.5 py-3 first:pt-0">
+          <li key={page.site_url_id} className="grid gap-2 py-3 first:pt-0">
             <ProjectLink
-              className={textRole('bodyStrong', 'text-accent-text truncate hover:underline')}
+              className={textRole('itemTitle', 'text-accent-text truncate hover:underline')}
               href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
             >
               {pageLabel(page.normalized_url)}
             </ProjectLink>
             <ul className="grid gap-1">
               {page.failed_checks.map((check) => (
-                <li key={check.rule_id} className="text-secondary flex items-start gap-2 text-xs">
-                  <span className="bg-danger mt-1.5 size-1.5 shrink-0 rounded-full" aria-hidden />
+                <li key={check.rule_id} className="type-caption flex items-start gap-2">
+                  <span className="bg-danger mt-2 size-1.5 shrink-0 rounded-full" aria-hidden />
                   <span>
                     {check.title}: {check.expected_capability}
                   </span>

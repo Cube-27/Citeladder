@@ -35,7 +35,7 @@ export function BillingDetailsForm({
       <legend className={textRole('label', 'px-1')}>Billing details</legend>
       <div className="grid gap-3 sm:grid-cols-2">
         {addressFields.map(([key, label, autoComplete]) => (
-          <label key={key} className="grid gap-1 text-sm">
+          <label key={key} className="type-label grid gap-2">
             {label}
             <Input
               value={details[key]}
@@ -47,7 +47,7 @@ export function BillingDetailsForm({
       </div>
       {india ? (
         <>
-          <label htmlFor={`${idPrefix}-billing-state-code`} className="grid gap-1 text-sm">
+          <label htmlFor={`${idPrefix}-billing-state-code`} className="type-label grid gap-2">
             Billing state code
             <Input
               id={`${idPrefix}-billing-state-code`}
@@ -56,9 +56,9 @@ export function BillingDetailsForm({
               autoComplete="address-level1"
               onChange={(event) => update('billing_state_code', event.target.value.toUpperCase())}
             />
-            <span className="text-muted text-xs">GSTIN is optional for Indian customers.</span>
+            <span className="type-caption">GSTIN is optional for Indian customers.</span>
           </label>
-          <label htmlFor={`${idPrefix}-customer-gstin`} className="grid gap-1 text-sm">
+          <label htmlFor={`${idPrefix}-customer-gstin`} className="type-label grid gap-2">
             GSTIN (optional)
             <Input
               id={`${idPrefix}-customer-gstin`}

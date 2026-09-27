@@ -44,8 +44,8 @@ export function CardHeader({
     <header
       {...props}
       className={cn(
-        'flex flex-col gap-1 p-[var(--card-padding-large)] pb-2',
-        bordered && 'border-border border-b pb-3',
+        'flex flex-col gap-1 p-[var(--card-padding)] pb-3',
+        bordered && 'border-border-subtle border-b',
         className,
       )}
     >
@@ -79,7 +79,7 @@ export function CardTitle({
     // The object rung, the same one the route H1 and a section H2 sit at. It
     // used to be 18/500 — larger and lighter than both, so a card's title
     // outranked the page's and weight said nothing.
-    <h3 {...props} className={textRole('objectTitle', className)}>
+    <h3 {...props} className={textRole('sectionTitle', className)}>
       {children}
     </h3>
   );
@@ -91,7 +91,7 @@ export function CardDescription({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'p'>>) {
   return (
-    <p {...props} className={cn('text-muted text-sm leading-relaxed', className)}>
+    <p {...props} className={cn(textRole('body'), className)}>
       {children}
     </p>
   );
@@ -109,7 +109,10 @@ export function CardContent({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'div'> & { children: ReactNode; flush?: boolean }>) {
   return (
-    <div {...props} className={cn(flush ? '' : 'p-[var(--card-padding-large)]', className)}>
+    <div
+      {...props}
+      className={cn(flush ? '' : 'p-[var(--card-padding)] [header+&]:pt-0', className)}
+    >
       {children}
     </div>
   );

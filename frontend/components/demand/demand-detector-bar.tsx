@@ -87,12 +87,10 @@ export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnaps
           <Tooltip
             key={key}
             content={
-              <Stack gap="tight" className="max-w-xs p-1 text-xs">
+              <Stack gap="tight" className="type-caption max-w-xs p-1 text-current">
                 <p className={textRole('emphasis')}>{meta.label}</p>
                 <p className="opacity-90">{meta.description}</p>
-                <p className="border-t border-current/20 pt-1.5 text-xs opacity-75">
-                  {meta.requirements}
-                </p>
+                <p className="pt-2 opacity-75">{meta.requirements}</p>
                 {detectorLimitations.length > 0 && (
                   <p className={textRole('label', 'text-warning-text')}>
                     Note: {detectorLimitations.join(' ')}
@@ -116,7 +114,7 @@ export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnaps
       {/* Real, signal-specific limitations still surface; the static privacy
           caveat that used to sit here said the same thing on every screen. */}
       {limitations.length > 0 ? (
-        <span className={textRole('meta', 'ms-auto flex items-center gap-1.5')}>
+        <span className={textRole('caption', 'ms-auto flex items-center gap-2')}>
           <Info className="size-3 shrink-0" aria-hidden="true" />
           {limitations.join(' ')}
         </span>

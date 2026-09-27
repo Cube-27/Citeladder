@@ -40,8 +40,8 @@ function DetailRow({
 }: Readonly<{ label: string; children: React.ReactNode; numeric?: boolean }>) {
   return (
     <div className="border-border-subtle grid min-h-12 grid-cols-[minmax(0,180px)_1fr] items-center gap-4 border-b py-2 last:border-b-0">
-      <dt className={textRole('bodyStrong')}>{label}</dt>
-      <dd className={numeric ? 'text-secondary text-xs tabular-nums' : 'text-foreground text-sm'}>
+      <dt className={textRole('itemTitle')}>{label}</dt>
+      <dd className={numeric ? 'type-caption tabular-nums' : 'type-body text-foreground'}>
         {children}
       </dd>
     </div>
@@ -112,7 +112,7 @@ function ProjectDeletionControls() {
   if (!hasCapability(PROJECT_DELETION_CAPABILITY)) return null;
   return (
     <>
-      <section className="border-border-subtle grid gap-4 border-t pt-4">
+      <section className="grid gap-4">
         <EditorialSectionHeader
           title="Danger zone"
           description="Permanently delete the active project and everything inside it."
@@ -128,8 +128,8 @@ function ProjectDeletionControls() {
                   size="md"
                 />
                 <div className="grid min-w-0 gap-0.5">
-                  <div className={textRole('bodyStrong', 'truncate')}>{activeProject.name}</div>
-                  <p className="text-muted text-xs">Brand: {activeProject.brand_name}</p>
+                  <div className={textRole('itemTitle', 'truncate')}>{activeProject.name}</div>
+                  <p className="type-caption">Brand: {activeProject.brand_name}</p>
                 </div>
               </div>
               <Button
@@ -150,7 +150,7 @@ function ProjectDeletionControls() {
             ) : null}
           </>
         ) : (
-          <p className="text-muted text-sm">No project selected.</p>
+          <p className="type-body">No project selected.</p>
         )}
       </section>
       <Dialog
@@ -255,15 +255,15 @@ export function SettingsScreen() {
                   // triggering a menu. A pale tint with accent ink read as a
                   // disabled chip beside the address it belongs to.
                   className={textRole(
-                    'bodyStrong',
+                    'itemTitle',
                     'bg-accent text-accent-fg flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
                   )}
                 >
                   {emailInitials(user.email)}
                 </span>
                 <div className="grid min-w-0 flex-1 gap-0.5">
-                  <div className={textRole('bodyStrong', 'truncate')}>{user.email}</div>
-                  <div className="text-muted text-sm capitalize">{user.role}</div>
+                  <div className={textRole('itemTitle', 'truncate')}>{user.email}</div>
+                  <div className="type-body capitalize">{user.role}</div>
                 </div>
                 <Badge variant="status" value={user.is_active ? 'success' : 'danger'}>
                   {user.is_active ? 'Active' : 'Inactive'}

@@ -120,19 +120,19 @@ export function Calendar({
           type="button"
           aria-label="Previous month"
           onClick={() => setMonth((current) => addMonths(current, -1))}
-          className="hover:bg-active inline-flex size-7 items-center justify-center rounded-[var(--radius-control)]"
+          className="hover:bg-active inline-flex size-8 items-center justify-center rounded-[var(--radius-control)]"
         >
           <ChevronLeft className="size-4" aria-hidden />
         </Pressable>
         {/* Announced on change so a screen reader hears the month it moved to. */}
-        <span aria-live="polite" className="text-sm font-medium">
+        <span aria-live="polite" className="type-item-title">
           {monthLabel(month)}
         </span>
         <Pressable
           type="button"
           aria-label="Next month"
           onClick={() => setMonth((current) => addMonths(current, 1))}
-          className="hover:bg-active inline-flex size-7 items-center justify-center rounded-[var(--radius-control)]"
+          className="hover:bg-active inline-flex size-8 items-center justify-center rounded-[var(--radius-control)]"
         >
           <ChevronRight className="size-4" aria-hidden />
         </Pressable>
@@ -141,11 +141,7 @@ export function Calendar({
         <thead>
           <tr>
             {WEEKDAYS.map((weekday) => (
-              <th
-                key={weekday}
-                scope="col"
-                className="text-muted p-0 pb-1 text-center text-xs font-normal"
-              >
+              <th key={weekday} scope="col" className="type-caption p-0 pb-1 text-center">
                 {weekday}
               </th>
             ))}
@@ -170,8 +166,8 @@ export function Calendar({
                       disabled={disabled}
                       onClick={() => onSelect(iso)}
                       className={cn(
-                        'inline-flex size-8 items-center justify-center rounded-[var(--radius-control)] text-sm tabular-nums transition-colors',
-                        isSelected ? 'bg-accent text-on-accent font-medium' : 'hover:bg-active',
+                        'type-body text-foreground inline-flex size-8 items-center justify-center rounded-[var(--radius-control)] tabular-nums transition-colors',
+                        isSelected ? 'bg-accent text-on-accent' : 'hover:bg-active',
                         // Days spilling in from the neighbouring months stay
                         // legible but recede, so the current month reads as
                         // the subject.

@@ -57,12 +57,12 @@ export function PlanRow({
     >
       <div className="grid min-w-0 gap-0.5">
         <div className="flex items-center gap-2">
-          <span className={textRole('bodyStrong')}>{plan.name}</span>
+          <span className={textRole('itemTitle')}>{plan.name}</span>
           <span className={textRole('label', 'tabular-nums')}>{priceLabel}</span>
         </div>
-        {plan.description ? <p className="text-muted text-xs">{plan.description}</p> : null}
+        {plan.description ? <p className="type-caption">{plan.description}</p> : null}
         {!selection.ok && !plan.contact_only && selection.reason ? (
-          <p className="text-muted text-xs">{billingReasonMessage(selection.reason)}</p>
+          <p className="type-caption">{billingReasonMessage(selection.reason)}</p>
         ) : null}
       </div>
       <div className="shrink-0">

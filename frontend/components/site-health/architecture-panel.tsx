@@ -139,7 +139,7 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
         <CardHeader className="gap-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="grid gap-1">
-              <CardTitle className="text-lg">Page kinds</CardTitle>
+              <CardTitle>Page kinds</CardTitle>
               <CardDescription>
                 URLs grouped by their persisted structural purpose for this crawl.
               </CardDescription>
@@ -185,7 +185,7 @@ function CoverageReasons({ reasons }: Readonly<{ reasons: readonly string[] }>) 
   const named = reasons.filter((reason) => reason in COVERAGE_REASON_LABELS);
   if (named.length === 0) return null;
   return (
-    <p className="text-muted text-xs">
+    <p className="type-caption">
       Why: {named.map((reason) => COVERAGE_REASON_LABELS[reason]).join('; ')}.
     </p>
   );
@@ -216,17 +216,17 @@ function ArchitectureMetrics({
     ],
   ];
   return (
-    <dl className="border-border-subtle grid grid-cols-2 border-y sm:grid-cols-3 lg:grid-cols-5">
+    <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
       {items.map(([label, value, supporting]) => (
         <div
           key={label}
           className="border-border-subtle grid gap-0.5 border-b px-3 py-2 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
         >
           <dt className={eyebrowClasses}>{label}</dt>
-          <dd className={textRole('metric')}>
+          <dd className={textRole('figure')}>
             {value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : value}
           </dd>
-          {supporting ? <span className="text-muted text-xs">{supporting}</span> : null}
+          {supporting ? <span className="type-caption">{supporting}</span> : null}
         </div>
       ))}
     </dl>
@@ -271,7 +271,7 @@ function PageKindTable({
                     className="inline-flex min-h-11 w-auto items-center gap-2 text-left md:min-h-9"
                   >
                     <Chevron className="text-muted size-4 shrink-0" aria-hidden />
-                    <PageKindBadge pageKind={pageKind.page_kind} className="text-xs" />
+                    <PageKindBadge pageKind={pageKind.page_kind} />
                   </Pressable>
                 </TableCell>
                 <TableRecordMetricCell label="Pages">{pageKind.page_count}</TableRecordMetricCell>
@@ -307,19 +307,19 @@ function PageKindPages({
         {pages.length === 0 ? (
           <p className={textRole('body')}>No projected URLs are available for this kind.</p>
         ) : (
-          <ul className="content-scroll grid max-h-64 gap-1.5 overflow-y-auto overscroll-contain pr-2 pl-6">
+          <ul className="content-scroll grid max-h-64 gap-2 overflow-y-auto overscroll-contain pr-2 pl-6">
             {pages.map((page) => (
               <li key={page.site_url_id} className="min-w-0">
                 {crawlId ? (
                   <ProjectLink
                     href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
-                    className="text-accent-text min-w-0 truncate text-sm hover:underline"
+                    className="type-body text-accent-text min-w-0 truncate hover:underline"
                     title={page.url}
                   >
                     {page.url}
                   </ProjectLink>
                 ) : (
-                  <span className="text-foreground min-w-0 truncate text-sm">{page.url}</span>
+                  <span className="type-body text-foreground min-w-0 truncate">{page.url}</span>
                 )}
               </li>
             ))}
@@ -371,7 +371,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
         <CardContent className="grid gap-3 pt-2">
           {data.structure_depth.buckets.map((bucket) => (
             <div key={bucket.key} className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-3">
-              <span className="text-secondary text-xs">{DEPTH_LABELS[bucket.key]}</span>
+              <span className="type-caption">{DEPTH_LABELS[bucket.key]}</span>
               <div className="bg-background-alt h-1.5 overflow-hidden rounded-full">
                 <div
                   className="bg-accent h-full rounded-full"
@@ -384,7 +384,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
             </div>
           ))}
           {data.structure_depth.unmeasured_page_count > 0 ? (
-            <p className="text-muted text-xs">
+            <p className="type-caption">
               {data.structure_depth.unmeasured_page_count} pages have no measured depth.
             </p>
           ) : null}
@@ -400,7 +400,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
         <CardContent className="grid gap-3 pt-2">
           {data.topical_coherence.state === 'available' ? (
             <>
-              <p className="text-secondary text-xs">
+              <p className="type-caption">
                 {data.topical_coherence.eligible_page_count} of{' '}
                 {data.topical_coherence.total_page_count} pages eligible
               </p>
@@ -413,7 +413,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
                   </li>
                 ))}
               </ul>
-              <p className="text-muted text-xs">
+              <p className="type-caption">
                 {data.topical_coherence.outliers.length} bounded lexical outliers
               </p>
             </>

@@ -21,7 +21,7 @@ export function Passage({
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
     <blockquote className={panelClasses({ tone: 'well', pad: 'compact' }, className)}>
-      <p className={cn(textRole('body'), 'leading-relaxed')}>“{children}”</p>
+      <p className={textRole('body')}>“{children}”</p>
     </blockquote>
   );
 }
@@ -41,7 +41,7 @@ export function Limitations({
   return (
     <div className={cn('grid gap-1', className)}>
       {items.map((item) => (
-        <p key={item} className="text-muted text-xs">
+        <p key={item} className="type-caption">
           {item}
         </p>
       ))}

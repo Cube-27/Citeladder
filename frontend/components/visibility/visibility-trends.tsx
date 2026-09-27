@@ -102,7 +102,7 @@ export function VisibilityTrends({
         <Card>
           <CardHeader>
             <CardTitle>Brand and competitors</CardTitle>
-            <p className={textRole('meta')}>
+            <p className={textRole('caption')}>
               How often each brand is named, across the same answers. Select a row to plot it on its
               own.
             </p>
@@ -201,7 +201,7 @@ function HeadlineMetrics({ selected }: { selected: Visibility }) {
           <MetricItem
             key={item.key}
             label={
-              <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-2">
                 {item.label}
                 <InfoHint label={item.label}>{item.explanation}</InfoHint>
               </span>
@@ -217,7 +217,7 @@ function HeadlineMetrics({ selected }: { selected: Visibility }) {
       {position == null ? null : (
         <MetricItem
           label={
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-2">
               Average position
               <InfoHint label="Average position">
                 {`Where your brand tends to appear among the brands you TRACK — you and your configured competitors. A brand an answer names that you do not track is not counted, so this is not a rank within the whole answer. Counted only over the answers that named you, and averaged to ${formatPositionExact(position)}.`}
@@ -339,9 +339,9 @@ function MeasurementHistory({
 /** One entry in the chart key: the brand, then each comparison line. */
 function SeriesKey({ label, swatchClass }: Readonly<{ label: string; swatchClass: string }>) {
   return (
-    <li className="flex items-center gap-1.5">
+    <li className="flex items-center gap-2">
       <span className={`inline-block size-2 rounded-full ${swatchClass}`} aria-hidden />
-      <span className={textRole('meta')}>{label}</span>
+      <span className={textRole('caption')}>{label}</span>
     </li>
   );
 }

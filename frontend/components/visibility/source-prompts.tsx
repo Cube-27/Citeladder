@@ -36,7 +36,7 @@ import { EVIDENCE_LIMIT } from '@/lib/visibility/use-visibility-dashboard';
 
 /** A counted nought in a column of chips, kept apart from an absent one. */
 function ObservedNone() {
-  return <span className={textRole('meta', 'text-secondary tabular-nums')}>0</span>;
+  return <span className={textRole('caption', 'text-secondary tabular-nums')}>0</span>;
 }
 
 /** Chips a cell carries before it stops being a cell; the rest become "+N". */
@@ -189,7 +189,7 @@ function PromptRow({
           />
           <span className="grid min-w-0">
             <span className="truncate">{item.prompt_text || 'Untitled prompt'}</span>
-            <span className={textRole('meta', 'text-secondary truncate')}>
+            <span className={textRole('caption', 'text-secondary truncate')}>
               {productModelLabel(item.logical_engine, item.transport_model) ||
                 engineLabel(item.logical_engine) ||
                 item.logical_engine}
@@ -286,7 +286,7 @@ function ChipRow({
     <span className="flex items-center gap-1">
       {children}
       {overflow > 0 ? (
-        <span className={textRole('meta', 'text-secondary tabular-nums')}>+{overflow}</span>
+        <span className={textRole('caption', 'text-secondary tabular-nums')}>+{overflow}</span>
       ) : null}
     </span>
   );

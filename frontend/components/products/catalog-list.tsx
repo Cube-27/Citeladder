@@ -138,7 +138,7 @@ function CatalogRow({
           onClick={onSelect}
           aria-label={entry.label}
           aria-current={selected ? 'true' : undefined}
-          className="flex min-w-0 flex-1 items-center justify-between gap-2 py-2 text-left text-sm"
+          className="type-control flex min-w-0 flex-1 items-center justify-between gap-2 py-2 text-left"
         >
           <span className={cn('truncate', selected ? 'text-accent-text' : 'text-secondary')}>
             {entry.label}
@@ -183,7 +183,7 @@ function CatalogTree({
           checked={checkboxState(shownSelectionCount, shownKeys.length)}
           onCheckedChange={() => onToggle(shownKeys)}
         />
-        <span className="text-muted text-xs tabular-nums">{shownKeys.length} shown</span>
+        <span className="type-caption tabular-nums">{shownKeys.length} shown</span>
       </div>
       <div className={textRole('label', 'flex items-center justify-between px-2')}>
         <span>Categories</span>
@@ -320,13 +320,13 @@ export function CatalogList({
           value={search}
           onValueChange={setSearch}
         />
-        <p className="text-muted text-xs">
+        <p className="type-caption">
           Check items for bulk actions. Select a name to view its details.
         </p>
       </div>
       <div className="grid min-w-0 gap-3 p-[var(--card-padding)] pt-3">
         {empty ? (
-          <p className="text-muted px-2 py-[var(--empty-state-padding)] text-sm">
+          <p className="type-body px-2 py-[var(--empty-state-padding)]">
             {needle
               ? `Nothing matches “${search.trim()}”.`
               : 'Nothing projected yet. Run a Site Health crawl or import a CSV.'}

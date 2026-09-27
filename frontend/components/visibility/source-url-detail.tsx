@@ -97,15 +97,15 @@ function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) 
             target="_blank"
             rel="noreferrer"
             className={textRole(
-              'meta',
-              'text-secondary hover:text-accent-text inline-flex min-w-0 items-center gap-1.5 transition-colors hover:underline',
+              'caption',
+              'text-secondary hover:text-accent-text inline-flex min-w-0 items-center gap-2 transition-colors hover:underline',
             )}
           >
             <span className="truncate">{url}</span>
             <ExternalLink className="size-3 shrink-0" aria-hidden />
           </a>
         ) : (
-          <span className={textRole('meta', 'text-secondary truncate')}>{url}</span>
+          <span className={textRole('caption', 'text-secondary truncate')}>{url}</span>
         )}
       </div>
     </CardHeader>

@@ -37,11 +37,11 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
           >
             <CheckCircle2 className="text-success mt-0.5 size-4" aria-hidden />
             <div className="min-w-0">
-              <ToastPrimitive.Title className="text-sm font-medium">
+              <ToastPrimitive.Title className="type-item-title text-current">
                 {message.title}
               </ToastPrimitive.Title>
               {message.description ? (
-                <ToastPrimitive.Description className="text-muted mt-0.5 text-xs">
+                <ToastPrimitive.Description className="type-caption mt-0.5">
                   {message.description}
                 </ToastPrimitive.Description>
               ) : null}

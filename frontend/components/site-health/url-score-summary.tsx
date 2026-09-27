@@ -60,7 +60,7 @@ function ScoreTile({
       )}
       <div className="grid min-w-0 gap-1">
         <Label>{label}</Label>
-        {caveat ? <span className="text-muted text-xs">{caveat}</span> : null}
+        {caveat ? <span className="type-caption">{caveat}</span> : null}
       </div>
     </div>
   );
@@ -68,10 +68,10 @@ function ScoreTile({
 
 function scoreUnavailableState(state: string) {
   if (state === 'limited_evidence') {
-    return <span className="text-muted text-xs">Limited evidence</span>;
+    return <span className="type-caption">Limited evidence</span>;
   }
   if (state === 'excluded') {
-    return <span className="text-muted text-xs">Excluded</span>;
+    return <span className="type-caption">Excluded</span>;
   }
   return <UnavailableValue state="not_measured" />;
 }

@@ -162,7 +162,7 @@ export function SearchableSelect({
               aria-selected={option.value === value}
               className={cn(
                 menuItemVariants({ selected: option.value === value }),
-                'grid gap-x-3 text-xs leading-5',
+                'grid gap-x-3',
                 optionGridClass(Boolean(renderLeading), Boolean(renderOptionEnd)),
                 index === activeIndex && option.value !== value && 'bg-background-alt',
               )}

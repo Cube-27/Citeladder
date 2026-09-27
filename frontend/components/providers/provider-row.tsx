@@ -66,7 +66,7 @@ function LastFailure({ group }: Readonly<{ group: ProviderGroup }>) {
   )?.latest_probe;
   if (!probe) return null;
   return (
-    <p className="text-danger-text text-xs">
+    <p className="type-caption text-danger-text">
       Last test failed
       {probe.safe_reason ? `: ${probe.safe_reason}` : ''}
       {probe.model ? ` (model ${probe.model})` : ''}.
@@ -142,8 +142,8 @@ export function ProviderRow({
             size="md"
           />
           <div className="grid min-w-0 gap-0.5">
-            <h3 className={textRole('objectTitle')}>{group.label}</h3>
-            <p className={textRole('meta')}>{group.engines.map(engineSummary).join(' · ')}</p>
+            <h3 className={textRole('sectionTitle')}>{group.label}</h3>
+            <p className={textRole('caption')}>{group.engines.map(engineSummary).join(' · ')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

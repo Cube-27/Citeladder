@@ -37,7 +37,6 @@ import {
 
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import type { MarketOption } from '@/lib/setup/markets';
-import { cn } from '@/lib/utils';
 
 const COUNTRY_FLAGS = {
   AE,
@@ -123,7 +122,7 @@ function CountryFlag({ code }: Readonly<{ code: string }>) {
   return Flag ? (
     <Flag
       data-country-flag={code}
-      className={cn('h-3.5 w-5 shrink-0 overflow-hidden rounded-[2px]')}
+      className="h-3.5 w-5 shrink-0 overflow-hidden rounded-xs"
       aria-hidden
     />
   ) : null;

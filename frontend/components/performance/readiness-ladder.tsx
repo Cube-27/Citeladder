@@ -167,7 +167,7 @@ export function ReadinessLadder({
           );
         })}
       </ol>
-      <p className={textRole('meta')}>
+      <p className={textRole('caption')}>
         {EXPLANATION[data.stage]}
         {data.imported_through
           ? ` Imported through ${formatWindowDate(data.imported_through)}.`

@@ -43,7 +43,7 @@ export function EvidenceLink({ evidence, className }: Readonly<EvidenceLinkProps
     >
       <span className="min-w-0 [overflow-wrap:anywhere]">{evidence.label}</span>
       {evidence.observedAt ? (
-        <span className={textRole('meta', 'shrink-0')}>· {evidence.observedAt}</span>
+        <span className={textRole('caption', 'shrink-0')}>· {evidence.observedAt}</span>
       ) : null}
       <ArrowUpRight aria-hidden className="mt-0.5 size-3 shrink-0" />
     </ProjectLink>

@@ -70,9 +70,9 @@ export function OutputPane({
         <div className="flex flex-wrap items-center gap-2">
           <Badge>{outputKindLabel(output.kind)}</Badge>
           <Badge>{OUTPUT_PHASE_LABEL[output.phase]}</Badge>
-          <span className={textRole('meta')}>Revision {revision.number}</span>
+          <span className={textRole('caption')}>Revision {revision.number}</span>
           {output.target_label ? (
-            <span className={textRole('meta', 'truncate')}>{output.target_label}</span>
+            <span className={textRole('caption', 'truncate')}>{output.target_label}</span>
           ) : null}
         </div>
         {editing ? null : (
@@ -254,11 +254,11 @@ function Sources({ refs }: Readonly<{ refs: string[] }>) {
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
   return (
-    <ul className="grid gap-1.5">
+    <ul className="grid gap-2">
       {[...counts].map(([label, count]) => (
         <li key={label} className="flex justify-between gap-3">
           <span className={textRole('body')}>{label}</span>
-          <span className={textRole('meta', 'tabular-nums')}>{count}</span>
+          <span className={textRole('caption', 'tabular-nums')}>{count}</span>
         </li>
       ))}
     </ul>

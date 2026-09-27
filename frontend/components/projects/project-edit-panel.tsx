@@ -244,7 +244,7 @@ export function ProjectEditPanel({
         <div className="grid gap-2">
           <div className="flex items-center gap-2">
             <p className={eyebrowClasses}>Competitors</p>
-            <span className="text-muted text-xs">
+            <span className="type-caption">
               {competitors.length} of {maximumCompetitors ?? '…'}
             </span>
             <Button
@@ -265,7 +265,7 @@ export function ProjectEditPanel({
             </Button>
           </div>
           {competitors.length === 0 ? (
-            <p className="text-muted text-sm">None tracked.</p>
+            <p className="type-body">None tracked.</p>
           ) : (
             <ul className="grid list-none gap-2 p-0">
               {competitors.map((competitor, index) => (

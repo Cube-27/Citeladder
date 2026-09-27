@@ -66,9 +66,7 @@ function PromptSetField({
         }
         if (!promptSetsLoading && !promptSets.length) {
           return (
-            <p className="text-muted text-sm">
-              No prompt set yet. Add prompts on the Prompts screen first.
-            </p>
+            <p className="type-body">No prompt set yet. Add prompts on the Prompts screen first.</p>
           );
         }
         return (
@@ -253,7 +251,7 @@ export function LaunchDialogView({
           </legend>
           {noEngines ? (
             <div className="grid gap-2">
-              <p className="text-muted text-sm">
+              <p className="type-body">
                 {unverifiedEngines.length
                   ? `A key is stored for ${unverifiedEngines.map((engine) => ENGINE_LABELS[engine]).join(', ')}, but it has not passed a connection test yet. Test it to launch an audit with it.`
                   : 'No configured engines. Connect a provider to launch an audit.'}
@@ -318,7 +316,9 @@ export function LaunchDialogView({
           )}
         </Field>
         {estimate ? (
-          <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1 text-xs')}>
+          <div
+            className={panelClasses({ tone: 'well', pad: 'compact' }, 'type-caption grid gap-1')}
+          >
             <span className={textRole('emphasis', 'text-foreground')}>
               {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
               planned

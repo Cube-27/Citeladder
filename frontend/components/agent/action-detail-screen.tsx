@@ -197,7 +197,7 @@ function Diagnosis({
   return (
     <section aria-labelledby="action-diagnosis" className="grid gap-4">
       <SectionTitle id="action-diagnosis">Diagnosis</SectionTitle>
-      {approach ? <p className={textRole('bodyStrong')}>{approach}</p> : null}
+      {approach ? <p className={textRole('itemTitle')}>{approach}</p> : null}
       <div className="grid gap-2">
         <h3 className={textRole('label')}>What happened</h3>
         {action.members.length === 0 ? (
@@ -221,11 +221,11 @@ function Diagnosis({
       {families.length > 0 ? (
         <div className="grid gap-2">
           <h3 className={textRole('label')}>Evidence by system</h3>
-          <dl className="grid gap-1.5 sm:grid-cols-2">
+          <dl className="grid gap-2 sm:grid-cols-2">
             {families.map(([family, state]) => (
               <div key={family} className="flex justify-between gap-3">
                 <dt className={textRole('body')}>{familyLabel(family)}</dt>
-                <dd className={textRole('meta')}>{FAMILY_STATE_LABEL[state] ?? ''}</dd>
+                <dd className={textRole('caption')}>{FAMILY_STATE_LABEL[state] ?? ''}</dd>
               </div>
             ))}
           </dl>
@@ -317,12 +317,12 @@ function LinkedChats({
             <li key={chat.id} className={panelClasses({ pad: 'compact' }, 'grid gap-0.5')}>
               <ProjectLink
                 href={`/agent/chats/${chat.id}`}
-                className={textRole('bodyStrong', 'hover:text-accent-text')}
+                className={textRole('itemTitle', 'hover:text-accent-text')}
               >
                 {chat.title}
               </ProjectLink>
               {chat.output_kind && chat.output_phase ? (
-                <span className={textRole('meta')}>
+                <span className={textRole('caption')}>
                   {outputKindLabel(chat.output_kind)} · {OUTPUT_PHASE_LABEL[chat.output_phase]}
                 </span>
               ) : null}

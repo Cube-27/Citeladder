@@ -90,7 +90,7 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
         <span>{logout.isPending ? 'Signing out…' : 'Sign out'}</span>
       </DropdownItem>
       {logout.isError ? (
-        <p role="alert" className="text-danger px-2 py-1.5 text-xs">
+        <p role="alert" className="type-caption text-danger px-2 py-2">
           Sign out failed. Your session is still active; please try again.
         </p>
       ) : null}
@@ -125,14 +125,12 @@ export function UserMenuTrigger({
             aria-hidden
             className={textRole(
               'label',
-              'bg-accent text-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full text-xs uppercase',
+              'type-caption bg-accent text-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full uppercase',
             )}
           >
             {emailInitials(email)}
           </span>
-          {compact ? null : (
-            <span className="text-secondary min-w-0 flex-1 truncate text-sm">{email}</span>
-          )}
+          {compact ? null : <span className="type-body min-w-0 flex-1 truncate">{email}</span>}
         </DropdownTrigger>
         {open ? <UserMenuContent presenter={presenter} /> : null}
       </Dropdown>

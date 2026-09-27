@@ -66,7 +66,7 @@ export function CandidateReview({
   return (
     <section aria-labelledby="candidate-review-heading" className="grid min-w-0 gap-3">
       <div className="bg-elevated sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 py-2">
-        <h3 id="candidate-review-heading" className={textRole('bodyStrong')}>
+        <h3 id="candidate-review-heading" className={textRole('itemTitle')}>
           Review {plural(candidates.length, 'suggestion')}
         </h3>
         <div className="flex gap-2">
@@ -99,7 +99,7 @@ export function CandidateReview({
           }
           disabled={isReviewing}
         />
-        <span className="text-muted text-xs tabular-nums">{selected.length} selected</span>
+        <span className="type-caption tabular-nums">{selected.length} selected</span>
       </div>
       <ul className="divide-border grid min-w-0 divide-y" aria-label="Suggested prompts">
         {candidates.map((candidate) => {
@@ -114,9 +114,9 @@ export function CandidateReview({
                 disabled={isReviewing}
               />
               <div className="grid min-w-0 gap-0.5 py-2">
-                <span className="text-foreground text-sm">{candidate.text}</span>
-                {topicName ? <span className="text-muted text-xs">{topicName}</span> : null}
-                <span id={`${descriptionId}-${candidate.id}`} className="text-secondary text-xs">
+                <span className="type-body text-foreground">{candidate.text}</span>
+                {topicName ? <span className="type-caption">{topicName}</span> : null}
+                <span id={`${descriptionId}-${candidate.id}`} className="type-caption text-secondary">
                   {qualityStatusLabel(candidate)}
                 </span>
                 {candidate.quality_flags.length ? (

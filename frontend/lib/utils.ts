@@ -18,16 +18,10 @@ const twMerge = extendTailwindMerge({
             // `text-hero`, `text-display-1` and `text-display-2` no longer
             // exist in the token layer and are no longer registered here.
             'heading-sm',
-            'page-title',
-            'role-meta',
-            'role-body',
-            'role-section',
             'field',
           ],
         },
       ],
-      // `font-*` otherwise reads as a font family.
-      'font-weight': [{ font: ['overlay-title'] }],
     },
   },
 });

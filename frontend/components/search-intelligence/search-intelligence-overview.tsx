@@ -20,7 +20,7 @@ export function SearchMetrics({
           className="border-border-subtle grid min-w-40 flex-1 gap-1 border-r p-4 last:border-0"
         >
           <span className={textRole('label')}>{label}</span>
-          <span className={textRole('metricSm')}>{formatSearchNumber(value)}</span>
+          <span className={textRole('figureSm')}>{formatSearchNumber(value)}</span>
         </div>
       ))}
     </div>
@@ -68,7 +68,7 @@ export function SearchIntelligenceOverview({
         competitors={competitors}
         onOpen={onOpen}
       />
-      <p className={textRole('meta')}>
+      <p className={textRole('caption')}>
         Top-10 share of the provider aggregate:{' '}
         {footprint?.summary.top_10_percentage == null
           ? 'Not measured'
@@ -77,7 +77,7 @@ export function SearchIntelligenceOverview({
       <SearchSummaryEvidence
         datasets={datasets.filter((item) => item === footprint || item === backlinks)}
       />
-      <p className={textRole('meta')}>
+      <p className={textRole('caption')}>
         Provider estimates and observed rankings are separate from first-party Search Demand data.
       </p>
     </Stack>
@@ -88,7 +88,7 @@ export function SearchSummaryEvidence({
   datasets,
 }: Readonly<{ datasets: SearchIntelligenceDataset[] }>) {
   return (
-    <details className={textRole('meta')}>
+    <details className={textRole('caption')}>
       <summary>Metric definitions and saved evidence</summary>
       <p>
         Organic positions exclude other result types; absolute position includes them. Estimated

@@ -238,7 +238,7 @@ function BacklinkMetrics({
         ]}
       />
       {summary ? (
-        <p className={textRole('meta')}>
+        <p className={textRole('caption')}>
           Referring pages: {String(summary.summary.referring_pages ?? 'Not measured')} · Broken
           backlinks: {String(summary.summary.broken_backlinks ?? 'Not measured')} · Target spam:{' '}
           {String(summary.summary.target_spam_score ?? 'Not measured')}
@@ -267,7 +267,7 @@ function CollectionResult({
     <div className="grid min-w-0 gap-4">
       {' '}
       {comparison && dataset ? (
-        <p className={textRole('bodyStrong')}>
+        <p className={textRole('itemTitle')}>
           {label(dataset)} compared with {dataset.target_hostname}
         </p>
       ) : null}

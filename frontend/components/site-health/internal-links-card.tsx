@@ -58,14 +58,14 @@ export function InternalLinksCard({
   ];
   return (
     <div className="grid min-w-0 gap-4">
-      <p className={textRole('meta')}>
+      <p className={textRole('caption')}>
         {`Modelled over ${links.source_page_count} observed crawl page${links.source_page_count === 1 ? '' : 's'}${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
       </p>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
         {metrics.map((metric) => (
           <div key={metric.label} className="grid gap-0.5">
             <Label>{metric.label}</Label>
-            <dd className={textRole('bodyStrong', 'tabular-nums')}>
+            <dd className={textRole('itemTitle', 'tabular-nums')}>
               {metric.value === PLACEHOLDER ? (
                 <UnavailableValue state="not_measured" />
               ) : (
@@ -105,7 +105,7 @@ function NeighbourList({
   emptyMessage: string;
 }>) {
   return (
-    <section className="grid min-w-0 content-start gap-1.5 overflow-hidden">
+    <section className="grid min-w-0 content-start gap-2 overflow-hidden">
       <Label>{heading}</Label>
       {neighbours.length === 0 ? (
         <p className={textRole('body')}>{emptyMessage}</p>
@@ -114,30 +114,30 @@ function NeighbourList({
           {neighbours.map((neighbour) => (
             <li
               key={`${neighbour.site_url_id ?? neighbour.url}`}
-              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-1.5 first:pt-0"
+              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-2 first:pt-0"
             >
               {/* An off-crawl target is counted but was never a node, so it has
                   no detail route to link to. */}
               {neighbour.site_url_id ? (
                 <ProjectLink
                   href={`/site/crawls/${crawlId}/pages/${neighbour.site_url_id}`}
-                  className="text-accent-text min-w-0 text-xs leading-4 [overflow-wrap:anywhere] tabular-nums hover:underline"
+                  className="type-caption text-accent-text min-w-0 [overflow-wrap:anywhere] tabular-nums hover:underline"
                   title={neighbour.url}
                 >
                   {neighbour.url}
                 </ProjectLink>
               ) : (
                 <span
-                  className="text-secondary min-w-0 text-xs leading-4 [overflow-wrap:anywhere] tabular-nums"
+                  className="type-caption min-w-0 [overflow-wrap:anywhere] tabular-nums"
                   title={neighbour.url}
                 >
                   {neighbour.url}
                 </span>
               )}
-              <span className="flex shrink-0 items-center gap-1.5">
+              <span className="flex shrink-0 items-center gap-2">
                 {neighbour.main_content ? <Badge>Main</Badge> : null}
                 {neighbour.nofollow ? <Badge className="text-muted">nofollow</Badge> : null}
-                <span className="text-muted text-xs tabular-nums">×{neighbour.anchor_count}</span>
+                <span className="type-caption tabular-nums">×{neighbour.anchor_count}</span>
               </span>
             </li>
           ))}

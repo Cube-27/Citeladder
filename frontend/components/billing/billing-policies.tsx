@@ -24,7 +24,7 @@ function PolicyLink({ path, children }: Readonly<{ path: `/${string}`; children:
  */
 export function CheckoutConsent({ recurring }: Readonly<{ recurring: boolean }>) {
   return (
-    <p className={textRole('meta')}>
+    <p className={textRole('caption')}>
       {recurring
         ? 'By continuing you authorise a recurring monthly charge of the quoted total until you cancel. Cancellation takes effect at the end of the paid period. '
         : 'By continuing you authorise a single charge of the quoted total. It does not renew. '}
@@ -61,7 +61,7 @@ export function BillingSupport({
         </a>
         {'. '}Include your workspace name and the invoice number; never send card details.
       </p>
-      <p className={textRole('meta')}>
+      <p className={textRole('caption')}>
         <PolicyLink path="/refund-policy">Refund Policy</PolicyLink> ·{' '}
         <PolicyLink path="/cancellation-policy">Cancellation Policy</PolicyLink> ·{' '}
         <PolicyLink path="/terms">Terms of Service</PolicyLink>

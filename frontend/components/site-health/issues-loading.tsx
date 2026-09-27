@@ -13,7 +13,7 @@ export function IssuesLoading() {
 
       <div className="border-border-subtle flex flex-wrap gap-x-8 gap-y-3 border-b pb-3">
         {SUMMARY_PLACEHOLDERS.map((placeholder) => (
-          <div key={placeholder} className="flex items-baseline gap-1.5">
+          <div key={placeholder} className="flex items-baseline gap-2">
             <Skeleton className="h-6 w-8" />
             <Skeleton className="h-3 w-24" />
           </div>

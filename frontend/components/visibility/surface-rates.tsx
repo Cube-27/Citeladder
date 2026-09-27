@@ -45,18 +45,18 @@ function RateTile({
       <Label>{label}</Label>
       {rate.value === null ? (
         <>
-          <span className={textRole('bodyStrong', 'text-muted')}>Unavailable</span>
-          <span className="text-muted text-xs">
+          <span className={textRole('itemTitle', 'text-muted')}>Unavailable</span>
+          <span className="type-caption">
             Nothing to divide by yet — no observation has entered this denominator.
           </span>
         </>
       ) : (
         <>
-          <span className={textRole('metric')}>{Math.round(rate.value * 1000) / 10}%</span>
-          <span className="text-muted text-xs">{denominatorCopy(rate)}</span>
+          <span className={textRole('figure')}>{Math.round(rate.value * 1000) / 10}%</span>
+          <span className="type-caption">{denominatorCopy(rate)}</span>
         </>
       )}
-      <p className="text-secondary text-xs leading-relaxed">{caption}</p>
+      <p className="type-caption">{caption}</p>
     </div>
   );
 }
@@ -67,7 +67,7 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
     <section className="grid gap-2 p-4">
       <div className="grid gap-0.5">
         <Label>Competitors, when an overview appeared</Label>
-        <p className="text-muted text-xs">
+        <p className="type-caption">
           Over the same denominator as your own conditional mention rate, so the two are comparable.
         </p>
       </div>
@@ -77,16 +77,16 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
             <span className={textRole('body', 'min-w-0 truncate')}>{entry.name}</span>
             <span className="shrink-0 text-right">
               {entry.rate.value === null ? (
-                <span className="text-muted text-sm">Unavailable</span>
+                <span className="type-body">Unavailable</span>
               ) : (
                 <>
-                  <span className="text-secondary text-sm tabular-nums">
+                  <span className="type-body tabular-nums">
                     {`${Math.round(entry.rate.value * 1000) / 10}%`}
                   </span>
                   {/* The denominator is stated once for the list above; the
                       numerator is not, and it is what separates one competitor
                       named in a single overview from one named in fifty. */}
-                  <span className="text-muted ml-2 text-xs tabular-nums">
+                  <span className="type-caption ml-2 tabular-nums">
                     {`${entry.rate.numerator} of ${entry.rate.denominator}`}
                   </span>
                 </>
@@ -133,7 +133,7 @@ export function SurfaceRatesPanel({
       <BusyBar active={query.isFetching} label="Updating AI Overview rates" />
       <CardHeader>
         <CardTitle>Google AI Overview</CardTitle>
-        <p className={textRole('meta', 'text-secondary')}>
+        <p className={textRole('caption', 'text-secondary')}>
           {`${data.successful} successfully observed ${data.successful === 1 ? 'search' : 'searches'}, ${data.with_overview} of which showed an overview. Each rate below states what it divided by.`}
         </p>
       </CardHeader>

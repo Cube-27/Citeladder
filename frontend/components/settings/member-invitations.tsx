@@ -76,7 +76,7 @@ export function InviteDialog({
       }
     >
       <div className="grid gap-4">
-        <div className="grid gap-1.5">
+        <div className="grid gap-2">
           <label htmlFor="invite-email" className={textRole('label')}>
             Email
           </label>
@@ -89,7 +89,7 @@ export function InviteDialog({
             placeholder="teammate@example.com"
           />
         </div>
-        <div className="grid gap-1.5">
+        <div className="grid gap-2">
           <label htmlFor="invite-role" className={textRole('label')}>
             Workspace role
           </label>
@@ -100,7 +100,7 @@ export function InviteDialog({
             options={ROLE_OPTIONS}
             ariaLabel="Invitation role"
           />
-          <p className={textRole('meta')}>{ROLE_SUMMARY[role]}</p>
+          <p className={textRole('caption')}>{ROLE_SUMMARY[role]}</p>
         </div>
         {issuedToken ? (
           <Alert tone="info">
@@ -110,7 +110,7 @@ export function InviteDialog({
                 — resending issues a new link and invalidates this one.
               </span>
               <div className="flex items-center gap-2">
-                <code className="text-secondary min-w-0 flex-1 truncate text-xs tabular-nums">
+                <code className="type-caption min-w-0 flex-1 truncate tabular-nums">
                   {acceptanceLink(issuedToken)}
                 </code>
                 <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>
@@ -160,7 +160,7 @@ export function PendingInvitations({
                 <Badge variant="neutral">{invitation.role}</Badge>
               </TableCell>
               <TableCell>
-                <div className="flex items-center justify-end gap-1.5">
+                <div className="flex items-center justify-end gap-2">
                   <Button
                     type="button"
                     variant="secondary"

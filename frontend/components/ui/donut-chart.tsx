@@ -73,7 +73,7 @@ export function DonutChart({
   const unaccounted = Math.max(whole - sum, 0);
 
   if (!drawn.length || whole <= 0) {
-    return <p className={textRole('meta', cn('text-secondary', className))}>{emptyLabel}</p>;
+    return <p className={textRole('caption', cn('text-secondary', className))}>{emptyLabel}</p>;
   }
 
   // Each segment starts where the ones before it ended, so the offsets are a
@@ -158,15 +158,15 @@ export function DonutChart({
         >
           {highlighted ? (
             <div className="grid gap-0.5">
-              <span className={textRole('metric', 'tabular-nums')}>{highlighted.value}</span>
-              <span className={textRole('meta', 'text-secondary')}>
+              <span className={textRole('figure', 'tabular-nums')}>{highlighted.value}</span>
+              <span className={textRole('caption', 'text-secondary')}>
                 {shareText(highlighted.value, whole)}
               </span>
             </div>
           ) : (
             <div className="grid gap-0.5">
-              <span className={textRole('metric', 'tabular-nums')}>{formatCount(total)}</span>
-              <span className={textRole('meta', 'text-secondary')}>{totalLabel}</span>
+              <span className={textRole('figure', 'tabular-nums')}>{formatCount(total)}</span>
+              <span className={textRole('caption', 'text-secondary')}>{totalLabel}</span>
             </div>
           )}
         </div>
@@ -181,13 +181,13 @@ export function DonutChart({
               onFocus={() => setActive(slice.key)}
               onBlur={() => setActive(null)}
               className={cn(
-                'focus-ring flex w-full items-center gap-1.5 transition-opacity',
+                'focus-ring flex w-full items-center gap-2 transition-opacity',
                 active && active !== slice.key ? 'opacity-45' : 'opacity-100',
               )}
             >
               <span className={cn('size-2 shrink-0 rounded-full', slice.swatchClass)} aria-hidden />
-              <span className={textRole('meta', 'truncate')}>{slice.label}</span>
-              <span className={textRole('meta', 'text-secondary ml-auto shrink-0 tabular-nums')}>
+              <span className={textRole('caption', 'truncate')}>{slice.label}</span>
+              <span className={textRole('caption', 'text-secondary ml-auto shrink-0 tabular-nums')}>
                 {shareText(slice.value, whole)}
               </span>
             </button>

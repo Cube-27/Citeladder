@@ -43,18 +43,16 @@ export function ExecutionsTable({
           <TableRow key={execution.id}>
             <TableCell className="max-w-2xl">
               <div className="flex flex-col gap-1">
-                <span className="leading-relaxed break-words" title={execution.prompt_text}>
+                <span className="break-words" title={execution.prompt_text}>
                   {execution.prompt_text || `Prompt #${execution.prompt_index + 1}`}
                 </span>
-                <span className="text-muted text-xs tabular-nums">rep {execution.repetition}</span>
+                <span className="type-caption tabular-nums">rep {execution.repetition}</span>
               </div>
             </TableCell>
             <TableCell>
-              <span className={textRole('bodyStrong')}>
-                {engineLabel(execution.logical_engine)}
-              </span>
+              <span className={textRole('itemTitle')}>{engineLabel(execution.logical_engine)}</span>
               {productTransportLabel(execution.transport_provider) ? (
-                <span className="text-muted ml-1.5 text-xs">
+                <span className="type-caption ml-2">
                   {productTransportLabel(execution.transport_provider)}
                 </span>
               ) : null}

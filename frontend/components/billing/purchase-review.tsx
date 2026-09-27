@@ -46,7 +46,7 @@ export function PurchaseReview({
         <h2 id="purchase-review-title" className={textRole('sectionTitle')}>
           {KIND_TITLE[prepared.kind]}
         </h2>
-        <p className={textRole('meta')}>
+        <p className={textRole('caption')}>
           {itemName(prepared.catalog_key)}
           {prepared.quantity > 1 ? ` × ${prepared.quantity}` : ''}
           {prepared.kind === 'upgrade' ? ' · prorated for the rest of this period' : ''}

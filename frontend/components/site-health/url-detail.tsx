@@ -169,7 +169,7 @@ function IssueHistory({
   return (
     <Card>
       <CardContent className="grid gap-3">
-        <h2 className={textRole('objectTitle')}>Issue History</h2>
+        <h2 className={textRole('sectionTitle')}>Issue History</h2>
         {historyQuery.isError ? <Alert tone="danger">Could not load issue history.</Alert> : null}
         {historyQuery.isLoading ? <HistorySkeleton /> : null}
         {!historyQuery.isLoading && !historyQuery.isError && rows.length === 0 ? (
@@ -212,8 +212,8 @@ function HistoryRows({ rows }: Readonly<{ rows: IssueHistoryPage['items'] }>) {
       {rows.map((row) => (
         <li key={row.id} className="flex items-center justify-between gap-3 py-2">
           <span className="flex min-w-0 flex-col">
-            <span className="text-foreground truncate text-sm">{issueTitle(row)}</span>
-            <span className="text-muted text-xs tabular-nums">
+            <span className="type-body text-foreground truncate">{issueTitle(row)}</span>
+            <span className="type-caption tabular-nums">
               {formatAudited(row.created_at, timeZone)}
             </span>
           </span>

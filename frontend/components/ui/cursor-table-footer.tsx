@@ -60,7 +60,7 @@ export function CursorTableFooter({
       )}
     >
       <div className="flex items-center gap-2">
-        <label className="text-muted text-xs" htmlFor={`${noun}-rows-per-page`}>
+        <label className="type-caption" htmlFor={`${noun}-rows-per-page`}>
           Rows per page
         </label>
         <Select
@@ -76,7 +76,7 @@ export function CursorTableFooter({
         />
       </div>
       <div className="flex items-center gap-1">
-        <span className="text-muted mr-1 text-xs" aria-live="polite">
+        <span className="type-caption mr-1" aria-live="polite">
           <span className="tabular-nums">
             {from}–{to}
           </span>

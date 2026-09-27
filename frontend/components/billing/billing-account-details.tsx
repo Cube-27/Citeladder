@@ -13,14 +13,14 @@ export function BillingCountryInput({
     <div
       className={panelClasses(
         { tone: 'tonal', pad: 'compact' },
-        'flex flex-col justify-between gap-2.5 sm:flex-row sm:items-center',
+        'flex flex-col justify-between gap-2 sm:flex-row sm:items-center',
       )}
     >
       <div className="min-w-0">
         <label htmlFor="billing-country-input" className={textRole('label', 'block')}>
           Billing country
         </label>
-        <span id="billing-country-help" className="text-muted block text-xs">
+        <span id="billing-country-help" className="type-caption block">
           Two-letter ISO code. The server resolves currency, tax and the exact amount from it.
         </span>
       </div>
@@ -43,9 +43,9 @@ export function SubscriptionDetail({
   subscription: BillingEntitlement['subscription'] | null;
   periodEnd: string | null | undefined;
 }>) {
-  if (!subscription) return <p className={textRole('meta')}>No active subscription</p>;
+  if (!subscription) return <p className={textRole('caption')}>No active subscription</p>;
   return (
-    <p className={textRole('meta')}>
+    <p className={textRole('caption')}>
       Subscription: {subscription.status.replaceAll('_', ' ')}
       {periodEnd ? (
         <>

@@ -88,7 +88,7 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
     return (
       <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1')}>
         <span className={textRole('label')}>Query relevance unavailable</span>
-        <p className="text-muted text-xs">
+        <p className="type-caption">
           {relevance.reason === 'page_content_unavailable'
             ? 'The resolved page had no usable inspected content.'
             : 'No usable query terms were available for comparison.'}
@@ -107,12 +107,12 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
       <div className="grid gap-2">
         <div>
           <span className={textRole('label')}>Query relevance</span>
-          <p className="text-secondary mt-0.5 text-xs">
+          <p className="type-caption mt-0.5">
             {relevance.statement ??
               'Query-term coverage measured against the currently inspected page.'}
           </p>
         </div>
-        <dl className="grid grid-cols-3 gap-3 text-xs">
+        <dl className="type-caption grid grid-cols-3 gap-3">
           <div>
             <dt className="text-muted">Title</dt>
             <dd className={textRole('emphasis', 'tabular-nums')}>
@@ -133,7 +133,7 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
           </div>
         </dl>
         {missing.length > 0 ? (
-          <p className="text-secondary text-xs">
+          <p className="type-caption">
             <span className={textRole('label')}>Missing from title or H1:</span>{' '}
             {missing.join(', ')}
           </p>

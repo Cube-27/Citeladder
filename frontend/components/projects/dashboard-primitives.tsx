@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { MetricValue } from '@/components/ui/metric-value';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Opportunity } from '@/lib/api/types';
@@ -53,15 +54,13 @@ export function StateMetric({
       )}
     >
       <p className={eyebrowClasses}>{label}</p>
-      <div>
-        {value === null ? (
-          <UnavailableValue state="not_measured" />
-        ) : (
-          <p className={textRole('metric', 'leading-none')}>{metricValue(value, suffix)}</p>
-        )}
-      </div>
-      <p className={cn(textRole('label', 'tabular-nums'), deltaToneClass(delta, positive))}>
-        {deltaLabel(delta, inverse)}
+      <MetricValue
+        value={value === null ? null : metricValue(value, suffix)}
+        label={availabilityLabel('not_measured')}
+      />
+      {/* A missing value has no change to report; the section states why once. */}
+      <p className={cn(textRole('delta'), deltaToneClass(delta, positive))}>
+        {value === null ? '\u00a0' : deltaLabel(delta, inverse)}
       </p>
     </div>
   );
@@ -81,12 +80,12 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {movements.map((row) => (
-        <div key={row.label} className="border-border-subtle min-w-0 border-t pt-3">
+        <div key={row.label} className="grid min-w-0 gap-2">
           <div className="flex items-center justify-between gap-2">
             <span className={textRole('label', 'capitalize')}>{row.label}</span>
             <span
               className={cn(
-                textRole('label', 'font-display tabular-nums'),
+                textRole('delta'),
                 row.direction === 'positive' ? 'text-success' : 'text-danger',
               )}
             >
@@ -100,7 +99,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
               )}
             </span>
           </div>
-          <div className="flex h-14 items-end gap-2.5" aria-hidden>
+          <div className="flex h-14 items-end gap-2" aria-hidden>
             <span
               className="bg-border-strong w-6 rounded-t-xs transition-[height]"
               style={{ height: `${Math.max(6, ((row.previous ?? 0) / ceiling) * 56)}px` }}
@@ -110,7 +109,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
               style={{ height: `${Math.max(6, ((row.current ?? 0) / ceiling) * 56)}px` }}
             />
           </div>
-          <p className={textRole('label', 'text-center font-sans')}>Previous · Current</p>
+          <p className={textRole('caption', 'text-center')}>Previous · Current</p>
         </div>
       ))}
     </div>
@@ -160,7 +159,7 @@ export function ActionRow({
         <div className="flex flex-wrap items-center gap-2">
           <ProjectLink
             href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
-            className={textRole('bodyStrong', 'hover:text-accent-text transition-colors')}
+            className={textRole('itemTitle', 'hover:text-accent-text transition-colors')}
           >
             {action.title}
           </ProjectLink>
@@ -172,15 +171,13 @@ export function ActionRow({
             <Badge>{action.severity}</Badge>
           )}
         </div>
-        <p className="text-muted truncate text-xs">
+        <p className="type-caption truncate">
           {action.target_label ?? 'Project-wide'} · {action.evidence_summary.count} persisted
           evidence item(s)
         </p>
       </div>
-      <div className="flex items-center justify-end gap-1.5">
-        <span className={textRole('label', 'font-display me-2 tabular-nums')}>
-          {action.priority_score.toFixed(1)}
-        </span>
+      <div className="flex items-center justify-end gap-2">
+        <span className={textRole('figureSm', 'me-2')}>{action.priority_score.toFixed(1)}</span>
         <Button
           variant="ghost"
           size="icon"
