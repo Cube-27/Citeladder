@@ -57,12 +57,14 @@ export function getBootstrapReadTimeoutMs(): number {
 export const COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS = 195_000;
 
 /**
- * Prompt generation runs several structured model batches and then JEV quality
- * judging of the admitted pool before it responds; a measured local run took
- * about three and a half minutes. The ordinary 30-second limit abandoned the
- * request while the server went on to stage its candidates.
+ * Prompt generation makes sequential structured model calls (offering maps,
+ * then generation batches, each bounded by the 180-second model gateway)
+ * before a JEV judging pass that is bounded at 30 seconds. A measured local
+ * run spent about a minute in the model calls and two seconds in JEV, which
+ * the ordinary 30-second limit abandoned while the server went on to stage
+ * its candidates.
  */
-export const PROMPT_GENERATION_REQUEST_TIMEOUT_MS = 360_000;
+export const PROMPT_GENERATION_REQUEST_TIMEOUT_MS = 240_000;
 
 /**
  * Bounded backoff between the API client's network-failure retries (A3). The
