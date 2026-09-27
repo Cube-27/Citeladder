@@ -4,9 +4,11 @@
 
 - [Prompt generation v2](citeladder-prompt-generation-v2.md)
   — owner-approved on 26 September 2026 and revised after the prompt-universe/JEV
-  research. PR 1 (#161), PR 2 (#162) and PR 3a (#163) merged; PR 3b
-  (business-map generation, JEV shadow) is implemented. Next: PR 3c (policy
-  revision, JEV gate).
+  research. PR 1 (#161), PR 2 (#162), PR 3a (#163) and PR 3b (#172) merged.
+  PR 3c code (JEV hard gate with provisional thresholds, text-free rejection
+  outcomes, calibration report) is implemented. Remaining: owner/legal approval
+  and publication of the drafted TypeSafe policy revision, the production key
+  (no earlier than the DPA's 30-day notice), then calibration from live data.
 
 - [Demo and production hardening](citeladder-production-hardening.md)
   — repository-side Phase 1 subset implemented locally on 26 September 2026 in

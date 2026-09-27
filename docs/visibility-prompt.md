@@ -27,12 +27,17 @@ so no audit, capacity/occupancy or visibility query can see a proposal. The
 tracked or already pending. `POST /prompt-sets/{id}/candidates/review` takes
 `accept_ids`/`reject_ids`: accept re-runs prompt capacity and the conflict-safe
 insert under the project, prompt-set and account locks, copying run provenance
-and the candidate's validation into `generation_evidence`; reject deletes. An
+and the candidate's validation into `generation_evidence`. Reject removes the
+candidate from review: it is deleted, or, when it carries a quality-judge
+decision, kept as a text-free `rejected` outcome record (decision, topic and
+admission record, no question text) for calibrating the judge. An
 over-allowance accept writes nothing. Unreviewed candidates expire after
-`GENERATION_CANDIDATE_RETENTION_HOURS`; expired rows are hidden and purged by
-the next write. The Generate dialog shows the pending list with select-all and
-**Accept selected** / **Reject selected**; within a run, rows the quality judge
-flagged are listed last with advisory labels and stay selectable.
+`GENERATION_CANDIDATE_RETENTION_HOURS` and outcome records after
+`GENERATION_REJECTED_OUTCOME_RETENTION_DAYS`; expired rows are hidden and
+purged by the next write. The Generate dialog shows the pending list with
+select-all and **Accept selected** / **Reject selected**; within a run, rows
+the quality judge flagged are listed last with advisory labels and stay
+selectable.
 
 Topics may have one level of subtopics (`Topic.parent_id`, same project); a
 subtopic cannot have children, and deleting a parent promotes its subtopics.
@@ -92,19 +97,33 @@ shortfall is reported, never filled. `candidates_generated` counts what passed
 admission and is never a market size. Each candidate keeps its cell in
 `evidence_refs`, copied into `generation_evidence` on accept.
 
-The [quality judge](../backend/app/domain/prompts/quality_judge.py) runs in
-**shadow mode** through the [JEV connector](../backend/app/connectors/jev.py)
-when `JEV_API_KEY` is set (blank is off; production stays unset until the
-TypeSafe subprocessor revision is published). It judges only the selected
-candidates, so it cannot change what reaches review: yes/no fit, buyer
-relevance, naturalness, standalone and sensibility; intent and stage labels
-recorded beside the model's; and a per-topic duplicate choice among tracked and
-earlier candidates. Its state omits the brand and competitors. Each decision
-stores model, question-schema and policy versions and a state hash, so an
-identical judgment already recorded in the set is reused. Decisions order and
-flag the review list and never drop a row; any JEV failure reports
-`quality_gate="unavailable"` and generation still succeeds. JEV calls are
-bounded by `JEV_MAX_CALLS_PER_GENERATION`, not the agent-call bucket.
+The [quality judge](../backend/app/domain/prompts/quality_judge.py) runs
+through the [JEV connector](../backend/app/connectors/jev.py) when
+`JEV_API_KEY` is set (blank is off; production stays unset until the TypeSafe
+subprocessor revision is published). It judges only the selected candidates:
+yes/no fit, buyer relevance, naturalness, standalone and sensibility; intent
+and stage labels recorded beside the model's; and a per-topic duplicate choice
+among tracked and earlier candidates. Its state omits the brand and
+competitors. Each decision stores model, question-schema and policy versions,
+the thresholds it was judged under and a state hash, so an identical judgment
+already recorded in the set is reused (re-flagged for the new candidate under
+the current policy; the stored decision is never rewritten).
+
+The [gate policy](../backend/app/domain/prompts/quality_policy.py) gives each
+decision a verdict. **Fail**: a yes/no answer below `JEV_FAIL_BELOW` or a
+duplicate choice at or above `JEV_DUPLICATE_FAIL_AT`. **Uncertain**: an answer
+below `JEV_FLAG_BELOW`, a duplicate at or above `JEV_DUPLICATE_FLAG_AT`, or a
+missing answer (`incomplete`); the row is shown flagged. **Pass**: everything
+else. With `JEV_MODE=gate` (the default) a failed candidate never reaches
+review: it is stored only as a text-free `gate_rejected` outcome record and
+counted in `quality_rejected`, and the shortfall is reported, never filled.
+`JEV_MODE=shadow` records and flags without removing anything. The thresholds
+(policy `jev-gate-1`) are provisional until calibrated from review outcomes
+with `scripts/jev_calibration.py`, an aggregate, text-free operator report; a
+threshold change bumps `JEV_POLICY_VERSION`. A JEV failure removes nothing:
+it reports `quality_gate="unavailable"`, the unjudged candidate stays
+reviewable and generation still succeeds. JEV calls are bounded by
+`JEV_MAX_CALLS_PER_GENERATION`, not the agent-call bucket.
 Commercial relevance and distinct needs remain human review criteria; there
 are no word-count windows, opening quotas or automatic rewrite loops. Batching,
 bounded technical retries and partial-result behavior remain.
