@@ -1,4 +1,5 @@
 /** Classify citation ownership from the audit's frozen scoring configuration. */
+import { scalarText } from '../text-order.ts';
 import { domainMatches, isGroundingRedirect, normalizeDomain } from './domains.ts';
 
 type JsonObject = Record<string, unknown>;
@@ -31,7 +32,7 @@ function competitorConfigs(config: JsonObject): CompetitorConfig[] {
     // The stored list holds objects; anything else fails as `.get` would.
     if (!isObject(item)) throw new TypeError('competitor entry is not an object');
     return {
-      name: String(item.name ?? ''),
+      name: scalarText(item.name),
       domains: truthyStrings(listOf(item.domains)),
     };
   });
@@ -44,7 +45,7 @@ function competitorConfigs(config: JsonObject): CompetitorConfig[] {
 export function scoringConfig(configuration: unknown): ScoringConfig {
   const config = isObject(configuration) ? configuration : {};
   return {
-    brandName: String(config.brand_name ?? ''),
+    brandName: scalarText(config.brand_name),
     ownedDomains: listOf(config.owned_domains),
     unintendedDomains: listOf(config.unintended_domains),
     competitors: competitorConfigs(config),
@@ -56,7 +57,7 @@ function domainIn(domain: string, targets: readonly unknown[]): boolean {
 }
 
 function urlDomain(value: unknown): string {
-  const raw = String(value ?? '').trim();
+  const raw = typeof value === 'string' ? value.trim() : '';
   if (!raw) return '';
   try {
     return normalizeDomain(new URL(raw).hostname);
@@ -72,7 +73,7 @@ function citationDomain(citation: JsonObject): string {
   const annotationUrl = citation.redirect_url || citation.url;
   const direct = urlDomain(annotationUrl);
   if (direct && !isGroundingRedirect(annotationUrl)) return direct;
-  return normalizeDomain(citation.domain || citation.title);
+  return normalizeDomain(citation.domain);
 }
 
 export type ClassifiedCitation = JsonObject & {

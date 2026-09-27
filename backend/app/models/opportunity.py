@@ -163,15 +163,16 @@ class Opportunity(Base):
 class Action(Base):
     """One unit of work: the live Opportunities and agent work on one target.
 
-    Identity is ``(project_id, group_key)`` and survives recompute: a
-    recompute re-derives the members, priority, convergence and diagnosis in
+    Identity is ``(project_id, group_key)`` and survives each Opportunity
+    refresh (TypeScript API service): the refresh re-derives the members,
+    priority, convergence and diagnosis in
     the same transaction that supersedes the Opportunity rows, and never
     creates a second Action for a target. An Action whose members all stopped
     firing keeps its identity (chats and declarations may reference it) with
     ``evidence_cleared_at`` set. ``origin`` records whether evidence or agent
     work created it; an agent-created Action gains members through the same
     ``group_key`` when evidence later appears. ``status`` is the human
-    workflow decision, the only field a user writes; recompute never touches it.
+    workflow decision, the only field a user writes; the refresh never touches it.
     """
 
     __tablename__ = "actions"
@@ -204,7 +205,7 @@ class Action(Base):
     )
     origin: Mapped[str] = mapped_column(String(16))
     status: Mapped[str] = mapped_column(String(16), default=ACTION_STATUS_OPEN)
-    # Derived projection, rewritten by each recompute (invariant 5 provenance:
+    # Derived projection, rewritten by each refresh (invariant 5 provenance:
     # the member ids, the snapshot they came from and the policy versions).
     priority_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     families: Mapped[list] = mapped_column(JSONB, default=list)

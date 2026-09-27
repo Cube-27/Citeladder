@@ -25,11 +25,12 @@ import {
   type OpportunityRow,
 } from './projection.ts';
 import type { Scope } from './sources.ts';
+import { compareText } from '../text-order.ts';
 
 const o = policy.opportunity.opportunities;
 const e = policy.opportunity.earned_actions;
 const LIST_SCOPE = 'opportunities';
-const EARNED_RULE_IDS = [...o.EARNED_RULE_IDS].sort();
+const EARNED_RULE_IDS = [...o.EARNED_RULE_IDS].sort(compareText);
 
 export type OpportunityFilters = {
   type: string | null;

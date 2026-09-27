@@ -9,6 +9,7 @@
  */
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { scalarText } from '../text-order.ts';
 
 export type BrandIdentity = { logo_url: string | null; website: string | null };
 
@@ -18,10 +19,7 @@ export type BrandIdentity = { logo_url: string | null; website: string | null };
  * every lookup here are keyed by this one function.
  */
 export function identityKey(name: unknown): string {
-  return String(name ?? '')
-    .trim()
-    .replace(/\s+/gu, ' ')
-    .toLowerCase();
+  return scalarText(name).trim().replace(/\s+/gu, ' ').toLowerCase();
 }
 
 function brandLogoUrl(projectId: string): string {

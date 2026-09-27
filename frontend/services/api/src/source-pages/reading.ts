@@ -15,7 +15,7 @@ import { compareIdentityText } from '../analysis/comparison.ts';
 import { record } from '../traffic/performance.ts';
 
 const strings = (value: unknown): string[] =>
-  Array.isArray(value) ? value.map((item) => String(item)).sort(compareIdentityText) : [];
+  Array.isArray(value) ? value.map(String).sort(compareIdentityText) : [];
 
 function compareLists(left: string[], right: string[]): number {
   for (let index = 0; index < Math.min(left.length, right.length); index += 1) {

@@ -16,7 +16,8 @@ A reading judged against a different roster is not comparable.
     competitor or an alias changes what an earlier reading would have
     concluded, so a roster change makes the check unavailable rather than
     silently comparing two different questions. This is the same rule
-    ``earned_page_hits._prior`` applies to deterioration.
+    the TypeScript refresh's prior-reading lookup
+    (``opportunities/earned-page-hits.ts``) applies to deterioration.
 
 ``unavailable`` never decays into ``unmet``.
     A page we could not read tells us nothing about whether the placement went

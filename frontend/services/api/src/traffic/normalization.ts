@@ -3,6 +3,7 @@ import { domainToASCII } from 'node:url';
 
 import { policy } from '../config.ts';
 import { compareIdentityText } from '../analysis/comparison.ts';
+import { stripTrailing } from '../text-order.ts';
 
 import casefoldMap from '../generated/query-casefold.json' with { type: 'json' };
 
@@ -45,7 +46,7 @@ export function canonicalPage(input: string, origin?: string | null): string | n
     const raw = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]*)([^?#]*)/iu.exec(value);
     if (!raw || raw[1]!.includes('@')) return null;
     const rawHost = raw[1]!.replace(/:\d+$/u, '');
-    const host = domainToASCII(normalizeQuery(rawHost.replace(/\.+$/u, '')));
+    const host = domainToASCII(normalizeQuery(stripTrailing(rawHost, '.')));
     if (!host) return null;
     const defaultPort = scheme === 'https' ? 443 : 80;
     const port = parsed.port ? Number(parsed.port) : defaultPort;
@@ -65,10 +66,12 @@ export function canonicalPage(input: string, origin?: string | null): string | n
     pairs.sort(([ak, av], [bk, bv]) => compareIdentityText(ak, bk) || compareIdentityText(av, bv));
     const quote = (s: string) =>
       encodeURIComponent(s)
-        .replace(/[!'()*]/gu, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
-        .replace(/%20/gu, '+');
+        .replaceAll(/[!'()*]/gu, (c) => `%${c.codePointAt(0)!.toString(16).toUpperCase()}`)
+        .replaceAll('%20', '+');
     const query = pairs.map(([k, v]) => `${quote(k)}=${quote(v)}`).join('&');
-    return `${scheme}://${host}${port === defaultPort ? '' : `:${port}`}${encoded}${query ? `?${query}` : ''}`;
+    const authority = port === defaultPort ? host : `${host}:${port}`;
+    const search = query ? `?${query}` : '';
+    return `${scheme}://${authority}${encoded}${search}`;
   } catch {
     return null;
   }

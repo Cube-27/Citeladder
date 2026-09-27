@@ -236,7 +236,8 @@ scheduling gap predates this PR.
 The same PR removed PR 3's Pydantic error-wording emulation (speedate
 datetime diagnostics, uuid-crate messages, the casefold table and the frozen
 `request_parameters` golden): parity is the 422 contract (status, code, `loc`,
-`type`), not message text.
+`type`), not message text. PR 7a-cleanup later relaxed `type` for dates (see
+there).
 
 > **Stop point B.** Reads and the first worker kinds are TS; the queue is proven
 > with two stacks.
@@ -455,11 +456,14 @@ PostgreSQL coverage (`opportunity-refresh.test.ts`) exercises:
 - supersede-not-mutate with Action identity kept and vanished evidence cleared
 - dismissed status surviving a refresh
 - Agent-row adoption
-- keyset paging, filters, cursor and token errors
+- keyset paging, filters (including `status=dismissed`), malformed/foreign cursors and 422 filter tokens
 - order versioning with a coded 409
-- export headers
+- owner reads of summary (with `source_mix` and the staleness flip), history, detail and both exports, with their headers
 - a foreign-audit 404
-- a 401, and non-member 404s on every route
+- a 401, and non-member 404s on every route, including `export.csv`
+
+Pure decisions the seeded scenario never reaches (earned-page selection and
+factors, site-change promotion) have focused tests in `opportunity-decisions.test.ts`.
 
 Retired Python tests:
 - 11 detector/recompute/projection modules and `test_action_grouping`: their behavior is covered by the TS PostgreSQL suite.
@@ -470,6 +474,10 @@ Retired Python tests:
 Deliberate departures:
 - Commerce hit queries gain an `ORDER BY` for determinism.
 - Citation, mention, source-page and presence reads add workspace predicates the Python loaders relied on joins for.
+- Exports render whole floats as JavaScript numbers (`30`, not Python's `30.0`); rule 4, nothing parses the `.0`.
+- Keyset cursors issued by the Python routes fail once with `invalid_cursor` after cutover; clients restart from the first page.
+- A refresh stamps one microsecond database time (`clock_timestamp()`) on its snapshot and rows, so refreshes in the same millisecond still order by `created_at`.
+- Float query parameters accept decimal notation only (no `0x10`, no `1_000`).
 
 Spans and attributes are unchanged; the refresh adds no provider I/O. Deployment
 and soak remain pending.
@@ -506,7 +514,8 @@ owner moves. It moves no routes or kinds.
 - **Update the earlier PRs' "As implemented" notes** only where they claim
   golden coverage that no longer exists. Point to this PR.
 
-*As implemented:* the generic `src/python` helpers, all ten frozen fixture sets,
+*As implemented:* the Opportunity-port slice landed first with PR 7a (`3ab65637`);
+this PR removed the rest. The generic `src/python` helpers, all ten frozen fixture sets,
 seventeen non-contract live sets, their replay adapters and unused Python builders
 are removed. Route fragments, the OpenAPI harness, session interop, error-envelope
 shape and shared identity operations remain under live contract coverage.
@@ -526,7 +535,12 @@ ISO validation; error messages use plain language; derived metric rounding uses
 JavaScript numbers; referral content hashes use JSON.stringify; stored numeric
 metrics reject booleans/non-finite values; page facts use strict JSON equality;
 missing crawl references remain null. Verification source revisions retain exact
-microseconds instead of reproducing floating-point timestamp rounding.
+microseconds instead of reproducing floating-point timestamp rounding. Request
+date 422s use `date_parsing`/`date_type` instead of Pydantic's
+`date_from_datetime_*` tokens. Corrupt stored values fail loudly on TS-owned reads
+instead of Python truthiness: a non-null, non-object stored score (a null score
+still composes AIO entities, without competitor order), non-list
+`competitors_mentioned`, and non-integer session counts.
 The shared URL hash/group-key owners retain only the raw path/host and query
 serialization details that their active Python counterparts still compare.
 

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 
 import { Badge } from '@/components/ui/badge';
 import { LogoMark } from '@/components/ui/logo-mark';
+import { textRole } from '@/components/ui/typography';
 
 import { WallpaperPanel } from './wallpaper-panel';
 import { ScaledPreview } from '../primitives/scaled-preview';
@@ -61,7 +62,7 @@ const TINT_RIVAL: Record<Tint, string> = {
 
 function PlatformChip({ name }: Readonly<{ name: string }>) {
   return (
-    <span className="text-muted inline-flex items-center gap-1.5 text-xs font-medium">
+    <span className={textRole('badge', 'text-muted inline-flex items-center gap-1.5')}>
       {PLATFORM_LOGOS[name] ? (
         <img
           src={PLATFORM_LOGOS[name]}
@@ -81,7 +82,7 @@ function StateChip({ cited }: Readonly<{ cited: boolean }>) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 text-xs font-medium',
+        textRole('badge', 'inline-flex items-center gap-1.5'),
         cited ? 'text-accent-text' : 'text-muted',
       )}
     >
@@ -126,7 +127,7 @@ function WindowChrome({ label }: Readonly<{ label: string }>) {
   return (
     <div className="border-border-subtle flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-1.5">
       <LogoMark variant="mini" wordmark={false} />
-      <span className="text-foreground text-xs font-medium">{label}</span>
+      <span className={textRole('badge', 'text-foreground')}>{label}</span>
     </div>
   );
 }
@@ -137,7 +138,7 @@ function WindowHead({ title, note, tint }: Readonly<{ title: string; note: strin
       <span aria-hidden className={cn('mb-2.5 block h-[3px] w-6 rounded-full', TINT_MARK[tint])} />
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h3 className="website-small-heading text-foreground">{title}</h3>
-        <span className="text-muted text-xs">{note}</span>
+        <span className={textRole('caption')}>{note}</span>
       </div>
     </div>
   );
@@ -149,7 +150,10 @@ function ExportRow({ tint, badge }: Readonly<{ tint: Tint; badge: string }>) {
       <div className="flex flex-wrap gap-2.5">
         <span
           className={cn(
-            'text-muted inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 text-xs font-medium',
+            textRole(
+              'badge',
+              'text-muted inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5',
+            ),
             TINT_WASH[tint],
           )}
         >
@@ -158,7 +162,10 @@ function ExportRow({ tint, badge }: Readonly<{ tint: Tint; badge: string }>) {
         </span>
         <span
           className={cn(
-            'text-muted inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 text-xs font-medium',
+            textRole(
+              'badge',
+              'text-muted inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5',
+            ),
             TINT_WASH[tint],
           )}
         >
@@ -194,7 +201,7 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
         <span className={cn('w-[22%]', TINT_RIVAL[tint])} />
         <span className="bg-active w-[10%]" />
       </div>
-      <div className="text-muted mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+      <div className={textRole('caption', 'mt-2.5 flex flex-wrap gap-x-4 gap-y-1')}>
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="bg-accent size-1.5 rounded-full" />
           Your brand 68%
@@ -246,7 +253,7 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
           >
             <div className="min-w-0">
               <p className="text-foreground truncate text-sm font-medium">{q}</p>
-              <p className="text-muted truncate text-xs">{s}</p>
+              <p className={textRole('caption', 'truncate')}>{s}</p>
             </div>
             <div className="flex shrink-0 items-center gap-4">
               <PlatformChip name={p} />
@@ -274,15 +281,15 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <span className="text-foreground text-sm font-medium">{name}</span>
               <div className="flex items-baseline gap-2.5">
-                <span className="text-muted text-xs">{delta}</span>
+                <span className={textRole('caption')}>{delta}</span>
                 <span className="text-foreground text-xl font-medium tabular-nums">
                   {value}
-                  <span className="text-muted text-xs">/100</span>
+                  <span className={textRole('caption')}>/100</span>
                 </span>
               </div>
             </div>
             <Bar width={value} own={value >= 80} tint={tint} />
-            <span className="text-muted text-xs">{status}</span>
+            <span className={textRole('caption')}>{status}</span>
           </div>
         ))}
       </div>
@@ -377,17 +384,17 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <span className="text-foreground text-sm font-medium">{name}</span>
               <div className="flex items-baseline gap-3">
-                <span className="text-foreground text-xs font-medium tabular-nums">{price}</span>
+                <span className={textRole('badge', 'text-foreground tabular-nums')}>{price}</span>
                 <StateChip cited={cited} />
               </div>
             </div>
             <Bar width={share} own={rank.startsWith('#1')} tint={tint} />
-            <span className="text-muted text-xs font-medium">{rank}</span>
+            <span className={textRole('badge', 'text-muted')}>{rank}</span>
           </div>
         ))}
       </div>
       <div className="border-border-subtle mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border-t pt-4">
-        <span className="text-muted text-xs">Competitor co-placement: Sony WH-1000XM5</span>
+        <span className={textRole('caption')}>Competitor co-placement: Sony WH-1000XM5</span>
         <Badge variant="status" value="success">
           64% SKU Share of Voice
         </Badge>
@@ -426,14 +433,14 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
               <span className={cn('text-sm', own ? 'text-foreground font-medium' : 'text-muted')}>
                 {label}
               </span>
-              <span className="text-muted text-xs tabular-nums">{engines}</span>
+              <span className={textRole('caption', 'tabular-nums')}>{engines}</span>
             </div>
             <Bar width={share} own={own} tint={tint} />
           </div>
         ))}
       </div>
       <div className="border-border-subtle mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-        <span className="text-muted text-xs">Press release earned 58% of this prompt</span>
+        <span className={textRole('caption')}>Press release earned 58% of this prompt</span>
         <Badge variant="status" value="info">
           Coverage Report Ready
         </Badge>

@@ -83,11 +83,7 @@ function priority(impressions: number, ctr: number | null, gap: number) {
 }
 export function detectSearchSignals(rows: SearchInput[]): Candidate[] {
   return [...rows]
-    .sort(
-      (a, b) =>
-        (a.target_kind < b.target_kind ? -1 : a.target_kind > b.target_kind ? 1 : 0) ||
-        (a.target < b.target ? -1 : a.target > b.target ? 1 : 0),
-    )
+    .sort((a, b) => compareText(a.target_kind, b.target_kind) || compareText(a.target, b.target))
     .flatMap((row) => {
       const ctr = row.impressions ? row.clicks / row.impressions : null;
       if (
@@ -215,21 +211,9 @@ export function detectStrikingDistance(rows: QueryInput[]): Evaluation {
   // Order by the group identity fields.
   const ordered = [...groups.values()].sort(
     ([a], [b]) =>
-      (a!.classification < b!.classification
-        ? -1
-        : a!.classification > b!.classification
-          ? 1
-          : 0) ||
-      (a!.normalized_query < b!.normalized_query
-        ? -1
-        : a!.normalized_query > b!.normalized_query
-          ? 1
-          : 0) ||
-      (a!.resolved_page_url < b!.resolved_page_url
-        ? -1
-        : a!.resolved_page_url > b!.resolved_page_url
-          ? 1
-          : 0),
+      compareText(a!.classification, b!.classification) ||
+      compareText(a!.normalized_query, b!.normalized_query) ||
+      compareText(a!.resolved_page_url, b!.resolved_page_url),
   );
   for (const group of ordered) {
     const row = group[0]!;

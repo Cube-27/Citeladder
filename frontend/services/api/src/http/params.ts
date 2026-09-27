@@ -60,6 +60,43 @@ export const UUID_MESSAGE = 'Expected a UUID';
 
 const failure = (type: string, message: string): Outcome => ({ ok: false, type, message });
 
+function validateInt(scalar: Extract<Scalar, { kind: 'int' }>, raw: string): Outcome {
+  const text = raw.trim();
+  if (!/^[+-]?\d+$/u.test(text) || !Number.isSafeInteger(Number(text)))
+    return failure('int_parsing', 'Expected a safe integer');
+  const value = Number(text);
+  if (scalar.ge !== undefined && value < scalar.ge) {
+    return failure('greater_than_equal', `Must be at least ${scalar.ge}`);
+  }
+  if (scalar.le !== undefined && value > scalar.le) {
+    return failure('less_than_equal', `Must be at most ${scalar.le}`);
+  }
+  return { ok: true, value };
+}
+
+// Decimal notation only: `Number` would also read hex, octal and binary literals.
+const DECIMAL = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/iu;
+
+function validateFloat(raw: string): Outcome {
+  const text = raw.trim();
+  const value = DECIMAL.test(text) ? Number(text) : Number.NaN;
+  return Number.isFinite(value)
+    ? { ok: true, value }
+    : failure('float_parsing', 'Expected a finite number');
+}
+
+function validateStr(scalar: Extract<Scalar, { kind: 'str' }>, raw: string): Outcome {
+  // Lengths count code points, not UTF-16 units.
+  const length = [...raw].length;
+  if (scalar.minLength !== undefined && length < scalar.minLength) {
+    return failure('string_too_short', `Must contain at least ${scalar.minLength} characters`);
+  }
+  if (scalar.maxLength !== undefined && length > scalar.maxLength) {
+    return failure('string_too_long', `Must contain at most ${scalar.maxLength} characters`);
+  }
+  return { ok: true, value: raw };
+}
+
 function validateScalar(scalar: Scalar, raw: string): Outcome {
   switch (scalar.kind) {
     case 'uuid': {
@@ -78,36 +115,12 @@ function validateScalar(scalar: Scalar, raw: string): Outcome {
         ? failure('datetime_parsing', 'Expected an ISO 8601 date or datetime')
         : { ok: true, value };
     }
-    case 'int': {
-      const text = raw.trim();
-      if (!/^[+-]?\d+$/u.test(text) || !Number.isSafeInteger(Number(text)))
-        return failure('int_parsing', 'Expected a safe integer');
-      const value = Number(text);
-      if (scalar.ge !== undefined && value < scalar.ge) {
-        return failure('greater_than_equal', `Must be at least ${scalar.ge}`);
-      }
-      if (scalar.le !== undefined && value > scalar.le) {
-        return failure('less_than_equal', `Must be at most ${scalar.le}`);
-      }
-      return { ok: true, value };
-    }
-    case 'float': {
-      const value = raw.trim() === '' ? Number.NaN : Number(raw);
-      return !Number.isFinite(value)
-        ? failure('float_parsing', 'Expected a finite number')
-        : { ok: true, value };
-    }
-    case 'str': {
-      // Lengths count code points, not UTF-16 units.
-      const length = [...raw].length;
-      if (scalar.minLength !== undefined && length < scalar.minLength) {
-        return failure('string_too_short', `Must contain at least ${scalar.minLength} characters`);
-      }
-      if (scalar.maxLength !== undefined && length > scalar.maxLength) {
-        return failure('string_too_long', `Must contain at most ${scalar.maxLength} characters`);
-      }
-      return { ok: true, value: raw };
-    }
+    case 'int':
+      return validateInt(scalar, raw);
+    case 'float':
+      return validateFloat(raw);
+    case 'str':
+      return validateStr(scalar, raw);
     case 'literal':
       return scalar.values.includes(raw)
         ? { ok: true, value: raw }

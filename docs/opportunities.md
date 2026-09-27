@@ -204,7 +204,6 @@ expected-change vocabulary, the check states and the recheck schedule.
 exercise Python enqueue → TypeScript claim → Python read, replay, concurrent
 claims and recomputes, supersession, the Agent handoff and non-member 404s.
 [Verification PostgreSQL tests](../frontend/services/api/test/opportunity-verification.test.ts)
-and [frozen Python goldens](../frontend/services/api/golden/frozen/opportunity_verification.json)
 exercise comparison, unavailable-state behavior, workspace isolation and the
 Python-producer/TypeScript-worker/Python-reader boundary;
 [placement tests](../backend/tests/component/test_placement_checks.py) exercise

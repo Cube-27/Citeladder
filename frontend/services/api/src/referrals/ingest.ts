@@ -17,9 +17,10 @@ import { isoDateText } from '../db/timestamps.ts';
 import { payloadArtifactId, requireProject, type Executor } from '../workers/executor.ts';
 import { enqueueClassifyReferrals } from './enqueue.ts';
 import { referralEventFields } from './events.ts';
+import { compareText } from '../text-order.ts';
 
 const { referrals } = policy;
-const REFERRAL_DATASETS = Object.values(referrals.datasets).sort();
+const REFERRAL_DATASETS = Object.values(referrals.datasets).sort(compareText);
 // Rows per INSERT, well inside PostgreSQL's bind-parameter limit.
 const INSERT_CHUNK = 1000;
 

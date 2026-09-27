@@ -28,11 +28,15 @@ def listed_in_headings(name: str, headings: tuple[str, ...]) -> bool:
     produced under. Plain substring containment would match inside a longer
     word and would miss ``Best & Less`` against ``Best and Less``, so the
     heading check and the presence check could disagree about the same brand
-    on the same page.
+    on the same page. Each heading is matched alone, so a name never spans
+    two adjacent headings ("Ac" and "me" do not list "Acme").
     """
-    joined = normalize_alias(" | ".join(headings))
     alias = normalize_alias(name)
-    return bool(joined and alias and alias_present(alias, joined))
+    return bool(alias) and any(
+        alias_present(alias, text)
+        for text in (normalize_alias(heading) for heading in headings)
+        if text
+    )
 
 
 def links_to_owned(

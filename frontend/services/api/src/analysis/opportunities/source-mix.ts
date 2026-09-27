@@ -158,12 +158,7 @@ export function buildSourceProjection(
     .map((v) => project(v, rows.length))
     .sort(
       (a, b) =>
-        b.answer_count - a.answer_count ||
-        (a.canonical_domain < b.canonical_domain
-          ? -1
-          : a.canonical_domain > b.canonical_domain
-            ? 1
-            : 0),
+        b.answer_count - a.answer_count || compareText(a.canonical_domain, b.canonical_domain),
     );
   return [
     mix(observed, rows.length, answers),

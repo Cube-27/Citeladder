@@ -66,6 +66,7 @@ describe('cross-stack contracts', () => {
     ({ input, output }) => {
       const value = input as {
         status: number;
+        message: string;
         details?: Record<string, unknown>;
         detail?: unknown;
       };
@@ -73,22 +74,17 @@ describe('cross-stack contracts', () => {
       const actual = envelopeSchema.parse(
         errorEnvelope({
           code: defaultCode(value.status),
-          message: 'A plain TypeScript message',
+          message: value.message,
           requestId: 'request-fixture',
           retryable: isRetryableStatus(value.status),
           details: value.details,
           detail: value.detail,
         }),
       );
-      expect({
-        code: actual.error.code,
-        retryable: actual.error.retryable,
-        details: actual.error.details,
-      }).toEqual({
-        code: expected.error.code,
-        retryable: expected.error.retryable,
-        details: expected.error.details,
-      });
+      // Everything but the per-request ID, which is checked only by the schema.
+      const { request_id: _actualId, ...actualError } = actual.error;
+      const { request_id: _expectedId, ...expectedError } = expected.error;
+      expect({ ...actual, error: actualError }).toEqual({ ...expected, error: expectedError });
     },
   );
 });

@@ -283,8 +283,8 @@ starts with `uv run python -m scripts.export_ts_platform --freeze-family <tag>` 
 Python still serves it; the same change adds the TS route contracts, flips the
 manifest entry, adds the family's paths to `TYPESCRIPT_INGRESS_PATHS` and every
 ingress Caddyfile, and deletes the Python router. Behavior that leaves Python
-with the router is frozen once as golden masters under `golden/frozen/` before
-its code is deleted.
+with the router is covered by TypeScript and PostgreSQL tests before its code is
+deleted; retired Python output is not frozen.
 
 ### Repository validation harness
 

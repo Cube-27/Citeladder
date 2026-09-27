@@ -4,7 +4,7 @@
 # A separate process (the ``analytics-worker`` compose service). It mirrors
 # ``ContentWorker`` exactly on the queue mechanics — claim via the generic
 # ``PostgresTaskQueue`` (``FOR UPDATE SKIP LOCKED``, claim committed BEFORE
-# any work — invariant 8), sweep expired leases FIRST in every loop
+# any work — invariant 15), sweep expired leases FIRST in every loop
 # iteration, ``mark_running`` before dispatch, heartbeat the lease while the
 # executor runs, and cooperative cancel at the task boundary. Terminal
 # accounting goes through the worker-owned atomic ``_finalize``: one locked

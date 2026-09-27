@@ -13,7 +13,7 @@ import {
   valueFactorForPrompt,
 } from './scoring.ts';
 import { summarizeSourcePattern } from './source-patterns.ts';
-import { compareText } from '../../text-order.ts';
+import { compareText, scalarText } from '../../text-order.ts';
 const p = policy.opportunity.opportunities;
 export const rules = p.OPPORTUNITY_RULES_BY_ID as Record<
   string,
@@ -110,7 +110,7 @@ function presentation(issue: SiteEvidence['issues'][number]): [string | null, st
   const missing = atoms
     .map(record)
     .filter((a) => a.outcome === 'missing')
-    .map((a) => String(a.name ?? ''))
+    .map((a) => scalarText(a.name))
     .sort(compareText);
   const selected = entries.find(
     ([names]) => JSON.stringify(names) === JSON.stringify(missing),
@@ -160,12 +160,8 @@ export function detectSiteIssueOpportunities(e: SiteEvidence): DetectorHit[] {
   }
   return hits.sort(
     (a, b) =>
-      (a.rule_id < b.rule_id ? -1 : a.rule_id > b.rule_id ? 1 : 0) ||
-      (a.target_key < b.target_key ? -1 : a.target_key > b.target_key ? 1 : 0) ||
-      (a.source_issue_ids[0]! < b.source_issue_ids[0]!
-        ? -1
-        : a.source_issue_ids[0]! > b.source_issue_ids[0]!
-          ? 1
-          : 0),
+      compareText(a.rule_id, b.rule_id) ||
+      compareText(a.target_key, b.target_key) ||
+      compareText(a.source_issue_ids[0]!, b.source_issue_ids[0]!),
   );
 }

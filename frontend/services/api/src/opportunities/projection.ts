@@ -10,6 +10,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { isoUtc, isoUtcOrNull, utcText, utcTextOf } from '../db/timestamps.ts';
 import { record } from '../traffic/performance.ts';
+import { scalarText } from '../text-order.ts';
 
 const r = policy.opportunity.refresh;
 
@@ -83,8 +84,9 @@ function humanizeTheme(theme: string): string {
 /** The user-facing target label, from persisted frozen evidence only. */
 function targetLabel(row: Pick<OpportunityRow, 'evidence' | 'target_theme' | 'target_url'>) {
   const evidence = record(row.evidence);
-  const prompt = String(evidence.prompt_text ?? '').trim();
-  const product = String(evidence.product_name ?? '').trim();
+  // Detector hits store `prompt_text`; confirmed declines store `prompt`.
+  const prompt = scalarText(evidence.prompt_text).trim() || scalarText(evidence.prompt).trim();
+  const product = scalarText(evidence.product_name).trim();
   return row.target_url || prompt || humanizeTheme(row.target_theme ?? '') || product || null;
 }
 

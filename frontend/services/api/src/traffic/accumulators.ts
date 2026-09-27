@@ -1,4 +1,5 @@
 import { policy } from '../config.ts';
+import { compareText } from '../text-order.ts';
 
 export type MetricRow = {
   id: string;
@@ -23,7 +24,7 @@ function metricCount(row: MetricRow, key: string): number {
 }
 
 export function provenance(ids: Iterable<string>) {
-  const all = [...new Set(ids)].sort();
+  const all = [...new Set(ids)].sort(compareText);
   return { ids: all.slice(0, policy.traffic.TRAFFIC_PROVENANCE_ID_LIMIT), total: all.length };
 }
 

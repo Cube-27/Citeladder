@@ -450,7 +450,66 @@ describe('Opportunity routes', () => {
 
     const replayed = await read(`limit=3&rule_id=thin_content&cursor=${first.body.next_cursor}`);
     expect([replayed.status, replayed.body.error.code]).toEqual([400, 'invalid_cursor']);
-    expect((await read('type=bogus')).status).toBe(422);
+    const malformed = await read('cursor=not*a*cursor');
+    expect([malformed.status, malformed.body.error.code]).toEqual([400, 'invalid_cursor']);
+    for (const query of ['type=bogus', 'severity=bogus', 'status=bogus', 'min_priority=0x10'])
+      expect([query, (await read(query)).status]).toEqual([query, 422]);
+
+    const thin = byRule(await live(s), 'thin_content');
+    await python('dismiss', s.workspace_id, thin.action_id!, s.user_id);
+    expect((await read('status=dismissed')).body.items.map((item) => item.rule_id)).toEqual([
+      'thin_content',
+    ]);
+  });
+
+  it('serves summary, history, detail and Markdown export to the owner', async () => {
+    const s = await seed();
+    await recomputeOpportunities(db, scope(s));
+    const json = async <T>(path: string) => {
+      const { status, response } = await request(s, path);
+      expect([path, status]).toEqual([path, 200]);
+      return (await response.json()) as T;
+    };
+    type Summary = { computed: boolean; stale: boolean; total_count: number; source_mix: unknown };
+    const summary = await json<Summary>(`${base(s)}/summary`);
+    expect(summary).toMatchObject({ computed: true, stale: false, total_count: 4 });
+    // The persisted source projection, with its exact audit provenance.
+    expect(summary.source_mix).toMatchObject({
+      state: 'available',
+      audit_id: s.audit_id,
+      counts: { competitive_evidence: 1 },
+      eligible_analyzed_answers: 1,
+      answers_with_sources: 1,
+    });
+
+    const history = await json<{ items: { rule_id: string; occurrence_count: number }[] }>(
+      `${base(s)}/history`,
+    );
+    expect(history.items.map((item) => [item.rule_id, item.occurrence_count]).sort()).toEqual([
+      ['brand_absent_high_value_prompt', 1],
+      ['missing_structured_data', 1],
+      ['owned_page_not_cited', 1],
+      ['thin_content', 1],
+    ]);
+    const thin = byRule(await live(s), 'thin_content');
+    const detail = await json<{ id: string; source_issue_ids: string[] }>(
+      `/api/v1/opportunities/${thin.id}`,
+    );
+    expect(detail).toMatchObject({ id: thin.id, source_issue_ids: [s.issue_thin_id] });
+
+    const markdown = await request(s, `${base(s)}/export.md`);
+    expect(markdown.status).toBe(200);
+    expect(markdown.response.headers.get('content-disposition')).toBe(
+      `attachment; filename="opportunities-${s.project_id}.md"`,
+    );
+
+    // Newer scored evidence than the snapshot makes the summary stale.
+    await db
+      .updateTable('audits')
+      .set({ completed_at: new Date(Date.now() + 3_600_000) })
+      .where('id', '=', s.audit_id)
+      .execute();
+    expect((await json<Summary>(`${base(s)}/summary`)).stale).toBe(true);
   });
 
   it('requires a session', async () => {
@@ -465,6 +524,7 @@ describe('Opportunity routes', () => {
       ['GET', `${base(own)}/summary`],
       ['GET', `${base(own)}/history`],
       ['GET', `${base(own)}/export.md`],
+      ['GET', `${base(own)}/export.csv`],
       ['GET', `/api/v1/opportunities/${row!.id}`],
       ['POST', `${base(own)}/recompute`],
       ['PUT', `${base(own)}/order`, { ordered_opportunity_ids: [], expected_version: 0 }],

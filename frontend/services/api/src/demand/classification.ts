@@ -59,7 +59,7 @@ export async function classifyProjectQueries(
   projectId: string,
   queries: string[],
 ): Promise<Map<string, Classification>> {
-  const values = [...new Set(queries.filter(Boolean).map(normalizeQuery))].sort(compareText);
+  const values = [...new Set(queries.map(normalizeQuery).filter(Boolean))].sort(compareText);
   const result = new Map<string, Classification>();
   if (!values.length) return result;
   const scope = new WorkspaceScope(workspaceId);

@@ -10,6 +10,7 @@ import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { record } from '../traffic/performance.ts';
 import type { DemandSource, Scope } from './sources.ts';
+import { compareText } from '../text-order.ts';
 
 const o = policy.opportunity.opportunities;
 const r = policy.opportunity.refresh;
@@ -27,7 +28,12 @@ const RULE_BY_CLASS: Readonly<Record<string, string>> = {
   [r.change_class_critical]: 'site_change_critical_regression',
 };
 
-function changeRule(row: { change_class: string; field: string; after: unknown }): string | null {
+/** The rule an unexpected change promotes to, or null when it promotes nothing. */
+export function changeRule(row: {
+  change_class: string;
+  field: string;
+  after: unknown;
+}): string | null {
   if (Object.hasOwn(RULE_BY_CLASS, row.change_class)) return RULE_BY_CLASS[row.change_class]!;
   const after = row.after;
   if (
@@ -396,8 +402,6 @@ export async function commerceHits(
     ...(await alternativeHits(db, scope.workspaceId, snapshots, auditId)),
   ];
   return hits.sort(
-    (a, b) =>
-      (a.rule_id < b.rule_id ? -1 : a.rule_id > b.rule_id ? 1 : 0) ||
-      (a.target_key < b.target_key ? -1 : a.target_key > b.target_key ? 1 : 0),
+    (a, b) => compareText(a.rule_id, b.rule_id) || compareText(a.target_key, b.target_key),
   );
 }

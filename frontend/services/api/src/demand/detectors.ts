@@ -11,6 +11,7 @@ import {
   type Evaluation,
   type QueryInput,
 } from './projection.ts';
+import { compareText } from '../text-order.ts';
 
 const p = policy.demand;
 const resolved = (row: QueryInput) => ['exact', 'resolved'].includes(row.resolution_outcome);
@@ -19,7 +20,7 @@ export function detectCannibalization(rows: QueryInput[]): Evaluation {
   const candidates: Candidate[] = [];
   let abstained = 0;
   const groups = grouped(rows, (r) => r.normalized_query);
-  for (const query of [...groups.keys()].sort()) {
+  for (const query of [...groups.keys()].sort(compareText)) {
     const group = groups.get(query)!;
     if (group[0]!.classification !== 'non_branded') continue;
     if (!group.every(resolved)) {
@@ -38,7 +39,7 @@ export function detectCannibalization(rows: QueryInput[]): Evaluation {
           total > 0 &&
           r.impressions / total >= p.DEMAND_CANNIBALIZATION_MIN_PAGE_SHARE,
       )
-      .sort((a, b) => (a.url < b.url ? -1 : a.url > b.url ? 1 : 0));
+      .sort((a, b) => compareText(a.url, b.url));
     if (qualified.length < 2) continue;
     candidates.push(
       queryCandidate(
@@ -120,8 +121,8 @@ function relevance(query: string, a: ReturnType<typeof aggregate>, property: str
     title_coverage: round(tc, 6),
     h1_coverage: round(hc, 6),
     primary_content_coverage: round(pc, 6),
-    absent_from_title: [...terms].filter((t) => !title.has(t)).sort(),
-    absent_from_h1: [...terms].filter((t) => !h1.has(t)).sort(),
+    absent_from_title: [...terms].filter((t) => !title.has(t)).sort(compareText),
+    absent_from_h1: [...terms].filter((t) => !h1.has(t)).sort(compareText),
     page_analysis_id: a.page_analysis_id,
     page_artifact_id: a.page_artifact_id,
     scope,
@@ -225,7 +226,7 @@ export function detectTrends(rows: QueryInput[], windowEnd: string): Evaluation 
     rows.filter((r) => r.classification === 'non_branded'),
     (r) => r.normalized_query,
   );
-  for (const query of [...groups.keys()].sort()) {
+  for (const query of [...groups.keys()].sort(compareText)) {
     const group = groups.get(query)!;
     let prior = 0,
       recent = 0;

@@ -13,6 +13,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { metricSeriesPoints, type MetricSeriesPoint } from './metric-series.ts';
+import { scalarText } from '../text-order.ts';
 
 const analytics = policy.analytics;
 const PRESET_DAYS: Readonly<Record<string, number>> = analytics.preset_range_days;
@@ -86,7 +87,7 @@ function laxShare(value: unknown): number | null {
 export function aiReferralSources(raw: unknown) {
   const rows: unknown[] = Array.isArray(raw) ? raw : [];
   return rows.filter(isObject).map((row) => ({
-    ai_source: String(row.ai_source ?? ''),
+    ai_source: scalarText(row.ai_source),
     sessions: sessionCount.parse(row.sessions),
     share: laxShare(row.share),
   }));

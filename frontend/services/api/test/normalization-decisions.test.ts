@@ -3,7 +3,8 @@ import { executionFrozenProvenance } from '../src/analysis/provenance.ts';
 import { policy } from '../src/config.ts';
 import { aiReferralSources } from '../src/analytics/ai-referrals.ts';
 import { metricSeriesPoints } from '../src/analytics/metric-series.ts';
-import { domainMatches, normalizeDomain } from '../src/analysis/domains.ts';
+import { domainMatches, isGroundingRedirect, normalizeDomain } from '../src/analysis/domains.ts';
+import { listedInHeadings } from '../src/analysis/opportunities/page-predicates.ts';
 import { classifySourceDomain } from '../src/analysis/opportunities/source-patterns.ts';
 import {
   evaluatePlacement,
@@ -59,6 +60,20 @@ describe('recorded evidence normalization', () => {
     );
   });
 
+  it('reads a grounding redirect from its host, never a substring', () => {
+    expect(
+      isGroundingRedirect('https://vertexaisearch.cloud.google.com/grounding-api-redirect/x'),
+    ).toBe(true);
+    expect(isGroundingRedirect('grounding-api-redirect/xyz')).toBe(true);
+    expect(isGroundingRedirect('evil-grounding-api-redirect.example')).toBe(false);
+    expect(isGroundingRedirect('https://pub.example/a?ref=grounding-api-redirect')).toBe(false);
+  });
+
+  it('lists a name only within one heading', () => {
+    expect(listedInHeadings('Best & Less', ['Top picks', 'Best and Less'])).toBe(true);
+    expect(listedInHeadings('Acme', ['Ac', 'me'])).toBe(false);
+  });
+
   it('keeps changed-roster and missing-verdict placement observations unavailable', () => {
     const p = policy.opportunity.placement;
     const baseline: PlacementReading = {
@@ -101,6 +116,18 @@ it('parses ISO timestamps without losing PostgreSQL microseconds', () => {
   expect(parseDatetime('2026-02-30T00:00:00Z')).toBeNull();
   expect(parseDatetime('0000-01-01T00:00:00Z')).toBeNull();
   expect(parseDatetime('2026-01-01 00:00:00')).toBeNull();
+  expect(parseDatetime('2026-01-01')).toMatchObject({ hour: 0, offsetSeconds: null });
+  expect(parseDatetime('2026-01-01T10:15')).toMatchObject({ hour: 10, minute: 15, second: 0 });
+  expect(parseDatetime('2026-01-01T00:00:00Zjunk')).toBeNull();
+});
+
+it('reads float parameters in decimal notation only', () => {
+  const specs = { path: {}, query: { min: { scalar: { kind: 'float' as const } } } };
+  expect(validateParams(specs, { path: {}, search: 'min=1.5e1' }).query).toEqual({ min: 15 });
+  for (const min of ['0x10', 'Infinity', ''])
+    expect(() => validateParams(specs, { path: {}, search: `min=${min}` })).toThrow(
+      RequestValidationError,
+    );
 });
 
 it('collects invalid parameter locations in the 422 envelope', () => {

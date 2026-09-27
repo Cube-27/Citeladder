@@ -10,13 +10,11 @@ function normalizeAlias(value: string): string {
     .trim()
     .replace(/\s+/gu, ' ');
 }
-export function listedInHeadings(name: string, headings: string[]): boolean {
-  const text = normalizeAlias(headings.join(' | '));
-  const alias = normalizeAlias(name).trim();
-  if (!alias || !text) return false;
+/** Whether one heading names `needle` on token boundaries, including compact matches. */
+function headingNames(heading: string, needle: string): boolean {
+  const text = normalizeAlias(heading);
+  if (!text) return false;
   const tokens = text.split(' ');
-  const needle = alias.replaceAll(' ', '');
-  // Each start/end is a token boundary, including overlapping compact matches.
   return tokens.some((_, start) => {
     let candidate = '';
     for (const token of tokens.slice(start)) {
@@ -26,6 +24,11 @@ export function listedInHeadings(name: string, headings: string[]): boolean {
     }
     return false;
   });
+}
+/** A match never spans two headings: "Ac" and "me" do not list "Acme". */
+export function listedInHeadings(name: string, headings: string[]): boolean {
+  const needle = normalizeAlias(name).replaceAll(' ', '');
+  return Boolean(needle) && headings.some((heading) => headingNames(heading, needle));
 }
 export function linksToOwned(outbound: string[], owned: string[]): boolean {
   return outbound.some((link) => owned.some((domain) => domainMatches(link, domain)));

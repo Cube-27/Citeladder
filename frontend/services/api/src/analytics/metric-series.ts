@@ -5,6 +5,7 @@
  * the traffic reads still use: non-list fragments and non-object entries
  * degrade to nothing rather than failing the read.
  */
+import { scalarText } from '../text-order.ts';
 
 export type MetricSeriesPoint = { date: string; value: number | null };
 
@@ -25,5 +26,5 @@ export function metricSeriesPoints(raw: unknown): MetricSeriesPoint[] {
     .filter((entry): entry is Record<string, unknown> => {
       return entry !== null && typeof entry === 'object' && !Array.isArray(entry);
     })
-    .map((entry) => ({ date: String(entry.date ?? ''), value: numericValue(entry.value) }));
+    .map((entry) => ({ date: scalarText(entry.date), value: numericValue(entry.value) }));
 }

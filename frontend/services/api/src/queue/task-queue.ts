@@ -16,6 +16,7 @@ import { sql, type Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { AnalyticsTasks } from '../generated/db-schema.ts';
+import { compareText } from '../text-order.ts';
 
 export type QueueTask = Selectable<AnalyticsTasks>;
 
@@ -124,7 +125,7 @@ export class TaskQueue {
         )
         .returningAll()
         .execute();
-      const workspaces = [...new Set(claimed.map((task) => task.workspace_id))].sort();
+      const workspaces = [...new Set(claimed.map((task) => task.workspace_id))].sort(compareText);
       await trx
         .insertInto('queue_workspace_turns')
         .values(

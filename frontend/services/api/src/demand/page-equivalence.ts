@@ -4,7 +4,7 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { policy } from '../config.ts';
 import { canonicalPage } from '../traffic/normalization.ts';
 import { record } from '../traffic/performance.ts';
-import { compareText } from '../text-order.ts';
+import { compareText, scalarText, stripTrailing } from '../text-order.ts';
 
 const p = policy.demand;
 type PageCandidate = {
@@ -46,7 +46,7 @@ function variants(canonical: string): string[] {
       ? ['/']
       : [
           url.pathname,
-          url.pathname.endsWith('/') ? url.pathname.replace(/\/+$/u, '') : `${url.pathname}/`,
+          url.pathname.endsWith('/') ? stripTrailing(url.pathname, '/') : `${url.pathname}/`,
         ];
   return [
     ...new Set(
@@ -74,7 +74,7 @@ function resolveFromArtifacts(
       const final = canonicalPage(artifact.final_url);
       if (source === requested && final === candidate.normalized_url && final !== source)
         proofs.add('redirect');
-      const declared = canonicalPage(String(record(artifact.normalized_facts).canonical_url ?? ''));
+      const declared = canonicalPage(scalarText(record(artifact.normalized_facts).canonical_url));
       const sourceMatches =
         source === requested ||
         candidates.some(
@@ -90,15 +90,8 @@ function resolveFromArtifacts(
     (a, b) =>
       Number(b.sitemap_member) - Number(a.sitemap_member) ||
       Number(b.preferred_origin) - Number(a.preferred_origin) ||
-      (a.normalized_url < b.normalized_url
-        ? -1
-        : a.normalized_url > b.normalized_url
-          ? 1
-          : a.site_url_id < b.site_url_id
-            ? -1
-            : a.site_url_id > b.site_url_id
-              ? 1
-              : 0),
+      compareText(a.normalized_url, b.normalized_url) ||
+      compareText(a.site_url_id, b.site_url_id),
   );
   return resolution(
     proven.length === 1 ? 'resolved' : 'ambiguous',
@@ -149,7 +142,7 @@ export async function resolveOwnedPages(
         preferred_origin:
           !!preferred &&
           (r.normalized_url === preferred ||
-            r.normalized_url.startsWith(`${preferred.replace(/\/+$/u, '')}/`)),
+            r.normalized_url.startsWith(`${stripTrailing(preferred, '/')}/`)),
       }));
     const exact = candidates.find((c) => c.normalized_url === canonical.get(url));
     if (exact) result.set(url, resolution('exact', exact.site_url_id, candidates));

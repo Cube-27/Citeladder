@@ -24,6 +24,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { pydanticUtcOrNull, utcText } from '../db/timestamps.ts';
 import { authorizeRunSet, isLogicalEngine, unknownEngine } from './selection.ts';
+import { compareText } from '../text-order.ts';
 
 type JsonObject = Record<string, unknown>;
 
@@ -64,9 +65,9 @@ export type ScoredAnalysis = {
   score: unknown;
 };
 
+/** A stored score object; absent keeps its own meaning and corrupt data fails loudly. */
 function asObject(value: unknown): JsonObject {
-  if (!value) return {};
-  if (typeof value === 'object' && !Array.isArray(value)) return value as JsonObject;
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as JsonObject;
   throw new TypeError('stored score is not an object');
 }
 
@@ -86,8 +87,11 @@ async function composedEntities(
   // No analysis means no answer was ever scored: nothing to compose.
   if (analysis === null || audit === undefined) return [];
   const config = scoringConfig(audit.configuration);
-  const score = asObject(analysis.score);
-  const offsets = asObject(score.competitor_first_offsets);
+  // Mentions, links and citations stand on their own rows; the score only
+  // orders competitors, so an absent score or offset map means no order.
+  const score: JsonObject = analysis.score === null ? {} : asObject(analysis.score);
+  const firstOffsets = score.competitor_first_offsets;
+  const offsets = firstOffsets === undefined || firstOffsets === null ? {} : asObject(firstOffsets);
   const citations = await db
     .selectFrom('citations')
     .select(['is_owned', 'matched_competitor'])
@@ -178,9 +182,7 @@ export async function executionSurfaceEvidence(
       .where('workspace_id', '=', input.workspaceId)
       .execute()
   ).sort(
-    (left, right) =>
-      left.element_index - right.element_index ||
-      (left.url < right.url ? -1 : left.url > right.url ? 1 : 0),
+    (left, right) => left.element_index - right.element_index || compareText(left.url, right.url),
   );
   return {
     outcome: observation.outcome,
@@ -316,7 +318,7 @@ export async function surfaceRates(
     owned_citation_rate_when_present: ownedCitationRateWhenPresent(counts),
     competitor_mention_rates: competitors
       .map((row) => ({ name: String(row.competitor_name ?? ''), overviews: Number(row.overviews) }))
-      .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
+      .sort((left, right) => compareText(left.name, right.name))
       .map(({ name, overviews }) => ({ name, rate: competitorMentionRate(counts, overviews) })),
   };
 }

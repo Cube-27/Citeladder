@@ -13,6 +13,7 @@ import {
   type Evaluation,
 } from './verification-decisions.ts';
 import type { Declaration } from './verification-result.ts';
+import { scalarText } from '../text-order.ts';
 export type Source = { kind: string; id: string; observed_at: string };
 type Context = {
   db: Database;
@@ -22,7 +23,8 @@ type Context = {
 };
 const checksOf = (d: Declaration) =>
   Array.isArray(d.expected_checks) ? d.expected_checks.map(record) : [];
-const kindName = (check: Record<string, unknown>) => String(check.kind ?? 'unknown');
+const kindName = (check: Record<string, unknown>) =>
+  check.kind === null || check.kind === undefined ? 'unknown' : scalarText(check.kind);
 async function siteCheck(ctx: Context, crawlId: string, check: Record<string, unknown>) {
   const kind = kindName(check);
   const d = ctx.declaration;

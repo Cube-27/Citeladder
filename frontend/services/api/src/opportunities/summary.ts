@@ -23,6 +23,7 @@ import {
   type Scope,
   type SnapshotRow,
 } from './sources.ts';
+import { compareText } from '../text-order.ts';
 
 const o = policy.opportunity.opportunities;
 const q = policy.task_queue.statuses;
@@ -57,7 +58,7 @@ async function latestEvidence(db: Database, scope: Scope) {
     crawl ? (crawl.completed_text ?? crawl.created_text) : null,
     demand?.created_text ?? null,
   ].filter((stamp): stamp is string => stamp !== null);
-  const evidenceAt = stamps.length ? stamps.sort().at(-1)! : null;
+  const evidenceAt = stamps.length ? stamps.sort(compareText).at(-1)! : null;
   return { evidenceAt, demand: demand ?? null };
 }
 

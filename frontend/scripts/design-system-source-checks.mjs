@@ -85,12 +85,63 @@ const TOKEN_COLORED_ROLES = [
   '.flow-meta',
 ];
 
-const RAW_TYPE_SCALE =
-  /(?<![\w-])(?:[\w-]+:)*text-(?:2xs|xs|sm|base|lg|xl|[2-9]xl|support|page-title|heading-sm|role-(?:meta|body|section))(?![\w-])/;
+/** Alternation over literal values, escaped for use inside a RegExp. */
+const oneOf = (values) => `(?:${values.map(escapeRegExp).join('|')})`;
+
+/** A class token (with any variant prefixes) whose utility part matches `utility`. */
+const classToken = (utility, end) => new RegExp(String.raw`(?<![\w-])(?:[\w-]+:)*` + utility + end);
+
+const TYPE_SIZES = [
+  '2xs',
+  'xs',
+  'sm',
+  'base',
+  'lg',
+  'xl',
+  ...['2', '3', '4', '5', '6', '7', '8', '9'].map((step) => `${step}xl`),
+  'support',
+  'page-title',
+  'heading-sm',
+  'role-meta',
+  'role-body',
+  'role-section',
+];
+const SPACING_UTILITIES = [
+  'gap',
+  'gap-x',
+  'gap-y',
+  'space-x',
+  'space-y',
+  'p',
+  'px',
+  'py',
+  'pt',
+  'pb',
+  'pl',
+  'pr',
+  'ps',
+  'pe',
+  'm',
+  'mx',
+  'my',
+  'mt',
+  'mb',
+  'ml',
+  'mr',
+  'ms',
+  'me',
+];
+// Six- and ten-pixel steps, and any arbitrary pixel value.
+const OFF_GRID_STEPS = ['1.5', '2.5', '3.5', '7', '9', '11'];
+const ARBITRARY_PX = String.raw`\[\d+(?:\.\d+)?px\]`;
+
+const RAW_TYPE_SCALE = classToken(`text-${oneOf(TYPE_SIZES)}`, String.raw`(?![\w-])`);
 const RAW_TYPE_METRICS =
   /(?<![\w-])(?:[\w-]+:)*(?:leading-|tracking-|font-(?:display|sans)(?![\w-]))/;
-const OFF_GRID_SPACING =
-  /(?<![\w-])(?:[\w-]+:)*-?(?:gap|gap-x|gap-y|space-x|space-y|p|px|py|pt|pb|pl|pr|ps|pe|m|mx|my|mt|mb|ml|mr|ms|me)-(?:1\.5|2\.5|3\.5|7|9|11|\[\d+(?:\.\d+)?px\])(?![\w.-])/;
+const OFF_GRID_SPACING = classToken(
+  `-?${oneOf(SPACING_UTILITIES)}-(?:${oneOf(OFF_GRID_STEPS)}|${ARBITRARY_PX})`,
+  String.raw`(?![\w.-])`,
+);
 
 function staticBindings(program) {
   const bindings = new Map();
