@@ -4,6 +4,8 @@
 # Only an explicit accept creates a ``Prompt``, and only then are prompt
 # capacity, the per-set uniqueness guard and ``generation_evidence`` applied,
 # so a proposal can never be audited, charged or counted in visibility.
+# Rejected candidates with a quality-judge decision become text-free outcome
+# records for calibrating the judge (config/prompts.py).
 # Every query is scoped by ``workspace_id`` (invariant 5).
 from __future__ import annotations
 
@@ -20,7 +22,10 @@ from app.core.config.projects import PROMPT_ORIGIN_GENERATED
 from app.core.config.prompts import (
     BINDING_CODE_ACCEPTED,
     CANDIDATE_DISPOSITION_ACCEPTED,
+    CANDIDATE_DISPOSITION_GATE_REJECTED,
     CANDIDATE_DISPOSITION_PENDING,
+    CANDIDATE_DISPOSITION_REJECTED,
+    CANDIDATE_OUTCOME_DISPOSITIONS,
     GENERATOR_VERSION,
     PROMPT_STATUS_ACTIVE,
     prompt_generation_settings,
@@ -28,6 +33,7 @@ from app.core.config.prompts import (
 from app.domain.prompts.generation_contract import SuggestedPrompt, SuggestedTopic
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
+from app.domain.prompts.quality_policy import gated_out
 from app.domain.prompts.service import PromptSetNotFoundError, prepare_prompt_inserts
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet, Topic
@@ -45,6 +51,8 @@ class StagedCandidates:
     run_id: uuid.UUID
     candidates: list[PromptCandidate]
     dropped_duplicates: int
+    # Candidates the quality gate failed; kept only as outcome records.
+    gate_rejected: int = 0
 
 
 @dataclass(frozen=True)
@@ -65,15 +73,43 @@ def _pending_clause(now: datetime) -> tuple[Any, ...]:
 async def purge_expired_candidates(
     session: AsyncSession, *, workspace_id: uuid.UUID, prompt_set_id: uuid.UUID
 ) -> None:
-    """Delete pending candidates past retention. Write paths only."""
+    """Delete pending candidates and outcome records past retention.
+
+    Write paths only. An outcome record's ``expires_at`` is its purge time.
+    """
     await session.execute(
         delete(PromptCandidate).where(
             PromptCandidate.workspace_id == workspace_id,
             PromptCandidate.prompt_set_id == prompt_set_id,
-            PromptCandidate.disposition == CANDIDATE_DISPOSITION_PENDING,
+            PromptCandidate.disposition.in_(
+                {CANDIDATE_DISPOSITION_PENDING, *CANDIDATE_OUTCOME_DISPOSITIONS}
+            ),
             PromptCandidate.expires_at <= datetime.now(UTC),
         )
     )
+
+
+def _outcome_expiry(now: datetime) -> datetime:
+    days = prompt_generation_settings.rejected_outcome_retention_days
+    return now + timedelta(days=days)
+
+
+def _text_free_decision(decision: dict[str, Any]) -> dict[str, Any]:
+    """The decision without the duplicate option's prompt text."""
+    duplicate = decision.get("duplicate_of")
+    if not isinstance(duplicate, dict):
+        return decision
+    return {**decision, "duplicate_of": {**duplicate, "text": None}}
+
+
+def _as_outcome(candidate: PromptCandidate, disposition: str, now: datetime) -> None:
+    """Keep a rejected candidate's judgment and outcome, drop its text."""
+    candidate.disposition = disposition
+    candidate.text = ""
+    candidate.normalized_text_hash = ""
+    candidate.jev_decision = _text_free_decision(candidate.jev_decision or {})
+    candidate.reviewed_at = now
+    candidate.expires_at = _outcome_expiry(now)
 
 
 async def _existing_prompt_hashes(
@@ -164,6 +200,25 @@ def _stageable(
     return stageable, duplicates
 
 
+async def _record_gate_rejections(
+    session: AsyncSession, rows: list[dict[str, Any]], now: datetime
+) -> tuple[list[dict[str, Any]], int]:
+    """Store gate-failed rows as text-free outcomes; return the reviewable rest."""
+    gated = [row for row in rows if gated_out(row["jev_decision"])]
+    for row in gated:
+        row.update(
+            text="",
+            normalized_text_hash="",
+            jev_decision=_text_free_decision(row["jev_decision"]),
+            disposition=CANDIDATE_DISPOSITION_GATE_REJECTED,
+            reviewed_at=now,
+            expires_at=_outcome_expiry(now),
+        )
+    if gated:
+        await session.execute(pg_insert(PromptCandidate).values(gated))
+    return [row for row in rows if not gated_out(row["jev_decision"])], len(gated)
+
+
 async def stage_candidates(
     session: AsyncSession,
     *,
@@ -220,6 +275,7 @@ async def stage_candidates(
         )
         for topic_id, prompt in stageable
     ]
+    rows, gated = await _record_gate_rejections(session, rows, now)
     inserted_ids: list[uuid.UUID] = []
     if rows:
         stmt = (
@@ -236,7 +292,10 @@ async def stage_candidates(
         dropped += len(rows) - len(inserted_ids)
     candidates = review_order(await _load_in_order(session, inserted_ids))
     return StagedCandidates(
-        run_id=run.id, candidates=candidates, dropped_duplicates=dropped
+        run_id=run.id,
+        candidates=candidates,
+        dropped_duplicates=dropped,
+        gate_rejected=gated,
     )
 
 
@@ -469,7 +528,10 @@ async def review_candidates(
     accept_ids: list[uuid.UUID],
     reject_ids: list[uuid.UUID],
 ) -> CandidateReview:
-    """Accept (insert as active prompts) or reject (delete) pending candidates.
+    """Accept (insert as active prompts) or reject pending candidates.
+
+    Reject removes a candidate from review: it is deleted, or kept as a
+    text-free outcome record when it carries a quality-judge decision.
 
     Runs under the same lock order as generation and import: project lock,
     prompt-set lock, then the account-capacity lock inside
@@ -519,8 +581,13 @@ async def review_candidates(
         if to_accept
         else ([], 0)
     )
+    now = datetime.now(UTC)
     for candidate in to_reject:
-        await session.delete(candidate)
+        # Without a judgment there is nothing to calibrate against.
+        if candidate.jev_decision:
+            _as_outcome(candidate, CANDIDATE_DISPOSITION_REJECTED, now)
+        else:
+            await session.delete(candidate)
     await session.flush()
     accepted = await _hydrate_prompts(session, prompt_ids)
     await session.commit()

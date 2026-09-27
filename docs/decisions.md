@@ -80,7 +80,8 @@ own the shipped behavior.
 ## Generated prompts are reviewed before they are tracked
 
 Generate stages candidates in a separate table; only a user's accept creates an
-active prompt, and rejected candidates are deleted. This reverses "generated
+active prompt, and a rejected candidate leaves review (see the quality-gate
+entry below for the text-free outcome it may leave). This reverses "generated
 rows are active immediately": the owner judged generated quality too uneven to
 track unseen. Candidates are not a `proposed` status on `Prompt`, because every
 audit, capacity and visibility query would then have to exclude proposals and
@@ -102,4 +103,20 @@ runs without `JEV_API_KEY`.
 
 Source: owner decision of 26 September 2026 in the
 [prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 3b.
+[Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
+
+## The quality judgment gates generated prompts
+
+The JEV judgment is now a hard gate by default: a strong fail never reaches
+review, an uncertain candidate is shown flagged and the rest pass. The owner
+chose provisional, versioned thresholds (`jev-gate-1`) because judgments
+can only be calibrated once the feature runs live. `JEV_MODE=shadow` restores
+record-only behavior. Calibration needs outcomes, so a rejected candidate that
+carries a judgment, whether rejected by a user or by the gate, is kept as an
+outcome record without its question text for a configured retention. This
+narrows "rejected candidates are deleted". Code still owns every check code
+can make, and a judgment never retires a tracked prompt.
+
+Source: owner decisions of 27 September 2026 for the
+[prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 3c.
 [Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.

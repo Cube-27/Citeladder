@@ -23,11 +23,17 @@ function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateRespon
   const duplicates = result.dropped_duplicates
     ? `; ${plural(result.dropped_duplicates, 'duplicate')} skipped`
     : '';
+  const gated = result.quality_rejected
+    ? `; ${plural(result.quality_rejected, 'weak suggestion')} removed by quality checks`
+    : '';
   // Say so when the request could not be filled, rather than letting a short
   // set read as the number that was asked for.
+  // Topics only help when the gate did not account for the whole gap.
+  const topicsHint =
+    result.requested_count > total + result.quality_rejected ? ' — add topics for more' : '';
   const shortfall =
     result.requested_count > total
-      ? ` (${total} of ${result.requested_count} requested — add topics for more)`
+      ? ` (${total} of ${result.requested_count} requested${topicsHint})`
       : '';
   const judge =
     result.quality_gate === 'unavailable'
@@ -38,7 +44,8 @@ function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateRespon
       Drafted {plural(total, 'suggestion')}
       {shortfall}
       {topicCount ? ` across ${plural(topicCount, 'topic')}` : ''}
-      {duplicates}. Accept the ones worth tracking.{judge}
+      {duplicates}
+      {gated}. Accept the ones worth tracking.{judge}
     </Alert>
   );
 }

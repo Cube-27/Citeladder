@@ -3,10 +3,11 @@
 Status: active, owner-approved direction (26 September 2026; revised the same day
 after the prompt-universe and JEV feasibility research). PR 1 merged as `54e6f4b8`
 (#161); PR 2 merged as `42c73cfe` (#162); PR 3a merged as `adadf505`
-(#163). PR 3b is implemented on `prompt-gen-v2-pr3b`, including model-suggested
-map entries and subtopic creation in the topic rail. In shadow mode JEV judges
-only the selected candidates, so it cannot change which candidates reach
-review. PR 3c is next.
+(#163); PR 3b merged as `22bac8f1` (#172). PR 3c's code is implemented on
+`prompt-gen-v2-pr3c`: the hard gate (on by default, provisional thresholds),
+text-free rejection outcomes and the calibration report. Still open: owner/legal
+approval and publication of the policy revision drafted in section 7.1, then
+the production key, then calibration from live outcomes.
 Scope: onboarding completion, the Prompts page workflow, and the quick **Generate
 prompts** path. The agent-driven "Build with Agent" generation is phase 2 and is
 out of scope (section 9).
@@ -180,6 +181,57 @@ copied verbatim into tracked prompts.
 
 ## 7. PR 3c: policy revision and JEV hard gate
 
+Owner decisions of 27 September 2026: the legal revision is an internal
+proposal (7.1) until TypeSafe's terms are confirmed; the gate ships enabled
+with provisional thresholds, because judgments can only be calibrated once the
+feature runs live; and a rejected candidate with a judgment keeps its outcome
+but not its text.
+
+### 7.1 Internal proposal: subprocessor and privacy revision (approval pending)
+
+Not an approved contract or operational claim; do not render it until the
+owner (and legal review) approves it. Before publishing, confirm with TypeSafe:
+processing region, retention of request bodies (their docs offer zero data
+retention to enterprise customers only), their DPA and subprocessors, rate
+limits and pricing. The [DPA](../../frontend/lib/marketing-content/legal-dpa.ts)
+requires 30 days' notice to workspace owners before a new subprocessor is used,
+so production gets `JEV_API_KEY` no earlier than 30 days after publication.
+
+- `/subprocessors` row: **TypeSafe** · Quality checks on generated prompt
+  suggestions · Business facts from your project (category, offerings,
+  audiences, markets, jobs to be done), the topic, the buyer need behind the
+  suggestion and the suggested question; never brand or competitor names ·
+  Location: *to confirm*.
+- Privacy Policy, `ai` section, new paragraph: "When you generate prompt
+  suggestions, we may send each suggestion with your project's business facts
+  to a quality-checking provider, which answers fixed questions about whether
+  the suggestion fits your business and reads like a real buyer's question.
+  Its answers decide which suggestions we show you; they are not used to score
+  your business."
+- Privacy Policy, `retention` section, addition: "When you reject a suggested
+  prompt that was quality-checked, we keep the check's result, without the
+  suggestion's text, for up to 180 days to improve those checks."
+- On publication: bump `PRIVACY_NOTICE_REVISION` in
+  `backend/app/core/config/legal.py` (prior acceptance evidence is preserved),
+  notify workspace owners under the DPA, then set the production key.
+
+### 7.2 Implemented
+
+- `JEV_MODE=gate` (default) or `shadow`. Verdicts per decision in
+  `domain/prompts/quality_policy.py`; a failed candidate is stored only as a
+  text-free `gate_rejected` outcome and counted in `quality_rejected`.
+- Provisional thresholds, policy `jev-gate-1`: `JEV_FAIL_BELOW=0.15`,
+  `JEV_FLAG_BELOW=0.35`, `JEV_DUPLICATE_FLAG_AT=0.6`,
+  `JEV_DUPLICATE_FAIL_AT=0.85`. Recorded on every decision.
+- User rejects of judged candidates become text-free `rejected` outcomes,
+  purged after `GENERATION_REJECTED_OUTCOME_RETENTION_DAYS` (180).
+- `scripts/jev_calibration.py`: aggregate report of per-question false-flag,
+  false-reject and catch rates, verdict x outcome, a fail-threshold sweep and
+  agreement by business category. Recalibrated thresholds go in the PR that
+  changes them, with a new `JEV_POLICY_VERSION`.
+
+### 7.3 Original scope
+
 - **Policy revision (lands first in this PR; publication needs owner/legal
   approval):** add TypeSafe as a subprocessor on `/subprocessors`
   (`frontend/lib/marketing-content/legal*.ts`), describe the prompt-quality judgment
@@ -226,8 +278,11 @@ PR 3b
 - [x] JEV decisions recorded in shadow; unset key means off; tests never call JEV.
 
 PR 3c
-- [ ] Policy revision approved and published before production JEV traffic.
-- [ ] Calibration recorded; hard gate enabled with versioned thresholds.
+- [ ] Policy revision approved and published before production JEV traffic
+  (drafted as an internal proposal in 7.1).
+- [x] Hard gate enabled with versioned (provisional) thresholds; calibration
+  report available.
+- [ ] Calibration recorded from live accept/reject outcomes.
 
 ## 10. Later, not in this plan
 

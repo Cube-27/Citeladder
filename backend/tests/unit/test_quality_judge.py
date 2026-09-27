@@ -1,4 +1,4 @@
-"""JEV shadow judgments: core state, duplicate options, flags and state hash."""
+"""JEV judgments: core state, duplicate options, flags and state hash."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.connectors.jev import JevDecision
+from app.core.config.jev import JEV_NOUL_QUESTIONS
 from app.domain.prompts.generation_contract import SuggestedPrompt, SuggestedTopic
 from app.domain.prompts.quality_judge import build_requests, decision_record
 
@@ -110,6 +111,22 @@ def test_weak_answers_and_a_confident_duplicate_flag_the_candidate() -> None:
     assert record["rank_score"] == 0.73
 
 
+def test_a_duplicate_choice_that_was_not_offered_cannot_fail_the_gate() -> None:
+    (request,) = _requests(["tracked question"], ["new one"])
+    answers = {key: {"type": "noul", "noul": 0.9} for key in JEV_NOUL_QUESTIONS}
+    answers["duplicate_of"] = {
+        "type": "choice",
+        "choice": "p9",
+        "probabilities": {"p9": 0.99},
+    }
+
+    record = decision_record(request, JevDecision(model="jev", answers=answers))
+
+    assert record["duplicate_of"]["choice"] is None
+    assert record["verdict"] == "uncertain"
+    assert record["flags"] == ["incomplete"]
+
+
 def test_malformed_choice_answers_are_recorded_as_unavailable_values() -> None:
     (request,) = _requests(["tracked question"], ["new one"])
     decision = JevDecision(
@@ -138,7 +155,9 @@ def test_malformed_choice_answers_are_recorded_as_unavailable_values() -> None:
     assert record["intent"] == {"choice": None, "probabilities": {}, "confidence": None}
     assert record["duplicate_of"]["probabilities"] == {"none": 0.4}
     assert record["duplicate_of"]["text"] is None
-    assert record["flags"] == []
+    # Missing answers never pass and never fail: the row is shown flagged.
+    assert record["flags"] == ["incomplete"]
+    assert record["verdict"] == "uncertain"
 
 
 @pytest.mark.asyncio

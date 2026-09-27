@@ -7,15 +7,18 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.api.prompts as prompts_api
 from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.jev import JevDecision
+from app.core.config.jev import jev_settings
+from app.domain.prompts.quality_calibration import load_reviewed_decisions
 from app.models.prompt_candidate import PromptCandidate
 from tests.component.prompt_generation_helpers import (
     FakeAgent,
@@ -225,6 +228,7 @@ async def test_shadow_decisions_rank_and_flag_without_dropping(
     weak = "best running shoes in australia"
     judge = _FakeJudge(weak_text=weak)
     monkeypatch.setattr(prompts_api, "create_jev_client", lambda: judge)
+    monkeypatch.setattr(jev_settings, "mode", "shadow")
     _, prompt_set_id = await make_project_and_set(client, "v2-jev@example.com")
 
     body = (
@@ -287,3 +291,88 @@ async def test_jev_failure_never_fails_generation(
         await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
     ).json()
     assert {c["quality_status"] for c in listed} == {"unavailable"}
+
+
+async def _set_candidates(
+    session_factory: async_sessionmaker[AsyncSession], prompt_set_id: str
+) -> list[PromptCandidate]:
+    async with session_factory() as session:
+        result = await session.execute(
+            select(PromptCandidate).where(
+                PromptCandidate.prompt_set_id == uuid.UUID(prompt_set_id)
+            )
+        )
+        return list(result.scalars().all())
+
+
+@pytest.mark.asyncio
+async def test_the_gate_removes_strong_fails_and_keeps_text_free_outcomes(
+    client: httpx.AsyncClient,
+    fake_agent: FakeAgent,
+    monkeypatch: pytest.MonkeyPatch,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    weak = "best running shoes in australia"
+    monkeypatch.setattr(
+        prompts_api, "create_jev_client", lambda: _FakeJudge(weak_text=weak)
+    )
+    _, prompt_set_id = await make_project_and_set(client, "v2-gate@example.com")
+
+    body = (
+        await client.post(
+            f"/api/v1/prompt-sets/{prompt_set_id}/generate", json={"count": 3}
+        )
+    ).json()
+
+    # The strong fail never reaches review; the shortfall is reported.
+    assert body["quality_gate"] == "gate"
+    assert body["quality_rejected"] == 1
+    assert weak not in {c["text"] for c in body["candidates"]}
+    assert len(body["candidates"]) == 2
+    kept, rejected = (c["id"] for c in body["candidates"])
+
+    review = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
+        json={"reject_ids": [rejected]},
+    )
+    assert review.json()["rejected_count"] == 1
+    listed = (
+        await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
+    ).json()
+    assert [c["id"] for c in listed] == [kept]
+
+    # Both rejections survive for calibration with the judgment, not the text.
+    outcomes = {
+        c.disposition: c
+        for c in await _set_candidates(session_factory, prompt_set_id)
+        if c.disposition != "pending"
+    }
+    assert set(outcomes) == {"gate_rejected", "rejected"}
+    for outcome in outcomes.values():
+        assert outcome.text == ""
+        assert outcome.jev_decision["verdict"] in {"fail", "pass"}
+    assert outcomes["gate_rejected"].jev_decision["verdict"] == "fail"
+    async with session_factory() as session:
+        reviewed = await load_reviewed_decisions(session)
+    mine = sorted(
+        r.disposition
+        for r in reviewed
+        if r.decision in [o.jev_decision for o in outcomes.values()]
+    )
+    assert mine == ["gate_rejected", "rejected"]
+
+    # Past retention, the next write to the set purges outcome records.
+    async with session_factory() as session:
+        await session.execute(
+            update(PromptCandidate)
+            .where(PromptCandidate.prompt_set_id == uuid.UUID(prompt_set_id))
+            .where(PromptCandidate.disposition != "pending")
+            .values(expires_at=datetime.now(UTC) - timedelta(minutes=1))
+        )
+        await session.commit()
+    await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
+        json={"accept_ids": [kept]},
+    )
+    remaining = await _set_candidates(session_factory, prompt_set_id)
+    assert [c.disposition for c in remaining] == ["accepted"]

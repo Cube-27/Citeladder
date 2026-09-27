@@ -1,17 +1,24 @@
 # TypeSafe JEV (System One) configuration: prompt-candidate quality judgments.
 #
-# JEV answers bounded questions about generated prompt candidates. In PR 3b it
-# runs in SHADOW mode: decisions are recorded on the candidate, rank the review
-# list and flag weak rows, and never drop anything. A blank ``JEV_API_KEY``
+# JEV answers bounded questions about generated prompt candidates. In GATE
+# mode (the default) a strong fail is removed before review, an uncertain
+# candidate is shown flagged and a strong pass is eligible; in SHADOW mode
+# decisions only rank and flag the review list. A blank ``JEV_API_KEY``
 # switches the judge off entirely. JEV is a new processor of customer data, so
 # production keeps the key unset until the privacy/subprocessor revision is
 # published (prompt generation v2, decision 10).
+#
+# The gate thresholds are PROVISIONAL: they were set before any production
+# decisions existed and are recalibrated from user accept/reject outcomes
+# (``scripts/jev_calibration.py``). Change a threshold together with
+# ``JEV_POLICY_VERSION``; every decision records the version and thresholds it
+# was judged under, and historical decisions are never re-judged.
 from __future__ import annotations
 
-from typing import Final
+from typing import Final, Literal
 from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.dotenv import dotenv_sources
@@ -19,14 +26,28 @@ from app.core.config.dotenv import dotenv_sources
 # Version of the question set below. Stored on every decision so a decision is
 # only ever compared with decisions that asked the same questions.
 JEV_QUESTION_SCHEMA_VERSION: Final = "prompt-quality-questions-1"
-# Version of the shadow flagging thresholds (settings below). Stored on every
-# decision; historical decisions are never re-flagged under a newer policy.
-JEV_SHADOW_POLICY_VERSION: Final = "jev-shadow-1"
+# Version of the flag and gate thresholds (settings below). Stored on every
+# decision; a stored decision is never re-flagged under a newer policy.
+JEV_POLICY_VERSION: Final = "jev-gate-1"
 
-# ``Prompt generation quality_gate`` values reported by Generate.
+# JEV_MODE values.
+JEV_MODE_GATE: Final = "gate"
+JEV_MODE_SHADOW: Final = "shadow"
+
+# ``Prompt generation quality_gate`` values reported by Generate: the judge
+# is off, recorded decisions only (shadow), gated every candidate (gate), or
+# failed for at least one candidate (unavailable; that candidate is kept).
 QUALITY_GATE_OFF: Final = "off"
-QUALITY_GATE_SHADOW: Final = "shadow"
+QUALITY_GATE_SHADOW: Final = JEV_MODE_SHADOW
+QUALITY_GATE_GATE: Final = JEV_MODE_GATE
 QUALITY_GATE_UNAVAILABLE: Final = "unavailable"
+
+# Gate verdicts recorded on each decision.
+JEV_VERDICT_PASS: Final = "pass"
+JEV_VERDICT_UNCERTAIN: Final = "uncertain"
+JEV_VERDICT_FAIL: Final = "fail"
+# Flag for a decision missing an answer: never a pass, never a fail.
+JEV_FLAG_INCOMPLETE: Final = "incomplete"
 
 # Yes/no questions. JEV never writes prompts, invents topics or checks facts
 # code can check (length, names, duplicates by text); these are the semantic
@@ -147,10 +168,16 @@ class JevSettings(BaseSettings):
     generation_deadline_seconds: float = Field(default=30.0, gt=0, le=120)
     # Tracked/earlier prompts offered to the per-topic duplicate choice.
     duplicate_options_max: int = Field(default=20, ge=1, le=100)
-    # Shadow flagging: a yes/no answer below this probability flags the row.
+    # gate: strong fails are removed before review; shadow: record only.
+    mode: Literal["gate", "shadow"] = JEV_MODE_GATE
+    # A yes/no answer below this probability flags the row (uncertain).
     flag_below: float = Field(default=0.35, ge=0, le=1)
     # A duplicate choice at or above this probability flags the row.
     duplicate_flag_at: float = Field(default=0.6, ge=0, le=1)
+    # Strong fail (gate): any yes/no answer below this probability, or a
+    # duplicate choice at or above ``duplicate_fail_at``.
+    fail_below: float = Field(default=0.15, ge=0, le=1)
+    duplicate_fail_at: float = Field(default=0.85, ge=0, le=1)
 
     @field_validator("base_url")
     @classmethod
@@ -159,6 +186,25 @@ class JevSettings(BaseSettings):
         if parts.scheme != "https" or not parts.hostname:
             raise ValueError("JEV_BASE_URL must be an https URL")
         return value.rstrip("/")
+
+    @model_validator(mode="after")
+    def _ordered_thresholds(self) -> JevSettings:
+        if self.fail_below > self.flag_below:
+            raise ValueError("JEV_FAIL_BELOW must not exceed JEV_FLAG_BELOW")
+        if self.duplicate_fail_at < self.duplicate_flag_at:
+            raise ValueError(
+                "JEV_DUPLICATE_FAIL_AT must not be below JEV_DUPLICATE_FLAG_AT"
+            )
+        return self
+
+    def thresholds(self) -> dict[str, float]:
+        """The thresholds a decision is judged under (recorded with it)."""
+        return {
+            "flag_below": self.flag_below,
+            "fail_below": self.fail_below,
+            "duplicate_flag_at": self.duplicate_flag_at,
+            "duplicate_fail_at": self.duplicate_fail_at,
+        }
 
     @property
     def enabled(self) -> bool:

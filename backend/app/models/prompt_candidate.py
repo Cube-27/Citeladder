@@ -73,9 +73,12 @@ class PromptCandidate(Base):
     """A generated prompt awaiting review.
 
     ``pending`` candidates are shown for review until ``expires_at``; accept
-    inserts a ``Prompt`` and keeps this row as ``accepted`` with the link, and
-    reject deletes it. Candidates are never audited, never charged to prompt
-    capacity and never counted in visibility.
+    inserts a ``Prompt`` and keeps this row as ``accepted`` with the link.
+    Reject deletes it, unless it carries a quality-judge decision: then it is
+    kept without its text as a ``rejected`` (user) or ``gate_rejected`` (hard
+    gate) outcome record for calibration, purged at ``expires_at``.
+    Candidates are never audited, never charged to prompt capacity and never
+    counted in visibility.
     """
 
     __tablename__ = "prompt_candidates"
@@ -127,9 +130,11 @@ class PromptCandidate(Base):
     evidence_refs: Mapped[list] = mapped_column(JSONB, default=list)
     # Deterministic admission outcome recorded at staging time.
     validation: Mapped[dict] = mapped_column(JSONB, default=dict)
-    # Quality-judge decisions (PR 3b shadow mode); null until recorded.
+    # Quality-judge decision (answers, flags, verdict, policy); null when the
+    # judge was off, failed or past its call cap.
     jev_decision: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    # pending | accepted (config/prompts.py CANDIDATE_DISPOSITION_*).
+    # pending | accepted | rejected | gate_rejected
+    # (config/prompts.py CANDIDATE_DISPOSITION_*).
     disposition: Mapped[str] = mapped_column(
         String(16), default=CANDIDATE_DISPOSITION_PENDING
     )

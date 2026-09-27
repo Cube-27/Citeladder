@@ -1,5 +1,5 @@
 /**
- * Review copy for the shadow quality judge's flags on a generated candidate.
+ * Review copy for the quality judge's flags on a generated candidate.
  * Flags are signals about the question asked, never a score for the business;
  * an unknown flag code falls back to a generic prompt to double-check.
  */
@@ -10,6 +10,7 @@ const QUALITY_FLAG_COPY: Record<string, string> = {
   standalone: 'May need missing context',
   sensible: 'May not make sense',
   duplicate_of: 'May repeat another prompt',
+  incomplete: 'Not fully checked',
 };
 
 export function qualityFlagLabel(flag: string): string {

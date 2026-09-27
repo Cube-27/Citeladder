@@ -82,9 +82,10 @@ Add these environment secrets:
   `DEFAULT_AGENT_MODEL` for platform-funded Agent features;
 - `KEENABLE_API_KEY`: required for external brand-discovery research;
 - `TAVILY_API_KEY`: required for commerce-catalog web research;
-- `JEV_API_KEY`: optional TypeSafe key for prompt-candidate quality judgments.
-  Leave it unset until the privacy/subprocessor revision that names TypeSafe
-  is published; unset switches the judge off;
+- `JEV_API_KEY`: optional TypeSafe key for prompt-candidate quality judgments
+  (a hard gate by default; `JEV_MODE=shadow` only flags). Leave it unset until
+  the privacy/subprocessor revision that names TypeSafe is published and its
+  DPA notice period has passed; unset switches the judge off;
 - `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`: required. One Google
   OAuth client serves both sign-in and the Search Console / Analytics connect.
 - `BING_OAUTH_CLIENT_ID` / `BING_OAUTH_CLIENT_SECRET`: optional. They are issued
