@@ -174,6 +174,31 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # TypeScript analytics worker: the API service image, another command. It
+  # claims the analytics kinds core/config/analytics.py assigns to TypeScript;
+  # analytics-worker claims the rest and queue-sweeper expires every lease.
+  analytics-worker-ts:
+    image: ${API_SERVICE_IMAGE:?API_SERVICE_IMAGE must be an immutable digest}
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - path: runtime.env
+        required: ${RUNTIME_ENV_REQUIRED:-true}
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DB_SSL_MODE: require
+      DB_POOL_SIZE: "2"
+      DB_MAX_OVERFLOW: "0"
+    command: ["node", "src/worker.ts"]
+    healthcheck:
+      disable: true
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
   caddy:
     image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     network_mode: host

@@ -28,6 +28,13 @@ import { decodeSessionToken } from '../src/auth/session.ts';
 import { secretIsWeak } from '../src/config.ts';
 import { defaultCode, errorEnvelope, isRetryableStatus } from '../src/errors.ts';
 import { pyIntOrZero, pyRepr, pyStrOrEmpty } from '../src/python/text.ts';
+import { classifyReferralSignals } from '../src/referrals/classification.ts';
+import { referralEventFields, sanitizeReferralUrl } from '../src/referrals/events.ts';
+import {
+  buildAiReferralsProjection,
+  ProjectionError,
+  type ReferralFact,
+} from '../src/referrals/projection.ts';
 import { PythonValueError } from '../src/python/urlparse.ts';
 import { sanitizeCorrelationId } from '../src/request-id.ts';
 import { identityKey } from '../src/visibility/brand-identities.ts';
@@ -87,6 +94,25 @@ function sourceSeriesAssembly(input: {
   );
 }
 
+function aiReferralsProjection(input: {
+  facts: ReferralFact[];
+  window_start: string;
+  window_end: string;
+  granularity: string;
+}): unknown {
+  try {
+    return buildAiReferralsProjection({
+      facts: input.facts,
+      windowStart: input.window_start,
+      windowEnd: input.window_end,
+      granularity: input.granularity,
+    });
+  } catch (error) {
+    if (error instanceof ProjectionError) return { raises: 'ValueError' };
+    throw error;
+  }
+}
+
 function mentionPositions(score: Record<string, unknown>): unknown {
   const offsets = (score.competitor_first_offsets ?? {}) as Record<string, unknown>;
   return {
@@ -135,6 +161,8 @@ const PORTS: Record<string, (input: never) => unknown> = {
     pyIntOrZero(input) ?? { raises: typeof input === 'string' ? 'ValueError' : 'TypeError' },
   python_str_or_empty: (input: unknown) => pyStrOrEmpty(input),
   python_string_reprs: (input: string) => pyRepr(input),
+  referral_classifications: (input: Record<string, string | null>) =>
+    classifyReferralSignals(input),
   retrieval_provenance: (input: { request?: unknown; route?: unknown; audit?: unknown }) =>
     executionFrozenProvenance({
       requestSnapshot: input.request ?? null,
@@ -150,6 +178,11 @@ const PORTS: Record<string, (input: never) => unknown> = {
   // Frozen: the Python owner retired with TypeScript migration PR 3.
   aio_rates: aioRates,
   source_series_assembly: sourceSeriesAssembly,
+  // Frozen: the Python owners retired with TypeScript migration PR 4.
+  ai_referrals_projections: aiReferralsProjection,
+  referral_event_rows: (input: { dataset: string; date: string; dimension_key: string }) =>
+    referralEventFields(input),
+  referral_url_sanitize: (input: string) => raising(() => sanitizeReferralUrl(input)),
 };
 
 const goldenRoot = new URL('../golden/', import.meta.url);

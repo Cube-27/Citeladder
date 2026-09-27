@@ -351,5 +351,26 @@ services:
       # Loopback only: nothing may reach this service except from this host.
       - "127.0.0.1:8100:8100"
 
+  # TypeScript analytics worker (TypeScript migration PR 4): the API service
+  # image running another command. It claims the analytics task kinds
+  # core/config/analytics.py assigns to TypeScript; analytics-worker claims
+  # the rest, and queue-sweeper still expires leases for every kind.
+  analytics-worker-ts:
+    build:
+      context: .
+      dockerfile: frontend/services/api/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ${CITELADDER_ENV_FILE:-.env}
+    environment: *backend_env
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["node", "src/worker.ts"]
+    healthcheck:
+      disable: true
+
 volumes:
   pg_data:

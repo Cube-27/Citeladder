@@ -16,6 +16,7 @@ type SettingSpec = {
   default: unknown;
   values?: unknown[];
   minimum?: number;
+  exclusive_minimum?: number;
   maximum?: number;
 };
 
@@ -39,9 +40,10 @@ function envValue(spec: SettingSpec, env: Record<string, string | undefined>): s
   return undefined;
 }
 
-function parseInteger(name: string, raw: string, spec: SettingSpec): number {
-  if (!/^[+-]?\d+$/u.test(raw.trim())) throw new ConfigError(`${name} must be an integer`);
-  const value = Number(raw.trim());
+function checkBounds(name: string, value: number, spec: SettingSpec): number {
+  if (spec.exclusive_minimum !== undefined && value <= spec.exclusive_minimum) {
+    throw new ConfigError(`${name} must be > ${spec.exclusive_minimum}`);
+  }
   if (spec.minimum !== undefined && value < spec.minimum) {
     throw new ConfigError(`${name} must be >= ${spec.minimum}`);
   }
@@ -49,6 +51,17 @@ function parseInteger(name: string, raw: string, spec: SettingSpec): number {
     throw new ConfigError(`${name} must be <= ${spec.maximum}`);
   }
   return value;
+}
+
+function parseInteger(name: string, raw: string, spec: SettingSpec): number {
+  if (!/^[+-]?\d+$/u.test(raw.trim())) throw new ConfigError(`${name} must be an integer`);
+  return checkBounds(name, Number(raw.trim()), spec);
+}
+
+function parseFloatSetting(name: string, raw: string, spec: SettingSpec): number {
+  const value = Number(raw.trim());
+  if (!raw.trim() || !Number.isFinite(value)) throw new ConfigError(`${name} must be a number`);
+  return checkBounds(name, value, spec);
 }
 
 function parseBoolean(name: string, raw: string): boolean {
@@ -73,6 +86,8 @@ function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
   switch (spec.type) {
     case 'int':
       return parseInteger(name, raw, spec);
+    case 'float':
+      return parseFloatSetting(name, raw, spec);
     case 'bool':
       return parseBoolean(name, raw);
     case 'datetime':
@@ -87,10 +102,17 @@ function parseSetting(name: string, spec: SettingSpec, raw: string): unknown {
   }
 }
 
-function resolveSetting(name: string, env: Record<string, string | undefined>): unknown {
-  const spec: SettingSpec = policy.settings[name as keyof typeof policy.settings];
+function resolveSpec(
+  name: string,
+  spec: SettingSpec,
+  env: Record<string, string | undefined>,
+): unknown {
   const raw = envValue(spec, env);
   return raw === undefined ? spec.default : parseSetting(name, spec, raw);
+}
+
+function resolveSetting(name: string, env: Record<string, string | undefined>): unknown {
+  return resolveSpec(name, policy.settings[name as keyof typeof policy.settings], env);
 }
 
 export type ServiceConfig = {
@@ -205,4 +227,32 @@ export function demoAccessExpired(config: ServiceConfig, now: Date = new Date())
   const expiresAt = config.demo.expiresAt;
   if (expiresAt === null || Number.isNaN(expiresAt.getTime())) return true;
   return now.getTime() >= expiresAt.getTime();
+}
+
+export type WorkerSettings = {
+  leaseTtlSeconds: number;
+  heartbeatIntervalSeconds: number;
+  taskMaxAttempts: number;
+  pollIntervalSeconds: number;
+  retryDelaySeconds: number;
+};
+
+/** The analytics worker knobs (`ANALYTICS_*`), refusing a heartbeat slower than the lease. */
+export function loadWorkerSettings(
+  env: Record<string, string | undefined> = process.env,
+): WorkerSettings {
+  const specs = policy.analytics.worker_settings;
+  const setting = (name: keyof typeof specs) => resolveSpec(name, specs[name], env) as number;
+  const settings: WorkerSettings = {
+    leaseTtlSeconds: setting('lease_ttl_seconds'),
+    heartbeatIntervalSeconds: setting('heartbeat_interval_seconds'),
+    taskMaxAttempts: setting('task_max_attempts'),
+    pollIntervalSeconds: setting('poll_interval_seconds'),
+    retryDelaySeconds: setting('retry_delay_seconds'),
+  };
+  // A heartbeat slower than the lease guarantees expiry during healthy work.
+  if (settings.heartbeatIntervalSeconds >= settings.leaseTtlSeconds) {
+    throw new ConfigError('heartbeat_interval_seconds must be shorter than lease_ttl_seconds');
+  }
+  return settings;
 }

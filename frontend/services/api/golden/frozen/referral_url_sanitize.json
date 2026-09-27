@@ -1,0 +1,86 @@
+{
+  "name": "referral_url_sanitize",
+  "generated_by": "backend/app/domain/analytics, frozen when its Python owner retired in TypeScript migration PR 4",
+  "cases": [
+    {
+      "input": "",
+      "output": ""
+    },
+    {
+      "input": "   ",
+      "output": ""
+    },
+    {
+      "input": "https://chatgpt.com/",
+      "output": "https://chatgpt.com/"
+    },
+    {
+      "input": "https://chatgpt.com/c/abc?utm_source=chatgpt.com&session=secret#frag",
+      "output": "https://chatgpt.com/c/abc?utm_source=chatgpt.com"
+    },
+    {
+      "input": "HTTPS://User:Pass@Chat.OpenAI.com:8443/path;p?Ref=x&UTM_Medium=ai&email=a@b.c",
+      "output": "https://chat.openai.com:8443/path;p?ref=x&utm_medium=ai"
+    },
+    {
+      "input": "https://perplexity.ai:notaport/x?q=1",
+      "output": "https://perplexity.ai/x"
+    },
+    {
+      "input": "https://perplexity.ai:99999/x",
+      "output": "https://perplexity.ai/x"
+    },
+    {
+      "input": "https://perplexity.ai:0/x",
+      "output": "https://perplexity.ai/x"
+    },
+    {
+      "input": "http://example.com:80/a b?utm_term=a b&utm_content=%E2%9C%93&ref=",
+      "output": "http://example.com:80/a b?utm_term=a+b&utm_content=%E2%9C%93&ref="
+    },
+    {
+      "input": "//cdn.example.net/asset.js?ref=1",
+      "output": "//cdn.example.net/asset.js?ref=1"
+    },
+    {
+      "input": "/landing/path?utm_campaign=spring+sale&gclid=zzz",
+      "output": "/landing/path?utm_campaign=spring+sale"
+    },
+    {
+      "input": "android-app://com.google.android.gm/",
+      "output": "android-app://com.google.android.gm/"
+    },
+    {
+      "input": "https://www.google.com/search?q=private",
+      "output": "https://www.google.com/search"
+    },
+    {
+      "input": "https://gemini.google.com/app?utm_source=gemini&utm_source=dup",
+      "output": "https://gemini.google.com/app?utm_source=gemini&utm_source=dup"
+    },
+    {
+      "input": "https://example.com/?utm_x=%ZZ&ref=%C3%28",
+      "output": "https://example.com/?utm_x=%25ZZ&ref=%EF%BF%BD%28"
+    },
+    {
+      "input": "https://example.com?&&ref&utm_a==b",
+      "output": "https://example.com?ref=&utm_a=%3Db"
+    },
+    {
+      "input": "https://[2001:db8::1]:8080/v?ref=ip6",
+      "output": "https://2001:db8::1:8080/v?ref=ip6"
+    },
+    {
+      "input": "https://münchen.example/straße?ref=ü",
+      "output": "https://münchen.example/straße?ref=%C3%BC"
+    },
+    {
+      "input": "mailto:someone@example.com?ref=m",
+      "output": "mailto:someone@example.com?ref=m"
+    },
+    {
+      "input": "https://example.com:/empty-port",
+      "output": "https://example.com/empty-port"
+    }
+  ]
+}

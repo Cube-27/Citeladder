@@ -56,7 +56,6 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.core.security import encrypt_secret
-from app.domain.analytics.ingest import metric_row_not_superseded
 from app.domain.integrations.derive import (
     UnmappedPropertyError,
     _parse_row_date,
@@ -517,7 +516,8 @@ async def test_overlapping_windows_supersede_instead_of_colliding(
     allocated per window, both imports were revision 0, so the corrected rows
     hit the metric-row unique identity and were thrown away by ON CONFLICT DO
     NOTHING — Search Console's late-data correction never landed. Both
-    revisions must now be stored, and readers must see the later one.
+    revisions must now be stored, the correction at the higher revision that
+    every latest-revision reader selects.
     """
     workspace_id, project_id, connection_id = await _seed_graph(db_session)
 
@@ -565,30 +565,6 @@ async def test_overlapping_windows_supersede_instead_of_colliding(
     by_seq = {row.resync_seq: row for row in rows}
     assert by_seq[wide.resync_seq].metrics["clicks"] == 3
     assert by_seq[narrow.resync_seq].metrics["clicks"] == 9
-
-    # ...and the READER — the same `metric_row_not_superseded` clause the
-    # ingest projection and the referrals drill-down apply — returns the later
-    # revision, exactly once. Recomputing "latest" in the test would assert the
-    # test's own rule rather than the one production actually uses.
-    current = list(
-        await db_session.scalars(
-            select(IntegrationMetricRow)
-            .where(
-                IntegrationMetricRow.project_id == project_id,
-                IntegrationMetricRow.dataset == DATASET_GSC_PAGE_DAILY,
-                IntegrationMetricRow.date == date(2026, 7, 21),
-            )
-            .where(metric_row_not_superseded())
-        )
-    )
-    assert len(current) == 1
-    assert current[0].resync_seq == narrow.resync_seq
-    assert current[0].metrics == {
-        "clicks": 9,
-        "impressions": 90,
-        "ctr": 0.1,
-        "position": 4.5,
-    }
 
 
 @pytest.mark.asyncio

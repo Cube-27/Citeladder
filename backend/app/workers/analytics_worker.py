@@ -12,7 +12,10 @@
 # already-terminal row writes NOTHING — single-writer, invariant 3) and
 # increments ``attempt_count`` exactly once.
 #
-# Catalog projection remains DB-only. Optional competitor discovery performs
+# The referral chain (ingest, classify, snapshot refresh, retention) runs in
+# the TypeScript analytics worker; this worker claims only the complement
+# (``ANALYTICS_PYTHON_TASK_KINDS``) and still sweeps expired leases for every
+# kind. Catalog projection remains DB-only. Optional competitor discovery performs
 # one bounded provider request after the queue claim has committed, and persists
 # an immutable attempt before publishing candidates.
 #
@@ -32,17 +35,14 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.analytics import (
+    ANALYTICS_PYTHON_TASK_KINDS,
     ANALYTICS_QUEUE_SPEC,
-    ANALYTICS_TASK_KIND_AI_REFERRALS_SNAPSHOT_REFRESH,
-    ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
     ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION,
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY,
     ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH,
-    ANALYTICS_TASK_KIND_INGEST_REFERRALS,
     ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
     ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
     ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
-    ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
@@ -58,12 +58,6 @@ from app.core.config.task_queue import (
 )
 from app.core.database import SessionLocal
 from app.core.telemetry import configure_logging, instrument_worker
-from app.domain.analytics.ai_referrals_snapshot import refresh_ai_referrals_snapshot
-from app.domain.analytics.ingest import ingest_referrals
-from app.domain.analytics.tasks import (
-    run_classify_referrals,
-    run_referral_retention_sweep,
-)
 from app.domain.commerce.competitors import run_competitor_discovery
 from app.domain.commerce.projector import project_catalog_analysis
 from app.domain.demand.search_intelligence.executor import execute_search_intelligence
@@ -120,13 +114,11 @@ async def _refresh_opportunities(
 
 
 # Kind dispatch table (invariant 2: one owner of kind -> executor routing).
+# Exactly ``ANALYTICS_PYTHON_TASK_KINDS``: the referral chain's kinds belong to
+# the TypeScript analytics worker (TypeScript migration PR 4).
 EXECUTORS: dict[str, AnalyticsExecutor] = {
-    ANALYTICS_TASK_KIND_INGEST_REFERRALS: ingest_referrals,
-    ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS: run_classify_referrals,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH: refresh_traffic_snapshot,
     ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION: project_performance_range,
-    ANALYTICS_TASK_KIND_AI_REFERRALS_SNAPSHOT_REFRESH: refresh_ai_referrals_snapshot,
-    ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP: run_referral_retention_sweep,
     ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION: project_catalog_analysis,
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY: run_competitor_discovery,
     ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH: _refresh_opportunities,
@@ -174,7 +166,11 @@ class AnalyticsWorker(DrainableWorkerMixin):
             list(sweep.failed_task_ids),
             compensators=self._compensators,
         )
-        rows = await self._queue.claim(owner=self.owner, limit=1)
+        # Only the Python-owned kinds: the TypeScript worker claims the rest,
+        # so each kind has exactly one writer.
+        rows = await self._queue.claim(
+            owner=self.owner, limit=1, kinds=sorted(ANALYTICS_PYTHON_TASK_KINDS)
+        )
         for row in rows:
             await self._execute(row)
         return len(rows)
