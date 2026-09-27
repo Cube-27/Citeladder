@@ -220,6 +220,31 @@
         "dimension_key": "/x | 20260720"
       },
       "output": null
+    },
+    {
+      "input": {
+        "dataset": "ga4_source_medium_daily",
+        "date": "2026-07-20",
+        "dimension_key": "delsource | medium | 20260720"
+      },
+      "output": {
+        "landing_url": "",
+        "referrer_url": "",
+        "referrer_host": "",
+        "utm_source": "delsource",
+        "utm_medium": "medium",
+        "utm_campaign": "",
+        "user_agent": "",
+        "session_id_hash": "",
+        "raw": {
+          "dataset": "ga4_source_medium_daily",
+          "date": "2026-07-20",
+          "dimension_key": "delsource | medium | 20260720",
+          "utm_source": "delsource",
+          "utm_medium": "medium"
+        },
+        "content_hash": "e6864232d354e49b43b11d1adc92a0da85160701cb90daa735b233d5a8646431"
+      }
     }
   ]
 }

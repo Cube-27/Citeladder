@@ -72,6 +72,7 @@ from app.core.config.analytics import (
     ANALYTICS_DEFAULT_GRANULARITY,
     ANALYTICS_MAX_WINDOW_DAYS,
     ANALYTICS_PRESET_RANGE_DAYS,
+    ANALYTICS_PYTHON_TASK_KINDS,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_WINDOW_DAYS,
     ANALYTICS_TS_OWNED_TASK_KINDS,
@@ -295,6 +296,7 @@ def _analytics_policy() -> dict[str, Any]:
         "ai_referral_formula_version": AI_REFERRAL_FORMULA_VERSION,
         "snapshot_window_days": list(ANALYTICS_SNAPSHOT_WINDOW_DAYS),
         "ts_owned_task_kinds": sorted(ANALYTICS_TS_OWNED_TASK_KINDS),
+        "python_task_kinds": sorted(ANALYTICS_PYTHON_TASK_KINDS),
         "worker_settings": {
             name: _setting(name, AnalyticsSettings)
             for name in ANALYTICS_WORKER_SETTINGS

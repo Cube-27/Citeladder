@@ -27,11 +27,12 @@ const INSERT_CHUNK = 1000;
 export async function ownedArtifact(db: Database, workspaceId: string, artifactId: string) {
   const artifact = await db
     .selectFrom('integration_import_artifacts')
-    .select(['id', 'workspace_id', 'provider', 'sync_run_id'])
+    .select(['id', 'provider', 'sync_run_id'])
+    .where('workspace_id', '=', workspaceId)
     .where('id', '=', artifactId)
     .executeTakeFirst();
   // Never project rows for an artifact outside the claimed task's workspace.
-  if (artifact === undefined || artifact.workspace_id !== workspaceId) {
+  if (artifact === undefined) {
     throw new Error(`unknown import artifact: ${artifactId}`);
   }
   return artifact;

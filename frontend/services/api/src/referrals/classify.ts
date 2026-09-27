@@ -33,6 +33,7 @@ export const classifyReferrals: Executor = async (task, { db, checkCancelled, ma
       isoDateText(sql.ref('window_start')).as('window_start'),
       isoDateText(sql.ref('window_end')).as('window_end'),
     ])
+    .where('workspace_id', '=', task.workspace_id)
     .where('id', '=', artifact.sync_run_id)
     .executeTakeFirst();
   if (run === undefined) throw new Error(`unknown sync run: ${artifact.sync_run_id}`);

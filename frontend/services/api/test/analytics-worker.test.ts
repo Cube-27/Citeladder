@@ -30,20 +30,21 @@ let projectId: string;
 const WINDOW: [string, string] = ['2026-07-20', '2026-07-22'];
 
 let owner: string;
+const created: string[] = [];
 
 beforeAll(async () => {
   owner = await fixtures.user();
 });
 
 beforeEach(async () => {
-  // Every TypeScript-owned task in this disposable database belongs to this file.
-  await db
-    .deleteFrom('analytics_tasks')
-    .where('task_kind', 'in', policy.analytics.ts_owned_task_kinds)
-    .execute();
+  // The worker claims across workspaces: clear what earlier tests here left.
+  if (created.length > 0) {
+    await db.deleteFrom('analytics_tasks').where('workspace_id', 'in', created).execute();
+  }
   // Grants and property mappings are unique per workspace: one per test.
   workspaceId = await fixtures.ownedWorkspace(owner);
   otherWorkspaceId = await fixtures.ownedWorkspace(owner);
+  created.push(workspaceId, otherWorkspaceId);
   projectId = await seedProject(db, workspaceId);
 });
 

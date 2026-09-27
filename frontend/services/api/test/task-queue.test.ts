@@ -16,7 +16,7 @@ const db = testDatabase();
 const fixtures = new Fixtures(db);
 const queue = new TaskQueue(db, { leaseTtlSeconds: 120 });
 const TS_KINDS = policy.analytics.ts_owned_task_kinds;
-const PYTHON_KINDS = ['traffic_snapshot_refresh', 'demand_snapshot_refresh'];
+const PYTHON_KINDS = policy.analytics.python_task_kinds;
 let workspaces: string[] = [];
 
 async function task(workspaceId: string, kind: string, priority = 0): Promise<string> {

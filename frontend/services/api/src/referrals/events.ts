@@ -115,11 +115,12 @@ function signalsForRow(row: MetricRowIdentity): Signals | null {
 /** `json.dumps(value, sort_keys=True, separators=(",", ":"))` for string maps. */
 function pythonCanonicalJson(value: Record<string, string>): string {
   const sorted = Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1)));
-  // `ensure_ascii`: each non-ASCII UTF-16 unit, surrogates included, as `\uxxxx`.
+  // `ensure_ascii`: DEL and each non-ASCII UTF-16 unit, surrogates included,
+  // as `\uxxxx` (Python escapes everything outside ' '..'~').
   let ascii = '';
   for (const unit of JSON.stringify(sorted).split('')) {
     const code = unit.charCodeAt(0);
-    ascii += code < 0x80 ? unit : `\\u${code.toString(16).padStart(4, '0')}`;
+    ascii += code < 0x7f ? unit : `\\u${code.toString(16).padStart(4, '0')}`;
   }
   return ascii;
 }

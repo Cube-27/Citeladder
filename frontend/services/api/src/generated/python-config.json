@@ -311,6 +311,17 @@
       "ingest_referrals",
       "referral_retention_sweep"
     ],
+    "python_task_kinds": [
+      "commerce_catalog_projection",
+      "commerce_competitor_discovery",
+      "demand_snapshot_refresh",
+      "opportunity_refresh",
+      "opportunity_verification",
+      "performance_range_projection",
+      "search_intelligence_acquisition",
+      "source_page_inspection",
+      "traffic_snapshot_refresh"
+    ],
     "worker_settings": {
       "lease_ttl_seconds": {
         "env": [
