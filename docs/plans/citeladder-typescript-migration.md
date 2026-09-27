@@ -14,8 +14,7 @@ and verification) implemented locally on 27 September 2026 at the owner's
 request. PR 6 includes the explicitly approved detector foundation for PR 7.
 PR 7 is split at the owner's direction: PR 7a (Opportunity refresh and catalog
 routes) implemented on 27 September 2026, without Python emulation. PR 7b
-(Action routes and declarations) implemented locally on 27 September 2026;
-commit-only delivery, with no PR or deployment requested. PR 7a-cleanup
+(Action routes and declarations) implemented on 27 September 2026. PR 7a-cleanup
 removed Python emulation from PRs 3–6 on 27 September 2026 (rules 4 and 7).
 Not execution authorization; each later PR is executed only when individually
 assigned.

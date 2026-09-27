@@ -207,7 +207,7 @@ export async function declareAction(
     const placement = checks.find(
       ({ check }) => check.kind === policy.opportunity.placement.PLACEMENT_CHECK_KIND,
     );
-    if (placement) await openPlacementCheck(trx, row, placement);
+    if (placement) await openPlacementCheck(trx, row, placement, project.website_url);
     return { row, created: true };
   });
 }

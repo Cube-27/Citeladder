@@ -38,7 +38,7 @@
   PR 7 is split: 7a (Opportunity refresh and catalog routes) is implemented.
   PR 7a-cleanup removes Python emulation from PRs 3–6, retaining only live
   cross-stack identity contracts. PR 7b (Action routes and declarations) is
-  implemented locally in a separate worktree, with commit-only delivery.
+  implemented.
   PR 8 needs its own assignment. Deployment of PRs 3–7b and their one-week
   cutover soaks are pending.
   Site Health, audits, billing/entitlements and the Agent runtime stay Python.

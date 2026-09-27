@@ -143,6 +143,19 @@ export async function requireAction(
   return row;
 }
 
+/** The workspace's Action row with the effective status its readers see. */
+async function readAction(db: Database, workspaceId: string, actionId: string) {
+  const row = await db
+    .selectFrom('actions')
+    .selectAll()
+    .select(effectiveStatus().as('current'))
+    .where('workspace_id', '=', workspaceId)
+    .where('id', '=', actionId)
+    .executeTakeFirst();
+  if (!row) throw notFound('Action');
+  return row;
+}
+
 export async function actionMembers(db: Database, action: ActionRow) {
   const ids = stringList(action.member_opportunity_ids);
   if (!ids.length) return [];
@@ -159,13 +172,7 @@ export async function actionMembers(db: Database, action: ActionRow) {
 }
 
 export async function getAction(db: Database, workspaceId: string, actionId: string) {
-  const action = await requireAction(db, workspaceId, actionId);
-  const current = await db
-    .selectFrom('actions')
-    .select(effectiveStatus().as('status'))
-    .where('workspace_id', '=', workspaceId)
-    .where('id', '=', actionId)
-    .executeTakeFirstOrThrow();
+  const action = await readAction(db, workspaceId, actionId);
   const declaration = await db
     .selectFrom('opportunity_implementation_events')
     .selectAll()
@@ -174,7 +181,7 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
     .where('action_id', '=', actionId)
     .executeTakeFirst();
   return {
-    ...actionItem(action, current.status),
+    ...actionItem(action, action.current),
     diagnosis: action.diagnosis,
     members: (await actionMembers(db, action)).map((row) => projectItem(row)),
     declaration: declaration ? await declarationView(db, declaration) : null,
@@ -217,20 +224,12 @@ export async function updateActionStatus(
   status: string,
   userId: string,
 ) {
-  if (!a.ACTION_USER_STATUSES.includes(status))
-    throw new ApiError(422, 'Status must be open or dismissed');
   await db.transaction().execute(async (trx) => {
     const action = await requireAction(trx, workspaceId, actionId, true);
     if (!a.ACTION_USER_STATUSES.includes(action.status))
       throw new ApiError(422, 'A declared Action cannot be changed');
     await recordStatus(trx, action, status, userId);
   });
-  const row = await db
-    .selectFrom('actions')
-    .selectAll()
-    .select(effectiveStatus().as('current'))
-    .where('workspace_id', '=', workspaceId)
-    .where('id', '=', actionId)
-    .executeTakeFirstOrThrow();
+  const row = await readAction(db, workspaceId, actionId);
   return actionItem(row, row.current);
 }

@@ -15,6 +15,7 @@ export async function openPlacementCheck(
   db: Database,
   declaration: Selectable<OpportunityImplementationEvents>,
   { check, member }: MemberCheck,
+  website: string,
 ) {
   const hash = String(check.url_hash ?? '');
   if (!hash) return;
@@ -49,12 +50,6 @@ export async function openPlacementCheck(
         .limit(1)
         .executeTakeFirst()
     : null;
-  const project = await db
-    .selectFrom('projects')
-    .select('website_url')
-    .where('workspace_id', '=', declaration.workspace_id)
-    .where('id', '=', declaration.project_id)
-    .executeTakeFirstOrThrow();
   const domains = await db
     .selectFrom('owned_domains as domain')
     .innerJoin('projects as project', 'project.id', 'domain.project_id')
@@ -63,11 +58,7 @@ export async function openPlacementCheck(
     .where('domain.project_id', '=', declaration.project_id)
     .execute();
   const owned = [
-    ...new Set(
-      [project.website_url, ...domains.map((row) => row.domain)]
-        .map(normalizeDomain)
-        .filter(Boolean),
-    ),
+    ...new Set([website, ...domains.map((row) => row.domain)].map(normalizeDomain).filter(Boolean)),
   ].sort();
   const now = new Date();
   const declaredAt = db
