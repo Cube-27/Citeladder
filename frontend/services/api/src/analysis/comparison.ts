@@ -1,14 +1,25 @@
 import { createHash } from 'node:crypto';
 import { policy } from '../config.ts';
-import { pyCompare } from '../python/text.ts';
 import { record } from '../traffic/performance.ts';
+
+/** Code-point order for hashes compared with active Python writers only.
+ * Delete this contract when the last Python identity producer moves.
+ */
+export function compareIdentityText(left: string, right: string): number {
+  const a = Array.from(left, (char) => char.codePointAt(0)!);
+  const b = Array.from(right, (char) => char.codePointAt(0)!);
+  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
+    if (a[index] !== b[index]) return a[index]! - b[index]!;
+  }
+  return a.length - b.length;
+}
 
 /** json.dumps(sort_keys=True, ensure_ascii=True), for frozen measurement identities. */
 function comparisonJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(comparisonJson).join(', ')}]`;
   if (value && typeof value === 'object')
     return `{${Object.entries(value)
-      .sort(([a], [b]) => pyCompare(a, b))
+      .sort(([a], [b]) => compareIdentityText(a, b))
       .map(([key, item]) => `${comparisonJson(key)}: ${comparisonJson(item)}`)
       .join(', ')}}`;
   return [...JSON.stringify(value ?? null)]

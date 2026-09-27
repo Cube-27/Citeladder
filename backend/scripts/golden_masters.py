@@ -1,12 +1,4 @@
-"""Golden-master fixtures the TypeScript API service replays.
-
-Each builder runs the real Python implementation over a fixed input set and
-returns ``[{"input": ..., "output": ...}]``. The TS runner
-(``frontend/services/api/test/golden.test.ts``) feeds every input to its port
-and requires byte-identical JSON output, key order included. Inputs must be
-deterministic: a builder that depends on the clock or randomness makes the
-``--check`` staleness gate fail on every run.
-"""
+"""Live fixtures for shared cross-stack identities and the error envelope."""
 
 from __future__ import annotations
 
@@ -19,7 +11,7 @@ from typing import Any
 from joserfc import jwt
 from joserfc.jwk import OctKey
 
-from app.core.config import secret_is_weak, settings
+from app.core.config import settings
 from app.core.config.errors import (
     CODE_HTTP_ERROR,
     STATUS_DEFAULT_CODE,
@@ -27,19 +19,14 @@ from app.core.config.errors import (
 )
 from app.core.errors import error_envelope
 from app.core.security import TokenDecodeError, decode_access_token
-from app.core.telemetry import sanitize_correlation_id
-from scripts import golden_masters_analysis as analysis
 from scripts.golden_masters_demand import (
     canonical_pages,
-    page_equivalence,
     query_normalizations,
 )
 from scripts.golden_masters_opportunities import (
     opportunity_comparisons,
-    opportunity_detectors,
     opportunity_sources,
 )
-from scripts.golden_masters_performance import performance_windows
 
 # A fixture-only signing key; it signs nothing outside these fixtures.
 GOLDEN_SESSION_KEY = "golden-session-key-fixture-only-00000"  # pragma: allowlist secret
@@ -48,29 +35,6 @@ _SUBJECT = "6f1c0d2e-9a4b-4c1d-8e2f-3a5b7c9d1e0f"
 _YEAR_2000 = 946_684_800
 _YEAR_2096 = 4_000_000_000
 _YEAR_2100 = 4_102_444_800
-
-
-def correlation_ids() -> list[dict[str, Any]]:
-    inputs = [
-        "",
-        "   ",
-        "abc-DEF_123.xyz",
-        "  padded-id  ",
-        "0123456789abcdef",
-        "a" * 128,
-        "a" * 129,
-        "bad id",
-        "crlf\r\ninjected",
-        "semi;colon",
-        "unicode-é-ok",
-        "\x1cfile-separator-stripped",
-        "﻿bom-kept",
-        " nbsp-stripped ",
-        "٣٤٥-arabic-digits",
-    ]
-    return [
-        {"input": value, "output": sanitize_correlation_id(value)} for value in inputs
-    ]
 
 
 def error_envelopes() -> list[dict[str, Any]]:
@@ -170,43 +134,11 @@ def session_tokens() -> list[dict[str, Any]]:
     return cases
 
 
-def secret_strength() -> list[dict[str, Any]]:
-    inputs = [
-        "",
-        "short",
-        "replace-with-32-byte-minimum-secret",
-        "a" * 40,
-        "abcdefghijk" * 4,
-        "abcdefghijkl" * 3,
-        "  PassWord  ",
-        "ﬁ" * 11 + "abcdefghijklmnopqrstuvwxyz",
-        "correct-horse-battery-staple-4-0-9-x",
-    ]
-    return [{"input": value, "output": secret_is_weak(value)} for value in inputs]
-
-
 GOLDEN_MASTERS: dict[str, Callable[[], list[dict[str, Any]]]] = {
-    "opportunity_detectors": opportunity_detectors,
+    "canonical_pages": canonical_pages,
+    "query_normalizations": query_normalizations,
     "opportunity_comparisons": opportunity_comparisons,
     "opportunity_sources": opportunity_sources,
-    "query_normalizations": query_normalizations,
-    "canonical_pages": canonical_pages,
-    "page_equivalence": page_equivalence,
-    "performance_windows": performance_windows,
-    "ai_referral_sources": analysis.ai_referral_sources,
-    "brand_identity_keys": analysis.brand_identity_keys,
-    "citation_classifications": analysis.citation_classifications,
-    "correlation_ids": correlation_ids,
-    "domain_matches": analysis.domain_match_pairs,
-    "error_envelopes": error_envelopes,
-    "grounding_redirects": analysis.grounding_redirects,
-    "mention_positions": analysis.mention_positions,
-    "metric_series_points": analysis.metric_series,
-    "normalized_domains": analysis.normalized_domains,
-    "python_int_or_zero": analysis.python_int_or_zero,
-    "python_str_or_empty": analysis.python_str_or_empty,
-    "python_string_reprs": analysis.python_string_reprs,
-    "retrieval_provenance": analysis.retrieval_provenance,
-    "secret_strength": secret_strength,
     "session_tokens": session_tokens,
+    "error_envelopes": error_envelopes,
 }

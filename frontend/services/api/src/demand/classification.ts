@@ -1,8 +1,9 @@
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { policy } from '../config.ts';
-import { hostname, urlsplit } from '../python/urlparse.ts';
+import { normalizeDomain } from '../analysis/domains.ts';
 import { normalizeQuery as foldQuery } from '../traffic/normalization.ts';
+import { compareText } from '../text-order.ts';
 
 export function normalizeQuery(value: string): string {
   return (foldQuery(value).match(/[\p{L}\p{N}_]+/gu) ?? []).join(' ');
@@ -14,16 +15,14 @@ export type Classification = {
   classifier_version: string;
   override_id: string | null;
 };
-export function classifyQuery(
+function classifyQuery(
   query: string,
   brand: { brand_name: string; aliases: string[]; owned_domains: string[] },
 ): Classification {
   const normalized = normalizeQuery(query);
   const domains = new Set<string>();
   for (const value of brand.owned_domains) {
-    const host = (
-      hostname(urlsplit(value.includes('://') ? value : `https://${value}`)) ?? ''
-    ).replace(/^www\./u, '');
+    const host = normalizeDomain(value);
     const term = normalizeQuery(host.split('.')[0] ?? '');
     if (term) {
       domains.add(term);
@@ -34,7 +33,9 @@ export function classifyQuery(
     [brand.brand_name, ...brand.aliases].map(normalizeQuery).filter(Boolean),
   );
   for (const term of domains) vocabulary.add(term);
-  const matched = [...vocabulary].filter((term) => ` ${normalized} `.includes(` ${term} `)).sort();
+  const matched = [...vocabulary]
+    .filter((term) => ` ${normalized} `.includes(` ${term} `))
+    .sort(compareText);
   const canonical = normalizeQuery(brand.brand_name);
   const classification = !matched.length
     ? 'non_branded'
@@ -58,7 +59,7 @@ export async function classifyProjectQueries(
   projectId: string,
   queries: string[],
 ): Promise<Map<string, Classification>> {
-  const values = [...new Set(queries.filter(Boolean).map(normalizeQuery))].sort();
+  const values = [...new Set(queries.filter(Boolean).map(normalizeQuery))].sort(compareText);
   const result = new Map<string, Classification>();
   if (!values.length) return result;
   const scope = new WorkspaceScope(workspaceId);

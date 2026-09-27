@@ -1,5 +1,4 @@
 import { policy } from '../../config.ts';
-import { pyCompare } from '../../python/text.ts';
 import { rules } from './detectors.ts';
 import { brandOf, competitorsOf, earnedPageBrief } from './earned-page-brief.ts';
 import type { DetectorHit, EarnedPageEvidence, SourcePageEvidence } from './evidence.ts';
@@ -95,7 +94,7 @@ function research(page: SourcePageEvidence): [string, Record<string, unknown>] |
 }
 export function detectEarnedPageOpportunities(evidence: EarnedPageEvidence): DetectorHit[] {
   return [...evidence.pages]
-    .sort((a, b) => pyCompare(a.url_hash, b.url_hash))
+    .sort((a, b) => (a.url_hash < b.url_hash ? -1 : a.url_hash > b.url_hash ? 1 : 0))
     .flatMap((page) => {
       const [qualified, missing] = qualification(page);
       const selected = qualified ? selectedAction(page, evidence.owned_domains) : research(page);

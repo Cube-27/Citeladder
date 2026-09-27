@@ -9,7 +9,6 @@
  */
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { pyCollapseWhitespace, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
 
 export type BrandIdentity = { logo_url: string | null; website: string | null };
 
@@ -19,7 +18,10 @@ export type BrandIdentity = { logo_url: string | null; website: string | null };
  * every lookup here are keyed by this one function.
  */
 export function identityKey(name: unknown): string {
-  return pyCollapseWhitespace(pyStrOrEmpty(name)).toLowerCase();
+  return String(name ?? '')
+    .trim()
+    .replace(/\s+/gu, ' ')
+    .toLowerCase();
 }
 
 function brandLogoUrl(projectId: string): string {
@@ -64,14 +66,14 @@ export async function brandIdentities(
     .orderBy('created_at')
     .execute();
   for (const competitor of competitors) {
-    const domains = listOf(competitor.domains).filter(pyTruthy).map(pyStrOrEmpty);
+    const domains = listOf(competitor.domains).filter(Boolean).map(String);
     const identity = {
       logo_url: competitor.logo_asset_id ? competitorLogoUrl(project.id, competitor.id) : null,
       website: domains[0] ?? null,
     };
     for (const name of [competitor.name, ...listOf(competitor.aliases)]) {
       const key = identityKey(name);
-      if (pyTruthy(name) && !found.has(key)) found.set(key, identity);
+      if (name && !found.has(key)) found.set(key, identity);
     }
   }
   return found;

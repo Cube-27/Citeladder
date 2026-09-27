@@ -11,7 +11,6 @@ import type {
 } from '../generated/db-schema.ts';
 import { record } from '../traffic/performance.ts';
 import { isoformat, parseDatetime } from '../http/datetimes.ts';
-import { pyTruthy } from '../python/text.ts';
 import {
   gapChanges,
   leg,
@@ -27,7 +26,7 @@ type Context = { db: Database; scope: WorkspaceScope; declaration: Declaration }
 const limitLeg = (state: string, limitation: string) => leg(state, { limitations: [limitation] });
 const strings = (value: unknown): string[] => (Array.isArray(value) ? value.map(String) : []);
 const operand = (text: string) => sql<Date>`${text}::timestamptz`;
-export function auditIdentity(
+function auditIdentity(
   audit: Pick<Selectable<Audits>, 'id' | 'configuration' | 'benchmark_mode' | 'repetitions'>,
   prompts: unknown[][],
   engines: unknown[][],
@@ -39,7 +38,7 @@ export function auditIdentity(
     engines,
     benchmark_mode: audit.benchmark_mode,
     repetitions: audit.repetitions,
-    locale: pyTruthy(config.locale)
+    locale: config.locale
       ? config.locale
       : {
           country_code: config.country_code ?? null,

@@ -8,7 +8,6 @@ import { rules } from '../analysis/opportunities/detectors.ts';
 import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
-import { pyCompare } from '../python/text.ts';
 import { record } from '../traffic/performance.ts';
 import type { DemandSource, Scope } from './sources.ts';
 
@@ -133,8 +132,7 @@ function changeHit(pair: ChangePair, row: ChangeRow): DetectorHit | null {
     evidence: {
       change_snapshot_id: pair.id,
       change_observation_id: row.id,
-      // `str(None)`: Python writes the literal when the pair has no older crawl.
-      crawl_a_id: pair.crawl_a_id ?? 'None',
+      crawl_a_id: pair.crawl_a_id,
       crawl_b_id: pair.crawl_b_id,
       field: row.field,
       before_value: row.before_value,
@@ -398,6 +396,8 @@ export async function commerceHits(
     ...(await alternativeHits(db, scope.workspaceId, snapshots, auditId)),
   ];
   return hits.sort(
-    (a, b) => pyCompare(a.rule_id, b.rule_id) || pyCompare(a.target_key, b.target_key),
+    (a, b) =>
+      (a.rule_id < b.rule_id ? -1 : a.rule_id > b.rule_id ? 1 : 0) ||
+      (a.target_key < b.target_key ? -1 : a.target_key > b.target_key ? 1 : 0),
   );
 }

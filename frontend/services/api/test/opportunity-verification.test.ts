@@ -434,3 +434,23 @@ it('keeps baseline gaps unknown until a later snapshot and suppresses changed au
       .execute();
   }
 });
+it('keeps boolean page facts distinct from numeric expectations', async () => {
+  const { evidenceFor } = await import('../src/opportunities/verification-evidence.ts');
+  const d = await declaration(own.declarations.site!);
+  const source = {
+    kind: 'site_crawl',
+    id: own.crawlId,
+    observed_at: '2026-09-27T10:00:00.123456Z',
+  };
+  const inspect = (expected: boolean | number) =>
+    evidenceFor(
+      db,
+      {
+        ...d,
+        expected_checks: [{ kind: 'page_fact', fact_key: 'secure', expected_value: expected }],
+      },
+      source,
+    );
+  expect(await inspect(true)).toMatchObject({ observed: 1, matched: 1, contradicted: false });
+  expect(await inspect(1)).toMatchObject({ observed: 1, matched: 0, contradicted: true });
+});

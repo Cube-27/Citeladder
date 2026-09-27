@@ -23,6 +23,7 @@ import {
   type Evaluation,
 } from './projection.ts';
 import { detectCannibalization, detectCtrGap, detectTrends } from './detectors.ts';
+import { compareText } from '../text-order.ts';
 
 const p = policy.demand;
 async function downstream(db: Database, task: QueueTask, id: string, maxAttempts: number) {
@@ -87,7 +88,7 @@ export const recomputeDemand: Executor = async (task, { db, maxAttempts, checkCa
     for (const c of candidates) counts[c.signal_type] = (counts[c.signal_type] ?? 0) + 1;
     const detectorSummary = Object.fromEntries(
       Object.entries(evaluations)
-        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .sort(([a], [b]) => compareText(a, b))
         .map(([name, e]) => [
           name,
           {

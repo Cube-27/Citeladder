@@ -1,35 +1,23 @@
 /** Pure demand decisions over recorded evidence. No model or provider calls. */
 import { policy } from '../config.ts';
-import { pyCompare } from '../python/text.ts';
 import { hash } from '../traffic/normalization.ts';
+import { compareText } from '../text-order.ts';
 
 const p = policy.demand;
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (value && typeof value === 'object')
     return `{${Object.entries(value)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .sort(([a], [b]) => compareText(a, b))
       .map(([k, v]) => `${JSON.stringify(k)}:${stableJson(v)}`)
       .join(',')}}`;
   return JSON.stringify(value);
 }
 export const stableHash = (value: unknown) => hash(stableJson(value));
-/** Round the exact IEEE-754 value to decimal, ties to even, like Python round. */
+/** Round a derived metric to its published decimal precision. */
 export function round(value: number, digits: number): number {
-  if (!Number.isFinite(value) || value === 0) return value;
-  const bytes = new DataView(new ArrayBuffer(8));
-  bytes.setFloat64(0, Math.abs(value));
-  const bits = bytes.getBigUint64(0);
-  const exponent = Number((bits >> 52n) & 0x7ffn);
-  let numerator =
-    ((bits & ((1n << 52n) - 1n)) | (exponent ? 1n << 52n : 0n)) * 10n ** BigInt(digits);
-  const shift = (exponent || 1) - 1023 - 52;
-  const denominator = shift < 0 ? 1n << BigInt(-shift) : 1n;
-  if (shift > 0) numerator <<= BigInt(shift);
-  let quotient = numerator / denominator;
-  const twice = (numerator % denominator) * 2n;
-  if (twice > denominator || (twice === denominator && quotient % 2n !== 0n)) quotient += 1n;
-  return (Math.sign(value) * Number(quotient)) / 10 ** digits;
+  const scale = 10 ** digits;
+  return Math.round(value * scale) / scale;
 }
 export type SearchInput = {
   source_metric_row_ids: string[];
@@ -79,7 +67,7 @@ export type Evaluation = {
   counts_by_classification: Record<string, number>;
   limitations: string[];
 };
-export const unique = (values: string[]) => [...new Set(values)].sort();
+export const unique = (values: string[]) => [...new Set(values)].sort(compareText);
 function priority(impressions: number, ctr: number | null, gap: number) {
   const demand = Math.min(1, Math.log1p(Math.max(impressions, 0)) / Math.log1p(10000));
   const weakness = ctr === null ? 1 : Math.max(0, 1 - ctr);
@@ -95,7 +83,11 @@ function priority(impressions: number, ctr: number | null, gap: number) {
 }
 export function detectSearchSignals(rows: SearchInput[]): Candidate[] {
   return [...rows]
-    .sort((a, b) => pyCompare(a.target_kind, b.target_kind) || pyCompare(a.target, b.target))
+    .sort(
+      (a, b) =>
+        (a.target_kind < b.target_kind ? -1 : a.target_kind > b.target_kind ? 1 : 0) ||
+        (a.target < b.target ? -1 : a.target > b.target ? 1 : 0),
+    )
     .flatMap((row) => {
       const ctr = row.impressions ? row.clicks / row.impressions : null;
       if (
@@ -148,11 +140,11 @@ export function aggregate(rows: QueryInput[]) {
     classification_override_ids: unique(
       rows.flatMap((r) => (r.classification_override_id ? [r.classification_override_id] : [])),
     ),
-    observed_start: rows.map((r) => r.observed_date).sort()[0] ?? null,
+    observed_start: rows.map((r) => r.observed_date).sort(compareText)[0] ?? null,
     observed_end:
       rows
         .map((r) => r.observed_date)
-        .sort()
+        .sort(compareText)
         .at(-1) ?? null,
     page_title: page?.page_title ?? '',
     page_h1_texts: page?.page_h1_texts ?? [],
@@ -220,12 +212,24 @@ export function detectStrikingDistance(rows: QueryInput[]): Evaluation {
     JSON.stringify([r.classification, r.normalized_query, r.resolved_page_url]),
   );
   const candidates: Candidate[] = [];
-  // Python's tuple order over the group identity, not the JSON key's.
+  // Order by the group identity fields.
   const ordered = [...groups.values()].sort(
     ([a], [b]) =>
-      pyCompare(a!.classification, b!.classification) ||
-      pyCompare(a!.normalized_query, b!.normalized_query) ||
-      pyCompare(a!.resolved_page_url, b!.resolved_page_url),
+      (a!.classification < b!.classification
+        ? -1
+        : a!.classification > b!.classification
+          ? 1
+          : 0) ||
+      (a!.normalized_query < b!.normalized_query
+        ? -1
+        : a!.normalized_query > b!.normalized_query
+          ? 1
+          : 0) ||
+      (a!.resolved_page_url < b!.resolved_page_url
+        ? -1
+        : a!.resolved_page_url > b!.resolved_page_url
+          ? 1
+          : 0),
   );
   for (const group of ordered) {
     const row = group[0]!;

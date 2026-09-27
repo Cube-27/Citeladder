@@ -5,9 +5,8 @@ Committed artifacts:
 * ``services/api/src/generated/python-config.json`` -- the policy the TS
   service reads. ``app/core/config`` stays the policy authority (TypeScript
   migration D5); TS never restates a default, bound, error code or role matrix.
-* ``services/api/golden/*.json`` -- golden masters produced by the Python
-  implementation and replayed by the TS test suite, so a port is proven to
-  behave the same.
+* ``services/api/golden/*.json`` -- live fixtures for values both stacks still compute
+  and compare, plus the shared error-envelope shape.
 * ``services/api/golden/openapi/parity.json`` -- the OpenAPI fragment
   FastAPI publishes for a fixture family, which proves the TS exporter and
   fragment normalization against Pydantic's schemas.

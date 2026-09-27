@@ -14,8 +14,8 @@ and verification) implemented locally on 27 September 2026 at the owner's
 request. PR 6 includes the explicitly approved detector foundation for PR 7.
 PR 7 is split at the owner's direction: PR 7a (Opportunity refresh and catalog
 routes) implemented on 27 September 2026, without Python emulation. Next is
-PR 7a-cleanup (remove Python emulation from PRs 3–6, rules 4 and 7), then PR 7b
-(Action routes and declarations); neither has started.
+PR 7b (Action routes and declarations), which has not started. PR 7a-cleanup
+removed Python emulation from PRs 3–6 on 27 September 2026 (rules 4 and 7).
 Not execution authorization; each later PR is executed only when individually
 assigned.
 
@@ -197,13 +197,14 @@ tests are ported with workspace-isolation cases. This is the first ingress split
 
 *As implemented:* the routes reach only the leaves listed in the port —
 normalization's domain helpers, the grounding-redirect predicate, citation
-classification, mention position and frozen provenance, all golden-mastered
-against the Python that still serves the scorer. `lexical`, `trend_metrics`
+classification, mention position and frozen provenance. PR 7a-cleanup replaced
+the classification parity corpora with TS decision and PostgreSQL route coverage. `lexical`, `trend_metrics`
 and `comparison` are not on these routes' paths and move with the PRs whose
 readers call them. `get_execution_evidence`, `execution_surface_evidence` and
 `get_ai_referrals` stay in Python for MCP and the Agent (rule 2); the rates,
 source series and URL detail retired with their routers (about 15 Python files
-including tests), their behavior frozen as golden masters.
+including tests). PR 7a-cleanup removed their frozen golden masters; PostgreSQL
+route tests retain behavior and workspace-isolation coverage.
 
 ### PR 4: Queue engine and referral analytics kinds
 
@@ -226,9 +227,9 @@ so both images always agree; rollback is reverting that constant. The worker
 runs from the API service image as `analytics-worker-ts`. The two-stack proof
 is a PostgreSQL test of concurrent claimers with disjoint kind sets through
 the shared claim SQL, plus a Python test that its worker leaves TS-owned rows
-queued. Classification stays in Python for the traffic projection (rule 2,
-live golden); the sanitizer, event mapping and snapshot projection retired
-with their executors and are frozen goldens. Nothing enqueues
+queued. Classification stayed in Python until PR 5; the sanitizer, event mapping
+and snapshot projection retired with their executors. PR 7a-cleanup removed the
+frozen corpora in favor of worker and focused redaction/identity tests. Nothing enqueues
 `referral_retention_sweep` yet, in either stack; the executor is ported, the
 scheduling gap predates this PR.
 
@@ -259,10 +260,11 @@ readers. Compose continues using the existing TS analytics worker image.
 
 The traffic fold, demand projection/admission/evidence writers and demand router
 retired, along with their Python-only component/unit tests. Their retained
-contracts are covered by frozen Python projection/classification goldens and TS
-PostgreSQL tests, including the cold-connect chain through both workers.
+contracts are covered by TS PostgreSQL tests, including the cold-connect chain
+through both workers. PR 7a-cleanup removed the frozen projection/classification
+corpora.
 `analytics/classification.py` also lost its final runtime caller and retired;
-its existing golden is now frozen. Config, models, Alembic, enqueue helpers and
+its frozen golden was removed by PR 7a-cleanup. Config, models, Alembic, enqueue helpers and
 the Python queue/sweeper remain authoritative.
 
 Python bridges remain only for their current callers: `traffic.performance`,
@@ -271,9 +273,10 @@ Python bridges remain only for their current callers: `traffic.performance`,
 and query normalization serve MCP; `demand.selection` serves prompts and
 opportunities; `demand.page_equivalence` serves implementation events.
 `demand.search_intelligence` stays untouched for PR 8. Remove each bridge when
-its last Python caller moves. Shared page equivalence, URL/query normalization
-and Performance window conversion have live goldens; the real cross-runtime
-reader test checks Performance results/cursors and query-evidence paging.
+its last Python caller moves. PR 7a-cleanup keeps live URL/query identity goldens
+because Python still writes SiteUrl hashes and compares query keys; page-equivalence
+and Performance conversion corpora were removed. The real cross-runtime reader
+test checks Performance results/cursors and query-evidence paging.
 Current-demand selection remains the Python consumer's window-first selector;
 the migrated `/demand/latest` preserves its existing creation-time ordering.
 
@@ -304,8 +307,8 @@ modules (11 detector modules and eight transitive leaves), an empty package
 initializer, and 13 directly relevant test modules. Only one application file
 and one test file are retired, below the retirement budget. The owner chose
 option 2 after the inventory confirmed that the detector port has no TS runtime
-caller in this PR: it is an explicitly approved, golden-tested foundation for
-PR 7. The verifier is the live TS runtime cutover.
+caller in this PR: it was an explicitly approved foundation for PR 7.
+PR 7a-cleanup replaces the detector corpora with TS decision and PostgreSQL coverage. The verifier is the live TS runtime cutover.
 
 The inventory and rule 2 bridges are below. Paths are relative to `backend/app`;
 all listed Python modules remain unless marked retired. Removal requires the
@@ -342,11 +345,10 @@ and idempotency format. It adds no provider I/O or new spans; existing queue
 worker telemetry remains in force. Route ownership and both Caddyfiles are
 unchanged.
 
-Live `opportunity_detectors` and `opportunity_comparisons` goldens cover the
-retained pure Python owners, including thresholds, ties, empty evidence,
-Unicode, URL normalization and canonical JSON hashes. Frozen
-`opportunity_verification` goldens retain the retired verifier's decisions,
-measurement states, comparison windows and microsecond/timezone behavior.
+PR 7a-cleanup retains `opportunity_comparisons` for the shared measurement hash
+and removes the detector and frozen verification corpora. Focused TS tests cover
+uncertain placement, source classification, strict page-fact equality and ISO
+microseconds; the PostgreSQL suite covers the verifier's decisions.
 PostgreSQL coverage exercises Python enqueue → TS claim/complete → Python read,
 concurrent replay, exact provenance, finalized/current evidence, missing prompt
 targets, changed audit cohorts and referral/demand before/after states.
@@ -356,8 +358,8 @@ The nine pure detector test modules remain (`test_action_grouping`,
 `test_opportunity_exports`, `test_opportunity_source_mix`,
 `test_opportunity_site_detectors`, `test_placement_outcome`,
 `test_source_patterns`, `test_visibility_detectors`).
-`test_opportunity_verification_result.py` is retired into frozen goldens and TS
-PostgreSQL coverage. Verifier-only cases leave `test_visibility_metric_check`
+`test_opportunity_verification_result.py` is retired into TS PostgreSQL coverage;
+PR 7a-cleanup removes its frozen golden corpus. Verifier-only cases leave `test_visibility_metric_check`
 and `test_placement_checks` with the same behavior covered in TS; their Python
 helper, declaration, inspection and recheck tests remain. The Action declaration
 reader test now consumes seeded observations. `test_post_sync_chain` additionally
@@ -504,8 +506,32 @@ owner moves. It moves no routes or kinds.
 - **Update the earlier PRs' "As implemented" notes** only where they claim
   golden coverage that no longer exists. Point to this PR.
 
-Validation: `./scripts/check.ps1`, the affected TS suites and the route-ownership
-gate. Expect a large net deletion.
+*As implemented:* the generic `src/python` helpers, all ten frozen fixture sets,
+seventeen non-contract live sets, their replay adapters and unused Python builders
+are removed. Route fragments, the OpenAPI harness, session interop, error-envelope
+shape and shared identity operations remain under live contract coverage.
+No routes, task kinds, schema or policy ownership move.
+
+Cross-stack exceptions are local to their owners: Site Health still writes
+`SiteUrl.url_hash`, Python demand readers compare normalized query keys, source
+inspection writes roster hashes, prompt writers compare prompt hashes, both
+stacks take the project lock, and the Python Action reader groups the persisted
+Action by its page key. Frozen measurement identities remain shared. Their live
+goldens and narrow Unicode/serialization rules retire when the final Python
+producer/consumer moves (the Action bridge in 7b; other owners in their later
+assigned PRs).
+
+Deliberate departures: ordinary URL parsing uses WHATWG URL; request dates use
+ISO validation; error messages use plain language; derived metric rounding uses
+JavaScript numbers; referral content hashes use JSON.stringify; stored numeric
+metrics reject booleans/non-finite values; page facts use strict JSON equality;
+missing crawl references remain null. Verification source revisions retain exact
+microseconds instead of reproducing floating-point timestamp rounding.
+The shared URL hash/group-key owners retain only the raw path/host and query
+serialization details that their active Python counterparts still compare.
+
+Validation: `./scripts/check.ps1`, affected TS suites on disposable PostgreSQL,
+and the route-ownership gate. Deployment and cutover soaks remain pending.
 
 ### PR 8: Commerce and search intelligence
 

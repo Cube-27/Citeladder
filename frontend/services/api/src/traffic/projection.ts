@@ -1,10 +1,10 @@
 /** Incremental traffic fold. Ordered input buffers just one revision identity. */
 import { policy } from '../config.ts';
-import { pyCompare } from '../python/text.ts';
 import { classifyReferralSignals } from '../referrals/classification.ts';
 import { addDays } from '../referrals/projection.ts';
 import { Ga4Accum, GscAccum, provenance, sourceFields, type MetricRow } from './accumulators.ts';
 import { canonicalPage, casefold, hash, normalizeQuery } from './normalization.ts';
+import { compareText } from '../text-order.ts';
 
 const p = policy.traffic;
 type Measures = Record<string, number | null>;
@@ -54,7 +54,7 @@ function startsFor(window: ProjectionWindow): string[] {
 
 const identity = (row: MetricRow) =>
   JSON.stringify([row.property_ref, row.provider, row.dataset, row.date, row.dimension_key]);
-const ordered = <T>(map: Map<string, T>) => [...map].sort(([a], [b]) => pyCompare(a, b));
+const ordered = <T>(map: Map<string, T>) => [...map].sort(([a], [b]) => compareText(a, b));
 function getOrAdd<T>(map: Map<string, T>, key: string, create: () => T): T {
   let value = map.get(key);
   if (value === undefined) {

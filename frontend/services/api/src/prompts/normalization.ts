@@ -6,14 +6,13 @@
  * held to the Python owner by a live golden master.
  */
 import { policy } from '../config.ts';
-import { pyCollapseWhitespace } from '../python/text.ts';
-import { casefold, hash } from '../traffic/normalization.ts';
+import { casefold, collapseIdentityWhitespace, hash } from '../traffic/normalization.ts';
 
 const TRAILING = new Set(policy.opportunity.refresh.prompt_trailing_punctuation);
 
 /** Casefold, collapse whitespace, and strip trailing punctuation. */
 function normalizePromptText(text: string): string {
-  const characters = [...casefold(pyCollapseWhitespace(text))];
+  const characters = [...casefold(collapseIdentityWhitespace(text))];
   let end = characters.length;
   while (end > 0 && TRAILING.has(characters[end - 1]!)) end -= 1;
   return characters.slice(0, end).join('');

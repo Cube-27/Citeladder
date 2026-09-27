@@ -15,9 +15,9 @@ import type {
 } from '../analysis/opportunities/evidence.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
-import { pyCompare } from '../python/text.ts';
 import { record } from '../traffic/performance.ts';
 import { siteCoverage, type CoverageCrawl } from './refresh-compute.ts';
+import { compareText } from '../text-order.ts';
 
 const o = policy.opportunity.opportunities;
 const r = policy.opportunity.refresh;
@@ -126,7 +126,7 @@ function declineHit(row: DeclineRow, auditId: string): DetectorHit {
       prompt: row.prompt_text,
       rolling_four: row.rolling_four,
       immediate_delta: row.immediate_delta,
-      engines: Object.keys(record(row.per_engine_scores)).sort(pyCompare),
+      engines: Object.keys(record(row.per_engine_scores)).sort(compareText),
       engine_agreement: row.engine_agreement,
       repetition_agreement: row.repetition_agreement,
       trend_confidence: row.trend_confidence,
@@ -258,7 +258,7 @@ export async function loadVisibilityEvidence(
       logical_engine: row.logical_engine || '',
       owned_citation_count: credits.owned.get(row.id) ?? 0,
       brand_mentioned: Boolean(row.brand_mentioned),
-      competitor_names: [...(credits.competitors.get(row.id) ?? [])].sort(pyCompare),
+      competitor_names: [...(credits.competitors.get(row.id) ?? [])].sort(compareText),
       citations: citations.get(row.id) ?? [],
       artifact_id: row.artifact_id,
       entity_assessments: Array.isArray(row.entity_assessments)
@@ -275,7 +275,7 @@ export async function loadVisibilityEvidence(
       prompt_intent: row.prompt_intent || '',
       snapshot_id: row.id,
     })),
-    owned_domains: [...owned].sort(pyCompare),
+    owned_domains: [...owned].sort(compareText),
   };
   return [evidence, metric?.id ?? null];
 }

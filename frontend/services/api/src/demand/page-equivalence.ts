@@ -4,9 +4,10 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { policy } from '../config.ts';
 import { canonicalPage } from '../traffic/normalization.ts';
 import { record } from '../traffic/performance.ts';
+import { compareText } from '../text-order.ts';
 
 const p = policy.demand;
-export type PageCandidate = {
+type PageCandidate = {
   site_url_id: string;
   normalized_url: string;
   evidence: string[];
@@ -19,7 +20,7 @@ export type PageResolution = {
   candidates: PageCandidate[];
   resolver_version: string;
 };
-export type PageArtifact = {
+type PageArtifact = {
   requested_url: string;
   final_url: string;
   normalized_facts: unknown;
@@ -57,10 +58,10 @@ function variants(canonical: string): string[] {
         )
         .filter((v): v is string => v !== null),
     ),
-  ].sort();
+  ].sort(compareText);
 }
 
-export function resolveFromArtifacts(
+function resolveFromArtifacts(
   requested: string,
   candidates: PageCandidate[],
   artifacts: PageArtifact[],
@@ -82,7 +83,7 @@ export function resolveFromArtifacts(
       if (sourceMatches && declared === candidate.normalized_url && declared !== requested)
         proofs.add('canonical');
     }
-    candidate.evidence = [...proofs].sort();
+    candidate.evidence = [...proofs].sort(compareText);
   }
   const proven = enriched.filter((c) => c.evidence.length);
   enriched.sort(
@@ -116,7 +117,7 @@ export async function resolveOwnedPages(
   const scope = new WorkspaceScope(workspaceId);
   const canonical = new Map(urls.map((url) => [url, canonicalPage(url)]));
   const variantsByUrl = new Map([...canonical].map(([raw, c]) => [raw, c ? variants(c) : []]));
-  const all = [...new Set([...variantsByUrl.values()].flat())].sort();
+  const all = [...new Set([...variantsByUrl.values()].flat())].sort(compareText);
   const rows = new Map<
     string,
     { id: string; normalized_url: string; latest_source_kind: string | null }

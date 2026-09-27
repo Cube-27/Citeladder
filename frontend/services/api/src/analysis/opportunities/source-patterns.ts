@@ -1,7 +1,7 @@
 import { policy } from '../../config.ts';
-import { pyCompare } from '../../python/text.ts';
 import { domainMatches, normalizeDomain } from '../domains.ts';
 import type { CitationEvidence } from './evidence.ts';
+import { compareText } from '../../text-order.ts';
 const p = policy.opportunity.source_patterns;
 /**
  * True when `google` is the registrable label: only a public suffix follows
@@ -84,7 +84,7 @@ export function summarizeSourcePattern(citations: CitationEvidence[]) {
   if (independent.size >= p.MULTIPLE_INDEPENDENT_DOMAIN_MIN)
     patterns.push(p.PATTERN_MULTIPLE_INDEPENDENT_DOMAINS);
   const ordered = [...domains].sort(
-    ([a, [ak]], [b, [bk]]) => classRank(ak) - classRank(bk) || pyCompare(a, b),
+    ([a, [ak]], [b, [bk]]) => classRank(ak) - classRank(bk) || compareText(a, b),
   );
   return {
     taxonomy_version: p.SOURCE_TAXONOMY_VERSION,
@@ -96,8 +96,8 @@ export function summarizeSourcePattern(citations: CitationEvidence[]) {
     observed_patterns: patterns,
     competitor_source_domains: Object.fromEntries(
       [...competitors]
-        .sort(([a], [b]) => pyCompare(a, b))
-        .map(([name, list]) => [name, list.sort(pyCompare)]),
+        .sort(([a], [b]) => compareText(a, b))
+        .map(([name, list]) => [name, list.sort(compareText)]),
     ),
     top_citations: ordered.slice(0, p.MAX_TOP_CITATIONS).map(([domain, [source_class, c]]) => ({
       domain,

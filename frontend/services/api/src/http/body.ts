@@ -2,7 +2,7 @@
 import type { Context } from 'hono';
 import { z } from 'zod';
 import { RequestValidationError, type ValidationEntry } from './params.ts';
-import { dateErrorType, parseRequestDate } from './datetimes.ts';
+import { parseRequestDate } from './datetimes.ts';
 
 const dateFields = new WeakMap<z.ZodType, Set<string>>();
 
@@ -89,14 +89,14 @@ export async function readOptionalBody<T extends z.ZodType>(
     else if (issue.code === 'too_small') type = 'string_too_short';
     else if (issue.code === 'too_big') type = 'string_too_long';
     else if (issue.code === 'invalid_format')
-      type = issue.format === 'date' ? 'date_from_datetime_parsing' : 'value_error';
+      type = issue.format === 'date' ? 'date_parsing' : 'value_error';
     else if (issue.code === 'invalid_value') type = 'literal_error';
     if (
       at !== undefined &&
       isDate(String(issue.path[0])) &&
       (issue.code === 'invalid_type' || issue.code === 'invalid_format')
     )
-      type = dateErrorType(at);
+      type = typeof at === 'string' ? 'date_parsing' : 'date_type';
     return [{ loc: issue.path.map(String), message: issue.message, type }];
   });
   throw new RequestValidationError(errors);

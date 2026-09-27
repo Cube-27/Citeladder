@@ -1,9 +1,8 @@
 import { policy } from '../../config.ts';
 import { round } from '../../demand/projection.ts';
-import { pyStrip } from '../../python/text.ts';
 const p = policy.opportunity.opportunities;
 const e = policy.opportunity.earned_actions;
-const normalized = (value: string | null) => pyStrip(value ?? '').toLowerCase();
+const normalized = (value: string | null) => (value ?? '').trim().toLowerCase();
 function weight(table: Record<string, number>, key: string, fallback: number): number {
   return table[key] ?? fallback;
 }

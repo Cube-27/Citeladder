@@ -15,9 +15,9 @@ import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
 import { priorityScore } from '../analysis/opportunities/scoring.ts';
 import { emptySourceProjection } from '../analysis/opportunities/source-mix.ts';
 import { isoUtc } from '../db/timestamps.ts';
-import { pyCompare } from '../python/text.ts';
 import { promptTextHash } from '../prompts/normalization.ts';
 import { record } from '../traffic/performance.ts';
+import { compareText } from '../text-order.ts';
 
 const o = policy.opportunity.opportunities;
 const a = policy.opportunity.actions;
@@ -66,9 +66,9 @@ export function siteCoverage(crawl: CoverageCrawl | null): [Json, string[]] {
 }
 
 const mergedIds = (left: string[], right: string[]) =>
-  [...new Set([...left, ...right])].sort(pyCompare);
+  [...new Set([...left, ...right])].sort(compareText);
 
-/** Python's tuple comparison of the tie-break key; positive when `left` wins. */
+/** Compare the tie-break fields; positive when `left` wins. */
 function preference(left: Scored, right: Scored): number {
   const [lh, ls] = left;
   const [rh, rs] = right;
@@ -77,8 +77,16 @@ function preference(left: Scored, right: Scored): number {
   return (
     ls - rs ||
     flags(lh) - flags(rh) ||
-    pyCompare(lh.title_override ?? '', rh.title_override ?? '') ||
-    pyCompare(lh.remediation_override ?? '', rh.remediation_override ?? '')
+    ((lh.title_override ?? '') < (rh.title_override ?? '')
+      ? -1
+      : (lh.title_override ?? '') > (rh.title_override ?? '')
+        ? 1
+        : 0) ||
+    ((lh.remediation_override ?? '') < (rh.remediation_override ?? '')
+      ? -1
+      : (lh.remediation_override ?? '') > (rh.remediation_override ?? '')
+        ? 1
+        : 0)
   );
 }
 
@@ -111,7 +119,8 @@ export function scoreHits(hits: DetectorHit[]): Scored[] {
   }
   return [...consolidated.values()].sort(
     ([left], [right]) =>
-      pyCompare(left.rule_id, right.rule_id) || pyCompare(left.target_key, right.target_key),
+      (left.rule_id < right.rule_id ? -1 : left.rule_id > right.rule_id ? 1 : 0) ||
+      (left.target_key < right.target_key ? -1 : left.target_key > right.target_key ? 1 : 0),
   );
 }
 
@@ -148,7 +157,7 @@ function median(sorted: number[]): number {
 }
 
 const sourceIds = (scored: Scored[], field: 'source_analysis_ids' | 'source_issue_ids') =>
-  [...new Set(scored.flatMap(([hit]) => hit[field]))].sort(pyCompare);
+  [...new Set(scored.flatMap(([hit]) => hit[field]))].sort(compareText);
 
 export type SnapshotSources = {
   auditId: string | null;
@@ -164,10 +173,10 @@ export function buildSnapshot(
   projections: [Json, Json, Json[]],
 ) {
   const countsByType: Record<string, number> = Object.fromEntries(
-    [...o.OPPORTUNITY_TYPES].sort(pyCompare).map((name) => [name, 0]),
+    [...o.OPPORTUNITY_TYPES].sort(compareText).map((name) => [name, 0]),
   );
   const countsBySeverity: Record<string, number> = Object.fromEntries(
-    [...o.OPPORTUNITY_SEVERITIES].sort(pyCompare).map((name) => [name, 0]),
+    [...o.OPPORTUNITY_SEVERITIES].sort(compareText).map((name) => [name, 0]),
   );
   for (const row of rows) {
     countsByType[row.opportunity_type]! += 1;
@@ -211,7 +220,7 @@ export function stampSourceProjections(
   for (const projection of projections) {
     projection.audit_id = auditId;
     projection.prompt_snapshot_ids = selected.map((row) => row.snapshot_id || null);
-    projection.gap_keys = selected.map((row) => promptTextHash(row.text)).sort(pyCompare);
+    projection.gap_keys = selected.map((row) => promptTextHash(row.text)).sort(compareText);
   }
 }
 

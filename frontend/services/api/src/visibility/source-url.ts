@@ -11,9 +11,9 @@ import { sql } from 'kysely';
 
 import type { Database } from '../db/database.ts';
 import { pydanticUtcOrNull, utcText } from '../db/timestamps.ts';
-import { pyCompare } from '../python/text.ts';
 import { brandIdentities, identityKey } from './brand-identities.ts';
 import { authorizedSelection, evidenceScope, observedAt, type RunSelection } from './selection.ts';
+import { compareText } from '../text-order.ts';
 
 // A detail page shows what a person can take in; its tables do not page.
 const SOURCE_URL_MAX_PROMPTS = 50;
@@ -94,7 +94,9 @@ async function engines(db: Database, cited: Cited): Promise<SourceUrlDetail['eng
     }))
     .sort(
       (left, right) =>
-        right.retrievals - left.retrievals || pyCompare(left.logical_engine, right.logical_engine),
+        right.retrievals - left.retrievals ||
+        compareText(left.logical_engine, right.logical_engine) ||
+        compareText(left.transport_model ?? '', right.transport_model ?? ''),
     );
 }
 
@@ -120,7 +122,7 @@ async function promptRows(db: Database, cited: Cited): Promise<SourceUrlDetail['
     last_seen: pydanticUtcOrNull(row.last_seen),
     engines: (row.engines ?? [])
       .filter((engine): engine is string => Boolean(engine))
-      .sort(pyCompare),
+      .sort(compareText),
   }));
 }
 
@@ -175,7 +177,11 @@ async function brands(
     }
   }
   const ordered = found
-    .sort((left, right) => right.responses - left.responses || pyCompare(left.name, right.name))
+    .sort(
+      (left, right) =>
+        right.responses - left.responses ||
+        (left.name < right.name ? -1 : left.name > right.name ? 1 : 0),
+    )
     .slice(0, SOURCE_URL_MAX_BRANDS);
   const identities = await brandIdentities(db, selection.projectId);
   return ordered.map((entry) => {
