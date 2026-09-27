@@ -19,6 +19,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import math
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -193,10 +194,16 @@ def _flags(answers: dict[str, Any], duplicate: dict[str, Any] | None) -> list[st
     return flags
 
 
-def _number(value: object) -> float | None:
+def _probability(value: object) -> float | None:
+    """A finite probability in [0, 1], else None (unavailable).
+
+    JSON parsing accepts NaN/Infinity, which PostgreSQL JSONB rejects, so a
+    non-finite or out-of-range value must never reach the stored decision.
+    """
     if isinstance(value, bool) or not isinstance(value, float | int):
         return None
-    return float(value)
+    number = float(value)
+    return number if math.isfinite(number) and 0.0 <= number <= 1.0 else None
 
 
 def _choice_answer(answer: object) -> dict[str, Any] | None:
@@ -211,19 +218,19 @@ def _choice_answer(answer: object) -> dict[str, Any] | None:
             {
                 str(option): number
                 for option, value in probabilities.items()
-                if (number := _number(value)) is not None
+                if (number := _probability(value)) is not None
             }
             if isinstance(probabilities, dict)
             else {}
         ),
-        "confidence": _number(answer.get("confidence")),
+        "confidence": _probability(answer.get("confidence")),
     }
 
 
 def decision_record(request: _Request, decision: JevDecision) -> dict[str, Any]:
     """The persisted shadow decision for one candidate."""
     nouls = {
-        key: _number((decision.answers.get(key) or {}).get("noul"))
+        key: _probability((decision.answers.get(key) or {}).get("noul"))
         for key in JEV_NOUL_QUESTIONS
     }
     duplicate = _choice_answer(decision.answers.get("duplicate_of"))

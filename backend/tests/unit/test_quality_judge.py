@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from types import SimpleNamespace
 
@@ -115,11 +116,13 @@ def test_malformed_choice_answers_are_recorded_as_unavailable_values() -> None:
         model="jev-1.13.0",
         answers={
             "natural": {"type": "noul", "noul": "high"},
+            "sensible": {"type": "noul", "noul": float("nan")},
+            "standalone": {"type": "noul", "noul": 1.7},
             "intent": {"type": "choice", "choice": 3, "probabilities": [0.5]},
             "duplicate_of": {
                 "type": "choice",
                 "choice": {"p1": 1},
-                "probabilities": {"p1": "most", "none": 0.4},
+                "probabilities": {"p1": "most", "p2": float("inf"), "none": 0.4},
                 "confidence": "sure",
             },
         },
@@ -128,6 +131,10 @@ def test_malformed_choice_answers_are_recorded_as_unavailable_values() -> None:
     record = decision_record(request, decision)
 
     assert record["answers"]["natural"] is None
+    assert record["answers"]["sensible"] is None
+    assert record["answers"]["standalone"] is None
+    # The stored decision must be valid JSON for PostgreSQL JSONB.
+    json.dumps(record, allow_nan=False)
     assert record["intent"] == {"choice": None, "probabilities": {}, "confidence": None}
     assert record["duplicate_of"]["probabilities"] == {"none": 0.4}
     assert record["duplicate_of"]["text"] is None
