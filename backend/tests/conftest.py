@@ -90,15 +90,10 @@ for _name, _value in _TEST_ENVIRONMENT.items():
 # Any provider credential inherited from the shell would defeat the point, so
 # they are cleared too: `.env` is disabled, but an exported key is not.
 _PROVIDER_CREDENTIAL_SUFFIXES = ("_API_KEY", "_CLIENT_SECRET", "_CLIENT_ID")
-# The default agent is "configured" only when base URL, model, AND a resolved
-# credential are all present — and its credential is not always a `*_API_KEY`.
-# `AWS_BEARER_TOKEN_BEDROCK` matches no suffix above, so a developer with
-# Bedrock exported kept `DefaultAgentSettings.configured` true inside the
-# suite, which is exactly the "is this provider configured?" branch that must
-# stay off. The endpoint identity is cleared with it so no shell value can
-# reconstitute the trio.
+# The default agent is "configured" only when base URL, model, AND key are all
+# present. The endpoint identity is cleared with the key so no shell value can
+# reconstitute the trio and turn the "is this provider configured?" branch on.
 _DEFAULT_AGENT_VARIABLES = (
-    "AWS_BEARER_TOKEN_BEDROCK",
     "DEFAULT_AGENT_BASE_URL",
     "DEFAULT_AGENT_MODEL",
 )

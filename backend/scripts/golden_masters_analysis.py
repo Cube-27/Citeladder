@@ -16,6 +16,7 @@ from app.analysis.position import brand_position, competitor_position
 from app.analysis.scoring import ScoringConfig, classify_citation
 from app.connectors.answer_engines.grounding_redirect import is_grounding_redirect
 from app.domain.analysis.brand_identity import identity_key
+from app.domain.analytics import service as analytics
 from app.domain.analytics.schemas import metric_series_points
 from app.domain.audits.schemas import execution_frozen_provenance
 
@@ -223,6 +224,38 @@ def metric_series() -> list[dict[str, Any]]:
     ]
 
 
+def ai_referral_sources() -> list[dict[str, Any]]:
+    # The stored ``metrics["sources"]`` value, as the reader projects it. The
+    # port raises a TypeError where Python raises; both are a 500.
+    inputs: list[Any] = [
+        None,
+        "not rows",
+        {"chatgpt": 1},
+        [
+            {"ai_source": "chatgpt", "sessions": "12", "share": 0.5},
+            {"ai_source": None, "sessions": None, "share": None},
+            "not a row",
+            {"sessions": 5.9, "share": "0.25"},
+            {"ai_source": 7, "sessions": True, "share": 1},
+            {"ai_source": ["x"], "sessions": "٣", "share": False},
+        ],
+        [{"sessions": "many"}],
+        [{"sessions": [1]}],
+        [{"share": "high"}],
+    ]
+    cases: list[dict[str, Any]] = []
+    for raw in inputs:
+        try:
+            output: Any = [
+                row.model_dump(mode="json")
+                for row in analytics.ai_referral_sources(raw)
+            ]
+        except (TypeError, ValueError):
+            output = {"raises": "error"}
+        cases.append({"input": raw, "output": output})
+    return cases
+
+
 def brand_identity_keys() -> list[dict[str, Any]]:
     inputs = [
         "Wise",
@@ -259,6 +292,64 @@ def python_string_reprs() -> list[dict[str, Any]]:
         "",
     ]
     return [{"input": value, "output": repr(value)} for value in inputs]
+
+
+def python_str_or_empty() -> list[dict[str, Any]]:
+    # Decoded JSON values, as the readers' ``str(value or "")`` sees them. An
+    # integral float such as 2.0 is left out: JSON decoding erases that tag.
+    inputs: list[Any] = [
+        "name",
+        "",
+        None,
+        0,
+        False,
+        True,
+        42,
+        -7,
+        10**16,
+        1.5,
+        -0.25,
+        0.0001,
+        1e-05,
+        -1.5e-07,
+        [],
+        {},
+        ["a", 1, None, True],
+        {"k": "it's", "n": [0.5]},
+    ]
+    return [{"input": value, "output": str(value or "")} for value in inputs]
+
+
+def python_int_or_zero() -> list[dict[str, Any]]:
+    inputs: list[Any] = [
+        None,
+        "",
+        0,
+        12,
+        5.9,
+        -5.9,
+        True,
+        "12",
+        " +3 ",
+        "-4",
+        "1_000",
+        "٣٤",
+        " 12 ",
+        "１２",
+        "1__0",
+        "_1",
+        "1.0",
+        "x",
+        [1],
+    ]
+    cases: list[dict[str, Any]] = []
+    for value in inputs:
+        try:
+            output: Any = int(value or 0)
+        except (TypeError, ValueError) as exc:
+            output = {"raises": type(exc).__name__}
+        cases.append({"input": value, "output": output})
+    return cases
 
 
 def python_uuids() -> list[dict[str, Any]]:

@@ -1,0 +1,88 @@
+{
+  "name": "python_str_or_empty",
+  "generated_by": "backend/scripts/export_ts_platform.py",
+  "cases": [
+    {
+      "input": "name",
+      "output": "name"
+    },
+    {
+      "input": "",
+      "output": ""
+    },
+    {
+      "input": null,
+      "output": ""
+    },
+    {
+      "input": 0,
+      "output": ""
+    },
+    {
+      "input": false,
+      "output": ""
+    },
+    {
+      "input": true,
+      "output": "True"
+    },
+    {
+      "input": 42,
+      "output": "42"
+    },
+    {
+      "input": -7,
+      "output": "-7"
+    },
+    {
+      "input": 10000000000000000,
+      "output": "10000000000000000"
+    },
+    {
+      "input": 1.5,
+      "output": "1.5"
+    },
+    {
+      "input": -0.25,
+      "output": "-0.25"
+    },
+    {
+      "input": 0.0001,
+      "output": "0.0001"
+    },
+    {
+      "input": 1e-05,
+      "output": "1e-05"
+    },
+    {
+      "input": -1.5e-07,
+      "output": "-1.5e-07"
+    },
+    {
+      "input": [],
+      "output": ""
+    },
+    {
+      "input": {},
+      "output": ""
+    },
+    {
+      "input": [
+        "a",
+        1,
+        null,
+        true
+      ],
+      "output": "['a', 1, None, True]"
+    },
+    {
+      "input": {
+        "k": "it's",
+        "n": [
+          0.5
+        ]
+      },
+      "output": "{'k': \"it's\", 'n': [0.5]}"
+    }
+  ]
+}

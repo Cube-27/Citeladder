@@ -21,7 +21,12 @@
  * schema, not the error envelope both stacks actually send; the envelope has
  * its own golden masters.
  */
-import type { JsonSchema, OpenApiDocument, OpenApiOperation } from './document.ts';
+import type {
+  JsonSchema,
+  OpenApiDocument,
+  OpenApiOperation,
+  OpenApiParameter,
+} from './document.ts';
 
 type NormalizedOperation = {
   parameters: { in: string; name: string; required: boolean; schema: unknown }[];
@@ -44,7 +49,9 @@ const ANNOTATIONS = new Set([
   'title',
   'writeOnly',
 ]);
+const HTTP_METHODS = new Set(['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace']);
 const COMPONENT_REF = '#/components/schemas/';
+const PARAMETER_REF = '#/components/parameters/';
 const LOCAL_DEF_REF = '#/$defs/';
 
 type Definitions = { components: Record<string, JsonSchema>; defs: Record<string, JsonSchema> };
@@ -133,16 +140,37 @@ function splitTypeArray(schema: JsonSchema): JsonSchema {
   return result;
 }
 
-function normalizeSchema(node: unknown, definitions: Definitions, seen: Set<string>): unknown {
+/** A reference on the current resolution chain; an alias only forwards to another. */
+type Visit = { ref: string; alias: boolean };
+
+/** A schema that only forwards to another reference, annotations aside. */
+function isAlias(schema: JsonSchema): boolean {
+  return (
+    typeof schema.$ref === 'string' &&
+    Object.keys(schema).every((key) => key === '$ref' || ANNOTATIONS.has(key))
+  );
+}
+
+function normalizeSchema(node: unknown, definitions: Definitions, seen: Visit[]): unknown {
   if (Array.isArray(node)) return node.map((item) => normalizeSchema(item, definitions, seen));
   if (!isObject(node)) return node;
   if (typeof node.$ref === 'string') {
     const ref = node.$ref;
-    // A recursive schema stays a reference at its second visit.
-    if (seen.has(ref)) return { $ref: ref };
-    const merged: JsonSchema = { ...resolveRef(ref, definitions), ...node };
-    delete merged.$ref;
-    return normalizeSchema(merged, definitions, new Set([...seen, ref]));
+    const siblings: JsonSchema = { ...node };
+    delete siblings.$ref;
+    const at = seen.findIndex((visit) => visit.ref === ref);
+    if (at >= 0) {
+      // A recursive schema becomes a back-reference at its second visit,
+      // named by how many schemas up the chain it points (alias hops do not
+      // count), not by component name: Pydantic and zod name the same
+      // recursive schema differently. Constraints beside it still compare.
+      const distance = seen.slice(at).filter((visit) => !visit.alias).length;
+      const constraints = normalizeSchema(siblings, definitions, seen) as JsonSchema;
+      return { ...constraints, $recursion: distance };
+    }
+    const target = resolveRef(ref, definitions);
+    const merged: JsonSchema = { ...target, ...siblings };
+    return normalizeSchema(merged, definitions, [...seen, { ref, alias: isAlias(target) }]);
   }
   const source = splitTypeArray(node);
   const schema: JsonSchema = {};
@@ -170,11 +198,7 @@ function normalizeSchema(node: unknown, definitions: Definitions, seen: Set<stri
 
 function normalizeRoot(schema: unknown, components: Record<string, JsonSchema>): unknown {
   const defs = isObject(schema) && isObject(schema.$defs) ? schema.$defs : {};
-  return normalizeSchema(
-    schema,
-    { components, defs: defs as Record<string, JsonSchema> },
-    new Set(),
-  );
+  return normalizeSchema(schema, { components, defs: defs as Record<string, JsonSchema> }, []);
 }
 
 function normalizeContent(
@@ -224,15 +248,52 @@ function normalizeOperation(
   };
 }
 
+type ParameterOrRef = OpenApiParameter | { $ref: string };
+
+/** A parameter, with a `#/components/parameters/` reference resolved. */
+function resolveParameter(
+  parameter: ParameterOrRef,
+  parameters: Record<string, ParameterOrRef>,
+): OpenApiParameter {
+  const visited = new Set<string>();
+  let current = parameter;
+  // A component parameter may itself be a reference to another one.
+  while ('$ref' in current) {
+    const ref = current.$ref;
+    if (visited.has(ref)) throw new Error(`Circular parameter reference: ${ref}`);
+    visited.add(ref);
+    const target = ref.startsWith(PARAMETER_REF)
+      ? parameters[ref.slice(PARAMETER_REF.length)]
+      : undefined;
+    if (!target) throw new Error(`Unresolvable parameter reference: ${ref}`);
+    current = target;
+  }
+  return current;
+}
+
 /** The family's operations, normalized; keys are `METHOD /path`. */
 export function familyFragment(document: OpenApiDocument, family: string): NormalizedFragment {
   const components = document.components?.schemas ?? {};
+  const declared: Record<string, ParameterOrRef> = document.components?.parameters ?? {};
+  const resolve = (list: ParameterOrRef[] | undefined) =>
+    (list ?? []).map((parameter) => resolveParameter(parameter, declared));
   const fragment: NormalizedFragment = {};
   for (const [path, item] of Object.entries(document.paths)) {
+    // Path-level parameters apply to every operation under the path; an
+    // operation's own parameter with the same location and name wins.
+    const shared = resolve((item as { parameters?: ParameterOrRef[] }).parameters);
     for (const [method, operation] of Object.entries(item)) {
-      if (operation.tags?.includes(family)) {
-        fragment[`${method.toUpperCase()} ${path}`] = normalizeOperation(operation, components);
-      }
+      if (!HTTP_METHODS.has(method) || !operation.tags?.includes(family)) continue;
+      const own = resolve(operation.parameters);
+      const inherited = shared.filter(
+        (parameter) =>
+          !own.some((entry) => entry.in === parameter.in && entry.name === parameter.name),
+      );
+      const parameters = [...inherited, ...own];
+      fragment[`${method.toUpperCase()} ${path}`] = normalizeOperation(
+        parameters.length > 0 ? { ...operation, parameters } : operation,
+        components,
+      );
     }
   }
   return fragment;

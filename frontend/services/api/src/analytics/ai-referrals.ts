@@ -11,7 +11,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
-import { pyRepr, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
+import { pyIntOrZero, pyRepr, pyStrOrEmpty, pyTruthy } from '../python/text.ts';
 import { metricSeriesPoints, type MetricSeriesPoint } from './metric-series.ts';
 
 const analytics = policy.analytics;
@@ -73,19 +73,25 @@ function validateWindow(fromDate: string | null, toDate: string | null): void {
   }
 }
 
-/** `int(value or 0)` over a stored JSON value. */
+/** `int(value or 0)` over a stored JSON value; anything else is a 500. */
 function pyInt(value: unknown): number {
-  if (!pyTruthy(value)) return 0;
-  if (typeof value === 'number') return Math.trunc(value);
-  if (typeof value === 'boolean') return 1;
-  if (typeof value === 'string' && /^\s*[+-]?\d+(?:_\d+)*\s*$/u.test(value)) {
-    return Number(value.replaceAll('_', '').trim());
-  }
-  throw new TypeError('stored session count is not an integer');
+  const parsed = pyIntOrZero(value);
+  if (parsed === null) throw new TypeError('stored session count is not an integer');
+  return parsed;
 }
 
 function laxShare(value: unknown): number | null {
   return metricSeriesPoints([{ value }])[0]!.value;
+}
+
+/** `ai_referral_sources`: the stored per-source rows as served; a malformed value is a 500. */
+export function aiReferralSources(raw: unknown) {
+  const rows: unknown[] = Array.isArray(raw) ? raw : [];
+  return rows.filter(isObject).map((row) => ({
+    ai_source: pyStrOrEmpty(row.ai_source),
+    sessions: pyInt(row.sessions),
+    share: laxShare(row.share),
+  }));
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -149,7 +155,6 @@ export async function getAiReferrals(
     throw new TypeError('stored metrics are not an object');
   }
   const metrics = isObject(snapshot.metrics) ? snapshot.metrics : {};
-  const sources: unknown[] = Array.isArray(metrics.sources) ? metrics.sources : [];
   return {
     project_id: query.projectId,
     window_start: snapshot.window_start,
@@ -157,11 +162,7 @@ export async function getAiReferrals(
     granularity: snapshot.granularity,
     referral_volume: metricSeriesPoints(metrics.referral_volume),
     referral_share: metricSeriesPoints(metrics.referral_share),
-    sources: sources.filter(isObject).map((row) => ({
-      ai_source: pyStrOrEmpty(row.ai_source),
-      sessions: pyInt(row.sessions),
-      share: laxShare(row.share),
-    })),
+    sources: aiReferralSources(metrics.sources),
     analyzer_version: snapshot.analyzer_version,
     formula_version: snapshot.formula_version,
   };

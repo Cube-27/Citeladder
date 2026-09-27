@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Mapping
 from typing import Any
@@ -16,6 +17,7 @@ from app.connectors.app_model_transport import (
     AppModelTransportError,
     CurlAppModelJsonTransport,
     chat_completions_url,
+    post_with_output_cap,
     resolve_app_model_target,
 )
 from app.connectors.discovery_models.contracts import (
@@ -87,7 +89,7 @@ class OpenAICompatibleAppModelClient:
         )
 
     async def complete_text(self, *, system: str, user: str) -> ModelResult:
-        return await self._complete(system=system, user=user, response_format=None)
+        return await self._complete(system=system, user=user)
 
     async def complete_json(self, *, system: str, user: str) -> str:
         return strip_json_fence(
@@ -102,17 +104,15 @@ class OpenAICompatibleAppModelClient:
         schema_name: str,
         schema: Mapping[str, Any],
     ) -> ModelResult:
-        return await self._complete(
+        # The schema travels in the prompt, which every provider honors; strict
+        # response formats differ per provider, so callers validate instead.
+        return await self.complete_text(
             system=system,
-            user=user,
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": schema_name,
-                    "strict": True,
-                    "schema": dict(schema),
-                },
-            },
+            user=(
+                f"{user}\n\nReturn JSON that matches the {schema_name} schema "
+                "exactly:\n"
+                + json.dumps(dict(schema), ensure_ascii=False, separators=(",", ":"))
+            ),
         )
 
     async def complete_structured_json(
@@ -128,18 +128,12 @@ class OpenAICompatibleAppModelClient:
         )
         return strip_json_fence(result.content)
 
-    async def _complete(
-        self,
-        *,
-        system: str,
-        user: str,
-        response_format: Mapping[str, Any] | None,
-    ) -> ModelResult:
+    async def _complete(self, *, system: str, user: str) -> ModelResult:
         messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ]
-        body = await self._chat(messages=messages, response_format=response_format)
+        body = await self._chat(messages=messages)
         content, choice = _completion_content(body)
         usage = body.get("usage") if isinstance(body.get("usage"), dict) else {}
         return ModelResult(
@@ -160,28 +154,40 @@ class OpenAICompatibleAppModelClient:
         messages: list[dict[str, Any]],
         max_tokens: int | None = None,
         timeout_seconds: float = 60.0,
-        response_format: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "stream": False,
         }
-        if max_tokens is not None:
-            payload["max_tokens"] = max_tokens
-        if response_format is not None:
-            payload["response_format"] = dict(response_format)
         try:
             target = await resolve_app_model_target(
                 chat_completions_url(self._route.api_base_url)
             )
-            response = await self._transport.post(
-                target=target,
-                api_key=self._route.api_key,
-                payload=payload,
-                timeout_seconds=timeout_seconds,
-                max_response_bytes=APP_MODEL_MAX_RESPONSE_BYTES,
-            )
+            if max_tokens is None:
+                response = await self._transport.post(
+                    target=target,
+                    api_key=self._route.api_key,
+                    payload=payload,
+                    timeout_seconds=timeout_seconds,
+                    max_response_bytes=APP_MODEL_MAX_RESPONSE_BYTES,
+                )
+            else:
+                route = self._route
+                response = await post_with_output_cap(
+                    self._transport,
+                    route_key=(
+                        route.route_id,
+                        route.route_revision,
+                        route.credential_revision,
+                    ),
+                    target=target,
+                    api_key=self._route.api_key,
+                    payload=payload,
+                    output_cap=max_tokens,
+                    timeout_seconds=timeout_seconds,
+                    max_response_bytes=APP_MODEL_MAX_RESPONSE_BYTES,
+                )
         except AppModelTransportError as exc:
             raise ProviderError(
                 str(exc),

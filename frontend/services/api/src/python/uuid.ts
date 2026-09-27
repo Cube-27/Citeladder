@@ -6,7 +6,7 @@
  * of a path or query parameter, with its error wording. They accept
  * different spellings, so each call site uses the one its Python owner used.
  */
-import { pyStrip } from './text.ts';
+import { pyDecimalDigit, pyStrip } from './text.ts';
 
 function canonical(hex: string): string {
   const lower = hex.toLowerCase();
@@ -16,11 +16,7 @@ function canonical(hex: string): string {
 /** The value of one `int(..., 16)` digit, or -1; Unicode decimal digits count. */
 function digitValue(character: string): number {
   if (/^[0-9a-f]$/iu.test(character)) return Number.parseInt(character, 16);
-  if (!/^\p{Nd}$/u.test(character)) return -1;
-  // Decimal digits are encoded as contiguous runs of ten, starting at zero.
-  let start = character.codePointAt(0)!;
-  while (/^\p{Nd}$/u.test(String.fromCodePoint(start - 1))) start -= 1;
-  return (character.codePointAt(0)! - start) % 10;
+  return pyDecimalDigit(character);
 }
 
 /** `int(text, 16)` restricted to values that fit a UUID, or null. */

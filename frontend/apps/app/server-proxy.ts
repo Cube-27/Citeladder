@@ -1,3 +1,4 @@
+import { caddyPathSource } from '@citeladder/contracts/caddy-path';
 import { TYPESCRIPT_INGRESS_PATHS } from '@citeladder/contracts/route-ownership';
 import type { ProxyOptions } from 'vite';
 import { resolveBackendOrigin } from '../../lib/config/backend-origin.ts';
@@ -20,24 +21,28 @@ export function createServerProxy(
   );
 }
 
-/** A Caddy path pattern (`*` within one segment) as an anchored proxy key. */
-function ingressPattern(path: string): string {
-  const segments = path.split('*').map((part) => part.replaceAll(/[.+?^${}()|[\]\\]/g, '\\$&'));
-  return `^${segments.join('[^/]+')}(?:\\?|$)`;
-}
+// The paths every ingress sends to the Python backend, as Caddy path patterns.
+const BACKEND_PATHS = [
+  '/api',
+  '/api/*',
+  '/mcp',
+  '/mcp/*',
+  '/authorize',
+  '/token',
+  '/revoke',
+  '/.well-known/oauth-authorization-server',
+  '/.well-known/oauth-protected-resource/mcp',
+] as const;
 
 function proxyRoutes(target: string, apiService: string): Record<string, ProxyOptions> {
   const options = (origin: string): ProxyOptions => ({ target: origin, changeOrigin: true });
-  // Vite tries keys in insertion order, so the narrower TypeScript paths lead.
-  const typescript = Object.fromEntries(
-    TYPESCRIPT_INGRESS_PATHS.map((path) => [ingressPattern(path), options(apiService)]),
-  );
-  return {
-    ...typescript,
-    '^/api(?:/|\\?|$)': options(target),
-    '^/mcp(?:/|\\?|$)': options(target),
-    '^/(?:authorize|token|revoke)(?:\\?|$)': options(target),
-    '^/\\.well-known/(?:oauth-authorization-server|oauth-protected-resource/mcp)(?:\\?|$)':
-      options(target),
-  };
+  // Each key is Caddy's own matcher, folding case and merging repeated slashes
+  // as Caddy does, so dev routes a path as production does. Vite tries keys in insertion order, so the
+  // narrower TypeScript paths lead.
+  const routes = (paths: readonly string[], origin: string) =>
+    paths.map((path) => [caddyPathSource(path, { proxyKey: true }), options(origin)] as const);
+  return Object.fromEntries([
+    ...routes(TYPESCRIPT_INGRESS_PATHS, apiService),
+    ...routes(BACKEND_PATHS, target),
+  ]);
 }

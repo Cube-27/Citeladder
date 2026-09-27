@@ -72,12 +72,13 @@ function scoreObject(score: unknown): Record<string, unknown> | null {
 function competitorsMentioned(score: Record<string, unknown> | null): string[] {
   const names = score?.competitors_mentioned;
   if (!pyTruthy(names)) return [];
+  // `list()` iterates a str, list or dict (its keys); any other stored scalar
+  // is a TypeError in Python, so it fails here too rather than reading as [].
+  if (typeof names !== 'string' && (names === null || typeof names !== 'object')) {
+    throw new TypeError('stored competitors_mentioned is not a list of names');
+  }
   const listed =
-    typeof names === 'string'
-      ? [...names]
-      : Array.isArray(names)
-        ? names
-        : Object.keys(names as object);
+    typeof names === 'string' ? [...names] : Array.isArray(names) ? names : Object.keys(names);
   if (!listed.every((name) => typeof name === 'string')) {
     throw new TypeError('stored competitors_mentioned is not a list of names');
   }
@@ -113,18 +114,22 @@ export async function getExecutionEvidence(
       'matched_competitor',
     ])
     .where('analysis_id', '=', analysis.id)
+    .where('workspace_id', '=', input.workspaceId)
     .orderBy('ordinal', 'asc')
     .execute();
   // Frozen provenance from the task and audit parents (invariants 4 and 7).
+  // audit_tasks has no workspace column; it is scoped through its audit.
   const task = await db
     .selectFrom('audit_tasks')
     .select(['request_snapshot', 'provider_route_snapshot'])
     .where('id', '=', input.taskId)
+    .where('audit_id', '=', analysis.audit_id)
     .executeTakeFirst();
   const audit = await db
     .selectFrom('audits')
     .select('configuration')
     .where('id', '=', analysis.audit_id)
+    .where('workspace_id', '=', input.workspaceId)
     .executeTakeFirst();
   const score = scoreObject(analysis.score);
   return {

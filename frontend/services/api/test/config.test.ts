@@ -69,4 +69,11 @@ describe('demoAccessExpired', () => {
     const open = loadConfig({ DEMO_MODE: 'on', DEMO_EXPIRES_AT: '2026-09-28T00:00:00Z' });
     expect(demoAccessExpired(open, now)).toBe(false);
   });
+
+  it.each(['2026-02-30T00:00:00Z', 'Mar 5 2026 10:00 +0530'])(
+    'refuses %s at boot, as pydantic does',
+    (value) => {
+      expect(() => loadConfig({ DEMO_EXPIRES_AT: value })).toThrow(ConfigError);
+    },
+  );
 });

@@ -101,17 +101,87 @@ export function pyTruthy(value: unknown): boolean {
   return Boolean(value);
 }
 
+/** The value of one Unicode decimal digit (`\p{Nd}`) as `int()` reads it, or -1. */
+export function pyDecimalDigit(character: string): number {
+  if (!/^\p{Nd}$/u.test(character)) return -1;
+  // Decimal digits are encoded as contiguous runs of ten, starting at zero.
+  let start = character.codePointAt(0)!;
+  while (/^\p{Nd}$/u.test(String.fromCodePoint(start - 1))) start -= 1;
+  return (character.codePointAt(0)! - start) % 10;
+}
+
+const OUT_OF_RANGE = 'integer exceeds the exact JSON number range';
+
 /**
- * `str(value or "")` for a decoded JSON value: falsy values become the empty
- * string, and a number prints as Python prints the integral and
- * short-decimal values stored JSON carries.
+ * `int(text)` for a `str`, or null where Python raises `ValueError`. The whole
+ * string is validated first; accumulation then stops with a `RangeError` as
+ * soon as the magnitude passes the exact JSON number range.
  */
+function pyIntFromStr(text: string): number | null {
+  let body = pyStrip(text);
+  let negative = false;
+  if (body.startsWith('+') || body.startsWith('-')) {
+    negative = body.startsWith('-');
+    body = body.slice(1);
+  }
+  if (!/^\p{Nd}+(?:_\p{Nd}+)*$/u.test(body)) return null;
+  let value = 0;
+  for (const character of body.replaceAll('_', '')) {
+    const digit = pyDecimalDigit(character);
+    if (value > (Number.MAX_SAFE_INTEGER - digit) / 10) throw new RangeError(OUT_OF_RANGE);
+    value = value * 10 + digit;
+  }
+  return negative ? -value : value;
+}
+
+/**
+ * `int(value or 0)` for a decoded JSON value, or null where Python raises.
+ *
+ * Python's `int` is unbounded, but a served JSON number is exact only up to
+ * 2^53. Past that the port refuses the value (a `RangeError`, served as a
+ * 500) rather than emitting a rounded count; a JSON number there has already
+ * been rounded by decoding, so it is refused the same way.
+ */
+export function pyIntOrZero(value: unknown): number | null {
+  if (!pyTruthy(value)) return 0;
+  if (typeof value === 'boolean') return 1;
+  if (typeof value === 'string') return pyIntFromStr(value);
+  if (typeof value !== 'number') return null;
+  const whole = Math.trunc(value);
+  if (!Number.isSafeInteger(whole)) throw new RangeError(OUT_OF_RANGE);
+  return whole;
+}
+
+/**
+ * `repr(value)` for a finite JSON number. A decoded JSONB value carries no
+ * int/float tag, so an integral number prints as an `int` (JSONB renders
+ * `1e16` as `10000000000000000`, which Python also reads as an `int`); only a
+ * stored `2.0` would print differently, as `'2.0'`.
+ */
+function pyNumberRepr(value: number): string {
+  if (Number.isInteger(value)) return BigInt(value).toString();
+  const [mantissa, exponent] = value.toExponential().split('e') as [string, string];
+  const power = Number(exponent);
+  // Python switches to scientific notation below 1e-4; JavaScript below 1e-6.
+  if (power >= -4) return String(value);
+  return `${mantissa}e-${String(-power).padStart(2, '0')}`;
+}
+
+/** `repr(value)` for a decoded JSON value, as Python prints the object it decodes to. */
+function pyReprValue(value: unknown): string {
+  if (value === null || value === undefined) return 'None';
+  if (typeof value === 'boolean') return value ? 'True' : 'False';
+  if (typeof value === 'number') return pyNumberRepr(value);
+  if (typeof value === 'string') return pyRepr(value);
+  if (Array.isArray(value)) return `[${value.map(pyReprValue).join(', ')}]`;
+  const entries = Object.entries(value as Record<string, unknown>);
+  return `{${entries.map(([key, item]) => `${pyRepr(key)}: ${pyReprValue(item)}`).join(', ')}}`;
+}
+
+/** `str(value or "")` for a decoded JSON value: falsy values become the empty string. */
 export function pyStrOrEmpty(value: unknown): string {
   if (!pyTruthy(value)) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'boolean') return 'True';
-  if (typeof value === 'number') return Number.isInteger(value) ? value.toFixed(0) : String(value);
-  return JSON.stringify(value);
+  return typeof value === 'string' ? value : pyReprValue(value);
 }
 
 /** Python's `str` ordering: by code point, where JavaScript compares UTF-16 units. */

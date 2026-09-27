@@ -67,6 +67,15 @@ describe('session verification', () => {
     ],
     ['a non-UUID subject', () => sessionToken({ sub: 'someone', ver: 2 }), 'Invalid token'],
     ['a missing version', () => sessionToken({ sub: userId }), 'Invalid token'],
+    // Deliberately stricter than Python's int(payload["ver"]): Python only
+    // mints integer versions, so a coercible string or float was never issued.
+    ['a string version', () => sessionToken({ sub: userId, ver: '2' }), 'Invalid token'],
+    ['a fractional version', () => sessionToken({ sub: userId, ver: 2.9 }), 'Invalid token'],
+    [
+      'a non-numeric issued-at',
+      () => sessionToken({ sub: userId, ver: 2, iat: 'now' }),
+      'Invalid token',
+    ],
     ['a revoked version', () => sessionToken({ sub: userId, ver: 1 }), 'Session no longer valid'],
     [
       'an unknown user',

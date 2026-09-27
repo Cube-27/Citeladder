@@ -28,12 +28,23 @@ _COMPONENT_PREFIX = "#/components/schemas/"
 PARITY_FAMILY = "parity"
 
 
+_HTTP_METHODS = frozenset(
+    {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+)
+
+
 def _operations(spec: dict[str, Any], family: str) -> dict[str, dict[str, Any]]:
     paths: dict[str, dict[str, Any]] = {}
     for path, item in spec.get("paths", {}).items():
         for method, operation in item.items():
-            if family in operation.get("tags", []):
+            if method in _HTTP_METHODS and family in operation.get("tags", []):
                 paths.setdefault(path, {})[method] = operation
+        if path in paths:
+            # Path-level fields (shared ``parameters``, ``summary``, ...) belong
+            # to every operation under the path, so they stay in the parity
+            # target rather than being dropped or crashing the exporter.
+            shared = {k: v for k, v in item.items() if k not in _HTTP_METHODS}
+            paths[path] = {**shared, **paths[path]}
     return paths
 
 

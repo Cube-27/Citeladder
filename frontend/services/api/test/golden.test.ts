@@ -22,13 +22,14 @@ import { domainMatches, isGroundingRedirect, normalizeDomain } from '../src/anal
 import { brandPosition, competitorPosition } from '../src/analysis/position.ts';
 import { executionFrozenProvenance } from '../src/analysis/provenance.ts';
 import { classifyCitation, scoringConfig } from '../src/analysis/scoring.ts';
+import { aiReferralSources } from '../src/analytics/ai-referrals.ts';
 import { metricSeriesPoints } from '../src/analytics/metric-series.ts';
 import { decodeSessionToken } from '../src/auth/session.ts';
 import { secretIsWeak } from '../src/config.ts';
 import { defaultCode, errorEnvelope, isRetryableStatus } from '../src/errors.ts';
 import { isoformat, type ParsedDatetime } from '../src/http/datetimes.ts';
 import { RequestValidationError, validateParams } from '../src/http/params.ts';
-import { pyRepr } from '../src/python/text.ts';
+import { pyIntOrZero, pyRepr, pyStrOrEmpty } from '../src/python/text.ts';
 import { PythonValueError } from '../src/python/urlparse.ts';
 import { pythonUuid } from '../src/python/uuid.ts';
 import { sanitizeCorrelationId } from '../src/request-id.ts';
@@ -142,6 +143,14 @@ function mentionPositions(score: Record<string, unknown>): unknown {
 }
 
 const PORTS: Record<string, (input: never) => unknown> = {
+  ai_referral_sources: (input: unknown) => {
+    try {
+      return aiReferralSources(input);
+    } catch (error) {
+      if (error instanceof TypeError) return { raises: 'error' };
+      throw error;
+    }
+  },
   brand_identity_keys: (input: string) => identityKey(input),
   citation_classifications: (input: { citation: Record<string, unknown>; config: unknown }) =>
     raising(() => classifyCitation(input.citation, scoringConfig(input.config))),
@@ -166,6 +175,10 @@ const PORTS: Record<string, (input: never) => unknown> = {
   mention_positions: mentionPositions,
   metric_series_points: (input: unknown) => metricSeriesPoints(input),
   normalized_domains: (input: unknown) => raising(() => normalizeDomain(input)),
+  // `int()` raises ValueError for a str and TypeError for any other JSON value.
+  python_int_or_zero: (input: unknown) =>
+    pyIntOrZero(input) ?? { raises: typeof input === 'string' ? 'ValueError' : 'TypeError' },
+  python_str_or_empty: (input: unknown) => pyStrOrEmpty(input),
   python_string_reprs: (input: string) => pyRepr(input),
   python_uuids: (input: string) => pythonUuid(input),
   retrieval_provenance: (input: { request?: unknown; route?: unknown; audit?: unknown }) =>

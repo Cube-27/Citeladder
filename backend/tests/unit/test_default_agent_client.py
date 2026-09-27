@@ -7,6 +7,7 @@ import json
 import httpx
 import pytest
 
+from app.connectors.agent import client as client_module
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
 from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.agent import DefaultAgentSettings
@@ -16,8 +17,8 @@ from app.core.config.provider_catalog import ERROR_PARSE, ERROR_RATE_LIMIT
 def _settings(*, api_key: str = "test-key") -> DefaultAgentSettings:
     return DefaultAgentSettings(
         DEFAULT_AGENT_API_KEY=api_key,
-        DEFAULT_AGENT_BASE_URL="https://mock.nvidia.test/v1",
-        DEFAULT_AGENT_MODEL="nvidia/test-model",
+        DEFAULT_AGENT_BASE_URL="https://mock.provider.test/v1",
+        DEFAULT_AGENT_MODEL="test-model",
         DEFAULT_AGENT_TIMEOUT_SECONDS=5,
         DEFAULT_AGENT_MAX_OUTPUT_TOKENS=123,
     )
@@ -25,6 +26,11 @@ def _settings(*, api_key: str = "test-key") -> DefaultAgentSettings:
 
 def _client(handler) -> DefaultAgentClient:
     return DefaultAgentClient(_settings(), transport=httpx.MockTransport(handler))
+
+
+@pytest.fixture(autouse=True)
+def _fresh_cap_memo(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(client_module, "_LEGACY_CAP_ROUTES", set())
 
 
 @pytest.mark.asyncio
@@ -46,7 +52,8 @@ async def test_complete_json_uses_prompt_mode_without_key_in_body() -> None:
     assert isinstance(body, dict)
     assert "response_format" not in body
     assert "valid JSON object" in body["messages"][1]["content"]
-    assert body["max_tokens"] == 123
+    assert body["max_completion_tokens"] == 123
+    assert "max_tokens" not in body
     assert "test-key" not in json.dumps(body)
 
 
@@ -85,66 +92,6 @@ async def test_complete_structured_json_prompts_with_schema_by_default() -> None
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("mode", "expected_format"),
-    [
-        ("prompt_json", None),
-        ("json_object", {"type": "json_object"}),
-        ("json_schema", {"type": "json_schema"}),
-    ],
-)
-async def test_structured_transport_uses_configured_format(
-    mode: str, expected_format: dict[str, str] | None
-) -> None:
-    captured: dict[str, object] = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured["body"] = json.loads(request.content)
-        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
-
-    settings = _settings().model_copy(update={"structured_output_mode": mode})
-    client = DefaultAgentClient(settings, transport=httpx.MockTransport(handler))
-    await client.complete_structured_json(
-        system="system",
-        user="user",
-        schema_name="brand_research",
-        schema={"type": "object", "additionalProperties": False},
-    )
-
-    body = captured["body"]
-    assert isinstance(body, dict)
-    if expected_format is None:
-        assert "response_format" not in body
-    elif mode == "json_schema":
-        assert body["response_format"]["type"] == "json_schema"
-        assert body["response_format"]["json_schema"]["strict"] is True
-    else:
-        assert body["response_format"] == expected_format
-
-
-@pytest.mark.asyncio
-async def test_prompt_mode_succeeds_when_provider_rejects_response_format() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
-        body = json.loads(request.content)
-        if "response_format" in body:
-            return httpx.Response(400, json={"error": "unsupported response_format"})
-        return httpx.Response(
-            200, json={"choices": [{"message": {"content": '{"ok":true}'}}]}
-        )
-
-    client = _client(handler)
-    assert (
-        await client.complete_structured_json(
-            system="system",
-            user="user",
-            schema_name="fixture",
-            schema={"type": "object"},
-        )
-        == '{"ok":true}'
-    )
-
-
-@pytest.mark.asyncio
 async def test_errors_are_classified_and_do_not_expose_key() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(429, headers={"retry-after": "4"})
@@ -172,27 +119,6 @@ def test_missing_key_is_rejected() -> None:
         DefaultAgentClient(_settings(api_key=""))
 
 
-def test_mistral_configuration_is_entirely_env_driven(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("DEFAULT_AGENT_API_KEY", raising=False)
-    monkeypatch.setenv("DEFAULT_AGENT_BASE_URL", "https://api.mistral.ai/v1")
-    monkeypatch.setenv("DEFAULT_AGENT_MODEL", "mistral-small-2603")
-    monkeypatch.setenv("MISTRAL_API_KEY", "mistral-key")
-    settings = DefaultAgentSettings(_env_file=None)
-    assert settings.resolved_api_key == "mistral-key"
-    assert settings.base_url == "https://api.mistral.ai/v1"
-    assert settings.model == "mistral-small-2603"
-    assert settings.resolved_structured_output_mode == "prompt_json"
-
-
-def test_auto_mode_depends_on_adapter_not_provider_host() -> None:
-    settings = _settings().model_copy(
-        update={"base_url": "https://api.mistral.ai/v1", "adapter": "openai_responses"}
-    )
-    assert settings.resolved_structured_output_mode == "json_schema"
-
-
 @pytest.mark.parametrize("missing", ["base_url", "model"])
 def test_endpoint_and_model_are_required_for_configuration(missing: str) -> None:
     settings = _settings().model_copy(update={missing: ""})
@@ -202,50 +128,93 @@ def test_endpoint_and_model_are_required_for_configuration(missing: str) -> None
         DefaultAgentClient(settings)
 
 
-def test_explicit_default_agent_key_precedes_provider_fallback(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.asyncio
+async def test_output_cap_falls_back_once_and_is_remembered() -> None:
+    sent: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        sent.append(body)
+        if "max_completion_tokens" in body:
+            # Mistral-style validation error naming the refused field.
+            return httpx.Response(
+                422,
+                json={"detail": [{"loc": ["body", "max_completion_tokens"]}]},
+            )
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+
+    client = _client(handler)
+    await client.complete_json(system="s", user="u")
+    await client.complete_json(system="s", user="u")
+
+    assert [next(k for k in b if k.startswith("max_")) for b in sent] == [
+        "max_completion_tokens",
+        "max_tokens",
+        "max_tokens",
+    ]
+    assert all(b["max_tokens"] == 123 for b in sent[1:])
+
+
+@pytest.mark.asyncio
+async def test_failed_fallback_is_not_remembered() -> None:
+    sent: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        sent.append(next(k for k in body if k.startswith("max_")))
+        if "max_completion_tokens" in body:
+            return httpx.Response(
+                400, json={"error": {"param": "max_completion_tokens"}}
+            )
+        return httpx.Response(401, json={"error": {"code": "invalid_api_key"}})
+
+    client = _client(handler)
+    for _ in range(2):
+        with pytest.raises(ProviderError):
+            await client.complete_json(system="s", user="u")
+
+    assert sent == ["max_completion_tokens", "max_tokens"] * 2
+
+
+@pytest.mark.asyncio
+async def test_unrelated_client_error_is_not_retried(
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    monkeypatch.setenv("DEFAULT_AGENT_API_KEY", "application-key")
-    monkeypatch.setenv("DEFAULT_AGENT_BASE_URL", "https://api.mistral.ai/v1")
-    monkeypatch.setenv("MISTRAL_API_KEY", "provider-key")
-    settings = DefaultAgentSettings(_env_file=None)
-    assert settings.resolved_api_key == "application-key"
+    calls = 0
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            400,
+            json={
+                "error": {
+                    "type": "invalid_request_error",
+                    "code": "model_not_found",
+                    "param": "model",
+                    "message": "echoed prompt text",
+                }
+            },
+        )
+
+    with pytest.raises(ProviderError), caplog.at_level("WARNING"):
+        await _client(handler).complete_json(system="s", user="u")
+
+    assert calls == 1
+    record = next(r for r in caplog.records if r.message == "default agent call failed")
+    assert record.provider_error_code == "model_not_found"
+    assert record.provider_error_param == "model"
+    assert "echoed prompt text" not in str(record.__dict__)
 
 
-@pytest.mark.parametrize(
-    ("base_url", "provider_variable", "expected"),
-    [
-        ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY", "nvidia-key"),
-        ("https://api.groq.com/openai/v1", "GROQ_API_KEY", "groq-key"),
-        (
-            "https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1",
-            "AWS_BEARER_TOKEN_BEDROCK",
-            "bedrock-key",
-        ),
-    ],
-)
-def test_provider_keys_are_selected_only_for_matching_hosts(
-    monkeypatch: pytest.MonkeyPatch,
-    base_url: str,
-    provider_variable: str,
-    expected: str,
-) -> None:
-    monkeypatch.delenv("DEFAULT_AGENT_API_KEY", raising=False)
-    monkeypatch.setenv("DEFAULT_AGENT_BASE_URL", base_url)
-    monkeypatch.setenv(provider_variable, expected)
+@pytest.mark.asyncio
+async def test_exhausted_reasoning_budget_names_the_finish_reason() -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": ""}, "finish_reason": "length"}]},
+        )
 
-    settings = DefaultAgentSettings(_env_file=None)
-
-    assert settings.resolved_api_key == expected
-
-
-def test_provider_key_does_not_leak_to_lookalike_host(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("DEFAULT_AGENT_API_KEY", raising=False)
-    monkeypatch.setenv("DEFAULT_AGENT_BASE_URL", "https://evilgroq.com/v1")
-    monkeypatch.setenv("GROQ_API_KEY", "groq-key")
-
-    settings = DefaultAgentSettings(_env_file=None)
-
-    assert settings.resolved_api_key == ""
+    with pytest.raises(ProviderError, match="finish_reason=length") as excinfo:
+        await _client(handler).complete_json(system="s", user="u")
+    assert excinfo.value.error_code == ERROR_PARSE

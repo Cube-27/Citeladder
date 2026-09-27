@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
-from urllib.parse import urlsplit
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,11 +26,6 @@ from app.core.config.task_queue import ERROR_MAX_ATTEMPTS, PostgresQueueSpec
 if TYPE_CHECKING:
     # Type-only: config never imports a model at runtime (circular import).
     from app.models.agent import AgentRun
-
-STRUCTURED_OUTPUT_AUTO = "auto"
-STRUCTURED_OUTPUT_PROMPT_JSON = "prompt_json"
-STRUCTURED_OUTPUT_JSON_OBJECT = "json_object"
-STRUCTURED_OUTPUT_JSON_SCHEMA = "json_schema"
 
 # =========================================================================
 # Agent runtime policy (chats, runs, outputs)
@@ -123,41 +117,12 @@ ERROR_OUTPUT_CONFLICT: Final = "output_conflict"
 ERROR_MODEL_CHANGED: Final = "model_changed"
 
 
-def _is_nvidia_host(host: str) -> bool:
-    return host == "nvidia.com" or host.endswith(".nvidia.com")
-
-
-def _is_provider_host(host: str, domain: str) -> bool:
-    return host == domain or host.endswith(f".{domain}")
-
-
-def _is_bedrock_host(host: str) -> bool:
-    parts = host.split(".")
-    return (
-        len(parts) >= 4
-        and parts[0] == "bedrock-runtime"
-        and parts[-2:]
-        == [
-            "amazonaws",
-            "com",
-        ]
-    )
-
-
-def _first_provider_key(candidates: tuple[tuple[bool, str], ...]) -> str:
-    for matches_host, key in candidates:
-        if matches_host:
-            normalized = key.strip()
-            if normalized:
-                return normalized
-    return ""
-
-
 class DefaultAgentSettings(BaseSettings):
     """Env-overridable default-agent knobs (``DEFAULT_AGENT_*``).
 
-    Provider-specific aliases remain separate so an empty or stale alias cannot
-    silently shadow the credential for the configured endpoint.
+    Any OpenAI-compatible ``/chat/completions`` endpoint works: set the key,
+    base URL and model. There is no per-provider switch; the client sends the
+    portable request shape and adapts to the one known dialect split itself.
     """
 
     model_config = SettingsConfigDict(
@@ -173,20 +138,6 @@ class DefaultAgentSettings(BaseSettings):
         default="",
         validation_alias=AliasChoices("DEFAULT_AGENT_API_KEY", "default_agent_api_key"),
     )
-    adapter: str = Field(
-        default="openai_compatible",
-        validation_alias=AliasChoices("DEFAULT_AGENT_ADAPTER", "default_agent_adapter"),
-        pattern="^(openai_compatible|openai_responses)$",
-    )
-    nvidia_api_key: str = Field(default="", validation_alias="NVIDIA_API_KEY")
-    mistral_api_key: str = Field(
-        default="",
-        validation_alias=AliasChoices("MISTRAL_API_KEY", "MISTRALAI_API_KEY"),
-    )
-    groq_api_key: str = Field(default="", validation_alias="GROQ_API_KEY")
-    bedrock_bearer_token: str = Field(
-        default="", validation_alias="AWS_BEARER_TOKEN_BEDROCK"
-    )
     base_url: str = Field(
         default="",
         validation_alias=AliasChoices(
@@ -197,14 +148,6 @@ class DefaultAgentSettings(BaseSettings):
         default="",
         validation_alias=AliasChoices("DEFAULT_AGENT_MODEL", "default_agent_model"),
     )
-    structured_output_mode: str = Field(
-        default=STRUCTURED_OUTPUT_AUTO,
-        validation_alias=AliasChoices(
-            "DEFAULT_AGENT_STRUCTURED_OUTPUT_MODE",
-            "default_agent_structured_output_mode",
-        ),
-        pattern="^(auto|prompt_json|json_object|json_schema)$",
-    )
     # HTTP client timeout for a single agent call.
     timeout_seconds: float = Field(
         default=180.0,
@@ -212,9 +155,10 @@ class DefaultAgentSettings(BaseSettings):
             "DEFAULT_AGENT_TIMEOUT_SECONDS", "default_agent_timeout_seconds"
         ),
     )
-    # Per-call output cap so one generation cannot run away.
+    # Per-call output cap so one generation cannot run away. Reasoning models
+    # spend part of it on hidden reasoning, so it is sized for them.
     max_output_tokens: int = Field(
-        default=4096,
+        default=16_384,
         gt=0,
         validation_alias=AliasChoices(
             "DEFAULT_AGENT_MAX_OUTPUT_TOKENS", "default_agent_max_output_tokens"
@@ -277,32 +221,12 @@ class DefaultAgentSettings(BaseSettings):
         )
 
     @property
-    def resolved_structured_output_mode(self) -> str:
-        if self.structured_output_mode != STRUCTURED_OUTPUT_AUTO:
-            return self.structured_output_mode
-        if self.adapter == "openai_responses":
-            return STRUCTURED_OUTPUT_JSON_SCHEMA
-        return STRUCTURED_OUTPUT_PROMPT_JSON
-
-    @property
     def configured(self) -> bool:
-        return all((self.base_url.strip(), self.model.strip(), self.resolved_api_key))
+        return all((self.base_url.strip(), self.model.strip(), self.api_key.strip()))
 
     @property
     def resolved_api_key(self) -> str:
-        host = (urlsplit(self.base_url).hostname or "").casefold()
-        provider_key = _first_provider_key(
-            (
-                (_is_nvidia_host(host), self.nvidia_api_key),
-                (_is_provider_host(host, "mistral.ai"), self.mistral_api_key),
-                (_is_provider_host(host, "groq.com"), self.groq_api_key),
-                (_is_bedrock_host(host), self.bedrock_bearer_token),
-            )
-        )
-        # DEFAULT_AGENT_* is the explicit application-model route. Provider
-        # aliases are compatibility fallbacks only; a stale alias must not
-        # shadow a deliberately rotated default-agent credential.
-        return self.api_key.strip() or provider_key
+        return self.api_key.strip()
 
 
 default_agent_settings = DefaultAgentSettings()

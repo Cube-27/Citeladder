@@ -12,6 +12,7 @@ from app.connectors.app_model_transport import (
     AppModelJsonTransport,
     AppModelTransportError,
     chat_completions_url,
+    post_with_output_cap,
     resolve_app_model_target,
 )
 from app.core.config.app_models import (
@@ -143,15 +144,17 @@ async def _probe_one(
     latency_ms: int | None = None
     try:
         target = await resolve_app_model_target(chat_completions_url(api_base_url))
-        response = await app_transport.post(
+        response = await post_with_output_cap(
+            app_transport,
+            route_key=(route_id, tested_route_revision, tested_credential_revision),
             target=target,
             api_key=api_key,
             payload={
                 "model": model,
                 "messages": [{"role": "user", "content": APP_MODEL_PROBE_PROMPT}],
-                "max_tokens": APP_MODEL_PROBE_MAX_OUTPUT_TOKENS,
                 "stream": False,
             },
+            output_cap=APP_MODEL_PROBE_MAX_OUTPUT_TOKENS,
             timeout_seconds=APP_MODEL_PROBE_TIMEOUT_SECONDS,
             max_response_bytes=16_384,
         )

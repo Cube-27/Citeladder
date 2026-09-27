@@ -380,6 +380,9 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
         if any("app.workers." in value for value in _values(service.get("command", [])))
     ]
     assert len(workers) == 9
+    # Which stack each /api/v1 path reaches through this Caddyfile is proven by
+    # the TypeScript route-ownership gate (`pnpm --filter @citeladder/api
+    # check:routes`), not here; run it after changing any routing block.
     caddy = (RUNTIME / "Caddyfile").read_text(encoding="utf-8")
     assert "trusted_proxies static __CLOUDFLARE_CIDRS__" in caddy
     tls_init = (RUNTIME / "init-postgres-tls.sh").read_text(encoding="utf-8")
