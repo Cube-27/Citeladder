@@ -53,7 +53,8 @@ and Demand, then the appropriate Opportunity and verification successors.
 Source identity and contributing revisions belong in refresh idempotency.
 [Analytics worker](../backend/app/workers/analytics_worker.py) owns dispatch
 of the Python kinds; the [TypeScript analytics worker](../frontend/services/api/src/workers/analytics-worker.ts)
-owns the AI Referrals chain (ingest, classify, snapshot refresh, retention).
+owns the AI Referrals chain (ingest, classify, snapshot refresh, retention),
+Traffic snapshot refresh, Performance range projection and Demand snapshot refresh.
 Each domain owns its derived projection.
 
 [Performance](../backend/app/domain/traffic/performance.py) reads persisted
@@ -99,7 +100,7 @@ Text, minimum-volume and intent filters run across persisted rows. Cursors bind 
 
 ## Query evidence and Demand
 
-[Demand service](../backend/app/domain/demand/service.py) builds immutable,
+[Query evidence](../frontend/services/api/src/demand/query-evidence.ts) builds immutable,
 versioned QueryEvidenceSnapshot/Row projections from latest gsc_query_page_daily
 evidence before detector computation. Rows retain exact metric/artifact IDs,
 query, date, metrics, importer identity and owned-page resolution. Identical
