@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { openApiDocument, type OpenApiDocument } from '../src/openapi/document.ts';
+import { openApiDocument, type JsonSchema, type OpenApiDocument } from '../src/openapi/document.ts';
 import { familyFragment } from '../src/openapi/fragment.ts';
 import type { RouteContract } from '../src/openapi/routes.ts';
 
@@ -135,6 +135,41 @@ describe('OpenAPI fragment parity', () => {
     expect(familyFragment(flat, 'tree')).not.toEqual(familyFragment(pydantic, 'tree'));
   });
 
+  it('ignores alias hops and keeps constraints beside a recursive reference', () => {
+    const document = (schemas: Record<string, object>): OpenApiDocument => ({
+      openapi: '3.1.0',
+      paths: {
+        '/api/v1/tree': {
+          get: {
+            tags: ['tree'],
+            responses: {
+              '200': {
+                content: {
+                  'application/json': { schema: { $ref: '#/components/schemas/Root' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      components: { schemas: schemas as Record<string, JsonSchema> },
+    });
+    const node = (children: object) => ({
+      type: 'object',
+      properties: { children: { type: 'array', items: children } },
+    });
+    const direct = document({ Root: node({ $ref: '#/components/schemas/Root' }) });
+    const aliased = document({
+      Root: { $ref: '#/components/schemas/Node' },
+      Node: node({ $ref: '#/components/schemas/Root' }),
+    });
+    const capped = document({
+      Root: node({ $ref: '#/components/schemas/Root', maxProperties: 3 }),
+    });
+    expect(familyFragment(aliased, 'tree')).toEqual(familyFragment(direct, 'tree'));
+    expect(familyFragment(capped, 'tree')).not.toEqual(familyFragment(direct, 'tree'));
+  });
+
   it('applies path-level parameters to every operation under the path', () => {
     const id = { name: 'id', in: 'path', required: true, schema: { type: 'string' } } as const;
     const operation = { tags: ['items'], responses: { '200': {} } };
@@ -149,7 +184,7 @@ describe('OpenAPI fragment parity', () => {
     expect(familyFragment(shared, 'items')).toEqual(familyFragment(inline, 'items'));
   });
 
-  it('resolves a referenced path-level parameter before operation overrides', () => {
+  it('resolves a chained path-level parameter reference before operation overrides', () => {
     const id = { name: 'id', in: 'path', required: true, schema: { type: 'string' } } as const;
     const operation = { tags: ['items'], responses: { '200': {} } };
     const referenced = {
@@ -161,7 +196,9 @@ describe('OpenAPI fragment parity', () => {
           put: { ...operation, parameters: [{ ...id, schema: { type: 'integer' } }] },
         },
       },
-      components: { parameters: { ItemId: id } },
+      components: {
+        parameters: { ItemId: { $ref: '#/components/parameters/Id' }, Id: id },
+      },
     } as unknown as OpenApiDocument;
     const fragment = familyFragment(referenced, 'items');
     expect(fragment['GET /api/v1/items/{id}']?.parameters).toEqual([id]);

@@ -36,11 +36,11 @@ const BACKEND_PATHS = [
 
 function proxyRoutes(target: string, apiService: string): Record<string, ProxyOptions> {
   const options = (origin: string): ProxyOptions => ({ target: origin, changeOrigin: true });
-  // Each key is Caddy's own matcher, folding case as Caddy does, so dev routes
-  // a path as production does. Vite tries keys in insertion order, so the
+  // Each key is Caddy's own matcher, folding case and merging repeated slashes
+  // as Caddy does, so dev routes a path as production does. Vite tries keys in insertion order, so the
   // narrower TypeScript paths lead.
   const routes = (paths: readonly string[], origin: string) =>
-    paths.map((path) => [caddyPathSource(path, { caseless: true }), options(origin)] as const);
+    paths.map((path) => [caddyPathSource(path, { proxyKey: true }), options(origin)] as const);
   return Object.fromEntries([
     ...routes(TYPESCRIPT_INGRESS_PATHS, apiService),
     ...routes(BACKEND_PATHS, target),

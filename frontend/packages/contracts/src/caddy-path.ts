@@ -23,13 +23,14 @@ const UNSUPPORTED = /[?[\\]/u;
 // Caddy's `CleanPath` does with an impossible byte.
 const EMPTY_SEGMENT = '￿';
 
-function literal(text: string, caseless: boolean): string {
+function literal(text: string, proxyKey: boolean): string {
   const escaped = text.replaceAll(/[.*+?^${}()|[\]\\/]/gu, '\\$&');
-  if (!caseless) return escaped;
-  return escaped.replaceAll(
-    /[a-z]/giu,
-    (letter) => `[${letter.toLowerCase()}${letter.toUpperCase()}]`,
-  );
+  if (!proxyKey) return escaped;
+  // A proxy key sees the raw URL, so it folds case and accepts the repeated
+  // slashes Caddy's cleaning merges (a browser already resolves `.` and `..`).
+  return escaped
+    .replaceAll(/[a-z]/giu, (letter) => `[${letter.toLowerCase()}${letter.toUpperCase()}]`)
+    .replaceAll('\\/', '\\/+');
 }
 
 /** Go's `path.Clean`. */
@@ -58,16 +59,16 @@ function caddyCleanPath(path: string, mergeSlashes: boolean): string {
 /**
  * The regular-expression source for one Caddy path pattern. It matches a
  * request path with or without its query string, so it also serves as a
- * Vite proxy key. Compile it with the `i` flag for Caddy's case folding, or
- * pass `caseless` for a source that folds case without flags (Vite compiles
- * proxy keys without any).
+ * Vite proxy key. Compile it with the `i` flag for Caddy's case folding over
+ * a cleaned path, or pass `proxyKey` for a source that folds case and merges
+ * slashes by itself (Vite compiles proxy keys without flags or cleaning).
  */
-export function caddyPathSource(pattern: string, { caseless = false } = {}): string {
+export function caddyPathSource(pattern: string, { proxyKey = false } = {}): string {
   if (UNSUPPORTED.test(pattern)) {
     throw new Error(`Unsupported Caddy path pattern '${pattern}'`);
   }
   if (pattern === '*') return '^';
-  const text = (value: string) => literal(value, caseless);
+  const text = (value: string) => literal(value, proxyKey);
   const end = '(?:\\?|$)';
   const wildcards = pattern.split('*').length - 1;
   if (wildcards === 2 && pattern.startsWith('*') && pattern.endsWith('*')) {

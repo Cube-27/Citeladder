@@ -140,19 +140,37 @@ function splitTypeArray(schema: JsonSchema): JsonSchema {
   return result;
 }
 
-function normalizeSchema(node: unknown, definitions: Definitions, seen: string[]): unknown {
+/** A reference on the current resolution chain; an alias only forwards to another. */
+type Visit = { ref: string; alias: boolean };
+
+/** A schema that only forwards to another reference, annotations aside. */
+function isAlias(schema: JsonSchema): boolean {
+  return (
+    typeof schema.$ref === 'string' &&
+    Object.keys(schema).every((key) => key === '$ref' || ANNOTATIONS.has(key))
+  );
+}
+
+function normalizeSchema(node: unknown, definitions: Definitions, seen: Visit[]): unknown {
   if (Array.isArray(node)) return node.map((item) => normalizeSchema(item, definitions, seen));
   if (!isObject(node)) return node;
   if (typeof node.$ref === 'string') {
     const ref = node.$ref;
-    // A recursive schema becomes a back-reference at its second visit, named
-    // by how many references up the chain it points, not by the component
-    // name: Pydantic and zod name the same recursive schema differently.
-    const depth = seen.indexOf(ref);
-    if (depth >= 0) return { $recursion: seen.length - depth };
-    const merged: JsonSchema = { ...resolveRef(ref, definitions), ...node };
-    delete merged.$ref;
-    return normalizeSchema(merged, definitions, [...seen, ref]);
+    const siblings: JsonSchema = { ...node };
+    delete siblings.$ref;
+    const at = seen.findIndex((visit) => visit.ref === ref);
+    if (at >= 0) {
+      // A recursive schema becomes a back-reference at its second visit,
+      // named by how many schemas up the chain it points (alias hops do not
+      // count), not by component name: Pydantic and zod name the same
+      // recursive schema differently. Constraints beside it still compare.
+      const distance = seen.slice(at).filter((visit) => !visit.alias).length;
+      const constraints = normalizeSchema(siblings, definitions, seen) as JsonSchema;
+      return { ...constraints, $recursion: distance };
+    }
+    const target = resolveRef(ref, definitions);
+    const merged: JsonSchema = { ...target, ...siblings };
+    return normalizeSchema(merged, definitions, [...seen, { ref, alias: isAlias(target) }]);
   }
   const source = splitTypeArray(node);
   const schema: JsonSchema = {};
@@ -235,20 +253,28 @@ type ParameterOrRef = OpenApiParameter | { $ref: string };
 /** A parameter, with a `#/components/parameters/` reference resolved. */
 function resolveParameter(
   parameter: ParameterOrRef,
-  parameters: Record<string, OpenApiParameter>,
+  parameters: Record<string, ParameterOrRef>,
 ): OpenApiParameter {
-  if (!('$ref' in parameter)) return parameter;
-  const target = parameter.$ref.startsWith(PARAMETER_REF)
-    ? parameters[parameter.$ref.slice(PARAMETER_REF.length)]
-    : undefined;
-  if (!target) throw new Error(`Unresolvable parameter reference: ${parameter.$ref}`);
-  return target;
+  const visited = new Set<string>();
+  let current = parameter;
+  // A component parameter may itself be a reference to another one.
+  while ('$ref' in current) {
+    const ref = current.$ref;
+    if (visited.has(ref)) throw new Error(`Circular parameter reference: ${ref}`);
+    visited.add(ref);
+    const target = ref.startsWith(PARAMETER_REF)
+      ? parameters[ref.slice(PARAMETER_REF.length)]
+      : undefined;
+    if (!target) throw new Error(`Unresolvable parameter reference: ${ref}`);
+    current = target;
+  }
+  return current;
 }
 
 /** The family's operations, normalized; keys are `METHOD /path`. */
 export function familyFragment(document: OpenApiDocument, family: string): NormalizedFragment {
   const components = document.components?.schemas ?? {};
-  const declared = document.components?.parameters ?? {};
+  const declared: Record<string, ParameterOrRef> = document.components?.parameters ?? {};
   const resolve = (list: ParameterOrRef[] | undefined) =>
     (list ?? []).map((parameter) => resolveParameter(parameter, declared));
   const fragment: NormalizedFragment = {};

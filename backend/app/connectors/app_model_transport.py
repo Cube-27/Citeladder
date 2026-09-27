@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+import uuid
 from dataclasses import dataclass
 from typing import Any, Protocol
 from urllib.parse import urlsplit, urlunsplit
@@ -240,9 +241,15 @@ class CurlAppModelJsonTransport:
         )
 
 
+# Customer routes, keyed by (route, route revision, credential revision), whose
+# provider needed the legacy output-cap name. A new revision re-learns it.
+_LEGACY_CAP_ROUTES: set[tuple[uuid.UUID, uuid.UUID, uuid.UUID]] = set()
+
+
 async def post_with_output_cap(
     transport: AppModelJsonTransport,
     *,
+    route_key: tuple[uuid.UUID, uuid.UUID, uuid.UUID],
     target: ResolvedTarget,
     api_key: str,
     payload: dict[str, Any],
@@ -250,7 +257,11 @@ async def post_with_output_cap(
     timeout_seconds: float,
     max_response_bytes: int,
 ) -> AppModelJsonResponse:
-    """POST with the current output-cap name, retrying once with the legacy one."""
+    """POST with the current output-cap name, retrying once with the legacy one.
+
+    The legacy name is remembered for the route only after a request with it
+    succeeds, so later requests on that route skip the refused attempt.
+    """
 
     async def post(cap_param: str) -> AppModelJsonResponse:
         return await transport.post(
@@ -261,9 +272,13 @@ async def post_with_output_cap(
             max_response_bytes=max_response_bytes,
         )
 
+    if route_key in _LEGACY_CAP_ROUTES:
+        return await post(LEGACY_OUTPUT_CAP_PARAM)
     try:
         return await post(OUTPUT_CAP_PARAM)
     except AppModelTransportError as exc:
         if not exc.refused_output_cap:
             raise
-    return await post(LEGACY_OUTPUT_CAP_PARAM)
+    response = await post(LEGACY_OUTPUT_CAP_PARAM)
+    _LEGACY_CAP_ROUTES.add(route_key)
+    return response

@@ -173,8 +173,14 @@ class OpenAICompatibleAppModelClient:
                     max_response_bytes=APP_MODEL_MAX_RESPONSE_BYTES,
                 )
             else:
+                route = self._route
                 response = await post_with_output_cap(
                     self._transport,
+                    route_key=(
+                        route.route_id,
+                        route.route_revision,
+                        route.credential_revision,
+                    ),
                     target=target,
                     api_key=self._route.api_key,
                     payload=payload,

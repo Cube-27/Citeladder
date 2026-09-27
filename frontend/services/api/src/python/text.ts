@@ -110,8 +110,14 @@ export function pyDecimalDigit(character: string): number {
   return (character.codePointAt(0)! - start) % 10;
 }
 
-/** `int(text)` for a `str`, exact at any size, or null where Python raises `ValueError`. */
-function pyIntFromStr(text: string): bigint | null {
+const OUT_OF_RANGE = 'integer exceeds the exact JSON number range';
+
+/**
+ * `int(text)` for a `str`, or null where Python raises `ValueError`. The whole
+ * string is validated first; accumulation then stops with a `RangeError` as
+ * soon as the magnitude passes the exact JSON number range.
+ */
+function pyIntFromStr(text: string): number | null {
   let body = pyStrip(text);
   let negative = false;
   if (body.startsWith('+') || body.startsWith('-')) {
@@ -119,9 +125,11 @@ function pyIntFromStr(text: string): bigint | null {
     body = body.slice(1);
   }
   if (!/^\p{Nd}+(?:_\p{Nd}+)*$/u.test(body)) return null;
-  let value = 0n;
+  let value = 0;
   for (const character of body.replaceAll('_', '')) {
-    value = value * 10n + BigInt(pyDecimalDigit(character));
+    const digit = pyDecimalDigit(character);
+    if (value > (Number.MAX_SAFE_INTEGER - digit) / 10) throw new RangeError(OUT_OF_RANGE);
+    value = value * 10 + digit;
   }
   return negative ? -value : value;
 }
@@ -137,15 +145,11 @@ function pyIntFromStr(text: string): bigint | null {
 export function pyIntOrZero(value: unknown): number | null {
   if (!pyTruthy(value)) return 0;
   if (typeof value === 'boolean') return 1;
-  let parsed: bigint | number | null = null;
-  if (typeof value === 'number') parsed = Math.trunc(value);
-  else if (typeof value === 'string') parsed = pyIntFromStr(value);
-  if (parsed === null) return null;
-  const exact = Number(parsed);
-  if (!Number.isSafeInteger(exact) || BigInt(exact) !== BigInt(parsed)) {
-    throw new RangeError('integer exceeds the exact JSON number range');
-  }
-  return exact;
+  if (typeof value === 'string') return pyIntFromStr(value);
+  if (typeof value !== 'number') return null;
+  const whole = Math.trunc(value);
+  if (!Number.isSafeInteger(whole)) throw new RangeError(OUT_OF_RANGE);
+  return whole;
 }
 
 /**

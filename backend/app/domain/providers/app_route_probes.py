@@ -146,6 +146,7 @@ async def _probe_one(
         target = await resolve_app_model_target(chat_completions_url(api_base_url))
         response = await post_with_output_cap(
             app_transport,
+            route_key=(route_id, tested_route_revision, tested_credential_revision),
             target=target,
             api_key=api_key,
             payload={

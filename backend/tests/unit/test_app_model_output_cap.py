@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any, cast
 
 import pytest
 
+from app.connectors import app_model_transport as transport_module
 from app.connectors.app_model_transport import (
     AppModelJsonResponse,
     AppModelTransportError,
@@ -26,9 +28,18 @@ class _Transport:
         return AppModelJsonResponse(status_code=200, body={}, latency_ms=1)
 
 
-async def _post(transport: _Transport) -> None:
+_ROUTE = (uuid.uuid4(), uuid.uuid4(), uuid.uuid4())
+
+
+@pytest.fixture(autouse=True)
+def _fresh_cap_memo(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(transport_module, "_LEGACY_CAP_ROUTES", set())
+
+
+async def _post(transport: _Transport, route: tuple = _ROUTE) -> None:
     await post_with_output_cap(
         transport,
+        route_key=route,
         target=cast(ResolvedTarget, object()),
         api_key="k",
         payload={"model": "m"},
@@ -45,12 +56,17 @@ def _rejection(*, refused: bool) -> AppModelTransportError:
 
 
 @pytest.mark.asyncio
-async def test_refused_cap_is_retried_once_with_the_legacy_name() -> None:
+async def test_refused_cap_is_retried_once_and_remembered_per_route() -> None:
     transport = _Transport(_rejection(refused=True))
     await _post(transport)
+    await _post(transport)
+    # Another route, or a new revision of this one, learns its own dialect.
+    await _post(transport, (_ROUTE[0], uuid.uuid4(), _ROUTE[2]))
     assert transport.payloads == [
         {"model": "m", "max_completion_tokens": 32},
         {"model": "m", "max_tokens": 32},
+        {"model": "m", "max_tokens": 32},
+        {"model": "m", "max_completion_tokens": 32},
     ]
 
 
