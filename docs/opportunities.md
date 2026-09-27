@@ -122,7 +122,8 @@ is never the anchor: the same page and action can be attempted more than once,
 and a check has to know which attempt it verifies.
 
 Later crawl, audit, traffic or source-page-inspection completion can enqueue
-bounded [verification](../backend/app/domain/opportunities/verification.py)
+bounded [TypeScript verification](../frontend/services/api/src/opportunities/verification.ts)
+through the [Python admission bridge](../backend/app/domain/opportunities/verification.py)
 over persisted evidence. Verification appends observations against eligible
 declarations; it does not perform an external change or infer one from metrics.
 Repeated processing is idempotent. New evidence can change the observed
@@ -148,7 +149,7 @@ accounting.
 
 ## Comparability and presentation
 
-The [verification result](../backend/app/domain/opportunities/verification_result.py)
+The [verification result](../frontend/services/api/src/opportunities/verification-result.ts)
 projects separate visibility, AI-referral and branded-demand legs, baseline and
 post-action source IDs, version identity, gap changes and overlapping actions.
 A placement observation travels in its own top-level section, never folded into
@@ -187,8 +188,10 @@ ranking and verification policy;
 expected-change vocabulary, the check states and the recheck schedule.
 [Site Health](site-health.md), [Demand](integrations-traffic-analytics.md) and
 [Visibility](visibility-prompt.md) remain the source authorities.
-[Verification-result tests](../backend/tests/unit/test_opportunity_verification_result.py)
-exercise comparison and unavailable-state behavior;
+[Verification PostgreSQL tests](../frontend/services/api/test/opportunity-verification.test.ts)
+and [frozen Python goldens](../frontend/services/api/golden/frozen/opportunity_verification.json)
+exercise comparison, unavailable-state behavior, workspace isolation and the
+Python-producer/TypeScript-worker/Python-reader boundary;
 [placement tests](../backend/tests/component/test_placement_checks.py) exercise
 the declaration-to-observation path and the recheck admission ordering. The pending integrations
 follow-up may improve these read surfaces; it is not a second action store.
