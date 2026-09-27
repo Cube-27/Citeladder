@@ -25,7 +25,7 @@ from app.core.config.dotenv import dotenv_sources
 
 # Version of the question set below. Stored on every decision so a decision is
 # only ever compared with decisions that asked the same questions.
-JEV_QUESTION_SCHEMA_VERSION: Final = "prompt-quality-questions-1"
+JEV_QUESTION_SCHEMA_VERSION: Final = "prompt-quality-questions-2"
 # Version of the flag and gate thresholds (settings below). Stored on every
 # decision; a stored decision is never re-flagged under a newer policy.
 JEV_POLICY_VERSION: Final = "jev-gate-1"

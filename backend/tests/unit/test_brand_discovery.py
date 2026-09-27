@@ -154,8 +154,8 @@ def test_prompt_instruction_shows_register_for_the_business_kind() -> None:
     legal = cohort_system_prompt("professional_service")
     retail = cohort_system_prompt("retail")
     assert "employment dispute" in legal
-    assert "cheap baby clothes in bulk" not in legal
-    assert "Cheap baby clothes in bulk" in retail
+    assert "school clothes" not in legal
+    assert "school clothes" in retail
     # An unknown facet still gets a concrete register rather than nothing.
     assert "Which providers should I shortlist" in cohort_system_prompt("")
 

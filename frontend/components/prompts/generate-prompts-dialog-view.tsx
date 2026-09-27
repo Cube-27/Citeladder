@@ -88,9 +88,10 @@ function useGenerationStep(open: boolean, result?: PromptGenerateResponse | null
     setPreviousOpen(open);
     if (open) setShowSetup(false);
   }
+  // Only a new result returns to review; clearing it for Generate more must not.
   if (previousResult !== result) {
     setPreviousResult(result);
-    setShowSetup(false);
+    if (result) setShowSetup(false);
   }
   return [showSetup, setShowSetup] as const;
 }

@@ -205,7 +205,7 @@ export function useOnboardingFlow(transactionKey: string) {
         const listKey = queryKeys.projects.list(activeWorkspaceId);
         await queryClient.cancelQueries({ queryKey: listKey });
         if (!mounted.current) return;
-        void queryClient.invalidateQueries({ queryKey: listKey, refetchType: 'none' });
+        void queryClient.invalidateQueries({ queryKey: listKey });
       }
       setActiveProjectId(projectId);
       startOnboardingNavigationHandoff(projectId);
