@@ -32,8 +32,8 @@ export type ReferralFact = {
   resync_seq: number;
 };
 
-export type SeriesPoint = { date: string; value: number | null };
-export type SourceRow = { ai_source: string; sessions: number; share: number | null };
+type SeriesPoint = { date: string; value: number | null };
+type SourceRow = { ai_source: string; sessions: number; share: number | null };
 
 export type AiReferralsProjection = {
   metrics: { referral_volume: SeriesPoint[]; referral_share: SeriesPoint[]; sources: SourceRow[] };
@@ -51,7 +51,7 @@ export function addDays(day: string, days: number): string {
 }
 
 /** The calendar bucket holding `day`: itself, its ISO Monday, or the 1st. */
-export function bucketStart(day: string, granularity: string): string {
+function bucketStart(day: string, granularity: string): string {
   if (granularity === 'day') return day;
   if (granularity === 'week') return addDays(day, -((toDate(day).getUTCDay() + 6) % 7));
   if (granularity === 'month') return `${day.slice(0, 7)}-01`;
@@ -66,11 +66,7 @@ function nextBucket(start: string, granularity: string): string {
 }
 
 /** Series labels: every bucket start in the window, the first clamped to it. */
-export function bucketLabels(
-  windowStart: string,
-  windowEnd: string,
-  granularity: string,
-): string[] {
+function bucketLabels(windowStart: string, windowEnd: string, granularity: string): string[] {
   const labels: string[] = [];
   for (
     let start = bucketStart(windowStart, granularity);

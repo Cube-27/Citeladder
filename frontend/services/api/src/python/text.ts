@@ -28,7 +28,7 @@ const WHITESPACE = new Set([
 // `str.isprintable()` is false for these categories (the ASCII space aside).
 const NON_PRINTABLE = /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\p{Zs}]/u;
 
-export function isPySpace(character: string): boolean {
+function isPySpace(character: string): boolean {
   return WHITESPACE.has(character.codePointAt(0)!);
 }
 
@@ -89,7 +89,7 @@ export function pyTruthy(value: unknown): boolean {
 }
 
 /** The value of one Unicode decimal digit (`\p{Nd}`) as `int()` reads it, or -1. */
-export function pyDecimalDigit(character: string): number {
+function pyDecimalDigit(character: string): number {
   if (!/^\p{Nd}$/u.test(character)) return -1;
   // Decimal digits are encoded as contiguous runs of ten, starting at zero.
   let start = character.codePointAt(0)!;

@@ -9,7 +9,7 @@ import type { Database } from '../db/database.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 
-export type ExecutorContext = {
+type ExecutorContext = {
   db: Database;
   /** Throws `TaskCancelledError` once the row turned terminal (cooperative cancel). */
   checkCancelled: (boundary: string) => Promise<void>;
