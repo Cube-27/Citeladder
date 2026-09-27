@@ -346,12 +346,12 @@ def _export_cases(add):
             {
                 "title": '\t=HYPERLINK("x")',
                 "remediation": "a|b\r\nc\\d",
-                "priority_score": -2,
+                "priority_score": -2.0,
                 "target": "é𐀀",
                 "rule_version": True,
             }
         ],
-        [{"title": "  +formula", "target": None}],
+        [{"title": "  +formula", "target": None, "priority_score": 30.0}],
     ]
     for rows in variants:
         add("csv", [rows], exports.rows_to_csv(rows))

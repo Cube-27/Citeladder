@@ -33125,14 +33125,14 @@
             {
               "title": "\t=HYPERLINK(\"x\")",
               "remediation": "a|b\r\nc\\d",
-              "priority_score": -2,
+              "priority_score": -2.0,
               "target": "é𐀀",
               "rule_version": true
             }
           ]
         ]
       },
-      "output": "id,rule_id,opportunity_type,severity,priority_score,title,target,remediation,rule_version,formula_version,created_at\r\n,,,,'-2,\"'\t=HYPERLINK(\"\"x\"\")\",é𐀀,\"a|b\r\nc\\d\",true,,\r\n"
+      "output": "id,rule_id,opportunity_type,severity,priority_score,title,target,remediation,rule_version,formula_version,created_at\r\n,,,,'-2.0,\"'\t=HYPERLINK(\"\"x\"\")\",é𐀀,\"a|b\r\nc\\d\",true,,\r\n"
     },
     {
       "input": {
@@ -33142,14 +33142,14 @@
             {
               "title": "\t=HYPERLINK(\"x\")",
               "remediation": "a|b\r\nc\\d",
-              "priority_score": -2,
+              "priority_score": -2.0,
               "target": "é𐀀",
               "rule_version": true
             }
           ]
         ]
       },
-      "output": "# CiteLadder — Opportunities\n\n| id | rule_id | opportunity_type | severity | priority_score | title | target | remediation | rule_version | formula_version | created_at |\n|---|---|---|---|---|---|---|---|---|---|---|\n|  |  |  |  | '-2 | '\t=HYPERLINK(\"x\") | é𐀀 | a\\|b  c\\\\d | true |  |  |\n"
+      "output": "# CiteLadder — Opportunities\n\n| id | rule_id | opportunity_type | severity | priority_score | title | target | remediation | rule_version | formula_version | created_at |\n|---|---|---|---|---|---|---|---|---|---|---|\n|  |  |  |  | '-2.0 | '\t=HYPERLINK(\"x\") | é𐀀 | a\\|b  c\\\\d | true |  |  |\n"
     },
     {
       "input": {
@@ -33158,12 +33158,13 @@
           [
             {
               "title": "  +formula",
-              "target": null
+              "target": null,
+              "priority_score": 30.0
             }
           ]
         ]
       },
-      "output": "id,rule_id,opportunity_type,severity,priority_score,title,target,remediation,rule_version,formula_version,created_at\r\n,,,,,'  +formula,,,,,\r\n"
+      "output": "id,rule_id,opportunity_type,severity,priority_score,title,target,remediation,rule_version,formula_version,created_at\r\n,,,,30.0,'  +formula,,,,,\r\n"
     },
     {
       "input": {
@@ -33172,12 +33173,13 @@
           [
             {
               "title": "  +formula",
-              "target": null
+              "target": null,
+              "priority_score": 30.0
             }
           ]
         ]
       },
-      "output": "# CiteLadder — Opportunities\n\n| id | rule_id | opportunity_type | severity | priority_score | title | target | remediation | rule_version | formula_version | created_at |\n|---|---|---|---|---|---|---|---|---|---|---|\n|  |  |  |  |  | '  +formula |  |  |  |  |  |\n"
+      "output": "# CiteLadder — Opportunities\n\n| id | rule_id | opportunity_type | severity | priority_score | title | target | remediation | rule_version | formula_version | created_at |\n|---|---|---|---|---|---|---|---|---|---|---|\n|  |  |  |  | 30.0 | '  +formula |  |  |  |  |  |\n"
     }
   ]
 }

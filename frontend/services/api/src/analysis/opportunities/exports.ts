@@ -1,4 +1,4 @@
-import { pyReprValue } from '../../python/text.ts';
+import { pyFloatRepr, pyReprValue } from '../../python/text.ts';
 const columns = [
   'id',
   'rule_id',
@@ -12,15 +12,19 @@ const columns = [
   'formula_version',
   'created_at',
 ];
-function cell(value: unknown): string {
+// A float column's decoded number has no float tag; Python prints its whole values as `30.0`.
+const floatColumns = new Set(['priority_score']);
+function cell(value: unknown, column: string): string {
   const text =
     value === null || value === undefined
       ? ''
-      : typeof value === 'boolean'
-        ? String(value)
-        : typeof value === 'object'
-          ? pyReprValue(value)
-          : String(value);
+      : typeof value === 'number' && floatColumns.has(column)
+        ? pyFloatRepr(value)
+        : typeof value === 'boolean'
+          ? String(value)
+          : typeof value === 'object'
+            ? pyReprValue(value)
+            : String(value);
   return /^[\t\r\n]/u.test(text) || /^[ \t\r\n\v\f]*[=+@-]/u.test(text) ? `'${text}` : text;
 }
 export function rowsToCsv(items: Record<string, unknown>[]): string {
@@ -29,13 +33,13 @@ export function rowsToCsv(items: Record<string, unknown>[]): string {
   return (
     [
       columns.join(','),
-      ...items.map((item) => columns.map((c) => quote(cell(item[c]))).join(',')),
+      ...items.map((item) => columns.map((c) => quote(cell(item[c], c))).join(',')),
     ].join('\r\n') + '\r\n'
   );
 }
 export function rowsToMarkdown(items: Record<string, unknown>[]): string {
-  const escape = (value: unknown) =>
-    cell(value)
+  const escape = (value: unknown, column: string) =>
+    cell(value, column)
       .replaceAll('\\', '\\\\')
       .replaceAll('|', '\\|')
       .replaceAll('\n', ' ')
@@ -45,7 +49,7 @@ export function rowsToMarkdown(items: Record<string, unknown>[]): string {
     '',
     `| ${columns.join(' | ')} |`,
     `|${columns.map(() => '---').join('|')}|`,
-    ...items.map((item) => `| ${columns.map((c) => escape(item[c])).join(' | ')} |`),
+    ...items.map((item) => `| ${columns.map((c) => escape(item[c], c)).join(' | ')} |`),
     '',
   ].join('\n');
 }

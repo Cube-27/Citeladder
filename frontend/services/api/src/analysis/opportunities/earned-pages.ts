@@ -106,7 +106,7 @@ export function detectEarnedPageOpportunities(evidence: EarnedPageEvidence): Det
       return [
         {
           rule_id: rule,
-          target_key: `earned-page:${page.url_hash}`,
+          target_key: `${p.EARNED_PAGE_TARGET_PREFIX}${page.url_hash}`,
           target_prompt_id: null,
           target_url: page.canonical_url,
           target_theme: page.themes[0] ?? null,

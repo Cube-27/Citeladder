@@ -146,12 +146,19 @@ export function pyIntOrZero(value: unknown): number | null {
  * stored `2.0` would print differently, as `'2.0'`.
  */
 function pyNumberRepr(value: number): string {
-  if (Number.isInteger(value)) return BigInt(value).toString();
+  return Number.isInteger(value) ? BigInt(value).toString() : pyFloatRepr(value);
+}
+
+/** `repr(value)` for a finite number known to be a Python `float` (`30` prints `'30.0'`). */
+export function pyFloatRepr(value: number): string {
   const [mantissa, exponent] = value.toExponential().split('e') as [string, string];
   const power = Number(exponent);
-  // Python switches to scientific notation below 1e-4; JavaScript below 1e-6.
-  if (power >= -4) return String(value);
-  return `${mantissa}e-${String(-power).padStart(2, '0')}`;
+  // Python uses scientific notation below 1e-4 and from 1e16; JavaScript below 1e-6 and from 1e21.
+  if (power < -4 || power >= 16) {
+    return `${mantissa}e${power < 0 ? '-' : '+'}${String(Math.abs(power)).padStart(2, '0')}`;
+  }
+  const text = Object.is(value, -0) ? '-0' : String(value);
+  return Number.isInteger(value) ? `${text}.0` : text;
 }
 
 /** `repr(value)` for a decoded JSON value, as Python prints the object it decodes to. */
