@@ -235,10 +235,11 @@ def _is_explicit_list_container(node: Any) -> bool:
 
 
 def _listing_signals(region: Any, containers: list[Any]) -> dict[str, Any]:
-    affordance_nodes = _collection_affordance_nodes(region)
+    # A control's class depends only on the node, not the collection being
+    # considered. Classify once before checking its relation to each container.
+    affordances = _collection_affordances(region)
     observations = [
-        _collection_observation(item, affordance_nodes, containers)
-        for item in containers
+        _collection_observation(item, affordances, containers) for item in containers
     ]
     largest = max(
         observations,
@@ -265,8 +266,7 @@ def _listing_signals(region: Any, containers: list[Any]) -> dict[str, Any]:
         str(item.get("class") or "") for item in evidence["affordances"]
     }
     has_empty_state = "empty_state" in affordance_classes or (
-        not observations
-        and any(_affordance_class(node) == "empty_state" for node in affordance_nodes)
+        not observations and any(kind == "empty_state" for _node, kind in affordances)
     )
     largest_container = largest["container"] if largest is not None else {}
     return {
@@ -410,7 +410,7 @@ def _sku_attribute(node: Any) -> bool:
 
 
 def _collection_observation(
-    container: Any, affordance_nodes: list[Any], containers: list[Any]
+    container: Any, classified_nodes: list[tuple[Any, str]], containers: list[Any]
 ) -> dict[str, Any]:
     item_count, distinct_targets = _card_list_observation(container)
     name = bounded_container_name(container)
@@ -421,10 +421,7 @@ def _collection_observation(
     }
     affordances: list[dict[str, str]] = []
     seen: set[tuple[str, str]] = set()
-    for node in affordance_nodes:
-        affordance_class = _affordance_class(node)
-        if not affordance_class:
-            continue
+    for node, affordance_class in classified_nodes:
         relation = bounded_structural_relation(node, container)
         if not relation:
             continue
@@ -468,12 +465,12 @@ def _empty_state_belongs_to(node: Any, container: Any, containers: list[Any]) ->
     return False
 
 
-def _collection_affordance_nodes(region: Any) -> list[Any]:
-    found: list[Any] = []
+def _collection_affordances(region: Any) -> list[tuple[Any, str]]:
+    found: list[tuple[Any, str]] = []
     try:
         walker = region.iter()
     except DOM_ERRORS as exc:
-        dom_failure("_collection_affordance_nodes", exc)
+        dom_failure("_collection_affordances", exc)
         return found
     for scanned, node in enumerate(walker, start=1):
         if scanned > _config.REGION_MAX_CONTAINERS_SCANNED:
@@ -484,8 +481,8 @@ def _collection_affordance_nodes(region: Any) -> list[Any]:
             node, region, allow_pagination_navigation=True
         ):
             continue
-        if _could_be_affordance(node):
-            found.append(node)
+        if _could_be_affordance(node) and (kind := _affordance_class(node)):
+            found.append((node, kind))
     return found
 
 

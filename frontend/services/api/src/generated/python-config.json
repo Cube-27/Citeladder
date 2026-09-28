@@ -2627,7 +2627,7 @@
   },
   "content_structure": {
     "version": 1,
-    "policy_version": 2,
+    "policy_version": 3,
     "max_passages": 40,
     "max_passage_chars": 1600,
     "min_passage_chars": 40,

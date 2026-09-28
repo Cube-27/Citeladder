@@ -34,10 +34,13 @@ function selectedChoice(raw: unknown, options: string[]) {
   const answer = choice.safeParse(raw);
   if (!answer.success) return null;
   const distribution = answer.data.probabilities;
+  // Preserve the 1% normalization tolerance at its floating-point boundary.
+  const normalizationTolerance = 0.01 + Number.EPSILON * options.length;
   if (
     Object.keys(distribution).length !== options.length ||
     options.some((key) => distribution[key] === undefined) ||
-    Math.abs(Object.values(distribution).reduce((sum, value) => sum + value, 0) - 1) > 0.01
+    Math.abs(Object.values(distribution).reduce((sum, value) => sum + value, 0) - 1) >
+      normalizationTolerance
   )
     return null;
   if (!options.includes(answer.data.choice)) return null;
@@ -150,7 +153,7 @@ function topicGroups(
   pages: ContentPage[],
   links: ContentLink[],
 ) {
-  const groups = [...topics.values()].filter((topic) => topic.page_ids.length >= 2);
+  const groups = [...topics.values()];
   for (const topic of groups) {
     const members = pages.filter((page) => topic.page_ids.includes(page.analysis_id));
     const urls = new Set(members.map((page) => page.url));
@@ -223,7 +226,7 @@ export function projectContent(manifest: Record<string, unknown>, outcomes: Map<
     }
   }
   const groups = topicGroups(topics, pages, links);
-  diagnostics.singleton_topics = topics.size - groups.length;
+  diagnostics.singleton_topics = groups.filter((topic) => topic.page_ids.length === 1).length;
   const assigned = new Set(groups.flatMap((topic) => topic.page_ids));
   return {
     pages: pages.map(pageSummary),

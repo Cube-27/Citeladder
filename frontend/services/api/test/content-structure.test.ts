@@ -104,6 +104,24 @@ describe('content structure', () => {
     expect(
       selectedAnchor(candidate, { type: 'choice', choice: 'none', confidence: 1, probabilities }),
     ).toEqual({ anchor: null, confidence: 1 });
+    probabilities.none = 0.99;
+    expect(
+      selectedAnchor(candidate, {
+        type: 'choice',
+        choice: 'none',
+        confidence: 0.99,
+        probabilities,
+      }),
+    ).toEqual({ anchor: null, confidence: 0.99 });
+    probabilities.none = 0.98;
+    expect(
+      selectedAnchor(candidate, {
+        type: 'choice',
+        choice: 'none',
+        confidence: 0.98,
+        probabilities,
+      }),
+    ).toBeNull();
   });
 
   it('keeps missing judgments and omitted passages separate from completed-empty results', () => {
@@ -166,6 +184,42 @@ describe('content structure', () => {
     );
     expect(result.state).toBe('unavailable');
     expect(result.topics).toEqual([]);
+  });
+
+  it('retains a classified topic with one page without inventing internal links', () => {
+    const pages = [page(sourceId, 'Garden care', 'Healthy soil supports plants.')];
+    const candidates = topicCandidates(pages).candidates;
+    const outcomes = new Map(
+      candidates.map((candidate) => [
+        candidate.id,
+        {
+          state: 'completed',
+          answers: {
+            membership: { type: 'noul', noul: 0.9 },
+            label: {
+              type: 'choice',
+              choice: '0',
+              confidence: 0.9,
+              probabilities: { '0': 0.9, none: 0.1 },
+            },
+          },
+        },
+      ]),
+    );
+    const result = projectContent(
+      { pages, candidates, policy: policy.content_structure },
+      outcomes,
+    );
+    expect(result.topics).toEqual([
+      expect.objectContaining({
+        label: 'Garden care',
+        page_ids: [sourceId],
+        contextual_links: 0,
+        recommendation_ids: [],
+      }),
+    ]);
+    expect(result.unassigned_pages).toBe(0);
+    expect(result.diagnostics.singleton_topics).toBe(1);
   });
 
   it('publishes frozen topic answers admitted before the classifier cutover', () => {

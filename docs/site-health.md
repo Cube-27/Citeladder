@@ -196,7 +196,9 @@ provisional P(yes) defaults, not permission to publish or a calibrated guarantee
 Workers load the frozen manifest once per job; subsequent authorization/lease
 locks exclude its large JSON payload. Polling reads only saved results and
 manifest summary fields, and publication excludes dispatch request bodies.
-Analysis policy 2 keeps extraction version 1 readable. Publication accepts the
+Topic classifications remain visible even when only one page currently belongs
+to a topic; internal links within that topic still require distinct pages.
+Analysis policy 3 keeps extraction version 1 readable. Publication accepts the
 frozen binary topic answers of already-queued policy-1 runs; that compatibility
 branch can be removed once those jobs have drained. New admissions use only
 the page/passage classifier.
