@@ -14,7 +14,7 @@ positioning; [the index](README.md) routes to substantive feature documents.
 |---|---|---|
 | Workspace/project access | Identity, membership and project boundaries | Every product action/read is authorized |
 | Onboarding | Research evidence and reviewed company/competitor context | Confirmed context and a project with an empty prompt set |
-| Site Health | Acquisition, normalized facts, classifications, findings and snapshots | Persisted site evidence and change observations |
+| Site Health | Acquisition, normalized facts, classifications, findings, snapshots and bounded Content structure analyses | Persisted site evidence, contextual-link suggestions, topic groups and change observations |
 | Integrations / Demand | Imported observations, projections and demand signals | Exact-window/source evidence |
 | Prompts / Visibility | Portfolios, frozen audits, answer artifacts and measurements | Comparable observed mentions/citations |
 | Opportunities | Ranked actions, target-level Actions, declarations and verification observations | One Action per target and one implementation record |

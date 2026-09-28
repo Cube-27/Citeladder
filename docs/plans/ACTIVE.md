@@ -2,6 +2,13 @@
 
 ## Active
 
+- [Content structure: internal links and topics](citeladder-content-structure.md)
+  — implemented locally on 28 September 2026 in `codex/content-structure` at
+  `C:/Projects/Citeladder-content-structure`. TypeScript owns the new page and
+  analysis projections; the existing Python provider/credit owners execute
+  judgments. Legacy Site Health topical coherence is retired. Publication,
+  editor calibration and live credit-rate/provider enablement remain pending.
+
 - [Prompt generation v2](citeladder-prompt-generation-v2.md)
   — owner-approved on 26 September 2026 and revised after the prompt-universe/JEV
   research. PR 1 (#161), PR 2 (#162), PR 3a (#163) and PR 3b (#172) merged.

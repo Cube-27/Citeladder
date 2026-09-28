@@ -156,9 +156,48 @@ metrics persist normalized internal-authority share over the observed crawl,
 including formula version, rank and incomplete/sample caveats; off-crawl targets
 receive no transition weight. Anchor diagnostics group generic, repeated-target
 and low-lexical-alignment evidence without automatic Opportunity promotion.
-Architecture also persists deterministic bounded lexical topic clusters, explicit
-unknown/ineligible page assignments and crawl-local outliers. Cluster identities
-are not comparable across crawls.
+The old lexical topical-coherence projection is retired. Content structure at
+`/site/content-structure` provides contextual-link suggestions and source-grounded
+topic groups over an explicitly selected saved crawl. Topics allow multiple
+memberships and abstention; their identities are local to one analysis. They
+do not contribute to a health score.
+
+### Content structure
+
+New crawl extraction records complete main-content paragraphs, DOM locators and
+linked text ranges. Older captures without those facts require a fresh crawl.
+TypeScript owns scoped admission, bounded candidate retrieval, saved reads and
+publication. The existing Python JEV connector/configuration (`JEV_API_KEY`) and
+credit owner execute bounded judgments through the existing analytics queue.
+No provider runs on a read, and no second provider client is introduced.
+
+`site_content_structure_runs` retains the frozen crawl, exact page-analysis and
+artifact identities, passages, candidates and policy; TypeScript is its writer.
+Python appends funding, dispatch and outcome events to
+`site_content_structure_events`. The first funded dispatch freezes the model and
+published `content_structure` credit rate for the run. Each dispatch reserves a
+finite allowance against the existing crawl metered subject and commits before
+network I/O. Recovery settles an interrupted dispatch as uncertain without
+resending it. Publication fences the worker lease and queues the existing
+Opportunity refresh. Missing funding or provider availability yields unavailable
+judgments, never an observed zero.
+
+One project-scoped API family exposes the saved read (including recent analysis
+history), explicit analyze and cancel operations. The bounded result supports
+client-side filtering, pagination and CSV export using the shared controls.
+Recommendations retain exact existing unlinked anchor spans and separate
+usefulness and anchor judgments. Navigation-only links do not suppress a
+contextual suggestion; incomplete link capture suppresses source candidates.
+Qualified links join the source page's existing Action. The user explicitly
+selects implemented links; a later complete compatible crawl checks the declared
+anchor and exact destination URL without a model call. No CMS publishing occurs.
+
+Limits and provisional thresholds live in
+`backend/app/core/config/site_health_content_structure.py` and are exported to
+TypeScript. Live rollout still requires a published finite credit rate and
+editor-reviewed calibration; fixture tests do not establish recommendation quality.
+
+### Change intelligence
 
 Change Intelligence compares bounded primary-text shingles and heading outlines
 under extractor/analyzer provenance. Content change and modification-date
