@@ -12,6 +12,7 @@ export const API_ERROR_CODES = [
   "commerce_conflict",
   "commerce_invalid",
   "commerce_not_found",
+  "commerce_prompt_generation_unavailable",
   "commerce_target_required",
   "conflict",
   "connection_changed",

@@ -298,6 +298,22 @@ def build_config() -> dict[str, Any]:
         },
         "brand_identity": _brand_identity_policy(),
         "commerce": {
+            "buyer_prompts": {
+                "min": commerce_config.COMMERCE_PROMPTS_MIN,
+                "max": commerce_config.COMMERCE_PROMPTS_MAX,
+                "default": commerce_config.COMMERCE_PROMPTS_DEFAULT,
+                "targets_max": commerce_config.COMMERCE_GENERATION_TARGETS_MAX,
+                "min_words": commerce_config.COMMERCE_BUYER_PROMPT_MIN_WORDS,
+                "max_words": commerce_config.COMMERCE_BUYER_PROMPT_MAX_WORDS,
+                "survey_markers": commerce_config.COMMERCE_BUYER_PROMPT_SURVEY_MARKERS,
+                "product_limit": commerce_config.COMMERCE_PROMPT_CONTEXT_PRODUCT_LIMIT,
+                "term_limit": commerce_config.COMMERCE_PROMPT_CONTEXT_TERM_LIMIT,
+                "version": commerce_config.COMMERCE_PROMPT_TEMPLATE_VERSION,
+                "systems": {
+                    model: commerce_config.commerce_buyer_prompt_system(model)
+                    for model in ("", *commerce_config.PROMPT_EXEMPLARS)
+                },
+            },
             "import_max_bytes": commerce_config.COMMERCE_IMPORT_MAX_BYTES,
             "import_max_rows": commerce_config.COMMERCE_IMPORT_MAX_ROWS,
             "import_error_limit": commerce_config.COMMERCE_IMPORT_ERROR_LIMIT,

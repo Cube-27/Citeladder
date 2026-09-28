@@ -14,6 +14,8 @@
 # that previously returned an uncoded string detail.
 from __future__ import annotations
 
+ERROR_COMMERCE_PROMPT_GENERATION_UNAVAILABLE = "commerce_prompt_generation_unavailable"
+
 from typing import Final
 
 # Server-side failures.

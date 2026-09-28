@@ -10,6 +10,12 @@ import type { Context } from 'hono';
 import { z } from 'zod';
 
 import { decideBuyerPrompt, decideCandidate } from '../commerce/decisions.ts';
+import {
+  buyerGenerateInput,
+  buyerManualInput,
+  generateBuyerPrompts,
+  manualBuyerPrompt,
+} from '../commerce/buyer-prompts.ts';
 import { importCatalog } from '../commerce/import.ts';
 import { buyerPrompts, candidates, catalog, discoveries, shelf } from '../commerce/reads.ts';
 import { policy } from '../config.ts';
@@ -46,6 +52,38 @@ async function scopeOf(db: Database, c: Context<AppEnv>, projectId: string) {
 }
 
 export const commerceRoutes = [
+  definePostRoute({
+    family,
+    path: `${root}/buyer-prompts/generate`,
+    capability: 'run',
+    status: 201,
+    params: { path: projectPath, query: {} },
+    body: buyerGenerateInput,
+    response: z.array(buyerPromptSchema),
+    async handle({ c, db }, { path }) {
+      return generateBuyerPrompts(
+        db,
+        await scopeOf(db, c, path.project_id),
+        await readBody(c, buyerGenerateInput),
+      );
+    },
+  }),
+  definePostRoute({
+    family,
+    path: `${root}/buyer-prompts/manual`,
+    capability: 'write',
+    status: 201,
+    params: { path: projectPath, query: {} },
+    body: buyerManualInput,
+    response: buyerPromptSchema,
+    async handle({ c, db }, { path }) {
+      return manualBuyerPrompt(
+        db,
+        await scopeOf(db, c, path.project_id),
+        await readBody(c, buyerManualInput),
+      );
+    },
+  }),
   defineGetRoute({
     family,
     path: `${root}/catalog`,
