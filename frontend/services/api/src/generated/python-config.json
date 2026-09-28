@@ -374,7 +374,8 @@
       "running": "running",
       "retry_wait": "retry_wait",
       "succeeded": "succeeded",
-      "failed": "failed"
+      "failed": "failed",
+      "cancelled": "cancelled"
     },
     "claimable": [
       "awaiting_provider_result",
@@ -2549,6 +2550,49 @@
     "declaration": {
       "output_phase_outline": "outline"
     }
+  },
+  "search_intelligence": {
+    "task_kind": "search_intelligence_acquisition",
+    "price_version": "dataforseo-standard-2026-09-20",
+    "transport_provider": "dataforseo",
+    "connection_test_ok": "ok",
+    "default_research_scope": "domain_subdomains",
+    "default_depths": {
+      "ranking_keywords": 200,
+      "missing_keywords": 100,
+      "shared_keywords": 100,
+      "referring_domains": 100,
+      "destination_pages": 100,
+      "keyword_suggestions": 150,
+      "organic_pages": 100,
+      "backlinks": 100
+    },
+    "max_depth": 1000000,
+    "row_sort_fields": [
+      "backlinks",
+      "dataforseo_rank",
+      "difficulty",
+      "domain",
+      "etv",
+      "id",
+      "intent",
+      "keyword",
+      "owned_rank_group",
+      "rank_group",
+      "referring_main_domains",
+      "search_volume",
+      "url"
+    ],
+    "auxiliary_sort_fields": [
+      "backlinks_spam_score",
+      "broken_backlinks",
+      "broken_pages",
+      "cpc",
+      "organic_keywords",
+      "rank_absolute",
+      "referring_domains",
+      "referring_pages"
+    ]
   },
   "abuse": {
     "active_job_retry_after_seconds": {

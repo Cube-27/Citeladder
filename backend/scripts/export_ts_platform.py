@@ -43,6 +43,7 @@ from app.core.config import (
 from app.core.config import demand as demand_config
 from app.core.config import errors as error_config
 from app.core.config import opportunities as opportunities_config
+from app.core.config import search_intelligence as search_intelligence_config
 from app.core.config import workspaces as workspace_config
 from app.core.config.abuse import AbuseSettings
 from app.core.config.analysis import (
@@ -66,6 +67,7 @@ from app.core.config.analytics import (
     ANALYTICS_PYTHON_TASK_KINDS,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
     ANALYTICS_SNAPSHOT_WINDOW_DAYS,
+    ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
     ANALYTICS_TS_OWNED_TASK_KINDS,
     ERROR_EXECUTOR_NOT_WIRED,
     MATCH_SIGNAL_REFERRER,
@@ -109,11 +111,14 @@ from app.core.config.prompts import (
 from app.core.config.provider_catalog import (
     ERROR_UNKNOWN,
     LOGICAL_ENGINES,
+    TEST_STATUS_OK,
+    TRANSPORT_DATAFORSEO,
     is_search_surface,
 )
 from app.core.config.task_queue import (
     ERROR_MAX_ATTEMPTS,
     TASK_CLAIMABLE_STATUSES,
+    TASK_STATUS_CANCELLED,
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
     TASK_STATUS_QUEUED,
@@ -247,11 +252,28 @@ def build_config() -> dict[str, Any]:
         "traffic": traffic_policy(),
         "demand": demand_policy(),
         "opportunity": opportunity_policy(),
+        "search_intelligence": _search_intelligence_policy(),
         "abuse": {
             "active_job_retry_after_seconds": _setting(
                 "active_job_retry_after_seconds", AbuseSettings
             )
         },
+    }
+
+
+def _search_intelligence_policy() -> dict[str, Any]:
+    """What Search Intelligence confirms, reads and sorts by."""
+    si = search_intelligence_config
+    return {
+        "task_kind": ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
+        "price_version": si.PRICE_VERSION,
+        "transport_provider": TRANSPORT_DATAFORSEO,
+        "connection_test_ok": TEST_STATUS_OK,
+        "default_research_scope": si.DEFAULT_RESEARCH_SCOPE,
+        "default_depths": dict(si.DEFAULT_DEPTHS),
+        "max_depth": si.MAX_SAFE_DEPTH,
+        "row_sort_fields": sorted(si.ROW_SORT_FIELDS),
+        "auxiliary_sort_fields": sorted(si.AUXILIARY_SORT_FIELDS),
     }
 
 
@@ -312,6 +334,7 @@ def _task_queue_policy() -> dict[str, Any]:
             "retry_wait": TASK_STATUS_RETRY_WAIT,
             "succeeded": TASK_STATUS_SUCCEEDED,
             "failed": TASK_STATUS_FAILED,
+            "cancelled": TASK_STATUS_CANCELLED,
         },
         "claimable": sorted(TASK_CLAIMABLE_STATUSES),
         "terminal": sorted(TASK_TERMINAL_STATUSES),
@@ -373,6 +396,7 @@ ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
     workspace_config,
     demand_config,
     opportunities_config,
+    search_intelligence_config,
 )
 _ERROR_CODE_PREFIXES = ("CODE_", "ERROR_")
 

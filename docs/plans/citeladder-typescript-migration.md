@@ -19,6 +19,8 @@ removed Python emulation from PRs 3–6 on 27 September 2026 (rules 4 and 7).
 The owner restated the objective on 28 September 2026 (section 1, rule 4), and
 golden retirement removed every golden file and parity check. Earlier "As
 implemented" notes that mention goldens or frozen fragments are historical.
+PR 8 is split at the owner's direction (28 September 2026): 8a (Search
+Intelligence) implemented on 28 September 2026; 8b (Commerce) not started.
 Not execution authorization; each later PR is executed only when individually
 assigned.
 
@@ -651,6 +653,91 @@ synchronous DataForSEO Labs/Backlinks client (`search_intelligence_dataforseo.py
 `dataforseo_transport.py`, money as integer minor units), the
 `search_intelligence` kind, and the whole `commerce` and `search-intelligence`
 route families. Recorded fixtures only.
+
+*Owner decision (28 September 2026):* the inventory found that most of this scope
+depends on code that stays Python. PR 8 therefore moves only what does not, and is
+split: **8a** moves Search Intelligence, **8b** moves Commerce. A path that needs
+billing/entitlements, the Site Health secure fetcher, the model gateway or the
+provider-capacity pools shared with audits stays Python under its own manifest
+family, as 7a did with `actions`.
+
+Stays Python, with its reason:
+- SI review creation (`POST .../search-intelligence/reviews`): it resolves
+  competitor websites through `SecureFetcher` (`resolve_site`). Retagged
+  `search-intelligence-reviews`.
+- The `search_intelligence_acquisition` kind: it needs Fernet decryption of the
+  BYOK key (planned for PR 11) and the provider-capacity locking it shares with
+  audits' DataForSEO calls. The synchronous DataForSEO client stays with it.
+- Commerce buyer-prompt generation (model gateway, abuse limit, prompt-slot
+  occupancy) and manual buyer prompts (prompt-slot occupancy).
+- Commerce competitor discovery and its kind (`SecureFetcher`, the lxml parser,
+  Keenable, brand-discovery settings).
+- Commerce shelf analysis and finalization, which audit terminalization calls.
+
+*8b scope (not started):* database-only Commerce routes (catalog read and CSV
+import, candidate list, discovery status and decision, buyer-prompt list and
+decision, AI Shelf read) and the `commerce_catalog_projection` kind. Re-inventory
+before starting.
+
+*As implemented (8a, 28 September 2026):* the `search-intelligence` family is
+TypeScript-owned in the manifest and all three ingress Caddyfiles, each path
+listed explicitly so `POST .../reviews` still reaches Python. TypeScript serves
+readiness, preferences, confirm, cancel, the run list and detail, dataset rows,
+content handoff and citation matches (`src/search-intelligence/`). `defineRoute`
+gains `authorize: 'project'`, which resolves membership from the path's project
+like `require_project_member` and does not read `X-Workspace-Id`. Responses are
+the shared `@citeladder/contracts/search-intelligence` schemas; only the request
+bodies and the handoff response live beside the route. Error codes are
+`CODE_*` constants in `core/config/search_intelligence.py`, and the new
+`search_intelligence` policy section exports the price version, task kind,
+transport, test status, default scope and depths, maximum depth and sort fields.
+Readiness makes no network I/O; registrable domains come from `tldts` (ICANN
+list) and WHATWG `URL`.
+
+Rule 1 exception: `search_intelligence_runs` has two writers. Python creates
+reviewed runs and executes queued ones; TypeScript confirms and cancels. Both
+take the run row lock, and confirmation takes the project row lock first, so
+one acquisition is active per project. Confirmation enqueues the Python-owned
+`search_intelligence_acquisition` task (key
+`analytics:search_intelligence_acquisition:{run_id}`, payload `{run_id}`) in
+the same transaction that queues the run. The citation-match scope hash is the
+one value both stacks' stored rows share: sha256 of
+`{audit_ids, citation_ids, parent_dataset_id}` as compact JSON in that key order.
+
+Replacement-gate inventory (paths relative to `backend/app`):
+
+| Python module | Disposition |
+| --- | --- |
+| `api/search_intelligence.py` | `POST /reviews` only, tag `search-intelligence-reviews` |
+| `domain/demand/search_intelligence/citations.py` | retired |
+| `service.py` `confirm_review`, `cancel_run`, `update_preferences`, `content_handoff`, `_validate_confirmation` | retired |
+| `domain/analytics/enqueue.py` `enqueue_search_intelligence` | retired |
+| `schemas.py` handoff, citation, row and page models | retired |
+| `service.py` `readiness`, `dataset_page`, `dataset_dict`, `row_dict`; `pagination.py` | bridge for `domain/mcp` until PR 13 |
+| `service.py` `create_review`, `requests`, `targets`, `review_state`, `executor`, `normalization`, `dispatch_evidence` | Python-owned (review and acquisition) |
+
+Python component tests keep review creation and the executor; they seed
+confirmation and cancellation through `tests/component/search_intelligence_helpers.py`
+and read published results through the retained bridges. Read, transition,
+handoff, citation and authorization coverage moves to
+`frontend/services/api/test/search-intelligence.test.ts`, including a
+concurrent-confirmation race and concurrent citation derivation.
+`contract-schema-map.ts` keeps only `searchRunSchema: 'RunResponse'`, which the
+review route still publishes.
+
+Deliberate departures:
+- Timestamps serialize as ISO millisecond UTC (`toISOString`).
+- Stored JSON columns, preferences and research scope are validated at read; a
+  malformed stored value fails loudly instead of reading as `{}`.
+- Dataset cursors are the shared keyset format; cursors issued by Python fail
+  once with `invalid_cursor`.
+- Handoff canonicalizes row id case, and `row_ids` echo lowercase.
+- Saving preferences bumps the project's `updated_at`.
+- A missing run on confirmation is `Run not found` (was `Review not found`).
+- The latest run and dataset lists tie-break by id.
+- Research scopes are not exported: the contract's enum is the authority.
+
+Spans and attributes are unchanged. Deployment and soak remain pending.
 
 > **Stop point C.** All in-scope analytics and read-heavy product surfaces are
 > TS. Python holds writes to core entities, integrations, auth and the island.

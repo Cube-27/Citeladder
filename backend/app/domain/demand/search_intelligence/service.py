@@ -1,4 +1,9 @@
-"""Authorized Search Intelligence reviews, confirmation, and persisted reads."""
+"""Search Intelligence cost reviews and the persisted reads MCP still calls.
+
+Confirmation, cancellation, preferences, handoff and the HTTP reads are
+TypeScript-owned (migration PR 8a). ``readiness``, ``dataset_page``,
+``dataset_dict`` and ``row_dict`` remain for the MCP readers until MCP moves.
+"""
 
 from __future__ import annotations
 
@@ -17,14 +22,11 @@ from app.core.config.search_intelligence import (
     HISTORY_DAYS,
     HISTORY_MAX_OBSERVATIONS,
     LIST_KINDS,
-    PRICE_VERSION,
     REUSE_DAYS,
     QuoteLine,
     estimate_dataset,
     page_sizes,
 )
-from app.core.config.task_queue import TASK_STATUS_CANCELLED
-from app.domain.analytics.enqueue import enqueue_search_intelligence
 from app.domain.demand.search_intelligence.pagination import (
     UnsupportedSortError,
     filtered_count,
@@ -41,7 +43,6 @@ from app.domain.demand.search_intelligence.review_state import (
     _save_review_defaults,
 )
 from app.domain.demand.search_intelligence.schemas import (
-    ContentHandoffResponse,
     DatasetSelection,
     ReadinessResponse,
     ReviewCreate,
@@ -55,7 +56,6 @@ from app.domain.demand.search_intelligence.targets import (
     resolve_competitor,
     select_owned_target,
 )
-from app.models.analytics import AnalyticsTask
 from app.models.project import Project
 from app.models.provider import ProviderConnection
 from app.models.search_intelligence import (
@@ -445,126 +445,6 @@ def _competitors_changed(project: Project, saved: dict[str, CanonicalTarget]) ->
         raise
 
 
-def _validate_confirmation(run: SearchIntelligenceRun, now: datetime) -> None:
-    if run.status != "reviewed":
-        raise SearchIntelligenceError(
-            "review_not_confirmable", "Review is no longer confirmable"
-        )
-    if run.expires_at <= now:
-        raise SearchIntelligenceError(
-            "review_expired", "Review expired; create a new cost review"
-        )
-    if run.pricing_version != PRICE_VERSION:
-        raise SearchIntelligenceError(
-            "pricing_changed", "Pricing changed; create a new cost review"
-        )
-
-
-async def confirm_review(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    run_id: uuid.UUID,
-) -> SearchIntelligenceRun:
-    await session.scalar(
-        select(Project.id)
-        .where(
-            Project.workspace_id == workspace_id,
-            Project.id == project_id,
-        )
-        .with_for_update()
-    )
-    run = await session.scalar(
-        select(SearchIntelligenceRun)
-        .where(
-            SearchIntelligenceRun.workspace_id == workspace_id,
-            SearchIntelligenceRun.project_id == project_id,
-            SearchIntelligenceRun.id == run_id,
-        )
-        .with_for_update()
-    )
-    if run is None:
-        raise SearchIntelligenceError("not_found", "Review not found")
-    if run.confirmed_at is not None:
-        return run
-    now = _utcnow()
-    _validate_confirmation(run, now)
-    connection = await session.get(ProviderConnection, run.connection_id)
-    if (
-        connection is None
-        or not connection.active
-        or connection.credential_revision != run.connection_revision
-    ):
-        raise SearchIntelligenceError(
-            "connection_changed", "DataForSEO connection changed; create a new review"
-        )
-    active_run = await session.scalar(
-        select(SearchIntelligenceRun.id).where(
-            SearchIntelligenceRun.workspace_id == workspace_id,
-            SearchIntelligenceRun.project_id == project_id,
-            SearchIntelligenceRun.id != run.id,
-            SearchIntelligenceRun.status.in_(("queued", "running")),
-        )
-    )
-    if active_run is not None:
-        raise SearchIntelligenceError(
-            "acquisition_in_progress",
-            "Another Search Intelligence acquisition is already active",
-        )
-    run.confirmed_at = now
-    if not run.call_plan:
-        run.status = "succeeded"
-        run.completed_at = now
-        await session.commit()
-        return run
-    task_id = await enqueue_search_intelligence(
-        session, workspace_id=workspace_id, project_id=project_id, run_id=run.id
-    )
-    if task_id is None:
-        task = await session.scalar(
-            select(AnalyticsTask).where(
-                AnalyticsTask.idempotency_key
-                == f"analytics:search_intelligence_acquisition:{run.id}"
-            )
-        )
-        task_id = task.id if task else None
-    run.analytics_task_id = task_id
-    run.status = "queued"
-    await session.commit()
-    return run
-
-
-async def cancel_run(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    run_id: uuid.UUID,
-) -> SearchIntelligenceRun:
-    run = await session.scalar(
-        select(SearchIntelligenceRun)
-        .where(
-            SearchIntelligenceRun.workspace_id == workspace_id,
-            SearchIntelligenceRun.project_id == project_id,
-            SearchIntelligenceRun.id == run_id,
-        )
-        .with_for_update()
-    )
-    if run is None:
-        raise SearchIntelligenceError("not_found", "Run not found")
-    if run.status not in {"succeeded", "failed", "cancelled", "partial"}:
-        run.status = "cancelled"
-        run.cancelled_at = _utcnow()
-        if run.analytics_task_id:
-            task = await session.get(AnalyticsTask, run.analytics_task_id)
-            if task and task.status not in {"succeeded", "failed", "cancelled"}:
-                task.status = TASK_STATUS_CANCELLED
-                task.completed_at = run.cancelled_at
-        await session.commit()
-    return run
-
-
 async def readiness(
     session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
 ) -> ReadinessResponse:
@@ -730,58 +610,3 @@ async def dataset_page(
         session, dataset, search, min_volume, intent
     )
     return metadata, [row_dict(row) for row in rows], next_cursor
-
-
-async def update_preferences(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    preferences: SearchIntelligencePreferences,
-) -> SearchIntelligencePreferences:
-    project = await _project(session, workspace_id, project_id)
-    project.search_intelligence_preferences = preferences.model_dump(mode="json")
-    await session.commit()
-    return preferences
-
-
-async def content_handoff(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    dataset_id: uuid.UUID,
-    row_ids: list[uuid.UUID],
-) -> ContentHandoffResponse:
-    dataset = await session.scalar(
-        select(SearchIntelligenceDataset).where(
-            SearchIntelligenceDataset.workspace_id == workspace_id,
-            SearchIntelligenceDataset.project_id == project_id,
-            SearchIntelligenceDataset.id == dataset_id,
-            SearchIntelligenceDataset.status == "published",
-        )
-    )
-    if dataset is None:
-        raise SearchIntelligenceError("not_found", "Dataset not found")
-    rows = list(
-        (
-            await session.scalars(
-                select(SearchIntelligenceRow).where(
-                    SearchIntelligenceRow.workspace_id == workspace_id,
-                    SearchIntelligenceRow.project_id == project_id,
-                    SearchIntelligenceRow.dataset_id == dataset_id,
-                    SearchIntelligenceRow.id.in_(row_ids),
-                )
-            )
-        ).all()
-    )
-    if len(rows) != len(set(row_ids)):
-        raise SearchIntelligenceError(
-            "evidence_not_found", "One or more evidence rows are unavailable"
-        )
-    return ContentHandoffResponse(
-        project_id=project_id,
-        dataset_id=dataset_id,
-        row_ids=row_ids,
-        evidence=[{**row_dict(row), "dataset": dataset_dict(dataset)} for row in rows],
-    )

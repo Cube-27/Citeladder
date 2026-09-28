@@ -182,28 +182,6 @@ class SearchDatasetResponse(BaseModel):
     filtered_saved_count: int | None = None
 
 
-class SearchRowResponse(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    id: uuid.UUID
-    dataset_id: uuid.UUID
-    call_id: uuid.UUID | None
-    row_kind: str
-    keyword: str
-    domain: str
-    url: str
-    search_volume: int | None
-    difficulty: int | None
-    intent: str
-    rank_group: int | None
-    owned_rank_group: int | None
-    etv: str | None
-    backlinks: int | None
-    referring_main_domains: int | None
-    dataforseo_rank: int | None
-    auxiliary: dict[str, Any]
-
-
 class ReadinessResponse(BaseModel):
     connected: bool
     connection_id: uuid.UUID | None
@@ -212,26 +190,3 @@ class ReadinessResponse(BaseModel):
     preferences: SearchIntelligencePreferences
     latest_run: RunResponse | None
     datasets: list[SearchDatasetResponse]
-
-
-class DatasetPageResponse(BaseModel):
-    dataset: SearchDatasetResponse
-    rows: list[SearchRowResponse]
-    next_cursor: str | None
-
-
-class CitationMatchRequest(BaseModel):
-    backlink_dataset_id: uuid.UUID
-    audit_ids: list[uuid.UUID] = Field(min_length=1, max_length=50)
-
-
-class ContentHandoffRequest(BaseModel):
-    dataset_id: uuid.UUID
-    row_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
-
-
-class ContentHandoffResponse(BaseModel):
-    project_id: uuid.UUID
-    dataset_id: uuid.UUID
-    row_ids: list[uuid.UUID]
-    evidence: list[dict]
