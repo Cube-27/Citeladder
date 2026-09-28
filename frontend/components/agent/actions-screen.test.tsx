@@ -109,9 +109,8 @@ describe('Actions', () => {
       { initialEntries: [`/agent/actions/${ACTION}`], projectSelection: selection },
     );
 
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'https://acme.test/pricing' }),
-    ).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Actions' })).toBeVisible();
+    expect(await screen.findByText('https://acme.test/pricing')).toBeVisible();
     const evidence = screen.getByText('Search Console').closest('div');
     expect(within(evidence as HTMLElement).getByText('Unavailable')).toBeVisible();
     expect(screen.getByText('The next crawl of this page')).toBeVisible();

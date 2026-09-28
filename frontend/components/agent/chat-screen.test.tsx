@@ -179,7 +179,7 @@ describe('ChatScreen', () => {
     await act(() => queryClient.invalidateQueries({ queryKey: queryKeys.agent.revisions(CHAT) }));
     expect(await screen.findByText('Revision 3')).toBeVisible();
   });
-  it('saves an edit as a new revision and reopens the pane on the latest one', async () => {
+  it('saves an edit as a new revision and shows it inline in the thread', async () => {
     let current = detail(revision(REV1, 1, 'agent', 'Old title tag.'));
     const edits: unknown[] = [];
     mswServer.use(
@@ -209,15 +209,7 @@ describe('ChatScreen', () => {
     expect(edits).toEqual([
       { base_revision_id: REV1, title: 'Pricing page edits', body: 'New title tag.' },
     ]);
-
-    await user.click(within(pane).getByRole('button', { name: 'Close output' }));
-    expect(screen.queryByRole('region', { name: 'Pricing page edits' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Pricing page edits.*Revision 2/ }));
-    expect(
-      within(screen.getAllByRole('region', { name: 'Pricing page edits' })[0]).getByText(
-        'New title tag.',
-      ),
-    ).toBeVisible();
+    expect(await within(pane).findByText('New title tag.')).toBeVisible();
   });
 
   it('keeps an unsaved edit when switching output tabs', async () => {

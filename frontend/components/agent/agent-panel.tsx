@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
+import { textRole } from '@/components/ui/typography';
 import { contextChips, withoutContext, type AgentHandoff } from '@/lib/agent/handoff';
 import { useAgentPanel } from '@/lib/agent/panel-context';
 import { isRunActive } from '@/lib/agent/run-state';
@@ -174,7 +175,16 @@ function PanelConversation({
     <div className="grid gap-4">
       <Conversation
         detail={detail}
-        onOpenOutput={openOutput}
+        output={
+          detail.output?.latest_revision ? (
+            <div className="grid justify-items-start gap-2">
+              <span className={textRole('itemTitle')}>{detail.output.latest_revision.title}</span>
+              <Button variant="secondary" size="sm" onClick={openOutput}>
+                Open output
+              </Button>
+            </div>
+          ) : null
+        }
         onRefine={(instruction) => turn.send(instruction)}
         onStop={() => detail.latest_run && cancel.mutate({ chatId, runId: detail.latest_run.id })}
         stopping={cancel.isPending}

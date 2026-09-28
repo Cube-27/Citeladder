@@ -1,15 +1,14 @@
 'use client';
 
-import { FileText } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Pressable } from '@/components/ui/pressable';
 import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
-import { runErrorCopy, OUTPUT_PHASE_LABEL, outputKindLabel } from '@/lib/agent/vocabulary';
+import { runErrorCopy } from '@/lib/agent/vocabulary';
 import { runOutcome } from '@/lib/agent/run-state';
 import type { AgentChatDetail, AgentMessage } from '@/lib/api/agent';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
@@ -19,19 +18,19 @@ import { cn } from '@/lib/utils';
 const REFINEMENTS = ['Make it shorter', 'Make it more specific', 'No standalone FAQ'] as const;
 
 /**
- * The chat's append-only messages, the latest run's state and, once there is
- * an output, a card that focuses the output pane plus quick refinements.
+ * The chat's append-only messages, then the output (rendered in the thread,
+ * not beside it), the latest run's state and quick refinements.
  */
 export function Conversation({
   detail,
-  onOpenOutput,
+  output: outputView,
   onRefine,
   onStop,
   stopping,
   canSend,
 }: Readonly<{
   detail: AgentChatDetail;
-  onOpenOutput: () => void;
+  output?: ReactNode;
   onRefine: (instruction: string) => void;
   onStop: () => void;
   stopping: boolean;
@@ -49,27 +48,8 @@ export function Conversation({
           </li>
         ))}
       </ol>
+      {outputView ? <div className={panelClasses({}, 'min-w-0')}>{outputView}</div> : null}
       <RunState outcome={outcome} onStop={onStop} stopping={stopping} />
-      {output?.latest_revision ? (
-        <Pressable
-          onClick={onOpenOutput}
-          className={panelClasses(
-            { pad: 'compact' },
-            'focus-ring hover:bg-active flex items-center gap-3 text-left',
-          )}
-        >
-          <FileText className="text-accent-text size-4 shrink-0" aria-hidden />
-          <span className="grid min-w-0 gap-0.5">
-            <span className={textRole('itemTitle', 'truncate')}>
-              {output.latest_revision.title}
-            </span>
-            <span className={textRole('caption')}>
-              {outputKindLabel(output.kind)} · {OUTPUT_PHASE_LABEL[output.phase]} · Revision{' '}
-              {output.latest_revision.number}
-            </span>
-          </span>
-        </Pressable>
-      ) : null}
       {output?.latest_revision && canSend && outcome.kind !== 'running' ? (
         <fieldset aria-label="Quick refinements" className="flex flex-wrap gap-2">
           {REFINEMENTS.map((instruction) => (
