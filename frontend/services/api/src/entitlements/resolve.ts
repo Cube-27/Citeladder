@@ -42,18 +42,21 @@ const SUPPLEMENT = 'supplement';
 
 class CorruptGrant extends Error {}
 
+/** Flags are 0 or 1, levels an ordinal of the definition, counters non-negative. */
+function valueFits(definition: { type: string; levels: number }, value: number): boolean {
+  if (definition.type === 'flag') return value === 0 || value === 1;
+  if (definition.type === 'level') return value >= 0 && value < definition.levels;
+  return value >= 0;
+}
+
 function validate(grant: GrantRow): void {
   const definition = Object.hasOwn(CAPABILITIES, grant.key) ? CAPABILITIES[grant.key] : undefined;
   if (definition === undefined) throw new CorruptGrant(`unknown capability key: ${grant.key}`);
   if (!SOURCE_KINDS.has(grant.source_kind))
     throw new CorruptGrant(`unknown grant source kind: ${grant.source_kind}`);
-  const valid =
-    definition.type === 'flag'
-      ? grant.value === 0 || grant.value === 1
-      : definition.type === 'level'
-        ? grant.value >= 0 && grant.value < definition.levels
-        : grant.value >= 0;
-  if (!valid) throw new CorruptGrant(`grant value out of range: ${grant.key}`);
+  if (!valueFits(definition, grant.value)) {
+    throw new CorruptGrant(`grant value out of range: ${grant.key}`);
+  }
   if (grant.bundle_role !== PRIMARY && grant.bundle_role !== SUPPLEMENT)
     throw new CorruptGrant(`unknown grant bundle role: ${grant.bundle_role}`);
   if (grant.bundle_role === PRIMARY && !grant.bundle_id)

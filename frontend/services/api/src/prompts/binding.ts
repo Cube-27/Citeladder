@@ -110,9 +110,10 @@ function businessContextValues(context: Record<string, unknown>): string[] {
   return CONTEXT_FIELDS.flatMap((field) => {
     const raw = context[field];
     const candidates = Array.isArray(raw) ? raw : [raw];
-    return candidates.flatMap((value) =>
-      typeof value === 'string' ? [value] : Array.isArray(value) ? strings(value) : [],
-    );
+    return candidates.flatMap((value) => {
+      if (typeof value === 'string') return [value];
+      return Array.isArray(value) ? strings(value) : [];
+    });
   });
 }
 
