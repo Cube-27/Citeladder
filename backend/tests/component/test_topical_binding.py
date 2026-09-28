@@ -65,7 +65,6 @@ from tests.component.occupancy_helpers import seed_occupancy_grants
 
 def _project_payload(**profile: object) -> dict:
     return {
-        **profile,
         "name": "Acme Visibility",
         "brand_name": "Acme Corp",
         "brand": {"aliases": ["Acme"]},
@@ -76,6 +75,7 @@ def _project_payload(**profile: object) -> dict:
         ],
         "country_code": "AU",
         "language_code": "en-AU",
+        **profile,
     }
 
 

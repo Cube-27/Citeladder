@@ -418,6 +418,7 @@ describe('competitor suggestions', () => {
       call<Competitor>(`/competitor-suggestions/${id}/accept`, { method: 'POST' }),
       call<Competitor>(`/competitor-suggestions/${id}/accept`, { method: 'POST' }),
     ]);
+    expect([one.status, two.status]).toEqual([200, 200]);
     expect(one.body.id).toBe(two.body.id);
   });
 });

@@ -106,8 +106,9 @@ function checkedExclusions(offering: Omit<OfferingMap, 'exclusions'>, exclusions
   );
   const kept = new Map<string, Exclusion>();
   for (const exclusion of exclusions) {
-    const pair = [key(exclusion.first), key(exclusion.second)].sort();
-    if (pair[0] === pair[1] || !pair.every((item) => known.has(item)))
+    const [first, second] = [key(exclusion.first), key(exclusion.second)];
+    const pair = first < second ? [first, second] : [second, first];
+    if (first === second || !pair.every((item) => known.has(item)))
       invalid(`Exclusions for "${offering.offering}" must name two of its entries`);
     const pairKey = JSON.stringify(pair);
     if (!kept.has(pairKey)) kept.set(pairKey, exclusion);

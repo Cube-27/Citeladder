@@ -86,7 +86,9 @@ export async function acceptSuggestion(
     let competitor = competitors.find(
       (row) =>
         row.name.toLowerCase() === candidate.name.toLowerCase() ||
-        strings.parse(row.domains).includes(candidate.domain),
+        strings
+          .parse(row.domains)
+          .some((domain) => domain.toLowerCase() === candidate.domain.toLowerCase()),
     );
     if (competitor === undefined) {
       if (competitors.length >= MAX_COMPETITORS)
