@@ -8,9 +8,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.prompts.service import PromptSetNotFoundError
 from app.models.project import Project
 from app.models.prompt import PromptSet, Topic
+
+
+class PromptSetNotFoundError(LookupError):
+    """The prompt set is missing or not in the caller's workspace (404)."""
 
 
 class GenerationValidationError(ValueError):

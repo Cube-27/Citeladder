@@ -1,23 +1,14 @@
-# Prompt-set + prompt request/response schemas (Q3=A; ids string UUID).
-#
-# The dedicated prompt resource: prompt sets group prompts; each prompt carries
-# text/theme/intent + cohort/enabled/origin fields. Adapted from the reference
-# ``PromptInput`` and extended with the columns CiteLadder's prompt model adds.
+# Prompt schemas the Python owners still publish: the project response's
+# embedded prompt sets and the generation request/response. The TypeScript API
+# owns the prompt-library routes and their contracts.
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.config.http import (
-    PROMPT_IMPORT_MAX_ROWS,
-    PROMPT_INTENT_MAX_CHARS,
-    PROMPT_TEXT_MAX_CHARS,
-    PROMPT_THEME_MAX_CHARS,
-    TOPIC_NAME_MAX_CHARS,
-)
 from app.core.config.prompts import (
     PROMPT_COHORTS,
     PROMPT_STATUSES,
@@ -30,10 +21,6 @@ PromptIntent = Literal["", "discovery", "comparison", "purchase", "service", "lo
 # repeated here; this guard keeps the alias in lock-step with the config
 # constants (PROMPT_STATUS_*) so they cannot drift silently.
 PromptStatus = Literal["active", "archived"]
-# Same inline-literal rule as above: the values mirror ``PROMPT_ORIGIN_MANUAL``
-# and ``PROMPT_ORIGIN_GENERATED`` in ``config/projects.py``. ``imported`` is not
-# offered here — CSV import sets its own origin server-side.
-PromptOrigin = Literal["manual", "generated"]
 PromptCohort = Literal["core", "brand_diagnostic", "comparison", "commerce"]
 lock_literal(PromptStatus, PROMPT_STATUSES, name="PromptStatus")
 # Keep the API literal and persisted cohort catalog in lock-step.
@@ -41,90 +28,8 @@ lock_literal(PromptCohort, PROMPT_COHORTS, name="PromptCohort")
 
 
 # --------------------------------------------------------------------------
-# Prompts
+# Responses the Python project and generation routes still publish
 # --------------------------------------------------------------------------
-class PromptInput(BaseModel):
-    """A single prompt on create/import. ``intent`` is validated + casefolded
-    by the service; an unknown intent normalizes to ``""``.
-
-    ``topic_id`` files the prompt under an existing topic at creation time, so a
-    caller that creates topics first (onboarding, mirroring what ``/generate``
-    does in one transaction) does not have to create-then-PATCH every prompt.
-    The service validates it against the prompt's own project exactly as the
-    update path does; ``None`` leaves the prompt untopiced.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    text: str = Field(min_length=1, max_length=PROMPT_TEXT_MAX_CHARS)
-    theme: str = Field(default="", max_length=PROMPT_THEME_MAX_CHARS)
-    intent: str = Field(default="", max_length=PROMPT_INTENT_MAX_CHARS)
-    cohort: PromptCohort = "core"
-    enabled: bool = True
-    topic_id: uuid.UUID | None = None
-    # Provenance. ``manual`` (the default) is free text a human typed and stays
-    # subject to the topical-binding gate. ``generated`` marks a prompt the
-    # backend's own agent produced from verified brand-website evidence — the
-    # onboarding flow — which is constrained at generation time instead (see
-    # ``create_prompt``).
-    #
-    # This is a CLIENT-SUPPLIED claim, so it is not trusted on its own: the
-    # service re-verifies that the text really came from a generation the
-    # backend performed before honouring the exemption.
-    origin: PromptOrigin = "manual"
-    # Backend-issued HMAC over this prompt's text, returned by the suggestion
-    # endpoints. Required for ``origin="generated"`` to be honoured; ignored
-    # otherwise. Without a valid receipt the prompt is stored as ``manual`` and
-    # the binding gate applies as normal.
-    generation_receipt: str = Field(default="", max_length=128)
-
-
-class PromptCreate(PromptInput):
-    prompt_set_id: uuid.UUID
-
-
-class PromptUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    text: str | None = Field(
-        default=None, min_length=1, max_length=PROMPT_TEXT_MAX_CHARS
-    )
-    theme: str | None = Field(default=None, max_length=PROMPT_THEME_MAX_CHARS)
-    intent: str | None = Field(default=None, max_length=PROMPT_INTENT_MAX_CHARS)
-    cohort: PromptCohort | None = None
-    enabled: bool | None = None
-    status: PromptStatus | None = None
-    topic_id: uuid.UUID | None = None
-
-
-class PromptImportRow(PromptInput):
-    """One CSV import row: the user's topic NAME plus the prompt.
-
-    ``topic`` is user vocabulary: an existing topic is matched
-    case-insensitively, an unknown name becomes a manual topic, and an empty
-    name imports the prompt unassigned. ``topic_id`` is not honoured here.
-    Theme, intent and cohort stay optional internal fields with code defaults.
-    """
-
-    # Stripped like ``TopicName``, but blank is allowed: it means unassigned.
-    topic: Annotated[
-        str, StringConstraints(strip_whitespace=True, max_length=TOPIC_NAME_MAX_CHARS)
-    ] = ""
-
-
-class PromptImport(BaseModel):
-    """CSV bulk-create payload: already-parsed prompt rows.
-
-    The browser parses the CSV at F7 and posts the rows here through the normal
-    import path; the service persists them via the prompt resource with
-    ``origin='imported'``.
-    """
-
-    prompts: list[PromptImportRow] = Field(
-        default_factory=list, max_length=PROMPT_IMPORT_MAX_ROWS
-    )
-
-
 class PromptResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -151,17 +56,6 @@ class PromptResponse(BaseModel):
 # --------------------------------------------------------------------------
 # Prompt sets
 # --------------------------------------------------------------------------
-class PromptSetCreate(BaseModel):
-    project_id: uuid.UUID
-    name: str = Field(default="", max_length=255)
-    description: str = Field(default="", max_length=1024)
-
-
-class PromptSetUpdate(BaseModel):
-    name: str | None = Field(default=None, max_length=255)
-    description: str | None = Field(default=None, max_length=1024)
-
-
 class PromptSetResponse(BaseModel):
     id: uuid.UUID
     project_id: uuid.UUID
@@ -173,33 +67,6 @@ class PromptSetResponse(BaseModel):
     updated_at: datetime
 
 
-# --------------------------------------------------------------------------
-# Topics
-# --------------------------------------------------------------------------
-# Stripped before the length check, so a whitespace-only name is rejected
-# rather than persisted empty.
-TopicName = Annotated[
-    str,
-    StringConstraints(
-        strip_whitespace=True, min_length=1, max_length=TOPIC_NAME_MAX_CHARS
-    ),
-]
-
-
-class TopicCreate(BaseModel):
-    name: TopicName
-    description: str = Field(default="", max_length=1024)
-    # Makes this a subtopic of a top-level topic in the same project.
-    parent_id: uuid.UUID | None = None
-
-
-class TopicUpdate(BaseModel):
-    name: TopicName | None = None
-    description: str | None = Field(default=None, max_length=1024)
-    # Explicit null promotes a subtopic to top level; omitted leaves it as is.
-    parent_id: uuid.UUID | None = None
-
-
 class TopicResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -209,9 +76,8 @@ class TopicResponse(BaseModel):
     name: str
     description: str
     origin: str
-    # Per-status prompt counts for the topics rail (projection, computed).
+    # Active prompts under the topic, for the topics rail (projection).
     active_count: int = 0
-    proposed_count: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -283,26 +149,3 @@ class PromptGenerateResponse(BaseModel):
     quality_gate: str = "off"
     # Candidates the hard quality gate removed before review.
     quality_rejected: int = 0
-
-
-class PromptCandidateReviewRequest(BaseModel):
-    """Accept (insert as active prompts) and/or reject candidates."""
-
-    accept_ids: list[uuid.UUID] = Field(default_factory=list)
-    reject_ids: list[uuid.UUID] = Field(default_factory=list)
-
-
-class PromptCandidateReviewResponse(BaseModel):
-    accepted: list[PromptResponse] = Field(default_factory=list)
-    rejected_count: int = 0
-    # Accepted candidates whose text was already tracked in the set.
-    dropped_duplicates: int = 0
-    # Ids that were unknown, expired or already reviewed.
-    unavailable_count: int = 0
-
-
-class PromptBulkStatusRequest(BaseModel):
-    """Bulk review transition (accept-all / archive-selected)."""
-
-    prompt_ids: list[uuid.UUID] = Field(min_length=1)
-    status: PromptStatus

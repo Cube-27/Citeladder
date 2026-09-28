@@ -1,6 +1,6 @@
 /**
  * Prompts domain endpoints (F2/F7): prompt-set CRUD, individual prompt edits,
- * CSV import (raw file or browser-parsed rows), AI generation via the
+ * import of browser-parsed CSV rows, AI generation via the
  * app-level default agent, and bulk review-status transitions. Every response
  * passes through `strictValidate`.
  */
@@ -45,10 +45,6 @@ export type PromptInput = {
   // prompt and then PATCHing every prompt. Must name a topic of the prompt's
   // own project — the backend answers 404 otherwise.
   topic_id?: string;
-  // Provenance only. A valid receipt records that the backend generated this
-  // exact text; it never bypasses topical relevance validation.
-  origin?: 'manual' | 'generated';
-  generation_receipt?: string;
 };
 
 /** One CSV import row: the user's topic NAME (created when new, '' = none). */
@@ -119,20 +115,10 @@ export const promptsApi = {
   },
   deletePrompt: (promptId: string, options?: ApiRequestOptions) =>
     apiClient.delete<void>(`/prompts/${promptId}`, options),
-  importCsv: async (promptSetId: string, file: File, options?: ApiRequestOptions) => {
-    const form = new FormData();
-    form.append('file', file);
-    const res = await apiClient.postForm<PromptSet>(
-      `/prompt-sets/${promptSetId}/import`,
-      form,
-      options,
-    );
-    return strictValidate(promptSetSchema, res, 'prompts.importCsv');
-  },
   /**
-   * Persist browser-parsed rows through the same `/import` endpoint. The B3
-   * backend accepts a JSON body of `{ prompts: [...] }` (rows already parsed +
-   * previewed in the browser) and bulk-creates them with `origin='imported'`.
+   * Persist browser-parsed rows through `/import`: a JSON body of
+   * `{ prompts: [...] }` (rows already parsed and previewed in the browser),
+   * bulk-created with `origin='imported'`.
    */
   importRows: async (promptSetId: string, rows: PromptImportRow[], options?: ApiRequestOptions) => {
     const res = await apiClient.post<PromptSet>(

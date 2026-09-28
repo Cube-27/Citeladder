@@ -3,9 +3,8 @@
  *
  * The CSV is parsed and validated entirely in the browser so the user can
  * preview + fix rows before anything is persisted; the accepted rows are then
- * posted to the B3 `/prompt-sets/{id}/import` endpoint. Mirrors the backend
- * column aliases (`app/domain/prompts/csv_import.py`) so a file that imports
- * server-side previews identically here.
+ * posted as rows to the `/prompt-sets/{id}/import` endpoint, which accepts
+ * only parsed rows, so this module is the one CSV reader.
  *
  * Users supply only `topic` and `prompt` ({@link PROMPT_CSV_COLUMNS}, which the
  * downloadable sample is also built from). Theme, intent, cohort and enabled

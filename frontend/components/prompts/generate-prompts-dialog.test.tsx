@@ -14,7 +14,6 @@ const topic = (id: string, name: string, parent_id: string | null = null): Topic
   description: '',
   origin: 'manual',
   active_count: 0,
-  proposed_count: 0,
   created_at: '',
   updated_at: '',
 });

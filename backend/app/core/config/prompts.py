@@ -107,6 +107,17 @@ PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS: Final[tuple[str, ...]] = (
     "buyer_roles",
 )
 
+# --- Prompt write serialization and dedupe identity -------------------------
+# Transaction-scoped advisory-lock families (``domain/prompts/locks.py``): a
+# personalized BLAKE2b of the namespace and the entity UUID. The TypeScript
+# prompt and Opportunity writers derive the same keys from the policy export.
+PROMPT_LOCK_PERSON: Final = "citeladder-locks"
+PROJECT_LOCK_NAMESPACE: Final = 0x50524F4A  # "PROJ"
+PROMPT_SET_LOCK_NAMESPACE: Final = 0x50524F4D  # "PROM"
+# Trailing characters that do not change a prompt's concept ("best shoes?" ==
+# "best shoes"); stripped before hashing (``domain/prompts/normalization.py``).
+PROMPT_TRAILING_PUNCTUATION: Final = " \t\n\r\v\f?.!,;:"
+
 # --- Topical binding (project-identity prompt admission) -------------------
 # Outcome codes for ``BindingResult`` / the coded API errors built from it.
 BINDING_CODE_ACCEPTED: Final = "accepted"

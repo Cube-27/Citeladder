@@ -262,8 +262,6 @@ export const apiClient = {
     request<Blob>('GET', path, 'blob', undefined, options),
   post: <T>(path: string, body: unknown, options?: ApiRequestOptions) =>
     request<T>('POST', path, 'json', body, options),
-  postForm: <T>(path: string, body: FormData, options?: ApiRequestOptions) =>
-    request<T>('POST', path, 'json', body, options),
   put: <T>(path: string, body: unknown, options?: ApiRequestOptions) =>
     request<T>('PUT', path, 'json', body, options),
   patch: <T>(path: string, body: unknown, options?: ApiRequestOptions) =>

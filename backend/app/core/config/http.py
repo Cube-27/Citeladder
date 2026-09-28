@@ -9,9 +9,6 @@ API_REQUEST_BODY_MAX_BYTES: Final = 2 * 1024 * 1024
 
 # Prompt/product imports are intentionally smaller than the global ceiling.
 IMPORT_BODY_MAX_BYTES: Final = 1 * 1024 * 1024
-IMPORT_READ_CHUNK_BYTES: Final = 64 * 1024
-IMPORT_MAX_COLUMNS: Final = 64
-IMPORT_MAX_CELL_CHARS: Final = 8_192
 
 PROMPT_IMPORT_MAX_ROWS: Final = 500
 # DTO ceiling for prompt text on create/import/update. Kept consistent with

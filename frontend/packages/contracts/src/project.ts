@@ -77,7 +77,7 @@ export const promptSchema = responseObject({
 });
 
 // A topical category grouping prompts within a project (first-class resource;
-// counts are per-status projections for the topics rail).
+// `active_count` is the active-prompt projection for the topics rail).
 export const topicSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
@@ -87,7 +87,6 @@ export const topicSchema = responseObject({
   description: z.string(),
   origin: z.enum(['manual', 'generated']),
   active_count: z.number().int(),
-  proposed_count: z.number().int(),
   created_at: z.string(),
   updated_at: z.string(),
 });

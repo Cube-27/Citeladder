@@ -32,7 +32,6 @@ from app.core.config.site_health_contracts import (
 )
 from app.core.config.site_health_rule_types import FINDING_CLASS_DEFECT
 from app.core.config.site_health_rules import TRACKING_QUERY_PARAMS
-from app.domain.prompts import locks, normalization
 from app.domain.source_pages.persistence import OUTCOME_INSPECTED
 
 
@@ -112,11 +111,4 @@ def _refresh_policy() -> dict[str, Any]:
         "content_change_field": CONTENT_CHANGE_FIELD,
         "source_page_outcome_inspected": OUTCOME_INSPECTED,
         "content_format_ids": list(CONTENT_FORMAT_IDS),
-        # The prompt writers' project advisory lock, which recompute shares so
-        # both stacks serialize on one key while a rollout overlaps them.
-        "project_lock": {
-            "namespace": locks._PROJECT_NAMESPACE,
-            "person": locks._LOCK_PERSON.decode(),
-        },
-        "prompt_trailing_punctuation": normalization._TRAILING_PUNCTUATION_CHARS,
     }

@@ -12,7 +12,10 @@ from app.core.config.prompts import prompt_generation_settings
 from app.models.agent import AgentChat, AgentOutput, AgentOutputRevision
 from app.models.project import Project
 from app.models.prompt import Prompt, Topic
-from tests.component.prompt_generation_helpers import accept_all, make_project_and_set
+from tests.component.prompt_generation_helpers import (
+    make_project_and_set,
+    staged_candidate,
+)
 
 
 @pytest.mark.asyncio
@@ -79,8 +82,8 @@ async def test_saved_portfolio_is_scoped_staged_and_preserves_revision_provenanc
     repeated = await client.post(endpoint, json={"agent_revision_id": revision_id})
     assert repeated.status_code == 201
     assert repeated.json()["candidates"] == []
-    accepted = await accept_all(client, set_id, body)
-    assert accepted[0]["generation_evidence"]["agent_revision_id"] == revision_id
+    _, provenance = await staged_candidate(body["candidates"][0]["id"])
+    assert provenance["agent_revision_id"] == revision_id
 
     # A different workspace's valid revision must not be copied into this set.
     _, other_set = await make_project_and_set(client, "agent-prompts-other@example.com")

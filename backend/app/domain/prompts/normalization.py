@@ -9,21 +9,13 @@ from __future__ import annotations
 import hashlib
 import re
 
+from app.core.config.prompts import PROMPT_TRAILING_PUNCTUATION
+
 _WHITESPACE = re.compile(r"\s+")
-# Trailing punctuation that doesn't change the concept ("best shoes?" == "best shoes").
-#
-# Stripped with str.rstrip rather than a regex. The obvious pattern —
-# ``re.compile(r"[\s?.!,;:]+$")`` — is a polynomial ReDoS (CodeQL
-# py/polynomial-redos): on a long run of whitespace that never satisfies the
-# anchor, the engine retries the quantifier from each starting offset, so cost
-# grows with the square of the run length. Measured on the pre-fix pattern:
-# 2k chars 14ms, 4k 50ms, 8k 200ms, 16k 825ms.
-#
-# This is reachable with attacker-influenced input — CSV import and the AI
-# suggestion path both feed text straight here — and rstrip does exactly the
-# same job in linear time, since the character set is what it strips and the
-# anchor was only ever "at the end".
-_TRAILING_PUNCTUATION_CHARS = " \t\n\r\v\f?.!,;:"
+# Trailing punctuation (config-owned) is stripped with str.rstrip, not a
+# regex: ``[\s?.!,;:]+$`` is a polynomial ReDoS (CodeQL py/polynomial-redos)
+# on long whitespace runs, and CSV import and generation feed
+# attacker-influenced text here. rstrip does the same job in linear time.
 
 
 def normalize_prompt_text(text: str) -> str:
@@ -33,7 +25,7 @@ def normalize_prompt_text(text: str) -> str:
     with ``toLowerCase()``.
     """
     collapsed = _WHITESPACE.sub(" ", text).strip().lower()
-    return collapsed.rstrip(_TRAILING_PUNCTUATION_CHARS)
+    return collapsed.rstrip(PROMPT_TRAILING_PUNCTUATION)
 
 
 def prompt_text_hash(text: str) -> str:

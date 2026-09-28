@@ -49,10 +49,6 @@ from app.core.config.entitlements import (
     CODE_FUNDED_CREDITS_EXHAUSTED,
     CODE_MANUAL_RUN_RATE_EXCEEDED,
 )
-from app.core.config.prompts import (
-    CODE_BINDING_VOCABULARY_EMPTY,
-    CODE_PROMPT_OFF_TOPIC,
-)
 from app.core.database import SessionLocal
 from app.core.errors import ApiException
 from app.core.http_errors import raise_api_error, raise_not_found
@@ -91,7 +87,6 @@ from app.domain.audits.schemas import (
 )
 from app.domain.entitlements.enforcement import RateAdmissionDeniedError
 from app.domain.entitlements.types import STATUS_ENTITLEMENT_UNRESOLVED
-from app.domain.prompts.topical_binding import TopicalBindingError
 from app.models.audit import Audit, AuditEvent
 
 router = APIRouter(prefix="/audits", tags=["audits"])
@@ -110,8 +105,7 @@ _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 # status mapping lives here. Rate denials are 429; an unresolvable
 # entitlement is 403 (never data); commercial budget/credit exhaustion is a
 # graceful 403; an unresolvable funded cost estimate is a 422 fail-closed.
-# Topical-binding rejections are 422 (request-content validation); an unset
-# prompt-count policy is a 422 fail-closed (like an unresolved cost), while
+# An unset prompt-count policy is a 422 fail-closed (like an unresolved cost), while
 # breaching a configured count is a graceful 403 (like budget exhaustion).
 _ADMISSION_STATUS: dict[str, int] = {
     CODE_MANUAL_RUN_RATE_EXCEEDED: status.HTTP_429_TOO_MANY_REQUESTS,
@@ -119,8 +113,6 @@ _ADMISSION_STATUS: dict[str, int] = {
     CODE_FUNDED_COST_UNRESOLVED: status.HTTP_422_UNPROCESSABLE_CONTENT,
     CODE_FUNDED_BUDGET_EXHAUSTED: status.HTTP_403_FORBIDDEN,
     CODE_FUNDED_CREDITS_EXHAUSTED: status.HTTP_403_FORBIDDEN,
-    CODE_PROMPT_OFF_TOPIC: status.HTTP_422_UNPROCESSABLE_CONTENT,
-    CODE_BINDING_VOCABULARY_EMPTY: status.HTTP_422_UNPROCESSABLE_CONTENT,
     CODE_PROMPT_COUNT_POLICY_UNCONFIGURED: status.HTTP_422_UNPROCESSABLE_CONTENT,
     CODE_PROMPT_COUNT_EXCEEDED: status.HTTP_403_FORBIDDEN,
 }
@@ -149,7 +141,6 @@ def _translate_create_audit_errors() -> Iterator[None]:
         RateAdmissionDeniedError,
         FundedAdmissionError,
         PromptCountPolicyError,
-        TopicalBindingError,
     ) as exc:
         raise ApiException.coded(
             _ADMISSION_STATUS.get(exc.code, status.HTTP_403_FORBIDDEN),

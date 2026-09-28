@@ -1,35 +1,24 @@
-"""Component tests for account occupancy enforcement (real Postgres).
+"""Component tests for project-slot occupancy enforcement (real Postgres).
 
-Pins the slice23 Task 4 contract: every occupancy check runs in the SAME
-transaction as the insert it guards, under the account-capacity advisory
-lock, so concurrent mutations from INDEPENDENT sessions can never push the
-committed count past the account grant — for project creates and for
-manual/imported/accepted-candidate prompt inserts alike. Also pins the
-charging semantics: only rows that actually insert consume a slot (duplicates
-and staged candidates are free), archived/generated rows count, deletion
-frees capacity,
-and resolver allowance changes affect subsequent mutations immediately.
+Pins the slice23 Task 4 contract for project creates: the occupancy check
+runs in the SAME transaction as the insert it guards, under the
+account-capacity advisory lock, so concurrent creates from INDEPENDENT
+sessions can never push the committed count past the account grant; resolver
+allowance changes affect the next mutation immediately; an unresolved
+entitlement fails closed and an unprovisioned one is ungated. Prompt-slot
+occupancy is enforced and tested by the TypeScript prompt writers.
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
 import uuid
-from typing import cast
 
-import httpx
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.connectors.agent.client import DefaultAgentClient
-from app.core.config.entitlements import KEY_PROJECT_SLOTS, KEY_PROMPT_SLOTS
-from app.core.config.projects import PROMPT_ORIGIN_GENERATED, PROMPT_ORIGIN_MANUAL
-from app.core.config.prompts import (
-    PROMPT_STATUS_ACTIVE,
-    PROMPT_STATUS_ARCHIVED,
-)
+from app.core.config.entitlements import KEY_PROJECT_SLOTS
 from app.domain.entitlements.enforcement import (
     OccupancyLimitExceededError,
     OccupancyUnresolvedError,
@@ -37,61 +26,12 @@ from app.domain.entitlements.enforcement import (
 from app.domain.entitlements.types import GrantSpec
 from app.domain.projects.schemas import ProjectCreate
 from app.domain.projects.service import create_project
-from app.domain.prompts.candidates import review_candidates
-from app.domain.prompts.generation import generate_prompts
-from app.domain.prompts.importing import import_prompts
-from app.domain.prompts.schemas import (
-    PromptCreate,
-    PromptGenerateRequest,
-    PromptImportRow,
-    PromptUpdate,
-)
-from app.domain.prompts.service import (
-    create_prompt,
-    delete_prompt,
-    update_prompt,
-)
-from app.models.brand import Brand
 from app.models.project import Project
-from app.models.prompt import Prompt, PromptSet
 from app.models.workspace import Workspace
 from tests.component.occupancy_helpers import (
-    revoke_signup_baseline_grants,
     seed_account_workspace,
     seed_occupancy_grants,
 )
-from tests.fixtures.prompt_generation import labelled_row, slot_text
-
-
-async def _seed_project_set(
-    session: AsyncSession, workspace_id: uuid.UUID
-) -> tuple[uuid.UUID, uuid.UUID]:
-    """ORM-seed a project + prompt set (bypasses occupancy on purpose)."""
-    project = Project(workspace_id=workspace_id, name="Seed Project")
-    session.add(project)
-    await session.flush()
-    # Binding identity for topical admission: texts below name the brand.
-    brand = Brand(project_id=project.id, name="Acme Corp")
-    session.add(brand)
-    await session.flush()
-    prompt_set = PromptSet(project_id=project.id, name="Seed Set")
-    session.add(prompt_set)
-    await session.flush()
-    project_id, prompt_set_id = project.id, prompt_set.id
-    await session.commit()
-    return project_id, prompt_set_id
-
-
-async def _prompt_count(session: AsyncSession, prompt_set_id: uuid.UUID) -> int:
-    return int(
-        (
-            await session.execute(
-                select(func.count())
-                .select_from(Prompt)
-                .where(Prompt.prompt_set_id == prompt_set_id)
-            )
-        ).scalar_one()
-    )
 
 
 def _project_count_stmt(workspace_id: uuid.UUID):
@@ -189,366 +129,8 @@ async def test_project_slots_are_scoped_to_the_accounts_own_workspace(
 
 
 # =========================================================================
-# Concurrent prompt inserts (manual / import / generated) never exceed it
+# Allowance changes
 # =========================================================================
-@pytest.mark.asyncio
-async def test_concurrent_manual_prompt_inserts_never_exceed_grant(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        _account, workspace, _user = await seed_account_workspace(session)
-        _project_id, prompt_set_id = await _seed_project_set(session, workspace.id)
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace.id,
-            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=2),),
-        )
-        await session.commit()
-
-    async def _create(text: str) -> str:
-        async with session_factory() as session:
-            try:
-                await create_prompt(
-                    session,
-                    workspace_id=workspace.id,
-                    payload=PromptCreate(prompt_set_id=prompt_set_id, text=text),
-                )
-                return "ok"
-            except OccupancyLimitExceededError:
-                await session.rollback()
-                return "denied"
-
-    results = await asyncio.gather(
-        _create("alpha acme question"),
-        _create("beta acme question"),
-        _create("gamma acme question"),
-    )
-    assert sorted(results) == ["denied", "ok", "ok"]
-
-    async with session_factory() as session:
-        assert await _prompt_count(session, prompt_set_id) == 2
-
-
-@pytest.mark.asyncio
-async def test_concurrent_imports_never_exceed_grant(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        _account, workspace, _user = await seed_account_workspace(session)
-        _project_id, prompt_set_id = await _seed_project_set(session, workspace.id)
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace.id,
-            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=3),),
-        )
-        await session.commit()
-
-    rows_a = [PromptImportRow(text=f"batch a acme {idx}") for idx in range(3)]
-    rows_b = [PromptImportRow(text=f"batch b acme {idx}") for idx in range(3)]
-
-    async def _import(rows: list[PromptImportRow]) -> str:
-        async with session_factory() as session:
-            try:
-                await import_prompts(
-                    session,
-                    workspace_id=workspace.id,
-                    prompt_set_id=prompt_set_id,
-                    rows=rows,
-                )
-                return "ok"
-            except OccupancyLimitExceededError:
-                await session.rollback()
-                return "denied"
-
-    # Each import would fit alone (3 <= 3); together they would persist 6.
-    # The account lock serializes them and the loser is denied atomically.
-    results = await asyncio.gather(_import(rows_a), _import(rows_b))
-    assert sorted(results) == ["denied", "ok"]
-
-    async with session_factory() as session:
-        assert await _prompt_count(session, prompt_set_id) == 3
-
-
-@pytest.mark.asyncio
-async def test_concurrent_candidate_accepts_never_exceed_grant(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    resp = await client.post(
-        "/api/v1/auth/register",
-        json={"email": "occ-gen@example.com", "password": "password123"},
-    )
-    assert resp.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": "occ-gen@example.com", "password": "password123"},
-    )
-    assert login_response.status_code == 200
-    project = (
-        await client.post(
-            "/api/v1/projects",
-            json={
-                "name": "Acme Visibility",
-                "brand_name": "Acme Corp",
-                "website_url": "https://acme.com",
-                "benchmark_mode": "controlled_localized",
-                "default_repetitions": 1,
-                "products_services": ["running shoes"],
-            },
-        )
-    ).json()
-    prompt_set_id = (
-        await client.post(
-            "/api/v1/prompt-sets",
-            json={"project_id": project["id"], "name": "Seed Set"},
-        )
-    ).json()["id"]
-    topic_response = await client.post(
-        f"/api/v1/projects/{project['id']}/topics",
-        json={"name": "Running Shoes"},
-    )
-    assert topic_response.status_code == 201
-    workspace_id = uuid.UUID(project["workspace_id"])
-    async with session_factory() as session:
-        await revoke_signup_baseline_grants(session, workspace_id=workspace_id)
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace_id,
-            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=4),),
-        )
-        await session.commit()
-
-    def _agent_payload(run_label: str, user: str) -> str:
-        # Distinct fixture texts exercise occupancy rather than quality.
-        marker = "Buyer-query slots (return one row per slot): "
-        slot_line = next(line for line in user.splitlines() if line.startswith(marker))
-        slots = json.loads(slot_line.removeprefix(marker))
-
-        return json.dumps(
-            {
-                "prompts": [
-                    labelled_row(slot, slot_text(slot, f"{run_label}{index}"))
-                    for index, slot in enumerate(slots)
-                ]
-            }
-        )
-
-    class _LabelAgent:
-        model = "fake-model"
-        base_url_host = "agent.test"
-
-        def __init__(self, topic: str) -> None:
-            self._topic = topic
-
-        async def complete_structured_json(
-            self,
-            *,
-            system: str,
-            user: str,
-            schema_name: str,
-            schema: dict[str, object],
-        ) -> str:
-            if schema_name == "business_map_suggestions":
-                return json.dumps({"offerings": []})
-            return _agent_payload(self._topic, user)
-
-    async def _stage(topic: str) -> list[uuid.UUID]:
-        async with session_factory() as session:
-            result = await generate_prompts(
-                session,
-                workspace_id=workspace_id,
-                prompt_set_id=uuid.UUID(prompt_set_id),
-                payload=PromptGenerateRequest(count=4, confirm_send_evidence=True),
-                agent=cast(DefaultAgentClient, _LabelAgent(topic)),
-            )
-            return [candidate.id for candidate in result.candidates]
-
-    # Staging charges nothing: both runs stage all four candidates.
-    alpha, beta = await _stage("Alpha"), await _stage("Beta")
-    assert len(alpha) == len(beta) == 4
-
-    # Both accepts race; the account lock serializes them at the insert.
-    async def _accept(candidate_ids: list[uuid.UUID]) -> str:
-        async with session_factory() as session:
-            try:
-                await review_candidates(
-                    session,
-                    workspace_id=workspace_id,
-                    prompt_set_id=uuid.UUID(prompt_set_id),
-                    accept_ids=candidate_ids,
-                    reject_ids=[],
-                )
-                return "ok"
-            except OccupancyLimitExceededError:
-                await session.rollback()
-                return "denied"
-
-    results = await asyncio.gather(_accept(alpha), _accept(beta))
-    assert sorted(results) == ["denied", "ok"]
-
-    async with session_factory() as session:
-        assert await _prompt_count(session, uuid.UUID(prompt_set_id)) == 4
-
-
-# =========================================================================
-# Charging semantics
-# =========================================================================
-@pytest.mark.asyncio
-async def test_duplicate_filtering_charges_only_actual_inserts(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        _account, workspace, _user = await seed_account_workspace(session)
-        _project_id, prompt_set_id = await _seed_project_set(session, workspace.id)
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace.id,
-            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=3),),
-        )
-        await session.commit()
-
-    async with session_factory() as session:
-        await create_prompt(
-            session,
-            workspace_id=workspace.id,
-            payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme alpha"),
-        )
-
-    # "alpha" + an intra-upload repeat normalize to the persisted hash, so
-    # only "beta"/"gamma" are charged: 1 in use + 2 actual inserts == 3.
-    async with session_factory() as session:
-        prompt_set = await import_prompts(
-            session,
-            workspace_id=workspace.id,
-            prompt_set_id=prompt_set_id,
-            rows=[
-                PromptImportRow(text="acme alpha"),
-                PromptImportRow(text=" ACME ALPHA "),
-                PromptImportRow(text="acme beta"),
-                PromptImportRow(text="acme gamma"),
-            ],
-        )
-        assert len(prompt_set.prompts) == 3
-
-    # At full capacity an all-duplicate upload inserts nothing and is NOT
-    # denied — duplicates never consume a slot.
-    async with session_factory() as session:
-        prompt_set = await import_prompts(
-            session,
-            workspace_id=workspace.id,
-            prompt_set_id=prompt_set_id,
-            rows=[
-                PromptImportRow(text="acme alpha"),
-                PromptImportRow(text="acme beta"),
-            ],
-        )
-        assert len(prompt_set.prompts) == 3
-
-    async with session_factory() as session:
-        assert await _prompt_count(session, prompt_set_id) == 3
-
-
-@pytest.mark.asyncio
-async def test_archived_and_generated_rows_count_and_update_is_free(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        _account, workspace, _user = await seed_account_workspace(session)
-        _project_id, prompt_set_id = await _seed_project_set(session, workspace.id)
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace.id,
-            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=3),),
-        )
-        archived = Prompt(
-            prompt_set_id=prompt_set_id,
-            text="archived row",
-            status=PROMPT_STATUS_ARCHIVED,
-            origin=PROMPT_ORIGIN_MANUAL,
-        )
-        generated_active_two = Prompt(
-            prompt_set_id=prompt_set_id,
-            text="second generated active row",
-            status=PROMPT_STATUS_ACTIVE,
-            origin=PROMPT_ORIGIN_GENERATED,
-        )
-        generated_active = Prompt(
-            prompt_set_id=prompt_set_id,
-            text="generated active row",
-            status=PROMPT_STATUS_ACTIVE,
-            origin=PROMPT_ORIGIN_GENERATED,
-        )
-        session.add_all([archived, generated_active_two, generated_active])
-        await session.commit()
-        archived_id = archived.id
-
-    # Archived and generated rows all occupy slots: 3/3 used.
-    async with session_factory() as session:
-        with pytest.raises(OccupancyLimitExceededError):
-            await create_prompt(
-                session,
-                workspace_id=workspace.id,
-                payload=PromptCreate(prompt_set_id=prompt_set_id, text="new acme text"),
-            )
-        await session.rollback()
-
-    # Updating text does NOT consume a slot, even at full capacity.
-    async with session_factory() as session:
-        updated = await update_prompt(
-            session,
-            workspace_id=workspace.id,
-            prompt_id=archived_id,
-            payload=PromptUpdate(text="rewritten acme archived row"),
-        )
-        assert updated.text == "rewritten acme archived row"
-
-    async with session_factory() as session:
-        assert await _prompt_count(session, prompt_set_id) == 3
-
-
-@pytest.mark.asyncio
-async def test_deletion_frees_capacity(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        _account, workspace, _user = await seed_account_workspace(session)
-        _project_id, prompt_set_id = await _seed_project_set(session, workspace.id)
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace.id,
-            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=1),),
-        )
-        await session.commit()
-
-    async with session_factory() as session:
-        first = await create_prompt(
-            session,
-            workspace_id=workspace.id,
-            payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme first"),
-        )
-        first_id = first.id
-
-    async with session_factory() as session:
-        with pytest.raises(OccupancyLimitExceededError):
-            await create_prompt(
-                session,
-                workspace_id=workspace.id,
-                payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme second"),
-            )
-        await session.rollback()
-
-    async with session_factory() as session:
-        await delete_prompt(session, workspace_id=workspace.id, prompt_id=first_id)
-
-    async with session_factory() as session:
-        await create_prompt(
-            session,
-            workspace_id=workspace.id,
-            payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme second"),
-        )
-        assert await _prompt_count(session, prompt_set_id) == 1
-
-
 @pytest.mark.asyncio
 async def test_resolver_allowance_changes_immediately_affect_mutations(
     session_factory: async_sessionmaker[AsyncSession],
@@ -607,7 +189,7 @@ async def test_unresolved_entitlement_fails_closed(
         session.add(workspace)
         await session.flush()
         workspace_id = workspace.id
-        _project_id, prompt_set_id = await _seed_project_set(session, workspace_id)
+        await session.commit()
 
     async with session_factory() as session:
         with pytest.raises(OccupancyUnresolvedError):
@@ -615,15 +197,6 @@ async def test_unresolved_entitlement_fails_closed(
                 session,
                 workspace_id=workspace_id,
                 payload=ProjectCreate(name="Denied"),
-            )
-        await session.rollback()
-
-    async with session_factory() as session:
-        with pytest.raises(OccupancyUnresolvedError):
-            await create_prompt(
-                session,
-                workspace_id=workspace_id,
-                payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme denied"),
             )
         await session.rollback()
 
@@ -637,7 +210,7 @@ async def test_unprovisioned_account_is_not_occupancy_gated(
     # contract) until any grant exists.
     async with session_factory() as session:
         _account, workspace, _user = await seed_account_workspace(session)
-        _project_id, prompt_set_id = await _seed_project_set(session, workspace.id)
+        await session.commit()
 
     async with session_factory() as session:
         await create_project(
@@ -646,10 +219,7 @@ async def test_unprovisioned_account_is_not_occupancy_gated(
         await create_project(
             session, workspace_id=workspace.id, payload=ProjectCreate(name="Two")
         )
-    async with session_factory() as session:
-        await create_prompt(
-            session,
-            workspace_id=workspace.id,
-            payload=PromptCreate(prompt_set_id=prompt_set_id, text="acme free"),
+        count = int(
+            (await session.execute(_project_count_stmt(workspace.id))).scalar_one()
         )
-        assert await _prompt_count(session, prompt_set_id) == 1
+        assert count == 2

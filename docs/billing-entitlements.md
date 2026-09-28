@@ -33,7 +33,13 @@ primary profile, falling back to the free baseline, then applies deliberate
 supplements. Grants/revocations remain append-only. Occupancy admission uses
 locked current counts; reads expose persisted/current projections without
 repairing provisioning or acquiring admission locks. Missing authority is not
-unlimited access.
+unlimited access. The TypeScript prompt writers resolve the same grants and
+admit prompt slots in [`src/entitlements/`](../frontend/services/api/src/entitlements/),
+under the account capacity lock Python's
+[enforcement](../backend/app/domain/entitlements/enforcement.py) takes
+(a personalized BLAKE2b of `OCCUPANCY_LOCK_NAMESPACE` and the account id), so
+Python Commerce and project writers and TypeScript prompt writers serialize on
+one key.
 
 ## Explicit purchase to settlement
 

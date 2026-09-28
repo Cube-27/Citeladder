@@ -7,11 +7,10 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.api.prompts as prompts_api
@@ -24,8 +23,11 @@ from app.models.brand import BrandProfile
 from app.models.prompt_candidate import PromptCandidate
 from tests.component.prompt_generation_helpers import (
     FakeAgent,
-    accept_all,
+    create_topic,
     make_project_and_set,
+    pending_candidates,
+    project_topics,
+    staged_candidate,
 )
 from tests.fixtures.prompt_generation import slots_from_user_message
 
@@ -69,12 +71,9 @@ async def _two_offering_project(client: httpx.AsyncClient, email: str):
     project, prompt_set_id = await make_project_and_set(
         client, email, products_services=["running shoes", "sandals"]
     )
-    topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
-    sandals = await client.post(
-        f"/api/v1/projects/{project['id']}/topics", json={"name": "Sandals"}
-    )
-    assert sandals.status_code == 201
-    return project, prompt_set_id, topics[0]["id"], sandals.json()["id"]
+    topics = await project_topics(project["id"])
+    sandals = await create_topic(project["id"], "Sandals")
+    return project, prompt_set_id, topics[0]["id"], sandals["id"]
 
 
 @pytest.mark.asyncio
@@ -157,10 +156,9 @@ async def test_multi_topic_generation_writes_one_question_per_map_cell(
         "wide fit"
     ]
 
-    accepted = await accept_all(client, prompt_set_id, body)
-    evidence = accepted[0]["generation_evidence"]
-    assert evidence["requested_topic_ids"] == [shoes_id, sandals_id]
-    assert evidence["evidence_refs"][0]["kind"] == "business_map_cell"
+    candidate, provenance = await staged_candidate(body["candidates"][0]["id"])
+    assert provenance["requested_topic_ids"] == [shoes_id, sandals_id]
+    assert candidate.evidence_refs[0]["kind"] == "business_map_cell"
 
 
 @pytest.mark.asyncio
@@ -299,9 +297,7 @@ async def test_shadow_decisions_rank_and_flag_without_dropping(
     assert body["candidates"][-1]["text"] == weak
     assert body["candidates"][-1]["quality_flags"] == ["natural"]
     assert {c["quality_status"] for c in body["candidates"]} == {"judged"}
-    listed = (
-        await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
-    ).json()
+    listed = await pending_candidates(prompt_set_id)
     assert [c["id"] for c in listed] == [c["id"] for c in body["candidates"]]
 
     async with session_factory() as session:
@@ -321,9 +317,10 @@ async def test_shadow_decisions_rank_and_flag_without_dropping(
     assert decision["model"] == "jev-1.13.0"
     assert decision["question_schema_version"]
     assert decision["state_hash"]
-    accepted = await accept_all(client, prompt_set_id, body)
-    assert all(p["generation_evidence"]["jev_decision"] for p in accepted)
-    assert accepted[0]["generation_evidence"]["quality_gate"] == "shadow"
+    for staged in body["candidates"]:
+        candidate, provenance = await staged_candidate(staged["id"])
+        assert candidate.jev_decision
+        assert provenance["quality_gate"] == "shadow"
 
 
 @pytest.mark.asyncio
@@ -342,9 +339,7 @@ async def test_jev_failure_never_fails_generation(
     assert response.status_code == 201
     assert response.json()["quality_gate"] == "unavailable"
     assert len(response.json()["candidates"]) == 2
-    listed = (
-        await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
-    ).json()
+    listed = await pending_candidates(prompt_set_id)
     assert {c["quality_status"] for c in listed} == {"unavailable"}
 
 
@@ -384,50 +379,20 @@ async def test_the_gate_removes_strong_fails_and_keeps_text_free_outcomes(
     assert body["quality_rejected"] == 1
     assert weak not in {c["text"] for c in body["candidates"]}
     assert len(body["candidates"]) == 2
-    kept, rejected = (c["id"] for c in body["candidates"])
+    listed = await pending_candidates(prompt_set_id)
+    assert {c["id"] for c in listed} == {c["id"] for c in body["candidates"]}
 
-    review = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
-        json={"reject_ids": [rejected]},
-    )
-    assert review.json()["rejected_count"] == 1
-    listed = (
-        await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
-    ).json()
-    assert [c["id"] for c in listed] == [kept]
-
-    # Both rejections survive for calibration with the judgment, not the text.
-    outcomes = {
-        c.disposition: c
+    # The gate rejection survives for calibration with the judgment, not the
+    # text. (Review rejections are written by the TypeScript review.)
+    outcomes = [
+        c
         for c in await _set_candidates(session_factory, prompt_set_id)
         if c.disposition != "pending"
-    }
-    assert set(outcomes) == {"gate_rejected", "rejected"}
-    for outcome in outcomes.values():
-        assert outcome.text == ""
-        assert outcome.jev_decision["verdict"] in {"fail", "pass"}
-    assert outcomes["gate_rejected"].jev_decision["verdict"] == "fail"
+    ]
+    assert [outcome.disposition for outcome in outcomes] == ["gate_rejected"]
+    assert outcomes[0].text == ""
+    assert outcomes[0].jev_decision["verdict"] == "fail"
     async with session_factory() as session:
         reviewed = await load_reviewed_decisions(session)
-    mine = sorted(
-        r.disposition
-        for r in reviewed
-        if r.decision in [o.jev_decision for o in outcomes.values()]
-    )
-    assert mine == ["gate_rejected", "rejected"]
-
-    # Past retention, the next write to the set purges outcome records.
-    async with session_factory() as session:
-        await session.execute(
-            update(PromptCandidate)
-            .where(PromptCandidate.prompt_set_id == uuid.UUID(prompt_set_id))
-            .where(PromptCandidate.disposition != "pending")
-            .values(expires_at=datetime.now(UTC) - timedelta(minutes=1))
-        )
-        await session.commit()
-    await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
-        json={"accept_ids": [kept]},
-    )
-    remaining = await _set_candidates(session_factory, prompt_set_id)
-    assert [c.disposition for c in remaining] == ["accepted"]
+    mine = [r.disposition for r in reviewed if r.decision == outcomes[0].jev_decision]
+    assert mine == ["gate_rejected"]

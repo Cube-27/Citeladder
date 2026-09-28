@@ -44,9 +44,11 @@ from app.core.config import brand_logos as brand_logo_config
 from app.core.config import brand_profile as brand_profile_config
 from app.core.config import commerce_catalog as commerce_config
 from app.core.config import demand as demand_config
+from app.core.config import entitlements as entitlements_config
 from app.core.config import errors as error_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
+from app.core.config import prompts as prompts_config
 from app.core.config import search_intelligence as search_intelligence_config
 from app.core.config import workspaces as workspace_config
 from app.core.config.abuse import AbuseSettings
@@ -98,11 +100,20 @@ from app.core.config.audits import (
     AUDIT_STATUS_PARTIALLY_COMPLETED,
     MEASUREMENT_POLICY_KEY,
 )
+from app.core.config.billing_contracts import SUBSCRIPTION_KIND_BASE
 from app.core.config.errors import (
     CODE_HTTP_ERROR,
     CODE_INTERNAL_ERROR,
     RETRYABLE_STATUSES,
     STATUS_DEFAULT_CODE,
+)
+from app.core.config.http import (
+    IMPORT_BODY_MAX_BYTES,
+    PROMPT_IMPORT_MAX_ROWS,
+    PROMPT_INTENT_MAX_CHARS,
+    PROMPT_TEXT_MAX_CHARS,
+    PROMPT_THEME_MAX_CHARS,
+    TOPIC_NAME_MAX_CHARS,
 )
 from app.core.config.integrations_datasets import (
     DATASET_GA4_REFERRER_DAILY,
@@ -110,11 +121,19 @@ from app.core.config.integrations_datasets import (
     DIMENSION_KEY_SEPARATOR,
     INTEGRATION_DATASET_TEMPLATES,
 )
-from app.core.config.projects import MAX_PROJECT_COMPETITORS
+from app.core.config.jev import QUALITY_GATE_OFF, QUALITY_GATE_UNAVAILABLE
+from app.core.config.projects import (
+    MAX_PROJECT_COMPETITORS,
+    PROMPT_INTENTS,
+    PROMPT_ORIGIN_GENERATED,
+    PROMPT_ORIGIN_IMPORTED,
+    PROMPT_ORIGIN_MANUAL,
+)
 from app.core.config.prompts import (
     ORGANIC_PROMPT_COHORTS,
     PROMPT_COHORT_CORE,
     REQUESTABLE_PROMPT_COHORTS,
+    PromptGenerationSettings,
 )
 from app.core.config.provider_catalog import (
     ERROR_UNKNOWN,
@@ -277,9 +296,106 @@ def build_config() -> dict[str, Any]:
             ),
         },
         "abuse": {
-            "active_job_retry_after_seconds": _setting(
-                "active_job_retry_after_seconds", AbuseSettings
+            name: _setting(name, AbuseSettings)
+            for name in (
+                "active_job_retry_after_seconds",
+                "bulk_import_limit",
+                "bulk_import_window_seconds",
             )
+        },
+        "entitlements": _entitlements_policy(),
+        "prompts": _prompts_policy(),
+    }
+
+
+def _entitlements_policy() -> dict[str, Any]:
+    """The capability registry and the account-capacity lock both stacks take."""
+    ent = entitlements_config
+    registry = ent.CAPABILITY_REGISTRY
+    return {
+        "registry_revision": registry.revision,
+        "capabilities": {
+            entry.key: {
+                "type": entry.capability_type.value,
+                "levels": len(entry.ordered_values),
+            }
+            for entry in registry.entries
+        },
+        "grant_source_kinds": sorted(ent.GRANT_SOURCE_KINDS),
+        "paid_access_sources": [ent.GRANT_SOURCE_ADDON, ent.GRANT_SOURCE_TOPUP],
+        "base_subscription_kind": SUBSCRIPTION_KIND_BASE,
+        "prompt_slots": ent.KEY_PROMPT_SLOTS,
+        "project_slots": ent.KEY_PROJECT_SLOTS,
+        "capacity_lock": {
+            "namespace": ent.OCCUPANCY_LOCK_NAMESPACE,
+            "person": ent.OCCUPANCY_LOCK_PERSON,
+        },
+        "codes": {
+            "limit_exceeded": ent.CODE_OCCUPANCY_LIMIT_EXCEEDED,
+            "unresolved": ent.CODE_OCCUPANCY_UNRESOLVED,
+            "capability_not_granted": ent.CODE_CAPABILITY_NOT_GRANTED,
+        },
+    }
+
+
+# The review and retention knobs the TS prompt owner reads (``GENERATION_*``).
+PROMPT_GENERATION_SETTINGS = (
+    "rejected_outcome_retention_days",
+    "review_max_ids",
+)
+
+
+def _prompts_policy() -> dict[str, Any]:
+    """Prompt, topic and candidate vocabulary and bounds for the TS owner."""
+    cfg = prompts_config
+    return {
+        "locks": {
+            "project": {
+                "namespace": cfg.PROJECT_LOCK_NAMESPACE,
+                "person": cfg.PROMPT_LOCK_PERSON,
+            },
+            "prompt_set": {
+                "namespace": cfg.PROMPT_SET_LOCK_NAMESPACE,
+                "person": cfg.PROMPT_LOCK_PERSON,
+            },
+        },
+        "trailing_punctuation": cfg.PROMPT_TRAILING_PUNCTUATION,
+        "text_max_chars": PROMPT_TEXT_MAX_CHARS,
+        "theme_max_chars": PROMPT_THEME_MAX_CHARS,
+        "intent_max_chars": PROMPT_INTENT_MAX_CHARS,
+        "topic_name_max_chars": TOPIC_NAME_MAX_CHARS,
+        "import_max_rows": PROMPT_IMPORT_MAX_ROWS,
+        "import_max_bytes": IMPORT_BODY_MAX_BYTES,
+        "intents": sorted(PROMPT_INTENTS),
+        "branded_cohorts": sorted(
+            {cfg.PROMPT_COHORT_COMPARISON, cfg.PROMPT_COHORT_BRAND_DIAGNOSTIC}
+        ),
+        "status_active": cfg.PROMPT_STATUS_ACTIVE,
+        "origins": {
+            "manual": PROMPT_ORIGIN_MANUAL,
+            "imported": PROMPT_ORIGIN_IMPORTED,
+            "generated": PROMPT_ORIGIN_GENERATED,
+        },
+        "topic_origin_manual": cfg.TOPIC_ORIGIN_MANUAL,
+        "candidate": {
+            "pending": cfg.CANDIDATE_DISPOSITION_PENDING,
+            "accepted": cfg.CANDIDATE_DISPOSITION_ACCEPTED,
+            "rejected": cfg.CANDIDATE_DISPOSITION_REJECTED,
+            "outcomes": sorted(cfg.CANDIDATE_OUTCOME_DISPOSITIONS),
+            "quality_gates_reported": [QUALITY_GATE_OFF, QUALITY_GATE_UNAVAILABLE],
+        },
+        "generation_settings": {
+            name: _setting(name, PromptGenerationSettings)
+            for name in PROMPT_GENERATION_SETTINGS
+        },
+        "binding": {
+            "min_token_chars": cfg.TOPICAL_BINDING_MIN_TOKEN_CHARS,
+            "stopwords": sorted(cfg.TOPICAL_BINDING_STOPWORDS),
+            "business_context_fields": list(
+                cfg.PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS
+            ),
+            "off_topic": cfg.CODE_PROMPT_OFF_TOPIC,
+            "vocabulary_empty": cfg.CODE_BINDING_VOCABULARY_EMPTY,
         },
     }
 
@@ -450,6 +566,8 @@ ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
     opportunities_config,
     search_intelligence_config,
     commerce_config,
+    prompts_config,
+    entitlements_config,
 )
 _ERROR_CODE_PREFIXES = ("CODE_", "ERROR_")
 

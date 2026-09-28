@@ -1,0 +1,369 @@
+/**
+ * Prompts: manual create, edit, delete, bulk review transitions and bulk
+ * import.
+ *
+ * Every insert path takes the project lock, then the set lock, then the
+ * account capacity lock (`entitlements/occupancy.ts`), the order Python
+ * generation and Commerce use, and charges only rows that can actually insert
+ * (a duplicate never consumes a prompt slot). The per-set hash uniqueness
+ * stays the final race guard. Text entering active measurement passes topical
+ * binding (`binding.ts`) against the persisted project identity and the
+ * prompt's own topic.
+ */
+import { randomUUID } from 'node:crypto';
+
+import { promptCohortSchema, promptStatusSchema } from '@citeladder/contracts/project';
+import type { Kysely } from 'kysely';
+import { z } from 'zod';
+
+import { policy } from '../config.ts';
+import type { Database } from '../db/database.ts';
+import { isUniqueViolation } from '../db/errors.ts';
+import { ApiError, notFound } from '../errors.ts';
+import type { DB } from '../generated/db-schema.ts';
+import { admitPrompts } from '../entitlements/occupancy.ts';
+import {
+  BINDING_FAILURES,
+  bindingError,
+  bindingFailure,
+  loadVocabulary,
+  type BindingFailure,
+} from './binding.ts';
+import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
+import { promptTextHash } from './normalization.ts';
+import { readPromptSet, scopedPromptSet } from './prompt-sets.ts';
+import { resolveTopicsByName } from './topics.ts';
+import { promptView, type PromptRow, type PromptSetView, type PromptView } from './views.ts';
+
+const P = policy.prompts;
+const INTENTS = new Set(P.intents);
+const BRANDED = new Set(P.branded_cohorts);
+const UNIQUE_TEXT = 'uq_prompt_set_normalized_text';
+const DUPLICATE = 'An equivalent prompt already exists in this set';
+
+const text = z.string().trim().min(1).max(P.text_max_chars);
+const theme = z.string().max(P.theme_max_chars);
+const intent = z.string().max(P.intent_max_chars);
+
+export const promptInput = z.strictObject({
+  text,
+  theme: theme.default(''),
+  intent: intent.default(''),
+  cohort: promptCohortSchema.default('core'),
+  enabled: z.boolean().default(true),
+  topic_id: z.uuid().nullish(),
+});
+export const promptUpdate = z.strictObject({
+  text: text.nullish(),
+  theme: theme.nullish(),
+  intent: intent.nullish(),
+  cohort: promptCohortSchema.nullish(),
+  enabled: z.boolean().nullish(),
+  status: promptStatusSchema.nullish(),
+  topic_id: z.uuid().nullish(),
+});
+export const promptBulkStatus = z.strictObject({
+  prompt_ids: z.array(z.uuid()).min(1),
+  status: promptStatusSchema,
+});
+const importRow = z.strictObject({
+  text: z.string().trim().max(P.text_max_chars),
+  theme: theme.default(''),
+  intent: intent.default(''),
+  cohort: promptCohortSchema.default('core'),
+  enabled: z.boolean().default(true),
+  topic: z.string().trim().max(P.topic_name_max_chars).default(''),
+});
+export const promptImport = z.strictObject({
+  prompts: z.array(importRow).max(P.import_max_rows),
+});
+
+/** Trim and lower-case an intent; an unknown one is unspecified (''). */
+function normalizeIntent(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  return INTENTS.has(normalized) ? normalized : '';
+}
+
+type Cohort = z.infer<typeof promptCohortSchema>;
+const cohortColumns = (cohort: Cohort) => ({ cohort, branded: BRANDED.has(cohort) });
+
+/** A prompt in the caller's workspace with its project, or `Prompt not found`. */
+async function scopedPrompt(db: Kysely<DB>, workspaceId: string, promptId: string) {
+  const row = await db
+    .selectFrom('prompts')
+    .innerJoin('prompt_sets', 'prompt_sets.id', 'prompts.prompt_set_id')
+    .innerJoin('projects', 'projects.id', 'prompt_sets.project_id')
+    .selectAll('prompts')
+    .select('prompt_sets.project_id')
+    .where('prompts.id', '=', promptId)
+    .where('projects.workspace_id', '=', workspaceId)
+    .executeTakeFirst();
+  if (row === undefined) throw notFound('Prompt');
+  return row;
+}
+
+/** The topic's persisted name and description, or 404 outside the project. */
+async function topicText(db: Kysely<DB>, projectId: string, topicId: string): Promise<string> {
+  const topic = await db
+    .selectFrom('topics')
+    .select(['name', 'description'])
+    .where('id', '=', topicId)
+    .where('project_id', '=', projectId)
+    .executeTakeFirst();
+  if (topic === undefined) throw new ApiError(404, "Topic not found in this prompt's project");
+  return [topic.name, topic.description].filter(Boolean).join(' ');
+}
+
+async function requireBinding(
+  db: Kysely<DB>,
+  projectId: string,
+  value: string,
+  topicId: string | null,
+): Promise<void> {
+  const context = topicId === null ? '' : await topicText(db, projectId, topicId);
+  const failure = bindingFailure(value, await loadVocabulary(db, projectId), context);
+  if (failure !== null) throw bindingError(failure);
+}
+
+export async function listPrompts(
+  db: Database,
+  workspaceId: string,
+  promptSetId: string,
+): Promise<PromptView[]> {
+  return (await readPromptSet(db, workspaceId, promptSetId)).prompts;
+}
+
+export async function createPrompt(
+  db: Database,
+  workspaceId: string,
+  promptSetId: string,
+  input: z.infer<typeof promptInput>,
+): Promise<PromptView> {
+  try {
+    return await db.transaction().execute(async (trx) => {
+      const set = await scopedPromptSet(trx, workspaceId, promptSetId);
+      await requireBinding(trx, set.project_id, input.text, input.topic_id ?? null);
+      await acquireProjectLock(trx, set.project_id);
+      await acquirePromptSetLock(trx, set.id);
+      const hash = promptTextHash(input.text);
+      const existing = await trx
+        .selectFrom('prompts')
+        .select('id')
+        .where('prompt_set_id', '=', set.id)
+        .where('normalized_text_hash', '=', hash)
+        .executeTakeFirst();
+      if (existing !== undefined) throw new ApiError(409, DUPLICATE);
+      await admitPrompts(trx, workspaceId, 1);
+      const now = new Date();
+      const row = await trx
+        .insertInto('prompts')
+        .values({
+          id: randomUUID(),
+          prompt_set_id: set.id,
+          topic_id: input.topic_id ?? null,
+          text: input.text,
+          normalized_text_hash: hash,
+          theme: input.theme.trim(),
+          intent: normalizeIntent(input.intent),
+          ...cohortColumns(input.cohort),
+          enabled: input.enabled,
+          status: P.status_active,
+          origin: P.origins.manual,
+          created_at: now,
+          updated_at: now,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      return promptView(row);
+    });
+  } catch (error) {
+    if (isUniqueViolation(error, UNIQUE_TEXT)) throw new ApiError(409, DUPLICATE);
+    throw error;
+  }
+}
+
+export async function updatePrompt(
+  db: Database,
+  workspaceId: string,
+  promptId: string,
+  input: z.infer<typeof promptUpdate>,
+): Promise<PromptView> {
+  const prompt = await scopedPrompt(db, workspaceId, promptId);
+  // An explicit null detaches the prompt; an absent key leaves its topic.
+  const topicGiven = 'topic_id' in input;
+  const topicId = topicGiven ? (input.topic_id ?? null) : prompt.topic_id;
+  if (topicGiven && topicId !== null) await topicText(db, prompt.project_id, topicId);
+  const activates = input.status === P.status_active && prompt.status !== P.status_active;
+  if (input.text != null || activates) {
+    await requireBinding(db, prompt.project_id, input.text ?? prompt.text, topicId);
+  }
+  const changes: Partial<PromptRow> = {
+    ...(input.text == null
+      ? {}
+      : { text: input.text, normalized_text_hash: promptTextHash(input.text) }),
+    ...(input.theme == null ? {} : { theme: input.theme.trim() }),
+    ...(input.intent == null ? {} : { intent: normalizeIntent(input.intent) }),
+    ...(input.cohort == null ? {} : cohortColumns(input.cohort)),
+    ...(input.enabled == null ? {} : { enabled: input.enabled }),
+    ...(input.status == null ? {} : { status: input.status }),
+    ...(topicGiven ? { topic_id: topicId } : {}),
+  };
+  try {
+    const row = await db
+      .updateTable('prompts')
+      .set({ ...changes, updated_at: new Date() })
+      .where('id', '=', prompt.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return promptView(row);
+  } catch (error) {
+    if (isUniqueViolation(error, UNIQUE_TEXT)) throw new ApiError(409, DUPLICATE);
+    throw error;
+  }
+}
+
+export async function deletePrompt(
+  db: Database,
+  workspaceId: string,
+  promptId: string,
+): Promise<void> {
+  const prompt = await scopedPrompt(db, workspaceId, promptId);
+  await db.deleteFrom('prompts').where('id', '=', prompt.id).execute();
+}
+
+type Failed<T> = { item: T; failure: BindingFailure; code: string; message: string };
+
+/** Each failing item; the whole request is rejected if any fail. */
+function failures<T>(items: readonly T[], check: (item: T) => BindingFailure | null): Failed<T>[] {
+  return items.flatMap((item) => {
+    const failure = check(item);
+    return failure === null ? [] : [{ item, failure, ...BINDING_FAILURES[failure] }];
+  });
+}
+
+/** Archive or activate prompts of one set; all of them, or none (404). */
+export async function bulkSetStatus(
+  db: Database,
+  workspaceId: string,
+  promptSetId: string,
+  input: z.infer<typeof promptBulkStatus>,
+): Promise<PromptSetView> {
+  const ids = [...new Set(input.prompt_ids)];
+  await db.transaction().execute(async (trx) => {
+    const set = await scopedPromptSet(trx, workspaceId, promptSetId);
+    if (input.status === P.status_active) {
+      const rows = await trx
+        .selectFrom('prompts')
+        .leftJoin('topics', 'topics.id', 'prompts.topic_id')
+        .select(['prompts.id', 'prompts.text', 'topics.name', 'topics.description'])
+        .where('prompts.prompt_set_id', '=', set.id)
+        .where('prompts.id', 'in', ids)
+        .execute();
+      const vocabulary = await loadVocabulary(trx, set.project_id);
+      const failed = failures(rows, (row) =>
+        bindingFailure(row.text, vocabulary, [row.name, row.description].filter(Boolean).join(' ')),
+      );
+      if (failed.length > 0) {
+        throw bindingError(
+          failed[0]!.failure,
+          `${failed.length} prompt(s) fail topical binding and cannot be activated`,
+          {
+            prompts: failed.map(({ item, code, message }) => ({
+              prompt_id: item.id,
+              code,
+              message,
+            })),
+          },
+        );
+      }
+    }
+    const result = await trx
+      .updateTable('prompts')
+      .set({ status: input.status, updated_at: new Date() })
+      .where('prompt_set_id', '=', set.id)
+      .where('id', 'in', ids)
+      .executeTakeFirst();
+    if (Number(result.numUpdatedRows) !== ids.length) {
+      throw new ApiError(404, 'Prompt(s) not found in this set');
+    }
+  });
+  return readPromptSet(db, workspaceId, promptSetId);
+}
+
+/**
+ * Import parsed rows as `imported` prompts, atomically: every non-blank row
+ * must bind, and an over-allowance import inserts nothing. Blank rows are
+ * skipped and duplicates (in the set, or repeated in the upload) are dropped
+ * before occupancy is charged. A row's topic name reuses a project topic
+ * (case-insensitively) or creates one, only for rows that insert.
+ */
+export async function importPrompts(
+  db: Database,
+  workspaceId: string,
+  promptSetId: string,
+  input: z.infer<typeof promptImport>,
+): Promise<PromptSetView> {
+  await db.transaction().execute(async (trx) => {
+    const set = await scopedPromptSet(trx, workspaceId, promptSetId);
+    const rows = input.prompts.map((row, index) => ({ ...row, index }));
+    const vocabulary = await loadVocabulary(trx, set.project_id);
+    const failed = failures(
+      rows.filter((row) => row.text),
+      (row) => bindingFailure(row.text, vocabulary),
+    );
+    if (failed.length > 0) {
+      throw bindingError(
+        failed[0]!.failure,
+        `${failed.length} imported prompt row(s) fail topical binding; no rows were imported`,
+        {
+          rows: failed.map(({ item, code, message }) => ({ row: item.index, code, message })),
+        },
+      );
+    }
+    await acquireProjectLock(trx, set.project_id);
+    await acquirePromptSetLock(trx, set.id);
+    const byHash = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) {
+      const hash = row.text ? promptTextHash(row.text) : '';
+      if (hash && !byHash.has(hash)) byHash.set(hash, row);
+    }
+    if (byHash.size === 0) return;
+    const existing = await trx
+      .selectFrom('prompts')
+      .select('normalized_text_hash')
+      .where('prompt_set_id', '=', set.id)
+      .where('normalized_text_hash', 'in', [...byHash.keys()])
+      .execute();
+    for (const { normalized_text_hash: hash } of existing) byHash.delete(hash);
+    if (byHash.size === 0) return;
+    await admitPrompts(trx, workspaceId, byHash.size);
+    const topics = await resolveTopicsByName(
+      trx,
+      set.project_id,
+      [...byHash.values()].map((row) => row.topic),
+    );
+    const now = new Date();
+    await trx
+      .insertInto('prompts')
+      .values(
+        [...byHash].map(([hash, row]) => ({
+          id: randomUUID(),
+          prompt_set_id: set.id,
+          topic_id: topics.get(row.topic.toLowerCase()) ?? null,
+          text: row.text,
+          normalized_text_hash: hash,
+          theme: row.theme.trim(),
+          intent: normalizeIntent(row.intent),
+          ...cohortColumns(row.cohort),
+          enabled: row.enabled,
+          status: P.status_active,
+          origin: P.origins.imported,
+          created_at: now,
+          updated_at: now,
+        })),
+      )
+      .onConflict((conflict) => conflict.constraint(UNIQUE_TEXT).doNothing())
+      .execute();
+  });
+  return readPromptSet(db, workspaceId, promptSetId);
+}

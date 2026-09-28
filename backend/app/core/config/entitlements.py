@@ -318,13 +318,6 @@ def _build_registry() -> CapabilityRegistry:
     )
 
 
-# Bounded in-process entitlement cache knobs (domain/entitlements/cache.py).
-# The cache is replica-safe only because every lookup first reads the persisted
-# account ``entitlement_lifecycle_version`` and includes it in the key; these
-# knobs bound memory and serve-staleness between version bumps.
-ENTITLEMENT_CACHE_MAX_ENTRIES: Final = 1024
-ENTITLEMENT_CACHE_MAX_TTL_SECONDS: Final = 300
-
 # One config-owned registry revision for the whole v8 entitlement layer.
 CAPABILITY_REGISTRY_REVISION: Final = "entitlements-v3"
 
@@ -449,6 +442,9 @@ CREDENTIAL_MODES: Final[frozenset[str]] = frozenset(
 # (domain/entitlements/enforcement.py). Distinct from the prompts-domain
 # lock namespaces so the lock families can never overlap.
 OCCUPANCY_LOCK_NAMESPACE: Final = 0x43415041  # "CAPA"
+# BLAKE2b personalization of that key. The TypeScript prompt writers derive
+# the same key from the exported policy, so both stacks serialize on it.
+OCCUPANCY_LOCK_PERSON: Final = "citeladder-cap"
 
 CODE_OCCUPANCY_LIMIT_EXCEEDED: Final = "occupancy_limit_exceeded"
 CODE_OCCUPANCY_UNRESOLVED: Final = "occupancy_unresolved"

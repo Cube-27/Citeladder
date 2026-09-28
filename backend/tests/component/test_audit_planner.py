@@ -37,7 +37,6 @@ from app.domain.audits.cancellation import cancel_audit
 from app.domain.audits.creation import create_audit
 from app.domain.audits.errors import AuditValidationError
 from app.domain.audits.reads import list_tasks
-from app.domain.entitlements.cache import clear_cache
 from app.domain.entitlements.types import GrantSpec
 from app.models.audit import AuditEngineSnapshot, AuditPromptSnapshot, AuditTask
 from app.models.billing import ConsumableLedger
@@ -356,13 +355,6 @@ async def test_create_audit_rejects_a_prompt_over_the_max_length(
                 prompt_set_id=seed.prompt_set_id,
                 repetitions=1,
             )
-
-
-@pytest.fixture(autouse=True)
-def _clear_entitlement_cache():
-    clear_cache()
-    yield
-    clear_cache()
 
 
 async def _tasks(session: AsyncSession, audit_id) -> list[AuditTask]:

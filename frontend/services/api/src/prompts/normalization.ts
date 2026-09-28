@@ -1,14 +1,14 @@
 /**
- * Prompt-text identity, as `app/domain/prompts/normalization.py` computes it.
+ * Prompt-text identity: the per-set dedupe key.
  *
- * Python still owns prompt writes; the Opportunity refresh only needs the same
- * dedupe key for the gap prompts it stamps on a snapshot, so this copy must
- * match it until prompt writes move (PR 10).
+ * Python generation stages candidates keyed by the same hash
+ * (`app/domain/prompts/normalization.py`), so both stacks must agree until
+ * generation moves (migration section 7).
  */
 import { policy } from '../config.ts';
 import { collapseIdentityWhitespace, hash } from '../traffic/normalization.ts';
 
-const TRAILING = new Set(policy.opportunity.refresh.prompt_trailing_punctuation);
+const TRAILING = new Set(policy.prompts.trailing_punctuation);
 
 /** Lower-case, collapse whitespace, and strip trailing punctuation. */
 function normalizePromptText(text: string): string {
