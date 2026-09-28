@@ -16,6 +16,7 @@
     "@citeladder/contracts": "workspace:*",
     "@hono/node-server": "^2.1.1",
     "@noble/hashes": "^2.4.0",
+    "csv-parse": "^7.0.3",
     "hono": "^4.13.9",
     "jose": "^6.2.12",
     "kysely": "^0.29.6",

@@ -18,7 +18,8 @@ export const ROUTE_OWNERSHIP = {
   auth: 'python',
   billing: 'python',
   'brand-discoveries': 'python',
-  commerce: 'python',
+  commerce: 'typescript',
+  'commerce-python': 'python',
   demand: 'typescript',
   executions: 'typescript',
   integrations: 'python',
@@ -46,6 +47,14 @@ export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
  * documents; the development proxy reads this list directly.
  */
 export const TYPESCRIPT_INGRESS_PATHS = [
+  '/api/v1/projects/*/commerce/catalog',
+  '/api/v1/projects/*/commerce/catalog/import',
+  '/api/v1/projects/*/commerce/competitors',
+  '/api/v1/projects/*/commerce/competitors/discoveries',
+  '/api/v1/projects/*/commerce/competitors/*-*-*-*-*',
+  '/api/v1/projects/*/commerce/buyer-prompts',
+  '/api/v1/projects/*/commerce/buyer-prompts/*-*-*-*-*',
+  '/api/v1/projects/*/commerce/ai-shelf',
   '/api/v1/executions/*',
   '/api/v1/projects/*/ai-referrals',
   '/api/v1/projects/*/performance',

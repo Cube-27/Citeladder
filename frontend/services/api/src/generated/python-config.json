@@ -308,6 +308,7 @@
     "ts_owned_task_kinds": [
       "ai_referrals_snapshot_refresh",
       "classify_referrals",
+      "commerce_catalog_projection",
       "demand_snapshot_refresh",
       "ingest_referrals",
       "opportunity_refresh",
@@ -317,7 +318,6 @@
       "traffic_snapshot_refresh"
     ],
     "python_task_kinds": [
-      "commerce_catalog_projection",
       "commerce_competitor_discovery",
       "search_intelligence_acquisition",
       "source_page_inspection"
@@ -2592,6 +2592,76 @@
       "rank_absolute",
       "referring_domains",
       "referring_pages"
+    ]
+  },
+  "commerce": {
+    "import_max_bytes": 2000000,
+    "import_max_rows": 10000,
+    "import_error_limit": 100,
+    "importer_version": "commerce-catalog-importer-1",
+    "projector_version": "commerce-projector-1",
+    "breadcrumb_index_names": [
+      "catalog",
+      "categories",
+      "category",
+      "collection",
+      "collections",
+      "shop",
+      "shop all"
+    ],
+    "price_markers": [
+      [
+        "$",
+        ""
+      ],
+      [
+        "AUD",
+        "AUD"
+      ],
+      [
+        "USD",
+        "USD"
+      ],
+      [
+        "CAD",
+        "CAD"
+      ],
+      [
+        "NZD",
+        "NZD"
+      ],
+      [
+        "GBP",
+        "GBP"
+      ],
+      [
+        "EUR",
+        "EUR"
+      ],
+      [
+        "INR",
+        "INR"
+      ],
+      [
+        "£",
+        "GBP"
+      ],
+      [
+        "€",
+        "EUR"
+      ],
+      [
+        "₹",
+        "INR"
+      ]
+    ],
+    "ambiguous_price_tokens": [
+      "%",
+      "from ",
+      "starting at ",
+      "up to ",
+      " over ",
+      " under "
     ]
   },
   "abuse": {

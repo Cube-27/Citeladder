@@ -26,6 +26,7 @@ from app.models.commerce import CommerceCategory
 from app.models.project import Project
 from app.models.prompt import Prompt, Topic
 from tests.component.auth_helpers import register_and_login as _register
+from tests.component.commerce_helpers import seed_catalog
 
 
 async def _project(client: httpx.AsyncClient) -> dict:
@@ -38,134 +39,24 @@ async def _project(client: httpx.AsyncClient) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_catalog_import_is_idempotent_with_row_outcomes(
-    client: httpx.AsyncClient,
-) -> None:
-    await _register(client, "commerce-import@example.com")
-    project = await _project(client)
-    url = f"/api/v1/projects/{project['id']}/commerce/catalog/import"
-    content = (
-        "canonical_url,name,brand,price,currency,sku,category\n"
-        "https://shop.example/products/one,Acme One,Acme,19.00,USD,A-1,Shoes\n"
-    )
-    payload = {
-        "filename": "catalog.csv",
-        "content_type": "text/csv",
-        "content": content,
-    }
-    first = await client.post(url, json=payload)
-    assert first.status_code == 201
-    assert first.json()["created"] == 1
-    assert first.json()["row_outcomes"][0]["status"] == "created"
-    repeated = await client.post(url, json=payload)
-    assert repeated.status_code == 201
-    assert repeated.json() == first.json()
-
-    catalog = await client.get(f"/api/v1/projects/{project['id']}/commerce/catalog")
-    assert catalog.status_code == 200
-    assert catalog.json()["products"][0]["canonical_url"] == (
-        "https://shop.example/products/one"
-    )
-    assert catalog.json()["products"][0]["field_sources"]["name"]["kind"] == "csv"
-
-
-@pytest.mark.asyncio
-async def test_catalog_import_propagates_cross_product_identity_conflict(
-    client: httpx.AsyncClient,
-) -> None:
-    await _register(client, "commerce-conflict@example.com")
-    project = await _project(client)
-    url = f"/api/v1/projects/{project['id']}/commerce/catalog/import"
-    seeded = await client.post(
-        url,
-        json={
-            "filename": "catalog.csv",
-            "content_type": "text/csv",
-            "content": (
-                "canonical_url,name,sku\n"
-                "https://shop.example/products/one,One,A-1\n"
-                "https://shop.example/products/two,Two,A-2\n"
-            ),
-        },
-    )
-    assert seeded.status_code == 201
-
-    conflict = await client.post(
-        url,
-        json={
-            "filename": "conflict.csv",
-            "content_type": "text/csv",
-            "content": (
-                "canonical_url,name,sku\n"
-                "https://shop.example/products/one,Conflict,A-2\n"
-            ),
-        },
-    )
-
-    assert conflict.status_code == 409
-    assert conflict.json()["error"]["code"] == "commerce_conflict"
-
-
-@pytest.mark.asyncio
-async def test_catalog_orders_categories_by_product_count_descending(
-    client: httpx.AsyncClient,
-) -> None:
-    await _register(client, "commerce-category-order@example.com")
-    project = await _project(client)
-    response = await client.post(
-        f"/api/v1/projects/{project['id']}/commerce/catalog/import",
-        json={
-            "filename": "catalog.csv",
-            "content_type": "text/csv",
-            "content": (
-                "canonical_url,name,category\n"
-                "https://shop.example/products/one,One,Small\n"
-                "https://shop.example/products/two,Two,Large\n"
-                "https://shop.example/products/three,Three,Large\n"
-            ),
-        },
-    )
-    assert response.status_code == 201
-
-    catalog = await client.get(f"/api/v1/projects/{project['id']}/commerce/catalog")
-
-    assert catalog.status_code == 200
-    assert [
-        (row["name"], row["product_count"]) for row in catalog.json()["categories"]
-    ] == [("Large", 2), ("Small", 1)]
-
-
-@pytest.mark.asyncio
-async def test_commerce_catalog_is_workspace_isolated(
-    client: httpx.AsyncClient,
-) -> None:
-    await _register(client, "commerce-owner@example.com")
-    project = await _project(client)
-    await _register(client, "commerce-outsider@example.com")
-    response = await client.get(f"/api/v1/projects/{project['id']}/commerce/catalog")
-    assert response.status_code == 404
-
-
-@pytest.mark.asyncio
 async def test_competitor_discovery_deduplicates_only_within_one_request(
     client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     await _register(client, "commerce-discovery@example.com")
     project = await _project(client)
-    import_response = await client.post(
-        f"/api/v1/projects/{project['id']}/commerce/catalog/import",
-        json={
-            "filename": "catalog.csv",
-            "content_type": "text/csv",
-            "content": (
-                "canonical_url,name,brand\n"
-                "https://shop.example/products/one,Acme One,Acme\n"
-            ),
-        },
+    product_ids = await seed_catalog(
+        session_factory,
+        project["id"],
+        [
+            {
+                "canonical_url": "https://shop.example/products/one",
+                "name": "Acme One",
+                "brand": "Acme",
+            }
+        ],
     )
-    assert import_response.status_code == 201
-    catalog = await client.get(f"/api/v1/projects/{project['id']}/commerce/catalog")
-    product_id = catalog.json()["products"][0]["id"]
+    product_id = product_ids[0]
     url = f"/api/v1/projects/{project['id']}/commerce/competitors/discover"
     target = {"kind": "product", "id": product_id}
 
@@ -176,46 +67,6 @@ async def test_competitor_discovery_deduplicates_only_within_one_request(
     assert second.status_code == 202
     assert first.json()["task_ids"][0] == first.json()["task_ids"][1]
     assert second.json()["task_ids"][0] != first.json()["task_ids"][0]
-    status_response = await client.get(
-        f"/api/v1/projects/{project['id']}/commerce/competitors/discoveries",
-        params=[("task_ids", first.json()["task_ids"][0])],
-    )
-    assert status_response.status_code == 200
-    assert status_response.json() == [
-        {
-            "id": first.json()["task_ids"][0],
-            "target": target,
-            "status": "queued",
-            "error_code": "",
-            "terminal": False,
-        }
-    ]
-
-    # Omitting task_ids asks for whatever is in flight for the project. The
-    # client used to hold the ids in component state alone, so a reload lost
-    # track of a running discovery entirely.
-    active_response = await client.get(
-        f"/api/v1/projects/{project['id']}/commerce/competitors/discoveries",
-    )
-    assert active_response.status_code == 200
-    active_ids = {row["id"] for row in active_response.json()}
-    assert active_ids == {
-        first.json()["task_ids"][0],
-        second.json()["task_ids"][0],
-    }
-    assert all(row["terminal"] is False for row in active_response.json())
-
-
-async def test_ai_shelf_requires_an_explicit_target(
-    client: httpx.AsyncClient,
-) -> None:
-    await _register(client, "commerce-shelf-target@example.com")
-    project = await _project(client)
-
-    response = await client.get(f"/api/v1/projects/{project['id']}/commerce/ai-shelf")
-
-    assert response.status_code == 422
-    assert response.json()["error"]["code"] == "commerce_target_required"
 
 
 @pytest.mark.asyncio
@@ -236,21 +87,30 @@ async def test_a_category_target_carries_the_shop_not_just_its_own_name(
     project = await _project(client)
     project_id = uuid.UUID(project["id"])
 
-    imported = await client.post(
-        f"/api/v1/projects/{project_id}/commerce/catalog/import",
-        json={
-            "filename": "catalog.csv",
-            "content_type": "text/csv",
-            "content": (
-                "canonical_url,name,brand,price,currency,sku,category\n"
-                "https://shop.example/products/midi,"
-                "Bubble Linen Dress,Acme,240.00,USD,L-1,ACCESORIES\n"
-                "https://shop.example/products/scarf,"
-                "Silk Linen Scarf,Acme,90.00,USD,L-2,ACCESORIES\n"
-            ),
-        },
+    await seed_catalog(
+        session_factory,
+        project["id"],
+        [
+            {
+                "canonical_url": "https://shop.example/products/midi",
+                "name": "Bubble Linen Dress",
+                "brand": "Acme",
+                "price": "240.00",
+                "currency": "USD",
+                "sku": "L-1",
+                "category": "ACCESORIES",
+            },
+            {
+                "canonical_url": "https://shop.example/products/scarf",
+                "name": "Silk Linen Scarf",
+                "brand": "Acme",
+                "price": "90.00",
+                "currency": "USD",
+                "sku": "L-2",
+                "category": "ACCESORIES",
+            },
+        ],
     )
-    assert imported.status_code in {200, 201}, imported.text
 
     async with session_factory() as session:
         category = await session.scalar(
@@ -298,19 +158,21 @@ async def test_a_manual_buyer_prompt_can_be_added_to_a_category(
     project = await _project(client)
     project_id = uuid.UUID(project["id"])
 
-    imported = await client.post(
-        f"/api/v1/projects/{project_id}/commerce/catalog/import",
-        json={
-            "filename": "catalog.csv",
-            "content_type": "text/csv",
-            "content": (
-                "canonical_url,name,brand,price,currency,sku,category\n"
-                "https://shop.example/products/midi,"
-                "Bubble Linen Dress,Acme,240.00,USD,L-1,DRESSES\n"
-            ),
-        },
+    await seed_catalog(
+        session_factory,
+        project["id"],
+        [
+            {
+                "canonical_url": "https://shop.example/products/midi",
+                "name": "Bubble Linen Dress",
+                "brand": "Acme",
+                "price": "240.00",
+                "currency": "USD",
+                "sku": "L-1",
+                "category": "DRESSES",
+            }
+        ],
     )
-    assert imported.status_code in {200, 201}, imported.text
 
     async with session_factory() as session:
         category = await session.scalar(
@@ -368,7 +230,9 @@ async def test_a_manual_buyer_prompt_rejects_an_unknown_target(
 
 @pytest.mark.asyncio
 async def test_buyer_prompt_provider_failure_is_service_unavailable(
-    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     class UnavailableGateway(FakeModelGateway):
         async def complete_structured_json(
@@ -393,19 +257,19 @@ async def test_buyer_prompt_provider_failure_is_service_unavailable(
 
     await _register(client, "commerce-provider-error@example.com")
     project = await _project(client)
-    imported = await client.post(
-        f"/api/v1/projects/{project['id']}/commerce/catalog/import",
-        json={
-            "filename": "catalog.csv",
-            "content_type": "text/csv",
-            "content": (
-                "canonical_url,name,brand,category\n"
-                "https://shop.example/products/one,Acme One,Acme,Shoes\n"
-            ),
-        },
+    product_ids = await seed_catalog(
+        session_factory,
+        project["id"],
+        [
+            {
+                "canonical_url": "https://shop.example/products/one",
+                "name": "Acme One",
+                "brand": "Acme",
+                "category": "Shoes",
+            }
+        ],
     )
-    assert imported.status_code == 201
-    product_id = imported.json()["row_outcomes"][0]["product_id"]
+    product_id = product_ids[0]
     monkeypatch.setattr(
         "app.api.commerce.create_model_gateway", lambda: UnavailableGateway()
     )
@@ -421,7 +285,9 @@ async def test_buyer_prompt_provider_failure_is_service_unavailable(
 
 @pytest.mark.asyncio
 async def test_buyer_prompt_generation_charges_each_target_and_bounds_fanout(
-    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     await _register(client, "commerce-quota@example.com")
     project = await _project(client)
@@ -443,21 +309,21 @@ async def test_buyer_prompt_generation_charges_each_target_and_bounds_fanout(
     missing = await client.post(url, json={"targets": [missing_target], "count": 2})
     assert missing.status_code == 404
     assert calls == []
-    imported = await client.post(
-        f"/api/v1/projects/{project['id']}/commerce/catalog/import",
-        json={
-            "filename": "catalog.csv",
-            "content_type": "text/csv",
-            "content": (
-                "canonical_url,name,brand,category\n"
-                "https://shop.example/products/one,Acme One,Acme,Shoes\n"
-            ),
-        },
+    product_ids = await seed_catalog(
+        session_factory,
+        project["id"],
+        [
+            {
+                "canonical_url": "https://shop.example/products/one",
+                "name": "Acme One",
+                "brand": "Acme",
+                "category": "Shoes",
+            }
+        ],
     )
-    assert imported.status_code == 201
     target = {
         "kind": "product",
-        "id": imported.json()["row_outcomes"][0]["product_id"],
+        "id": product_ids[0],
     }
     valid = await client.post(url, json={"targets": [target, target], "count": 2})
     assert valid.status_code == 201
@@ -474,21 +340,19 @@ async def test_buyer_prompt_model_call_has_no_open_read_transaction(
 ) -> None:
     await _register(client, "commerce-transaction@example.com")
     project = await _project(client)
-    imported = await client.post(
-        f"/api/v1/projects/{project['id']}/commerce/catalog/import",
-        json={
-            "filename": "catalog.csv",
-            "content_type": "text/csv",
-            "content": (
-                "canonical_url,name,brand,category\n"
-                "https://shop.example/products/one,Acme One,Acme,Shoes\n"
-            ),
-        },
+    product_ids = await seed_catalog(
+        session_factory,
+        project["id"],
+        [
+            {
+                "canonical_url": "https://shop.example/products/one",
+                "name": "Acme One",
+                "brand": "Acme",
+                "category": "Shoes",
+            }
+        ],
     )
-    assert imported.status_code == 201
-    target = CommerceTarget(
-        kind="product", id=uuid.UUID(imported.json()["row_outcomes"][0]["product_id"])
-    )
+    target = CommerceTarget(kind="product", id=uuid.UUID(product_ids[0]))
     async with session_factory() as session:
         project_row = await session.get(Project, uuid.UUID(project["id"]))
         assert project_row is not None

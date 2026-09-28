@@ -40,6 +40,7 @@ from app.core.config import (
     WEAK_SECRET_WORDS,
     Settings,
 )
+from app.core.config import commerce_catalog as commerce_config
 from app.core.config import demand as demand_config
 from app.core.config import errors as error_config
 from app.core.config import opportunities as opportunities_config
@@ -253,6 +254,20 @@ def build_config() -> dict[str, Any]:
         "demand": demand_policy(),
         "opportunity": opportunity_policy(),
         "search_intelligence": _search_intelligence_policy(),
+        "commerce": {
+            "import_max_bytes": commerce_config.COMMERCE_IMPORT_MAX_BYTES,
+            "import_max_rows": commerce_config.COMMERCE_IMPORT_MAX_ROWS,
+            "import_error_limit": commerce_config.COMMERCE_IMPORT_ERROR_LIMIT,
+            "importer_version": commerce_config.COMMERCE_IMPORTER_VERSION,
+            "projector_version": commerce_config.COMMERCE_PROJECTOR_VERSION,
+            "breadcrumb_index_names": sorted(
+                commerce_config.COMMERCE_BREADCRUMB_INDEX_NAMES
+            ),
+            "price_markers": commerce_config.COMMERCE_VISIBLE_PRICE_CURRENCY_MARKERS,
+            "ambiguous_price_tokens": (
+                commerce_config.COMMERCE_VISIBLE_PRICE_AMBIGUOUS_TOKENS
+            ),
+        },
         "abuse": {
             "active_job_retry_after_seconds": _setting(
                 "active_job_retry_after_seconds", AbuseSettings
@@ -397,6 +412,7 @@ ERROR_CODE_MODULES: tuple[types.ModuleType, ...] = (
     demand_config,
     opportunities_config,
     search_intelligence_config,
+    commerce_config,
 )
 _ERROR_CODE_PREFIXES = ("CODE_", "ERROR_")
 

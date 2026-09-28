@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -10,7 +9,6 @@ from pydantic import ValidationError
 from app.connectors import commerce_competitors as competitor_connector
 from app.connectors.agent.gateway import FakeModelGateway
 from app.connectors.commerce_competitors import CompetitorProviderUnavailable
-from app.core.config.commerce_catalog import COMMERCE_IMPORT_MAX_BYTES
 from app.domain.commerce import competitors
 from app.domain.commerce.audit_context import (
     CommerceContextError,
@@ -22,25 +20,10 @@ from app.domain.commerce.competitors import (
     _precheck,
     _validated_results,
 )
-from app.domain.commerce.projector import (
-    _breadcrumb_categories,
-    _catalog_identity,
-    _category_from_analysis,
-    _category_title,
-    _crawl_values,
-    _identity_base_url,
-    _link_product_to_projected_shelves,
-    _link_shelf_products,
-    _project_product_source,
-)
 from app.domain.commerce.prompts import _leaks_owned_identity
 from app.domain.commerce.schemas import (
-    CatalogImportRequest,
     CommerceTarget,
     RecommendationSpan,
-)
-from app.domain.commerce.service import (
-    _import_response,
 )
 from app.domain.commerce.shelf import (
     _ai_observed_candidate,
@@ -55,28 +38,6 @@ from app.domain.commerce.shelf import (
     _spans,
 )
 from app.domain.commerce.shelf_metrics import _first_position_rate
-
-
-def test_catalog_identity_uses_only_in_scope_declared_canonical() -> None:
-    fetched = "https://shop.example.com/collections/all/products/widget?variant=1"
-
-    assert (
-        _catalog_identity(
-            {"canonical_url": "https://shop.example.com/products/widget"}, fetched
-        )
-        == "https://shop.example.com/products/widget"
-    )
-    assert (
-        _catalog_identity(
-            {"canonical_url": "https://attacker.example.net/products/widget"}, fetched
-        )
-        == fetched
-    )
-    assert (
-        _identity_base_url("https://shop.example.com/products/widget", fetched)
-        == "https://shop.example.com/products/widget"
-    )
-    assert _identity_base_url("", fetched) == fetched
 
 
 @pytest.mark.asyncio
@@ -513,170 +474,6 @@ def test_discovery_queries_distinguish_product_and_category_targets() -> None:
     )
 
 
-def test_projector_omits_empty_availability_attributes() -> None:
-    values = _crawl_values({"structured_data": {"product": {}}}, "https://shop.test/p")
-    assert values["attributes"] == {}
-    values = _crawl_values(
-        {"structured_data": {"product": {"availability": ["InStock"]}}},
-        "https://shop.test/p",
-    )
-    assert values["attributes"] == {"availability": ["InStock"]}
-
-
-def test_projector_falls_back_to_visible_price_without_structured_price() -> None:
-    values = _crawl_values(
-        {
-            "structured_data": {"product": {"price_currency": ["AUD"]}},
-            "commerce": {"visible_price": "$1,299.95"},
-        },
-        "https://shop.test/p",
-    )
-
-    assert values["price"] == Decimal("1299.95")
-    assert values["currency"] == "AUD"
-
-
-@pytest.mark.parametrize(
-    "visible_price",
-    [
-        "From $19.99",
-        "$19.99 - $29.99",
-        "10% off orders over $50",
-        "$12,34,56",
-    ],
-)
-def test_projector_rejects_ambiguous_visible_prices(visible_price: str) -> None:
-    values = _crawl_values(
-        {"commerce": {"visible_price": visible_price}}, "https://shop.test/p"
-    )
-
-    assert values["price"] is None
-    assert values["currency"] == ""
-
-
-@pytest.mark.asyncio
-async def test_projector_refreshes_non_edited_category_name() -> None:
-    category = SimpleNamespace(
-        name="Old name",
-        normalized_name="old name",
-        role="unknown",
-        field_sources={},
-        source_analysis_id=None,
-        projector_version="old",
-    )
-
-    class Session:
-        async def scalar(self, *_: object):
-            return category
-
-        def add(self, _: object) -> None:
-            raise AssertionError("existing category should be updated")
-
-    analysis = SimpleNamespace(
-        id=uuid.uuid4(), workspace_id=uuid.uuid4(), project_id=uuid.uuid4()
-    )
-    await _category_from_analysis(
-        Session(),  # type: ignore[arg-type]
-        analysis=analysis,
-        canonical_url="https://shop.test/category",
-        title="New Name",
-        role="leaf",
-    )
-
-    assert category.name == "New Name"
-    assert category.normalized_name == "new name"
-    assert category.field_sources["name"]["source_id"] == str(analysis.id)
-
-
-@pytest.mark.asyncio
-async def test_a_listing_page_classified_as_a_product_projects_as_a_category() -> None:
-    """A crawled page must reach the catalog under SOME kind, never vanish.
-
-    The classifier promotes listing pages ("/shop/women") to `product` on a
-    price regex plus a cart marker. They carry no product identity, so the
-    projector refused them -- and, because it refused them silently, a crawl
-    with nine analyzed product pages left the Commerce workspace reading
-    "Nothing projected yet". A listing page is a category; project it as one.
-    """
-    added: list[object] = []
-
-    class Session:
-        async def scalar(self, *_: object) -> None:
-            return None
-
-        def add(self, row: object) -> None:
-            added.append(row)
-
-        async def flush(self) -> None:
-            return None
-
-    analysis = SimpleNamespace(
-        id=uuid.uuid4(),
-        workspace_id=uuid.uuid4(),
-        project_id=uuid.uuid4(),
-        crawl_id=uuid.uuid4(),
-        classifier_version="c1",
-    )
-    artifact = SimpleNamespace(
-        id=uuid.uuid4(),
-        extractor_version="e1",
-        final_url="",
-        normalized_facts={
-            "title": "Women's Clothing Online | Shop Now",
-            "structured_data": {"product": {}},
-            "commerce": {"breadcrumbs": ["Home", "Women"], "category_role": "hub"},
-        },
-    )
-    site_url = SimpleNamespace(
-        normalized_url="https://shop.test/shop/women", latest_title="Women"
-    )
-
-    await _project_product_source(
-        Session(),  # type: ignore[arg-type]
-        analysis=analysis,
-        artifact=artifact,
-        site_url=site_url,
-    )
-
-    assert len(added) == 1
-    category = added[0]
-    assert category.name == "Women"  # the breadcrumb leaf, not the title tag
-    assert category.canonical_url == "https://shop.test/shop/women"
-    assert category.role == "hub"
-
-
-def test_structured_price_remains_authoritative_over_visible_price() -> None:
-    values = _crawl_values(
-        {
-            "structured_data": {
-                "product": {"price": ["20.00"], "price_currency": ["USD"]}
-            },
-            "commerce": {"visible_price": "$19.00"},
-        },
-        "https://shop.test/p",
-    )
-
-    assert values["price"] == 20
-    assert values["currency"] == "USD"
-
-
-def test_catalog_import_limit_counts_utf8_bytes() -> None:
-    with pytest.raises(ValidationError):
-        CatalogImportRequest(content="é" * (COMMERCE_IMPORT_MAX_BYTES // 2 + 1))
-
-
-def test_import_response_tolerates_historical_null_outcomes() -> None:
-    row = SimpleNamespace(
-        id=uuid.uuid4(),
-        created_count=1,
-        updated_count=2,
-        unchanged_count=3,
-        rejected_count=4,
-        row_outcomes=None,
-    )
-    assert _import_response(row).row_outcomes == []
-
-
 def test_category_prompt_leakage_does_not_protect_generic_category_name() -> None:
     context = {"target_kind": "category", "name": "Running shoes", "brand": "Acme"}
     assert _leaks_owned_identity("Which running shoes are best?", context) is False
@@ -755,63 +552,6 @@ async def test_a_failed_verification_does_not_consume_an_accept_slot(
     ]
 
 
-def test_category_name_is_the_page_s_own_name_not_its_title_tag() -> None:
-    """Raw titles were stored verbatim and fed into the competitor query."""
-    title = "ASTR The Label Elevated Women's Clothing | Red Dress"
-    # The breadcrumb leaf is the page's own claim and wins outright.
-    assert (
-        _category_title(
-            {
-                "commerce": {"breadcrumbs": ["Home", "Clothing", "Dresses"]},
-                "title": title,
-            },
-            "",
-        )
-        == "Dresses"
-    )
-    # Then the h1.
-    assert _category_title(
-        {"headings": {"h1_texts": ["Midi Dresses"]}, "title": title}, ""
-    ) == ("Midi Dresses")
-    # Only then the title, with the site-name segment dropped.
-    assert _category_title({"title": "Dresses | Red Dress"}, "") == "Dresses"
-    assert _category_title({"title": title}, "") == (
-        "ASTR The Label Elevated Women's Clothing"
-    )
-    # A separator-free title survives intact.
-    assert _category_title({"title": "Back in Stock"}, "") == "Back in Stock"
-
-
-def test_a_breadcrumb_separator_is_not_a_category_name() -> None:
-    """A crumb of pure punctuation became a catalog category literally named "/"."""
-    # The separator nodes are skipped and the real leaf is taken.
-    assert (
-        _category_title({"commerce": {"breadcrumbs": ["Home", "/", "Dresses"]}}, "")
-        == "Dresses"
-    )
-    # A trail that is nothing BUT separators names nothing, and falls through.
-    assert _category_title({"commerce": {"breadcrumbs": ["/", "›"]}}, "") == ""
-    # The same rule applies to an h1 and to a title segment.
-    assert _category_title({"headings": {"h1_texts": ["|"]}, "title": "Denim"}, "") == (
-        "Denim"
-    )
-    assert _category_title({"title": "/"}, "") == ""
-    # A non-Latin name is still a name.
-    assert _category_title({"commerce": {"breadcrumbs": ["ドレス"]}}, "") == ("ドレス")
-
-
-def test_a_shipping_banner_is_not_a_product_price() -> None:
-    """Only the bare "$100" reached the guard, so the banner became the price."""
-    from app.domain.commerce.projector import _has_product_identity, _visible_price
-
-    assert _visible_price("$100", "Free shipping over $100 on all orders") == (None, "")
-    assert _visible_price("$82", "Belted Midi Dress $82 Add to cart")[0] is not None
-    # And a page with no price of its own never enters the catalog as a product.
-    assert not _has_product_identity({"name": "Back in Stock", "price": None})
-    assert _has_product_identity({"name": "Midi Dress", "price": 82})
-    assert _has_product_identity({"name": "", "sku": "ABC-1", "price": None})
-
-
 def test_a_review_listicle_is_never_a_competitor_candidate() -> None:
     """The exact result that shipped Serious Eats as a cookware competitor.
 
@@ -882,177 +622,3 @@ def test_editorial_phrases_still_exclude_a_listicle() -> None:
         )
         assert outcome == "excluded_editorial", title
         assert checked is None
-
-
-@pytest.mark.asyncio
-async def test_a_shelf_page_links_its_products_into_the_category() -> None:
-    """Membership must come from the shelf, not only from each product page.
-
-    It used to be derived ONLY from a product page's own JSON-LD `category`
-    and breadcrumb trail. A storefront that publishes neither -- most Shopify
-    themes -- produced no membership at all: 466 products all fell into one
-    "Uncategorized" bucket while every real collection reported zero. The
-    category page is the authority on what is on the shelf, is already
-    crawled and stored, and was simply never read for this.
-    """
-    category = SimpleNamespace(id=uuid.uuid4())
-    workspace_id, project_id = uuid.uuid4(), uuid.uuid4()
-    product_ids = [uuid.uuid4(), uuid.uuid4()]
-    statements: list[object] = []
-
-    class Session:
-        async def scalars(self, *_: object):
-            return SimpleNamespace(all=lambda: product_ids)
-
-        async def execute(self, statement: object):
-            statements.append(statement)
-            if len(statements) == 1:
-                return SimpleNamespace(all=lambda: [])
-            return SimpleNamespace()
-
-    analysis = SimpleNamespace(
-        id=uuid.uuid4(),
-        workspace_id=workspace_id,
-        project_id=project_id,
-        crawl_id=uuid.uuid4(),
-    )
-    artifact = SimpleNamespace(
-        requested_url="https://shop.test/collections/all",
-        final_url="https://shop.test/collections/all",
-        normalized_facts={
-            "commerce": {
-                "product_cards": [
-                    {"url": "https://shop.test/products/a", "title": "Product A"},
-                    {"url": "https://shop.test/products/b", "title": "Product B"},
-                ]
-            },
-            # A navigation product is not a shelf card and must not become
-            # category membership.
-            "links": {
-                "anchors": [
-                    {"url": "https://shop.test/products/nav", "is_internal": True}
-                ]
-            },
-        },
-    )
-
-    await _link_shelf_products(
-        Session(),  # type: ignore[arg-type]
-        analysis=analysis,
-        artifact=artifact,
-        category=category,  # type: ignore[arg-type]
-    )
-
-    # The membership insert, plus the retraction of the "Uncategorized"
-    # fallback for the products the shelf has now claimed.
-    assert len(statements) == 3
-
-
-@pytest.mark.asyncio
-async def test_a_product_landing_after_its_shelf_still_gets_membership() -> None:
-    category = SimpleNamespace(id=uuid.uuid4())
-    artifact = SimpleNamespace(
-        requested_url="https://shop.test/collections/dresses",
-        final_url="https://shop.test/collections/dresses",
-        normalized_facts={
-            "commerce": {
-                "product_cards": [
-                    {
-                        "url": "https://shop.test/products/linen-dress",
-                        "title": "Linen Dress",
-                    }
-                ]
-            }
-        },
-    )
-    statements: list[object] = []
-
-    class Session:
-        async def execute(self, statement: object):
-            statements.append(statement)
-            if len(statements) == 1:
-                return SimpleNamespace(all=lambda: [(category, artifact)])
-            if len(statements) == 2:
-                return SimpleNamespace(all=lambda: [])
-            return SimpleNamespace()
-
-    analysis = SimpleNamespace(
-        workspace_id=uuid.uuid4(),
-        project_id=uuid.uuid4(),
-        crawl_id=uuid.uuid4(),
-    )
-    product = SimpleNamespace(
-        id=uuid.uuid4(), canonical_url="https://shop.test/products/linen-dress"
-    )
-
-    await _link_product_to_projected_shelves(
-        Session(),  # type: ignore[arg-type]
-        analysis=analysis,
-        product=product,  # type: ignore[arg-type]
-    )
-
-    # Shelf lookup, membership insert, and the "Uncategorized" retraction.
-    assert len(statements) == 4
-
-
-@pytest.mark.asyncio
-async def test_a_shelf_with_no_internal_links_writes_nothing() -> None:
-    class Session:
-        async def scalars(self, *_: object):
-            raise AssertionError("no product lookup should run")
-
-        def add(self, _: object) -> None:
-            raise AssertionError("no membership should be written")
-
-    await _link_shelf_products(
-        Session(),  # type: ignore[arg-type]
-        analysis=SimpleNamespace(
-            id=uuid.uuid4(), workspace_id=uuid.uuid4(), project_id=uuid.uuid4()
-        ),
-        artifact=SimpleNamespace(normalized_facts={"commerce": {"product_cards": []}}),
-        category=SimpleNamespace(id=uuid.uuid4()),  # type: ignore[arg-type]
-    )
-
-
-def test_breadcrumb_categories_keep_a_linked_leaf_and_drop_the_index() -> None:
-    """A trail that ends at the parent shelf must not lose that shelf."""
-    page = "https://shop.test/Categories/Men/Singlets/Basic-Singlet/SCW18300"
-    ancestor_trail = {
-        "breadcrumbs": ["Home", "/", "Categories", "Men's  Clothing", "Singlets"],
-        "breadcrumb_links": [
-            {"url": "https://shop.test/", "title": "Home"},
-            {"url": "https://shop.test/categories", "title": "Categories"},
-            {"url": "https://shop.test/men", "title": "Men's  Clothing"},
-            {"url": "https://shop.test/singlets", "title": "Singlets"},
-        ],
-    }
-    assert _breadcrumb_categories(ancestor_trail, page_url=page) == [
-        "Men's Clothing",
-        "Singlets",
-    ]
-
-    # The conventional trail ends at the product itself, unlinked.
-    product_trail = {"breadcrumbs": ["Home", "/", "Dresses", "/", "Linen Dress"]}
-    assert _breadcrumb_categories(product_trail, page_url=page) == ["Dresses"]
-
-    # An earlier linked crumb does not vouch for a later, unlinked namesake.
-    repeated_trail = {
-        "breadcrumbs": ["Home", "DRESSES", "Dresses"],
-        "breadcrumb_links": [{"url": "https://shop.test/dresses", "title": "DRESSES"}],
-    }
-    assert _breadcrumb_categories(repeated_trail, page_url=page) == ["DRESSES"]
-
-    # A current crumb linked through the collection alias is still this page.
-    alias_trail = {
-        "breadcrumbs": ["Home", "Dresses", "Linen Dress"],
-        "breadcrumb_links": [
-            {"url": "https://shop.test/collections/dresses", "title": "Dresses"},
-            {
-                "url": "https://shop.test/collections/dresses/products/linen",
-                "title": "Linen Dress",
-            },
-        ],
-    }
-    assert _breadcrumb_categories(
-        alias_trail, page_url="https://shop.test/products/linen"
-    ) == ["Dresses"]

@@ -37,7 +37,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.analytics import (
     ANALYTICS_PYTHON_TASK_KINDS,
     ANALYTICS_QUEUE_SPEC,
-    ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION,
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
@@ -54,7 +53,6 @@ from app.core.config.task_queue import (
 from app.core.database import SessionLocal
 from app.core.telemetry import configure_logging, instrument_worker
 from app.domain.commerce.competitors import run_competitor_discovery
-from app.domain.commerce.projector import project_catalog_analysis
 from app.domain.demand.search_intelligence.executor import execute_search_intelligence
 from app.models.analytics import AnalyticsTask
 from app.orchestration.executor_errors import CapacityWaitError, TerminalExecutorError
@@ -91,7 +89,6 @@ type AnalyticsExecutor = Callable[
 # Exactly ``ANALYTICS_PYTHON_TASK_KINDS``: every other kind belongs to the
 # TypeScript analytics worker (TypeScript migration PRs 4-7).
 EXECUTORS: dict[str, AnalyticsExecutor] = {
-    ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION: project_catalog_analysis,
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY: run_competitor_discovery,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION: inspect_source_pages,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE: execute_search_intelligence,
