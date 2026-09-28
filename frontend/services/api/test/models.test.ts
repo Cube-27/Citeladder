@@ -1,0 +1,116 @@
+import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
+
+import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
+import { createJevClient, jevSettings } from '../src/models/jev.ts';
+
+const settings = {
+  ...gatewaySettings({}),
+  apiKey: 'test-only',
+  baseUrl: 'https://model.test/v1',
+  model: 'test',
+};
+const reply = () =>
+  Response.json({
+    model: 'returned-model',
+    choices: [{ message: { content: '```json\n{"answer":42}\n```' }, finish_reason: 'stop' }],
+    usage: { prompt_tokens: 12, completion_tokens: 5 },
+  });
+function transport(responses: Response[]) {
+  return {
+    fetch: vi.fn<typeof fetch>(async () => {
+      const response = responses.shift();
+      if (!response) throw new Error('Unexpected network call');
+      return response;
+    }),
+    sleep: vi.fn(async (_milliseconds: number) => {}),
+  };
+}
+
+describe('configured model gateway', () => {
+  it('validates structured JSON and records actual model and usage', async () => {
+    const io = transport([reply()]);
+    const gateway = createModelGateway(settings, io);
+    const result = await gateway.structured('system', 'question', z.object({ answer: z.number() }));
+    expect(result.value.answer).toBe(42);
+    expect(result.result).toMatchObject({
+      returned_model: 'returned-model',
+      usage: { input_tokens: 12, output_tokens: 5 },
+    });
+    const sent = JSON.parse(String(io.fetch.mock.calls[0]![1]!.body));
+    expect(sent.messages[1].content).toContain('"answer"');
+  });
+
+  it('falls back only for a named output-cap rejection and remembers success', async () => {
+    const io = transport([
+      new Response('unsupported max_completion_tokens', { status: 400 }),
+      reply(),
+      reply(),
+    ]);
+    const gateway = createModelGateway(settings, io);
+    await gateway.complete('system', 'question');
+    await gateway.complete('system', 'next');
+    const bodies = io.fetch.mock.calls.map((call) => JSON.parse(String(call[1]!.body)));
+    expect(bodies.map((body) => Object.hasOwn(body, 'max_tokens'))).toEqual([false, true, true]);
+    const refused = transport([new Response('invalid model', { status: 400 })]);
+    await expect(createModelGateway(settings, refused).complete('s', 'u')).rejects.toMatchObject({
+      status: 400,
+    });
+    expect(refused.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries rate limits with Retry-After and transient server errors', async () => {
+    const io = transport([
+      new Response(null, { status: 429, headers: { 'retry-after': '7' } }),
+      new Response(null, { status: 503 }),
+      reply(),
+    ]);
+    await createModelGateway(settings, io).complete('s', 'u');
+    expect(io.sleep.mock.calls.map(([delay]) => delay)).toEqual([7000, 4000]);
+  });
+
+  it('refuses unparseable output and missing configuration without retry', async () => {
+    const io = transport([Response.json({ choices: [] })]);
+    await expect(createModelGateway(settings, io).complete('s', 'u')).rejects.toMatchObject({
+      code: 'parse',
+    });
+    expect(io.fetch).toHaveBeenCalledTimes(1);
+    expect(() => createModelGateway(gatewaySettings({}), io)).toThrow('not_configured');
+    const invalid = transport([Response.json({ choices: [{ message: { content: 'not JSON' } }] })]);
+    await expect(
+      createModelGateway(settings, invalid).structured('s', 'u', z.object({})),
+    ).rejects.toMatchObject({ code: 'parse' });
+  });
+});
+
+describe('JEV transport', () => {
+  const configured = { ...jevSettings({}), apiKey: 'test-only' };
+  it('is off without a key and returns typed answer records when enabled', async () => {
+    expect(createJevClient(jevSettings({}))).toBeNull();
+    const io = transport([
+      Response.json({ model: 'jev-test', answers: { fit: { probability: 0.9 } } }),
+    ]);
+    expect(
+      await createJevClient(configured, io)!.decide({ question: 'shoe?' }, { fit: {} }),
+    ).toMatchObject({ answers: { fit: { probability: 0.9 } } });
+  });
+  it('retries overload but refuses ordinary server, auth and malformed responses', async () => {
+    const io = transport([
+      new Response(null, { status: 529, headers: { 'retry-after': '500' } }),
+      Response.json({ answers: {} }),
+    ]);
+    await createJevClient(configured, io)!.decide({}, {});
+    expect(io.sleep).toHaveBeenCalledWith(10_000);
+    for (const status of [401, 500]) {
+      const failed = transport([new Response(null, { status })]);
+      await expect(createJevClient(configured, failed)!.decide({}, {})).rejects.toMatchObject({
+        status,
+      });
+      expect(failed.fetch).toHaveBeenCalledTimes(1);
+    }
+    const invalid = transport([Response.json({ answers: [] })]);
+    await expect(createJevClient(configured, invalid)!.decide({}, {})).rejects.toMatchObject({
+      code: 'parse',
+    });
+  });
+});

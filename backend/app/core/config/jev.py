@@ -29,6 +29,7 @@ JEV_QUESTION_SCHEMA_VERSION: Final = "prompt-quality-questions-2"
 # Version of the flag and gate thresholds (settings below). Stored on every
 # decision; a stored decision is never re-flagged under a newer policy.
 JEV_POLICY_VERSION: Final = "jev-gate-1"
+JEV_RETRY_AFTER_CAP_SECONDS: Final = 10.0
 
 # JEV_MODE values.
 JEV_MODE_GATE: Final = "gate"

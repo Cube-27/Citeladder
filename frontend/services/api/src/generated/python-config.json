@@ -2814,6 +2814,22 @@
       "type": "int",
       "default": 3600,
       "minimum": 1
+    },
+    "agent_call_limit": {
+      "env": [
+        "ABUSE_AGENT_CALL_LIMIT"
+      ],
+      "type": "int",
+      "default": 30,
+      "minimum": 1
+    },
+    "agent_call_window_seconds": {
+      "env": [
+        "ABUSE_AGENT_CALL_WINDOW_SECONDS"
+      ],
+      "type": "int",
+      "default": 86400,
+      "minimum": 1
     }
   },
   "entitlements": {
@@ -3177,5 +3193,220 @@
       "off_topic": "prompt_off_topic",
       "vocabulary_empty": "binding_vocabulary_empty"
     }
+  },
+  "models": {
+    "gateway": {
+      "api_key": {
+        "env": [
+          "DEFAULT_AGENT_API_KEY"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "base_url": {
+        "env": [
+          "DEFAULT_AGENT_BASE_URL"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "model": {
+        "env": [
+          "DEFAULT_AGENT_MODEL"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "timeout_seconds": {
+        "env": [
+          "DEFAULT_AGENT_TIMEOUT_SECONDS"
+        ],
+        "type": "float",
+        "default": 180.0
+      },
+      "max_output_tokens": {
+        "env": [
+          "DEFAULT_AGENT_MAX_OUTPUT_TOKENS"
+        ],
+        "type": "int",
+        "default": 16384,
+        "exclusive_minimum": 0
+      },
+      "execution_timeout_seconds": {
+        "env": [
+          "DEFAULT_AGENT_EXECUTION_TIMEOUT_SECONDS"
+        ],
+        "type": "float",
+        "default": 210.0,
+        "exclusive_minimum": 0
+      },
+      "lease_margin_seconds": {
+        "env": [
+          "DEFAULT_AGENT_LEASE_MARGIN_SECONDS"
+        ],
+        "type": "float",
+        "default": 30.0,
+        "exclusive_minimum": 0
+      },
+      "context_limit": {
+        "env": [
+          "DEFAULT_AGENT_CONTEXT_LIMIT"
+        ],
+        "type": "int",
+        "default": 32000,
+        "minimum": 1024
+      },
+      "reconcile_poll_seconds": {
+        "env": [
+          "DEFAULT_AGENT_RECONCILE_POLL_SECONDS",
+          "AGENT_RECONCILE_POLL_SECONDS"
+        ],
+        "type": "float",
+        "default": 2.0,
+        "exclusive_minimum": 0
+      },
+      "retry_base_delay_seconds": {
+        "env": [
+          "DEFAULT_AGENT_RETRY_BASE_DELAY_SECONDS"
+        ],
+        "type": "float",
+        "default": 2.0,
+        "exclusive_minimum": 0
+      },
+      "retry_max_delay_seconds": {
+        "env": [
+          "DEFAULT_AGENT_RETRY_MAX_DELAY_SECONDS"
+        ],
+        "type": "float",
+        "default": 45.0,
+        "exclusive_minimum": 0
+      }
+    },
+    "max_attempts": 3,
+    "jev": {
+      "api_key": {
+        "env": [
+          "JEV_API_KEY"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "base_url": {
+        "env": [
+          "JEV_BASE_URL"
+        ],
+        "type": "str",
+        "default": "https://api.typesafe.ai"
+      },
+      "model": {
+        "env": [
+          "JEV_MODEL"
+        ],
+        "type": "str",
+        "default": "jev-latest"
+      },
+      "timeout_seconds": {
+        "env": [
+          "JEV_TIMEOUT_SECONDS"
+        ],
+        "type": "float",
+        "default": 10.0,
+        "exclusive_minimum": 0,
+        "maximum": 60
+      },
+      "max_attempts": {
+        "env": [
+          "JEV_MAX_ATTEMPTS"
+        ],
+        "type": "int",
+        "default": 3,
+        "minimum": 1,
+        "maximum": 5
+      },
+      "backoff_seconds": {
+        "env": [
+          "JEV_BACKOFF_SECONDS"
+        ],
+        "type": "float",
+        "default": 0.5,
+        "minimum": 0,
+        "maximum": 10
+      },
+      "max_calls_per_generation": {
+        "env": [
+          "JEV_MAX_CALLS_PER_GENERATION"
+        ],
+        "type": "int",
+        "default": 100,
+        "minimum": 1,
+        "maximum": 500
+      },
+      "generation_deadline_seconds": {
+        "env": [
+          "JEV_GENERATION_DEADLINE_SECONDS"
+        ],
+        "type": "float",
+        "default": 30.0,
+        "exclusive_minimum": 0,
+        "maximum": 120
+      },
+      "duplicate_options_max": {
+        "env": [
+          "JEV_DUPLICATE_OPTIONS_MAX"
+        ],
+        "type": "int",
+        "default": 20,
+        "minimum": 1,
+        "maximum": 100
+      },
+      "mode": {
+        "env": [
+          "JEV_MODE"
+        ],
+        "type": "literal",
+        "values": [
+          "gate",
+          "shadow"
+        ],
+        "default": "gate"
+      },
+      "flag_below": {
+        "env": [
+          "JEV_FLAG_BELOW"
+        ],
+        "type": "float",
+        "default": 0.35,
+        "minimum": 0,
+        "maximum": 1
+      },
+      "duplicate_flag_at": {
+        "env": [
+          "JEV_DUPLICATE_FLAG_AT"
+        ],
+        "type": "float",
+        "default": 0.6,
+        "minimum": 0,
+        "maximum": 1
+      },
+      "fail_below": {
+        "env": [
+          "JEV_FAIL_BELOW"
+        ],
+        "type": "float",
+        "default": 0.15,
+        "minimum": 0,
+        "maximum": 1
+      },
+      "duplicate_fail_at": {
+        "env": [
+          "JEV_DUPLICATE_FAIL_AT"
+        ],
+        "type": "float",
+        "default": 0.85,
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
+    "jev_retry_after_cap_seconds": 10.0
   }
 }

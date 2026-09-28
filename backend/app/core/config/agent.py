@@ -39,6 +39,7 @@ AGENT_PROTOCOL_VERSION: Final = "agent-protocol-1"
 # either calls one read tool or responds. Every bound is frozen onto the run at
 # admission, so a config change never alters a turn already queued.
 AGENT_MAX_STEPS: Final = 8
+GENERATION_PROVIDER_MAX_ATTEMPTS: Final = 3
 AGENT_MAX_TOOL_CALLS: Final = 6
 # A run's attempts at the whole turn (a lost lease or retryable provider error).
 AGENT_RUN_MAX_ATTEMPTS: Final = 3

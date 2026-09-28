@@ -25,6 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import SecretStr
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 
@@ -41,6 +42,8 @@ from app.core.config import (
     Settings,
 )
 from app.core.config import brand_logos as brand_logo_config
+from app.core.config import agent as agent_config
+from app.core.config import jev as jev_config
 from app.core.config import brand_profile as brand_profile_config
 from app.core.config import commerce_catalog as commerce_config
 from app.core.config import demand as demand_config
@@ -215,6 +218,7 @@ def _type_descriptor(annotation: Any) -> dict[str, Any]:
         (int, "int"),
         (float, "float"),
         (str, "str"),
+        (SecretStr, "str"),
     ):
         if annotation is candidate:
             return {"type": label}
@@ -227,7 +231,11 @@ def _setting(name: str, model: type[BaseSettings] = Settings) -> dict[str, Any]:
     prefix = str(model.model_config.get("env_prefix") or "")
     entry: dict[str, Any] = {"env": _env_names(name, field, prefix)}
     entry.update(_type_descriptor(field.annotation))
-    entry["default"] = field.default
+    entry["default"] = (
+        field.default.get_secret_value()
+        if isinstance(field.default, SecretStr)
+        else field.default
+    )
     # Pydantic records ``Field(ge=..., gt=..., le=...)`` as metadata objects
     # that expose those attributes.
     for constraint in field.metadata:
@@ -307,10 +315,24 @@ def build_config() -> dict[str, Any]:
                 "active_job_retry_after_seconds",
                 "bulk_import_limit",
                 "bulk_import_window_seconds",
+                "agent_call_limit",
+                "agent_call_window_seconds",
             )
         },
         "entitlements": _entitlements_policy(),
         "prompts": _prompts_policy(),
+        "models": {
+            "gateway": {
+                name: _setting(name, agent_config.DefaultAgentSettings)
+                for name in agent_config.DefaultAgentSettings.model_fields
+            },
+            "max_attempts": agent_config.GENERATION_PROVIDER_MAX_ATTEMPTS,
+            "jev": {
+                name: _setting(name, jev_config.JevSettings)
+                for name in jev_config.JevSettings.model_fields
+            },
+            "jev_retry_after_cap_seconds": jev_config.JEV_RETRY_AFTER_CAP_SECONDS,
+        },
     }
 
 
