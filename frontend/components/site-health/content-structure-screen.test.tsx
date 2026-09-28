@@ -76,9 +76,7 @@ describe('Content structure', () => {
     );
     renderScreen();
     await userEvent.click(await screen.findByRole('button', { name: 'Analyze content' }));
-    expect(
-      await screen.findByRole('heading', { name: 'Analysis unavailable' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Analysis failed' })).toBeInTheDocument();
     expect(screen.queryByText('No link suggestions to review')).not.toBeInTheDocument();
   });
 

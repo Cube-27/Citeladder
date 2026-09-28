@@ -6,14 +6,10 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import site_health_content_structure as config
 from app.core.config.entitlements import KEY_AI_CREDITS
 from app.core.config.jev import jev_settings
 from app.domain.billing.accounts import billing_account_id_for
-from app.domain.billing.catalog_revisions import (
-    AiCreditRatePayload,
-    CatalogUnavailableError,
-    published_ai_credit_policy,
-)
 from app.domain.entitlements.ledger import FundedCreditsExhaustedError, LedgerError
 from app.domain.entitlements.metered import (
     MeteredSubject,
@@ -70,36 +66,6 @@ def event(
     )
 
 
-async def _run_funding(
-    session: AsyncSession, run: SiteContentStructureRun
-) -> SiteContentStructureEvent:
-    funding = await session.scalar(
-        select(SiteContentStructureEvent).where(
-            SiteContentStructureEvent.run_id == run.id,
-            SiteContentStructureEvent.workspace_id == run.workspace_id,
-            SiteContentStructureEvent.kind == "funding",
-        )
-    )
-    if funding is not None:
-        return funding
-    revision, credit_policy = await published_ai_credit_policy(session)
-    rate = credit_policy.rate(feature="content_structure", model=jev_settings.model)
-    if rate is None:
-        raise CatalogUnavailableError("content_structure_funding_unavailable")
-    funding = event(
-        run,
-        run.id,
-        "funding",
-        {
-            "model": jev_settings.model,
-            "catalog_revision": revision,
-            "rate": rate.model_dump(mode="json"),
-        },
-    )
-    session.add(funding)
-    return funding
-
-
 async def prepare_dispatch(
     session: AsyncSession, run: SiteContentStructureRun, candidate: dict
 ) -> dict | None:
@@ -139,11 +105,9 @@ async def prepare_dispatch(
         session.add(event(run, candidate_id, "outcome", {"state": "unavailable"}))
         return None
     try:
-        funding = await _run_funding(session, run)
-        rate = AiCreditRatePayload.model_validate(funding.evidence["rate"])
         account_id = await billing_account_id_for(session, run.workspace_id)
         if account_id is None:
-            raise CatalogUnavailableError("content_structure_funding_unavailable")
+            raise LedgerError("content_structure_account_unavailable")
         reservation = await reserve_metered_usage(
             session,
             account_id=account_id,
@@ -153,11 +117,11 @@ async def prepare_dispatch(
                 subject_id=run.crawl_id,
                 workspace_id=run.workspace_id,
             ),
-            hold_units=rate.call_credit_cap,
+            hold_units=config.CONTENT_STRUCTURE_CREDITS_PER_JUDGMENT,
             idempotency_key=f"content:{run.id}:{candidate_id}",
             at=datetime.now(UTC),
         )
-    except (CatalogUnavailableError, LedgerError, FundedCreditsExhaustedError):
+    except (LedgerError, FundedCreditsExhaustedError):
         session.add(
             event(
                 run,
@@ -169,10 +133,9 @@ async def prepare_dispatch(
         return None
     evidence = {
         "request": candidate["request"],
-        "model": funding.evidence["model"],
+        "model": jev_settings.model,
         "policy_version": run.policy_version,
-        "catalog_revision": funding.evidence["catalog_revision"],
-        "rate": rate.model_dump(mode="json"),
+        "credits": config.CONTENT_STRUCTURE_CREDITS_PER_JUDGMENT,
         "reservation_id": str(reservation.reservation_id),
     }
     session.add(event(run, candidate_id, "dispatch", evidence))
@@ -186,22 +149,15 @@ async def finish_dispatch(
     dispatch: dict,
     outcome: dict,
 ) -> None:
-    rate = AiCreditRatePayload.model_validate(dispatch["rate"])
+    # A flat per-judgment charge; a dispatch that made no provider call is free.
+    credits = 0 if outcome["state"] == "unavailable" else int(dispatch["credits"])
     await settle_metered_usage(
         session,
         reservation_id=uuid.UUID(dispatch["reservation_id"]),
         dispatch_key=str(candidate_id),
         attempt=1,
-        # No provider call means no usage to charge; otherwise unknown usage
-        # settles at the rate's bounded unknown-usage charge.
-        charged_units=(
-            0
-            if outcome["state"] == "unavailable"
-            else rate.charge(outcome["usage"])
-            if "usage" in outcome
-            else None
-        ),
-        unknown_usage_charge=rate.unknown_usage_charge,
+        charged_units=credits,
+        unknown_usage_charge=credits,
         idempotency_key=f"content:{run.id}:{candidate_id}:settle",
         at=datetime.now(UTC),
     )

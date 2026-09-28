@@ -11,7 +11,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
+import { SearchField } from '@/components/ui/search-field';
 import { ReadError } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
 import { TabsBar, TabsRoot, TabPanel } from '@/components/ui/tabs';
@@ -21,6 +21,8 @@ import {
 } from '@/lib/api/site-health-content-structure';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import { downloadCsv } from '@/lib/csv/download';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatDisplayTimestamp } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -192,6 +194,25 @@ function AnalysisActions({ read }: Readonly<{ read: AnalysisRead }>) {
   );
 }
 
+const STATUS_OPTIONS = [
+  { value: '', label: 'All statuses' },
+  { value: 'open', label: 'Open' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'implemented', label: 'Implemented' },
+  { value: 'measuring', label: 'Measuring' },
+  { value: 'done', label: 'Done' },
+  { value: 'dismissed', label: 'Dismissed' },
+];
+const STATE_LABELS: Record<ContentStructure['state'], string> = {
+  queued: 'Running',
+  running: 'Running',
+  completed: 'Complete',
+  partial: 'Partial',
+  unavailable: 'Failed',
+  cancelled: 'Cancelled',
+  failed: 'Failed',
+};
+
 function ContentControls({
   data,
   links,
@@ -203,69 +224,77 @@ function ContentControls({
   params: URLSearchParams;
   update: ParamChange;
 }>) {
-  if (!data?.analysis) return null;
+  const timeZone = useDisplayTimeZone();
+  const analysis = data?.analysis;
+  if (!analysis) return null;
+  const hasResults = analysis.recommendations.length > 0 || analysis.topics.length > 0;
+  if (!hasResults && data.history.length < 2) return null;
   return (
-    <>
+    // `contents`: the control band owns the row, its height and its rule.
+    <div className="contents">
       {data.history.length > 1 ? (
         <Select
           ariaLabel="Saved analysis"
-          value={data.analysis.id}
+          value={analysis.id}
           onValueChange={(value) => update('analysis', value)}
-          options={data.history.map((run, index) => ({
+          options={data.history.map((run) => ({
             value: run.id,
-            label: `Analysis ${data.history.length - index} · ${run.state}`,
+            label: `${formatDisplayTimestamp(run.created_at, timeZone)} · ${STATE_LABELS[run.state]}`,
           }))}
         />
       ) : null}
-      <Input
-        aria-label="Search pages and anchors"
-        placeholder="Search pages and anchors"
-        value={params.get('q') ?? ''}
-        onChange={(event) => update('q', event.target.value)}
-      />
-      <Select
-        ariaLabel="Filter by topic"
-        value={params.get('topic') ?? ''}
-        onValueChange={(value) => update('topic', value)}
-        options={[
-          { value: '', label: 'All topics' },
-          ...data.analysis.topics.map((item) => ({ value: item.id, label: item.label })),
-        ]}
-      />
-      <Select
-        ariaLabel="Action status"
-        value={params.get('status') ?? ''}
-        onValueChange={(value) => update('status', value)}
-        options={[
-          { value: '', label: 'All Action statuses' },
-          { value: 'open', label: 'Open' },
-          { value: 'in_progress', label: 'In progress' },
-          { value: 'implemented', label: 'Implemented' },
-          { value: 'measuring', label: 'Measuring' },
-          { value: 'done', label: 'Done' },
-          { value: 'dismissed', label: 'Dismissed' },
-        ]}
-      />
-      {links.length ? (
-        <Button
-          variant="secondary"
-          onClick={() =>
-            downloadCsv(
-              'internal-links',
-              ['Source', 'Destination', 'Anchor', 'Passage'],
-              links.map((link) => [
-                link.source.url,
-                link.target.url,
-                link.anchor.text,
-                link.passage.text,
-              ]),
-            )
-          }
-        >
-          Export
-        </Button>
+      {hasResults ? (
+        <>
+          <div className="max-w-sm min-w-55 flex-1">
+            <SearchField
+              size="compact"
+              value={params.get('q') ?? ''}
+              onValueChange={(value) => update('q', value)}
+              placeholder="Search pages and anchors"
+              aria-label="Search pages and anchors"
+            />
+          </div>
+          {analysis.topics.length ? (
+            <Select
+              ariaLabel="Filter by topic"
+              value={params.get('topic') ?? ''}
+              onValueChange={(value) => update('topic', value)}
+              options={[
+                { value: '', label: 'All topics' },
+                ...analysis.topics.map((item) => ({ value: item.id, label: item.label })),
+              ]}
+            />
+          ) : null}
+          <Select
+            ariaLabel="Action status"
+            value={params.get('status') ?? ''}
+            onValueChange={(value) => update('status', value)}
+            options={STATUS_OPTIONS}
+          />
+          {links.length ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="ml-auto"
+              onClick={() =>
+                downloadCsv(
+                  'internal-links',
+                  ['Source', 'Destination', 'Anchor', 'Passage'],
+                  links.map((link) => [
+                    link.source.url,
+                    link.target.url,
+                    link.anchor.text,
+                    link.passage.text,
+                  ]),
+                )
+              }
+            >
+              Export CSV
+            </Button>
+          ) : null}
+        </>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -331,15 +360,19 @@ function AnalysisResult({
     return (
       <EmptyState
         icon={ICONS.site}
-        heading={analysis.state === 'cancelled' ? 'Analysis cancelled' : 'Analysis unavailable'}
-        description="Saved crawl evidence is unchanged; you can start another analysis when service and credit availability are restored."
+        heading={analysis.state === 'cancelled' ? 'Analysis cancelled' : 'Analysis failed'}
+        description={
+          analysis.state === 'cancelled'
+            ? 'Start a new analysis when you are ready.'
+            : 'No suggestions could be generated for this crawl. Analyze again to retry.'
+        }
       />
     );
   return (
     <>
       <p className="type-caption">
-        {analysis.page_count} pages · <DisplayTime value={analysis.created_at} dateOnly /> ·{' '}
-        {analysis.omitted_pages} pages outside this analysis
+        {analysis.page_count} pages analyzed · <DisplayTime value={analysis.created_at} dateOnly />
+        {analysis.omitted_pages ? ` · ${analysis.omitted_pages} pages over the limit` : null}
       </p>
       {analysis.stale ? (
         <Alert tone="warning">

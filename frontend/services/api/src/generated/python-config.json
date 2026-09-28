@@ -2638,6 +2638,7 @@
     "max_memberships": 200,
     "max_excerpt_chars": 1800,
     "history_limit": 20,
+    "credits_per_judgment": 1,
     "min_anchor_words": 2,
     "max_anchor_words": 5,
     "min_label_words": 2,

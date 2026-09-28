@@ -12,8 +12,9 @@ and use reusable Sol 6 medium agents for exploration and targeted verification.
 
 Implemented locally in the worktree below. Publication and live enablement are
 pending. The implemented v1 scope uses two tables, three API operations, bounded
-saved results and existing Action/provider/credit owners. Threshold calibration
-and a published finite `content_structure` credit rate remain rollout work.
+saved results and existing Action/provider/credit owners. Judgments draw a flat
+per-judgment amount from the shared AI-credit balance; no separate credit policy
+exists. Threshold calibration remains rollout work.
 
 Selected product direction: a new **Content structure** page at
 `/site/content-structure`, containing **Internal links** and **Topics** views.
@@ -266,10 +267,9 @@ appropriate. Deletion/retention must preserve meaningful provenance or mark it
 unavailable; no orphaned evidence references.
 
 Admission validates permission and finalized crawl eligibility. Before provider
-dispatch the Python task rechecks permission, provider readiness and a published
-finite credit policy, then reserves through the existing metered-usage owner.
-The first funded dispatch freezes the published rate and model for the run.
-No provider call proceeds without an allowance. Missing funding is persisted as
+dispatch the Python task rechecks permission and provider readiness, then reserves
+a flat per-judgment amount of shared AI credits through the existing
+metered-usage owner. No provider call proceeds without an allowance. Missing funding is persisted as
 unavailable; the key alone does not bypass credit admission.
 
 Use explicit admission and one active analysis per configured project scope.

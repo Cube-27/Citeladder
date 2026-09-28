@@ -173,11 +173,11 @@ No provider runs on a read, and no second provider client is introduced.
 
 `site_content_structure_runs` retains the frozen crawl, exact page-analysis and
 artifact identities, passages, candidates and policy; TypeScript is its writer.
-Python appends funding, dispatch and outcome events to
-`site_content_structure_events`. The first funded dispatch freezes the model and
-published `content_structure` credit rate for the run. Each dispatch reserves a
-finite allowance against the existing crawl metered subject and commits before
-network I/O. Recovery settles an interrupted dispatch as uncertain without
+Python appends dispatch and outcome events to
+`site_content_structure_events`. There is no separate credit policy: each
+dispatch reserves a flat per-judgment amount from the shared AI-credit balance
+against the existing crawl metered subject and commits before network I/O; a
+judgment that never reached the provider is not charged. Recovery settles an interrupted dispatch as uncertain without
 resending it. Publication fences the worker lease and queues the existing
 Opportunity refresh. Missing funding or provider availability yields unavailable
 judgments, never an observed zero.
@@ -194,8 +194,7 @@ anchor and exact destination URL without a model call. No CMS publishing occurs.
 
 Limits and provisional thresholds live in
 `backend/app/core/config/site_health_content_structure.py` and are exported to
-TypeScript. Live rollout still requires a published finite credit rate and
-editor-reviewed calibration; fixture tests do not establish recommendation quality.
+TypeScript. Live rollout still requires editor-reviewed calibration; fixture tests do not establish recommendation quality.
 
 ### Change intelligence
 

@@ -53,26 +53,8 @@ async def test_dispatch_is_committed_before_provider_and_replay_does_not_resend(
         task.lease_expires_at = datetime.now(UTC) + timedelta(minutes=5)
         session.add(task)
         await session.commit()
-    rate = SimpleNamespace(
-        call_credit_cap=1,
-        model_dump=lambda **_: {
-            "feature": "content_structure",
-            "model": "fixture",
-            "input_credits_per_million": 1,
-            "cached_input_credits_per_million": 0,
-            "output_credits_per_million": 0,
-            "reasoning_credits_per_million": 0,
-            "call_credit_cap": 1,
-            "unknown_usage_charge": 1,
-        },
-    )
     monkeypatch.setattr(
         owner, "jev_settings", SimpleNamespace(enabled=True, model="fixture")
-    )
-    monkeypatch.setattr(
-        owner,
-        "published_ai_credit_policy",
-        AsyncMock(return_value=("fixture", SimpleNamespace(rate=lambda **_: rate))),
     )
     monkeypatch.setattr(
         owner, "billing_account_id_for", AsyncMock(return_value=uuid.uuid4())
