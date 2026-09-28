@@ -70,15 +70,12 @@ def fake_agent(monkeypatch: pytest.MonkeyPatch) -> FakeAgent:
 async def test_generate_stages_candidates_until_accepted(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
-    project, prompt_set_id = await make_project_and_set(client, "gen1@example.com")
-    profile = await client.put(
-        f"/api/v1/projects/{project['id']}/brand-profile",
-        json={
-            "positioning": "Value-priced family footwear.",
-            "target_audience": "Budget-conscious Australian families.",
-        },
+    project, prompt_set_id = await make_project_and_set(
+        client,
+        "gen1@example.com",
+        positioning="Value-priced family footwear.",
+        target_audience="Budget-conscious Australian families.",
     )
-    assert profile.status_code == 200
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
@@ -255,14 +252,12 @@ async def test_generate_creates_topics_from_confirmed_offerings_when_none_exist(
 async def test_generate_without_topics_or_offerings_rejects_before_provider(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
-    project, prompt_set_id = await make_project_and_set(
-        client, "gen-no-offerings@example.com", create_default_topic=False
+    _, prompt_set_id = await make_project_and_set(
+        client,
+        "gen-no-offerings@example.com",
+        create_default_topic=False,
+        products_services=[],
     )
-    profile = await client.put(
-        f"/api/v1/projects/{project['id']}/brand-profile",
-        json={"products_services": []},
-    )
-    assert profile.status_code == 200
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",

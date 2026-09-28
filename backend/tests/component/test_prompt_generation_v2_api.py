@@ -18,7 +18,9 @@ import app.api.prompts as prompts_api
 from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.jev import JevDecision
 from app.core.config.jev import jev_settings
+from app.domain.projects.business_map import BusinessMap, read_business_map
 from app.domain.prompts.quality_calibration import load_reviewed_decisions
+from app.models.brand import BrandProfile
 from app.models.prompt_candidate import PromptCandidate
 from tests.component.prompt_generation_helpers import (
     FakeAgent,
@@ -35,13 +37,38 @@ def fake_agent(monkeypatch: pytest.MonkeyPatch) -> FakeAgent:
     return agent
 
 
-async def _two_offering_project(client: httpx.AsyncClient, email: str):
-    project, prompt_set_id = await make_project_and_set(client, email)
-    profile = await client.put(
-        f"/api/v1/projects/{project['id']}/brand-profile",
-        json={"products_services": ["running shoes", "sandals"]},
+async def _profile(session: AsyncSession, project_id: str) -> BrandProfile:
+    profile = await session.scalar(
+        select(BrandProfile).where(BrandProfile.project_id == uuid.UUID(project_id))
     )
-    assert profile.status_code == 200
+    assert profile is not None
+    return profile
+
+
+async def _store_business_map(
+    session_factory: async_sessionmaker[AsyncSession], project_id: str, raw: dict
+) -> None:
+    async with session_factory() as session:
+        profile = await _profile(session, project_id)
+        profile.business_context = {
+            **(profile.business_context or {}),
+            "business_map": BusinessMap.model_validate(raw).model_dump(mode="json"),
+        }
+        await session.commit()
+
+
+async def _stored_business_map(
+    session_factory: async_sessionmaker[AsyncSession], project_id: str
+) -> dict:
+    async with session_factory() as session:
+        profile = await _profile(session, project_id)
+        return read_business_map(profile.business_context).model_dump(mode="json")
+
+
+async def _two_offering_project(client: httpx.AsyncClient, email: str):
+    project, prompt_set_id = await make_project_and_set(
+        client, email, products_services=["running shoes", "sandals"]
+    )
     topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
     sandals = await client.post(
         f"/api/v1/projects/{project['id']}/topics", json={"name": "Sandals"}
@@ -53,14 +80,19 @@ async def _two_offering_project(client: httpx.AsyncClient, email: str):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("empty_entry", [False, True])
 async def test_multi_topic_generation_writes_one_question_per_map_cell(
-    client: httpx.AsyncClient, fake_agent: FakeAgent, empty_entry: bool
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    fake_agent: FakeAgent,
+    empty_entry: bool,
 ) -> None:
     project, prompt_set_id, shoes_id, sandals_id = await _two_offering_project(
         client, "v2-cells@example.com"
     )
-    mapped = await client.put(
-        f"/api/v1/projects/{project['id']}/business-map",
-        json={
+    # A person's confirmed map, as the business-map editor stores it.
+    await _store_business_map(
+        session_factory,
+        project["id"],
+        {
             "offerings": [
                 {
                     "offering": "running shoes",
@@ -72,7 +104,6 @@ async def test_multi_topic_generation_writes_one_question_per_map_cell(
             ]
         },
     )
-    assert mapped.status_code == 200
     fake_agent.map_response = json.dumps(
         {
             "offerings": [
@@ -115,9 +146,7 @@ async def test_multi_topic_generation_writes_one_question_per_map_cell(
 
     # Suggestions are stored unreviewed, without competitor names or
     # offerings nobody confirmed, and a person's map is untouched.
-    business_map = (
-        await client.get(f"/api/v1/projects/{project['id']}/business-map")
-    ).json()
+    business_map = await _stored_business_map(session_factory, project["id"])
     by_offering = {item["offering"]: item for item in business_map["offerings"]}
     assert set(by_offering) == {"running shoes", "sandals"}
     sandals = by_offering["sandals"]

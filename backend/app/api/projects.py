@@ -13,7 +13,7 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
@@ -30,7 +30,6 @@ from app.core.config.analysis import (
     VISIBILITY_EVIDENCE_MAX_LIMIT,
     VISIBILITY_TREND_DEFAULT_GRANULARITY,
 )
-from app.core.config.brand_logos import BRAND_LOGO_CACHE_MAX_AGE_SECONDS
 from app.core.errors import ApiException
 from app.core.http_errors import raise_api_error, raise_not_found
 from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
@@ -53,34 +52,8 @@ from app.domain.command_center.report import render_executive_pdf
 from app.domain.command_center.schemas import CommandCenterResponse
 from app.domain.command_center.service import get_command_center
 from app.domain.entitlements.enforcement import OccupancyError
-from app.domain.projects.brand_profile import (
-    BrandProfileNotFoundError,
-    brand_profile_to_response,
-    get_brand_profile,
-    upsert_manual_brand_profile,
-)
-from app.domain.projects.business_map import (
-    BusinessMapResponse,
-    BusinessMapUpdate,
-    BusinessMapValidationError,
-    get_business_map,
-    update_business_map,
-)
-from app.domain.projects.logos import (
-    BrandLogoNotFoundError,
-    get_project_logo_asset,
-    refresh_project_logos,
-)
-from app.domain.projects.observed_competitors import (
-    ObservedCandidateNotFoundError,
-    accept_observed_candidate,
-    list_observed_candidates,
-)
+from app.domain.projects.logos import refresh_project_logos
 from app.domain.projects.schemas import (
-    BrandProfileResponse,
-    BrandProfileUpsert,
-    CompetitorResponse,
-    ObservedCompetitorResponse,
     ProjectCreate,
     ProjectResponse,
     ProjectUpdate,
@@ -162,81 +135,6 @@ async def create_project_endpoint(
         )
     )
     return project_to_response(project)
-
-
-@router.get(
-    "/{project_id}/brand-profile",
-)
-async def get_brand_profile_endpoint(
-    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
-) -> BrandProfileResponse:
-    # Authorize through the owning project before reading the denormalized row.
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
-    try:
-        profile = await get_brand_profile(
-            session, workspace_id=ctx.workspace_id, project_id=project_id
-        )
-    except BrandProfileNotFoundError as exc:
-        raise_not_found("Brand profile", cause=exc)
-    return brand_profile_to_response(profile)
-
-
-@router.put(
-    "/{project_id}/brand-profile",
-)
-async def put_brand_profile_endpoint(
-    project_id: uuid.UUID,
-    payload: BrandProfileUpsert,
-    ctx: _WriteDep,
-    session: _SessionDep,
-) -> BrandProfileResponse:
-    try:
-        profile = await upsert_manual_brand_profile(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            user_id=ctx.user.id,
-            payload=payload,
-        )
-    except (ProjectNotFoundError, BrandProfileNotFoundError) as exc:
-        raise_not_found("Brand profile", cause=exc)
-    return brand_profile_to_response(profile)
-
-
-@router.get("/{project_id}/business-map")
-async def get_business_map_endpoint(
-    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
-) -> BusinessMapResponse:
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
-    try:
-        return await get_business_map(
-            session, workspace_id=ctx.workspace_id, project_id=project_id
-        )
-    except BrandProfileNotFoundError as exc:
-        raise_not_found("Brand profile", cause=exc)
-
-
-@router.put("/{project_id}/business-map")
-async def put_business_map_endpoint(
-    project_id: uuid.UUID,
-    payload: BusinessMapUpdate,
-    ctx: _WriteDep,
-    session: _SessionDep,
-) -> BusinessMapResponse:
-    """Replace the business map; surviving entries keep their provenance."""
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
-    try:
-        return await update_business_map(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            user_id=ctx.user.id,
-            payload=payload,
-        )
-    except BrandProfileNotFoundError as exc:
-        raise_not_found("Brand profile", cause=exc)
-    except BusinessMapValidationError as exc:
-        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
 
 
 @router.get(
@@ -477,29 +375,6 @@ async def get_visibility_evidence_endpoint(
         raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
 
 
-def _logo_response(
-    content: bytes,
-    content_type: str,
-    asset_sha256: str,
-    if_none_match: str | None,
-) -> Response:
-    etag = f'"{asset_sha256}"'
-    headers = {
-        "Cache-Control": f"private, max-age={BRAND_LOGO_CACHE_MAX_AGE_SECONDS}",
-        "Content-Disposition": "inline",
-        "Content-Security-Policy": "default-src 'none'; sandbox",
-        "ETag": etag,
-        "X-Content-Type-Options": "nosniff",
-    }
-    if if_none_match == etag:
-        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
-    return Response(
-        content=content,
-        media_type=content_type,
-        headers=headers,
-    )
-
-
 @router.post("/{project_id}/logos/refresh")
 async def refresh_project_logos_endpoint(
     project_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
@@ -520,57 +395,6 @@ async def refresh_project_logos_endpoint(
     except ProjectNotFoundError as exc:
         raise_not_found(_RES_PROJECT, cause=exc)
     return project_to_response(project)
-
-
-@router.get("/{project_id}/logo", response_class=Response)
-async def get_brand_logo_endpoint(
-    project_id: uuid.UUID,
-    request: Request,
-    ctx: _ProjectMemberDep,
-    session: _SessionDep,
-) -> Response:
-    try:
-        asset = await get_project_logo_asset(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-        )
-    except BrandLogoNotFoundError as exc:
-        raise_not_found("Brand logo", cause=exc)
-    return _logo_response(
-        asset.image_data or b"",
-        asset.content_type,
-        asset.sha256,
-        request.headers.get("if-none-match"),
-    )
-
-
-@router.get(
-    "/{project_id}/competitors/{competitor_id}/logo",
-    response_class=Response,
-)
-async def get_competitor_logo_endpoint(
-    project_id: uuid.UUID,
-    competitor_id: uuid.UUID,
-    request: Request,
-    ctx: _ProjectMemberDep,
-    session: _SessionDep,
-) -> Response:
-    try:
-        asset = await get_project_logo_asset(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            competitor_id=competitor_id,
-        )
-    except BrandLogoNotFoundError as exc:
-        raise_not_found("Competitor logo", cause=exc)
-    return _logo_response(
-        asset.image_data or b"",
-        asset.content_type,
-        asset.sha256,
-        request.headers.get("if-none-match"),
-    )
 
 
 @router.get("/{project_id}")
@@ -700,40 +524,6 @@ async def get_visibility_endpoint(
 
     except TrendQueryError as exc:
         raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
-
-
-@router.get(
-    "/{project_id}/competitor-suggestions",
-)
-async def list_observed_competitors_endpoint(
-    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
-) -> list[ObservedCompetitorResponse]:
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
-    rows = await list_observed_candidates(
-        session, workspace_id=ctx.workspace_id, project_id=project_id
-    )
-    return [ObservedCompetitorResponse.model_validate(row) for row in rows]
-
-
-@router.post(
-    "/{project_id}/competitor-suggestions/{candidate_id}/accept",
-)
-async def accept_observed_competitor_endpoint(
-    project_id: uuid.UUID,
-    candidate_id: uuid.UUID,
-    ctx: _WriteDep,
-    session: _SessionDep,
-) -> CompetitorResponse:
-    try:
-        competitor = await accept_observed_candidate(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            candidate_id=candidate_id,
-        )
-    except ObservedCandidateNotFoundError as exc:
-        raise_not_found("Competitor suggestion", cause=exc)
-    return CompetitorResponse.model_validate(competitor)
 
 
 @router.patch("/{project_id}")

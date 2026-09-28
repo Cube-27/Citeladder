@@ -208,6 +208,9 @@ export const brandProfileSchema = responseObject({
   project_id: uuid(),
   brand_id: uuid(),
   ...brandProfileDraftSchema.shape,
+  // The confirmed onboarding context (category, facets, business map), so a
+  // client can show what the project was built from.
+  business_context: z.record(z.string(), z.unknown()),
   sources: brandProfileFieldSourcesSchema,
   source_artifact_ids: brandProfileSourceArtifactsSchema,
   created_at: z.string(),
