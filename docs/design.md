@@ -62,7 +62,7 @@ Use Switzer for text and figures and Sentient for the page title and public head
 
 ### Website and focused-flow ladder
 
-Roles own all typography properties. The general ladder is mobile-first: base below 700px, with 700px and 981px step-ups where defined. Ordinary paragraphs stay at or above 14px, except the compact homepage editorial ladder below 540px, where short supporting paragraphs step down by 2px. Prose measure is 45–75 characters; long paragraphs never use accent ink. Body tracking is zero; large text uses calm leading.
+Roles own all typography properties. The general ladder is mobile-first: base below 700px, with 700px and 981px step-ups where defined. Ordinary paragraphs stay at or above 14px, except the compact homepage editorial ladder below 540px, where short supporting paragraphs step down by 2px. Prose measure is 45–75 characters, except the documentation article column, which can reach 85ch to sit closer to its side navigation; long paragraphs never use accent ink. Body tracking is zero; large text uses calm leading.
 
 | Role | Size / line height | Weight | Tracking | Ink |
 | --- | --- | --- | --- | --- |
