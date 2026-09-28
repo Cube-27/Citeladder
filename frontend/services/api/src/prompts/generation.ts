@@ -62,6 +62,11 @@ function candidateRow(draft: Draft, { workspaceId, setId, runId, cohort, now }: 
   };
 }
 
+function stampRun(suggestion: OfferingMap, runId: string) {
+  for (const entry of dimensions.flatMap((dimension) => suggestion[dimension]))
+    entry.source = { ...entry.source, generation_run_id: runId };
+}
+
 /** Store suggested maps only for still-confirmed offerings that have no facets yet. */
 async function mergeMapSuggestions(
   trx: Database,
@@ -87,9 +92,7 @@ async function mergeMapSuggestions(
     const index = existing.findIndex((map) => map.offering.toLowerCase() === offering);
     const prior = existing[index];
     if (prior && dimensions.some((dimension) => prior[dimension].length)) continue;
-    for (const dimension of dimensions)
-      for (const entry of suggestion[dimension])
-        entry.source = { ...entry.source, generation_run_id: runId };
+    stampRun(suggestion, runId);
     if (index < 0) existing.push(suggestion);
     else existing[index] = suggestion;
   }

@@ -72,6 +72,7 @@ export async function postModel(
   transport: Transport,
   signal?: AbortSignal,
 ): Promise<Response> {
+  const external = signal ? [signal] : [];
   for (let attempt = 0; attempt < policy.attempts; attempt++) {
     let response: Response | undefined;
     try {
@@ -79,10 +80,7 @@ export async function postModel(
         method: 'POST',
         headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
         body: JSON.stringify(body),
-        signal: AbortSignal.any([
-          AbortSignal.timeout(policy.timeoutSeconds * 1000),
-          ...(signal ? [signal] : []),
-        ]),
+        signal: AbortSignal.any([AbortSignal.timeout(policy.timeoutSeconds * 1000), ...external]),
       });
       if (!policy.retryStatus(response.status) || attempt + 1 === policy.attempts) return response;
     } catch (error) {
@@ -93,14 +91,18 @@ export async function postModel(
       }
     }
     await response?.body?.cancel();
-    try {
-      await transport.sleep(retryDelay(response, attempt, policy), signal);
-    } catch {
-      // Only an abort interrupts the backoff; the caller's deadline has passed.
-      throw new ModelError('connection');
-    }
+    await backoff(transport, retryDelay(response, attempt, policy), signal);
   }
   throw new ModelError('connection');
+}
+
+/** Only an abort interrupts the backoff; the caller's deadline has passed. */
+async function backoff(transport: Transport, milliseconds: number, signal?: AbortSignal) {
+  try {
+    await transport.sleep(milliseconds, signal);
+  } catch {
+    throw new ModelError('connection');
+  }
 }
 
 export async function modelJson(response: Response): Promise<unknown> {

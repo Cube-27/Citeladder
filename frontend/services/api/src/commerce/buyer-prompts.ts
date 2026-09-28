@@ -196,11 +196,66 @@ async function commerceTopic(trx: Database, projectId: string, name: string, now
   return find().executeTakeFirstOrThrow();
 }
 
-async function persist(
-  db: Database,
+type Batch = { target: Target; texts: string[]; evidence: Record<string, unknown> | null };
+
+/** One disabled prompt and its target binding; a normalized duplicate is a 409. */
+async function insertBuyerPrompt(
+  trx: Database,
   scope: CommerceScope,
-  batches: { target: Target; texts: string[]; evidence: Record<string, unknown> | null }[],
+  owner: { set: string; topic: string; name: string },
+  batch: Batch,
+  text: string,
+  now: Date,
 ) {
+  const id = randomUUID();
+  const labels = batch.evidence
+    ? {
+        theme: owner.name,
+        buyer_stage: 'consideration',
+        prompt_intent: 'recommend',
+        origin: 'generated',
+      }
+    : { theme: 'Commerce', buyer_stage: '', prompt_intent: '', origin: 'manual' };
+  const inserted = await trx
+    .insertInto('prompts')
+    .values({
+      id,
+      prompt_set_id: owner.set,
+      topic_id: owner.topic,
+      text,
+      normalized_text_hash: promptTextHash(text),
+      ...labels,
+      intent: 'comparison',
+      cohort: 'commerce',
+      branded: false,
+      enabled: false,
+      status: 'active',
+      generation_evidence: batch.evidence ? JSON.stringify(batch.evidence) : null,
+      created_at: now,
+      updated_at: now,
+    })
+    .onConflict((conflict) => conflict.constraint('uq_prompt_set_normalized_text').doNothing())
+    .returning('id')
+    .executeTakeFirst();
+  if (!inserted) throw new ApiError(409, 'This buyer prompt is already tracked');
+  await trx
+    .insertInto('commerce_prompt_targets')
+    .values({
+      id: randomUUID(),
+      workspace_id: scope.workspaceId,
+      project_id: scope.projectId,
+      prompt_id: id,
+      target_kind: batch.target.kind,
+      target_id: batch.target.id,
+      template_version: P.version,
+      approved_at: null,
+      created_at: now,
+    })
+    .execute();
+  return id;
+}
+
+async function persist(db: Database, scope: CommerceScope, batches: Batch[]) {
   return db.transaction().execute(async (trx) => {
     const contexts = [];
     for (const batch of batches) contexts.push(await targetContext(trx, scope, batch.target));
@@ -220,51 +275,17 @@ async function persist(
         .trim();
       if (!name) throw unavailable();
       const topic = await commerceTopic(trx, scope.projectId, name, now);
-      for (const text of batch.texts) {
-        const id = randomUUID();
-        const inserted = await trx
-          .insertInto('prompts')
-          .values({
-            id,
-            prompt_set_id: set.id,
-            topic_id: topic.id,
+      for (const text of batch.texts)
+        ids.push(
+          await insertBuyerPrompt(
+            trx,
+            scope,
+            { set: set.id, topic: topic.id, name },
+            batch,
             text,
-            normalized_text_hash: promptTextHash(text),
-            theme: batch.evidence ? name : 'Commerce',
-            intent: 'comparison',
-            buyer_stage: batch.evidence ? 'consideration' : '',
-            prompt_intent: batch.evidence ? 'recommend' : '',
-            cohort: 'commerce',
-            branded: false,
-            enabled: false,
-            status: 'active',
-            origin: batch.evidence ? 'generated' : 'manual',
-            generation_evidence: batch.evidence ? JSON.stringify(batch.evidence) : null,
-            created_at: now,
-            updated_at: now,
-          })
-          .onConflict((conflict) =>
-            conflict.constraint('uq_prompt_set_normalized_text').doNothing(),
-          )
-          .returning('id')
-          .executeTakeFirst();
-        if (!inserted) throw new ApiError(409, 'This buyer prompt is already tracked');
-        await trx
-          .insertInto('commerce_prompt_targets')
-          .values({
-            id: randomUUID(),
-            workspace_id: scope.workspaceId,
-            project_id: scope.projectId,
-            prompt_id: id,
-            target_kind: batch.target.kind,
-            target_id: batch.target.id,
-            template_version: P.version,
-            approved_at: null,
-            created_at: now,
-          })
-          .execute();
-        ids.push(id);
-      }
+            now,
+          ),
+        );
     }
     return (await buyerPrompts(trx, scope)).filter((row) => ids.includes(row.id));
   });
