@@ -11,6 +11,7 @@ export const POST_INTERNAL_LINKS: BlogPost = {
   excerpt:
     'Internal linking is a decision problem before it is a writing problem: which related page would genuinely help this reader next?',
   image: '/blog/editorial/article-internal-links.png',
+  cardImage: '/blog/editorial/article-internal-links.svg',
   date: '2026-09-28',
   readTime: '7 min read',
   author: PRODUCT_HEAD.name,
