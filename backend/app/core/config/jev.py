@@ -30,6 +30,7 @@ JEV_QUESTION_SCHEMA_VERSION: Final = "prompt-quality-questions-2"
 # decision; a stored decision is never re-flagged under a newer policy.
 JEV_POLICY_VERSION: Final = "jev-gate-1"
 JEV_RETRY_AFTER_CAP_SECONDS: Final = 10.0
+JEV_CALIBRATION_SWEEP: Final = (0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5)
 
 # JEV_MODE values.
 JEV_MODE_GATE: Final = "gate"

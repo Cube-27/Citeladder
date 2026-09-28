@@ -44,6 +44,7 @@ from app.core.config import (
 from app.core.config import brand_logos as brand_logo_config
 from app.core.config import agent as agent_config
 from app.core.config import jev as jev_config
+from app.core.config import visibility_prompts as visibility_config
 from app.core.config import brand_profile as brand_profile_config
 from app.core.config import commerce_catalog as commerce_config
 from app.core.config import demand as demand_config
@@ -116,6 +117,7 @@ from app.core.config.http import (
     PROMPT_IMPORT_MAX_ROWS,
     PROMPT_INTENT_MAX_CHARS,
     PROMPT_TEXT_MAX_CHARS,
+    PROMPT_TEXT_MIN_WORDS,
     PROMPT_THEME_MAX_CHARS,
     TOPIC_NAME_MAX_CHARS,
 )
@@ -332,6 +334,11 @@ def build_config() -> dict[str, Any]:
                 for name in jev_config.JevSettings.model_fields
             },
             "jev_retry_after_cap_seconds": jev_config.JEV_RETRY_AFTER_CAP_SECONDS,
+            "quality": {
+                name.removeprefix("JEV_").lower(): value
+                for name, value in vars(jev_config).items()
+                if name.startswith("JEV_")
+            },
         },
     }
 
@@ -367,10 +374,7 @@ def _entitlements_policy() -> dict[str, Any]:
 
 
 # The review and retention knobs the TS prompt owner reads (``GENERATION_*``).
-PROMPT_GENERATION_SETTINGS = (
-    "rejected_outcome_retention_days",
-    "review_max_ids",
-)
+PROMPT_GENERATION_SETTINGS = tuple(PromptGenerationSettings.model_fields)
 
 
 def _prompts_policy() -> dict[str, Any]:
@@ -389,6 +393,28 @@ def _prompts_policy() -> dict[str, Any]:
         },
         "trailing_punctuation": cfg.PROMPT_TRAILING_PUNCTUATION,
         "text_max_chars": PROMPT_TEXT_MAX_CHARS,
+        "text_min_words": PROMPT_TEXT_MIN_WORDS,
+        "generation": {
+            "version": cfg.GENERATOR_VERSION,
+            "policy_version": visibility_config.BUYER_QUERY_POLICY_VERSION,
+            "cell_max_facets": cfg.GENERATION_CELL_MAX_FACETS,
+            "map_calls": cfg.MAP_SUGGESTION_MODEL_CALLS,
+            "map_max_entries": cfg.MAP_SUGGESTION_MAX_PER_DIMENSION,
+            "map_system": cfg.MAP_SUGGESTION_SYSTEM_PROMPT,
+            "stages": visibility_config.BUYER_STAGES,
+            "intent_legacy": visibility_config.PROMPT_INTENT_LEGACY,
+            "local_intents": visibility_config.LOCAL_PROMPT_INTENTS,
+            "topic_max": visibility_config.VISIBILITY_TOPIC_MAX,
+            "brand_common_words": sorted(cfg.BRAND_TOKEN_COMMON_WORDS),
+            "provider_phrases": sorted(visibility_config.PROVIDER_DESCRIPTION_PHRASES),
+            "systems": {
+                model: {
+                    cohort: visibility_config.cohort_system_prompt(model, cohort)
+                    for cohort in ("core", "comparison", "brand_diagnostic")
+                }
+                for model in ("", *visibility_config.PROMPT_EXEMPLARS)
+            },
+        },
         "theme_max_chars": PROMPT_THEME_MAX_CHARS,
         "intent_max_chars": PROMPT_INTENT_MAX_CHARS,
         "topic_name_max_chars": TOPIC_NAME_MAX_CHARS,
