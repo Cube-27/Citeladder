@@ -39,9 +39,11 @@
   billing, entitlements, audits, Site Health and the Agent into scope and
   settled standing decisions (D6, D7). PR 10 (TS entitlement enforcement and
   the prompt library: sets, prompts, import, candidate review and topics) is
-  implemented; prompt generation stays Python until PR 11 moves the model
-  gateway. PRs 11–20 follow the re-sequenced order in the plan. Deployment of
-  PRs 3–10 and their one-week cutover soaks are pending.
+  implemented. PR 11 moves the configured model gateway, JEV client, prompt-set
+  generation and Commerce buyer-prompt generation/manual entry to TS; Python
+  keeps the documented bridges for remaining callers. PRs 12–20 follow the
+  re-sequenced order. Deployment of PRs 3–11 and their one-week cutover soaks
+  are pending.
 
 ## Queued
 - [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)

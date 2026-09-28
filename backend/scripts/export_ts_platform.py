@@ -25,6 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import SecretStr
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 
@@ -40,17 +41,20 @@ from app.core.config import (
     WEAK_SECRET_WORDS,
     Settings,
 )
+from app.core.config import agent as agent_config
 from app.core.config import brand_logos as brand_logo_config
 from app.core.config import brand_profile as brand_profile_config
 from app.core.config import commerce_catalog as commerce_config
 from app.core.config import demand as demand_config
 from app.core.config import entitlements as entitlements_config
 from app.core.config import errors as error_config
+from app.core.config import jev as jev_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
 from app.core.config import prompts as prompts_config
 from app.core.config import search_intelligence as search_intelligence_config
 from app.core.config import site_health_internal_links as internal_links_config
+from app.core.config import visibility_prompts as visibility_config
 from app.core.config import workspaces as workspace_config
 from app.core.config.abuse import AbuseSettings
 from app.core.config.analysis import (
@@ -113,6 +117,7 @@ from app.core.config.http import (
     PROMPT_IMPORT_MAX_ROWS,
     PROMPT_INTENT_MAX_CHARS,
     PROMPT_TEXT_MAX_CHARS,
+    PROMPT_TEXT_MIN_WORDS,
     PROMPT_THEME_MAX_CHARS,
     TOPIC_NAME_MAX_CHARS,
 )
@@ -215,6 +220,7 @@ def _type_descriptor(annotation: Any) -> dict[str, Any]:
         (int, "int"),
         (float, "float"),
         (str, "str"),
+        (SecretStr, "str"),
     ):
         if annotation is candidate:
             return {"type": label}
@@ -228,6 +234,11 @@ def _setting(name: str, model: type[BaseSettings] = Settings) -> dict[str, Any]:
     entry: dict[str, Any] = {"env": _env_names(name, field, prefix)}
     entry.update(_type_descriptor(field.annotation))
     entry["default"] = field.default
+    if isinstance(field.default, SecretStr):
+        # The export is committed: only an unset secret may be written.
+        if field.default.get_secret_value():
+            raise ValueError(f"{name} has a non-empty secret default")
+        entry["default"] = ""
     # Pydantic records ``Field(ge=..., gt=..., le=...)`` as metadata objects
     # that expose those attributes.
     for constraint in field.metadata:
@@ -288,6 +299,22 @@ def build_config() -> dict[str, Any]:
         },
         "brand_identity": _brand_identity_policy(),
         "commerce": {
+            "buyer_prompts": {
+                "min": commerce_config.COMMERCE_PROMPTS_MIN,
+                "max": commerce_config.COMMERCE_PROMPTS_MAX,
+                "default": commerce_config.COMMERCE_PROMPTS_DEFAULT,
+                "targets_max": commerce_config.COMMERCE_GENERATION_TARGETS_MAX,
+                "min_words": commerce_config.COMMERCE_BUYER_PROMPT_MIN_WORDS,
+                "max_words": commerce_config.COMMERCE_BUYER_PROMPT_MAX_WORDS,
+                "survey_markers": commerce_config.COMMERCE_BUYER_PROMPT_SURVEY_MARKERS,
+                "product_limit": commerce_config.COMMERCE_PROMPT_CONTEXT_PRODUCT_LIMIT,
+                "term_limit": commerce_config.COMMERCE_PROMPT_CONTEXT_TERM_LIMIT,
+                "version": commerce_config.COMMERCE_PROMPT_TEMPLATE_VERSION,
+                "systems": {
+                    model: commerce_config.commerce_buyer_prompt_system(model)
+                    for model in ("", *commerce_config.PROMPT_EXEMPLARS)
+                },
+            },
             "import_max_bytes": commerce_config.COMMERCE_IMPORT_MAX_BYTES,
             "import_max_rows": commerce_config.COMMERCE_IMPORT_MAX_ROWS,
             "import_error_limit": commerce_config.COMMERCE_IMPORT_ERROR_LIMIT,
@@ -307,10 +334,28 @@ def build_config() -> dict[str, Any]:
                 "active_job_retry_after_seconds",
                 "bulk_import_limit",
                 "bulk_import_window_seconds",
+                "agent_call_limit",
+                "agent_call_window_seconds",
             )
         },
         "entitlements": _entitlements_policy(),
         "prompts": _prompts_policy(),
+        "models": {
+            "gateway": {
+                name: _setting(name, agent_config.DefaultAgentSettings)
+                for name in agent_config.DefaultAgentSettings.model_fields
+            },
+            "max_attempts": agent_config.GENERATION_PROVIDER_MAX_ATTEMPTS,
+            "jev": {
+                name: _setting(name, jev_config.JevSettings)
+                for name in jev_config.JevSettings.model_fields
+            },
+            "quality": {
+                name.removeprefix("JEV_").lower(): value
+                for name, value in vars(jev_config).items()
+                if name.startswith("JEV_")
+            },
+        },
     }
 
 
@@ -345,10 +390,7 @@ def _entitlements_policy() -> dict[str, Any]:
 
 
 # The review and retention knobs the TS prompt owner reads (``GENERATION_*``).
-PROMPT_GENERATION_SETTINGS = (
-    "rejected_outcome_retention_days",
-    "review_max_ids",
-)
+PROMPT_GENERATION_SETTINGS = tuple(PromptGenerationSettings.model_fields)
 
 
 def _prompts_policy() -> dict[str, Any]:
@@ -367,6 +409,28 @@ def _prompts_policy() -> dict[str, Any]:
         },
         "trailing_punctuation": cfg.PROMPT_TRAILING_PUNCTUATION,
         "text_max_chars": PROMPT_TEXT_MAX_CHARS,
+        "text_min_words": PROMPT_TEXT_MIN_WORDS,
+        "generation": {
+            "version": cfg.GENERATOR_VERSION,
+            "policy_version": visibility_config.BUYER_QUERY_POLICY_VERSION,
+            "cell_max_facets": cfg.GENERATION_CELL_MAX_FACETS,
+            "map_calls": cfg.MAP_SUGGESTION_MODEL_CALLS,
+            "map_max_entries": cfg.MAP_SUGGESTION_MAX_PER_DIMENSION,
+            "map_system": cfg.MAP_SUGGESTION_SYSTEM_PROMPT,
+            "stages": visibility_config.BUYER_STAGES,
+            "intent_legacy": visibility_config.PROMPT_INTENT_LEGACY,
+            "local_intents": visibility_config.LOCAL_PROMPT_INTENTS,
+            "topic_max": visibility_config.VISIBILITY_TOPIC_MAX,
+            "brand_common_words": sorted(cfg.BRAND_TOKEN_COMMON_WORDS),
+            "provider_phrases": sorted(visibility_config.PROVIDER_DESCRIPTION_PHRASES),
+            "systems": {
+                model: {
+                    cohort: visibility_config.cohort_system_prompt(model, cohort)
+                    for cohort in ("core", "comparison", "brand_diagnostic")
+                }
+                for model in ("", *visibility_config.PROMPT_EXEMPLARS)
+            },
+        },
         "theme_max_chars": PROMPT_THEME_MAX_CHARS,
         "intent_max_chars": PROMPT_INTENT_MAX_CHARS,
         "topic_name_max_chars": TOPIC_NAME_MAX_CHARS,
@@ -400,6 +464,7 @@ def _prompts_policy() -> dict[str, Any]:
             "business_context_fields": list(
                 cfg.PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS
             ),
+            "accepted": cfg.BINDING_CODE_ACCEPTED,
             "off_topic": cfg.CODE_PROMPT_OFF_TOPIC,
             "vocabulary_empty": cfg.CODE_BINDING_VOCABULARY_EMPTY,
         },

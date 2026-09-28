@@ -118,8 +118,7 @@ class PromptCandidate(Base):
         index=True,
     )
     text: Mapped[str] = mapped_column(Text)
-    # Set by the staging owner (domain/prompts/candidates.py); models do not
-    # import domain code.
+    # Set by the TS staging owner (src/prompts/generation.ts).
     normalized_text_hash: Mapped[str] = mapped_column(String(64), default="")
     intent: Mapped[str] = mapped_column(String(32), default="")
     buyer_stage: Mapped[str] = mapped_column(String(16), default="")

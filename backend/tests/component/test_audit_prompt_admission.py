@@ -1,20 +1,17 @@
-"""Component tests for topical binding in generation and audit admission.
+"""Component tests for audit admission of persisted prompts.
 
 Covers, against real Postgres (service level) and the API envelope:
-  - generated-output persistence drops off-domain model output;
   - audit launch consumes persisted active prompts without a second lexical
     gate, including in a project with no identity vocabulary;
   - the funded/trial prompt-count policy: unset fails closed with
     ``prompt_count_policy_unconfigured``, a configured count is enforced,
     and BYOK audit creation is never gated by the knob.
 
-Binding on manual create, edit, activation and import is enforced by the
-TypeScript prompt writers and tested there.
+Prompt writers and generation are TypeScript-owned and tested there.
 """
 
 from __future__ import annotations
 
-import json
 import uuid
 
 import httpx
@@ -22,7 +19,6 @@ import pytest
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-import app.api.prompts as prompts_api
 from app.core.config.audits import (
     AUDIT_TRIGGER_MANUAL,
     AUDIT_TRIGGER_TRIAL,
@@ -42,7 +38,7 @@ from app.domain.audits.creation import create_audit
 from app.domain.audits.errors import PromptCountPolicyError
 from app.domain.entitlements.types import GrantSpec
 from app.models.brand import Brand, OwnedDomain
-from app.models.prompt import Prompt, Topic
+from app.models.prompt import Prompt, PromptSet, Topic
 from app.models.provider import ProviderConnection, ProviderRoute
 from tests.component.audit_helpers import (
     _mark_connection_probed,
@@ -51,11 +47,6 @@ from tests.component.audit_helpers import (
 )
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import seed_occupancy_grants
-from tests.component.prompt_generation_helpers import (
-    create_prompt_set,
-    create_topic,
-    pending_candidates,
-)
 
 # ---------------------------------------------------------------------------
 # Shared API seed helpers (project identity: Acme Corp / acme.com, competitor
@@ -63,7 +54,7 @@ from tests.component.prompt_generation_helpers import (
 # ---------------------------------------------------------------------------
 
 
-def _project_payload(**profile: object) -> dict:
+def _project_payload() -> dict:
     return {
         "name": "Acme Visibility",
         "brand_name": "Acme Corp",
@@ -75,74 +66,27 @@ def _project_payload(**profile: object) -> dict:
         ],
         "country_code": "AU",
         "language_code": "en-AU",
-        **profile,
     }
 
 
+async def _create_prompt_set(
+    session_factory: async_sessionmaker[AsyncSession], project_id: str
+) -> str:
+    async with session_factory() as session:
+        prompt_set = PromptSet(project_id=uuid.UUID(project_id), name="Default")
+        session.add(prompt_set)
+        await session.commit()
+        return str(prompt_set.id)
+
+
 async def _make_project_and_set(
-    client: httpx.AsyncClient, email: str, **profile: object
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    email: str,
 ) -> tuple[dict, str]:
     await _register(client, email)
-    project = (
-        await client.post("/api/v1/projects", json=_project_payload(**profile))
-    ).json()
-    return project, await create_prompt_set(project["id"])
-
-
-# ---------------------------------------------------------------------------
-# Generated-output persistence (model output is not trusted)
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_generation_drops_off_domain_model_output(
-    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    project, prompt_set_id = await _make_project_and_set(
-        client, "bind-gen@example.com", products_services=["running shoes"]
-    )
-    topic = await create_topic(project["id"], "Running Shoes")
-    assert topic["name"] == "Running Shoes"
-
-    class _MixedAgent:
-        model = "fake-model"
-        base_url_host = "agent.test"
-
-        async def complete_structured_json(
-            self,
-            *,
-            system: str,
-            user: str,
-            schema_name: str,
-            schema: dict[str, object],
-        ) -> str:
-            return json.dumps(
-                {
-                    "prompts": [
-                        {
-                            "slot_id": "q1",
-                            "text": "Best running shoes for flat feet",
-                            "buyer_stage": "consideration",
-                            "prompt_intent": "recommend",
-                        },
-                        {
-                            "slot_id": "q2",
-                            "text": "Best laptops for programming",
-                            "buyer_stage": "consideration",
-                            "prompt_intent": "recommend",
-                        },
-                    ]
-                }
-            )
-
-    monkeypatch.setattr(prompts_api, "create_model_gateway", lambda: _MixedAgent())
-    resp = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
-        json={"count": 2, "confirm_send_evidence": True},
-    )
-    assert resp.status_code == 201
-    staged = resp.json()["candidates"]
-    assert [p["text"] for p in staged] == ["Best running shoes for flat feet"]
-    pending = await pending_candidates(prompt_set_id)
-    assert [p["text"] for p in pending] == ["Best running shoes for flat feet"]
+    project = (await client.post("/api/v1/projects", json=_project_payload())).json()
+    return project, await _create_prompt_set(session_factory, project["id"])
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +163,7 @@ async def test_audit_launch_api_passes_active_prompt_to_later_admission_gates(
 ) -> None:
     """POST /audits does not reject active text at the lexical gate."""
     project, prompt_set_id = await _make_project_and_set(
-        client, "bind-audit@example.com"
+        client, session_factory, "bind-audit@example.com"
     )
     workspace_id = uuid.UUID(project["workspace_id"])
     async with session_factory() as session:
@@ -295,7 +239,7 @@ async def test_empty_vocabulary_does_not_block_audit(
             json={"name": "No Identity", "website_url": "", "brand_name": ""},
         )
     ).json()
-    prompt_set_id = await create_prompt_set(project["id"])
+    prompt_set_id = await _create_prompt_set(session_factory, project["id"])
 
     async with session_factory() as session:
         workspace_id = uuid.UUID(project["workspace_id"])

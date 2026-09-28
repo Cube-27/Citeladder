@@ -1,19 +1,6 @@
-# Shared prompt-set write serialization (PostgreSQL advisory locks).
-#
-# Generation and the delete paths that can race it (prompt-set delete, topic
-# delete) all funnel through the SAME transaction-scoped advisory locks, so a
-# delete can never interleave between generation's re-resolution and its
-# inserts. Locks are transaction-scoped (``pg_advisory_xact_lock``): they
-# release automatically at COMMIT/ROLLBACK, so no caller can leak one.
-#
-# There are two lock granularities:
-#   * a PROJECT lock — serializes topic-level changes (topics are per-project
-#     and a topic can be referenced by prompts in any set of the project);
-#   * a PROMPT-SET lock — serializes the active-pool count + inserts for a set.
-#
-# Deadlock avoidance: every caller that needs both acquires them in the SAME
-# global order — PROJECT lock FIRST, then PROMPT-SET lock. No path ever takes a
-# set lock before a project lock, so opposing lock orders cannot arise.
+# Project advisory-lock bridge for Python source-page admission. TypeScript
+# owns prompt writes and uses the same key derivation. Retire this bridge when
+# source-page admission moves; locks release automatically at commit/rollback.
 from __future__ import annotations
 
 import hashlib
@@ -25,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.prompts import (
     PROJECT_LOCK_NAMESPACE,
     PROMPT_LOCK_PERSON,
-    PROMPT_SET_LOCK_NAMESPACE,
 )
 
 
@@ -55,23 +41,5 @@ async def _advisory_xact_lock(
 
 
 async def acquire_project_lock(session: AsyncSession, project_id: uuid.UUID) -> None:
-    """Serialize topic-level writers for one project (transaction-scoped).
-
-    Held by generation and by ``delete_topic`` so a topic cannot be deleted
-    between generation's re-resolution and its inserts. Must be acquired
-    BEFORE any prompt-set lock (see module docstring).
-    """
+    """Serialize source-page admission with other project writers."""
     await _advisory_xact_lock(session, PROJECT_LOCK_NAMESPACE, project_id)
-
-
-async def acquire_prompt_set_lock(
-    session: AsyncSession, prompt_set_id: uuid.UUID
-) -> None:
-    """Serialize writers for one prompt set (transaction-scoped).
-
-    Held by generation and by ``delete_prompt_set``. Must be acquired AFTER the
-    project lock when both are needed (see module docstring). Non-PostgreSQL
-    dialects (e.g. SQLite in isolated unit tests) skip the lock; production
-    always runs on PostgreSQL where the lock is guaranteed.
-    """
-    await _advisory_xact_lock(session, PROMPT_SET_LOCK_NAMESPACE, prompt_set_id)

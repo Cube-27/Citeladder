@@ -20,7 +20,6 @@ from app.domain.commerce.competitors import (
     _precheck,
     _validated_results,
 )
-from app.domain.commerce.prompts import _leaks_owned_identity
 from app.domain.commerce.schemas import (
     CommerceTarget,
     RecommendationSpan,
@@ -472,14 +471,6 @@ def test_discovery_queries_distinguish_product_and_category_targets() -> None:
         )
         == "buy Trail Runner trail shoe blue price AUD 75 to 200 online store"
     )
-
-
-def test_category_prompt_leakage_does_not_protect_generic_category_name() -> None:
-    context = {"target_kind": "category", "name": "Running shoes", "brand": "Acme"}
-    assert _leaks_owned_identity("Which running shoes are best?", context) is False
-    assert _leaks_owned_identity("Is Acme best?", context) is True
-    context["target_kind"] = "product"
-    assert _leaks_owned_identity("Which running shoes are best?", context) is True
 
 
 def test_first_position_win_requires_an_explicit_rank_one() -> None:

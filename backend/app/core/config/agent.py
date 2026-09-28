@@ -44,6 +44,8 @@ AGENT_MAX_TOOL_CALLS: Final = 6
 AGENT_RUN_MAX_ATTEMPTS: Final = 3
 # Per-chat bound on user turns, so one conversation cannot grow without end.
 AGENT_CHAT_TURN_LIMIT: Final = 60
+# HTTP attempts per default-model call made by TS prompt generation.
+GENERATION_PROVIDER_MAX_ATTEMPTS: Final = 3
 
 # Context bounds (characters, after serialization).
 AGENT_TOOL_RESULT_MAX_CHARS: Final = 12_000

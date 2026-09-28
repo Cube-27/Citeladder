@@ -10,7 +10,7 @@
 #
 # The gate thresholds are PROVISIONAL: they were set before any production
 # decisions existed and are recalibrated from user accept/reject outcomes
-# (``scripts/jev_calibration.py``). Change a threshold together with
+# (``frontend/services/api/scripts/jev-calibration.ts``). Change a threshold with
 # ``JEV_POLICY_VERSION``; every decision records the version and thresholds it
 # was judged under, and historical decisions are never re-judged.
 from __future__ import annotations
@@ -29,6 +29,8 @@ JEV_QUESTION_SCHEMA_VERSION: Final = "prompt-quality-questions-2"
 # Version of the flag and gate thresholds (settings below). Stored on every
 # decision; a stored decision is never re-flagged under a newer policy.
 JEV_POLICY_VERSION: Final = "jev-gate-1"
+JEV_RETRY_AFTER_CAP_SECONDS: Final = 10.0
+JEV_CALIBRATION_SWEEP: Final = (0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5)
 
 # JEV_MODE values.
 JEV_MODE_GATE: Final = "gate"

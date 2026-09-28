@@ -1,5 +1,6 @@
 import {
   promptCandidateReviewResponseSchema,
+  promptGenerateResponseSchema,
   promptCandidateSchema,
   promptSchema,
   promptSetSchema,
@@ -8,6 +9,8 @@ import {
 import { z } from 'zod';
 
 import { enforceWorkspaceRequest } from '../abuse/usage.ts';
+import { generationInput } from '../prompts/generation-input.ts';
+import { generatePrompts } from '../prompts/generation.ts';
 import { policy, resolveSettingSpec } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
@@ -60,6 +63,23 @@ function bulkImportLimit() {
 }
 
 export const promptRoutes = [
+  definePostRoute({
+    family: 'prompt-generation',
+    path: `${setRoot}/generate`,
+    capability: 'run',
+    status: 201,
+    params: { path: setPath, query: noQuery },
+    body: generationInput,
+    response: promptGenerateResponseSchema,
+    async handle({ c, db }, { path }) {
+      return generatePrompts(
+        db,
+        c.get('workspace').workspaceId,
+        path.prompt_set_id,
+        await readBody(c, generationInput),
+      );
+    },
+  }),
   defineGetRoute({
     family,
     path: `${api}/prompt-sets`,

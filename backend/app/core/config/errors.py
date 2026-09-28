@@ -16,6 +16,10 @@ from __future__ import annotations
 
 from typing import Final
 
+ERROR_COMMERCE_PROMPT_GENERATION_UNAVAILABLE: Final = (
+    "commerce_prompt_generation_unavailable"
+)
+
 # Server-side failures.
 CODE_INTERNAL_ERROR: Final = "internal_error"
 CODE_BAD_GATEWAY: Final = "bad_gateway"
