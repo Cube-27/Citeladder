@@ -11,7 +11,7 @@ confirmation; [Commerce](commerce-intelligence.md) owns typed buyer targets.
 
 ## Context, topics and generation
 
-The [prompt API](../backend/app/api/prompts.py) and
+The [generation route](../backend/app/api/prompts.py) and
 [generation service](../backend/app/domain/prompts/generation.py) authorize the
 workspace/project, validate topic/cohort selection, gather confirmed brand
 context and optional observed demand, call the configured model, then recheck
@@ -23,18 +23,23 @@ Generated prompts are **candidates**, not prompts. Each Generate request records
 a `PromptGenerationRun` (request, generator version, provenance) and pending
 `PromptCandidate` rows in [their own tables](../backend/app/models/prompt_candidate.py),
 so no audit, capacity/occupancy or visibility query can see a proposal. The
-[candidate owner](../backend/app/domain/prompts/candidates.py) drops texts already
-tracked or already pending. `POST /prompt-sets/{id}/candidates/review` takes
-`accept_ids`/`reject_ids`: accept re-runs prompt capacity and the conflict-safe
-insert under the project, prompt-set and account locks, copying run provenance
-and the candidate's validation into `generation_evidence`. Reject removes the
+[staging owner](../backend/app/domain/prompts/candidates.py) drops texts already
+tracked or already pending. The TypeScript API owns the prompt library: prompt
+sets, prompts, topics, import and candidate review
+([`src/prompts/`](../frontend/services/api/src/prompts/)).
+`POST /prompt-sets/{id}/candidates/review` takes `accept_ids`/`reject_ids`:
+accept runs prompt-slot occupancy
+([`src/entitlements/`](../frontend/services/api/src/entitlements/)) and the
+conflict-safe insert under the project, prompt-set and account capacity locks,
+copying run provenance and the candidate's validation into
+`generation_evidence`. Reject removes the
 candidate from review: it is deleted, or, when it carries a quality-judge
 decision, kept as a text-free `rejected` outcome record (decision, topic and
 admission record, no question text) for calibrating the judge. An
 over-allowance accept writes nothing. Unreviewed candidates expire after
 `GENERATION_CANDIDATE_RETENTION_HOURS` and outcome records after
 `GENERATION_REJECTED_OUTCOME_RETENTION_DAYS`; expired rows are hidden and
-purged by the next write. The Generate dialog shows the pending list with
+purged by the next generation or review. The Generate dialog shows the pending list with
 select-all and **Accept selected** / **Reject selected**; within a run, rows
 the quality judge flagged are listed last with advisory labels and stay
 selectable.
@@ -186,14 +191,21 @@ CSV import reads `topic,prompt` (aliases `category`; `text`, `query`,
 `question`) in any order; a file without a recognized header is a list of
 prompts. Optional `theme`, `intent`, `cohort` and `enabled` columns are clipped
 or defaulted rather than rejected; the upload's column, row and cell-size bounds
-still reject a file before parsing. The browser previews and posts parsed rows;
-the [CSV parser](../backend/app/domain/prompts/csv_import.py) serves raw uploads
-with the same contract, and the dialog's sample file is generated from the
-[browser parser's column contract](../frontend/lib/prompts/csv.ts). Under the
-project lock, [import](../backend/app/domain/prompts/importing.py) matches topic
+still reject a file before parsing. The
+[browser parser](../frontend/lib/prompts/csv.ts) is the one CSV reader: it
+previews and posts parsed rows (the endpoint accepts only rows), and the
+dialog's sample file is generated from its column contract. Under the project
+lock, [import](../frontend/services/api/src/prompts/prompts.ts) matches topic
 names case-insensitively, creates unknown names as manual topics only for rows
 that insert, and imports a blank topic unassigned. A binding or capacity failure
 rejects the whole import; duplicate rows are skipped while the rest import.
+
+Manual create, text edits, activation and import pass
+[topical binding](../frontend/services/api/src/prompts/binding.ts): the text
+must share a non-stopword token or exact phrase with the project's identity
+(brand and aliases, owned domains, topics, brand profile) or with the prompt's
+own topic; an empty vocabulary fails closed. Python generation applies the same
+rule to model output through its own validator.
 
 ## Audit admission and execution
 

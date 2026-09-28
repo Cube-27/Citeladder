@@ -56,7 +56,7 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   path: string;
   params: { path: Path; query: Query };
   response: Response;
-  method?: 'get' | 'post' | 'put' | 'patch';
+  method?: 'get' | 'post' | 'put' | 'patch' | 'delete';
   status?: ContentfulStatusCode;
   /** Another success status the same response is served with, such as a replay's 200. */
   alsoStatus?: ContentfulStatusCode;
@@ -197,6 +197,28 @@ export function definePatchRoute<
   Response extends z.ZodType,
 >(route: RouteSpec<Path, Query, Response>): ProductRoute {
   return defineRoute({ ...route, method: 'patch' });
+}
+
+/** A `204 No Content` route: the handler performs the deletion and returns nothing. */
+export function defineDeleteRoute<const Path extends ParamSpecs, const Query extends ParamSpecs>(
+  route: Omit<
+    RouteSpec<Path, Query, z.ZodType>,
+    'method' | 'response' | 'status' | 'alsoStatus' | 'raw' | 'handle'
+  > & {
+    handle: (context: RouteContext, params: RequestParams<Path, Query>) => Promise<void>;
+  },
+): ProductRoute {
+  const product = defineRoute({
+    ...route,
+    method: 'delete',
+    response: z.null(),
+    raw: true,
+    async handle(context, params) {
+      await route.handle(context, params);
+      return context.c.body(null, 204);
+    },
+  });
+  return { ...product, contract: { ...product.contract, responses: { 204: null } } };
 }
 
 /** Register once before handlers: a path may support several methods. */

@@ -22,11 +22,11 @@ import uuid
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Fixed namespaces are included in the 64-bit hash, making accidental lock-key
-# overlap with another entity class negligibly unlikely at application scale.
-_PROMPT_SET_NAMESPACE = 0x50524F4D  # "PROM"
-_PROJECT_NAMESPACE = 0x50524F4A  # "PROJ"
-_LOCK_PERSON = b"citeladder-locks"
+from app.core.config.prompts import (
+    PROJECT_LOCK_NAMESPACE,
+    PROMPT_LOCK_PERSON,
+    PROMPT_SET_LOCK_NAMESPACE,
+)
 
 
 def _advisory_lock_key(namespace: int, entity_id: uuid.UUID) -> int:
@@ -34,7 +34,7 @@ def _advisory_lock_key(namespace: int, entity_id: uuid.UUID) -> int:
     digest = hashlib.blake2b(
         namespace.to_bytes(4, "big") + entity_id.bytes,
         digest_size=8,
-        person=_LOCK_PERSON,
+        person=PROMPT_LOCK_PERSON.encode(),
     ).digest()
     return int.from_bytes(digest, "big", signed=True)
 
@@ -61,7 +61,7 @@ async def acquire_project_lock(session: AsyncSession, project_id: uuid.UUID) -> 
     between generation's re-resolution and its inserts. Must be acquired
     BEFORE any prompt-set lock (see module docstring).
     """
-    await _advisory_xact_lock(session, _PROJECT_NAMESPACE, project_id)
+    await _advisory_xact_lock(session, PROJECT_LOCK_NAMESPACE, project_id)
 
 
 async def acquire_prompt_set_lock(
@@ -74,4 +74,4 @@ async def acquire_prompt_set_lock(
     dialects (e.g. SQLite in isolated unit tests) skip the lock; production
     always runs on PostgreSQL where the lock is guaranteed.
     """
-    await _advisory_xact_lock(session, _PROMPT_SET_NAMESPACE, prompt_set_id)
+    await _advisory_xact_lock(session, PROMPT_SET_LOCK_NAMESPACE, prompt_set_id)

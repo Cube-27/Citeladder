@@ -33,31 +33,15 @@
   Payment implementation, deployment and external acceptance remain excluded.
 
 - [TypeScript migration](citeladder-typescript-migration.md)
-  — PR 1 (TS platform foundation), PR 2 (shared contracts and
-  route-ownership gate) and PR 3 (first live reads: `executions`,
-  `ai-referrals`, `visibility`) implemented on 27 September 2026, applying
-  D1–D5 as drafted; D6 awaits the owner. PR 4 (queue engine and referral
-  analytics kinds, plus removal of PR 3's error-wording emulation) implemented
-  on 27 September 2026. PR 5 (traffic, performance and demand projections)
-  is implemented without a split; integrations sync/readiness and shared
-  Python readers remain with their existing owners. PR 6 is implemented locally:
-  verification is TS-owned, with an owner-approved detector foundation for PR 7.
-  PR 7 is split: 7a (Opportunity refresh and catalog routes) is implemented.
-  PR 7a-cleanup removes Python emulation from PRs 3–6, retaining only live
-  cross-stack identity contracts. PR 7b (Action routes and declarations) is
-  implemented.
-  The owner restated the objective on 28 September 2026: rebuild in clean
-  TypeScript, with no parity and no golden files. Golden retirement removed
-  every golden file and parity check before PR 8. PR 8 is split into 8a
-  (Search Intelligence, implemented on 28 September 2026; review creation and
-  acquisition stay Python) and 8b (database-only Commerce, implemented on
-  28 September 2026). PR 9 is split: 9a (brand profile, business map,
-  competitor suggestions and logo reads) is implemented on 28 September 2026;
-  project CRUD stays Python behind entitlements. 9b (the six projects-tagged
-  visibility reads) is implemented on 28 September 2026; the command center
-  and executive PDF stay Python. Deployment of PRs 3–9b and their one-week
-  cutover soaks are pending.
-  Site Health, audits, billing/entitlements and the Agent runtime stay Python.
+  — PRs 1–9b implemented on 27–28 September 2026 (7, 8 and 9 split at the
+  owner's direction; golden files and parity checks retired before PR 8).
+  On 28 September 2026 the owner set the target at 30% Python or less, brought
+  billing, entitlements, audits, Site Health and the Agent into scope and
+  settled standing decisions (D6, D7). PR 10 (TS entitlement enforcement and
+  the prompt library: sets, prompts, import, candidate review and topics) is
+  implemented; prompt generation stays Python until PR 11 moves the model
+  gateway. PRs 11–20 follow the re-sequenced order in the plan. Deployment of
+  PRs 3–10 and their one-week cutover soaks are pending.
 
 ## Queued
 - [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)

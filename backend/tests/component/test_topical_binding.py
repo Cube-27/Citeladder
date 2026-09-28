@@ -1,16 +1,15 @@
-"""Component tests for topical binding + prompt bounds (slice23 Task 4 Part C).
+"""Component tests for topical binding in generation and audit admission.
 
 Covers, against real Postgres (service level) and the API envelope:
-  - off-domain free text rejected on all five paths: manual create, CSV
-    import (atomic), text update, and generated acceptance (proposed -> active)
-    — plus valid brand/domain/category text passing;
   - generated-output persistence drops off-domain model output;
-  - empty vocabulary fails closed (complete identity / use generation);
-  - the 300-char DTO bound (301 rejects, 300 accepts);
+  - audit launch consumes persisted active prompts without a second lexical
+    gate, including in a project with no identity vocabulary;
   - the funded/trial prompt-count policy: unset fails closed with
     ``prompt_count_policy_unconfigured``, a configured count is enforced,
-    and BYOK audit creation is never gated by the knob;
-  - the competitor negative pin: a competitor name never admits a prompt.
+    and BYOK audit creation is never gated by the knob.
+
+Binding on manual create, edit, activation and import is enforced by the
+TypeScript prompt writers and tested there.
 """
 
 from __future__ import annotations
@@ -37,10 +36,6 @@ from app.core.config.entitlements import (
     KEY_AUDIT_CREDITS,
 )
 from app.core.config.projects import PROMPT_ORIGIN_GENERATED
-from app.core.config.prompts import (
-    CODE_BINDING_VOCABULARY_EMPTY,
-    CODE_PROMPT_OFF_TOPIC,
-)
 from app.core.config.provider_catalog import ENGINE_CLAUDE
 from app.core.security import encrypt_secret
 from app.domain.audits.creation import create_audit
@@ -56,6 +51,11 @@ from tests.component.audit_helpers import (
 )
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import seed_occupancy_grants
+from tests.component.prompt_generation_helpers import (
+    create_prompt_set,
+    create_topic,
+    pending_candidates,
+)
 
 # ---------------------------------------------------------------------------
 # Shared API seed helpers (project identity: Acme Corp / acme.com, competitor
@@ -86,173 +86,7 @@ async def _make_project_and_set(
     project = (
         await client.post("/api/v1/projects", json=_project_payload(**profile))
     ).json()
-    prompt_set_id = (
-        await client.post(
-            "/api/v1/prompt-sets",
-            json={"project_id": project["id"], "name": "Default"},
-        )
-    ).json()["id"]
-    return project, prompt_set_id
-
-
-# ---------------------------------------------------------------------------
-# Manual create
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_create_rejects_off_domain_and_accepts_on_domain(
-    client: httpx.AsyncClient,
-) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "bind-create@example.com")
-
-    off_domain = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "best laptops for programming"},
-    )
-    assert off_domain.status_code == 422
-    body = off_domain.json()
-    assert body["error"]["code"] == CODE_PROMPT_OFF_TOPIC
-    assert body["detail"]["code"] == CODE_PROMPT_OFF_TOPIC
-
-    # Brand token, owned-domain token, and domain-host label all bind.
-    for text in (
-        "best acme running shoes",
-        "is acme corp shipping fast",
-        "reviews for acme.com products",
-    ):
-        created = await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": text},
-        )
-        assert created.status_code == 201, text
-
-
-@pytest.mark.asyncio
-async def test_competitor_name_never_admits_a_prompt(
-    client: httpx.AsyncClient,
-) -> None:
-    """Negative pin: the competitor list is not the positive vocabulary."""
-    _, prompt_set_id = await _make_project_and_set(client, "bind-comp@example.com")
-    resp = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "is globex the market leader in footwear"},
-    )
-    assert resp.status_code == 422
-    assert resp.json()["error"]["code"] == CODE_PROMPT_OFF_TOPIC
-
-
-# ---------------------------------------------------------------------------
-# CSV import (atomic)
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_import_one_invalid_row_inserts_nothing_and_returns_row_errors(
-    client: httpx.AsyncClient,
-) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "bind-import@example.com")
-
-    resp = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/import",
-        json={
-            "prompts": [
-                {"text": "best acme running shoes"},
-                {"text": "best laptops for programming"},
-            ]
-        },
-    )
-    assert resp.status_code == 422
-    body = resp.json()
-    assert body["error"]["code"] == CODE_PROMPT_OFF_TOPIC
-    rows = body["error"]["details"]["rows"]
-    assert rows == [
-        {
-            "row": 1,
-            "code": CODE_PROMPT_OFF_TOPIC,
-            "message": rows[0]["message"],
-        }
-    ]
-    # Atomic: the valid sibling row was NOT inserted either.
-    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
-    assert listed["prompts"] == []
-
-    valid = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/import",
-        json={"prompts": [{"text": "best acme running shoes"}]},
-    )
-    assert valid.status_code == 201
-    assert valid.json()["prompt_count"] == 1
-
-
-# ---------------------------------------------------------------------------
-# Text update + the proposed -> active human transition
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_update_rejects_off_domain_text_and_accepts_on_domain(
-    client: httpx.AsyncClient,
-) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "bind-update@example.com")
-    prompt = (
-        await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "best acme running shoes"},
-        )
-    ).json()
-
-    off_domain = await client.patch(
-        f"/api/v1/prompts/{prompt['id']}",
-        json={"text": "best laptops for programming"},
-    )
-    assert off_domain.status_code == 422
-    assert off_domain.json()["error"]["code"] == CODE_PROMPT_OFF_TOPIC
-    # The edit did not persist.
-    assert (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()["prompts"][
-        0
-    ]["text"] == "best acme running shoes"
-
-    ok = await client.patch(
-        f"/api/v1/prompts/{prompt['id']}",
-        json={"text": "best acme trail shoes"},
-    )
-    assert ok.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_activation_transition_rejects_off_domain_proposed_prompt(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """Stale/bypassed proposed content can never be promoted to active."""
-    _, prompt_set_id = await _make_project_and_set(client, "bind-accept@example.com")
-    async with session_factory() as session:
-        stale = Prompt(
-            prompt_set_id=uuid.UUID(prompt_set_id),
-            text="best laptops for programming",
-            status="proposed",
-            origin="generated",
-        )
-        fresh = Prompt(
-            prompt_set_id=uuid.UUID(prompt_set_id),
-            text="best acme running shoes",
-            status="proposed",
-            origin="generated",
-        )
-        session.add_all([stale, fresh])
-        await session.commit()
-        stale_id, fresh_id = str(stale.id), str(fresh.id)
-
-    rejected = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts/bulk-status",
-        json={"prompt_ids": [stale_id], "status": "active"},
-    )
-    assert rejected.status_code == 422
-    assert rejected.json()["error"]["code"] == CODE_PROMPT_OFF_TOPIC
-    # Nothing transitioned.
-    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
-    assert {p["status"] for p in listed["prompts"]} == {"proposed"}
-
-    accepted = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts/bulk-status",
-        json={"prompt_ids": [fresh_id], "status": "active"},
-    )
-    assert accepted.status_code == 200
+    return project, await create_prompt_set(project["id"])
 
 
 # ---------------------------------------------------------------------------
@@ -265,12 +99,7 @@ async def test_generation_drops_off_domain_model_output(
     project, prompt_set_id = await _make_project_and_set(
         client, "bind-gen@example.com", products_services=["running shoes"]
     )
-    topic = (
-        await client.post(
-            f"/api/v1/projects/{project['id']}/topics",
-            json={"name": "Running Shoes"},
-        )
-    ).json()
+    topic = await create_topic(project["id"], "Running Shoes")
     assert topic["name"] == "Running Shoes"
 
     class _MixedAgent:
@@ -312,9 +141,7 @@ async def test_generation_drops_off_domain_model_output(
     assert resp.status_code == 201
     staged = resp.json()["candidates"]
     assert [p["text"] for p in staged] == ["Best running shoes for flat feet"]
-    pending = (
-        await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
-    ).json()
+    pending = await pending_candidates(prompt_set_id)
     assert [p["text"] for p in pending] == ["Best running shoes for flat feet"]
 
 
@@ -452,11 +279,15 @@ async def test_audit_launch_api_passes_active_prompt_to_later_admission_gates(
 # Empty vocabulary fails closed
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_empty_vocabulary_fails_closed_on_mutation_but_not_audit(
+async def test_empty_vocabulary_does_not_block_audit(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """A project with no brand identity/topics yet cannot take free text."""
+    """A persisted prompt in a project with no identity can still be measured.
+
+    The TypeScript prompt writers refuse new free text there; setup should
+    nudge the user to add identity, not make the visibility run unreachable.
+    """
     await _register(client, "bind-empty@example.com")
     project = (
         await client.post(
@@ -464,32 +295,8 @@ async def test_empty_vocabulary_fails_closed_on_mutation_but_not_audit(
             json={"name": "No Identity", "website_url": "", "brand_name": ""},
         )
     ).json()
-    prompt_set_id = (
-        await client.post(
-            "/api/v1/prompt-sets",
-            json={"project_id": project["id"], "name": "Default"},
-        )
-    ).json()["id"]
+    prompt_set_id = await create_prompt_set(project["id"])
 
-    created = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "anything at all"},
-    )
-    assert created.status_code == 422
-    body = created.json()
-    assert body["error"]["code"] == CODE_BINDING_VOCABULARY_EMPTY
-    # The guidance directs the caller to complete identity / use generation.
-    assert "identity" in body["error"]["message"]
-
-    imported = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/import",
-        json={"prompts": [{"text": "anything at all"}]},
-    )
-    assert imported.status_code == 422
-    assert imported.json()["error"]["code"] == CODE_BINDING_VOCABULARY_EMPTY
-
-    # An already-persisted prompt can still be measured: setup should nudge the
-    # user to add identity, not make the visibility run unreachable.
     async with session_factory() as session:
         workspace_id = uuid.UUID(project["workspace_id"])
         session.add(
@@ -559,36 +366,6 @@ async def test_empty_vocabulary_after_identity_removal_keeps_audit_available(
             repetitions=1,
         )
         assert audit.id is not None
-
-
-# ---------------------------------------------------------------------------
-# Prompt text bound (DTO boundary)
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_prompt_text_bound_300_accepts_301_rejects(
-    client: httpx.AsyncClient,
-) -> None:
-    _, prompt_set_id = await _make_project_and_set(client, "bind-300@example.com")
-
-    exactly = "acme " + "x" * 295
-    assert len(exactly) == 300
-    ok = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts", json={"text": exactly}
-    )
-    assert ok.status_code == 201
-
-    over = "acme " + "x" * 296
-    assert len(over) == 301
-    resp = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts", json={"text": over}
-    )
-    assert resp.status_code == 422
-
-    # The update DTO shares the bound.
-    patch = await client.patch(
-        f"/api/v1/prompts/{ok.json()['id']}", json={"text": over}
-    )
-    assert patch.status_code == 422
 
 
 # ---------------------------------------------------------------------------

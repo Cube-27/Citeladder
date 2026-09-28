@@ -6,15 +6,16 @@ provider I/O, regardless of what keys exist in the developer's ``.env``.
 
 Covers:
   - generate happy path: candidates reference existing canonical topics, stay
-    untracked until accepted, and accepted prompts retain provenance
-    evidence (invariant 4);
+    untracked until accepted, and the run records provenance (invariant 4);
   - count cap (422);
   - unconfigured agent -> 503, but foreign set -> 404 first (invariant 5);
   - unparseable model output -> 502;
   - DB-level duplicate dropping across repeat runs (conflict-safe dedupe);
-  - topics CRUD with per-status counts + duplicate-name 409;
-  - bulk status transitions + duplicate prompt text 409;
+  - generation racing the TypeScript set/topic deletes under their locks;
   - the audit planner never consumes ``proposed``/``archived`` prompts.
+
+Prompt-library routes (sets, prompts, topics, import, review) are TypeScript
+owned; tests set that state up in the database directly.
 """
 
 from __future__ import annotations
@@ -25,19 +26,20 @@ from typing import cast
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.api.prompts as prompts_api
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
 from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.audits import AUDIT_TRIGGER_MANUAL
-from app.core.config.entitlements import KEY_PROJECT_SLOTS, KEY_PROMPT_SLOTS
+from app.core.config.entitlements import KEY_PROMPT_SLOTS
 from app.domain.audits.creation import create_audit
 from app.domain.audits.errors import AuditValidationError
 from app.domain.audits.reads import list_tasks
 from app.domain.entitlements.types import GrantSpec
-from app.models.prompt import Prompt
+from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
+from app.models.prompt import Prompt, PromptSet, Topic
 from app.models.prompt_candidate import PromptCandidate, PromptGenerationRun
 from tests.component.audit_helpers import seed_audit_fixtures
 from tests.component.auth_helpers import register_and_login as _register
@@ -48,8 +50,12 @@ from tests.component.occupancy_helpers import (
 from tests.component.prompt_generation_helpers import (
     FakeAgent,
     accept_all,
+    create_prompt,
+    create_topic,
     make_project_and_set,
-    project_payload,
+    pending_candidates,
+    project_topics,
+    prompt_set_view,
 )
 from tests.fixtures.prompt_generation import (
     slots_from_user_message,
@@ -91,10 +97,10 @@ async def test_generate_stages_candidates_until_accepted(
     assert {t["name"] for t in body["topics"]} == {"Running Shoes"}
     # Candidates are not tracked prompts: nothing counts until accepted.
     assert body["topics"][0]["active_count"] == 0
-    tracked = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
+    tracked = await prompt_set_view(prompt_set_id)
     assert tracked["prompts"] == []
-    pending = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
-    assert {c["id"] for c in pending.json()} == {c["id"] for c in body["candidates"]}
+    pending = await pending_candidates(prompt_set_id)
+    assert {c["id"] for c in pending} == {c["id"] for c in body["candidates"]}
 
     accepted = await accept_all(client, prompt_set_id, body)
     assert len(accepted) == 3
@@ -103,11 +109,9 @@ async def test_generate_stages_candidates_until_accepted(
         assert prompt["origin"] == "generated"
         assert prompt["topic_id"] is not None
         assert "buyer_query_archetype" not in prompt["generation_evidence"]
-    topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
+    topics = await project_topics(project["id"])
     assert topics[0]["active_count"] == 3
-    assert (
-        await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
-    ).json() == []
+    assert await pending_candidates(prompt_set_id) == []
 
     # The brand evidence went to the agent (confirmed above), and the
     # request embedded identity + count instructions.
@@ -125,7 +129,7 @@ async def test_generate_stages_candidates_until_accepted(
     assert '["running shoes"]' in sent
 
     # Core generation excludes tracked and competitor names.
-    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
+    listed = await prompt_set_view(prompt_set_id)
     assert all(prompt["branded"] is False for prompt in listed["prompts"])
 
 
@@ -166,43 +170,34 @@ async def test_generate_persists_provenance_evidence(
         json={"count": 3, "confirm_send_evidence": True},
     )
     assert resp.status_code == 201
-    candidate_ids = {candidate["id"] for candidate in resp.json()["candidates"]}
-    await accept_all(client, prompt_set_id, resp.json())
+    candidate_ids = {
+        uuid.UUID(candidate["id"]) for candidate in resp.json()["candidates"]
+    }
 
     async with session_factory() as session:
-        prompts = (
-            (
-                await session.execute(
-                    select(Prompt).where(
-                        Prompt.prompt_set_id == uuid.UUID(prompt_set_id)
-                    )
-                )
+        candidates = (
+            await session.scalars(
+                select(PromptCandidate).where(PromptCandidate.id.in_(candidate_ids))
             )
-            .scalars()
-            .all()
-        )
-    assert len(prompts) == 3
-    run_ids = set()
-    for prompt in prompts:
-        evidence = prompt.generation_evidence
-        assert evidence is not None
-        assert evidence["generator_version"] == "prompt-gen-v2"
-        assert evidence["buyer_query_policy_version"] == "buyer-query-policy-1"
-        assert "buyer_query_archetype" not in evidence
-        assert evidence["generation_mode"] == "model"
-        assert evidence["model_identity"] == {
-            "transport_host": "agent.test",
-            "transport_model": "fake-model",
-        }
-        assert evidence["requested_count"] == 3
-        assert evidence["candidate_validation"]["admission"] == "passed"
-        run_ids.add(evidence["generation_run_id"])
-    assert len(run_ids) == 1  # one run id for the whole batch
-    assert {p.generation_evidence["candidate_id"] for p in prompts} == candidate_ids
-    async with session_factory() as session:
-        run = await session.get(PromptGenerationRun, uuid.UUID(run_ids.pop()))
+        ).all()
+        run_ids = {candidate.run_id for candidate in candidates}
+        assert len(run_ids) == 1  # one run for the whole batch
+        run = await session.get(PromptGenerationRun, run_ids.pop())
+    assert len(candidates) == 3
+    assert all(c.validation["admission"] == "passed" for c in candidates)
     assert run is not None
     assert run.prompt_set_id == uuid.UUID(prompt_set_id)
+    evidence = run.provenance
+    assert evidence["generator_version"] == "prompt-gen-v2"
+    assert evidence["buyer_query_policy_version"] == "buyer-query-policy-1"
+    assert "buyer_query_archetype" not in evidence
+    assert evidence["generation_mode"] == "model"
+    assert evidence["model_identity"] == {
+        "transport_host": "agent.test",
+        "transport_model": "fake-model",
+    }
+    assert evidence["requested_count"] == 3
+    assert evidence["generation_run_id"] == str(run.id)
 
 
 @pytest.mark.asyncio
@@ -241,7 +236,7 @@ async def test_generate_creates_topics_from_confirmed_offerings_when_none_exist(
         prompt["topic_id"] == body["topics"][0]["id"] for prompt in body["candidates"]
     )
 
-    topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
+    topics = await project_topics(project["id"])
     assert [(topic["name"], topic["origin"]) for topic in topics] == [
         ("running shoes", "generated")
     ]
@@ -414,7 +409,7 @@ async def test_generate_twice_drops_duplicates(
     assert third["candidates"] == []
     assert third["dropped_duplicates"] == 6
 
-    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
+    listed = await prompt_set_view(prompt_set_id)
     assert len(listed["prompts"]) == 3  # no dupes, and no reused topics broke
 
 
@@ -423,12 +418,7 @@ async def test_generate_into_target_topic(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     project, prompt_set_id = await make_project_and_set(client, "gen10@example.com")
-    topic = (
-        await client.post(
-            f"/api/v1/projects/{project['id']}/topics",
-            json={"name": "Running Shoe Pricing"},
-        )
-    ).json()
+    topic = await create_topic(project["id"], "Running Shoe Pricing")
 
     # The fake converts its fixture to the only canonical topic ID supplied to
     # a scoped generation call.
@@ -465,7 +455,7 @@ async def test_generate_into_target_topic(
     assert '"topic":"Running Shoe Pricing"' in agent.calls[0]["user"]
 
     # No new topic was created from the model's invented name.
-    topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
+    topics = await project_topics(project["id"])
     assert {t["name"] for t in topics} == {"Running Shoe Pricing", "Running Shoes"}
 
 
@@ -477,12 +467,9 @@ async def test_topic_scoped_generation_plans_only_that_topic(
     project, prompt_set_id = await make_project_and_set(
         client, "gen-scoped@example.com"
     )
-    target = (
-        await client.post(
-            f"/api/v1/projects/{project['id']}/topics",
-            json={"name": "School Uniforms", "description": "Shirts, dresses, shoes."},
-        )
-    ).json()
+    target = await create_topic(
+        project["id"], "School Uniforms", description="Shirts, dresses, shoes."
+    )
 
     agent = FakeAgent(response=json.dumps({"topics": []}))
     monkeypatch.setattr(prompts_api, "create_model_gateway", lambda: agent)
@@ -512,15 +499,11 @@ async def test_generation_reuses_existing_topic_with_description(
     project, prompt_set_id = await make_project_and_set(
         client, "gen-topic-description@example.com"
     )
-    topic = (
-        await client.post(
-            f"/api/v1/projects/{project['id']}/topics",
-            json={
-                "name": "Footwear",
-                "description": "Running and everyday shoes for families.",
-            },
-        )
-    ).json()
+    topic = await create_topic(
+        project["id"],
+        "Footwear",
+        description="Running and everyday shoes for families.",
+    )
     agent = FakeAgent(
         response=json.dumps(
             {
@@ -555,7 +538,7 @@ async def test_generation_reuses_existing_topic_with_description(
         '"topic_description":"Running and everyday shoes for families."'
         in agent.calls[0]["user"]
     )
-    topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
+    topics = await project_topics(project["id"])
     assert {item["name"] for item in topics} == {"Footwear", "Running Shoes"}
 
 
@@ -587,19 +570,10 @@ def _agent_response_with_n_prompts(
 
 @pytest.mark.asyncio
 async def test_generate_stages_validated_requested_count_for_acceptance(
-    client: httpx.AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-    session_factory: async_sessionmaker[AsyncSession],
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The requested, validated set is staged and becomes active on accept."""
-    project, prompt_set_id = await make_project_and_set(client, "pool1@example.com")
-    async with session_factory() as session:
-        await seed_occupancy_grants(
-            session,
-            workspace_id=uuid.UUID(project["workspace_id"]),
-            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=20),),
-        )
-        await session.commit()
+    """The requested, validated set is staged for review."""
+    _, prompt_set_id = await make_project_and_set(client, "pool1@example.com")
     agent = FakeAgent(response=_agent_response_with_n_prompts(25))
     monkeypatch.setattr(prompts_api, "create_model_gateway", lambda: agent)
 
@@ -611,34 +585,28 @@ async def test_generate_stages_validated_requested_count_for_acceptance(
     body = resp.json()
     # A single topic can fill the requested count without recipe limits.
     assert len(body["candidates"]) == 20
-    accepted = await accept_all(client, prompt_set_id, body)
-    assert [p["status"] for p in accepted] == ["active"] * 20
 
 
 @pytest.mark.asyncio
-async def test_accepting_comparison_candidates_is_capacity_checked_and_branded(
+async def test_generation_stages_comparison_candidates_without_charging_capacity(
     client: httpx.AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Generation charges nothing; accept is where prompt capacity applies."""
+    """Generation charges nothing: a full prompt allowance still stages."""
     project, prompt_set_id = await make_project_and_set(client, "brandcap@example.com")
     async with session_factory() as session:
-        # The ten pre-existing prompts consume the free baseline; the generated
-        # comparison pair needs its own explicit allowance.
+        await revoke_signup_baseline_grants(
+            session, workspace_id=uuid.UUID(project["workspace_id"])
+        )
         await seed_occupancy_grants(
             session,
             workspace_id=uuid.UUID(project["workspace_id"]),
             grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=2),),
         )
         await session.commit()
-    # Ten existing prompts leave room for two more.
-    for i in range(10):
-        created = await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": f"best Acme running shoes for terrain {i}"},
-        )
-        assert created.status_code == 201
+    for i in range(2):
+        await create_prompt(prompt_set_id, f"best Acme running shoes for terrain {i}")
     comparison_prompts = [
         {"text": text, "intent": "comparison"}
         for text in (
@@ -666,28 +634,9 @@ async def test_accepting_comparison_candidates_is_capacity_checked_and_branded(
         json={"count": 10, "cohort": "comparison", "confirm_send_evidence": True},
     )
     assert resp.status_code == 201
-    candidate_ids = [c["id"] for c in resp.json()["candidates"]]
-    assert len(candidate_ids) == 10
-
-    over = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
-        json={"accept_ids": candidate_ids},
-    )
-    assert over.status_code == 403
-    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
-    assert len(listed["prompts"]) == 10
-    still_pending = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
-    assert len(still_pending.json()) == 10
-
-    within = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
-        json={"accept_ids": candidate_ids[:2]},
-    )
-    assert within.status_code == 200
-    accepted = within.json()["accepted"]
-    assert len(accepted) == 2
-    assert all(p["branded"] and p["status"] == "active" for p in accepted)
-    assert all(p["cohort"] == "comparison" for p in accepted)
+    candidates = resp.json()["candidates"]
+    assert len(candidates) == 10
+    assert {candidate["cohort"] for candidate in candidates} == {"comparison"}
 
 
 @pytest.mark.asyncio
@@ -798,11 +747,7 @@ async def test_generate_bounds_existing_prompt_context(
     _, prompt_set_id = await make_project_and_set(client, "ctx1@example.com")
     monkeypatch.setattr(prompt_generation_settings, "existing_prompt_context_limit", 3)
     for i in range(6):
-        created = await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": f"existing acme context prompt {i}"},
-        )
-        assert created.status_code == 201
+        await create_prompt(prompt_set_id, f"existing acme context prompt {i}")
 
     agent = FakeAgent(response=_agent_response_with_n_prompts(2, topic="New"))
     monkeypatch.setattr(prompts_api, "create_model_gateway", lambda: agent)
@@ -910,11 +855,8 @@ async def test_generation_racing_prompt_set_delete_is_scoped_not_found(
     import asyncio
 
     from app.domain.prompts.generation import generate_prompts
+    from app.domain.prompts.generation_errors import PromptSetNotFoundError
     from app.domain.prompts.schemas import PromptGenerateRequest
-    from app.domain.prompts.service import (
-        PromptSetNotFoundError,
-        delete_prompt_set,
-    )
     from app.models.project import Project
 
     project, prompt_set_id = await make_project_and_set(client, "race1@example.com")
@@ -965,12 +907,14 @@ async def test_generation_racing_prompt_set_delete_is_scoped_not_found(
 
     async def _delete() -> None:
         await provider_entered.wait()
+        # The TypeScript delete's locks: project, then the set.
         async with session_factory() as session:
-            await delete_prompt_set(
-                session,
-                workspace_id=workspace_id,
-                prompt_set_id=uuid.UUID(prompt_set_id),
+            await acquire_project_lock(session, uuid.UUID(project["id"]))
+            await acquire_prompt_set_lock(session, uuid.UUID(prompt_set_id))
+            await session.execute(
+                delete(PromptSet).where(PromptSet.id == uuid.UUID(prompt_set_id))
             )
+            await session.commit()
         delete_done.set()
 
     gen_result, _ = await asyncio.gather(_generate(), _delete())
@@ -992,15 +936,10 @@ async def test_generation_racing_topic_delete_is_scoped_validation_error(
         generate_prompts,
     )
     from app.domain.prompts.schemas import PromptGenerateRequest
-    from app.domain.prompts.topics import delete_topic
     from app.models.project import Project
 
     project, prompt_set_id = await make_project_and_set(client, "race2@example.com")
-    topic = (
-        await client.post(
-            f"/api/v1/projects/{project['id']}/topics", json={"name": "Doomed"}
-        )
-    ).json()
+    topic = await create_topic(project["id"], "Doomed")
     async with session_factory() as session:
         proj = await session.get(Project, uuid.UUID(project["id"]))
         assert proj is not None
@@ -1049,12 +988,13 @@ async def test_generation_racing_topic_delete_is_scoped_validation_error(
 
     async def _delete() -> None:
         await provider_entered.wait()
+        # The TypeScript topic delete takes the project lock first.
         async with session_factory() as session:
-            await delete_topic(
-                session,
-                workspace_id=workspace_id,
-                topic_id=uuid.UUID(topic["id"]),
+            await acquire_project_lock(session, uuid.UUID(project["id"]))
+            await session.execute(
+                delete(Topic).where(Topic.id == uuid.UUID(topic["id"]))
             )
+            await session.commit()
         delete_done.set()
 
     gen_result, _ = await asyncio.gather(_generate(), _delete())
@@ -1122,336 +1062,6 @@ async def test_generation_unrelated_integrity_error_is_not_remapped(
 
 
 # --------------------------------------------------------------------------
-# Topics CRUD
-# --------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_create_prompt_accepts_topic_id(client: httpx.AsyncClient) -> None:
-    """Onboarding creates topics first, then files prompts under them directly.
-
-    Without ``topic_id`` on create it would have to POST every prompt and then
-    PATCH every prompt, doubling the write count on a first-run flow.
-    """
-    project, prompt_set_id = await make_project_and_set(
-        client, "ptopic1@example.com", create_default_topic=False
-    )
-    topic = (
-        await client.post(
-            f"/api/v1/projects/{project['id']}/topics", json={"name": "Everyday basics"}
-        )
-    ).json()
-
-    created = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "best basics for kids", "topic_id": topic["id"]},
-    )
-
-    assert created.status_code == 201
-    assert created.json()["topic_id"] == topic["id"]
-    # And it counts toward the topic straight away.
-    listing = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
-    assert listing[0]["active_count"] == 1
-
-
-@pytest.mark.asyncio
-async def test_create_prompt_rejects_foreign_topic_id(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """A topic from another project is a 404, not a cross-scope FK write."""
-    project_a, set_a = await make_project_and_set(client, "ptopic2@example.com")
-    async with session_factory() as session:
-        await seed_occupancy_grants(
-            session,
-            workspace_id=uuid.UUID(project_a["workspace_id"]),
-            grants=(GrantSpec(key=KEY_PROJECT_SLOTS, value=1),),
-        )
-        await session.commit()
-    other = await client.post(
-        "/api/v1/projects",
-        json={
-            "name": "Other",
-            "brand_name": "Other",
-            "website_url": "https://other.example",
-            "country_code": "US",
-            "language_code": "en",
-        },
-    )
-    assert other.status_code == 201
-    foreign_topic = (
-        await client.post(
-            f"/api/v1/projects/{other.json()['id']}/topics", json={"name": "Foreign"}
-        )
-    ).json()
-
-    resp = await client.post(
-        f"/api/v1/prompt-sets/{set_a}/prompts",
-        json={"text": "scoped acme prompt", "topic_id": foreign_topic["id"]},
-    )
-
-    assert resp.status_code == 404
-    assert project_a["id"] != other.json()["id"]
-
-
-@pytest.mark.asyncio
-async def test_topics_crud_with_counts(client: httpx.AsyncClient) -> None:
-    project, prompt_set_id = await make_project_and_set(
-        client, "top1@example.com", create_default_topic=False
-    )
-    project_id = project["id"]
-
-    created = await client.post(
-        f"/api/v1/projects/{project_id}/topics",
-        json={"name": "Footwear", "description": "Shoes and boots"},
-    )
-    assert created.status_code == 201
-    topic = created.json()
-    assert topic["origin"] == "manual"
-    assert topic["active_count"] == 0
-    assert topic["proposed_count"] == 0
-
-    # Duplicate name (same project) -> 409.
-    dup = await client.post(
-        f"/api/v1/projects/{project_id}/topics", json={"name": "Footwear"}
-    )
-    assert dup.status_code == 409
-
-    # A prompt assigned to the topic shows up in the counts.
-    prompt = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "best hiking boots"},
-    )
-    assert prompt.status_code == 201
-    patched = await client.patch(
-        f"/api/v1/prompts/{prompt.json()['id']}",
-        json={"topic_id": topic["id"]},
-    )
-    assert patched.status_code == 200
-    assert patched.json()["topic_id"] == topic["id"]
-
-    listing = await client.get(f"/api/v1/projects/{project_id}/topics")
-    assert listing.status_code == 200
-    assert listing.json()[0]["active_count"] == 1
-
-    renamed = await client.patch(
-        f"/api/v1/topics/{topic['id']}", json={"name": "Boots"}
-    )
-    assert renamed.status_code == 200
-    assert renamed.json()["name"] == "Boots"
-
-    deleted = await client.delete(f"/api/v1/topics/{topic['id']}")
-    assert deleted.status_code == 204
-    assert (await client.get(f"/api/v1/projects/{project_id}/topics")).json() == []
-
-    # Topic delete detaches (SET NULL), never deletes prompts.
-    survivor = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
-    assert len(survivor["prompts"]) == 1
-    assert survivor["prompts"][0]["topic_id"] is None
-
-
-@pytest.mark.asyncio
-async def test_prompt_topic_assignment_same_project_succeeds(
-    client: httpx.AsyncClient,
-) -> None:
-    """A prompt can be filed under a topic of its own project."""
-    project, prompt_set_id = await make_project_and_set(client, "tscope1@example.com")
-    topic = (
-        await client.post(
-            f"/api/v1/projects/{project['id']}/topics", json={"name": "Footwear"}
-        )
-    ).json()
-    prompt = (
-        await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "best hiking shoes"},
-        )
-    ).json()
-    resp = await client.patch(
-        f"/api/v1/prompts/{prompt['id']}", json={"topic_id": topic["id"]}
-    )
-    assert resp.status_code == 200
-    assert resp.json()["topic_id"] == topic["id"]
-    # Detaching (topic_id=null) is always allowed.
-    detached = await client.patch(
-        f"/api/v1/prompts/{prompt['id']}", json={"topic_id": None}
-    )
-    assert detached.status_code == 200
-    assert detached.json()["topic_id"] is None
-
-
-@pytest.mark.asyncio
-async def test_prompt_topic_assignment_cross_project_rejected(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """A topic from a sibling project (same workspace) can't be attached."""
-    await _register(client, "tscope2@example.com")
-    project_a = (
-        await client.post("/api/v1/projects", json=project_payload(name="A"))
-    ).json()
-    prompt_set_a = (
-        await client.post(
-            "/api/v1/prompt-sets",
-            json={"project_id": project_a["id"], "name": "SetA"},
-        )
-    ).json()["id"]
-    async with session_factory() as session:
-        await seed_occupancy_grants(
-            session,
-            workspace_id=uuid.UUID(project_a["workspace_id"]),
-            grants=(GrantSpec(key=KEY_PROJECT_SLOTS, value=1),),
-        )
-        await session.commit()
-    project_b = (
-        await client.post(
-            "/api/v1/projects",
-            json=project_payload(
-                name="B", brand_name="Beta", website_url="https://beta.example"
-            ),
-        )
-    ).json()
-    topic_b = (
-        await client.post(
-            f"/api/v1/projects/{project_b['id']}/topics", json={"name": "Other"}
-        )
-    ).json()
-
-    prompt = (
-        await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_a}/prompts",
-            json={"text": "cross project acme prompt"},
-        )
-    ).json()
-    resp = await client.patch(
-        f"/api/v1/prompts/{prompt['id']}", json={"topic_id": topic_b["id"]}
-    )
-    assert resp.status_code == 404
-    # The assignment did not persist.
-    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_a}")).json()
-    assert listed["prompts"][0]["topic_id"] is None
-
-
-@pytest.mark.asyncio
-async def test_prompt_topic_assignment_cross_workspace_rejected(
-    client: httpx.AsyncClient,
-) -> None:
-    """A topic from another workspace can't be attached to this prompt."""
-    # Workspace 1 owns the topic.
-    other_project, _ = await make_project_and_set(client, "tscope3a@example.com")
-    other_topic = (
-        await client.post(
-            f"/api/v1/projects/{other_project['id']}/topics", json={"name": "Theirs"}
-        )
-    ).json()
-
-    # Workspace 2 owns the prompt.
-    client.cookies.clear()
-    _, prompt_set_id = await make_project_and_set(client, "tscope3b@example.com")
-    prompt = (
-        await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "my acme prompt"},
-        )
-    ).json()
-    resp = await client.patch(
-        f"/api/v1/prompts/{prompt['id']}", json={"topic_id": other_topic["id"]}
-    )
-    assert resp.status_code == 404
-    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
-    assert listed["prompts"][0]["topic_id"] is None
-
-
-@pytest.mark.asyncio
-async def test_prompt_topic_assignment_unknown_topic_rejected(
-    client: httpx.AsyncClient,
-) -> None:
-    """A non-existent topic id is rejected (no cross-scope FK 500)."""
-    _, prompt_set_id = await make_project_and_set(client, "tscope4@example.com")
-    prompt = (
-        await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "orphan acme prompt"},
-        )
-    ).json()
-    resp = await client.patch(
-        f"/api/v1/prompts/{prompt['id']}", json={"topic_id": str(uuid.uuid4())}
-    )
-    assert resp.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_topics_are_workspace_scoped(client: httpx.AsyncClient) -> None:
-    project, _ = await make_project_and_set(client, "top2a@example.com")
-    topic = (
-        await client.post(
-            f"/api/v1/projects/{project['id']}/topics", json={"name": "Mine"}
-        )
-    ).json()
-
-    client.cookies.clear()
-    await _register(client, "top2b@example.com")
-    assert (
-        await client.get(f"/api/v1/projects/{project['id']}/topics")
-    ).status_code == 404
-    assert (
-        await client.patch(f"/api/v1/topics/{topic['id']}", json={"name": "X"})
-    ).status_code == 404
-    assert (await client.delete(f"/api/v1/topics/{topic['id']}")).status_code == 404
-
-
-# --------------------------------------------------------------------------
-# Review lifecycle: status edits, bulk transitions, duplicate guard
-# --------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_prompt_status_update_and_duplicate_409(
-    client: httpx.AsyncClient,
-) -> None:
-    _, prompt_set_id = await make_project_and_set(client, "rev1@example.com")
-    prompt = (
-        await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "best value shoes"},
-        )
-    ).json()
-    assert prompt["status"] == "active"
-
-    archived = await client.patch(
-        f"/api/v1/prompts/{prompt['id']}", json={"status": "archived"}
-    )
-    assert archived.status_code == 200
-    assert archived.json()["status"] == "archived"
-
-    # Same concept ("Best value shoes?" normalizes identically) -> 409.
-    dup = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-        json={"text": "Best  value shoes?"},
-    )
-    assert dup.status_code == 409
-
-
-@pytest.mark.asyncio
-async def test_bulk_status_rejects_foreign_prompt_ids(
-    client: httpx.AsyncClient,
-) -> None:
-    """One bad id rejects the whole batch — no partial transitions."""
-    _, prompt_set_id = await make_project_and_set(client, "rev3@example.com")
-    prompt = (
-        await client.post(
-            f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
-            json={"text": "real acme prompt"},
-        )
-    ).json()
-
-    resp = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/prompts/bulk-status",
-        json={"prompt_ids": [prompt["id"], str(uuid.uuid4())], "status": "archived"},
-    )
-    assert resp.status_code == 404
-    # The valid prompt was not transitioned.
-    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
-    assert listed["prompts"][0]["status"] == "active"
-
-
-# --------------------------------------------------------------------------
 # Audits only consume active prompts (no auto-run of AI suggestions)
 # --------------------------------------------------------------------------
 @pytest.mark.asyncio
@@ -1497,115 +1107,3 @@ async def test_planner_excludes_proposed_and_archived_prompts(
                 prompt_ids=[seed.prompt_ids[0]],
                 repetitions=1,
             )
-
-
-# =========================================================================
-# Account occupancy enforcement (slice23 Task 4): the route maps the
-# domain denial to the coded 403; the quota check lives in the service.
-# =========================================================================
-@pytest.mark.asyncio
-async def test_accept_over_occupancy_returns_coded_403(
-    client: httpx.AsyncClient,
-    fake_agent: FakeAgent,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    project, prompt_set_id = await make_project_and_set(
-        client, "occ-gen-403@example.com"
-    )
-    # Make the registered account bare, then provision a zero-slot grant: every
-    # accepted candidate that could actually insert is over the allowance.
-    async with session_factory() as session:
-        workspace_id = uuid.UUID(project["workspace_id"])
-        await revoke_signup_baseline_grants(session, workspace_id=workspace_id)
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace_id,
-            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=0),),
-        )
-        await session.commit()
-
-    generated = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
-        json={"count": 3, "confirm_send_evidence": True},
-    )
-    # Staging charges nothing, so generation itself is not over capacity.
-    assert generated.status_code == 201
-    candidate_ids = [c["id"] for c in generated.json()["candidates"]]
-    resp = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/candidates/review",
-        json={"accept_ids": candidate_ids},
-    )
-    assert resp.status_code == 403
-    body = resp.json()
-    assert body["error"]["code"] == "occupancy_limit_exceeded"
-    assert body["error"]["retryable"] is False
-    assert body["error"]["details"]["key"] == "prompt_slots"
-    assert body["detail"]["code"] == "occupancy_limit_exceeded"
-
-    # The denial is atomic: nothing tracked, every candidate still pending.
-    got = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")
-    assert got.json()["prompts"] == []
-    pending = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}/candidates")
-    assert sorted(c["id"] for c in pending.json()) == sorted(candidate_ids)
-
-
-@pytest.mark.asyncio
-async def test_import_over_occupancy_returns_coded_403(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    project, prompt_set_id = await make_project_and_set(
-        client, "occ-import-403@example.com"
-    )
-    async with session_factory() as session:
-        workspace_id = uuid.UUID(project["workspace_id"])
-        await revoke_signup_baseline_grants(session, workspace_id=workspace_id)
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace_id,
-            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=2),),
-        )
-        await session.commit()
-
-    # 3 distinct rows against an allowance of 2: the whole import is denied
-    # atomically (duplicates would be filtered before charging; there are
-    # none here).
-    resp = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/import",
-        json={
-            "prompts": [
-                {"text": "first acme import"},
-                {"text": "second acme import"},
-                {"text": "third acme import"},
-            ]
-        },
-    )
-    assert resp.status_code == 403
-    body = resp.json()
-    assert body["error"]["code"] == "occupancy_limit_exceeded"
-    assert body["error"]["details"] == {
-        "key": "prompt_slots",
-        "allowance": 2,
-        "current": 0,
-        "requested": 3,
-    }
-    got = await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")
-    assert got.json()["prompts"] == []
-
-
-@pytest.mark.asyncio
-async def test_import_validation_does_not_echo_parser_details(
-    client: httpx.AsyncClient,
-) -> None:
-    _, prompt_set_id = await make_project_and_set(
-        client, "import-safe-validation@example.com"
-    )
-
-    response = await client.post(
-        f"/api/v1/prompt-sets/{prompt_set_id}/import",
-        content=b'{"prompts": [',
-        headers={"Content-Type": "application/json"},
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"] == "Invalid prompt import payload"

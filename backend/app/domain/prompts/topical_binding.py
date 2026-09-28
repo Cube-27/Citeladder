@@ -1,5 +1,9 @@
 # Topical binding: deterministic project-identity admission for prompt text.
 #
+# Python generation filters model output through this validator, and Commerce
+# reuses ``binding_tokens``. The TypeScript API owns binding enforcement for
+# manual, edited and imported prompts (``src/prompts/binding.ts``).
+#
 # Topic + BrandProfile + brand aliases + owned domains are the binding
 # authoritative category identity (no project-category column). This module
 # builds a NORMALIZED positive vocabulary from that identity and validates
@@ -19,13 +23,8 @@ from __future__ import annotations
 
 import re
 import unicodedata
-import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
-
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from typing import TYPE_CHECKING
 
 from app.core.config.prompts import (
     BINDING_CODE_ACCEPTED,
@@ -35,29 +34,10 @@ from app.core.config.prompts import (
     TOPICAL_BINDING_MIN_TOKEN_CHARS,
     TOPICAL_BINDING_STOPWORDS,
 )
-from app.models.brand import Brand
 from app.models.project import Project
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-
-
-class TopicalBindingError(ValueError):
-    """Prompt text failed project topical binding (coded, API-mapped).
-
-    Follows the FundedAdmissionError pattern: a config-owned ``code``
-    (``prompt_off_topic`` | ``binding_vocabulary_empty``) plus optional
-    structured ``details`` (e.g. per-row import failures). Raised BEFORE any
-    persistence, so a rejection never writes a row.
-    """
-
-    def __init__(
-        self, message: str, *, code: str, details: dict[str, Any] | None = None
-    ) -> None:
-        super().__init__(message)
-        self.message = message
-        self.code = code
-        self.details = details
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,20 +67,6 @@ class BindingResult:
     matched_token: str | None = None
     matched_phrase: str | None = None
 
-
-# Human-facing guidance per failure code (the stable contract is the code).
-BINDING_FAILURE_MESSAGES: dict[str, str] = {
-    CODE_PROMPT_OFF_TOPIC: (
-        "Prompt text does not share any brand, owned-domain, or category term "
-        "with this project's identity (brand name/aliases, owned domains, "
-        "topics, or brand profile)."
-    ),
-    CODE_BINDING_VOCABULARY_EMPTY: (
-        "This project has no brand identity to bind prompts against yet. "
-        "Complete the project identity (brand name/aliases, owned domains, "
-        "topics, or brand profile) or use prompt generation first."
-    ),
-}
 
 # Anything that is not an ASCII letter/digit collapses to a single space.
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
@@ -320,52 +286,3 @@ def validate_prompt_binding(
                 accepted=True, code=BINDING_CODE_ACCEPTED, matched_phrase=phrase
             )
     return BindingResult(accepted=False, code=CODE_PROMPT_OFF_TOPIC)
-
-
-async def load_project_vocabulary(
-    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
-) -> BindingVocabulary:
-    """Load the project's binding identity (workspace-scoped) + build the vocabulary.
-
-    One query with the four identity relationships eager-loaded; callers
-    already authorized the project through their own scoped lookup, and the
-    workspace filter here keeps this loader safe to call standalone
-    (invariant 5).
-    """
-    result = await session.execute(
-        select(Project)
-        .options(
-            selectinload(Project.brand).selectinload(Brand.aliases),
-            selectinload(Project.brand).selectinload(Brand.profile),
-            selectinload(Project.owned_domains),
-            selectinload(Project.topics),
-        )
-        .where(Project.id == project_id, Project.workspace_id == workspace_id)
-    )
-    return build_project_vocabulary(result.scalars().unique().one())
-
-
-async def enforce_prompt_binding(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    text: str,
-    topic_text: str = "",
-) -> BindingResult:
-    """Require ``text`` to bind to the project's vocabulary (raises coded).
-
-    The shared enforcement for the single-text mutation paths (manual create,
-    text update, activation transition). A rejection raises
-    ``TopicalBindingError`` BEFORE any write. ``topic_text`` is the topic the
-    prompt is being filed under; see ``validate_prompt_binding``.
-    """
-    vocabulary = await load_project_vocabulary(
-        session, workspace_id=workspace_id, project_id=project_id
-    )
-    result = validate_prompt_binding(text, vocabulary, topic_text=topic_text)
-    if not result.accepted:
-        raise TopicalBindingError(
-            BINDING_FAILURE_MESSAGES[result.code], code=result.code
-        )
-    return result

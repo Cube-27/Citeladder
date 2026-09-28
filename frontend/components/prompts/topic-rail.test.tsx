@@ -16,7 +16,6 @@ function makeTopic(overrides: Partial<Topic> = {}): Topic {
     description: '',
     origin: 'manual',
     active_count: 0,
-    proposed_count: 0,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     ...overrides,
@@ -63,7 +62,7 @@ describe('TopicRail', () => {
     const onSelect = vi.fn();
     const onCreate = vi.fn();
     const onDelete = vi.fn();
-    const topic = makeTopic({ active_count: 3, proposed_count: 2 });
+    const topic = makeTopic({ active_count: 3 });
 
     const rail = renderRail({ topics: [topic], onSelect, onCreate, onDelete });
     const nav = within(screen.getByRole('navigation', { name: 'Topics' }));

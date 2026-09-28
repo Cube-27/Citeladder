@@ -53,7 +53,6 @@ from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
 )
 from app.domain.audits.creation import create_audit
-from app.domain.entitlements.cache import clear_cache
 from app.domain.entitlements.ledger import consumable_usage
 from app.domain.entitlements.types import GrantSpec
 from app.models.audit import (
@@ -114,7 +113,6 @@ async def _make_funded_audit(
             max_cooldown_seconds=60.0,
         ),
     )
-    clear_cache()
     async with session_factory() as session:
         seed = await seed_audit_fixtures(
             session, prompt_count=1, engines=[ENGINE_CLAUDE], probed=False

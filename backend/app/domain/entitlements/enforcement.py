@@ -52,6 +52,7 @@ from app.core.config.entitlements import (
     KEY_MANUAL_RUNS_PER_DAY,
     MANUAL_RUNS_ROLLING_WINDOW_SECONDS,
     OCCUPANCY_LOCK_NAMESPACE,
+    OCCUPANCY_LOCK_PERSON,
     CapabilityType,
 )
 from app.domain.billing.accounts import billing_account_id_for
@@ -163,7 +164,7 @@ def _capacity_lock_key(account_id: uuid.UUID) -> int:
     digest = hashlib.blake2b(
         OCCUPANCY_LOCK_NAMESPACE.to_bytes(4, "big") + account_id.bytes,
         digest_size=8,
-        person=b"citeladder-cap",
+        person=OCCUPANCY_LOCK_PERSON.encode(),
     ).digest()
     return int.from_bytes(digest, "big", signed=True)
 

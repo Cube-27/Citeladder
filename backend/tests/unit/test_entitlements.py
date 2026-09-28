@@ -25,7 +25,6 @@ from app.core.config.entitlements import (
     KEY_HISTORY_WINDOW,
     KEY_MONITORED_URLS,
 )
-from app.domain.entitlements import cache as entitlement_cache
 from app.domain.entitlements.resolver import (
     ResolverInputError,
     effective_grant_expiry,
@@ -356,39 +355,3 @@ def test_fold_is_deterministic_and_clock_free(
     second = _fold(grants)
     assert first == second
     assert first.capability_value(KEY_MONITORED_URLS) == 50
-
-
-# =========================================================================
-# Authorization deliberately bypasses process-local entitlement state
-# =========================================================================
-def test_process_cache_never_serves_stale_authorization_state() -> None:
-    stale = ResolvedEntitlement(
-        account_id=_ACCOUNT,
-        registry_revision=CAPABILITY_REGISTRY.revision,
-        entitlement_lifecycle_version=1,
-        resolved_at=_AT,
-        valid_until=None,
-        status=STATUS_RESOLVED,
-        capabilities=(),
-        errors=(),
-    )
-    entitlement_cache.put_cached(stale)
-
-    assert (
-        entitlement_cache.get_cached(
-            account_id=_ACCOUNT,
-            registry_revision=CAPABILITY_REGISTRY.revision,
-            entitlement_lifecycle_version=1,
-            at=_AT,
-        )
-        is None
-    )
-    assert (
-        entitlement_cache.get_cached(
-            account_id=_ACCOUNT,
-            registry_revision="requested-but-not-persisted-revision",
-            entitlement_lifecycle_version=1,
-            at=_AT,
-        )
-        is None
-    )

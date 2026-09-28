@@ -237,6 +237,14 @@ export type WorkerSettings = {
   retryDelaySeconds: number;
 };
 
+/** One exported setting after its environment override, as pydantic-settings resolves it. */
+export function resolveSettingSpec(
+  spec: SettingSpec,
+  env: Record<string, string | undefined> = process.env,
+): unknown {
+  return resolveSpec(spec.env[0] ?? 'setting', spec, env);
+}
+
 export function activeJobRetrySeconds(
   env: Record<string, string | undefined> = process.env,
 ): number {

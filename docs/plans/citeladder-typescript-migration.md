@@ -1,18 +1,23 @@
 # TypeScript migration plan
 
-Status: PRs 1–9b implemented (27–28 September 2026), each at the owner's
+Status: PRs 1–10 implemented (27–28 September 2026), each at the owner's
 request. PRs 7, 8 and 9 were split at the owner's direction (7a, 7a-cleanup,
 7b; 8a, 8b; 9a, 9b), and a golden-retirement pass and contract convergence
-followed 7b.
-D6 (team rule) still awaits the owner. Deployment and the one-week
-error-rate/latency soak are pending for every cutover from PR 3 on.
-This is not execution authorization: each later PR runs only when individually
-assigned.
+followed 7b. On 28 September 2026 the owner widened the objective (section 1)
+and brought the former out-of-scope island into the plan (section 2, D7); PR 10
+recorded that change and re-sequenced PRs 11–20 so that each PR first moves
+what unlocks the next ones. Deployment and the one-week error-rate/latency soak
+are pending for every cutover from PR 3 on. This is not execution
+authorization: each later PR runs only when individually assigned.
 
 ## 1. Objective
 
-**Reduce Python technical debt; do not translate Python.** The long-term goal
-is to move as much of the appropriate codebase as possible to TypeScript. Each
+**Reduce Python technical debt; do not translate Python.** The goal is to move
+the application to TypeScript. The measurable target (owner, 28 September 2026)
+is Python at **30% or less** of the repository's Python plus TypeScript source
+lines, and lower where practical; on 28 September 2026 it was about 63% (257k
+Python, 149k TypeScript lines, tests included). Python tests are about 37% of
+the Python lines and are deleted with the code they cover. Each
 migrated owner is built as if greenfield, in idiomatic TypeScript that follows
 the service's established conventions, and the Python it replaces is deleted.
 
@@ -41,25 +46,27 @@ PR leaves the repository deployable and coherent if migration stops after it.
 **PR size budget.** One PR retires at most about 50 Python files (application
 plus tests). Re-count before starting and split if it exceeds the budget.
 
-**In scope:** API reads, analytics projection workers, opportunities, commerce
-and search intelligence, projects, prompts and topics, integrations, auth and
-workspaces, and MCP.
+**In scope (D7, 28 September 2026):** the whole application layer: API reads
+and writes, analytics projection workers, opportunities, commerce, search
+intelligence, projects and onboarding, prompts and generation, integrations,
+auth and workspaces, MCP, billing and entitlements, BYOK providers, audits and
+their connectors, Site Health and source-page inspection, brand discovery and
+the Agent runtime. The former "island" moves in dependency order: entitlements
+first (PR 10), because occupancy and capacity locks were the reason most write
+paths had to stay Python.
 
-**Out of scope (stays Python; a separate plan may revisit).** One coupled island
-around crawl execution and money: audit creation reserves capacity, runs funded
-admission and writes the entitlements ledger, and brand discovery references
-billing, so none of it moves before billing.
+**Stays Python (by design, not by default):**
 
-- Site Health: `domain/site_health`, `api/site_health`, `workers/site_health*`,
-  `connectors/web_evidence`, `analysis/site_health`. Crawl transport
-  (`curl_cffi`, DNS pinning), robots (`protego`), sitemaps (`defusedxml`) and
-  `lxml` have no equal TS replacement.
-- Audits (creation, schedules, scheduler, execution), answer-engine and
-  search-surface connectors, and the DataForSEO two-phase park/poll.
-- Billing, entitlements, BYOK providers (`domain/providers`).
-- The existing Agent runtime and brand discovery.
-- Source-page inspection (it fetches through `web_evidence`).
-- `models/`, Alembic migrations and the queue sweeper, which serves every queue.
+- `models/` and Alembic migrations (D4 keeps Alembic the schema author).
+- `core/config` until PR 20 transfers what only TypeScript reads.
+- The queue sweeper while any Python kind remains.
+- Crawl fetching only if TLS-fingerprint impersonation (`curl_cffi`) proves
+  necessary in PR 18: then a small Python fetch service stays behind a queue
+  contract. `lxml`, `protego` and `defusedxml` have Node replacements (parse5,
+  a robots parser, fast-xml-parser) and are not reasons to stay.
+
+At stop point D these are roughly 40–45k Python lines, about 15–20% of the
+total.
 
 ## 3. Verified constraints
 
@@ -89,10 +96,27 @@ billing, so none of it moves before billing.
 - **D5 Policy.** `backend/app/core/config/*` remains the policy authority
   (invariant 2). TS reads a generated, drift-checked export; refresh and other
   policy is exported, never restated. Config used only by migrated owners
-  transfers to TS config in PR 14.
-- **D6 Team rule (awaiting owner).** New product services default to
-  TypeScript. In-flight plans (Prompt generation v2, Agent workspace) finish as
-  planned; PRs 9–10 wait for Prompt generation v2.
+  transfers to TS config in PR 20.
+- **D6 Team rule (owner, 28 September 2026).** New product services are
+  TypeScript. Prompt generation v2 and the Agent workspace continue as planned
+  and move with PRs 11 and 19.
+- **D7 Standing decisions (owner, 28 September 2026).** Settled once so PRs do
+  not reopen them:
+  1. Scope is section 2. "It touches billing, entitlements, audits, Site Health
+     or the Agent" is no longer a reason to keep a path in Python; it is a
+     dependency that the PR order resolves.
+  2. Ingress routes by path, so a path moves whole. When one method on a path
+     depends on an owner that has not moved yet, the path waits for the PR that
+     moves that owner (see the order in section 6); the PR does not stop to ask.
+  3. Budget: when a PR would retire more than about 50 Python files, split it
+     into dependency-ordered sub-PRs (a, b, …) and proceed without asking.
+  4. A TypeScript library that replaces a Python dependency is approved (for
+     example the Anthropic TypeScript SDK for the model gateway, a PDF library
+     for invoices, parse5, a robots parser, fast-xml-parser).
+  5. Dead code and dead configuration found while porting are deleted in the
+     same PR and listed as departures.
+  6. Ask the owner only about product behavior that is genuinely unclear, not
+     about scope, splits or sequencing.
 
 ## 5. Rules for every PR
 
@@ -103,7 +127,7 @@ billing, so none of it moves before billing.
    writer exception is named with its lock order in its owner's section.
 2. **Shared Python code is retired last.** A Python module still called by
    Python code that has not moved stays as a bridge; TS gets its own
-   implementation. A bridge is deleted when its last Python caller moves (PR 14
+   implementation. A bridge is deleted when its last Python caller moves (PR 20
    or never), not simply when a later PR lands.
 3. **Revertible within the release.** Rollback is a manifest entry, a compose
    command or a kind set in config, never a data repair.
@@ -142,11 +166,24 @@ billing, so none of it moves before billing.
 | 7 | Opportunity store, refresh and routes (7a, 7a-cleanup, 7b) | Med-High | Done |
 | 8 | Search intelligence (8a) and database-only Commerce (8b) | Med-High | Done |
 | 9 | Projects: brand identity (9a); projects-tagged reads (9b) | Med-High | Done |
-| 10 | Prompts and topics | Med-High | |
-| 11 | Integrations | High | |
-| 12 | Auth and workspaces | High | |
-| 13 | MCP server and OAuth provider | High | |
-| 14 | Consolidation and policy transfer | Medium | |
+| 10 | Entitlement enforcement and the prompt library | Med-High | Done |
+| 11 | Model gateway and prompt generation | High | |
+| 12 | Projects, onboarding and brand discovery | High | |
+| 13 | Integrations | High | |
+| 14 | Auth and workspaces | High | |
+| 15 | MCP server and OAuth provider | High | |
+| 16 | Billing and the entitlement ledger | High | |
+| 17 | Audits, providers and answer-engine connectors | High | |
+| 18 | Site Health and source-page inspection | High | |
+| 19 | Agent runtime | High | |
+| 20 | Consolidation and policy transfer | Medium | |
+
+Order rationale: each PR moves the owner that blocks the most later paths.
+Entitlements (10) unblock every slot-consuming write; the model gateway (11)
+unblocks generation, Commerce buyer-prompt generation, brand discovery and the
+Agent; billing (16) precedes audits (17), whose admission reserves ledger
+credits; Site Health (18) follows audits because audit creation and the crawl
+share funded admission.
 
 Paths in bridge tables are relative to `backend/app`.
 
@@ -287,10 +324,10 @@ Stays Python, by reason:
 - `POST .../reviews` (tag `search-intelligence-reviews`): resolves competitor
   sites through `SecureFetcher`.
 - `search_intelligence_acquisition` kind and the synchronous DataForSEO client:
-  Fernet BYOK decryption (PR 11) and provider-capacity locking shared with
+  Fernet BYOK decryption (PR 17) and provider-capacity locking shared with
   audits.
 - `service.py` `readiness`, `dataset_page`, `dataset_dict`, `row_dict` and
-  `pagination.py`: bridges for `domain/mcp` until PR 13.
+  `pagination.py`: bridges for `domain/mcp` until PR 15.
 
 Rule 1 exception on `search_intelligence_runs`: Python creates and executes
 runs; TS confirms and cancels. Both take the run row lock; confirmation takes
@@ -370,7 +407,7 @@ Stays Python (`projects` family):
 
 | Python bridge | Remaining caller |
 | --- | --- |
-| `business_map` value models, `read_business_map`, `with_model_suggestions` | prompt generation (PR 10) |
+| `business_map` value models, `read_business_map`, `with_model_suggestions` | prompt generation (PR 11) |
 | `service.brand_logo_url`, `competitor_logo_url`, `logos.get_project_logo_urls` | project response, analysis brand identity |
 
 Rule 1 exceptions and lock order:
@@ -407,7 +444,7 @@ a Node PDF library and retire no Python dependency.
 
 | Python bridge | Remaining caller |
 | --- | --- |
-| `evidence.get_visibility_evidence`, `get_execution_evidence`, `selection`, `source_projection` with `source_mentions`, `source_page_links`, `brand_identity`, `evidence_selection`, `aio_evidence` | `domain/mcp` (PR 13) |
+| `evidence.get_visibility_evidence`, `get_execution_evidence`, `selection`, `source_projection` with `source_mentions`, `source_page_links`, `brand_identity`, `evidence_selection`, `aio_evidence` | `domain/mcp` (PR 15) |
 | `visibility.get_visibility`, `comparison_projection`, `matched_comparison`, `measurement` | command center and executive PDF |
 | `metrics.get_metrics`, `evidence.load_export_bundle`, `schemas.MetricsResponse` | `api/audits.py` (audit island) |
 
@@ -425,13 +462,116 @@ evidence mention and citation lookups are workspace-scoped; range `from_at`,
 `to_at` and `baseline_at` render as UTC instants; 422 messages print values
 without Python quoting.
 
-### PR 10: Prompts and topics
+### PR 10: Entitlement enforcement and the prompt library
 
-`domain/prompts`, `api/prompts`, CSV import and export, and candidate review. If
-prompt generation still calls models through `connectors/app_model_*`, generation
-stays a Python-owned task kind and only CRUD, review and import move.
+Re-scoped at the owner's direction (28 September 2026): the PR carries the
+section 1, 2 and D7 changes and moves the owner that kept every slot-consuming
+write in Python.
 
-### PR 11: Integrations
+TS owns entitlement resolution and prompt-slot occupancy
+(`src/entitlements/`): the grant fold (one primary bundle by priority, every
+supplement; flags OR, levels max, counters sum; add-ons and top-ups only while
+the base subscription has a readable end), `lockWorkspaceCapacity` and
+`admitPrompts`. It fails closed exactly as Python does (no billing account or a
+corrupt grant is 403 `occupancy_unresolved`; an unprovisioned account is not
+gated). TS also owns the `bulk_import` usage window (`src/abuse/usage.ts`).
+
+TS owns the `prompts` family (`src/prompts/`, `src/routes/prompts.ts`): prompt
+sets (list, create, read, rename, delete), prompts (list, create, edit,
+delete, bulk status), import of parsed rows, candidate list and review, and
+topics (list, create, edit, delete). Topical binding for manual, edited,
+activated and imported text is TS (`binding.ts`). Ingress lists every path
+explicitly; `/prompt-sets/*-*-*-*-*` matches only the set resource, so
+`/generate` still reaches Python. CSV export has no server side (the browser
+writes it), so nothing moved there.
+
+Stays Python (`prompt-generation` family), by reason:
+- `POST /prompt-sets/{id}/generate`: model gateway, quality judge and the
+  `agent.provider_call` limiter. Moves in PR 11.
+
+Deleted: `domain/prompts/service.py`, `topics.py`, `importing.py`,
+`csv_import.py`, `receipts.py`, `domain/entitlements/cache.py`,
+`api/request_bodies.py`, the review half of `candidates.py`, the request
+schemas, binding enforcement (`TopicalBindingError`, `enforce_prompt_binding`,
+`load_project_vocabulary`) and the audit route's unreachable binding-error
+mapping, plus their tests (about 4,300 net Python lines, 11 files).
+
+| Python bridge | Remaining caller |
+| --- | --- |
+| `generation*`, `candidates.stage_candidates`, `quality_*`, `query_patterns`, `portfolio*`, `map_suggestions`, `agent_proposals`, `demand_grounding`, `topic_recovery`, `locks`, `normalization` | generation (PR 11) |
+| `topical_binding` validator and `binding_tokens` | generation; Commerce buyer-prompt validation (PR 11) |
+| `mappers.prompt_set_to_response`, `PromptResponse`, `PromptSetResponse` | project response (PR 12) |
+| `entitlements.enforcement` (`lock_workspace_capacity`, `enforce_occupancy`, `require_workspace_capability`) | project CRUD, Commerce manual entry, Agent (PRs 11, 12, 19) |
+| `entitlements.resolver`, `service`, ledger and grants | billing reads, audits, Site Health, integrations history window (PRs 13–18) |
+
+Rule 1 exceptions and lock order:
+- `prompts`: TS inserts (manual, import, accept), edits and deletes; Python
+  Commerce inserts buyer prompts (generation, manual entry) and TS approves
+  them (PR 8b). TS inserts take the project lock, then the prompt-set lock,
+  then the account capacity lock; Commerce takes only the capacity lock, never
+  a project or set lock after it, so no cycle exists. The per-set
+  `uq_prompt_set_normalized_text` stays the final guard.
+- `prompt_sets`: Python onboarding and Commerce create sets; TS creates,
+  renames and deletes. TS delete takes project, then set.
+- `topics`: Python generation (topic recovery) creates under the project lock;
+  Commerce creates its target topic under the capacity lock only; TS creates,
+  edits, re-parents and deletes under the project lock. `uq_topic_project_name`
+  (lower-cased) guards concurrent creates.
+- `prompt_candidates` and `prompt_generation_runs`: Python generation stages
+  and purges under project, then set; TS review takes project, then set, then
+  the candidate rows (`FOR UPDATE`), then capacity on accept.
+- The stored business map: unchanged from 9a (TS edits under the project lock
+  then the profile row; Python generation adds suggestions under the project
+  lock).
+- `usage_windows`: both stacks upsert counters (`bulk_import` is TS-only now,
+  `agent.provider_call` Python); the conditional upsert needs no lock.
+
+Departures:
+- The BLAKE2b personalization is zero-padded to 16 bytes as Python pads it
+  (`citeladder-cap` is 14 bytes); the lock families moved into
+  `core/config/prompts.py` and `entitlements.py` and are exported, replacing
+  the private-name export in `opportunity_policy.py`.
+- `branded` is true for `comparison` and `brand_diagnostic` on every path
+  (Python manual create, edit and import set it only for `comparison`).
+- Import persists each row's cohort (Python dropped it and stored `core`).
+- Edit and activation bind against the prompt's own topic, as create does
+  (Python ignored the topic on update, so a topic-admitted prompt could not be
+  re-activated).
+- Whitespace-only text is a 422 (Python accepted it and answered 409).
+- Manual create no longer accepts `origin`/`generation_receipt`: nothing issues
+  receipts since candidates replaced direct generated inserts, so the path was
+  dead. `receipts.py` and its tests are deleted.
+- Import accepts only parsed rows: the multipart and raw `text/csv` forms had
+  no caller (the browser parses and previews), so the server CSV parser and
+  `apiClient.postForm` are deleted. The 1 MiB body cap is kept (413).
+- `proposed_count` is removed from the topic contract (always zero since the
+  `proposed` status was retired); topic counts are active prompts.
+- Prompt-set lists and topic lists tie-break by id; timestamps are ISO
+  instants; coded 403/422 errors carry the code in `error.code` with a plain
+  `detail` string.
+- Dead config removed: `ENTITLEMENT_CACHE_MAX_ENTRIES`,
+  `ENTITLEMENT_CACHE_MAX_TTL_SECONDS`, `IMPORT_READ_CHUNK_BYTES`,
+  `IMPORT_MAX_COLUMNS`, `IMPORT_MAX_CELL_CHARS`.
+
+### PR 11: Model gateway and prompt generation
+
+A TS model gateway (Anthropic TypeScript SDK and the other configured
+providers through `connectors/app_model_*`'s contract), the JEV judge client
+and the `agent.provider_call` limiter. Then prompt generation, agent-proposal
+admission, business-map suggestions, and Commerce buyer-prompt generation and
+manual entry move, retiring nearly all of `domain/prompts` and
+`domain/commerce/prompts.py` with `buyer_prompt_validation`. Recorded fixtures
+only; no live provider calls in tests.
+
+### PR 12: Projects, onboarding and brand discovery
+
+Project CRUD (project-slot occupancy and the deletion capability through
+`src/entitlements/`), the project response, onboarding, logo refresh (a TS
+fetcher with the SSRF rules of `SecureFetcher`) and brand discovery. The
+command center moves here; the executive PDF moves with billing's PDF library
+in PR 16.
+
+### PR 13: Integrations
 
 A Fernet-compatible TS encrypt/decrypt proven against Python ciphertext.
 `domain/integrations`, `connectors/integrations` (GSC, GA4, Bing, OAuth), the
@@ -439,31 +579,57 @@ A Fernet-compatible TS encrypt/decrypt proven against Python ciphertext.
 processes. The import worker's immutable artifacts and resume-from-artifact
 behavior are tested with recorded page sequences, including mid-run failure.
 
-### PR 12: Auth and workspaces
+### PR 14: Auth and workspaces
 
 Login, registration, cookie issuance, Google sign-in, members and invitations:
 `api/auth.py`, `api/oauth.py`, `api/workspaces.py`, `domain/auth`,
 `domain/workspaces`, `domain/abuse`. Argon2 parameters, JWT claims and cookie
 attributes are identical, so Python's `api/deps.py` keeps verifying TS-issued
-sessions for the island routes. Soak with sessions from each stack accepted by
-both.
+sessions for the remaining Python routes. Soak with sessions from each stack
+accepted by both.
 
-### PR 13: MCP server and OAuth provider
+### PR 15: MCP server and OAuth provider
 
 `domain/mcp`, `api/mcp_connections`, the `/mcp`, `/authorize`, `/token` and
 `/revoke` paths, and the consent CSP.
 
-### PR 14: Consolidation and policy transfer
+### PR 16: Billing and the entitlement ledger
+
+Checkout, subscriptions, plan changes, webhooks, reconciliation, invoices and
+the consumable ledger. Razorpay becomes a TS REST client (payments stay
+disabled until the owner's live sign-off). A TS PDF library replaces
+`reportlab` for invoices and the executive PDF.
+
+### PR 17: Audits, providers and answer-engine connectors
+
+Audit creation, schedules, the scheduler, funded admission, the audit worker,
+BYOK providers, answer-engine and search-surface connectors, and the
+DataForSEO two-phase park/poll (including Search Intelligence acquisition and
+review creation).
+
+### PR 18: Site Health and source-page inspection
+
+`domain/site_health`, `analysis/site_health`, `workers/site_health*`,
+`connectors/web_evidence` and source-page inspection, with Node replacements
+for robots, sitemaps and HTML parsing. Decide here whether crawl fetching
+needs TLS impersonation; if so, keep only a Python fetch service (section 2).
+
+### PR 19: Agent runtime
+
+The Agent tool catalog, runs and outputs, retiring the remaining Opportunity,
+visibility, traffic and demand bridges its tools call.
+
+### PR 20: Consolidation and policy transfer
 
 Move `core/config` modules consumed only by TS into TS config and shrink the
 export. Delete Python bridges whose last caller has moved. Remove empty Python
-routers and dead registrations. Document the final Python↔TS boundary (queue row
-contracts, ownership manifest) in the architecture owner.
+routers and dead registrations. Document the final Python↔TS boundary in the
+architecture owner.
 
 > **Stop point D (end of this plan).** TypeScript owns the application layer.
-> Python owns the Site Health, audits, billing and Agent island behind documented
-> queue and route contracts. Moving that island, or transferring schema
-> ownership away from Alembic, needs its own plan.
+> Python keeps the schema (models and Alembic), any policy not yet transferred,
+> the queue sweeper while a Python kind remains, and at most a crawl fetch
+> service: about 15–20% of source lines.
 
 ## 7. Values both stacks read
 
@@ -471,10 +637,20 @@ No generated fixture guards these; each is covered by live PostgreSQL tests and
 retires with its last Python side. Move those callers early rather than add
 guards.
 
-- Session cookies (until PR 12) and the blake2b project advisory-lock key.
+- Session cookies (until PR 14) and the BLAKE2b advisory-lock keys: project
+  and prompt-set (`citeladder-locks`) and account capacity (`citeladder-cap`),
+  personalization zero-padded to 16 bytes.
 - `SiteUrl.url_hash` (Site Health writes it) and normalized query keys (Python
   demand readers compare them).
-- Source-page roster hash (source inspection stamps it) and prompt-text hash.
+- Source-page roster hash (source inspection stamps it) and the prompt-text
+  hash (sha256 of the lower-cased, whitespace-collapsed text without trailing
+  `PROMPT_TRAILING_PUNCTUATION`): TS writers and Python generation dedupe
+  against the same `normalized_text_hash` until PR 11.
+- Occupancy counts and grants: every persisted prompt in the account's
+  workspace counts toward `prompt_slots`; grants and revocations are read by
+  both folds until PR 16.
+- `usage_windows` rows: sha256 of the lower-cased workspace id, fixed window
+  start, `uq_usage_window_subject_operation_start`.
 - The URL form behind an Action's page key (Python Agent attach).
 - Citation-match scope hash: sha256 of `{audit_ids, citation_ids,
   parent_dataset_id}` as compact JSON in that key order.
@@ -492,6 +668,6 @@ guards.
 
 - Asyncio vs Node behavior under lock contention: lease tests run against real
   PostgreSQL.
-- Crypto interop (JOSE in PR 12, Fernet in PR 11, argon2 in PR 12).
+- Crypto interop (JOSE in PR 14, Fernet in PR 13, argon2 in PR 14).
 - Dashboards keyed on logfire attributes going dark after a cutover.
 - Compose and GCP compose drifting from the ownership manifest.

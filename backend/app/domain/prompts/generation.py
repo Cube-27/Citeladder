@@ -75,6 +75,7 @@ from app.domain.prompts.generation_contract import (
 )
 from app.domain.prompts.generation_errors import (
     GenerationValidationError,
+    PromptSetNotFoundError,
     reraise_scoped_integrity_error,
 )
 from app.domain.prompts.generation_filtering import (
@@ -92,7 +93,6 @@ from app.domain.prompts.map_suggestions import suggest_offering_maps
 from app.domain.prompts.normalization import prompt_text_hash
 from app.domain.prompts.quality_judge import JudgeResult, judge_candidates
 from app.domain.prompts.query_patterns import PromptSlot, slots_for_cells
-from app.domain.prompts.service import PromptSetNotFoundError
 from app.domain.prompts.topic_recovery import (
     confirmed_offerings,
     recover_topics_from_confirmed_offerings,

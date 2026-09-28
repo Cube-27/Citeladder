@@ -2571,12 +2571,7 @@
         "reddit",
         "newsletter",
         "original_research"
-      ],
-      "project_lock": {
-        "namespace": 1347571530,
-        "person": "citeladder-locks"
-      },
-      "prompt_trailing_punctuation": " \t\n\r\u000b\f?.!,;:"
+      ]
     },
     "declaration": {
       "output_phase_outline": "outline"
@@ -2804,6 +2799,384 @@
       "type": "int",
       "default": 60,
       "minimum": 1
+    },
+    "bulk_import_limit": {
+      "env": [
+        "ABUSE_BULK_IMPORT_LIMIT"
+      ],
+      "type": "int",
+      "default": 10,
+      "minimum": 1
+    },
+    "bulk_import_window_seconds": {
+      "env": [
+        "ABUSE_BULK_IMPORT_WINDOW_SECONDS"
+      ],
+      "type": "int",
+      "default": 3600,
+      "minimum": 1
+    }
+  },
+  "entitlements": {
+    "registry_revision": "entitlements-v3",
+    "capabilities": {
+      "audit_cadence": {
+        "type": "level",
+        "levels": 3
+      },
+      "history_window": {
+        "type": "level",
+        "levels": 4
+      },
+      "support_tier": {
+        "type": "level",
+        "levels": 2
+      },
+      "audit_credits": {
+        "type": "counter.consumable",
+        "levels": 0
+      },
+      "ai_credits": {
+        "type": "counter.consumable",
+        "levels": 0
+      },
+      "project_slots": {
+        "type": "counter.occupancy",
+        "levels": 0
+      },
+      "prompt_slots": {
+        "type": "counter.occupancy",
+        "levels": 0
+      },
+      "monitored_urls": {
+        "type": "counter.occupancy",
+        "levels": 0
+      },
+      "fanout": {
+        "type": "flag",
+        "levels": 0
+      },
+      "provider.grok": {
+        "type": "flag",
+        "levels": 0
+      },
+      "provider.perplexity": {
+        "type": "flag",
+        "levels": 0
+      },
+      "provider.copilot": {
+        "type": "flag",
+        "levels": 0
+      },
+      "exports": {
+        "type": "flag",
+        "levels": 0
+      },
+      "manual_runs_per_day": {
+        "type": "counter.rate",
+        "levels": 0
+      },
+      "serp_tasks_per_period": {
+        "type": "counter.consumable",
+        "levels": 0
+      },
+      "site_health_page_fetches_per_period": {
+        "type": "counter.consumable",
+        "levels": 0
+      },
+      "agent": {
+        "type": "flag",
+        "levels": 0
+      },
+      "project_deletion": {
+        "type": "flag",
+        "levels": 0
+      }
+    },
+    "grant_source_kinds": [
+      "addon",
+      "override",
+      "plan",
+      "topup",
+      "trial"
+    ],
+    "paid_access_sources": [
+      "addon",
+      "topup"
+    ],
+    "base_subscription_kind": "base",
+    "prompt_slots": "prompt_slots",
+    "project_slots": "project_slots",
+    "capacity_lock": {
+      "namespace": 1128353857,
+      "person": "citeladder-cap"
+    },
+    "codes": {
+      "limit_exceeded": "occupancy_limit_exceeded",
+      "unresolved": "occupancy_unresolved",
+      "capability_not_granted": "capability_not_granted"
+    }
+  },
+  "prompts": {
+    "locks": {
+      "project": {
+        "namespace": 1347571530,
+        "person": "citeladder-locks"
+      },
+      "prompt_set": {
+        "namespace": 1347571533,
+        "person": "citeladder-locks"
+      }
+    },
+    "trailing_punctuation": " \t\n\r\u000b\f?.!,;:",
+    "text_max_chars": 300,
+    "theme_max_chars": 255,
+    "intent_max_chars": 64,
+    "topic_name_max_chars": 255,
+    "import_max_rows": 500,
+    "import_max_bytes": 1048576,
+    "intents": [
+      "comparison",
+      "discovery",
+      "local",
+      "purchase",
+      "service"
+    ],
+    "branded_cohorts": [
+      "brand_diagnostic",
+      "comparison"
+    ],
+    "status_active": "active",
+    "origins": {
+      "manual": "manual",
+      "imported": "imported",
+      "generated": "generated"
+    },
+    "topic_origin_manual": "manual",
+    "candidate": {
+      "pending": "pending",
+      "accepted": "accepted",
+      "rejected": "rejected",
+      "outcomes": [
+        "gate_rejected",
+        "rejected"
+      ],
+      "quality_gates_reported": [
+        "off",
+        "unavailable"
+      ]
+    },
+    "generation_settings": {
+      "rejected_outcome_retention_days": {
+        "env": [
+          "GENERATION_REJECTED_OUTCOME_RETENTION_DAYS"
+        ],
+        "type": "int",
+        "default": 180,
+        "minimum": 1
+      },
+      "review_max_ids": {
+        "env": [
+          "GENERATION_REVIEW_MAX_IDS"
+        ],
+        "type": "int",
+        "default": 500,
+        "minimum": 1
+      }
+    },
+    "binding": {
+      "min_token_chars": 3,
+      "stopwords": [
+        "a",
+        "about",
+        "after",
+        "again",
+        "all",
+        "am",
+        "an",
+        "and",
+        "any",
+        "app",
+        "are",
+        "as",
+        "at",
+        "be",
+        "been",
+        "before",
+        "being",
+        "best",
+        "better",
+        "between",
+        "both",
+        "brand",
+        "brands",
+        "but",
+        "buy",
+        "buying",
+        "by",
+        "can",
+        "cheap",
+        "cheapest",
+        "co",
+        "com",
+        "company",
+        "compare",
+        "comparison",
+        "corp",
+        "corporation",
+        "cost",
+        "costs",
+        "could",
+        "deal",
+        "deals",
+        "dev",
+        "did",
+        "do",
+        "does",
+        "doing",
+        "down",
+        "during",
+        "each",
+        "few",
+        "for",
+        "from",
+        "get",
+        "gets",
+        "gmbh",
+        "good",
+        "got",
+        "guide",
+        "had",
+        "has",
+        "have",
+        "having",
+        "he",
+        "her",
+        "him",
+        "his",
+        "how",
+        "i",
+        "if",
+        "in",
+        "inc",
+        "into",
+        "io",
+        "is",
+        "it",
+        "its",
+        "just",
+        "latest",
+        "llc",
+        "ltd",
+        "made",
+        "make",
+        "makes",
+        "may",
+        "me",
+        "might",
+        "more",
+        "most",
+        "must",
+        "my",
+        "near",
+        "need",
+        "needs",
+        "net",
+        "new",
+        "no",
+        "nor",
+        "not",
+        "number",
+        "of",
+        "off",
+        "on",
+        "once",
+        "online",
+        "option",
+        "options",
+        "or",
+        "org",
+        "other",
+        "ought",
+        "our",
+        "out",
+        "over",
+        "own",
+        "per",
+        "price",
+        "prices",
+        "pricing",
+        "product",
+        "products",
+        "review",
+        "reviews",
+        "same",
+        "shall",
+        "she",
+        "shop",
+        "shopping",
+        "should",
+        "so",
+        "some",
+        "store",
+        "such",
+        "than",
+        "that",
+        "the",
+        "their",
+        "them",
+        "then",
+        "these",
+        "they",
+        "this",
+        "those",
+        "through",
+        "to",
+        "too",
+        "top",
+        "under",
+        "up",
+        "use",
+        "used",
+        "using",
+        "versus",
+        "very",
+        "via",
+        "vs",
+        "want",
+        "wants",
+        "was",
+        "we",
+        "were",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "whom",
+        "whose",
+        "why",
+        "will",
+        "with",
+        "within",
+        "without",
+        "work",
+        "works",
+        "would",
+        "www",
+        "you",
+        "your"
+      ],
+      "business_context_fields": [
+        "category",
+        "category_aliases",
+        "category_terms",
+        "jobs_to_be_done",
+        "service_areas",
+        "buyer_roles"
+      ],
+      "off_topic": "prompt_off_topic",
+      "vocabulary_empty": "binding_vocabulary_empty"
     }
   }
 }
