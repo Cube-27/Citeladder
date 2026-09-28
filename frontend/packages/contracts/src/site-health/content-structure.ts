@@ -48,7 +48,15 @@ export const contentStructureSchema = z.object({
   id: z.uuid(),
   crawl_id: z.uuid(),
   created_at: z.string(),
-  state: z.enum(['queued', 'running', 'completed', 'partial', 'unavailable', 'cancelled', 'failed']),
+  state: z.enum([
+    'queued',
+    'running',
+    'completed',
+    'partial',
+    'unavailable',
+    'cancelled',
+    'failed',
+  ]),
   page_count: z.number().int(),
   omitted_pages: z.number().int(),
   omitted_candidates: z.number().int(),
@@ -61,6 +69,11 @@ export const contentStructureSchema = z.object({
 });
 
 export const contentStructureReadSchema = z.object({
+  history: z
+    .array(
+      z.object({ id: z.uuid(), created_at: z.string(), state: contentStructureSchema.shape.state }),
+    )
+    .default([]),
   analysis: contentStructureSchema.nullable(),
   crawl_id: z.uuid().nullable(),
   availability: z.enum(['ready', 'crawl_required', 'fresh_crawl_required', 'unavailable']),

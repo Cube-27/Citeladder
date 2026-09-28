@@ -117,6 +117,7 @@ RULE_EVIDENCE_FAMILY: Final[dict[str, str]] = {
     "content_structure_incomplete": FAMILY_SITE_HEALTH,
     "citability_trust_incomplete": FAMILY_SITE_HEALTH,
     "site_link_near_orphan": FAMILY_LINK_GRAPH,
+    "site_contextual_links": FAMILY_LINK_GRAPH,
     "site_link_weak_authority": FAMILY_LINK_GRAPH,
     "site_change_potential_regression": FAMILY_SITE_CHANGES,
     "site_change_critical_regression": FAMILY_SITE_CHANGES,
@@ -230,7 +231,13 @@ APPROACH_TREE: Final[tuple[ApproachRule, ...]] = (
     ),
     ApproachRule(
         approach=APPROACH_IMPROVE_LINKS,
-        rule_ids=frozenset({"site_link_near_orphan", "site_link_weak_authority"}),
+        rule_ids=frozenset(
+            {
+                "site_link_near_orphan",
+                "site_link_weak_authority",
+                "site_contextual_links",
+            }
+        ),
         skill_id="internal_links",
         donts=("Do not add links from unrelated pages to hit a link count.",),
     ),
@@ -280,6 +287,7 @@ FAMILY_MEASUREMENT_LEG: Final[dict[str, str]] = {
 CHECK_KIND_MEASUREMENT_LEG: Final[dict[str, str]] = {
     "site_rule": LEG_CRAWL,
     "page_fact": LEG_CRAWL,
+    "contextual_link": LEG_CRAWL,
     "visibility_metric": LEG_VISIBILITY_RUN,
     "traffic_metric": LEG_SEARCH_CONSOLE_WINDOW,
     "placement": LEG_PLACEMENT_RECHECK,

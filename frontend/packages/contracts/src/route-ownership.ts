@@ -35,6 +35,7 @@ export const ROUTE_OWNERSHIP = {
   'search-intelligence': 'typescript',
   'search-intelligence-reviews': 'python',
   'site-health': 'python',
+  'site-health-content-structure': 'typescript',
   visibility: 'typescript',
   workspaces: 'python',
 } as const satisfies Record<string, RouteStack>;
@@ -48,6 +49,9 @@ export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
  * documents; the development proxy reads this list directly.
  */
 export const TYPESCRIPT_INGRESS_PATHS = [
+  '/api/v1/projects/*/site-health/content-structure',
+  '/api/v1/projects/*/site-health/content-structure/*',
+  '/api/v1/projects/*/site-health/content-structure/analyses/*/cancel',
   '/api/v1/projects/*/commerce/catalog',
   '/api/v1/projects/*/commerce/catalog/import',
   '/api/v1/projects/*/commerce/competitors',

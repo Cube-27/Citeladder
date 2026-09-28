@@ -1,6 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 
 import { PageShell } from '@/components/layout/page-shell';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Stack } from '@/components/ui/layout';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
@@ -59,6 +60,9 @@ export function UrlDetailView({
       }
     >
       <Stack gap="workspace">
+        <ProjectLink href="/site/content-structure" className="type-control text-accent-text">
+          Review internal links and topics
+        </ProjectLink>
         <PageMetadata detail={detail} />
         <UrlScoreSummary detail={detail} />
         <PageMeasurements detail={detail} />

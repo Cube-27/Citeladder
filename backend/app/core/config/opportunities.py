@@ -394,6 +394,16 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
         ),
     ),
     OpportunityRule(
+        rule_id="site_contextual_links",
+        opportunity_type=OPPORTUNITY_TYPE_SITE,
+        severity=SEVERITY_LOW,
+        title="Add useful contextual links",
+        remediation=(
+            "Review the suggested source passages and link their existing anchors "
+            "to the relevant destination pages."
+        ),
+    ),
+    OpportunityRule(
         rule_id="site_link_near_orphan",
         opportunity_type=OPPORTUNITY_TYPE_SITE,
         severity=SEVERITY_MEDIUM,

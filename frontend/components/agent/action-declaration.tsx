@@ -46,12 +46,16 @@ export function MarkImplementedButton({
   actionId,
   revision,
   disabled = false,
+  recommendationIds,
+  selectionDescription,
 }: Readonly<{
   workspaceId: string;
   actionId: string;
   /** The output revision shipped; null declares work done outside CiteLadder. */
   revision: { id: string; number: number } | null;
   disabled?: boolean;
+  recommendationIds?: string[];
+  selectionDescription?: string;
 }>) {
   const [open, setOpen] = useState(false);
   // One key and one timestamp per dialog opening, so a retry after an
@@ -64,6 +68,10 @@ export function MarkImplementedButton({
     onSuccess: () => {
       setOpen(false);
       void queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
+      if (recommendationIds)
+        void queryClient.invalidateQueries({
+          queryKey: ['site-health', 'content-structure', workspaceId],
+        });
     },
   });
   const submit = () =>
@@ -73,6 +81,7 @@ export function MarkImplementedButton({
       input: {
         output_revision_id: revision?.id ?? null,
         declared_implemented_at: attempt.declaredAt,
+        ...(recommendationIds ? { recommendation_ids: recommendationIds } : {}),
       },
     });
   return (
@@ -93,9 +102,10 @@ export function MarkImplementedButton({
         onOpenChange={setOpen}
         title="Mark implemented"
         description={
-          revision
+          selectionDescription ??
+          (revision
             ? `Declare that revision ${revision.number} of this output is live on your site.`
-            : 'Declare that this work is live, done outside CiteLadder.'
+            : 'Declare that this work is live, done outside CiteLadder.')
         }
         footer={
           <div className="flex justify-end gap-2">
@@ -114,6 +124,13 @@ export function MarkImplementedButton({
             next visibility run, Search Console window, crawl or placement recheck. Nothing runs
             automatically, and an Action can be declared once.
           </p>
+          {recommendationIds ? (
+            <p className={textRole('body')}>
+              Only these {recommendationIds.length} selected links will be measured. Include every
+              link you want to declare now; this page Action can be declared once. Other findings on
+              this page are not included in this declaration.
+            </p>
+          ) : null}
           {declare.isError ? (
             <MutationNotice
               notice={mutationNoticeForError(declare.error, {
@@ -197,6 +214,9 @@ function AttachedDeclaration({
     return <DeclarationStatus declaration={declaration} shownRevision={revision} />;
   }
   if (!isDeclarable(action.data) || !mayWrite) return null;
+  if (action.data.members.some((member) => member.rule_id === 'site_contextual_links')) {
+    return <ContextualLinkDeclarationRoute />;
+  }
   return (
     <div>
       <MarkImplementedButton
@@ -206,6 +226,14 @@ function AttachedDeclaration({
         disabled={runActive}
       />
     </div>
+  );
+}
+
+export function ContextualLinkDeclarationRoute() {
+  return (
+    <Button asChild variant="secondary">
+      <ProjectLink href="/site/content-structure">Select implemented links</ProjectLink>
+    </Button>
   );
 }
 

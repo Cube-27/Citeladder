@@ -2439,7 +2439,6 @@ export interface SiteObservedArchitectures {
   source_link_metric_ids: string[] | null;
   source_snapshot_id: string;
   structure_depth: Json | null;
-  topical_coherence: Json | null;
   workspace_id: string;
 }
 

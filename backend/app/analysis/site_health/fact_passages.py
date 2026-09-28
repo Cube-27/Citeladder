@@ -19,7 +19,8 @@ def _paragraph(node: Any, heading: str) -> dict[str, Any]:
         if not text:
             continue
         start = length + int(bool(parts))
-        length = start + len(text)
+        # Consumers use JavaScript string offsets (UTF-16 code units).
+        length = start + len(text.encode("utf-16-le")) // 2
         parts.append(text)
         parent = text_node.getparent()
         # An element's tail belongs to its parent, outside that element's link.

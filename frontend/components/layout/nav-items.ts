@@ -41,6 +41,7 @@ export const NAV_GROUPS = [
       },
       { label: 'Search Demand', href: '/demand', icon: ICONS.demand },
       { label: 'Issues', href: '/issues', icon: ICONS.issues },
+      { label: 'Content structure', href: '/site/content-structure', icon: ICONS.site },
       { label: 'Search Intelligence', href: '/search-intelligence', icon: ICONS.analytics },
       { label: 'Performance', href: '/performance', icon: ICONS.performance },
       { label: 'Commerce Suite', href: '/products', icon: ICONS.products },

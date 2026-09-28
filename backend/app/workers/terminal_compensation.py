@@ -51,9 +51,11 @@ def analytics_compensators() -> dict[str, AnalyticsCompensator]:
     and ``QueueSweeper`` -- which runs no executors and sweeps six queues --
     should not pay for it just to have this registry available.
     """
+    from app.workers.content_structure import compensate_content_structure
     from app.workers.source_pages.inspector import compensate_inspection_handoff
 
     return {
+        "content_structure_judgment": compensate_content_structure,
         # Audit terminalization enqueues inspection INSTEAD of the Opportunity
         # refresh, so an inspection that never finishes still owes that
         # refresh. Recomputing without page evidence is what the product did

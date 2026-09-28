@@ -27,6 +27,10 @@ export function projectDestination(
   projectId: string,
 ): string {
   const params = new URLSearchParams(search?.toString() ?? '');
+  if (pathname === '/site/content-structure' && params.get(PROJECT_PARAM) !== projectId) {
+    for (const key of ['analysis', 'crawl', 'topic', 'recommendation', 'page', 'q'])
+      params.delete(key);
+  }
   params.set(PROJECT_PARAM, projectId);
   params.delete(WORKSPACE_PARAM);
   return `${pathname}?${params.toString()}`;

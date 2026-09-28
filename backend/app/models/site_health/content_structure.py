@@ -33,7 +33,9 @@ class SiteContentStructureRun(Base):
     policy_version: Mapped[int] = mapped_column(Integer)
     manifest: Mapped[dict] = mapped_column(JSONB)
     result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
 
 
 class SiteContentStructureEvent(Base):
@@ -58,4 +60,6 @@ class SiteContentStructureEvent(Base):
     candidate_id: Mapped[uuid.UUID] = mapped_column(UUID)
     kind: Mapped[str] = mapped_column(String(24))
     evidence: Mapped[dict] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )

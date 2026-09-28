@@ -4028,9 +4028,6 @@ def upgrade() -> None:
         ),
         sa.Column("hierarchy", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("archetype", postgresql.JSONB(astext_type=Text()), nullable=True),
-        sa.Column(
-            "topical_coherence", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
         sa.Column("source_analysis_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
         sa.Column("source_artifact_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
         sa.Column("source_evaluation_ids", postgresql.ARRAY(sa.UUID()), nullable=True),

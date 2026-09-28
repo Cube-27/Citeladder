@@ -11,6 +11,9 @@ from app.core.database import SessionLocal, engine
 from app.models.agent import AgentChat, AgentOutput, AgentOutputRevision
 from app.models.opportunity import Opportunity, OpportunitySnapshot
 from app.models.project import Project
+from app.models.site_health.analysis import SitePageAnalysis
+from app.models.site_health.acquisition import SiteFetchArtifact
+from app.analysis.site_health.parser import extract_page_facts
 from app.domain.opportunities.placement_checks import evaluate_placement_checks
 from app.models.source_pages import PlacementCheck, SourcePage, SourcePageEntityPresence, SourcePageSnapshot
 from tests.component.opportunity_helpers import _seed_scenario, seed_action_for, seed_live_set
@@ -111,9 +114,29 @@ async def observe(workspace, project, page_id):
 
 async def main():
     result = await {"seed": seed, "revision": revision, "earned": earned,
-                    "sibling": sibling, "observe": observe}[sys.argv[1]](*sys.argv[2:])
+                    "sibling": sibling, "observe": observe, "content": content}[sys.argv[1]](*sys.argv[2:])
     print(json.dumps(result))
     await engine.dispose()
+
+
+async def content():
+    result = await seed()
+    async with SessionLocal() as session:
+        rows = list(await session.scalars(select(SitePageAnalysis).where(
+            SitePageAnalysis.crawl_id == uuid.UUID(result["crawl_id"]))))
+        for index, row in enumerate(rows):
+            artifact = await session.get(SiteFetchArtifact, row.artifact_id)
+            artifact.normalized_facts = extract_page_facts(
+                body=(f'<html><title>Garden soil {index}</title><main><h1>Garden soil</h1>'
+                      '<p>Healthy garden soil helps plants grow and supports a thriving garden.</p></main></html>').encode(),
+                final_url=artifact.final_url, content_type="text/html", status_code=200,
+                redacted_headers={},
+            )
+            row.main_content_indexable = True
+            row.finalized_at = datetime.now(UTC)
+            row.is_current = True
+        await session.commit()
+    return result
 
 
 asyncio.run(main())

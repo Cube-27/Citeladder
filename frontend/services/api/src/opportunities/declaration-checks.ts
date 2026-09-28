@@ -5,6 +5,7 @@ import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import type { OpportunityRow } from './projection.ts';
 import type { Scope } from './sources.ts';
+import { contentDeclarationChecks } from './content-declaration.ts';
 
 const o = policy.opportunity.opportunities;
 const p = policy.opportunity.placement;
@@ -120,7 +121,11 @@ export async function declarationChecks(
   members: OpportunityRow[],
   auditId: string | null,
   brandName: string,
+  recommendationIds: string[] = [],
 ): Promise<MemberCheck[]> {
+  const contextual = members.filter((member) => member.rule_id === 'site_contextual_links');
+  if (contextual.length || recommendationIds.length)
+    return contentDeclarationChecks(db, scope, contextual, recommendationIds);
   const checks = new Map<string, MemberCheck>();
   for (const member of members) {
     const check = await memberCheck(db, scope, member, auditId, brandName);

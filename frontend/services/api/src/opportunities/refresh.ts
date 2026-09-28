@@ -12,6 +12,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { sql } from 'kysely';
+import { record } from '../db/json.ts';
 
 import {
   detectSiteIssueOpportunities,
@@ -45,6 +46,7 @@ import {
   loadVisibilityEvidence,
 } from './refresh-evidence.ts';
 import { changeHits, commerceHits, demandHits } from './refresh-hits.ts';
+import { contentLinkHits } from './content-links.ts';
 import {
   currentDemandSnapshot,
   DASHBOARD_AUDIT_STATUSES,
@@ -60,6 +62,7 @@ import {
 
 type Projections = [Record<string, unknown>, Record<string, unknown>, Record<string, unknown>[]];
 type Collected = {
+  contentRunId: string | null;
   audit: AuditSource | null;
   demand: DemandSource | null;
   hits: DetectorHit[];
@@ -114,6 +117,7 @@ async function collectHits(
 ): Promise<Collected> {
   const demand = await currentDemandSnapshot(db, scope);
   const collected: Collected = {
+    contentRunId: null,
     audit: sources.audit,
     demand,
     hits: await demandHits(db, scope, demand),
@@ -128,6 +132,9 @@ async function collectHits(
   if (sources.crawl !== null) {
     const site = await loadSiteEvidence(db, scope.workspaceId, sources.crawl);
     collected.hits.push(...detectSiteIssueOpportunities(site));
+    const content = await contentLinkHits(db, scope, site.crawl_id);
+    collected.contentRunId = content.runId;
+    collected.hits.push(...content.hits);
     collected.hits.push(...(await changeHits(db, scope.workspaceId, sources.crawl)));
   }
   return collected;
@@ -179,7 +186,12 @@ async function writeRefresh(
     crawlId: crawl?.id ?? null,
     demand: collected.demand,
   };
-  if (skipIfCurrent && current !== null && snapshotIsCurrent(current, sources))
+  if (
+    skipIfCurrent &&
+    current !== null &&
+    snapshotIsCurrent(current, sources) &&
+    (record(current.coverage).content_structure_run_id ?? null) === collected.contentRunId
+  )
     return projectSnapshot(current);
   const workspace = new WorkspaceScope(scope.workspaceId);
   const live = await workspace
@@ -227,7 +239,10 @@ async function writeRefresh(
       ...snapshot,
       workspace_id: scope.workspaceId,
       project_id: scope.projectId,
-      coverage: snapshot.coverage === null ? null : JSON.stringify(snapshot.coverage),
+      coverage: JSON.stringify({
+        ...record(snapshot.coverage),
+        content_structure_run_id: collected.contentRunId,
+      }),
       limitations: JSON.stringify(snapshot.limitations),
       source_mix: JSON.stringify(snapshot.source_mix),
       action_path_mix: JSON.stringify(snapshot.action_path_mix),

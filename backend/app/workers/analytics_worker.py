@@ -57,6 +57,7 @@ from app.domain.demand.search_intelligence.executor import execute_search_intell
 from app.models.analytics import AnalyticsTask
 from app.orchestration.executor_errors import CapacityWaitError, TerminalExecutorError
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
+from app.workers.content_structure import judge_content_structure
 from app.workers.drain import DrainableWorkerMixin
 from app.workers.source_pages.inspector import inspect_source_pages
 from app.workers.terminal_compensation import (
@@ -89,6 +90,7 @@ type AnalyticsExecutor = Callable[
 # Exactly ``ANALYTICS_PYTHON_TASK_KINDS``: every other kind belongs to the
 # TypeScript analytics worker (TypeScript migration PRs 4-7).
 EXECUTORS: dict[str, AnalyticsExecutor] = {
+    "content_structure_judgment": judge_content_structure,
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY: run_competitor_discovery,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION: inspect_source_pages,
     ANALYTICS_TASK_KIND_SEARCH_INTELLIGENCE: execute_search_intelligence,

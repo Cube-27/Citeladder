@@ -342,6 +342,18 @@ const placementExpectedCheckSchema = responseObject({
   baseline_snapshot_id: z.string().nullable(),
 });
 export const expectedCheckSchema = z.discriminatedUnion('kind', [
+  responseObject({
+    kind: z.literal('contextual_link'),
+    recommendation_id: uuid(),
+    content_structure_run_id: uuid(),
+    target_site_url_id: uuid(),
+    target_url: z.string(),
+    anchor_text: z.string(),
+    source_analysis_id: uuid(),
+    source_artifact_id: uuid(),
+    target_analysis_id: uuid(),
+    extractor_version: z.string(),
+  }),
   siteRuleExpectedCheckSchema,
   pageFactExpectedCheckSchema,
   metricExpectedCheckSchema,
