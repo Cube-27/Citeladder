@@ -15,6 +15,7 @@ class ProviderTaskEvidenceMixin:
         context,
         *,
         error_code: str = "",
+        error_detail: str = "",
         submission: SearchSurfaceSubmission | None = None,
     ) -> None:
         async with self._session_factory() as session:
@@ -54,6 +55,9 @@ class ProviderTaskEvidenceMixin:
                     if error_code
                     else ATTEMPT_STATUS_SUCCEEDED,
                     error_code=error_code,
+                    # The provider's own status and message: without them a
+                    # refused submission is an unexplained `client_error`.
+                    error_detail=error_detail,
                 )
             )
             await session.commit()

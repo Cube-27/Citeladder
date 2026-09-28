@@ -194,6 +194,32 @@ async def test_accepted_without_id_keeps_reported_charge_through_deadline(
 
 
 @pytest.mark.asyncio
+async def test_refused_submission_keeps_the_provider_reason_on_the_attempt(
+    session_factory, monkeypatch
+):
+    from app.connectors.answer_engines.errors import ProviderError
+    from app.models.audit import ProviderAttempt
+
+    refusal = ProviderError(
+        "DataForSEO refused the submission (status 40202): Rate limit exceeded",
+        error_code="client_error",
+        retryable=False,
+    )
+    stub = _RecordingAdapter(submit_error=refusal)
+    monkeypatch.setattr(lifecycle, "DataForSeoSearchSurfaceAdapter", lambda **_: stub)
+    audit_id, task_id, _ = await seed(session_factory, "gemini_consumer")
+    await step(session_factory, audit_id, task_id)
+    task = await _task(session_factory, task_id)
+    assert task.status == "failed"
+    async with session_factory() as session:
+        attempt = await session.scalar(
+            select(ProviderAttempt).where(ProviderAttempt.task_id == task_id)
+        )
+    assert attempt.error_code == "client_error"
+    assert "40202" in attempt.error_detail
+
+
+@pytest.mark.asyncio
 async def test_recovery_pacing_shared_across_connections_and_isolated_from_other_calls(
     session_factory,
 ):

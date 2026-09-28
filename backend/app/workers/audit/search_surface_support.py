@@ -214,8 +214,9 @@ def _provider_refusal(exc: ProviderError) -> SearchSurfaceResult:
     evidence that the provider never said.
     """
     logger.info(
-        "search surface refused by provider",
-        extra={"error_code": exc.error_code},
+        "search surface refused by provider error_code=%s detail=%s",
+        exc.error_code,
+        exc,
     )
     return SearchSurfaceResult(outcome=OUTCOME_PROVIDER_ERROR)
 

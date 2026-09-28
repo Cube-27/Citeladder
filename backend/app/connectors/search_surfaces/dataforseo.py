@@ -200,8 +200,10 @@ class DataForSeoSearchSurfaceAdapter:
         task = _single_task(body)
         status = _task_status(task)
         if status not in dataforseo_config.ACCEPTED_SUBMISSION_STATUS_CODES:
+            message = str(task.get("status_message") or "").strip()[:240]
+            suffix = f": {message}" if message else ""
             raise ProviderError(
-                f"DataForSEO refused the submission (status {status})",
+                f"DataForSEO refused the submission (status {status}){suffix}",
                 error_code=_submission_error_code(status),
                 retryable=False,
             )

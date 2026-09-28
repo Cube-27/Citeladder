@@ -218,6 +218,7 @@ class AuditSearchSurfaceMixin(AuditScraperFinalizationMixin):
             await self._record_provider_exchange(
                 context,
                 error_code=exc.error_code,
+                error_detail=str(exc),
                 submission=exc.submission
                 if isinstance(exc, UncertainSubmission)
                 else None,
@@ -297,7 +298,9 @@ class AuditSearchSurfaceMixin(AuditScraperFinalizationMixin):
         try:
             payload = await adapter.fetch(context.provider_task_id)
         except ProviderError as exc:
-            await self._record_provider_exchange(context, error_code=exc.error_code)
+            await self._record_provider_exchange(
+                context, error_code=exc.error_code, error_detail=str(exc)
+            )
             if exc.error_code in RETRYABLE_ERRORS:
                 # Retrieval itself faulted. Spend a RETRIEVAL attempt and poll
                 # the same task again — this is the only counter that moves,

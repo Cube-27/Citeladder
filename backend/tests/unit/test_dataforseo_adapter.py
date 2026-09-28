@@ -190,7 +190,12 @@ class TestSubmission:
         def handler(_: httpx.Request) -> httpx.Response:
             return httpx.Response(
                 200,
-                json={"status_code": 20000, "tasks": [{"status_code": 40501}]},
+                json={
+                    "status_code": 20000,
+                    "tasks": [
+                        {"status_code": 40501, "status_message": "Invalid Field."}
+                    ],
+                },
             )
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
@@ -200,6 +205,9 @@ class TestSubmission:
                 await adapter.submit(request)
 
         assert excinfo.value.retryable is False
+        # The provider's reason is the only evidence of why it refused.
+        assert "40501" in str(excinfo.value)
+        assert "Invalid Field." in str(excinfo.value)
 
 
 class TestRetrieval:

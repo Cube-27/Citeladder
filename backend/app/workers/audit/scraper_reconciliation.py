@@ -84,7 +84,9 @@ class AuditScraperReconciliationMixin:
             )
             next_state, match = reconcile_page(listing, context, state)
         except ProviderError as exc:
-            await self._record_provider_exchange(context, error_code=exc.error_code)
+            await self._record_provider_exchange(
+                context, error_code=exc.error_code, error_detail=str(exc)
+            )
             await self._park_submission_uncertain(
                 context.task_id, context.audit_id, spend_poll=True
             )
