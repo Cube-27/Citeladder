@@ -27,8 +27,12 @@ _TRAILING_PUNCTUATION_CHARS = " \t\n\r\v\f?.!,;:"
 
 
 def normalize_prompt_text(text: str) -> str:
-    """Casefold, collapse whitespace, and strip trailing punctuation."""
-    collapsed = _WHITESPACE.sub(" ", text).strip().casefold()
+    """Lower-case, collapse whitespace, and strip trailing punctuation.
+
+    Plain ``lower()``: the TypeScript Opportunity refresh computes the same key
+    with ``toLowerCase()``.
+    """
+    collapsed = _WHITESPACE.sub(" ", text).strip().lower()
     return collapsed.rstrip(_TRAILING_PUNCTUATION_CHARS)
 
 

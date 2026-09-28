@@ -5,19 +5,8 @@ Committed artifacts:
 * ``services/api/src/generated/python-config.json`` -- the policy the TS
   service reads. ``app/core/config`` stays the policy authority (TypeScript
   migration D5); TS never restates a default, bound, error code or role matrix.
-* ``services/api/golden/*.json`` -- live fixtures for values both stacks still compute
-  and compare, plus the shared error-envelope shape.
-* ``services/api/golden/openapi/parity.json`` -- the OpenAPI fragment
-  FastAPI publishes for a fixture family, which proves the TS exporter and
-  fragment normalization against Pydantic's schemas.
 * ``packages/contracts/src/generated/error-codes.ts`` -- the machine-code
   union: every error code declared by the modules in ``ERROR_CODE_MODULES``.
-
-``--freeze-family <tag>`` writes ``services/api/golden/families/<tag>.json``,
-the fragment FastAPI publishes for one route family. It is run while Python
-still serves the family, in the PR that moves it to TypeScript; the frozen
-file is the parity target after the Python router is deleted, so ``--check``
-never regenerates it.
 
 ``--check`` regenerates in memory and fails when a committed artifact is
 stale, which is how CI keeps the two stacks from drifting.
@@ -138,17 +127,12 @@ from app.core.config.workspaces import (
     CODE_WORKSPACE_ROLE_FORBIDDEN,
 )
 from app.domain.workspaces.policy import WORKSPACE_ROLES, effective_capabilities
-from scripts.golden_masters import GOLDEN_MASTERS
-from scripts.openapi_fragments import family_fragment, parity_fragment
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
 SERVICE_ROOT = FRONTEND_ROOT / "services" / "api"
 CONFIG_PATH = SERVICE_ROOT / "src" / "generated" / "python-config.json"
-GOLDEN_ROOT = SERVICE_ROOT / "golden"
-PARITY_PATH = GOLDEN_ROOT / "openapi" / "parity.json"
-FROZEN_FAMILIES_ROOT = GOLDEN_ROOT / "families"
 CONTRACTS_ROOT = FRONTEND_ROOT / "packages" / "contracts"
 ERROR_CODES_PATH = CONTRACTS_ROOT / "src" / "generated" / "error-codes.ts"
 GENERATED_BY = "backend/scripts/export_ts_platform.py"
@@ -428,42 +412,16 @@ def build_artifacts() -> dict[Path, str]:
     artifacts = {
         CONFIG_PATH: _render(build_config()),
         ERROR_CODES_PATH: render_error_codes(),
-        PARITY_PATH: _render({"generated_by": GENERATED_BY, **parity_fragment()}),
-        SERVICE_ROOT / "src" / "generated" / "query-casefold.json": _render(
-            {
-                char: char.casefold()
-                for codepoint in range(sys.maxunicode + 1)
-                if (char := chr(codepoint)).casefold() != char.lower()
-            }
-        ),
     }
-    for name, build in GOLDEN_MASTERS.items():
-        payload = {"name": name, "generated_by": GENERATED_BY, "cases": build()}
-        artifacts[GOLDEN_ROOT / f"{name}.json"] = _render(payload)
     return artifacts
 
 
 def _stale_paths(artifacts: dict[Path, str]) -> list[Path]:
-    stale = [
+    return [
         path
         for path, content in artifacts.items()
         if not path.exists() or path.read_text(encoding="utf-8") != content
     ]
-    orphans = set(GOLDEN_ROOT.glob("*.json")) - set(artifacts)
-    return stale + sorted(orphans)
-
-
-def freeze_family(family: str) -> Path:
-    """Write the family's current FastAPI fragment as its frozen golden."""
-    # Imported here: only freezing needs the full application.
-    from app.main import app
-
-    fragment = family_fragment(app.openapi(), family)
-    path = FROZEN_FAMILIES_ROOT / f"{family}.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"generated_by": GENERATED_BY, **fragment}
-    path.write_text(_render(payload), encoding="utf-8", newline="\n")
-    return path
 
 
 def main() -> int:
@@ -473,16 +431,7 @@ def main() -> int:
         action="store_true",
         help="fail when a committed artifact differs from a fresh export",
     )
-    parser.add_argument(
-        "--freeze-family",
-        metavar="TAG",
-        help="freeze one route family's FastAPI fragment for the parity gate",
-    )
     arguments = parser.parse_args()
-    if arguments.freeze_family:
-        path = freeze_family(arguments.freeze_family)
-        print(f"froze {path.relative_to(FRONTEND_ROOT)}")
-        return 0
     artifacts = build_artifacts()
     if arguments.check:
         stale = _stale_paths(artifacts)
@@ -498,8 +447,6 @@ def main() -> int:
     for path, content in artifacts.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8", newline="\n")
-    for orphan in set(GOLDEN_ROOT.glob("*.json")) - set(artifacts):
-        orphan.unlink()
     return 0
 
 

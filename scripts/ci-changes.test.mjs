@@ -71,13 +71,11 @@ test('the TypeScript API service runs for its code and every Python input it is 
     'migrations/versions/0001_initial.py',
     'backend/app/core/config/errors.py',
     'backend/app/domain/workspaces/policy.py',
-    'backend/scripts/golden_masters.py',
     'frontend/packages/contracts/src/route-ownership.ts',
     'backend/app/api/projects.py',
     'frontend/local-compose-routes.caddy',
     'frontend/apps/app/Caddyfile',
     'infra/gcp/runtime/Caddyfile',
-    'backend/app/analysis/scoring.py',
   ]) {
     assert.equal(classifyPaths([path]).api, true, path);
   }

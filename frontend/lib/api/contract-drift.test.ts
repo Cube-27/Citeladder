@@ -57,7 +57,7 @@ describe('declaredKeysFor', () => {
   });
 
   it('resolves page wrappers and arrays to their object shape', () => {
-    expect(declaredKeysFor('opportunitiesPageSchema')?.declared).toContain('items');
+    expect(declaredKeysFor('siteCrawlListPageSchema')?.declared).toContain('items');
     expect(declaredKeysFor('visibilityTrendPointSchema')?.declared.length).toBeGreaterThan(0);
   });
 });

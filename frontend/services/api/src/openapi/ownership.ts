@@ -1,15 +1,13 @@
 /**
- * The route-ownership gate (TypeScript migration rules 1 and 4).
+ * The route-ownership gate (TypeScript migration rule 1).
  *
  * Holds both stacks to the manifest in `@citeladder/contracts`: every
- * `/api/v1` family is served by exactly the stack the manifest names, a
- * TypeScript family publishes the frozen Python fragment it replaced, and
+ * `/api/v1` family is served by exactly the stack the manifest names, and
  * each ingress Caddyfile sends every operation's path to that stack.
  */
 import type { RouteStack } from '@citeladder/contracts/route-ownership';
 
 import type { OpenApiDocument } from './document.ts';
-import { familyFragment, fragmentDifferences } from './fragment.ts';
 import type { IngressOutcome } from './ingress.ts';
 
 export type OwnershipInputs = {
@@ -17,8 +15,6 @@ export type OwnershipInputs = {
   manifest: Readonly<Record<string, RouteStack>>;
   python: OpenApiDocument;
   typescript: OpenApiDocument;
-  /** Python fragments frozen before each TypeScript family's router was deleted. */
-  frozen: Readonly<Record<string, OpenApiDocument>>;
   /** Each ingress file's router, keyed by its repository path. */
   ingress: Readonly<Record<string, (path: string) => Set<IngressOutcome>>>;
 };
@@ -52,7 +48,6 @@ function familyOperations(
 
 function checkTypeScriptFamily(
   family: string,
-  inputs: OwnershipInputs,
   served: { python: Map<string, Operation[]>; typescript: Map<string, Operation[]> },
   failures: string[],
 ): void {
@@ -67,18 +62,6 @@ function checkTypeScriptFamily(
       `'${family}' is TypeScript-owned, but the TypeScript service declares no route for it`,
     );
   }
-  const golden = inputs.frozen[family];
-  if (!golden) {
-    failures.push(
-      `'${family}' has no frozen Python fragment; run \`python -m scripts.export_ts_platform --freeze-family ${family}\` before deleting its Python router`,
-    );
-    return;
-  }
-  const differences = fragmentDifferences(
-    familyFragment(inputs.typescript, family),
-    familyFragment(golden, family),
-  );
-  for (const difference of differences) failures.push(`'${family}' parity: ${difference}`);
 }
 
 function checkIngress(
@@ -116,7 +99,7 @@ function checkIngress(
   }
 }
 
-/** Every way the stacks, frozen fragments and ingress disagree with the manifest. */
+/** Every way the stacks and ingress disagree with the manifest. */
 export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
   const failures: string[] = [];
   const served = {
@@ -137,16 +120,11 @@ export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
   }
   for (const [family, stack] of Object.entries(inputs.manifest)) {
     if (stack === 'typescript') {
-      checkTypeScriptFamily(family, inputs, served, failures);
+      checkTypeScriptFamily(family, served, failures);
     } else if (!served.python.has(family)) {
       failures.push(
         `The manifest assigns '${family}' to python, but Python serves no route for it`,
       );
-    }
-  }
-  for (const family of Object.keys(inputs.frozen)) {
-    if (inputs.manifest[family] !== 'typescript') {
-      failures.push(`A frozen fragment exists for '${family}', which is not TypeScript-owned`);
     }
   }
   checkIngress(inputs, [served.python, served.typescript], failures);

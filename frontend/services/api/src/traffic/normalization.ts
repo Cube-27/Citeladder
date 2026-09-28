@@ -5,27 +5,14 @@ import { policy } from '../config.ts';
 import { compareIdentityText } from '../analysis/comparison.ts';
 import { stripTrailing } from '../text-order.ts';
 
-import casefoldMap from '../generated/query-casefold.json' with { type: 'json' };
-
-const folds: Readonly<Record<string, string>> = casefoldMap;
-
-/** Unicode folding retained for prompt hashes shared with the Python writer. */
-export const casefold = (value: string): string =>
-  [...value].map((char) => folds[char] ?? char.toLowerCase()).join('');
-
-/** Whitespace in shared prompt/query identities, until their Python readers retire. */
+/** Runs of whitespace as one space, trimmed. */
 export function collapseIdentityWhitespace(value: string): string {
-  for (const codePoint of [0x1c, 0x1d, 0x1e, 0x1f])
-    value = value.replaceAll(String.fromCodePoint(codePoint), ' ');
-  return value
-    .split(/\p{White_Space}+/u)
-    .filter(Boolean)
-    .join(' ');
+  return value.split(/\s+/u).filter(Boolean).join(' ');
 }
 
-/** Unicode default case folding is part of the persisted query identity. */
+/** A query's persisted identity: NFKC, lower case, collapsed whitespace. */
 export function normalizeQuery(value: string): string {
-  return collapseIdentityWhitespace(casefold(value.normalize('NFKC')));
+  return collapseIdentityWhitespace(value.normalize('NFKC').toLowerCase());
 }
 
 export const hash = (value: string) => createHash('sha256').update(value).digest('hex');

@@ -3,7 +3,7 @@ import { policy } from '../config.ts';
 import { classifyReferralSignals } from '../referrals/classification.ts';
 import { addDays } from '../referrals/projection.ts';
 import { Ga4Accum, GscAccum, provenance, sourceFields, type MetricRow } from './accumulators.ts';
-import { canonicalPage, casefold, hash, normalizeQuery } from './normalization.ts';
+import { canonicalPage, hash, normalizeQuery } from './normalization.ts';
 import { compareText } from '../text-order.ts';
 
 const p = policy.traffic;
@@ -159,7 +159,7 @@ export class TrafficProjectionBuilder {
       classifyReferralSignals({ utm_source: source, utm_medium: medium }) !== null;
     if (row.dataset === p.DATASET_GA4_LANDING_DAILY) {
       if (
-        p.TRAFFIC_GA4_ORGANIC_MEDIUMS.includes(casefold(values[2]!.trim())) ||
+        p.TRAFFIC_GA4_ORGANIC_MEDIUMS.includes(values[2]!.trim().toLowerCase()) ||
         ai(values[1]!, values[2]!)
       )
         this.page(values[0]!)?.ga4.add(row);

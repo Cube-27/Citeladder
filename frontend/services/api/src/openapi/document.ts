@@ -8,9 +8,9 @@ import { z } from 'zod';
 
 import type { RouteContract } from './routes.ts';
 
-export type JsonSchema = { [key: string]: unknown };
+type JsonSchema = { [key: string]: unknown };
 
-export type OpenApiParameter = {
+type OpenApiParameter = {
   name: string;
   in: 'path' | 'query' | 'header' | 'cookie';
   required: boolean;
@@ -19,7 +19,7 @@ export type OpenApiParameter = {
 
 type OpenApiContent = Record<string, { schema: JsonSchema }>;
 
-export type OpenApiOperation = {
+type OpenApiOperation = {
   tags?: string[];
   parameters?: OpenApiParameter[];
   requestBody?: { required?: boolean; content: OpenApiContent };

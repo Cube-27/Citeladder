@@ -21,7 +21,7 @@ const INTERNAL_ERROR_MESSAGE = 'An unexpected error occurred';
 // startup rather than on the first unhandled error.
 const INTERNAL_ERROR_CODE = asApiErrorCode(policy.errors.internal_error_code);
 
-export type Envelope = {
+type Envelope = {
   detail: unknown;
   error: {
     code: ApiErrorCode;
@@ -32,17 +32,17 @@ export type Envelope = {
   };
 };
 
-export function isRetryableStatus(status: number): boolean {
+function isRetryableStatus(status: number): boolean {
   return policy.errors.retryable_statuses.includes(status) || (status >= 500 && status <= 599);
 }
 
 /** The status's canonical code, or the fallback for an unmapped status. */
-export function defaultCode(status: number): ApiErrorCode {
+function defaultCode(status: number): ApiErrorCode {
   const codes: Record<string, string> = policy.errors.status_default_code;
   return asApiErrorCode(codes[String(status)] ?? policy.errors.fallback_code);
 }
 
-export function errorEnvelope(input: {
+function errorEnvelope(input: {
   code: ApiErrorCode;
   message: string;
   requestId: string;

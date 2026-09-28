@@ -3,9 +3,8 @@
  *
  * Every product route the service serves is declared here with its zod
  * schemas, and the OpenAPI document is generated from these declarations
- * (`document.ts`). A family's fragment must equal the frozen Python golden
- * before ingress sends it traffic (TypeScript migration rule 4). Each product
- * route declares its contract beside its handler (`routes/`).
+ * (`document.ts`), which the route-ownership gate reads. Each product route
+ * declares its contract beside its handler (`routes/`).
  */
 import type { RouteFamily } from '@citeladder/contracts/route-ownership';
 import type { z } from 'zod';

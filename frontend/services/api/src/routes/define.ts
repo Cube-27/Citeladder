@@ -2,8 +2,7 @@
  * A product route: its published contract, its parameters and its handler.
  *
  * The parameter specs are the single declaration: they validate requests
- * (`http/params.ts`) and generate the OpenAPI parameters the parity gate
- * compares with the frozen Python fragment. Every route here is a
+ * (`http/params.ts`) and generate the route's OpenAPI parameters. Every route here is a
  * workspace-scoped read resolved like FastAPI's `require_active_workspace`:
  * session first (401), then the active workspace (400/404), then the
  * parameters (422), as FastAPI resolves dependencies before parameters.

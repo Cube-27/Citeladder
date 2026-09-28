@@ -1,5 +1,7 @@
 /**
- * The response contracts the UI consumes, mapped to their OpenAPI component.
+ * The response contracts the UI consumes from Python-owned route families,
+ * mapped to their OpenAPI component. TypeScript-owned families serve the
+ * contracts themselves, so they have no Python component to drift from.
  * Covers the top-level response objects AND the item shapes of list/page
  * wrappers (the wrappers themselves add no new field sets). A mapped entry
  * that cannot be resolved on either side fails the guard — when a response
@@ -34,22 +36,9 @@ export const CONTRACT_SCHEMA_MAP = {
   providerCatalogSchema: 'ProviderCatalogResponse',
   auditSchema: 'AuditResponse',
   executionSchema: 'AuditTaskResponse',
-  executionEvidenceSchema: 'ExecutionEvidenceResponse',
-  searchSurfaceEvidenceSchema: 'SearchSurfaceEvidence',
-  surfaceEntitySchema: 'SurfaceEntityEvidence',
-  aioLinkSchema: 'AioLinkEvidence',
-  aioRateSchema: 'AioRateValue',
-  aioCompetitorRateSchema: 'AioCompetitorRate',
-  surfaceRatesSchema: 'SurfaceRatesResponse',
   visibilitySchema: 'VisibilityResponse',
   visibilityTrendPointSchema: 'VisibilityTrendPoint',
   visibilityEvidenceResponseSchema: 'VisibilityEvidenceResponse',
-  // Externally cited pages
-  // AI Referrals / performance
-  aiReferralsSchema: 'AiReferralsResponse',
-  performanceDashboardSchema: 'PerformanceDashboardResponse',
-  performanceTablePageSchema: 'PerformanceTablePage',
-  performanceRangeTaskSchema: 'PerformanceRangeTaskResponse',
   // Integrations
   integrationConnectionSchema: 'IntegrationConnectionResponse',
   integrationSyncRunSchema: 'IntegrationSyncRunResponse',
@@ -58,10 +47,6 @@ export const CONTRACT_SCHEMA_MAP = {
   integrationTestResultSchema: 'IntegrationTestResponse',
   integrationPropertySchema: 'IntegrationPropertyResponse',
   integrationPropertyMappingSchema: 'IntegrationPropertyMappingResponse',
-  // Demand Intelligence
-  demandSignalSchema: 'DemandSignalView',
-  demandSnapshotSchema: 'DemandSnapshotView',
-  demandRecomputeResponseSchema: 'DemandRecomputeResponse',
   // Search Intelligence
   searchTargetSchema: 'TargetResponse',
   searchPreferencesSchema: 'SearchIntelligencePreferences',
@@ -95,13 +80,6 @@ export const CONTRACT_SCHEMA_MAP = {
   providerProbeSchema: 'ProviderProbeResponse',
   // Opportunities
   opportunitySchema: 'OpportunityItem',
-  opportunityDetailSchema: 'OpportunityDetail',
-  opportunitiesPageSchema: 'OpportunitiesPage',
-  opportunitySummarySchema: 'OpportunitySummary',
-  // Actions (one unit of work per target)
-  actionItemSchema: 'ActionItem',
-  actionDetailSchema: 'ActionDetail',
-  actionsPageSchema: 'ActionsPage',
   // Agent chats, outputs and revisions
   agentRunSchema: 'RunView',
   agentRevisionSchema: 'RevisionView',

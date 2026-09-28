@@ -2,7 +2,7 @@
  * Deterministic AI-referral classification (no model may guess a source).
  *
  * Ports `app/domain/analytics/classification.py`, which Python keeps for the
- * traffic projection; a golden master holds the two to the same answers. The
+ * traffic projection until that projection's last Python reader moves. The
  * rule tables are config data exported from `core/config/analytics.py`.
  * Tiers run in a fixed order (referrer host, then UTM, then user agent) and
  * the first rule to fire within a tier wins.

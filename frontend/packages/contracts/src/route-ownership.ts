@@ -3,8 +3,7 @@
  * family (TypeScript migration rule 1).
  *
  * A family is one OpenAPI tag. Exactly one stack serves it: the PR that moves
- * a family to TypeScript flips its entry, freezes the Python fragment and
- * deletes the Python router. The route-ownership gate
+ * a family to TypeScript flips its entry and deletes the Python router. The route-ownership gate
  * (`frontend/services/api/scripts/check-route-ownership.ts`) holds both
  * stacks' OpenAPI documents and both ingress Caddyfiles to this record.
  */

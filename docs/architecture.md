@@ -85,16 +85,12 @@ kind and table has exactly one writing stack. For route families (OpenAPI tags)
 the record is the manifest in `frontend/packages/contracts/src/route-ownership.ts`;
 the route-ownership gate (`frontend/services/api/scripts/check-route-ownership.ts`)
 holds both stacks' OpenAPI documents and every ingress Caddyfile (production's
-origin, the local Compose ingress and the Vite app container) to it. A family
-moves to TypeScript only with a frozen Python fragment
-(`export_ts_platform --freeze-family`) that the service's generated fragment
-matches.
+origin, the local Compose ingress and the Vite app container) to it.
 
 Python code a moved route still shares with Python callers stays until its last
 Python caller moves (the Agent still reads AI Referrals, MCP still reads
-execution evidence); the TypeScript port is held to it by golden masters that
-`export_ts_platform` regenerates. Behavior that retired with its only Python
-caller is covered by TypeScript and PostgreSQL tests, never by frozen Python output.
+execution evidence). TypeScript owners are covered by their own TypeScript and
+PostgreSQL tests; no golden files compare them with Python.
 
 `@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response
 contracts the browser app validates with, the route-ownership manifest, and the
@@ -103,8 +99,7 @@ API error-code union exported from the Python config that declares the codes.
 The service does not own policy or schema. It reads `backend/app/core/config`
 through a generated, drift-checked export and verifies Python-issued sessions;
 Alembic stays the only schema author, so the service holds Kysely types
-generated from the migrated schema. Behavior it ports from Python replays
-Python-produced golden masters (`backend/scripts/export_ts_platform.py`).
+generated from the migrated schema.
 
 ## Delivery topology
 

@@ -1,7 +1,6 @@
 /** Page grouping identity shared with the Python Action reader until PR 7b. */
 import { policy } from '../config.ts';
 import { stripTrailing } from '../text-order.ts';
-import { casefold } from '../traffic/normalization.ts';
 
 export function normalizedUrlForCompare(url: string): string {
   const text = url.trim();
@@ -21,7 +20,7 @@ export function normalizedUrlForCompare(url: string): string {
     const port = parsed.port ? `:${parsed.port}` : '';
     const path = stripTrailing(raw[2]!, '/') || '/';
     const pairs = [...new URLSearchParams(raw[3])].filter(
-      ([key]) => !policy.opportunity.tracking_query_params.includes(casefold(key)),
+      ([key]) => !policy.opportunity.tracking_query_params.includes(key.toLowerCase()),
     );
     const quote = (value: string) =>
       encodeURIComponent(value)
