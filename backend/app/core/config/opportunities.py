@@ -39,7 +39,7 @@ from app.core.config.projects import (
 # row is always traceable to the exact logic that produced it (mirrors
 # ``SCORING_RULE_VERSION`` in ``config/analysis.py``).
 ANALYZER_VERSION: Final = "opp-analyzer-1"
-RULE_VERSION: Final = "opp-rules-1"
+RULE_VERSION: Final = "opp-rules-2"
 RULE_PRODUCT_NOT_MENTIONED: Final = "product_not_mentioned"
 RULE_CITED_ALTERNATIVES: Final = "cited_alternatives_without_uploaded_presence"
 RULE_CATALOG_FIELDS_MISSING: Final = "catalog_fields_missing"

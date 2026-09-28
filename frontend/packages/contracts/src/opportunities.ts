@@ -352,6 +352,7 @@ export const expectedCheckSchema = z.discriminatedUnion('kind', [
     source_analysis_id: uuid(),
     source_artifact_id: uuid(),
     target_analysis_id: uuid(),
+    target_artifact_id: uuid(),
     extractor_version: z.string(),
   }),
   siteRuleExpectedCheckSchema,

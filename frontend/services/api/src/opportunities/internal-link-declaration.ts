@@ -48,6 +48,7 @@ export async function internalLinkDeclarationChecks(
           source_analysis_id: link.source.analysis_id,
           source_artifact_id: link.source.artifact_id,
           target_analysis_id: link.target.analysis_id,
+          target_artifact_id: link.target.artifact_id,
           extractor_version: link.source.extractor_version,
         },
       });

@@ -132,14 +132,14 @@ Dismissing an Action or producing Agent output for it does not declare it. The
 chat's own measurement plan is free text and does not add checks.
 
 Contextual-link declarations freeze only the explicitly selected links, including
-source/target analysis IDs, source artifact, extractor version, destination and
-existing anchor text. They preserve one declaration per page Action, so the UI
+source/target analysis and artifact IDs, extractor version, destination and
+suggested anchor text. They preserve one declaration per page Action, so the UI
 asks users to select every link they intend to declare before submitting.
 Unselected links are not declared implicitly; the page's other findings keep
 their own checks in the same declaration. Same-key
 replay must name the same selection. Later complete, compatible crawl evidence
-checks main-content placement and anchor text; navigation-only links do not
-satisfy the check, and missing or incompatible capture stays inconclusive.
+checks for a main-content link to the destination; the anchor was a suggestion,
+so rewording it still verifies. Navigation-only links do not satisfy the check, and missing or incompatible capture stays inconclusive.
 
 An earned declaration receives a PLACEMENT check, not the baseline-anchored
 visibility one. Its expected change is read from the rule — a listing acquired,

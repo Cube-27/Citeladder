@@ -50,14 +50,14 @@ async function replay(
     (row.project_id !== action.project_id ||
       row.action_id !== action.id ||
       row.output_revision_id !== input.output_revision_id ||
+      // Unreadable stored checks are unknown, never an empty selection.
+      !Array.isArray(row.expected_checks) ||
       JSON.stringify(
-        (Array.isArray(row.expected_checks)
-          ? row.expected_checks
-              .map(record)
-              .filter((check) => check.kind === 'contextual_link')
-              .map((check) => check.recommendation_id)
-          : []
-        ).toSorted((left, right) => String(left).localeCompare(String(right))),
+        row.expected_checks
+          .map(record)
+          .filter((check) => check.kind === 'contextual_link')
+          .map((check) => check.recommendation_id)
+          .toSorted((left, right) => String(left).localeCompare(String(right))),
       ) !==
         JSON.stringify(
           (input.recommendation_ids ?? []).toSorted((left, right) => left.localeCompare(right)),

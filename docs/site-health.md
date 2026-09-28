@@ -212,7 +212,7 @@ without a model call. The anchor is a suggestion, so rewording it still
 verifies. No CMS publishing occurs.
 
 Limits and provisional thresholds live in
-`backend/app/core/config/site_health_content_structure.py` and are exported to
+`backend/app/core/config/site_health_internal_links.py` and are exported to
 TypeScript. Live rollout still requires editor-reviewed calibration; fixture tests do not establish recommendation quality.
 
 ### Change intelligence
