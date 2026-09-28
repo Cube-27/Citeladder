@@ -167,7 +167,7 @@ total.
 | 8 | Search intelligence (8a) and database-only Commerce (8b) | Med-High | Done |
 | 9 | Projects: brand identity (9a); projects-tagged reads (9b) | Med-High | Done |
 | 10 | Entitlement enforcement and the prompt library | Med-High | Done |
-| 11 | Model gateway and prompt generation | High | |
+| 11 | Model gateway and prompt generation | High | Done |
 | 12 | Projects, onboarding and brand discovery | High | |
 | 13 | Integrations | High | |
 | 14 | Auth and workspaces | High | |
@@ -555,13 +555,79 @@ Departures:
 
 ### PR 11: Model gateway and prompt generation
 
-A TS model gateway (Anthropic TypeScript SDK and the other configured
-providers through `connectors/app_model_*`'s contract), the JEV judge client
-and the `agent.provider_call` limiter. Then prompt generation, agent-proposal
-admission, business-map suggestions, and Commerce buyer-prompt generation and
-manual entry move, retiring nearly all of `domain/prompts` and
-`domain/commerce/prompts.py` with `buyer_prompt_validation`. Recorded fixtures
-only; no live provider calls in tests.
+TS owns the config-only OpenAI-compatible model gateway and JEV transport
+(`src/models/`), using injected `fetch`, bounded retries, structured JSON
+validation and the output-cap fallback. No provider SDK or BYOK decryption is
+needed. Python configuration remains authoritative through `export_ts_platform`.
+The shared `agent.provider_call` window now admits multi-call reservations in
+`src/abuse/usage.ts`, alongside bulk import.
+
+TS owns `prompt-generation` and the two Commerce buyer-prompt writes:
+`POST /prompt-sets/{id}/generate`,
+`POST /projects/{id}/commerce/buyer-prompts/generate` and
+`POST /projects/{id}/commerce/buyer-prompts/manual`. All three ingress files
+route them to TS. Browser response contracts and paths are unchanged.
+
+Generation reads scoped persisted context, recovers missing topics from confirmed
+offerings, suggests missing business maps, plans compatible cells, admits drafts,
+judges through JEV, selects and stages candidates. Agent portfolios enter the same
+admission path with exact revision/output/run provenance and no generation call.
+Demand grounding retains observed periods, metrics and source IDs; verbatim
+observed queries cannot become candidates. Strong JEV failures are text-free
+outcomes; unavailable judgments remain reviewable. Only explicit candidate
+acceptance consumes prompt slots. Commerce creates disabled prompts and target
+relations under capacity admission; approval remains separate.
+
+Stays Python: competitor discovery (`commerce-python`, SecureFetcher), Agent
+execution, onboarding research, Commerce shelf analysis, project CRUD, billing
+and internal links. No queue kind changes ownership.
+
+| Python bridge | Remaining caller / retirement condition |
+| --- | --- |
+| `connectors/agent/*`, `connectors/app_model*.py` | Agent, onboarding research, Commerce shelf and providers; retire after those callers move |
+| `connectors/jev.py` | Internal-links worker; its retry cap now comes from shared JEV config |
+| `prompts/normalization.py` | Prompt model and analysis; retire with their final Python caller |
+| `prompts/locks.py` project lock | Source-page admission; unused prompt-set acquisition removed |
+| `prompts/mappers.py`, `schemas.py` | Embedded project prompt-set response; generation/topic/candidate DTOs removed |
+| `entitlements/enforcement.py` | Project CRUD, Agent and admission callers; retain until their owners move |
+
+Lock order and shared writers:
+- Generation topic recovery takes the project lock. Candidate staging/purge takes
+  project, then prompt set; review continues project → set → candidate rows →
+  account capacity. Every provider/JEV call occurs outside a transaction.
+- Commerce takes capacity only, never project/set locks afterward. The unique
+  normalized prompt hash and case-insensitive topic index remain final guards.
+- Python onboarding still creates prompt sets; Python Agent still increments
+  `agent.provider_call`. Both stacks share the existing usage-window row format.
+- Business-map suggestions are merged under the project lock and profile row,
+  only where the still-confirmed offering remains facet-empty.
+
+Retired: 40 Python files, including the generation route, generation/admission/
+quality modules, Commerce prompt owner/validator, calibration script and their
+tests. Mixed Commerce and brand-discovery files retain tests of remaining Python
+subjects; retired generation assertions move to TS behavioral coverage. The
+additional Agent-proposal integration test was retired after its scoped handoff
+and provenance path moved to the PostgreSQL TS test. The calibration operator
+entry point is `frontend/services/api/scripts/jev-calibration.ts`; it requires an
+active persisted admin and reads aggregate decisions without prompt text.
+
+Departures:
+- Plain fetch replaces only the default configured gateway; the earlier SDK
+  wording was inapplicable to these routes.
+- New provenance/state hashes use ordinary `JSON.stringify`, without Python
+  serialization emulation. Prior decisions remain immutable.
+- Actual returned model identity, usage and latency are retained in run evidence.
+- Commerce validates workspace/target ownership before model configuration and
+  returns a deliberate 409 for normalized duplicates instead of an integrity 500.
+- Blank Commerce manual text is rejected after trimming.
+- Calibration sweep values and JEV retry cap moved to configuration; the unused
+  Python `prompt_generation_settings` singleton is removed. The settings class
+  remains the exported policy authority.
+- No Commerce literal-route exclusions existed in the current TS route registry;
+  its method guards already prefer explicit literal routes over UUID routes.
+
+Implementation is complete locally; deployment and the one-week soak remain
+separate release work. PR validation records contain exact commands and results.
 
 ### PR 12: Projects, onboarding and brand discovery
 
