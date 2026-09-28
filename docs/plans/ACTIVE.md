@@ -2,6 +2,13 @@
 
 ## Active
 
+- [Internal link suggestions](citeladder-internal-links.md)
+  — implemented on 28 September 2026 in `codex/content-structure`; revised after
+  owner review to a Website Internal links tab using JEV page-pair judgments.
+  Topics and the separate Content structure page are removed. Legacy Site
+  Health topical coherence is retired. Owner approval, editor calibration and
+  live provider enablement remain pending.
+
 - [Prompt generation v2](citeladder-prompt-generation-v2.md)
   — owner-approved on 26 September 2026 and revised after the prompt-universe/JEV
   research. PR 1 (#161), PR 2 (#162), PR 3a (#163) and PR 3b (#172) merged.

@@ -6,6 +6,8 @@
 import type { ListFilters } from './shared';
 
 export const siteHealthKeys = {
+  internalLinks: (workspaceId: string, projectId: string, analysisId?: string) =>
+    ['site-health', 'internal-links', workspaceId, projectId, analysisId ?? 'latest'] as const,
   all: ['site-health'] as const,
   // Entitlement data depends on the `X-Workspace-Id` header (F5's active
   // workspace), so the workspace id must be part of the key — otherwise a

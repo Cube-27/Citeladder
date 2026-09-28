@@ -156,9 +156,66 @@ metrics persist normalized internal-authority share over the observed crawl,
 including formula version, rank and incomplete/sample caveats; off-crawl targets
 receive no transition weight. Anchor diagnostics group generic, repeated-target
 and low-lexical-alignment evidence without automatic Opportunity promotion.
-Architecture also persists deterministic bounded lexical topic clusters, explicit
-unknown/ineligible page assignments and crawl-local outliers. Cluster identities
-are not comparable across crawls.
+The old lexical topical-coherence projection is retired. Website's Internal
+links tab suggests missing contextual links over an explicitly analyzed saved
+crawl. Suggestions do not contribute to a health score.
+
+### Internal links
+
+The analysis follows a hub-and-spoke rubric over page pairs. TypeScript owns
+scoped admission, retrieval, saved reads and publication; the existing Python
+JEV connector (`JEV_API_KEY`) and AI-credit owner execute judgments through the
+existing analytics queue. No provider runs on a read.
+
+Admission freezes each usable page's title, H1, meta description, a short
+content excerpt, page kind, observed main-content targets and main-content
+inbound count from the crawl's link metrics. Trust/policy and about/contact
+pages are excluded. Retrieval ranks destinations by TF-IDF similarity over
+title, H1, URL path and description; once a crawl has enough pages, words on a
+large share of them (brand and template text) carry no weight. Each source page
+keeps a bounded shortlist of related destinations it does not already link
+from main content. A navigation-only link does not suppress a suggestion; a
+link in an unclassified region does, and a source whose anchor capture was
+truncated gets no suggestions. Product pages whose titles differ only by a
+colour or size word are variants: they never suggest each other, and one
+destination represents each variant family.
+
+Each page pair is one JEV request: a Noul asks whether the source should link
+to the destination, with the rubric, both page types and the destination's
+inbound count in state. When the destination offers more than one descriptive
+option (its H1, title without site suffix, or a non-identifier URL slug), a
+Choice selects the anchor text. JEV never writes URLs or anchor text. A pair at
+or above the review threshold becomes a suggestion; the threshold is a review
+default, not permission to publish.
+
+The job uses its own concurrency and wall-clock budget on a heartbeated lease,
+not the Generate-request JEV deadline. Dispatch reservations commit before each
+request; a deadline leaves unsent pairs unavailable and settles interrupted
+dispatches as uncertain without resending them. Publication periodically saves
+progress so suggestions can be reviewed while the rest are checked. Results
+distinguish running, completed-empty, partial and unavailable, with reasons and
+elapsed time.
+
+`site_internal_link_runs` retains the frozen crawl, page identities, candidates
+and policy; TypeScript is its writer. Python appends dispatch and outcome events
+to `site_internal_link_events`. Each dispatch reserves a flat per-judgment amount
+from the shared AI-credit balance against the crawl metered subject; a judgment
+that never reached the provider is not charged. Missing funding or provider
+availability yields unavailable judgments, never an observed zero.
+
+One project-scoped API family exposes the saved read (including recent analysis
+history), explicit analyze and cancel operations; the tab filters, pages and
+exports the bounded result client-side. Suggestions join the source page's
+existing Action. The user explicitly selects implemented links; a later complete
+compatible crawl verifies a main-content link to the exact destination URL
+without a model call. The anchor is a suggestion, so rewording it still
+verifies. No CMS publishing occurs.
+
+Limits and provisional thresholds live in
+`backend/app/core/config/site_health_internal_links.py` and are exported to
+TypeScript. Live rollout still requires editor-reviewed calibration; fixture tests do not establish recommendation quality.
+
+### Change intelligence
 
 Change Intelligence compares bounded primary-text shingles and heading outlines
 under extractor/analyzer provenance. Content change and modification-date

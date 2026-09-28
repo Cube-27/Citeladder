@@ -678,6 +678,10 @@ def _extract_document(root: Any, *, final_url: str, settings: Any) -> dict[str, 
     facts["ordered_list_steps"] = ordered_list_steps(root)
     facts["hreflang_alternates"] = _hreflang_alternates(root, final_url=final_url)
     facts.update(page_owned_content_facts(root))
+    # Link suggestions need to know whether every anchor was captured.
+    facts["links"]["anchors_truncated"] = (
+        len(facts["links"]["anchors"]) >= settings.max_links_per_page
+    )
     facts["source_support"] = extract_source_support_facts(root, final_url=final_url)
     facts["inline_script_chars"] = _inline_script_chars(root)
     blocking_scripts = _blocking_scripts(root)

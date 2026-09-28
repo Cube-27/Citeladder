@@ -28,6 +28,7 @@ export type ActionDeclaration = z.infer<typeof actionDeclarationSchema>;
 export type MeasurementLeg = ActionDeclaration['legs'][number];
 /** Targets and expected checks are server-owned; the user names only these. */
 export type ActionDeclarationInput = {
+  recommendation_ids?: string[];
   /** The revision shipped, or null for work done outside CiteLadder. */
   output_revision_id: string | null;
   declared_implemented_at: string;

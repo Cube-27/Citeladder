@@ -5,6 +5,7 @@ import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import type { OpportunityRow } from './projection.ts';
 import type { Scope } from './sources.ts';
+import { internalLinkDeclarationChecks } from './internal-link-declaration.ts';
 
 const o = policy.opportunity.opportunities;
 const p = policy.opportunity.placement;
@@ -120,12 +121,21 @@ export async function declarationChecks(
   members: OpportunityRow[],
   auditId: string | null,
   brandName: string,
+  recommendationIds: string[] = [],
 ): Promise<MemberCheck[]> {
+  // Contextual links are declared per selected link; the page's other
+  // findings keep their own checks in the same declaration.
+  const contextual = members.filter((member) => member.rule_id === 'site_contextual_links');
   const checks = new Map<string, MemberCheck>();
   for (const member of members) {
+    if (member.rule_id === 'site_contextual_links') continue;
     const check = await memberCheck(db, scope, member, auditId, brandName);
     const key = JSON.stringify(check);
     if (!checks.has(key)) checks.set(key, { check, member });
   }
-  return [...checks.values()];
+  const links =
+    contextual.length || recommendationIds.length
+      ? await internalLinkDeclarationChecks(db, scope, contextual, recommendationIds)
+      : [];
+  return [...checks.values(), ...links];
 }

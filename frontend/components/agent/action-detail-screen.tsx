@@ -8,6 +8,7 @@ import {
   DeclarationStatus,
   isDeclarable,
   MarkImplementedButton,
+  ContextualLinkDeclarationRoute,
 } from '@/components/agent/action-declaration';
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { PageShell } from '@/components/layout/page-shell';
@@ -272,7 +273,15 @@ function Implementation({
             output, use Mark implemented in its chat.
           </p>
           <div>
-            <MarkImplementedButton workspaceId={workspaceId} actionId={action.id} revision={null} />
+            {action.members.some((member) => member.rule_id === 'site_contextual_links') ? (
+              <ContextualLinkDeclarationRoute />
+            ) : (
+              <MarkImplementedButton
+                workspaceId={workspaceId}
+                actionId={action.id}
+                revision={null}
+              />
+            )}
           </div>
         </div>
       )}

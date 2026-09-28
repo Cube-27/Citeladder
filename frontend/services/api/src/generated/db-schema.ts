@@ -2369,6 +2369,31 @@ export interface SiteHealthSnapshots {
   workspace_id: string;
 }
 
+export interface SiteInternalLinkEvents {
+  candidate_id: string;
+  created_at: Timestamp;
+  evidence: Json;
+  id: string;
+  kind: string;
+  project_id: string;
+  run_id: string;
+  workspace_id: string;
+}
+
+export interface SiteInternalLinkRuns {
+  actor_id: string;
+  crawl_id: string;
+  created_at: Timestamp;
+  id: string;
+  idempotency_key: string;
+  manifest: Json;
+  policy_version: number;
+  project_id: string;
+  result: Json | null;
+  state: string;
+  workspace_id: string;
+}
+
 export interface SiteIssues {
   analysis_id: string;
   analyzer_version: string;
@@ -2414,7 +2439,6 @@ export interface SiteObservedArchitectures {
   source_link_metric_ids: string[] | null;
   source_snapshot_id: string;
   structure_depth: Json | null;
-  topical_coherence: Json | null;
   workspace_id: string;
 }
 
@@ -2921,6 +2945,8 @@ export interface DB {
   site_fetch_attempts: SiteFetchAttempts;
   site_health_profiles: SiteHealthProfiles;
   site_health_snapshots: SiteHealthSnapshots;
+  site_internal_link_events: SiteInternalLinkEvents;
+  site_internal_link_runs: SiteInternalLinkRuns;
   site_issues: SiteIssues;
   site_observed_architectures: SiteObservedArchitectures;
   site_page_analyses: SitePageAnalyses;

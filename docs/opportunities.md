@@ -111,7 +111,9 @@ implemented ([implementation events](../frontend/services/api/src/opportunities/
 It is anchored on the Action and, when the work came from the Agent, on the
 exact output revision the user shipped; a revision from another Action's output
 or an outline is refused, and null means work done outside CiteLadder. The
-caller names only that revision and the implementation time. The server
+caller names that revision and the implementation time. For contextual-link
+findings, the caller also selects saved recommendation IDs in Website's Internal links tab;
+the server validates them against the current crawl and Action membership. The server
 locks the project before the Action row and freezes its live member rows and
 targets (the publisher page for an
 earned Action, otherwise the members' resolved pages or the Action's own page)
@@ -128,6 +130,16 @@ insert-conflict recovery. A valid retry returns the original declaration without
 requiring a new snapshot, resolving targets again, or repeating side effects.
 Dismissing an Action or producing Agent output for it does not declare it. The
 chat's own measurement plan is free text and does not add checks.
+
+Contextual-link declarations freeze only the explicitly selected links, including
+source/target analysis and artifact IDs, extractor version, destination and
+suggested anchor text. They preserve one declaration per page Action, so the UI
+asks users to select every link they intend to declare before submitting.
+Unselected links are not declared implicitly; the page's other findings keep
+their own checks in the same declaration. Same-key
+replay must name the same selection. Later complete, compatible crawl evidence
+checks for a main-content link to the destination; the anchor was a suggestion,
+so rewording it still verifies. Navigation-only links do not satisfy the check, and missing or incompatible capture stays inconclusive.
 
 An earned declaration receives a PLACEMENT check, not the baseline-anchored
 visibility one. Its expected change is read from the rule — a listing acquired,

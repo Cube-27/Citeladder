@@ -24,6 +24,7 @@ const replayConflict = () =>
     code: asApiErrorCode(o.CODE_IMPLEMENTATION_IDEMPOTENCY_CONFLICT),
   });
 export type DeclarationInput = {
+  recommendation_ids?: string[];
   output_revision_id: string | null;
   declared_implemented_at: string;
 };
@@ -49,6 +50,18 @@ async function replay(
     (row.project_id !== action.project_id ||
       row.action_id !== action.id ||
       row.output_revision_id !== input.output_revision_id ||
+      // Unreadable stored checks are unknown, never an empty selection.
+      !Array.isArray(row.expected_checks) ||
+      JSON.stringify(
+        row.expected_checks
+          .map(record)
+          .filter((check) => check.kind === 'contextual_link')
+          .map((check) => check.recommendation_id)
+          .toSorted((left, right) => String(left).localeCompare(String(right))),
+      ) !==
+        JSON.stringify(
+          (input.recommendation_ids ?? []).toSorted((left, right) => left.localeCompare(right)),
+        ) ||
       !row.same_time)
   )
     throw replayConflict();
@@ -134,7 +147,14 @@ export async function declareAction(
 ) {
   const declaredAt = isoformat(toUtc(parseDatetime(input.declared_implemented_at)!));
   const fingerprint = createHash('sha256')
-    .update(JSON.stringify([actionId, input.output_revision_id, declaredAt]))
+    .update(
+      JSON.stringify([
+        actionId,
+        input.output_revision_id,
+        declaredAt,
+        (input.recommendation_ids ?? []).toSorted((left, right) => left.localeCompare(right)),
+      ]),
+    )
     .digest('hex');
   return db.transaction().execute(async (trx) => {
     // Refresh takes the project lock before updating Action rows. A declaration
@@ -166,14 +186,16 @@ export async function declareAction(
       .where('id', '=', action.project_id)
       .executeTakeFirstOrThrow();
     const scope = { workspaceId, projectId: action.project_id };
-    const resolved = await targets(trx, action, members, project.website_url);
     const checks = await declarationChecks(
       trx,
       scope,
       members,
       snapshot.audit_id,
       project.brand_name,
+      input.recommendation_ids ?? [],
     );
+    const declaredMembers = [...new Map(checks.map(({ member }) => [member.id, member])).values()];
+    const resolved = await targets(trx, action, declaredMembers, project.website_url);
     const row = await trx
       .insertInto('opportunity_implementation_events')
       .values({
@@ -184,7 +206,7 @@ export async function declareAction(
         actor_user_id: userId,
         output_revision_id: input.output_revision_id,
         opportunity_snapshot_id: snapshot.id,
-        member_opportunity_ids: JSON.stringify(members.map((member) => member.id)),
+        member_opportunity_ids: JSON.stringify(declaredMembers.map((member) => member.id)),
         ...resolved,
         target_site_url_ids: JSON.stringify(resolved.target_site_url_ids),
         expected_checks: JSON.stringify(checks.map(({ check }) => check)),
