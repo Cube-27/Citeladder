@@ -1,7 +1,15 @@
 import { z } from 'zod';
 
 import { policy, resolveSettingSpec } from '../config.ts';
-import { defaultTransport, ModelError, modelJson, postModel, type Transport } from './http.ts';
+import { getLogger } from '../logging.ts';
+import {
+  defaultTransport,
+  ModelError,
+  modelJson,
+  postModel,
+  providerErrorCode,
+  type Transport,
+} from './http.ts';
 
 export function jevSettings(env: Record<string, string | undefined> = process.env) {
   const spec = policy.models.jev;
@@ -43,6 +51,11 @@ export function createJevClient(settings = jevSettings(), transport: Transport =
         transport,
         signal,
       );
+      if (!response.ok)
+        getLogger('app.connectors.jev').warning('jev call failed', {
+          status: response.status,
+          error_code: providerErrorCode(response.status),
+        });
       const parsed = decision.safeParse(await modelJson(response));
       if (!parsed.success) throw new ModelError('parse');
       return parsed.data;

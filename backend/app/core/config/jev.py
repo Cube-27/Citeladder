@@ -10,7 +10,7 @@
 #
 # The gate thresholds are PROVISIONAL: they were set before any production
 # decisions existed and are recalibrated from user accept/reject outcomes
-# (``frontend/services/api/scripts/jev-calibration.ts``). Change a threshold together with
+# (``frontend/services/api/scripts/jev-calibration.ts``). Change a threshold with
 # ``JEV_POLICY_VERSION``; every decision records the version and thresholds it
 # was judged under, and historical decisions are never re-judged.
 from __future__ import annotations

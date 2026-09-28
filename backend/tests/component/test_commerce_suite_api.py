@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker

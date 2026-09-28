@@ -1,5 +1,11 @@
 import { setTimeout } from 'node:timers/promises';
 
+export function providerErrorCode(status: number) {
+  if (status === 429) return 'rate_limit';
+  if (status === 401 || status === 403) return 'auth_failure';
+  return status >= 500 ? 'server_error' : 'client_error';
+}
+
 export class ModelError extends Error {
   readonly code: 'not_configured' | 'parse' | 'http' | 'connection';
   readonly status: number | undefined;

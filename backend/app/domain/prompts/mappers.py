@@ -1,4 +1,5 @@
 """Project response bridge; retired when project CRUD moves to TypeScript."""
+
 from __future__ import annotations
 
 from app.domain.prompts.schemas import PromptResponse, PromptSetResponse

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { policy, resolveSettingSpec } from '../config.ts';
 import { record } from '../db/json.ts';
 import { getLogger } from '../logging.ts';
+import { ModelError, providerErrorCode } from '../models/http.ts';
 import type { JevClient } from '../models/jev.ts';
 import type { GenerationContext } from './generation-context.ts';
 import type { Draft } from './generation-drafts.ts';
@@ -82,6 +83,7 @@ export async function judgeDrafts(
 ): Promise<'off' | 'gate' | 'shadow' | 'unavailable'> {
   if (!judge) return 'off';
   const deadline = AbortSignal.timeout(Number(setting('generation_deadline_seconds')) * 1000);
+  let pendingAtDeadline = 0;
   const prior = new Map<string, string[]>();
   for (const prompt of context.prompts)
     if (prompt.topic_id)
@@ -185,12 +187,25 @@ export async function judgeDrafts(
           usage: result.usage ?? {},
         });
         if ((draft.decision.flags as string[]).includes(Q.flag_incomplete)) unavailable = true;
-      } catch {
+      } catch (error) {
         unavailable = true;
-        logger.warning('jev call failed', { error_code: 'unavailable' });
+        if (deadline.aborted) pendingAtDeadline++;
+        else if (error instanceof ModelError)
+          logger.warning('jev decision unavailable', {
+            error_code: error.status
+              ? providerErrorCode(error.status)
+              : error.code === 'parse'
+                ? 'parse_error'
+                : error.code,
+          });
+        else
+          logger.warning('jev decision malformed', {
+            error_type: error instanceof Error ? error.name : typeof error,
+          });
       }
     }),
   );
+  if (pendingAtDeadline) logger.warning('jev deadline reached', { pending: pendingAtDeadline });
   return unavailable ? 'unavailable' : z.enum(['gate', 'shadow']).parse(setting('mode'));
 }
 

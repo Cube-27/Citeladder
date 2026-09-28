@@ -19,14 +19,10 @@ export const CONTRACT_SCHEMA_MAP = {
   projectSchema: 'ProjectResponse',
   competitorSchema: 'CompetitorResponse',
   commandCenterSchema: 'CommandCenterResponse',
-  // Prompts / topics: the project response embeds prompt sets and Python
-  // generation publishes staged candidates and their topics; the TypeScript
-  // API serves the rest of the prompt library.
+  // The Python project response still embeds prompts and prompt sets.
+  // TypeScript owns generation, candidates and topics and serves their contracts.
   promptSchema: 'PromptResponse',
   promptSetSchema: 'PromptSetResponse',
-  promptGenerateResponseSchema: 'PromptGenerateResponse',
-  promptCandidateSchema: 'PromptCandidateResponse',
-  topicSchema: 'TopicResponse',
   // Providers
   providerConnectionSchema: 'ProviderConnectionResponse',
   connectionTestResultSchema: 'ProviderConnectionTestResponse',

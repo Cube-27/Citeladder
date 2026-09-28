@@ -2,7 +2,14 @@ import { z } from 'zod';
 
 import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
-import { defaultTransport, ModelError, modelJson, postModel, type Transport } from './http.ts';
+import {
+  defaultTransport,
+  ModelError,
+  modelJson,
+  postModel,
+  providerErrorCode,
+  type Transport,
+} from './http.ts';
 
 export type GatewaySettings = {
   apiKey: string;
@@ -94,12 +101,7 @@ export function createModelGateway(
       logger.warning('default agent call failed', {
         status: response.status,
         model: settings.model,
-        error_code:
-          response.status === 429
-            ? 'rate_limit'
-            : response.status >= 500
-              ? 'server_error'
-              : 'client_error',
+        error_code: providerErrorCode(response.status),
       });
     const parsed = completion.safeParse(await modelJson(response));
     if (!parsed.success) throw new ModelError('parse');

@@ -1,4 +1,5 @@
 """Prompt-set DTO bridge for Python project responses."""
+
 from __future__ import annotations
 
 import uuid

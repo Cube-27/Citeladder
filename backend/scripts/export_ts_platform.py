@@ -41,20 +41,20 @@ from app.core.config import (
     WEAK_SECRET_WORDS,
     Settings,
 )
-from app.core.config import brand_logos as brand_logo_config
 from app.core.config import agent as agent_config
-from app.core.config import jev as jev_config
-from app.core.config import visibility_prompts as visibility_config
+from app.core.config import brand_logos as brand_logo_config
 from app.core.config import brand_profile as brand_profile_config
 from app.core.config import commerce_catalog as commerce_config
 from app.core.config import demand as demand_config
 from app.core.config import entitlements as entitlements_config
 from app.core.config import errors as error_config
+from app.core.config import jev as jev_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
 from app.core.config import prompts as prompts_config
 from app.core.config import search_intelligence as search_intelligence_config
 from app.core.config import site_health_internal_links as internal_links_config
+from app.core.config import visibility_prompts as visibility_config
 from app.core.config import workspaces as workspace_config
 from app.core.config.abuse import AbuseSettings
 from app.core.config.analysis import (

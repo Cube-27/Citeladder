@@ -15,7 +15,7 @@ const dimensions = ['attributes', 'situations', 'audiences'] as const;
 const facets = ['attribute', 'situation_or_constraint', 'audience'] as const;
 const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
 const normalized = (text: string) => words(text).join(' ');
-export const containsName = (text: string, names: readonly string[]) =>
+const containsName = (text: string, names: readonly string[]) =>
   names.some(
     (name) => normalized(name) && ` ${normalized(text)} `.includes(` ${normalized(name)} `),
   );
