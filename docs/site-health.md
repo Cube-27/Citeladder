@@ -164,13 +164,17 @@ crawl. Suggestions do not contribute to a health score.
 
 The analysis follows a hub-and-spoke rubric over page pairs. TypeScript owns
 scoped admission, retrieval, saved reads and publication; the existing Python
-JEV connector (`JEV_API_KEY`) and AI-credit owner execute judgments through the
-existing analytics queue. No provider runs on a read.
+JEV connector (`JEV_API_KEY`) executes judgments through the existing
+analytics queue. No provider runs on a read.
 
 Admission freezes each usable page's title, H1, meta description, a short
 content excerpt, page kind, observed main-content targets and main-content
 inbound count from the crawl's link metrics. Trust/policy and about/contact
-pages are excluded. Retrieval ranks destinations by TF-IDF similarity over
+pages are excluded. Eligibility (available, untruncated extraction and
+included page kind) is applied before the page cap; above the cap, indexable
+pages are preferred and the rest follow a stable URL-hash order, so the cap
+spreads across site sections instead of taking the alphabetically first URLs.
+Retrieval ranks destinations by TF-IDF similarity over
 title, H1, URL path and description; once a crawl has enough pages, words on a
 large share of them (brand and template text) carry no weight. Each source page
 keeps a bounded shortlist of related destinations it does not already link
@@ -180,28 +184,34 @@ truncated gets no suggestions. Product pages whose titles differ only by a
 colour or size word are variants: they never suggest each other, and one
 destination represents each variant family.
 
-Each page pair is one JEV request: a Noul asks whether the source should link
-to the destination, with the rubric, both page types and the destination's
-inbound count in state. When the destination offers more than one descriptive
-option (its H1, title without site suffix, or a non-identifier URL slug), a
-Choice selects the anchor text. JEV never writes URLs or anchor text. A pair at
+Each source page is one JEV request. Its state carries the rubric and the
+source once, and each shortlisted destination (with its page type and inbound
+count) under `targets`. Per destination, a Noul asks whether the source should
+link to it and, when the destination offers more than one descriptive option
+(its H1, title without site suffix, or a non-identifier URL slug), a Choice
+selects the anchor text. Answers map back to their page pair by the
+destination's key. JEV never writes URLs or anchor text. A pair at
 or above the review threshold becomes a suggestion; the threshold is a review
 default, not permission to publish.
 
-The job uses its own concurrency and wall-clock budget on a heartbeated lease,
-not the Generate-request JEV deadline. Dispatch reservations commit before each
-request; a deadline leaves unsent pairs unavailable and settles interrupted
-dispatches as uncertain without resending them. Publication periodically saves
-progress so suggestions can be reviewed while the rest are checked. Results
+The job has its own wall-clock budget on a heartbeated lease, not the
+Generate-request JEV deadline. One transaction commits every request's dispatch
+events, then all requests are sent at once; outcomes are written in batches as
+they arrive. A deadline or interrupted job closes dispatched pairs as uncertain
+without resending them. Publication periodically saves progress so suggestions
+can be reviewed while the rest are checked. Results
 distinguish running, completed-empty, partial and unavailable, with reasons and
 elapsed time.
 
 `site_internal_link_runs` retains the frozen crawl, page identities, candidates
 and policy; TypeScript is its writer. Python appends dispatch and outcome events
-to `site_internal_link_events`. Each dispatch reserves a flat per-judgment amount
-from the shared AI-credit balance against the crawl metered subject; a judgment
-that never reached the provider is not charged. Missing funding or provider
-availability yields unavailable judgments, never an observed zero.
+to `site_internal_link_events`, one of each per page pair. Judgments are not
+metered against AI credits. A missing permission or provider configuration
+yields unavailable judgments, never an observed zero.
+
+Cancelling stops new dispatches, but a cancelled run's in-flight judgments
+still settle. The project's analysis slot stays occupied until that run's
+judgment task is terminal, so a replacement never overlaps it.
 
 One project-scoped API family exposes the saved read (including recent analysis
 history), explicit analyze and cancel operations; the tab filters, pages and

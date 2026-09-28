@@ -12,8 +12,11 @@ import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import { effectiveStatus } from '../opportunities/action-status.ts';
-import { linkCandidates } from './internal-link-candidates.ts';
+import { linkCandidates, linkRequests } from './internal-link-candidates.ts';
 import { loadLinkPages, type LinkScope } from './internal-link-pages.ts';
+
+const { succeeded, failed, cancelled } = policy.task_queue.statuses;
+const terminalTaskStatuses = [succeeded, failed, cancelled];
 
 export async function latestLinkCrawl(db: Database, scope: LinkScope) {
   return db
@@ -136,6 +139,17 @@ export async function admitLinkRun(
       .where('state', 'in', ['queued', 'running'])
       .executeTakeFirst();
     if (active) throw new ApiError(409, 'An internal link analysis is already running');
+    // A cancelled run's worker can still settle in-flight judgments; the
+    // project's slot stays occupied until its judgment task is terminal.
+    const settling = await trx
+      .selectFrom('analytics_tasks')
+      .select('id')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('task_kind', '=', 'internal_link_judgment')
+      .where('status', 'not in', terminalTaskStatuses)
+      .executeTakeFirst();
+    if (settling) throw new ApiError(409, 'The previous internal link analysis is still stopping');
     const crawl = await trx
       .selectFrom('site_crawls')
       .select('id')
@@ -164,6 +178,7 @@ export async function admitLinkRun(
         manifest: JSON.stringify({
           pages,
           candidates,
+          requests: linkRequests(pages, candidates),
           page_count: pages.length,
           omitted_pages: omittedPages,
           policy: policy.internal_links,

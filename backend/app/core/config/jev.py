@@ -168,9 +168,7 @@ class JevSettings(BaseSettings):
     base_url: str = "https://api.typesafe.ai"
     model: str = "jev-latest"
     timeout_seconds: float = Field(default=10.0, gt=0, le=60)
-    # Parallel decide() calls within one bounded generation/content job.
-    concurrency: int = Field(default=4, ge=1, le=16)
-    # Attempts per call, including the first; only 429/529/timeouts retry.
+    # Attempts per call, including the first; only 429/503/529/timeouts retry.
     max_attempts: int = Field(default=3, ge=1, le=5)
     backoff_seconds: float = Field(default=0.5, ge=0, le=10)
     # Upper bound on decide() calls one Generate request may make. Candidates

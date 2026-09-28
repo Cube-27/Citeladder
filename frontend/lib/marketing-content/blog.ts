@@ -1,6 +1,8 @@
 import { POST_AUDIT } from './blog-posts/audit';
+import { POST_BUYER_PROMPTS } from './blog-posts/buyer-prompts';
 import { POST_CITATIONS } from './blog-posts/citations';
 import { POST_CONNECT } from './blog-posts/connect';
+import { POST_INTERNAL_LINKS } from './blog-posts/internal-links';
 import { POST_PLAYBOOK } from './blog-posts/playbook';
 import { POST_TRACK } from './blog-posts/track';
 import { POST_VERIFY } from './blog-posts/verify';
@@ -115,7 +117,8 @@ export type BlogPost = {
  * The cluster is one editorial journey — connect the evidence, measure what is
  * observed, diagnose which sources win, audit the owned pages, act on the gap,
  * verify the movement — so each post owns one question and hands the reader to
- * the next rather than restating the whole thesis. The index sorts by date, so
+ * the next rather than restating the whole thesis. Feature posts follow it:
+ * how the portfolio is built, then how owned pages are connected. The index sorts by date, so
  * this array only decides the walk and the tie-break between same-day posts.
  */
 export const POSTS: readonly BlogPost[] = [
@@ -125,6 +128,8 @@ export const POSTS: readonly BlogPost[] = [
   POST_AUDIT,
   POST_PLAYBOOK,
   POST_VERIFY,
+  POST_BUYER_PROMPTS,
+  POST_INTERNAL_LINKS,
 ] as const;
 
 export const BLOG_EMPTY_STATE = {

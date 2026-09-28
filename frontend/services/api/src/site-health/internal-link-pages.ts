@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import { internalLinkPageSchema, type InternalLinkPage } from '@citeladder/contracts/site-health';
 
 import { policy } from '../config.ts';
@@ -70,7 +71,13 @@ export async function loadLinkPages(db: Database, scope: LinkScope, crawlId: str
     .where('url.workspace_id', '=', scope.workspaceId)
     .where('url.project_id', '=', scope.projectId)
     .where('analysis.is_current', '=', true)
-    .where('analysis.finalized_at', 'is not', null);
+    .where('analysis.finalized_at', 'is not', null)
+    // Filter before the page cap, so discarded rows never take an eligible page's place.
+    .where(sql<boolean>`artifact.normalized_facts #>> '{extraction,state}' = 'available'`)
+    .where(
+      sql<boolean>`artifact.normalized_facts #> '{extraction,truncated}' is distinct from 'true'::jsonb`,
+    )
+    .where('analysis.page_kind', 'not in', [...policy.internal_links.excluded_page_kinds]);
   const total = await query
     .select((eb) => eb.fn.countAll<string>().as('count'))
     .executeTakeFirstOrThrow();
@@ -85,18 +92,19 @@ export async function loadLinkPages(db: Database, scope: LinkScope, crawlId: str
       'artifact.final_url',
       'url.normalized_url',
     ])
+    // Above the cap, indexable pages first, then a stable hash order: a
+    // reproducible spread across site sections rather than the alphabetically
+    // first URLs. The admitted pages are frozen in the run manifest.
+    .orderBy(sql`analysis.main_content_indexable desc nulls last`)
+    .orderBy(sql`md5(url.normalized_url)`)
     .orderBy('url.normalized_url')
     .limit(policy.internal_links.max_pages)
     .execute();
   const inbound = await contextualInbound(db, scope, crawlId);
-  const excluded = new Set<string>(policy.internal_links.excluded_page_kinds);
   const pages: InternalLinkPage[] = [];
   const urls = new Set<string>();
   for (const row of rows) {
     const facts = record(row.normalized_facts);
-    const extraction = record(facts.extraction);
-    if (extraction.state !== 'available' || extraction.truncated || excluded.has(row.page_kind))
-      continue;
     const url = linkUrl(row.final_url || row.normalized_url, row.normalized_url);
     if (!url || urls.has(url)) continue;
     urls.add(url);

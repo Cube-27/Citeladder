@@ -83,4 +83,16 @@ export const BLOG_SOURCES = {
     url: 'https://arxiv.org/abs/2311.09735',
     publishedDate: '2023-11-16',
   },
+  googleLinkBestPractices: {
+    id: 'google-link-best-practices',
+    title: 'Link best practices for Google',
+    publisher: 'Google Search Central',
+    url: 'https://developers.google.com/search/docs/crawling-indexing/links-crawlable',
+  },
+  typesafeSystemOne: {
+    id: 'typesafe-system-one',
+    title: 'System One models',
+    publisher: 'TypeSafe documentation',
+    url: 'https://docs.typesafe.ai/concepts/system-one',
+  },
 } as const satisfies Record<string, BlogSource>;

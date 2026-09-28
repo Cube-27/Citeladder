@@ -136,6 +136,7 @@ export const SUBPROCESSORS: LegalDocument = {
   slug: 'subprocessors',
   title: 'Subprocessors',
   description: 'The service providers that process data for CiteLadder, and why.',
+  lastUpdated: '2026-09-28',
   sections: [
     {
       id: 'subprocessors',
@@ -175,6 +176,12 @@ export const SUBPROCESSORS: LegalDocument = {
             'Tavily',
             'Web search for commerce competitor research',
             'Search queries such as product and competitor names',
+            'United States',
+          ],
+          [
+            'TypeSafe AI',
+            'Quality checks on generated prompt suggestions and on suggested internal links between your website’s pages',
+            'For prompt suggestions: your project’s business facts (such as category, offerings, audiences and markets), the topic, the buyer need and the suggested question, never brand or competitor names. For internal links: the title, main heading, URL path, description, page type and a short text excerpt of the crawled pages being compared',
             'United States',
           ],
         ],

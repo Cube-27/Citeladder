@@ -18,7 +18,32 @@ from app.workers import internal_links as worker
 from tests.component.opportunity_helpers import _seed_scenario
 
 
-async def _seed_run(session_factory, count=4):
+def _manifest(sources: int, per_source: int) -> dict:
+    """``sources`` requests, each asking one link question per destination."""
+    requests = []
+    for source in range(sources):
+        keys = [f"t{index}" for index in range(per_source)]
+        requests.append(
+            {
+                "id": str(uuid.uuid4()),
+                "candidates": [{"id": str(uuid.uuid4()), "key": key} for key in keys],
+                "request": {
+                    "state": {"source": str(source)},
+                    "questions": {
+                        f"link_{key}": {
+                            "type": "noul",
+                            "instructions": f"Should `source` link to `targets.{key}`?",
+                        }
+                        for key in keys
+                    },
+                },
+            }
+        )
+    candidates = [item for request in requests for item in request["candidates"]]
+    return {"requests": requests, "candidates": candidates}
+
+
+async def _seed_run(session_factory, sources=2, per_source=2):
     async with session_factory() as session:
         seed = await _seed_scenario(session)
         run = SiteInternalLinkRun(
@@ -29,24 +54,8 @@ async def _seed_run(session_factory, count=4):
             actor_id=seed.user_id,
             idempotency_key=str(uuid.uuid4()),
             state="queued",
-            policy_version=1,
-            manifest={
-                "candidates": [
-                    {
-                        "id": str(uuid.uuid4()),
-                        "request": {
-                            "state": {"source": str(index)},
-                            "questions": {
-                                "link": {
-                                    "type": "noul",
-                                    "instructions": "Should `source` link?",
-                                },
-                            },
-                        },
-                    }
-                    for index in range(count)
-                ]
-            },
+            policy_version=2,
+            manifest=_manifest(sources, per_source),
         )
         task = AnalyticsTask(
             workspace_id=seed.workspace_id,
@@ -64,32 +73,17 @@ async def _seed_run(session_factory, count=4):
     return run, task
 
 
-def _fund_judgments(monkeypatch, *, concurrency=2, deadline=10):
+def _enable_judge(monkeypatch, *, deadline=10, batch=50):
     monkeypatch.setattr(
         owner, "jev_settings", SimpleNamespace(enabled=True, model="fixture")
     )
-    monkeypatch.setattr(
-        owner, "billing_account_id_for", AsyncMock(return_value=uuid.uuid4())
-    )
-    monkeypatch.setattr(
-        owner,
-        "reserve_metered_usage",
-        AsyncMock(
-            side_effect=lambda *args, **kwargs: SimpleNamespace(
-                reservation_id=uuid.uuid4()
-            )
-        ),
-    )
-    settlement = AsyncMock()
-    monkeypatch.setattr(owner, "settle_metered_usage", settlement)
     monkeypatch.setattr(
         worker,
         "jev_settings",
         worker.jev_settings.model_copy(update={"api_key": SecretStr("fixture-only")}),
     )
-    monkeypatch.setattr(worker.config, "INTERNAL_LINKS_CONCURRENCY", concurrency)
     monkeypatch.setattr(worker.config, "INTERNAL_LINKS_JOB_DEADLINE_SECONDS", deadline)
-    return settlement
+    monkeypatch.setattr(worker.config, "INTERNAL_LINKS_OUTCOME_BATCH", batch)
 
 
 async def _events(session_factory, run, kind):
@@ -104,12 +98,12 @@ async def _events(session_factory, run, kind):
         )
 
 
-async def test_pooled_requests_overlap_reuse_client_and_keep_each_pair_answer(
+async def test_every_source_request_is_in_flight_at_once_and_answers_map_by_key(
     session_factory, monkeypatch
 ):
-    run, task = await _seed_run(session_factory)
-    settlement = _fund_judgments(monkeypatch)
-    both_started = asyncio.Event()
+    run, task = await _seed_run(session_factory, sources=3, per_source=2)
+    _enable_judge(monkeypatch, batch=1)
+    all_started = asyncio.Event()
 
     class Client:
         active = 0
@@ -127,17 +121,19 @@ async def test_pooled_requests_overlap_reuse_client_and_keep_each_pair_answer(
         async def decide(self, state, questions):
             self.calls += 1
             self.active += 1
-            assert self.active <= 2
-            if self.active == 2:
-                both_started.set()
-            dispatched = await _events(session_factory, run, "dispatch")
-            assert len(dispatched) >= self.calls
-            await asyncio.wait_for(both_started.wait(), timeout=3)
+            if self.active == 3:
+                all_started.set()
+            assert len(await _events(session_factory, run, "dispatch")) == 6
+            await asyncio.wait_for(all_started.wait(), timeout=3)
             self.active -= 1
+            source = int(state["source"])
             return SimpleNamespace(
                 model="fixture",
                 usage={"input_tokens": 10},
-                answers={"link": {"type": "noul", "noul": int(state["source"]) / 10}},
+                answers={
+                    name: {"type": "noul", "noul": (source * 2 + index) / 10}
+                    for index, name in enumerate(sorted(questions))
+                },
             )
 
     client = Client()
@@ -153,13 +149,13 @@ async def test_pooled_requests_overlap_reuse_client_and_keep_each_pair_answer(
         1,
         1,
         1,
-        4,
+        3,
     )
-    assert settlement.await_count == 4
     outcomes = await _events(session_factory, run, "outcome")
     expected = {
-        candidate["id"]: index / 10
-        for index, candidate in enumerate(run.manifest["candidates"])
+        candidate["id"]: (source * 2 + index) / 10
+        for source, request in enumerate(run.manifest["requests"])
+        for index, candidate in enumerate(request["candidates"])
     }
     assert {
         str(row.candidate_id): row.evidence["answers"]["link"]["noul"]
@@ -167,11 +163,11 @@ async def test_pooled_requests_overlap_reuse_client_and_keep_each_pair_answer(
     } == expected
 
 
-async def test_deadline_settles_sent_requests_and_leaves_unsent_free(
+async def test_deadline_closes_sent_pairs_as_uncertain_without_resending(
     session_factory, monkeypatch
 ):
     run, task = await _seed_run(session_factory)
-    settlement = _fund_judgments(monkeypatch, concurrency=1, deadline=1)
+    _enable_judge(monkeypatch, deadline=1)
 
     class Client:
         calls = 0
@@ -190,18 +186,16 @@ async def test_deadline_settles_sent_requests_and_leaves_unsent_free(
     monkeypatch.setattr(worker, "create_jev_client", lambda _: client)
     await worker.judge_internal_links(session_factory, task)
     await worker.judge_internal_links(session_factory, task)
-    assert client.calls == 1
-    assert settlement.await_count == 1
+    assert client.calls == 2
     outcomes = await _events(session_factory, run, "outcome")
-    assert sorted(row.evidence["state"] for row in outcomes) == ["unavailable"] * 3 + [
-        "uncertain"
-    ]
-    assert {row.evidence["reason"] for row in outcomes} == {"deadline_exceeded"}
+    assert [row.evidence for row in outcomes] == [
+        {"state": "uncertain", "reason": "deadline_exceeded"}
+    ] * 4
 
 
 async def test_scope_and_cancelled_run_do_not_dispatch(session_factory, monkeypatch):
     run, task = await _seed_run(session_factory)
-    _fund_judgments(monkeypatch)
+    _enable_judge(monkeypatch)
     client = AsyncMock()
     monkeypatch.setattr(worker, "create_jev_client", client)
     real_workspace = task.workspace_id
@@ -214,14 +208,14 @@ async def test_scope_and_cancelled_run_do_not_dispatch(session_factory, monkeypa
         await session.commit()
     await worker.judge_internal_links(session_factory, task)
     client.assert_not_called()
-    owner.reserve_metered_usage.assert_not_awaited()
+    assert not await _events(session_factory, run, "dispatch")
 
 
-async def test_terminal_compensation_settles_each_unfinished_pair_once(
+async def test_terminal_compensation_closes_each_unfinished_pair_once(
     session_factory, monkeypatch
 ):
-    run, task = await _seed_run(session_factory, count=2)
-    _fund_judgments(monkeypatch)
+    run, task = await _seed_run(session_factory, sources=1)
+    _enable_judge(monkeypatch)
     async with session_factory() as session:
         saved_task = await session.get(AnalyticsTask, task.id)
         saved_task.status = "failed"
@@ -235,16 +229,14 @@ async def test_terminal_compensation_settles_each_unfinished_pair_once(
         candidate["id"] for candidate in run.manifest["candidates"]
     )
     assert {row.evidence["state"] for row in outcomes} == {"unavailable"}
-    owner.reserve_metered_usage.assert_not_awaited()
-    owner.settle_metered_usage.assert_not_awaited()
 
 
 @pytest.mark.parametrize("interrupted", [False, True])
 async def test_dispatch_is_committed_before_provider_and_replay_does_not_resend(
     session_factory, monkeypatch, interrupted
 ):
-    run, task = await _seed_run(session_factory, count=1)
-    settlement = _fund_judgments(monkeypatch)
+    run, task = await _seed_run(session_factory, sources=1, per_source=1)
+    _enable_judge(monkeypatch)
 
     class Client:
         calls = 0
@@ -275,7 +267,6 @@ async def test_dispatch_is_committed_before_provider_and_replay_does_not_resend(
         await worker.judge_internal_links(session_factory, task)
     await worker.judge_internal_links(session_factory, task)
     assert client.calls == 1
-    assert settlement.await_count == 1
     outcomes = await _events(session_factory, run, "outcome")
     assert len(outcomes) == 1
     assert outcomes[0].evidence["state"] == (

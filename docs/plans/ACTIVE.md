@@ -6,16 +6,16 @@
   — implemented on 28 September 2026 in `codex/content-structure`; revised after
   owner review to a Website Internal links tab using JEV page-pair judgments.
   Topics and the separate Content structure page are removed. Legacy Site
-  Health topical coherence is retired. Owner approval, editor calibration and
-  live provider enablement remain pending.
+  Health topical coherence is retired. Merged in #196; the production key is
+  set with the published TypeSafe revision. Editor calibration remains pending.
 
 - [Prompt generation v2](citeladder-prompt-generation-v2.md)
   — owner-approved on 26 September 2026 and revised after the prompt-universe/JEV
   research. PR 1 (#161), PR 2 (#162), PR 3a (#163) and PR 3b (#172) merged.
   PR 3c code (JEV hard gate with provisional thresholds, text-free rejection
-  outcomes, calibration report) is implemented. Remaining: owner/legal approval
-  and publication of the drafted TypeSafe policy revision, the production key
-  (no earlier than the DPA's 30-day notice), then calibration from live data.
+  outcomes, calibration report) is implemented. The TypeSafe policy revision
+  was published and the production key set on 28 September 2026 (owner
+  decision: pre-launch, no DPA notice owed). Remaining: calibration from live data.
 
 - [Demo and production hardening](citeladder-production-hardening.md)
   — repository-side Phase 1 subset implemented locally on 26 September 2026 in

@@ -2,8 +2,9 @@
 
 ``POST /v1/systemone`` evaluates a ``state`` against named typed questions and
 returns one answer per question id (https://docs.typesafe.ai/api.md). Only
-rate limits (429), overload (529) and timeouts retry; auth (401) and
-validation (422) failures never do. The API key and state bodies are never
+rate limits (429), overload (529), unavailability (503) and timeouts retry;
+auth (401) and validation (422) failures never do. JEV is built for parallel
+calls, so the connection pool is not capped here. The API key and state bodies are never
 logged.
 """
 
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 _DECIDE_PATH = "/v1/systemone"
 _OVERLOADED = 529
+_UNAVAILABLE = 503
 _RETRY_AFTER_CAP_SECONDS = 10.0
 
 
@@ -47,7 +49,7 @@ def _status_error(response: httpx.Response) -> ProviderError:
     status = response.status_code
     if status == 429:
         code, retryable = ERROR_RATE_LIMIT, True
-    elif status == _OVERLOADED:
+    elif status in (_OVERLOADED, _UNAVAILABLE):
         code, retryable = ERROR_SERVER, True
     elif status in (401, 403):
         code, retryable = ERROR_AUTH, False
@@ -114,7 +116,10 @@ class JevClient:
         self._backoff = backoff_seconds
         self._sleep = sleep
         self._client = httpx.AsyncClient(
-            timeout=timeout_seconds, transport=transport, trust_env=False
+            timeout=timeout_seconds,
+            transport=transport,
+            trust_env=False,
+            limits=httpx.Limits(max_connections=None, max_keepalive_connections=None),
         )
 
     async def __aenter__(self) -> JevClient:

@@ -10,6 +10,7 @@ export const PRIVACY_POLICY: LegalDocument = {
   slug: 'privacy',
   title: 'Privacy Policy',
   description: 'What personal data CiteLadder processes, why, and the choices you have.',
+  lastUpdated: '2026-09-28',
   sections: legalSections(`
 ## who | Who we are
 ${PARENT_COMPANY.legalName} (“Cube27”, “we”, “us”) operates CiteLadder. Our principal business address is ${PARENT_COMPANY.address}. Contact us at ${PARENT_COMPANY.email}.
@@ -39,6 +40,7 @@ A requested crawl processes page bodies to extract relevant information. Extract
 
 ## ai | AI providers and data use
 An enabled AI feature may send your prompt and relevant project context to the provider used for that feature. BYOK calls also run under your own provider account and settings.
+When you generate prompt suggestions, we may send each suggestion with your project’s business facts to a quality-checking provider, which answers fixed questions about whether the suggestion fits your business and reads like a real buyer’s question. When you run an internal link analysis, we send the provider short descriptions of pairs of your crawled pages, which it uses to answer whether one page should link to the other. Its answers decide which suggestions we show you; they are not used to score your business. Our subprocessor list at /subprocessors names this provider and the data it receives.
 We do not sell Customer Data or use it to train third-party foundation models, and we do not disclose one customer’s private project information to another customer. Provider retention and processing depend on the provider’s service, agreement and configuration; we do not promise that every provider deletes data immediately.
 
 ## connected-accounts | Connected Google and other accounts
@@ -53,6 +55,7 @@ We may also disclose information to advisers or authorities where necessary and 
 ## retention | Retention, export and deletion
 We retain project data while your workspace needs it for the Service. Cancelling a subscription does not immediately delete your workspace or its history.
 You can ask us to export supported Customer Data or delete your data by emailing ${PARENT_COMPANY.email}. We will verify your identity and authority, then act on the request within the period applicable law requires.
+When you reject a suggested prompt that was quality-checked, we keep the check’s result, without the suggestion’s text, for up to 180 days to improve those checks.
 We may keep limited billing, tax, accounting, consent, security, fraud or dispute records for the period the law requires. Third-party providers and external clients you authorised may retain their own copies under their terms.
 
 ## security | Security and international processing
