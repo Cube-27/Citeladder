@@ -5,8 +5,8 @@
  * Python source-page inspection stamps `roster_version` on every presence it
  * writes (`app/domain/source_pages/roster.project_roster`), and the
  * earned-page detector only compares readings taken on the current roster, so
- * `projectRoster` must hash exactly what Python hashes. A live golden holds it
- * to Python.
+ * `projectRoster` must hash exactly what Python hashes until source-page
+ * inspection moves.
  */
 import { createHash } from 'node:crypto';
 

@@ -4,8 +4,8 @@
  *
  * Transaction-scoped, so it releases at COMMIT/ROLLBACK. The key derivation
  * (a personalized 8-byte BLAKE2b of the namespace and the UUID bytes, read
- * as a signed big-endian integer) is proved against Python by a live golden,
- * so both stacks serialize on one key.
+ * as a signed big-endian integer) must match `locks.py`, so both stacks
+ * serialize on one key until the prompt writers move (PR 10).
  */
 import { blake2b } from '@noble/hashes/blake2.js';
 import { sql } from 'kysely';
@@ -23,7 +23,7 @@ function uuidBytes(id: string): Uint8Array {
 }
 
 /** The signed 64-bit lock key for one project. */
-export function projectLockKey(projectId: string): bigint {
+function projectLockKey(projectId: string): bigint {
   const input = new Uint8Array(20);
   new DataView(input.buffer).setUint32(0, namespace);
   input.set(uuidBytes(projectId), 4);

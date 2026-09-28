@@ -16,7 +16,7 @@ import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { parseUuid } from '../http/uuid.ts';
 
-export type SessionClaims = Record<string, unknown>;
+type SessionClaims = Record<string, unknown>;
 
 export type SessionUser = { id: string; sessionVersion: number };
 
@@ -24,9 +24,9 @@ export type SessionUser = { id: string; sessionVersion: number };
  * Verify a session token as `decode_access_token` does, or return null.
  *
  * `exp` and `nbf` are enforced by jose; joserfc additionally rejects an `iat`
- * in the future, so that is checked here. Golden masters prove parity.
+ * in the future, so that is checked here.
  */
-export async function decodeSessionToken(
+async function decodeSessionToken(
   token: string,
   secretKey: string,
   now: Date = new Date(),

@@ -1,6 +1,6 @@
 /**
- * The route-ownership gate: one writing stack per family, TypeScript parity
- * with the frozen Python fragment, and ingress that agrees with both.
+ * The route-ownership gate: one writing stack per family, and ingress that
+ * agrees with it.
  */
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -78,14 +78,13 @@ function migrated(overrides: Partial<OwnershipInputs> = {}): OwnershipInputs {
     manifest: { executions: 'typescript', projects: 'python' },
     python: pythonDocument(['projects']),
     typescript: executionsRoute(),
-    frozen: { executions: pythonDocument(['executions']) },
     ingress: { Caddyfile: ingressRouter(SPLIT_INGRESS, UPSTREAMS) },
     ...overrides,
   };
 }
 
 describe('route-ownership gate', () => {
-  it('accepts a migrated family with parity and matching ingress', () => {
+  it('accepts a migrated family with matching ingress', () => {
     expect(routeOwnershipFailures(migrated())).toEqual([]);
   });
 
@@ -107,21 +106,9 @@ describe('route-ownership gate', () => {
     );
   });
 
-  it('refuses a TypeScript family without a frozen fragment', () => {
-    const failures = routeOwnershipFailures(migrated({ frozen: {} }));
-    expect(failures).toEqual([expect.stringContaining('--freeze-family executions')]);
-  });
-
-  it('refuses TypeScript contracts that drift from the frozen fragment', () => {
-    const failures = routeOwnershipFailures(
-      migrated({ typescript: executionsRoute(z.object({ name: z.string().nullable() })) }),
-    );
-    expect(failures).toEqual(["'executions' parity: GET /api/v1/executions/{item_id} differs"]);
-  });
-
   it('refuses TypeScript routes for a family the manifest gives Python', () => {
     const failures = routeOwnershipFailures(
-      migrated({ manifest: { executions: 'python', projects: 'python' }, frozen: {} }),
+      migrated({ manifest: { executions: 'python', projects: 'python' } }),
     );
     expect(failures).toContainEqual(
       "The TypeScript service serves 'executions', which the manifest assigns to python",

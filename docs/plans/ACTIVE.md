@@ -39,7 +39,10 @@
   PR 7a-cleanup removes Python emulation from PRs 3–6, retaining only live
   cross-stack identity contracts. PR 7b (Action routes and declarations) is
   implemented.
-  PR 8 needs its own assignment. Deployment of PRs 3–7b and their one-week
+  The owner restated the objective on 28 September 2026: rebuild in clean
+  TypeScript, with no parity and no golden files. Golden retirement removed
+  every golden file and parity check before PR 8. PR 8 is split into 8a
+  (Search Intelligence) and 8b (Commerce). Deployment of PRs 3–7b and their one-week
   cutover soaks are pending.
   Site Health, audits, billing/entitlements and the Agent runtime stay Python.
 

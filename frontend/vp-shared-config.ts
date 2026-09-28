@@ -195,8 +195,6 @@ export const fmtConfig: OxfmtConfig = {
     // generators in CI.
     '**/services/*/src/generated/**',
     '**/packages/*/src/generated/**',
-    // Python-produced golden masters, byte-checked by export_ts_platform --check.
-    '**/services/*/golden/**',
     // Re-wrapping this inflates it past the owner line budget that
     // check-frontend-architecture.mjs enforces; kept hand-formatted.
     '**/apps/app/src/globals.css',

@@ -239,8 +239,8 @@ function apiServiceChecks() {
     ['-m', 'scripts.export_ts_platform', '--check'],
     backendRoot,
   );
-  // One writing stack per route family: both OpenAPI documents, the frozen
-  // Python fragments and both ingress Caddyfiles against the manifest.
+  // One writing stack per route family: both OpenAPI documents and every
+  // ingress Caddyfile against the manifest.
   const pythonOpenApi = join('.artifacts', 'openapi.json');
   if (
     step(

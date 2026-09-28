@@ -1,6 +1,5 @@
 import { policy } from '../../config.ts';
 import { round } from '../../demand/projection.ts';
-import { casefold } from '../../traffic/normalization.ts';
 import { normalizedUrlForCompare } from '../url-compare.ts';
 import { rules } from './detectors.ts';
 import { compareText } from '../../text-order.ts';
@@ -55,7 +54,7 @@ export function targetFor(member: ActionMember) {
     );
   if (key.startsWith('prompt')) return target(key, p.TARGET_PROMPT, member);
   if (key.startsWith('demand:') && member.target_theme)
-    return target(`query:${casefold(member.target_theme).trim()}`, p.TARGET_QUERY, member);
+    return target(`query:${member.target_theme.toLowerCase().trim()}`, p.TARGET_QUERY, member);
   return target(key, p.TARGET_QUERY, member);
 }
 function actionPriority(strongest: number, families: number): number {

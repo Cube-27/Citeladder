@@ -1,8 +1,6 @@
 /**
- * The `opportunities` family's published schemas, field for field with the
- * Pydantic models the frozen fragment records (`domain/opportunities/
- * schemas.py`). A `default_factory` field is optional with no published
- * default; a plain default is published.
+ * The `opportunities` family's published schemas, which the browser's
+ * contracts consume.
  */
 import { z } from 'zod';
 

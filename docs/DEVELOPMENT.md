@@ -261,12 +261,12 @@ API_TEST_DATABASE_URL="postgresql://postgres:<password>@127.0.0.1:<port>/<dispos
 TYPES_DATABASE_URL="<same disposable database>" pnpm db:types   # regenerate Kysely types after a schema change
 ```
 
-After changing an exported setting, error code, the workspace role matrix or a
-shared cross-stack identity contract, regenerate the Python-owned inputs from `backend/` with
+After changing an exported setting, error code or the workspace role matrix,
+regenerate the Python-owned inputs from `backend/` with
 `uv run python -m scripts.export_ts_platform` and commit them. From the
 repository root, `node scripts/quality.mjs --mode check --scope api` checks types,
 schema authority, export freshness and route ownership (`pnpm check:routes` against
-FastAPI's exported OpenAPI, the frozen fragments and every ingress Caddyfile); CI
+FastAPI's exported OpenAPI and every ingress Caddyfile); CI
 additionally verifies the generated types and runs the suite against PostgreSQL.
 `docker compose up analytics-worker-ts` (or `node src/worker.ts` in
 `frontend/services/api`) runs the TypeScript analytics worker, which claims the
@@ -279,12 +279,10 @@ beside the backend when working on those screens.
 
 A new OpenAPI tag on a Python router needs an entry in
 `frontend/packages/contracts/src/route-ownership.ts`. Moving a family to TypeScript
-starts with `uv run python -m scripts.export_ts_platform --freeze-family <tag>` while
-Python still serves it; the same change adds the TS route contracts, flips the
-manifest entry, adds the family's paths to `TYPESCRIPT_INGRESS_PATHS` and every
-ingress Caddyfile, and deletes the Python router. Behavior that leaves Python
-with the router is covered by TypeScript and PostgreSQL tests before its code is
-deleted; retired Python output is not frozen.
+adds its zod route contracts, flips the manifest entry, adds the family's paths
+to `TYPESCRIPT_INGRESS_PATHS` and every ingress Caddyfile, and deletes the Python
+router. Its behavior is covered by TypeScript and PostgreSQL tests; nothing
+compares it with Python output.
 
 ### Repository validation harness
 
