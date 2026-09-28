@@ -58,12 +58,8 @@ async function views(db: Database, sets: readonly PromptSetRow[]): Promise<Promp
     .orderBy('created_at')
     .orderBy('id')
     .execute();
-  return sets.map((set) =>
-    promptSetView(
-      set,
-      prompts.filter((prompt) => prompt.prompt_set_id === set.id),
-    ),
-  );
+  const bySet = Map.groupBy(prompts, (prompt) => prompt.prompt_set_id);
+  return sets.map((set) => promptSetView(set, bySet.get(set.id) ?? []));
 }
 
 export async function readPromptSet(

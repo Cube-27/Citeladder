@@ -182,11 +182,13 @@ export async function updateTopic(
   return writing(() =>
     db.transaction().execute(async (trx) => {
       const topic = await scopedTopic(trx, workspaceId, topicId);
+      // Every topic edit changes binding vocabulary or hierarchy: serialize it
+      // with the prompt writers that read them.
+      await acquireProjectLock(trx, topic.project_id);
       const reparent = 'parent_id' in input;
       const parentId = input.parent_id ?? null;
-      if (reparent) {
-        await acquireProjectLock(trx, topic.project_id);
-        if (parentId !== null) await validateParent(trx, topic.project_id, parentId, topic.id);
+      if (reparent && parentId !== null) {
+        await validateParent(trx, topic.project_id, parentId, topic.id);
       }
       const row = await trx
         .updateTable('topics')

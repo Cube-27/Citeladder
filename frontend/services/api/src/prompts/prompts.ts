@@ -188,7 +188,28 @@ export async function updatePrompt(
   promptId: string,
   input: z.infer<typeof promptUpdate>,
 ): Promise<PromptView> {
+  try {
+    return await db
+      .transaction()
+      .execute((trx) => applyPromptUpdate(trx, workspaceId, promptId, input));
+  } catch (error) {
+    if (isUniqueViolation(error, UNIQUE_TEXT)) throw new ApiError(409, DUPLICATE);
+    throw error;
+  }
+}
+
+/**
+ * The edit, under the project lock that topic writers take, so the topic and
+ * vocabulary it binds against cannot change before it commits.
+ */
+async function applyPromptUpdate(
+  db: Kysely<DB>,
+  workspaceId: string,
+  promptId: string,
+  input: z.infer<typeof promptUpdate>,
+): Promise<PromptView> {
   const prompt = await scopedPrompt(db, workspaceId, promptId);
+  await acquireProjectLock(db, prompt.project_id);
   // An explicit null detaches the prompt; an absent key leaves its topic.
   const topicGiven = 'topic_id' in input;
   const topicId = topicGiven ? (input.topic_id ?? null) : prompt.topic_id;
@@ -208,18 +229,13 @@ export async function updatePrompt(
     ...(input.status == null ? {} : { status: input.status }),
     ...(topicGiven ? { topic_id: topicId } : {}),
   };
-  try {
-    const row = await db
-      .updateTable('prompts')
-      .set({ ...changes, updated_at: new Date() })
-      .where('id', '=', prompt.id)
-      .returningAll()
-      .executeTakeFirstOrThrow();
-    return promptView(row);
-  } catch (error) {
-    if (isUniqueViolation(error, UNIQUE_TEXT)) throw new ApiError(409, DUPLICATE);
-    throw error;
-  }
+  const row = await db
+    .updateTable('prompts')
+    .set({ ...changes, updated_at: new Date() })
+    .where('id', '=', prompt.id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  return promptView(row);
 }
 
 export async function deletePrompt(
@@ -251,6 +267,8 @@ export async function bulkSetStatus(
   const ids = [...new Set(input.prompt_ids)];
   await db.transaction().execute(async (trx) => {
     const set = await scopedPromptSet(trx, workspaceId, promptSetId);
+    await acquireProjectLock(trx, set.project_id);
+    await acquirePromptSetLock(trx, set.id);
     if (input.status === P.status_active) {
       const rows = await trx
         .selectFrom('prompts')
@@ -305,6 +323,8 @@ export async function importPrompts(
 ): Promise<PromptSetView> {
   await db.transaction().execute(async (trx) => {
     const set = await scopedPromptSet(trx, workspaceId, promptSetId);
+    await acquireProjectLock(trx, set.project_id);
+    await acquirePromptSetLock(trx, set.id);
     const rows = input.prompts.map((row, index) => ({ ...row, index }));
     const vocabulary = await loadVocabulary(trx, set.project_id);
     const failed = failures(
@@ -320,8 +340,6 @@ export async function importPrompts(
         },
       );
     }
-    await acquireProjectLock(trx, set.project_id);
-    await acquirePromptSetLock(trx, set.id);
     const byHash = new Map<string, (typeof rows)[number]>();
     for (const row of rows) {
       const hash = row.text ? promptTextHash(row.text) : '';
