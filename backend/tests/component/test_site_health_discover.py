@@ -7,6 +7,7 @@ in ``site_health_worker_helpers``.
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 import uuid
 from types import SimpleNamespace
@@ -17,6 +18,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.connectors.web_evidence.contracts import FetchResult
 from app.core.config.site_health_acquisition import (
     AI_CRAWLER_BOTS,
     ERROR_BOT_BLOCKED,
@@ -71,7 +73,9 @@ from app.models.site_health.crawl import SiteCrawl, SiteDiscoveryFrontier
 from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.snapshot import SiteHealthSnapshot
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
+from app.workers.site_health.phases import discover as discover_phase
 from app.workers.site_health.phases import site_setup as site_setup_phase
+from app.workers.site_health.phases.contracts import DiscoverOutcome
 from app.workers.site_health.phases.discover_stages import (
     write_sitemap_observations,
 )
@@ -91,6 +95,53 @@ from tests.component.site_health_worker_helpers import (
     _seed_runtime,
     _worker,
 )
+
+
+@pytest.mark.asyncio
+async def test_discovery_parsing_allows_event_loop_progress(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seed = await _seed_root_discover(session_factory, root="https://example.com/")
+    worker = _worker(session_factory, {"/": _html([])}, owner="parsing-progress")
+    loop = asyncio.get_running_loop()
+    parsing_started = asyncio.Event()
+    release_parser = threading.Event()
+    parse = discover_phase._parse_discover_result
+
+    def blocking_parse(
+        result: FetchResult,
+        *,
+        root_registrable_domain: str,
+        include_globs: list[str] | None,
+        exclude_globs: list[str] | None,
+    ) -> DiscoverOutcome:
+        loop.call_soon_threadsafe(parsing_started.set)
+        if not release_parser.wait(timeout=5):
+            raise AssertionError("Discovery parsing blocked the event loop")
+        return parse(
+            result,
+            root_registrable_domain=root_registrable_domain,
+            include_globs=include_globs,
+            exclude_globs=exclude_globs,
+        )
+
+    monkeypatch.setattr(discover_phase, "_parse_discover_result", blocking_parse)
+    running = asyncio.create_task(worker.run_once())
+    try:
+        await asyncio.wait_for(parsing_started.wait(), timeout=10)
+    finally:
+        release_parser.set()
+        await running
+
+    async with session_factory() as session:
+        task = await session.scalar(
+            select(SiteCrawlTask).where(
+                SiteCrawlTask.crawl_id == seed.crawl_id,
+                SiteCrawlTask.task_kind == TASK_KIND_DISCOVER,
+            )
+        )
+        assert task is not None and task.status == TASK_STATUS_SUCCEEDED
 
 
 @pytest.mark.asyncio

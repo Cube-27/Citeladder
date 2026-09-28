@@ -10,6 +10,7 @@ this remains in-process and does not own claiming or terminalization.
 
 from __future__ import annotations
 
+import asyncio
 import time
 
 from app.analysis.site_health.parser import extract_page_facts
@@ -182,7 +183,10 @@ async def _fetch_discover(
             attempts=exc.attempts,
         )
 
-    return _parse_discover_result(
+    # Parsing touches no session or shared state. Keep it off the event loop
+    # so other worker slots and lease heartbeats can progress during extraction.
+    return await asyncio.to_thread(
+        _parse_discover_result,
         result,
         root_registrable_domain=root_registrable_domain,
         include_globs=include_globs,
