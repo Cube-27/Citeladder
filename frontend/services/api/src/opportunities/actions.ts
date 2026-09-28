@@ -1,6 +1,10 @@
 /** Persisted Action reads and explicit workflow decisions. Agent attach stays Python. */
 import { randomUUID } from 'node:crypto';
-import { actionItemSchema, actionStatusSchema } from '@citeladder/contracts/actions';
+import {
+  actionDetailSchema,
+  actionItemSchema,
+  actionStatusSchema,
+} from '@citeladder/contracts/actions';
 import { sql, type Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -22,10 +26,6 @@ import { declarationView } from './declaration-view.ts';
 const a = policy.opportunity.actions;
 export type ActionRow = Selectable<Actions>;
 const jsonList = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
-const jsonRecord = (value: unknown): Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
 const stringList = (value: unknown): string[] =>
   jsonList(value).filter((v): v is string => typeof v === 'string');
 
@@ -187,7 +187,7 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
     .executeTakeFirst();
   return {
     ...actionItem(action, action.current),
-    diagnosis: jsonRecord(action.diagnosis),
+    diagnosis: actionDetailSchema.shape.diagnosis.parse(action.diagnosis),
     members: (await actionMembers(db, action)).map((row) => projectItem(row)),
     declaration: declaration ? await declarationView(db, declaration) : null,
   };

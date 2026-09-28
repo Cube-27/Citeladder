@@ -117,11 +117,12 @@ type Rank = { system_rank: number; display_rank: number; order_source: 'system' 
 
 /** The factors shown beside a score: its inputs plus the detector's own. */
 function priorityFactors(row: OpportunityRow): Record<string, string | number> {
+  // The detector's factors, then the row's own values, which always win.
   const factors = {
+    ...record(record(row.evidence).priority_factors),
     severity: row.severity,
     system_score: row.priority_score,
     formula_version: row.formula_version,
-    ...record(record(row.evidence).priority_factors),
   };
   return Object.fromEntries(
     Object.entries(factors).filter(
@@ -198,17 +199,22 @@ function projectContentHandoff(row: OpportunityRow): Record<string, unknown> {
       persisted.handoff_template_version ||
       policy.opportunity.source_patterns.CONTENT_HANDOFF_TEMPLATE_VERSION,
   };
-  if (Object.keys(persisted).length) {
-    const skill = persisted.suggested_skill_id
-      ? String(persisted.suggested_skill_id)
-      : DEFAULT_FORMAT;
-    persisted.suggested_skill_id = r.content_format_ids.includes(skill) ? skill : DEFAULT_FORMAT;
-    persisted.opportunity_id = row.id;
-    persisted.snapshot_versions = versions;
-    return persisted;
-  }
+  const skill = persisted.suggested_skill_id
+    ? String(persisted.suggested_skill_id)
+    : DEFAULT_FORMAT;
+  // A detector's frozen brief overlays the row's default brief, so a brief
+  // frozen before a field existed still carries every published field.
   return {
+    ...defaultHandoff(row),
+    ...persisted,
     opportunity_id: row.id,
+    suggested_skill_id: r.content_format_ids.includes(skill) ? skill : DEFAULT_FORMAT,
+    snapshot_versions: versions,
+  };
+}
+
+function defaultHandoff(row: OpportunityRow): Record<string, unknown> {
+  return {
     pathway: policy.opportunity.earned_actions.ACTION_PATH_OWNED,
     source_class: null,
     canonical_domain: null,
@@ -224,7 +230,6 @@ function projectContentHandoff(row: OpportunityRow): Record<string, unknown> {
     limitations: [],
     truncated: false,
     source_analysis_ids: ids(row.source_analysis_ids),
-    snapshot_versions: versions,
   };
 }
 

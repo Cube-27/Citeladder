@@ -6,11 +6,14 @@ import { policy } from '../config.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { parseDate } from '../http/datetimes.ts';
-import { record } from '../db/json.ts';
+import { record, strings } from '../db/json.ts';
 import { normalizeQuery } from './classification.ts';
 import { querySnapshots, type DemandScope } from './query-evidence.ts';
-import { strings } from '../db/json.ts';
-import { queryEvidenceState, resolutionOutcome } from '../routes/demand-contracts.ts';
+import {
+  queryEvidenceState,
+  resolutionCandidates,
+  resolutionOutcome,
+} from '../routes/demand-contracts.ts';
 
 const timestampColumns = () => [
   isoDateText(sql.ref('window_start')).as('start'),
@@ -176,9 +179,7 @@ export async function queryEvidencePage(
       site_url_id: r.site_url_id,
       resolved_page_url: r.resolved_page_url,
       resolution_outcome: resolutionOutcome.parse(r.resolution_outcome),
-      resolution_candidates: Array.isArray(r.resolution_candidates)
-        ? r.resolution_candidates.map(record)
-        : [],
+      resolution_candidates: resolutionCandidates.parse(r.resolution_candidates),
       property_ref: r.property_ref,
       impressions: r.impressions,
       clicks: r.clicks,

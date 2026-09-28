@@ -56,6 +56,8 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   response: Response;
   method?: 'get' | 'post' | 'put' | 'patch';
   status?: ContentfulStatusCode;
+  /** Another success status the same response is served with, such as a replay's 200. */
+  alsoStatus?: ContentfulStatusCode;
   body?: z.ZodType;
   headers?: z.ZodObject;
   capability?: WorkspaceCapability;
@@ -142,7 +144,10 @@ function defineRoute<
       : ACTIVE_WORKSPACE_HEADERS,
     cookies: SESSION_COOKIE,
     ...(route.body ? { body: route.body } : {}),
-    responses: { [status]: route.response },
+    responses: {
+      [status]: route.response,
+      ...(route.alsoStatus ? { [route.alsoStatus]: route.response } : {}),
+    },
   };
   const register = (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => {
     const pattern = honoPath(route.path);

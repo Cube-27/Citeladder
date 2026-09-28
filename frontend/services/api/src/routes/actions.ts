@@ -80,6 +80,7 @@ export const actionRoutes = [
     body: declarationCreate,
     response: actionDeclarationSchema,
     status: 201,
+    alsoStatus: 200,
     raw: true,
     headers: z.object({
       'Idempotency-Key': z
