@@ -75,19 +75,22 @@ export async function readiness(
     .executeTakeFirst();
   if (project === undefined) throw notFound('Project');
   const [ownedDomains, competitors, connections, latest, datasets] = await Promise.all([
-    db
-      .selectFrom('owned_domains')
-      .select(['id', 'domain'])
-      .where('project_id', '=', scope.projectId)
-      .orderBy('created_at')
-      .orderBy('id')
+    // Project children carry no workspace column; the join scopes them.
+    scope.workspace
+      .selectFrom(db, 'projects')
+      .innerJoin('owned_domains', 'owned_domains.project_id', 'projects.id')
+      .select(['owned_domains.id', 'owned_domains.domain'])
+      .where('projects.id', '=', scope.projectId)
+      .orderBy('owned_domains.created_at')
+      .orderBy('owned_domains.id')
       .execute(),
-    db
-      .selectFrom('competitors')
-      .select(['id', 'name', 'domains'])
-      .where('project_id', '=', scope.projectId)
-      .orderBy('created_at')
-      .orderBy('id')
+    scope.workspace
+      .selectFrom(db, 'projects')
+      .innerJoin('competitors', 'competitors.project_id', 'projects.id')
+      .select(['competitors.id', 'competitors.name', 'competitors.domains'])
+      .where('projects.id', '=', scope.projectId)
+      .orderBy('competitors.created_at')
+      .orderBy('competitors.id')
       .execute(),
     eligibleConnections(db, scope.workspace),
     scope.workspace
@@ -173,7 +176,7 @@ function sortKey(sort: string): RawBuilder<unknown> {
 }
 
 /** User text matched literally: `%`, `_` and `\` are not wildcards. */
-const containsPattern = (text: string) => `%${text.replaceAll(/[\\%_]/gu, '\\$&')}%`;
+const containsPattern = (text: string) => `%${text.replaceAll(/[\\%_]/gu, String.raw`\$&`)}%`;
 
 function matchingRows(
   db: Database,

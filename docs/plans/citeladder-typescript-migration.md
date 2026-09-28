@@ -736,6 +736,8 @@ Deliberate departures:
 - A missing run on confirmation is `Run not found` (was `Review not found`).
 - The latest run and dataset lists tie-break by id.
 - Research scopes are not exported: the contract's enum is the authority.
+- Citation-match rows also record the citation's `analyzer_version`, and
+  owned-domain and competitor reads join the workspace-scoped project.
 
 Spans and attributes are unchanged. Deployment and soak remain pending.
 

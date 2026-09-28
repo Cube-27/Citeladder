@@ -605,6 +605,17 @@ describe('Search Intelligence citation matches', () => {
     expect(matched.body.rows.map((row) => [row.domain, row.url])).toEqual([
       ['linker.example', 'https://linker.example/post'],
     ]);
+    // Each match keeps its citation's processing version as provenance.
+    const source = await db
+      .selectFrom('citations')
+      .select(['id', 'analyzer_version'])
+      .where('audit_id', '=', auditId)
+      .where('url', '=', 'https://linker.example/post')
+      .executeTakeFirstOrThrow();
+    expect(matched.body.rows[0]).toMatchObject({
+      citation_id: source.id,
+      analyzer_version: source.analyzer_version,
+    });
 
     // Derivations stored before this owner are found by the same identity.
     const derived = await db

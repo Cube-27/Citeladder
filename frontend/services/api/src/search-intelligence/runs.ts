@@ -26,7 +26,7 @@ const RUN_QUEUED = 'queued';
 const RUN_SUCCEEDED = 'succeeded';
 const RUN_CANCELLED = 'cancelled';
 const ACTIVE_RUN_STATUSES = [RUN_QUEUED, 'running'];
-const FINISHED_RUN_STATUSES = [RUN_SUCCEEDED, 'failed', RUN_CANCELLED, 'partial'];
+const FINISHED_RUN_STATUSES = new Set([RUN_SUCCEEDED, 'failed', RUN_CANCELLED, 'partial']);
 
 const conflict = (code: ApiErrorCode, message: string) => new ApiError(409, message, { code });
 
@@ -129,7 +129,7 @@ export async function cancelRun(db: Database, scope: Scope, runId: string) {
   return db.transaction().execute(async (trx) => {
     const run = await lockRun(trx, scope, runId);
     if (run === undefined) throw notFound('Run');
-    if (FINISHED_RUN_STATUSES.includes(run.status)) return runView(run);
+    if (FINISHED_RUN_STATUSES.has(run.status)) return runView(run);
     const now = new Date();
     const cancelled = await trx
       .updateTable('search_intelligence_runs')

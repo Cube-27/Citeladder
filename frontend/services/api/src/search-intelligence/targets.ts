@@ -7,7 +7,10 @@
  */
 import type { searchTargetSchema } from '@citeladder/contracts/search-intelligence';
 import { getDomain } from 'tldts';
+
 import type { z } from 'zod';
+
+import { stripTrailing } from '../text-order.ts';
 
 type CanonicalTarget = z.output<typeof searchTargetSchema>;
 
@@ -27,7 +30,7 @@ function targetOf(
     return null;
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-  const hostname = url.hostname.replace(/\.+$/u, '');
+  const hostname = stripTrailing(url.hostname, '.');
   const domain = getDomain(hostname, { allowPrivateDomains: false });
   if (!domain || (hostname !== domain && hostname !== `www.${domain}`)) return null;
   return {
@@ -35,7 +38,7 @@ function targetOf(
     label,
     registrable_domain: domain,
     hostname,
-    origin: `${url.protocol}//${hostname}${url.port ? `:${url.port}` : ''}`,
+    origin: url.port ? `${url.protocol}//${hostname}:${url.port}` : `${url.protocol}//${hostname}`,
     source_kind: sourceKind,
   };
 }

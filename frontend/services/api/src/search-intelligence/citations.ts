@@ -9,7 +9,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
-import { compareText } from '../text-order.ts';
+import { compareText, stripTrailing } from '../text-order.ts';
 import type { Scope } from './reads.ts';
 import { datasetView } from './views.ts';
 
@@ -22,10 +22,8 @@ const sha256 = (text: string) => createHash('sha256').update(text).digest('hex')
 
 /** Lower-cased, dot-trimmed and without a leading `www.`. */
 function comparableDomain(value: string): string {
-  const domain = value
-    .trim()
-    .toLowerCase()
-    .replace(/^\.+|\.+$/gu, '');
+  let domain = stripTrailing(value.trim().toLowerCase(), '.');
+  while (domain.startsWith('.')) domain = domain.slice(1);
   return domain.startsWith('www.') ? domain.slice('www.'.length) : domain;
 }
 
@@ -43,6 +41,7 @@ type Citation = {
   canonical_url: string | null;
   title: string;
   classification: string;
+  analyzer_version: string;
 };
 
 /** A citation's best URL: canonical, then resolved, then as cited. */
@@ -110,6 +109,7 @@ export async function deriveCitationMatches(
           'canonical_url',
           'title',
           'classification',
+          'analyzer_version',
         ])
         .where('audit_id', 'in', selected)
         .orderBy('audit_id')
@@ -198,6 +198,7 @@ export async function deriveCitationMatches(
               artifact_id: citation.artifact_id,
               title: citation.title,
               classification: citation.classification,
+              analyzer_version: citation.analyzer_version,
             }),
             created_at: now,
           })),
