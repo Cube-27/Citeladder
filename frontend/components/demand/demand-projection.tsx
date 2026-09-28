@@ -20,9 +20,9 @@ import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer
 import { DemandSignalTable, SignalLegend } from '@/components/demand/demand-signal-table';
 import { DemandSummaryCards } from '@/components/demand/demand-summary-cards';
 import { demandApi, type DemandSignal, type DemandSnapshot } from '@/lib/api/demand';
-import { httpErrorStatus } from '@/lib/api/errors';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { queryKeys } from '@/lib/api/query-keys';
+import { latestDemandSnapshotQuery } from '@/lib/demand/latest-snapshot';
 import {
   countByTab,
   FILTER_TABS,
@@ -350,12 +350,7 @@ function SearchDemandView({
 export function DemandProjection() {
   const { activeProject, isLoading: projectLoading } = useProjectContext();
   const latest = useQuery({
-    queryKey: queryKeys.demand.latest(activeProject?.id),
-    queryFn: ({ signal }) =>
-      demandApi.getLatest(activeProject!.id, {
-        signal,
-        workspaceId: activeProject!.workspace_id,
-      }),
+    ...latestDemandSnapshotQuery(activeProject?.id ?? '', activeProject?.workspace_id ?? null),
     enabled: Boolean(activeProject),
     // Deliberately NO `keepPreviousData`: the key's only variable is the
     // project, so keeping previous data would render the PREVIOUS project's
@@ -401,11 +396,11 @@ function demandFallback({
 }: Readonly<{
   projectLoading: boolean;
   hasProject: boolean;
-  latest: UseQueryResult<DemandSnapshot, Error>;
+  latest: UseQueryResult<DemandSnapshot | null, Error>;
 }>) {
   if (projectLoading || latest.isLoading) return <DemandLoading />;
   if (!hasProject) return <Alert tone="info">Select a project to inspect search demand.</Alert>;
-  if (latest.isError && httpErrorStatus(latest.error) === 404) {
+  if (latest.data === null) {
     return (
       <EmptyState
         icon={Search}
@@ -420,7 +415,7 @@ function demandFallback({
     );
   }
   if (latest.isError) return <Alert tone="danger">Search demand could not be loaded.</Alert>;
-  if (!latest.data) return null;
+  if (latest.data === undefined) return null;
   return (
     <Alert tone="info">
       Search Console evidence is unavailable for this snapshot. Sync Search Console to measure

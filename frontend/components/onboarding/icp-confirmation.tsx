@@ -92,11 +92,13 @@ export function IcpCategory({ profile, onChange }: IcpPart) {
   return (
     <>
       <FlowGroup
+        className="flow-review-card"
         title="What you sell"
         help="Your competitors and tracked questions are built from this."
       >
         <RadioGroup
           variant="row"
+          className="border-y-0"
           ariaLabel="What you sell"
           value={isOther ? OTHER_CATEGORY : profile.category}
           options={[
@@ -148,9 +150,9 @@ export function IcpAudience({ profile, onChange }: IcpPart) {
 
   return (
     <>
-      <FlowGroup title="Who buys it">
+      <FlowGroup className="flow-review-card" title="Who buys it">
         <RadioGroup
-          variant="row"
+          variant="chip"
           ariaLabel="Who buys it"
           value={profile.business_type ?? ''}
           options={BUYER_TYPE_CHOICES}
@@ -160,9 +162,9 @@ export function IcpAudience({ profile, onChange }: IcpPart) {
         />
       </FlowGroup>
 
-      <FlowGroup title="Where they buy it">
+      <FlowGroup className="flow-review-card" title="Where they buy it">
         <RadioGroup
-          variant="row"
+          variant="chip"
           ariaLabel="Where they buy it"
           value={profile.market_scope ?? ''}
           options={MARKET_SCOPE_CHOICES}

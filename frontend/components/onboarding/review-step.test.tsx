@@ -116,7 +116,6 @@ describe('ReviewStep competitor limit', () => {
     );
 
     expect(screen.getByText('5 of 5')).toBeInTheDocument();
-    expect(screen.getByText('Tracked head-to-head in every answer.')).toBeInTheDocument();
     const button = screen.getByRole('button', { name: 'Add' });
     expect(button).toBeDisabled();
     await userEvent.click(button);

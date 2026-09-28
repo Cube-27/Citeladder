@@ -40,9 +40,13 @@ authorized to publish the global billing catalog or administer other workspaces.
 
 ## Membership and ownership continuity
 
-Authenticated onboarding reads `/workspaces/{id}/policies` and captures an
+Authenticated onboarding reads `/workspaces/{id}/policies` and records an
 explicit Terms acceptance before opening that workspace in the app. This covers
-password, Google-created and operator-created identities. PostgreSQL stores
+password, Google-created and operator-created identities. The decision is taken
+on the sign-in form (an unticked, required checkbox for both email and Google
+sign-in) and recorded for the resolved workspace against the server-published
+revision; a session that reaches the app without that decision in the same tab
+gets the explicit review screen instead. PostgreSQL stores
 actor, workspace, immutable revision, context and timestamp; repeated acceptance
 of one revision is idempotent. Updating the approved Terms revision requires
 renewed acceptance and never overwrites an earlier row. Privacy is a notice;

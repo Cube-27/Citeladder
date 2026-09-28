@@ -23,6 +23,7 @@ import { redirect } from 'react-router-dom';
 import { billingApi } from '@/lib/api/billing';
 import { authApi } from '@/lib/api/auth';
 import { httpErrorStatus } from '@/lib/api/client';
+import { policiesApi } from '@/lib/api/policies';
 import { projectsApi } from '@/lib/api/projects';
 import { getAppQueryClient } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -144,8 +145,19 @@ async function resolveScope(client: QueryClient, url: URL): Promise<Scope | null
   return { workspaceId, workspaces, resolvedProject, requestedProjectId };
 }
 
-/** The workspace's projects and its remaining allowance, asked together. */
+/**
+ * The workspace's projects and its remaining allowance, asked together.
+ *
+ * The Terms status rides along only to warm the policy gate's cache: without
+ * it the gate had nothing to answer from on a reload and held the page on a
+ * loader for one more round trip. Its outcome decides nothing here.
+ */
 function readWorkspaceState(client: QueryClient, workspaceId: string) {
+  void client.prefetchQuery({
+    queryKey: queryKeys.policies.workspace(workspaceId),
+    queryFn: ({ signal }) => policiesApi.status(workspaceId, signal),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
   return Promise.all([
     settle<Project[]>(
       client.ensureQueryData({
