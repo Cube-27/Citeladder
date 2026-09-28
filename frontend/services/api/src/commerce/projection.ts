@@ -1,4 +1,4 @@
-import type { Updateable } from 'kysely';
+import { sql, type Updateable } from 'kysely';
 import { z } from 'zod';
 import { commerceCategorySchema } from '@citeladder/contracts/commerce-suite';
 
@@ -17,6 +17,7 @@ import {
 import { commerceMissing, type CommerceScope } from './reads.ts';
 import {
   catalogUrl,
+  categoryKey,
   categoryTitle,
   pageIdentity,
   productAlias,
@@ -65,17 +66,23 @@ async function projectCategory(
   url: string,
 ) {
   const name = categoryTitle(facts, source.latest_title);
+  const key = categoryKey(name);
+  // The category owning this name wins over one matched by URL, so the rename
+  // below can never collide with the (project_id, normalized_name) key.
   const existing = await db
     .selectFrom('commerce_categories')
     .selectAll()
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
-    .where('canonical_url', '=', url)
+    .where((eb) => eb.or([eb('normalized_name', '=', key), eb('canonical_url', '=', url)]))
+    .orderBy(sql`normalized_name = ${key}`, 'desc')
+    .orderBy('id')
     .executeTakeFirst();
   const category = existing ?? (await categoryByName(db, scope, name));
   const provenance = {
     kind: 'site_health',
     source_id: source.id,
+    artifact_id: source.artifact_id,
     version: policy.commerce.projector_version,
   };
   const role = commerceCategorySchema.shape.role.safeParse(facts.commerce.category_role);
@@ -83,7 +90,7 @@ async function projectCategory(
     .updateTable('commerce_categories')
     .set({
       name,
-      normalized_name: name.toLowerCase().replaceAll(/\s+/gu, ' '),
+      normalized_name: key,
       canonical_url: url,
       role: role.success ? role.data : 'unknown',
       source_analysis_id: source.id,
@@ -99,7 +106,11 @@ async function projectCategory(
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .execute();
+  return { shelfId: category.id };
 }
+
+/** What a projection may newly link: its own shelf, or its own product. */
+type Linkable = { shelfId: string } | { productId: string };
 
 async function projectProduct(
   db: Database,
@@ -107,7 +118,7 @@ async function projectProduct(
   source: Source,
   facts: CatalogFacts,
   url: string,
-) {
+): Promise<Linkable | null> {
   const prior = await db
     .selectFrom('commerce_product_observations')
     .select('id')
@@ -116,12 +127,10 @@ async function projectProduct(
     .where('source_analysis_id', '=', source.id)
     .where('projector_version', '=', policy.commerce.projector_version)
     .executeTakeFirst();
-  if (prior) return;
+  if (prior) return null;
   const projection = productFacts(facts, url);
-  if (!projection.identified) {
-    await projectCategory(db, scope, source, facts, url);
-    return;
-  }
+  // A listing page the classifier called a product is projected as the shelf it is.
+  if (!projection.identified) return projectCategory(db, scope, source, facts, url);
   const existing = await db
     .selectFrom('commerce_products')
     .selectAll()
@@ -198,11 +207,63 @@ async function projectProduct(
     const category = await categoryByName(db, scope, name.slice(0, 255));
     await addMembership(db, scope, product.id, category.id, observation);
   }
+  return { productId: product.id };
 }
 
-/** Reconcile shelf links in either task order using one materialized alias map. */
-async function linkShelves(db: Database, scope: CommerceScope, crawlId: string) {
-  const shelves = await db
+/** Crawled URL -> the identities its own stored facts declare, for these URLs only. */
+async function declaredIdentities(
+  db: Database,
+  scope: CommerceScope,
+  crawlId: string,
+  urls: string[],
+) {
+  const rows = await db
+    .selectFrom('site_urls as u')
+    .innerJoin('site_crawl_tasks as t', 't.site_url_id', 'u.id')
+    .innerJoin('site_fetch_artifacts as f', 'f.task_id', 't.id')
+    .select(['u.normalized_url', 'f.final_url', 'f.normalized_facts'])
+    .where('u.workspace_id', '=', scope.workspaceId)
+    .where('u.project_id', '=', scope.projectId)
+    .where('u.normalized_url', 'in', urls)
+    .where('t.workspace_id', '=', scope.workspaceId)
+    .where('t.crawl_id', '=', crawlId)
+    .where('f.workspace_id', '=', scope.workspaceId)
+    .where('f.fetch_purpose', '=', 'discover')
+    .execute();
+  const identities = new Map<string, string[]>();
+  for (const row of rows) {
+    if (row.normalized_facts === null) continue;
+    const identity = pageIdentity(
+      readFacts(row.normalized_facts),
+      row.final_url || row.normalized_url,
+    );
+    if (identity)
+      identities.set(row.normalized_url, [...(identities.get(row.normalized_url) ?? []), identity]);
+  }
+  return identities;
+}
+
+/** A shelf lists a product through its URL, a declared identity, or a collection alias. */
+function listedProducts(
+  links: string[],
+  identities: Map<string, string[]>,
+  productsByUrl: Map<string, string>,
+) {
+  const ids = new Set<string>();
+  for (const url of links.flatMap((link) => [link, ...(identities.get(link) ?? [])]))
+    for (const candidate of [url, productAlias(url)]) {
+      const id = candidate ? productsByUrl.get(candidate) : undefined;
+      if (id) ids.add(id);
+    }
+  return ids;
+}
+
+/**
+ * Link shelves and products in either task order. A shelf source reconciles
+ * only its own links; a product source only itself against the projected shelves.
+ */
+async function linkShelves(db: Database, scope: CommerceScope, crawlId: string, from: Linkable) {
+  let shelfQuery = db
     .selectFrom('commerce_categories as c')
     .innerJoin('site_page_analyses as a', 'a.id', 'c.source_analysis_id')
     .innerJoin('site_fetch_artifacts as f', 'f.id', 'a.artifact_id')
@@ -211,58 +272,32 @@ async function linkShelves(db: Database, scope: CommerceScope, crawlId: string) 
     .where('c.project_id', '=', scope.projectId)
     .where('a.workspace_id', '=', scope.workspaceId)
     .where('a.project_id', '=', scope.projectId)
-    .where('f.workspace_id', '=', scope.workspaceId)
-    .execute();
-  if (!shelves.length) return;
-  const aliases = await db
-    .selectFrom('site_urls as u')
-    .innerJoin('site_crawl_tasks as t', 't.site_url_id', 'u.id')
-    .innerJoin('site_fetch_artifacts as f', 'f.task_id', 't.id')
-    .select(['u.normalized_url', 'f.final_url', 'f.normalized_facts'])
-    .where('u.workspace_id', '=', scope.workspaceId)
-    .where('u.project_id', '=', scope.projectId)
-    .where('t.workspace_id', '=', scope.workspaceId)
-    .where('t.crawl_id', '=', crawlId)
-    .where('f.workspace_id', '=', scope.workspaceId)
-    .where('f.fetch_purpose', '=', 'discover')
-    .execute();
-  const identities = new Map<string, Set<string>>();
-  for (const row of aliases) {
-    if (row.normalized_facts === null) continue;
-    const identity = pageIdentity(
-      readFacts(row.normalized_facts),
-      row.final_url || row.normalized_url,
-    );
-    const values = identities.get(row.normalized_url) ?? new Set<string>();
-    if (identity) values.add(identity);
-    identities.set(row.normalized_url, values);
-  }
-  const products = await db
+    .where('f.workspace_id', '=', scope.workspaceId);
+  if ('shelfId' in from) shelfQuery = shelfQuery.where('c.id', '=', from.shelfId);
+  const shelves = (await shelfQuery.execute()).map((shelf) => ({
+    id: shelf.id,
+    links: shelfLinks(readFacts(shelf.normalized_facts), shelf.final_url || shelf.requested_url),
+  }));
+  const urls = [...new Set(shelves.flatMap((shelf) => shelf.links))];
+  if (!urls.length) return;
+  const identities = await declaredIdentities(db, scope, crawlId, urls);
+  let productQuery = db
     .selectFrom('commerce_products')
     .select(['id', 'canonical_url'])
     .where('workspace_id', '=', scope.workspaceId)
-    .where('project_id', '=', scope.projectId)
-    .execute();
-  const productsByUrl = new Map(products.map((row) => [catalogUrl(row.canonical_url), row.id]));
+    .where('project_id', '=', scope.projectId);
+  if ('productId' in from) productQuery = productQuery.where('id', '=', from.productId);
+  const productsByUrl = new Map(
+    (await productQuery.execute()).map((row) => [catalogUrl(row.canonical_url), row.id]),
+  );
   const claimed = new Set<string>();
-  for (const shelf of shelves) {
-    const links = new Set(
-      shelfLinks(readFacts(shelf.normalized_facts), shelf.final_url || shelf.requested_url),
-    );
-    for (const link of [...links])
-      for (const identity of identities.get(link) ?? []) links.add(identity);
-    for (const link of [...links]) {
-      const alias = productAlias(link);
-      if (alias) links.add(alias);
-    }
-    for (const link of links) {
-      const productId = productsByUrl.get(link);
-      if (!productId) continue;
+  for (const shelf of shelves)
+    for (const productId of listedProducts(shelf.links, identities, productsByUrl)) {
       await addMembership(db, scope, productId, shelf.id, null);
       claimed.add(productId);
     }
-  }
   if (!claimed.size) return;
+  // A product a real shelf claims is no longer uncategorized.
   await db
     .deleteFrom('commerce_product_categories')
     .where('workspace_id', '=', scope.workspaceId)
@@ -293,8 +328,10 @@ export const projectCatalog: Executor = async (task, { db, checkCancelled }) => 
     const facts = readFacts(source.normalized_facts);
     const url = pageIdentity(facts, source.final_url || source.normalized_url);
     if (!url) throw new Error('Catalog source has no usable URL');
-    if (source.page_kind === 'category') await projectCategory(trx, scope, source, facts, url);
-    else await projectProduct(trx, scope, source, facts, url);
-    await linkShelves(trx, scope, source.crawl_id);
+    const projected =
+      source.page_kind === 'category'
+        ? await projectCategory(trx, scope, source, facts, url)
+        : await projectProduct(trx, scope, source, facts, url);
+    if (projected) await linkShelves(trx, scope, source.crawl_id, projected);
   });
 };

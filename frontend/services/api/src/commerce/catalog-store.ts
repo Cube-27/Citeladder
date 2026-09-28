@@ -4,6 +4,7 @@ import type { Insertable, Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { CommerceProducts, CommerceProductObservations } from '../generated/db-schema.ts';
+import { categoryKey } from './projection-facts.ts';
 import { commerceMissing, type CommerceScope } from './reads.ts';
 
 /** Import and projection serialize at the project, before touching catalog rows. */
@@ -51,7 +52,7 @@ export async function newProduct(
 }
 
 export async function categoryByName(db: Database, scope: CommerceScope, name: string) {
-  const normalized = name.trim().toLowerCase().replaceAll(/\s+/gu, ' ') || 'uncategorized';
+  const normalized = categoryKey(name) || 'uncategorized';
   const existing = await db
     .selectFrom('commerce_categories')
     .selectAll()
@@ -98,7 +99,13 @@ export async function addMembership(
       source_observation_id: observationId,
       created_at: new Date(),
     })
-    .onConflict((oc) => oc.columns(['product_id', 'category_id']).doNothing())
+    .onConflict((oc) =>
+      // A shelf link records no observation; later product evidence supplies one.
+      oc
+        .columns(['product_id', 'category_id'])
+        .doUpdateSet({ source_observation_id: (eb) => eb.ref('excluded.source_observation_id') })
+        .where('commerce_product_categories.source_observation_id', 'is', null),
+    )
     .execute();
 }
 

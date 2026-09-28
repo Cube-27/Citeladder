@@ -52,12 +52,8 @@ _WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
-def _map_error(exc: Exception) -> ApiException:
-    if isinstance(exc, CommerceNotFoundError):
-        return ApiException(status.HTTP_404_NOT_FOUND, "commerce_not_found", str(exc))
-    return ApiException.coded(
-        status.HTTP_422_UNPROCESSABLE_CONTENT, "commerce_invalid", str(exc)
-    )
+def _not_found(exc: CommerceNotFoundError) -> ApiException:
+    return ApiException(status.HTTP_404_NOT_FOUND, "commerce_not_found", str(exc))
 
 
 @router.post(
@@ -78,7 +74,7 @@ async def competitor_discovery_endpoint(
             targets=payload.targets,
         )
     except CommerceNotFoundError as exc:
-        raise _map_error(exc) from exc
+        raise _not_found(exc) from exc
 
 
 @router.post(
@@ -123,7 +119,7 @@ async def buyer_prompts_generate_endpoint(
             gateway=gateway,
         )
     except CommerceNotFoundError as exc:
-        raise _map_error(exc) from exc
+        raise _not_found(exc) from exc
     except OccupancyError as exc:
         raise ApiException.coded(
             status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
@@ -159,4 +155,4 @@ async def buyer_prompt_manual_endpoint(
             status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
         ) from exc
     except CommerceNotFoundError as exc:
-        raise _map_error(exc) from exc
+        raise _not_found(exc) from exc

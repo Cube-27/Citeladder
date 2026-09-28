@@ -100,17 +100,17 @@ async def test_request_validation_error_envelope(client: httpx.AsyncClient) -> N
     await _register(client, "env-validation@example.com")
     project = await _project(client, "Envelope Validation")
     resp = await client.get(
-        f"/api/v1/projects/{project['id']}/commerce/ai-shelf",
-        params={"audit_id": "not-a-uuid"},
+        f"/api/v1/projects/{project['id']}/site-health",
+        params={"crawl_id": "not-a-uuid"},
     )
     assert resp.status_code == 422
     body = resp.json()
     # ``detail`` is now a human string, not the raw validation array.
     assert isinstance(body["detail"], str)
-    assert "audit_id" in body["detail"]
+    assert "crawl_id" in body["detail"]
     _assert_envelope(body, code="validation_error", retryable=False)
     errors = body["error"]["details"]["errors"]
-    assert errors[0]["loc"] == ["audit_id"]
+    assert errors[0]["loc"] == ["crawl_id"]
     for entry in errors:
         assert set(entry) <= {"loc", "message", "type"}
 
@@ -172,23 +172,6 @@ async def test_site_health_stale_selection_version_409_envelope(
     # ...and mirrored into the canonical block + details.
     _assert_envelope(body, code="stale_selection_version", retryable=False)
     assert body["error"]["details"] == {"current_selection_version": 0}
-
-
-# =========================================================================
-# commerce
-# =========================================================================
-async def test_commerce_catalog_import_422_envelope(client: httpx.AsyncClient) -> None:
-    await _register(client, "env-commerce@example.com")
-    project = await _project(client, "Envelope Commerce")
-    resp = await client.post(
-        f"/api/v1/projects/{project['id']}/commerce/catalog/import",
-        json={"filename": "bad.csv", "content_type": "text/csv", "content": ""},
-    )
-    assert resp.status_code == 422
-    body = resp.json()
-    assert body["detail"] == {"code": "commerce_invalid", "message": "CSV is empty"}
-    _assert_envelope(body, code="commerce_invalid", retryable=False)
-    assert body["error"]["message"] == body["detail"]["message"]
 
 
 # =========================================================================

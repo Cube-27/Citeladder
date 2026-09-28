@@ -69,7 +69,7 @@ export async function catalog(db: Database, scope: CommerceScope) {
       attributes: jsonObject(row.attributes, 'commerce_products.attributes'),
       field_sources: jsonObject(row.field_sources, 'commerce_products.field_sources'),
       variants: commerceProductSchema.shape.variants.parse(row.variants),
-      category_ids: (byProduct.get(row.id) ?? []).sort(),
+      category_ids: (byProduct.get(row.id) ?? []).sort((a, b) => a.localeCompare(b)),
       created_at: row.created_at.toISOString(),
       updated_at: row.updated_at.toISOString(),
     })),

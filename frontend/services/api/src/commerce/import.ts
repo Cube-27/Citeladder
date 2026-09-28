@@ -72,8 +72,13 @@ function rowsOf(content: string): Record<string, string>[] {
 function productValues(row: Record<string, string>) {
   if (row.variants || row.attributes)
     throw new Error('variants and attributes cannot be imported from CSV');
-  const categories = (row.categories || row.category || '').split(/[;|]/u);
-  if (categories.some((name) => name.trim().length > 255))
+  const categories = new Set(
+    (row.categories || row.category || '')
+      .split(/[;|]/u)
+      .map((name) => name.trim())
+      .filter(Boolean),
+  );
+  if ([...categories].some((name) => name.length > 255))
     throw new Error('Category name exceeds 255 characters');
   const values: Record<string, string | number> = {};
   for (const field of Object.keys(productInput.shape)) {
@@ -88,7 +93,11 @@ function productValues(row: Record<string, string>) {
   if (parsed.data.canonical_url) {
     parsed.data.canonical_url = catalogUrl(parsed.data.canonical_url);
   }
-  return parsed.data;
+  return { values: parsed.data, categories };
+}
+
+function outcome(rowNumber: number, status: Outcome['status'], productId: string): Outcome {
+  return { row_number: rowNumber, status, product_id: productId, error_code: '', detail: '' };
 }
 
 async function importRow(
@@ -98,9 +107,9 @@ async function importRow(
   rowNumber: number,
   row: Record<string, string>,
 ): Promise<Outcome> {
-  let values: z.output<typeof productInput>;
+  let parsed: ReturnType<typeof productValues>;
   try {
-    values = productValues(row);
+    parsed = productValues(row);
   } catch (error) {
     return {
       row_number: rowNumber,
@@ -110,6 +119,7 @@ async function importRow(
       detail: String((error as Error).message).slice(0, 500),
     };
   }
+  const { values, categories } = parsed;
   const matches = await db
     .selectFrom('commerce_products')
     .selectAll()
@@ -168,21 +178,12 @@ async function importRow(
     observed_fields: JSON.stringify(values),
     importer_version: policy.commerce.importer_version,
   });
-  const names = (row.categories || row.category || '')
-    .split(/[;|]/u)
-    .map((name) => name.trim())
-    .filter(Boolean);
-  for (const name of new Set(names)) {
+  for (const name of categories) {
     const category = await categoryByName(db, scope, name);
     await addMembership(db, scope, product.id, category.id, observationId);
   }
-  return {
-    row_number: rowNumber,
-    status: matches.length ? (changed ? 'updated' : 'unchanged') : 'created',
-    product_id: product.id,
-    error_code: '',
-    detail: '',
-  };
+  if (!matches.length) return outcome(rowNumber, 'created', product.id);
+  return outcome(rowNumber, changed ? 'updated' : 'unchanged', product.id);
 }
 
 export async function importCatalog(

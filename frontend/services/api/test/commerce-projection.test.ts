@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { importCatalog } from '../src/commerce/import.ts';
@@ -152,6 +153,44 @@ describe('catalog projection PostgreSQL boundary', () => {
       field_sources: { name: { kind: 'csv' } },
     });
   }, 20_000);
+  it('projects a shelf onto the category owning its name when another row holds its URL', async () => {
+    const s = await seed();
+    await importCatalog(db, s, {
+      filename: 'catalog.csv',
+      content_type: 'text/csv',
+      content: 'canonical_url,name,sku,category\nhttps://example.com/p/x,X,X1,tools\n',
+    });
+    const stale = randomUUID();
+    await db
+      .insertInto('commerce_categories')
+      .values({
+        id: stale,
+        workspace_id: s.workspaceId,
+        project_id: s.projectId,
+        name: 'Old tools',
+        normalized_name: 'old tools',
+        role: 'unknown',
+        canonical_url: 'https://example.com/collections/tools',
+        field_sources: '{}',
+        source_analysis_id: null,
+        projector_version: '',
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    for (const task of s.tasks) await execute(task);
+    const result = await catalog(db, s);
+    const tools = result.categories.find((row) => row.name === 'Tools')!;
+    expect(tools).toMatchObject({ canonical_url: 'https://example.com/collections/tools' });
+    expect(result.categories.find((row) => row.id === stale)!.name).toBe('Old tools');
+    const widget = result.products.find((row) => row.name === 'Widget')!;
+    expect(widget.category_ids).toEqual([tools.id]);
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'succeeded' })
+      .where('workspace_id', '=', s.workspaceId)
+      .execute();
+  }, 20_000);
   it('rejects foreign source evidence and does not create catalog rows', async () => {
     const own = await seed();
     const foreign = await seed();
@@ -182,6 +221,12 @@ describe('projection decisions over stored facts', () => {
     expect(pageIdentity(readFacts({ canonical_url: 'https://attacker.example.net/p' }), base)).toBe(
       'https://shop.example.com/collections/all/products/widget',
     );
+    expect(
+      pageIdentity(
+        readFacts({ canonical_url: 'https://other.myshopify.com/products/widget' }),
+        'https://mine.myshopify.com/products/widget',
+      ),
+    ).toBe('https://mine.myshopify.com/products/widget');
     expect(
       pageIdentity(
         readFacts({ canonical_url: './widget' }),

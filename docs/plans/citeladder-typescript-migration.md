@@ -827,8 +827,11 @@ Deliberate departures:
   and import cannot overwrite each other's field authority. No per-row nested
   transaction or Python Decimal/CSV-sniffer behavior is carried over.
 - Projected categories record their canonical URL when attaching to a category
-  originally created by CSV/breadcrumbs. Shelf matching uses materialized alias
-  and product maps rather than per-link database lookups.
+  originally created by CSV/breadcrumbs; the category owning the projected name
+  wins over one matched only by URL, so a rename never collides. A category
+  source links only its own shelf; a product source links only itself. Declared
+  identities are read for the linked URLs alone. Canonical trust counts private
+  suffixes, so a shared host's other tenant is off-site.
 - Literal method guards take precedence over parameter routes, so discovery-status
   GET is not rejected by the candidate PATCH guard. UUID-shaped terminal ingress
   globs exclude the Python-owned `discover`, `generate` and `manual` literals.

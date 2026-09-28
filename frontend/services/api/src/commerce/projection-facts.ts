@@ -46,7 +46,8 @@ const schemes = new Set<string>(policy.traffic.url_schemes);
 const ports = new Set<number>(policy.traffic.url_ports);
 const ignoredQueryKeys = new Set<string>(policy.traffic.ignored_query_keys);
 const indexNames = new Set<string>(policy.commerce.breadcrumb_index_names);
-const normalizeName = (name: string) => name.trim().toLowerCase().replaceAll(/\s+/gu, ' ');
+/** Category identity: `commerce_categories.normalized_name`. */
+export const categoryKey = (name: string) => name.trim().toLowerCase().replaceAll(/\s+/gu, ' ');
 const named = (name: string) => /[\p{L}\p{N}]/u.test(name);
 
 export function catalogUrl(value: string, base?: string): string {
@@ -55,19 +56,24 @@ export function catalogUrl(value: string, base?: string): string {
     if (!schemes.has(url.protocol.slice(0, -1)) || url.username || url.password) return '';
     if (!ports.has(Number(url.port || (url.protocol === 'https:' ? 443 : 80)))) return '';
     url.hash = '';
-    for (const key of [...url.searchParams.keys()])
-      if (ignoredQueryKeys.has(key.toLowerCase())) url.searchParams.delete(key);
-    url.searchParams.sort();
+    const query = new URLSearchParams(
+      [...url.searchParams].filter(([key]) => !ignoredQueryKeys.has(key.toLowerCase())),
+    );
+    query.sort();
+    url.search = query.toString();
     return url.href;
   } catch {
     return '';
   }
 }
 
+// Private suffixes count: on a shared host (a.myshopify.com) another tenant is another site.
+const site = (url: string) => getDomain(url, { allowPrivateDomains: true });
+
 export function pageIdentity(facts: CatalogFacts, base: string): string {
   const declared = facts.canonical_url ? catalogUrl(facts.canonical_url, base) : '';
-  const domain = getDomain(base);
-  return declared && domain && getDomain(declared) === domain ? declared : catalogUrl(base);
+  const domain = site(base);
+  return declared && domain && site(declared) === domain ? declared : catalogUrl(base);
 }
 
 export function productAlias(value: string): string {
@@ -92,19 +98,17 @@ function localizedPrice(raw: string): number | null {
   const separator = lastDot > lastComma ? '.' : ',';
   const parts = raw.split(separator);
   const fraction = parts.at(-1)!;
-  if (parts.length === 2 && /^[0-9]{1,2}$/u.test(fraction)) {
+  if (parts.length === 2 && /^\d{1,2}$/u.test(fraction)) {
     const integer = parts[0]!;
     const groups = integer.split(separator === '.' ? ',' : '.');
     if (groups.length > 1 && !validGroups(groups)) return null;
     return finitePrice(`${groups.join('')}.${fraction}`);
   }
   if (parts.length > 1) return validGroups(parts) ? finitePrice(parts.join('')) : null;
-  return /^[0-9]+$/u.test(raw) ? finitePrice(raw) : null;
+  return /^\d+$/u.test(raw) ? finitePrice(raw) : null;
 }
 function validGroups(groups: string[]): boolean {
-  return (
-    /^[0-9]{1,3}$/u.test(groups[0]!) && groups.slice(1).every((group) => /^[0-9]{3}$/u.test(group))
-  );
+  return /^\d{1,3}$/u.test(groups[0]!) && groups.slice(1).every((group) => /^\d{3}$/u.test(group));
 }
 const markerSource = policy.commerce.price_markers
   .map(([marker]) => marker!.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`))
@@ -115,7 +119,7 @@ function adjacentAmount(text: string, start: number, direction: 1 | -1): string 
   let index = start;
   while (index >= 0 && index < text.length && /\s/u.test(text[index]!)) index += direction;
   const boundary = index;
-  while (index >= 0 && index < text.length && /[0-9,.]/u.test(text[index]!)) index += direction;
+  while (index >= 0 && index < text.length && /[\d,.]/u.test(text[index]!)) index += direction;
   return direction === 1 ? text.slice(boundary, index) : text.slice(index + 1, boundary + 1);
 }
 
@@ -177,7 +181,7 @@ export function productFacts(facts: CatalogFacts, url: string) {
 }
 
 export function categoryTitle(facts: CatalogFacts, fallback: string): string {
-  const crumb = facts.commerce.breadcrumbs.filter(named).at(-1);
+  const crumb = facts.commerce.breadcrumbs.findLast(named);
   const heading = facts.headings.h1_texts.find(named);
   const title = (facts.title || fallback).split(/\||–|—|·|»| - /u)[0]!.trim();
   return (crumb || heading || (named(title) ? title : 'Uncategorized')).trim().slice(0, 255);
@@ -193,7 +197,7 @@ export function productCategories(facts: CatalogFacts, url: string, aliases: str
   const linked = new Set<number>();
   for (const link of facts.commerce.breadcrumb_links) {
     const position = crumbs.findIndex(
-      (crumb, index) => index >= cursor && normalizeName(crumb) === normalizeName(link.title),
+      (crumb, index) => index >= cursor && categoryKey(crumb) === categoryKey(link.title),
     );
     if (position < 0) continue;
     cursor = position + 1;
@@ -202,7 +206,7 @@ export function productCategories(facts: CatalogFacts, url: string, aliases: str
   }
   const ancestors = crumbs.slice(1, linked.has(crumbs.length - 1) ? undefined : -1);
   return [...new Set([...facts.structured_data.product.category, ...ancestors])].filter(
-    (name) => named(name) && !indexNames.has(normalizeName(name)),
+    (name) => named(name) && !indexNames.has(categoryKey(name)),
   );
 }
 

@@ -35,17 +35,18 @@ async def seed_catalog(
             ids.append(str(product.id))
             if not category_name:
                 continue
-            category = categories.get(category_name)
+            key = " ".join(category_name.lower().split())
+            category = categories.get(key)
             if category is None:
                 category = CommerceCategory(
                     workspace_id=project.workspace_id,
                     project_id=project.id,
                     name=category_name,
-                    normalized_name=category_name.lower(),
+                    normalized_name=key,
                 )
                 session.add(category)
                 await session.flush()
-                categories[category_name] = category
+                categories[key] = category
             session.add(
                 CommerceProductCategory(
                     workspace_id=project.workspace_id,
