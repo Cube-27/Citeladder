@@ -11,8 +11,8 @@ confirmation; [Commerce](commerce-intelligence.md) owns typed buyer targets.
 
 ## Context, topics and generation
 
-The [generation route](../backend/app/api/prompts.py) and
-[generation service](../backend/app/domain/prompts/generation.py) authorize the
+The [generation route](../frontend/services/api/src/routes/prompts.ts) and
+[generation service](../frontend/services/api/src/prompts/generation.ts) authorize the
 workspace/project, validate topic/cohort selection, gather confirmed brand
 context and optional observed demand, call the configured model, then recheck
 ownership and stage the admitted suggestions for review. A request may select
@@ -23,9 +23,9 @@ Generated prompts are **candidates**, not prompts. Each Generate request records
 a `PromptGenerationRun` (request, generator version, provenance) and pending
 `PromptCandidate` rows in [their own tables](../backend/app/models/prompt_candidate.py),
 so no audit, capacity/occupancy or visibility query can see a proposal. The
-[staging owner](../backend/app/domain/prompts/candidates.py) drops texts already
+[staging owner](../frontend/services/api/src/prompts/generation.ts) drops texts already
 tracked or already pending. The TypeScript API owns the prompt library: prompt
-sets, prompts, topics, import and candidate review
+sets, prompts, topics, import, generation and candidate review
 ([`src/prompts/`](../frontend/services/api/src/prompts/)).
 `POST /prompt-sets/{id}/candidates/review` takes `accept_ids`/`reject_ids`:
 accept runs prompt-slot occupancy
@@ -55,7 +55,7 @@ excluded pairs that never combine. Entries carry origin and review state: a
 model suggestion stays `suggested` until a person confirms it, and edits keep
 each surviving entry's provenance. When a Generate request selects confirmed
 offerings with absent or facet-empty map entries, one bounded model call
-([map suggestions](../backend/app/domain/prompts/map_suggestions.py)) proposes
+([map suggestions](../frontend/services/api/src/prompts/generation-drafts.ts)) proposes
 them; they ground that run and are stored `suggested` with model identity and
 the generation run id, only for offerings still empty at write time, and never
 naming the brand or a competitor. A failed suggestion call only means cells
@@ -81,7 +81,7 @@ provider-only labels are rejected. Configuration and [onboarding topic admission
 own these decisions, not a copied vocabulary list in documentation.
 
 Generation plans `count × GENERATION_OVERGENERATE_FACTOR`
-[cells](../backend/app/domain/prompts/generation_cells.py): per selected topic,
+[cells](../frontend/services/api/src/prompts/generation-drafts.ts): per selected topic,
 its offering plus at most two attribute, situation/constraint or audience
 entries, a target buyer stage and, for area-served businesses, a market.
 Excluded pairs never share a cell and the full product is never enumerated;
@@ -104,7 +104,7 @@ allowed labels, cohort identity, normalized exact duplicates, the shared length
 bound, topical binding, texts already tracked or pending, and exact copies of
 observed demand queries. Core queries cannot name the tracked brand, aliases or
 supplied competitors; diagnostics name the brand and comparisons also name an
-accepted competitor. [Selection](../backend/app/domain/prompts/generation_selection.py)
+accepted competitor. [Selection](../frontend/services/api/src/prompts/generation-quality.ts)
 keeps at most `count` after judgment, preferring passing judgments while treating
 uncertain and unjudged candidates equally, then spread across topic, stage, audience,
 situation, attribute and market; a
@@ -112,7 +112,7 @@ shortfall is reported, never filled. `candidates_generated` counts what passed
 admission and is never a market size. Each candidate keeps its cell in
 `evidence_refs`, copied into `generation_evidence` on accept.
 
-The [quality judge](../backend/app/domain/prompts/quality_judge.py) runs
+The [quality judge](../frontend/services/api/src/prompts/generation-quality.ts) runs
 through the [JEV connector](../backend/app/connectors/jev.py) when
 `JEV_API_KEY` is set (blank is off; the TypeSafe subprocessor and privacy
 revision was published on 28 September 2026 and production carries the key).
@@ -125,7 +125,7 @@ the thresholds it was judged under and a state hash, so an identical judgment
 already recorded in the set is reused (re-flagged for the new candidate under
 the current policy; the stored decision is never rewritten).
 
-The [gate policy](../backend/app/domain/prompts/quality_policy.py) gives each
+The [gate policy](../frontend/services/api/src/prompts/generation-quality.ts) gives each
 decision a verdict. **Fail**: a yes/no answer below `JEV_FAIL_BELOW` or a
 duplicate choice at or above `JEV_DUPLICATE_FAIL_AT`. **Uncertain**: an answer
 below `JEV_FLAG_BELOW`, a duplicate at or above `JEV_DUPLICATE_FLAG_AT`, or a

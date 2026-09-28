@@ -1,10 +1,16 @@
-import { expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { policy } from '../src/config.ts';
+import { ModelError } from '../src/models/http.ts';
+import type { JevClient } from '../src/models/jev.ts';
 import type { GenerationContext } from '../src/prompts/generation-context.ts';
 import { admitDrafts, planSlots, type Draft } from '../src/prompts/generation-drafts.ts';
 import { generationInput } from '../src/prompts/generation-input.ts';
-import { applyQualityPolicy, selectDrafts } from '../src/prompts/generation-quality.ts';
+import {
+  applyQualityPolicy,
+  judgeDrafts,
+  selectDrafts,
+} from '../src/prompts/generation-quality.ts';
 
 const context = {
   prompts: [],
@@ -31,6 +37,7 @@ it('admits category language but rejects tracked identities, placeholders and co
     'Which Rival dresses last longest?',
     'best dresses online',
     'Dresses near [city]',
+    'Are reddress maxi dresses worth it?',
   ];
   const result = admitDrafts(
     texts.map((text, index) => ({
@@ -76,6 +83,45 @@ it('never combines excluded map facets and retains hypothesis provenance', () =>
   ).toBe(true);
   expect(slots.some((slot) => slot.buyer_need.attribute === 'silk')).toBe(true);
   expect(slots[0]!.evidence_ref.evidence_type).toBe('hypothesis');
+});
+
+describe('JEV judgments', () => {
+  const answers = Object.fromEntries(
+    Object.keys(policy.models.quality.noul_questions).map((key) => [key, { noul: 0.9 }]),
+  );
+  const draft = (): Draft => ({
+    slot: planSlots(context, generationInput.parse({ count: 1 }), [])[0]!,
+    text: 'Which maxi dresses suit warm weather?',
+    hash: 'hash',
+    intent: 'purchase',
+    buyer_stage: 'decision',
+    prompt_intent: 'buy',
+  });
+  const judge = (decide: JevClient['decide']): JevClient => ({ model: 'jev-test', decide });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('reports the gate unavailable only when a judgment is missing', async () => {
+    const failed = judge(async () => {
+      throw new ModelError('http', 503);
+    });
+    expect(await judgeDrafts(context, [draft()], failed)).toBe('unavailable');
+    const incomplete = [draft()];
+    const partial = judge(async () => ({ model: 'jev-test', answers: {} }));
+    expect(await judgeDrafts(context, incomplete, partial)).toBe('gate');
+    expect(incomplete[0]!.decision?.flags).toContain(policy.models.quality.flag_incomplete);
+  });
+
+  it('records but never removes strong failures in shadow mode', async () => {
+    vi.stubEnv('JEV_MODE', 'shadow');
+    const drafts = [draft()];
+    const failing = judge(async () => ({
+      model: 'jev-test',
+      answers: { ...answers, decision_value: { noul: 0.01 } },
+    }));
+    expect(await judgeDrafts(context, drafts, failing)).toBe('shadow');
+    expect(drafts[0]!.decision).toMatchObject({ verdict: 'fail', mode: 'shadow' });
+    expect(selectDrafts(drafts, 1)).toHaveLength(1);
+  });
 });
 
 it('keeps incomplete judgments uncertain, gates strong failures and prefers passing drafts', () => {

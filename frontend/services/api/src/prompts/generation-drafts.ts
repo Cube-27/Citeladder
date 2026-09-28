@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { namesAlias } from '../analysis/aliases.ts';
 import { policy } from '../config.ts';
 import { record, strings } from '../db/json.ts';
 import { getLogger } from '../logging.ts';
@@ -14,11 +15,8 @@ const G = policy.prompts.generation;
 export const dimensions = ['attributes', 'situations', 'audiences'] as const;
 const facets = ['attribute', 'situation_or_constraint', 'audience'] as const;
 const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
-const normalized = (text: string) => words(text).join(' ');
 const containsName = (text: string, names: readonly string[]) =>
-  names.some(
-    (name) => normalized(name) && ` ${normalized(text)} `.includes(` ${normalized(name)} `),
-  );
+  names.some((name) => namesAlias(text, name));
 const stem = (token: string) => token.replace(/(?<=[sxz]|ch|sh)es$/u, '').replace(/(?<!s)s$/u, '');
 
 function brandTerms(context: GenerationContext): string[] {
@@ -221,14 +219,15 @@ export function admitDrafts(
     const slot = slots.find((item) => item.slot_id === row.slot_id);
     const text = row.text.trim().replace(/\s+/gu, ' '),
       hash = promptTextHash(text);
+    // Unplannable rows and duplicates are counted like Python's parser did;
+    // content filters below reject without counting.
     if (
       !slot ||
       usedSlots.has(slot.slot_id) ||
       !slot.allowed_prompt_intents.includes(row.prompt_intent) ||
-      !G.stages.includes(row.buyer_stage)
-    )
-      continue;
-    if (seen.has(hash)) {
+      !G.stages.includes(row.buyer_stage) ||
+      seen.has(hash)
+    ) {
       dropped++;
       continue;
     }

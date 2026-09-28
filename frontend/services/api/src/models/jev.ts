@@ -7,6 +7,7 @@ import {
   endpointUrl,
   ModelError,
   modelJson,
+  parseEndpoint,
   postModel,
   providerErrorCode,
   type Transport,
@@ -17,7 +18,7 @@ export function jevSettings(env: Record<string, string | undefined> = process.en
   const setting = (name: keyof typeof spec) => resolveSettingSpec(spec[name], env);
   return {
     apiKey: String(setting('api_key')).trim(),
-    baseUrl: String(setting('base_url')),
+    baseUrl: String(setting('base_url')).trim(),
     model: String(setting('model')),
     timeoutSeconds: Number(setting('timeout_seconds')),
     attempts: Number(setting('max_attempts')),
@@ -33,7 +34,7 @@ const decision = z.object({
 
 export function createJevClient(settings = jevSettings(), transport: Transport = defaultTransport) {
   if (!settings.apiKey) return null;
-  const endpoint = new URL(settings.baseUrl);
+  const endpoint = parseEndpoint(settings.baseUrl);
   if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password) {
     throw new ModelError('not_configured');
   }

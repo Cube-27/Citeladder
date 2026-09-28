@@ -9,6 +9,15 @@ export function providerErrorCode(status: number) {
 /** Rate limits and transient gateway failures; never a deterministic 4xx/5xx. */
 export const transientStatus = (status: number) => [429, 500, 502, 503, 504].includes(status);
 
+/** A configured endpoint URL; an unparseable value is a configuration error. */
+export function parseEndpoint(baseUrl: string) {
+  try {
+    return new URL(baseUrl);
+  } catch {
+    throw new ModelError('not_configured');
+  }
+}
+
 /** `base` without trailing slashes, joined to an absolute `path`. */
 export function endpointUrl(base: string, path: string) {
   let end = base.length;

@@ -597,8 +597,8 @@ Lock order and shared writers:
   account capacity. Every provider/JEV call occurs outside a transaction.
 - Commerce takes capacity only, never project/set locks afterward. The unique
   normalized prompt hash and case-insensitive topic index remain final guards.
-- Python onboarding still creates prompt sets; Python Agent still increments
-  `agent.provider_call`. Both stacks share the existing usage-window row format.
+- Python onboarding still creates prompt sets. `agent.provider_call` is now
+  TS-only (Python Agent counts `agent.runs`) in the shared usage-window format.
 - Business-map suggestions are merged under the project lock and profile row,
   only where the still-confirmed offering remains facet-empty.
 
@@ -622,7 +622,14 @@ Departures:
 - Blank Commerce manual text is rejected after trimming. Generation skips texts
   already tracked in the Commerce set, so a repeat run is not a 409.
 - The gateway refuses plain-HTTP endpoints other than loopback, and a JEV
-  deadline also interrupts retry backoff.
+  deadline also interrupts retry backoff. A model call retries transient
+  statuses within one `timeout_seconds` envelope (Python made a single attempt).
+- Commerce prompts use the shared 300-character prompt cap (Python's manual
+  schema allowed 2000); an over-long generated item is dropped individually.
+- The model receives slots and reference evidence as one JSON payload rather
+  than Python's labeled message; admission still rejects verbatim observed
+  queries and tracked names. Selection diversifies by offering too, and review
+  lists pending candidates in staging order, without shadow-last ranking.
 - Calibration sweep values and JEV retry cap moved to configuration; the unused
   Python `prompt_generation_settings` singleton is removed. The settings class
   remains the exported policy authority.

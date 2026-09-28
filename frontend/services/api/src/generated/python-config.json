@@ -3481,6 +3481,7 @@
         "service_areas",
         "buyer_roles"
       ],
+      "accepted": "accepted",
       "off_topic": "prompt_off_topic",
       "vocabulary_empty": "binding_vocabulary_empty"
     }

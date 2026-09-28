@@ -208,7 +208,6 @@ export async function judgeDrafts(
           rank_score: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
           usage: result.usage ?? {},
         });
-        if ((draft.decision.flags as string[]).includes(Q.flag_incomplete)) unavailable = true;
       } catch (error) {
         unavailable = true;
         if (deadline.aborted) pendingAtDeadline++;

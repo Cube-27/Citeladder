@@ -192,7 +192,7 @@ COMMERCE_VISIBLE_PRICE_AMBIGUOUS_TOKENS: Final = (
 # Same lesson the visibility portfolio already learned: a small model follows
 # examples far more reliably than prohibitions, so the register is set by
 # exemplars here and the known failure modes are rejected deterministically in
-# `domain/commerce/buyer_prompt_validation.py`.
+# the TS Commerce owner (`src/commerce/buyer-prompts.ts`).
 COMMERCE_BUYER_PROMPT_MIN_WORDS: Final = 4
 COMMERCE_BUYER_PROMPT_MAX_WORDS: Final = 24
 # How much of the shelf the model is shown. Enough to make the vertical

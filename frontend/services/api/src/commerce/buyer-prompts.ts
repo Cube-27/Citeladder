@@ -11,12 +11,13 @@ import { admitPrompts } from '../entitlements/occupancy.ts';
 import { ApiError } from '../errors.ts';
 import { createModelGateway, type ModelGateway } from '../models/gateway.ts';
 import { ModelError } from '../models/http.ts';
+import { bindingTokens } from '../prompts/binding.ts';
 import { promptTextHash } from '../prompts/normalization.ts';
 import { buyerPrompts, commerceMissing, type CommerceScope } from './reads.ts';
 
 const P = policy.commerce.buyer_prompts;
 const COMMERCE_SET_NAME = 'Commerce Buyer Prompts';
-const stringField = (value: unknown) => (typeof value === 'string' ? value : '');
+const stringField = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 const targetSchema = z.object({ kind: z.enum(['product', 'category']), id: z.uuid() });
 type Target = z.infer<typeof targetSchema>;
 export const buyerGenerateInput = z.object({
@@ -94,12 +95,6 @@ type TargetContext = Awaited<ReturnType<typeof targetContext>>;
 /** `tracked` holds normalized hashes already in the set or kept for this request. */
 function admittedTexts(texts: string[], context: TargetContext, tracked: Set<string>) {
   const words = (text: string) => text.toLowerCase().match(/[a-z0-9']+/gu) ?? [];
-  const tokens = (text: string) =>
-    words(text.normalize('NFKD').replaceAll(/\P{ASCII}/gu, '')).filter(
-      (word) =>
-        word.length >= policy.prompts.binding.min_token_chars &&
-        !policy.prompts.binding.stopwords.includes(word),
-    );
   const vocabulary = new Set(
     [
       context.sells,
@@ -108,7 +103,7 @@ function admittedTexts(texts: string[], context: TargetContext, tracked: Set<str
       ...(context.target_kind === 'product'
         ? [context.name, 'description' in context ? context.description : '']
         : []),
-    ].flatMap(tokens),
+    ].flatMap((value) => [...bindingTokens(value)]),
   );
   const admitted: string[] = [],
     seen = new Set<string>(),
@@ -121,6 +116,7 @@ function admittedTexts(texts: string[], context: TargetContext, tracked: Set<str
       opening = parts.slice(0, 3).join(' ');
     const hash = promptTextHash(text);
     if (
+      text.length > policy.prompts.text_max_chars ||
       parts.length < P.min_words ||
       parts.length > P.max_words ||
       P.survey_markers.some((marker) => lower.includes(marker)) ||
@@ -129,7 +125,8 @@ function admittedTexts(texts: string[], context: TargetContext, tracked: Set<str
       (openings.get(opening) ?? 0) >= 2
     )
       continue;
-    if (vocabulary.size && !tokens(text).some((token) => vocabulary.has(token))) continue;
+    if (vocabulary.size && ![...bindingTokens(text)].some((token) => vocabulary.has(token)))
+      continue;
     if (
       [context.brand, ...(context.target_kind === 'product' ? [context.name] : [])].some(
         (name) => name.trim() && lower.includes(name.trim().toLowerCase()),
@@ -287,7 +284,9 @@ async function persist(db: Database, scope: CommerceScope, batches: Batch[]) {
           ),
         );
     }
-    return (await buyerPrompts(trx, scope)).filter((row) => ids.includes(row.id));
+    // Same-timestamp rows read back in random-id order; return generation order.
+    const views = new Map((await buyerPrompts(trx, scope)).map((row) => [row.id, row]));
+    return ids.flatMap((id) => views.get(id) ?? []);
   });
 }
 
@@ -333,11 +332,8 @@ export async function generateBuyerPrompts(
       const response = await gateway.structured(
         systems[context.business_model] ?? systems['']!,
         JSON.stringify({ count: input.count, context }),
-        z.object({
-          prompts: z.array(
-            z.object({ text: z.string().min(1).max(policy.prompts.text_max_chars) }),
-          ),
-        }),
+        // Unusable items are dropped one by one during admission, never the batch.
+        z.object({ prompts: z.array(z.object({ text: z.string() })) }),
       );
       const texts = admittedTexts(
         response.value.prompts.map((row) => row.text),

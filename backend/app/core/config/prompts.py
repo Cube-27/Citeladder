@@ -132,7 +132,7 @@ TOPICAL_BINDING_MIN_TOKEN_CHARS: Final = 3
 # Generic English function/question/commerce words plus legal-suffix and
 # host-label noise excluded from BOTH sides of the binding match, so a prompt
 # can never pass on generic wording alone. One owner (invariant 1);
-# ``domain/prompts/topical_binding.py`` reads it, nothing re-lists these.
+# the TS binding owner (``src/prompts/binding.ts``) reads it via the export.
 TOPICAL_BINDING_STOPWORDS: Final[frozenset[str]] = frozenset(
     {
         # Function words.
@@ -428,7 +428,7 @@ class PromptGenerationSettings(BaseSettings):
 
     model_config = SettingsConfigDict(extra="ignore")
 
-    # ``ge=1`` floors mirror ``PromptGenerateRequest.count``'s ``ge=1``: a
+    # ``ge=1`` floors mirror the TS generation request's ``count`` floor: a
     # zero/negative env override would otherwise produce an unrequestable
     # default or an always-rejecting cap, so fail at settings construction.
     default_count: int = Field(

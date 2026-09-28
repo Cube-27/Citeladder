@@ -90,6 +90,9 @@ describe('configured model gateway', () => {
     });
     expect(io.fetch).toHaveBeenCalledTimes(1);
     expect(() => createModelGateway(gatewaySettings({}), io)).toThrow('not_configured');
+    expect(() => createModelGateway({ ...settings, baseUrl: 'model.test/v1' }, io)).toThrow(
+      'not_configured',
+    );
     const plain = { ...settings, baseUrl: 'http://model.test/v1' };
     expect(() => createModelGateway(plain, io)).toThrow('not_configured');
     expect(() =>

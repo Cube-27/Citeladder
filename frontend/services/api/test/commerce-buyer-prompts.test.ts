@@ -129,7 +129,8 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
               prompts: [
                 { text: 'best running shoes for wet trails' },
                 { text: 'waterproof trail shoes for muddy hikes' },
-                { text: 'which trail running shoes grip wet rocks' },
+                // Binds only through the plural fold: "shoe" meets "shoes".
+                { text: 'best waterproof shoe for rainy commutes' },
               ],
             }),
           },
@@ -143,11 +144,8 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
     buyerGenerateInput.parse({ targets: [target], count: 2 }),
     gateway,
   );
-  expect(repeat.map((row) => row.text)).toEqual(
-    expect.arrayContaining([
-      'waterproof trail shoes for muddy hikes',
-      'which trail running shoes grip wet rocks',
-    ]),
-  );
-  expect(repeat).toHaveLength(2);
+  expect(repeat.map((row) => row.text)).toEqual([
+    'waterproof trail shoes for muddy hikes',
+    'best waterproof shoe for rainy commutes',
+  ]);
 });

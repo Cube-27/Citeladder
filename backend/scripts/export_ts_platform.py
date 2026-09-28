@@ -233,11 +233,12 @@ def _setting(name: str, model: type[BaseSettings] = Settings) -> dict[str, Any]:
     prefix = str(model.model_config.get("env_prefix") or "")
     entry: dict[str, Any] = {"env": _env_names(name, field, prefix)}
     entry.update(_type_descriptor(field.annotation))
-    entry["default"] = (
-        field.default.get_secret_value()
-        if isinstance(field.default, SecretStr)
-        else field.default
-    )
+    entry["default"] = field.default
+    if isinstance(field.default, SecretStr):
+        # The export is committed: only an unset secret may be written.
+        if field.default.get_secret_value():
+            raise ValueError(f"{name} has a non-empty secret default")
+        entry["default"] = ""
     # Pydantic records ``Field(ge=..., gt=..., le=...)`` as metadata objects
     # that expose those attributes.
     for constraint in field.metadata:
@@ -463,6 +464,7 @@ def _prompts_policy() -> dict[str, Any]:
             "business_context_fields": list(
                 cfg.PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS
             ),
+            "accepted": cfg.BINDING_CODE_ACCEPTED,
             "off_topic": cfg.CODE_PROMPT_OFF_TOPIC,
             "vocabulary_empty": cfg.CODE_BINDING_VOCABULARY_EMPTY,
         },

@@ -7,6 +7,7 @@ import {
   endpointUrl,
   ModelError,
   modelJson,
+  parseEndpoint,
   postModel,
   providerErrorCode,
   transientStatus,
@@ -74,7 +75,7 @@ export function createModelGateway(
   if (![settings.apiKey, settings.baseUrl, settings.model].every((part) => part.trim())) {
     throw new ModelError('not_configured');
   }
-  const endpoint = new URL(settings.baseUrl);
+  const endpoint = parseEndpoint(settings.baseUrl);
   // Plain HTTP would expose the key and business context; allow it only locally.
   const secure =
     endpoint.protocol === 'https:' ||
@@ -87,6 +88,8 @@ export function createModelGateway(
   const url = endpointUrl(settings.baseUrl, '/chat/completions');
   async function complete(system: string, user: string) {
     const started = performance.now();
+    // Retries share one call's timeout, the envelope of a single provider call.
+    const deadline = AbortSignal.timeout(settings.timeoutSeconds * 1000);
     const send = (legacy: boolean) =>
       postModel(
         url,
@@ -101,6 +104,7 @@ export function createModelGateway(
         },
         retry,
         transport,
+        deadline,
       );
     let response = await send(legacyCap);
     if (

@@ -55,6 +55,30 @@ function normalize(text: string): string {
 
 const eligible = (token: string) => token.length >= MIN_TOKEN && !STOPWORDS.has(token);
 
+/**
+ * Fold a word so it matches its own plural. "-ies" folds to "y" first, so
+ * "accessories" meets "accessory"; "-ie" keeps "movie"/"movies" together;
+ * "-es" is stripped only after a sibilant ("dresses" → "dress", "shoes" →
+ * "shoe"); a bare "s" is dropped unless doubled.
+ */
+function stem(token: string): string {
+  if (token.length > 4 && token.endsWith('ies')) return `${token.slice(0, -3)}y`;
+  if (token.length > 3 && token.endsWith('ie')) return `${token.slice(0, -2)}y`;
+  if (
+    token.length > 4 &&
+    token.endsWith('es') &&
+    ('sxz'.includes(token.at(-3)!) || ['ch', 'sh'].includes(token.slice(-4, -2)))
+  )
+    return token.slice(0, -2);
+  if (token.length > 3 && token.endsWith('s') && !token.endsWith('ss')) return token.slice(0, -1);
+  return token;
+}
+
+/** Comparable topic tokens for `text`, plural-folded, for "is this about that" checks. */
+export function bindingTokens(text: string): Set<string> {
+  return new Set(tokensOf(text).map(stem));
+}
+
 function tokensOf(text: string): string[] {
   const normalized = normalize(text);
   return normalized ? normalized.split(' ').filter(eligible) : [];

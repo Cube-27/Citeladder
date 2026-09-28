@@ -15,7 +15,12 @@ import {
   type OfferingMap,
 } from './generation-context.ts';
 import { dimensions, draftCallLimit, generateDrafts, type Draft } from './generation-drafts.ts';
-import { generationSetting, validateSelection, type GenerationInput } from './generation-input.ts';
+import {
+  generationSetting,
+  validateSelection,
+  wantedTopics,
+  type GenerationInput,
+} from './generation-input.ts';
 import { gatedOut, judgeDrafts, selectDrafts } from './generation-quality.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
@@ -52,7 +57,10 @@ function candidateRow(draft: Draft, { workspaceId, setId, runId, cohort, now }: 
     cohort,
     slot_id: draft.slot.slot_id,
     evidence_refs: JSON.stringify([draft.slot.evidence_ref]),
-    validation: JSON.stringify({ admission: 'passed' }),
+    validation: JSON.stringify({
+      admission: 'passed',
+      topical_binding: policy.prompts.binding.accepted,
+    }),
     jev_decision: draft.decision ? JSON.stringify(draft.decision) : null,
     disposition: gated ? 'gate_rejected' : 'pending',
     prompt_id: null,
@@ -160,7 +168,10 @@ async function stage(
       buyer_query_policy_version: policy.prompts.generation.policy_version,
       generation_mode: revision ? 'agent_proposal' : 'model',
       requested_count: input.count,
+      requested_topic_ids: wantedTopics(input),
+      requested_intents: input.intents.filter(Boolean),
       cohort: input.cohort,
+      business_map_suggested_offerings: output.maps.map((map) => map.offering),
       model_results: output.models,
       quality_gate: gate,
       candidates_generated: output.drafts.length,
