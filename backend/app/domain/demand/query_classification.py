@@ -7,5 +7,5 @@ _TOKEN_RE = re.compile(r"[\w]+", re.UNICODE)
 
 
 def normalize_query(value: str) -> str:
-    normalized = unicodedata.normalize("NFKC", value).casefold()
+    normalized = unicodedata.normalize("NFKC", value).lower()
     return " ".join(_TOKEN_RE.findall(normalized))

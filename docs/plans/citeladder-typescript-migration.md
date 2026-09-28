@@ -619,8 +619,9 @@ old rule left behind was deleted:
   Python-owned families against FastAPI.
 
 Departure: query keys, prompt-text hashes and Action query group keys now
-lower-case instead of casefolding. They differ from Python only for the few
-characters where the two differ (such as `ß`), until those Python readers move.
+lower-case instead of casefolding. The Python prompt-text hash and query
+normalizer switched to plain `lower()` too, so both stacks agree on the simple
+rule (no stored data needed preserving).
 
 Open for the owner: five TypeScript families (executions, visibility,
 ai-referrals, opportunities, actions) still declare TS-side response schemas
