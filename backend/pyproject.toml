@@ -17,7 +17,7 @@ dependencies = [
   "logfire[fastapi,httpx,sqlalchemy,system-metrics]>=4.20.0,<6",
   "lxml>=6.1.0,<7",
   "mcp>=2,<3",
-  "protego>=0.6.2,<1",
+  "protego>=0.7.0,<1",
   # Imported directly by ~30 modules but declared nowhere until the `deptry`
   # gate found it: both arrived only because FastAPI/pydantic-settings happened
   # to pull them in, so a FastAPI bump narrowing either range would have broken
@@ -30,7 +30,7 @@ dependencies = [
   # the app, not just the two upload routes.
   "python-multipart>=0.0.31,<1",
   "reportlab>=5.0.0",
-  "sqlalchemy[asyncio]>=2.0.43,<3",
+  "sqlalchemy[asyncio]>=2.1.1,<3",
   # See the pydantic note above; `app/main.py` imports StarletteHTTPException.
   # Range pinned to the version FastAPI already resolved -- a wider floor
   # silently downgraded it.

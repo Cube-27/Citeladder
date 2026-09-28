@@ -45,8 +45,8 @@ describe('PromptTable pagination', () => {
     expect(screen.queryByRole('columnheader', { name: 'Branded' })).not.toBeInTheDocument();
     expect(screen.queryByText('Branded')).not.toBeInTheDocument();
     const question = screen.getByText('Prompt number 1');
-    expect(question).toHaveTextContent(/Stage: Consideration/);
-    expect(question).toHaveTextContent(/Intent: Discovery/);
+    expect(question.textContent).toMatch(/Stage: Consideration/);
+    expect(question.textContent).toMatch(/Intent: Discovery/);
     await userEvent.setup().tab();
     expect(question).toHaveFocus();
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Discovery');

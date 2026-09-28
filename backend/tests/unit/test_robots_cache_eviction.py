@@ -246,14 +246,11 @@ async def test_concurrent_ensure_deduplicates_fetch_and_exposes_cached_delay() -
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("declared", ["86400", "inf"])
-async def test_pacing_delay_never_exceeds_the_supported_maximum(declared) -> None:
+async def test_pacing_delay_never_exceeds_the_supported_maximum() -> None:
     # The host gate sleeps for this value while heartbeating the lease; an
-    # unclamped robots delay would park worker lanes for a day or forever.
+    # unclamped robots delay would park worker lanes for a day.
     cache = _result_cache(
-        _ResultFetcherFactory(
-            status=200, body=f"User-agent: *\nCrawl-delay: {declared}\n".encode()
-        )
+        _ResultFetcherFactory(status=200, body=b"User-agent: *\nCrawl-delay: 86400\n")
     )
     authority = "https://example.com:443"
     policy, _, _ = await cache.ensure(authority)
@@ -261,6 +258,27 @@ async def test_pacing_delay_never_exceeds_the_supported_maximum(declared) -> Non
     assert (
         cache.crawl_delay(f"{authority}/page")
         == site_health_settings.max_crawl_delay_seconds
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("declared", ["inf", "nan", "-5"])
+async def test_non_finite_or_negative_crawl_delay_is_ignored_as_malformed(
+    declared,
+) -> None:
+    # RFC 9309 §2.2: a malformed line is ignored, so the host is paced as if
+    # no Crawl-delay were declared rather than paused.
+    cache = _result_cache(
+        _ResultFetcherFactory(
+            status=200, body=f"User-agent: *\nCrawl-delay: {declared}\n".encode()
+        )
+    )
+    authority = "https://example.com:443"
+    policy, _, _ = await cache.ensure(authority)
+    assert policy.can_fetch(f"{authority}/page")
+    assert (
+        cache.crawl_delay(f"{authority}/page")
+        == site_health_settings.default_crawl_delay_seconds
     )
 
 

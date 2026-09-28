@@ -213,7 +213,7 @@ describe('IntegrationSettings — grant cards', () => {
     expect(await within(googleCard).findByText('sc-domain:example.com')).toBeInTheDocument();
     expect(within(googleCard).getByText('properties/123456789')).toBeInTheDocument();
     const lastSynced = googleCard.querySelector('time[datetime="2026-07-23T04:12:00Z"]');
-    expect(lastSynced).toHaveTextContent(/Jul 23, 2026.*09:42/);
+    expect(lastSynced?.textContent).toMatch(/Jul 23, 2026.*09:42/);
 
     const msCard = screen.getByTestId('grant-card-microsoft');
     expect(within(msCard).getByText('Bing Webmaster Tools')).toBeInTheDocument();
@@ -455,7 +455,7 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Google connected.');
-    expect(alert).toHaveTextContent(/shared OAuth grant/i);
+    expect(alert.textContent).toMatch(/shared OAuth grant/i);
     await waitFor(() =>
       expect(replaceState).toHaveBeenCalledWith(null, '', '/settings?tab=integrations'),
     );
@@ -470,7 +470,7 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
     expect(alert).toHaveTextContent('Bing connected.');
     // Connecting queues nothing — the import starts when a property is
     // picked — so the notice says what the reader must do next.
-    expect(alert).toHaveTextContent(/select a property/i);
+    expect(alert.textContent).toMatch(/select a property/i);
     expect(alert).not.toHaveTextContent('AI Referrals');
   });
 

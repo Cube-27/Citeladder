@@ -1,4 +1,4 @@
-FROM node@sha256:e961046fec20896e8904f2b4a8b4c7e5ca91826d84d8d33d83dbaa61f942069e AS dependencies
+FROM node@sha256:a723b54c35a76e947095a20a67d39585bb09c862e6b1adeb8a9f518f95e34fb0 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -10,7 +10,7 @@ COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml 
 COPY frontend/packages/contracts/package.json ./packages/contracts/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-FROM node@sha256:e961046fec20896e8904f2b4a8b4c7e5ca91826d84d8d33d83dbaa61f942069e AS builder
+FROM node@sha256:a723b54c35a76e947095a20a67d39585bb09c862e6b1adeb8a9f518f95e34fb0 AS builder
 
 ARG NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS
 ARG NEXT_PUBLIC_BOOTSTRAP_READ_TIMEOUT_MS
@@ -36,7 +36,7 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
 RUN pnpm build:vite
 
-FROM caddy@sha256:13ba145cba2f3e28fa801994876e4c086d1b95d5aa2a520a734765ffb6b12017 AS runtime
+FROM caddy@sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52 AS runtime
 
 COPY frontend/apps/app/Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /app/apps/app/dist /srv

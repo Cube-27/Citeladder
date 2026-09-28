@@ -120,7 +120,7 @@ class PostgresTaskQueue[
         limit: int,
         kinds: Sequence[str] | None,
         queue_name: str,
-    ) -> Select[tuple[T]]:
+    ) -> Select[T]:
         """The locking SELECT one claim runs.
 
         Lock eligible rows and skip any another worker already holds. The
