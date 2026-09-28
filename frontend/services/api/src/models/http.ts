@@ -3,10 +3,12 @@ import { setTimeout } from 'node:timers/promises';
 export class ModelError extends Error {
   readonly code: 'not_configured' | 'parse' | 'http' | 'connection';
   readonly status: number | undefined;
-  constructor(code: ModelError['code'], status?: number) {
+  readonly retryAfter: string | undefined;
+  constructor(code: ModelError['code'], status?: number, retryAfter?: string) {
     super(status === undefined ? `Model ${code}` : `Model returned HTTP ${status}`);
     this.code = code;
     this.status = status;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -72,7 +74,18 @@ export async function postModel(
 }
 
 export async function modelJson(response: Response): Promise<unknown> {
-  if (!response.ok) throw new ModelError('http', response.status);
+  if (!response.ok) {
+    const header = response.headers.get('retry-after');
+    const numeric = header === null ? NaN : Number(header);
+    const seconds = Number.isFinite(numeric)
+      ? numeric
+      : (Date.parse(header ?? '') - Date.now()) / 1000;
+    throw new ModelError(
+      'http',
+      response.status,
+      Number.isFinite(seconds) ? String(Math.max(1, Math.ceil(seconds))) : undefined,
+    );
+  }
   try {
     return await response.json();
   } catch {

@@ -90,6 +90,17 @@ export function createModelGateway(
       response = await send(true);
       if (response.ok) legacyCap = true;
     }
+    if (!response.ok)
+      logger.warning('default agent call failed', {
+        status: response.status,
+        model: settings.model,
+        error_code:
+          response.status === 429
+            ? 'rate_limit'
+            : response.status >= 500
+              ? 'server_error'
+              : 'client_error',
+      });
     const parsed = completion.safeParse(await modelJson(response));
     if (!parsed.success) throw new ModelError('parse');
     const body = parsed.data;

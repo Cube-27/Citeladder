@@ -509,6 +509,3 @@ class PromptGenerationSettings(BaseSettings):
             "GENERATION_REVIEW_MAX_IDS", "generation_review_max_ids"
         ),
     )
-
-
-prompt_generation_settings = PromptGenerationSettings()

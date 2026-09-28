@@ -19,7 +19,7 @@ from typing import Any
 import httpx
 
 from app.connectors.answer_engines.errors import ProviderError, parse_retry_after
-from app.core.config.jev import JevSettings, jev_settings
+from app.core.config.jev import JEV_RETRY_AFTER_CAP_SECONDS, JevSettings, jev_settings
 from app.core.config.provider_catalog import (
     ERROR_AUTH,
     ERROR_CLIENT,
@@ -35,7 +35,6 @@ logger = logging.getLogger(__name__)
 _DECIDE_PATH = "/v1/systemone"
 _OVERLOADED = 529
 _UNAVAILABLE = 503
-_RETRY_AFTER_CAP_SECONDS = 10.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,7 +147,7 @@ class JevClient:
         backoff = self._backoff * (2 ** (attempt - 1))
         if retry_after is None:
             return backoff
-        return min(max(backoff, retry_after), _RETRY_AFTER_CAP_SECONDS)
+        return min(max(backoff, retry_after), JEV_RETRY_AFTER_CAP_SECONDS)
 
     async def _once(self, body: dict[str, Any]) -> JevDecision:
         try:

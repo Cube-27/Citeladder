@@ -24,7 +24,6 @@ from app.api.mcp_connections import router as mcp_connections_router
 from app.api.oauth import router as oauth_router
 from app.api.performance import router as performance_router
 from app.api.projects import router as projects_router
-from app.api.prompts import router as prompts_router
 from app.api.provider_connections import (
     catalog_router as provider_catalog_router,
 )
@@ -70,7 +69,6 @@ _ROUTERS = (
     workspaces_router,
     projects_router,
     brand_discoveries_router,
-    prompts_router,
     provider_connections_router,
     provider_catalog_router,
     audits_router,

@@ -134,7 +134,25 @@ export async function generationContext(
           .limit(input.count)
           .execute()
       : [];
-    const business = { ...record(profile?.business_context), products_services: offerings };
+    const persistedBusiness = record(profile?.business_context);
+    const fieldSources = { ...record(persistedBusiness.field_sources) };
+    for (const field of ['description', 'positioning', 'products_services', 'target_audience']) {
+      const source = record(record(profile?.sources)[field]);
+      if (Object.keys(source).length)
+        fieldSources[field] = ['confirmed', 'edited'].includes(String(source.review_state))
+          ? 'reviewed'
+          : 'inferred';
+    }
+    const business = {
+      ...persistedBusiness,
+      products_services: offerings,
+      description: profile?.description ?? '',
+      positioning: profile?.positioning ?? '',
+      target_audience: profile?.target_audience ?? '',
+      primary_market: project.country_code || project.primary_market,
+      language_code: project.language_code,
+      field_sources: fieldSources,
+    };
     const maps = z
       .object({ offerings: z.array(offeringMapSchema).default([]) })
       .parse(record(business).business_map ?? {}).offerings;

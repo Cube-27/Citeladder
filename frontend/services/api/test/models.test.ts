@@ -69,6 +69,20 @@ describe('configured model gateway', () => {
     expect(io.sleep.mock.calls.map(([delay]) => delay)).toEqual([7000, 4000]);
   });
 
+  it('preserves a bounded retry hint when provider retries are exhausted', async () => {
+    const io = transport(
+      Array.from(
+        { length: settings.attempts },
+        () => new Response(null, { status: 429, headers: { 'retry-after': '12' } }),
+      ),
+    );
+    await expect(createModelGateway(settings, io).complete('s', 'u')).rejects.toMatchObject({
+      status: 429,
+      retryAfter: '12',
+    });
+    expect(io.fetch).toHaveBeenCalledTimes(settings.attempts);
+  });
+
   it('refuses unparseable output and missing configuration without retry', async () => {
     const io = transport([Response.json({ choices: [] })]);
     await expect(createModelGateway(settings, io).complete('s', 'u')).rejects.toMatchObject({

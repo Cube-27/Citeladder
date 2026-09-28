@@ -238,7 +238,10 @@ export async function generatePrompts(
     if (error.code === 'not_configured')
       throw new ApiError(503, 'Default model is not configured', { code: 'agent_not_configured' });
     if (error.status === 429)
-      throw new ApiError(429, 'Model provider is rate limited', { code: 'rate_limited' });
+      throw new ApiError(429, 'Model provider is rate limited', {
+        code: 'rate_limited',
+        headers: error.retryAfter ? { 'retry-after': error.retryAfter } : undefined,
+      });
     throw new ApiError(502, 'Model generation failed', {
       code: error.code === 'parse' ? 'generation_unparseable' : 'agent_call_failed',
     });
