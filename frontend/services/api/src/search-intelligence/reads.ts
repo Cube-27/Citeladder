@@ -176,7 +176,8 @@ function sortKey(sort: string): RawBuilder<unknown> {
 }
 
 /** User text matched literally: `%`, `_` and `\` are not wildcards. */
-const containsPattern = (text: string) => `%${text.replaceAll(/[\\%_]/gu, String.raw`\$&`)}%`;
+const ESCAPED_MATCH = String.raw`\$&`;
+const containsPattern = (text: string) => `%${text.replaceAll(/[\\%_]/gu, ESCAPED_MATCH)}%`;
 
 function matchingRows(
   db: Database,
