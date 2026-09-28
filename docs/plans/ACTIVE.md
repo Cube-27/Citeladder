@@ -44,8 +44,10 @@
   every golden file and parity check before PR 8. PR 8 is split into 8a
   (Search Intelligence, implemented on 28 September 2026; review creation and
   acquisition stay Python) and 8b (database-only Commerce, implemented on
-  28 September 2026). Deployment of PRs 3–8b and their one-week
-  cutover soaks are pending.
+  28 September 2026). PR 9 is split: 9a (brand profile, business map,
+  competitor suggestions and logo reads) is implemented on 28 September 2026;
+  project CRUD stays Python behind entitlements. Deployment of PRs 3–9a and
+  their one-week cutover soaks are pending.
   Site Health, audits, billing/entitlements and the Agent runtime stay Python.
 
 ## Queued

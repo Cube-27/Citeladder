@@ -43,7 +43,7 @@ Topics may have one level of subtopics (`Topic.parent_id`, same project); a
 subtopic cannot have children, and deleting a parent promotes its subtopics.
 The topic rail adds a subtopic under a chosen top-level topic.
 
-The [business map](../backend/app/domain/projects/business_map.py), edited under
+The [business map](../frontend/services/api/src/projects/business-map.ts), edited under
 Brand knowledge and stored in `BusinessContext.business_map`, lists per
 confirmed offering its attributes, situations/constraints and audiences, plus
 excluded pairs that never combine. Entries carry origin and review state: a
