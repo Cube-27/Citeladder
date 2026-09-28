@@ -20,7 +20,6 @@ from app.core.config.provider_catalog import (
 )
 from app.core.security import encrypt_secret
 from app.domain.demand.search_intelligence import executor, service
-from app.models.analytics import AnalyticsTask
 from app.models.brand import Competitor
 from app.models.project import Project
 from app.models.provider import ProviderConnection
@@ -34,6 +33,7 @@ from app.orchestration import provider_capacity
 from app.orchestration.executor_errors import CapacityWaitError
 from app.orchestration.provider_capacity import CapacityDecision
 from tests.component.auth_helpers import register_and_login
+from tests.component.search_intelligence_helpers import queue_confirmed_run
 
 
 async def connected_project(client, db_session):
@@ -78,14 +78,7 @@ async def test_explicit_429_retries_with_durable_attempts(
     )
     assert review.status_code == 201, review.text
     run_id = uuid.UUID(review.json()["id"])
-    assert (
-        await client.post(f"{base}/runs/{run_id}/confirm", json={})
-    ).status_code == 202
-    async with session_factory() as session:
-        run = await session.get(SearchIntelligenceRun, run_id)
-        assert run is not None
-        task = await session.get(AnalyticsTask, run.analytics_task_id)
-        assert task is not None
+    task = await queue_confirmed_run(session_factory, run_id)
 
     rate_error = ProviderError(
         "rate limited",
@@ -188,14 +181,7 @@ async def test_lost_live_call_stays_uncertain_without_resend(
         },
     )
     run_id = uuid.UUID(review.json()["id"])
-    assert (
-        await client.post(f"{base}/runs/{run_id}/confirm", json={})
-    ).status_code == 202
-    async with session_factory() as session:
-        run = await session.get(SearchIntelligenceRun, run_id)
-        assert run is not None
-        task = await session.get(AnalyticsTask, run.analytics_task_id)
-        assert task is not None
+    task = await queue_confirmed_run(session_factory, run_id)
     monkeypatch.setattr(
         executor,
         "acquire_provider_capacity",
@@ -295,16 +281,12 @@ async def test_saved_response_preserves_cost_and_result_state(
     )
     assert review.status_code == 201, review.text
     run_id = uuid.UUID(review.json()["id"])
-    confirmed = await client.post(f"{base}/runs/{run_id}/confirm", json={})
-    assert confirmed.status_code == 202
+    task = await queue_confirmed_run(session_factory, run_id)
     body = {"tasks": [{"result": [result] if result is not None else None}]}
     paid_call = AsyncMock(
         return_value=ResearchResponse(body, "saved-response", "task", Decimal("0.01"))
     )
     monkeypatch.setattr(executor, "execute_live", paid_call)
-    async with session_factory() as session:
-        run = await session.get(SearchIntelligenceRun, run_id)
-        task = await session.get(AnalyticsTask, run.analytics_task_id)
     await executor.execute_search_intelligence(session_factory, task)
     async with session_factory() as session:
         run = await session.get(SearchIntelligenceRun, run_id)
@@ -349,8 +331,10 @@ async def test_review_inherits_market_and_freezes_resolved_competitor(
 
     resolver = AsyncMock(side_effect=resolve)
     monkeypatch.setattr(service, "resolve_competitor", resolver)
-    readiness = await client.get(base)
-    assert readiness.json()["preferences"]["location_code"] == 2036
+    readiness = await service.readiness(
+        db_session, workspace_id=row.workspace_id, project_id=row.id
+    )
+    assert readiness.preferences.location_code == 2036
     resolver.assert_not_awaited()
     payload = {
         "research_scope": "exact_host",
@@ -517,43 +501,44 @@ async def test_new_datasets_publish_exact_call_provenance_and_saved_filters(
     paid = AsyncMock(side_effect=live)
     monkeypatch.setattr(executor, "execute_live", paid)
     run_id = uuid.UUID(reviewed["id"])
-    assert (
-        await client.post(f"{base}/runs/{run_id}/confirm", json={})
-    ).status_code == 202
-    async with session_factory() as session:
-        run = await session.get(SearchIntelligenceRun, run_id)
-        task = await session.get(AnalyticsTask, run.analytics_task_id)
+    task = await queue_confirmed_run(session_factory, run_id)
     await executor.execute_search_intelligence(session_factory, task)
-    saved = (await client.get(base)).json()["datasets"]
-    assert {item["dataset_kind"] for item in saved} == {
-        "organic_pages",
-        "backlinks",
-        "backlink_history",
-    }
-    assert all(item["research_scope"] == "domain_subdomains" for item in saved)
-    organic = next(item for item in saved if item["dataset_kind"] == "organic_pages")
-    url = f"{base}/datasets/{organic['id']}/rows"
-    filtered = (
-        await client.get(url, params={"search": "needle", "limit": 1, "sort": "etv"})
-    ).json()
-    assert filtered["dataset"]["filtered_saved_count"] == 2
-    assert filtered["rows"][0]["url"].endswith("/needle")
-    assert filtered["rows"][0]["call_id"] is not None
-    assert filtered["rows"][0]["organic_keywords"] == 12
-    cursor = filtered["next_cursor"]
-    assert cursor
-    assert (
-        await client.get(
-            url,
-            params={"cursor": cursor, "search": "different", "limit": 1, "sort": "etv"},
+    # The MCP readers' Python bridges read what the executor published.
+    async with session_factory() as reader:
+        saved = (
+            await service.readiness(
+                reader, workspace_id=task.workspace_id, project_id=task.project_id
+            )
+        ).datasets
+        assert {item.dataset_kind for item in saved} == {
+            "organic_pages",
+            "backlinks",
+            "backlink_history",
+        }
+        assert all(item.research_scope == "domain_subdomains" for item in saved)
+        organic = next(item for item in saved if item.dataset_kind == "organic_pages")
+        page = {
+            "workspace_id": task.workspace_id,
+            "project_id": task.project_id,
+            "dataset_id": organic.id,
+            "limit": 1,
+            "sort": "etv",
+        }
+        dataset, rows, cursor = await service.dataset_page(
+            reader, cursor=None, search="needle", **page
         )
-    ).status_code == 422
-    second = (
-        await client.get(
-            url,
-            params={"cursor": cursor, "search": "needle", "limit": 1, "sort": "etv"},
+        assert dataset["filtered_saved_count"] == 2
+        assert rows[0]["url"].endswith("/needle")
+        assert rows[0]["call_id"] is not None
+        assert rows[0]["organic_keywords"] == 12
+        assert cursor
+        with pytest.raises(service.SearchIntelligenceError, match="cursor"):
+            await service.dataset_page(
+                reader, cursor=cursor, search="different", **page
+            )
+        _, second, _ = await service.dataset_page(
+            reader, cursor=cursor, search="needle", **page
         )
-    ).json()
-    assert second["rows"][0]["url"].endswith("needle-two")
-    assert second["rows"][0]["etv"] is None
+        assert second[0]["url"].endswith("needle-two")
+        assert second[0]["etv"] is None
     assert paid.await_count == 3

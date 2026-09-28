@@ -98,6 +98,35 @@ export function workspaceMember(
   };
 }
 
+/**
+ * Authorize through the project in the path (mount after `sessionUser`): the
+ * caller must belong to the project's workspace. Mirrors
+ * `require_project_member`; a missing project and a foreign one are the same
+ * `Project not found`, and `X-Workspace-Id` is not read.
+ */
+export function projectMember(db: Database): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    const projectId = parseUuid(c.req.param('project_id') ?? '');
+    if (projectId === null) {
+      throw new RequestValidationError([
+        { loc: ['project_id'], message: UUID_MESSAGE, type: 'uuid_parsing' },
+      ]);
+    }
+    const member = await db
+      .selectFrom('projects')
+      .innerJoin('workspaces', 'workspaces.id', 'projects.workspace_id')
+      .innerJoin('workspace_members', 'workspace_members.workspace_id', 'projects.workspace_id')
+      .select(['workspace_members.workspace_id', 'workspace_members.role'])
+      .where('projects.id', '=', projectId)
+      .where('workspace_members.user_id', '=', c.get('user').id)
+      .where('workspaces.is_system', '=', false)
+      .executeTakeFirst();
+    if (member === undefined) throw notFound('Project');
+    c.set('workspace', new WorkspaceContext(member.workspace_id, member.role));
+    await next();
+  };
+}
+
 /** The caller's earliest tenant membership, or 404. */
 async function defaultWorkspaceMember(db: Database, userId: string): Promise<WorkspaceContext> {
   const member = await db

@@ -47,14 +47,9 @@ export const CONTRACT_SCHEMA_MAP = {
   integrationTestResultSchema: 'IntegrationTestResponse',
   integrationPropertySchema: 'IntegrationPropertyResponse',
   integrationPropertyMappingSchema: 'IntegrationPropertyMappingResponse',
-  // Search Intelligence
-  searchTargetSchema: 'TargetResponse',
-  searchPreferencesSchema: 'SearchIntelligencePreferences',
+  // Search Intelligence: the Python review route still publishes RunResponse;
+  // every other response is served by the TypeScript API.
   searchRunSchema: 'RunResponse',
-  searchDatasetSchema: 'SearchDatasetResponse',
-  searchReadinessSchema: 'ReadinessResponse',
-  searchRowSchema: 'SearchRowResponse',
-  searchDatasetPageSchema: 'DatasetPageResponse',
   // Billing (v8 commercial surface)
   billingCatalogSchema: 'BillingCatalogResponse',
   billingEntitlementSchema: 'BillingEntitlementResponse',

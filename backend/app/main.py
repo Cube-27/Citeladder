@@ -29,7 +29,9 @@ from app.api.provider_connections import (
     catalog_router as provider_catalog_router,
 )
 from app.api.provider_connections import router as provider_connections_router
-from app.api.search_intelligence import router as search_intelligence_router
+from app.api.search_intelligence import (
+    reviews_router as search_intelligence_reviews_router,
+)
 from app.api.site_health import router as site_health_router
 from app.api.workspaces import router as workspaces_router
 from app.connectors.answer_engines.http_client import aclose_shared_clients
@@ -74,7 +76,7 @@ _ROUTERS = (
     audits_router,
     audit_schedules_router,
     site_health_router,
-    search_intelligence_router,
+    search_intelligence_reviews_router,
     integrations_router,
     performance_router,
     agent_router,

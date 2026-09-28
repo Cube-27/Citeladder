@@ -78,7 +78,7 @@ AI sources only. Formula changes require explicit derived rebuilds, never reads.
 
 ## Search Intelligence acquisition
 
-[Search Intelligence](../backend/app/domain/demand/search_intelligence/) acquires explicit, reviewed DataForSEO Labs and Backlinks Live datasets for one saved apex or www project target and saved competitor targets. The review endpoint is provider-free: it freezes canonical scope, exact request pages, endpoint/version pricing, credential revision, an opaque HMAC account identity, and the maximum cost. Only the separate confirmation action enqueues paid work. Reads render immutable published datasets and never call DataForSEO.
+[Search Intelligence](../backend/app/domain/demand/search_intelligence/) acquires explicit, reviewed DataForSEO Labs and Backlinks Live datasets for one saved apex or www project target and saved competitor targets. The review endpoint is provider-free: it freezes canonical scope, exact request pages, endpoint/version pricing, credential revision, an opaque HMAC account identity, and the maximum cost. Only the separate confirmation action enqueues paid work. Reads render immutable published datasets and never call DataForSEO. Review creation and paid acquisition stay in that Python owner; readiness, preferences, confirmation, cancellation, dataset reads, content handoff and citation matching are served by the [TypeScript owner](../frontend/services/api/src/search-intelligence/).
 
 Account identity uses a purpose-specific key derived from the configured encryption secret, so JWT signing-key rotation does not change account capacity pools.
 

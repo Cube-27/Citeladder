@@ -7,6 +7,7 @@ import { performanceRoutes } from './performance.ts';
 import { demandRoutes } from './demand.ts';
 import { opportunityRoutes } from './opportunities.ts';
 import { actionRoutes } from './actions.ts';
+import { searchIntelligenceRoutes } from './search-intelligence.ts';
 
 export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...executionRoutes,
@@ -16,4 +17,5 @@ export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...demandRoutes,
   ...opportunityRoutes,
   ...actionRoutes,
+  ...searchIntelligenceRoutes,
 ];

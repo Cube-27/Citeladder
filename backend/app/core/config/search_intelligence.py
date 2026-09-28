@@ -56,6 +56,16 @@ AUXILIARY_SORT_FIELDS: Final = frozenset(
     }
 )
 
+# Error codes the Search Intelligence routes publish.
+CODE_INVALID_SORT: Final = "invalid_sort"
+CODE_EVIDENCE_NOT_FOUND: Final = "evidence_not_found"
+CODE_AUDIT_NOT_FOUND: Final = "audit_not_found"
+CODE_REVIEW_NOT_CONFIRMABLE: Final = "review_not_confirmable"
+CODE_REVIEW_EXPIRED: Final = "review_expired"
+CODE_PRICING_CHANGED: Final = "pricing_changed"
+CODE_CONNECTION_CHANGED: Final = "connection_changed"
+CODE_ACQUISITION_IN_PROGRESS: Final = "acquisition_in_progress"
+
 LABS_TASK_USD: Final = Decimal("0.012")
 LABS_ITEM_USD: Final = Decimal("0.00012")
 BACKLINKS_REQUEST_USD: Final = Decimal("0.024")

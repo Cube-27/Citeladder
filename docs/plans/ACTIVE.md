@@ -42,7 +42,8 @@
   The owner restated the objective on 28 September 2026: rebuild in clean
   TypeScript, with no parity and no golden files. Golden retirement removed
   every golden file and parity check before PR 8. PR 8 is split into 8a
-  (Search Intelligence) and 8b (Commerce). Deployment of PRs 3–7b and their one-week
+  (Search Intelligence, implemented on 28 September 2026; review creation and
+  acquisition stay Python) and 8b (Commerce, not started). Deployment of PRs 3–8a and their one-week
   cutover soaks are pending.
   Site Health, audits, billing/entitlements and the Agent runtime stay Python.
 

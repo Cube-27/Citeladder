@@ -2,17 +2,19 @@
  * A product route: its published contract, its parameters and its handler.
  *
  * The parameter specs are the single declaration: they validate requests
- * (`http/params.ts`) and generate the route's OpenAPI parameters. Every route here is a
- * workspace-scoped read resolved like FastAPI's `require_active_workspace`:
- * session first (401), then the active workspace (400/404), then the
- * parameters (422), as FastAPI resolves dependencies before parameters.
+ * (`http/params.ts`) and generate the route's OpenAPI parameters. A route
+ * resolves its workspace like FastAPI's `require_active_workspace` (the
+ * default) or, with `authorize: 'project'`, like `require_project_member`:
+ * session first (401), then the workspace or project (400/404), the
+ * capability (403) and the parameters (422), as FastAPI resolves dependencies
+ * before parameters.
  */
 import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 
 import { sessionUser } from '../auth/session.ts';
-import { activeWorkspace } from '../auth/workspace.ts';
+import { activeWorkspace, projectMember } from '../auth/workspace.ts';
 import type { WorkspaceCapability } from '../auth/workspace.ts';
 import { policy, type ServiceConfig } from '../config.ts';
 import type { AppEnv } from '../context.ts';
@@ -61,6 +63,8 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   body?: z.ZodType;
   headers?: z.ZodObject;
   capability?: WorkspaceCapability;
+  /** Resolve the workspace from the path's `project_id` instead of `X-Workspace-Id`. */
+  authorize?: 'workspace' | 'project';
 } & RouteBody<Path, Query, Response>;
 
 export type ProductRoute = {
@@ -133,15 +137,15 @@ function defineRoute<
 >(route: RouteSpec<Path, Query, Response>): ProductRoute {
   const method = route.method ?? 'get';
   const status = route.status ?? 200;
+  const byProject = route.authorize === 'project';
+  const workspaceHeaders = byProject ? z.object({}) : ACTIVE_WORKSPACE_HEADERS;
   const contract: RouteContract = {
     family: route.family,
     method,
     path: route.path,
     pathParams: parameterObject(route.params.path),
     query: parameterObject(route.params.query),
-    headers: route.headers
-      ? ACTIVE_WORKSPACE_HEADERS.extend(route.headers.shape)
-      : ACTIVE_WORKSPACE_HEADERS,
+    headers: route.headers ? workspaceHeaders.extend(route.headers.shape) : workspaceHeaders,
     cookies: SESSION_COOKIE,
     ...(route.body ? { body: route.body } : {}),
     responses: {
@@ -155,7 +159,7 @@ function defineRoute<
       method.toUpperCase(),
       pattern,
       sessionUser(config, db),
-      activeWorkspace(db),
+      byProject ? projectMember(db) : activeWorkspace(db),
       async (c) => {
         if (method !== 'get') c.get('workspace').require(route.capability ?? 'run');
         const params = validateParams(route.params, {
