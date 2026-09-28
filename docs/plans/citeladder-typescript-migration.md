@@ -1,9 +1,9 @@
 # TypeScript migration plan
 
-Status: PRs 1–8b and 9a implemented (27–28 September 2026), each at the
-owner's request. PRs 7, 8 and 9 were split at the owner's direction (7a,
-7a-cleanup, 7b; 8a, 8b; 9a, with 9b not started), and a golden-retirement pass
-and contract convergence followed 7b.
+Status: PRs 1–9b implemented (27–28 September 2026), each at the owner's
+request. PRs 7, 8 and 9 were split at the owner's direction (7a, 7a-cleanup,
+7b; 8a, 8b; 9a, 9b), and a golden-retirement pass and contract convergence
+followed 7b.
 D6 (team rule) still awaits the owner. Deployment and the one-week
 error-rate/latency soak are pending for every cutover from PR 3 on.
 This is not execution authorization: each later PR runs only when individually
@@ -26,7 +26,8 @@ logic, excess I/O or weak typing because Python has them.
 Where practical, each PR simplifies the architecture, removes obsolete code,
 consolidates duplication, tightens types and error handling, cuts unnecessary
 dependencies and database/network round-trips, and improves testability and
-observability. Redesign needs a clear benefit and stays within the PR's scope;
+observability. A TypeScript library is added only when it replaces a Python
+dependency and improves the architecture. Redesign needs a clear benefit and stays within the PR's scope;
 do not change things only for the sake of change. The result should be simpler,
 more maintainable and more efficient than the Python it replaces. When product
 behavior is unclear, ask the owner instead of copying Python. A PR is judged by
@@ -140,7 +141,7 @@ billing, so none of it moves before billing.
 | 6 | Opportunity detectors and verification | Medium | Done |
 | 7 | Opportunity store, refresh and routes (7a, 7a-cleanup, 7b) | Med-High | Done |
 | 8 | Search intelligence (8a) and database-only Commerce (8b) | Med-High | Done |
-| 9 | Projects: brand identity (9a); projects-tagged reads (9b) | Med-High | 9a done |
+| 9 | Projects: brand identity (9a); projects-tagged reads (9b) | Med-High | Done |
 | 10 | Prompts and topics | Med-High | |
 | 11 | Integrations | High | |
 | 12 | Auth and workspaces | High | |
@@ -365,8 +366,7 @@ caller is logo refresh.
 Stays Python (`projects` family):
 - project CRUD (entitlement occupancy and capability);
 - logo refresh (`SecureFetcher`, abuse limiter);
-- 9b candidates: command center, executive PDF and the projects-tagged
-  visibility reads (visibility, prompts, trends, fanout, sources, evidence).
+- the command center and executive PDF (see 9b).
 
 | Python bridge | Remaining caller |
 | --- | --- |
@@ -387,6 +387,43 @@ instants; a malformed stored business map fails loudly instead of reading as
 empty; accepting a suggestion enforces the project competitor ceiling (409),
 serializes concurrent accepts and returns the competitor's logo URL;
 suggestions tie-break by id; 422 messages quote names with double quotes.
+
+**9b.** TS owns the six projects-tagged visibility reads, joined to the
+existing `visibility` family (`src/visibility/`, `src/routes/visibility.ts`)
+and its selection, evidence-scope and brand-identity code: the dashboard
+(latest, run and range), prompt scores (one run or a pooled period), trends,
+query fanout, the Sources table and per-answer evidence. Ingress collapses the
+family to `/projects/*/visibility`, `/visibility/*` and `/visibility/sources/*`.
+The Python routes, `trends`, `trend_folding`, `range_projection`,
+`fanout_projection`, `prompt_period`, `prompt_outcomes` and
+`source_comparison` are deleted, with `get_prompt_metrics`, the evidence
+filters, the Sources baseline branch, the range and named-baseline paths of
+`get_visibility`, and the unreachable `VISIBILITY_TRENDS_STRICT_VERSION_BUCKETS`
+(a bucket's identity already carries its versions).
+
+The command center and executive PDF stay Python: the PDF renders the command
+center through `reportlab`, which billing invoices keep, so moving it would add
+a Node PDF library and retire no Python dependency.
+
+| Python bridge | Remaining caller |
+| --- | --- |
+| `evidence.get_visibility_evidence`, `get_execution_evidence`, `selection`, `source_projection` with `source_mentions`, `source_page_links`, `brand_identity`, `evidence_selection`, `aio_evidence` | `domain/mcp` (PR 13) |
+| `visibility.get_visibility`, `comparison_projection`, `matched_comparison`, `measurement` | command center and executive PDF |
+| `metrics.get_metrics`, `evidence.load_export_bundle`, `schemas.MetricsResponse` | `api/audits.py` (audit island) |
+
+All 9b routes are reads; no table gains a second writer.
+
+Departures: a non-core cohort reads its own aggregate (Python served the
+comparison block for any non-core cohort, so `commerce` showed comparison
+numbers); a URL-dimension baseline compares pages (Python counted domains and
+moved every URL row against zero); prompt reads reject an unknown engine like
+every other visibility read; range rankings take marks by brand or competitor
+identity, including entities absent from the last run; evidence cursors are
+TS keyset cursors bound to the selection, filters and `as_of` (Python cursors
+fail once); fanout search lower-cases; fanout reads answers in bounded batches;
+evidence mention and citation lookups are workspace-scoped; range `from_at`,
+`to_at` and `baseline_at` render as UTC instants; 422 messages print values
+without Python quoting.
 
 ### PR 10: Prompts and topics
 
