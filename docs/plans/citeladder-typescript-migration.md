@@ -20,7 +20,8 @@ The owner restated the objective on 28 September 2026 (section 1, rule 4), and
 golden retirement removed every golden file and parity check. Earlier "As
 implemented" notes that mention goldens or frozen fragments are historical.
 PR 8 is split at the owner's direction (28 September 2026): 8a (Search
-Intelligence) implemented on 28 September 2026; 8b (Commerce) not started.
+Intelligence) implemented on 28 September 2026; 8b (database-only Commerce)
+implemented on 28 September 2026.
 Not execution authorization; each later PR is executed only when individually
 assigned.
 
@@ -674,7 +675,7 @@ Stays Python, with its reason:
   Keenable, brand-discovery settings).
 - Commerce shelf analysis and finalization, which audit terminalization calls.
 
-*8b scope (not started):* database-only Commerce routes (catalog read and CSV
+*8b scope:* database-only Commerce routes (catalog read and CSV
 import, candidate list, discovery status and decision, buyer-prompt list and
 decision, AI Shelf read) and the `commerce_catalog_projection` kind. Re-inventory
 before starting.
@@ -740,6 +741,101 @@ Deliberate departures:
   owned-domain and competitor reads join the workspace-scoped project.
 
 Spans and attributes are unchanged. Deployment and soak remain pending.
+
+*As implemented (8b, 28 September 2026):* TypeScript owns the eight database-only
+Commerce routes and `commerce_catalog_projection`. The owner explicitly approved
+moving the buyer-prompt decision after Step 0 verified that approval enables an
+existing Prompt: it creates no Prompt and consumes no additional prompt slot.
+The long-term objective remains debt reduction through idiomatic TypeScript,
+preserving required behavior rather than Python architecture or semantics.
+
+Step 0 replacement inventory (paths relative to `backend/app`; private helpers
+belong to their listed entry point unless another caller is named):
+
+| Route / function owner | Caller and dependency finding | Disposition |
+| --- | --- | --- |
+| `api/commerce.py` `catalog_endpoint` → `service.get_catalog`, `_memberships`, `_product_response` | Browser catalog; persisted products/categories/memberships/task counts only | TS `commerce/reads.ts`; Python deleted |
+| `catalog_import_endpoint` → `import_catalog`, `_csv_reader`, `_clean_row`, `_price`, `_csv_values`, `_identity_matches`, `_import_row`, `_resolve_import_product`, `_apply_import_values`, `_csv_observation`, `_category_names`, `_import_response` | Browser import; writes raw CSV/content SHA256/outcomes, products, append-only observations, categories and memberships; **no enqueue, entitlement or abuse limit**; only CSV size/row policy | TS `commerce/import.ts`; Python deleted |
+| `service._category`, `_merge_categories` | Import and old projector; database only | TS catalog store; Python deleted |
+| `competitors_endpoint` → `list_candidates` | Browser candidates; persisted read | TS; Python deleted |
+| `competitor_discovery_status_endpoint` → `list_active_discovery_tasks`, `list_discovery_tasks`, `_discovery_response` | Browser discovery polling; persisted tasks only | TS; Python deleted |
+| `competitor_decision_endpoint` → `decide_candidate` | Browser decision; updates candidate state/time only; **no `competitors` insertion or brand discovery call** | TS locked decision; Python deleted |
+| `buyer_prompts_endpoint` → `prompts.list_buyer_prompts` | Browser prompt list; persisted shared Prompts/targets | TS; Python deleted |
+| `buyer_prompt_decision_endpoint` → `decide_buyer_prompt` | Browser approval; updates Prompt.enabled and target.approved_at only | TS under explicit owner exception; Python deleted |
+| `ai_shelf_endpoint` → `shelf_metrics.get_shelf`, `_scoped_snapshots`, `_latest_audit_id`, `_shelf_snapshots`, `_shelf_observations` | Browser shelf; persisted snapshots/observations; **no finalization, recomputation or repair** | TS; Python deleted |
+| `projector.project_catalog_analysis` and all source/product/category/price/breadcrumb/provenance helpers | Python analytics executor; reads persisted Site Health analyses/artifacts/URLs and writes catalog; no fetching, lxml, models, billing, abuse limiter, provider capacity or audit lifecycle | TS `projection.ts` and typed fact interpretation; entire Python module and executor deleted |
+| `catalog_membership` all nine URL/alias/shelf/membership helpers; `facts._dict_value`, `_list_value` | Old projector only; stored evidence and pure URL operations, no fetch | Entire modules deleted; TS materializes alias and product lookup maps |
+| `service.enqueue_catalog_projection`; `eligibility.project_sells_catalog` | `workers/site_health/phases/analyze.py`; brand-model eligibility and durable enqueue | Retained bridge until Site Health's last Python caller moves (outside this plan) |
+| `service.require_project`, `CommerceNotFoundError` | Remaining `competitors` and `prompts` entry points | Retained bridge until their last Python caller moves |
+| `competitor_discovery_endpoint`, `enqueue_discoveries`, `_target_names`, `_category_contexts`, `_product_contexts` | Browser discovery; creates Python task after target reads | Python `commerce-python` |
+| `run_competitor_discovery` and its provider/query/host/precheck/verification/persistence helpers | Python analytics worker; SecureFetcher, lxml classification, provider calls, acquisition admission and brand-discovery settings | Python discovery kind and module retained |
+| `buyer_prompts_generate_endpoint`, `validate_buyer_prompt_targets`, `generate_buyer_prompts`, `_generate_target_texts` | Browser generation; model gateway, abuse limiter, billing-backed prompt-slot occupancy | Python |
+| `buyer_prompt_manual_endpoint`, `add_manual_buyer_prompt`, `_reserve_prompt_capacity` | Browser manual entry; entitlement/account lock and prompt-slot occupancy | Python |
+| `prompts._project_with_brand`, `_category_products`, `_target_context`, `_base_target_context`, `_prompt_owner`, `_target_vocabulary`, `_leaks_owned_identity`, `_prompt_response`; all `buyer_prompt_validation` functions | Remaining generation/manual paths and focused tests; prompt owner/context/pure admission | Retained until generation/manual move |
+| `audit_context.freeze_commerce_context`, `_target_evidence` | `domain/audits/creation.py`; freezes catalog, approved candidates and prompt targets for funded audit creation | Python island; not moved |
+| `shelf.analyze_commerce_task` and all parsing/matching/resolution/persistence helpers | Audit terminalization; bounded model gateway and observation/candidate writes | Python island; not moved |
+| `shelf_metrics.finalize_commerce_shelf`, `_snapshot_exists`, `_target_tasks`, `_target_observations`, `_build_shelf_snapshot`, `_ranked`, `_owned_task_count`, `_mean_rank`, `_first_position_rate` | Audit terminalization; writes formula-versioned snapshots | Python island; not moved |
+| `price.normalized_price_value`, `_valid_grouped_integer`, `_valid_grouped_parts` | `shelf._parse_price_value` still calls this parser | Retained bridge until shelf analysis moves; **not** retired with projector |
+| `schemas` | Remaining discovery/generation/manual routes and recommendation-span tests | Moved-only request/response models deleted; remaining models retained |
+
+There are no MCP Commerce callers. Three whole Python application files retire,
+plus moved functions and tests in mixed modules; no whole test module retires.
+This is below the approximately 50-file retirement budget. Python component tests
+seed catalog inputs via `tests/component/commerce_helpers.py`; migrated behavior
+is covered at the TypeScript/PostgreSQL boundary instead of through Python HTTP.
+The contract-schema map had no Commerce entries to remove.
+
+Rule 1 exceptions and shared lock order:
+- `commerce_competitor_candidates`: Python discovery/shelf insert candidates;
+  TS updates explicit decisions. Existing candidate updates lock that one row;
+  Python insertion does not rewrite an existing decision. No catalog lock is
+  acquired after a candidate lock.
+- `prompts` and `commerce_prompt_targets`: Python generation/manual paths create
+  disabled Prompts and targets; the generic Prompt owner also edits Prompts.
+  TS approval locks **Prompt, then CommercePromptTarget**, matching parent-before-
+  child creation. Generic Python Prompt updates acquire only the Prompt row lock.
+  Approval never acquires billing capacity locks or creates rows.
+- `analytics_tasks` retains its existing queue exception: producers insert,
+  the stack assigned to each kind claims/executes, Python's sweeper expires leases.
+  Catalog import/projection serialize on the scoped project row before catalog
+  writes; all product/category/observation/membership writers are now TS.
+
+Rule 4 cross-stack values (exercised with live PostgreSQL, no generated files):
+- Python Site Health enqueue writes payload `{source_analysis_id}` and key
+  `commerce:project:{analysis_id}:{commerce-projector-1}`; TS consumes that task,
+  retains source analysis/artifact IDs and processing versions, and publishes
+  catalog rows the Python audit context reads.
+- Catalog product/category IDs, canonical URLs, prices/currency, attributes,
+  field provenance and memberships remain inputs to Python discovery, prompt
+  context and audit freezing. TS uses WHATWG URLs and the existing exported URL
+  scheme/port/ignored-query policy; no SiteUrl hash is written or emulated.
+- Candidate `state=approved`/`decision_at`, Prompt `enabled`, and target
+  `approved_at` remain the Python audit admission/context inputs. Tests call the
+  actual Python context freezer after TS imports/projections and decisions.
+- Raw CSV SHA256 remains import identity; Python no longer writes or compares it.
+  Category identity now lowercases and collapses whitespace; Python no longer
+  writes category identities. Neither needs a cross-stack emulation layer.
+
+Deliberate departures:
+- A real CSV parser handles quoted fields, BOM and malformed records. Non-finite,
+  negative, overflowing prices and overlong typed product fields yield rejected
+  row outcomes. Raw text remains unchanged; the old import did not neutralize
+  formulas, so no new sanitization is applied to stored evidence.
+- Reads validate persisted JSON and contract enums, serialize dates explicitly,
+  and preserve numeric/null distinctions. Malformed stored values fail loudly.
+- Concurrent imports replay the winning immutable artifact; catalog projection
+  and import cannot overwrite each other's field authority. No per-row nested
+  transaction or Python Decimal/CSV-sniffer behavior is carried over.
+- Projected categories record their canonical URL when attaching to a category
+  originally created by CSV/breadcrumbs. Shelf matching uses materialized alias
+  and product maps rather than per-link database lookups.
+- Literal method guards take precedence over parameter routes, so discovery-status
+  GET is not rejected by the candidate PATCH guard. UUID-shaped terminal ingress
+  globs exclude the Python-owned `discover`, `generate` and `manual` literals.
+- Category name sorting uses locale comparison and ties use IDs; read lists have
+  deterministic ID tie-breakers. Approval updates Prompt.updated_at.
+
+Deployment and the one-week cutover soak remain pending.
 
 > **Stop point C.** All in-scope analytics and read-heavy product surfaces are
 > TS. Python holds writes to core entities, integrations, auth and the island.

@@ -77,10 +77,15 @@ while position metrics use only explicitly ordered recommendations.
 
 ## Entry points and lifecycle
 
-The [Commerce API](../backend/app/api/commerce.py) authorizes workspace/project
-reads and role-gated mutations. [Catalog service](../backend/app/domain/commerce/service.py)
-owns CSV admission and reads; [projector](../backend/app/domain/commerce/projector.py)
-consumes persisted Site Health analyses through analytics tasks. Project and
+The [TypeScript Commerce API](../frontend/services/api/src/routes/commerce.ts)
+authorizes persisted reads, CSV imports and explicit decisions using active
+workspace membership and run/write capabilities. The
+[Python API](../backend/app/api/commerce.py) retains competitor discovery and
+buyer-prompt generation/manual entry. [CSV admission](../frontend/services/api/src/commerce/import.ts)
+and [catalog projection](../frontend/services/api/src/commerce/projection.ts)
+serialize catalog writes on the scoped project row. Projection consumes persisted
+Site Health analyses through analytics tasks enqueued by the retained
+[Python bridge](../backend/app/domain/commerce/service.py). Project and
 target IDs are re-authorized; an object ID alone is never a catalog boundary.
 The [workspace](../frontend/components/products/commerce-workspace.tsx) coordinates
 target selection and persisted queries. Async discovery must reach a persisted
@@ -90,9 +95,11 @@ terminal state before an empty candidate list is interpreted as its result.
 identity before shared audit execution. [Shelf metrics](../backend/app/domain/commerce/shelf_metrics.py)
 owns the formulas; no browser aggregate or current-catalog lookup may reinterpret
 an old answer. Queue leases, bounded retries and cancellation remain with the
-shared analytics/audit workers. [Projection tests](../backend/tests/component/test_commerce_projection.py)
-and [API tests](../backend/tests/component/test_commerce_suite_api.py) cover these
-contracts with deterministic provider doubles.
+shared analytics/audit workers. [TS projection tests](../frontend/services/api/test/commerce-projection.test.ts)
+and [route tests](../frontend/services/api/test/commerce.test.ts) cover the database
+owner, including the Python enqueue and audit-context boundaries. The
+[Python tests](../backend/tests/component/test_commerce_suite_api.py) retain
+generation, manual entry and discovery coverage with deterministic provider doubles.
 
 The retired [rebuild record](archive/plans/commerce-suite-atomic-rebuild.md)
 retains unverified manual migration/crawl/CSV, reference-evaluation, Tavily and
