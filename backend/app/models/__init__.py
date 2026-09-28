@@ -155,6 +155,10 @@ from app.models.site_health.analysis import (
     SiteRuleEvaluation,
 )
 from app.models.site_health.architecture import SiteObservedArchitecture
+from app.models.site_health.content_structure import (
+    SiteContentStructureEvent,
+    SiteContentStructureRun,
+)
 from app.models.site_health.crawl import (
     SiteCrawl,
     SiteDiscoveryFrontier,
@@ -311,6 +315,8 @@ __all__ = [
     "SiteHealthSnapshot",
     "SiteIssue",
     "SiteObservedArchitecture",
+    "SiteContentStructureEvent",
+    "SiteContentStructureRun",
     "SitePageAnalysis",
     "SitePageLinkMetric",
     "SiteRuleEvaluation",

@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 from app.analysis.site_health.dom import DOM_ERRORS, dom_failure
 from app.analysis.site_health.dom import node_text as _text
 from app.analysis.site_health.fact_copy import NEXT_ACTION_RE, is_metadata_or_cta
+from app.analysis.site_health.fact_passages import content_passages
 from app.analysis.site_health.fact_questions import (
     direct_answer,
     question_answer_relationships,
@@ -97,6 +98,7 @@ def page_owned_content_facts(root: Any) -> dict[str, Any]:
         facts["primary_content_text"] = primary_text[
             : taxonomy.PAGE_OWNED_TEXT_MAX_CHARS
         ]
+        facts["content_structure"] = content_passages(region, container_ids)
         outline = _primary_heading_outline(region, container_ids)
         lead = _editorial_lead(region, container_ids)
         proposition = (

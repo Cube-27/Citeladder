@@ -2148,6 +2148,31 @@ export interface SiteChangeSnapshots {
   workspace_id: string;
 }
 
+export interface SiteContentStructureEvents {
+  candidate_id: string;
+  created_at: Timestamp;
+  evidence: Json;
+  id: string;
+  kind: string;
+  project_id: string;
+  run_id: string;
+  workspace_id: string;
+}
+
+export interface SiteContentStructureRuns {
+  actor_id: string;
+  crawl_id: string;
+  created_at: Timestamp;
+  id: string;
+  idempotency_key: string;
+  manifest: Json;
+  policy_version: number;
+  project_id: string;
+  result: Json | null;
+  state: string;
+  workspace_id: string;
+}
+
 export interface SiteCrawlEvents {
   crawl_id: string;
   created_at: Timestamp;
@@ -2913,6 +2938,8 @@ export interface DB {
   security_events: SecurityEvents;
   site_change_observations: SiteChangeObservations;
   site_change_snapshots: SiteChangeSnapshots;
+  site_content_structure_events: SiteContentStructureEvents;
+  site_content_structure_runs: SiteContentStructureRuns;
   site_crawl_events: SiteCrawlEvents;
   site_crawl_tasks: SiteCrawlTasks;
   site_crawls: SiteCrawls;

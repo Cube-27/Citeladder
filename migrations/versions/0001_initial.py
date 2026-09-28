@@ -7285,7 +7285,53 @@ def upgrade() -> None:
     )
 
 
+    op.create_table(
+        "site_content_structure_runs",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("crawl_id", sa.UUID(), nullable=False),
+        sa.Column("actor_id", sa.UUID(), nullable=False),
+        sa.Column("idempotency_key", sa.String(36), nullable=False),
+        sa.Column("state", sa.String(24), nullable=False),
+        sa.Column("policy_version", sa.Integer(), nullable=False),
+        sa.Column("manifest", postgresql.JSONB(), nullable=False),
+        sa.Column("result", postgresql.JSONB(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "crawl_id"],
+            ["site_crawls.workspace_id", "site_crawls.project_id", "site_crawls.id"],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint("workspace_id", "project_id", "idempotency_key"),
+        sa.UniqueConstraint("workspace_id", "project_id", "id"),
+    )
+    _create_indexes("site_content_structure_runs", ("workspace_id", "project_id"))
+    op.create_table(
+        "site_content_structure_events",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("run_id", sa.UUID(), nullable=False),
+        sa.Column("candidate_id", sa.UUID(), nullable=False),
+        sa.Column("kind", sa.String(24), nullable=False),
+        sa.Column("evidence", postgresql.JSONB(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "run_id"],
+            ["site_content_structure_runs.workspace_id", "site_content_structure_runs.project_id", "site_content_structure_runs.id"],
+            ondelete="CASCADE",
+        ),
+        sa.UniqueConstraint("run_id", "candidate_id", "kind"),
+    )
+    _create_indexes("site_content_structure_events", ("workspace_id", "project_id"))
+
+
 def downgrade() -> None:
+    op.drop_table("site_content_structure_events")
+    op.drop_table("site_content_structure_runs")
     op.drop_table("enterprise_agreement_references")
     op.drop_table("provider_disclosures")
     op.drop_table("web_acquisition_controls")
