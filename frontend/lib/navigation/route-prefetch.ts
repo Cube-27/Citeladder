@@ -33,12 +33,8 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
   '/site': prefetchSiteHealth,
   '/issues': prefetchIssues,
   '/demand': async (client, { projectId, workspaceId }) => {
-    const { demandApi } = await import('@/lib/api/demand');
-    warmQuery(client, {
-      queryKey: queryKeys.demand.latest(projectId),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        demandApi.getLatest(projectId, { signal, workspaceId }),
-    });
+    const { latestDemandSnapshotQuery } = await import('@/lib/demand/latest-snapshot');
+    warmQuery(client, latestDemandSnapshotQuery(projectId, workspaceId));
   },
   '/performance': async (client, { projectId, workspaceId }) => {
     // The landing view, built from the screen's own defaults: the latest

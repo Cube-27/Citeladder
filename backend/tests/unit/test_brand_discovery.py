@@ -85,6 +85,40 @@ async def test_selected_competitor_resolution_has_a_deadline(
         )
 
 
+@pytest.mark.asyncio
+async def test_selected_competitor_sites_are_confirmed_concurrently(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Each check waits until both are in flight, so checks run one after
+    # another would each exhaust the deadline and fail.
+    in_flight = 0
+    both_started = asyncio.Event()
+
+    async def resolve(_domain: str, url: str):
+        nonlocal in_flight
+        in_flight += 1
+        if in_flight == 2:
+            both_started.set()
+        await both_started.wait()
+        return SimpleNamespace(registrable_domain=normalize_website_url(url)[1])
+
+    monkeypatch.setattr(onboarding_completion, "resolve_site", resolve)
+    monkeypatch.setattr(
+        onboarding_completion, "BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS", 1
+    )
+    payload = BrandDiscoveryComplete(
+        profile=ConfirmedDiscoveryProfile(category="Retail"),
+        domains=["acme.com"],
+        competitors=[
+            {"name": "Globex", "domains": ["globex.com"]},
+            {"name": "Initech", "domains": ["initech.com"]},
+        ],
+    )
+    await onboarding_completion._resolve_selected_competitors(
+        payload, owned_domains={"acme.com"}
+    )
+
+
 def test_normalizes_url_and_market() -> None:
     url, domain = normalize_website_url("HTTPS://WWW.Example.COM:443/shop#offers")
     assert url == "https://www.example.com/shop"

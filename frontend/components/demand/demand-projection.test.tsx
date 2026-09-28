@@ -299,6 +299,26 @@ describe('DemandProjection', () => {
     expect(await screen.findByText(/no qualifying search gaps observed/i)).toBeInTheDocument();
   });
 
+  it('answers a revisit without a snapshot from cache instead of reloading the skeleton', async () => {
+    vi.mocked(demandApi.getLatest).mockRejectedValue(new ApiError('No demand snapshot', 404, ''));
+    const first = renderProjection();
+    expect(await screen.findByText('No Search Demand snapshot yet')).toBeInTheDocument();
+    first.unmount();
+    const readsBeforeRevisit = vi.mocked(demandApi.getLatest).mock.calls.length;
+
+    render(
+      <QueryClientProvider client={client}>
+        <TooltipProvider>
+          <DemandProjection />
+        </TooltipProvider>
+      </QueryClientProvider>,
+      { wrapper: RouterTestWrapper },
+    );
+    expect(screen.getByText('No Search Demand snapshot yet')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(vi.mocked(demandApi.getLatest).mock.calls).toHaveLength(readsBeforeRevisit);
+  });
+
   it('routes first-use recovery through the selected project Performance screen', async () => {
     vi.mocked(demandApi.getLatest).mockRejectedValue(new ApiError('No demand snapshot', 404, ''));
     renderProjection();

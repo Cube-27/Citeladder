@@ -518,13 +518,14 @@
 }
 
 /* The review step is the only wide one, and the only one with more to confirm
-   than to read. It runs a tighter rhythm and a smaller title than the steps
-   that ask a single question, so the confirmation fits a laptop viewport
-   instead of scrolling past its own actions. */
+   than to read. Its title is smaller than the single-question steps', but its
+   sections are separate cards with room between them: at a 0.5rem answer gap
+   every question ran into the next and the page read as one long list. */
 .flow-content[data-flow-measure='wide'] {
-  --flow-header-gap: 1.5rem;
-  --flow-block: 1.25rem;
-  --flow-answer: 0.5rem;
+  --flow-header-gap: 1.25rem;
+  --flow-block: 1.5rem;
+  --flow-answer: 0.875rem;
+  --flow-card-gap: 1rem;
 }
 
 .flow-content[data-flow-measure='wide'] .flow-title {
@@ -533,7 +534,7 @@
 }
 
 /* The review step's two columns: what we found on the left, what you tell us on
-   the right. One column below the breakpoint, exactly as before. */
+   the right. One column below the breakpoint. */
 .flow-review {
   display: grid;
   align-items: start;
@@ -543,8 +544,73 @@
 @media (min-width: 64rem) {
   .flow-review {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    column-gap: calc(var(--flow-block) * 1.5);
+    column-gap: var(--flow-block);
   }
+}
+
+.flow-review-column {
+  display: grid;
+  min-width: 0;
+  gap: var(--flow-card-gap);
+}
+
+.flow-review-eyebrow {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* One decision per card. The card, not a rule, is what separates questions. */
+.flow-review-card {
+  padding: 1.125rem 1.25rem 1.25rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+}
+
+.flow-review-card .flow-help {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.flow-review-card .flow-group-copy {
+  gap: 0.25rem;
+}
+
+/* Inside a card the card's own edge frames the list; the rows keep their
+   separators. */
+.flow-review-card .flow-entity-list:not(.flow-competitor-chips) {
+  border-block: 0;
+}
+
+/* Short single-answer choices read as a set of options, not loose words. */
+.flow-review-card [data-radio-variant='chip'] button {
+  border: 1px solid var(--color-border-subtle);
+}
+
+.flow-review-card [data-radio-variant='chip'] button[data-state='checked'] {
+  border-color: var(--color-accent-border);
+}
+
+.flow-review-notices {
+  display: grid;
+  gap: var(--flow-stack);
+  margin-bottom: var(--flow-block);
+  scroll-margin-top: var(--flow-block);
+}
+
+.flow-review-hint {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--color-warning-text);
+  scroll-margin-block: var(--flow-block);
 }
 
 /* Owned domains use ruled rows. Competitor suggestions use compact toggles
@@ -563,6 +629,19 @@
   align-items: center;
   gap: 0.25rem;
   min-width: 0;
+}
+
+/* The row fills its line so the selection mark always sits at the right edge,
+   not wherever a short name happens to end. A row without a logo has two
+   children, which the three-column template put the mark into the 1fr track
+   straight after the name. */
+.flow-entity > .flow-entity-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.flow-entity-row:has(> .flow-entity-identity:first-child) {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .flow-entity-row {

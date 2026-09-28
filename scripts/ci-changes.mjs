@@ -222,15 +222,30 @@ export function selectDiff({
   baseSha,
   headSha,
   previousRunTrusted = true,
+  beforeIsAncestor = true,
 }) {
   if (eventName !== 'pull_request') return { full: true, range: null };
 
   const usableBefore = beforeSha && !/^0+$/.test(beforeSha);
-  if (action === 'synchronize' && usableBefore && previousRunTrusted) {
+  // A force-push (rebase or amend) orphans the previous head, so its incremental
+  // diff is neither fetchable nor meaningful; revalidate the cumulative PR scope.
+  if (action === 'synchronize' && usableBefore && previousRunTrusted && beforeIsAncestor) {
     return { full: false, range: `${beforeSha}..${headSha}` };
   }
   if (!baseSha) throw new Error('CI_BASE_SHA is required for the initial pull-request diff.');
   return { full: false, range: `${baseSha}...${headSha}` };
+}
+
+function isAncestor(ancestorSha, descendantSha) {
+  if (!ancestorSha || !descendantSha) return false;
+  try {
+    execFileSync(GIT_EXECUTABLE, ['merge-base', '--is-ancestor', ancestorSha, descendantSha], {
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function changedPaths(range) {
@@ -339,6 +354,7 @@ async function main(environment = process.env) {
     baseSha: environment.CI_BASE_SHA,
     headSha: environment.CI_HEAD_SHA,
     previousRunTrusted,
+    beforeIsAncestor: isAncestor(environment.CI_BEFORE_SHA, environment.CI_HEAD_SHA),
   });
   const paths = changedPaths(diff.range);
   const result = classifyPaths(paths, diff);

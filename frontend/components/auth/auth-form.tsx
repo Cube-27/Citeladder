@@ -2,15 +2,18 @@
 
 import { Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { type ComponentProps, type ReactNode, useState } from 'react';
+import { type ComponentProps, type ReactNode, type Ref, useId, useRef, useState } from 'react';
 
 import { Alert as MktAlert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Pressable } from '@/components/ui/pressable';
 import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/errors';
+import { recordSignInTermsConsent } from '@/lib/auth/terms-consent';
+import { websiteHref } from '@/lib/config/app-link';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { cn } from '@/lib/utils';
 
@@ -106,6 +109,61 @@ export function AuthPasswordField({
   );
 }
 
+/**
+ * The Terms decision, made where the visitor signs in.
+ *
+ * Unticked by default and required. The Privacy Policy is linked as notice,
+ * not bundled into the agreement: processing does not rest on this consent.
+ */
+function TermsConsent({
+  ref,
+  agreed,
+  missing,
+  onChange,
+}: Readonly<{
+  ref: Ref<HTMLDivElement>;
+  agreed: boolean;
+  missing: boolean;
+  onChange: (agreed: boolean) => void;
+}>) {
+  const errorId = useId();
+  const noticeId = useId();
+  return (
+    <div ref={ref} className="auth-terms-consent grid gap-0.5">
+      <Checkbox
+        checked={agreed}
+        onCheckedChange={(value) => onChange(value === true)}
+        required
+        aria-describedby={missing ? `${errorId} ${noticeId}` : noticeId}
+        label={
+          <>
+            I agree to the{' '}
+            <a href={websiteHref('/terms')} target="_blank" rel="noreferrer" className="flow-exit">
+              Terms of Service
+            </a>
+          </>
+        }
+      />
+      <p id={noticeId} className="type-caption ps-[calc(var(--control-height)+0.5rem)]">
+        Our{' '}
+        <a href={websiteHref('/privacy')} target="_blank" rel="noreferrer" className="flow-exit">
+          Privacy Policy
+        </a>{' '}
+        explains how we process your data.
+      </p>
+      {missing ? (
+        <p
+          id={errorId}
+          role="alert"
+          className="type-caption text-danger-text ps-[calc(var(--control-height)+0.5rem)]"
+        >
+          Agree to the Terms of Service to continue.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function AuthFormShell({
   title,
   description,
@@ -141,11 +199,37 @@ export function AuthFormShell({
 }>) {
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
   const [oauthPending, setOauthPending] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [consentMissing, setConsentMissing] = useState(false);
+  const consentRef = useRef<HTMLDivElement>(null);
+  // Both ways in lead into the app, so both carry the same Terms decision.
+  const requiresConsent = showForm || showOAuth;
+
+  /** Hold any way in until the Terms box is ticked; remember the decision once it is. */
+  function consentGiven(): boolean {
+    if (!requiresConsent) return true;
+    if (!agreed) {
+      setConsentMissing(true);
+      consentRef.current?.querySelector<HTMLElement>('button[role="checkbox"]')?.focus();
+      return false;
+    }
+    recordSignInTermsConsent();
+    return true;
+  }
+
+  const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = (event) => {
+    if (!consentGiven()) {
+      event.preventDefault();
+      return;
+    }
+    onSubmit?.(event);
+  };
 
   async function handleGoogleSignIn() {
     // The button stays live for the whole round trip otherwise, and a second
     // click starts a second authorization before the first can redirect.
     if (oauthPending) return;
+    if (!consentGiven()) return;
     setOauthPending(true);
     setOauthNotice(null);
     try {
@@ -198,8 +282,18 @@ export function AuthFormShell({
         {error ? <MktAlert>{error}</MktAlert> : null}
 
         {showForm ? (
-          <form noValidate onSubmit={onSubmit} className="auth-email-form grid gap-3">
+          <form noValidate onSubmit={handleSubmit} className="auth-email-form grid gap-3">
             {children}
+
+            <TermsConsent
+              ref={consentRef}
+              agreed={agreed}
+              missing={consentMissing}
+              onChange={(value) => {
+                setAgreed(value);
+                if (value) setConsentMissing(false);
+              }}
+            />
 
             <Button
               type="submit"

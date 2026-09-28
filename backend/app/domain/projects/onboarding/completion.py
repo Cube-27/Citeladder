@@ -142,21 +142,42 @@ async def complete_discovery(
 async def _resolve_selected_competitors(
     payload: BrandDiscoveryComplete, *, owned_domains: set[str]
 ) -> None:
+    """Confirm every selected competitor website, all at once.
+
+    The checks are independent, so they run concurrently under one per-site
+    deadline. Run one after another, five slow sites took a minute — longer
+    than the browser waits for "Create project" — and the reader saw nothing
+    while the project was still being created behind them. The first failure
+    in the reviewed order is the one reported.
+    """
     for competitor in payload.competitors:
         if not competitor.domains:
             raise BrandDiscoveryError(
                 f"Could not resolve website for {competitor.name}: add a domain"
             )
-        for domain in competitor.domains:
-            try:
-                url, normalized = normalize_website_url(domain)
-                if normalized in owned_domains:
-                    raise SiteNotFoundError("owned_domain")
-                async with asyncio.timeout(BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS):
-                    resolved = await resolve_site(domain, url)
-                if resolved.registrable_domain != normalized:
-                    raise SiteNotFoundError("domain_redirected")
-            except (InvalidWebsiteUrl, SiteNotFoundError, TimeoutError) as exc:
-                raise BrandDiscoveryError(
-                    f"Could not resolve website for {competitor.name}: {domain}"
-                ) from exc
+    checks = [
+        (competitor.name, domain)
+        for competitor in payload.competitors
+        for domain in competitor.domains
+    ]
+    outcomes = await asyncio.gather(
+        *(_confirm_competitor_site(domain, owned_domains) for _, domain in checks),
+        return_exceptions=True,
+    )
+    for (name, domain), outcome in zip(checks, outcomes, strict=True):
+        if isinstance(outcome, InvalidWebsiteUrl | SiteNotFoundError | TimeoutError):
+            raise BrandDiscoveryError(
+                f"Could not resolve website for {name}: {domain}"
+            ) from outcome
+        if isinstance(outcome, BaseException):
+            raise outcome
+
+
+async def _confirm_competitor_site(domain: str, owned_domains: set[str]) -> None:
+    url, normalized = normalize_website_url(domain)
+    if normalized in owned_domains:
+        raise SiteNotFoundError("owned_domain")
+    async with asyncio.timeout(BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS):
+        resolved = await resolve_site(domain, url)
+    if resolved.registrable_domain != normalized:
+        raise SiteNotFoundError("domain_redirected")

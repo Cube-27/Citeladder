@@ -22,6 +22,7 @@ import {
   type ReviewCompetitor,
   type ReviewDomain,
 } from '@/lib/onboarding/forms';
+import { ONBOARDING_COMPLETION_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
 import {
   finishOnboardingCompletionRequest,
   startOnboardingCompletionRequest,
@@ -230,7 +231,7 @@ export function useOnboardingFlow(transactionKey: string) {
             competitors: selectedCompetitors(competitors),
           },
           `complete:${discoveryState.id}`,
-          { workspaceId: activeWorkspaceId },
+          { workspaceId: activeWorkspaceId, timeoutMs: ONBOARDING_COMPLETION_REQUEST_TIMEOUT_MS },
         );
         if (result.status !== 'failed' && !result.project_id) {
           throw new Error(
@@ -246,6 +247,15 @@ export function useOnboardingFlow(transactionKey: string) {
     onSuccess: async (result) => {
       if (result.status === 'failed' || !result.project_id) return;
       await openProject(result.project_id);
+    },
+    // A request the browser abandoned may still have committed. Re-read the
+    // draft: if it now names its project, the effect below opens it, instead
+    // of leaving the reader on a review whose project already exists.
+    onError: () => {
+      if (!discoveryState) return;
+      void queryClient.invalidateQueries({
+        queryKey: brandDiscoveryKeys.detail(activeWorkspaceId, discoveryState.id),
+      });
     },
   });
 

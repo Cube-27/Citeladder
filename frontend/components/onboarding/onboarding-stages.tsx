@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
 import { ActivityProgress, type ActivityStep } from '@/components/ui/activity-progress';
@@ -239,14 +239,30 @@ export function ReviewStage({
   return (
     <div>
       <StageHeader title="Does this look right?">
-        Choose up to five competitors to track. Suggestions are provisional.
+        Confirm what we found before we create your project.
       </StageHeader>
+      <ReviewNotices failed={complete.isError && !resolutionError}>
+        {catalog.isError ? (
+          <Alert tone="warning">
+            <div className="flex items-center justify-between gap-3">
+              <span>We could not load the competitor limit.</span>
+              <Button size="sm" variant="ghost" onClick={() => catalog.refetch()}>
+                Try again
+              </Button>
+            </div>
+          </Alert>
+        ) : null}
+        {complete.isError && !resolutionError ? (
+          <Alert tone="warning">{onboardingErrorMessage(complete.error)}</Alert>
+        ) : null}
+        <CompletionStateAlert failed={completionFailed} />
+      </ReviewNotices>
       {/* Two columns: what we found on the left, what only you can tell us on
-          the right. One `.flow-groups` per column — this used to nest three of
-          them, so the page carried three stacked 2rem rhythms and ran on well
-          past the fold with both margins empty. */}
+          the right. Every question is its own card, so the sections read as
+          separate decisions instead of one long run of ruled rows. */}
       <div className="flow-review">
-        <div className="flow-groups">
+        <div className="flow-review-column">
+          <p className="flow-review-eyebrow">What we found</p>
           <ReviewStep
             domains={domains}
             competitors={competitors}
@@ -264,39 +280,43 @@ export function ReviewStage({
             maximumCompetitors={maximumCompetitors}
             resolutionError={resolutionError}
           />
+          {!hasSelectedDomain ? (
+            <p className="flow-review-hint">Keep at least one website address selected.</p>
+          ) : null}
+          {flow.hasIncompleteCompetitor ? (
+            <p className="flow-review-hint">Add a name and website for each selected competitor.</p>
+          ) : null}
         </div>
         {profile ? (
-          <div className="flow-groups">
+          <div className="flow-review-column">
+            <p className="flow-review-eyebrow">About your business</p>
             <IcpCategory profile={profile} onChange={setProfile} />
             <IcpAudience profile={profile} onChange={setProfile} />
+            {!hasConfirmedIcp(profile) ? (
+              <p className="flow-review-hint">Choose or describe what you sell.</p>
+            ) : null}
           </div>
         ) : null}
       </div>
-      <div className="mt-[var(--flow-block)] grid gap-[var(--flow-answer)]">
-        {catalog.isError ? (
-          <Alert tone="warning">
-            <div className="flex items-center justify-between gap-3">
-              <span>We could not load the competitor limit.</span>
-              <Button size="sm" variant="ghost" onClick={() => catalog.refetch()}>
-                Try again
-              </Button>
-            </div>
-          </Alert>
-        ) : null}
-        {complete.isError && !resolutionError ? (
-          <Alert tone="warning">{onboardingErrorMessage(complete.error)}</Alert>
-        ) : null}
-        <CompletionStateAlert failed={completionFailed} />
-        {!hasSelectedDomain ? (
-          <Alert tone="warning">Keep at least one website address selected.</Alert>
-        ) : null}
-        {flow.hasIncompleteCompetitor ? (
-          <Alert tone="warning">Add a name and website for each selected competitor.</Alert>
-        ) : null}
-        {!hasConfirmedIcp(profile) ? (
-          <Alert tone="warning">Choose or describe what you sell.</Alert>
-        ) : null}
-      </div>
+    </div>
+  );
+}
+
+/**
+ * Anything that stopped "Create project", above the cards it concerns.
+ *
+ * These used to sit below both columns — past the fold on a laptop — so a
+ * refused or timed-out creation looked like a button that did nothing. A new
+ * failure brings this region into view.
+ */
+function ReviewNotices({ failed, children }: Readonly<{ failed: boolean; children: ReactNode }>) {
+  const region = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (failed) region.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [failed]);
+  return (
+    <div ref={region} aria-live="polite" className="flow-review-notices empty:hidden">
+      {children}
     </div>
   );
 }

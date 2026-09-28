@@ -67,6 +67,15 @@ export const COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS = 195_000;
 export const PROMPT_GENERATION_REQUEST_TIMEOUT_MS = 240_000;
 
 /**
+ * "Create project" confirms every selected competitor website before it
+ * commits. The checks run concurrently, each bounded at 12 seconds on the
+ * backend (two fetch attempts inside that), and the commit follows. The
+ * ordinary 30-second limit sat too close to that bound: the browser gave up
+ * while the server went on to create the project.
+ */
+export const ONBOARDING_COMPLETION_REQUEST_TIMEOUT_MS = 60_000;
+
+/**
  * Bounded backoff between the API client's network-failure retries (A3). The
  * delay is multiplied by the attempt number, so attempt 2 waits one unit.
  */
