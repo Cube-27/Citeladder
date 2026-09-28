@@ -85,6 +85,8 @@ function scalarSchema(spec: ParamSpec): z.ZodType {
       return z.iso.datetime({ offset: true });
     case 'float':
       return z.number();
+    case 'bool':
+      return z.boolean();
     case 'int': {
       let schema = z.int();
       if (scalar.ge !== undefined) schema = schema.min(scalar.ge);

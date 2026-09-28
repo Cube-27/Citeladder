@@ -58,7 +58,7 @@ describe('declaredKeysFor', () => {
 
   it('resolves page wrappers and arrays to their object shape', () => {
     expect(declaredKeysFor('siteCrawlListPageSchema')?.declared).toContain('items');
-    expect(declaredKeysFor('visibilityTrendPointSchema')?.declared.length).toBeGreaterThan(0);
+    expect(declaredKeysFor('commandCenterSchema')?.declared.length).toBeGreaterThan(0);
   });
 });
 

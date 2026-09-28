@@ -48,8 +48,6 @@ from app.workers.audit import execution as audit_execution
 from tests.component.analysis_api_helpers import (
     _event,
     _seed_evidence_execution,
-    _seed_snapshot,
-    _trend_metrics,
 )
 from tests.component.audit_helpers import seed_audit_fixtures
 
@@ -165,7 +163,6 @@ async def test_source_counts_and_empty_answers_use_complete_selection(session_fa
             session,
             RunSelection(**scope),
             limit=1,
-            outcome="brand_absent",
         )
         assert answers.total == 2
         sources = await get_visibility_sources(
@@ -205,75 +202,6 @@ async def test_source_counts_and_empty_answers_use_complete_selection(session_fa
         assert foreign.total == 0
 
 
-async def test_source_comparison_uses_selected_persisted_runs(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    url = "https://example.com/selected"
-    baseline_at = datetime(2026, 2, 1, tzinfo=UTC)
-    current_at = datetime(2026, 3, 1, tzinfo=UTC)
-    async with session_factory() as session:
-        seed = await seed_audit_fixtures(session, prompt_count=1)
-        metrics = _trend_metrics(
-            brand_rate=1.0,
-            owned_rate=0.0,
-            competitor_rate=0.0,
-            brand_count=1,
-            competitor_count=0,
-            total_completed=1,
-        )
-        metrics["coverage"] = {"requested": 1}
-        selected, _ = await _seed_snapshot(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            completed_at=baseline_at,
-            metrics=metrics,
-            visibility_score=50.0,
-            total_completed=1,
-        )
-        await _seed_evidence_execution(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            completed_at=baseline_at,
-            audit=selected,
-            transport_model=GEMINI_MODEL,
-            citations=[(url, "example.com", "third_party")],
-        )
-        unselected, _ = await _seed_snapshot(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            completed_at=current_at,
-            metrics=metrics,
-            visibility_score=50.0,
-            total_completed=1,
-        )
-        await _seed_evidence_execution(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            completed_at=current_at,
-            audit=unselected,
-            transport_model=GEMINI_MODEL,
-            citations=[("https://other.com/page", "other.com", "third_party")],
-        )
-        await session.commit()
-
-        comparison = await get_visibility_sources(
-            session,
-            RunSelection(
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                audit_ids=[unselected.id],
-            ),
-            baseline_audit_ids=[selected.id],
-        )
-
-    assert comparison.comparison_status == "comparable"
-    assert comparison.items[0].response_delta == 100.0
-
-
 @pytest.mark.parametrize("selection_field", ["audit_id", "audit_ids"])
 async def test_source_readers_reject_foreign_selected_runs(
     session_factory: async_sessionmaker[AsyncSession], selection_field: str
@@ -296,16 +224,6 @@ async def test_source_readers_reject_foreign_selected_runs(
         )
         with pytest.raises(AnalysisNotFoundError):
             await get_visibility_sources(session, selection)
-        if selection_field == "audit_ids":
-            with pytest.raises(AnalysisNotFoundError):
-                await get_visibility_sources(
-                    session,
-                    RunSelection(
-                        workspace_id=seed.workspace_id,
-                        project_id=seed.project_id,
-                    ),
-                    baseline_audit_ids=[foreign.id],
-                )
 
 
 async def test_url_rows_carry_last_seen_including_the_projects_own_pages(

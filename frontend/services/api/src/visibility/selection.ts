@@ -47,7 +47,10 @@ function requireAware(label: string, value: ParsedDatetime | null): void {
   }
 }
 
-function validateEngineAndRange(selection: RunSelection): void {
+/** A known engine and an aware, ordered window, or a 422. */
+export function validateEngineAndRange(
+  selection: Pick<RunSelection, 'logicalEngine' | 'fromAt' | 'toAt'>,
+): void {
   if (selection.logicalEngine !== null && !isLogicalEngine(selection.logicalEngine)) {
     throw unknownEngine(selection.logicalEngine);
   }
@@ -60,6 +63,17 @@ function validateEngineAndRange(selection: RunSelection): void {
   ) {
     throw new TrendQueryError("'from' must not be after 'to'");
   }
+}
+
+export function validateCohort(cohort: string): void {
+  if (!visibility.requestable_cohorts.includes(cohort)) {
+    throw new TrendQueryError(`Unknown prompt cohort: ${cohort}`);
+  }
+}
+
+/** The cohorts a selection reads: core is every organic cohort. */
+export function selectedCohorts(cohort: string): readonly string[] {
+  return cohort === visibility.core_cohort ? visibility.organic_cohorts : [cohort];
 }
 
 /** Every run in `auditIds` belongs to the project and is dashboard-ready, or throw. */
@@ -95,9 +109,7 @@ export async function authorizedSelection(
   selection: RunSelection,
 ): Promise<RunSelection> {
   validateEngineAndRange(selection);
-  if (!visibility.requestable_cohorts.includes(selection.cohort)) {
-    throw new TrendQueryError(`Unknown prompt cohort: ${selection.cohort}`);
-  }
+  validateCohort(selection.cohort);
   const normalized = {
     ...selection,
     fromAt: selection.fromAt && toUtc(selection.fromAt),
@@ -123,8 +135,7 @@ export async function authorizedSelection(
  * statement, so they agree on what "the selection" contains.
  */
 export function evidenceScope(db: Database, selection: RunSelection) {
-  const cohorts =
-    selection.cohort === visibility.core_cohort ? visibility.organic_cohorts : [selection.cohort];
+  const cohorts = selectedCohorts(selection.cohort);
   let query = db
     .selectFrom('response_analyses as ra')
     .innerJoin('audit_tasks as task', 'task.id', 'ra.task_id')

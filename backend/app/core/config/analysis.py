@@ -58,12 +58,6 @@ VISIBILITY_TREND_DEFAULT_GRANULARITY: Final = "run"
 # final response is still returned in chronological order).
 VISIBILITY_TREND_MAX_POINTS: Final = 100
 VISIBILITY_SELECTION_MAX_RUNS: Final = 100
-# When True, a requested week/month bucket that would fold snapshots produced
-# under different analyzer/scoring versions is NOT emitted; the whole selected
-# range falls back to raw per-run points so no bucket ever mixes versions.
-# When False, such a bucket is emitted but flagged ``spans_version_boundary``
-# with every contributing version listed.
-VISIBILITY_TRENDS_STRICT_VERSION_BUCKETS: Final = True
 
 # --- Execution-evidence projection (roadmap: visibility Mentions & Fanout) -
 # The evidence endpoint is a pure READ-ONLY projection over already-persisted

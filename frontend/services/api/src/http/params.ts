@@ -19,6 +19,7 @@ type Scalar =
   | { kind: 'datetime' }
   | { kind: 'int'; ge?: number; le?: number }
   | { kind: 'float' }
+  | { kind: 'bool' }
   | { kind: 'str'; minLength?: number; maxLength?: number }
   | { kind: 'literal'; values: readonly string[] };
 
@@ -26,9 +27,11 @@ type ScalarValue<S extends Scalar> = S extends { kind: 'datetime' }
   ? ParsedDatetime
   : S extends { kind: 'int' | 'float' }
     ? number
-    : S extends { kind: 'literal'; values: readonly (infer V)[] }
-      ? V
-      : string;
+    : S extends { kind: 'bool' }
+      ? boolean
+      : S extends { kind: 'literal'; values: readonly (infer V)[] }
+        ? V
+        : string;
 
 export type ParamSpec = {
   scalar: Scalar;
@@ -85,6 +88,17 @@ function validateFloat(raw: string): Outcome {
     : failure('float_parsing', 'Expected a finite number');
 }
 
+// Pydantic's lax boolean spellings, which FastAPI query parameters accept.
+const TRUE_WORDS = new Set(['1', 'on', 't', 'true', 'y', 'yes']);
+const FALSE_WORDS = new Set(['0', 'off', 'f', 'false', 'n', 'no']);
+
+function validateBool(raw: string): Outcome {
+  const text = raw.trim().toLowerCase();
+  if (TRUE_WORDS.has(text)) return { ok: true, value: true };
+  if (FALSE_WORDS.has(text)) return { ok: true, value: false };
+  return failure('bool_parsing', 'Expected a boolean');
+}
+
 function validateStr(scalar: Extract<Scalar, { kind: 'str' }>, raw: string): Outcome {
   // Lengths count code points, not UTF-16 units.
   const length = [...raw].length;
@@ -119,6 +133,8 @@ function validateScalar(scalar: Scalar, raw: string): Outcome {
       return validateInt(scalar, raw);
     case 'float':
       return validateFloat(raw);
+    case 'bool':
+      return validateBool(raw);
     case 'str':
       return validateStr(scalar, raw);
     case 'literal':

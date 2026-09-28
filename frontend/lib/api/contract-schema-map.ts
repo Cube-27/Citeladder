@@ -32,9 +32,6 @@ export const CONTRACT_SCHEMA_MAP = {
   providerCatalogSchema: 'ProviderCatalogResponse',
   auditSchema: 'AuditResponse',
   executionSchema: 'AuditTaskResponse',
-  visibilitySchema: 'VisibilityResponse',
-  visibilityTrendPointSchema: 'VisibilityTrendPoint',
-  visibilityEvidenceResponseSchema: 'VisibilityEvidenceResponse',
   // Integrations
   integrationConnectionSchema: 'IntegrationConnectionResponse',
   integrationSyncRunSchema: 'IntegrationSyncRunResponse',

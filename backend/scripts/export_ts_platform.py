@@ -55,6 +55,9 @@ from app.core.config.analysis import (
     VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     VISIBILITY_EVIDENCE_MAX_LIMIT,
     VISIBILITY_SELECTION_MAX_RUNS,
+    VISIBILITY_TREND_DEFAULT_GRANULARITY,
+    VISIBILITY_TREND_GRANULARITIES,
+    VISIBILITY_TREND_MAX_POINTS,
 )
 from app.core.config.analytics import (
     AI_REFERRAL_ANALYZER_VERSION,
@@ -344,6 +347,9 @@ def _visibility_policy() -> dict[str, Any]:
         "selection_max_runs": VISIBILITY_SELECTION_MAX_RUNS,
         "evidence_default_limit": VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
         "evidence_max_limit": VISIBILITY_EVIDENCE_MAX_LIMIT,
+        "trend_granularities": sorted(VISIBILITY_TREND_GRANULARITIES),
+        "trend_default_granularity": VISIBILITY_TREND_DEFAULT_GRANULARITY,
+        "trend_max_points": VISIBILITY_TREND_MAX_POINTS,
         "overview_present_outcome": OUTCOME_AI_OVERVIEW_PRESENT,
         "successful_outcomes": sorted(SUCCESSFUL_OUTCOMES),
     }

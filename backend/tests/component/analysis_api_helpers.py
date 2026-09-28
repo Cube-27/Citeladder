@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 import pytest
 from sqlalchemy import select
@@ -18,7 +18,6 @@ from app.connectors.answer_engines.contracts import (
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_TRIGGER_MANUAL,
-    MEASUREMENT_POLICY_KEY,
     audit_settings,
 )
 from app.core.config.provider_catalog import (
@@ -32,7 +31,6 @@ from app.models.analysis import (
     BrandMention,
     Citation,
     CompetitorMention,
-    MetricSnapshot,
     ResponseAnalysis,
 )
 from app.models.audit import (
@@ -168,157 +166,6 @@ class _UsageStubAdapter(_StubAdapter):
             ),
             latency_ms=response.latency_ms,
         )
-
-
-@pytest.mark.asyncio
-def _trend_metrics(
-    *,
-    brand_rate: float,
-    owned_rate: float,
-    competitor_rate: float,
-    brand_count: int,
-    competitor_count: int,
-    total_completed: int,
-    per_engine: dict | None = None,
-) -> dict:
-    counts = {_BRAND: brand_count, _COMPETITOR: competitor_count}
-    total_mentions = sum(counts.values())
-    share = {
-        name: round(c / total_mentions, 4) if total_mentions else 0.0
-        for name, c in counts.items()
-    }
-    metrics = {
-        "total_completed": total_completed,
-        "brand_mention_rate": brand_rate,
-        "owned_citation_rate": owned_rate,
-        "competitor_mention_rate": {_COMPETITOR: competitor_rate},
-        "competitor_citation_rate": {_COMPETITOR: 0.0},
-        "share_of_voice": {
-            "total_mentions": total_mentions,
-            "mention_counts": counts,
-            "share": share,
-        },
-        "sentiment": None,
-        "avg_position": None,
-    }
-    if per_engine is not None:
-        metrics["per_engine"] = per_engine
-    return metrics
-
-
-async def _seed_snapshot(
-    session,
-    *,
-    workspace_id,
-    project_id,
-    completed_at: datetime,
-    metrics: dict,
-    visibility_score: float,
-    total_completed: int,
-    analyzer_version: str = "b6-analysis-1",
-    scoring_rule_version: str = "scoring-v1",
-    status: str = AUDIT_STATUS_COMPLETED,
-    transport_model: str | None = None,
-    retrieval_enabled: bool | None = None,
-):
-    configuration = {
-        "brand_name": _BRAND,
-        "brand_aliases": [],
-        "owned_domains": ["acme.com"],
-        "competitors": [
-            {"name": _COMPETITOR, "aliases": [], "domains": ["globex.com"]}
-        ],
-        "country_code": "US",
-        "language_code": "en",
-        "benchmark_mode": "consumer_like",
-        "panel_hash": "frozen-panel",
-        "audit_scope": "brand",
-        "repetitions": 1,
-        "engine_routes": {
-            ENGINE_GEMINI: {
-                "transport_provider": TRANSPORT_GOOGLE,
-                "transport_model": transport_model or GEMINI_MODEL,
-                "retrieval_enabled": True
-                if retrieval_enabled is None
-                else retrieval_enabled,
-            }
-        },
-        MEASUREMENT_POLICY_KEY: {
-            "retrieval_enabled": True
-            if retrieval_enabled is None
-            else retrieval_enabled,
-            "max_output_tokens": 1000,
-            "answer_instruction": "Answer the question.",
-        },
-    }
-    audit = Audit(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        status=status,
-        completed_at=completed_at,
-        requested_count=total_completed,
-        completed_count=total_completed,
-        configuration=configuration,
-    )
-    session.add(audit)
-    await session.flush()
-    if transport_model is not None:
-        session.add(
-            AuditEngineSnapshot(
-                audit_id=audit.id,
-                logical_engine=ENGINE_GEMINI,
-                transport_provider=TRANSPORT_GOOGLE,
-                transport_model=transport_model,
-            )
-        )
-        await session.flush()
-    snapshot = MetricSnapshot(
-        workspace_id=workspace_id,
-        audit_id=audit.id,
-        project_id=project_id,
-        analyzer_version=analyzer_version,
-        scoring_rule_version=scoring_rule_version,
-        total_completed=total_completed,
-        total_failed=0,
-        visibility_score=visibility_score,
-        metrics=metrics,
-        source_analysis_ids=[],
-        source_artifact_ids=[],
-    )
-    session.add(snapshot)
-    await session.flush()
-    return audit, snapshot
-
-
-async def _seed_partition_audits(session, *, workspace_id, project_id) -> dict:
-    """Seed two runs per identity, all inside one 2026 week/month."""
-    snapshots: dict[tuple, list] = {}
-    for model, retrieval, scores in _PARTITION_IDENTITIES:
-        for run, score in enumerate(scores):
-            _, snapshot = await _seed_snapshot(
-                session,
-                workspace_id=workspace_id,
-                project_id=project_id,
-                completed_at=datetime(2026, 1, 5, 6 + run, tzinfo=UTC),
-                metrics=_trend_metrics(
-                    brand_rate=score / 100,
-                    owned_rate=0.5,
-                    competitor_rate=0.5,
-                    brand_count=1,
-                    competitor_count=1,
-                    total_completed=1,
-                ),
-                visibility_score=score,
-                total_completed=1,
-                transport_model=model,
-                retrieval_enabled=retrieval,
-            )
-            snapshots.setdefault((model, retrieval), []).append(snapshot)
-    return snapshots
-
-
-def _identity_of(point) -> tuple:
-    return (point.transport_model, point.retrieval_enabled)
 
 
 async def _seed_evidence_execution(
