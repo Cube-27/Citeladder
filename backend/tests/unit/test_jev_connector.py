@@ -64,7 +64,7 @@ async def test_decide_posts_state_and_questions_with_bearer_auth() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("status", [429, 529])
+@pytest.mark.parametrize("status", [429, 503, 529])
 async def test_rate_limit_and_overload_retry_then_succeed(status: int) -> None:
     responses = [httpx.Response(status, headers={"retry-after": "2"})]
     sleeps: list[float] = []

@@ -133,3 +133,15 @@ notify. Later subprocessor changes follow the DPA notice period.
 Source: owner decision of 28 September 2026.
 [Prompts and Visibility](visibility-prompt.md) and
 [Site Health](site-health.md#internal-links) own the shipped behavior.
+
+## JEV judgments are unmetered and unthrottled
+
+JEV is built for parallel calls and costs almost nothing per judgment, so
+CiteLadder does not cap its concurrency or meter judgments against AI credits.
+Prompt generation sends every candidate's request at once, and an internal-link
+analysis sends one request per source page at once. A bounded call count per
+generation and each job's deadline remain.
+
+Source: owner decision of 28 September 2026.
+[Prompts and Visibility](visibility-prompt.md) and
+[Site Health](site-health.md#internal-links) own the shipped behavior.

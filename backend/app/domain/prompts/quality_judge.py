@@ -276,17 +276,16 @@ async def _decide_all(
     """
     if not requests:
         return {}, False
-    semaphore = asyncio.Semaphore(jev_settings.concurrency)
 
+    # JEV is built for parallel calls: every request is sent at once.
     async def _one(request: _Request) -> tuple[str, dict[str, Any] | None]:
-        async with semaphore:
-            try:
-                decision = await judge.decide(request.state, request.questions)
-            except ProviderError as exc:
-                logger.warning(
-                    "jev decision unavailable", extra={"error_code": exc.error_code}
-                )
-                return request.key, None
+        try:
+            decision = await judge.decide(request.state, request.questions)
+        except ProviderError as exc:
+            logger.warning(
+                "jev decision unavailable", extra={"error_code": exc.error_code}
+            )
+            return request.key, None
         try:
             return request.key, decision_record(request, decision)
         except (AttributeError, KeyError, TypeError, ValueError) as exc:

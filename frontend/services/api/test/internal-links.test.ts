@@ -5,6 +5,7 @@ import {
   anchorOptions,
   isVariant,
   linkCandidates,
+  linkRequests,
 } from '../src/site-health/internal-link-candidates.ts';
 import { projectLinks } from '../src/site-health/internal-link-publish.ts';
 import { policy } from '../src/config.ts';
@@ -92,11 +93,36 @@ describe('internal link candidates', () => {
       title: 'Black Bikini Hi-Cut Cotton | Acme',
     });
     expect(anchorOptions(target)).toEqual(['Bikini Hi-Cut Cotton', 'Black Bikini Hi-Cut Cotton']);
-    const candidate = linkCandidates([page('Cotton bikini care'), target]).find(
-      (item) => item.target === target.analysis_id,
-    )!;
-    const question = candidate.request.questions.anchor as { criteria: Record<string, string> };
+    const pages = [page('Cotton bikini care'), target];
+    const candidate = linkCandidates(pages).find((item) => item.target === target.analysis_id)!;
+    const [request] = linkRequests(pages, [candidate]);
+    const question = request!.request.questions[`anchor_${candidate.key}`] as {
+      criteria: Record<string, string>;
+    };
     expect(Object.values(question.criteria)).toEqual(anchorOptions(target));
+  });
+
+  it('sends each source page once with a question per destination it names', () => {
+    const words = 'alpha bravo charlie delta echo foxtrot golf hotel'.split(' ');
+    const pages = words.map((_, index) =>
+      page([0, 1, 2, 3].map((offset) => words[(index + offset) % words.length]).join(' ')),
+    );
+    const candidates = linkCandidates(pages);
+    const requests = linkRequests(pages, candidates);
+    expect(requests).toHaveLength(new Set(candidates.map((item) => item.source)).size);
+    expect(requests.flatMap((item) => item.candidates.map(({ id }) => id)).sort()).toEqual(
+      candidates.map(({ id }) => id).sort(),
+    );
+    for (const { candidates: members, request } of requests) {
+      const targets = request.state.targets as Record<string, { url: string }>;
+      for (const { id, key } of members) {
+        const candidate = candidates.find((item) => item.id === id)!;
+        const target = pages.find((item) => item.analysis_id === candidate.target)!;
+        expect(targets[key]!.url).toBe(new URL(target.url).pathname);
+        const link = request.questions[`link_${key}`] as { instructions: string };
+        expect(link.instructions).toContain(`targets.${key}`);
+      }
+    }
   });
 });
 

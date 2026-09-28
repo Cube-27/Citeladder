@@ -10,8 +10,16 @@ export type LinkCandidate = {
   id: string;
   source: string;
   target: string;
+  /** The destination's key in its source page's JEV request (`targets.<key>`). */
+  key: string;
   similarity: number;
   anchors: string[];
+};
+
+/** One JEV request per source page: its targets share the source state. */
+export type LinkRequest = {
+  id: string;
+  candidates: { id: string; key: string }[];
   request: { state: Record<string, unknown>; questions: Record<string, unknown> };
 };
 
@@ -123,28 +131,52 @@ function pageState(page: InternalLinkPage) {
   };
 }
 
-function linkRequest(source: InternalLinkPage, target: InternalLinkPage, anchors: string[]) {
-  const questions: Record<string, unknown> = {
-    link: {
-      type: 'noul',
-      instructions: limits.link_instructions,
-      criteria: limits.link_criteria,
-    },
-  };
-  if (anchors.length > 1)
-    questions.anchor = {
-      type: 'choice',
-      instructions: limits.anchor_instructions,
-      criteria: Object.fromEntries(anchors.map((anchor, index) => [`a${index}`, anchor])),
+const targetPath = (key: string) => `targets.${key}`;
+
+function linkRequest(source: InternalLinkPage, targets: [LinkCandidate, InternalLinkPage][]) {
+  const questions: Record<string, unknown> = {};
+  const state: Record<string, unknown> = {};
+  for (const [candidate, target] of targets) {
+    const path = targetPath(candidate.key);
+    state[candidate.key] = {
+      ...pageState(target),
+      contextual_inbound_links: target.contextual_inbound,
     };
-  return {
-    state: {
-      rubric: limits.rubric,
-      source: pageState(source),
-      target: { ...pageState(target), contextual_inbound_links: target.contextual_inbound },
-    },
-    questions,
-  };
+    questions[`link_${candidate.key}`] = {
+      type: 'noul',
+      instructions: limits.link_instructions.replaceAll('{target}', path),
+      criteria: limits.link_criteria,
+    };
+    if (candidate.anchors.length > 1)
+      questions[`anchor_${candidate.key}`] = {
+        type: 'choice',
+        instructions: limits.anchor_instructions.replaceAll('{target}', path),
+        criteria: Object.fromEntries(
+          candidate.anchors.map((anchor, index) => [`a${index}`, anchor]),
+        ),
+      };
+  }
+  return { state: { rubric: limits.rubric, source: pageState(source), targets: state }, questions };
+}
+
+/**
+ * Group each source page's shortlist into one JEV request: the source and
+ * rubric are sent once, with a link (and anchor) question per destination.
+ */
+export function linkRequests(
+  pages: InternalLinkPage[],
+  candidates: LinkCandidate[],
+): LinkRequest[] {
+  const byId = new Map(pages.map((page) => [page.analysis_id, page]));
+  const grouped = Map.groupBy(candidates, (candidate) => candidate.source);
+  return [...grouped].map(([sourceId, shortlist]) => ({
+    id: randomUUID(),
+    candidates: shortlist.map(({ id, key }) => ({ id, key })),
+    request: linkRequest(
+      byId.get(sourceId)!,
+      shortlist.map((candidate) => [candidate, byId.get(candidate.target)!]),
+    ),
+  }));
 }
 
 /** Shortlist the most related unlinked destinations for every source page. */
@@ -175,15 +207,15 @@ export function linkCandidates(pages: InternalLinkPage[]): LinkCandidate[] {
       if (chosen.some((page) => isVariant(page, target))) continue;
       const anchors = anchorOptions(target);
       if (!anchors.length) continue;
-      chosen.push(target);
       candidates.push({
         id: randomUUID(),
         source: source.analysis_id,
         target: target.analysis_id,
+        key: `t${chosen.length}`,
         similarity,
         anchors,
-        request: linkRequest(source, target, anchors),
       });
+      chosen.push(target);
     }
   }
   return candidates;

@@ -12,7 +12,7 @@ import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import { effectiveStatus } from '../opportunities/action-status.ts';
-import { linkCandidates } from './internal-link-candidates.ts';
+import { linkCandidates, linkRequests } from './internal-link-candidates.ts';
 import { loadLinkPages, type LinkScope } from './internal-link-pages.ts';
 
 const { succeeded, failed, cancelled } = policy.task_queue.statuses;
@@ -178,6 +178,7 @@ export async function admitLinkRun(
         manifest: JSON.stringify({
           pages,
           candidates,
+          requests: linkRequests(pages, candidates),
           page_count: pages.length,
           omitted_pages: omittedPages,
           policy: policy.internal_links,
