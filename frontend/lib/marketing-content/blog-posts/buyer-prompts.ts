@@ -40,6 +40,41 @@ export const POST_BUYER_PROMPTS: BlogPost = {
       text: 'CiteLadder builds a representative set of questions to measure repeatedly. It does not estimate how many AI prompts exist, and a count of generated candidates is never a market size.',
       tone: 'accent',
     },
+    {
+      type: 'diagram',
+      title: 'The prompt-generation pipeline',
+      variant: 'flow',
+      data: {
+        steps: [
+          {
+            step: '01',
+            title: 'Map',
+            desc: 'Use confirmed offerings, attributes, audiences and markets.',
+          },
+          {
+            step: '02',
+            title: 'Generate',
+            desc: 'Write natural buyer questions from compatible cells.',
+          },
+          {
+            step: '03',
+            title: 'Admit',
+            desc: 'Apply duplicate, brand, binding and evidence rules in code.',
+          },
+          {
+            step: '04',
+            title: 'Judge',
+            desc: 'Ask Jev bounded quality questions about each candidate.',
+          },
+          { step: '05', title: 'Review', desc: 'Accept only the candidates worth tracking.' },
+          {
+            step: '06',
+            title: 'Measure',
+            desc: 'Run the approved portfolio across the AI-search engines you choose.',
+          },
+        ],
+      },
+    },
     { type: 'heading', text: 'Start with business structure, not prompt wording' },
     {
       type: 'paragraph',
@@ -146,41 +181,6 @@ export const POST_BUYER_PROMPTS: BlogPost = {
     {
       type: 'paragraph',
       text: 'Generating suggestions and running an audit are separate actions. Generation never launches provider measurements on its own: you review the portfolio first, then choose when and where to run it.',
-    },
-    {
-      type: 'diagram',
-      title: 'The prompt-generation pipeline',
-      variant: 'flow',
-      data: {
-        steps: [
-          {
-            step: '01',
-            title: 'Map',
-            desc: 'Use confirmed offerings, attributes, audiences and markets.',
-          },
-          {
-            step: '02',
-            title: 'Generate',
-            desc: 'Write natural buyer questions from compatible cells.',
-          },
-          {
-            step: '03',
-            title: 'Admit',
-            desc: 'Apply duplicate, brand, binding and evidence rules in code.',
-          },
-          {
-            step: '04',
-            title: 'Judge',
-            desc: 'Ask Jev bounded quality questions about each candidate.',
-          },
-          { step: '05', title: 'Review', desc: 'Accept only the candidates worth tracking.' },
-          {
-            step: '06',
-            title: 'Measure',
-            desc: 'Run the approved portfolio across the AI-search engines you choose.',
-          },
-        ],
-      },
     },
     { type: 'heading', text: 'What the workflow avoids' },
     {
