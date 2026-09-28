@@ -87,9 +87,18 @@ function ActionDetailView({
   workspaceId,
 }: Readonly<{ action: ActionDetail; workspaceId: string }>) {
   const [evidenceId, setEvidenceId] = useState<string | null>(null);
+  // Owned here, not by the controls, so a failure notice renders in the body
+  // and the one-row header never has to hold it.
+  const update = useStatusUpdate(workspaceId);
   return (
-    <PageShell actions={<ActionControls action={action} workspaceId={workspaceId} />}>
+    <PageShell actions={<ActionControls action={action} update={update} />}>
       <Stack gap="section">
+        {update.isError ? (
+          <MutationNotice
+            notice={mutationNoticeForError(update.error, { action: 'update this Action' })}
+            onRetry={() => update.variables && update.mutate(update.variables)}
+          />
+        ) : null}
         <ActionFacts action={action} />
         <Diagnosis action={action} onOpenEvidence={setEvidenceId} />
         <Implementation action={action} workspaceId={workspaceId} />
@@ -107,25 +116,24 @@ function ActionDetailView({
   );
 }
 
-function ActionControls({
-  action,
-  workspaceId,
-}: Readonly<{ action: ActionDetail; workspaceId: string }>) {
-  const mayWrite = useWorkspaceCapability('write');
+function useStatusUpdate(workspaceId: string) {
   const queryClient = useQueryClient();
-  const update = useMutation({
+  return useMutation({
     ...actionsMutations.updateStatus(workspaceId),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.actions.all }),
   });
+}
+
+type StatusUpdate = ReturnType<typeof useStatusUpdate>;
+
+function ActionControls({
+  action,
+  update,
+}: Readonly<{ action: ActionDetail; update: StatusUpdate }>) {
+  const mayWrite = useWorkspaceCapability('write');
   const dismissed = action.status === 'dismissed';
   return (
     <>
-      {update.isError ? (
-        <MutationNotice
-          notice={mutationNoticeForError(update.error, { action: 'update this Action' })}
-          onRetry={() => update.variables && update.mutate(update.variables)}
-        />
-      ) : null}
       {mayWrite ? (
         <Button
           variant="secondary"
