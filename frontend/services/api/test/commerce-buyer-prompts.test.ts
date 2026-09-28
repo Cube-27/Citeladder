@@ -120,4 +120,34 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
       .where('project_id', '=', scope.projectId)
       .execute(),
   ).toHaveLength(2);
+  io.fetch.mockImplementationOnce(async () =>
+    Response.json({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              prompts: [
+                { text: 'best running shoes for wet trails' },
+                { text: 'waterproof trail shoes for muddy hikes' },
+                { text: 'which trail running shoes grip wet rocks' },
+              ],
+            }),
+          },
+        },
+      ],
+    }),
+  );
+  const repeat = await generateBuyerPrompts(
+    db,
+    scope,
+    buyerGenerateInput.parse({ targets: [target], count: 2 }),
+    gateway,
+  );
+  expect(repeat.map((row) => row.text)).toEqual(
+    expect.arrayContaining([
+      'waterproof trail shoes for muddy hikes',
+      'which trail running shoes grip wet rocks',
+    ]),
+  );
+  expect(repeat).toHaveLength(2);
 });

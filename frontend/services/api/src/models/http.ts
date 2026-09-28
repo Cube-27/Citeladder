@@ -6,6 +6,16 @@ export function providerErrorCode(status: number) {
   return status >= 500 ? 'server_error' : 'client_error';
 }
 
+/** Rate limits and transient gateway failures; never a deterministic 4xx/5xx. */
+export const transientStatus = (status: number) => [429, 500, 502, 503, 504].includes(status);
+
+/** `base` without trailing slashes, joined to an absolute `path`. */
+export function endpointUrl(base: string, path: string) {
+  let end = base.length;
+  while (end > 0 && base[end - 1] === '/') end--;
+  return `${base.slice(0, end)}${path}`;
+}
+
 export class ModelError extends Error {
   readonly code: 'not_configured' | 'parse' | 'http' | 'connection';
   readonly status: number | undefined;
@@ -20,9 +30,12 @@ export class ModelError extends Error {
 
 export type Transport = {
   fetch: typeof fetch;
-  sleep: (milliseconds: number) => Promise<void>;
+  sleep: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
 };
-export const defaultTransport: Transport = { fetch: globalThis.fetch, sleep: setTimeout };
+export const defaultTransport: Transport = {
+  fetch: globalThis.fetch,
+  sleep: (milliseconds, signal) => setTimeout(milliseconds, undefined, { signal }),
+};
 export type RetryPolicy = {
   attempts: number;
   timeoutSeconds: number;
@@ -32,10 +45,16 @@ export type RetryPolicy = {
   retryConnection: boolean;
 };
 
-function retryDelay(response: Response | undefined, attempt: number, policy: RetryPolicy) {
+/** `Retry-After` as seconds (delta or HTTP date), or NaN when absent/invalid. */
+function retryAfterSeconds(response: Response | undefined) {
   const header = response?.headers.get('retry-after');
-  const seconds = header == null ? 0 : Number(header);
-  const after = Number.isFinite(seconds) ? seconds : (Date.parse(header!) - Date.now()) / 1000;
+  if (header == null) return Number.NaN;
+  const seconds = Number(header);
+  return Number.isFinite(seconds) ? seconds : (Date.parse(header) - Date.now()) / 1000;
+}
+
+function retryDelay(response: Response | undefined, attempt: number, policy: RetryPolicy) {
+  const after = retryAfterSeconds(response);
   return (
     Math.min(
       policy.maxDelaySeconds,
@@ -74,18 +93,19 @@ export async function postModel(
       }
     }
     await response?.body?.cancel();
-    await transport.sleep(retryDelay(response, attempt, policy));
+    try {
+      await transport.sleep(retryDelay(response, attempt, policy), signal);
+    } catch {
+      // Only an abort interrupts the backoff; the caller's deadline has passed.
+      throw new ModelError('connection');
+    }
   }
   throw new ModelError('connection');
 }
 
 export async function modelJson(response: Response): Promise<unknown> {
   if (!response.ok) {
-    const header = response.headers.get('retry-after');
-    const numeric = header === null ? NaN : Number(header);
-    const seconds = Number.isFinite(numeric)
-      ? numeric
-      : (Date.parse(header ?? '') - Date.now()) / 1000;
+    const seconds = retryAfterSeconds(response);
     throw new ModelError(
       'http',
       response.status,

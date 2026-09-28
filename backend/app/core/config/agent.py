@@ -39,12 +39,13 @@ AGENT_PROTOCOL_VERSION: Final = "agent-protocol-1"
 # either calls one read tool or responds. Every bound is frozen onto the run at
 # admission, so a config change never alters a turn already queued.
 AGENT_MAX_STEPS: Final = 8
-GENERATION_PROVIDER_MAX_ATTEMPTS: Final = 3
 AGENT_MAX_TOOL_CALLS: Final = 6
 # A run's attempts at the whole turn (a lost lease or retryable provider error).
 AGENT_RUN_MAX_ATTEMPTS: Final = 3
 # Per-chat bound on user turns, so one conversation cannot grow without end.
 AGENT_CHAT_TURN_LIMIT: Final = 60
+# HTTP attempts per default-model call made by TS prompt generation.
+GENERATION_PROVIDER_MAX_ATTEMPTS: Final = 3
 
 # Context bounds (characters, after serialization).
 AGENT_TOOL_RESULT_MAX_CHARS: Final = 12_000

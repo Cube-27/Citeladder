@@ -11,7 +11,7 @@ import { generationInvalid, generationSetting, type GenerationInput } from './ge
 import { promptTextHash } from './normalization.ts';
 
 const G = policy.prompts.generation;
-const dimensions = ['attributes', 'situations', 'audiences'] as const;
+export const dimensions = ['attributes', 'situations', 'audiences'] as const;
 const facets = ['attribute', 'situation_or_constraint', 'audience'] as const;
 const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
 const normalized = (text: string) => words(text).join(' ');
@@ -32,7 +32,10 @@ function brandTerms(context: GenerationContext): string[] {
     policy.prompts.binding.business_context_fields.flatMap((field) => {
       const value = record(business)[field];
       return (typeof value === 'string' ? [value] : strings(value)).flatMap((phrase) =>
-        phrase.split(/\s+-\s+|[(),;/–—|]+/u).map((segment) => stem(words(segment).at(-1) ?? '')),
+        phrase
+          .replaceAll(/\s+/gu, ' ')
+          .split(/ - |[(),;/–—|]+/u)
+          .map((segment) => stem(words(segment).at(-1) ?? '')),
       );
     }),
   );
@@ -75,7 +78,10 @@ function combinations(map: OfferingMap | undefined): Facet[][] {
   );
   const result: Facet[][] = [[]];
   for (const option of options) {
-    for (const prior of [...result]) {
+    // Extend only the combinations that existed before this option.
+    const size = result.length;
+    for (let index = 0; index < size; index++) {
+      const prior = result[index]!;
       if (
         prior.length >= G.cell_max_facets ||
         prior.some((item) => item.dimension === option.dimension)
@@ -343,9 +349,25 @@ async function suggestMaps(
   }
 }
 
+/** Bodies of the ```json fenced blocks, each closed by a bare ``` line. */
+function jsonBlocks(body: string) {
+  const blocks: string[] = [];
+  let open: string[] | null = null;
+  for (const line of body.split('\n')) {
+    const fence = line.trimEnd();
+    if (open === null) {
+      if (fence === '```json') open = [];
+    } else if (fence === '```') {
+      blocks.push(open.join('\n'));
+      open = null;
+    } else open.push(line);
+  }
+  return blocks;
+}
+
 function proposal(context: GenerationContext) {
   const revision = context.revision!;
-  const blocks = [...revision.body.matchAll(/^```json\s*\n([\s\S]*?)^```\s*$/gmu)];
+  const blocks = jsonBlocks(revision.body);
   if (blocks.length !== 1) throw generationInvalid('Portfolio requires one JSON prompt proposal');
   const schema = z.object({
     prompts: z
@@ -355,7 +377,7 @@ function proposal(context: GenerationContext) {
   });
   let parsed: z.infer<typeof schema>;
   try {
-    parsed = schema.parse(JSON.parse(blocks[0]![1]!));
+    parsed = schema.parse(JSON.parse(blocks[0]!));
   } catch {
     throw generationInvalid('Portfolio contains invalid prompt rows');
   }
@@ -385,6 +407,12 @@ function proposal(context: GenerationContext) {
   };
 }
 
+/** Model calls for one request's slots: every batch plus one refill batch. */
+export const draftCallLimit = (count: number) =>
+  Math.ceil(
+    (count * generationSetting('overgenerate_factor')) / generationSetting('model_batch_size'),
+  ) + 1;
+
 export async function generateDrafts(
   context: GenerationContext,
   input: GenerationInput,
@@ -411,7 +439,7 @@ export async function generateDrafts(
   const systems = G.systems as Record<string, Record<string, string>>;
   const system = (systems[String(record(context.context.business_context).business_model)] ??
     systems[''])![input.cohort]!;
-  for (let call = 0; call < Math.ceil(slots.length / batchSize) + 1; call++) {
+  for (let call = 0; call < draftCallLimit(input.count); call++) {
     const accepted = new Set(drafts.map((row) => row.slot.slot_id));
     const batch = slots.filter((slot) => !accepted.has(slot.slot_id)).slice(0, batchSize);
     if (!batch.length) break;

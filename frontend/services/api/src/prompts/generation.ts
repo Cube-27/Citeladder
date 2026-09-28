@@ -1,8 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-import { offeringMapSchema } from '@citeladder/contracts/project';
-import { z } from 'zod';
-
 import { agentCallLimit, enforceWorkspaceRequest } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -11,8 +8,13 @@ import { ApiError } from '../errors.ts';
 import { createModelGateway, type ModelGateway } from '../models/gateway.ts';
 import { ModelError } from '../models/http.ts';
 import { createJevClient, type JevClient } from '../models/jev.ts';
-import { generationContext, type GenerationContext } from './generation-context.ts';
-import { generateDrafts } from './generation-drafts.ts';
+import {
+  generationContext,
+  offeringMaps,
+  type GenerationContext,
+  type OfferingMap,
+} from './generation-context.ts';
+import { dimensions, draftCallLimit, generateDrafts, type Draft } from './generation-drafts.ts';
 import { generationSetting, validateSelection, type GenerationInput } from './generation-input.ts';
 import { gatedOut, judgeDrafts, selectDrafts } from './generation-quality.ts';
 import { acquireProjectLock, acquirePromptSetLock } from './locks.ts';
@@ -22,6 +24,84 @@ import { candidateView } from './views.ts';
 
 type Dependencies = { gateway: () => ModelGateway; judge: () => JevClient | null };
 const defaults: Dependencies = { gateway: createModelGateway, judge: createJevClient };
+type Staging = {
+  workspaceId: string;
+  setId: string;
+  runId: string;
+  cohort: GenerationInput['cohort'];
+  now: Date;
+};
+
+/** Gate-rejected drafts keep a text-free outcome row for calibration. */
+function candidateRow(draft: Draft, { workspaceId, setId, runId, cohort, now }: Staging) {
+  const gated = gatedOut(draft);
+  const retentionHours = gated
+    ? generationSetting('rejected_outcome_retention_days') * 24
+    : generationSetting('candidate_retention_hours');
+  return {
+    id: randomUUID(),
+    workspace_id: workspaceId,
+    run_id: runId,
+    prompt_set_id: setId,
+    topic_id: draft.slot.topic_id,
+    text: gated ? '' : draft.text,
+    normalized_text_hash: gated ? '' : draft.hash,
+    intent: draft.intent,
+    buyer_stage: draft.buyer_stage,
+    prompt_intent: draft.prompt_intent,
+    cohort,
+    slot_id: draft.slot.slot_id,
+    evidence_refs: JSON.stringify([draft.slot.evidence_ref]),
+    validation: JSON.stringify({ admission: 'passed' }),
+    jev_decision: draft.decision ? JSON.stringify(draft.decision) : null,
+    disposition: gated ? 'gate_rejected' : 'pending',
+    prompt_id: null,
+    created_at: now,
+    reviewed_at: gated ? now : null,
+    expires_at: new Date(now.getTime() + retentionHours * 3_600_000),
+  };
+}
+
+/** Store suggested maps only for still-confirmed offerings that have no facets yet. */
+async function mergeMapSuggestions(
+  trx: Database,
+  { workspaceId, runId, now }: Staging,
+  projectId: string,
+  suggestions: OfferingMap[],
+) {
+  if (!suggestions.length) return;
+  const profile = await trx
+    .selectFrom('brand_profiles')
+    .selectAll()
+    .where('project_id', '=', projectId)
+    .where('workspace_id', '=', workspaceId)
+    .forUpdate()
+    .executeTakeFirst();
+  if (!profile) return;
+  const business = record(profile.business_context);
+  const existing = offeringMaps(business);
+  const offerings = new Set(strings(profile.products_services).map((name) => name.toLowerCase()));
+  for (const suggestion of suggestions) {
+    const offering = suggestion.offering.toLowerCase();
+    if (!offerings.has(offering)) continue;
+    const index = existing.findIndex((map) => map.offering.toLowerCase() === offering);
+    const prior = existing[index];
+    if (prior && dimensions.some((dimension) => prior[dimension].length)) continue;
+    for (const dimension of dimensions)
+      for (const entry of suggestion[dimension])
+        entry.source = { ...entry.source, generation_run_id: runId };
+    if (index < 0) existing.push(suggestion);
+    else existing[index] = suggestion;
+  }
+  await trx
+    .updateTable('brand_profiles')
+    .set({
+      business_context: JSON.stringify({ ...business, business_map: { offerings: existing } }),
+      updated_at: now,
+    })
+    .where('id', '=', profile.id)
+    .execute();
+}
 
 async function stage(
   db: Database,
@@ -110,86 +190,12 @@ async function stage(
         created_at: now,
       })
       .execute();
-    const rows = [...selected, ...rejected].map((draft) => {
-      const rejected = gatedOut(draft);
-      return {
-        id: randomUUID(),
-        workspace_id: workspaceId,
-        run_id: runId,
-        prompt_set_id: set.id,
-        topic_id: draft.slot.topic_id,
-        text: rejected ? '' : draft.text,
-        normalized_text_hash: rejected ? '' : draft.hash,
-        intent: draft.intent,
-        buyer_stage: draft.buyer_stage,
-        prompt_intent: draft.prompt_intent,
-        cohort: input.cohort,
-        slot_id: draft.slot.slot_id,
-        evidence_refs: JSON.stringify([draft.slot.evidence_ref]),
-        validation: JSON.stringify({ admission: 'passed' }),
-        jev_decision: draft.decision ? JSON.stringify(draft.decision) : null,
-        disposition: rejected ? 'gate_rejected' : 'pending',
-        prompt_id: null,
-        created_at: now,
-        reviewed_at: rejected ? now : null,
-        expires_at: new Date(
-          now.getTime() +
-            (rejected
-              ? generationSetting('rejected_outcome_retention_days') * 24
-              : generationSetting('candidate_retention_hours')) *
-              3_600_000,
-        ),
-      };
-    });
+    const staging = { workspaceId, setId: set.id, runId, cohort: input.cohort, now };
+    const rows = [...selected, ...rejected].map((draft) => candidateRow(draft, staging));
     const inserted = rows.length
       ? await trx.insertInto('prompt_candidates').values(rows).returningAll().execute()
       : [];
-    if (output.maps.length) {
-      const profile = await trx
-        .selectFrom('brand_profiles')
-        .selectAll()
-        .where('project_id', '=', set.project_id)
-        .where('workspace_id', '=', workspaceId)
-        .forUpdate()
-        .executeTakeFirst();
-      if (profile) {
-        const business = record(profile.business_context);
-        const existing = z
-          .object({ offerings: z.array(offeringMapSchema).default([]) })
-          .parse(business.business_map ?? {}).offerings;
-        const offerings = new Set(
-          strings(profile.products_services).map((name) => name.toLowerCase()),
-        );
-        for (const suggestion of output.maps) {
-          if (!offerings.has(suggestion.offering.toLowerCase())) continue;
-          const index = existing.findIndex(
-            (map) => map.offering.toLowerCase() === suggestion.offering.toLowerCase(),
-          );
-          const prior = existing[index];
-          if (
-            prior &&
-            [prior.attributes, prior.situations, prior.audiences].some((values) => values.length)
-          )
-            continue;
-          for (const dimension of ['attributes', 'situations', 'audiences'] as const)
-            for (const entry of suggestion[dimension])
-              entry.source = { ...entry.source, generation_run_id: runId };
-          if (index < 0) existing.push(suggestion);
-          else existing[index] = suggestion;
-        }
-        await trx
-          .updateTable('brand_profiles')
-          .set({
-            business_context: JSON.stringify({
-              ...business,
-              business_map: { offerings: existing },
-            }),
-            updated_at: now,
-          })
-          .where('id', '=', profile.id)
-          .execute();
-      }
-    }
+    await mergeMapSuggestions(trx, staging, set.project_id, output.maps);
     const candidates = inserted.filter((row) => row.disposition === 'pending');
     const touched = new Set(candidates.map((row) => row.topic_id));
     return {
@@ -221,14 +227,7 @@ export async function generatePrompts(
       await enforceWorkspaceRequest(
         db,
         workspaceId,
-        agentCallLimit(
-          Math.ceil(
-            (input.count * generationSetting('overgenerate_factor')) /
-              generationSetting('model_batch_size'),
-          ) +
-            1 +
-            policy.prompts.generation.map_calls,
-        ),
+        agentCallLimit(draftCallLimit(input.count) + policy.prompts.generation.map_calls),
       );
     const output = await generateDrafts(context, input, gateway);
     const gate = await judgeDrafts(context, output.drafts, dependencies.judge());

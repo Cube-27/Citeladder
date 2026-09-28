@@ -1,5 +1,5 @@
 /**
- * The prompt writers' advisory locks, shared with Python generation
+ * The prompt writers' advisory locks, shared with Python source-page admission
  * (`app/domain/prompts/locks.py`) through the exported lock families.
  *
  * Order: the project lock, then the prompt-set lock, then the account

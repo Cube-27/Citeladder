@@ -23,7 +23,7 @@ function transport(responses: Response[]) {
       if (!response) throw new Error('Unexpected network call');
       return response;
     }),
-    sleep: vi.fn(async (_milliseconds: number) => {}),
+    sleep: vi.fn(async (_milliseconds: number, _signal?: AbortSignal) => {}),
   };
 }
 
@@ -90,6 +90,11 @@ describe('configured model gateway', () => {
     });
     expect(io.fetch).toHaveBeenCalledTimes(1);
     expect(() => createModelGateway(gatewaySettings({}), io)).toThrow('not_configured');
+    const plain = { ...settings, baseUrl: 'http://model.test/v1' };
+    expect(() => createModelGateway(plain, io)).toThrow('not_configured');
+    expect(() =>
+      createModelGateway({ ...plain, baseUrl: 'http://127.0.0.1:11434/v1' }, io),
+    ).not.toThrow();
     const invalid = transport([Response.json({ choices: [{ message: { content: 'not JSON' } }] })]);
     await expect(
       createModelGateway(settings, invalid).structured('s', 'u', z.object({})),
@@ -114,7 +119,7 @@ describe('JEV transport', () => {
       Response.json({ answers: {} }),
     ]);
     await createJevClient(configured, io)!.decide({}, {});
-    expect(io.sleep).toHaveBeenCalledWith(10_000);
+    expect(io.sleep.mock.calls.map(([delay]) => delay)).toEqual([10_000]);
     for (const status of [401, 500]) {
       const failed = transport([new Response(null, { status })]);
       await expect(createJevClient(configured, failed)!.decide({}, {})).rejects.toMatchObject({
@@ -126,5 +131,17 @@ describe('JEV transport', () => {
     await expect(createJevClient(configured, invalid)!.decide({}, {})).rejects.toMatchObject({
       code: 'parse',
     });
+  });
+  it('stops retrying when the generation deadline passes during backoff', async () => {
+    const deadline = new AbortController();
+    const io = transport([new Response(null, { status: 503 })]);
+    io.sleep.mockImplementationOnce(async (_milliseconds, signal) => {
+      deadline.abort();
+      signal?.throwIfAborted();
+    });
+    await expect(
+      createJevClient(configured, io)!.decide({}, {}, deadline.signal),
+    ).rejects.toMatchObject({ code: 'connection' });
+    expect(io.fetch).toHaveBeenCalledTimes(1);
   });
 });

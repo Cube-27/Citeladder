@@ -4,6 +4,7 @@ import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
 import {
   defaultTransport,
+  endpointUrl,
   ModelError,
   modelJson,
   postModel,
@@ -21,7 +22,7 @@ export function jevSettings(env: Record<string, string | undefined> = process.en
     timeoutSeconds: Number(setting('timeout_seconds')),
     attempts: Number(setting('max_attempts')),
     baseDelaySeconds: Number(setting('backoff_seconds')),
-    maxDelaySeconds: policy.models.jev_retry_after_cap_seconds,
+    maxDelaySeconds: policy.models.quality.retry_after_cap_seconds,
   };
 }
 const decision = z.object({
@@ -40,7 +41,7 @@ export function createJevClient(settings = jevSettings(), transport: Transport =
     model: settings.model,
     async decide(state: unknown, questions: Record<string, unknown>, signal?: AbortSignal) {
       const response = await postModel(
-        `${settings.baseUrl.replace(/\/+$/u, '')}/v1/systemone`,
+        endpointUrl(settings.baseUrl, '/v1/systemone'),
         settings.apiKey,
         { state, model: settings.model, questions },
         {

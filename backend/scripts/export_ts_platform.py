@@ -349,7 +349,6 @@ def build_config() -> dict[str, Any]:
                 name: _setting(name, jev_config.JevSettings)
                 for name in jev_config.JevSettings.model_fields
             },
-            "jev_retry_after_cap_seconds": jev_config.JEV_RETRY_AFTER_CAP_SECONDS,
             "quality": {
                 name.removeprefix("JEV_").lower(): value
                 for name, value in vars(jev_config).items()

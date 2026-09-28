@@ -18,6 +18,55 @@ import { acquireProjectLock } from './locks.ts';
 import { scopedPromptSet } from './prompt-sets.ts';
 
 export type OfferingMap = z.infer<typeof offeringMapSchema>;
+const businessMap = z.object({ offerings: z.array(offeringMapSchema).default([]) });
+/** The persisted `business_context.business_map` offerings. */
+export const offeringMaps = (business: Record<string, unknown>): OfferingMap[] =>
+  businessMap.parse(business.business_map ?? {}).offerings;
+
+/** A project without topics gets one generated topic per confirmed offering. */
+async function recoverTopics(trx: Database, projectId: string, offerings: string[]) {
+  const names = new Map<string, string>();
+  for (const offering of offerings) {
+    const name = offering
+      .trim()
+      .replaceAll(/\s+/gu, ' ')
+      .slice(0, policy.prompts.topic_name_max_chars)
+      .trim();
+    if (name) names.set(name.toLowerCase(), name);
+  }
+  if (!names.size)
+    throw generationInvalid('Add at least one confirmed offering before generating prompts');
+  const now = new Date();
+  return trx
+    .insertInto('topics')
+    .values(
+      [...names.values()].slice(0, policy.prompts.generation.topic_max).map((name) => ({
+        id: randomUUID(),
+        project_id: projectId,
+        parent_id: null,
+        name,
+        description: '',
+        origin: 'generated',
+        created_at: now,
+        updated_at: now,
+      })),
+    )
+    .returningAll()
+    .execute();
+}
+
+/** Persisted field sources, overridden by each profile field's review state. */
+function fieldSources(business: Record<string, unknown>, sources: Record<string, unknown>) {
+  const result = { ...record(business.field_sources) };
+  for (const field of ['description', 'positioning', 'products_services', 'target_audience']) {
+    const source = record(sources[field]);
+    if (!Object.keys(source).length) continue;
+    const reviewed = ['confirmed', 'edited'].includes(String(source.review_state));
+    result[field] = reviewed ? 'reviewed' : 'inferred';
+  }
+  return result;
+}
+
 export async function generationContext(
   db: Database,
   workspaceId: string,
@@ -49,36 +98,7 @@ export async function generationContext(
       .execute();
     validateSelection(input, topics);
     const offerings = strings(profile?.products_services);
-    if (!topics.length) {
-      const names = new Map<string, string>();
-      for (const offering of offerings) {
-        const name = offering
-          .trim()
-          .replace(/\s+/gu, ' ')
-          .slice(0, policy.prompts.topic_name_max_chars)
-          .trim();
-        if (name) names.set(name.toLowerCase(), name);
-      }
-      if (!names.size)
-        throw generationInvalid('Add at least one confirmed offering before generating prompts');
-      const now = new Date();
-      topics = await trx
-        .insertInto('topics')
-        .values(
-          [...names.values()].slice(0, policy.prompts.generation.topic_max).map((name) => ({
-            id: randomUUID(),
-            project_id: project.id,
-            parent_id: null,
-            name,
-            description: '',
-            origin: 'generated',
-            created_at: now,
-            updated_at: now,
-          })),
-        )
-        .returningAll()
-        .execute();
-    }
+    if (!topics.length) topics = await recoverTopics(trx, project.id, offerings);
     const wanted = wantedTopics(input);
     const selected = wanted.length
       ? wanted.map((id) => topics.find((topic) => topic.id === id)!)
@@ -135,14 +155,6 @@ export async function generationContext(
           .execute()
       : [];
     const persistedBusiness = record(profile?.business_context);
-    const fieldSources = { ...record(persistedBusiness.field_sources) };
-    for (const field of ['description', 'positioning', 'products_services', 'target_audience']) {
-      const source = record(record(profile?.sources)[field]);
-      if (Object.keys(source).length)
-        fieldSources[field] = ['confirmed', 'edited'].includes(String(source.review_state))
-          ? 'reviewed'
-          : 'inferred';
-    }
     const business = {
       ...persistedBusiness,
       products_services: offerings,
@@ -151,11 +163,9 @@ export async function generationContext(
       target_audience: profile?.target_audience ?? '',
       primary_market: project.country_code || project.primary_market,
       language_code: project.language_code,
-      field_sources: fieldSources,
+      field_sources: fieldSources(persistedBusiness, record(profile?.sources)),
     };
-    const maps = z
-      .object({ offerings: z.array(offeringMapSchema).default([]) })
-      .parse(record(business).business_map ?? {}).offerings;
+    const maps = offeringMaps(business);
     const context = {
       brand_name: brand?.name ?? project.brand_name,
       brand_aliases: aliases.map((row) => row.alias),

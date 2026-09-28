@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import { applyQualityPolicy } from './generation-quality.ts';
+import { applyQualityPolicy, probability } from './generation-quality.ts';
 
 type Row = { decision: Record<string, unknown>; disposition: string; category: string };
 const rate = (numerator: number, denominator: number) =>
@@ -25,12 +25,7 @@ export function calibrationReport(rows: Row[]) {
   const thresholds = applyQualityPolicy({}).thresholds;
   const verdict = (row: Row) => applyQualityPolicy(row.decision).verdict;
   const values = (rows: Row[], question: string) =>
-    rows.flatMap((row) => {
-      const value = record(row.decision.answers)[question];
-      return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
-        ? [value]
-        : [];
-    });
+    rows.flatMap((row) => probability(record(row.decision.answers)[question]) ?? []);
   return {
     question_schema_version: Q.question_schema_version,
     thresholds,
@@ -52,29 +47,20 @@ export function calibrationReport(rows: Row[]) {
       Object.keys(Q.noul_questions).map((question) => {
         const a = values(accepted, question),
           r = values(rejected, question);
-        const failed = r.filter((value) => value < thresholds.fail_below).length;
+        const below = (values: number[], threshold: number) =>
+          values.filter((value) => value < threshold).length;
+        const failed = below(r, thresholds.fail_below),
+          falseFails = below(a, thresholds.fail_below);
         return [
           question,
           {
             answered_accepted: a.length,
             answered_rejected: r.length,
-            false_flag_rate: rate(
-              a.filter((value) => value < thresholds.flag_below).length,
-              a.length,
-            ),
-            false_reject_rate: rate(
-              a.filter((value) => value < thresholds.fail_below).length,
-              a.length,
-            ),
-            rejected_caught_by_flag: rate(
-              r.filter((value) => value < thresholds.flag_below).length,
-              r.length,
-            ),
+            false_flag_rate: rate(below(a, thresholds.flag_below), a.length),
+            false_reject_rate: rate(falseFails, a.length),
+            rejected_caught_by_flag: rate(below(r, thresholds.flag_below), r.length),
             rejected_caught_by_fail: rate(failed, r.length),
-            fail_precision: rate(
-              failed,
-              failed + a.filter((value) => value < thresholds.fail_below).length,
-            ),
+            fail_precision: rate(failed, failed + falseFails),
           },
         ];
       }),

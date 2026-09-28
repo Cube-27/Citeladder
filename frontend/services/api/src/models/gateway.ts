@@ -4,10 +4,12 @@ import { policy, resolveSettingSpec } from '../config.ts';
 import { getLogger } from '../logging.ts';
 import {
   defaultTransport,
+  endpointUrl,
   ModelError,
   modelJson,
   postModel,
   providerErrorCode,
+  transientStatus,
   type Transport,
 } from './http.ts';
 
@@ -52,6 +54,18 @@ const completion = z.object({
   usage: z.record(z.string(), z.unknown()).optional(),
 });
 const logger = getLogger('app.connectors.agent.client');
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** Model text without a leading ``` / ```json fence or a trailing ``` fence. */
+function unfenced(content: string) {
+  let text = content.trim();
+  if (text.startsWith('```')) {
+    text = text.slice(3);
+    if (text.slice(0, 4).toLowerCase() === 'json') text = text.slice(4);
+  }
+  if (text.endsWith('```')) text = text.slice(0, -3);
+  return text.trim();
+}
 
 export function createModelGateway(
   settings = gatewaySettings(),
@@ -61,16 +75,16 @@ export function createModelGateway(
     throw new ModelError('not_configured');
   }
   const endpoint = new URL(settings.baseUrl);
-  if (endpoint.username || endpoint.password || !['https:', 'http:'].includes(endpoint.protocol)) {
+  // Plain HTTP would expose the key and business context; allow it only locally.
+  const secure =
+    endpoint.protocol === 'https:' ||
+    (endpoint.protocol === 'http:' && LOOPBACK_HOSTS.has(endpoint.hostname));
+  if (endpoint.username || endpoint.password || !secure) {
     throw new ModelError('not_configured');
   }
   let legacyCap = false;
-  const retry = {
-    ...settings,
-    retryStatus: (status: number) => status === 429 || status >= 500,
-    retryConnection: true,
-  };
-  const url = `${settings.baseUrl.replace(/\/+$/u, '')}/chat/completions`;
+  const retry = { ...settings, retryStatus: transientStatus, retryConnection: true };
+  const url = endpointUrl(settings.baseUrl, '/chat/completions');
   async function complete(system: string, user: string) {
     const started = performance.now();
     const send = (legacy: boolean) =>
@@ -143,8 +157,7 @@ export function createModelGateway(
         `${user}\n\nReturn only JSON matching this schema:\n${JSON.stringify(z.toJSONSchema(schema))}`,
       );
       try {
-        const text = result.content.replace(/^```(?:json)?\s*\n?/iu, '').replace(/\s*```$/u, '');
-        return { value: schema.parse(JSON.parse(text)), result };
+        return { value: schema.parse(JSON.parse(unfenced(result.content))), result };
       } catch {
         throw new ModelError('parse');
       }

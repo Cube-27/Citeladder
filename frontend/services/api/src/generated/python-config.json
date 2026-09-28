@@ -3698,7 +3698,6 @@
         "maximum": 1
       }
     },
-    "jev_retry_after_cap_seconds": 10.0,
     "quality": {
       "question_schema_version": "prompt-quality-questions-2",
       "policy_version": "jev-gate-1",

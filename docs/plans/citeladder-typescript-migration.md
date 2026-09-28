@@ -619,7 +619,10 @@ Departures:
 - Actual returned model identity, usage and latency are retained in run evidence.
 - Commerce validates workspace/target ownership before model configuration and
   returns a deliberate 409 for normalized duplicates instead of an integrity 500.
-- Blank Commerce manual text is rejected after trimming.
+- Blank Commerce manual text is rejected after trimming. Generation skips texts
+  already tracked in the Commerce set, so a repeat run is not a 409.
+- The gateway refuses plain-HTTP endpoints other than loopback, and a JEV
+  deadline also interrupts retry backoff.
 - Calibration sweep values and JEV retry cap moved to configuration; the unused
   Python `prompt_generation_settings` singleton is removed. The settings class
   remains the exported policy authority.

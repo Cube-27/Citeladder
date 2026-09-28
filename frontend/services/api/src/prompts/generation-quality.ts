@@ -12,7 +12,7 @@ import type { Draft } from './generation-drafts.ts';
 const Q = policy.models.quality;
 const setting = (name: keyof typeof policy.models.jev) =>
   resolveSettingSpec(policy.models.jev[name]);
-const probability = (value: unknown): number | null =>
+export const probability = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : null;
 const logger = getLogger('app.domain.prompts.quality_judge');
 
@@ -51,13 +51,15 @@ export function applyQualityPolicy(decision: Record<string, unknown>) {
   const fail =
     values.some(([, value]) => value !== null && value < thresholds.fail_below) ||
     (duplicateP !== null && duplicateP >= thresholds.duplicate_fail_at);
+  let verdict = flags.length ? 'uncertain' : 'pass';
+  if (fail) verdict = 'fail';
   return {
     ...decision,
     thresholds,
     flags,
     mode: String(setting('mode')),
     policy_version: Q.policy_version,
-    verdict: fail ? 'fail' : flags.length ? 'uncertain' : 'pass',
+    verdict,
   };
 }
 
@@ -73,6 +75,44 @@ function choice(value: unknown, allowed: readonly string[]) {
     ),
     confidence: probability(answer.confidence),
   };
+}
+
+/** The JEV question set; `duplicate_of` only when the topic has prior texts. */
+function jevQuestions(options: Record<string, string>, hasPrior: boolean) {
+  const questions: Record<string, unknown> = Object.fromEntries(
+    Object.entries(Q.noul_questions).map(([key, value]) => [key, { type: 'noul', ...value }]),
+  );
+  questions.intent = {
+    type: 'choice',
+    instructions: Q.intent_instructions,
+    criteria: Q.intent_descriptions,
+  };
+  questions.stage = {
+    type: 'choice',
+    instructions: Q.stage_instructions,
+    criteria: Q.stage_descriptions,
+  };
+  if (hasPrior)
+    questions.duplicate_of = {
+      type: 'choice',
+      instructions: Q.duplicate_instructions,
+      criteria: { [Q.duplicate_none]: Q.duplicate_none_description, ...options },
+    };
+  return questions;
+}
+
+function jevErrorCode(error: ModelError) {
+  if (error.status) return providerErrorCode(error.status);
+  return error.code === 'parse' ? 'parse_error' : error.code;
+}
+
+function logJudgeFailure(error: unknown) {
+  if (error instanceof ModelError)
+    logger.warning('jev decision unavailable', { error_code: jevErrorCode(error) });
+  else
+    logger.warning('jev decision malformed', {
+      error_type: error instanceof Error ? error.name : typeof error,
+    });
 }
 
 /** All inputs are already committed. No database connection spans a JEV call. */
@@ -128,25 +168,7 @@ export async function judgeDrafts(
         buyer_need: draft.slot.buyer_need,
         candidate: { question: draft.text },
       };
-      const questions: Record<string, unknown> = Object.fromEntries(
-        Object.entries(Q.noul_questions).map(([key, value]) => [key, { type: 'noul', ...value }]),
-      );
-      questions.intent = {
-        type: 'choice',
-        instructions: Q.intent_instructions,
-        criteria: Q.intent_descriptions,
-      };
-      questions.stage = {
-        type: 'choice',
-        instructions: Q.stage_instructions,
-        criteria: Q.stage_descriptions,
-      };
-      if (texts.length)
-        questions.duplicate_of = {
-          type: 'choice',
-          instructions: Q.duplicate_instructions,
-          criteria: { [Q.duplicate_none]: Q.duplicate_none_description, ...options },
-        };
+      const questions = jevQuestions(options, texts.length > 0);
       const hash = createHash('sha256')
         .update(
           JSON.stringify({
@@ -190,18 +212,7 @@ export async function judgeDrafts(
       } catch (error) {
         unavailable = true;
         if (deadline.aborted) pendingAtDeadline++;
-        else if (error instanceof ModelError)
-          logger.warning('jev decision unavailable', {
-            error_code: error.status
-              ? providerErrorCode(error.status)
-              : error.code === 'parse'
-                ? 'parse_error'
-                : error.code,
-          });
-        else
-          logger.warning('jev decision malformed', {
-            error_type: error instanceof Error ? error.name : typeof error,
-          });
+        else logJudgeFailure(error);
       }
     }),
   );
