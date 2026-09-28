@@ -38,10 +38,6 @@ BUSINESS_CONTEXT_MAX_KEYS = 32
 BUSINESS_CONTEXT_MAX_CHARS = 8_000
 
 
-BrandProfileOrigin = Literal["manual", "web_evidence", "ai_suggested"]
-BrandProfileReviewState = Literal["unreviewed", "confirmed", "edited"]
-
-
 # --------------------------------------------------------------------------
 # Shared value objects
 # --------------------------------------------------------------------------
@@ -68,45 +64,6 @@ class CompetitorResponse(BaseModel):
     aliases: list[str] = Field(default_factory=list)
     domains: list[str] = Field(default_factory=list)
     logo_url: str | None = None
-
-
-class ObservedCompetitorResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    audit_id: uuid.UUID
-    name: str
-    domain: str
-    qualification_reason: str
-    prompt_count: int
-    engine_count: int
-    market_relevant: bool
-    analyzer_version: str
-    source_analysis_ids: list[str] = Field(default_factory=list)
-    source_artifact_ids: list[str] = Field(default_factory=list)
-    status: str
-    created_at: datetime
-
-
-class BrandProfileFieldProvenance(BaseModel):
-    origin: BrandProfileOrigin
-    review_state: BrandProfileReviewState
-    reviewed_by: uuid.UUID | None = None
-    reviewed_at: datetime | None = None
-
-
-class BrandProfileSources(BaseModel):
-    description: BrandProfileFieldProvenance | None = None
-    positioning: BrandProfileFieldProvenance | None = None
-    products_services: BrandProfileFieldProvenance | None = None
-    target_audience: BrandProfileFieldProvenance | None = None
-
-
-class BrandProfileSourceArtifacts(BaseModel):
-    description: uuid.UUID | None = None
-    positioning: uuid.UUID | None = None
-    products_services: uuid.UUID | None = None
-    target_audience: uuid.UUID | None = None
 
 
 class BrandKnowledgeFields(BaseModel):
@@ -137,44 +94,6 @@ class BrandKnowledgeFields(BaseModel):
         if len(json.dumps(value, default=str)) > BUSINESS_CONTEXT_MAX_CHARS:
             raise ValueError("business_context is too large")
         return value
-
-
-class BrandProfileUpsert(BaseModel):
-    """Human-authored partial upsert; every supplied field becomes manual."""
-
-    description: str | None = Field(
-        default=None, max_length=BRAND_PROFILE_TEXT_MAX_CHARS
-    )
-    positioning: str | None = Field(
-        default=None, max_length=BRAND_PROFILE_TEXT_MAX_CHARS
-    )
-    products_services: (
-        list[Annotated[str, Field(max_length=BRAND_PROFILE_PRODUCT_MAX_CHARS)]] | None
-    ) = Field(default=None, max_length=BRAND_PROFILE_PRODUCTS_MAX_COUNT)
-    target_audience: str | None = Field(
-        default=None, max_length=BRAND_PROFILE_TEXT_MAX_CHARS
-    )
-
-
-class BrandProfileResponse(BaseModel):
-    id: uuid.UUID
-    workspace_id: uuid.UUID
-    project_id: uuid.UUID
-    brand_id: uuid.UUID
-    description: str
-    positioning: str
-    products_services: list[str] = Field(default_factory=list)
-    target_audience: str
-    # Readable, not just writable. The confirmed onboarding context drives
-    # competitors and prompts, so a client that cannot fetch it back cannot
-    # show what the project was built from, let alone round-trip an edit.
-    business_context: dict[str, Any] = Field(default_factory=dict)
-    sources: BrandProfileSources = Field(default_factory=BrandProfileSources)
-    source_artifact_ids: BrandProfileSourceArtifacts = Field(
-        default_factory=BrandProfileSourceArtifacts
-    )
-    created_at: datetime
-    updated_at: datetime
 
 
 # --------------------------------------------------------------------------

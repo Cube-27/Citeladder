@@ -28,12 +28,9 @@ from app.core.config.entitlements import (
     KEY_PROMPT_SLOTS,
 )
 from app.domain.entitlements.types import GrantSpec
-from app.domain.workspaces.policy import WORKSPACE_ROLE_MEMBER
 from app.models.brand import Brand, BrandLogoAsset, Competitor
 from app.models.project import Project
 from app.models.site_health.crawl import SiteCrawl
-from app.models.user import User
-from app.models.workspace import Workspace, WorkspaceMember
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import (
     revoke_signup_baseline_grants,
@@ -235,11 +232,13 @@ async def test_update_project_rebuilds_brand_and_competitors_atomically(
 
 
 @pytest.mark.asyncio
-async def test_project_logo_assets_are_workspace_scoped(
+async def test_project_response_links_cached_logos(
     client: httpx.AsyncClient, db_session: AsyncSession
 ) -> None:
+    """Marks with a cached asset publish the URLs the TypeScript API serves."""
     await _register(client, "logo-owner@example.com")
     project = (await client.post("/api/v1/projects", json=_project_payload())).json()
+    assert project["brand"]["logo_url"] is None
     project_id = uuid.UUID(project["id"])
     brand = await db_session.scalar(select(Brand).where(Brand.project_id == project_id))
     competitor = await db_session.scalar(
@@ -263,123 +262,11 @@ async def test_project_logo_assets_are_workspace_scoped(
     competitor.logo_asset_id = asset.id
     await db_session.commit()
 
-    refreshed = await client.get(f"/api/v1/projects/{project['id']}")
-    assert refreshed.json()["brand"]["logo_url"].endswith(
-        f"/projects/{project['id']}/logo"
+    refreshed = (await client.get(f"/api/v1/projects/{project['id']}")).json()
+    assert refreshed["brand"]["logo_url"] == f"/api/v1/projects/{project_id}/logo"
+    assert refreshed["competitors"][0]["logo_url"] == (
+        f"/api/v1/projects/{project_id}/competitors/{competitor.id}/logo"
     )
-    competitor_id = project["competitors"][0]["id"]
-    own_logo = await client.get(f"/api/v1/projects/{project['id']}/logo")
-    competitor_logo = await client.get(
-        f"/api/v1/projects/{project['id']}/competitors/{competitor_id}/logo"
-    )
-    assert own_logo.status_code == 200
-    assert own_logo.content == png
-    assert competitor_logo.status_code == 200
-    assert competitor_logo.content == png
-    assert own_logo.headers["content-type"] == "image/png"
-    assert own_logo.headers["cache-control"] == "private, max-age=86400"
-    assert own_logo.headers["etag"] == f'"{hashlib.sha256(png).hexdigest()}"'
-    assert own_logo.headers["x-content-type-options"] == "nosniff"
-    not_modified = await client.get(
-        f"/api/v1/projects/{project['id']}/logo",
-        headers={"If-None-Match": own_logo.headers["etag"]},
-    )
-    assert not_modified.status_code == 304
-    assert not_modified.content == b""
-    assert not_modified.headers["cache-control"] == own_logo.headers["cache-control"]
-    assert not_modified.headers["etag"] == own_logo.headers["etag"]
-    assert not_modified.headers["x-content-type-options"] == "nosniff"
-
-    client.cookies.clear()
-    await _register(client, "logo-outsider@example.com")
-    assert (
-        await client.get(f"/api/v1/projects/{project['id']}/logo")
-    ).status_code == 404
-    assert (
-        await client.get(
-            f"/api/v1/projects/{project['id']}/competitors/{competitor_id}/logo"
-        )
-    ).status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_logo_is_served_without_the_active_workspace_header(
-    client: httpx.AsyncClient, db_session: AsyncSession
-) -> None:
-    """A browser <img> cannot send X-Workspace-Id, so the path must be enough.
-
-    The logo URLs are fetched directly by the browser, not through the API
-    client, so no active-workspace header rides along. Scoping those routes to
-    the caller's *earliest-joined* workspace 404s every logo in any other one —
-    the "brand logos never appear" bug.
-    """
-    await _register(client, "logo-second-ws@example.com")
-    # A SECOND workspace the caller joined by invitation, which is NOT the
-    # fallback a header-less request would otherwise resolve to. A user owns
-    # exactly one workspace, so this one is seeded as a Member row.
-    user_id = await db_session.scalar(
-        select(User.id).where(User.email == "logo-second-ws@example.com")
-    )
-    assert user_id is not None
-    joined = Workspace(name="Second workspace")
-    db_session.add(joined)
-    await db_session.flush()
-    db_session.add(
-        WorkspaceMember(
-            workspace_id=joined.id, user_id=user_id, role=WORKSPACE_ROLE_MEMBER
-        )
-    )
-    await seed_occupancy_grants(
-        db_session,
-        workspace_id=joined.id,
-        grants=(GrantSpec(key=KEY_PROJECT_SLOTS, value=1),),
-    )
-    await db_session.commit()
-    second = {"id": str(joined.id)}
-    project = (
-        await client.post(
-            "/api/v1/projects",
-            json=_project_payload(),
-            headers={"X-Workspace-Id": second["id"]},
-        )
-    ).json()
-    project_id = uuid.UUID(project["id"])
-    brand = await db_session.scalar(select(Brand).where(Brand.project_id == project_id))
-    competitor = await db_session.scalar(
-        select(Competitor).where(Competitor.project_id == project_id)
-    )
-    assert brand is not None
-    assert competitor is not None
-    png = b"\x89PNG\r\n\x1a\nsecond"
-    asset = BrandLogoAsset(
-        domain="acme.com",
-        status=BRAND_LOGO_STATUS_READY,
-        source_url="https://acme.com/favicon.png",
-        content_type="image/png",
-        image_data=png,
-        byte_size=len(png),
-        sha256=hashlib.sha256(png).hexdigest(),
-    )
-    db_session.add(asset)
-    await db_session.flush()
-    brand.logo_asset_id = asset.id
-    competitor.logo_asset_id = asset.id
-    await db_session.commit()
-
-    # No X-Workspace-Id — exactly what the <img> request looks like.
-    served = await client.get(f"/api/v1/projects/{project['id']}/logo")
-    assert served.status_code == 200
-    assert served.content == png
-
-    # The competitor route resolves the workspace independently of the brand
-    # route, so it regresses on its own — a <img> for a competitor logo sends
-    # no header either.
-    competitor_id = project["competitors"][0]["id"]
-    competitor_served = await client.get(
-        f"/api/v1/projects/{project['id']}/competitors/{competitor_id}/logo"
-    )
-    assert competitor_served.status_code == 200
-    assert competitor_served.content == png
 
 
 @pytest.mark.asyncio

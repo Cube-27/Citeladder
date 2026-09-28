@@ -293,6 +293,7 @@ async def test_concurrent_candidate_accepts_never_exceed_grant(
                 "website_url": "https://acme.com",
                 "benchmark_mode": "controlled_localized",
                 "default_repetitions": 1,
+                "products_services": ["running shoes"],
             },
         )
     ).json()
@@ -302,11 +303,6 @@ async def test_concurrent_candidate_accepts_never_exceed_grant(
             json={"project_id": project["id"], "name": "Seed Set"},
         )
     ).json()["id"]
-    profile = await client.put(
-        f"/api/v1/projects/{project['id']}/brand-profile",
-        json={"products_services": ["running shoes"]},
-    )
-    assert profile.status_code == 200
     topic_response = await client.post(
         f"/api/v1/projects/{project['id']}/topics",
         json={"name": "Running Shoes"},

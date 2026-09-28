@@ -19,10 +19,6 @@ export const CONTRACT_SCHEMA_MAP = {
   projectSchema: 'ProjectResponse',
   competitorSchema: 'CompetitorResponse',
   commandCenterSchema: 'CommandCenterResponse',
-  brandProfileSchema: 'BrandProfileResponse',
-  businessMapSchema: 'BusinessMapResponse',
-  offeringMapSchema: 'OfferingMap',
-  businessMapEntrySchema: 'BusinessMapEntry',
   // Prompts / topics
   promptSchema: 'PromptResponse',
   promptSetSchema: 'PromptSetResponse',

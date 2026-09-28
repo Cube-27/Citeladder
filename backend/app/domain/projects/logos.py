@@ -35,16 +35,12 @@ from app.core.config.brand_logos import (
     BRAND_LOGO_SUCCESS_CACHE_SECONDS,
 )
 from app.domain.site_health.acquisition_controls import authorize_acquisition
-from app.models.brand import Brand, BrandLogoAsset, Competitor
+from app.models.brand import BrandLogoAsset
 from app.models.project import Project
 
 from .service import brand_logo_url, competitor_logo_url, get_project
 
 logger = logging.getLogger(__name__)
-
-
-class BrandLogoNotFoundError(LookupError):
-    """The requested project identity has no ready cached logo."""
 
 
 @dataclass(slots=True)
@@ -287,44 +283,6 @@ async def refresh_project_logos(
             _attach_asset(project, target, asset.id)
     await session.commit()
     return await get_project(session, workspace_id=workspace_id, project_id=project_id)
-
-
-async def get_project_logo_asset(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    competitor_id: uuid.UUID | None = None,
-) -> BrandLogoAsset:
-    if competitor_id is None:
-        stmt = (
-            select(BrandLogoAsset)
-            .join(Brand, Brand.logo_asset_id == BrandLogoAsset.id)
-            .join(Project, Project.id == Brand.project_id)
-            .where(
-                Project.id == project_id,
-                Project.workspace_id == workspace_id,
-                BrandLogoAsset.status == BRAND_LOGO_STATUS_READY,
-                BrandLogoAsset.image_data.is_not(None),
-            )
-        )
-    else:
-        stmt = (
-            select(BrandLogoAsset)
-            .join(Competitor, Competitor.logo_asset_id == BrandLogoAsset.id)
-            .join(Project, Project.id == Competitor.project_id)
-            .where(
-                Project.id == project_id,
-                Project.workspace_id == workspace_id,
-                Competitor.id == competitor_id,
-                BrandLogoAsset.status == BRAND_LOGO_STATUS_READY,
-                BrandLogoAsset.image_data.is_not(None),
-            )
-        )
-    asset = await session.scalar(stmt)
-    if asset is None:
-        raise BrandLogoNotFoundError("Brand logo not found")
-    return asset
 
 
 def get_project_logo_urls(project: Project) -> dict[uuid.UUID, str]:

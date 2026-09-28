@@ -7,7 +7,7 @@
  * the tracked brand wins a name collision, and a name that resolves to
  * nothing has no mark rather than a borrowed one.
  */
-import { policy } from '../config.ts';
+import { brandLogoUrl, competitorLogoUrl } from '../projects/logos.ts';
 import type { Database } from '../db/database.ts';
 import { scalarText } from '../text-order.ts';
 
@@ -20,14 +20,6 @@ export type BrandIdentity = { logo_url: string | null; website: string | null };
  */
 export function identityKey(name: unknown): string {
   return scalarText(name).trim().replace(/\s+/gu, ' ').toLowerCase();
-}
-
-function brandLogoUrl(projectId: string): string {
-  return `${policy.api.prefix}/projects/${projectId}/logo`;
-}
-
-function competitorLogoUrl(projectId: string, competitorId: string): string {
-  return `${policy.api.prefix}/projects/${projectId}/competitors/${competitorId}/logo`;
 }
 
 function listOf(value: unknown): unknown[] {

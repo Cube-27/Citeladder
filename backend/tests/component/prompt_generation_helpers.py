@@ -163,24 +163,27 @@ def project_payload(**overrides: object) -> dict:
 
 
 async def make_project_and_set(
-    client: httpx.AsyncClient, email: str, *, create_default_topic: bool = True
+    client: httpx.AsyncClient,
+    email: str,
+    *,
+    create_default_topic: bool = True,
+    **profile: object,
 ) -> tuple[dict, str]:
+    """A project, its Default prompt set and (optionally) a Running Shoes topic.
+
+    ``profile`` overrides the brand knowledge seeded at creation. The default
+    offering gives topical binding its category identity: unbranded
+    generated/manual texts bind through the products_services vocabulary.
+    """
     await _register(client, email)
-    project = (await client.post("/api/v1/projects", json=project_payload())).json()
+    payload = project_payload(**{"products_services": ["running shoes"], **profile})
+    project = (await client.post("/api/v1/projects", json=payload)).json()
     prompt_set_id = (
         await client.post(
             "/api/v1/prompt-sets",
             json={"project_id": project["id"], "name": "Default"},
         )
     ).json()["id"]
-    # Category identity for topical binding: unbranded generated/manual texts
-    # bind through the products_services vocabulary (a partial upsert, so
-    # later per-test brand-profile PUTs keep it).
-    profile = await client.put(
-        f"/api/v1/projects/{project['id']}/brand-profile",
-        json={"products_services": ["running shoes"]},
-    )
-    assert profile.status_code == 200
     if create_default_topic:
         topic = await client.post(
             f"/api/v1/projects/{project['id']}/topics",

@@ -20,6 +20,7 @@ const profile: BrandProfile = {
   positioning: '',
   products_services: [],
   target_audience: '',
+  business_context: {},
   sources: {
     description: null,
     positioning: null,

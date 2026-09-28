@@ -63,8 +63,9 @@ from tests.component.occupancy_helpers import seed_occupancy_grants
 # ---------------------------------------------------------------------------
 
 
-def _project_payload() -> dict:
+def _project_payload(**profile: object) -> dict:
     return {
+        **profile,
         "name": "Acme Visibility",
         "brand_name": "Acme Corp",
         "brand": {"aliases": ["Acme"]},
@@ -79,10 +80,12 @@ def _project_payload() -> dict:
 
 
 async def _make_project_and_set(
-    client: httpx.AsyncClient, email: str
+    client: httpx.AsyncClient, email: str, **profile: object
 ) -> tuple[dict, str]:
     await _register(client, email)
-    project = (await client.post("/api/v1/projects", json=_project_payload())).json()
+    project = (
+        await client.post("/api/v1/projects", json=_project_payload(**profile))
+    ).json()
     prompt_set_id = (
         await client.post(
             "/api/v1/prompt-sets",
@@ -259,12 +262,9 @@ async def test_activation_transition_rejects_off_domain_proposed_prompt(
 async def test_generation_drops_off_domain_model_output(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    project, prompt_set_id = await _make_project_and_set(client, "bind-gen@example.com")
-    profile = await client.put(
-        f"/api/v1/projects/{project['id']}/brand-profile",
-        json={"products_services": ["running shoes"]},
+    project, prompt_set_id = await _make_project_and_set(
+        client, "bind-gen@example.com", products_services=["running shoes"]
     )
-    assert profile.status_code == 200
     topic = (
         await client.post(
             f"/api/v1/projects/{project['id']}/topics",
