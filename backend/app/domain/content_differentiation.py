@@ -224,7 +224,7 @@ async def _load_candidates(
     result: list[CandidateRow] = []
     for candidate, page in rows:
         candidate_time = audit_times.get(candidate.audit_id)
-        snapshot = (
+        candidate_snapshot = (
             _candidate_snapshot(
                 candidate,
                 candidate_audit_created_at=candidate_time,
@@ -233,7 +233,7 @@ async def _load_candidates(
             if candidate_time is not None
             else None
         )
-        result.append((candidate, page, snapshot))
+        result.append((candidate, page, candidate_snapshot))
     return result
 
 
@@ -254,7 +254,7 @@ async def _load_owned_pages(
         .order_by(SiteFetchArtifact.fetched_at.desc(), SiteUrl.id)
         .limit(DIFFERENTIATION_MAX_OWNED_PAGE_CANDIDATES)
     )
-    return [tuple(row) for row in rows.all()]
+    return [row.tuple() for row in rows.all()]
 
 
 def _group_candidates(

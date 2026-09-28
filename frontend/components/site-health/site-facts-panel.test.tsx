@@ -182,7 +182,7 @@ describe('SiteFactsPanel', () => {
     render(<SiteFactsPanel crawl={crawl(accessBlocked)} dashboard={undefined} />);
 
     expect(screen.queryByText('Stance unknown')).not.toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent(/HTTP 403/);
+    expect(screen.getByRole('alert').textContent).toMatch(/HTTP 403/);
     expect(screen.queryByText(/checked again shortly/)).not.toBeInTheDocument();
     const files = screen.getByTestId('site-facts-well-known-files');
     expect(within(files).getByText('Access blocked')).toBeInTheDocument();

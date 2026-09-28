@@ -95,6 +95,6 @@ describe('GeneratePromptsDialog', () => {
 
     const alert = screen.getByText(/removed by quality checks/i);
     expect(alert).toHaveTextContent('3 weak suggestions removed by quality checks');
-    expect(alert).not.toHaveTextContent(/add topics/i);
+    expect(alert.textContent).not.toMatch(/add topics/i);
   });
 });
