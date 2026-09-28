@@ -71,6 +71,48 @@ function expiryMs(grant: GrantRow, subscriptionEnd: Date | null): number | null 
   return own === null ? subscriptionEnd.getTime() : Math.min(own, subscriptionEnd.getTime());
 }
 
+/** Each grant's earliest revocation instant. */
+function revocationTimes(revocations: readonly RevocationRow[]): Map<string, number> {
+  const revokedAt = new Map<string, number>();
+  for (const { grant_id: id, effective_from: from } of revocations) {
+    revokedAt.set(id, Math.min(revokedAt.get(id) ?? Infinity, from.getTime()));
+  }
+  return revokedAt;
+}
+
+function isActive(
+  grant: GrantRow,
+  revokedAt: ReadonlyMap<string, number>,
+  subscriptionEnd: Date | null,
+  now: number,
+): boolean {
+  if (grant.valid_from.getTime() > now) return false;
+  if ((revokedAt.get(grant.id) ?? Infinity) <= now) return false;
+  const expiry = expiryMs(grant, subscriptionEnd);
+  return expiry === null || now < expiry;
+}
+
+/** The selected primary bundle: highest priority, then bundle id. */
+function primaryBundle(active: readonly GrantRow[]): string | null {
+  let best: { priority: number; id: string } | null = null;
+  for (const grant of active) {
+    if (grant.bundle_role !== PRIMARY) continue;
+    const better =
+      best === null ||
+      grant.profile_priority > best.priority ||
+      (grant.profile_priority === best.priority && grant.bundle_id > best.id);
+    if (better) best = { priority: grant.profile_priority, id: grant.bundle_id };
+  }
+  return best?.id ?? null;
+}
+
+/** Flags OR, levels take the maximum, counters add. */
+function combine(type: string, prior: number, value: number): number {
+  if (type === 'flag') return prior === 1 || value === 1 ? 1 : 0;
+  if (type === 'level') return Math.max(prior, value);
+  return prior + value;
+}
+
 /** Capability values at `at`; throws `CorruptGrant` on any invalid row. */
 export function foldEntitlement(
   grants: readonly GrantRow[],
@@ -79,49 +121,36 @@ export function foldEntitlement(
   at: Date,
 ): Map<string, number> {
   grants.forEach(validate);
-  const now = at.getTime();
-  const revokedAt = new Map<string, number>();
-  for (const { grant_id: id, effective_from: from } of revocations) {
-    revokedAt.set(id, Math.min(revokedAt.get(id) ?? Infinity, from.getTime()));
-  }
-  const active = grants.filter((grant) => {
-    if (grant.valid_from.getTime() > now) return false;
-    if ((revokedAt.get(grant.id) ?? Infinity) <= now) return false;
-    const expiry = expiryMs(grant, subscriptionEnd);
-    return expiry === null || now < expiry;
-  });
-  let bundle: { priority: number; id: string } | null = null;
-  for (const grant of active) {
-    if (grant.bundle_role !== PRIMARY) continue;
-    const better =
-      bundle === null ||
-      grant.profile_priority > bundle.priority ||
-      (grant.profile_priority === bundle.priority && grant.bundle_id > bundle.id);
-    if (better) bundle = { priority: grant.profile_priority, id: grant.bundle_id };
-  }
+  const revokedAt = revocationTimes(revocations);
+  const active = grants.filter((grant) =>
+    isActive(grant, revokedAt, subscriptionEnd, at.getTime()),
+  );
+  const bundle = primaryBundle(active);
   const values = new Map<string, number>();
   for (const grant of active) {
-    if (grant.bundle_role === PRIMARY && grant.bundle_id !== bundle?.id) continue;
-    const type = CAPABILITIES[grant.key]!.type;
+    if (grant.bundle_role === PRIMARY && grant.bundle_id !== bundle) continue;
     const prior = values.get(grant.key);
-    if (prior === undefined) values.set(grant.key, grant.value);
-    else if (type === 'flag') values.set(grant.key, prior === 1 || grant.value === 1 ? 1 : 0);
-    else if (type === 'level') values.set(grant.key, Math.max(prior, grant.value));
-    else values.set(grant.key, prior + grant.value);
+    values.set(
+      grant.key,
+      prior === undefined
+        ? grant.value
+        : combine(CAPABILITIES[grant.key]!.type, prior, grant.value),
+    );
   }
   return values;
 }
 
-/** Resolve one account in the caller's transaction. */
+/** Resolve the account that bills `workspaceId`, in the caller's transaction. */
 export async function resolveAccountEntitlement(
   db: Database,
-  accountId: string,
+  { accountId, workspaceId }: { accountId: string; workspaceId: string },
   at: Date,
 ): Promise<Entitlement> {
   const account = await db
     .selectFrom('billing_accounts')
     .select('id')
     .where('id', '=', accountId)
+    .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
   if (account === undefined) return { status: 'unresolved', error: 'billing_account_missing' };
   const [grants, revocations, subscription] = await Promise.all([

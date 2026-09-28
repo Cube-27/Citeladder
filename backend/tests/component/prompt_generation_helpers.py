@@ -244,7 +244,7 @@ async def create_topic(
         )
         session.add(topic)
         await session.commit()
-        return _json(topic_to_response(topic))
+        return _json(topic_to_response(topic, {}))
 
 
 async def create_prompt(prompt_set_id: str, text: str, **fields: Any) -> dict[str, Any]:

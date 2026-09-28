@@ -345,7 +345,7 @@ describe('candidate review', () => {
       theme: 'Road',
       origin: 'generated',
       branded: true,
-      generation_evidence: { model: 'm', candidate_id: accept },
+      generation_evidence: { model: 'm', candidate_id: accept, generation_run_id: runId },
     });
     const rows = await db
       .selectFrom('prompt_candidates')

@@ -70,7 +70,7 @@ export async function admitPrompts(
   requested: number,
 ): Promise<void> {
   const accountId = await lockWorkspaceCapacity(db, workspaceId);
-  const entitlement = await resolveAccountEntitlement(db, accountId, new Date());
+  const entitlement = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
   if (entitlement.status !== 'resolved') {
     logger.info('billing.occupancy_unresolved', {
       account_id: accountId,

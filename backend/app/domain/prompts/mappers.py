@@ -57,7 +57,7 @@ async def active_prompt_counts(
 
 
 def topic_to_response(
-    topic: Topic, active_counts: dict[uuid.UUID, int] | None = None
+    topic: Topic, active_counts: dict[uuid.UUID, int]
 ) -> TopicResponse:
     return TopicResponse(
         id=topic.id,
@@ -66,7 +66,7 @@ def topic_to_response(
         name=topic.name,
         description=topic.description,
         origin=topic.origin,
-        active_count=(active_counts or {}).get(topic.id, 0),
+        active_count=active_counts.get(topic.id, 0),
         created_at=topic.created_at,
         updated_at=topic.updated_at,
     )

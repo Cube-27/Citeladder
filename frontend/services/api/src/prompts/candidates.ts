@@ -151,6 +151,7 @@ async function acceptedRows(
   return candidates.map((candidate) => {
     const evidence: Record<string, unknown> = {
       ...provenance.get(candidate.run_id),
+      generation_run_id: candidate.run_id,
       buyer_query_slot_id: candidate.slot_id,
       candidate_id: candidate.id,
       candidate_validation: record(candidate.validation),

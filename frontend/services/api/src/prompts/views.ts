@@ -14,7 +14,7 @@ import type { Selectable } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
-import { jsonObject, record, strings } from '../db/json.ts';
+import { jsonObject, strings } from '../db/json.ts';
 import type { PromptCandidates, Prompts, PromptSets, Topics } from '../generated/db-schema.ts';
 
 export type PromptRow = Selectable<Prompts>;
@@ -83,15 +83,19 @@ export function topicView(row: TopicRow, activeCount: number): TopicView {
 }
 
 /** `judged`, the run's reported gate (`off`/`unavailable`), or `not_judged`. */
-function qualityStatus(decision: Record<string, unknown>, runGate: string | null) {
-  if (Object.keys(decision).length > 0) return 'judged' as const;
+function qualityStatus(decision: Record<string, unknown> | null, runGate: string | null) {
+  if (decision !== null && Object.keys(decision).length > 0) return 'judged' as const;
   if (runGate === QUALITY_OFF) return 'off' as const;
   if (runGate === QUALITY_UNAVAILABLE) return 'unavailable' as const;
   return 'not_judged' as const;
 }
 
 export function candidateView(row: CandidateRow, runGate: string | null): CandidateView {
-  const decision = record(row.jev_decision);
+  // No decision is a valid state (not judged); a non-object one is corrupt.
+  const decision =
+    row.jev_decision === null
+      ? null
+      : jsonObject(row.jev_decision, 'prompt_candidates.jev_decision');
   return {
     id: row.id,
     run_id: row.run_id,
@@ -105,6 +109,6 @@ export function candidateView(row: CandidateRow, runGate: string | null): Candid
     created_at: row.created_at.toISOString(),
     expires_at: row.expires_at.toISOString(),
     quality_status: qualityStatus(decision, runGate),
-    quality_flags: strings(decision.flags),
+    quality_flags: strings(decision?.flags),
   };
 }
