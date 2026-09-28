@@ -11,7 +11,6 @@ export const POST_BUYER_PROMPTS: BlogPost = {
   excerpt:
     'A useful AI-search prompt portfolio represents real buying decisions, not every question a model can invent.',
   image: '/blog/editorial/article-prompts.png',
-  cardImage: '/blog/editorial/article-prompts.svg',
   date: '2026-09-28',
   readTime: '8 min read',
   author: PRODUCT_HEAD.name,
@@ -33,6 +32,7 @@ export const POST_BUYER_PROMPTS: BlogPost = {
       type: 'paragraph',
       text: 'CiteLadder takes the opposite approach. A new project starts with no prompts. The user chooses when to build the first portfolio, which business areas matter, and which suggestions are worth tracking.',
     },
+    { type: 'heading', text: 'A portfolio, not a prompt universe' },
     {
       type: 'callout',
       title: 'The portfolio principle',

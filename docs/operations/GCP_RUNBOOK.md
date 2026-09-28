@@ -82,8 +82,9 @@ Add these environment secrets:
   `DEFAULT_AGENT_MODEL` for platform-funded Agent features;
 - `KEENABLE_API_KEY`: required for external brand-discovery research;
 - `TAVILY_API_KEY`: required for commerce-catalog web research;
-- `JEV_API_KEY`: TypeSafe key for prompt-candidate quality judgments (a hard
-  gate by default; `JEV_MODE=shadow` only flags) and internal link judgments.
+- `JEV_API_KEY`: TypeSafe key for prompt-candidate quality judgments and
+  internal link judgments. The deployment writes no `JEV_MODE`, so production
+  runs the default hard gate; shadow mode is a local setting only.
   TypeSafe is a published subprocessor (28 September 2026), so production sets
   it; unset switches both judgments off;
 - `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`: required. One Google
