@@ -36,7 +36,7 @@ afterAll(async () => {
 });
 
 describe('content analysis admission', () => {
-  it('publishes frozen links into page Actions and declares only the explicit selection', async () => {
+  it('publishes frozen links into page Actions and declares the explicit selection with the other page findings', async () => {
     const seed = await actionFixture<ActionSeed>('content');
     seeds.push(seed);
     const admitted = contentStructureReadSchema.parse(
@@ -162,10 +162,14 @@ describe('content analysis admission', () => {
       .select(['expected_checks', 'member_opportunity_ids'])
       .where('action_id', '=', link.action_id!)
       .executeTakeFirstOrThrow();
-    expect(saved.expected_checks).toEqual([
-      expect.objectContaining({ kind: 'contextual_link', recommendation_id: link.id }),
+    const checks = saved.expected_checks as Record<string, unknown>[];
+    expect(checks.filter((check) => check.kind === 'contextual_link')).toEqual([
+      expect.objectContaining({ recommendation_id: link.id }),
     ]);
-    expect(saved.member_opportunity_ids).toEqual([contextualMember.id]);
+    expect(checks.some((check) => check.kind !== 'contextual_link')).toBe(true);
+    const declaredMembers = saved.member_opportunity_ids as string[];
+    expect(declaredMembers).toContain(contextualMember.id);
+    expect(declaredMembers.length).toBeGreaterThan(1);
     expect((await declare([link.id])).status).toBe(200);
     expect((await declare(selected.map((candidate) => candidate.id))).status).toBe(409);
   });

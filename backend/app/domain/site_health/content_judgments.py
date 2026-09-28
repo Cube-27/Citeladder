@@ -192,7 +192,15 @@ async def finish_dispatch(
         reservation_id=uuid.UUID(dispatch["reservation_id"]),
         dispatch_key=str(candidate_id),
         attempt=1,
-        charged_units=rate.charge(outcome["usage"]) if "usage" in outcome else None,
+        # No provider call means no usage to charge; otherwise unknown usage
+        # settles at the rate's bounded unknown-usage charge.
+        charged_units=(
+            0
+            if outcome["state"] == "unavailable"
+            else rate.charge(outcome["usage"])
+            if "usage" in outcome
+            else None
+        ),
         unknown_usage_charge=rate.unknown_usage_charge,
         idempotency_key=f"content:{run.id}:{candidate_id}:settle",
         at=datetime.now(UTC),

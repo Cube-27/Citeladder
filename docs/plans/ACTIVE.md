@@ -3,8 +3,8 @@
 ## Active
 
 - [Content structure: internal links and topics](citeladder-content-structure.md)
-  — implemented locally on 28 September 2026 in `codex/content-structure` at
-  `C:/Projects/Citeladder-content-structure`. TypeScript owns the new page and
+  — implemented on 28 September 2026 in `codex/content-structure`; in review
+  and owner testing before merge. TypeScript owns the new page and
   analysis projections; the existing Python provider/credit owners execute
   judgments. Legacy Site Health topical coherence is retired. Publication,
   editor calibration and live credit-rate/provider enablement remain pending.

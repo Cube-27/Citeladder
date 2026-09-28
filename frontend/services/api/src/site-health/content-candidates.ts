@@ -64,7 +64,7 @@ export function linkCandidates(pages: ContentPage[]): {
   candidates: LinkCandidate[];
   omitted: number;
 } {
-  const candidates: LinkCandidate[] = [];
+  const candidates: (LinkCandidate & { score: number })[] = [];
   const targetWords = new Map(
     pages.map((page) => [page.analysis_id, words(`${page.title} ${page.excerpt}`)]),
   );
@@ -85,7 +85,7 @@ export function linkCandidates(pages: ContentPage[]): {
         .filter(({ score }) => score > 0)
         .sort((a, b) => b.score - a.score || a.target.url.localeCompare(b.target.url))
         .slice(0, limits.targets_per_passage);
-      for (const { target } of targets) {
+      for (const { target, score } of targets) {
         const anchors = anchorCandidates(passage, target);
         if (!anchors.length) continue;
         seen.add(target.url);
@@ -96,12 +96,17 @@ export function linkCandidates(pages: ContentPage[]): {
           target: target.analysis_id,
           passage,
           anchors,
+          score,
         });
       }
     }
   }
+  // Rank across the whole site so early URLs cannot consume the bounded budget.
   return {
-    candidates: candidates.slice(0, limits.max_link_candidates),
+    candidates: candidates
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limits.max_link_candidates)
+      .map(({ score: _score, ...candidate }) => candidate),
     omitted: Math.max(0, candidates.length - limits.max_link_candidates),
   };
 }

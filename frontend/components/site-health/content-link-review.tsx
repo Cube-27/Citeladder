@@ -1,7 +1,7 @@
 import type { ContentLink } from '@citeladder/contracts/site-health';
-import { Link } from 'react-router-dom';
 import { useState } from 'react';
 
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
@@ -13,7 +13,6 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 export function ContentLinkReview({
   link,
   links,
-  projectId,
   workspaceId,
   crawlId,
   stale,
@@ -21,7 +20,6 @@ export function ContentLinkReview({
 }: Readonly<{
   link: ContentLink | undefined;
   links: ContentLink[];
-  projectId: string;
   workspaceId: string;
   crawlId: string;
   stale: boolean;
@@ -55,11 +53,9 @@ export function ContentLinkReview({
               {link.passage.text.slice(link.anchor.end)}
             </p>
             <Button asChild variant="secondary" size="sm">
-              <Link
-                to={`/site/crawls/${crawlId}/pages/${link.source.site_url_id}?project=${projectId}`}
-              >
+              <ProjectLink href={`/site/crawls/${crawlId}/pages/${link.source.site_url_id}`}>
                 View page evidence
-              </Link>
+              </ProjectLink>
             </Button>
           </section>
           <section className="space-y-3">
@@ -89,9 +85,7 @@ export function ContentLinkReview({
             </CopyButton>
             {link.action_id ? (
               <Button asChild variant="secondary">
-                <Link to={`/agent/actions/${link.action_id}?project=${projectId}`}>
-                  Open Action
-                </Link>
+                <ProjectLink href={`/agent/actions/${link.action_id}`}>Open Action</ProjectLink>
               </Button>
             ) : null}
           </div>

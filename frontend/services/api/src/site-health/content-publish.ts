@@ -3,6 +3,7 @@ import {
   contentPageSchema,
   contentStructureSchema,
   type ContentLink,
+  type ContentPage,
   type ContentTopic,
 } from '@citeladder/contracts/site-health';
 import { z } from 'zod';
@@ -12,8 +13,12 @@ import { record } from '../db/json.ts';
 import type { Executor } from '../workers/executor.ts';
 import { payloadString, taskProject } from '../workers/executor.ts';
 import type { ContentCandidate, LinkCandidate } from './content-candidates.ts';
-import { pageSummary } from './content-runs.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
+
+function pageSummary(page: ContentPage) {
+  const { passages: _passages, ...summary } = page;
+  return summary;
+}
 
 const probability = z.number().min(0).max(1);
 const noul = z.object({ type: z.literal('noul'), noul: probability });

@@ -76,7 +76,7 @@ export const contentStructureReadSchema = z.object({
     .default([]),
   analysis: contentStructureSchema.nullable(),
   crawl_id: z.uuid().nullable(),
-  availability: z.enum(['ready', 'crawl_required', 'fresh_crawl_required', 'unavailable']),
+  availability: z.enum(['ready', 'crawl_required']),
 });
 
 export const contentStructureInputSchema = z.object({

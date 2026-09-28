@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import type { ContentLink, ContentStructure } from '@citeladder/contracts/site-health';
 
 import { PageShell } from '@/components/layout/page-shell';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -70,7 +71,13 @@ function useContentAnalysis(scope: Scope, analysisId: string | undefined, update
     onSuccess: (result) => {
       queryClient.setQueryData(options.queryKey, result);
       setRequestKey(crypto.randomUUID());
-      if (result.analysis) update('analysis', result.analysis.id);
+      if (!result.analysis) return;
+      // Seed the selected-analysis key so the URL change does not flash a reload.
+      queryClient.setQueryData(
+        contentStructureQuery(workspaceId, projectId, result.analysis.id).queryKey,
+        result,
+      );
+      update('analysis', result.analysis.id);
     },
   });
   const cancel = useMutation({
@@ -143,14 +150,14 @@ function ContentStructureContent(scope: Scope) {
               update={update}
             />
           ) : (
-            <StartState data={read.data} projectId={scope.projectId} />
+            <StartState data={read.data} />
           )}
         </div>
         {analysis ? (
           <ContentLinkReview
             link={selected}
             links={analysis.recommendations}
-            {...scope}
+            workspaceId={scope.workspaceId}
             crawlId={analysis.crawl_id}
             stale={analysis.stale}
             onClose={() => update('recommendation', '')}
@@ -283,10 +290,7 @@ function ReadNotices({ read }: Readonly<{ read: AnalysisRead }>) {
   );
 }
 
-function StartState({
-  data,
-  projectId,
-}: Readonly<{ data: SavedRead | undefined; projectId: string }>) {
+function StartState({ data }: Readonly<{ data: SavedRead | undefined }>) {
   if (!data) return null;
   if (data.crawl_id)
     return (
@@ -303,7 +307,7 @@ function StartState({
       description="A completed crawl provides the page content and existing links for analysis."
       action={
         <Button asChild>
-          <Link to={`/site?project=${projectId}`}>Open Website</Link>
+          <ProjectLink href="/site">Open Website</ProjectLink>
         </Button>
       }
     />

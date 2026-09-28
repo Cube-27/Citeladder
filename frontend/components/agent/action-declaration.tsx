@@ -126,9 +126,9 @@ export function MarkImplementedButton({
           </p>
           {recommendationIds ? (
             <p className={textRole('body')}>
-              Only these {recommendationIds.length} selected links will be measured. Include every
-              link you want to declare now; this page Action can be declared once. Other findings on
-              this page are not included in this declaration.
+              Only these {recommendationIds.length} selected links will be measured, together with
+              the page&apos;s other findings. Include every link you want to declare now; this page
+              Action can be declared once.
             </p>
           ) : null}
           {declare.isError ? (

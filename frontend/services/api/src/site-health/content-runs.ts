@@ -45,13 +45,13 @@ export async function contentRun(db: Database, scope: ContentScope, id?: string)
     state: contentStructureSchema.shape.state.parse(run.state),
     created_at: run.created_at.toISOString(),
   }));
-  if (!row)
-    return {
-      history,
-      analysis: null,
-      crawl_id: crawl?.id ?? null,
-      availability: crawl ? ('ready' as const) : ('crawl_required' as const),
-    };
+  const read = {
+    history,
+    analysis: null as ContentStructure | null,
+    crawl_id: crawl?.id ?? null,
+    availability: crawl ? ('ready' as const) : ('crawl_required' as const),
+  };
+  if (!row) return read;
   const manifest = record(row.manifest);
   const analysis = row.result
     ? contentStructureSchema.parse(row.result)
@@ -89,12 +89,7 @@ export async function contentRun(db: Database, scope: ContentScope, id?: string)
     }
   }
   if (row.state === 'cancelled') analysis.state = 'cancelled';
-  return {
-    history,
-    analysis,
-    crawl_id: crawl?.id ?? null,
-    availability: crawl ? ('ready' as const) : ('crawl_required' as const),
-  };
+  return { ...read, analysis };
 }
 
 export async function admitContentRun(
@@ -196,9 +191,4 @@ export async function cancelContentRun(db: Database, scope: ContentScope, id: st
     .where('state', 'in', ['queued', 'running'])
     .execute();
   return contentRun(db, scope, id);
-}
-
-export function pageSummary(page: ContentStructure['pages'][number] & { passages?: unknown }) {
-  const { passages: _passages, ...summary } = page;
-  return summary;
 }

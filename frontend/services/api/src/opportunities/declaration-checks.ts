@@ -123,14 +123,19 @@ export async function declarationChecks(
   brandName: string,
   recommendationIds: string[] = [],
 ): Promise<MemberCheck[]> {
+  // Contextual links are declared per selected link; the page's other
+  // findings keep their own checks in the same declaration.
   const contextual = members.filter((member) => member.rule_id === 'site_contextual_links');
-  if (contextual.length || recommendationIds.length)
-    return contentDeclarationChecks(db, scope, contextual, recommendationIds);
   const checks = new Map<string, MemberCheck>();
   for (const member of members) {
+    if (member.rule_id === 'site_contextual_links') continue;
     const check = await memberCheck(db, scope, member, auditId, brandName);
     const key = JSON.stringify(check);
     if (!checks.has(key)) checks.set(key, { check, member });
   }
-  return [...checks.values()];
+  const links =
+    contextual.length || recommendationIds.length
+      ? await contentDeclarationChecks(db, scope, contextual, recommendationIds)
+      : [];
+  return [...checks.values(), ...links];
 }

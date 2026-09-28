@@ -135,7 +135,8 @@ Contextual-link declarations freeze only the explicitly selected links, includin
 source/target analysis IDs, source artifact, extractor version, destination and
 existing anchor text. They preserve one declaration per page Action, so the UI
 asks users to select every link they intend to declare before submitting.
-Unselected links and unrelated findings are not declared implicitly. Same-key
+Unselected links are not declared implicitly; the page's other findings keep
+their own checks in the same declaration. Same-key
 replay must name the same selection. Later complete, compatible crawl evidence
 checks main-content placement and anchor text; navigation-only links do not
 satisfy the check, and missing or incompatible capture stays inconclusive.
