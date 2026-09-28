@@ -154,7 +154,7 @@ describe('UserMenu', () => {
     await user.click(screen.getByRole('button', { name: /test\.user@example\.test/i }));
     await user.click(await screen.findByRole('menuitem', { name: /sign out/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/session is still active/i);
+    expect((await screen.findByRole('alert')).textContent).toMatch(/session is still active/i);
     expect(clearSession).not.toHaveBeenCalled();
     expect(screen.getAllByText('test.user@example.test')).not.toHaveLength(0);
     expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeEnabled();

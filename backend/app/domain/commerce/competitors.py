@@ -493,9 +493,10 @@ async def _persist_discovery(
             await session.scalar(
                 select(func.count()).where(CommerceCompetitorAttempt.task_id == task.id)
             )
+            or 0
         )
-        or 0
-    ) + 1
+        + 1
+    )
     result_payload: list[dict[str, Any]] = []
     survivors: list[tuple[str, str, str]] = []
     if status == "succeeded":

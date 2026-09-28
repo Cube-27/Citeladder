@@ -74,7 +74,7 @@ _weak_format = SourcePage.page_format_method.is_(None) | (
 
 async def _resolved_rows(
     session: AsyncSession, *, audit: Audit
-) -> list[tuple[str, str, str, str | None, str | None, int]]:
+) -> list[tuple[str | None, str | None, str, str | None, str | None, int]]:
     """Per cited page: identity, classification, and distinct answers citing it."""
     statement = (
         select(
@@ -93,7 +93,7 @@ async def _resolved_rows(
         )
         .group_by(Citation.url_hash)
     )
-    return [tuple(row) for row in (await session.execute(statement)).all()]
+    return [row.tuple() for row in (await session.execute(statement)).all()]
 
 
 async def _unresolved_rows(

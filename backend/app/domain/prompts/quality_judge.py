@@ -23,6 +23,7 @@ import json
 import logging
 import math
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -259,9 +260,10 @@ async def _recorded_decisions(
             PromptCandidate.jev_decision["state_hash"].astext.in_(state_hashes),
         )
     )
+    decisions: Sequence[dict[str, Any] | None] = rows.scalars().all()
     return {
         decision["state_hash"]: decision
-        for decision in rows.scalars().all()
+        for decision in decisions
         if isinstance(decision, dict)
     }
 

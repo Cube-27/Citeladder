@@ -186,7 +186,7 @@ def _route_candidates(
 
 
 def _first_healthy(
-    rows: Sequence[Row[Any]], *, at: datetime
+    rows: Sequence[Row[ProviderConnection, ProviderRoute]], *, at: datetime
 ) -> tuple[ProviderConnection, ProviderRoute] | None:
     """First catalog/endpoint-approved, unpaused (connection, route), or None."""
     for connection, route in rows:

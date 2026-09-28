@@ -62,7 +62,7 @@ describe('PromptsRouteContent', () => {
 
     await user.click(screen.getByRole('link', { name: 'Generate prompts' }));
     expect(await screen.findByText('generate requests: 1')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(/^\/prompts$/));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toMatch(/^\/prompts$/));
 
     await user.click(screen.getByRole('link', { name: 'Generate prompts' }));
     expect(await screen.findByText('generate requests: 2')).toBeInTheDocument();

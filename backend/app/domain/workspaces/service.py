@@ -127,7 +127,7 @@ async def list_workspaces_for_user(
         )
         .order_by(Workspace.created_at.asc())
     )
-    return [tuple(row) for row in result.all()]
+    return [row.tuple() for row in result.all()]
 
 
 async def count_owned_workspaces(session: AsyncSession, user_id: uuid.UUID) -> int:
