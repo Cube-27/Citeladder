@@ -22,9 +22,8 @@ export async function contentLinkHits(
     .executeTakeFirst();
   if (!run) return { runId: null, hits: [] };
   const result = contentStructureSchema.parse(run.result);
-  const sources = new Set(result.recommendations.map((link) => link.source.site_url_id));
-  const hits: DetectorHit[] = [...sources].map((id) => {
-    const links = result.recommendations.filter((link) => link.source.site_url_id === id);
+  const sources = Map.groupBy(result.recommendations, (link) => link.source.site_url_id);
+  const hits: DetectorHit[] = [...sources].map(([id, links]) => {
     const source = links[0]!.source;
     return {
       rule_id: 'site_contextual_links',

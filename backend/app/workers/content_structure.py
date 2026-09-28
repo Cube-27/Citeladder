@@ -3,6 +3,7 @@
 import asyncio
 import time
 import uuid
+from contextlib import nullcontext
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -148,11 +149,8 @@ async def judge_content_structure(
     client = create_jev_client(jev_settings.model_copy(update={"max_attempts": 1}))
     try:
         async with asyncio.timeout(jev_settings.generation_deadline_seconds):
-            if client is None:
-                await _run_pool(factory, task, None, candidates)
-            else:
-                async with client:
-                    await _run_pool(factory, task, client, candidates)
+            async with client if client is not None else nullcontext():
+                await _run_pool(factory, task, client, candidates)
     except TimeoutError:
         await compensate_content_structure(factory, task, reason="deadline_exceeded")
         return

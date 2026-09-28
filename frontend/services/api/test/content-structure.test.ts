@@ -188,6 +188,8 @@ describe('content structure', () => {
 
   it('retains a classified topic with one page without inventing internal links', () => {
     const pages = [page(sourceId, 'Garden care', 'Healthy soil supports plants.')];
+    // A same-page fragment link is not a connection to another topic member.
+    pages[0]!.contextual_targets = [pages[0]!.url];
     const candidates = topicCandidates(pages).candidates;
     const outcomes = new Map(
       candidates.map((candidate) => [

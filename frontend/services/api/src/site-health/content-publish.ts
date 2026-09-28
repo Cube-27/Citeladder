@@ -158,7 +158,8 @@ function topicGroups(
     const members = pages.filter((page) => topic.page_ids.includes(page.analysis_id));
     const urls = new Set(members.map((page) => page.url));
     topic.contextual_links = members.reduce(
-      (count, page) => count + page.contextual_targets.filter((url) => urls.has(url)).length,
+      (count, page) =>
+        count + page.contextual_targets.filter((url) => url !== page.url && urls.has(url)).length,
       0,
     );
     topic.recommendation_ids = links

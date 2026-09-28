@@ -19,7 +19,7 @@ from app.workers import content_structure as worker
 from tests.component.opportunity_helpers import _seed_scenario
 
 
-async def _seed_run(session_factory, count=4):
+async def _seed_run(session_factory, count=4, *, kind="link"):
     async with session_factory() as session:
         seed = await _seed_scenario(session)
         run = SiteContentStructureRun(
@@ -35,7 +35,7 @@ async def _seed_run(session_factory, count=4):
                 "candidates": [
                     {
                         "id": str(uuid.uuid4()),
-                        "kind": "link",
+                        **({"kind": kind} if kind else {}),
                         "request": {
                             "state": {"source": str(index)},
                             "questions": {
@@ -54,7 +54,7 @@ async def _seed_run(session_factory, count=4):
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             task_kind="content_structure_judgment",
-            payload={"run_id": str(run.id), "kind": "link"},
+            payload={"run_id": str(run.id), **({"kind": kind} if kind else {})},
             idempotency_key=str(uuid.uuid4()),
             status="running",
             lease_owner="test",
@@ -292,56 +292,9 @@ async def test_terminal_compensation_only_finishes_its_own_branch(
 async def test_dispatch_is_committed_before_provider_and_replay_does_not_resend(
     session_factory, monkeypatch, interrupted
 ):
-    async with session_factory() as session:
-        seed = await _seed_scenario(session)
-        candidate_id = uuid.uuid4()
-        run = SiteContentStructureRun(
-            id=uuid.uuid4(),
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            crawl_id=seed.crawl_id,
-            actor_id=seed.user_id,
-            idempotency_key=str(uuid.uuid4()),
-            state="queued",
-            policy_version=1,
-            manifest={
-                "candidates": [
-                    {"id": str(candidate_id), "request": {"state": {}, "questions": {}}}
-                ]
-            },
-        )
-        session.add(run)
-        task = AnalyticsTask(
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-            task_kind="content_structure_judgment",
-            payload={"run_id": str(run.id)},
-            idempotency_key=str(uuid.uuid4()),
-            status="running",
-            lease_owner="test",
-            available_at=datetime.now(UTC),
-        )
-        task.lease_expires_at = datetime.now(UTC) + timedelta(minutes=5)
-        session.add(task)
-        await session.commit()
-    monkeypatch.setattr(
-        owner, "jev_settings", SimpleNamespace(enabled=True, model="fixture")
-    )
-    monkeypatch.setattr(
-        owner, "billing_account_id_for", AsyncMock(return_value=uuid.uuid4())
-    )
-    monkeypatch.setattr(
-        owner,
-        "reserve_metered_usage",
-        AsyncMock(return_value=SimpleNamespace(reservation_id=uuid.uuid4())),
-    )
-    settlement = AsyncMock()
-    monkeypatch.setattr(owner, "settle_metered_usage", settlement)
-    monkeypatch.setattr(
-        worker,
-        "jev_settings",
-        worker.jev_settings.model_copy(update={"api_key": SecretStr("fixture-only")}),
-    )
+    # Legacy queued jobs omit the branch kind; keep that input covered.
+    run, task = await _seed_run(session_factory, count=1, kind=None)
+    settlement = _fund_judgments(monkeypatch)
 
     class Client:
         calls = 0

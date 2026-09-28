@@ -190,7 +190,6 @@ export async function admitContentRun(
 }
 
 export async function cancelContentRun(db: Database, scope: ContentScope, id: string) {
-  await contentRun(db, scope, id);
   await db
     .updateTable('site_content_structure_runs')
     .set({ state: 'cancelled' })
