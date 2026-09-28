@@ -1,0 +1,499 @@
+'use client';
+
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
+import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
+
+import { ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
+import { DisplayTime } from '@/components/ui/display-time';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ReadError } from '@/components/ui/read-error';
+import { SearchField } from '@/components/ui/search-field';
+import { Select } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { useTablePage } from '@/components/ui/table-pagination';
+import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
+import type { ActionStatus } from '@/lib/api/actions';
+import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
+import { internalLinksApi, internalLinksQuery } from '@/lib/api/site-health-internal-links';
+import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
+import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
+import { downloadCsv } from '@/lib/csv/download';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatCount, formatDisplayTimestamp } from '@/lib/format';
+import { ICONS } from '@/lib/icons';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { InternalLinkReview } from './internal-link-review';
+
+type Scope = Readonly<{ projectId: string; workspaceId: string }>;
+type ParamChange = (key: string, value: string) => void;
+const isRunning = (state: string | undefined) => state === 'queued' || state === 'running';
+
+const REASON_LABELS: Record<string, string> = {
+  funding_unavailable: 'insufficient AI credits',
+  permission_unavailable: 'run permission unavailable',
+  provider_unconfigured: 'analysis provider not configured',
+  deadline_exceeded: 'time limit reached',
+  interrupted_dispatch: 'interrupted requests',
+};
+const STATE_LABELS: Record<InternalLinkAnalysis['state'], string> = {
+  queued: 'Running',
+  running: 'Running',
+  completed: 'Complete',
+  partial: 'Partial',
+  unavailable: 'Failed',
+  cancelled: 'Cancelled',
+  failed: 'Failed',
+};
+
+function useInternalLinks({ projectId, workspaceId }: Scope, update: ParamChange) {
+  const [params] = useSearchParams();
+  const analysisId = params.get('analysis') || undefined;
+  const queryClient = useQueryClient();
+  const options = internalLinksQuery(workspaceId, projectId, analysisId);
+  const query = useQuery({
+    ...options,
+    refetchInterval: (current) =>
+      isRunning(current.state.data?.analysis?.state) ? RERUN_POLL_INTERVAL_MS : false,
+  });
+  const denied = [401, 403, 404].includes(httpErrorStatus(query.error) ?? 0);
+  const data = denied ? undefined : query.data;
+  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
+  const analyze = useMutation({
+    mutationFn: () =>
+      internalLinksApi.analyze(
+        projectId,
+        { crawl_id: data!.crawl_id!, idempotency_key: requestKey },
+        { workspaceId },
+      ),
+    onSuccess: (result) => {
+      setRequestKey(crypto.randomUUID());
+      if (!result.analysis) return;
+      // Seed the selected-analysis key so the URL change does not flash a reload.
+      queryClient.setQueryData(
+        internalLinksQuery(workspaceId, projectId, result.analysis.id).queryKey,
+        result,
+      );
+      update('analysis', result.analysis.id);
+    },
+  });
+  const cancel = useMutation({
+    mutationFn: () => internalLinksApi.cancel(projectId, data!.analysis!.id, { workspaceId }),
+    onSuccess: (result) => queryClient.setQueryData(options.queryKey, result),
+  });
+  return { data, query, analyze, cancel };
+}
+type LinksRead = ReturnType<typeof useInternalLinks>;
+
+function filterLinks(links: InternalLink[], search: string, status: string) {
+  const needle = search.toLocaleLowerCase();
+  return links.filter(
+    (link) =>
+      (!status || (link.action_status ?? '') === status) &&
+      `${link.source.title} ${link.source.url} ${link.target.title} ${link.target.url} ${link.anchor}`
+        .toLocaleLowerCase()
+        .includes(needle),
+  );
+}
+
+export function InternalLinksPanel(scope: Scope) {
+  const [params, setParams] = useSearchParams();
+  const update: ParamChange = (key, value) =>
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      if (key === 'analysis') next.delete('link');
+      return next;
+    });
+  const read = useInternalLinks(scope, update);
+  const analysis = read.data?.analysis;
+  const links = filterLinks(
+    analysis?.recommendations ?? [],
+    params.get('links_q') ?? '',
+    params.get('links_status') ?? '',
+  );
+  const selected = analysis?.recommendations.find((link) => link.id === params.get('link'));
+  return (
+    <div className="grid min-w-0 gap-4">
+      <LinksHeader read={read} links={links} update={update} />
+      <Notices read={read} />
+      {analysis ? (
+        <LinksResult
+          analysis={analysis}
+          links={links}
+          params={params}
+          update={update}
+          canAnalyze={Boolean(read.data?.crawl_id)}
+        />
+      ) : (
+        <StartState read={read} />
+      )}
+      {analysis ? (
+        <InternalLinkReview
+          link={selected}
+          links={analysis.recommendations}
+          workspaceId={scope.workspaceId}
+          crawlId={analysis.crawl_id}
+          stale={analysis.stale}
+          onClose={() => update('link', '')}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** One line: what was analyzed and when, plus the controls that act on it. */
+function analysisSummary(analysis: InternalLinkAnalysis): string {
+  const parts = [
+    `${formatCount(analysis.recommendations.length)} suggestions`,
+    `${formatCount(analysis.page_count)} pages`,
+  ];
+  const summary = analysis.diagnostics;
+  if (summary && !isRunning(analysis.state))
+    parts.push(
+      `${formatCount(summary.candidates)} page pairs checked in ${Math.round(summary.elapsed_seconds)}s`,
+    );
+  if (analysis.omitted_pages)
+    parts.push(`${formatCount(analysis.omitted_pages)} pages over the limit`);
+  return parts.join(' · ');
+}
+
+function LinksHeader({
+  read,
+  links,
+  update,
+}: Readonly<{ read: LinksRead; links: InternalLink[]; update: ParamChange }>) {
+  const timeZone = useDisplayTimeZone();
+  const data = read.data;
+  const analysis = data?.analysis;
+  if (!data || !analysis) return null;
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+      <output className="type-caption min-w-0 flex-1">
+        {analysisSummary(analysis)} · <DisplayTime value={analysis.created_at} />
+      </output>
+      {data.history.length > 1 ? (
+        <Select
+          ariaLabel="Saved analysis"
+          value={analysis.id}
+          onValueChange={(value) => update('analysis', value)}
+          options={data.history.map((run) => ({
+            value: run.id,
+            label: `${formatDisplayTimestamp(run.created_at, timeZone)} · ${STATE_LABELS[run.state]}`,
+          }))}
+        />
+      ) : null}
+      {links.length ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() =>
+            downloadCsv(
+              'internal-links',
+              ['Source page', 'Destination', 'Anchor text'],
+              links.map((link) => [link.source.url, link.target.url, link.anchor]),
+            )
+          }
+        >
+          Export CSV
+        </Button>
+      ) : null}
+      <RunControls read={read} running={isRunning(analysis.state)} />
+    </div>
+  );
+}
+
+function RunControls({ read, running }: Readonly<{ read: LinksRead; running: boolean }>) {
+  const canRun = useWorkspaceCapability('run');
+  if (!canRun) return null;
+  if (running)
+    return (
+      <Button
+        variant="secondary"
+        size="sm"
+        pending={read.cancel.isPending}
+        onClick={() => read.cancel.mutate()}
+      >
+        Cancel analysis
+      </Button>
+    );
+  return (
+    <Button
+      size="sm"
+      disabled={!read.data?.crawl_id || read.query.isError}
+      pending={read.analyze.isPending}
+      onClick={() => read.analyze.mutate()}
+    >
+      Analyze again
+    </Button>
+  );
+}
+
+function Notices({ read }: Readonly<{ read: LinksRead }>) {
+  const mutationError = read.analyze.error || read.cancel.error;
+  return (
+    <>
+      {read.query.isError ? (
+        <ReadError
+          error={read.query.error}
+          fallback="Internal links could not be loaded."
+          onRetry={() => void read.query.refetch()}
+        />
+      ) : null}
+      {mutationError ? (
+        <Alert>{humanizeApiError(mutationError, 'Analysis could not be started.').message}</Alert>
+      ) : null}
+      {read.query.isPending ? <output className="type-body">Loading internal links…</output> : null}
+    </>
+  );
+}
+
+function StartState({ read }: Readonly<{ read: LinksRead }>) {
+  const canRun = useWorkspaceCapability('run');
+  const data = read.data;
+  if (!data) return null;
+  if (!data.crawl_id)
+    return (
+      <EmptyState
+        icon={ICONS.site}
+        heading="Run a crawl first"
+        description="A completed crawl provides the pages and existing links to analyze."
+      />
+    );
+  return (
+    <EmptyState
+      icon={ICONS.site}
+      heading="Find missing internal links"
+      description="Compare related pages from your latest crawl and suggest the contextual links each page is missing."
+      action={
+        canRun ? (
+          <Button pending={read.analyze.isPending} onClick={() => read.analyze.mutate()}>
+            Analyze internal links
+          </Button>
+        ) : undefined
+      }
+    />
+  );
+}
+
+function stateNotice(analysis: InternalLinkAnalysis) {
+  const reasons = Object.entries(analysis.diagnostics?.reasons ?? {})
+    .map(([reason, count]) => `${REASON_LABELS[reason] ?? 'unavailable'} (${formatCount(count)})`)
+    .join(', ');
+  if (analysis.state === 'cancelled') return 'This analysis was cancelled.';
+  if (analysis.state === 'unavailable' || analysis.state === 'failed')
+    return `No page pairs could be checked${reasons ? `: ${reasons}` : ''}. Analyze again to retry.`;
+  if (analysis.state === 'partial' && reasons)
+    return `Some page pairs were not checked: ${reasons}. These suggestions cover the rest.`;
+  return null;
+}
+
+function LinksResult({
+  analysis,
+  links,
+  params,
+  update,
+  canAnalyze,
+}: Readonly<{
+  analysis: InternalLinkAnalysis;
+  links: InternalLink[];
+  params: URLSearchParams;
+  update: ParamChange;
+  canAnalyze: boolean;
+}>) {
+  const summary = analysis.diagnostics;
+  const notice = stateNotice(analysis);
+  if (isRunning(analysis.state) && !analysis.recommendations.length)
+    return (
+      <output className="type-body">
+        {summary
+          ? `Checking related pages… ${formatCount(summary.candidates - summary.pending)} of ${formatCount(summary.candidates)} page pairs done.`
+          : 'Checking related pages…'}
+      </output>
+    );
+  return (
+    <>
+      {analysis.stale ? (
+        <Alert tone="warning">
+          These suggestions use an earlier crawl.{' '}
+          {canAnalyze ? 'Analyze again before making edits.' : null}
+        </Alert>
+      ) : null}
+      {notice ? <Alert tone="info">{notice}</Alert> : null}
+      {/* A run that could not check pairs has no result; never render it as empty. */}
+      {['unavailable', 'failed', 'cancelled'].includes(analysis.state) &&
+      !analysis.recommendations.length ? null : (
+        <LinksBody analysis={analysis} links={links} params={params} update={update} />
+      )}
+    </>
+  );
+}
+
+function LinksBody({
+  analysis,
+  links,
+  params,
+  update,
+}: Readonly<{
+  analysis: InternalLinkAnalysis;
+  links: InternalLink[];
+  params: URLSearchParams;
+  update: ParamChange;
+}>) {
+  const summary = analysis.diagnostics;
+  return (
+    <>
+      {isRunning(analysis.state) && summary ? (
+        <output className="type-caption">
+          {formatCount(summary.candidates - summary.pending)} of {formatCount(summary.candidates)}{' '}
+          page pairs checked. Suggestions appear as they are found.
+        </output>
+      ) : null}
+      {analysis.recommendations.length ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="max-w-sm min-w-55 flex-1">
+            <SearchField
+              size="compact"
+              value={params.get('links_q') ?? ''}
+              onValueChange={(value) => update('links_q', value)}
+              placeholder="Search pages and anchors"
+              aria-label="Search pages and anchors"
+            />
+          </div>
+          <Select
+            ariaLabel="Action status"
+            value={params.get('links_status') ?? ''}
+            onValueChange={(value) => update('links_status', value)}
+            options={[
+              { value: '', label: 'All statuses' },
+              ...Object.entries(ACTION_STATUS_LABEL).map(([value, label]) => ({ value, label })),
+            ]}
+          />
+        </div>
+      ) : null}
+      <LinksTable
+        links={links}
+        emptyReason={emptyReason(analysis)}
+        onSelect={(id) => update('link', id)}
+      />
+    </>
+  );
+}
+
+/** Distinguish "nothing to compare" from "compared and nothing qualified". */
+function emptyReason(analysis: InternalLinkAnalysis): string {
+  const summary = analysis.diagnostics;
+  if (analysis.recommendations.length) return 'No suggestions match these filters.';
+  if (!summary || !summary.candidates)
+    return 'No related, unlinked pages were found in this crawl.';
+  return `${formatCount(summary.completed)} page pairs were checked and none needed a new link.`;
+}
+
+function LinksTable({
+  links,
+  emptyReason,
+  onSelect,
+}: Readonly<{ links: InternalLink[]; emptyReason: string; onSelect: (id: string) => void }>) {
+  const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
+  const pagination = useTablePage(links.length, pageSize);
+  if (!links.length)
+    return (
+      <EmptyState variant="compact" icon={ICONS.site} heading={emptyReason} headingLevel={3} />
+    );
+  return (
+    <div className="min-w-0">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Source page</TableHead>
+            <TableHead>Add link to</TableHead>
+            <TableHead>Anchor text</TableHead>
+            <TableHead>Action</TableHead>
+            <TableHead>
+              <span className="sr-only">Review</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {links.slice(pagination.from - 1, pagination.to).map((link) => (
+            <TableRow key={link.id}>
+              <TableCell>
+                <PageCell title={link.source.title} url={link.source.url} />
+              </TableCell>
+              <TableCell>
+                <PageCell title={link.target.title} url={link.target.url} />
+              </TableCell>
+              <TableCell>{link.anchor}</TableCell>
+              <TableCell>
+                {link.action_status && link.action_status in ACTION_STATUS_LABEL ? (
+                  <ActionStatusBadge status={link.action_status as ActionStatus} />
+                ) : (
+                  <span className="type-caption">No Action yet</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSelect(link.id)}
+                  aria-label={`Review link from ${link.source.title || link.source.url} to ${link.target.title || link.target.url}`}
+                >
+                  Review
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <CursorTableFooter
+        from={pagination.from}
+        to={pagination.to}
+        total={links.length}
+        noun="suggestions"
+        pageSize={pageSize}
+        onPageSizeChange={(size) => {
+          setPageSize(isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE);
+          pagination.setPage(1);
+        }}
+        canPrev={pagination.page > 1}
+        canNext={pagination.page < pagination.pageCount}
+        onPrev={() => pagination.setPage(pagination.page - 1)}
+        onNext={() => pagination.setPage(pagination.page + 1)}
+      />
+    </div>
+  );
+}
+
+function PageCell({ title, url }: Readonly<{ title: string; url: string }>) {
+  const path = new URL(url).pathname;
+  return (
+    <span className="grid max-w-[24rem] min-w-0 gap-0.5">
+      <span className="truncate" title={title || url}>
+        {title || path}
+      </span>
+      <span className="type-caption truncate" title={url}>
+        {decodeURIPath(path)}
+      </span>
+    </span>
+  );
+}
+
+function decodeURIPath(path: string) {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}

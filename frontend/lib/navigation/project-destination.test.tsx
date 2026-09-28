@@ -49,6 +49,15 @@ describe('projectDestination', () => {
     );
     expect(href).toBe(`/visibility?tab=sources&project=${PROJECT_1}`);
   });
+
+  it('drops internal-link selections that belong to the previous project', () => {
+    const href = projectDestination(
+      '/site',
+      new URLSearchParams({ tab: 'internal-links', analysis: 'a', link: 'l', links_q: 'x' }),
+      PROJECT_1,
+    );
+    expect(href).toBe(`/site?tab=internal-links&project=${PROJECT_1}`);
+  });
 });
 
 describe('workspaceDestination', () => {

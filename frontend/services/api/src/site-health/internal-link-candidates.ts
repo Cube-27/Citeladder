@@ -1,0 +1,190 @@
+import { randomUUID } from 'node:crypto';
+import type { InternalLinkPage } from '@citeladder/contracts/site-health';
+
+import { policy } from '../config.ts';
+
+const limits = policy.internal_links;
+const stopWords = new Set<string>(limits.stop_words);
+
+export type LinkCandidate = {
+  id: string;
+  source: string;
+  target: string;
+  similarity: number;
+  anchors: string[];
+  request: { state: Record<string, unknown>; questions: Record<string, unknown> };
+};
+
+function path(url: string): string {
+  const pathname = new URL(url).pathname;
+  try {
+    return decodeURIComponent(pathname);
+  } catch {
+    return pathname;
+  }
+}
+
+/** A page title without its site-name suffix. */
+function pageName(title: string): string {
+  return title.split(/\s[|\-–—]\s/u)[0]!.trim();
+}
+
+function terms(page: InternalLinkPage): string[] {
+  const slug = path(page.url).replaceAll(/[/_-]+/gu, ' ');
+  return (
+    `${page.title} ${page.h1} ${slug} ${page.description}`
+      .toLocaleLowerCase()
+      .match(/[\p{L}\p{N}]{3,}/gu) ?? []
+  ).filter((word) => !stopWords.has(word));
+}
+
+/** Unit-length TF-IDF vectors; site-wide template words carry no weight. */
+function vectors(pages: InternalLinkPage[]) {
+  const tokens = new Map(pages.map((page) => [page.analysis_id, terms(page)]));
+  const frequency = new Map<string, number>();
+  for (const words of tokens.values())
+    for (const word of new Set(words)) frequency.set(word, (frequency.get(word) ?? 0) + 1);
+  const result = new Map<string, Map<string, number>>();
+  for (const page of pages) {
+    const counts = new Map<string, number>();
+    for (const word of tokens.get(page.analysis_id)!) {
+      const df = frequency.get(word)!;
+      if (
+        pages.length >= limits.common_term_min_pages &&
+        df > pages.length * limits.common_term_fraction
+      )
+        continue;
+      counts.set(word, (counts.get(word) ?? 0) + 1);
+    }
+    const weighted = new Map(
+      [...counts].map(([word, count]) => [
+        word,
+        count * Math.log(1 + pages.length / frequency.get(word)!),
+      ]),
+    );
+    const norm = Math.hypot(...weighted.values()) || 1;
+    result.set(page.analysis_id, new Map([...weighted].map(([word, x]) => [word, x / norm])));
+  }
+  return result;
+}
+
+function cosine(a: Map<string, number>, b: Map<string, number>): number {
+  const [small, large] = a.size < b.size ? [a, b] : [b, a];
+  let sum = 0;
+  for (const [word, x] of small) sum += x * (large.get(word) ?? 0);
+  return sum;
+}
+
+const titleWords = (page: InternalLinkPage) =>
+  new Set(
+    pageName(page.title)
+      .toLocaleLowerCase()
+      .match(/[\p{L}\p{N}]+/gu) ?? [],
+  );
+
+/** Colour/size variants of one product, which a contextual link would not help. */
+export function isVariant(a: InternalLinkPage, b: InternalLinkPage): boolean {
+  if (a.page_kind !== 'product' || b.page_kind !== 'product') return false;
+  const left = titleWords(a);
+  const right = titleWords(b);
+  const shared = [...left].filter((word) => right.has(word)).length;
+  const different = left.size + right.size - 2 * shared;
+  return shared >= 2 && different <= limits.variant_max_word_difference;
+}
+
+/** Descriptive anchors come from the destination itself, never the model. */
+export function anchorOptions(target: InternalLinkPage): string[] {
+  const leaf = path(target.url).split('/').filter(Boolean).at(-1) ?? '';
+  const options: string[] = [];
+  for (const raw of [target.h1, pageName(target.title), leaf.replaceAll(/[-_]+/gu, ' ')]) {
+    const option = raw.replaceAll(/\s+/gu, ' ').trim();
+    const digits = option.replaceAll(/\D/gu, '').length;
+    if (
+      option.length < limits.min_anchor_chars ||
+      option.length > limits.max_anchor_chars ||
+      // SKU-like slugs are identifiers, not anchor text.
+      digits > option.length / 3 ||
+      options.some((item) => item.toLocaleLowerCase() === option.toLocaleLowerCase())
+    )
+      continue;
+    options.push(option);
+  }
+  return options;
+}
+
+function pageState(page: InternalLinkPage) {
+  return {
+    title: page.title,
+    h1: page.h1,
+    url: path(page.url),
+    page_type: page.page_kind,
+    description: page.description,
+    content: page.excerpt,
+  };
+}
+
+function linkRequest(source: InternalLinkPage, target: InternalLinkPage, anchors: string[]) {
+  const questions: Record<string, unknown> = {
+    link: {
+      type: 'noul',
+      instructions: limits.link_instructions,
+      criteria: limits.link_criteria,
+    },
+  };
+  if (anchors.length > 1)
+    questions.anchor = {
+      type: 'choice',
+      instructions: limits.anchor_instructions,
+      criteria: Object.fromEntries(anchors.map((anchor, index) => [`a${index}`, anchor])),
+    };
+  return {
+    state: {
+      rubric: limits.rubric,
+      source: pageState(source),
+      target: { ...pageState(target), contextual_inbound_links: target.contextual_inbound },
+    },
+    questions,
+  };
+}
+
+/** Shortlist the most related unlinked destinations for every source page. */
+export function linkCandidates(pages: InternalLinkPage[]): LinkCandidate[] {
+  const vector = vectors(pages);
+  const candidates: LinkCandidate[] = [];
+  for (const source of pages) {
+    if (!source.links_complete) continue;
+    const linked = new Set(source.contextual_targets);
+    const ranked = pages
+      .filter(
+        (target) =>
+          target.eligible_target &&
+          target.url !== source.url &&
+          !linked.has(target.url) &&
+          !isVariant(source, target),
+      )
+      .map((target) => ({
+        target,
+        similarity: cosine(vector.get(source.analysis_id)!, vector.get(target.analysis_id)!),
+      }))
+      .filter((item) => item.similarity > limits.min_similarity)
+      .toSorted((a, b) => b.similarity - a.similarity || a.target.url.localeCompare(b.target.url));
+    const chosen: InternalLinkPage[] = [];
+    for (const { target, similarity } of ranked) {
+      if (chosen.length >= limits.targets_per_page) break;
+      // One destination per product family: its variants would repeat the suggestion.
+      if (chosen.some((page) => isVariant(page, target))) continue;
+      const anchors = anchorOptions(target);
+      if (!anchors.length) continue;
+      chosen.push(target);
+      candidates.push({
+        id: randomUUID(),
+        source: source.analysis_id,
+        target: target.analysis_id,
+        similarity,
+        anchors,
+        request: linkRequest(source, target, anchors),
+      });
+    }
+  }
+  return candidates;
+}

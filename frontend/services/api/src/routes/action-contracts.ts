@@ -13,6 +13,7 @@ export const statusPatch = z.strictObject({
     ),
 });
 export const declarationCreate = z.strictObject({
+  recommendation_ids: z.array(z.uuid()).max(100).default([]),
   output_revision_id: nullableUuid.default(null),
   declared_implemented_at: datetime.refine(
     (value) => !value.startsWith('0000-'),

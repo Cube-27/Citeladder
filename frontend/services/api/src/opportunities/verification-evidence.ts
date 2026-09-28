@@ -14,6 +14,7 @@ import {
 } from './verification-decisions.ts';
 import type { Declaration } from './verification-result.ts';
 import { scalarText } from '../text-order.ts';
+import { contextualLinkObserved } from './internal-link-verification.ts';
 export type Source = { kind: string; id: string; observed_at: string };
 type Context = {
   db: Database;
@@ -28,7 +29,7 @@ const kindName = (check: Record<string, unknown>) =>
 async function siteCheck(ctx: Context, crawlId: string, check: Record<string, unknown>) {
   const kind = kindName(check);
   const d = ctx.declaration;
-  if (!['site_rule', 'page_fact'].includes(kind)) {
+  if (!['site_rule', 'page_fact', 'contextual_link'].includes(kind)) {
     ctx.result.limitations.push(`${kind}: unavailable from a site crawl`);
     return;
   }
@@ -63,7 +64,14 @@ async function siteCheck(ctx: Context, crawlId: string, check: Record<string, un
     return;
   }
   let matched: boolean;
-  if (kind === 'site_rule') {
+  if (kind === 'contextual_link') {
+    const observed = contextualLinkObserved(analysis.normalized_facts, check);
+    if (observed === null) {
+      ctx.result.limitations.push('contextual_link: insufficient or incompatible link capture');
+      return;
+    }
+    matched = observed;
+  } else if (kind === 'site_rule') {
     const ids = Array.isArray(analysis.source_evaluation_ids)
       ? analysis.source_evaluation_ids.map(String)
       : [];

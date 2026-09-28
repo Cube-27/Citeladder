@@ -10,8 +10,10 @@ import { actionRoutes } from './actions.ts';
 import { searchIntelligenceRoutes } from './search-intelligence.ts';
 import { commerceRoutes } from './commerce.ts';
 import { brandIdentityRoutes } from './brand-identity.ts';
+import { internalLinkRoutes } from './internal-links.ts';
 
 export const PRODUCT_ROUTES: readonly ProductRoute[] = [
+  ...internalLinkRoutes,
   ...executionRoutes,
   ...aiReferralRoutes,
   ...visibilityRoutes,
