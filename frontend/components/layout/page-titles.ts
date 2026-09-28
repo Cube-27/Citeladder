@@ -17,7 +17,7 @@ const PAGE_TITLES: ReadonlyArray<readonly [prefix: string, title: string]> = [
   ['/agent/actions', 'Actions'],
   ['/agent/skills', 'Skills'],
   ['/agent/context', 'Context'],
-  ['/agent/chats', 'Chat'],
+  ['/agent/chats', 'Agent'],
   ['/agent', 'New chat'],
   ['/products', 'Commerce Suite'],
   ['/runs', 'Runs'],
@@ -36,7 +36,6 @@ const EXACT_OVERRIDES: ReadonlyArray<readonly [pattern: RegExp, title: string]> 
   [/^\/site\/crawls\/[^/]+\/pages\/[^/]+$/, 'Page detail'],
   [/^\/runs\/[^/]+\/executions\/[^/]+$/, 'Execution evidence'],
   [/^\/runs\/[^/]+$/, 'Run detail'],
-  [/^\/agent\/actions\/[^/]+$/, 'Action'],
 ];
 
 export function resolveTitle(pathname: string): string {

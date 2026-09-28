@@ -1,7 +1,6 @@
 'use client';
 
-import { FileText } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { Composer } from '@/components/agent/composer';
@@ -18,7 +17,6 @@ import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Drawer } from '@/components/ui/drawer';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -27,14 +25,7 @@ import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import type { AgentChatDetail } from '@/lib/api/agent';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
-/** Below this width the output opens as a sheet instead of beside the chat. */
-const COMPACT_OUTPUT_QUERY = '(max-width: 1099px)';
-
-function compactOutput(): boolean {
-  return typeof window.matchMedia === 'function' && window.matchMedia(COMPACT_OUTPUT_QUERY).matches;
-}
-
-/** One chat: the conversation on the left and its output on the right. */
+/** One chat: a single thread with its output inline and the composer pinned below. */
 export function ChatScreen() {
   const { chatId = '' } = useParams();
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
@@ -76,88 +67,68 @@ function ChatView({
   const canEdit = useWorkspaceCapability('run');
   const runActive = isRunActive(detail.latest_run);
   const hasOutput = Boolean(detail.output?.latest_revision);
-  const [paneOpen, setPaneOpen] = useState(true);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const openOutput = () => {
-    setPaneOpen(true);
-    // The sheet portals out of its hidden wrapper, so it must not open on desktop.
-    setSheetOpen(compactOutput());
-  };
   const turn = useFollowUp(workspaceId, detail);
   const cancel = useCancelRun(workspaceId, chatId);
+  const endRef = useRef<HTMLDivElement>(null);
+  const latestRevisionId = detail.output?.latest_revision?.id;
 
-  const pane = detail.output ? (
-    <OutputPane
-      workspaceId={workspaceId}
-      chatId={chatId}
-      output={detail.output}
-      runActive={runActive}
-      canEdit={canEdit}
-      canSend={access.canSend}
-      onClose={() => {
-        setPaneOpen(false);
-        setSheetOpen(false);
-      }}
-    />
-  ) : null;
+  // Like any chat window: a new turn, run state or revision scrolls the thread
+  // to its end, so the latest entry sits just above the pinned composer.
+  useEffect(() => {
+    endRef.current?.scrollIntoView?.({ block: 'end' });
+  }, [detail.messages.length, detail.latest_run?.status, latestRevisionId]);
 
   return (
     <PageShell
-      // The deliverable names the task better than the opening instruction does.
-      title={detail.output?.latest_revision?.title ?? detail.chat.title}
-      actions={
-        <ChatHeaderActions detail={detail} onOpenOutput={hasOutput ? openOutput : undefined} />
-      }
+      measure="workflow"
+      className="flex min-h-[calc(100dvh-var(--page-band-identity)-2*var(--content-gutter))] flex-col pb-0"
+      actions={<ChatHeaderActions detail={detail} />}
     >
-      <div className="grid gap-[var(--content-gutter)] min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <div className="grid min-w-0 content-start gap-4">
-          <Conversation
-            detail={detail}
-            onOpenOutput={openOutput}
-            onRefine={(instruction) => turn.send(instruction)}
-            onStop={() =>
-              detail.latest_run && cancel.mutate({ chatId, runId: detail.latest_run.id })
-            }
-            stopping={cancel.isPending}
-            canSend={access.canSend && !turn.pending}
-          />
-          {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
-          <FollowUpFailure turn={turn} actionId={detail.chat.action_id} />
-          <Composer
-            id="chat-message"
-            label="Reply to the agent"
-            value={turn.draft}
-            onChange={turn.setDraft}
-            onSubmit={() => turn.send(turn.draft)}
-            pending={turn.pending}
-            disabled={!access.canSend || runActive}
-            placeholder={hasOutput ? 'Ask for a change to the output.' : 'Ask a follow-up.'}
-            tools={
-              <SkillPicker
-                value={turn.skillId}
-                onChange={turn.setSkillId}
-                outputKind={detail.output?.kind}
-                disabled={!access.canSend || runActive}
+      <div className="grid min-w-0 flex-1 content-start gap-4">
+        <Conversation
+          detail={detail}
+          output={
+            detail.output ? (
+              <OutputPane
+                workspaceId={workspaceId}
+                chatId={chatId}
+                output={detail.output}
+                runActive={runActive}
+                canEdit={canEdit}
+                canSend={access.canSend}
               />
-            }
-          />
-        </div>
-        {pane && paneOpen ? <div className="hidden min-w-0 min-[1100px]:block">{pane}</div> : null}
+            ) : null
+          }
+          onRefine={(instruction) => turn.send(instruction)}
+          onStop={() => detail.latest_run && cancel.mutate({ chatId, runId: detail.latest_run.id })}
+          stopping={cancel.isPending}
+          canSend={access.canSend && !turn.pending}
+        />
+        {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
+        <FollowUpFailure turn={turn} actionId={detail.chat.action_id} />
       </div>
-      {pane ? (
-        <div className="min-[1100px]:hidden">
-          <Drawer
-            open={sheetOpen}
-            onOpenChange={setSheetOpen}
-            title="Output"
-            hideHeader
-            closeLabel="Back to chat"
-            className="w-screen max-w-none"
-          >
-            {pane}
-          </Drawer>
-        </div>
-      ) : null}
+      {/* The composer stays at the bottom of the window while the thread scrolls. */}
+      <div className="bg-panel z-sticky sticky bottom-0 pt-3 pb-[var(--content-gutter)]">
+        <Composer
+          id="chat-message"
+          label="Reply to the agent"
+          value={turn.draft}
+          onChange={turn.setDraft}
+          onSubmit={() => turn.send(turn.draft)}
+          pending={turn.pending}
+          disabled={!access.canSend || runActive}
+          placeholder={hasOutput ? 'Ask for a change to the output.' : 'Ask a follow-up.'}
+          tools={
+            <SkillPicker
+              value={turn.skillId}
+              onChange={turn.setSkillId}
+              outputKind={detail.output?.kind}
+              disabled={!access.canSend || runActive}
+            />
+          }
+        />
+      </div>
+      <div ref={endRef} />
     </PageShell>
   );
 }
@@ -182,25 +153,11 @@ export function FollowUpFailure({
   );
 }
 
-function ChatHeaderActions({
-  detail,
-  onOpenOutput,
-}: Readonly<{ detail: AgentChatDetail; onOpenOutput?: () => void }>) {
+function ChatHeaderActions({ detail }: Readonly<{ detail: AgentChatDetail }>) {
+  if (!detail.chat.action_id) return null;
   return (
-    <>
-      {detail.chat.action_id ? (
-        <Button asChild variant="ghost" size="sm">
-          <ProjectLink href={`/agent/actions/${detail.chat.action_id}`}>
-            {detail.chat.target_label ?? 'Open Action'}
-          </ProjectLink>
-        </Button>
-      ) : null}
-      {onOpenOutput ? (
-        <Button variant="secondary" size="sm" onClick={onOpenOutput}>
-          <FileText className="size-3.5" aria-hidden />
-          Output
-        </Button>
-      ) : null}
-    </>
+    <Button asChild variant="ghost" size="sm">
+      <ProjectLink href={`/agent/actions/${detail.chat.action_id}`}>Open Action</ProjectLink>
+    </Button>
   );
 }

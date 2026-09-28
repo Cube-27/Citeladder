@@ -160,9 +160,8 @@ function IdentityBand({ title, actions }: Readonly<{ title?: string; actions?: R
         <div className="min-w-0 flex-1 max-[700px]:sr-only">
           {/* The route H1 is the top of the type ladder: nothing on the page
               out-ranks it except a figure. It stays the one H1 per route. */}
-          <h1 className={textRole('pageTitle', 'min-w-0 [overflow-wrap:break-word]')}>
-            {resolved}
-          </h1>
+          {/* One row, always: a long title truncates rather than wrapping. */}
+          <h1 className={textRole('pageTitle', 'min-w-0 truncate')}>{resolved}</h1>
         </div>
         {actions ? (
           // The shell paints the theme toggle, the account glyph and, on
@@ -171,7 +170,7 @@ function IdentityBand({ title, actions }: Readonly<{ title?: string; actions?: R
           // Desktop-only, because that is the only width the glyphs appear at.
           <div
             className={cn(
-              'flex min-h-[var(--control-height)] shrink-0 flex-wrap items-center gap-2',
+              'flex min-h-[var(--control-height)] shrink-0 items-center gap-2',
               navigationMode(pathname) === 'dashboard'
                 ? 'min-[981px]:pe-[calc(3*var(--control-height)+1.25rem)]'
                 : 'min-[981px]:pe-[calc(2*var(--control-height)+1rem)]',

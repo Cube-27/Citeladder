@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Download, Pencil, X } from 'lucide-react';
+import { Download, Pencil } from 'lucide-react';
 import { useState } from 'react';
 
 import { OutputDeclaration } from '@/components/agent/action-declaration';
@@ -28,7 +28,7 @@ import { ContentMarkdown } from '@/lib/markdown/markdown';
 type PaneTab = 'output' | 'sources' | 'history';
 
 /**
- * The chat's deliverable. Edits, restores and outline approval are refused by
+ * The chat's deliverable, shown inline in the thread. Edits, restores and outline approval are refused by
  * the server while a turn is queued or running, so the pane disables them
  * then rather than offering a control that will fail.
  */
@@ -39,7 +39,6 @@ export function OutputPane({
   runActive,
   canEdit,
   canSend,
-  onClose,
 }: Readonly<{
   workspaceId: string;
   chatId: string;
@@ -47,7 +46,6 @@ export function OutputPane({
   runActive: boolean;
   canEdit: boolean;
   canSend: boolean;
-  onClose: () => void;
 }>) {
   const revision = output.latest_revision;
   const [tab, setTab] = useState<PaneTab>('output');
@@ -59,14 +57,9 @@ export function OutputPane({
   return (
     <section aria-labelledby="output-title" className="grid min-w-0 content-start gap-3">
       <header className="grid gap-2">
-        <div className="flex items-start gap-2">
-          <h2 id="output-title" className={textRole('sectionTitle', 'min-w-0 flex-1')}>
-            {revision.title}
-          </h2>
-          <Button variant="ghost" size="icon" aria-label="Close output" onClick={onClose}>
-            <X className="size-4" aria-hidden />
-          </Button>
-        </div>
+        <h2 id="output-title" className={textRole('sectionTitle', 'min-w-0')}>
+          {revision.title}
+        </h2>
         <div className="flex flex-wrap items-center gap-2">
           <Badge>{outputKindLabel(output.kind)}</Badge>
           <Badge>{OUTPUT_PHASE_LABEL[output.phase]}</Badge>

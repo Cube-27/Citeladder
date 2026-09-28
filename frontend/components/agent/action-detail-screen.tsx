@@ -88,10 +88,7 @@ function ActionDetailView({
 }: Readonly<{ action: ActionDetail; workspaceId: string }>) {
   const [evidenceId, setEvidenceId] = useState<string | null>(null);
   return (
-    <PageShell
-      title={action.target_label}
-      actions={<ActionControls action={action} workspaceId={workspaceId} />}
-    >
+    <PageShell actions={<ActionControls action={action} workspaceId={workspaceId} />}>
       <Stack gap="section">
         <ActionFacts action={action} />
         <Diagnosis action={action} onOpenEvidence={setEvidenceId} />
@@ -177,7 +174,9 @@ function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
         >
           {action.target_url}
         </ExternalHttpLink>
-      ) : null}
+      ) : (
+        <p className={textRole('itemTitle', 'break-all')}>{action.target_label}</p>
+      )}
       {action.evidence_cleared_at ? (
         <Alert tone="info">No current evidence targets this Action. Its chats are kept.</Alert>
       ) : null}
