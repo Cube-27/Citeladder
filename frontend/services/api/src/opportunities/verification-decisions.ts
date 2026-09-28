@@ -1,6 +1,6 @@
 import { policy } from '../config.ts';
 import { round } from '../demand/projection.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { epochMicros, parseDatetime } from '../http/datetimes.ts';
 import { compareText } from '../text-order.ts';
 const p = policy.opportunity.placement;

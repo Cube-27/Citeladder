@@ -15,7 +15,7 @@ import type {
 } from '../analysis/opportunities/evidence.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { siteCoverage, type CoverageCrawl } from './refresh-compute.ts';
 import { compareText } from '../text-order.ts';
 

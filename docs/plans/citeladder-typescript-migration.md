@@ -622,11 +622,24 @@ Departure: query keys, prompt-text hashes and Action query group keys now
 lower-case instead of casefolding. They differ from Python only for the few
 characters where the two differ (such as `ß`), until those Python readers move.
 
-Open for the owner: five TypeScript families (executions, visibility,
-ai-referrals, opportunities, actions) still declare TS-side response schemas
-beside the browser's `@citeladder/contracts` schemas. `demand` and
-`performance` already serve the shared contracts. Converging the five removes
-that duplication.
+### Contract convergence (after golden retirement)
+
+*As implemented (28 September 2026):* one contract per response. A response the
+browser reads is the shared `@citeladder/contracts` schema; the route publishes
+it, and `defineRoute` types each JSON handler's return value against its
+response schema, so contract drift is a compile error. Server-only responses
+and request bodies stay beside their route.
+- `executions`, `visibility`, `ai-referrals`, `opportunities` and `actions` now
+  serve the shared schemas; their TS-side duplicates and the hand-written
+  response types they mirrored are deleted.
+- Views narrow persisted values at the boundary: enums parse with the
+  contract's own schema, JSON columns go through `db/json.ts`, and dates are
+  serialized explicitly. A stored value outside the contract now fails on the
+  server instead of in the browser's `strictValidate`.
+- The typing exposed shipped drift, now fixed: Action timestamps and
+  measurement legs were serialized from raw `Date`s, execution evidence
+  carried an undeclared `cohort` (added to the contract), and several status
+  fields were untyped strings.
 
 ### PR 8: Commerce and search intelligence
 

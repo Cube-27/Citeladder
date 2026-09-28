@@ -12,9 +12,10 @@ import {
 } from '../workers/executor.ts';
 import { advisoryXactLock } from './admission.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { buildQueryEvidence } from './query-evidence.ts';
-import { queryDetectorInputs, sourceMaterial, strings, trafficSource } from './source.ts';
+import { queryDetectorInputs, sourceMaterial, trafficSource } from './source.ts';
+import { strings } from '../db/json.ts';
 import {
   detectSearchSignals,
   detectStrikingDistance,

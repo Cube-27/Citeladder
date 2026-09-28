@@ -6,6 +6,8 @@
  *
  * Pure functions over loaded evidence.
  */
+import { opportunitySummarySchema } from '@citeladder/contracts/opportunities';
+
 import { randomUUID } from 'node:crypto';
 
 import { policy } from '../config.ts';
@@ -16,8 +18,10 @@ import { priorityScore } from '../analysis/opportunities/scoring.ts';
 import { emptySourceProjection } from '../analysis/opportunities/source-mix.ts';
 import { isoUtc } from '../db/timestamps.ts';
 import { promptTextHash } from '../prompts/normalization.ts';
-import { record } from '../traffic/performance.ts';
+import { numberRecord, record } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
+
+const sourceMix = opportunitySummarySchema.shape.source_mix;
 
 const o = policy.opportunity.opportunities;
 const a = policy.opportunity.actions;
@@ -297,11 +301,13 @@ export function projectSnapshot(snapshot: StoredSnapshot) {
     demand_source_revision: snapshot.demand_source_revision,
     coverage: record(snapshot.coverage),
     limitations: Array.isArray(snapshot.limitations) ? [...snapshot.limitations] : [],
-    source_mix: truthyRecord(snapshot.source_mix) ?? emptySourceProjection(),
-    action_path_mix: truthyRecord(snapshot.action_path_mix) ?? emptySourceProjection(),
+    source_mix: sourceMix.parse(truthyRecord(snapshot.source_mix) ?? emptySourceProjection()),
+    action_path_mix: sourceMix.parse(
+      truthyRecord(snapshot.action_path_mix) ?? emptySourceProjection(),
+    ),
     domain_rollups: Array.isArray(snapshot.domain_rollups) ? [...snapshot.domain_rollups] : [],
-    counts_by_type: record(snapshot.counts_by_type),
-    counts_by_severity: record(snapshot.counts_by_severity),
+    counts_by_type: numberRecord(snapshot.counts_by_type),
+    counts_by_severity: numberRecord(snapshot.counts_by_severity),
     total_count: snapshot.total_count,
     median_priority: snapshot.median_priority,
     analyzer_version: snapshot.analyzer_version,

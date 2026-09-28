@@ -5,11 +5,16 @@
  * Every value is read from the row a refresh froze; nothing is re-scored or
  * re-derived at read time.
  */
+import {
+  opportunityDetailSchema,
+  opportunitySeveritySchema,
+  opportunityTypeSchema,
+} from '@citeladder/contracts/opportunities';
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
 import { isoUtc, isoUtcOrNull, utcText, utcTextOf } from '../db/timestamps.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 
 const r = policy.opportunity.refresh;
@@ -73,6 +78,7 @@ export const OPPORTUNITY_COLUMNS = [
 ] as const;
 
 const list = (value: unknown): unknown[] => (Array.isArray(value) ? [...value] : []);
+const ids = (value: unknown): string[] => list(value).map(String);
 
 function humanizeTheme(theme: string): string {
   const words = theme.replaceAll('_', ' ').replaceAll('-', ' ').trim().replace(/\s+/gu, ' ').trim();
@@ -109,6 +115,22 @@ function evidenceSummary(row: OpportunityRow) {
 
 type Rank = { system_rank: number; display_rank: number; order_source: 'system' | 'manual' };
 
+/** The factors shown beside a score: its inputs plus the detector's own. */
+function priorityFactors(row: OpportunityRow): Record<string, string | number> {
+  const factors = {
+    severity: row.severity,
+    system_score: row.priority_score,
+    formula_version: row.formula_version,
+    ...record(record(row.evidence).priority_factors),
+  };
+  return Object.fromEntries(
+    Object.entries(factors).filter(
+      (entry): entry is [string, string | number] =>
+        typeof entry[1] === 'string' || typeof entry[1] === 'number',
+    ),
+  );
+}
+
 export function projectItem(
   row: OpportunityRow,
   rank: Rank = { system_rank: 0, display_rank: 0, order_source: 'system' },
@@ -117,8 +139,8 @@ export function projectItem(
     id: row.id,
     project_id: row.project_id,
     rule_id: row.rule_id,
-    opportunity_type: row.opportunity_type,
-    severity: row.severity,
+    opportunity_type: opportunityTypeSchema.parse(row.opportunity_type),
+    severity: opportunitySeveritySchema.parse(row.severity),
     priority_score: row.priority_score,
     title: row.title || '',
     target_key: row.target_key,
@@ -128,12 +150,7 @@ export function projectItem(
     target_label: targetLabel(row),
     action_id: row.action_id,
     ...rank,
-    priority_factors: {
-      severity: row.severity,
-      system_score: row.priority_score,
-      formula_version: row.formula_version,
-      ...record(record(row.evidence).priority_factors),
-    },
+    priority_factors: priorityFactors(row),
     evidence_summary: evidenceSummary(row),
     created_at: isoUtc(row.created_text),
     updated_at: isoUtc(row.updated_text),
@@ -206,7 +223,7 @@ function projectContentHandoff(row: OpportunityRow): Record<string, unknown> {
     coverage: {},
     limitations: [],
     truncated: false,
-    source_analysis_ids: list(row.source_analysis_ids),
+    source_analysis_ids: ids(row.source_analysis_ids),
     snapshot_versions: versions,
   };
 }
@@ -216,14 +233,16 @@ export function projectDetail(row: OpportunityRow) {
     ...projectItem(row),
     remediation: row.remediation || '',
     evidence: record(row.evidence),
-    source_analysis_ids: list(row.source_analysis_ids),
-    source_issue_ids: list(row.source_issue_ids),
-    source_metric_ids: list(row.source_metric_ids),
-    source_traffic_ids: list(row.source_traffic_ids),
+    source_analysis_ids: ids(row.source_analysis_ids),
+    source_issue_ids: ids(row.source_issue_ids),
+    source_metric_ids: ids(row.source_metric_ids),
+    source_traffic_ids: ids(row.source_traffic_ids),
     analyzer_version: row.analyzer_version,
     rule_version: row.rule_version,
     formula_version: row.formula_version,
-    content_handoff: projectContentHandoff(row),
+    content_handoff: opportunityDetailSchema.shape.content_handoff.parse(
+      projectContentHandoff(row),
+    ),
     superseded_by_id: row.superseded_by_id,
     superseded_at: isoUtcOrNull(row.superseded_text),
   };

@@ -9,57 +9,18 @@
 import { sql } from 'kysely';
 
 import { executionFrozenProvenance } from '../analysis/provenance.ts';
+import {
+  citationClassificationSchema,
+  executionEvidenceSchema,
+} from '@citeladder/contracts/audits';
+import type { z } from 'zod';
+
 import type { Database } from '../db/database.ts';
 import { pydanticUtc, utcText } from '../db/timestamps.ts';
 import { AnalysisNotFoundError } from './selection.ts';
-import { executionSurfaceEvidence, type SearchSurfaceEvidence } from './surface.ts';
+import { executionSurfaceEvidence } from './surface.ts';
 
-type CitationEvidence = {
-  ordinal: number;
-  url: string;
-  title: string;
-  domain: string;
-  classification: string;
-  source_class: string | null;
-  source_origin: string;
-  source_taxonomy_version: string | null;
-  is_owned: boolean;
-  is_unintended: boolean;
-  matched_competitor: string | null;
-};
-
-export type ExecutionEvidenceResponse = {
-  id: string;
-  analysis_id: string;
-  audit_id: string;
-  task_id: string;
-  artifact_id: string | null;
-  analyzer_version: string;
-  scoring_rule_version: string;
-  logical_engine: string;
-  transport_provider: string;
-  transport_model: string;
-  retrieval_enabled: boolean | null;
-  prompt_index: number;
-  repetition: number;
-  prompt_class: string;
-  cohort: string;
-  brand_mentioned: boolean;
-  brand_first_offset: number | null;
-  owned_domain_cited: boolean;
-  owned_citation_count: number;
-  unintended_domain_cited: boolean;
-  citation_count: number;
-  search_used: boolean;
-  search_query_count: number;
-  sentiment: string | null;
-  avg_position: number | null;
-  score: Record<string, unknown> | null;
-  citations: CitationEvidence[];
-  competitors_mentioned: string[];
-  search_surface: SearchSurfaceEvidence | null;
-  created_at: string;
-};
+export type ExecutionEvidenceResponse = z.input<typeof executionEvidenceSchema>;
 
 function scoreObject(score: unknown): Record<string, unknown> | null {
   if (score === null) return null;
@@ -154,7 +115,10 @@ export async function getExecutionEvidence(
     sentiment: analysis.sentiment,
     avg_position: analysis.avg_position,
     score,
-    citations,
+    citations: citations.map((citation) => ({
+      ...citation,
+      classification: citationClassificationSchema.parse(citation.classification),
+    })),
     competitors_mentioned: competitorsMentioned(score),
     // Null for an LLM execution, and for a search that produced no
     // observation row: a gap in ours, not a measured absence.

@@ -6,14 +6,11 @@ import { isoDateText } from '../db/timestamps.ts';
 import { policy } from '../config.ts';
 import { addDays } from '../referrals/projection.ts';
 import { numberOrNull } from '../traffic/accumulators.ts';
-import { record } from '../traffic/performance.ts';
+import { record, strings } from '../db/json.ts';
 import { classifyProjectQueries } from './classification.ts';
 import { stableHash, unique, type QueryInput, type SearchInput } from './projection.ts';
 import { latestQuerySnapshot, queryEvidenceRevision, type DemandScope } from './query-evidence.ts';
 import { compareText } from '../text-order.ts';
-
-export const strings = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
 
 export async function trafficSource(db: Database, scope: DemandScope) {
   const workspace = new WorkspaceScope(scope.workspaceId);

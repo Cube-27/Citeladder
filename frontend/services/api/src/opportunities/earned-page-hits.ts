@@ -20,7 +20,7 @@ import type {
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { passageTexts, projectRoster } from '../source-pages/reading.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { compareText, scalarText } from '../text-order.ts';
 
 const e = policy.opportunity.earned_actions;

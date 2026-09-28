@@ -1,5 +1,5 @@
 import { policy } from '../../config.ts';
-import { record } from '../../traffic/performance.ts';
+import { record } from '../../db/json.ts';
 import type {
   AnalysisEvidence,
   DetectorHit,

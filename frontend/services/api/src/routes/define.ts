@@ -26,10 +26,40 @@ import {
 } from '../http/params.ts';
 import type { RouteContract } from '../openapi/routes.ts';
 
-type RouteHandler<Path extends ParamSpecs, Query extends ParamSpecs> = (
-  context: { c: Context<AppEnv>; db: Database },
-  params: RequestParams<Path, Query>,
-) => Promise<unknown>;
+type RouteContext = { c: Context<AppEnv>; db: Database };
+
+/**
+ * A JSON route's handler must return what its response contract accepts, so
+ * the shared contract and the handler cannot drift apart; a raw route builds
+ * its own `Response` (a file download, or a status chosen per request).
+ */
+type RouteBody<Path extends ParamSpecs, Query extends ParamSpecs, Response extends z.ZodType> =
+  | {
+      raw?: false;
+      handle: (
+        context: RouteContext,
+        params: RequestParams<Path, Query>,
+      ) => Promise<z.input<Response>>;
+    }
+  | {
+      raw: true;
+      handle: (
+        context: RouteContext,
+        params: RequestParams<Path, Query>,
+      ) => Promise<globalThis.Response>;
+    };
+
+type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response extends z.ZodType> = {
+  family: RouteContract['family'];
+  path: string;
+  params: { path: Path; query: Query };
+  response: Response;
+  method?: 'get' | 'post' | 'put' | 'patch';
+  status?: ContentfulStatusCode;
+  body?: z.ZodType;
+  headers?: z.ZodObject;
+  capability?: WorkspaceCapability;
+} & RouteBody<Path, Query, Response>;
 
 export type ProductRoute = {
   contract: RouteContract;
@@ -94,20 +124,11 @@ function methodNotAllowed(method: string): never {
   throw new ApiError(405, 'Method Not Allowed', { headers: { allow: method } });
 }
 
-function defineRoute<const Path extends ParamSpecs, const Query extends ParamSpecs>(route: {
-  family: RouteContract['family'];
-  path: string;
-  params: { path: Path; query: Query };
-  response: z.ZodType;
-  handle: RouteHandler<Path, Query>;
-  method?: 'get' | 'post' | 'put' | 'patch';
-  status?: ContentfulStatusCode;
-  body?: z.ZodType;
-  headers?: z.ZodObject;
-  capability?: WorkspaceCapability;
-  /** The handler builds its own `Response` (a file download, not JSON). */
-  raw?: boolean;
-}): ProductRoute {
+function defineRoute<
+  const Path extends ParamSpecs,
+  const Query extends ParamSpecs,
+  Response extends z.ZodType,
+>(route: RouteSpec<Path, Query, Response>): ProductRoute {
   const method = route.method ?? 'get';
   const status = route.status ?? 200;
   const contract: RouteContract = {
@@ -136,8 +157,8 @@ function defineRoute<const Path extends ParamSpecs, const Query extends ParamSpe
           path: c.req.param() as Record<string, string>,
           search: new URL(c.req.url).search,
         });
-        const result = await route.handle({ c, db }, params);
-        return route.raw ? (result as Response) : c.json(result, status);
+        if (route.raw) return route.handle({ c, db }, params);
+        return c.json(await route.handle({ c, db }, params), status);
       },
     );
   };
@@ -145,19 +166,25 @@ function defineRoute<const Path extends ParamSpecs, const Query extends ParamSpe
 }
 
 export const defineGetRoute = defineRoute;
-export function definePostRoute<const Path extends ParamSpecs, const Query extends ParamSpecs>(
-  route: Parameters<typeof defineRoute<Path, Query>>[0],
-): ProductRoute {
+export function definePostRoute<
+  const Path extends ParamSpecs,
+  const Query extends ParamSpecs,
+  Response extends z.ZodType,
+>(route: RouteSpec<Path, Query, Response>): ProductRoute {
   return defineRoute({ ...route, method: 'post' });
 }
-export function definePutRoute<const Path extends ParamSpecs, const Query extends ParamSpecs>(
-  route: Parameters<typeof defineRoute<Path, Query>>[0],
-): ProductRoute {
+export function definePutRoute<
+  const Path extends ParamSpecs,
+  const Query extends ParamSpecs,
+  Response extends z.ZodType,
+>(route: RouteSpec<Path, Query, Response>): ProductRoute {
   return defineRoute({ ...route, method: 'put' });
 }
-export function definePatchRoute<const Path extends ParamSpecs, const Query extends ParamSpecs>(
-  route: Parameters<typeof defineRoute<Path, Query>>[0],
-): ProductRoute {
+export function definePatchRoute<
+  const Path extends ParamSpecs,
+  const Query extends ParamSpecs,
+  Response extends z.ZodType,
+>(route: RouteSpec<Path, Query, Response>): ProductRoute {
   return defineRoute({ ...route, method: 'patch' });
 }
 

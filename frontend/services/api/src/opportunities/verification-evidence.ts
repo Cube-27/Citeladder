@@ -4,7 +4,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { parseUuid } from '../http/uuid.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import {
   evaluation,
   evaluatePlacementCheck,

@@ -1,7 +1,7 @@
 /** Freeze server-owned expectations from the live findings and their snapshot. */
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import type { OpportunityRow } from './projection.ts';
 import type { Scope } from './sources.ts';

@@ -6,14 +6,14 @@
  * empty payload, never a recomputation, and reports the window it actually
  * resolved rather than the one requested.
  */
+import { aiReferralSourceRowSchema, aiReferralsSchema } from '@citeladder/contracts/ai-referrals';
 import { sql } from 'kysely';
 import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
-import { metricSeriesPoints, type MetricSeriesPoint } from './metric-series.ts';
-import { scalarText } from '../text-order.ts';
+import { metricSeriesPoints } from './metric-series.ts';
 
 const analytics = policy.analytics;
 const PRESET_DAYS: Readonly<Record<string, number>> = analytics.preset_range_days;
@@ -22,19 +22,8 @@ const DAY_MS = 86_400_000;
 /** An invalid granularity, range or window: the route answers 422. */
 export class AiReferralsQueryError extends Error {}
 
-type AiReferralSourceRow = { ai_source: string; sessions: number; share: number | null };
-
-export type AiReferralsResponse = {
-  project_id: string;
-  window_start: string;
-  window_end: string;
-  granularity: string;
-  referral_volume: MetricSeriesPoint[];
-  referral_share: MetricSeriesPoint[];
-  sources: AiReferralSourceRow[];
-  analyzer_version: string;
-  formula_version: string;
-};
+export type AiReferralsResponse = z.input<typeof aiReferralsSchema>;
+const granularitySchema = aiReferralsSchema.shape.granularity;
 
 export type AiReferralsQuery = {
   workspaceId: string;
@@ -87,7 +76,7 @@ function laxShare(value: unknown): number | null {
 export function aiReferralSources(raw: unknown) {
   const rows: unknown[] = Array.isArray(raw) ? raw : [];
   return rows.filter(isObject).map((row) => ({
-    ai_source: scalarText(row.ai_source),
+    ai_source: aiReferralSourceRowSchema.shape.ai_source.parse(row.ai_source),
     sessions: sessionCount.parse(row.sessions),
     share: laxShare(row.share),
   }));
@@ -143,7 +132,7 @@ export async function getAiReferrals(
       project_id: query.projectId,
       window_start: query.fromDate ?? '',
       window_end: query.toDate ?? '',
-      granularity,
+      granularity: granularitySchema.parse(granularity),
       referral_volume: [],
       referral_share: [],
       sources: [],
@@ -158,7 +147,7 @@ export async function getAiReferrals(
     project_id: query.projectId,
     window_start: snapshot.window_start,
     window_end: snapshot.window_end,
-    granularity: snapshot.granularity,
+    granularity: granularitySchema.parse(snapshot.granularity),
     referral_volume: metricSeriesPoints(metrics.referral_volume),
     referral_share: metricSeriesPoints(metrics.referral_share),
     sources: aiReferralSources(metrics.sources),

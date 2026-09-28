@@ -14,7 +14,8 @@ import type { QueueTask } from '../queue/task-queue.ts';
 import { payloadWindow, requireProject, taskProject, type Executor } from '../workers/executor.ts';
 import type { MetricRow } from './accumulators.ts';
 import { hash } from './normalization.ts';
-import { record, windowDays } from './performance.ts';
+import { windowDays } from './performance.ts';
+import { record } from '../db/json.ts';
 import { TrafficProjectionBuilder, type Projection } from './projection.ts';
 import { compareText } from '../text-order.ts';
 

@@ -6,10 +6,11 @@ import { policy } from '../config.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { parseDate } from '../http/datetimes.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { normalizeQuery } from './classification.ts';
 import { querySnapshots, type DemandScope } from './query-evidence.ts';
-import { strings } from './source.ts';
+import { strings } from '../db/json.ts';
+import { queryEvidenceState, resolutionOutcome } from '../routes/demand-contracts.ts';
 
 const timestampColumns = () => [
   isoDateText(sql.ref('window_start')).as('start'),
@@ -63,7 +64,7 @@ export async function latestDemand(db: Database, workspaceId: string, projectId:
     source_metric_row_ids: strings(snapshot.source_metric_row_ids),
     coverage: record(snapshot.coverage),
     summary: record(snapshot.summary),
-    comparison: snapshot.comparison,
+    comparison: snapshot.comparison === null ? null : record(snapshot.comparison),
     formula_version: snapshot.formula_version,
     analyzer_version: snapshot.analyzer_version,
     created_at: pydanticUtc(snapshot.at!),
@@ -74,12 +75,12 @@ export async function latestDemand(db: Database, workspaceId: string, projectId:
       state: r.state,
       topic_cluster: r.topic_cluster,
       page_url: r.page_url,
-      evidence: r.evidence,
-      metrics: r.metrics,
-      coverage: r.coverage,
-      limitations: r.limitations,
+      evidence: record(r.evidence),
+      metrics: record(r.metrics),
+      coverage: record(r.coverage),
+      limitations: strings(r.limitations),
       priority_score: r.priority_score,
-      priority_inputs: r.priority_inputs,
+      priority_inputs: record(r.priority_inputs),
       created_at: pydanticUtc(r.at!),
       action_id: byIdentity.get(`demand:${r.identity_hash}`) ?? null,
     })),
@@ -100,11 +101,11 @@ async function requiredQuerySnapshot(db: Database, scope: DemandScope) {
     window_end: row.end,
     source_hash: row.source_hash,
     supersedes_snapshot_id: row.supersedes_snapshot_id,
-    state: row.state,
-    source_metric_row_ids: row.source_metric_row_ids,
-    source_artifact_ids: row.source_artifact_ids,
-    coverage: row.coverage,
-    limitations: row.limitations,
+    state: queryEvidenceState.parse(row.state),
+    source_metric_row_ids: strings(row.source_metric_row_ids),
+    source_artifact_ids: strings(row.source_artifact_ids),
+    coverage: record(row.coverage),
+    limitations: strings(row.limitations),
     analyzer_version: row.analyzer_version,
     resolver_version: row.resolver_version,
     created_at: pydanticUtc(row.at!),
@@ -174,8 +175,10 @@ export async function queryEvidencePage(
       observed_page_url: r.observed_page_url,
       site_url_id: r.site_url_id,
       resolved_page_url: r.resolved_page_url,
-      resolution_outcome: r.resolution_outcome,
-      resolution_candidates: r.resolution_candidates,
+      resolution_outcome: resolutionOutcome.parse(r.resolution_outcome),
+      resolution_candidates: Array.isArray(r.resolution_candidates)
+        ? r.resolution_candidates.map(record)
+        : [],
       property_ref: r.property_ref,
       impressions: r.impressions,
       clicks: r.clicks,

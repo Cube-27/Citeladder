@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { policy } from '../config.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 
 /** Code-point order for hashes compared with active Python writers only.
  * Delete this contract when the last Python identity producer moves.

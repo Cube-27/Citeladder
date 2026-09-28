@@ -72,6 +72,7 @@ const evidence = {
   prompt_index: 0,
   repetition: 1,
   prompt_class: 'unbranded',
+  cohort: 'core',
   brand_mentioned: true,
   brand_first_offset: 0,
   owned_domain_cited: true,

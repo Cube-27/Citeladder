@@ -7,7 +7,7 @@ import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { numberOrNull } from '../traffic/accumulators.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { normalizeQuery } from './classification.ts';
 import { resolveOwnedPages } from './page-equivalence.ts';
 import { stableHash, unique } from './projection.ts';

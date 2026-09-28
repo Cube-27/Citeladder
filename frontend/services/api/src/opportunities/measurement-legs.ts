@@ -7,7 +7,7 @@ import type {
   OpportunityVerificationEvents,
 } from '../generated/db-schema.ts';
 import { isoDateText } from '../db/timestamps.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 
 const a = policy.opportunity.actions;
 type Declaration = Selectable<OpportunityImplementationEvents>;

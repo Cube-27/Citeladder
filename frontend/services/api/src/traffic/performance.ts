@@ -1,5 +1,7 @@
 /** Persisted Performance reads, shared with the retained Python Agent reader. */
+import { performanceDimensionSchema } from '@citeladder/contracts/performance';
 import { sql } from 'kysely';
+import type { z } from 'zod';
 
 import { metricSeriesPoints } from '../analytics/metric-series.ts';
 import { policy } from '../config.ts';
@@ -11,12 +13,9 @@ import { parseUuid } from '../http/uuid.ts';
 import { addDays } from '../referrals/projection.ts';
 import { numberOrNull } from './accumulators.ts';
 import { hash } from './normalization.ts';
+import { record } from '../db/json.ts';
 
 const p = policy.traffic;
-export const record = (value: unknown): Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
 const integer = (value: unknown) => {
   const n = numberOrNull(value);
   return n === null ? null : Math.trunc(n);
@@ -115,22 +114,23 @@ function performanceWindow(
   };
   const observed = [totals.clicks, totals.impressions, totals.sessions, totals.conversions];
   const series = record(raw.series);
+  const evidenceState: 'not_run' | 'available' | 'observed_zero' = observed.every((v) => v === null)
+    ? 'not_run'
+    : observed.some(Boolean)
+      ? 'available'
+      : 'observed_zero';
   return {
     snapshot_id: snapshot?.id ?? null,
     window_start: snapshot?.start ?? window?.[0] ?? '',
     window_end: snapshot?.end ?? window?.[1] ?? '',
-    evidence_state: observed.every((v) => v === null)
-      ? 'not_run'
-      : observed.some(Boolean)
-        ? 'available'
-        : 'observed_zero',
+    evidence_state: evidenceState,
     totals,
-    series: Object.fromEntries(
-      ['clicks', 'impressions', 'ctr', 'position'].map((name) => [
-        name,
-        metricSeriesPoints(series[name]),
-      ]),
-    ),
+    series: {
+      clicks: metricSeriesPoints(series.clicks),
+      impressions: metricSeriesPoints(series.impressions),
+      ctr: metricSeriesPoints(series.ctr),
+      position: metricSeriesPoints(series.position),
+    },
   };
 }
 
@@ -187,8 +187,8 @@ export async function getPerformance(
       covered_days: integer(coverage.covered_days) ?? 0,
     },
     dimension_counts: Object.fromEntries(
-      p.PERFORMANCE_TABLE_DIMENSION_ORDER.map((d) => [d, integer(counts[d]) ?? 0]),
-    ),
+      performanceDimensionSchema.options.map((d) => [d, integer(counts[d]) ?? 0]),
+    ) as Record<z.infer<typeof performanceDimensionSchema>, number>,
     unavailable_dimensions: p.PERFORMANCE_UNAVAILABLE_DIMENSIONS,
     formula_version: snapshot?.formula_version ?? p.TRAFFIC_FORMULA_VERSION,
     normalization_version: snapshot?.normalization_version ?? p.TRAFFIC_NORMALIZATION_VERSION,

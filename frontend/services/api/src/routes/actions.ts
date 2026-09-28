@@ -9,13 +9,12 @@ import { declareAction } from '../opportunities/declarations.ts';
 import { declarationView as projectDeclaration } from '../opportunities/declaration-view.ts';
 import { defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
 import {
-  actionDetail,
-  actionItem,
-  actionsPage,
-  declarationCreate,
-  declarationView,
-  statusPatch,
-} from './action-contracts.ts';
+  actionDeclarationSchema,
+  actionDetailSchema,
+  actionItemSchema,
+  actionsPageSchema,
+} from '@citeladder/contracts/actions';
+import { declarationCreate, statusPatch } from './action-contracts.ts';
 
 const family = 'actions';
 const a = policy.opportunity.actions;
@@ -37,7 +36,7 @@ export const actionRoutes = [
         target_kind: { scalar: { kind: 'str' } },
       },
     },
-    response: actionsPage,
+    response: actionsPageSchema,
     async handle({ c, db }, { path, query }) {
       return listActions(
         db,
@@ -50,7 +49,7 @@ export const actionRoutes = [
     family,
     path: '/api/v1/actions/{action_id}',
     params: { path: actionPath, query: {} },
-    response: actionDetail,
+    response: actionDetailSchema,
     async handle({ c, db }, { path }) {
       return getAction(db, c.get('workspace').workspaceId, path.action_id);
     },
@@ -61,7 +60,7 @@ export const actionRoutes = [
     capability: 'write',
     params: { path: actionPath, query: {} },
     body: statusPatch,
-    response: actionItem,
+    response: actionItemSchema,
     async handle({ c, db }, { path }) {
       const body = await readBody(c, statusPatch);
       return updateActionStatus(
@@ -79,7 +78,7 @@ export const actionRoutes = [
     capability: 'write',
     params: { path: actionPath, query: {} },
     body: declarationCreate,
-    response: declarationView,
+    response: actionDeclarationSchema,
     status: 201,
     raw: true,
     headers: z.object({

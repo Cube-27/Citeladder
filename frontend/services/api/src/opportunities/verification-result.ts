@@ -9,7 +9,7 @@ import type {
   OpportunityImplementationEvents,
   OpportunitySnapshots,
 } from '../generated/db-schema.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { isoformat, parseDatetime } from '../http/datetimes.ts';
 import {
   gapChanges,

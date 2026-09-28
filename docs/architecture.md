@@ -93,7 +93,8 @@ execution evidence). TypeScript owners are covered by their own TypeScript and
 PostgreSQL tests; no golden files compare them with Python.
 
 `@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response
-contracts the browser app validates with, the route-ownership manifest, and the
+contracts the browser app validates with (TypeScript routes publish the same
+schemas, and each handler's return type is checked against its schema), the route-ownership manifest, and the
 API error-code union exported from the Python config that declares the codes.
 
 The service does not own policy or schema. It reads `backend/app/core/config`
