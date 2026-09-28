@@ -31,10 +31,6 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
     });
   },
   '/site': prefetchSiteHealth,
-  '/site/content-structure': async (client, { projectId, workspaceId }) => {
-    const { contentStructureQuery } = await import('@/lib/api/site-health-content-structure');
-    warmQuery(client, contentStructureQuery(workspaceId, projectId));
-  },
   '/issues': prefetchIssues,
   '/demand': async (client, { projectId, workspaceId }) => {
     const { demandApi } = await import('@/lib/api/demand');

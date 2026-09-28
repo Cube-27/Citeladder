@@ -1,28 +1,28 @@
 import {
-  contentStructureInputSchema,
-  contentStructureReadSchema,
+  internalLinksInputSchema,
+  internalLinksReadSchema,
 } from '@citeladder/contracts/site-health';
 
 import { readBody } from '../http/body.ts';
 import { requireProject } from '../projects/access.ts';
-import { admitContentRun, cancelContentRun, contentRun } from '../site-health/content-runs.ts';
+import { admitLinkRun, cancelLinkRun, linkRun } from '../site-health/internal-link-runs.ts';
 import { defineGetRoute, definePostRoute } from './define.ts';
 
-const family = 'site-health-content-structure';
-const root = '/api/v1/projects/{project_id}/site-health/content-structure';
+const family = 'site-health-internal-links';
+const root = '/api/v1/projects/{project_id}/site-health/internal-links';
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid } as const;
 
-export const contentStructureRoutes = [
+export const internalLinkRoutes = [
   defineGetRoute({
     family,
     path: root,
     params: { path: projectPath, query: { analysis_id: { scalar: { kind: 'uuid' } } } },
-    response: contentStructureReadSchema,
+    response: internalLinksReadSchema,
     async handle({ c, db }, { path, query }) {
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);
-      return contentRun(
+      return linkRun(
         db,
         { workspaceId: workspace.workspaceId, projectId: path.project_id },
         query.analysis_id ?? undefined,
@@ -35,16 +35,16 @@ export const contentStructureRoutes = [
     capability: 'run',
     status: 202,
     params: { path: projectPath, query: {} },
-    body: contentStructureInputSchema,
-    response: contentStructureReadSchema,
+    body: internalLinksInputSchema,
+    response: internalLinksReadSchema,
     async handle({ c, db }, { path }) {
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);
-      return admitContentRun(
+      return admitLinkRun(
         db,
         { workspaceId: workspace.workspaceId, projectId: path.project_id },
         c.get('user').id,
-        await readBody(c, contentStructureInputSchema),
+        await readBody(c, internalLinksInputSchema),
       );
     },
   }),
@@ -53,11 +53,11 @@ export const contentStructureRoutes = [
     path: `${root}/analyses/{analysis_id}/cancel`,
     capability: 'run',
     params: { path: { ...projectPath, analysis_id: uuid }, query: {} },
-    response: contentStructureReadSchema,
+    response: internalLinksReadSchema,
     async handle({ c, db }, { path }) {
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);
-      return cancelContentRun(
+      return cancelLinkRun(
         db,
         { workspaceId: workspace.workspaceId, projectId: path.project_id },
         path.analysis_id,

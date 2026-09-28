@@ -124,11 +124,13 @@ async def content():
     async with SessionLocal() as session:
         rows = list(await session.scalars(select(SitePageAnalysis).where(
             SitePageAnalysis.crawl_id == uuid.UUID(result["crawl_id"]))))
+        names = ["Garden soil guide", "Soil testing kit", "Compost for healthy soil"]
         for index, row in enumerate(rows):
             artifact = await session.get(SiteFetchArtifact, row.artifact_id)
+            name = names[index % len(names)]
             artifact.normalized_facts = extract_page_facts(
-                body=(f'<html><title>Garden soil {index}</title><main><h1>Garden soil</h1>'
-                      '<p>Healthy garden soil helps plants grow and supports a thriving garden.</p></main></html>').encode(),
+                body=(f'<html><title>{name} | Acme</title><main><h1>{name}</h1>'
+                      '<p>Healthy soil helps plants grow and supports a thriving garden.</p></main></html>').encode(),
                 final_url=artifact.final_url, content_type="text/html", status_code=200,
                 redacted_headers={},
             )

@@ -14,7 +14,7 @@ import {
 } from './verification-decisions.ts';
 import type { Declaration } from './verification-result.ts';
 import { scalarText } from '../text-order.ts';
-import { contextualLinkObserved } from './content-verification.ts';
+import { contextualLinkObserved } from './internal-link-verification.ts';
 export type Source = { kind: string; id: string; observed_at: string };
 type Context = {
   db: Database;

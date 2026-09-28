@@ -46,7 +46,7 @@ import {
   loadVisibilityEvidence,
 } from './refresh-evidence.ts';
 import { changeHits, commerceHits, demandHits } from './refresh-hits.ts';
-import { contentLinkHits } from './content-links.ts';
+import { internalLinkHits } from './internal-link-hits.ts';
 import {
   currentDemandSnapshot,
   DASHBOARD_AUDIT_STATUSES,
@@ -62,7 +62,7 @@ import {
 
 type Projections = [Record<string, unknown>, Record<string, unknown>, Record<string, unknown>[]];
 type Collected = {
-  contentRunId: string | null;
+  internalLinkRunId: string | null;
   audit: AuditSource | null;
   demand: DemandSource | null;
   hits: DetectorHit[];
@@ -117,7 +117,7 @@ async function collectHits(
 ): Promise<Collected> {
   const demand = await currentDemandSnapshot(db, scope);
   const collected: Collected = {
-    contentRunId: null,
+    internalLinkRunId: null,
     audit: sources.audit,
     demand,
     hits: await demandHits(db, scope, demand),
@@ -132,9 +132,9 @@ async function collectHits(
   if (sources.crawl !== null) {
     const site = await loadSiteEvidence(db, scope.workspaceId, sources.crawl);
     collected.hits.push(...detectSiteIssueOpportunities(site));
-    const content = await contentLinkHits(db, scope, site.crawl_id);
-    collected.contentRunId = content.runId;
-    collected.hits.push(...content.hits);
+    const links = await internalLinkHits(db, scope, site.crawl_id);
+    collected.internalLinkRunId = links.runId;
+    collected.hits.push(...links.hits);
     collected.hits.push(...(await changeHits(db, scope.workspaceId, sources.crawl)));
   }
   return collected;
@@ -190,7 +190,7 @@ async function writeRefresh(
     skipIfCurrent &&
     current !== null &&
     snapshotIsCurrent(current, sources) &&
-    (record(current.coverage).content_structure_run_id ?? null) === collected.contentRunId
+    (record(current.coverage).internal_link_run_id ?? null) === collected.internalLinkRunId
   )
     return projectSnapshot(current);
   const workspace = new WorkspaceScope(scope.workspaceId);
@@ -241,7 +241,7 @@ async function writeRefresh(
       project_id: scope.projectId,
       coverage: JSON.stringify({
         ...record(snapshot.coverage),
-        content_structure_run_id: collected.contentRunId,
+        internal_link_run_id: collected.internalLinkRunId,
       }),
       limitations: JSON.stringify(snapshot.limitations),
       source_mix: JSON.stringify(snapshot.source_mix),

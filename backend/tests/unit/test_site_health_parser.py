@@ -489,6 +489,12 @@ def test_link_bound_enforced(monkeypatch):
     ).encode()
     facts = _facts(body)
     assert len(facts["links"]["anchors"]) == limit
+    # A capped capture cannot prove a link is missing from the page.
+    assert facts["links"]["anchors_truncated"] is True
+    complete = _facts(
+        b'<html><body><a href="https://acme.example.com/p">l</a></body></html>'
+    )
+    assert complete["links"]["anchors_truncated"] is False
 
 
 def test_structured_data_block_bound_enforced():

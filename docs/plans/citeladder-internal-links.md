@@ -1,0 +1,48 @@
+# Internal link suggestions
+
+## Status and authorization
+
+Planned and implemented on 28 September 2026 in branch `codex/content-structure`.
+The first implementation shipped a separate Content structure page with passage
+anchors and JEV topic groups. Owner review of real project data found the
+topic groups unusable (almost every group held one product or designer page) and
+the passage anchors imprecise. The owner then directed:
+
+- Delete the Topics capability entirely.
+- Keep one **Internal links** tab in Website, before Changes; remove the
+  Content structure page and its navigation entry.
+- Follow the simpler hub-and-spoke page-pair approach of the JEV marketing
+  playbook link audit: JEV decides whether a source page should link to a
+  related destination; anchor text comes from the destination itself.
+- JEV cost is not a design constraint; live JEV calls are authorized for
+  development and validation on local project data.
+
+Do not merge until the owner approves.
+
+## Scope
+
+- Retrieval: TF-IDF over title, H1, URL path and meta description; bounded
+  destinations per source; skip self, existing main-content links, ineligible
+  destinations, utility pages and product colour/size variants.
+- Judgment: one JEV request per page pair (Noul link question plus an anchor
+  Choice over the destination's H1/title/slug when there is more than one).
+- Execution: existing analytics queue, committed dispatches, shared AI credits,
+  own job concurrency and deadline, partial publication.
+- Actions: suggestions join the source page Action; the user selects the links
+  implemented; a later crawl verifies a main-content link to the destination.
+- UI: summary on one line, shared table with rows-per-page footer, review
+  drawer with copyable anchor/URL/HTML, CSV export, saved-analysis history.
+
+Owner documentation: [Site Health](../site-health.md#internal-links) and
+[Opportunities](../opportunities.md).
+
+## Out of scope
+
+Topic or topical-authority grouping, passage-level anchor placement, generated
+anchor rewrites, CMS publishing and embedding-based retrieval.
+
+## Validation
+
+Validate on the local Aza Fashions and Best&Less crawls with live JEV before
+review: acceptance rate, spot-checked precision, variant noise and elapsed time.
+Threshold calibration against editor-reviewed examples remains a release task.

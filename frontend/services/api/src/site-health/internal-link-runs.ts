@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { contentStructureSchema, type ContentStructure } from '@citeladder/contracts/site-health';
+import {
+  internalLinkAnalysisSchema,
+  internalLinkAnalysisStateSchema,
+  type InternalLinkAnalysis,
+} from '@citeladder/contracts/site-health';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -8,11 +12,10 @@ import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import { enqueueTask } from '../referrals/enqueue.ts';
 import { effectiveStatus } from '../opportunities/action-status.ts';
-import { linkCandidates, topicCandidates } from './content-candidates.ts';
-import { loadContentPages, type ContentScope } from './content-evidence.ts';
-import { contentRequest } from './content-requests.ts';
+import { linkCandidates } from './internal-link-candidates.ts';
+import { loadLinkPages, type LinkScope } from './internal-link-pages.ts';
 
-export async function latestContentCrawl(db: Database, scope: ContentScope) {
+export async function latestLinkCrawl(db: Database, scope: LinkScope) {
   return db
     .selectFrom('site_crawls')
     .select('id')
@@ -23,86 +26,84 @@ export async function latestContentCrawl(db: Database, scope: ContentScope) {
     .executeTakeFirst();
 }
 
-export async function contentRun(db: Database, scope: ContentScope, id?: string) {
+/** Attach each suggestion's owning source-page Action, if one exists. */
+async function attachActions(db: Database, scope: LinkScope, analysis: InternalLinkAnalysis) {
+  if (!analysis.recommendations.length) return;
+  const actions = await db
+    .selectFrom('actions')
+    .select(['id', 'target_url', effectiveStatus().as('status')])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('target_url', 'in', [
+      ...new Set(analysis.recommendations.map((link) => link.source.url)),
+    ])
+    .where('evidence_cleared_at', 'is', null)
+    .execute();
+  for (const link of analysis.recommendations) {
+    const action = actions.find((item) => item.target_url === link.source.url);
+    link.action_id = action?.id ?? null;
+    link.action_status = action?.status ?? null;
+  }
+}
+
+export async function linkRun(db: Database, scope: LinkScope, id?: string) {
   let query = db
-    .selectFrom('site_content_structure_runs')
+    .selectFrom('site_internal_link_runs')
     .select(['id', 'crawl_id', 'state', 'created_at', 'result'])
+    // Reads never load the frozen pages and requests, only their counts.
     .select(
       sql<unknown>`jsonb_build_object(
       'page_count', manifest->'page_count',
-      'omitted_pages', manifest->'omitted_pages',
-      'omitted_candidates', manifest->'omitted_candidates'
+      'omitted_pages', manifest->'omitted_pages'
     )`.as('manifest'),
     )
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId);
   if (id) query = query.where('id', '=', id);
   const row = await query.orderBy('created_at', 'desc').executeTakeFirst();
-  if (id && !row) throw new ApiError(404, 'Content analysis not found');
-  const crawl = await latestContentCrawl(db, scope);
+  if (id && !row) throw new ApiError(404, 'Internal link analysis not found');
+  const crawl = await latestLinkCrawl(db, scope);
   const savedRuns = await db
-    .selectFrom('site_content_structure_runs')
+    .selectFrom('site_internal_link_runs')
     .select(['id', 'created_at', 'state'])
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .orderBy('created_at', 'desc')
-    .limit(policy.content_structure.history_limit)
+    .limit(policy.internal_links.history_limit)
     .execute();
-  const history = savedRuns.map((run) => ({
-    ...run,
-    state: contentStructureSchema.shape.state.parse(run.state),
-    created_at: run.created_at.toISOString(),
-  }));
   const read = {
-    history,
-    analysis: null as ContentStructure | null,
+    history: savedRuns.map((run) => ({
+      ...run,
+      state: internalLinkAnalysisStateSchema.parse(run.state),
+      created_at: run.created_at.toISOString(),
+    })),
+    analysis: null as InternalLinkAnalysis | null,
     crawl_id: crawl?.id ?? null,
     availability: crawl ? ('ready' as const) : ('crawl_required' as const),
   };
   if (!row) return read;
   const manifest = record(row.manifest);
-  const analysis = row.result
-    ? contentStructureSchema.parse(row.result)
-    : contentStructureSchema.parse({
-        id: row.id,
-        crawl_id: row.crawl_id,
-        created_at: row.created_at.toISOString(),
-        state: row.state,
-        page_count: manifest.page_count,
-        omitted_pages: manifest.omitted_pages,
-        omitted_candidates: manifest.omitted_candidates,
-        unassigned_pages: 0,
-        unavailable_judgments: 0,
-        stale: false,
-        recommendations: [],
-        topics: [],
-        pages: [],
-      });
+  const analysis = internalLinkAnalysisSchema.parse(
+    row.result ?? {
+      id: row.id,
+      crawl_id: row.crawl_id,
+      created_at: row.created_at.toISOString(),
+      state: row.state,
+      page_count: manifest.page_count,
+      omitted_pages: manifest.omitted_pages,
+      stale: false,
+      recommendations: [],
+    },
+  );
   analysis.stale = crawl?.id !== row.crawl_id;
-  if (analysis.recommendations.length) {
-    const actions = await db
-      .selectFrom('actions')
-      .select(['id', 'target_url', effectiveStatus().as('status')])
-      .where('workspace_id', '=', scope.workspaceId)
-      .where('project_id', '=', scope.projectId)
-      .where('target_url', 'in', [
-        ...new Set(analysis.recommendations.map((link) => link.source.url)),
-      ])
-      .where('evidence_cleared_at', 'is', null)
-      .execute();
-    for (const link of analysis.recommendations) {
-      const action = actions.find((item) => item.target_url === link.source.url);
-      link.action_id = action?.id ?? null;
-      link.action_status = action?.status ?? null;
-    }
-  }
+  await attachActions(db, scope, analysis);
   if (row.state === 'cancelled') analysis.state = 'cancelled';
   return { ...read, analysis };
 }
 
-export async function admitContentRun(
+export async function admitLinkRun(
   db: Database,
-  scope: ContentScope,
+  scope: LinkScope,
   actorId: string,
   input: { crawl_id: string; idempotency_key: string },
 ) {
@@ -116,7 +117,7 @@ export async function admitContentRun(
       .forUpdate()
       .executeTakeFirstOrThrow();
     const previous = await trx
-      .selectFrom('site_content_structure_runs')
+      .selectFrom('site_internal_link_runs')
       .select(['id', 'crawl_id'])
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
@@ -128,13 +129,13 @@ export async function admitContentRun(
       return previous.id;
     }
     const active = await trx
-      .selectFrom('site_content_structure_runs')
+      .selectFrom('site_internal_link_runs')
       .select('id')
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .where('state', 'in', ['queued', 'running'])
       .executeTakeFirst();
-    if (active) throw new ApiError(409, 'A content analysis is already running');
+    if (active) throw new ApiError(409, 'An internal link analysis is already running');
     const crawl = await trx
       .selectFrom('site_crawls')
       .select('id')
@@ -144,17 +145,12 @@ export async function admitContentRun(
       .where('completed_at', 'is not', null)
       .executeTakeFirst();
     if (!crawl) throw new ApiError(404, 'Completed crawl not found');
-    const { pages, omittedPages, omittedPassages } = await loadContentPages(trx, scope, crawl.id);
-    if (!pages.length) throw new ApiError(409, 'Run a fresh crawl to capture content passages');
-    const links = linkCandidates(pages);
-    const topics = topicCandidates(pages);
-    const candidates = [...links.candidates, ...topics.candidates].map((candidate) => ({
-      ...candidate,
-      request: contentRequest(candidate, pages),
-    }));
+    const { pages, omittedPages } = await loadLinkPages(trx, scope, crawl.id);
+    if (pages.length < 2) throw new ApiError(409, 'The crawl captured too few pages to link');
+    const candidates = linkCandidates(pages);
     const runId = randomUUID();
     await trx
-      .insertInto('site_content_structure_runs')
+      .insertInto('site_internal_link_runs')
       .values({
         id: runId,
         workspace_id: scope.workspaceId,
@@ -163,40 +159,37 @@ export async function admitContentRun(
         actor_id: actorId,
         idempotency_key: input.idempotency_key,
         state: 'queued',
-        policy_version: policy.content_structure.policy_version,
+        policy_version: policy.internal_links.policy_version,
         created_at: new Date(),
         manifest: JSON.stringify({
           pages,
           candidates,
           page_count: pages.length,
           omitted_pages: omittedPages,
-          omitted_passages: omittedPassages,
-          omitted_candidates: links.omitted + topics.omitted,
-          policy: policy.content_structure,
+          policy: policy.internal_links,
         }),
       })
       .execute();
-    for (const kind of ['link', 'topic'])
-      await enqueueTask(trx, {
-        ...scope,
-        kind: 'content_structure_judgment',
-        payload: { run_id: runId, kind },
-        keyParts: [runId, kind],
-        maxAttempts: 2,
-      });
+    await enqueueTask(trx, {
+      ...scope,
+      kind: 'internal_link_judgment',
+      payload: { run_id: runId },
+      keyParts: [runId],
+      maxAttempts: 2,
+    });
     return runId;
   });
-  return contentRun(db, scope, id);
+  return linkRun(db, scope, id);
 }
 
-export async function cancelContentRun(db: Database, scope: ContentScope, id: string) {
+export async function cancelLinkRun(db: Database, scope: LinkScope, id: string) {
   await db
-    .updateTable('site_content_structure_runs')
+    .updateTable('site_internal_link_runs')
     .set({ state: 'cancelled' })
     .where('id', '=', id)
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .where('state', 'in', ['queued', 'running'])
     .execute();
-  return contentRun(db, scope, id);
+  return linkRun(db, scope, id);
 }

@@ -30,9 +30,9 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.analytics import (
-    ANALYTICS_TASK_KIND_CONTENT_PUBLISH,
     ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
+    ANALYTICS_TASK_KIND_INTERNAL_LINK_PUBLISH,
     ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
     analytics_settings,
@@ -446,7 +446,7 @@ async def enqueue_source_page_inspection(
     )
 
 
-async def enqueue_content_structure_publish(
+async def enqueue_internal_link_publish(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
@@ -454,14 +454,14 @@ async def enqueue_content_structure_publish(
     run_id: uuid.UUID,
     revision: str = "complete",
 ) -> uuid.UUID | None:
-    """Queue TypeScript publication of one content analysis's settled outcomes."""
+    """Queue TypeScript publication of one internal-link analysis's outcomes."""
     return await _enqueue_task(
         session,
         workspace_id=workspace_id,
         project_id=project_id,
-        task_kind=ANALYTICS_TASK_KIND_CONTENT_PUBLISH,
+        task_kind=ANALYTICS_TASK_KIND_INTERNAL_LINK_PUBLISH,
         payload={"run_id": str(run_id)},
         idempotency_key=_idempotency_key(
-            ANALYTICS_TASK_KIND_CONTENT_PUBLISH, project_id, run_id, revision
+            ANALYTICS_TASK_KIND_INTERNAL_LINK_PUBLISH, project_id, run_id, revision
         ),
     )

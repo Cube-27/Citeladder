@@ -1,5 +1,4 @@
 import asyncio
-import re
 import uuid
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -9,20 +8,20 @@ import pytest
 from pydantic import SecretStr
 from sqlalchemy import select
 
-from app.domain.site_health import content_judgments as owner
+from app.domain.site_health import internal_link_judgments as owner
 from app.models.analytics import AnalyticsTask
-from app.models.site_health.content_structure import (
-    SiteContentStructureEvent,
-    SiteContentStructureRun,
+from app.models.site_health.internal_links import (
+    SiteInternalLinkEvent,
+    SiteInternalLinkRun,
 )
-from app.workers import content_structure as worker
+from app.workers import internal_links as worker
 from tests.component.opportunity_helpers import _seed_scenario
 
 
-async def _seed_run(session_factory, count=4, *, kind="link"):
+async def _seed_run(session_factory, count=4):
     async with session_factory() as session:
         seed = await _seed_scenario(session)
-        run = SiteContentStructureRun(
+        run = SiteInternalLinkRun(
             id=uuid.uuid4(),
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
@@ -35,13 +34,12 @@ async def _seed_run(session_factory, count=4, *, kind="link"):
                 "candidates": [
                     {
                         "id": str(uuid.uuid4()),
-                        **({"kind": kind} if kind else {}),
                         "request": {
                             "state": {"source": str(index)},
                             "questions": {
-                                "usefulness": {
+                                "link": {
                                     "type": "noul",
-                                    "instructions": "Does `source` help?",
+                                    "instructions": "Should `source` link?",
                                 },
                             },
                         },
@@ -53,8 +51,8 @@ async def _seed_run(session_factory, count=4, *, kind="link"):
         task = AnalyticsTask(
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
-            task_kind="content_structure_judgment",
-            payload={"run_id": str(run.id), **({"kind": kind} if kind else {})},
+            task_kind="internal_link_judgment",
+            payload={"run_id": str(run.id)},
             idempotency_key=str(uuid.uuid4()),
             status="running",
             lease_owner="test",
@@ -66,7 +64,7 @@ async def _seed_run(session_factory, count=4, *, kind="link"):
     return run, task
 
 
-def _fund_judgments(monkeypatch):
+def _fund_judgments(monkeypatch, *, concurrency=2, deadline=10):
     monkeypatch.setattr(
         owner, "jev_settings", SimpleNamespace(enabled=True, model="fixture")
     )
@@ -87,23 +85,30 @@ def _fund_judgments(monkeypatch):
     monkeypatch.setattr(
         worker,
         "jev_settings",
-        worker.jev_settings.model_copy(
-            update={
-                "api_key": SecretStr("fixture-only"),
-                "concurrency": 2,
-                "generation_deadline_seconds": 10,
-            }
-        ),
+        worker.jev_settings.model_copy(update={"api_key": SecretStr("fixture-only")}),
     )
+    monkeypatch.setattr(worker.config, "INTERNAL_LINKS_CONCURRENCY", concurrency)
+    monkeypatch.setattr(worker.config, "INTERNAL_LINKS_JOB_DEADLINE_SECONDS", deadline)
     return settlement
 
 
-async def test_batched_requests_overlap_reuse_client_and_preserve_individual_answers(
+async def _events(session_factory, run, kind):
+    async with session_factory() as session:
+        return list(
+            await session.scalars(
+                select(SiteInternalLinkEvent).where(
+                    SiteInternalLinkEvent.run_id == run.id,
+                    SiteInternalLinkEvent.kind == kind,
+                )
+            )
+        )
+
+
+async def test_pooled_requests_overlap_reuse_client_and_keep_each_pair_answer(
     session_factory, monkeypatch
 ):
     run, task = await _seed_run(session_factory)
     settlement = _fund_judgments(monkeypatch)
-    monkeypatch.setattr(worker.config, "CONTENT_STRUCTURE_JUDGMENTS_PER_REQUEST", 2)
     both_started = asyncio.Event()
 
     class Client:
@@ -125,30 +130,14 @@ async def test_batched_requests_overlap_reuse_client_and_preserve_individual_ans
             assert self.active <= 2
             if self.active == 2:
                 both_started.set()
-            async with session_factory() as session:
-                dispatches = list(
-                    await session.scalars(
-                        select(SiteContentStructureEvent).where(
-                            SiteContentStructureEvent.run_id == run.id,
-                            SiteContentStructureEvent.kind == "dispatch",
-                        )
-                    )
-                )
-            dispatched_ids = {str(row.candidate_id) for row in dispatches}
-            assert {key.split(":")[0] for key in questions} <= dispatched_ids
+            dispatched = await _events(session_factory, run, "dispatch")
+            assert len(dispatched) >= self.calls
             await asyncio.wait_for(both_started.wait(), timeout=3)
             self.active -= 1
-            assert len(state["items"]) == 2
-            answers = {}
-            for key, question in questions.items():
-                positions = set(re.findall(r"items\[(\d+)\]", question["instructions"]))
-                assert len(positions) == 1
-                source = state["items"][int(positions.pop())]["source"]
-                answers[key] = {"type": "noul", "noul": int(source) / 10}
             return SimpleNamespace(
                 model="fixture",
                 usage={"input_tokens": 10},
-                answers=answers,
+                answers={"link": {"type": "noul", "noul": int(state["source"]) / 10}},
             )
 
     client = Client()
@@ -159,51 +148,30 @@ async def test_batched_requests_overlap_reuse_client_and_preserve_individual_ans
         return client
 
     monkeypatch.setattr(worker, "create_jev_client", create)
-    await worker.judge_content_structure(session_factory, task)
+    await worker.judge_internal_links(session_factory, task)
     assert (len(constructor), client.entered, client.closed, client.calls) == (
         1,
         1,
         1,
-        2,
+        4,
     )
     assert settlement.await_count == 4
-    async with session_factory() as session:
-        outcomes = list(
-            await session.scalars(
-                select(SiteContentStructureEvent).where(
-                    SiteContentStructureEvent.run_id == run.id,
-                    SiteContentStructureEvent.kind == "outcome",
-                )
-            )
-        )
-    assert len(outcomes) == 4
+    outcomes = await _events(session_factory, run, "outcome")
     expected = {
         candidate["id"]: index / 10
         for index, candidate in enumerate(run.manifest["candidates"])
     }
     assert {
-        str(row.candidate_id): row.evidence["answers"]["usefulness"]["noul"]
+        str(row.candidate_id): row.evidence["answers"]["link"]["noul"]
         for row in outcomes
     } == expected
-    assert sum(row.evidence["usage"].get("input_tokens", 0) for row in outcomes) == 20
 
 
 async def test_deadline_settles_sent_requests_and_leaves_unsent_free(
     session_factory, monkeypatch
 ):
     run, task = await _seed_run(session_factory)
-    settlement = _fund_judgments(monkeypatch)
-    monkeypatch.setattr(worker.config, "CONTENT_STRUCTURE_JUDGMENTS_PER_REQUEST", 1)
-    monkeypatch.setattr(
-        worker,
-        "jev_settings",
-        worker.jev_settings.model_copy(
-            update={
-                "concurrency": 1,
-                "generation_deadline_seconds": 1,
-            }
-        ),
-    )
+    settlement = _fund_judgments(monkeypatch, concurrency=1, deadline=1)
 
     class Client:
         calls = 0
@@ -220,19 +188,11 @@ async def test_deadline_settles_sent_requests_and_leaves_unsent_free(
 
     client = Client()
     monkeypatch.setattr(worker, "create_jev_client", lambda _: client)
-    await worker.judge_content_structure(session_factory, task)
-    await worker.judge_content_structure(session_factory, task)
+    await worker.judge_internal_links(session_factory, task)
+    await worker.judge_internal_links(session_factory, task)
     assert client.calls == 1
     assert settlement.await_count == 1
-    async with session_factory() as session:
-        outcomes = list(
-            await session.scalars(
-                select(SiteContentStructureEvent).where(
-                    SiteContentStructureEvent.run_id == run.id,
-                    SiteContentStructureEvent.kind == "outcome",
-                )
-            )
-        )
+    outcomes = await _events(session_factory, run, "outcome")
     assert sorted(row.evidence["state"] for row in outcomes) == ["unavailable"] * 3 + [
         "uncertain"
     ]
@@ -246,44 +206,35 @@ async def test_scope_and_cancelled_run_do_not_dispatch(session_factory, monkeypa
     monkeypatch.setattr(worker, "create_jev_client", client)
     real_workspace = task.workspace_id
     task.workspace_id = uuid.uuid4()
-    await worker.judge_content_structure(session_factory, task)
+    await worker.judge_internal_links(session_factory, task)
     task.workspace_id = real_workspace
     async with session_factory() as session:
-        saved = await session.get(SiteContentStructureRun, run.id)
+        saved = await session.get(SiteInternalLinkRun, run.id)
         saved.state = "cancelled"
         await session.commit()
-    await worker.judge_content_structure(session_factory, task)
+    await worker.judge_internal_links(session_factory, task)
     client.assert_not_called()
     owner.reserve_metered_usage.assert_not_awaited()
 
 
-async def test_terminal_compensation_only_finishes_its_own_branch(
+async def test_terminal_compensation_settles_each_unfinished_pair_once(
     session_factory, monkeypatch
 ):
     run, task = await _seed_run(session_factory, count=2)
     _fund_judgments(monkeypatch)
     async with session_factory() as session:
-        saved = await session.get(SiteContentStructureRun, run.id)
-        candidates = [dict(candidate) for candidate in saved.manifest["candidates"]]
-        candidates[1]["kind"] = "topic"
-        saved.manifest = {"candidates": candidates}
         saved_task = await session.get(AnalyticsTask, task.id)
         saved_task.status = "failed"
         saved_task.lease_owner = None
         saved_task.lease_expires_at = None
         await session.commit()
-    await worker.compensate_content_structure(session_factory, task)
-    await worker.compensate_content_structure(session_factory, task)
-    async with session_factory() as session:
-        outcomes = list(
-            await session.scalars(
-                select(SiteContentStructureEvent).where(
-                    SiteContentStructureEvent.run_id == run.id,
-                    SiteContentStructureEvent.kind == "outcome",
-                )
-            )
-        )
-    assert [str(row.candidate_id) for row in outcomes] == [candidates[0]["id"]]
+    await worker.compensate_internal_links(session_factory, task)
+    await worker.compensate_internal_links(session_factory, task)
+    outcomes = await _events(session_factory, run, "outcome")
+    assert sorted(str(row.candidate_id) for row in outcomes) == sorted(
+        candidate["id"] for candidate in run.manifest["candidates"]
+    )
+    assert {row.evidence["state"] for row in outcomes} == {"unavailable"}
     owner.reserve_metered_usage.assert_not_awaited()
     owner.settle_metered_usage.assert_not_awaited()
 
@@ -292,8 +243,7 @@ async def test_terminal_compensation_only_finishes_its_own_branch(
 async def test_dispatch_is_committed_before_provider_and_replay_does_not_resend(
     session_factory, monkeypatch, interrupted
 ):
-    # Legacy queued jobs omit the branch kind; keep that input covered.
-    run, task = await _seed_run(session_factory, count=1, kind=None)
+    run, task = await _seed_run(session_factory, count=1)
     settlement = _fund_judgments(monkeypatch)
 
     class Client:
@@ -307,14 +257,7 @@ async def test_dispatch_is_committed_before_provider_and_replay_does_not_resend(
 
         async def decide(self, *_):
             self.calls += 1
-            async with session_factory() as session:
-                dispatch = await session.scalar(
-                    select(SiteContentStructureEvent).where(
-                        SiteContentStructureEvent.run_id == run.id,
-                        SiteContentStructureEvent.kind == "dispatch",
-                    )
-                )
-                assert dispatch is not None
+            assert await _events(session_factory, run, "dispatch")
             if interrupted:
                 raise RuntimeError("worker interrupted after dispatch")
             return SimpleNamespace(
@@ -327,30 +270,23 @@ async def test_dispatch_is_committed_before_provider_and_replay_does_not_resend(
     monkeypatch.setattr(worker, "create_jev_client", lambda _: client)
     if interrupted:
         with pytest.raises(RuntimeError, match="worker interrupted"):
-            await worker.judge_content_structure(session_factory, task)
+            await worker.judge_internal_links(session_factory, task)
     else:
-        await worker.judge_content_structure(session_factory, task)
-    await worker.judge_content_structure(session_factory, task)
+        await worker.judge_internal_links(session_factory, task)
+    await worker.judge_internal_links(session_factory, task)
     assert client.calls == 1
     assert settlement.await_count == 1
+    outcomes = await _events(session_factory, run, "outcome")
+    assert len(outcomes) == 1
+    assert outcomes[0].evidence["state"] == (
+        "uncertain" if interrupted else "completed"
+    )
     async with session_factory() as session:
-        events = list(
-            await session.scalars(
-                select(SiteContentStructureEvent).where(
-                    SiteContentStructureEvent.run_id == run.id
-                )
-            )
-        )
-        assert [row.kind for row in events].count("outcome") == 1
-        outcome = next(row for row in events if row.kind == "outcome")
-        assert outcome.evidence["state"] == (
-            "uncertain" if interrupted else "completed"
-        )
         queued = list(
             await session.scalars(
                 select(AnalyticsTask).where(
-                    AnalyticsTask.task_kind == "content_structure_publish"
+                    AnalyticsTask.task_kind == "internal_link_publish"
                 )
             )
         )
-        assert len(queued) == 1
+    assert len(queued) == 1

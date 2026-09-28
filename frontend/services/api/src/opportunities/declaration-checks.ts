@@ -5,7 +5,7 @@ import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import type { OpportunityRow } from './projection.ts';
 import type { Scope } from './sources.ts';
-import { contentDeclarationChecks } from './content-declaration.ts';
+import { internalLinkDeclarationChecks } from './internal-link-declaration.ts';
 
 const o = policy.opportunity.opportunities;
 const p = policy.opportunity.placement;
@@ -135,7 +135,7 @@ export async function declarationChecks(
   }
   const links =
     contextual.length || recommendationIds.length
-      ? await contentDeclarationChecks(db, scope, contextual, recommendationIds)
+      ? await internalLinkDeclarationChecks(db, scope, contextual, recommendationIds)
       : [];
   return [...checks.values(), ...links];
 }

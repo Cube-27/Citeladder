@@ -13,6 +13,7 @@ import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-la
 import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
+import { InternalLinksPanel } from '@/components/site-health/internal-links-panel';
 import { OverviewPanel } from '@/components/site-health/overview-panel';
 import { PageLoading } from '@/components/layout/page-loading';
 import { ReadError } from '@/components/ui/read-error';
@@ -20,6 +21,7 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries } from '@/lib/api/site-health';
+import { internalLinksQuery } from '@/lib/api/site-health-internal-links';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -202,6 +204,8 @@ function useSiteHealthTabPrefetch(
       warmQuery(queryClient, siteHealthQueries.architecture(workspaceId, projectId, crawlId));
     } else if (nextTab === 'aeo-readiness') {
       warmQuery(queryClient, siteHealthQueries.aeoReadiness(workspaceId, projectId, crawlId));
+    } else if (nextTab === 'internal-links') {
+      warmQuery(queryClient, internalLinksQuery(workspaceId, projectId));
     } else if (nextTab === 'changes') {
       warmQuery(queryClient, siteHealthQueries.changesSummary(workspaceId, projectId));
     }
@@ -244,13 +248,20 @@ function SiteHealthNotices({
   );
 }
 
-type AnalysisTab = 'overview' | 'pages' | 'architecture' | 'aeo-readiness' | 'changes';
+type AnalysisTab =
+  | 'overview'
+  | 'pages'
+  | 'architecture'
+  | 'aeo-readiness'
+  | 'internal-links'
+  | 'changes';
 
 const ANALYSIS_TABS: ReadonlyArray<{ value: AnalysisTab; label: string }> = [
   { value: 'overview', label: 'Overview' },
   { value: 'pages', label: 'Pages' },
   { value: 'architecture', label: 'Architecture' },
   { value: 'aeo-readiness', label: 'AEO Readiness' },
+  { value: 'internal-links', label: 'Internal links' },
   { value: 'changes', label: 'Changes' },
 ];
 
@@ -302,6 +313,8 @@ function AnalysisPanel({
     );
   if (tab === 'aeo-readiness' && crawlId)
     return <AeoReadinessPanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />;
+  if (tab === 'internal-links')
+    return <InternalLinksPanel key={projectId} projectId={projectId} workspaceId={workspaceId} />;
   if (tab === 'changes')
     return <ChangesPanel key={projectId} projectId={projectId} workspaceId={workspaceId} />;
   return <Alert tone="info">Run a crawl before opening Website analysis.</Alert>;

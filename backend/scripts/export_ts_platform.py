@@ -48,7 +48,7 @@ from app.core.config import errors as error_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
 from app.core.config import search_intelligence as search_intelligence_config
-from app.core.config import site_health_content_structure as content_structure_config
+from app.core.config import site_health_internal_links as internal_links_config
 from app.core.config import workspaces as workspace_config
 from app.core.config.abuse import AbuseSettings
 from app.core.config.analysis import (
@@ -262,10 +262,10 @@ def build_config() -> dict[str, Any]:
         "demand": demand_policy(),
         "opportunity": opportunity_policy(),
         "search_intelligence": _search_intelligence_policy(),
-        "content_structure": {
-            name.removeprefix("CONTENT_STRUCTURE_").lower(): value
-            for name, value in vars(content_structure_config).items()
-            if name.startswith("CONTENT_STRUCTURE_")
+        "internal_links": {
+            name.removeprefix("INTERNAL_LINKS_").lower(): value
+            for name, value in vars(internal_links_config).items()
+            if name.startswith("INTERNAL_LINKS_")
         },
         "brand_identity": _brand_identity_policy(),
         "commerce": {

@@ -390,8 +390,8 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
           ) : null}
         </CardContent>
       </Card>
-      <ProjectLink href="/site/content-structure" className="type-control text-accent-text">
-        Review internal links and topics
+      <ProjectLink href="/site?tab=internal-links" className="type-control text-accent-text">
+        Review internal link suggestions
       </ProjectLink>
     </div>
   );

@@ -399,8 +399,8 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
         severity=SEVERITY_LOW,
         title="Add useful contextual links",
         remediation=(
-            "Review the suggested source passages and link their existing anchors "
-            "to the relevant destination pages."
+            "Add the suggested contextual links from this page to the related "
+            "destination pages, using descriptive anchor text."
         ),
     ),
     OpportunityRule(

@@ -7283,7 +7283,7 @@ def upgrade() -> None:
 
 
     op.create_table(
-        "site_content_structure_runs",
+        "site_internal_link_runs",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
@@ -7304,9 +7304,9 @@ def upgrade() -> None:
         sa.UniqueConstraint("workspace_id", "project_id", "idempotency_key"),
         sa.UniqueConstraint("workspace_id", "project_id", "id"),
     )
-    _create_indexes("site_content_structure_runs", ("workspace_id", "project_id"))
+    _create_indexes("site_internal_link_runs", ("workspace_id", "project_id"))
     op.create_table(
-        "site_content_structure_events",
+        "site_internal_link_events",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
@@ -7318,17 +7318,17 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(
             ["workspace_id", "project_id", "run_id"],
-            ["site_content_structure_runs.workspace_id", "site_content_structure_runs.project_id", "site_content_structure_runs.id"],
+            ["site_internal_link_runs.workspace_id", "site_internal_link_runs.project_id", "site_internal_link_runs.id"],
             ondelete="CASCADE",
         ),
         sa.UniqueConstraint("run_id", "candidate_id", "kind"),
     )
-    _create_indexes("site_content_structure_events", ("workspace_id", "project_id"))
+    _create_indexes("site_internal_link_events", ("workspace_id", "project_id"))
 
 
 def downgrade() -> None:
-    op.drop_table("site_content_structure_events")
-    op.drop_table("site_content_structure_runs")
+    op.drop_table("site_internal_link_events")
+    op.drop_table("site_internal_link_runs")
     op.drop_table("enterprise_agreement_references")
     op.drop_table("provider_disclosures")
     op.drop_table("web_acquisition_controls")

@@ -1,16 +1,42 @@
-import type { ContentLink } from '@citeladder/contracts/site-health';
+import type { InternalLink } from '@citeladder/contracts/site-health';
 import { useState } from 'react';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
 import { Stack } from '@/components/ui/layout';
-import { Checkbox } from '@/components/ui/checkbox';
 import { MarkImplementedButton } from '@/components/agent/action-declaration';
+import { formatCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-export function ContentLinkReview({
+const escapeHtml = (value: string) =>
+  value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
+
+function PageSummary({
+  heading,
+  page,
+}: Readonly<{ heading: string; page: InternalLink['source'] }>) {
+  return (
+    <section className="space-y-2">
+      <h3 className="type-section-title">{heading}</h3>
+      <a
+        className="type-body text-accent-text break-all"
+        href={page.url}
+        target="_blank"
+        rel="noreferrer"
+      >
+        {page.title || page.url}
+      </a>
+      {page.description || page.excerpt ? (
+        <p className="type-body">{page.description || page.excerpt}</p>
+      ) : null}
+    </section>
+  );
+}
+
+export function InternalLinkReview({
   link,
   links,
   workspaceId,
@@ -18,8 +44,8 @@ export function ContentLinkReview({
   stale,
   onClose,
 }: Readonly<{
-  link: ContentLink | undefined;
-  links: ContentLink[];
+  link: InternalLink | undefined;
+  links: InternalLink[];
   workspaceId: string;
   crawlId: string;
   stale: boolean;
@@ -32,65 +58,44 @@ export function ContentLinkReview({
         if (!open) onClose();
       }}
       title="Review internal link"
-      description="Link existing text to a useful destination."
+      description="Add a contextual link from the source page to the destination."
     >
       {link ? (
         <Stack gap="section">
-          <section className="space-y-3">
-            <h3 className="type-section-title">Source passage</h3>
-            <a
-              className="type-body text-accent-text break-all"
-              href={link.source.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {link.source.title || link.source.url}
-            </a>
-            {link.passage.heading ? <p className="type-label">{link.passage.heading}</p> : null}
-            <p className="type-body">
-              {link.passage.text.slice(0, link.anchor.start)}
-              <mark className="bg-warning-bg text-warning-text">{link.anchor.text}</mark>
-              {link.passage.text.slice(link.anchor.end)}
-            </p>
-            <Button asChild variant="secondary" size="sm">
-              <ProjectLink href={`/site/crawls/${crawlId}/pages/${link.source.site_url_id}`}>
-                View page evidence
-              </ProjectLink>
-            </Button>
-          </section>
-          <section className="space-y-3">
-            <h3 className="type-section-title">Destination</h3>
-            <a
-              className="type-body text-accent-text break-all"
-              href={link.target.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {link.target.title || link.target.url}
-            </a>
-            <p className="type-body">{link.target.excerpt}</p>
+          <PageSummary heading="Source page" page={link.source} />
+          <PageSummary heading="Add a link to" page={link.target} />
+          <section className="space-y-2">
+            <h3 className="type-section-title">Suggested anchor text</h3>
+            <p className="type-body">{link.anchor}</p>
             <p className="type-caption">
-              {link.source.navigation_targets.includes(link.target.url)
-                ? 'Already linked in navigation; this suggestion adds a contextual link.'
-                : 'No existing contextual link was observed in this crawl.'}
+              {link.target.contextual_inbound === null
+                ? 'Existing contextual links to the destination were not measured.'
+                : `The destination currently has ${formatCount(link.target.contextual_inbound)} contextual links from other pages.`}{' '}
+              Place the link where the source text discusses this topic, and reword the anchor to
+              fit the sentence.
             </p>
           </section>
           <div className="flex flex-wrap gap-2">
-            <CopyButton value={link.anchor.text}>Copy anchor</CopyButton>
+            <CopyButton value={link.anchor}>Copy anchor</CopyButton>
             <CopyButton value={link.target.url}>Copy URL</CopyButton>
             <CopyButton
-              value={`${link.passage.text.slice(0, link.anchor.start)}[${link.anchor.text}](${link.target.url})${link.passage.text.slice(link.anchor.end)}`}
+              value={`<a href="${escapeHtml(link.target.url)}">${escapeHtml(link.anchor)}</a>`}
             >
-              Copy edit
+              Copy HTML
             </CopyButton>
+            <Button asChild variant="secondary" size="sm">
+              <ProjectLink href={`/site/crawls/${crawlId}/pages/${link.source.site_url_id}`}>
+                View source page evidence
+              </ProjectLink>
+            </Button>
             {link.action_id ? (
-              <Button asChild variant="secondary">
+              <Button asChild variant="secondary" size="sm">
                 <ProjectLink href={`/agent/actions/${link.action_id}`}>Open Action</ProjectLink>
               </Button>
             ) : null}
           </div>
           <p className="type-caption">
-            Review the edit in your site editor. Copying does not mark it implemented.
+            Make the edit in your site editor. Copying does not mark it implemented.
           </p>
           <LinkDeclaration
             key={`${link.source.analysis_id}:${links.map((item) => item.id).join(',')}`}
@@ -111,8 +116,8 @@ function LinkDeclaration({
   workspaceId,
   stale,
 }: Readonly<{
-  link: ContentLink;
-  links: ContentLink[];
+  link: InternalLink;
+  links: InternalLink[];
   workspaceId: string;
   stale: boolean;
 }>) {
@@ -130,7 +135,7 @@ function LinkDeclaration({
     <section className="space-y-3">
       <h3 className="type-section-title">Which links are live on this page?</h3>
       <p className="type-body">
-        Select every link you have implemented before declaring this page Action.
+        Select every link you have added before declaring this page Action.
       </p>
       {related.map((item) => (
         <Checkbox
@@ -141,7 +146,7 @@ function LinkDeclaration({
               checked === true ? [...ids, item.id] : ids.filter((id) => id !== item.id),
             )
           }
-          label={`${item.anchor.text} → ${item.target.title || item.target.url}`}
+          label={`${item.anchor} → ${item.target.title || item.target.url}`}
         />
       ))}
       <MarkImplementedButton
@@ -150,7 +155,7 @@ function LinkDeclaration({
         revision={null}
         recommendationIds={selected}
         disabled={!selected.length}
-        selectionDescription="Declare that the selected contextual links are live on this source page."
+        selectionDescription="Declare that the selected internal links are live on this source page."
       />
     </section>
   );

@@ -112,7 +112,7 @@ It is anchored on the Action and, when the work came from the Agent, on the
 exact output revision the user shipped; a revision from another Action's output
 or an outline is refused, and null means work done outside CiteLadder. The
 caller names that revision and the implementation time. For contextual-link
-findings, the caller also selects saved recommendation IDs in Content structure;
+findings, the caller also selects saved recommendation IDs in Website's Internal links tab;
 the server validates them against the current crawl and Action membership. The server
 locks the project before the Action row and freezes its live member rows and
 targets (the publisher page for an

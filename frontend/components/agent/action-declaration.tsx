@@ -70,7 +70,7 @@ export function MarkImplementedButton({
       void queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
       if (recommendationIds)
         void queryClient.invalidateQueries({
-          queryKey: ['site-health', 'content-structure', workspaceId],
+          queryKey: ['site-health', 'internal-links', workspaceId],
         });
     },
   });
@@ -232,7 +232,7 @@ function AttachedDeclaration({
 export function ContextualLinkDeclarationRoute() {
   return (
     <Button asChild variant="secondary">
-      <ProjectLink href="/site/content-structure">Select implemented links</ProjectLink>
+      <ProjectLink href="/site?tab=internal-links">Select implemented links</ProjectLink>
     </Button>
   );
 }

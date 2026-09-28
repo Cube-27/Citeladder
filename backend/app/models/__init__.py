@@ -155,15 +155,15 @@ from app.models.site_health.analysis import (
     SiteRuleEvaluation,
 )
 from app.models.site_health.architecture import SiteObservedArchitecture
-from app.models.site_health.content_structure import (
-    SiteContentStructureEvent,
-    SiteContentStructureRun,
-)
 from app.models.site_health.crawl import (
     SiteCrawl,
     SiteDiscoveryFrontier,
 )
 from app.models.site_health.events import SiteCrawlEvent
+from app.models.site_health.internal_links import (
+    SiteInternalLinkEvent,
+    SiteInternalLinkRun,
+)
 from app.models.site_health.links import SitePageLinkMetric
 from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.runtime import SiteHealthProfile, WorkspaceSiteHealthRuntime
@@ -305,8 +305,6 @@ __all__ = [
     "SearchIntelligenceRun",
     "SiteChangeObservation",
     "SiteChangeSnapshot",
-    "SiteContentStructureEvent",
-    "SiteContentStructureRun",
     "SiteCrawl",
     "SiteCrawlEvent",
     "SiteCrawlTask",
@@ -315,6 +313,8 @@ __all__ = [
     "SiteFetchAttempt",
     "SiteHealthProfile",
     "SiteHealthSnapshot",
+    "SiteInternalLinkEvent",
+    "SiteInternalLinkRun",
     "SiteIssue",
     "SiteObservedArchitecture",
     "SitePageAnalysis",

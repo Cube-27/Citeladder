@@ -1,14 +1,15 @@
-import { contentLinkSchema, contentStructureSchema } from '@citeladder/contracts/site-health';
+import { internalLinkAnalysisSchema, internalLinkSchema } from '@citeladder/contracts/site-health';
 
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
-import { latestContentCrawl } from '../site-health/content-runs.ts';
+import { latestLinkCrawl } from '../site-health/internal-link-runs.ts';
 import type { MemberCheck } from './declaration-checks.ts';
 import type { OpportunityRow } from './projection.ts';
 import type { Scope } from './sources.ts';
 
-export async function contentDeclarationChecks(
+/** Freeze exactly the selected, still-current suggestions as expected checks. */
+export async function internalLinkDeclarationChecks(
   db: Database,
   scope: Scope,
   members: OpportunityRow[],
@@ -16,22 +17,22 @@ export async function contentDeclarationChecks(
 ): Promise<MemberCheck[]> {
   const selected = new Set(ids);
   if (!selected.size || selected.size !== ids.length)
-    throw new ApiError(409, 'Select the links you implemented in Content structure');
-  const crawl = await latestContentCrawl(db, scope);
+    throw new ApiError(409, 'Select the internal links you implemented');
+  const crawl = await latestLinkCrawl(db, scope);
   const checks: MemberCheck[] = [];
   for (const member of members) {
     const evidence = record(member.evidence);
     const run = await db
-      .selectFrom('site_content_structure_runs')
+      .selectFrom('site_internal_link_runs')
       .select(['id', 'crawl_id', 'result'])
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
-      .where('id', '=', String(evidence.content_structure_run_id))
+      .where('id', '=', String(evidence.internal_link_run_id))
       .where('state', 'in', ['completed', 'partial'])
       .executeTakeFirst();
     if (!run || run.crawl_id !== crawl?.id) continue;
-    const result = contentStructureSchema.parse(run.result);
-    const eligible = contentLinkSchema.array().parse(evidence.recommendations);
+    const result = internalLinkAnalysisSchema.parse(run.result);
+    const eligible = internalLinkSchema.array().parse(evidence.recommendations);
     for (const link of eligible) {
       if (!selected.has(link.id) || !result.recommendations.some((row) => row.id === link.id))
         continue;
@@ -40,10 +41,10 @@ export async function contentDeclarationChecks(
         check: {
           kind: 'contextual_link',
           recommendation_id: link.id,
-          content_structure_run_id: run.id,
+          internal_link_run_id: run.id,
           target_site_url_id: link.source.site_url_id,
           target_url: link.target.url,
-          anchor_text: link.anchor.text,
+          anchor_text: link.anchor,
           source_analysis_id: link.source.analysis_id,
           source_artifact_id: link.source.artifact_id,
           target_analysis_id: link.target.analysis_id,

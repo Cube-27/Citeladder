@@ -1,4 +1,4 @@
-"""Reuse the shared provider and credit owners for frozen content questions."""
+"""Reuse the shared provider and credit owners for frozen internal-link questions."""
 
 import uuid
 from dataclasses import dataclass
@@ -8,7 +8,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
-from app.core.config import site_health_content_structure as config
+from app.core.config import site_health_internal_links as config
 from app.core.config.entitlements import KEY_AI_CREDITS
 from app.core.config.jev import jev_settings
 from app.domain.billing.accounts import billing_account_id_for
@@ -20,9 +20,9 @@ from app.domain.entitlements.metered import (
 )
 from app.domain.workspaces.policy import WorkspaceCapability, role_allows
 from app.models.analytics import AnalyticsTask
-from app.models.site_health.content_structure import (
-    SiteContentStructureEvent,
-    SiteContentStructureRun,
+from app.models.site_health.internal_links import (
+    SiteInternalLinkEvent,
+    SiteInternalLinkRun,
 )
 from app.models.workspace import WorkspaceMember
 
@@ -33,7 +33,7 @@ async def locked_run(
     *,
     terminal: bool = False,
     include_manifest: bool = False,
-) -> SiteContentStructureRun | None:
+) -> SiteInternalLinkRun | None:
     ownership = and_(
         AnalyticsTask.lease_owner == task.lease_owner,
         AnalyticsTask.status == "running",
@@ -54,13 +54,12 @@ async def locked_run(
     if current_task is None:
         return None
     statement = (
-        select(SiteContentStructureRun)
-        .options(defer(SiteContentStructureRun.result, raiseload=True))
+        select(SiteInternalLinkRun)
+        .options(defer(SiteInternalLinkRun.result, raiseload=True))
         .where(
-            SiteContentStructureRun.id
-            == uuid.UUID(str((task.payload or {})["run_id"])),
-            SiteContentStructureRun.workspace_id == task.workspace_id,
-            SiteContentStructureRun.project_id == task.project_id,
+            SiteInternalLinkRun.id == uuid.UUID(str((task.payload or {})["run_id"])),
+            SiteInternalLinkRun.workspace_id == task.workspace_id,
+            SiteInternalLinkRun.project_id == task.project_id,
         )
         .with_for_update()
     )
@@ -68,15 +67,15 @@ async def locked_run(
     # per job, never once per credit reservation/settlement or progress write.
     if not include_manifest:
         statement = statement.options(
-            defer(SiteContentStructureRun.manifest, raiseload=True)
+            defer(SiteInternalLinkRun.manifest, raiseload=True)
         )
     return await session.scalar(statement)
 
 
 def event(
-    run: SiteContentStructureRun, candidate_id: uuid.UUID, kind: str, evidence: dict
-) -> SiteContentStructureEvent:
-    return SiteContentStructureEvent(
+    run: SiteInternalLinkRun, candidate_id: uuid.UUID, kind: str, evidence: dict
+) -> SiteInternalLinkEvent:
+    return SiteInternalLinkEvent(
         workspace_id=run.workspace_id,
         project_id=run.project_id,
         run_id=run.id,
@@ -88,26 +87,26 @@ def event(
 
 @dataclass
 class DispatchContext:
-    events: dict[uuid.UUID, list[SiteContentStructureEvent]]
+    events: dict[uuid.UUID, list[SiteInternalLinkEvent]]
     unavailable_reason: str
     account_id: uuid.UUID | None
 
 
 async def dispatch_context(
-    session: AsyncSession, run: SiteContentStructureRun, candidates: list[dict]
+    session: AsyncSession, run: SiteInternalLinkRun, candidates: list[dict]
 ) -> DispatchContext:
     rows = list(
         await session.scalars(
-            select(SiteContentStructureEvent).where(
-                SiteContentStructureEvent.run_id == run.id,
-                SiteContentStructureEvent.workspace_id == run.workspace_id,
-                SiteContentStructureEvent.candidate_id.in_(
+            select(SiteInternalLinkEvent).where(
+                SiteInternalLinkEvent.run_id == run.id,
+                SiteInternalLinkEvent.workspace_id == run.workspace_id,
+                SiteInternalLinkEvent.candidate_id.in_(
                     [uuid.UUID(c["id"]) for c in candidates]
                 ),
             )
         )
     )
-    events: dict[uuid.UUID, list[SiteContentStructureEvent]] = {}
+    events: dict[uuid.UUID, list[SiteInternalLinkEvent]] = {}
     for row in rows:
         events.setdefault(row.candidate_id, []).append(row)
     role = await session.scalar(
@@ -129,11 +128,10 @@ async def dispatch_context(
 
 async def prepare_dispatch(
     session: AsyncSession,
-    run: SiteContentStructureRun,
+    run: SiteInternalLinkRun,
     candidate: dict,
     *,
     context: DispatchContext,
-    batch: dict | None = None,
 ) -> dict | None:
     candidate_id = uuid.UUID(candidate["id"])
     existing = context.events.get(candidate_id, [])
@@ -165,7 +163,7 @@ async def prepare_dispatch(
     try:
         account_id = context.account_id
         if account_id is None:
-            raise LedgerError("content_structure_account_unavailable")
+            raise LedgerError("internal_link_account_unavailable")
         reservation = await reserve_metered_usage(
             session,
             account_id=account_id,
@@ -175,8 +173,8 @@ async def prepare_dispatch(
                 subject_id=run.crawl_id,
                 workspace_id=run.workspace_id,
             ),
-            hold_units=config.CONTENT_STRUCTURE_CREDITS_PER_JUDGMENT,
-            idempotency_key=f"content:{run.id}:{candidate_id}",
+            hold_units=config.INTERNAL_LINKS_CREDITS_PER_JUDGMENT,
+            idempotency_key=f"internal-link:{run.id}:{candidate_id}",
             at=datetime.now(UTC),
         )
     except (LedgerError, FundedCreditsExhaustedError):
@@ -193,9 +191,8 @@ async def prepare_dispatch(
         "request": candidate["request"],
         "model": jev_settings.model,
         "policy_version": run.policy_version,
-        "credits": config.CONTENT_STRUCTURE_CREDITS_PER_JUDGMENT,
+        "credits": config.INTERNAL_LINKS_CREDITS_PER_JUDGMENT,
         "reservation_id": str(reservation.reservation_id),
-        "batch": batch,
     }
     session.add(event(run, candidate_id, "dispatch", evidence))
     return evidence
@@ -203,7 +200,7 @@ async def prepare_dispatch(
 
 async def finish_dispatch(
     session: AsyncSession,
-    run: SiteContentStructureRun,
+    run: SiteInternalLinkRun,
     candidate_id: uuid.UUID,
     dispatch: dict,
     outcome: dict,
@@ -219,7 +216,7 @@ async def finish_dispatch(
         attempt=1,
         charged_units=charged_credits,
         unknown_usage_charge=charged_credits,
-        idempotency_key=f"content:{run.id}:{candidate_id}:settle",
+        idempotency_key=f"internal-link:{run.id}:{candidate_id}:settle",
         at=datetime.now(UTC),
     )
     session.add(event(run, candidate_id, "outcome", outcome))

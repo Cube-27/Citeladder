@@ -73,13 +73,6 @@ export const appRoutes: RouteObject[] = [
         children: [
           productRoute('/pricing', () => import('./pricing-route')),
           { path: '/projects', element: <ProjectsRoute /> },
-          productRoute('/site/content-structure', () =>
-            import('@/components/site-health/content-structure-screen').then(
-              ({ ContentStructureScreen }) => ({
-                default: ContentStructureScreen,
-              }),
-            ),
-          ),
           productRoute('/site', () =>
             import('./product-routes-site-issues').then(({ WebsiteRoute }) => ({
               default: WebsiteRoute,

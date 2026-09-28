@@ -1,4 +1,4 @@
-"""Content analysis manifests and append-only provider events."""
+"""Internal-link analysis manifests and append-only provider events."""
 
 import uuid
 from datetime import datetime
@@ -11,8 +11,8 @@ from app.core.database import Base
 from app.models.site_health.common import _utcnow
 
 
-class SiteContentStructureRun(Base):
-    __tablename__ = "site_content_structure_runs"
+class SiteInternalLinkRun(Base):
+    __tablename__ = "site_internal_link_runs"
     __table_args__ = (
         ForeignKeyConstraint(
             ["workspace_id", "project_id", "crawl_id"],
@@ -38,15 +38,15 @@ class SiteContentStructureRun(Base):
     )
 
 
-class SiteContentStructureEvent(Base):
-    __tablename__ = "site_content_structure_events"
+class SiteInternalLinkEvent(Base):
+    __tablename__ = "site_internal_link_events"
     __table_args__ = (
         ForeignKeyConstraint(
             ["workspace_id", "project_id", "run_id"],
             [
-                "site_content_structure_runs.workspace_id",
-                "site_content_structure_runs.project_id",
-                "site_content_structure_runs.id",
+                "site_internal_link_runs.workspace_id",
+                "site_internal_link_runs.project_id",
+                "site_internal_link_runs.id",
             ],
             ondelete="CASCADE",
         ),

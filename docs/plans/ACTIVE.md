@@ -2,12 +2,12 @@
 
 ## Active
 
-- [Content structure: internal links and topics](citeladder-content-structure.md)
-  — implemented on 28 September 2026 in `codex/content-structure`; in review
-  and owner testing before merge. TypeScript owns the new page and
-  analysis projections; the existing Python provider/credit owners execute
-  judgments. Legacy Site Health topical coherence is retired. Publication,
-  editor calibration and live provider enablement remain pending.
+- [Internal link suggestions](citeladder-internal-links.md)
+  — implemented on 28 September 2026 in `codex/content-structure`; revised after
+  owner review to a Website Internal links tab using JEV page-pair judgments.
+  Topics and the separate Content structure page are removed. Legacy Site
+  Health topical coherence is retired. Owner approval, editor calibration and
+  live provider enablement remain pending.
 
 - [Prompt generation v2](citeladder-prompt-generation-v2.md)
   — owner-approved on 26 September 2026 and revised after the prompt-universe/JEV
