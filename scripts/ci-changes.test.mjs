@@ -231,6 +231,17 @@ test('pull-request synchronization uses latest-push diff and main is full', () =
     }),
     { full: false, range: 'base...head' },
   );
+  assert.deepEqual(
+    selectDiff({
+      eventName: 'pull_request',
+      action: 'synchronize',
+      beforeSha: 'before',
+      baseSha: 'base',
+      headSha: 'head',
+      beforeIsAncestor: false,
+    }),
+    { full: false, range: 'base...head' },
+  );
   for (const eventName of ['push', 'workflow_dispatch', 'merge_group']) {
     assert.deepEqual(selectDiff({ eventName }), { full: true, range: null }, eventName);
   }
