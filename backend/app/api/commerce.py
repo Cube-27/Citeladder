@@ -5,13 +5,12 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     WorkspaceContext,
     get_db,
-    require_active_workspace,
     require_active_workspace_run,
     require_active_workspace_write,
 )
@@ -21,50 +20,28 @@ from app.connectors.agent.factory import create_model_gateway
 from app.connectors.agent.gateway import ModelGateway
 from app.core.config.abuse import abuse_settings
 from app.core.errors import ApiException
-from app.core.http_errors import raise_not_found
 from app.domain.commerce.competitors import (
-    decide_candidate,
     enqueue_discoveries,
-    list_active_discovery_tasks,
-    list_candidates,
-    list_discovery_tasks,
 )
 from app.domain.commerce.prompts import (
     BuyerPromptGenerationUnavailable,
     add_manual_buyer_prompt,
-    decide_buyer_prompt,
     generate_buyer_prompts,
-    list_buyer_prompts,
     validate_buyer_prompt_targets,
 )
 from app.domain.commerce.schemas import (
-    BuyerPromptDecisionRequest,
     BuyerPromptGenerateRequest,
     BuyerPromptManualRequest,
     BuyerPromptResponse,
-    CatalogImportRequest,
-    CatalogImportResponse,
-    CatalogResponse,
-    CompetitorCandidateResponse,
-    CompetitorDecisionRequest,
     DiscoveryRequest,
     DiscoveryResponse,
-    DiscoveryTaskResponse,
-    ShelfResponse,
 )
 from app.domain.commerce.service import (
-    CommerceConflictError,
-    CommerceImportError,
     CommerceNotFoundError,
-    get_catalog,
-    import_catalog,
 )
-from app.domain.commerce.shelf_metrics import get_shelf
 from app.domain.entitlements.enforcement import OccupancyError
 
-router = APIRouter(prefix="/projects", tags=["commerce"])
-
-_WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+router = APIRouter(prefix="/projects", tags=["commerce-python"])
 
 # Capability-gated variants of the router's workspace dependency. They apply the
 # ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
@@ -78,46 +55,9 @@ _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 def _map_error(exc: Exception) -> ApiException:
     if isinstance(exc, CommerceNotFoundError):
         return ApiException(status.HTTP_404_NOT_FOUND, "commerce_not_found", str(exc))
-    if isinstance(exc, CommerceConflictError):
-        return ApiException.coded(
-            status.HTTP_409_CONFLICT, "commerce_conflict", str(exc)
-        )
     return ApiException.coded(
         status.HTTP_422_UNPROCESSABLE_CONTENT, "commerce_invalid", str(exc)
     )
-
-
-@router.get("/{project_id}/commerce/catalog")
-async def catalog_endpoint(
-    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
-) -> CatalogResponse:
-    try:
-        return await get_catalog(
-            session, workspace_id=ctx.workspace_id, project_id=project_id
-        )
-    except CommerceNotFoundError as exc:
-        raise_not_found("Project", cause=exc)
-
-
-@router.post(
-    "/{project_id}/commerce/catalog/import",
-    status_code=status.HTTP_201_CREATED,
-)
-async def catalog_import_endpoint(
-    project_id: uuid.UUID,
-    payload: CatalogImportRequest,
-    ctx: _RunDep,
-    session: _SessionDep,
-) -> CatalogImportResponse:
-    try:
-        return await import_catalog(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            payload=payload,
-        )
-    except (CommerceNotFoundError, CommerceConflictError, CommerceImportError) as exc:
-        raise _map_error(exc) from exc
 
 
 @router.post(
@@ -136,82 +76,6 @@ async def competitor_discovery_endpoint(
             workspace_id=ctx.workspace_id,
             project_id=project_id,
             targets=payload.targets,
-        )
-    except CommerceNotFoundError as exc:
-        raise _map_error(exc) from exc
-
-
-@router.get(
-    "/{project_id}/commerce/competitors",
-)
-async def competitors_endpoint(
-    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
-) -> list[CompetitorCandidateResponse]:
-    try:
-        return await list_candidates(
-            session, workspace_id=ctx.workspace_id, project_id=project_id
-        )
-    except CommerceNotFoundError as exc:
-        raise _map_error(exc) from exc
-
-
-@router.get(
-    "/{project_id}/commerce/competitors/discoveries",
-)
-async def competitor_discovery_status_endpoint(
-    project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    task_ids: Annotated[list[uuid.UUID] | None, Query()] = None,
-) -> list[DiscoveryTaskResponse]:
-    # Omitting `task_ids` asks for whatever is still in flight for the
-    # project. The client used to hold the ids in component state alone, so
-    # switching tab or reloading lost track of a running discovery and the
-    # workspace had no way to see it finish.
-    try:
-        if task_ids is None:
-            return await list_active_discovery_tasks(
-                session, workspace_id=ctx.workspace_id, project_id=project_id
-            )
-        return await list_discovery_tasks(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            task_ids=task_ids,
-        )
-    except CommerceNotFoundError as exc:
-        raise _map_error(exc) from exc
-
-
-@router.patch(
-    "/{project_id}/commerce/competitors/{candidate_id}",
-)
-async def competitor_decision_endpoint(
-    project_id: uuid.UUID,
-    candidate_id: uuid.UUID,
-    payload: CompetitorDecisionRequest,
-    ctx: _WriteDep,
-    session: _SessionDep,
-) -> CompetitorCandidateResponse:
-    try:
-        return await decide_candidate(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            candidate_id=candidate_id,
-            decision=payload.decision,
-        )
-    except CommerceNotFoundError as exc:
-        raise _map_error(exc) from exc
-
-
-@router.get("/{project_id}/commerce/buyer-prompts")
-async def buyer_prompts_endpoint(
-    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
-) -> list[BuyerPromptResponse]:
-    try:
-        return await list_buyer_prompts(
-            session, workspace_id=ctx.workspace_id, project_id=project_id
         )
     except CommerceNotFoundError as exc:
         raise _map_error(exc) from exc
@@ -294,55 +158,5 @@ async def buyer_prompt_manual_endpoint(
         raise ApiException.coded(
             status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
         ) from exc
-    except CommerceNotFoundError as exc:
-        raise _map_error(exc) from exc
-
-
-@router.patch(
-    "/{project_id}/commerce/buyer-prompts/{prompt_id}",
-)
-async def buyer_prompt_decision_endpoint(
-    project_id: uuid.UUID,
-    prompt_id: uuid.UUID,
-    payload: BuyerPromptDecisionRequest,
-    ctx: _WriteDep,
-    session: _SessionDep,
-) -> BuyerPromptResponse:
-    try:
-        return await decide_buyer_prompt(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            prompt_id=prompt_id,
-            approved=payload.approved,
-        )
-    except CommerceNotFoundError as exc:
-        raise _map_error(exc) from exc
-
-
-@router.get("/{project_id}/commerce/ai-shelf")
-async def ai_shelf_endpoint(
-    project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    audit_id: Annotated[uuid.UUID | None, Query()] = None,
-    target_kind: Annotated[str | None, Query(pattern="^(category|product)$")] = None,
-    target_id: Annotated[uuid.UUID | None, Query()] = None,
-) -> ShelfResponse:
-    if target_kind is None or target_id is None:
-        raise ApiException.coded(
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "commerce_target_required",
-            "AI Shelf requires an explicit product or category target.",
-        )
-    try:
-        return await get_shelf(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            audit_id=audit_id,
-            target_kind=target_kind,
-            target_id=target_id,
-        )
     except CommerceNotFoundError as exc:
         raise _map_error(exc) from exc

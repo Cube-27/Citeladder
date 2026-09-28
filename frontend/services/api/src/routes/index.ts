@@ -8,6 +8,7 @@ import { demandRoutes } from './demand.ts';
 import { opportunityRoutes } from './opportunities.ts';
 import { actionRoutes } from './actions.ts';
 import { searchIntelligenceRoutes } from './search-intelligence.ts';
+import { commerceRoutes } from './commerce.ts';
 
 export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...executionRoutes,
@@ -18,4 +19,5 @@ export const PRODUCT_ROUTES: readonly ProductRoute[] = [
   ...opportunityRoutes,
   ...actionRoutes,
   ...searchIntelligenceRoutes,
+  ...commerceRoutes,
 ];

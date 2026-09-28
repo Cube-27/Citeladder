@@ -30,7 +30,7 @@ from app.domain.commerce.schemas import (
     BuyerPromptResponse,
     CommerceTarget,
 )
-from app.domain.commerce.service import CommerceNotFoundError, require_project
+from app.domain.commerce.service import CommerceNotFoundError
 from app.domain.entitlements.enforcement import (
     enforce_occupancy,
     lock_workspace_capacity,
@@ -484,55 +484,6 @@ async def _reserve_prompt_capacity(
         requested_delta=count,
         at=datetime.now(UTC),
     )
-
-
-async def list_buyer_prompts(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-) -> list[BuyerPromptResponse]:
-    await require_project(session, workspace_id=workspace_id, project_id=project_id)
-    rows = (
-        await session.execute(
-            select(Prompt, CommercePromptTarget)
-            .join(CommercePromptTarget, CommercePromptTarget.prompt_id == Prompt.id)
-            .where(
-                CommercePromptTarget.workspace_id == workspace_id,
-                CommercePromptTarget.project_id == project_id,
-            )
-            .order_by(Prompt.created_at)
-        )
-    ).all()
-    return [_prompt_response(prompt, relation) for prompt, relation in rows]
-
-
-async def decide_buyer_prompt(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    prompt_id: uuid.UUID,
-    approved: bool,
-) -> BuyerPromptResponse:
-    row = (
-        await session.execute(
-            select(Prompt, CommercePromptTarget)
-            .join(CommercePromptTarget, CommercePromptTarget.prompt_id == Prompt.id)
-            .where(
-                Prompt.id == prompt_id,
-                CommercePromptTarget.workspace_id == workspace_id,
-                CommercePromptTarget.project_id == project_id,
-            )
-        )
-    ).one_or_none()
-    if row is None:
-        raise CommerceNotFoundError("Buyer prompt not found")
-    prompt, relation = row
-    prompt.enabled = approved
-    relation.approved_at = datetime.now(UTC) if approved else None
-    await session.commit()
-    return _prompt_response(prompt, relation)
 
 
 def _prompt_response(

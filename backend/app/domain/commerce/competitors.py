@@ -40,12 +40,10 @@ from app.core.config.commerce_catalog import (
     COMMERCE_SECOND_HAND_TOKENS,
 )
 from app.core.config.site_health_acquisition import FETCH_PURPOSE_ANALYZE
-from app.core.config.task_queue import TASK_STATUS_QUEUED, TASK_TERMINAL_STATUSES
+from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.domain.commerce.schemas import (
     CommerceTarget,
-    CompetitorCandidateResponse,
     DiscoveryResponse,
-    DiscoveryTaskResponse,
 )
 from app.domain.commerce.service import CommerceNotFoundError, require_project
 from app.domain.site_health.acquisition_controls import authorize_acquisition
@@ -196,120 +194,6 @@ async def enqueue_discoveries(
         task_ids.append(task_id)
     await session.commit()
     return DiscoveryResponse(task_ids=task_ids)
-
-
-async def list_discovery_tasks(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    task_ids: list[uuid.UUID],
-) -> list[DiscoveryTaskResponse]:
-    await require_project(session, workspace_id=workspace_id, project_id=project_id)
-    if not task_ids:
-        return []
-    rows = list(
-        (
-            await session.scalars(
-                select(AnalyticsTask).where(
-                    AnalyticsTask.id.in_(task_ids),
-                    AnalyticsTask.workspace_id == workspace_id,
-                    AnalyticsTask.project_id == project_id,
-                    AnalyticsTask.task_kind == "commerce_competitor_discovery",
-                )
-            )
-        ).all()
-    )
-    by_id = {row.id: row for row in rows}
-    responses: list[DiscoveryTaskResponse] = []
-    for task_id in dict.fromkeys(task_ids):
-        row = by_id.get(task_id)
-        if row is None:
-            raise CommerceNotFoundError("Competitor discovery task not found")
-        responses.append(_discovery_response(row))
-    return responses
-
-
-def _discovery_response(row: AnalyticsTask) -> DiscoveryTaskResponse:
-    return DiscoveryTaskResponse(
-        id=row.id,
-        target=CommerceTarget.model_validate(dict(row.payload or {}).get("target")),
-        status=row.status,
-        error_code=row.error_code,
-        terminal=row.status in TASK_TERMINAL_STATUSES,
-    )
-
-
-async def list_active_discovery_tasks(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-) -> list[DiscoveryTaskResponse]:
-    """Every discovery still in flight for the project.
-
-    Task ids lived only in React state, so a tab switch or a reload dropped
-    the running banner and the poll with it -- a discovery could finish with
-    nobody watching, and a stuck one was invisible. Server-held state is the
-    only thing a reload can recover from.
-    """
-    await require_project(session, workspace_id=workspace_id, project_id=project_id)
-    rows = await session.scalars(
-        select(AnalyticsTask)
-        .where(
-            AnalyticsTask.workspace_id == workspace_id,
-            AnalyticsTask.project_id == project_id,
-            AnalyticsTask.task_kind == "commerce_competitor_discovery",
-            AnalyticsTask.status.not_in(tuple(TASK_TERMINAL_STATUSES)),
-        )
-        .order_by(AnalyticsTask.created_at.asc())
-    )
-    return [_discovery_response(row) for row in rows]
-
-
-async def list_candidates(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-) -> list[CompetitorCandidateResponse]:
-    await require_project(session, workspace_id=workspace_id, project_id=project_id)
-    rows = list(
-        (
-            await session.scalars(
-                select(CommerceCompetitorCandidate)
-                .where(
-                    CommerceCompetitorCandidate.workspace_id == workspace_id,
-                    CommerceCompetitorCandidate.project_id == project_id,
-                )
-                .order_by(CommerceCompetitorCandidate.created_at.desc())
-            )
-        ).all()
-    )
-    return [CompetitorCandidateResponse.model_validate(row) for row in rows]
-
-
-async def decide_candidate(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    candidate_id: uuid.UUID,
-    decision: str,
-) -> CompetitorCandidateResponse:
-    row = await session.scalar(
-        select(CommerceCompetitorCandidate).where(
-            CommerceCompetitorCandidate.id == candidate_id,
-            CommerceCompetitorCandidate.workspace_id == workspace_id,
-            CommerceCompetitorCandidate.project_id == project_id,
-        )
-    )
-    if row is None:
-        raise CommerceNotFoundError("Competitor candidate not found")
-    row.state = decision
-    row.decision_at = _utcnow()
-    await session.commit()
-    return CompetitorCandidateResponse.model_validate(row)
 
 
 def _host(value: str) -> str:

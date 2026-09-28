@@ -205,11 +205,30 @@ export function registerMethodGuards(app: Hono<AppEnv>, routes: readonly Product
     allowed.add(contract.method.toUpperCase());
     methods.set(contract.path, allowed);
   }
-  for (const [path, allowed] of methods) {
-    // Hono otherwise serves HEAD from GET handlers; only declared methods run.
-    app.use(honoPath(path), async (c, next) => {
-      if (!allowed.has(c.req.method)) methodNotAllowed([...allowed].join(', '));
-      await next();
-    });
-  }
+  const guards = [...methods]
+    .map(([path, allowed]) => {
+      const segments = path.split('/');
+      const parameters = segments.filter((segment) => segment.startsWith('{')).length;
+      return {
+        segments: segments.map((segment) => (segment.startsWith('{') ? null : segment)),
+        parameters,
+        allowed,
+      };
+    })
+    .sort((a, b) => a.parameters - b.parameters);
+  app.use('*', async (c, next) => {
+    // A literal route such as /competitors/discoveries takes precedence over
+    // /competitors/{candidate_id}. Its GET must not inherit the latter's PATCH
+    // guard. Hono's implicit HEAD remains disallowed unless explicitly declared.
+    const segments = c.req.path.split('/');
+    const guard = guards.find(
+      (entry) =>
+        entry.segments.length === segments.length &&
+        entry.segments.every((segment, index) =>
+          segment === null ? Boolean(segments[index]) : segment === segments[index],
+        ),
+    );
+    if (guard && !guard.allowed.has(c.req.method)) methodNotAllowed([...guard.allowed].join(', '));
+    await next();
+  });
 }

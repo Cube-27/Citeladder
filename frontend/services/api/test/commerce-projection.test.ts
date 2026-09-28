@@ -1,0 +1,256 @@
+import { afterAll, describe, expect, it } from 'vitest';
+import { loadWorkerSettings, policy } from '../src/config.ts';
+import { importCatalog } from '../src/commerce/import.ts';
+import { projectCatalog } from '../src/commerce/projection.ts';
+import {
+  categoryTitle,
+  pageIdentity,
+  productCategories,
+  productFacts,
+  readFacts,
+} from '../src/commerce/projection-facts.ts';
+import { catalog } from '../src/commerce/reads.ts';
+import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
+import { commerceIsland } from './commerce-support.ts';
+import { enqueue } from './referral-fixtures.ts';
+import { testDatabase } from './support.ts';
+
+const db = testDatabase();
+type Seed = {
+  workspaceId: string;
+  projectId: string;
+  userId: string;
+  analyses: string[];
+  tasks: string[];
+};
+const seeds: Seed[] = [];
+async function seed() {
+  const value = await commerceIsland<Seed>('seed');
+  seeds.push(value);
+  return value;
+}
+afterAll(async () => {
+  for (const s of seeds) {
+    await db.deleteFrom('workspaces').where('id', '=', s.workspaceId).execute();
+    await db.deleteFrom('users').where('id', '=', s.userId).execute();
+  }
+  await db.destroy();
+});
+
+const context = { db, maxAttempts: 3, checkCancelled: async () => {} };
+async function execute(taskId: string) {
+  const task = await db
+    .selectFrom('analytics_tasks')
+    .selectAll()
+    .where('id', '=', taskId)
+    .executeTakeFirstOrThrow();
+  await projectCatalog(task, context);
+}
+
+describe('catalog projection PostgreSQL boundary', () => {
+  it.each([false, true])(
+    'links category and product in either order (product first: %s), preserving evidence on retry',
+    async (productFirst) => {
+      const s = await seed();
+      const tasks = await db
+        .selectFrom('analytics_tasks')
+        .selectAll()
+        .where('workspace_id', '=', s.workspaceId)
+        .execute();
+      const byAnalysis = new Map(
+        tasks.map((task) => [
+          (task.payload as { source_analysis_id: string }).source_analysis_id,
+          task.id,
+        ]),
+      );
+      const categoryTask = byAnalysis.get(s.analyses[0]!)!;
+      const productTask = byAnalysis.get(s.analyses[1]!)!;
+      const order = productFirst ? [productTask, categoryTask] : [categoryTask, productTask];
+      for (const task of order) await execute(task);
+      await Promise.all([execute(productTask), execute(productTask)]);
+      const result = await catalog(db, s);
+      expect(result.products).toHaveLength(1);
+      expect(result.products[0]).toMatchObject({
+        name: 'Widget',
+        price: 12.5,
+        canonical_url: 'https://example.com/products/widget',
+      });
+      const tools = result.categories.find((row) => row.name === 'Tools')!;
+      expect(tools.product_count).toBe(1);
+      expect(result.products[0]!.category_ids).toEqual([tools.id]);
+      const evidence = await db
+        .selectFrom('commerce_product_observations')
+        .selectAll()
+        .where('workspace_id', '=', s.workspaceId)
+        .execute();
+      expect(evidence).toHaveLength(1);
+      expect(evidence[0]).toMatchObject({
+        source_analysis_id: s.analyses[1],
+        projector_version: policy.commerce.projector_version,
+      });
+      expect(result.products[0]!.field_sources.price).toMatchObject({
+        source_id: s.analyses[1],
+        artifact_id: evidence[0]!.source_artifact_id,
+        evidence_path: 'structured_data.product.price',
+      });
+      await db
+        .updateTable('analytics_tasks')
+        .set({ status: 'succeeded' })
+        .where('workspace_id', '=', s.workspaceId)
+        .execute();
+    },
+    20_000,
+  );
+  it('claims the Python-enqueued projection kind, honors CSV priority in a race, and leaves discovery to Python', async () => {
+    const s = await seed();
+    const pythonTask = await enqueue(db, {
+      ...s,
+      kind: 'commerce_competitor_discovery',
+      payload: {},
+    });
+    const worker = new AnalyticsWorker(db, loadWorkerSettings({}), { owner: 'commerce-ts-test' });
+    await Promise.all([
+      worker.runUntilIdle(),
+      importCatalog(db, s, {
+        filename: 'catalog.csv',
+        content_type: 'text/csv',
+        content: 'canonical_url,name,price\nhttps://example.com/products/widget,Edited,44\n',
+      }),
+    ]);
+    const result = await catalog(db, s);
+    expect(result.products[0]).toMatchObject({ name: 'Edited', price: 44 });
+    const tasks = await db
+      .selectFrom('analytics_tasks')
+      .selectAll()
+      .where('workspace_id', '=', s.workspaceId)
+      .execute();
+    expect(
+      tasks
+        .filter((row) => row.task_kind === 'commerce_catalog_projection')
+        .map((row) => row.status),
+    ).toEqual(['succeeded', 'succeeded']);
+    expect(tasks.find((row) => row.id === pythonTask)!.status).toBe('queued');
+    const id = result.categories.find((row) => row.name === 'Tools')!.id;
+    const seeded = await commerceIsland<{ promptId: string }>(
+      'prompt',
+      s.workspaceId,
+      s.projectId,
+      id,
+      'category',
+    );
+    // The retained Python consumer reads TS projections, with provenance.
+    await db
+      .updateTable('commerce_prompt_targets')
+      .set({ approved_at: new Date() })
+      .where('prompt_id', '=', seeded.promptId)
+      .execute();
+    const frozen = await commerceIsland<{
+      targets: { products: { price: number; field_sources: Record<string, unknown> }[] }[];
+    }>('freeze', s.workspaceId, s.projectId, seeded.promptId);
+    expect(frozen.targets[0]!.products[0]).toMatchObject({
+      price: 44,
+      field_sources: { name: { kind: 'csv' } },
+    });
+  }, 20_000);
+  it('rejects foreign source evidence and does not create catalog rows', async () => {
+    const own = await seed();
+    const foreign = await seed();
+    const task = await db
+      .selectFrom('analytics_tasks')
+      .selectAll()
+      .where('id', '=', own.tasks[0]!)
+      .executeTakeFirstOrThrow();
+    await expect(
+      projectCatalog({ ...task, payload: { source_analysis_id: foreign.analyses[1]! } }, context),
+    ).rejects.toThrow('Source Site Health analysis not found');
+    expect((await catalog(db, own)).products).toEqual([]);
+    for (const s of [own, foreign])
+      await db
+        .updateTable('analytics_tasks')
+        .set({ status: 'cancelled' })
+        .where('workspace_id', '=', s.workspaceId)
+        .execute();
+  }, 20_000);
+});
+
+describe('projection decisions over stored facts', () => {
+  it('trusts canonical declarations only on the delivered site and resolves relative declarations after redirects', () => {
+    const base = 'https://shop.example.com/collections/all/products/widget?variant=1';
+    expect(pageIdentity(readFacts({ canonical_url: '/products/widget' }), base)).toBe(
+      'https://shop.example.com/products/widget',
+    );
+    expect(pageIdentity(readFacts({ canonical_url: 'https://attacker.example.net/p' }), base)).toBe(
+      'https://shop.example.com/collections/all/products/widget',
+    );
+    expect(
+      pageIdentity(
+        readFacts({ canonical_url: './widget' }),
+        'https://shop.example.com/products/old',
+      ),
+    ).toBe('https://shop.example.com/products/widget');
+  });
+  it.each(['from $29.99', 'up to $40', '$40 $20', 'Save 20%', '$1,23,4'])(
+    'does not invent product identity from an ambiguous price: %s',
+    (visible) => {
+      const projected = productFacts(
+        readFacts({ title: 'Collection', commerce: { visible_price: visible } }),
+        'https://shop.example.com/c',
+      );
+      expect(projected.identified).toBe(false);
+      expect(projected.values.price).toBeNull();
+    },
+  );
+  it('uses structured prices before visible prices and rejects invalid stored facts', () => {
+    const projected = productFacts(
+      readFacts({
+        title: 'Widget',
+        structured_data: { product: { price: ['12.50'], price_currency: ['USD'] } },
+        commerce: { visible_price: '$99.99' },
+      }),
+      'https://shop.example.com/p',
+    );
+    expect(projected.values).toMatchObject({ price: 12.5, currency: 'USD', attributes: {} });
+    expect(
+      productFacts(
+        readFacts({ title: 'Widget', commerce: { visible_price: '€1.299,50' } }),
+        'https://shop.example.com/p',
+      ).values.price,
+    ).toBe(1299.5);
+    expect(
+      productFacts(
+        readFacts({
+          title: 'Collection',
+          commerce: { visible_price: '$50', visible_price_context: 'free shipping over $50' },
+        }),
+        'https://shop.example.com/c',
+      ).identified,
+    ).toBe(false);
+    expect(() => readFacts({ commerce: [] })).toThrow();
+  });
+  it('takes meaningful category names and keeps a linked ancestor leaf but drops product and index crumbs', () => {
+    const facts = readFacts({
+      title: 'Dresses | Brand',
+      commerce: {
+        breadcrumbs: ['Home', '/', 'Categories', '/', 'Dresses'],
+        breadcrumb_links: [{ title: 'Dresses', url: '/collections/dresses' }],
+      },
+    });
+    expect(categoryTitle(facts, '')).toBe('Dresses');
+    expect(productCategories(facts, 'https://shop.example.com/products/dress', [])).toEqual([
+      'Dresses',
+    ]);
+    expect(
+      productCategories(
+        readFacts({ commerce: { breadcrumbs: ['Home', '/', 'Dresses', '/', 'Linen dress'] } }),
+        'https://shop.example.com/products/dress',
+        [],
+      ),
+    ).toEqual(['Dresses']);
+    expect(
+      categoryTitle(
+        readFacts({ commerce: { breadcrumbs: ['/', '»'] }, headings: { h1_texts: ['Tools'] } }),
+        '',
+      ),
+    ).toBe('Tools');
+  });
+});

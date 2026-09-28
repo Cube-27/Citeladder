@@ -25,6 +25,7 @@ import { projectPerformanceRange, refreshTrafficSnapshot } from '../traffic/snap
 import { recomputeDemand } from '../demand/snapshot.ts';
 import { refreshOpportunities } from '../opportunities/refresh.ts';
 import { verifyImplementationEvents } from '../opportunities/verification.ts';
+import { projectCatalog } from '../commerce/projection.ts';
 
 const logger = getLogger('workers.analytics');
 const { statuses, terminal } = policy.task_queue;
@@ -41,6 +42,7 @@ export const EXECUTORS: Readonly<Record<string, Executor>> = {
   demand_snapshot_refresh: recomputeDemand,
   opportunity_refresh: refreshOpportunities,
   opportunity_verification: verifyImplementationEvents,
+  commerce_catalog_projection: projectCatalog,
 };
 
 /** A claimed kind with no executor: a deploy bug, failed without retries. */
