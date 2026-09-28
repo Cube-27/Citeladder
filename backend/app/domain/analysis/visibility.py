@@ -15,6 +15,7 @@ from app.core.config.audits import AUDIT_SCOPE_BRAND
 from app.core.config.prompts import REQUESTABLE_PROMPT_COHORTS
 from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
 from app.domain.analysis.measurement import (
+    brand_name,
     competitor_rate,
     measurement_counts,
     observed_rate,
@@ -32,7 +33,6 @@ from app.domain.analysis.schemas import (
     RankingRow,
     VisibilityResponse,
 )
-from app.domain.analysis.trend_folding import _brand_name
 from app.domain.projects.logos import get_project_logo_urls
 from app.domain.projects.service import get_project
 from app.models.analysis import CompetitorMention, MetricSnapshot, ResponseAnalysis
@@ -48,39 +48,15 @@ async def get_visibility(
     audit_id: uuid.UUID | None = None,
     cohort: str = "core",
     logical_engine: str | None = None,
-    baseline_id: uuid.UUID | None = None,
-    selection_mode: str = "latest",
-    from_at=None,
-    to_at=None,
-    configuration_key: str | None = None,
 ) -> VisibilityResponse:
     """Serve the selected-run dashboard projection for a project.
 
     Defaults to the project's latest completed/partially-completed audit when
     ``audit_id`` is omitted. Computed server-side from the persisted snapshot;
-    no provider call (invariant 7).
+    no provider call (invariant 7). The HTTP dashboard is served by the
+    TypeScript API; this projection remains for the command center.
     """
-    from app.domain.analysis.trends import validate_engine_and_range
-
-    validate_engine_and_range(
-        logical_engine=logical_engine, from_at=from_at, to_at=to_at
-    )
     resolved_mode = "run" if audit_id else "latest"
-    if selection_mode == "run" and audit_id is None:
-        raise TrendQueryError("A specific run selection requires audit_id")
-    if selection_mode == "range":
-        from app.domain.analysis.range_projection import get_range_visibility
-
-        return await get_range_visibility(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            engine=logical_engine,
-            cohort=cohort,
-            from_at=from_at,
-            to_at=to_at,
-            configuration_key=configuration_key,
-        )
     audit_id, audit = await _selected_audit(
         session,
         workspace_id=workspace_id,
@@ -108,7 +84,6 @@ async def get_visibility(
         metrics=metrics,
         cohort=cohort,
         engine=logical_engine,
-        baseline_id=baseline_id,
     )
     rankings = _rankings(
         metrics,
@@ -268,10 +243,9 @@ def _rankings(
         identity_ids=logo_identity_ids or {},
         website_urls=website_urls,
     )
-    brand_name = _brand_name(counts, metrics)
     rows = [
         _ranking_row(
-            name=brand_name,
+            name=brand_name(counts, metrics),
             is_brand=True,
             mention_rate=observed_rate(metrics, "brand_mention_rate"),
             citation_rate=observed_rate(metrics, "owned_citation_rate"),

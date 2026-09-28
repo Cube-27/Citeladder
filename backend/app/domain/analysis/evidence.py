@@ -24,7 +24,6 @@ from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.analysis.aio_evidence import execution_surface_evidence
 from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
 from app.domain.analysis.evidence_selection import (
-    EvidenceFilters,
     apply_cursor,
     encode_cursor,
     scope_digest,
@@ -40,9 +39,11 @@ from app.domain.analysis.schemas import (
     VisibilityFanoutState,
     VisibilityMentionEvidence,
 )
-from app.domain.analysis.selection import RunSelection
-from app.domain.analysis.trend_folding import _to_utc
-from app.domain.analysis.trends import validate_engine_and_range
+from app.domain.analysis.selection import (
+    RunSelection,
+    to_utc,
+    validate_engine_and_range,
+)
 from app.domain.audits.schemas import execution_frozen_provenance
 from app.models.analysis import (
     BrandMention,
@@ -69,10 +70,6 @@ async def get_visibility_evidence(
     limit: int = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     cursor: str | None = None,
     as_of: datetime | None = None,
-    outcome: str | None = None,
-    competitor: str | None = None,
-    domain: str | None = None,
-    url: str | None = None,
 ) -> VisibilityEvidenceResponse:
     """Project the workspace-scoped execution evidence dataset (invariant 7).
 
@@ -81,9 +78,9 @@ async def get_visibility_evidence(
     mutation/backfill. Feeds the Mentions & Citations and Query Fanout tabs.
 
     Optional filters (``audit_id`` / ``prompt_id`` / ``logical_engine`` /
-    inclusive UTC ``from``/``to`` completion window) INTERSECT: when both
-    ``audit_id`` and a date window are supplied the selected audit must also
-    fall inside the window. Returns at most ``limit`` items in deterministic
+    inclusive UTC ``from``/``to`` completion window) INTERSECT. The HTTP
+    evidence route is served by the TypeScript API; this reader remains for
+    MCP. Returns at most ``limit`` items in deterministic
     newest-first order with ``truncated`` set when more matches exist. A valid
     project with no matching evidence returns an empty list, ``truncated=False``.
     """
@@ -102,8 +99,7 @@ async def get_visibility_evidence(
             .distinct()
         )
     ).all()
-    filters = EvidenceFilters(outcome, competitor, domain, url)
-    statement = filters.apply(base)
+    statement = base
     if prompt_id:
         frozen_text = (
             base.with_only_columns(AuditPromptSnapshot.text)
@@ -137,10 +133,6 @@ async def get_visibility_evidence(
             "to": selection.to_at,
             "cohort": selection.cohort,
             "as_of": as_of,
-            "outcome": outcome,
-            "competitor": competitor,
-            "domain": domain,
-            "url": url,
             "audit_ids": sorted(str(value) for value in selection.audit_ids or []),
         }
     )
@@ -185,7 +177,7 @@ async def _authorized_selection(
             f"'limit' must be between 1 and {VISIBILITY_EVIDENCE_MAX_LIMIT}"
         )
     selection = replace(
-        selection, from_at=_to_utc(selection.from_at), to_at=_to_utc(selection.to_at)
+        selection, from_at=to_utc(selection.from_at), to_at=to_utc(selection.to_at)
     )
     await selection.authorize(session)
     return selection
@@ -599,7 +591,7 @@ def _evidence_item(
         prompt_index=analysis.prompt_index,
         prompt_text=snapshot.text or "",
         repetition=analysis.repetition,
-        completed_at=_to_utc(audit.completed_at),
+        completed_at=to_utc(audit.completed_at),
         logical_engine=analysis.logical_engine,
         transport_provider=analysis.transport_provider,
         transport_model=analysis.transport_model,

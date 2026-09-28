@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import overload
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.analysis import VISIBILITY_SELECTION_MAX_RUNS
 from app.core.config.audits import AUDIT_SCOPE_BRAND
+from app.core.config.provider_catalog import LOGICAL_ENGINES
 from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
 from app.domain.analysis.projection_common import _AUDIT_NOT_FOUND, _DASHBOARD_STATUSES
 from app.models.audit import Audit
@@ -70,3 +72,36 @@ async def authorize_run_set(session, *, workspace_id, project_id, audit_ids):
     )
     if owned != ids:
         raise AnalysisNotFoundError("Selected run set not found")
+
+
+@overload
+def to_utc(value: datetime) -> datetime: ...
+
+
+@overload
+def to_utc(value: None) -> None: ...
+
+
+def to_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        # Defensive: the query layer already rejects naive datetimes.
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def validate_engine_and_range(
+    *,
+    logical_engine: str | None,
+    from_at: datetime | None,
+    to_at: datetime | None,
+) -> None:
+    """A known engine and an aware, ordered window, or ``TrendQueryError``."""
+    if logical_engine is not None and logical_engine not in LOGICAL_ENGINES:
+        raise TrendQueryError(f"Unknown logical engine: {logical_engine!r}")
+    for label, value in (("from", from_at), ("to", to_at)):
+        if value is not None and value.tzinfo is None:
+            raise TrendQueryError(f"'{label}' must be a timezone-aware timestamp")
+    if from_at is not None and to_at is not None and to_utc(from_at) > to_utc(to_at):
+        raise TrendQueryError("'from' must not be after 'to'")

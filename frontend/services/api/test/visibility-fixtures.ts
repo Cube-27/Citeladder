@@ -32,11 +32,19 @@ export type ExecutionInput = {
   theme?: string;
   cohort?: string;
   taskStatus?: string;
+  repetition?: number;
+  /** Stored search events on the task, and on its immutable artifact. */
+  taskEvents?: Json;
+  artifactEvents?: Json;
+  providerMetadata?: Json;
   /** Null: the task never produced an analysis (a failed retrieval). */
   analysis?: {
     brandMentioned?: boolean;
     brandFirstOffset?: number | null;
     ownedCited?: boolean;
+    avgPosition?: number | null;
+    searchUsed?: boolean;
+    searchQueryCount?: number;
     score?: Json;
     createdAt?: Date;
     citations?: {
@@ -46,6 +54,7 @@ export type ExecutionInput = {
       matched?: string | null;
       title?: string;
       sourceClass?: string | null;
+      urlHash?: string | null;
     }[];
     brandMentions?: string[];
     competitorMentions?: string[];
@@ -54,6 +63,9 @@ export type ExecutionInput = {
 };
 
 const TABLES_BY_WORKSPACE = [
+  'opportunities',
+  'metric_snapshots',
+  'prompt_metric_snapshots',
   'aio_entity_links',
   'aio_observations',
   'citations',
@@ -239,22 +251,31 @@ export class VisibilityFixtures extends Fixtures {
       input.auditId,
       Math.max(promptIndex + 1, this.promptIndexes.get(input.auditId) ?? 0),
     );
-    const snapshotId = randomUUID();
-    await this.database
-      .insertInto('audit_prompt_snapshots')
-      .values({
-        id: snapshotId,
-        audit_id: input.auditId,
-        prompt_index: promptIndex,
-        text: input.promptText ?? `prompt ${promptIndex}`,
-        theme: input.theme ?? '',
-        intent: '',
-        buyer_stage: '',
-        prompt_intent: '',
-        cohort: input.cohort ?? 'core',
-        created_at: now(),
-      })
-      .execute();
+    // A run freezes each prompt once; its other executions share the snapshot.
+    const existing = await this.database
+      .selectFrom('audit_prompt_snapshots')
+      .select('id')
+      .where('audit_id', '=', input.auditId)
+      .where('prompt_index', '=', promptIndex)
+      .executeTakeFirst();
+    const snapshotId = existing?.id ?? randomUUID();
+    if (existing === undefined) {
+      await this.database
+        .insertInto('audit_prompt_snapshots')
+        .values({
+          id: snapshotId,
+          audit_id: input.auditId,
+          prompt_index: promptIndex,
+          text: input.promptText ?? `prompt ${promptIndex}`,
+          theme: input.theme ?? '',
+          intent: '',
+          buyer_stage: '',
+          prompt_intent: '',
+          cohort: input.cohort ?? 'core',
+          created_at: now(),
+        })
+        .execute();
+    }
     const taskId = randomUUID();
     await this.database
       .insertInto('audit_tasks')
@@ -266,7 +287,7 @@ export class VisibilityFixtures extends Fixtures {
         prompt_snapshot_id: snapshotId,
         engine_snapshot_id: await this.engineSnapshot(input.auditId, engine, model),
         prompt_index: promptIndex,
-        repetition: 0,
+        repetition: input.repetition ?? 0,
         randomized_position: 0,
         logical_engine: engine,
         transport_provider: 'test',
@@ -280,6 +301,9 @@ export class VisibilityFixtures extends Fixtures {
         max_attempts: 5,
         answer_text: '',
         search_used: false,
+        search_events: input.taskEvents === undefined ? null : JSON.stringify(input.taskEvents),
+        provider_metadata:
+          input.providerMetadata === undefined ? null : JSON.stringify(input.providerMetadata),
         finish_reason: 'unknown',
         error_code: '',
         error_detail: '',
@@ -315,6 +339,8 @@ export class VisibilityFixtures extends Fixtures {
         transport_model: model,
         answer_text: '',
         search_used: false,
+        search_events:
+          input.artifactEvents === undefined ? null : JSON.stringify(input.artifactEvents),
         finish_reason: 'unknown',
         created_at: now(),
       })
@@ -335,7 +361,7 @@ export class VisibilityFixtures extends Fixtures {
         transport_provider: 'test',
         transport_model: model,
         prompt_index: input.promptIndex ?? 0,
-        repetition: 0,
+        repetition: input.repetition ?? 0,
         prompt_class: '',
         cohort: input.cohort ?? 'core',
         brand_mentioned: spec.brandMentioned ?? false,
@@ -344,8 +370,9 @@ export class VisibilityFixtures extends Fixtures {
         owned_citation_count: spec.ownedCited ? 1 : 0,
         unintended_domain_cited: false,
         citation_count: citations.length,
-        search_used: false,
-        search_query_count: 0,
+        avg_position: spec.avgPosition ?? null,
+        search_used: spec.searchUsed ?? false,
+        search_query_count: spec.searchQueryCount ?? 0,
         entity_assessments: JSON.stringify([]),
         score: spec.score === undefined ? null : JSON.stringify(spec.score),
         created_at: spec.createdAt ?? now(),
@@ -383,6 +410,7 @@ export class VisibilityFixtures extends Fixtures {
           title: citation.title ?? '',
           classification: 'third_party',
           source_class: citation.sourceClass ?? null,
+          url_hash: citation.urlHash ?? null,
           is_owned: citation.isOwned ?? false,
           is_unintended: false,
           matched_competitor: citation.matched ?? null,
@@ -434,6 +462,124 @@ export class VisibilityFixtures extends Fixtures {
         })
         .execute();
     }
+  }
+
+  /** A run's persisted aggregate, as analysis finalization writes it. */
+  async metricSnapshot(
+    tenant: Tenant,
+    auditId: string,
+    input: {
+      metrics: Json;
+      visibilityScore?: number;
+      analyzerVersion?: string;
+      scoringRuleVersion?: string;
+    },
+  ): Promise<string> {
+    const id = randomUUID();
+    await this.database
+      .insertInto('metric_snapshots')
+      .values({
+        id,
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        audit_id: auditId,
+        analyzer_version: input.analyzerVersion ?? 'test',
+        scoring_rule_version: input.scoringRuleVersion ?? 'test',
+        total_completed: 0,
+        total_failed: 0,
+        visibility_score: input.visibilityScore ?? 0,
+        metrics: JSON.stringify(input.metrics),
+        source_analysis_ids: JSON.stringify([]),
+        source_artifact_ids: JSON.stringify([]),
+        created_at: now(),
+      })
+      .execute();
+    return id;
+  }
+
+  /** One prompt's persisted score for a run. */
+  async promptScore(
+    tenant: Tenant,
+    auditId: string,
+    input: { promptIndex: number; promptText: string; composite: number; cohort?: string },
+  ): Promise<string> {
+    const id = randomUUID();
+    await this.database
+      .insertInto('prompt_metric_snapshots')
+      .values({
+        id,
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        audit_id: auditId,
+        prompt_id: null,
+        prompt_identity: input.promptText,
+        prompt_index: input.promptIndex,
+        prompt_text: input.promptText,
+        cohort: input.cohort ?? 'core',
+        composite_score: input.composite,
+        previous_score: null,
+        immediate_delta: null,
+        rolling_four: JSON.stringify([input.composite]),
+        per_engine_scores: JSON.stringify({}),
+        components: JSON.stringify({ visibility: null }),
+        engine_agreement: 1,
+        repetition_agreement: 1,
+        evidence_coverage: 1,
+        trend_confidence: 1,
+        decline_confirmed: false,
+        analyzer_version: 'test',
+        scoring_rule_version: 'test',
+        source_analysis_ids: JSON.stringify([]),
+        source_artifact_ids: JSON.stringify([]),
+        created_at: now(),
+      })
+      .execute();
+    return id;
+  }
+
+  /** A page this project knows, optionally with a live action on it. */
+  async sourcePage(
+    tenant: Tenant,
+    input: { urlHash: string; url: string; pageFormat?: string; action?: string },
+  ): Promise<void> {
+    await this.database
+      .insertInto('source_pages')
+      .values({
+        id: randomUUID(),
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        url_hash: input.urlHash,
+        canonical_url: input.url,
+        registrable_domain: new URL(input.url).hostname,
+        inspection_state: 'inspected',
+        page_format: input.pageFormat ?? 'article',
+        page_format_method: 'page',
+        recurrence_count: 1,
+        created_at: now(),
+        updated_at: now(),
+      })
+      .execute();
+    if (input.action === undefined) return;
+    await this.database
+      .insertInto('opportunities')
+      .values({
+        id: input.action,
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        opportunity_type: 'earned',
+        rule_id: 'test-rule',
+        rule_version: '1',
+        analyzer_version: 'test',
+        formula_version: 'test',
+        severity: 'medium',
+        priority_score: 1,
+        title: 'Fix the page',
+        remediation: '',
+        target_key: `earned-page:${input.urlHash}`,
+        created_at: now(),
+        updated_at: now(),
+      })
+      .execute();
   }
 
   async referralSnapshot(

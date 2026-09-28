@@ -105,9 +105,8 @@ export function epochMicros(value: ParsedDatetime): bigint {
   return shifted - BigInt(value.offsetSeconds ?? 0) * MICROSECONDS_PER_SECOND;
 }
 
-/** The value converted to UTC, preserving microseconds. */
-export function toUtc(value: ParsedDatetime): ParsedDatetime {
-  const micros = epochMicros(value);
+/** The UTC instant `micros` microseconds after the epoch. */
+export function fromEpochMicros(micros: bigint): ParsedDatetime {
   const seconds =
     micros / MICROSECONDS_PER_SECOND - (micros % MICROSECONDS_PER_SECOND < 0n ? 1n : 0n);
   const instant = new Date(Number(seconds) * 1000);
@@ -121,4 +120,9 @@ export function toUtc(value: ParsedDatetime): ParsedDatetime {
     microsecond: Number(micros - seconds * MICROSECONDS_PER_SECOND),
     offsetSeconds: 0,
   };
+}
+
+/** The value converted to UTC, preserving microseconds. */
+export function toUtc(value: ParsedDatetime): ParsedDatetime {
+  return fromEpochMicros(epochMicros(value));
 }

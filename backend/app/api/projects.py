@@ -3,15 +3,15 @@
 # The API surface is flat (no workspace_id in the path); the active
 # workspace is resolved by ``require_active_workspace`` from the
 # ``X-Workspace-Id`` header (or the caller's default workspace). Every query
-# filters by that workspace. ``/projects/{id}/visibility`` is added in B6.
+# filters by that workspace. The visibility reads are served by the
+# TypeScript API (route family ``visibility``).
 from __future__ import annotations
 
 import asyncio
 import re
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,29 +25,8 @@ from app.api.deps import (
 )
 from app.api.usage_limits import enforce_workspace_request
 from app.core.config.abuse import abuse_settings
-from app.core.config.analysis import (
-    VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
-    VISIBILITY_EVIDENCE_MAX_LIMIT,
-    VISIBILITY_TREND_DEFAULT_GRANULARITY,
-)
 from app.core.errors import ApiException
 from app.core.http_errors import raise_api_error, raise_not_found
-from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
-from app.domain.analysis.evidence import get_visibility_evidence
-from app.domain.analysis.fanout_projection import get_visibility_fanout
-from app.domain.analysis.metrics import get_prompt_metrics
-from app.domain.analysis.schemas import (
-    FanoutResponse,
-    PromptMetricItem,
-    SourcesResponse,
-    VisibilityEvidenceResponse,
-    VisibilityResponse,
-    VisibilityTrendPoint,
-)
-from app.domain.analysis.selection import RunSelection
-from app.domain.analysis.source_projection import get_visibility_sources
-from app.domain.analysis.trends import get_visibility_trends
-from app.domain.analysis.visibility import get_visibility
 from app.domain.command_center.report import render_executive_pdf
 from app.domain.command_center.schemas import CommandCenterResponse
 from app.domain.command_center.service import get_command_center
@@ -135,244 +114,6 @@ async def create_project_endpoint(
         )
     )
     return project_to_response(project)
-
-
-@router.get(
-    "/{project_id}/visibility/prompts",
-)
-async def get_prompt_metrics_endpoint(
-    project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    audit_id: Annotated[uuid.UUID | None, Query()] = None,
-    audit_ids: Annotated[list[uuid.UUID] | None, Query()] = None,
-    baseline_audit_ids: Annotated[list[uuid.UUID] | None, Query()] = None,
-    engine: Annotated[str | None, Query()] = None,
-    baseline_id: Annotated[uuid.UUID | None, Query()] = None,
-    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
-) -> list[PromptMetricItem]:
-    """Prompt scores and comparable-run movements from persisted evidence."""
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
-    try:
-        return await get_prompt_metrics(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            audit_id=audit_id,
-            logical_engine=engine,
-            baseline_id=baseline_id,
-            cohort=cohort,
-            audit_ids=audit_ids,
-            baseline_audit_ids=baseline_audit_ids,
-        )
-    except AnalysisNotFoundError as exc:
-        raise_not_found("Audit", cause=exc)
-    except TrendQueryError as exc:
-        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
-
-
-@router.get(
-    "/{project_id}/visibility/trends",
-)
-async def get_visibility_trends_endpoint(
-    project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    engine: Annotated[str | None, Query()] = None,
-    from_at: Annotated[datetime | None, Query(alias="from")] = None,
-    to_at: Annotated[datetime | None, Query(alias="to")] = None,
-    granularity: Annotated[str, Query()] = VISIBILITY_TREND_DEFAULT_GRANULARITY,
-    transport_model: Annotated[str | None, Query()] = None,
-    retrieval_enabled: Annotated[bool | None, Query()] = None,
-    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
-) -> list[VisibilityTrendPoint]:
-    """Cross-run Visibility trend projection for a project (invariant 7).
-
-    An ordered series of ``VisibilityTrendPoint``s projected from the project's
-    persisted dashboard-ready ``MetricSnapshot`` rows — optionally filtered by
-    ``engine`` (``logical_engine``) and an inclusive UTC ``from``/``to`` window,
-    and bucketed by ``granularity=run|day|week|month``. No provider is called and no
-    historical run is re-scored. A valid project with no matching history
-    returns ``[]`` (not 404); invalid engine/granularity/range or naive
-    timestamps return 422.
-
-    Folding may combine points only inside one ``(transport_model,
-    retrieval_enabled)`` identity partition. The optional model/retrieval
-    query params request an explicit identity slice before folding.
-    """
-    # Authorize the project first (404 for a cross-workspace/missing project).
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
-    try:
-        return await get_visibility_trends(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            logical_engine=engine,
-            from_at=from_at,
-            to_at=to_at,
-            granularity=granularity,
-            transport_model=transport_model,
-            retrieval_enabled=retrieval_enabled,
-            cohort=cohort,
-        )
-    except TrendQueryError as exc:
-        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
-
-
-@router.get("/{project_id}/visibility/fanout")
-async def get_visibility_fanout_endpoint(
-    project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    audit_id: Annotated[uuid.UUID | None, Query()] = None,
-    audit_ids: Annotated[list[uuid.UUID] | None, Query()] = None,
-    engine: Annotated[str | None, Query()] = None,
-    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
-    query: Annotated[str | None, Query(max_length=8192)] = None,
-    search: Annotated[str | None, Query(max_length=512)] = None,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[
-        int, Query(ge=1, le=VISIBILITY_EVIDENCE_MAX_LIMIT)
-    ] = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
-) -> FanoutResponse:
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
-    try:
-        return await get_visibility_fanout(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            audit_id=audit_id,
-            logical_engine=engine,
-            cohort=cohort,
-            offset=offset,
-            limit=limit,
-            query=query,
-            search=search,
-            audit_ids=audit_ids,
-        )
-    except AnalysisNotFoundError as exc:
-        raise_not_found("Audit", cause=exc)
-    except TrendQueryError as exc:
-        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
-
-
-@router.get("/{project_id}/visibility/sources")
-async def get_visibility_sources_endpoint(
-    project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    audit_id: Annotated[uuid.UUID | None, Query()] = None,
-    audit_ids: Annotated[list[uuid.UUID] | None, Query()] = None,
-    baseline_audit_ids: Annotated[list[uuid.UUID] | None, Query()] = None,
-    engine: Annotated[str | None, Query()] = None,
-    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
-    domain: Annotated[str | None, Query(max_length=255)] = None,
-    source_type: Annotated[str | None, Query(max_length=64)] = None,
-    dimension: Annotated[Literal["domain", "url"], Query()] = "domain",
-    from_at: Annotated[datetime | None, Query(alias="from")] = None,
-    to_at: Annotated[datetime | None, Query(alias="to")] = None,
-    as_of: Annotated[datetime | None, Query()] = None,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[
-        int, Query(ge=1, le=VISIBILITY_EVIDENCE_MAX_LIMIT)
-    ] = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
-) -> SourcesResponse:
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
-    try:
-        return await get_visibility_sources(
-            session,
-            RunSelection(
-                workspace_id=ctx.workspace_id,
-                project_id=project_id,
-                audit_id=audit_id,
-                audit_ids=audit_ids,
-                logical_engine=engine,
-                cohort=cohort,
-                from_at=from_at,
-                to_at=to_at,
-            ),
-            domain=domain,
-            source_class=source_type,
-            dimension=dimension,
-            as_of=as_of,
-            offset=offset,
-            limit=limit,
-            baseline_audit_ids=baseline_audit_ids,
-        )
-    except AnalysisNotFoundError as exc:
-        raise_not_found("Audit", cause=exc)
-    except TrendQueryError as exc:
-        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
-
-
-@router.get(
-    "/{project_id}/visibility/evidence",
-)
-async def get_visibility_evidence_endpoint(
-    project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    audit_id: Annotated[uuid.UUID | None, Query()] = None,
-    audit_ids: Annotated[list[uuid.UUID] | None, Query()] = None,
-    cursor: Annotated[str | None, Query(max_length=2048)] = None,
-    as_of: Annotated[datetime | None, Query()] = None,
-    outcome: Annotated[
-        Literal["brand_absent", "uncited", "competitor_gap"] | None, Query()
-    ] = None,
-    competitor: Annotated[str | None, Query(max_length=255)] = None,
-    domain: Annotated[str | None, Query(max_length=255)] = None,
-    url: Annotated[str | None, Query(max_length=8192)] = None,
-    prompt_id: Annotated[uuid.UUID | None, Query()] = None,
-    engine: Annotated[str | None, Query()] = None,
-    from_at: Annotated[datetime | None, Query(alias="from")] = None,
-    to_at: Annotated[datetime | None, Query(alias="to")] = None,
-    limit: Annotated[
-        int, Query(ge=1, le=VISIBILITY_EVIDENCE_MAX_LIMIT)
-    ] = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
-    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
-) -> VisibilityEvidenceResponse:
-    """Persisted execution-evidence projection for a project (invariant 7).
-
-    The shared read-only dataset behind the Mentions & Citations and Query
-    Fanout tabs: persisted brand/competitor mentions, classified citations, and
-    normalized query-fanout events for the project's dashboard-ready audits —
-    optionally filtered by ``audit_id``, ``prompt_id`` (source prompt on the
-    frozen snapshot), ``engine`` (``logical_engine``), and an inclusive UTC
-    ``from``/``to`` completion window. When both ``audit_id`` and a date window
-    are supplied the filters intersect. No provider is called and no evidence is
-    inferred/backfilled. A valid project with no matching evidence returns an
-    empty ``items`` list (not 404); an unknown engine/range or naive timestamp
-    returns 422; an ``audit_id`` outside the project/workspace returns 404
-    without leaking whether it exists elsewhere.
-    """
-    # Authorize the project first (404 for a cross-workspace/missing project).
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
-    try:
-        return await get_visibility_evidence(
-            session,
-            RunSelection(
-                workspace_id=ctx.workspace_id,
-                project_id=project_id,
-                audit_id=audit_id,
-                audit_ids=audit_ids,
-                logical_engine=engine,
-                cohort=cohort,
-                from_at=from_at,
-                to_at=to_at,
-            ),
-            cursor=cursor,
-            as_of=as_of,
-            outcome=outcome,
-            competitor=competitor,
-            domain=domain,
-            url=url,
-            prompt_id=prompt_id,
-            limit=limit,
-        )
-    except AnalysisNotFoundError as exc:
-        raise_not_found("Audit", cause=exc)
-    except TrendQueryError as exc:
-        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
 
 
 @router.post("/{project_id}/logos/refresh")
@@ -476,54 +217,6 @@ async def get_executive_report_endpoint(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-
-
-@router.get("/{project_id}/visibility")
-async def get_visibility_endpoint(
-    project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
-    session: _SessionDep,
-    audit_id: Annotated[uuid.UUID | None, Query()] = None,
-    engine: Annotated[str | None, Query()] = None,
-    baseline_id: Annotated[uuid.UUID | None, Query()] = None,
-    selection_mode: Annotated[Literal["latest", "run", "range"], Query()] = "latest",
-    from_at: Annotated[datetime | None, Query(alias="from")] = None,
-    to_at: Annotated[datetime | None, Query(alias="to")] = None,
-    configuration_key: Annotated[str | None, Query()] = None,
-    cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
-) -> VisibilityResponse:
-    """Selected-run dashboard projection for a project (invariant 7).
-
-    Visibility Score + per-engine comparison + brand-vs-competitor rankings,
-    computed server-side from the persisted ``MetricSnapshot``. Defaults to the
-    project's latest completed audit when ``audit_id`` is omitted. No provider
-    is called; no cross-run trend in this payload (see /visibility/trends).
-    """
-    # Authorize the project first (404 for a cross-workspace/missing project).
-    await _get_project_or_404(session, ctx.workspace_id, project_id)
-    try:
-        return await get_visibility(
-            session,
-            workspace_id=ctx.workspace_id,
-            project_id=project_id,
-            audit_id=audit_id,
-            logical_engine=engine,
-            baseline_id=baseline_id,
-            selection_mode=selection_mode,
-            from_at=from_at,
-            to_at=to_at,
-            configuration_key=configuration_key,
-            cohort=cohort,
-        )
-    except AnalysisNotFoundError as exc:
-        raise_api_error(
-            status.HTTP_404_NOT_FOUND,
-            "No visibility metrics available for the selected measurement",
-            cause=exc,
-        )
-
-    except TrendQueryError as exc:
-        raise_api_error(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc), cause=exc)
 
 
 @router.patch("/{project_id}")

@@ -46,8 +46,10 @@
   acquisition stay Python) and 8b (database-only Commerce, implemented on
   28 September 2026). PR 9 is split: 9a (brand profile, business map,
   competitor suggestions and logo reads) is implemented on 28 September 2026;
-  project CRUD stays Python behind entitlements. Deployment of PRs 3–9a and
-  their one-week cutover soaks are pending.
+  project CRUD stays Python behind entitlements. 9b (the six projects-tagged
+  visibility reads) is implemented on 28 September 2026; the command center
+  and executive PDF stay Python. Deployment of PRs 3–9b and their one-week
+  cutover soaks are pending.
   Site Health, audits, billing/entitlements and the Agent runtime stay Python.
 
 ## Queued

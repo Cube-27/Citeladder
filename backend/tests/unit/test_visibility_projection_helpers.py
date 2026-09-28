@@ -1,10 +1,8 @@
 """Pure-function regression tests for visibility projection helpers.
 
-Covers two review-hardening fixes in the focused analysis projection owners:
+Covers a review-hardening fix in the focused analysis projection owners:
   * ``_normalize_events`` skips malformed entries (no recognized event keys)
     so the evidence endpoint never surfaces phantom all-zero events.
-  * ``_mention_sov_of`` aggregates brand share across every brand key present
-    in a bucket, so a brand rename across snapshots does not undercount SOV.
 """
 
 from __future__ import annotations
@@ -23,7 +21,6 @@ from app.domain.analysis.errors import TrendQueryError
 from app.domain.analysis.evidence import _normalize_events
 from app.domain.analysis.evidence_selection import apply_cursor, encode_cursor
 from app.domain.analysis.measurement import measurement_counts, observed_rate
-from app.domain.analysis.trend_folding import _mention_sov_of
 from app.models.analysis import ResponseAnalysis
 
 
@@ -51,22 +48,6 @@ def test_normalize_events_preserves_empty_query() -> None:
 def test_normalize_events_non_list_is_empty() -> None:
     assert _normalize_events(None) == []
     assert _normalize_events({"query": "x"}) == []
-
-
-def test_mention_sov_aggregates_across_renamed_brand_keys() -> None:
-    # Two brand keys ("Acme", "Acme Corp") summed into one bucket.
-    counts = {"Acme": 3, "Acme Corp": 2, "Rival": 5}
-    sov = _mention_sov_of(counts, {"Acme", "Acme Corp"})
-    # (3 + 2) / (3 + 2 + 5) = 0.5 — not 3/10 or 2/10 from a single name.
-    assert sov == pytest.approx(0.5)
-
-
-def test_mention_sov_single_name() -> None:
-    assert _mention_sov_of({"Acme": 1, "Rival": 3}, {"Acme"}) == pytest.approx(0.25)
-
-
-def test_mention_sov_zero_total_is_none() -> None:
-    assert _mention_sov_of({"Acme": 0, "Rival": 0}, {"Acme"}) is None
 
 
 def test_presence_counts_distinguish_empty_zero_and_historical_citations() -> None:

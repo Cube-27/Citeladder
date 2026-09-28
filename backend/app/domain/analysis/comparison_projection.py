@@ -1,4 +1,4 @@
-"""Resolve the explicit or nearest compatible persisted run baseline."""
+"""Resolve the nearest compatible persisted run baseline."""
 
 from __future__ import annotations
 
@@ -8,7 +8,9 @@ from app.domain.analysis.measurement import (
     measurement_counts,
     observed_rate,
     prompt_performance,
+    response_sov,
 )
+from app.domain.analysis.projection_common import load_run_snapshots
 from app.domain.analysis.schemas import VisibilityComparison
 
 
@@ -22,37 +24,24 @@ async def compare_selection(
     metrics,
     cohort,
     engine,
-    baseline_id=None,
 ):
-    # Imports are local because selected-run and history readers share these
-    # existing projection functions, rather than duplicate their metric policy.
-    from app.domain.analysis.trends import _load_trend_rows
-
     key = frozen_comparison_key(audit.configuration, engine=engine)
     if key is None:
         return VisibilityComparison(status="identity_unavailable")
     # Walking backwards from the selected run, the search stops at the first
     # compatible baseline, so only the recent end of the history is reachable
-    # and bounding the read keeps this off a project's whole snapshot table on
-    # every dashboard load; `skipped_runs` reports how far it looked.
-    #
-    # An EXPLICIT baseline is different: the reader named a run, and it may be
-    # older than the bound. Asking for one and being told there is no
-    # comparison because it fell outside a window they never chose would be a
-    # worse answer than the slower read.
-    candidates = await _load_trend_rows(
+    # and bounding the read keeps this off a project's whole snapshot table;
+    # `skipped_runs` reports how far it looked.
+    candidates = await load_run_snapshots(
         session,
         workspace_id=workspace_id,
         project_id=project_id,
-        from_at=None,
         to_at=audit.completed_at,
-        newest=None if baseline_id else VISIBILITY_SELECTION_MAX_RUNS,
+        newest=VISIBILITY_SELECTION_MAX_RUNS,
     )
     skipped = 0
     for prior, previous in reversed(candidates):
         if previous.id == audit.id or previous.completed_at >= audit.completed_at:
-            continue
-        if baseline_id and previous.id != baseline_id:
             continue
         comparison = await _candidate_comparison(
             session, audit, snapshot, metrics, prior, previous, cohort, engine, key
@@ -61,20 +50,14 @@ async def compare_selection(
             comparison.skipped_runs = skipped
             return comparison
         skipped += 1
-        if baseline_id:
-            return VisibilityComparison(
-                status="changed_context", baseline_audit_id=previous.id
-            )
     return VisibilityComparison(skipped_runs=skipped)
 
 
 def metric_values(metrics):
-    from app.domain.analysis.trend_folding import _response_sov
-
     return {
         "visibility": observed_rate(metrics, "brand_mention_rate"),
         "owned_citation": observed_rate(metrics, "owned_citation_rate"),
-        "sov": _response_sov(metrics),
+        "sov": response_sov(metrics),
         "prompt_performance": prompt_performance(metrics),
     }
 

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config.audits import (
     AUDIT_SCOPE_BRAND,
@@ -54,3 +56,46 @@ async def latest_dashboard_audit_id(
         .order_by(Audit.completed_at.desc().nullslast(), Audit.created_at.desc())
         .limit(1)
     )
+
+
+async def load_run_snapshots(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    to_at: datetime | None,
+    newest: int | None = None,
+) -> list[tuple[MetricSnapshot, Audit]]:
+    """(snapshot, audit) pairs of the project's dashboard-ready brand runs.
+
+    Completed no later than ``to_at``, oldest first. ``newest`` bounds the read
+    to that many most-recent runs: a caller walking back to the nearest match
+    needs the recent end of the history, not all of it.
+    """
+    stmt = (
+        select(MetricSnapshot, Audit)
+        .join(Audit, Audit.id == MetricSnapshot.audit_id)
+        .options(selectinload(Audit.engine_snapshots))
+        .where(
+            MetricSnapshot.workspace_id == workspace_id,
+            MetricSnapshot.project_id == project_id,
+            Audit.workspace_id == workspace_id,
+            Audit.project_id == project_id,
+            Audit.audit_scope == AUDIT_SCOPE_BRAND,
+            Audit.status.in_(_DASHBOARD_STATUSES),
+            Audit.completed_at.is_not(None),
+        )
+    )
+    if to_at is not None:
+        stmt = stmt.where(Audit.completed_at <= to_at)
+    if newest is not None:
+        stmt = stmt.order_by(
+            Audit.completed_at.desc(), Audit.created_at.desc(), Audit.id.desc()
+        ).limit(newest)
+        rows = list((await session.execute(stmt)).tuples().all())
+        rows.reverse()
+        return rows
+    stmt = stmt.order_by(
+        Audit.completed_at.asc(), Audit.created_at.asc(), Audit.id.asc()
+    )
+    return list((await session.execute(stmt)).tuples().all())

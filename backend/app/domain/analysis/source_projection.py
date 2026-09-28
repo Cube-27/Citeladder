@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import String, cast, func, select
@@ -32,8 +31,9 @@ async def get_visibility_sources(
     offset: int = 0,
     limit: int = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     as_of: datetime | None = None,
-    baseline_audit_ids: list[uuid.UUID] | None = None,
 ) -> SourcesResponse:
+    """Cited sources over a selection. The HTTP Sources table is served by
+    the TypeScript API; this projection remains for MCP."""
     selection = await _authorized_selection(session, selection, limit=limit)
     as_of = _source_boundary(as_of)
     scope = _scope(selection, as_of=as_of)
@@ -127,22 +127,6 @@ async def get_visibility_sources(
             project_id=selection.project_id,
             scope=scope,
             items=response.items,
-        )
-    if baseline_audit_ids:
-        from app.domain.analysis.source_comparison import apply_source_comparison
-
-        await apply_source_comparison(
-            session,
-            response=response,
-            workspace_id=selection.workspace_id,
-            project_id=selection.project_id,
-            current_ids=selection.audit_ids
-            or ([selection.audit_id] if selection.audit_id else []),
-            baseline_ids=baseline_audit_ids,
-            engine=selection.logical_engine,
-            cohort=selection.cohort,
-            domain=domain,
-            as_of=as_of,
         )
     return response
 

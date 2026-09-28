@@ -59,3 +59,30 @@ def competitor_rate(metrics: dict, key: str, name: str) -> float | None:
     if key == "competitor_mention_rate" and name in counts:
         return counts[name] / total
     return (metrics.get(key) or {}).get(name)
+
+
+def brand_name(counts: dict, metrics: dict) -> str:
+    """The brand's display name: the first mention key that is no competitor."""
+    competitor_names = set(metrics.get("competitor_mention_rate") or {})
+    for name in counts:
+        if name not in competitor_names:
+            return name
+    return "Brand"
+
+
+def response_sov(metrics: dict) -> float | None:
+    """Response-level SOV: brand presence share vs competitor presence rates.
+
+    Not the mention-level figure: one asks how many answers named the brand at
+    all, the other how many namings were the brand's.
+    """
+    brand_rate = metrics.get("brand_mention_rate")
+    competitor_rates = metrics.get("competitor_mention_rate") or {}
+    if brand_rate is None:
+        return None
+    total = float(brand_rate) + sum(
+        float(v) for v in competitor_rates.values() if v is not None
+    )
+    if total <= 0:
+        return 0.0
+    return float(brand_rate) / total

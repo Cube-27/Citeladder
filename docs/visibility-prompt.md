@@ -255,10 +255,10 @@ acceptance remains a separate, explicitly authorized release step.
 
 ## Measurement and comparisons
 
-[Analysis](../backend/app/domain/analysis/) derives versioned persisted metrics,
-source and prompt outcomes from the selected evidence.
-[Visibility](../backend/app/domain/analysis/visibility.py) projects brand and
-competitor rankings. Mention, citation, recommendation identity, citation URL and
+[Analysis](../backend/app/analysis/) derives versioned persisted metrics from
+the selected evidence. The [visibility readers](../frontend/services/api/src/visibility/)
+project source and prompt outcomes and brand and competitor rankings from them.
+Mention, citation, recommendation identity, citation URL and
 rank remain distinct observations. Unsupported entity assessments are
 unavailable, not absent. Source-pattern and Opportunity mapping stay in
 [Opportunities](opportunities.md).

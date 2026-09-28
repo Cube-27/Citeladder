@@ -29,6 +29,16 @@ export function pydanticUtcOrNull(text: string | null): string | null {
   return text === null ? null : pydanticUtc(text);
 }
 
+/** Pydantic's JSON for an aware instant, rendered in UTC. */
+export function pydanticUtcOf(value: ParsedDatetime): string {
+  return isoformat(toUtc(value)).replace(/\+00:00$/u, 'Z');
+}
+
+/** Stored `utcText` output as a `timestamptz` operand. */
+export function storedInstant(text: string): RawBuilder<Date> {
+  return sql<Date>`${text + 'Z'}::timestamptz`;
+}
+
 /** A parsed request timestamp as a `timestamptz` operand (naive reads as UTC). */
 export function timestamptz(value: ParsedDatetime): RawBuilder<Date> {
   return sql<Date>`${isoformat(toUtc(value))}::timestamptz`;

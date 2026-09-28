@@ -1,58 +1,17 @@
-"""Scoped evidence predicates and opaque, scope-bound keyset cursors."""
+"""Opaque, scope-bound keyset cursors for the evidence reader."""
 
 from __future__ import annotations
 
 import base64
 import json
 import uuid
-from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha256
 
-from sqlalchemy import and_, exists, or_, select
+from sqlalchemy import and_, or_
 
 from app.domain.analysis.errors import TrendQueryError
-from app.models.analysis import Citation, CompetitorMention, ResponseAnalysis
-
-
-@dataclass(frozen=True)
-class EvidenceFilters:
-    outcome: str | None = None
-    competitor: str | None = None
-    domain: str | None = None
-    url: str | None = None
-
-    def apply(self, statement):
-        if self.outcome not in {None, "brand_absent", "uncited", "competitor_gap"}:
-            raise TrendQueryError("Unknown answer outcome")
-        if self.outcome in {"brand_absent", "competitor_gap"}:
-            statement = statement.where(ResponseAnalysis.brand_mentioned.is_(False))
-        if self.outcome == "uncited":
-            statement = statement.where(
-                ResponseAnalysis.brand_mentioned.is_(True),
-                ResponseAnalysis.owned_domain_cited.is_(False),
-            )
-        if self.competitor:
-            statement = statement.where(
-                exists(
-                    select(CompetitorMention.id).where(
-                        CompetitorMention.analysis_id == ResponseAnalysis.id,
-                        CompetitorMention.competitor_name == self.competitor,
-                    )
-                )
-            )
-        if self.outcome == "competitor_gap" and not self.competitor:
-            raise TrendQueryError("A competitor is required for a competitor gap")
-        if self.domain or self.url:
-            citation = select(Citation.id).where(
-                Citation.analysis_id == ResponseAnalysis.id
-            )
-            if self.domain:
-                citation = citation.where(Citation.domain == self.domain)
-            if self.url:
-                citation = citation.where(Citation.url == self.url)
-            statement = statement.where(exists(citation))
-        return statement
+from app.models.analysis import ResponseAnalysis
 
 
 def scope_digest(values: dict) -> str:
