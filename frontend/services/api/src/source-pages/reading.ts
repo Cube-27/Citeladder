@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto';
 
 import { policy } from '../config.ts';
 import { compareIdentityText } from '../analysis/comparison.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 
 const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(String).sort(compareIdentityText) : [];

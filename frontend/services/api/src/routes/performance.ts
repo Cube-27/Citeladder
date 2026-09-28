@@ -9,12 +9,8 @@ import { loadWorkerSettings } from '../config.ts';
 import { notFound } from '../errors.ts';
 import { requireProject } from '../projects/access.ts';
 import { enqueueTask, taskKey } from '../referrals/enqueue.ts';
-import {
-  customWindow,
-  getPerformance,
-  getPerformanceTable,
-  record,
-} from '../traffic/performance.ts';
+import { customWindow, getPerformance, getPerformanceTable } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { defineGetRoute, definePostRoute } from './define.ts';
 
 const root = '/api/v1/projects/{project_id}/performance';

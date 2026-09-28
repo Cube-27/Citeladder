@@ -1,5 +1,10 @@
 /** Persisted Action reads and explicit workflow decisions. Agent attach stays Python. */
 import { randomUUID } from 'node:crypto';
+import {
+  actionDetailSchema,
+  actionItemSchema,
+  actionStatusSchema,
+} from '@citeladder/contracts/actions';
 import { sql, type Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -32,16 +37,16 @@ function actionItem(row: ActionRow, status: string) {
     target_label: row.target_label,
     target_url: row.target_url,
     target_prompt_id: row.target_prompt_id,
-    origin: row.origin,
-    status,
+    origin: actionItemSchema.shape.origin.parse(row.origin),
+    status: actionStatusSchema.parse(status),
     priority_score: row.priority_score,
     families: stringList(row.families),
     approach: row.approach,
     skill_id: row.skill_id,
     member_count: jsonList(row.member_opportunity_ids).length,
-    evidence_cleared_at: row.evidence_cleared_at,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
+    evidence_cleared_at: row.evidence_cleared_at?.toISOString() ?? null,
+    created_at: row.created_at.toISOString(),
+    updated_at: row.updated_at.toISOString(),
   };
 }
 
@@ -182,7 +187,7 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
     .executeTakeFirst();
   return {
     ...actionItem(action, action.current),
-    diagnosis: action.diagnosis,
+    diagnosis: actionDetailSchema.shape.diagnosis.parse(action.diagnosis),
     members: (await actionMembers(db, action)).map((row) => projectItem(row)),
     declaration: declaration ? await declarationView(db, declaration) : null,
   };

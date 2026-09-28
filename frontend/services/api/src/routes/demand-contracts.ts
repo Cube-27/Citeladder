@@ -38,6 +38,9 @@ export const classificationResponse = z.object({
   classifier_version: z.string(),
   override_id: z.uuid().nullable(),
 });
+export const resolutionCandidates = z.array(json);
+export const resolutionOutcome = z.enum(['exact', 'resolved', 'ambiguous', 'unresolved']);
+export const queryEvidenceState = z.enum(['available', 'observed_zero', 'unavailable']);
 const querySnapshot = z.object({
   id: z.uuid(),
   project_id: z.uuid(),
@@ -45,7 +48,7 @@ const querySnapshot = z.object({
   window_end: z.iso.date(),
   source_hash: z.string(),
   supersedes_snapshot_id: z.uuid().nullable(),
-  state: z.enum(['available', 'observed_zero', 'unavailable']),
+  state: queryEvidenceState,
   source_metric_row_ids: z.array(z.string()),
   source_artifact_ids: z.array(z.string()),
   coverage: json,
@@ -61,8 +64,8 @@ const queryRow = z.object({
   observed_page_url: z.string(),
   site_url_id: z.uuid().nullable(),
   resolved_page_url: z.string(),
-  resolution_outcome: z.enum(['exact', 'resolved', 'ambiguous', 'unresolved']),
-  resolution_candidates: z.array(json),
+  resolution_outcome: resolutionOutcome,
+  resolution_candidates: resolutionCandidates,
   property_ref: z.string(),
   impressions: z.int(),
   clicks: z.int(),

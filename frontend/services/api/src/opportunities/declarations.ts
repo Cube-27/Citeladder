@@ -8,7 +8,7 @@ import { ApiError } from '../errors.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { isoformat, parseDatetime, toUtc } from '../http/datetimes.ts';
 import { parseUuid } from '../http/uuid.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { actionMembers, recordStatus, requireAction, type ActionRow } from './actions.ts';
 import { declarationChecks } from './declaration-checks.ts';

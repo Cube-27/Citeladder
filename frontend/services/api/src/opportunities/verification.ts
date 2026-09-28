@@ -7,7 +7,7 @@ import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { epochMicros, parseDatetime } from '../http/datetimes.ts';
 import { parseUuid } from '../http/uuid.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { taskProject, type Executor } from '../workers/executor.ts';
 import { observationKind } from './verification-decisions.ts';
 import { evidenceFor, type Source } from './verification-evidence.ts';

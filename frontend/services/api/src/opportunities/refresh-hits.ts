@@ -8,7 +8,7 @@ import { rules } from '../analysis/opportunities/detectors.ts';
 import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import type { DemandSource, Scope } from './sources.ts';
 import { compareText } from '../text-order.ts';
 

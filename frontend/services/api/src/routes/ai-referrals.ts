@@ -5,29 +5,13 @@
  * resolves the newest persisted snapshot of that length; `from`/`to` selects
  * one exact persisted window; neither serves the latest snapshot.
  */
-import { z } from 'zod';
+import { aiReferralsSchema } from '@citeladder/contracts/ai-referrals';
 
 import { AiReferralsQueryError, getAiReferrals } from '../analytics/ai-referrals.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { requireProject } from '../projects/access.ts';
 import { defineGetRoute } from './define.ts';
-
-const metricSeriesPoint = z.object({ date: z.string(), value: z.number().nullable() });
-
-const aiReferralsResponse = z.object({
-  project_id: z.uuid(),
-  window_start: z.string(),
-  window_end: z.string(),
-  granularity: z.string(),
-  referral_volume: z.array(metricSeriesPoint),
-  referral_share: z.array(metricSeriesPoint),
-  sources: z.array(
-    z.object({ ai_source: z.string(), sessions: z.int(), share: z.number().nullable() }),
-  ),
-  analyzer_version: z.string(),
-  formula_version: z.string(),
-});
 
 export const aiReferralRoutes = [
   defineGetRoute({
@@ -45,7 +29,7 @@ export const aiReferralRoutes = [
         },
       },
     },
-    response: aiReferralsResponse,
+    response: aiReferralsSchema,
     async handle({ c, db }, { path, query }) {
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);

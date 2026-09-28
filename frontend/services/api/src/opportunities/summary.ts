@@ -5,6 +5,8 @@
  * demand evidence is compared with the snapshot, and the latest refresh task
  * says whether a refresh is queued, running or delayed. Nothing is written.
  */
+import { opportunitySummarySchema } from '@citeladder/contracts/opportunities';
+
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -24,6 +26,8 @@ import {
   type SnapshotRow,
 } from './sources.ts';
 import { compareText } from '../text-order.ts';
+
+const sourceMix = opportunitySummarySchema.shape.source_mix;
 
 const o = policy.opportunity.opportunities;
 const q = policy.task_queue.statuses;
@@ -81,7 +85,7 @@ function activationState(
   snapshot: SnapshotRow | null,
   stale: boolean,
   refreshStatus: string | null,
-) {
+): 'waiting_for_evidence' | 'ready' | 'refreshing' | 'delayed' | 'queued' {
   if (evidenceAt === null) return 'waiting_for_evidence';
   if (snapshot !== null && !stale) return 'ready';
   if (refreshStatus === q.leased || refreshStatus === q.running) return 'refreshing';
@@ -119,8 +123,8 @@ export async function opportunitySummary(db: Database, scope: Scope) {
       demand_source_revision: null,
       coverage: {},
       limitations: [],
-      source_mix: emptySourceProjection(),
-      action_path_mix: emptySourceProjection(),
+      source_mix: sourceMix.parse(emptySourceProjection()),
+      action_path_mix: sourceMix.parse(emptySourceProjection()),
       domain_rollups: [],
       counts_by_type: {},
       counts_by_severity: {},
@@ -133,9 +137,6 @@ export async function opportunitySummary(db: Database, scope: Scope) {
       ...freshness,
     };
   }
-  const projected: Record<string, unknown> = projectSnapshot(snapshot);
-  const computedAt = projected.created_at;
-  delete projected.id;
-  delete projected.created_at;
+  const { id: _id, created_at: computedAt, ...projected } = projectSnapshot(snapshot);
   return { computed: true, ...projected, computed_at: computedAt, ...freshness };
 }

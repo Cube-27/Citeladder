@@ -323,6 +323,7 @@ export const executionEvidenceSchema = responseObject({
   prompt_index: z.number().int(),
   repetition: z.number().int(),
   prompt_class: z.string(),
+  cohort: z.string(),
   brand_mentioned: z.boolean(),
   brand_first_offset: z.number().int().nullable(),
   owned_domain_cited: z.boolean(),

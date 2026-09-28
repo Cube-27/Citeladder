@@ -7,7 +7,11 @@
  * fetched. An unknown or out-of-scope run is `Audit not found`, and a
  * malformed selection is a 422 carrying the reader's message.
  */
-import { z } from 'zod';
+import { surfaceRatesSchema } from '@citeladder/contracts/audits';
+import {
+  visibilitySourceSeriesSchema,
+  visibilitySourceUrlSchema,
+} from '@citeladder/contracts/visibility-evidence';
 
 import { ApiError, notFound } from '../errors.ts';
 import type { ParamSpecs } from '../http/params.ts';
@@ -38,93 +42,6 @@ const WINDOW = {
 // `citations.url` is unbounded text, so this cap decides which pages have a
 // detail view at all: the practical ceiling a query string survives.
 const MAX_URL_LENGTH = 8192;
-
-const datetime = z.iso.datetime({ offset: true });
-
-const sourceSeriesResponse = z.object({
-  dimension: z.enum(['domain', 'url']),
-  granularity: z.string(),
-  buckets: z.array(datetime).optional(),
-  series: z
-    .array(
-      z.object({
-        key: z.string(),
-        citations: z.int().default(0),
-        points: z
-          .array(
-            z.object({
-              at: datetime,
-              responses: z.int().default(0),
-              share: z.number().nullable().default(null),
-            }),
-          )
-          .optional(),
-      }),
-    )
-    .optional(),
-});
-
-const sourceUrlDetail = z.object({
-  url: z.string(),
-  title: z.string().default(''),
-  retrievals: z.int().default(0),
-  citations: z.int().default(0),
-  responses: z.int().default(0),
-  citation_rate: z.number().nullable().default(null),
-  prompts: z.int().default(0),
-  first_seen: datetime.nullable().default(null),
-  last_seen: datetime.nullable().default(null),
-  engines: z
-    .array(
-      z.object({
-        logical_engine: z.string(),
-        transport_model: z.string().nullable().default(null),
-        retrievals: z.int().default(0),
-      }),
-    )
-    .optional(),
-  prompt_rows: z
-    .array(
-      z.object({
-        prompt_text: z.string(),
-        topic: z.string().nullable().default(null),
-        responses: z.int().default(0),
-        last_seen: datetime.nullable().default(null),
-        engines: z.array(z.string()).optional(),
-      }),
-    )
-    .optional(),
-  brands: z
-    .array(
-      z.object({
-        kind: z.enum(['brand', 'competitor']),
-        name: z.string(),
-        responses: z.int().default(0),
-        logo_url: z.string().nullable().default(null),
-        website: z.string().nullable().default(null),
-      }),
-    )
-    .optional(),
-});
-
-const aioRateValue = z.object({
-  numerator: z.int().default(0),
-  denominator: z.int().default(0),
-  denominator_kind: z.string().default(''),
-  value: z.number().nullable().default(null),
-});
-
-const surfaceRatesResponse = z.object({
-  logical_engine: z.string().default(''),
-  successful: z.int().default(0),
-  with_overview: z.int().default(0),
-  excluded: z.int().default(0),
-  trigger_rate: aioRateValue.optional(),
-  brand_mention_rate_when_present: aioRateValue.optional(),
-  overall_brand_visibility: aioRateValue.optional(),
-  owned_citation_rate_when_present: aioRateValue.optional(),
-  competitor_mention_rates: z.array(z.object({ name: z.string(), rate: aioRateValue })).optional(),
-});
 
 /** Translate the readers' selection errors as the Python routers did. */
 async function selectionErrors<T>(read: () => Promise<T>): Promise<T> {
@@ -183,7 +100,7 @@ export const visibilityRoutes = [
         },
       },
     },
-    response: sourceSeriesResponse,
+    response: visibilitySourceSeriesSchema,
     async handle({ c, db }, { path, query }) {
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);
@@ -211,7 +128,7 @@ export const visibilityRoutes = [
         ...WINDOW,
       },
     },
-    response: sourceUrlDetail,
+    response: visibilitySourceUrlSchema,
     async handle({ c, db }, { path, query }) {
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);
@@ -235,7 +152,7 @@ export const visibilityRoutes = [
         cohort: COHORT,
       },
     },
-    response: surfaceRatesResponse,
+    response: surfaceRatesSchema,
     async handle({ c, db }, { path, query }) {
       const workspace = c.get('workspace');
       await requireProject(db, workspace, path.project_id);

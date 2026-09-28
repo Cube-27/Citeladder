@@ -3,7 +3,7 @@ import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { policy } from '../config.ts';
 import { canonicalPage } from '../traffic/normalization.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import { compareText, scalarText, stripTrailing } from '../text-order.ts';
 
 const p = policy.demand;

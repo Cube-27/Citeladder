@@ -18,7 +18,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { groupMembers, type ActionMember } from '../analysis/opportunities/actions.ts';
 import type { Database } from '../db/database.ts';
-import { record } from '../traffic/performance.ts';
+import { record } from '../db/json.ts';
 import type { NewOpportunity } from './refresh-compute.ts';
 import type { Scope } from './sources.ts';
 

@@ -18,12 +18,14 @@ import { recomputeOpportunities } from '../opportunities/refresh.ts';
 import { opportunitySummary } from '../opportunities/summary.ts';
 import { defineGetRoute, definePostRoute, definePutRoute } from './define.ts';
 import {
+  opportunitiesPageSchema,
+  opportunityDetailSchema,
+  opportunityOrderResponseSchema,
+  opportunitySummarySchema,
+} from '@citeladder/contracts/opportunities';
+import {
   fileResponse,
   historyResponse,
-  opportunitiesPage,
-  opportunityDetail,
-  opportunitySummary as summarySchema,
-  orderResponse,
   orderUpdate,
   recomputeRequest,
   recomputeResponse,
@@ -95,7 +97,7 @@ export const opportunityRoutes = [
         cursor: { scalar: { kind: 'str' } },
       },
     },
-    response: opportunitiesPage,
+    response: opportunitiesPageSchema,
     async handle({ c, db }, { path, query }) {
       const scope = { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id };
       return listOpportunities(
@@ -110,7 +112,7 @@ export const opportunityRoutes = [
     family,
     path: `${root}/summary`,
     params: { path: projectPath, query: {} },
-    response: summarySchema,
+    response: opportunitySummarySchema,
     async handle({ c, db }, { path }) {
       return opportunitySummary(db, {
         workspaceId: c.get('workspace').workspaceId,
@@ -152,7 +154,7 @@ export const opportunityRoutes = [
       path: { opportunity_id: { scalar: { kind: 'uuid' }, required: true } },
       query: {},
     },
-    response: opportunityDetail,
+    response: opportunityDetailSchema,
     async handle({ c, db }, { path }) {
       return getOpportunity(db, c.get('workspace').workspaceId, path.opportunity_id);
     },
@@ -163,7 +165,7 @@ export const opportunityRoutes = [
     capability: 'write',
     params: { path: projectPath, query: {} },
     body: orderUpdate,
-    response: orderResponse,
+    response: opportunityOrderResponseSchema,
     async handle({ c, db }, { path }) {
       const body = await readBody(c, orderUpdate);
       return updateOrder(

@@ -4,7 +4,13 @@ import type { Database } from '../db/database.ts';
 import type { OpportunityImplementationEvents } from '../generated/db-schema.ts';
 import { policy } from '../config.ts';
 import { pydanticUtc, utcTextOf } from '../db/timestamps.ts';
+import { record, strings } from '../db/json.ts';
 import { measurementLegs } from './measurement-legs.ts';
+import { measurementLegSchema } from '@citeladder/contracts/actions';
+import { expectedCheckSchema } from '@citeladder/contracts/opportunities';
+import { z } from 'zod';
+
+const observationKind = z.enum(['observed', 'verified', 'contradicted']);
 
 export async function declarationView(
   db: Database,
@@ -32,29 +38,35 @@ export async function declarationView(
     id: row.id,
     action_id: row.action_id,
     output_revision_id: row.output_revision_id,
-    member_opportunity_ids: row.member_opportunity_ids,
+    member_opportunity_ids: strings(row.member_opportunity_ids),
     opportunity_snapshot_id: row.opportunity_snapshot_id,
-    target_site_url_ids: row.target_site_url_ids,
+    target_site_url_ids: strings(row.target_site_url_ids),
     target_external_url: row.target_external_url,
     declared_implemented_at: pydanticUtc(timestamp.at),
-    expected_checks: row.expected_checks,
-    state: latest?.observation_kind ?? 'declared',
-    limitations: latest?.limitations ?? [],
+    expected_checks: z.array(expectedCheckSchema).parse(row.expected_checks ?? []),
+    state: latest ? observationKind.parse(latest.observation_kind) : ('declared' as const),
+    limitations: strings(latest?.limitations),
     verification_events: observations.map((item) => ({
       id: item.id,
-      observation_kind: item.observation_kind,
-      observed_at: item.observed_at,
+      observation_kind: observationKind.parse(item.observation_kind),
+      observed_at: item.observed_at.toISOString(),
       crawl_id: item.crawl_id,
       audit_id: item.audit_id,
-      source_analysis_ids: item.source_analysis_ids,
-      source_rule_evaluation_ids: item.source_rule_evaluation_ids,
-      source_metric_ids: item.source_metric_ids,
-      result: item.result,
+      source_analysis_ids: strings(item.source_analysis_ids),
+      source_rule_evaluation_ids: strings(item.source_rule_evaluation_ids),
+      source_metric_ids: strings(item.source_metric_ids),
+      result: record(item.result),
       verifier_version: item.verifier_version,
-      limitations: item.limitations,
-      created_at: item.created_at,
+      limitations: strings(item.limitations),
+      created_at: item.created_at.toISOString(),
     })),
-    legs: await measurementLegs(db, row, observations),
-    created_at: row.created_at,
+    legs: (await measurementLegs(db, row, observations)).map((leg) =>
+      measurementLegSchema.parse({
+        ...leg,
+        due_at: leg.due_at?.toISOString() ?? null,
+        last_evidence_at: leg.last_evidence_at?.toISOString() ?? null,
+      }),
+    ),
+    created_at: row.created_at.toISOString(),
   };
 }
