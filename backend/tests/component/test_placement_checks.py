@@ -28,6 +28,7 @@ from app.core.config.actions import TARGET_EARNED_PAGE
 from app.core.config.earned_actions import RULE_EARNED_PAGE_ACQUIRE
 from app.core.config.placement import (
     PLACEMENT_CHANGE_BRAND_LISTED,
+    PLACEMENT_CHECKER_VERSION,
     PLACEMENT_REASON_COVERAGE,
     PLACEMENT_REASON_ROSTER_CHANGED,
     PLACEMENT_RECHECK_AFTER_HOURS,
@@ -52,6 +53,7 @@ from app.domain.opportunities.placement_checks import (
 from app.domain.source_pages.admission import claim_pages
 from app.models.opportunity import (
     Opportunity,
+    OpportunityImplementationEvent,
     OpportunitySnapshot,
 )
 from app.models.source_pages import (
@@ -229,16 +231,67 @@ async def _declare(
         action_id = await seed_action_for(
             session, opportunity, target_kind=TARGET_EARNED_PAGE
         )
-    response = await client.post(
-        f"/api/v1/actions/{action_id}/declaration",
-        headers={
-            "X-Workspace-Id": str(scenario.workspace_id),
-            "Idempotency-Key": key,
-        },
-        json={"declared_implemented_at": datetime.now(UTC).isoformat()},
-    )
-    assert response.status_code == 201, response.text
-    return response.json()
+    # TypeScript owns declaration admission; these tests exercise only the
+    # Python inspector against its persisted input contract.
+    async with session_factory() as session:
+        snapshot = await session.scalar(
+            select(OpportunitySnapshot)
+            .where(OpportunitySnapshot.project_id == scenario.project_id)
+            .order_by(OpportunitySnapshot.created_at.desc())
+            .limit(1)
+        )
+        page = await session.scalar(
+            select(SourcePage).where(
+                SourcePage.project_id == scenario.project_id,
+                SourcePage.url_hash == _HASH,
+            )
+        )
+        handoff = opportunity.evidence["content_handoff"]
+        now = datetime.now(UTC)
+        declaration = OpportunityImplementationEvent(
+            workspace_id=scenario.workspace_id,
+            project_id=scenario.project_id,
+            action_id=action_id,
+            actor_user_id=scenario.user_id,
+            opportunity_snapshot_id=snapshot.id,
+            member_opportunity_ids=[str(opportunity.id)],
+            target_site_url_ids=[],
+            target_external_url=_PAGE_URL,
+            declared_implemented_at=now,
+            expected_checks=[
+                {"kind": "placement", "expected_change": PLACEMENT_CHANGE_BRAND_LISTED}
+            ],
+            idempotency_key=key,
+            request_fingerprint=key,
+        )
+        session.add(declaration)
+        await session.flush()
+        session.add(
+            PlacementCheck(
+                workspace_id=scenario.workspace_id,
+                project_id=scenario.project_id,
+                implementation_event_id=declaration.id,
+                source_page_id=page.id,
+                opportunity_stable_key=opportunity.target_key,
+                rule_id=opportunity.rule_id,
+                url_hash=_HASH,
+                expected_change=PLACEMENT_CHANGE_BRAND_LISTED,
+                expected_detail={
+                    "brand_name": "Acme Corp",
+                    "owned_domains": ["acme.test"],
+                    "discrepancies": [],
+                    "deterioration": [],
+                },
+                baseline_snapshot_id=uuid.UUID(handoff["snapshot_id"]),
+                baseline_roster_version=_ROSTER,
+                state=PLACEMENT_STATE_PENDING,
+                due_at=now + timedelta(hours=PLACEMENT_RECHECK_AFTER_HOURS),
+                declared_at=now,
+                checker_version=PLACEMENT_CHECKER_VERSION,
+            )
+        )
+        await session.commit()
+        return {"id": str(declaration.id)}
 
 
 async def _settle(
@@ -273,29 +326,6 @@ async def _check(
         assert row is not None
         session.expunge(row)
     return row
-
-
-async def test_a_declaration_opens_a_check_anchored_on_that_declaration(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    scenario, opportunity, page, baseline = await _seed(client, session_factory)
-
-    body = await _declare(
-        client, session_factory, scenario, opportunity, key="declare-once"
-    )
-    check = await _check(session_factory, scenario)
-
-    # The anchor is the implementation event. The same page and action can be
-    # attempted twice, and a check has to know which attempt it verifies.
-    assert check.implementation_event_id == uuid.UUID(body["id"])
-    assert check.expected_change == PLACEMENT_CHANGE_BRAND_LISTED
-    assert check.source_page_id == page.id
-    assert check.baseline_snapshot_id == baseline.id
-    assert check.baseline_roster_version == _ROSTER
-    # Carried for navigation across recompute, never as the anchor.
-    assert RULE_EARNED_PAGE_ACQUIRE in check.opportunity_stable_key
-    assert check.state == PLACEMENT_STATE_PENDING
 
 
 async def test_a_page_nobody_reread_is_not_a_failed_placement(

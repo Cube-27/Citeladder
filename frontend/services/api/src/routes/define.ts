@@ -101,9 +101,10 @@ function defineRoute<const Path extends ParamSpecs, const Query extends ParamSpe
   params: { path: Path; query: Query };
   response: z.ZodType;
   handle: RouteHandler<Path, Query>;
-  method?: 'get' | 'post' | 'put';
+  method?: 'get' | 'post' | 'put' | 'patch';
   status?: ContentfulStatusCode;
   body?: z.ZodType;
+  headers?: z.ZodObject;
   capability?: WorkspaceCapability;
   /** The handler builds its own `Response` (a file download, not JSON). */
   raw?: boolean;
@@ -116,18 +117,15 @@ function defineRoute<const Path extends ParamSpecs, const Query extends ParamSpe
     path: route.path,
     pathParams: parameterObject(route.params.path),
     query: parameterObject(route.params.query),
-    headers: ACTIVE_WORKSPACE_HEADERS,
+    headers: route.headers
+      ? ACTIVE_WORKSPACE_HEADERS.extend(route.headers.shape)
+      : ACTIVE_WORKSPACE_HEADERS,
     cookies: SESSION_COOKIE,
     ...(route.body ? { body: route.body } : {}),
     responses: { [status]: route.response },
   };
   const register = (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => {
     const pattern = honoPath(route.path);
-    // Hono serves HEAD from GET handlers; FastAPI declares GET alone.
-    app.use(pattern, async (c, next) => {
-      if (c.req.method !== method.toUpperCase()) methodNotAllowed(method.toUpperCase());
-      await next();
-    });
     app.on(
       method.toUpperCase(),
       pattern,
@@ -157,4 +155,26 @@ export function definePutRoute<const Path extends ParamSpecs, const Query extend
   route: Parameters<typeof defineRoute<Path, Query>>[0],
 ): ProductRoute {
   return defineRoute({ ...route, method: 'put' });
+}
+export function definePatchRoute<const Path extends ParamSpecs, const Query extends ParamSpecs>(
+  route: Parameters<typeof defineRoute<Path, Query>>[0],
+): ProductRoute {
+  return defineRoute({ ...route, method: 'patch' });
+}
+
+/** Register once before handlers: a path may support several methods. */
+export function registerMethodGuards(app: Hono<AppEnv>, routes: readonly ProductRoute[]): void {
+  const methods = new Map<string, Set<string>>();
+  for (const { contract } of routes) {
+    const allowed = methods.get(contract.path) ?? new Set<string>();
+    allowed.add(contract.method.toUpperCase());
+    methods.set(contract.path, allowed);
+  }
+  for (const [path, allowed] of methods) {
+    // Hono otherwise serves HEAD from GET handlers; only declared methods run.
+    app.use(honoPath(path), async (c, next) => {
+      if (!allowed.has(c.req.method)) methodNotAllowed([...allowed].join(', '));
+      await next();
+    });
+  }
 }

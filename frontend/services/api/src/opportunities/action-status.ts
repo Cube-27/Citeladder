@@ -17,7 +17,7 @@ import { compareText } from '../text-order.ts';
 const a = policy.opportunity.actions;
 
 /** The effective status of the `actions` row visible as `actions`. */
-function effectiveStatus(): RawBuilder<string> {
+export function effectiveStatus(): RawBuilder<string> {
   const latest = sql`(
     select ve.observation_kind
     from opportunity_verification_events ve
@@ -26,12 +26,15 @@ function effectiveStatus(): RawBuilder<string> {
       and ie.workspace_id = actions.workspace_id
       and ie.project_id = actions.project_id
       and ve.workspace_id = ie.workspace_id
+      and ve.project_id = ie.project_id
     order by ve.created_at desc, ve.id desc
     limit 1
   )`;
   return sql<string>`case
     when actions.status = ${a.ACTION_STATUS_OPEN}
-      and exists (select 1 from agent_outputs where agent_outputs.action_id = actions.id)
+      and exists (select 1 from agent_outputs where agent_outputs.action_id = actions.id
+        and agent_outputs.workspace_id = actions.workspace_id
+        and agent_outputs.project_id = actions.project_id)
       then ${a.ACTION_STATUS_IN_PROGRESS}::varchar
     when actions.status = ${a.ACTION_STATUS_IMPLEMENTED} and ${latest} = 'verified'
       then ${a.ACTION_STATUS_DONE}::varchar

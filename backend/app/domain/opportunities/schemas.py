@@ -2,13 +2,11 @@
 #
 # The Opportunity routes and their DTOs moved to the TypeScript service
 # (TypeScript migration PR 7a). ``OpportunityItem`` remains for the command
-# center's action list and the Action detail's members, and
-# ``VerificationEventView`` for the Action routes, until their owners move.
+# center's action list and the Agent's Action detail members until they move.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -22,21 +20,6 @@ class _Model(BaseModel):
 # =========================================================================
 # Requests
 # =========================================================================
-
-
-class VerificationEventView(_Model):
-    id: uuid.UUID
-    observation_kind: Literal["observed", "verified", "contradicted"]
-    observed_at: datetime
-    crawl_id: uuid.UUID | None
-    audit_id: uuid.UUID | None
-    source_analysis_ids: list[uuid.UUID]
-    source_rule_evaluation_ids: list[uuid.UUID]
-    source_metric_ids: list[uuid.UUID]
-    result: dict[str, Any]
-    verifier_version: str
-    limitations: list[str]
-    created_at: datetime
 
 
 class OpportunityItem(_Model):

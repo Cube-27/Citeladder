@@ -58,7 +58,7 @@ There is no separate Opportunities screen.
 
 ## Actions
 
-An [Action](../backend/app/domain/opportunities/actions.py) is the unit of work
+An [Action](../frontend/services/api/src/opportunities/actions.ts) is the unit of work
 over this store: the live Opportunities that share one target (an owned, earned
 or planned page, a product or category, a Search Console query or a visibility
 prompt), plus any Agent work on that target. The refresh re-derives every Action
@@ -74,6 +74,11 @@ versions. A model does not score or diagnose an Action.
 evidence Actions and restamps every row's members; the Python Agent only inserts
 its own `agent`-origin row, and does nothing when the target key already exists.
 The refresh adopts an Agent row on the same key instead of opening a second one.
+The [TypeScript Action routes](../frontend/services/api/src/routes/actions.ts)
+own workflow updates and declarations. The retained
+[Python read/attach bridge](../backend/app/domain/opportunities/actions.py) serves
+the Agent, while MCP and command-center reads retain the effective-status bridge;
+these helpers retire only when their last Python callers move.
 
 An Action's identity and origin never change. When no live Opportunity targets
 it any more, the row keeps its identity with its evidence cleared. The Agent
@@ -85,7 +90,7 @@ the detail names the chats linked to the Action.
 
 The Action, not the Opportunity, owns workflow status. A user stores only `open`
 or `dismissed` through `PATCH /api/v1/actions/{action_id}`, and each change
-appends an [ActionStatusEvent](../backend/app/domain/opportunities/action_status.py).
+appends an [ActionStatusEvent](../frontend/services/api/src/opportunities/actions.ts).
 `in_progress` is never stored: an open Action reads as in progress while a
 linked chat has an output, so the Agent sets no status. A declaration stores
 `implemented` (with its status event); `measuring` and `done` are derived from
@@ -102,22 +107,23 @@ the Search Demand "Act on this" band.
 ## Explicit implementation declaration
 
 `POST /api/v1/actions/{action_id}/declaration` records that an Action was
-implemented ([implementation events](../backend/app/domain/opportunities/implementation_events.py)).
+implemented ([implementation events](../frontend/services/api/src/opportunities/declarations.ts)).
 It is anchored on the Action and, when the work came from the Agent, on the
 exact output revision the user shipped; a revision from another Action's output
 or an outline is refused, and null means work done outside CiteLadder. The
 caller names only that revision and the implementation time. The server
-freezes the Action's live member rows, the targets (the publisher page for an
+locks the project before the Action row and freezes its live member rows and
+targets (the publisher page for an
 earned Action, otherwise the members' resolved pages or the Action's own page)
 and the expected checks: the union of the member rules' checks. Caller-supplied
 checks or targets are rejected, because a declaration that chose its own
 expectation could declare itself verified. The Action row is locked and one
 Action carries at most one declaration; a same-key replay returns it, and
-same-key conflicting input is rejected. A dismissed Action is reopened first,
+same-key conflicting input is rejected. The user must reopen a dismissed Action first,
 and an Action with no current finding is refused: with no checks it could never
 be measured.
 Replay checks both the persisted project/Action identity and the original
-fingerprint after workspace-scoped Action authorization, including unique-key
+request values after workspace-scoped Action authorization, including unique-key
 insert-conflict recovery. A valid retry returns the original declaration without
 requiring a new snapshot, resolving targets again, or repeating side effects.
 Dismissing an Action or producing Agent output for it does not declare it. The
@@ -126,7 +132,7 @@ chat's own measurement plan is free text and does not add checks.
 An earned declaration receives a PLACEMENT check, not the baseline-anchored
 visibility one. Its expected change is read from the rule — a listing acquired,
 a named discrepancy resolved, a placement restored, a source resolved — and a
-[placement check](../backend/app/domain/opportunities/placement_checks.py) row
+[placement check](../frontend/services/api/src/opportunities/placement-declaration.ts) row
 anchored on that implementation event freezes the source identity, the expected
 change, the baseline snapshot and the roster it was judged against. The
 opportunity's stable key travels alongside for navigation across recompute and
@@ -173,7 +179,7 @@ engines, repetitions, locale and retrieval policy. Missing or incompatible
 evidence remains not-run, unavailable or non-comparable.
 
 The Action detail returns the declaration with its observations and what each
-[loop leg](../backend/app/domain/opportunities/measurement_legs.py) is waiting
+[loop leg](../frontend/services/api/src/opportunities/measurement-legs.ts) is waiting
 for, read from persisted rows: the next scheduled visibility run, the next
 complete Search Console window after the declaration — a synced window that
 starts on or after the declaration day — (or a sync once it has closed), the next crawl (none is scheduled until someone runs one) and the
@@ -206,6 +212,9 @@ claims and recomputes, supersession, the Agent handoff and non-member 404s.
 [Verification PostgreSQL tests](../frontend/services/api/test/opportunity-verification.test.ts)
 exercise comparison, unavailable-state behavior, workspace isolation and the
 Python-producer/TypeScript-worker/Python-reader boundary;
+[Action PostgreSQL tests](../frontend/services/api/test/actions.test.ts) cover
+declaration admission, concurrent replay, workspace isolation, frozen checks and
+the TypeScript-declaration/Python-inspection boundary. The
 [placement tests](../backend/tests/component/test_placement_checks.py) exercise
-the declaration-to-observation path and the recheck admission ordering. The pending integrations
+inspection and recheck admission against seeded declarations. The pending integrations
 follow-up may improve these read surfaces; it is not a second action store.

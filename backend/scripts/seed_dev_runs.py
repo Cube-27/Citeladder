@@ -25,7 +25,6 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.actions import ACTION_STATUS_DISMISSED
 from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH
 from app.core.config.audits import AUDIT_TRIGGER_SYSTEM, audit_settings
 from app.core.config.entitlements import KEY_MONITORED_URLS
@@ -48,8 +47,6 @@ from app.domain.audits.creation import create_audit
 from app.domain.billing.bootstrap import ensure_workspace_billing
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
-from app.domain.opportunities import action_status
-from app.domain.opportunities.queries import list_opportunities
 from app.domain.opportunities.queue import enqueue_opportunity_refresh
 from app.domain.site_health.planner import create_crawl
 from app.domain.site_health.selection import (
@@ -321,39 +318,18 @@ async def run_site_health_crawls(
     )
 
 
-async def _dismiss_first_action(
-    *, workspace_id: uuid.UUID, project_id: uuid.UUID, demo_user_id: uuid.UUID
-) -> None:
-    async with SessionLocal() as session:
-        page = await list_opportunities(
-            session, workspace_id=workspace_id, project_id=project_id
-        )
-        action_id = next(
-            (item["action_id"] for item in page["items"] if item["action_id"]), None
-        )
-        if action_id is None:
-            return
-        await action_status.update_status(
-            session,
-            workspace_id=workspace_id,
-            action_id=action_id,
-            status=ACTION_STATUS_DISMISSED,
-            changed_by_user_id=demo_user_id,
-        )
-
-
 async def _refresh_opportunities(
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     trigger_kind: str,
     trigger_id: uuid.UUID,
-) -> bool:
+) -> None:
     """Enqueue a source's refresh and wait for the TypeScript worker to run it.
 
     The finished audit or crawl already enqueued the same idempotent task, so
-    this only makes sure it exists. Returns whether it succeeded in time; a seed
-    run without the TypeScript analytics worker leaves it queued.
+    this only makes sure it exists. A failed or unfinished refresh is logged;
+    a seed run without the TypeScript analytics worker leaves it queued.
     """
     async with SessionLocal() as session:
         await enqueue_opportunity_refresh(
@@ -375,7 +351,14 @@ async def _refresh_opportunities(
                 )
             )
         if status in _REFRESH_TERMINAL:
-            return status == TASK_STATUS_SUCCEEDED
+            if status != TASK_STATUS_SUCCEEDED:
+                logger.warning(
+                    "Opportunity refresh for %s %s ended %s",
+                    trigger_kind,
+                    trigger_id,
+                    status,
+                )
+            return
         await asyncio.sleep(1)
     logger.warning(
         "Opportunity refresh for %s %s did not finish in %ss; is the "
@@ -384,34 +367,28 @@ async def _refresh_opportunities(
         trigger_id,
         SEED_REFRESH_TIMEOUT_SECONDS,
     )
-    return False
 
 
 async def run_actions_and_comparison(
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-    demo_user_id: uuid.UUID,
     active_prompt_ids: list[uuid.UUID],
     audit_id: uuid.UUID,
     site_crawl_id: uuid.UUID,
 ) -> None:
     """Materialize the first action set, then give it comparable history.
 
-    One Action is dismissed between two comparable Wanderlust audits. The later
-    deterministic adapter generations improve the evidence mix without changing
-    prompt or engine identity, which is what keeps the pair comparable.
+    Later deterministic adapter generations improve the evidence mix without
+    changing prompt or engine identity, which keeps the pair comparable.
     """
     # The crawl finished after the audit, so its refresh reads both.
-    if await _refresh_opportunities(
+    await _refresh_opportunities(
         workspace_id=workspace_id,
         project_id=project_id,
         trigger_kind="site_crawl",
         trigger_id=site_crawl_id,
-    ):
-        await _dismiss_first_action(
-            workspace_id=workspace_id, project_id=project_id, demo_user_id=demo_user_id
-        )
+    )
 
     comparison_audit_id = audit_id
     with seeded_adapter():

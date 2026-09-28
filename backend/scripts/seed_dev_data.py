@@ -625,7 +625,6 @@ async def seed() -> None:
     await run_actions_and_comparison(
         workspace_id=workspaces.workspace_id,
         project_id=primary.project_id,
-        demo_user_id=workspaces.demo_user_id,
         active_prompt_ids=primary.active_prompt_ids,
         audit_id=audit_id,
         site_crawl_id=site_crawl_id,

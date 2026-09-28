@@ -22,7 +22,6 @@ from app.api.commerce import router as commerce_router
 from app.api.integrations import router as integrations_router
 from app.api.mcp_connections import router as mcp_connections_router
 from app.api.oauth import router as oauth_router
-from app.api.opportunities import router as opportunities_router
 from app.api.performance import router as performance_router
 from app.api.projects import router as projects_router
 from app.api.prompts import router as prompts_router
@@ -78,7 +77,6 @@ _ROUTERS = (
     search_intelligence_router,
     integrations_router,
     performance_router,
-    opportunities_router,
     agent_router,
     commerce_router,
 )

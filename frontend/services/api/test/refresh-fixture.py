@@ -6,7 +6,7 @@ import sys
 import uuid
 
 from app.core.database import SessionLocal, engine
-from app.domain.opportunities import action_status, actions, queries
+from app.domain.opportunities import actions, queries
 from app.domain.opportunities.queue import enqueue_opportunity_refresh
 from app.models.analysis import Citation, ResponseAnalysis
 from tests.component.opportunity_helpers import _seed_scenario
@@ -39,19 +39,6 @@ async def attach(workspace, project, user):
         )
         await session.commit()
         return {"id": str(action.id), "origin": action.origin}
-
-
-async def dismiss(workspace, action, user):
-    async with SessionLocal() as session:
-        await action_status.update_status(
-            session,
-            workspace_id=uuid.UUID(workspace),
-            action_id=uuid.UUID(action),
-            status="dismissed",
-            changed_by_user_id=uuid.UUID(user),
-        )
-        await session.commit()
-        return {}
 
 
 async def cite(workspace, analysis):
@@ -99,7 +86,6 @@ async def read(workspace, project):
 PHASES = {
     "seed": seed,
     "attach": attach,
-    "dismiss": dismiss,
     "cite": cite,
     "read": read,
 }

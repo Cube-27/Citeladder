@@ -1,7 +1,7 @@
 """Component tests for the unified API error envelope (WS-A A1).
 
-Exercises the live HTTP boundary: the migrated site-health, actions,
-and Commerce routers raise ``ApiException``; legacy raw
+Exercises the live HTTP boundary: the site-health and Commerce routers
+raise ``ApiException``; legacy raw
 ``HTTPException`` raises (unmigrated routers + Starlette routing errors) go
 through the compatibility shim; request validation and unhandled exceptions
 hit the two global handlers. Every non-2xx response carries the canonical
@@ -172,18 +172,6 @@ async def test_site_health_stale_selection_version_409_envelope(
     # ...and mirrored into the canonical block + details.
     _assert_envelope(body, code="stale_selection_version", retryable=False)
     assert body["error"]["details"] == {"current_selection_version": 0}
-
-
-# =========================================================================
-# actions
-# =========================================================================
-async def test_actions_404_envelope(client: httpx.AsyncClient) -> None:
-    await _register(client, "env-opp@example.com")
-    resp = await client.get(f"/api/v1/actions/{uuid.uuid4()}")
-    assert resp.status_code == 404
-    body = resp.json()
-    assert body["detail"] == "Action not found"
-    _assert_envelope(body, code="not_found", retryable=False)
 
 
 # =========================================================================

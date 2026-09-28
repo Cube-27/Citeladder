@@ -199,8 +199,8 @@ because this plan exists.
 ### P1-1. Repair implementation-event replay identity (SEC-01)
 
 Owner:
-[implementation events](../../backend/app/domain/opportunities/implementation_events.py)
-and [API](../../backend/app/api/opportunities.py).
+[implementation events](../../frontend/services/api/src/opportunities/declarations.ts)
+and [API](../../frontend/services/api/src/routes/actions.ts).
 Keep the workspace/key uniqueness contract. Authorize the requested project in
 the active workspace before returning a replay, and compare stored project and
 opportunity identity as well as declaration identity. Apply the same contract

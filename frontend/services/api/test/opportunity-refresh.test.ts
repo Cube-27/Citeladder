@@ -14,6 +14,7 @@ import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../src/app.ts';
+import { updateActionStatus } from '../src/opportunities/actions.ts';
 import { loadWorkerSettings, policy } from '../src/config.ts';
 import { recomputeOpportunities, refreshOpportunities } from '../src/opportunities/refresh.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
@@ -345,7 +346,7 @@ describe('opportunity_refresh', () => {
     const s = await seed();
     await recomputeOpportunities(db, scope(s));
     const thin = byRule(await live(s), 'thin_content');
-    await python('dismiss', s.workspace_id, thin.action_id!, s.user_id);
+    await updateActionStatus(db, s.workspace_id, thin.action_id!, 'dismissed', s.user_id);
 
     await recomputeOpportunities(db, scope(s));
 
@@ -456,7 +457,7 @@ describe('Opportunity routes', () => {
       expect([query, (await read(query)).status]).toEqual([query, 422]);
 
     const thin = byRule(await live(s), 'thin_content');
-    await python('dismiss', s.workspace_id, thin.action_id!, s.user_id);
+    await updateActionStatus(db, s.workspace_id, thin.action_id!, 'dismissed', s.user_id);
     expect((await read('status=dismissed')).body.items.map((item) => item.rule_id)).toEqual([
       'thin_content',
     ]);
