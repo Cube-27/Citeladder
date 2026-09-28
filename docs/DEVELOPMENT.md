@@ -73,7 +73,7 @@ configuration/secrets required by its owner.
 cd frontend
 echo "BACKEND_ORIGIN=http://localhost:8000" > .env.local
 pnpm install
-pnpm fonts:pull             # Inter/General Sans from the private font repo
+pnpm fonts:pull             # Switzer/Sentient from the private font repo
 pnpm dev                    # Local marketing Worker: http://127.0.0.1:3000
 pnpm dev:vite               # Vite authenticated SPA: http://127.0.0.1:3001/login
 ```
