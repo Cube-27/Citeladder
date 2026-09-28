@@ -9,12 +9,6 @@ KEYWORD_MAX_CHARS: Final = 2000
 PRIORITY: Final = 1
 PATH_ID_LIST: Final = "/v3/ai_optimization/id_list"
 RECONCILE_MAX_PAGES: Final = 10
-# Conservative supported launch context, documented by both task-post examples.
-# Expanding this allowlist requires product-specific location/language evidence.
-SUPPORTED_CONTEXTS: Final = {
-    "chatgpt_search": frozenset({(2840, "en")}),
-    "gemini_consumer": frozenset({(2840, "en")}),
-}
 
 
 def request_settings(engine: str) -> dict:

@@ -25,7 +25,6 @@ from app.core.config.dataforseo import (
     is_supported_search_context,
 )
 from app.core.config.entitlements import CREDENTIAL_MODE_BYOK
-from app.core.config.llm_scraper import SUPPORTED_CONTEXTS
 from app.core.config.provider_catalog import uses_provider_tasks
 from app.domain.abuse.service import reserve_workspace_capacity
 from app.domain.audits.errors import AuditValidationError
@@ -74,24 +73,16 @@ def _require_search_context(*, project: Project, engines: list[str]) -> None:
     The location is the part that cannot be defaulted. Guessing a market would
     measure the wrong country and present the answer as though it were the
     right one.
+
+    Every observed surface (Google AI Overview, ChatGPT Search, Gemini) is
+    measured from the same project market chosen at onboarding; no surface
+    narrows it further.
     """
-    selected = [engine for engine in engines if uses_provider_tasks(engine)]
-    if not selected:
+    if not any(uses_provider_tasks(engine) for engine in engines):
         return
-    for engine in selected:
-        contexts = SUPPORTED_CONTEXTS.get(engine)
-        if (
-            contexts is not None
-            and (
-                project.serp_location_code,
-                project.serp_language_code or DEFAULT_LANGUAGE_CODE,
-            )
-            not in contexts
-        ):
-            raise AuditValidationError(f"Unsupported location/language for {engine}.")
     if not project.serp_location_code:
         raise AuditValidationError(
-            "Set this project's search location before measuring Google AI Overview."
+            "Set this project's search location before measuring search surfaces."
         )
     if not is_supported_search_context(
         location_code=project.serp_location_code,

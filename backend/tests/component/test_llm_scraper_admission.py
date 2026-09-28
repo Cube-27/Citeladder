@@ -128,9 +128,16 @@ async def test_rollout_is_idempotent_scoped_and_keeps_disabled_route(session_fac
 
 
 @pytest.mark.asyncio
-async def test_unsupported_market_is_rejected_before_tasks(session_factory):
+async def test_scraper_surfaces_use_the_project_market(session_factory):
     from app.domain.audits.creation import _require_search_context
 
-    project = Project(serp_location_code=2356, serp_language_code="en")
-    with pytest.raises(AuditValidationError, match="Unsupported"):
-        _require_search_context(project=project, engines=["chatgpt_search"])
+    engines = ["chatgpt_search", "gemini_consumer", "google_ai_overview"]
+    _require_search_context(
+        project=Project(serp_location_code=2356, serp_language_code="en"),
+        engines=engines,
+    )
+    with pytest.raises(AuditValidationError, match="not one this deployment"):
+        _require_search_context(
+            project=Project(serp_location_code=999999, serp_language_code="en"),
+            engines=["chatgpt_search"],
+        )
