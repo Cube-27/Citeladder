@@ -452,6 +452,7 @@ async def enqueue_content_structure_publish(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     run_id: uuid.UUID,
+    revision: str = "complete",
 ) -> uuid.UUID | None:
     """Queue TypeScript publication of one content analysis's settled outcomes."""
     return await _enqueue_task(
@@ -461,6 +462,6 @@ async def enqueue_content_structure_publish(
         task_kind=ANALYTICS_TASK_KIND_CONTENT_PUBLISH,
         payload={"run_id": str(run_id)},
         idempotency_key=_idempotency_key(
-            ANALYTICS_TASK_KIND_CONTENT_PUBLISH, project_id, run_id
+            ANALYTICS_TASK_KIND_CONTENT_PUBLISH, project_id, run_id, revision
         ),
     )

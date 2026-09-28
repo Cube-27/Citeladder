@@ -66,6 +66,29 @@ export const contentStructureSchema = z.object({
   recommendations: z.array(contentLinkSchema),
   topics: z.array(contentTopicSchema),
   pages: z.array(contentPageSchema.omit({ passages: true })),
+  diagnostics: z
+    .object({
+      candidates: z.number().int(),
+      completed: z.number().int(),
+      pending: z.number().int(),
+      unavailable: z.number().int(),
+      below_threshold: z.number().int(),
+      no_anchor: z.number().int(),
+      rejected_label: z.number().int(),
+      singleton_topics: z.number().int(),
+      reasons: z.record(z.string(), z.number().int()),
+      probability_bands: z.array(
+        z.object({ threshold: z.number(), links: z.number().int(), topics: z.number().int() }),
+      ),
+      link_candidates: z.number().int(),
+      topic_candidates: z.number().int(),
+      links_pending: z.number().int(),
+      topics_pending: z.number().int(),
+      requests: z.number().int(),
+      elapsed_seconds: z.number().nonnegative(),
+    })
+    .nullable()
+    .default(null),
 });
 
 export const contentStructureReadSchema = z.object({

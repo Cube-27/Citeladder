@@ -80,55 +80,78 @@ describe('Content structure', () => {
     expect(screen.queryByText('No link suggestions to review')).not.toBeInTheDocument();
   });
 
-  it('opens exact passage evidence and returns keyboard focus to the review button', async () => {
-    mswServer.use(
-      http.get(endpoint, () =>
-        HttpResponse.json({
-          crawl_id: crawl,
-          availability: 'ready',
-          analysis: {
-            id: run,
+  it.each(['completed', 'running'])(
+    'reviews available links while analysis is %s and restores focus',
+    async (state) => {
+      mswServer.use(
+        http.get(endpoint, () =>
+          HttpResponse.json({
             crawl_id: crawl,
-            created_at: '2026-09-28T10:00:00Z',
-            state: 'completed',
-            page_count: 2,
-            omitted_pages: 0,
-            omitted_candidates: 0,
-            unassigned_pages: 2,
-            unavailable_judgments: 0,
-            stale: false,
-            recommendations: [
-              {
-                id: recommendation,
-                source: page(source, 'Plant care'),
-                target: page(target, 'Soil guide'),
-                passage: {
-                  locator: '/main/p',
-                  heading: 'Getting started',
-                  text: 'Choose healthy garden soil for your plants.',
-                  linked_ranges: [],
-                },
-                anchor: { text: 'healthy garden soil', start: 7, end: 26 },
-                usefulness: 0.94,
-                anchor_confidence: 0.82,
-                action_id: null,
-                action_status: null,
+            availability: 'ready',
+            analysis: {
+              id: run,
+              crawl_id: crawl,
+              created_at: '2026-09-28T10:00:00Z',
+              state,
+              diagnostics: {
+                candidates: 4,
+                completed: 2,
+                pending: state === 'running' ? 2 : 0,
+                unavailable: 0,
+                below_threshold: 0,
+                no_anchor: 0,
+                rejected_label: 0,
+                singleton_topics: 0,
+                reasons: {},
+                probability_bands: [],
+                link_candidates: 2,
+                topic_candidates: 2,
+                links_pending: 0,
+                topics_pending: state === 'running' ? 2 : 0,
+                requests: 1,
+                elapsed_seconds: 1,
               },
-            ],
-            topics: [],
-            pages: [],
-          },
-        }),
-      ),
-    );
-    renderScreen();
-    const button = await screen.findByRole('button', {
-      name: 'Review link from Plant care to Soil guide',
-    });
-    await userEvent.click(button);
-    expect(await screen.findByRole('dialog', { name: 'Review internal link' })).toBeInTheDocument();
-    expect(screen.getByText('healthy garden soil', { selector: 'mark' })).toBeInTheDocument();
-    await userEvent.keyboard('{Escape}');
-    expect(button).toHaveFocus();
-  });
+              page_count: 2,
+              omitted_pages: 0,
+              omitted_candidates: 0,
+              unassigned_pages: 2,
+              unavailable_judgments: 0,
+              stale: false,
+              recommendations: [
+                {
+                  id: recommendation,
+                  source: page(source, 'Plant care'),
+                  target: page(target, 'Soil guide'),
+                  passage: {
+                    locator: '/main/p',
+                    heading: 'Getting started',
+                    text: 'Choose healthy garden soil for your plants.',
+                    linked_ranges: [],
+                  },
+                  anchor: { text: 'healthy garden soil', start: 7, end: 26 },
+                  usefulness: 0.94,
+                  anchor_confidence: 0.82,
+                  action_id: null,
+                  action_status: null,
+                },
+              ],
+              topics: [],
+              pages: [],
+            },
+          }),
+        ),
+      );
+      renderScreen();
+      const button = await screen.findByRole('button', {
+        name: 'Review link from Plant care to Soil guide',
+      });
+      await userEvent.click(button);
+      expect(
+        await screen.findByRole('dialog', { name: 'Review internal link' }),
+      ).toBeInTheDocument();
+      expect(screen.getByText('healthy garden soil', { selector: 'mark' })).toBeInTheDocument();
+      await userEvent.keyboard('{Escape}');
+      expect(button).toHaveFocus();
+    },
+  );
 });

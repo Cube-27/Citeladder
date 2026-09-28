@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { contentStructureSchema, type ContentStructure } from '@citeladder/contracts/site-health';
 
 import { policy } from '../config.ts';
@@ -25,7 +26,14 @@ export async function latestContentCrawl(db: Database, scope: ContentScope) {
 export async function contentRun(db: Database, scope: ContentScope, id?: string) {
   let query = db
     .selectFrom('site_content_structure_runs')
-    .selectAll()
+    .select(['id', 'crawl_id', 'state', 'created_at', 'result'])
+    .select(
+      sql<unknown>`jsonb_build_object(
+      'page_count', manifest->'page_count',
+      'omitted_pages', manifest->'omitted_pages',
+      'omitted_candidates', manifest->'omitted_candidates'
+    )`.as('manifest'),
+    )
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId);
   if (id) query = query.where('id', '=', id);
@@ -155,7 +163,7 @@ export async function admitContentRun(
         actor_id: actorId,
         idempotency_key: input.idempotency_key,
         state: 'queued',
-        policy_version: policy.content_structure.version,
+        policy_version: policy.content_structure.policy_version,
         created_at: new Date(),
         manifest: JSON.stringify({
           pages,
@@ -168,13 +176,14 @@ export async function admitContentRun(
         }),
       })
       .execute();
-    await enqueueTask(trx, {
-      ...scope,
-      kind: 'content_structure_judgment',
-      payload: { run_id: runId },
-      keyParts: [runId],
-      maxAttempts: 2,
-    });
+    for (const kind of ['link', 'topic'])
+      await enqueueTask(trx, {
+        ...scope,
+        kind: 'content_structure_judgment',
+        payload: { run_id: runId, kind },
+        keyParts: [runId, kind],
+        maxAttempts: 2,
+      });
     return runId;
   });
   return contentRun(db, scope, id);

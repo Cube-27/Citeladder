@@ -1,10 +1,12 @@
 """Reuse the shared provider and credit owners for frozen content questions."""
 
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 from app.core.config import site_health_content_structure as config
 from app.core.config.entitlements import KEY_AI_CREDITS
@@ -26,23 +28,34 @@ from app.models.workspace import WorkspaceMember
 
 
 async def locked_run(
-    session: AsyncSession, task: AnalyticsTask
+    session: AsyncSession,
+    task: AnalyticsTask,
+    *,
+    terminal: bool = False,
+    include_manifest: bool = False,
 ) -> SiteContentStructureRun | None:
+    ownership = and_(
+        AnalyticsTask.lease_owner == task.lease_owner,
+        AnalyticsTask.status == "running",
+        AnalyticsTask.lease_expires_at > datetime.now(UTC),
+    )
+    if terminal:
+        ownership = or_(ownership, AnalyticsTask.status == "failed")
     current_task = await session.scalar(
         select(AnalyticsTask)
         .where(
             AnalyticsTask.id == task.id,
             AnalyticsTask.workspace_id == task.workspace_id,
-            AnalyticsTask.lease_owner == task.lease_owner,
-            AnalyticsTask.status == "running",
-            AnalyticsTask.lease_expires_at > datetime.now(UTC),
+            AnalyticsTask.project_id == task.project_id,
+            ownership,
         )
         .with_for_update()
     )
     if current_task is None:
         return None
-    return await session.scalar(
+    statement = (
         select(SiteContentStructureRun)
+        .options(defer(SiteContentStructureRun.result, raiseload=True))
         .where(
             SiteContentStructureRun.id
             == uuid.UUID(str((task.payload or {})["run_id"])),
@@ -51,6 +64,13 @@ async def locked_run(
         )
         .with_for_update()
     )
+    # The manifest contains the whole site's bounded evidence. Fetch it once
+    # per job, never once per credit reservation/settlement or progress write.
+    if not include_manifest:
+        statement = statement.options(
+            defer(SiteContentStructureRun.manifest, raiseload=True)
+        )
+    return await session.scalar(statement)
 
 
 def event(
@@ -66,19 +86,57 @@ def event(
     )
 
 
-async def prepare_dispatch(
-    session: AsyncSession, run: SiteContentStructureRun, candidate: dict
-) -> dict | None:
-    candidate_id = uuid.UUID(candidate["id"])
-    existing = list(
+@dataclass
+class DispatchContext:
+    events: dict[uuid.UUID, list[SiteContentStructureEvent]]
+    unavailable_reason: str
+    account_id: uuid.UUID | None
+
+
+async def dispatch_context(
+    session: AsyncSession, run: SiteContentStructureRun, candidates: list[dict]
+) -> DispatchContext:
+    rows = list(
         await session.scalars(
             select(SiteContentStructureEvent).where(
                 SiteContentStructureEvent.run_id == run.id,
                 SiteContentStructureEvent.workspace_id == run.workspace_id,
-                SiteContentStructureEvent.candidate_id == candidate_id,
+                SiteContentStructureEvent.candidate_id.in_(
+                    [uuid.UUID(c["id"]) for c in candidates]
+                ),
             )
         )
     )
+    events: dict[uuid.UUID, list[SiteContentStructureEvent]] = {}
+    for row in rows:
+        events.setdefault(row.candidate_id, []).append(row)
+    role = await session.scalar(
+        select(WorkspaceMember.role).where(
+            WorkspaceMember.workspace_id == run.workspace_id,
+            WorkspaceMember.user_id == run.actor_id,
+        )
+    )
+    reason = ""
+    if not role or not role_allows(role, WorkspaceCapability.RUN):
+        reason = "permission_unavailable"
+    elif not jev_settings.enabled:
+        reason = "provider_unconfigured"
+    account_id = (
+        None if reason else await billing_account_id_for(session, run.workspace_id)
+    )
+    return DispatchContext(events, reason, account_id)
+
+
+async def prepare_dispatch(
+    session: AsyncSession,
+    run: SiteContentStructureRun,
+    candidate: dict,
+    *,
+    context: DispatchContext,
+    batch: dict | None = None,
+) -> dict | None:
+    candidate_id = uuid.UUID(candidate["id"])
+    existing = context.events.get(candidate_id, [])
     if any(row.kind == "outcome" for row in existing):
         return None
     dispatched = next((row for row in existing if row.kind == "dispatch"), None)
@@ -91,21 +149,21 @@ async def prepare_dispatch(
             {"state": "uncertain", "reason": "interrupted_dispatch"},
         )
         return None
-    role = await session.scalar(
-        select(WorkspaceMember.role).where(
-            WorkspaceMember.workspace_id == run.workspace_id,
-            WorkspaceMember.user_id == run.actor_id,
+    if context.unavailable_reason:
+        session.add(
+            event(
+                run,
+                candidate_id,
+                "outcome",
+                {
+                    "state": "unavailable",
+                    "reason": context.unavailable_reason,
+                },
+            )
         )
-    )
-    if (
-        not role
-        or not role_allows(role, WorkspaceCapability.RUN)
-        or not jev_settings.enabled
-    ):
-        session.add(event(run, candidate_id, "outcome", {"state": "unavailable"}))
         return None
     try:
-        account_id = await billing_account_id_for(session, run.workspace_id)
+        account_id = context.account_id
         if account_id is None:
             raise LedgerError("content_structure_account_unavailable")
         reservation = await reserve_metered_usage(
@@ -137,6 +195,7 @@ async def prepare_dispatch(
         "policy_version": run.policy_version,
         "credits": config.CONTENT_STRUCTURE_CREDITS_PER_JUDGMENT,
         "reservation_id": str(reservation.reservation_id),
+        "batch": batch,
     }
     session.add(event(run, candidate_id, "dispatch", evidence))
     return evidence
@@ -150,14 +209,16 @@ async def finish_dispatch(
     outcome: dict,
 ) -> None:
     # A flat per-judgment charge; a dispatch that made no provider call is free.
-    credits = 0 if outcome["state"] == "unavailable" else int(dispatch["credits"])
+    charged_credits = (
+        0 if outcome["state"] == "unavailable" else int(dispatch["credits"])
+    )
     await settle_metered_usage(
         session,
         reservation_id=uuid.UUID(dispatch["reservation_id"]),
         dispatch_key=str(candidate_id),
         attempt=1,
-        charged_units=credits,
-        unknown_usage_charge=credits,
+        charged_units=charged_credits,
+        unknown_usage_charge=charged_credits,
         idempotency_key=f"content:{run.id}:{candidate_id}:settle",
         at=datetime.now(UTC),
     )

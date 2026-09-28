@@ -168,7 +168,7 @@ class JevSettings(BaseSettings):
     base_url: str = "https://api.typesafe.ai"
     model: str = "jev-latest"
     timeout_seconds: float = Field(default=10.0, gt=0, le=60)
-    # Parallel decide() calls within one generation.
+    # Parallel decide() calls within one bounded generation/content job.
     concurrency: int = Field(default=4, ge=1, le=16)
     # Attempts per call, including the first; only 429/529/timeouts retry.
     max_attempts: int = Field(default=3, ge=1, le=5)
@@ -176,7 +176,7 @@ class JevSettings(BaseSettings):
     # Upper bound on decide() calls one Generate request may make. Candidates
     # past the cap are staged without a decision.
     max_calls_per_generation: int = Field(default=100, ge=1, le=500)
-    # Overall wall-clock bound on all shadow decisions for one generation;
+    # Overall wall-clock bound on decisions for one generation/content job;
     # calls still running at the deadline are cancelled and reported as
     # unavailable, so a slow judge never holds a Generate request open.
     generation_deadline_seconds: float = Field(default=30.0, gt=0, le=120)

@@ -12,25 +12,27 @@ export function contentRequest(candidate: ContentCandidate, pages: ContentPage[]
   if (candidate.kind === 'topic')
     return {
       state: {
-        label: candidate.label,
-        label_source: page(candidate.source),
         page: page(candidate.page),
+        passage: candidate.passage,
+        labels: candidate.labels.map((label) => label.label),
       },
       questions: {
         membership: {
           type: 'noul',
           instructions: questionPolicy.topic_instructions,
           criteria: {
-            true: 'Substantive membership in a useful topic',
-            false: 'Incidental relevance or unusable label',
+            true: 'At least one offered subject describes this primary content substantively',
+            false: 'None of the offered subjects fit except incidentally',
           },
         },
         label: {
           type: 'choice',
-          instructions: questionPolicy.topic_instructions,
+          instructions: questionPolicy.label_instructions,
           criteria: {
-            label: candidate.label,
-            none: 'This label is not a useful specific topic for browsing pages',
+            none: 'No supplied label is a useful topic for this content',
+            ...Object.fromEntries(
+              candidate.labels.map((label, index) => [String(index), label.label]),
+            ),
           },
         },
       },

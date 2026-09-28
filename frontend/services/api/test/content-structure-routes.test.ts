@@ -110,6 +110,30 @@ describe('content analysis admission', () => {
       .returningAll()
       .executeTakeFirstOrThrow();
     await publishContentStructure(task, { db, checkCancelled: async () => {}, maxAttempts: 2 });
+    const progress = contentStructureReadSchema.parse(await (await request(seed)).json());
+    expect(progress.analysis!.state).toBe('running');
+    expect(progress.analysis!.recommendations.length).toBeGreaterThan(0);
+    expect(progress.analysis!.diagnostics!.topics_pending).toBeGreaterThan(0);
+    const selectedIds = new Set(selected.map((candidate) => candidate.id));
+    const remaining = (record(run.manifest).candidates as { id: string }[]).filter(
+      (candidate) => !selectedIds.has(candidate.id),
+    );
+    await db
+      .insertInto('site_content_structure_events')
+      .values(
+        remaining.map((candidate) => ({
+          id: randomUUID(),
+          workspace_id: seed.workspace_id,
+          project_id: seed.project_id,
+          run_id: runId,
+          candidate_id: candidate.id,
+          kind: 'outcome',
+          created_at: new Date(),
+          evidence: JSON.stringify({ state: 'unavailable', reason: 'deadline_exceeded' }),
+        })),
+      )
+      .execute();
+    await publishContentStructure(task, { db, checkCancelled: async () => {}, maxAttempts: 2 });
     await recomputeOpportunities(
       db,
       { workspaceId: seed.workspace_id, projectId: seed.project_id },

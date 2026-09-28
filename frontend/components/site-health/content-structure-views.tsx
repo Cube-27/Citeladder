@@ -24,7 +24,7 @@ export function ContentLinksTable({
       <EmptyState
         icon={ICONS.site}
         heading="No link suggestions to review"
-        description="No suitable existing anchors were found for this selection."
+        description="No link suggestions meet the review criteria for this selection. See analysis details for coverage and exclusions."
       />
     );
   return (

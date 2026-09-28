@@ -23,6 +23,55 @@ export function linkUrl(value: string, base: string): string | null {
   }
 }
 
+function contentLinks(facts: Record<string, unknown>, complete: boolean, url: string) {
+  const anchors = record(facts.links).anchors;
+  const contextual = new Set<string>();
+  const navigation = new Set<string>();
+  for (const raw of Array.isArray(anchors) ? anchors : []) {
+    const anchor = record(raw);
+    if (anchor.is_internal !== true) continue;
+    const target = linkUrl(text(anchor.url), url);
+    if (!target) continue;
+    if (anchor.region === 'main') contextual.add(target);
+    else if (['nav', 'header', 'footer', 'aside'].includes(text(anchor.region)))
+      navigation.add(target);
+    else complete = false;
+  }
+  return {
+    contextual_targets: [...contextual],
+    navigation_targets: [...navigation],
+    links_complete: complete,
+  };
+}
+
+function pageEvidence(
+  facts: Record<string, unknown>,
+  content: Record<string, unknown>,
+  url: string,
+) {
+  const links = contentLinks(facts, content.links_complete === true, url);
+  const passages = contentPassageSchema.array().safeParse(content.passages);
+  const headings = Array.isArray(facts.primary_heading_outline)
+    ? facts.primary_heading_outline
+    : [];
+  return {
+    omittedPassages: !links.links_complete || !passages.success ? 1 : 0,
+    evidence: {
+      ...links,
+      title: text(facts.title),
+      excerpt: text(facts.primary_content_text).slice(
+        0,
+        policy.content_structure.max_excerpt_chars,
+      ),
+      headings: headings
+        .map((heading) => (typeof heading === 'string' ? heading : text(record(heading).text)))
+        .filter(Boolean),
+      passages: passages.success ? passages.data : [],
+      extractor_version: text(facts.extractor_version),
+    },
+  };
+}
+
 export async function loadContentPages(db: Database, scope: ContentScope, crawlId: string) {
   const query = db
     .selectFrom('site_page_analyses as analysis')
@@ -71,45 +120,16 @@ export async function loadContentPages(db: Database, scope: ContentScope, crawlI
     const url = linkUrl(row.final_url || row.normalized_url, row.normalized_url);
     if (!url || urls.has(url)) continue;
     urls.add(url);
-    const anchors = record(facts.links).anchors;
-    const contextual: string[] = [];
-    const navigation: string[] = [];
-    let complete = content.links_complete === true;
-    for (const raw of Array.isArray(anchors) ? anchors : []) {
-      const anchor = record(raw);
-      if (anchor.is_internal !== true) continue;
-      const target = linkUrl(text(anchor.url), url);
-      if (!target) continue;
-      if (anchor.region === 'main') contextual.push(target);
-      else if (['nav', 'header', 'footer', 'aside'].includes(text(anchor.region)))
-        navigation.push(target);
-      else complete = false;
-    }
-    const passageResult = contentPassageSchema.array().safeParse(content.passages);
-    if (!complete || !passageResult.success) omittedPassages += 1;
-    const headings = Array.isArray(facts.primary_heading_outline)
-      ? facts.primary_heading_outline
-      : [];
+    const captured = pageEvidence(facts, content, url);
+    omittedPassages += captured.omittedPassages;
     pages.push(
       contentPageSchema.parse({
         analysis_id: row.id,
         artifact_id: row.artifact_id,
         site_url_id: row.site_url_id,
         url,
-        title: text(facts.title),
-        excerpt: text(facts.primary_content_text).slice(
-          0,
-          policy.content_structure.max_excerpt_chars,
-        ),
-        headings: headings
-          .map((heading) => (typeof heading === 'string' ? heading : text(record(heading).text)))
-          .filter(Boolean),
-        passages: passageResult.success ? passageResult.data : [],
-        contextual_targets: [...new Set(contextual)],
-        navigation_targets: [...new Set(navigation)],
-        links_complete: complete,
+        ...captured.evidence,
         eligible_target: row.main_content_indexable === true,
-        extractor_version: text(facts.extractor_version),
       }),
     );
   }

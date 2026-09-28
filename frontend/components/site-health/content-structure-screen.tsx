@@ -28,6 +28,7 @@ import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { ContentLinkReview } from './content-link-review';
 import { ContentLinksTable, ContentTopics } from './content-structure-views';
+import { ContentAnalysisSummary } from './content-analysis-summary';
 
 type Scope = Readonly<{ projectId: string; workspaceId: string }>;
 type SavedRead = Awaited<ReturnType<typeof contentStructureApi.read>>;
@@ -354,22 +355,26 @@ function AnalysisResult({
   topicId: string;
   update: ParamChange;
 }>) {
-  if (isRunning(analysis.state))
+  if (isRunning(analysis.state) && !analysis.diagnostics)
     return <output className="type-body">Checking contextual links and topic groups…</output>;
   if (['unavailable', 'failed', 'cancelled'].includes(analysis.state))
     return (
-      <EmptyState
-        icon={ICONS.site}
-        heading={analysis.state === 'cancelled' ? 'Analysis cancelled' : 'Analysis failed'}
-        description={
-          analysis.state === 'cancelled'
-            ? 'Start a new analysis when you are ready.'
-            : 'No suggestions could be generated for this crawl. Analyze again to retry.'
-        }
-      />
+      <>
+        <ContentAnalysisSummary analysis={analysis} />
+        <EmptyState
+          icon={ICONS.site}
+          heading={analysis.state === 'cancelled' ? 'Analysis cancelled' : 'Analysis failed'}
+          description={
+            analysis.state === 'cancelled'
+              ? 'Start a new analysis when you are ready.'
+              : 'No suggestions could be generated for this crawl. Analyze again to retry.'
+          }
+        />
+      </>
     );
   return (
     <>
+      <ContentAnalysisSummary analysis={analysis} />
       <p className="type-caption">
         {analysis.page_count} pages analyzed · <DisplayTime value={analysis.created_at} dateOnly />
         {analysis.omitted_pages ? ` · ${analysis.omitted_pages} pages over the limit` : null}

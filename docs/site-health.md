@@ -171,6 +171,36 @@ publication. The existing Python JEV connector/configuration (`JEV_API_KEY`) and
 credit owner execute bounded judgments through the existing analytics queue.
 No provider runs on a read, and no second provider client is introduced.
 
+Link retrieval allocates up to 15 destinations per source page, with a bounded
+exploration share for destinations without shared vocabulary. Lexical ranking
+is retrieval only; JEV decides usefulness and chooses from existing unlinked
+anchor spans, including spans with no destination-keyword match. Topic options
+are verbatim title/heading spans with source identities, admitted across pages
+without keyword-based membership filtering. JEV classifies each page and bounded
+primary passages into those options using Choice with an explicit no-match
+option and an independent Noul for whether any supplied topic fits. Multiple
+passages can assign a page to multiple topics; code groups the selected labels.
+
+Links and topics use separate jobs on the existing analytics queue. Each job
+reuses one HTTP client, batches independent questions into bounded requests and
+uses `JEV_CONCURRENCY` and `JEV_GENERATION_DEADLINE_SECONDS`. Questions explicitly
+name their own state paths; response IDs alone carry no meaning for JEV.
+Dispatch reservations commit before requests, and settlement remains per
+judgment even when several share a request. Token usage is recorded once per
+request. Deadlines leave unsent judgments unavailable and settle interrupted
+dispatches as uncertain without retrying them. Publication periodically saves
+progress and available results, so links can be reviewed while topics remain
+pending. Results expose coverage, pending/unavailable reasons, threshold bands,
+anchor/label exclusions, request count and elapsed time. Review thresholds are
+provisional P(yes) defaults, not permission to publish or a calibrated guarantee.
+Workers load the frozen manifest once per job; subsequent authorization/lease
+locks exclude its large JSON payload. Polling reads only saved results and
+manifest summary fields, and publication excludes dispatch request bodies.
+Analysis policy 2 keeps extraction version 1 readable. Publication accepts the
+frozen binary topic answers of already-queued policy-1 runs; that compatibility
+branch can be removed once those jobs have drained. New admissions use only
+the page/passage classifier.
+
 `site_content_structure_runs` retains the frozen crawl, exact page-analysis and
 artifact identities, passages, candidates and policy; TypeScript is its writer.
 Python appends dispatch and outcome events to

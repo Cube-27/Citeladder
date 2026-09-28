@@ -57,8 +57,11 @@ async function replay(
               .filter((check) => check.kind === 'contextual_link')
               .map((check) => check.recommendation_id)
           : []
-        ).sort(),
-      ) !== JSON.stringify([...(input.recommendation_ids ?? [])].sort()) ||
+        ).toSorted((left, right) => String(left).localeCompare(String(right))),
+      ) !==
+        JSON.stringify(
+          (input.recommendation_ids ?? []).toSorted((left, right) => left.localeCompare(right)),
+        ) ||
       !row.same_time)
   )
     throw replayConflict();
@@ -149,7 +152,7 @@ export async function declareAction(
         actionId,
         input.output_revision_id,
         declaredAt,
-        [...(input.recommendation_ids ?? [])].sort(),
+        (input.recommendation_ids ?? []).toSorted((left, right) => left.localeCompare(right)),
       ]),
     )
     .digest('hex');

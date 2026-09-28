@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentPage } from '@citeladder/contracts/site-health';
 
-import { anchorCandidates, linkCandidates } from '../src/site-health/content-candidates.ts';
+import {
+  anchorCandidates,
+  linkCandidates,
+  topicCandidates,
+} from '../src/site-health/content-candidates.ts';
+import { contentRequest } from '../src/site-health/content-requests.ts';
 import { projectContent, selectedAnchor } from '../src/site-health/content-publish.ts';
 import { policy } from '../src/config.ts';
 import { contextualLinkObserved } from '../src/opportunities/content-verification.ts';
@@ -114,7 +119,17 @@ describe('content structure', () => {
       omitted_passages: 0,
       omitted_candidates: 0,
     };
-    expect(projectContent(manifest, new Map()).state).toBe('unavailable');
+    expect(projectContent(manifest, new Map()).state).toBe('running');
+    const unavailable = new Map(
+      manifest.candidates.map((candidate) => [
+        candidate.id,
+        { state: 'unavailable', reason: 'funding_unavailable' },
+      ]),
+    );
+    expect(projectContent(manifest, unavailable).state).toBe('unavailable');
+    expect(projectContent(manifest, unavailable).diagnostics.reasons.funding_unavailable).toBe(
+      manifest.candidates.length,
+    );
     expect(
       projectContent({ ...manifest, candidates: [], omitted_passages: 1 }, new Map()).state,
     ).toBe('partial');
@@ -129,9 +144,9 @@ describe('content structure', () => {
     const candidates = pages.map((item) => ({
       id: item.analysis_id,
       kind: 'topic',
-      label: 'Garden care',
-      source: sourceId,
       page: item.analysis_id,
+      passage: null,
+      labels: [{ label: 'Garden care', source: sourceId }],
     }));
     const outcomes = new Map(
       candidates.map((candidate) => [
@@ -151,5 +166,126 @@ describe('content structure', () => {
     );
     expect(result.state).toBe('unavailable');
     expect(result.topics).toEqual([]);
+  });
+
+  it('publishes frozen topic answers admitted before the classifier cutover', () => {
+    const pages = [
+      page(sourceId, 'Garden care', 'Healthy soil supports plants.'),
+      page(targetId, 'Garden soil', 'Healthy soil improves plant growth.'),
+    ];
+    const candidates = pages.map((item) => ({
+      id: item.analysis_id,
+      kind: 'topic',
+      page: item.analysis_id,
+      label: 'Garden care',
+      source: sourceId,
+    }));
+    const outcomes = new Map(
+      candidates.map((candidate) => [
+        candidate.id,
+        {
+          state: 'completed',
+          answers: {
+            membership: { type: 'noul', noul: 0.9 },
+            label: {
+              type: 'choice',
+              choice: 'label',
+              confidence: 0.9,
+              probabilities: { label: 0.9, none: 0.1 },
+            },
+          },
+        },
+      ]),
+    );
+    const result = projectContent(
+      { pages, candidates, policy: { membership_threshold: 0.85 } },
+      outcomes,
+    );
+    expect(result.topics).toHaveLength(1);
+    expect(result.topics[0]!.page_ids).toEqual([sourceId, targetId]);
+  });
+
+  it('offers semantically possible anchors and targets even without matching keywords', () => {
+    const source = page(
+      sourceId,
+      'Summer comfort',
+      'Compare lightweight options for hot Australian summers.',
+    );
+    const target = page(targetId, "Women's Linen Collection", 'Breathable natural fabric dresses.');
+    const candidate = linkCandidates([source, target]).candidates.find(
+      (item) => item.source === sourceId,
+    )!;
+    expect(candidate.target).toBe(targetId);
+    expect(candidate.anchors.some((anchor) => anchor.text === 'lightweight options')).toBe(true);
+    source.passages[0]!.linked_ranges = [{ start: 8, end: 27 }];
+    expect(
+      anchorCandidates(source.passages[0]!, target).some(
+        (anchor) => anchor.text === 'lightweight options',
+      ),
+    ).toBe(false);
+  });
+
+  it('gives every source a target budget instead of spending a global cap on early pages', () => {
+    const pages = Array.from({ length: 20 }, (_, index) =>
+      page(
+        `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+        `Garden subject ${index}`,
+        `Explore garden subject ${index} with practical advice and examples.`,
+      ),
+    );
+    const candidates = linkCandidates(pages).candidates;
+    expect(candidates.length).toBeGreaterThan(100);
+    expect(new Set(candidates.map((candidate) => candidate.source)).size).toBe(20);
+    for (const source of pages)
+      expect(
+        candidates.filter((candidate) => candidate.source === source.analysis_id),
+      ).toHaveLength(policy.content_structure.targets_per_page);
+  });
+
+  it('lets JEV classify nonmatching pages into source-grounded labels, including several topics', () => {
+    const pages = [
+      page(sourceId, 'Linen collection | Acme', 'Breathable natural fabric dresses for women.'),
+      page(targetId, 'Summer comfort | Acme', 'Lightweight options for hot Australian summers.'),
+    ];
+    const candidates = topicCandidates(pages).candidates;
+    const labels = candidates[0]!.labels;
+    expect(labels.some((label) => label.label === 'Summer comfort')).toBe(true);
+    const outcomes = new Map(
+      candidates.map((candidate) => {
+        const selected = candidate.passage ? 'Summer comfort' : 'Linen collection';
+        const key = String(labels.findIndex((label) => label.label === selected));
+        return [
+          candidate.id,
+          {
+            state: 'completed',
+            answers: {
+              membership: { type: 'noul', noul: 0.75 },
+              label: {
+                type: 'choice',
+                choice: key,
+                confidence: 0.6,
+                probabilities: Object.fromEntries(
+                  ['none', ...labels.map((_, index) => String(index))].map((option) => [
+                    option,
+                    option === key ? 1 : 0,
+                  ]),
+                ),
+              },
+            },
+          },
+        ];
+      }),
+    );
+    const result = projectContent(
+      { pages, candidates, policy: policy.content_structure },
+      outcomes,
+    );
+    expect(result.topics.map((topic) => topic.label).sort()).toEqual([
+      'Linen collection',
+      'Summer comfort',
+    ]);
+    expect(result.topics.every((topic) => topic.page_ids.length === 2)).toBe(true);
+    const request = contentRequest(candidates[0]!, pages);
+    expect(Object.keys(request.questions.label!.criteria)).toHaveLength(labels.length + 1);
   });
 });
