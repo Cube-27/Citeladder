@@ -52,8 +52,8 @@ export async function runSetComparisonStatus(
   if (
     current.length === 0 ||
     baseline.length === 0 ||
-    [...current, ...baseline].some((date) => date === null) ||
-    !(baseline.toSorted().at(-1)! < current.toSorted()[0]!)
+    [...current, ...baseline].includes(null) ||
+    baseline.toSorted().at(-1)! >= current.toSorted()[0]!
   ) {
     return 'invalid_baseline';
   }

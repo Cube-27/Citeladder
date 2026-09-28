@@ -17,7 +17,7 @@ import {
 } from '../analysis/provenance.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { timestamptz, utcTextOf } from '../db/timestamps.ts';
+import { storedInstant, timestamptz, utcTextOf } from '../db/timestamps.ts';
 import type { ParsedDatetime } from '../http/datetimes.ts';
 import {
   cohortMetrics,
@@ -30,9 +30,6 @@ import {
 
 const visibility = policy.visibility;
 
-/** UTC text with microseconds, `YYYY-MM-DDTHH:MI:SS.US`: it orders as it compares. */
-export type UtcText = string;
-
 export type MeasuredRun = {
   snapshotId: string;
   auditId: string;
@@ -41,19 +38,20 @@ export type MeasuredRun = {
   scoringRuleVersion: string;
   visibilityScore: number;
   metrics: unknown;
-  snapshotCreatedAt: UtcText;
+  /** UTC text with microseconds (`utcText`): it orders as it compares. */
+  snapshotCreatedAt: string;
   configuration: unknown;
-  completedAt: UtcText;
+  completedAt: string;
   provenance: ModelProvenance[];
 };
 
 export type RunScope = { workspaceId: string; projectId: string };
 
-/** A request timestamp, or a stored one read back as `UtcText`. */
-export type Instant = ParsedDatetime | UtcText;
+/** A request timestamp, or a stored one read back as `utcText`. */
+export type Instant = ParsedDatetime | string;
 
 function instantOperand(value: Instant) {
-  return typeof value === 'string' ? sql<Date>`${`${value}Z`}::timestamptz` : timestamptz(value);
+  return typeof value === 'string' ? storedInstant(value) : timestamptz(value);
 }
 
 /**
@@ -93,7 +91,10 @@ export async function loadMeasuredRuns(
   if (window.toAt) query = query.where('audit.completed_at', '<=', instantOperand(window.toAt));
   const newestFirst = window.newest !== undefined;
   const direction = newestFirst ? 'desc' : 'asc';
-  query = query.orderBy('audit.completed_at', direction).orderBy('audit.created_at', direction);
+  query = query
+    .orderBy('audit.completed_at', direction)
+    .orderBy('audit.created_at', direction)
+    .orderBy('audit.id', direction);
   if (newestFirst) query = query.limit(window.newest!);
   const rows = await query.execute();
   if (newestFirst) rows.reverse();
@@ -160,7 +161,7 @@ export function selectedScore(
 export type TrendSource = {
   snapshotId: string;
   auditId: string;
-  completedAt: UtcText;
+  completedAt: string;
   logicalEngine: string | null;
   transportModel: string | null;
   retrievalEnabled: boolean | null;

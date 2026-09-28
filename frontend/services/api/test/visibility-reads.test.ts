@@ -388,6 +388,9 @@ describe('GET /visibility/prompts', () => {
 
     const foreignRun = await get(tenant, route(tenant, '/prompts'), { audit_id: randomUUID() });
     expect([foreignRun.status, foreignRun.body.detail]).toEqual([404, 'Audit not found']);
+    // Only a brand run has prompt scores to read.
+    const crawl = await fixtures.audit(tenant, { scope: 'site_health' });
+    expect((await get(tenant, route(tenant, '/prompts'), { audit_id: crawl })).status).toBe(404);
   });
 
   it('pools a prompt across a period and drops every single-run score', async () => {

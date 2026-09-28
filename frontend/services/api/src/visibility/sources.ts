@@ -380,12 +380,10 @@ async function applySourceComparison(
   input: { baselineIds: string[]; domain: string | null; pages: boolean; asOf: string },
 ): Promise<string> {
   await authorizeRunSet(db, selection, input.baselineIds);
+  let currentIds: string[] = selection.auditId ? [selection.auditId] : [];
+  if (selection.auditIds?.length) currentIds = selection.auditIds;
   const status = await runSetComparisonStatus(db, selection, {
-    currentIds: selection.auditIds?.length
-      ? selection.auditIds
-      : selection.auditId
-        ? [selection.auditId]
-        : [],
+    currentIds,
     baselineIds: input.baselineIds,
     responses: response.responses,
     engine: selection.logicalEngine,

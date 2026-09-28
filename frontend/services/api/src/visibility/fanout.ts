@@ -11,7 +11,7 @@ import { sql } from 'kysely';
 import type { z } from 'zod';
 
 import type { Database } from '../db/database.ts';
-import { utcTextOf } from '../db/timestamps.ts';
+import { storedInstant, utcTextOf } from '../db/timestamps.ts';
 import { compareText } from '../text-order.ts';
 import { fanoutState, selectEvents } from './evidence.ts';
 import { authorizedSelection, evidenceScope, type RunSelection } from './selection.ts';
@@ -30,17 +30,8 @@ type QueryTally = {
   brand: Set<string>;
 };
 
-export async function getVisibilityFanout(
-  db: Database,
-  requested: RunSelection,
-  options: { query: string | null; search: string | null; offset: number; limit: number },
-): Promise<FanoutResponse> {
-  const selection = await authorizedSelection(db, requested);
-  const states: Record<string, number> = {};
-  const queries = new Map<string, QueryTally>();
-  const answers: FanoutResponse['answers'] = [];
-  let totalEvents = 0;
-  let totalAnswers = 0;
+/** The selection's answers, newest first, read in bounded keyset batches. */
+async function* selectedAnswers(db: Database, selection: RunSelection) {
   let position: { createdAt: string; id: string } | null = null;
   for (;;) {
     let batch = evidenceScope(db, selection)
@@ -66,56 +57,90 @@ export async function getVisibilityFanout(
       .limit(BATCH);
     if (position !== null) {
       batch = batch.where(
-        sql<boolean>`(ra.created_at, ra.id) < (${`${position.createdAt}Z`}::timestamptz, ${position.id}::uuid)`,
+        sql<boolean>`(ra.created_at, ra.id) < (${storedInstant(position.createdAt)}, ${position.id}::uuid)`,
       );
     }
     const rows = await batch.execute();
-    for (const row of rows) {
-      const { events } = selectEvents(row.artifact_events, row.task_events);
-      const { state } = fanoutState({
-        events,
-        searchUsed: Boolean(row.search_used),
-        searchQueryCount: row.search_query_count ?? 0,
-        providerMetadata: row.provider_metadata,
-      });
-      states[state] = (states[state] ?? 0) + 1;
-      totalEvents += events.length;
-      if (options.query !== null && events.some((event) => event.query.trim() === options.query)) {
-        if (totalAnswers >= options.offset && totalAnswers < options.offset + options.limit) {
-          answers.push({
-            audit_id: row.audit_id,
-            task_id: row.task_id,
-            prompt_text: row.text,
-            logical_engine: row.logical_engine,
-            brand_mentioned: row.brand_mentioned,
-            owned_domain_cited: row.owned_domain_cited,
-          });
-        }
-        totalAnswers += 1;
-      }
-      for (const event of events) {
-        const text = event.query.trim();
-        if (!text) continue;
-        const tally = queries.get(text) ?? {
-          events: 0,
-          prompts: new Set(),
-          engines: new Set(),
-          responses: new Set(),
-          brand: new Set(),
-        };
-        tally.events += 1;
-        tally.prompts.add(row.prompt_id ?? row.text);
-        tally.engines.add(row.logical_engine);
-        tally.responses.add(row.id);
-        if (row.brand_mentioned) tally.brand.add(row.id);
-        queries.set(text, tally);
-      }
-    }
-    if (rows.length < BATCH) break;
+    yield* rows;
+    if (rows.length < BATCH) return;
     const last = rows.at(-1)!;
     position = { createdAt: last.created_at, id: last.id };
   }
-  const ordered = [...queries].sort(
+}
+
+/** What a query tally reads of one answer. */
+type Answer = {
+  id: string;
+  prompt_id: string | null;
+  text: string;
+  logical_engine: string;
+  brand_mentioned: boolean;
+};
+
+/** Count one answer's non-blank queries into the per-query tallies. */
+function tallyQueries(
+  queries: Map<string, QueryTally>,
+  answer: Answer,
+  events: readonly { query: string }[],
+): void {
+  for (const event of events) {
+    const text = event.query.trim();
+    if (!text) continue;
+    const tally = queries.get(text) ?? {
+      events: 0,
+      prompts: new Set(),
+      engines: new Set(),
+      responses: new Set(),
+      brand: new Set(),
+    };
+    tally.events += 1;
+    tally.prompts.add(answer.prompt_id ?? answer.text);
+    tally.engines.add(answer.logical_engine);
+    tally.responses.add(answer.id);
+    if (answer.brand_mentioned) tally.brand.add(answer.id);
+    queries.set(text, tally);
+  }
+}
+
+export async function getVisibilityFanout(
+  db: Database,
+  requested: RunSelection,
+  options: { query: string | null; search: string | null; offset: number; limit: number },
+): Promise<FanoutResponse> {
+  const selection = await authorizedSelection(db, requested);
+  const states: Record<string, number> = {};
+  const queries = new Map<string, QueryTally>();
+  const answers: FanoutResponse['answers'] = [];
+  let totalEvents = 0;
+  let totalAnswers = 0;
+  const page = (index: number) => index >= options.offset && index < options.offset + options.limit;
+  for await (const answer of selectedAnswers(db, selection)) {
+    const { events } = selectEvents(answer.artifact_events, answer.task_events);
+    const { state } = fanoutState({
+      events,
+      searchUsed: Boolean(answer.search_used),
+      searchQueryCount: answer.search_query_count ?? 0,
+      providerMetadata: answer.provider_metadata,
+    });
+    states[state] = (states[state] ?? 0) + 1;
+    totalEvents += events.length;
+    const ranQuery = events.some((event) => event.query.trim() === options.query);
+    if (options.query !== null && ranQuery) {
+      if (page(totalAnswers)) {
+        answers.push({
+          audit_id: answer.audit_id,
+          task_id: answer.task_id,
+          prompt_text: answer.text,
+          logical_engine: answer.logical_engine,
+          brand_mentioned: answer.brand_mentioned,
+          owned_domain_cited: answer.owned_domain_cited,
+        });
+      }
+      totalAnswers += 1;
+    }
+    tallyQueries(queries, answer, events);
+  }
+  const ordered = [...queries].toSorted(
     ([leftText, left], [rightText, right]) =>
       right.events - left.events || compareText(leftText, rightText),
   );

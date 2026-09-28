@@ -28,7 +28,7 @@ import {
   type Metrics,
   type RankingRow,
 } from './metrics.ts';
-import type { TrendSource, UtcText } from './runs.ts';
+import type { TrendSource } from './runs.ts';
 
 export type TrendPoint = z.input<typeof visibilityTrendPointSchema>;
 type TrendRankingRow = Omit<
@@ -104,7 +104,7 @@ function trendRow(row: RankingRow): TrendRankingRow {
 const DAY_MS = 86_400_000;
 
 /** The UTC start of the bucket holding `at`; weeks start on ISO Monday. */
-export function bucketStart(at: UtcText, granularity: string): UtcText {
+export function bucketStart(at: string, granularity: string): string {
   if (granularity === 'month') return `${at.slice(0, 7)}-01T00:00:00.000000`;
   const day = `${at.slice(0, 10)}T00:00:00.000000`;
   if (granularity === 'day') return day;
@@ -120,8 +120,14 @@ function isMixedVersion(bucket: readonly TrendSource[]): boolean {
   );
 }
 
+const RETRIEVAL_ORDER = new Map<boolean | null, number>([
+  [false, 0],
+  [null, 1],
+  [true, 2],
+]);
+
 function retrievalOrder(value: boolean | null): number {
-  return value === false ? 0 : value === null ? 1 : 2;
+  return RETRIEVAL_ORDER.get(value)!;
 }
 
 /**
@@ -130,7 +136,7 @@ function retrievalOrder(value: boolean | null): number {
  * blends two formulas: runs of another version fold into their own point.
  */
 export function bucketPoints(sources: readonly TrendSource[], granularity: string): TrendPoint[] {
-  const grouped = new Map<string, { start: UtcText; sources: TrendSource[] }>();
+  const grouped = new Map<string, { start: string; sources: TrendSource[] }>();
   for (const source of sources) {
     const start = bucketStart(source.completedAt, granularity);
     const key = JSON.stringify([
@@ -147,7 +153,7 @@ export function bucketPoints(sources: readonly TrendSource[], granularity: strin
   // Partitions sharing a boundary order by what a reader can see: the model
   // and whether retrieval was on, never by the comparison hash.
   return buckets
-    .sort((left, right) => {
+    .toSorted((left, right) => {
       const [a, b] = [left.sources[0]!, right.sources[0]!];
       return (
         compareText(left.start, right.start) ||
@@ -206,7 +212,7 @@ function foldedPosition(bucket: readonly TrendSource[]): number | null {
 }
 
 /** Fold one bucket's sources, which share one folding identity. */
-export function foldBucket(start: UtcText, bucket: readonly TrendSource[]): TrendPoint {
+export function foldBucket(start: string, bucket: readonly TrendSource[]): TrendPoint {
   const [first] = bucket;
   if (first === undefined) throw new Error('an empty bucket has no point');
   const brandRate = new WeightedRate();

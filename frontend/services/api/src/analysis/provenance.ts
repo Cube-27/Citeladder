@@ -58,8 +58,15 @@ function engineRank(engine: string): number {
   return ENGINE_ORDER.get(engine) ?? ENGINE_ORDER.size;
 }
 
+// Unrecorded first, then off, then on.
+const RETRIEVAL_RANK = new Map<boolean | null, number>([
+  [null, 0],
+  [false, 1],
+  [true, 2],
+]);
+
 function retrievalRank(value: boolean | null): number {
-  return value === null ? 0 : value ? 2 : 1;
+  return RETRIEVAL_RANK.get(value)!;
 }
 
 /** Exact duplicates removed, in stable catalog order. */

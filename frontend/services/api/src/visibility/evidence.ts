@@ -16,7 +16,13 @@ import type { z } from 'zod';
 import { executionFrozenProvenance } from '../analysis/provenance.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import { pydanticUtcOf, pydanticUtcOrNull, utcText, utcTextOf } from '../db/timestamps.ts';
+import {
+  pydanticUtcOf,
+  pydanticUtcOrNull,
+  storedInstant,
+  utcText,
+  utcTextOf,
+} from '../db/timestamps.ts';
 import { fromEpochMicros, type ParsedDatetime } from '../http/datetimes.ts';
 import {
   decodeKeysetCursor,
@@ -48,9 +54,9 @@ function eventInt(value: unknown): number {
 }
 
 function eventText(value: unknown): string {
-  if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value;
-  return typeof value === 'object' ? JSON.stringify(value) : String(value);
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return value === null || value === undefined ? '' : (JSON.stringify(value) ?? '');
 }
 
 /**
@@ -242,7 +248,7 @@ export async function getVisibilityEvidence(
   if (options.cursor) {
     const position = cursorPosition(options.cursor, fingerprint);
     page = page.where(
-      sql<boolean>`(ra.created_at, ra.id) < (${`${position.createdAt}Z`}::timestamptz, ${position.id}::uuid)`,
+      sql<boolean>`(ra.created_at, ra.id) < (${storedInstant(position.createdAt)}, ${position.id}::uuid)`,
     );
   }
   const rows = await page

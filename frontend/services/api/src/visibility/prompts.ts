@@ -17,7 +17,7 @@ import type { z } from 'zod';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject, numberRecord, record, strings } from '../db/json.ts';
-import { pydanticUtc, utcText, utcTextOf } from '../db/timestamps.ts';
+import { pydanticUtc, storedInstant, utcText, utcTextOf } from '../db/timestamps.ts';
 import { compareText } from '../text-order.ts';
 import {
   cellPrompt,
@@ -100,6 +100,7 @@ async function runRows(
     .where('id', '=', auditId)
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
+    .where('audit_scope', '=', visibility.brand_audit_scope)
     .executeTakeFirst();
   if (audit === undefined) throw new AnalysisNotFoundError('Audit not found');
   const snapshots = await db
@@ -250,7 +251,10 @@ async function baselineRun(
     .where('id', '=', baselineId)
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
-    .where('completed_at', '<', sql<Date>`${`${audit.completed_at}Z`}::timestamptz`)
+    // Only a dashboard-ready brand run can be a baseline.
+    .where('audit_scope', '=', visibility.brand_audit_scope)
+    .where('status', 'in', visibility.dashboard_audit_statuses)
+    .where('completed_at', '<', storedInstant(audit.completed_at))
     .executeTakeFirst();
   return previous && sharesCellContext(audit.configuration, previous.configuration)
     ? previous

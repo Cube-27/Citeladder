@@ -89,11 +89,13 @@ async def load_run_snapshots(
     if to_at is not None:
         stmt = stmt.where(Audit.completed_at <= to_at)
     if newest is not None:
-        stmt = stmt.order_by(Audit.completed_at.desc(), Audit.created_at.desc()).limit(
-            newest
-        )
+        stmt = stmt.order_by(
+            Audit.completed_at.desc(), Audit.created_at.desc(), Audit.id.desc()
+        ).limit(newest)
         rows = list((await session.execute(stmt)).tuples().all())
         rows.reverse()
         return rows
-    stmt = stmt.order_by(Audit.completed_at.asc(), Audit.created_at.asc())
+    stmt = stmt.order_by(
+        Audit.completed_at.asc(), Audit.created_at.asc(), Audit.id.asc()
+    )
     return list((await session.execute(stmt)).tuples().all())
