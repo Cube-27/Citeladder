@@ -187,10 +187,13 @@ with provisional thresholds, because judgments can only be calibrated once the
 feature runs live; and a rejected candidate with a judgment keeps its outcome
 but not its text.
 
-### 7.1 Internal proposal: subprocessor and privacy revision (approval pending)
+### 7.1 Subprocessor and privacy revision (published 28 September 2026)
 
-Not an approved contract or operational claim; do not render it until the
-owner (and legal review) approves it. Before publishing, confirm with TypeSafe:
+Published by the owner on 28 September 2026, with TypeSafe processing in the
+United States and the row widened to internal link judgments. The owner set
+the production key at publication instead of after the 30-day DPA notice
+because there are no DPA customers yet (see [decisions](../decisions.md)). The
+original proposal follows. Before publishing, confirm with TypeSafe:
 processing region, retention of request bodies (their docs offer zero data
 retention to enterprise customers only), their DPA and subprocessors, rate
 limits and pricing. The [DPA](../../frontend/lib/marketing-content/legal-dpa.ts)

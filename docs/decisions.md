@@ -120,3 +120,16 @@ can make, and a judgment never retires a tracked prompt.
 Source: owner decisions of 27 September 2026 for the
 [prompt generation v2 plan](plans/citeladder-prompt-generation-v2.md), PR 3c.
 [Prompts and Visibility](visibility-prompt.md) owns the shipped behavior.
+
+## TypeSafe is a published subprocessor; production runs JEV
+
+The subprocessor, Privacy Policy and AI Policy revision naming TypeSafe
+(United States) for prompt-suggestion and internal-link judgments was published
+on 28 September 2026, and `PRIVACY_NOTICE_REVISION` moved to that date. The
+owner enabled `JEV_API_KEY` in production at once rather than after the DPA's
+30-day notice, because CiteLadder is pre-launch and has no DPA customers to
+notify. Later subprocessor changes follow the DPA notice period.
+
+Source: owner decision of 28 September 2026.
+[Prompts and Visibility](visibility-prompt.md) and
+[Site Health](site-health.md#internal-links) own the shipped behavior.

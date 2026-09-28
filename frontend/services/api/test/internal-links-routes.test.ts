@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { internalLinksReadSchema } from '@citeladder/contracts/site-health';
 
@@ -10,6 +11,8 @@ import { publishInternalLinks } from '../src/site-health/internal-link-publish.t
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
 import type { LinkCandidate } from '../src/site-health/internal-link-candidates.ts';
 import { enqueueTask } from '../src/referrals/enqueue.ts';
+import { loadLinkPages } from '../src/site-health/internal-link-pages.ts';
+import { policy } from '../src/config.ts';
 
 const config = testConfig();
 const db = testDatabase(config);
@@ -215,5 +218,47 @@ describe('internal link analysis admission', () => {
       .where('id', '=', first!.analysis!.id)
       .executeTakeFirstOrThrow();
     expect(saved.manifest).toMatchObject({ page_count: 3 });
+    // The cancelled run's judgment task has not settled, so the slot stays occupied.
+    const replacement = { crawl_id: seed.crawl_id, idempotency_key: randomUUID() };
+    expect((await request(seed, '/analyses', replacement)).status).toBe(409);
+    await db
+      .updateTable('analytics_tasks')
+      .set({ status: 'succeeded' })
+      .where('workspace_id', '=', seed.workspace_id)
+      .where('task_kind', '=', 'internal_link_judgment')
+      .execute();
+    expect((await request(seed, '/analyses', replacement)).status).toBe(202);
+  });
+
+  it('fills the page cap with eligible pages, not the alphabetically first rows', async () => {
+    const seed = await actionFixture<ActionSeed>('content');
+    seeds.push(seed);
+    const scope = { workspaceId: seed.workspace_id, projectId: seed.project_id };
+    const first = await db
+      .selectFrom('site_page_analyses as analysis')
+      .innerJoin('site_urls as url', 'url.id', 'analysis.site_url_id')
+      .select('analysis.artifact_id')
+      .where('analysis.workspace_id', '=', seed.workspace_id)
+      .where('analysis.crawl_id', '=', seed.crawl_id)
+      .orderBy('url.normalized_url')
+      .executeTakeFirstOrThrow();
+    await db
+      .updateTable('site_fetch_artifacts')
+      .set({
+        normalized_facts: sql`jsonb_set(normalized_facts, '{extraction,truncated}', 'true'::jsonb)`,
+      })
+      .where('id', '=', first.artifact_id)
+      .execute();
+    const limits = policy.internal_links as { max_pages: number };
+    const cap = limits.max_pages;
+    limits.max_pages = 2;
+    try {
+      const { pages, omittedPages } = await loadLinkPages(db, scope, seed.crawl_id);
+      expect(pages).toHaveLength(2);
+      expect(pages.map((page) => page.artifact_id)).not.toContain(first.artifact_id);
+      expect(omittedPages).toBe(0);
+    } finally {
+      limits.max_pages = cap;
+    }
   });
 });

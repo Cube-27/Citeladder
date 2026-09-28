@@ -46,3 +46,14 @@ anchor rewrites, CMS publishing and embedding-based retrieval.
 Validate on the local Aza Fashions and Best&Less crawls with live JEV before
 review: acceptance rate, spot-checked precision, variant noise and elapsed time.
 Threshold calibration against editor-reviewed examples remains a release task.
+
+## Post-merge hardening
+
+Review of #196 found, and the follow-up PR fixed: eligibility filtering now
+precedes the page cap, whose selection is no longer URL-alphabetical; and a
+cancelled run keeps the project's slot until its judgment task is terminal.
+Deferred until real runs justify them: editor-outcome calibration and a
+separate judgment policy version (the run manifest already freezes the policy
+and threshold, and each dispatch records the model), batching pairs per JEV
+request after timing where runs spend time, normalized recommendation rows
+instead of one result document, and catalog-based product variants.

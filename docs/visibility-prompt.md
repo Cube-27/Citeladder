@@ -114,9 +114,9 @@ admission and is never a market size. Each candidate keeps its cell in
 
 The [quality judge](../backend/app/domain/prompts/quality_judge.py) runs
 through the [JEV connector](../backend/app/connectors/jev.py) when
-`JEV_API_KEY` is set (blank is off; production stays unset until the TypeSafe
-subprocessor revision is published). It judges the admitted draft pool within
-the configured call cap: yes/no fit, buyer relevance, decision value,
+`JEV_API_KEY` is set (blank is off; the TypeSafe subprocessor and privacy
+revision was published on 28 September 2026 and production carries the key).
+It judges the admitted draft pool within the configured call cap: yes/no fit, buyer relevance, decision value,
 naturalness, standalone and sensibility; intent
 and stage labels recorded beside the model's; and a per-topic duplicate choice
 among tracked and earlier candidates. Its state omits the brand and

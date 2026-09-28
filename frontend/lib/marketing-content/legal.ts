@@ -187,6 +187,7 @@ export const AI_POLICY: LegalDocument = {
   title: 'AI Policy',
   description:
     'How CiteLadder uses AI systems in the product and what we do not do with your data.',
+  lastUpdated: '2026-09-28',
   sections: [
     {
       id: 'overview',
@@ -203,6 +204,7 @@ export const AI_POLICY: LegalDocument = {
         'Answer engines (ChatGPT, Gemini, Claude, and any others you configure) generate responses when you run audits. Those calls use your BYOK credentials where configured.',
         'Scoring of mentions, citations, and related visibility metrics is deterministic over persisted artifacts — not an LLM judging another model’s answer.',
         'Optional product features may use models for assistance (for example drafting or research helpers). When they do, we will describe the purpose in-product.',
+        'Generated prompt suggestions and internal link suggestions are checked by a quality-judging model that answers fixed yes-or-no and multiple-choice questions. It ranks and filters suggestions for your review; it does not write them, publish them, or score your business.',
         'A visibility result records what a provider returned for one execution. It does not establish that the answer is true, permanent, or what another user would see.',
       ],
     },

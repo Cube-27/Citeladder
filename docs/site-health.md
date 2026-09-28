@@ -170,7 +170,11 @@ existing analytics queue. No provider runs on a read.
 Admission freezes each usable page's title, H1, meta description, a short
 content excerpt, page kind, observed main-content targets and main-content
 inbound count from the crawl's link metrics. Trust/policy and about/contact
-pages are excluded. Retrieval ranks destinations by TF-IDF similarity over
+pages are excluded. Eligibility (available, untruncated extraction and
+included page kind) is applied before the page cap; above the cap, indexable
+pages are preferred and the rest follow a stable URL-hash order, so the cap
+spreads across site sections instead of taking the alphabetically first URLs.
+Retrieval ranks destinations by TF-IDF similarity over
 title, H1, URL path and description; once a crawl has enough pages, words on a
 large share of them (brand and template text) carry no weight. Each source page
 keeps a bounded shortlist of related destinations it does not already link
@@ -202,6 +206,10 @@ to `site_internal_link_events`. Each dispatch reserves a flat per-judgment amoun
 from the shared AI-credit balance against the crawl metered subject; a judgment
 that never reached the provider is not charged. Missing funding or provider
 availability yields unavailable judgments, never an observed zero.
+
+Cancelling stops new dispatches, but a cancelled run's in-flight judgments
+still settle. The project's analysis slot stays occupied until that run's
+judgment task is terminal, so a replacement never overlaps it.
 
 One project-scoped API family exposes the saved read (including recent analysis
 history), explicit analyze and cancel operations; the tab filters, pages and
