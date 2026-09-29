@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { InternalLinkPage } from '@citeladder/contracts/site-health';
-import { internalLinkAnalysisSchema, internalLinkSchema } from '@citeladder/contracts/site-health';
+import {
+  internalLinkAnalysisSchema,
+  internalLinkPageSchema,
+  internalLinkSchema,
+} from '@citeladder/contracts/site-health';
 
 import {
   isVariant,
@@ -118,10 +122,23 @@ describe('internal link candidates', () => {
     const source = page('Garden soil guide', { source_passages: [] });
     const target = page('Soil testing kit');
     expect(pairs([source, target]).some(([from]) => from === source.analysis_id)).toBe(false);
+    source.source_passages = null;
+    expect(pairs([source, target]).some(([from]) => from === source.analysis_id)).toBe(false);
     source.source_passages = sourcePassages(
       'This article explains how to prepare seedlings for the growing season.',
     );
     expect(pairs([source, target]).some(([from]) => from === source.analysis_id)).toBe(false);
+  });
+
+  it('distinguishes unavailable source evidence from captured text without usable passages', () => {
+    const captured = page('Garden soil guide', { source_passages: [] });
+    expect(internalLinkPageSchema.parse(captured).source_passages).toEqual([]);
+    expect(
+      internalLinkPageSchema.parse({ ...captured, source_passages: null }).source_passages,
+    ).toBeNull();
+    expect(
+      internalLinkPageSchema.safeParse({ ...captured, source_passages: undefined }).success,
+    ).toBe(false);
   });
 
   it('keeps exact offsets beyond the excerpt and excludes flattened headings', () => {
@@ -213,7 +230,7 @@ describe('internal link publication', () => {
     const toTarget = (result: ReturnType<typeof projectLinks>) =>
       result.recommendations.find((link) => link.target.analysis_id === target.analysis_id)!;
     expect(toTarget(chosen).anchor).toBe('soil testing kit');
-    expect(toTarget(chosen).placement?.text).toBe(source.source_passages[0]!.text);
+    expect(toTarget(chosen).placement?.text).toBe(source.source_passages![0]!.text);
     const malformed = projectLinks(manifest, outcomes(completed(0.9, { choice: 'none' })));
     expect(malformed.recommendations).toEqual([]);
     expect(malformed.state).toBe('unavailable');
@@ -273,7 +290,7 @@ describe('internal link publication', () => {
       action_id: null,
       action_status: null,
     });
-    expect(saved.placement).toBeNull();
+    expect(saved.placement).toBeUndefined();
     expect(saved.anchor).toBe('Legacy label');
     const { sources_without_passages: _coverage, ...diagnostics } = projectLinks(
       manifest,

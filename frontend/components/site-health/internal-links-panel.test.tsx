@@ -1,12 +1,15 @@
 import { http, HttpResponse } from 'msw';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
+import { downloadCsv } from '@/lib/csv/download';
 import { InternalLinksPanel } from './internal-links-panel';
+
+vi.mock('@/lib/csv/download', () => ({ downloadCsv: vi.fn() }));
 
 const project = makeProject();
 const run = '00000000-0000-4000-8000-000000000011';
@@ -131,6 +134,28 @@ describe('Internal links', () => {
     );
     renderPanel();
     expect(await screen.findByText('Anchor 0')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    expect(downloadCsv).toHaveBeenCalledWith(
+      'internal-links',
+      expect.arrayContaining([
+        'Source analysis ID',
+        'Source artifact ID',
+        'Source site URL ID',
+        'Source extractor version',
+      ]),
+      expect.arrayContaining([
+        [
+          links[0]!.source.url,
+          links[0]!.target.url,
+          links[0]!.anchor,
+          links[0]!.placement.text,
+          links[0]!.source.analysis_id,
+          links[0]!.source.artifact_id,
+          links[0]!.source.site_url_id,
+          links[0]!.source.extractor_version,
+        ],
+      ]),
+    );
     expect(screen.queryByText('Anchor 11')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
     expect(await screen.findByText('Anchor 11')).toBeInTheDocument();
@@ -165,6 +190,28 @@ describe('Internal links', () => {
     renderPanel();
     expect(
       await screen.findByText(/20 pages had no usable captured source passages/),
+    ).toBeInTheDocument();
+  });
+
+  it('distinguishes failed analysis and unknown diagnostic reasons', async () => {
+    mswServer.use(
+      http.get(endpoint, () =>
+        HttpResponse.json(
+          read(
+            analysis({
+              state: 'failed',
+              diagnostics: {
+                ...analysis().diagnostics,
+                reasons: { unexpected_provider_state: 1 },
+              },
+            }),
+          ),
+        ),
+      ),
+    );
+    renderPanel();
+    expect(
+      await screen.findByText(/This analysis failed: unknown reason: unexpected_provider_state/),
     ).toBeInTheDocument();
   });
 });

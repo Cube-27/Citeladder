@@ -23,7 +23,8 @@ export const internalLinkPageSchema = z.object({
   h1: z.string(),
   description: z.string(),
   excerpt: z.string(),
-  source_passages: z.array(sourcePassageSchema).default([]),
+  /** Null when primary source text was unavailable or truncated. */
+  source_passages: z.array(sourcePassageSchema).nullable(),
   page_kind: z.string(),
   /** Main-content links observed in the crawl; null when not measured. */
   contextual_inbound: z.number().int().nonnegative().nullable(),
@@ -45,8 +46,8 @@ export const internalLinkSchema = z.object({
   target: internalLinkPageSummarySchema,
   /** Exact phrase from the selected source placement. */
   anchor: z.string(),
-  /** Historical saved results may not contain placement evidence. */
-  placement: internalLinkPlacementSchema.nullable().default(null),
+  /** Omitted in historical saved results; new recommendations have a placement. */
+  placement: internalLinkPlacementSchema.nullable().optional(),
   /** P(yes) that the source should link to the destination. */
   usefulness: z.number().min(0).max(1),
   action_id: z.uuid().nullable(),

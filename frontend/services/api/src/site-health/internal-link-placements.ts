@@ -6,15 +6,9 @@ const limits = policy.internal_links;
 const stopWords = new Set<string>(limits.stop_words);
 const segmenter = new Intl.Segmenter(undefined, { granularity: 'sentence' });
 const words = (text: string) => [...text.matchAll(/[\p{L}\p{N}]+/gu)];
+type SourcePassages = NonNullable<InternalLinkPage['source_passages']>;
 
-/** Exact, bounded source spans; flattened crawl text does not establish DOM paragraphs. */
-export function sourcePassages(
-  text: string,
-  headings: string[] = [],
-): InternalLinkPage['source_passages'] {
-  const passages: InternalLinkPage['source_passages'] = [];
-  // The extractor flattens headings into the text. Split at their observed,
-  // ordered occurrences so an H1 and its opening sentence cannot form an anchor.
+function proseRanges(text: string, headings: string[]) {
   const ranges: { start: number; end: number }[] = [];
   let cursor = 0;
   for (const heading of headings) {
@@ -25,19 +19,30 @@ export function sourcePassages(
     cursor = index + heading.length;
   }
   ranges.push({ start: cursor, end: text.length });
-  for (const range of ranges) {
+  return ranges;
+}
+
+function usablePassage(value: string) {
+  return (
+    value.length <= limits.max_passage_chars &&
+    words(value).length >= limits.min_passage_words &&
+    /[.!?。！？][\s"'’”)]*$/u.test(value)
+  );
+}
+
+/** Exact, bounded source spans; flattened crawl text does not establish DOM paragraphs. */
+export function sourcePassages(text: string, headings: string[] = []): SourcePassages {
+  const passages: SourcePassages = [];
+  // The extractor flattens headings into the text. Split at their observed,
+  // ordered occurrences so an H1 and its opening sentence cannot form an anchor.
+  for (const range of proseRanges(text, headings)) {
     for (const { segment, index: offset } of segmenter.segment(
       text.slice(range.start, range.end),
     )) {
       const index = range.start + offset;
       if (index + segment.length > limits.max_source_chars) return passages;
       const value = segment.trim();
-      if (
-        value.length > limits.max_passage_chars ||
-        words(value).length < limits.min_passage_words ||
-        !/[.!?。！？][\s"'’”)]*$/u.test(value)
-      )
-        continue;
+      if (!usablePassage(value)) continue;
       const start = index + segment.indexOf(value);
       passages.push({ text: value, start, end: start + value.length });
       if (passages.length >= limits.max_passages) return passages;
@@ -46,9 +51,30 @@ export function sourcePassages(
   return passages;
 }
 
+function anchorEnd(
+  passage: string,
+  tokens: ReturnType<typeof words>,
+  start: number,
+  targetTerms: Set<string>,
+) {
+  let end = start;
+  for (let next = start + 1; next < tokens.length; next += 1) {
+    const token = tokens[next]!;
+    const previous = tokens[next - 1]!;
+    if (
+      next - start >= limits.max_anchor_words ||
+      !/^[\s-]+$/u.test(passage.slice(previous.index + previous[0].length, token.index)) ||
+      (!targetTerms.has(token[0].toLowerCase()) && !stopWords.has(token[0].toLowerCase()))
+    )
+      break;
+    if (targetTerms.has(token[0].toLowerCase())) end = next;
+  }
+  return end;
+}
+
 /** Candidate phrases share destination vocabulary; JEV decides meaning in context. */
 export function sourcePlacements(
-  passages: InternalLinkPage['source_passages'],
+  passages: SourcePassages,
   targetTerms: Set<string>,
 ): InternalLinkPlacement[] {
   const found: InternalLinkPlacement[] = [];
@@ -57,18 +83,7 @@ export function sourcePlacements(
     for (let start = 0; start < tokens.length; start += 1) {
       const first = tokens[start]!;
       if (!targetTerms.has(first[0].toLowerCase())) continue;
-      let end = start;
-      for (let next = start + 1; next < tokens.length; next += 1) {
-        const token = tokens[next]!;
-        const previous = tokens[next - 1]!;
-        if (
-          next - start >= limits.max_anchor_words ||
-          !/^[\s-]+$/u.test(passage.text.slice(previous.index + previous[0].length, token.index)) ||
-          (!targetTerms.has(token[0].toLowerCase()) && !stopWords.has(token[0].toLowerCase()))
-        )
-          break;
-        if (targetTerms.has(token[0].toLowerCase())) end = next;
-      }
+      const end = anchorEnd(passage.text, tokens, start, targetTerms);
       const last = tokens[end]!;
       const anchor = passage.text.slice(first.index, last.index + last[0].length);
       if (anchor.length >= limits.min_anchor_chars && anchor.length <= limits.max_anchor_chars)

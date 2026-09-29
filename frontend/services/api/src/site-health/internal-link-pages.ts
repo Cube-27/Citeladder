@@ -109,6 +109,14 @@ export async function loadLinkPages(db: Database, scope: LinkScope, crawlId: str
     const url = linkUrl(row.final_url || row.normalized_url, row.normalized_url);
     if (!url || urls.has(url)) continue;
     urls.add(url);
+    const sourceText = facts.primary_content_text;
+    const headings = Array.isArray(facts.primary_heading_outline)
+      ? facts.primary_heading_outline.map((heading) => text(record(heading).text))
+      : [];
+    const source_passages =
+      facts.primary_content_truncated === true || typeof sourceText !== 'string'
+        ? null
+        : sourcePassages(sourceText, headings);
     pages.push(
       internalLinkPageSchema.parse({
         analysis_id: row.id,
@@ -119,15 +127,7 @@ export async function loadLinkPages(db: Database, scope: LinkScope, crawlId: str
         h1: text(strings(record(facts.headings).h1_texts)[0]),
         description: text(facts.meta_description),
         excerpt: text(facts.primary_content_text).slice(0, policy.internal_links.max_excerpt_chars),
-        source_passages:
-          facts.primary_content_truncated === true
-            ? []
-            : sourcePassages(
-                typeof facts.primary_content_text === 'string' ? facts.primary_content_text : '',
-                Array.isArray(facts.primary_heading_outline)
-                  ? facts.primary_heading_outline.map((heading) => text(record(heading).text))
-                  : [],
-              ),
+        source_passages,
         page_kind: row.page_kind,
         contextual_inbound: inbound.get(row.site_url_id) ?? null,
         ...linkedTargets(facts, url),

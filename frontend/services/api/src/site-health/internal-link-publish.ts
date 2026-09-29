@@ -37,7 +37,7 @@ function selectedPlacement(candidate: LinkCandidate, source: InternalLinkPage, r
       placement.anchor_start,
       placement.anchor_start + placement.anchor.length,
     ) === placement.anchor &&
-    source.source_passages.some(
+    source.source_passages?.some(
       (passage) =>
         passage.start === placement.start &&
         passage.end === placement.end &&
@@ -70,7 +70,7 @@ export function projectLinks(manifest: Record<string, unknown>, outcomes: Map<st
   const threshold = Number(record(manifest.policy).accept_threshold);
   const diagnostics = emptyDiagnostics(candidates.length);
   const sourcesWithoutPassages = [...pages.values()].filter(
-    (page) => !page.source_passages.length,
+    (page) => !page.source_passages?.length,
   ).length;
   const links: InternalLink[] = [];
   for (const candidate of candidates) {

@@ -193,8 +193,9 @@ spreads across site sections instead of taking the alphabetically first URLs.
 Source passages are sentence spans from persisted page-owned text, with exact
 UTF-16 offsets into the source artifact. Ordered observed headings are separated
 from prose; flattened text does not establish DOM paragraph or section locators.
-Empty or truncated primary text supplies no placements. Bounded sentence length,
-word count and punctuation filter obvious fragments; JEV rejects remaining
+Missing or truncated primary text records unavailable passage evidence; captured
+text with no qualifying prose records an empty passage collection. Bounded
+sentence length, word count and punctuation filter obvious fragments; JEV rejects remaining
 navigation, TOC, card and boilerplate text. Diagnostics disclose pages without
 usable captured passages rather than claiming they need no links.
 
@@ -221,9 +222,10 @@ URLs or anchor text. The Noul threshold remains a provisional review default,
 not permission to publish or a calibrated precision claim.
 
 Review highlights the exact anchor in its source passage, and CSV export includes
-that passage. Saved historical results remain readable with placement explicitly
-unavailable; no read or analysis rewrites historical results. The nullable
-placement read contract can be removed when pre-placement saved runs are retired
+that passage, its source page, artifact and URL identifiers, and extractor version.
+Saved historical results remain readable with placement absent; no read or
+analysis rewrites historical results. The optional placement read contract can be
+removed when pre-placement saved runs are retired
 from the serving database. New publication requires captured placement evidence.
 
 The job has its own wall-clock budget on a heartbeated lease, not the

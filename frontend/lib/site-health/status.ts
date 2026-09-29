@@ -41,14 +41,16 @@ const INTERNAL_LINK_REASON_LABELS: Record<string, string> = {
 export function internalLinkStateNotice(analysis: InternalLinkAnalysis) {
   const reasons = Object.entries(analysis.diagnostics?.reasons ?? {})
     .filter(([reason]) => !['no_placement', 'overlapping_placement'].includes(reason))
-    .map(
-      ([reason, count]) =>
-        `${INTERNAL_LINK_REASON_LABELS[reason] ?? 'unavailable'} (${formatCount(count)})`,
-    )
+    .map(([reason, count]) => {
+      const label = INTERNAL_LINK_REASON_LABELS[reason] ?? `unknown reason: ${reason}`;
+      return `${label} (${formatCount(count)})`;
+    })
     .join(', ');
+  const detail = reasons ? `: ${reasons}` : '';
   if (analysis.state === 'cancelled') return 'This analysis was cancelled.';
-  if (analysis.state === 'unavailable' || analysis.state === 'failed')
-    return `No page pairs could be checked${reasons ? `: ${reasons}` : ''}. Analyze again to retry.`;
+  if (analysis.state === 'unavailable')
+    return `No page pairs could be checked${detail}. Analyze again to retry.`;
+  if (analysis.state === 'failed') return `This analysis failed${detail}. Analyze again to retry.`;
   if (analysis.state === 'partial' && reasons)
     return `Some page pairs were not checked: ${reasons}. These suggestions cover the rest.`;
   return null;

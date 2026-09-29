@@ -29,7 +29,7 @@ import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import { internalLinksApi, internalLinksQuery } from '@/lib/api/site-health-internal-links';
 import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
-import { downloadCsv } from '@/lib/csv/download';
+import { downloadInternalLinksCsv } from '@/lib/site-health/internal-link-csv';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatDisplayTimestamp } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
@@ -190,22 +190,7 @@ function LinksHeader({
         />
       ) : null}
       {links.length ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() =>
-            downloadCsv(
-              'internal-links',
-              ['Source page', 'Destination', 'Anchor text', 'Source passage'],
-              links.map((link) => [
-                link.source.url,
-                link.target.url,
-                link.anchor,
-                link.placement?.text ?? '',
-              ]),
-            )
-          }
-        >
+        <Button variant="secondary" size="sm" onClick={() => downloadInternalLinksCsv(links)}>
           Export CSV
         </Button>
       ) : null}

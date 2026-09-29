@@ -183,9 +183,10 @@ export function linkCandidates(pages: InternalLinkPage[]): LinkCandidate[] {
   const vector = vectors(pages.map((page) => ({ ...page, description: '' })));
   const candidates: LinkCandidate[] = [];
   for (const source of pages) {
-    if (!source.links_complete || !source.source_passages.length) continue;
+    const capturedPassages = source.source_passages;
+    if (!source.links_complete || !capturedPassages?.length) continue;
     const linked = new Set(source.contextual_targets);
-    const passages = source.source_passages.map((passage) => passageVector(passage.text));
+    const passages = capturedPassages.map((passage) => passageVector(passage.text));
     const ranked = pages
       .filter(
         (target) =>
@@ -200,7 +201,7 @@ export function linkCandidates(pages: InternalLinkPage[]): LinkCandidate[] {
           ...passages.map((passage) => cosine(passage, vector.get(target.analysis_id)!)),
         ),
         placements: sourcePlacements(
-          source.source_passages,
+          capturedPassages,
           new Set(vector.get(target.analysis_id)!.keys()),
         ),
       }))
