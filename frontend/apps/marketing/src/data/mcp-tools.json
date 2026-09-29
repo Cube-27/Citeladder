@@ -31,6 +31,18 @@
             "anyOf": [
               {
                 "items": {
+                  "enum": [
+                    "profile",
+                    "prompts",
+                    "site_health",
+                    "demand",
+                    "opportunities",
+                    "visibility",
+                    "performance",
+                    "referrals",
+                    "integrations",
+                    "search_intelligence"
+                  ],
                   "type": "string"
                 },
                 "type": "array"
@@ -499,6 +511,8 @@
           "limit": {
             "anyOf": [
               {
+                "maximum": 200,
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -843,7 +857,7 @@
       "title": "Read persisted Site Health pages"
     },
     {
-      "description": "Read the latest persisted AI visibility audit status, summary, and evidence reference.",
+      "description": "Read the latest persisted AI visibility audit status, summary, and evidence reference. Use the returned audit_id with read_visibility_results and read_visibility_sources for diagnosis; the summary is not answer text.",
       "input_schema": {
         "properties": {
           "audit_id": {

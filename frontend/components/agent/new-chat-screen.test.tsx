@@ -105,6 +105,26 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
 }
 
 describe('NewChatScreen', () => {
+  it('submits the earned-source skill selected by a next-step link', async () => {
+    const bodies: unknown[] = [];
+    mswServer.use(
+      ...baseHandlers(),
+      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(ACCEPTED, { status: 202 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderNewChat('?skill=earned_authority&prompt=Find+source+opportunities');
+    await screen.findByLabelText('Message the agent');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      { message: 'Find source opportunities', skill_id: 'earned_authority', context: {} },
+    ]);
+  });
+
   it('starts a chat from an evidence handoff with only the references left attached', async () => {
     const bodies: unknown[] = [];
     const keys: (string | null)[] = [];
