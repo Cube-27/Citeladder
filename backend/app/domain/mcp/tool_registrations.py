@@ -39,7 +39,13 @@ from app.domain.mcp.evidence_readers import (
     read_visibility_sources as read_visibility_sources_data,
 )
 from app.domain.mcp.retrieval import fetch_business_record
-from app.domain.mcp.schemas import EvidenceResponse, RetrievalDocument, SearchEnvelope
+from app.domain.mcp.schemas import (
+    ContextSection,
+    EvidenceResponse,
+    PageLimit,
+    RetrievalDocument,
+    SearchEnvelope,
+)
 
 PerformanceRange = Literal[
     "day", "week", "month", "3_months", "6_months", "last_synced", "custom"
@@ -89,7 +95,7 @@ def _register_context_tools(
         "opportunities, and latest visibility audit from persisted CiteLadder data.",
     )
     async def get_project_business_context(
-        project_id: str, sections: list[str] | None = None
+        project_id: str, sections: list[ContextSection] | None = None
     ) -> EvidenceResponse:
         async with session_factory() as session:
             return EvidenceResponse.model_validate(
@@ -178,7 +184,8 @@ def _register_summary_tools(
         "read_visibility_audit",
         "Read latest visibility audit",
         "Read the latest persisted AI visibility audit status, summary, and "
-        "evidence reference.",
+        "evidence reference. Use the returned audit_id with read_visibility_results "
+        "and read_visibility_sources for diagnosis; the summary is not answer text.",
     )
     async def read_visibility_audit(
         project_id: str,
@@ -334,7 +341,7 @@ def _register_detail_tools(
         prompt_set_id: str | None = None,
         cohort: str | None = None,
         cursor: str | None = None,
-        limit: int | None = None,
+        limit: PageLimit | None = None,
     ) -> EvidenceResponse:
         async with session_factory() as session:
             return EvidenceResponse.model_validate(

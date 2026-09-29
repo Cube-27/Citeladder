@@ -120,7 +120,9 @@ export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
     context.search_intelligence_reference = { dataset_id: dataset, row_ids: rows };
   }
   const prompt = params.get(PARAM.prompt)?.trim() || undefined;
-  const skillId = params.get(PARAM.skill) === 'prompt_discovery' ? 'prompt_discovery' : undefined;
+  // The server catalog validates membership; preserve explicit skill selections.
+  const skill = params.get(PARAM.skill);
+  const skillId = skill && /^[a-z][a-z0-9_]{0,63}$/.test(skill) ? skill : undefined;
   return {
     actionId: uuidParam(params, PARAM.action),
     context,

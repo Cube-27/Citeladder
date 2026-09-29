@@ -4,9 +4,25 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime
-from typing import Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.core.config.mcp import MCP_MAX_LIST_LIMIT
+
+ContextSection = Literal[
+    "profile",
+    "prompts",
+    "site_health",
+    "demand",
+    "opportunities",
+    "visibility",
+    "performance",
+    "referrals",
+    "integrations",
+    "search_intelligence",
+]
+PageLimit = Annotated[int, Field(strict=True, ge=1, le=MCP_MAX_LIST_LIMIT)]
 
 
 class Pagination(BaseModel):

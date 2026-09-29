@@ -11,9 +11,11 @@ from types import SimpleNamespace
 import pytest
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config.agent import AGENT_TOOL_RESULT_MAX_CHARS
 from app.core.config.mcp import MCP_MAX_VISIBILITY_SOURCE_OFFSET
+from app.domain.agent.tool_catalog import build_agent_tools, execute_tool
 from app.domain.mcp import evidence_readers, retrieval
 from app.domain.mcp.common import _cursor_decode, _cursor_encode
 from app.domain.mcp.evidence_readers import (
@@ -28,6 +30,7 @@ from app.domain.mcp.evidence_readers import (
 )
 from app.domain.mcp.retrieval import fetch_business_record
 from app.domain.mcp.server import mcp_server
+from app.models.audit import Audit
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet, Topic
 from app.models.user import User
@@ -66,6 +69,44 @@ async def _account(
 
 async def _caller(session: AsyncSession, user: User):
     return auth_context_var.set(AuthenticatedUser(await read_grant(session, user.id)))
+
+
+@pytest.mark.asyncio
+async def test_large_audit_keeps_the_navigation_needed_for_detailed_reads(
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    user, workspace, project = await _account(db_session, "large-audit")
+    audit = Audit(
+        workspace_id=workspace.id,
+        project_id=project.id,
+        status="completed",
+        summary={"detail": "x" * (AGENT_TOOL_RESULT_MAX_CHARS * 2)},
+    )
+    db_session.add(audit)
+    await db_session.commit()
+    tools = build_agent_tools(session_factory)
+    outcome = await execute_tool(
+        tools["read_visibility_audit"],
+        project_id=project.id,
+        member_user_id=user.id,
+        arguments={"completed_baseline": True},
+    )
+    # Parse the visible envelope ahead of the clipped summary, just as a
+    # caller can use its continuation even though the body is incomplete.
+    envelope = json.loads(outcome.model_text.split(', "summary":', 1)[0] + "}")
+    detail = await execute_tool(
+        tools[envelope["continuations"]["results"]],
+        project_id=project.id,
+        member_user_id=user.id,
+        arguments={"audit_id": envelope["audit_id"]},
+    )
+    assert detail.payload["audit_id"] == str(audit.id)
+    assert detail.payload["items"] == []
+    assert (
+        envelope["artifact_refs"][0]["record_uri"] == f"citeladder://audit/{audit.id}"
+    )
+    assert "truncated" in outcome.model_text
 
 
 @pytest.mark.asyncio

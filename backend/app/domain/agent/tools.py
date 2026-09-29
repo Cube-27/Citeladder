@@ -253,6 +253,7 @@ async def _latest_audit(
     return {
         "state": "available",
         "status": row.status,
+        "audit_id": str(row.id),
         "summary": row.summary,
         "counts": {
             "requested": row.requested_count,

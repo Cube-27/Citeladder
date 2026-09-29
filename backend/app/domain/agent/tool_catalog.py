@@ -79,7 +79,7 @@ class ToolOutcome:
 def _arguments_model(
     name: str, handler: Callable[..., Any]
 ) -> tuple[type[BaseModel], bool]:
-    hints = typing.get_type_hints(handler)
+    hints = typing.get_type_hints(handler, include_extras=True)
     fields: dict[str, Any] = {}
     pinned = False
     for parameter in inspect.signature(handler).parameters.values():
@@ -279,7 +279,14 @@ def _same_project(payload: dict[str, Any], project_id: uuid.UUID) -> bool:
 
 def _outcome(payload: dict[str, Any]) -> ToolOutcome:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
-    text = json.dumps(payload, ensure_ascii=False, default=str)
+    # Keep identifiers, continuations and pagination readable even when the
+    # evidence body exceeds the model's character budget.
+    body_keys = {"summary", "items", "text"}
+    model_payload = {
+        **{key: value for key, value in payload.items() if key not in body_keys},
+        **{key: value for key, value in payload.items() if key in body_keys},
+    }
+    text = json.dumps(model_payload, ensure_ascii=False, default=str)
     if len(text) > AGENT_TOOL_RESULT_MAX_CHARS:
         text = (
             text[:AGENT_TOOL_RESULT_MAX_CHARS]

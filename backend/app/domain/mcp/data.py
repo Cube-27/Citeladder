@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Any
+from typing import Any, get_args
 from urllib.parse import quote
 
 from sqlalchemy import and_, or_, select
@@ -27,7 +28,7 @@ from app.domain.mcp.common import (
     _normalize_refs,
     current_user_id,
 )
-from app.domain.mcp.schemas import page
+from app.domain.mcp.schemas import ContextSection, page
 from app.models.brand import BrandProfile, Competitor, OwnedDomain
 from app.models.opportunity import Opportunity
 from app.models.project import Project
@@ -105,21 +106,10 @@ async def list_account_projects(
     }
 
 
-_CONTEXT_SECTIONS = {
-    "profile",
-    "prompts",
-    "site_health",
-    "demand",
-    "opportunities",
-    "visibility",
-    "performance",
-    "referrals",
-    "integrations",
-    "search_intelligence",
-}
+_CONTEXT_SECTIONS = frozenset(get_args(ContextSection))
 
 
-def _context_sections(sections: list[str] | None) -> set[str]:
+def _context_sections(sections: Sequence[str] | None) -> set[str]:
     selected = set(_CONTEXT_SECTIONS if sections is None else sections)
     unknown = selected - _CONTEXT_SECTIONS
     if unknown:
@@ -130,7 +120,7 @@ def _context_sections(sections: list[str] | None) -> set[str]:
 
 
 async def project_business_context(
-    session: AsyncSession, project_id: str, sections: list[str] | None = None
+    session: AsyncSession, project_id: str, sections: Sequence[str] | None = None
 ) -> dict[str, Any]:
     project = await _authorized_project(session, project_id)
     selected_sections = _context_sections(sections)

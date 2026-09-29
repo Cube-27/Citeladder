@@ -26,6 +26,8 @@ Discover available engines and surfaces; do not assume a fixed set of three. Cha
 
 Read audit state before selecting a baseline. If the newest audit is running or failed, use a separately returned completed comparable audit only when accessible, otherwise report the baseline gap. For each conclusion, open the actual answer and source evidence; an artifact reference is not its contents. Answer co-occurrence does not prove a competitor appears on the cited publisher page. Domain recurrence used to schedule inspections is not the citation count for the selected engine, cohort or period.
 
+Use `read_visibility_audit` once to select the audit, then pass its `audit_id` to `read_visibility_results`. Open decisive returned `citeladder://visibility_result/` records with `fetch` to read the answer text; use `read_visibility_sources` for source details. Reserve calls for those reads instead of repeating the summary or searching for an audit already identified. A truncated summary is not unavailable evidence: follow its identifiers and continuations, and narrow or paginate detailed reads. Only report raw answers as unavailable after the relevant read fails or explicitly reports their absence.
+
 ## Workflow
 
 1. **Validate the measurement frame.** Read business context, prompt portfolio and audit coverage. Separate unbranded discovery, branded evaluation and informational/citation prompts. A high score on questions naming the business does not prove discovery. Check completed versus failed runs and whether the prompt/version/engine mix changed.
@@ -63,6 +65,8 @@ observed_fanout_queries, evidence_refs
 ```
 
 The report contains baseline/cohort coverage, outcomes separated by type, evidence-backed failure modes, source/competitor gaps, prioritized actions with exact targets, counterevidence and a measurement plan. Null indicates unavailable, not false.
+
+For a direct question such as why a brand is missing, lead with a short plain-language explanation of what the actual answers reveal, supported by the decisive prompt and answer passages. Check whether the questions invite brand recommendations at all or mostly ask for general advice. Distinguish that prompt-fit issue from competitors being selected on a buying question. Give the strongest supported next action and state remaining uncertainty once. Scale the report to the question; do not bury the explanation under repeated caveats or turn an unread record into a task for the user to inspect.
 
 ## Validation and stops
 
