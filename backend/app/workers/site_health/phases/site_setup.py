@@ -7,7 +7,7 @@ page acquisition proceeds independently on the same queue.
 The task commits twice. Root analysis defers until ``crawl.site_facts`` exists,
 and the only thing it reads from that field is robots and llms.txt evidence —
 so the first commit publishes exactly that, and the sitemap walk (up to
-``max_sitemap_documents`` serial fetches) plus admission land in a second
+``max_sitemap_documents`` bounded concurrent fetches) plus admission land in a second
 commit under the same lease. Gating the first score on the walk cost the whole
 walk in start latency and protected nothing.
 """
@@ -141,17 +141,18 @@ async def _publish_evidence(
     policy = None
     robots_body: str | None = None
     robots_status: int | None = None
-    if authority:
-        policy, robots_body, robots_status = await ctx.robots.ensure(authority)
-    site_facts = await collect_site_evidence(
-        ctx,
-        requested_url=plan.requested_url,
-        authority=authority,
-        robots_policy=policy,
-        robots_body=robots_body,
-        robots_status=robots_status,
-        sample_mode=plan.sample_mode,
-    )
+    async with ctx.host_slot(plan.requested_url):
+        if authority:
+            policy, robots_body, robots_status = await ctx.robots.ensure(authority)
+        site_facts = await collect_site_evidence(
+            ctx,
+            requested_url=plan.requested_url,
+            authority=authority,
+            robots_policy=policy,
+            robots_body=robots_body,
+            robots_status=robots_status,
+            sample_mode=plan.sample_mode,
+        )
     # Commit one: the root page's gate clears here, before the walk.
     published = await _publish_site_facts(
         ctx, task_id=task_id, crawl_id=crawl_id, site_facts=site_facts

@@ -21,15 +21,24 @@ from __future__ import annotations
 
 import time
 import uuid
+from dataclasses import dataclass
+from math import ceil
 
 from app.core.config.site_health_runtime import site_health_settings
 
 
+@dataclass
+class _RefreshMark:
+    refreshed_at: float
+    observed: int = 1
+    pending: int = 0
+
+
 class ScoreRefreshCadence:
-    """Admit one live refresh per N analyses or T seconds, whichever is first."""
+    """Refresh after a growing batch of analyses or the elapsed-time bound."""
 
     def __init__(self) -> None:
-        self._marks: dict[uuid.UUID, tuple[float, int]] = {}
+        self._marks: dict[uuid.UUID, _RefreshMark] = {}
 
     def admits(self, crawl_id: uuid.UUID) -> bool:
         """Whether this analysis should trigger a live summary rebuild."""
@@ -45,18 +54,24 @@ class ScoreRefreshCadence:
             # rather than leaning on a zero timestamp, which only read as due
             # while the elapsed trigger was enabled -- with it off, the first
             # card waited for a whole page interval.
-            self._marks[crawl_id] = (now, 0)
+            self._marks[crawl_id] = _RefreshMark(refreshed_at=now)
             self._prune()
             return True
-        last_at, pending = mark
-        pending += 1
-        due = (page_interval > 0 and pending >= page_interval) or (
-            min_interval > 0 and now - last_at >= min_interval
+        mark.observed += 1
+        mark.pending += 1
+        growing_interval = max(
+            page_interval,
+            ceil(
+                (mark.observed - mark.pending)
+                * site_health_settings.live_score_refresh_page_fraction
+            ),
         )
-        self._marks[crawl_id] = (now, 0) if due else (last_at, pending)
-        # Pruned on both paths. With the elapsed trigger disabled a crawl's
-        # first analysis is not due, so an unseen crawl can enter the table
-        # here without ever passing through the admitted branch.
+        due = (page_interval > 0 and mark.pending >= growing_interval) or (
+            min_interval > 0 and now - mark.refreshed_at >= min_interval
+        )
+        if due:
+            mark.refreshed_at = now
+            mark.pending = 0
         self._prune()
         return due
 
@@ -69,6 +84,6 @@ class ScoreRefreshCadence:
         cap = site_health_settings.live_score_refresh_max_tracked_crawls
         if cap <= 0 or len(self._marks) <= cap:
             return
-        stale = sorted(self._marks.items(), key=lambda item: item[1][0])
+        stale = sorted(self._marks.items(), key=lambda item: item[1].refreshed_at)
         for crawl_id, _mark in stale[: len(self._marks) - cap]:
             self._marks.pop(crawl_id, None)

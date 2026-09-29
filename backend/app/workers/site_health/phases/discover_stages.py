@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
+from collections import deque
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -270,6 +272,9 @@ async def ingest_sitemap_tree(
     resolved["sitemap"] = {
         "fetched": bool(sitemap_files),
         "files": list(sitemap_files)[: site_health_settings.max_sitemap_documents],
+        # A URL can be discovered through a page before its sitemap arrives.
+        # Preserve membership without rewriting its immutable first observation.
+        "urls": list(sitemap_urls),
     }
     return resolved, sitemap_urls
 
@@ -315,42 +320,42 @@ async def _ingest_sitemaps(
     settings = site_health_settings
     collector = SitemapCollector()
     files: list[str] = []
-    queue: list[tuple[str, int]] = [(seed, 0) for seed in seeds]
+    queue = deque((seed, 0) for seed in dict.fromkeys(seeds))
     queued = {seed for seed in seeds}
-    attempted: set[str] = set()
+    attempted = 0
     async with ctx.new_fetcher() as fetcher:
-        while queue and len(attempted) < settings.max_sitemap_documents:
+        while queue and attempted < settings.max_sitemap_documents:
             if collector.url_count >= settings.max_sitemap_urls:
                 # The collector is full: no further document can add a URL,
                 # so every remaining fetch and parse is pure cost. A large
                 # index used to burn all 32 document fetches to produce
                 # nothing past this point.
                 break
-            url, depth = queue.pop(0)
-            if url in attempted:
-                continue
             # Bound network attempts, not only successful documents. A
             # sitemap index can contain thousands of stale or blocked
             # children; counting only successful responses lets one root
             # discovery monopolize every crawl worker indefinitely.
-            attempted.add(url)
-            result = await _fetch_sitemap_document(ctx, fetcher, url)
-            if result is None:
-                continue
-            files.append(url)
-            try:
-                child_refs = collector.add_document(
-                    url,
-                    result.body,
-                    content_type=result.content_type,
-                    depth=depth,
+            batch = [
+                queue.popleft()
+                for _ in range(
+                    min(
+                        len(queue),
+                        settings.sitemap_fetch_concurrency,
+                        settings.max_sitemap_documents - attempted,
+                    )
                 )
-            except SitemapParseError:
-                continue
-            for ref in child_refs:
-                if ref not in queued:
-                    queued.add(ref)
-                    queue.append((ref, depth + 1))
+            ]
+            attempted += len(batch)
+            results = await _fetch_sitemap_batch(ctx, fetcher, batch)
+            # Completion order cannot choose which URLs survive the collector
+            # cap. Consume the bounded wave in the original BFS order.
+            for (url, depth), result in zip(batch, results, strict=True):
+                for ref in _collect_sitemap_document(
+                    collector, files, url=url, depth=depth, result=result
+                ):
+                    if ref not in queued:
+                        queued.add(ref)
+                        queue.append((ref, depth + 1))
 
     page_urls = _admitted_sitemap_urls(
         collector,
@@ -359,6 +364,36 @@ async def _ingest_sitemaps(
         exclude_globs=exclude_globs,
     )
     return page_urls, tuple(files)
+
+
+async def _fetch_sitemap_batch(
+    ctx: PhaseContext, fetcher: SecureFetcher, batch: list[tuple[str, int]]
+) -> list[FetchResult | None]:
+    async with asyncio.TaskGroup() as group:
+        tasks = [
+            group.create_task(_fetch_sitemap_document(ctx, fetcher, url))
+            for url, _depth in batch
+        ]
+    return [task.result() for task in tasks]
+
+
+def _collect_sitemap_document(
+    collector: SitemapCollector,
+    files: list[str],
+    *,
+    url: str,
+    depth: int,
+    result: FetchResult | None,
+) -> list[str]:
+    if result is None:
+        return []
+    files.append(url)
+    try:
+        return collector.add_document(
+            url, result.body, content_type=result.content_type, depth=depth
+        )
+    except SitemapParseError:
+        return []
 
 
 async def _fetch_sitemap_document(
@@ -378,6 +413,7 @@ async def _fetch_sitemap_document(
                 max_decoded_bytes=site_health_settings.max_sitemap_decoded_bytes,
             ),
             enforce_scope=False,
+            request_slot=ctx.host_slot,
         )
     except FetchError:
         return None

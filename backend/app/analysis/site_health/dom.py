@@ -16,10 +16,13 @@ finds out.
 
 from __future__ import annotations
 
+import codecs
 import logging
+from dataclasses import dataclass
 from typing import Any, Final
 
 from lxml import etree
+from lxml import html as lxml_html
 
 logger = logging.getLogger("app.analysis.site_health.dom")
 
@@ -32,6 +35,37 @@ logger = logging.getLogger("app.analysis.site_health.dom")
 #: around those reads. Anything OUTSIDE this set is a bug, and it propagates:
 #: the fail-open contract exists for bad HTML, not for bad code.
 DOM_ERRORS: Final = (etree.Error, AttributeError, TypeError, ValueError)
+
+
+@dataclass(frozen=True, slots=True)
+class HtmlDocument:
+    """One parse result, including failure; fact extraction may mutate its root."""
+
+    root: Any | None
+
+
+def _safe_parser_encoding(charset: str) -> str | None:
+    normalized = str(charset or "").strip()
+    if not normalized:
+        return None
+    try:
+        codecs.lookup(normalized)
+    except LookupError:
+        return None
+    return normalized.lower()
+
+
+def parse_html_document(body: bytes, *, charset: str = "") -> HtmlDocument:
+    """Parse already-bounded bytes without network access, preserving failure."""
+    if not body:
+        return HtmlDocument(None)
+    parser = lxml_html.HTMLParser(
+        recover=True, encoding=_safe_parser_encoding(charset), no_network=True
+    )
+    try:
+        return HtmlDocument(lxml_html.document_fromstring(body, parser=parser))
+    except (etree.ParserError, ValueError):
+        return HtmlDocument(None)
 
 
 def dom_failure(operation: str, exc: BaseException) -> None:

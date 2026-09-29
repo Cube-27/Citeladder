@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from app.connectors.web_evidence.url_policy import UrlAdmission
 from app.core.config.site_health_crawl_policy import (
     CORPUS_DISPOSITION_ANALYZE,
     CORPUS_DISPOSITION_VERSION,
@@ -107,6 +108,7 @@ class DiscoveredLink:
     url: str
     url_hash: str
     ordinal: int
+    admission: UrlAdmission
     rewrite_reason: str = ""
     rewrite_version: str = ""
 
