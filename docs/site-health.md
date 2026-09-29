@@ -177,22 +177,33 @@ crawl. Suggestions do not contribute to a health score.
 
 ### Internal links
 
-The analysis follows a hub-and-spoke rubric over page pairs. TypeScript owns
+The analysis proposes inline editorial links at exact captured source phrases.
+It does not infer missing navigation or a parent/child site graph. TypeScript owns
 scoped admission, retrieval, saved reads and publication; the existing Python
 JEV connector (`JEV_API_KEY`) executes judgments through the existing
 analytics queue. No provider runs on a read.
 
 Admission freezes each usable page's title, H1, meta description, a short
-content excerpt, page kind, observed main-content targets and main-content
+destination excerpt, bounded source passages, page kind, observed main-content targets and main-content
 inbound count from the crawl's link metrics. Trust/policy and about/contact
 pages are excluded. Eligibility (available, untruncated extraction and
 included page kind) is applied before the page cap; above the cap, indexable
 pages are preferred and the rest follow a stable URL-hash order, so the cap
 spreads across site sections instead of taking the alphabetically first URLs.
-Retrieval ranks destinations by TF-IDF similarity over
-title, H1, URL path and description; once a crawl has enough pages, words on a
-large share of them (brand and template text) carry no weight. Each source page
-keeps a bounded shortlist of related destinations it does not already link
+Source passages are sentence spans from persisted page-owned text, with exact
+UTF-16 offsets into the source artifact. Ordered observed headings are separated
+from prose; flattened text does not establish DOM paragraph or section locators.
+Missing or truncated primary text records unavailable passage evidence; captured
+text with no qualifying prose records an empty passage collection. Bounded
+sentence length, word count and punctuation filter obvious fragments; JEV rejects remaining
+navigation, TOC, card and boilerplate text. Diagnostics disclose pages without
+usable captured passages rather than claiming they need no links.
+
+Retrieval compares source passages with TF-IDF destination labels (title, H1 and
+URL path); once a crawl has enough pages, words on a large share of them carry no
+weight. An exact source phrase must share destination vocabulary before a pair
+can be considered. This conservative lexical admission can miss synonyms.
+Each source page keeps a bounded shortlist of related destinations it does not already link
 from main content. A navigation-only link does not suppress a suggestion; a
 link in an unclassified region does, and a source whose anchor capture was
 truncated gets no suggestions. Product pages whose titles differ only by a
@@ -200,14 +211,22 @@ colour or size word are variants: they never suggest each other, and one
 destination represents each variant family.
 
 Each source page is one JEV request. Its state carries the rubric and the
-source once, and each shortlisted destination (with its page type and inbound
-count) under `targets`. Per destination, a Noul asks whether the source should
-link to it and, when the destination offers more than one descriptive option
-(its H1, title without site suffix, or a non-identifier URL slug), a Choice
-selects the anchor text. Answers map back to their page pair by the
-destination's key. JEV never writes URLs or anchor text. A pair at
-or above the review threshold becomes a suggestion; the threshold is a review
-default, not permission to publish.
+source once, and each shortlisted destination with exact source placement options
+under `targets`. A Noul judges whether a supplied placement adds useful, accurate
+context; a Choice selects one placement or explicitly chooses `none`. Both are
+required even for a single placement. Publication validates the chosen anchor
+and offsets against frozen source evidence, never falls back on a missing or
+invalid answer, and retains only the highest-ranked suggestion when anchors
+overlap. Distinct phrases can support distinct destinations. JEV never writes
+URLs or anchor text. The Noul threshold remains a provisional review default,
+not permission to publish or a calibrated precision claim.
+
+Review highlights the exact anchor in its source passage, and CSV export includes
+that passage, its source page, artifact and URL identifiers, and extractor version.
+Saved historical results remain readable with placement absent; no read or
+analysis rewrites historical results. The optional placement read contract can be
+removed when pre-placement saved runs are retired
+from the serving database. New publication requires captured placement evidence.
 
 The job has its own wall-clock budget on a heartbeated lease, not the
 Generate-request JEV deadline. One transaction commits every request's dispatch

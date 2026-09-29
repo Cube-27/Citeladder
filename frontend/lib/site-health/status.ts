@@ -25,8 +25,36 @@ import type {
   SiteHealthEntitlement,
 } from '@/lib/api/types';
 import type { RunStatusValue, StatusValue } from '@/components/ui/badge-variants';
-import { availabilityLabel, formatDisplayTimestamp } from '@/lib/format';
+import type { InternalLinkAnalysis } from '@citeladder/contracts/site-health';
+import { availabilityLabel, formatCount, formatDisplayTimestamp } from '@/lib/format';
 import { titleCaseStatus } from '@/lib/utils';
+
+const INTERNAL_LINK_REASON_LABELS: Record<string, string> = {
+  funding_unavailable: 'insufficient AI credits',
+  permission_unavailable: 'run permission unavailable',
+  provider_unconfigured: 'analysis provider not configured',
+  deadline_exceeded: 'time limit reached',
+  interrupted_dispatch: 'interrupted requests',
+  invalid_placement: 'missing or invalid placement answer',
+};
+
+export function internalLinkStateNotice(analysis: InternalLinkAnalysis) {
+  const reasons = Object.entries(analysis.diagnostics?.reasons ?? {})
+    .filter(([reason]) => !['no_placement', 'overlapping_placement'].includes(reason))
+    .map(([reason, count]) => {
+      const label = INTERNAL_LINK_REASON_LABELS[reason] ?? `unknown reason: ${reason}`;
+      return `${label} (${formatCount(count)})`;
+    })
+    .join(', ');
+  const detail = reasons ? `: ${reasons}` : '';
+  if (analysis.state === 'cancelled') return 'This analysis was cancelled.';
+  if (analysis.state === 'unavailable')
+    return `No page pairs could be checked${detail}. Analyze again to retry.`;
+  if (analysis.state === 'failed') return `This analysis failed${detail}. Analyze again to retry.`;
+  if (analysis.state === 'partial' && reasons)
+    return `Some page pairs were not checked: ${reasons}. These suggestions cover the rest.`;
+  return null;
+}
 
 /** The not-yet-analysed / not-applicable placeholder (matches visibility UI). */
 export const PLACEHOLDER = availabilityLabel('not_measured');

@@ -1,12 +1,15 @@
 import { http, HttpResponse } from 'msw';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
+import { downloadCsv } from '@/lib/csv/download';
 import { InternalLinksPanel } from './internal-links-panel';
+
+vi.mock('@/lib/csv/download', () => ({ downloadCsv: vi.fn() }));
 
 const project = makeProject();
 const run = '00000000-0000-4000-8000-000000000011';
@@ -103,7 +106,9 @@ describe('Internal links', () => {
     mswServer.use(http.get(endpoint, () => HttpResponse.json(read(analysis()))));
     renderPanel();
     expect(
-      await screen.findByText('30 page pairs were checked and none needed a new link.'),
+      await screen.findByText(
+        '30 page pairs were checked and none qualified for a contextual link.',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -113,6 +118,13 @@ describe('Internal links', () => {
       source: page(index, `Source ${index}`),
       target: page(50 + index, `Destination ${index}`),
       anchor: `Anchor ${index}`,
+      placement: {
+        text: `Consider Anchor ${index} when preparing this page for publication.`,
+        anchor: `Anchor ${index}`,
+        anchor_start: 9,
+        start: 400,
+        end: 400 + `Consider Anchor ${index} when preparing this page for publication.`.length,
+      },
       usefulness: 0.9 - index / 100,
       action_id: null,
       action_status: null,
@@ -122,6 +134,28 @@ describe('Internal links', () => {
     );
     renderPanel();
     expect(await screen.findByText('Anchor 0')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    expect(downloadCsv).toHaveBeenCalledWith(
+      'internal-links',
+      expect.arrayContaining([
+        'Source analysis ID',
+        'Source artifact ID',
+        'Source site URL ID',
+        'Source extractor version',
+      ]),
+      expect.arrayContaining([
+        [
+          links[0]!.source.url,
+          links[0]!.target.url,
+          links[0]!.anchor,
+          links[0]!.placement.text,
+          links[0]!.source.analysis_id,
+          links[0]!.source.artifact_id,
+          links[0]!.source.site_url_id,
+          links[0]!.source.extractor_version,
+        ],
+      ]),
+    );
     expect(screen.queryByText('Anchor 11')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
     expect(await screen.findByText('Anchor 11')).toBeInTheDocument();
@@ -129,7 +163,55 @@ describe('Internal links', () => {
       screen.getByRole('button', { name: 'Review link from Source 11 to Destination 11' }),
     );
     const drawer = await screen.findByRole('dialog');
-    expect(within(drawer).getByText('Anchor 11')).toBeInTheDocument();
+    expect(within(drawer).getByText(/when preparing this page for publication/)).toHaveTextContent(
+      'Consider Anchor 11 when preparing this page for publication.',
+    );
     expect(within(drawer).getByRole('button', { name: /Copy HTML/ })).toBeInTheDocument();
+  });
+
+  it('explains when source capture cannot support placement instead of implying no links are needed', async () => {
+    mswServer.use(
+      http.get(endpoint, () =>
+        HttpResponse.json(
+          read(
+            analysis({
+              diagnostics: {
+                ...analysis().diagnostics,
+                candidates: 0,
+                completed: 0,
+                below_threshold: 0,
+                sources_without_passages: 20,
+              },
+            }),
+          ),
+        ),
+      ),
+    );
+    renderPanel();
+    expect(
+      await screen.findByText(/20 pages had no usable captured source passages/),
+    ).toBeInTheDocument();
+  });
+
+  it('distinguishes failed analysis and unknown diagnostic reasons', async () => {
+    mswServer.use(
+      http.get(endpoint, () =>
+        HttpResponse.json(
+          read(
+            analysis({
+              state: 'failed',
+              diagnostics: {
+                ...analysis().diagnostics,
+                reasons: { unexpected_provider_state: 1 },
+              },
+            }),
+          ),
+        ),
+      ),
+    );
+    renderPanel();
+    expect(
+      await screen.findByText(/This analysis failed: unknown reason: unexpected_provider_state/),
+    ).toBeInTheDocument();
   });
 });

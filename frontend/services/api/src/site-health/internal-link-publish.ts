@@ -1,6 +1,7 @@
 import {
   internalLinkAnalysisSchema,
   internalLinkPageSchema,
+  internalLinkPlacementSchema,
   type InternalLink,
   type InternalLinkPage,
 } from '@citeladder/contracts/site-health';
@@ -18,15 +19,32 @@ const noul = z.object({ type: z.literal('noul'), noul: probability });
 const choice = z.object({ type: z.literal('choice'), choice: z.string() });
 
 function summary(page: InternalLinkPage) {
-  const { contextual_targets: _targets, ...rest } = page;
+  const { contextual_targets: _targets, source_passages: _passages, ...rest } = page;
   return rest;
 }
 
-/** The chosen supplied option, or the destination's first option. */
-function selectedAnchor(candidate: LinkCandidate, raw: unknown): string {
+/** Only an explicit selection of a frozen, source-grounded placement can publish. */
+function selectedPlacement(candidate: LinkCandidate, source: InternalLinkPage, raw: unknown) {
   const answer = choice.safeParse(raw);
   const index = answer.success ? /^a(\d+)$/u.exec(answer.data.choice) : null;
-  return candidate.anchors[Number(index?.[1] ?? 0)] ?? candidate.anchors[0]!;
+  if (!index) return null;
+  const parsed = internalLinkPlacementSchema.safeParse(candidate.placements?.[Number(index[1])]);
+  if (!parsed.success) return null;
+  const placement = parsed.data;
+  return placement.anchor &&
+    placement.end === placement.start + placement.text.length &&
+    placement.text.slice(
+      placement.anchor_start,
+      placement.anchor_start + placement.anchor.length,
+    ) === placement.anchor &&
+    source.source_passages?.some(
+      (passage) =>
+        passage.start === placement.start &&
+        passage.end === placement.end &&
+        passage.text === placement.text,
+    )
+    ? placement
+    : null;
 }
 
 function emptyDiagnostics(candidates: number) {
@@ -51,6 +69,9 @@ export function projectLinks(manifest: Record<string, unknown>, outcomes: Map<st
   const candidates = manifest.candidates as LinkCandidate[];
   const threshold = Number(record(manifest.policy).accept_threshold);
   const diagnostics = emptyDiagnostics(candidates.length);
+  const sourcesWithoutPassages = [...pages.values()].filter(
+    (page) => !page.source_passages?.length,
+  ).length;
   const links: InternalLink[] = [];
   for (const candidate of candidates) {
     if (!outcomes.has(candidate.id)) {
@@ -74,11 +95,26 @@ export function projectLinks(manifest: Record<string, unknown>, outcomes: Map<st
     const source = pages.get(candidate.source);
     const target = pages.get(candidate.target);
     if (!source || !target) throw new Error('Link candidate has no frozen page');
+    const placement = selectedPlacement(candidate, source, answers.anchor);
+    if (!placement) {
+      const selection = choice.safeParse(answers.anchor);
+      const reason =
+        selection.success && selection.data.choice === 'none'
+          ? 'no_placement'
+          : 'invalid_placement';
+      diagnostics.reasons[reason] = (diagnostics.reasons[reason] ?? 0) + 1;
+      if (reason === 'invalid_placement') {
+        diagnostics.completed -= 1;
+        diagnostics.unavailable += 1;
+      }
+      continue;
+    }
     links.push({
       id: candidate.id,
       source: summary(source),
       target: summary(target),
-      anchor: selectedAnchor(candidate, answers.anchor),
+      anchor: placement.anchor,
+      placement,
       usefulness: judgment.data.noul,
       action_id: null,
       action_status: null,
@@ -89,11 +125,30 @@ export function projectLinks(manifest: Record<string, unknown>, outcomes: Map<st
   else if (diagnostics.candidates && diagnostics.unavailable === diagnostics.candidates)
     state = 'unavailable';
   else if (diagnostics.unavailable || Number(manifest.omitted_pages)) state = 'partial';
+  const recommendations: InternalLink[] = [];
+  for (const link of links.toSorted(
+    (a, b) =>
+      b.usefulness - a.usefulness ||
+      a.source.url.localeCompare(b.source.url) ||
+      a.target.url.localeCompare(b.target.url),
+  )) {
+    const start = link.placement!.start + link.placement!.anchor_start;
+    const overlaps = recommendations.some((other) => {
+      const otherStart = other.placement!.start + other.placement!.anchor_start;
+      return (
+        other.source.analysis_id === link.source.analysis_id &&
+        start < otherStart + other.anchor.length &&
+        otherStart < start + link.anchor.length
+      );
+    });
+    if (overlaps)
+      diagnostics.reasons.overlapping_placement =
+        (diagnostics.reasons.overlapping_placement ?? 0) + 1;
+    else recommendations.push(link);
+  }
   return {
-    recommendations: links.toSorted(
-      (a, b) => b.usefulness - a.usefulness || a.source.url.localeCompare(b.source.url),
-    ),
-    diagnostics,
+    recommendations,
+    diagnostics: { ...diagnostics, sources_without_passages: sourcesWithoutPassages },
     state,
   };
 }

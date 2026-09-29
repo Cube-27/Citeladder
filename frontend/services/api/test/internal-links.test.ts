@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { InternalLinkPage } from '@citeladder/contracts/site-health';
+import {
+  internalLinkAnalysisSchema,
+  internalLinkPageSchema,
+  internalLinkSchema,
+} from '@citeladder/contracts/site-health';
 
 import {
-  anchorOptions,
   isVariant,
   linkCandidates,
   linkRequests,
@@ -11,6 +15,7 @@ import { projectLinks } from '../src/site-health/internal-link-publish.ts';
 import { policy } from '../src/config.ts';
 import { contextualLinkObserved } from '../src/opportunities/internal-link-verification.ts';
 import { linkUrl } from '../src/site-health/internal-link-pages.ts';
+import { sourcePassages } from '../src/site-health/internal-link-placements.ts';
 
 let counter = 0;
 function page(title: string, overrides: Partial<InternalLinkPage> = {}): InternalLinkPage {
@@ -26,6 +31,9 @@ function page(title: string, overrides: Partial<InternalLinkPage> = {}): Interna
     h1: title,
     description: '',
     excerpt: '',
+    source_passages: sourcePassages(
+      `${title} can help you make informed decisions about this subject.`,
+    ),
     page_kind: 'article',
     contextual_inbound: 0,
     contextual_targets: [],
@@ -87,19 +95,70 @@ describe('internal link candidates', () => {
       );
   });
 
-  it('offers descriptive destination anchors and rejects identifier slugs', () => {
-    const target = page('Bikini Hi-Cut Cotton', {
-      url: 'https://example.com/bikini-hi-cut-cotton/LUS1300C_667296_BLACK',
-      title: 'Black Bikini Hi-Cut Cotton | Acme',
-    });
-    expect(anchorOptions(target)).toEqual(['Bikini Hi-Cut Cotton', 'Black Bikini Hi-Cut Cotton']);
-    const pages = [page('Cotton bikini care'), target];
+  it('retrieves a destination from an exact source phrase even without title overlap', () => {
+    const target = page('Autocapture');
+    const text =
+      'Start by enabling autocapture to collect clicks and pageviews in your application.';
+    const pages = [page('Getting started', { source_passages: sourcePassages(text) }), target];
     const candidate = linkCandidates(pages).find((item) => item.target === target.analysis_id)!;
+    expect(candidate.placements).toEqual([
+      {
+        text,
+        start: 0,
+        end: text.length,
+        anchor: 'autocapture',
+        anchor_start: text.indexOf('autocapture'),
+      },
+    ]);
     const [request] = linkRequests(pages, [candidate]);
     const question = request!.request.questions[`anchor_${candidate.key}`] as {
-      criteria: Record<string, string>;
+      criteria: Record<string, unknown>;
     };
-    expect(Object.values(question.criteria)).toEqual(anchorOptions(target));
+    expect(Object.keys(question.criteria)).toEqual(['a0', 'none']);
+    expect(question.criteria.none).toBeDefined();
+  });
+
+  it('does not substitute metadata or destination labels for missing source prose', () => {
+    const source = page('Garden soil guide', { source_passages: [] });
+    const target = page('Soil testing kit');
+    expect(pairs([source, target]).some(([from]) => from === source.analysis_id)).toBe(false);
+    source.source_passages = null;
+    expect(pairs([source, target]).some(([from]) => from === source.analysis_id)).toBe(false);
+    source.source_passages = sourcePassages(
+      'This article explains how to prepare seedlings for the growing season.',
+    );
+    expect(pairs([source, target]).some(([from]) => from === source.analysis_id)).toBe(false);
+  });
+
+  it('distinguishes unavailable source evidence from captured text without usable passages', () => {
+    const captured = page('Garden soil guide', { source_passages: [] });
+    expect(internalLinkPageSchema.parse(captured).source_passages).toEqual([]);
+    expect(
+      internalLinkPageSchema.parse({ ...captured, source_passages: null }).source_passages,
+    ).toBeNull();
+    expect(
+      internalLinkPageSchema.safeParse({ ...captured, source_passages: undefined }).success,
+    ).toBe(false);
+  });
+
+  it('keeps exact offsets beyond the excerpt and excludes flattened headings', () => {
+    const intro =
+      'This introductory sentence provides some general background for the reader. '.repeat(8);
+    const heading = 'F45 TRAINING LIONHEART';
+    const sentence = 'LionHeart is more than a heart rate monitor for your workout.';
+    const text = `${intro}${heading} ${sentence}`;
+    const passages = sourcePassages(text, [heading]);
+    expect(passages.at(-1)).toEqual({
+      text: sentence,
+      start: text.indexOf(sentence),
+      end: text.length,
+    });
+    expect(
+      sourcePassages('Contents Trends Funnels Retention Was this page useful?', [
+        'Contents',
+        'Was this page useful?',
+      ]),
+    ).toEqual([]);
   });
 
   it('sends each source page once with a question per destination it names', () => {
@@ -127,7 +186,11 @@ describe('internal link candidates', () => {
 });
 
 describe('internal link publication', () => {
-  const source = page('Garden soil guide');
+  const source = page('Garden soil guide', {
+    source_passages: sourcePassages(
+      'Use a soil testing kit to check whether garden soil needs compost.',
+    ),
+  });
   const target = page('Soil testing kit', { h1: 'Home soil testing' });
   const manifest = {
     pages: [source, target],
@@ -159,16 +222,83 @@ describe('internal link publication', () => {
     );
   });
 
-  it('publishes accepted links with the chosen anchor, falling back to the first option', () => {
+  it('publishes only explicit source placements and never falls back on invalid answers', () => {
     const chosen = projectLinks(
       manifest,
-      outcomes(completed(0.9, { type: 'choice', choice: 'a1' })),
+      outcomes(completed(0.9, { type: 'choice', choice: 'a0' })),
     );
     const toTarget = (result: ReturnType<typeof projectLinks>) =>
       result.recommendations.find((link) => link.target.analysis_id === target.analysis_id)!;
-    expect(toTarget(chosen).anchor).toBe('Soil testing kit');
+    expect(toTarget(chosen).anchor).toBe('soil testing kit');
+    expect(toTarget(chosen).placement?.text).toBe(source.source_passages![0]!.text);
     const malformed = projectLinks(manifest, outcomes(completed(0.9, { choice: 'none' })));
-    expect(toTarget(malformed).anchor).toBe('Home soil testing');
+    expect(malformed.recommendations).toEqual([]);
+    expect(malformed.state).toBe('unavailable');
+    const none = projectLinks(
+      manifest,
+      outcomes(completed(0.9, { type: 'choice', choice: 'none' })),
+    );
+    expect(none.recommendations).toEqual([]);
+    expect(none.state).toBe('completed');
+    expect(
+      projectLinks(manifest, outcomes(completed(0.9, { type: 'choice', choice: 'a99' }))).state,
+    ).toBe('unavailable');
+  });
+
+  it('rejects a selected anchor whose offsets do not match frozen source evidence', () => {
+    const altered = structuredClone(manifest);
+    for (const candidate of altered.candidates) candidate.placements[0]!.anchor_start += 1;
+    const result = projectLinks(
+      altered,
+      outcomes(completed(0.99, { type: 'choice', choice: 'a0' })),
+    );
+    expect(result.recommendations).toEqual([]);
+    expect(result.state).toBe('unavailable');
+  });
+
+  it('keeps distinct phrases but chooses one destination for overlapping anchor spans', () => {
+    const competing = page('Soil testing methods');
+    const compost = page('Compost');
+    const pages = [source, target, competing, compost];
+    const candidates = linkCandidates(pages).filter(
+      (candidate) => candidate.source === source.analysis_id,
+    );
+    const decisions = new Map(
+      candidates.map((candidate) => [
+        candidate.id,
+        completed(candidate.target === target.analysis_id ? 0.95 : 0.8, {
+          type: 'choice',
+          choice: 'a0',
+        }),
+      ]),
+    );
+    const result = projectLinks({ ...manifest, pages, candidates }, decisions);
+    expect(result.recommendations.map((link) => link.target.analysis_id)).toEqual([
+      target.analysis_id,
+      compost.analysis_id,
+    ]);
+    expect(result.diagnostics.reasons.overlapping_placement).toBe(1);
+  });
+
+  it('reads historical saved suggestions without inventing placement evidence', () => {
+    const saved = internalLinkSchema.parse({
+      id: source.analysis_id,
+      source,
+      target,
+      anchor: 'Legacy label',
+      usefulness: 0.8,
+      action_id: null,
+      action_status: null,
+    });
+    expect(saved.placement).toBeUndefined();
+    expect(saved.anchor).toBe('Legacy label');
+    const { sources_without_passages: _coverage, ...diagnostics } = projectLinks(
+      manifest,
+      new Map(),
+    ).diagnostics;
+    expect(
+      internalLinkAnalysisSchema.shape.diagnostics.parse(diagnostics)?.sources_without_passages,
+    ).toBeNull();
   });
 });
 

@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import type { InternalLinkPage } from '@citeladder/contracts/site-health';
+import type { InternalLinkPage, InternalLinkPlacement } from '@citeladder/contracts/site-health';
 
 import { policy } from '../config.ts';
+import { sourcePlacements } from './internal-link-placements.ts';
 
 const limits = policy.internal_links;
 const stopWords = new Set<string>(limits.stop_words);
@@ -13,7 +14,7 @@ export type LinkCandidate = {
   /** The destination's key in its source page's JEV request (`targets.<key>`). */
   key: string;
   similarity: number;
-  anchors: string[];
+  placements: InternalLinkPlacement[];
 };
 
 /** One JEV request per source page: its targets share the source state. */
@@ -44,6 +45,14 @@ function terms(page: InternalLinkPage): string[] {
       .toLocaleLowerCase()
       .match(/[\p{L}\p{N}]{3,}/gu) ?? []
   ).filter((word) => !stopWords.has(word));
+}
+
+function passageVector(text: string): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const word of text.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? [])
+    if (!stopWords.has(word)) counts.set(word, (counts.get(word) ?? 0) + 1);
+  const norm = Math.hypot(...counts.values()) || 1;
+  return new Map([...counts].map(([word, count]) => [word, count / norm]));
 }
 
 /** Unit-length TF-IDF vectors; site-wide template words carry no weight. */
@@ -100,26 +109,6 @@ export function isVariant(a: InternalLinkPage, b: InternalLinkPage): boolean {
   return shared >= 2 && different <= limits.variant_max_word_difference;
 }
 
-/** Descriptive anchors come from the destination itself, never the model. */
-export function anchorOptions(target: InternalLinkPage): string[] {
-  const leaf = path(target.url).split('/').filter(Boolean).at(-1) ?? '';
-  const options: string[] = [];
-  for (const raw of [target.h1, pageName(target.title), leaf.replaceAll(/[-_]+/gu, ' ')]) {
-    const option = raw.replaceAll(/\s+/gu, ' ').trim();
-    const digits = option.replaceAll(/\D/gu, '').length;
-    if (
-      option.length < limits.min_anchor_chars ||
-      option.length > limits.max_anchor_chars ||
-      // SKU-like slugs are identifiers, not anchor text.
-      digits > option.length / 3 ||
-      options.some((item) => item.toLocaleLowerCase() === option.toLocaleLowerCase())
-    )
-      continue;
-    options.push(option);
-  }
-  return options;
-}
-
 function pageState(page: InternalLinkPage) {
   return {
     title: page.title,
@@ -141,20 +130,28 @@ function linkRequest(source: InternalLinkPage, targets: [LinkCandidate, Internal
     state[candidate.key] = {
       ...pageState(target),
       contextual_inbound_links: target.contextual_inbound,
+      placements: Object.fromEntries(
+        candidate.placements.map((placement, index) => [`a${index}`, placement]),
+      ),
     };
     questions[`link_${candidate.key}`] = {
       type: 'noul',
       instructions: limits.link_instructions.replaceAll('{target}', path),
       criteria: limits.link_criteria,
     };
-    if (candidate.anchors.length > 1)
-      questions[`anchor_${candidate.key}`] = {
-        type: 'choice',
-        instructions: limits.anchor_instructions.replaceAll('{target}', path),
-        criteria: Object.fromEntries(
-          candidate.anchors.map((anchor, index) => [`a${index}`, anchor]),
+    questions[`anchor_${candidate.key}`] = {
+      type: 'choice',
+      instructions: limits.anchor_instructions.replaceAll('{target}', path),
+      criteria: {
+        ...Object.fromEntries(
+          candidate.placements.map((_placement, index) => [
+            `a${index}`,
+            `The exact source phrase and passage at \`${path}.placements.a${index}\``,
+          ]),
         ),
-      };
+        none: limits.no_placement_description,
+      },
+    };
   }
   return { state: { rubric: limits.rubric, source: pageState(source), targets: state }, questions };
 }
@@ -181,11 +178,15 @@ export function linkRequests(
 
 /** Shortlist the most related unlinked destinations for every source page. */
 export function linkCandidates(pages: InternalLinkPage[]): LinkCandidate[] {
-  const vector = vectors(pages);
+  // Destination labels identify an anchor's subject; sales descriptions must not
+  // turn generic phrases such as "crafted with care" into linkable entities.
+  const vector = vectors(pages.map((page) => ({ ...page, description: '' })));
   const candidates: LinkCandidate[] = [];
   for (const source of pages) {
-    if (!source.links_complete) continue;
+    const capturedPassages = source.source_passages;
+    if (!source.links_complete || !capturedPassages?.length) continue;
     const linked = new Set(source.contextual_targets);
+    const passages = capturedPassages.map((passage) => passageVector(passage.text));
     const ranked = pages
       .filter(
         (target) =>
@@ -196,24 +197,28 @@ export function linkCandidates(pages: InternalLinkPage[]): LinkCandidate[] {
       )
       .map((target) => ({
         target,
-        similarity: cosine(vector.get(source.analysis_id)!, vector.get(target.analysis_id)!),
+        similarity: Math.max(
+          ...passages.map((passage) => cosine(passage, vector.get(target.analysis_id)!)),
+        ),
+        placements: sourcePlacements(
+          capturedPassages,
+          new Set(vector.get(target.analysis_id)!.keys()),
+        ),
       }))
-      .filter((item) => item.similarity > limits.min_similarity)
+      .filter((item) => item.placements.length > 0)
       .toSorted((a, b) => b.similarity - a.similarity || a.target.url.localeCompare(b.target.url));
     const chosen: InternalLinkPage[] = [];
-    for (const { target, similarity } of ranked) {
+    for (const { target, similarity, placements } of ranked) {
       if (chosen.length >= limits.targets_per_page) break;
       // One destination per product family: its variants would repeat the suggestion.
       if (chosen.some((page) => isVariant(page, target))) continue;
-      const anchors = anchorOptions(target);
-      if (!anchors.length) continue;
       candidates.push({
         id: randomUUID(),
         source: source.analysis_id,
         target: target.analysis_id,
         key: `t${chosen.length}`,
         similarity,
-        anchors,
+        placements,
       });
       chosen.push(target);
     }

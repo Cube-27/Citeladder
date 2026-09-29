@@ -130,7 +130,8 @@ async def content():
             name = names[index % len(names)]
             artifact.normalized_facts = extract_page_facts(
                 body=(f'<html><title>{name} | Acme</title><main><h1>{name}</h1>'
-                      '<p>Healthy soil helps plants grow and supports a thriving garden.</p></main></html>').encode(),
+                      '<p>Use a soil testing kit to understand nutrient levels before planting.</p>'
+                      '<p>Add compost to improve moisture retention and support a thriving garden.</p></main></html>').encode(),
                 final_url=artifact.final_url, content_type="text/html", status_code=200,
                 redacted_headers={},
             )
