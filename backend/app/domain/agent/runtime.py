@@ -26,9 +26,11 @@ from app.connectors.agent.gateway import ModelGateway
 from app.connectors.app_model_config import AppModelRouteConfig
 from app.core.config.agent import (
     AGENT_HISTORY_MAX_MESSAGES,
+    ERROR_ACCESS_REVOKED,
     ERROR_OUTPUT_CONFLICT,
     ERROR_PROTOCOL,
     ERROR_ROUTE_CHANGED,
+    ERROR_SKILLS_CHANGED,
     ERROR_STOPPED_AT_LIMIT,
     ERROR_TOOL,
     MESSAGE_ROLE_AGENT,
@@ -39,7 +41,11 @@ from app.core.config.agent import (
     TOOL_ATTEMPT_REFUSED,
     TOOL_ATTEMPT_UNAVAILABLE,
 )
-from app.core.config.agent_skills import AGENT_SKILL_REGISTRY, AgentSkill
+from app.core.config.agent_skills import (
+    AGENT_SKILL_CATALOG_VERSION,
+    AGENT_SKILL_REGISTRY,
+    AgentSkill,
+)
 from app.core.config.app_models import APP_FEATURE_AGENT
 from app.core.config.task_queue import TASK_STATUS_FAILED, TASK_STATUS_SUCCEEDED
 from app.domain.agent.context import render_manifest
@@ -112,7 +118,7 @@ class _Turn:
     member_id: uuid.UUID
     run_attempt: int
     mode: str
-    budget: dict[str, int]
+    budget: dict[str, Any]
     skill: AgentSkill | None
     skill_source: str | None
     format_id: str | None
@@ -223,8 +229,22 @@ def _resumed_skill(
     return skill, (SKILL_SOURCE_CHAT if skill else None)
 
 
+def _require_admitted_catalog(run: AgentRun) -> None:
+    """The skills a turn executes are the ones it was admitted against."""
+    if run.skill_catalog_version != AGENT_SKILL_CATALOG_VERSION:
+        raise RunFailedError(
+            ERROR_SKILLS_CHANGED,
+            "The Agent's skills changed after this turn was queued; ask again.",
+        )
+
+
 async def _load_turn(session: AsyncSession, run: AgentRun) -> _Turn:
     chat, request = await _chat_and_request(session, run)
+    # Tools run as the member who queued the turn; there is no stand-in.
+    if run.user_id is None:
+        raise RunFailedError(
+            ERROR_ACCESS_REVOKED, "The member who asked is no longer available."
+        )
     output = await output_for_chat(session, chat=chat)
     skill, skill_source = _resumed_skill(run, output)
     return _Turn(
@@ -232,7 +252,7 @@ async def _load_turn(session: AsyncSession, run: AgentRun) -> _Turn:
         chat_id=chat.id,
         workspace_id=run.workspace_id,
         project_id=run.project_id,
-        member_id=run.user_id or chat.created_by_user_id or uuid.UUID(int=0),
+        member_id=run.user_id,
         run_attempt=run.attempt_count,
         mode=run.mode,
         budget=dict(run.budget or {}),
@@ -252,10 +272,12 @@ async def _load_turn(session: AsyncSession, run: AgentRun) -> _Turn:
 
 
 def _manifest_refs(manifest: dict[str, Any]) -> set[str]:
+    """Opportunities the attached or mentioned Actions' frozen diagnoses name."""
     refs: set[str] = set()
-    action = manifest.get("action") or {}
-    for item in (action.get("diagnosis") or {}).get("what_happened") or []:
-        refs.add(f"citeladder://opportunity/{item.get('opportunity_id')}")
+    actions = [manifest.get("action") or {}, *(manifest.get("mentions") or [])]
+    for action in actions:
+        for item in (action.get("diagnosis") or {}).get("what_happened") or []:
+            refs.add(f"citeladder://opportunity/{item.get('opportunity_id')}")
     return refs
 
 
@@ -267,6 +289,7 @@ async def execute_run(deps: RuntimeDeps, *, run_id: uuid.UUID, owner: str) -> No
             await session.rollback()
             return
         try:
+            _require_admitted_catalog(run)
             route = await _admitted_route(session, run)
             turn = await _load_turn(session, run)
         except RunFailedError as exc:
@@ -384,7 +407,11 @@ async def _call_tool(
     arguments = dict(step.arguments or {})
     tool = deps.tools.get(name)
     started = time.monotonic()
-    reason = _refusal_reason(tool, spent=last_step or turn.tool_calls >= max_tool_calls)
+    reason = _refusal_reason(
+        tool,
+        last_step=last_step,
+        budget_spent=turn.tool_calls >= max_tool_calls,
+    )
     if reason is not None or tool is None:
         await _record_tool(
             session,
@@ -458,10 +485,16 @@ async def _call_tool(
     )
 
 
-def _refusal_reason(tool: AgentTool | None, *, spent: bool) -> str | None:
+def _refusal_reason(
+    tool: AgentTool | None, *, last_step: bool, budget_spent: bool
+) -> str | None:
     if tool is None:
         return "unknown tool"
-    return "the tool budget for this turn is spent" if spent else None
+    if budget_spent:
+        return "the tool budget for this turn is spent"
+    if last_step:
+        return "the last step of a turn must respond, not read"
+    return None
 
 
 def _citable_refs(artifact_refs: list[Any]) -> set[str]:

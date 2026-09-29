@@ -6927,6 +6927,7 @@ def upgrade() -> None:
             "evidence_refs", postgresql.JSONB(astext_type=Text()), nullable=False
         ),
         sa.Column("steps", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("mentions", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
@@ -7014,6 +7015,7 @@ def upgrade() -> None:
         sa.Column("runtime_version", sa.String(length=32), nullable=False),
         sa.Column("protocol_version", sa.String(length=32), nullable=False),
         sa.Column("registry_version", sa.String(length=32), nullable=False),
+        sa.Column("skill_catalog_version", sa.String(length=32), nullable=False),
         sa.Column("funding_source", sa.String(length=24), nullable=False),
         sa.Column("route_id", sa.UUID(), nullable=True),
         sa.Column("connection_id", sa.UUID(), nullable=True),

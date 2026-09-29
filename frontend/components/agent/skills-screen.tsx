@@ -3,10 +3,15 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { PageShell } from '@/components/layout/page-shell';
+import { ProjectLink } from '@/components/layout/scoped-link';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
+import { panelClasses } from '@/components/ui/panel';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionTitle, textRole } from '@/components/ui/typography';
+import { agentHandoffHref } from '@/lib/agent/handoff';
 import { outputKindLabel, skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
@@ -35,8 +40,9 @@ export function SkillsScreen() {
   return (
     <PageShell measure="workflow">
       <Stack gap="section">
-        <p className={textRole('body')}>
-          The agent picks a skill for each request, or you can choose one in a chat.
+        <p className={textRole('body', 'max-w-2xl')}>
+          Skills are the methods the agent works with. It picks one for each request, or you can
+          choose one here, with the skill menu, or by typing / in a chat.
         </p>
         {body}
       </Stack>
@@ -54,17 +60,30 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
     <Stack gap="section">
       {[...groups].map(([group, rows]) => (
         <section key={group} aria-label={group} className="grid gap-3">
-          <SectionTitle>{group}</SectionTitle>
-          <ul className="divide-border-subtle grid divide-y">
+          <div className="flex items-baseline gap-2">
+            <SectionTitle>{group}</SectionTitle>
+            <span className={textRole('caption')}>
+              {rows.length} {rows.length === 1 ? 'skill' : 'skills'}
+            </span>
+          </div>
+          <ul className="grid gap-3 sm:grid-cols-2">
             {rows.map((skill) => (
-              <li key={skill.id} className="grid gap-1 py-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <li key={skill.id} className={panelClasses({ pad: 'compact' }, 'grid gap-3')}>
+                <div className="grid gap-1">
                   <h3 className={textRole('itemTitle')}>{skill.label}</h3>
-                  <span className={textRole('caption')}>
-                    Produces: {outputKindLabel(skill.output_kind)}
-                  </span>
+                  <p className={textRole('body')}>{skill.description}</p>
                 </div>
-                <p className={textRole('body')}>{skill.description}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2 self-end">
+                  <Badge>Produces {outputKindLabel(skill.output_kind).toLowerCase()}</Badge>
+                  <Button asChild variant="ghost" size="sm">
+                    <ProjectLink
+                      href={agentHandoffHref({ skillId: skill.id })}
+                      aria-label={`Start a chat with ${skill.label}`}
+                    >
+                      Start a chat
+                    </ProjectLink>
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>

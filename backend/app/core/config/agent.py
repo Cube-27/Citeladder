@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 # =========================================================================
 # Stamped on every run so a turn names the runtime that produced it
 # (invariant 5). Skill and registry versions are stamped separately.
-AGENT_RUNTIME_VERSION: Final = "agent-runtime-1"
+AGENT_RUNTIME_VERSION: Final = "agent-runtime-2"
 AGENT_PROTOCOL_VERSION: Final = "agent-protocol-1"
 
 # One run is one agent turn: a bounded loop of structured model steps. A step
@@ -51,11 +51,17 @@ GENERATION_PROVIDER_MAX_ATTEMPTS: Final = 3
 AGENT_TOOL_RESULT_MAX_CHARS: Final = 12_000
 AGENT_CONTEXT_PACKAGE_MAX_CHARS: Final = 24_000
 AGENT_TRANSCRIPT_MAX_CHARS: Final = 90_000
+AGENT_TRANSCRIPT_TRUNCATION_MARKER: Final = "\n\n[earlier steps truncated]\n\n"
+AGENT_CONTEXT_TRUNCATION_MARKER: Final = "\n\n[context and output truncated]\n\n"
+AGENT_PROGRESS_VERSION: Final = "agent-progress-1"
 AGENT_HISTORY_MAX_MESSAGES: Final = 12
 AGENT_HISTORY_MESSAGE_MAX_CHARS: Final = 4_000
 
 # Input and output bounds.
 AGENT_MESSAGE_MAX_CHARS: Final = 8_000
+# Actions one message may @-mention; each adds its frozen diagnosis to the
+# turn's context package.
+AGENT_MENTIONS_MAX: Final = 5
 AGENT_INSTRUCTIONS_MAX_CHARS: Final = 4_000
 AGENT_OUTPUT_TITLE_MAX_CHARS: Final = 255
 AGENT_OUTPUT_BODY_MAX_CHARS: Final = 100_000
@@ -119,6 +125,9 @@ ERROR_ACCESS_REVOKED: Final = "access_revoked"
 ERROR_OUTPUT_CONFLICT: Final = "output_conflict"
 # The platform model changed after admission; the turn must be resubmitted.
 ERROR_MODEL_CHANGED: Final = "model_changed"
+# The skill catalog (model input) changed after admission, e.g. a deploy
+# between queueing and execution; the turn must be resubmitted.
+ERROR_SKILLS_CHANGED: Final = "skills_changed"
 
 
 class DefaultAgentSettings(BaseSettings):
@@ -234,6 +243,20 @@ class DefaultAgentSettings(BaseSettings):
 
 
 default_agent_settings = DefaultAgentSettings()
+
+
+def admission_budget() -> dict[str, int | float]:
+    """The step, tool and time envelope a run freezes at admission.
+
+    The per-call timeout is frozen with the step budgets so a configuration
+    change never alters a turn already queued.
+    """
+    return {
+        "max_steps": AGENT_MAX_STEPS,
+        "max_tool_calls": AGENT_MAX_TOOL_CALLS,
+        "execution_timeout_seconds": default_agent_settings.execution_timeout_seconds,
+    }
+
 
 # Worker cadence. A turn is several model calls, so the lease is renewed by a
 # heartbeat for as long as the turn runs; one call can never outlive it.

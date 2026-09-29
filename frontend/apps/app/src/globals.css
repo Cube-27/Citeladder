@@ -826,10 +826,15 @@ body {
     max-width: 100%;
     overflow-x: auto;
     margin: 0 0 1rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-control);
   }
   .prose-content .prose-table-frame table { margin: 0; }
+  /* A table keeps readable columns and scrolls inside its frame; it never
+     squeezes its cells to the column width letter by letter. */
   .prose-content table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     table-layout: auto;
     border-collapse: collapse;
     font-size: 0.875rem;
@@ -850,6 +855,12 @@ body {
     border-bottom: 1px solid var(--color-border-subtle);
   }
   .prose-content tr:last-child td { border-bottom: 0; }
+  .prose-content :is(th, td) {
+    min-width: 8rem;
+    max-width: 28rem;
+    overflow-wrap: normal;
+    vertical-align: top;
+  }
   .prose-compact { font-size: 0.875rem; line-height: 1.25rem; }
   .prose-compact :where(h2, h3, h4, h5, h6) { margin: 1rem 0 0.5rem; }
   .prose-compact h2 { font-family: var(--font-sans); font-size: 1rem; line-height: 1.5rem; letter-spacing: 0; }

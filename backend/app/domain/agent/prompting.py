@@ -18,11 +18,13 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.config.agent import (
+    AGENT_CONTEXT_TRUNCATION_MARKER,
     AGENT_HISTORY_MESSAGE_MAX_CHARS,
     AGENT_OUTPUT_BODY_MAX_CHARS,
     AGENT_OUTPUT_TITLE_MAX_CHARS,
     AGENT_REPLY_MAX_CHARS,
     AGENT_TRANSCRIPT_MAX_CHARS,
+    AGENT_TRANSCRIPT_TRUNCATION_MARKER,
     OUTPUT_PHASE_DRAFT,
     OUTPUT_PHASE_FINAL,
     OUTPUT_PHASE_OUTLINE,
@@ -267,22 +269,34 @@ def user_text(state: TurnState) -> str:
             f"## Current output (revision {output['number']}, phase {output['phase']})",
             f"# {output['title']}\n\n{output['body']}",
         ]
+    request_parts = []
     if state.mode == RUN_MODE_DRAFT_FROM_OUTLINE:
-        parts.append(
+        request_parts.append(
             "## Task\nThe user approved the outline above. Write the complete draft "
             "from it (output.phase = draft), keeping its structure unless the "
             "evidence requires a change you explain in the reply."
         )
-    parts += ["## Current request", state.request]
+    request_parts += ["## Current request", state.request]
+    request = "\n\n".join(request_parts)
+    context = "\n\n".join(parts)
+    if len(context) + len(request) + 2 > AGENT_TRANSCRIPT_MAX_CHARS:
+        marker = AGENT_CONTEXT_TRUNCATION_MARKER
+        room = max(0, AGENT_TRANSCRIPT_MAX_CHARS - len(request) - len(marker))
+        return context[:room] + marker + request
+    parts.append(request)
+    head_parts = len(parts)  # context, conversation, output and the request
     if state.steps:
         parts.append("## Steps taken this turn")
         parts += state.steps
     text = "\n\n".join(parts)
     if len(text) > AGENT_TRANSCRIPT_MAX_CHARS:
         # Keep the head (context, request) and the newest steps.
-        head = "\n\n".join(parts[: parts.index("## Current request") + 2])
-        tail = text[-(AGENT_TRANSCRIPT_MAX_CHARS - len(head) - 64) :]
-        text = f"{head}\n\n[earlier steps truncated]\n\n{tail}"
+        head = "\n\n".join(parts[:head_parts])
+        marker = AGENT_TRANSCRIPT_TRUNCATION_MARKER
+        room = AGENT_TRANSCRIPT_MAX_CHARS - len(head) - len(marker)
+        # A head that fills the bound keeps no steps (text[-0:] is all of it).
+        tail = text[-room:] if room > 0 else ""
+        text = f"{head}{marker}{tail}" if room >= 0 else head
     return text
 
 

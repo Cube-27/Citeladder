@@ -19,12 +19,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.gateway import ModelResult
+from app.core.config import agent as agent_config
 from app.core.config import settings
 from app.core.config.agent import default_agent_settings
 from app.core.config.app_models import APP_FEATURE_AGENT
 from app.core.config.entitlements import KEY_AI_CREDITS
 from app.core.security import encrypt_secret
-from app.domain.agent import model_calls, service
+from app.domain.agent import model_calls, runtime, service
 from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.ledger import consumable_usage
 from app.domain.opportunities.actions import get_action
@@ -252,6 +253,52 @@ async def test_a_turn_reads_evidence_and_saves_an_output_attached_to_its_page(
     ]
 
 
+async def test_a_mentioned_action_is_frozen_into_the_turns_context(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-mention@example.com")
+    await _verified_route(session_factory, project_id)
+    await _start(client, project_id, "Edit our pricing page.", skill_id="gsc_optimize")
+    await _worker(
+        session_factory,
+        ScriptedGateway(
+            [{"action": "respond", "reply": "Edits.", "output": _output("## Edit")}]
+        ),
+    ).run_once()
+    async with session_factory() as session:
+        action = await session.scalar(select(Action))
+    assert action is not None
+    chat_id = await _start(
+        client, project_id, "What should we do first?", mentions=[str(action.id)]
+    )
+    gateway = ScriptedGateway([{"action": "respond", "reply": "Start there."}])
+
+    await _worker(session_factory, gateway).run_once()
+
+    assert "ACTIONS THE USER MENTIONED" in gateway.prompts[0][1]
+    assert action.target_label in gateway.prompts[0][1]
+    request = (await _detail(client, chat_id))["messages"][0]
+    assert request["mentions"] == [
+        {"kind": "action", "id": str(action.id), "label": action.target_label}
+    ]
+
+
+async def test_a_mention_outside_the_project_refuses_the_turn(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-mention-foreign@example.com")
+    await _verified_route(session_factory, project_id)
+
+    response = await client.post(
+        f"/api/v1/projects/{project_id}/agent/chats",
+        json={"message": "Compare these.", "mentions": [str(uuid.uuid4())]},
+    )
+
+    assert response.status_code == 409, response.text
+    async with session_factory() as session:
+        assert (await session.scalars(select(AgentRun))).all() == []
+
+
 async def test_a_follow_up_revises_the_users_edit_instead_of_starting_over(
     client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
 ) -> None:
@@ -397,7 +444,7 @@ async def test_the_turn_stops_at_its_step_budget_without_saving(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(service, "AGENT_MAX_STEPS", 2)
+    monkeypatch.setattr(agent_config, "AGENT_MAX_STEPS", 2)
     project_id = await _project(client, "agent-budget@example.com")
     await _verified_route(session_factory, project_id)
     chat_id = await _start(
@@ -601,6 +648,132 @@ async def test_a_customer_route_revoked_after_admission_is_never_used(
     )
     # Never sent anywhere, and never silently moved to platform funding.
     assert gateway.prompts == []
+
+
+async def test_a_turn_admitted_against_other_skills_never_reaches_the_model(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = await _project(client, "agent-skills-changed@example.com")
+    await _verified_route(session_factory, project_id)
+    chat_id = await _start(client, project_id, "Summarize.", skill_id="growth_plan")
+    # A deploy between queueing and execution changed the packaged skills.
+    monkeypatch.setattr(runtime, "AGENT_SKILL_CATALOG_VERSION", "agent-skills-next")
+    gateway = ScriptedGateway([{"action": "respond", "reply": "Summary."}])
+
+    await _worker(session_factory, gateway).run_once()
+
+    detail = await _detail(client, chat_id)
+    assert (detail["latest_run"]["status"], detail["latest_run"]["error_code"]) == (
+        "failed",
+        "skills_changed",
+    )
+    assert gateway.prompts == []
+
+
+async def test_a_queued_turn_keeps_the_time_bound_it_was_admitted_with(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = await _project(client, "agent-frozen-timeout@example.com")
+    await _verified_route(session_factory, project_id)
+    admitted = default_agent_settings.execution_timeout_seconds
+    await _start(client, project_id, "Summarize.", skill_id="growth_plan")
+    monkeypatch.setattr(
+        default_agent_settings, "execution_timeout_seconds", admitted * 2
+    )
+
+    await _worker(
+        session_factory, ScriptedGateway([{"action": "respond", "reply": "Done."}])
+    ).run_once()
+
+    async with session_factory() as session:
+        attempt = await session.scalar(select(AgentModelAttempt))
+    assert attempt is not None
+    assert (attempt.deadline_at - attempt.dispatched_at).total_seconds() == admitted
+
+
+class ObservingGateway(ScriptedGateway):
+    """Records what the chat shows about the run each time the model is asked."""
+
+    def __init__(self, steps: list[dict[str, Any]], observe: Any) -> None:
+        super().__init__(steps)
+        self._observe = observe
+        self.seen: list[list[dict[str, Any]]] = []
+
+    async def complete_structured(self, **kwargs: Any) -> ModelResult:
+        self.seen.append(await self._observe())
+        return await super().complete_structured(**kwargs)
+
+
+async def test_an_active_turn_shows_its_committed_steps_as_they_happen(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = await _project(client, "agent-progress@example.com")
+    await _verified_route(session_factory, project_id)
+    chat_id = await _start(client, project_id, "Check site health.")
+
+    async def observe() -> list[dict[str, Any]]:
+        return (await _detail(client, chat_id))["latest_run"]["progress"]
+
+    execute_tool = runtime.execute_tool
+    during_tool: list[dict[str, Any]] = []
+
+    async def observe_tool(*args: Any, **kwargs: Any) -> Any:
+        during_tool.extend(await observe())
+        return await execute_tool(*args, **kwargs)
+
+    monkeypatch.setattr(runtime, "execute_tool", observe_tool)
+    gateway = ObservingGateway(
+        [
+            {"action": "select_skill", "skill_id": "technical_health"},
+            {"action": "call_tool", "tool": "read_site_health", "arguments": {}},
+            {"action": "respond", "reply": "No crawl yet."},
+        ],
+        observe,
+    )
+
+    await _worker(session_factory, gateway).run_once()
+
+    working = {"status": "working", "tool": None}
+    public_steps = [
+        [{key: step[key] for key in ("ordinal", "status", "tool")} for step in poll]
+        for poll in gateway.seen
+    ]
+    assert public_steps == [
+        [{"ordinal": 1, **working}],
+        [{"ordinal": 1, "status": "reasoned", "tool": None}, {"ordinal": 2, **working}],
+        [
+            {"ordinal": 1, "status": "reasoned", "tool": None},
+            {"ordinal": 2, "status": "unavailable", "tool": "read_site_health"},
+            {"ordinal": 3, **working},
+        ],
+    ]
+    assert during_tool[-1]["status"] == "processing"
+    async with session_factory() as session:
+        models = list(
+            (
+                await session.scalars(
+                    select(AgentModelAttempt).order_by(AgentModelAttempt.ordinal)
+                )
+            ).all()
+        )
+        tool = await session.scalar(select(AgentToolAttempt))
+        run = await session.scalar(select(AgentRun))
+    assert tool is not None and run is not None
+    assert [step["model_attempt_id"] for step in gateway.seen[-1]] == [
+        str(row.id) for row in models
+    ]
+    assert gateway.seen[-1][1]["tool_attempt_id"] == str(tool.id)
+    assert gateway.seen[-1][1]["registry_version"] == tool.registry_version
+    assert gateway.seen[-1][0]["skill_catalog_version"] == run.skill_catalog_version
+    assert during_tool[-1]["tool_attempt_id"] is None
+    # A finished turn's summary lives on its reply; progress is for live runs.
+    assert (await _detail(client, chat_id))["latest_run"]["progress"] == []
 
 
 async def test_a_member_who_loses_run_access_never_reaches_the_model(

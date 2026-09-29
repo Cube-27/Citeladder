@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.config.agent import (
     AGENT_INSTRUCTIONS_MAX_CHARS,
+    AGENT_MENTIONS_MAX,
     AGENT_MESSAGE_MAX_CHARS,
     AGENT_OUTPUT_BODY_MAX_CHARS,
     AGENT_OUTPUT_TITLE_MAX_CHARS,
@@ -31,6 +32,12 @@ def _nonblank(value: str) -> str:
     return value
 
 
+def _unique_mentions(value: list[uuid.UUID]) -> list[uuid.UUID]:
+    if len(value) != len(set(value)):
+        raise ValueError("mentioned Actions must be unique")
+    return value
+
+
 class ChatContextRefs(_Model):
     """Typed evidence a chat can start from; resolved server-side every run."""
 
@@ -47,15 +54,24 @@ class ChatCreate(_Model):
     skill_id: str | None = Field(default=None, max_length=64)
     action_id: uuid.UUID | None = None
     context: ChatContextRefs = Field(default_factory=ChatContextRefs)
+    # Actions the message @-mentions, resolved and authorized at admission.
+    mentions: list[uuid.UUID] = Field(
+        default_factory=list, max_length=AGENT_MENTIONS_MAX
+    )
 
     _message = field_validator("message")(_nonblank)
+    _mentions = field_validator("mentions")(_unique_mentions)
 
 
 class MessageCreate(_Model):
     message: str = Field(max_length=AGENT_MESSAGE_MAX_CHARS)
     skill_id: str | None = Field(default=None, max_length=64)
+    mentions: list[uuid.UUID] = Field(
+        default_factory=list, max_length=AGENT_MENTIONS_MAX
+    )
 
     _message = field_validator("message")(_nonblank)
+    _mentions = field_validator("mentions")(_unique_mentions)
 
 
 class OutputEdit(_Model):
@@ -75,6 +91,22 @@ class InstructionsUpdate(_Model):
     text: str = Field(max_length=AGENT_INSTRUCTIONS_MAX_CHARS)
 
 
+class RunStepView(_Model):
+    """One step of an active run: a model call in flight, or its outcome."""
+
+    ordinal: int
+    status: str
+    tool: str | None
+    model_attempt_id: uuid.UUID
+    tool_attempt_id: uuid.UUID | None
+    run_attempt: int
+    runtime_version: str
+    protocol_version: str
+    registry_version: str
+    skill_catalog_version: str
+    projection_version: str
+
+
 class RunView(_Model):
     id: uuid.UUID
     status: str
@@ -86,6 +118,8 @@ class RunView(_Model):
     error_detail: str
     created_at: datetime
     completed_at: datetime | None
+    # Committed steps of the current attempt while the run is active.
+    progress: list[RunStepView] = Field(default_factory=list)
 
 
 class MessageView(_Model):
@@ -97,6 +131,8 @@ class MessageView(_Model):
     skill_source: str | None
     evidence_refs: list[str]
     steps: list[dict[str, Any]]
+    # Actions a user message mentioned: {"kind": "action", "id", "label"}.
+    mentions: list[dict[str, str]]
     created_at: datetime
 
 

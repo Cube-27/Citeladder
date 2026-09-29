@@ -42,7 +42,11 @@ function revision(id: string, number: number, author: 'agent' | 'user', body: st
 
 function detail(
   latest: ReturnType<typeof revision>,
-  run: { status: string; error_code?: string } = { status: 'succeeded' },
+  run: {
+    status: string;
+    error_code?: string;
+    progress?: { ordinal: number; status: string; tool: string | null }[];
+  } = { status: 'succeeded' },
 ) {
   return {
     chat: {
@@ -97,6 +101,17 @@ function detail(
       error_detail: '',
       created_at: NOW,
       completed_at: NOW,
+      progress: (run.progress ?? []).map((step) => ({
+        model_attempt_id: RUN,
+        tool_attempt_id: null,
+        run_attempt: 1,
+        runtime_version: 'agent-runtime-2',
+        protocol_version: 'agent-protocol-1',
+        registry_version: 'agent-tools-2',
+        skill_catalog_version: 'test-catalog',
+        projection_version: 'agent-progress-1',
+        ...step,
+      })),
     },
     output: {
       id: OUTPUT,
@@ -212,6 +227,158 @@ describe('ChatScreen', () => {
     expect(await within(pane).findByText('New title tag.')).toBeVisible();
   });
 
+  it('sends one section to the agent with a scoped instruction', async () => {
+    const body = 'Intro.\n\n## Title tag\nOld title.\n\n## Meta description\nOld meta.';
+    const sent: unknown[] = [];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json(detail(revision(REV1, 1, 'agent', body))),
+      ),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, async ({ request }) => {
+        sent.push(await request.json());
+        return HttpResponse.json(
+          {
+            chat_id: CHAT,
+            run: { ...detail(revision(REV1, 1, 'agent', body)).latest_run, status: 'queued' },
+          },
+          { status: 202 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Ask the agent to revise Title tag' }),
+    );
+    await user.type(screen.getByLabelText('How should the agent revise Title tag?'), 'Shorter.');
+    await user.click(screen.getByRole('button', { name: 'Ask agent' }));
+
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      message:
+        'Revise only the section "Title tag": Shorter. Keep every other section exactly as it is.',
+    });
+  });
+
+  it('saves an edit to one section and keeps every other section', async () => {
+    const body = 'Intro.\n\n## Title tag\nOld title.\n\n## Meta description\nOld meta.';
+    const edits: unknown[] = [];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json(detail(revision(REV1, 1, 'agent', body))),
+      ),
+      http.post(`/api/v1/agent/chats/${CHAT}/output/revisions`, async ({ request }) => {
+        edits.push(await request.json());
+        return HttpResponse.json(revision(REV2, 2, 'user', 'x'), { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit Title tag' }));
+    const text = screen.getByLabelText('Section text (Markdown)');
+    await user.clear(text);
+    await user.type(text, '## Title tag{enter}New title.');
+    await user.click(screen.getByRole('button', { name: 'Save section' }));
+
+    await vi.waitFor(() => expect(edits).toHaveLength(1));
+    expect(edits[0]).toEqual({
+      base_revision_id: REV1,
+      title: 'Pricing page edits',
+      body: 'Intro.\n\n## Title tag\nNew title.\n\n## Meta description\nOld meta.',
+    });
+  });
+
+  it('links cited evidence and offers the next skill in a new chat', async () => {
+    const ACTION = '88888888-8888-4888-8888-888888888888';
+    const base = detail(revision(REV1, 1, 'agent', 'Body.'));
+    const withEvidence = {
+      ...base,
+      messages: base.messages.map((message) =>
+        message.role === 'agent'
+          ? { ...message, evidence_refs: [`citeladder://action/${ACTION}`] }
+          : message,
+      ),
+    };
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(withEvidence)),
+    );
+    renderChat();
+
+    const cited = within(await screen.findByRole('list', { name: 'Cited evidence' }));
+    expect(cited.getByRole('link', { name: 'Action' })).toHaveAttribute(
+      'href',
+      expect.stringContaining(`/agent/actions/${ACTION}`),
+    );
+    const next = within(screen.getByRole('navigation', { name: 'Next steps' }));
+    expect(next.getByRole('link', { name: 'Plan internal links' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('skill=internal_links'),
+    );
+  });
+
+  it('links the Actions a message mentioned', async () => {
+    const ACTION = '88888888-8888-4888-8888-888888888888';
+    const base = detail(revision(REV1, 1, 'agent', 'Body.'));
+    const withMention = {
+      ...base,
+      messages: base.messages.map((message) =>
+        message.role === 'user'
+          ? { ...message, mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page' }] }
+          : message,
+      ),
+    };
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(withMention)),
+      http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
+        HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
+      ),
+    );
+    renderChat();
+
+    const mentioned = within(await screen.findByRole('list', { name: 'Mentioned Actions' }));
+    expect(mentioned.getByRole('link', { name: '@Pricing page' })).toHaveAttribute(
+      'href',
+      expect.stringContaining(`/agent/actions/${ACTION}`),
+    );
+  });
+
+  it('compares an earlier revision with the current one', async () => {
+    mswServer.use(
+      http.get(`/api/v1/agent/chats/${CHAT}/output/revisions`, () =>
+        HttpResponse.json({
+          items: [
+            revision(REV1, 1, 'agent', 'Keep.\nOld line.'),
+            revision(REV2, 2, 'user', 'Keep.\nNew line.'),
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(
+      <OutputHistory
+        workspaceId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        chatId={CHAT}
+        latestRevisionId={REV2}
+        canRestore={false}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Compare with current' }));
+
+    const changes = within(screen.getByRole('list', { name: 'Changes from revision 1' }));
+    const changed = changes
+      .getAllByRole('listitem')
+      .map((item) => item.textContent)
+      .filter((text) => text?.includes(':'));
+    expect(changed).toEqual(['−Removed:Old line.', '+Added:New line.']);
+  });
+
   it('keeps an unsaved edit when switching output tabs', async () => {
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
@@ -300,6 +467,30 @@ describe('ChatScreen', () => {
     expect(await screen.findByText(/stopped at its step limit/i)).toBeVisible();
     expect(screen.queryByText(/could not finish/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Make it shorter' })).toBeEnabled();
+  });
+
+  it('shows what a running turn has done so far', async () => {
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json(
+          detail(revision(REV1, 1, 'agent', 'Body.'), {
+            status: 'running',
+            progress: [
+              { ordinal: 1, status: 'unavailable', tool: 'read_site_health' },
+              { ordinal: 2, status: 'working', tool: null },
+            ],
+          }),
+        ),
+      ),
+    );
+    renderChat();
+
+    const steps = within(await screen.findByRole('list', { name: 'Agent progress' }));
+    expect(steps.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Read site health · no data yet',
+      'Deciding the next step…',
+    ]);
   });
 
   it('refuses edits while a turn is running and offers Stop', async () => {

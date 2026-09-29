@@ -32,9 +32,11 @@ at most one active run, and an idempotency key replays the same run. Reads
 return persisted state and never execute a turn.
 
 Admission checks workspace role, the Agent capability and a funding route, then
-freezes on the run the runtime/protocol versions, skill and registry versions,
-step/tool/size budgets and funding identity. A configuration change never
-alters a queued turn. Budgets live in
+freezes on the run the runtime/protocol versions, the skill catalog and tool
+registry versions, step/tool/size budgets, the per-call time bound and funding
+identity. A configuration change never alters a queued turn, and a turn whose
+skill catalog changed before it ran (a deploy in between) ends with
+`skills_changed` before any model call. Budgets live in
 [Agent configuration](../backend/app/core/config/agent.py).
 
 A chat owns one deliverable of one kind. Agent saves and user edits both append
@@ -51,6 +53,24 @@ Approving or generating an output is not an implementation declaration: the
 output pane's **Mark implemented** declares the attached Action implemented
 with the revision on screen and then shows what each loop leg is waiting
 for; see [declaration](opportunities.md#explicit-implementation-declaration).
+
+While a run is active, the chat read also returns the
+[committed steps](../backend/app/domain/agent/progress.py) of its current
+attempt, projected from its model and tool attempt rows: a call in flight, a
+step still being processed, a previous step that returned without a read, or a
+read's outcome. Each step retains its model/tool attempt IDs, run attempt and
+runtime, protocol, catalog, registry and projection versions. One joined query
+reads these committed attempts. The conversation shows
+them under the running indicator; the runtime writes nothing extra for it.
+
+The output reads as a document of sections. Each section can be edited in
+place, saved as a user revision with every other section unchanged, or sent to
+the Agent with an instruction as an ordinary follow-up turn scoped to that
+section. History compares any earlier revision with the current one. Cited
+evidence on replies and in Sources links to the screen (or record) that shows
+it. After a deliverable, refinements revise it in the same chat, and next steps
+open a new chat with the skill that takes the work forward, carrying only the
+attached Action and the output's title.
 
 The chat list pages by keyset cursor, can be narrowed to the chats linked to one
 Action, and names each chat's target. An Action's workflow status is derived
@@ -70,7 +90,7 @@ an Action their evidence already created.
 Before the first model call, each run freezes a
 [context manifest](../backend/app/domain/agent/context.py): reviewed business
 context, the target page and a bounded related-page set, the attached Action's
-diagnosis, any Opportunity, Site Health, Demand or Search Intelligence evidence
+diagnosis, the diagnoses of up to five Actions the message @-mentions, any Opportunity, Site Health, Demand or Search Intelligence evidence
 the request named, and the project's versioned Agent instructions (audience,
 voice, standing requirements and exclusions). The
 [context builder](../backend/app/domain/agent/context_builder.py) authorizes
@@ -82,9 +102,9 @@ structured model steps. Each step does exactly one of `select_skill`,
 `call_tool` or `respond`. The runtime enforces the step, tool-call, transcript
 and output limits; the final step cannot spend a tool call, and a turn that
 exhausts its budget stops without saving a partial deliverable. Only evidence
-references an executed tool returned, or the attached Action's frozen diagnosis
-named, survive; the rest of the context package carries no record references.
-Any other `citeladder://` reference is dropped from the evidence list and
+references an executed tool returned, or the attached or mentioned Actions'
+frozen diagnoses named, survive; the rest of the context package carries no
+record references. Any other `citeladder://` reference is dropped from the evidence list and
 replaced in the visible reply and output text.
 
 ## Workspace and handoffs
@@ -95,6 +115,13 @@ empty topics, and reports topic truncation. A saved prompt portfolio includes
 typed core-question rows tied to those IDs. **Review in Prompts** explicitly
 submits the saved revision to the Prompts owner's admission and quality checks;
 users still accept candidates separately. The Agent gains no write tool.
+
+The composer takes inline commands: `/` picks a skill and `@` mentions up to
+five of the project's Actions. Mentions are typed Action IDs that admission
+authorizes to the chat's project (a foreign one refuses the turn), records on
+the user message and freezes into the manifest. New chat also offers **Brief
+me**, which starts a `growth_plan` chat mentioning the top open Actions; it
+runs only when clicked.
 
 The product shell switches between Dashboard and Agent modes, derived from the
 route. Agent mode holds New chat, Actions, Skills, Context and the searchable
@@ -145,7 +172,8 @@ organic results for that prompt: heading topics, table structures and outbound
 source domains. Every parity or gap figure carries its inspected-page numerator
 and denominator, and "unique" means absent from that inspected set. Organic
 comparison rows never create Citation rows, enter Sources counts or affect
-Visibility scoring.
+Visibility scoring. The `ai_visibility` skill owns the methodology for reading
+them.
 
 ## Skills
 
@@ -153,7 +181,12 @@ The [internal skill catalog](../backend/app/core/config/agent_skills/__init__.py
 loads the packaged `SKILL.md` methodologies, one shared operating contract and a
 content-format reference that the `content_create` skill draws on one format at
 a time. These files are production model input, not coding-agent skills.
-Packaging is declared in `backend/pyproject.toml`.
+Packaging is declared in `backend/pyproject.toml`. The catalog version is a
+content fingerprint of those files after vocabulary expansion. A body may name
+an application-owned vocabulary as `{{name}}`, which the loader expands from its owner's one listing
+(prompt buyer stages and intents), so the list is never hand-copied. The loader
+bounds descriptions and bodies, and a contract test requires every tool a skill
+names to be offered to the Agent.
 
 Users may select a skill by name. The catalog endpoint returns only its label,
 description, group and output kind; skill bodies are never returned to users or
@@ -192,6 +225,7 @@ keyed `agent`.
 The [runtime component suite](../backend/tests/component/test_agent_runtime.py)
 drives the real worker, runtime, tool catalog and persistence with a scripted
 model. It covers evidence-backed Action-linked outputs, follow-up revision of a
-user edit, outline-first enforcement, budget exhaustion, refusal of project
+user edit, outline-first enforcement, budget exhaustion, the frozen skill catalog and
+time bound, live step progress, refusal of project
 selection and unknown tools, single active run, idempotent replay, funding
 admission, workspace isolation, per-step settlement and unknown-usage recovery.

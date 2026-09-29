@@ -115,6 +115,7 @@ export interface AgentMessages {
   created_at: Timestamp;
   evidence_refs: Json;
   id: string;
+  mentions: Json;
   project_id: string;
   reply_to_message_id: string | null;
   role: string;
@@ -235,6 +236,7 @@ export interface AgentRuns {
   route_id: string | null;
   route_revision: string | null;
   runtime_version: string;
+  skill_catalog_version: string;
   skill_id: string | null;
   skill_source: string | null;
   skill_version: number | null;

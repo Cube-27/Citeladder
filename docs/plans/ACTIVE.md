@@ -45,6 +45,14 @@
   re-sequenced order. Deployment of PRs 3–11 and their one-week cutover soaks
   are pending.
 
+- [Agent capabilities](citeladder-agent-capabilities.md)
+  — planned on 29 September 2026 from an external Agent audit, rescoped by
+  the owner to a Peec/Searchable/Notion-style experience over existing data.
+  Foundations and MVP items 1–4 (chat polish, document canvas, composer
+  commands and mentions, briefing) are implemented in
+  `claude/practical-gates-oq7898`. Items 5–8 are proposed and await owner
+  approval; streaming and gateway consolidation fold into TypeScript PR 19.
+
 ## Queued
 - [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026; implementation not started. Customer

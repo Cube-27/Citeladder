@@ -2,20 +2,22 @@
 
 import type { ReactNode } from 'react';
 
+import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/copy-button';
 import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
-import { runErrorCopy } from '@/lib/agent/vocabulary';
+import { agentHandoffHref } from '@/lib/agent/handoff';
+import { nextStepsFor, refinementsFor } from '@/lib/agent/next-steps';
+import { runErrorCopy, runStepLabel } from '@/lib/agent/vocabulary';
 import { runOutcome } from '@/lib/agent/run-state';
-import type { AgentChatDetail, AgentMessage } from '@/lib/api/agent';
+import type { AgentChatDetail, AgentMessage, AgentRun } from '@/lib/api/agent';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
-
-/** Follow-ups that revise the chat's output as ordinary turns. */
-const REFINEMENTS = ['Make it shorter', 'Make it more specific', 'No standalone FAQ'] as const;
 
 /**
  * The chat's append-only messages, then the output (rendered in the thread,
@@ -49,20 +51,19 @@ export function Conversation({
         ))}
       </ol>
       {outputView ? <div className={panelClasses({}, 'min-w-0')}>{outputView}</div> : null}
-      <RunState outcome={outcome} onStop={onStop} stopping={stopping} />
+      <RunState
+        outcome={outcome}
+        progress={detail.latest_run?.progress ?? []}
+        onStop={onStop}
+        stopping={stopping}
+      />
       {output?.latest_revision && canSend && outcome.kind !== 'running' ? (
-        <fieldset aria-label="Quick refinements" className="flex flex-wrap gap-2">
-          {REFINEMENTS.map((instruction) => (
-            <Button
-              key={instruction}
-              variant="secondary"
-              size="sm"
-              onClick={() => onRefine(instruction)}
-            >
-              {instruction}
-            </Button>
-          ))}
-        </fieldset>
+        <FollowUps
+          kind={output.kind}
+          title={output.latest_revision.title}
+          actionId={detail.chat.action_id}
+          onRefine={onRefine}
+        />
       ) : null}
     </div>
   );
@@ -75,8 +76,22 @@ function MessageBubble({
   if (message.role === 'user')
     return (
       <div className="flex justify-end">
-        <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'max-w-[85%]')}>
+        <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid max-w-[85%] gap-2')}>
           <p className={textRole('body', 'whitespace-pre-wrap')}>{message.content}</p>
+          {message.mentions.length > 0 ? (
+            <ul aria-label="Mentioned Actions" className="flex flex-wrap gap-2">
+              {message.mentions.map((mention) => (
+                <li key={mention.id}>
+                  <ProjectLink
+                    href={`/agent/actions/${mention.id}`}
+                    className={textRole('caption', 'hover:text-accent-text underline')}
+                  >
+                    @{mention.label}
+                  </ProjectLink>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
     );
@@ -87,14 +102,14 @@ function MessageBubble({
       <div className="flex flex-wrap items-center gap-2">
         <span className={textRole('label')}>Agent</span>
         {skill ? <span className={textRole('caption')}>Skill: {skill}</span> : null}
-        {message.evidence_refs.length > 0 ? (
-          <span className={textRole('caption')}>
-            {message.evidence_refs.length} evidence{' '}
-            {message.evidence_refs.length === 1 ? 'reference' : 'references'}
-          </span>
-        ) : null}
       </div>
       <ContentMarkdown markdown={message.content} density="compact" />
+      <div className="flex flex-wrap items-center gap-2">
+        <EvidenceChips refs={message.evidence_refs} />
+        <CopyButton value={message.content} size="sm" variant="ghost">
+          Copy reply
+        </CopyButton>
+      </div>
       {message.steps.length > 0 ? (
         <details className="group">
           <summary className={textRole('caption', 'cursor-pointer')}>
@@ -114,6 +129,54 @@ function MessageBubble({
   );
 }
 
+/**
+ * After a deliverable: refinements revise it in this chat; next steps start a
+ * new chat with the skill that takes the work forward.
+ */
+function FollowUps({
+  kind,
+  title,
+  actionId,
+  onRefine,
+}: Readonly<{
+  kind: string;
+  title: string;
+  actionId: string | null;
+  onRefine: (instruction: string) => void;
+}>) {
+  const next = nextStepsFor(kind, title);
+  return (
+    <div className="grid gap-3">
+      <fieldset aria-label="Quick refinements" className="flex flex-wrap gap-2">
+        {refinementsFor(kind).map((instruction) => (
+          <Button
+            key={instruction}
+            variant="secondary"
+            size="sm"
+            onClick={() => onRefine(instruction)}
+          >
+            {instruction}
+          </Button>
+        ))}
+      </fieldset>
+      {next.length > 0 ? (
+        <nav aria-label="Next steps" className="flex flex-wrap items-center gap-2">
+          <span className={textRole('caption')}>Next, in a new chat:</span>
+          {next.map((step) => (
+            <Button key={step.label} asChild variant="ghost" size="sm">
+              <ProjectLink
+                href={agentHandoffHref({ actionId, prompt: step.prompt, skillId: step.skillId })}
+              >
+                {step.label}
+              </ProjectLink>
+            </Button>
+          ))}
+        </nav>
+      ) : null}
+    </div>
+  );
+}
+
 function stepLabel(step: AgentMessage['steps'][number]): string {
   if (step.kind === 'skill') return 'Chose a skill';
   if (step.kind === 'tool')
@@ -125,24 +188,37 @@ function stepLabel(step: AgentMessage['steps'][number]): string {
 
 function RunState({
   outcome,
+  progress,
   onStop,
   stopping,
 }: Readonly<{
   outcome: ReturnType<typeof runOutcome>;
+  progress: AgentRun['progress'];
   onStop: () => void;
   stopping: boolean;
 }>) {
   switch (outcome.kind) {
     case 'running':
       return (
-        <output className={cn('flex items-center gap-3', textRole('body'))}>
-          <Spinner className="text-muted" />
-          <span className="flex-1">
-            {outcome.queued ? 'Waiting to start…' : 'The agent is working…'}
+        <output className={cn('grid gap-2', textRole('body'))}>
+          <span className="flex items-center gap-3">
+            <Spinner className="text-muted" />
+            <span className="flex-1">
+              {outcome.queued ? 'Waiting to start…' : 'The agent is working…'}
+            </span>
+            <Button variant="ghost" size="sm" disabled={stopping} onClick={onStop}>
+              Stop
+            </Button>
           </span>
-          <Button variant="ghost" size="sm" disabled={stopping} onClick={onStop}>
-            Stop
-          </Button>
+          {progress.length > 0 ? (
+            <ol aria-label="Agent progress" className="grid gap-1 ps-8">
+              {progress.map((step) => (
+                <li key={step.ordinal} className={textRole('caption')}>
+                  {runStepLabel(step)}
+                </li>
+              ))}
+            </ol>
+          ) : null}
         </output>
       );
     case 'stopped_at_limit':

@@ -95,7 +95,8 @@ function ChatView({
                 output={detail.output}
                 runActive={runActive}
                 canEdit={canEdit}
-                canSend={access.canSend}
+                canSend={access.canSend && !turn.pending}
+                onRevise={(message) => turn.send(message)}
               />
             ) : null
           }
@@ -108,8 +109,9 @@ function ChatView({
         <FollowUpFailure turn={turn} actionId={detail.chat.action_id} />
       </div>
       {/* The composer stays at the bottom of the window while the thread scrolls. */}
-      <div className="bg-panel z-sticky sticky bottom-0 pt-3 pb-[var(--content-gutter)]">
+      <div className="bg-panel z-sticky sticky bottom-0 pt-2 pb-4">
         <Composer
+          rows={2}
           id="chat-message"
           label="Reply to the agent"
           value={turn.draft}
@@ -117,7 +119,12 @@ function ChatView({
           onSubmit={() => turn.send(turn.draft)}
           pending={turn.pending}
           disabled={!access.canSend || runActive}
-          placeholder={hasOutput ? 'Ask for a change to the output.' : 'Ask a follow-up.'}
+          placeholder={
+            hasOutput
+              ? 'Ask for a change to the output. / picks a skill, @ mentions an Action.'
+              : 'Ask a follow-up. / picks a skill, @ mentions an Action.'
+          }
+          commands={turn.commands}
           tools={
             <SkillPicker
               value={turn.skillId}
