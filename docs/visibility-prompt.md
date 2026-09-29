@@ -112,7 +112,9 @@ shortfall is reported, never filled. `candidates_generated` counts what passed
 admission and is never a market size. Every dropped row is counted under the
 first admission rule it broke (`admission_drops`, also frozen in run
 provenance), and the Generate dialog and agent handoff show that breakdown.
-Drafts are written in the project's `language_code`. Each candidate keeps its cell in
+Run provenance also records each dropped row's slot, normalized text hash,
+batch/index and admission phase alongside the generator and buyer-query policy versions.
+Drafts are written in the project's `language_code`, using English when it is blank. Each candidate keeps its cell in
 `evidence_refs`, copied into `generation_evidence` on accept.
 
 The [quality judge](../frontend/services/api/src/prompts/generation-quality.ts) runs
@@ -166,7 +168,9 @@ saved portfolio, validates its bounded core rows, and applies the same
 admission, JEV and candidate staging path without another text generation call.
 The block's fence is matched case-insensitively; a row filed under an unknown
 topic is dropped as `unknown_topic` rather than failing the portfolio. The report
-hides the block only while it holds submittable rows. Run provenance retains the exact output/revision/run references.
+hides the block only when there is exactly one closed JSON block with valid topic UUIDs
+and a nonempty row count within the UI generation ceiling. The API also enforces
+its configured runtime limit. Run provenance retains the exact output/revision/run references.
 It never activates prompts. Repeated submission drops tracked or pending copies.
 The handoff requests the portfolio's own question count, so selection never
 trims an approved plan to the default, and opens

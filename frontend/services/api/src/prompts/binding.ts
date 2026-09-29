@@ -23,7 +23,8 @@ const {
   business_context_fields: CONTEXT_FIELDS,
 } = policy.prompts.binding;
 const STOPWORDS = new Set(stopwords);
-const DENSE_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
+const DENSE_SCRIPT =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}]/u;
 // ICU word boundaries also split scripts written without spaces (Chinese,
 // Japanese, Thai); for spaced scripts they match the separator split below.
 const WORDS = new Intl.Segmenter(undefined, { granularity: 'word' });

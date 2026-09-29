@@ -8,6 +8,7 @@ import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { createJevClient, jevSettings } from '../src/models/jev.ts';
 import { reviewCandidates } from '../src/prompts/candidates.ts';
 import { generationInput } from '../src/prompts/generation-input.ts';
+import { promptTextHash } from '../src/prompts/normalization.ts';
 import { generatePrompts } from '../src/prompts/generation.ts';
 import { billingAccount, grant, promptSet, topic } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -186,6 +187,18 @@ describe('prompt generation at the PostgreSQL boundary', () => {
       agent_revision_id: revisionId,
       agent_output_id: outputId,
       admission_drops: { unknown_topic: 1 },
+      generator_version: policy.prompts.generation.version,
+      buyer_query_policy_version: policy.prompts.generation.policy_version,
+      admission_drop_records: [
+        {
+          reason: 'unknown_topic',
+          slot_id: 'agent-2',
+          normalized_text_hash: promptTextHash('Which running shoes suit wide feet?'),
+          phase: 'admission',
+          batch: 0,
+          row_index: 1,
+        },
+      ],
     });
     const repeated = await generatePrompts(db, tenant.workspaceId, setId, request, deps);
     expect(repeated.candidates).toEqual([]);

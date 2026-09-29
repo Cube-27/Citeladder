@@ -224,7 +224,8 @@ Add budget, location, audience, integrations or other details only when they
 materially help choose options. Keep simple needs simple. Do not manufacture
 differences by attaching an exact price, size, city or extra feature to each row.
 Write every query in the language named by the reference evidence's
-language_code, as a buyer in that market would type it; keep brand, product and
+language_code (use English when it is blank), as a buyer in that market would
+type it; keep brand, product and
 place names in the form buyers use.
 Write every query out in full, exactly as a buyer would type it. Never leave a
 template slot such as [city], {{location}} or <product> in the text: if a detail

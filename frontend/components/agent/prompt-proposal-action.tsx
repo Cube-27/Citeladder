@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { parsePromptProposal } from '@citeladder/contracts/prompt-proposal';
 import { useNavigate } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
@@ -12,46 +13,20 @@ import { admissionDropSummary } from '@/lib/prompts/admission';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
 import { PROMPTS_REVIEW_HREF } from '@/lib/prompts/routes';
-
-const PROPOSAL_FENCE = /^[ \t]*```json[ \t]*\n([\s\S]*?)^[ \t]*```[ \t]*$/gim;
-
-/** The proposal's rows when a fenced block holds a submittable shape, else null. */
-function proposalRows(json: string): unknown[] | null {
-  try {
-    const value: unknown = JSON.parse(json);
-    if (!value || typeof value !== 'object' || !('prompts' in value)) return null;
-    const rows = value.prompts;
-    const submittable =
-      Array.isArray(rows) &&
-      rows.length > 0 &&
-      rows.every(
-        (row: unknown) =>
-          !!row &&
-          typeof row === 'object' &&
-          ['topic_id', 'text', 'buyer_stage', 'prompt_intent'].every(
-            (key) => typeof (row as Record<string, unknown>)[key] === 'string',
-          ),
-      );
-    return submittable ? rows : null;
-  } catch {
-    return null;
-  }
-}
+import { MAX_GENERATION_COUNT } from '@/lib/config/prompts';
 
 /**
  * Keep submission metadata out of the readable report; editing retains it.
  * A malformed or empty proposal stays visible so the user can repair it.
  */
 export function promptPortfolioReport(body: string): string {
-  return body.replace(PROPOSAL_FENCE, (block, json: string) => (proposalRows(json) ? '' : block));
+  const proposal = parsePromptProposal(body, MAX_GENERATION_COUNT);
+  return proposal ? body.slice(0, proposal.start) + body.slice(proposal.end) : body;
 }
 
 /** How many questions the portfolio proposes (0 when it has no submittable block). */
 export function proposedQuestionCount(body: string): number {
-  return [...body.matchAll(PROPOSAL_FENCE)].reduce(
-    (total, match) => total + (proposalRows(match[1]!)?.length ?? 0),
-    0,
-  );
+  return parsePromptProposal(body, MAX_GENERATION_COUNT)?.rows.length ?? 0;
 }
 
 /** Explicitly stage the saved revision; activation remains in candidate review. */

@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { MAX_GENERATION_COUNT } from '@/lib/config/prompts';
 import {
   PromptProposalAction,
   promptPortfolioReport,
@@ -18,7 +19,7 @@ beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-const row = (topic_id: string) => ({
+const row = (topic_id: string = crypto.randomUUID()) => ({
   topic_id,
   text: 'Which trail shoes grip wet rock?',
   buyer_stage: 'consideration',
@@ -28,14 +29,17 @@ const portfolio = (rows: unknown[]) =>
   `Buyer questions\n\n\`\`\`JSON \n${JSON.stringify({ prompts: rows })}\n\`\`\``;
 
 it('hides only a submittable proposal and keeps unsubmittable blocks visible for repair', () => {
-  expect(promptPortfolioReport(portfolio([row('a'), row('b')]))).toBe('Buyer questions\n\n');
+  expect(promptPortfolioReport(portfolio([row(), row()]))).toBe('Buyer questions\n\n');
   for (const broken of [
     '```json\nnot valid JSON\n```',
     portfolio([]),
     portfolio([{ text: 'Missing its topic' }]),
+    portfolio([row('not-a-uuid')]),
+    portfolio(Array.from({ length: MAX_GENERATION_COUNT + 1 }, () => row())),
+    portfolio([row()]) + '\n' + portfolio([row()]),
   ])
     expect(promptPortfolioReport(broken)).toBe(broken);
-  expect(proposedQuestionCount(portfolio([row('a'), row('b')]))).toBe(2);
+  expect(proposedQuestionCount(portfolio([row(), row()]))).toBe(2);
   expect(proposedQuestionCount(portfolio([{ text: 'Missing its topic' }]))).toBe(0);
 });
 
@@ -60,7 +64,7 @@ it('submits only a saved revision on click and keeps an empty result recoverable
     <PromptProposalAction
       workspaceId="workspace"
       revisionId="revision"
-      body={portfolio(Array.from({ length: 12 }, (_, index) => row(`topic-${index}`)))}
+      body={portfolio(Array.from({ length: 12 }, () => row()))}
       disabled={false}
     />,
   );

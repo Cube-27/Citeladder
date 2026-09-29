@@ -99,6 +99,8 @@ it('binds identities written in any script and still rejects unrelated text', ()
   const vocabulary = { tokens: new Set(['unrelated']), phrases: new Set<string>() };
   expect(bindingFailure('सर्दियों के लिए सबसे अच्छे जूते कौन से हैं?', vocabulary, 'जूते')).toBeNull();
   expect(bindingFailure('哪些连衣裙适合夏天穿？', vocabulary, '连衣裙')).toBeNull();
+  expect(bindingFailure('ชาอะไรเหมาะกับตอนเช้า', vocabulary, 'ชา')).toBeNull();
+  expect(bindingFailure('วันนี้อากาศเป็นอย่างไร', vocabulary, 'ชา')).toBe('off_topic');
   expect(bindingFailure('Which café machines suit a small office?', vocabulary, 'Cafe')).toBeNull();
   expect(bindingFailure('आज मौसम कैसा है?', vocabulary, 'जूते')).toBe('off_topic');
   expect(bindingFailure('今天天气怎么样？', vocabulary, '连衣裙')).toBe('off_topic');

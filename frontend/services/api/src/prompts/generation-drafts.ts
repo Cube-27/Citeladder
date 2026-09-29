@@ -1,4 +1,5 @@
 import type { PromptAdmissionDropReason } from '@citeladder/contracts/project';
+import { parsePromptProposal } from '@citeladder/contracts/prompt-proposal';
 import { z } from 'zod';
 
 import { namesAlias } from '../analysis/aliases.ts';
@@ -193,6 +194,14 @@ const generatedRow = z.object({
 const generated = z.object({ prompts: z.array(generatedRow) });
 
 export type Drops = Partial<Record<PromptAdmissionDropReason, number>>;
+type AdmissionDrop = {
+  reason: PromptAdmissionDropReason;
+  slot_id: string;
+  normalized_text_hash: string;
+  phase: 'admission' | 'staging';
+  batch: number;
+  row_index: number;
+};
 export function countDrop(drops: Drops, reason: PromptAdmissionDropReason, count = 1) {
   if (count) drops[reason] = (drops[reason] ?? 0) + count;
 }
@@ -212,6 +221,7 @@ export function admitDrafts(
   context: GenerationContext,
   input: GenerationInput,
   prior: Draft[],
+  batch = 0,
 ) {
   const seen = new Set([
     ...context.prompts.map((row) => row.normalized_text_hash),
@@ -259,13 +269,22 @@ export function admitDrafts(
   };
   const admitted: Draft[] = [];
   const drops: Drops = {};
-  for (const row of rows) {
+  const dropRecords: AdmissionDrop[] = [];
+  for (const [row_index, row] of rows.entries()) {
     const slot = slots.find((item) => item.slot_id === row.slot_id);
     const text = row.text.trim().replace(/\s+/gu, ' '),
       hash = promptTextHash(text);
     const dropped = reason(row, slot, text, hash);
     if (dropped || !slot) {
       countDrop(drops, dropped ?? 'unplanned_slot');
+      dropRecords.push({
+        reason: dropped ?? 'unplanned_slot',
+        slot_id: row.slot_id,
+        normalized_text_hash: hash,
+        phase: 'admission',
+        batch,
+        row_index,
+      });
       continue;
     }
     seen.add(hash);
@@ -279,7 +298,7 @@ export function admitDrafts(
       prompt_intent: row.prompt_intent,
     });
   }
-  return { admitted, drops };
+  return { admitted, drops, dropRecords };
 }
 
 async function suggestMaps(
@@ -365,45 +384,27 @@ async function suggestMaps(
   }
 }
 
-/** Bodies of the ```json fenced blocks (any case), each closed by a bare ``` line. */
-function jsonBlocks(body: string) {
-  const blocks: string[] = [];
-  let open: string[] | null = null;
-  for (const line of body.split('\n')) {
-    const fence = line.trim().toLowerCase();
-    if (open === null) {
-      if (fence === '```json') open = [];
-    } else if (fence === '```') {
-      blocks.push(open.join('\n'));
-      open = null;
-    } else open.push(line);
-  }
-  return blocks;
-}
-
 function proposal(context: GenerationContext) {
   const revision = context.revision!;
-  const blocks = jsonBlocks(revision.body);
-  if (blocks.length !== 1) throw generationInvalid('Portfolio requires one JSON prompt proposal');
-  const schema = z.object({
-    prompts: z
-      .array(generatedRow.omit({ slot_id: true }).extend({ topic_id: z.uuid() }))
-      .min(1)
-      .max(generationSetting('max_count')),
-  });
-  let parsed: z.infer<typeof schema>;
-  try {
-    parsed = schema.parse(JSON.parse(blocks[0]!));
-  } catch {
-    throw generationInvalid('Portfolio contains invalid prompt rows');
-  }
+  const parsed = parsePromptProposal(revision.body, generationSetting('max_count'));
+  if (!parsed)
+    throw generationInvalid('Portfolio requires one JSON proposal with valid prompt rows');
   // A row filed under a topic that no longer exists is dropped on its own,
   // like any other inadmissible row, rather than failing the portfolio.
   const drops: Drops = {};
-  const rows = parsed.prompts.flatMap((row, index) => {
+  const dropRecords: AdmissionDrop[] = [];
+  const rows = parsed.rows.flatMap((row, index) => {
     const topic = context.selected.find((item) => item.id === row.topic_id);
     if (topic) return [{ row, topic, slot_id: `agent-${index + 1}` }];
     countDrop(drops, 'unknown_topic');
+    dropRecords.push({
+      reason: 'unknown_topic',
+      slot_id: `agent-${index + 1}`,
+      normalized_text_hash: promptTextHash(row.text),
+      phase: 'admission',
+      batch: 0,
+      row_index: index,
+    });
     return [];
   });
   const slots: Slot[] = rows.map(({ topic, slot_id }) => ({
@@ -426,6 +427,7 @@ function proposal(context: GenerationContext) {
     slots,
     rows: rows.map(({ row, slot_id }) => ({ ...row, slot_id })),
     drops,
+    dropRecords,
   };
 }
 
@@ -441,12 +443,13 @@ export async function generateDrafts(
   gateway: ModelGateway | null,
 ) {
   if (context.revision) {
-    const { slots, rows, drops } = proposal(context);
+    const { slots, rows, drops, dropRecords } = proposal(context);
     const admitted = admitDrafts(rows, slots, context, input, []);
     mergeDrops(drops, admitted.drops);
     return {
       drafts: admitted.admitted,
       drops,
+      dropRecords: [...dropRecords, ...admitted.dropRecords],
       maps: [] as OfferingMap[],
       models: [] as unknown[],
     };
@@ -458,6 +461,7 @@ export async function generateDrafts(
     models: unknown[] = [];
   const batchSize = generationSetting('model_batch_size');
   const drops: Drops = {};
+  const dropRecords: AdmissionDrop[] = [];
   let parseError = false;
   const systems = G.systems as Record<string, Record<string, string>>;
   const system = (systems[String(record(context.context.business_context).business_model)] ??
@@ -481,14 +485,15 @@ export async function generateDrafts(
       );
       const { content: _content, ...identity } = response.result;
       models.push(identity);
-      const result = admitDrafts(response.value.prompts, batch, context, input, drafts);
+      const result = admitDrafts(response.value.prompts, batch, context, input, drafts, call);
       drafts.push(...result.admitted);
       mergeDrops(drops, result.drops);
+      dropRecords.push(...result.dropRecords);
     } catch (error) {
       if (!(error instanceof ModelError) || error.code !== 'parse') throw error;
       parseError = true;
     }
   }
   if (!drafts.length && parseError) throw new ModelError('parse');
-  return { drafts, drops, maps, models };
+  return { drafts, drops, dropRecords, maps, models };
 }
