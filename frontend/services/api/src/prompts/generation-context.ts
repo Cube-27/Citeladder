@@ -124,6 +124,9 @@ export async function generationContext(
       .selectFrom('prompts')
       .selectAll()
       .where('prompt_set_id', '=', setId)
+      // Oldest first: model and judge context keep the most recent texts.
+      .orderBy('created_at')
+      .orderBy('id')
       .execute();
     const candidates = await trx
       .selectFrom('prompt_candidates')

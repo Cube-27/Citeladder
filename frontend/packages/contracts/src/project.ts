@@ -113,6 +113,24 @@ export const promptCandidateSchema = responseObject({
   quality_flags: z.array(z.string()).default([]),
 });
 
+// Why a drafted or proposed row failed admission, one code per dropped row.
+export const promptAdmissionDropReasons = [
+  'unknown_topic',
+  'unplanned_slot',
+  'intent',
+  'stage',
+  'duplicate',
+  'length',
+  'placeholder',
+  'observed_copy',
+  'off_topic',
+  'branded_core',
+  'brand_missing',
+  'competitor_missing',
+] as const;
+export const promptAdmissionDropReasonSchema = z.enum(promptAdmissionDropReasons);
+export type PromptAdmissionDropReason = z.infer<typeof promptAdmissionDropReasonSchema>;
+
 // `POST /prompt-sets/{id}/generate` result: staged candidates, the topics
 // they belong to, and how many duplicates were dropped.
 export const promptGenerateResponseSchema = responseObject({
@@ -130,6 +148,11 @@ export const promptGenerateResponseSchema = responseObject({
   quality_gate: z.enum(['off', 'shadow', 'gate', 'unavailable']).default('off'),
   // Suggestions the quality gate removed before review.
   quality_rejected: z.number().int().default(0),
+  // Rows that failed admission, by reason; copies of tracked or pending
+  // questions count as `duplicate`.
+  admission_drops: z
+    .partialRecord(promptAdmissionDropReasonSchema, z.number().int().nonnegative())
+    .default({}),
 });
 
 // `POST /prompt-sets/{id}/candidates/review` result.

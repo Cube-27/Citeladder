@@ -189,30 +189,34 @@ export async function judgeDrafts(
         return;
       }
       calls++;
+      // Only the judge call can make a decision unavailable; a failure in
+      // applying policy is a defect and propagates, as on the cached path.
+      let result: Awaited<ReturnType<JevClient['decide']>>;
       try {
-        const result = await judge.decide(state, questions, deadline);
-        const answers = Object.fromEntries(
-          Object.keys(Q.noul_questions).map((key) => [key, probability(result.answers[key]?.noul)]),
-        );
-        const values = Object.values(answers).filter((value): value is number => value !== null);
-        draft.decision = applyQualityPolicy({
-          model: result.model,
-          question_schema_version: Q.question_schema_version,
-          state_hash: hash,
-          answers,
-          intent: choice(result.answers.intent, Object.keys(Q.intent_descriptions)),
-          stage: choice(result.answers.stage, policy.prompts.generation.stages),
-          duplicate_of: texts.length
-            ? choice(result.answers.duplicate_of, [Q.duplicate_none, ...Object.keys(options)])
-            : null,
-          rank_score: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
-          usage: result.usage ?? {},
-        });
+        result = await judge.decide(state, questions, deadline);
       } catch (error) {
         unavailable = true;
         if (deadline.aborted) pendingAtDeadline++;
         else logJudgeFailure(error);
+        return;
       }
+      const answers = Object.fromEntries(
+        Object.keys(Q.noul_questions).map((key) => [key, probability(result.answers[key]?.noul)]),
+      );
+      const values = Object.values(answers).filter((value): value is number => value !== null);
+      draft.decision = applyQualityPolicy({
+        model: result.model,
+        question_schema_version: Q.question_schema_version,
+        state_hash: hash,
+        answers,
+        intent: choice(result.answers.intent, Object.keys(Q.intent_descriptions)),
+        stage: choice(result.answers.stage, policy.prompts.generation.stages),
+        duplicate_of: texts.length
+          ? choice(result.answers.duplicate_of, [Q.duplicate_none, ...Object.keys(options)])
+          : null,
+        rank_score: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
+        usage: result.usage ?? {},
+      });
     }),
   );
   if (pendingAtDeadline) logger.warning('jev deadline reached', { pending: pendingAtDeadline });

@@ -18,10 +18,15 @@ import { ApiError } from '../errors.ts';
 
 const {
   min_token_chars: MIN_TOKEN,
+  min_dense_token_chars: MIN_DENSE_TOKEN,
   stopwords,
   business_context_fields: CONTEXT_FIELDS,
 } = policy.prompts.binding;
 const STOPWORDS = new Set(stopwords);
+const DENSE_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
+// ICU word boundaries also split scripts written without spaces (Chinese,
+// Japanese, Thai); for spaced scripts they match the separator split below.
+const WORDS = new Intl.Segmenter(undefined, { granularity: 'word' });
 
 export type BindingFailure = 'off_topic' | 'vocabulary_empty';
 export type Vocabulary = { tokens: ReadonlySet<string>; phrases: ReadonlySet<string> };
@@ -43,17 +48,26 @@ export const BINDING_FAILURES: Record<BindingFailure, { code: string; message: s
   },
 };
 
-/** ASCII-fold, lower-case and collapse everything else to single spaces. */
+/**
+ * Fold Latin diacritics ("café" → "cafe"), lower-case, and join the words of
+ * any script with single spaces. Letters outside ASCII are kept, so a Hindi,
+ * Arabic or Chinese identity binds its own-language prompts.
+ */
 function normalize(text: string): string {
-  return text
+  const folded = text
     .normalize('NFKD')
-    .replaceAll(/\P{ASCII}/gu, '')
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/gu, ' ')
-    .trim();
+    .replaceAll(/[\u0300-\u036f]/gu, '')
+    .normalize('NFC')
+    .toLowerCase();
+  return [...WORDS.segment(folded)]
+    .filter((segment) => segment.isWordLike)
+    .flatMap((segment) => segment.segment.split(/[^\p{L}\p{N}\p{M}]+/u))
+    .filter(Boolean)
+    .join(' ');
 }
 
-const eligible = (token: string) => token.length >= MIN_TOKEN && !STOPWORDS.has(token);
+const eligible = (token: string) =>
+  token.length >= (DENSE_SCRIPT.test(token) ? MIN_DENSE_TOKEN : MIN_TOKEN) && !STOPWORDS.has(token);
 
 /**
  * Fold a word so it matches its own plural. "-ies" folds to "y" first, so

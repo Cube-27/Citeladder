@@ -460,6 +460,7 @@ def _prompts_policy() -> dict[str, Any]:
         },
         "binding": {
             "min_token_chars": cfg.TOPICAL_BINDING_MIN_TOKEN_CHARS,
+            "min_dense_token_chars": cfg.TOPICAL_BINDING_MIN_DENSE_TOKEN_CHARS,
             "stopwords": sorted(cfg.TOPICAL_BINDING_STOPWORDS),
             "business_context_fields": list(
                 cfg.PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS
