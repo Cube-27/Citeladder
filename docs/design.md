@@ -58,6 +58,8 @@ The homepage may use marketing-only geometry roles: `--radius-marketing-card` (2
 
 ## Typography
 
+Sentient serif headings use normal letter spacing, without custom tracking. The homepage H1 steps down by 2px at the mobile breakpoint (540px and below).
+
 Use Switzer for text and figures and Sentient for the page title and public headings; metrics, dates, ranks, and percentages use tabular numerals, not monospace. Switzer's default digits are already tabular; Sentient's are proportional, so numbers stay out of the display face. Weights are 400 (sentences), 500 (labels, controls, badges) and 600 (titles, figures). Do not assemble page-local size/weight/ink hierarchies.
 
 ### Website and focused-flow ladder

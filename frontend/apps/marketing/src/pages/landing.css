@@ -24,18 +24,6 @@
   font-weight: 500;
   line-height: 1.17;
 }
-:where(.cl-landing) h1 {
-  letter-spacing: -0.045em;
-}
-:where(.cl-landing) h2 {
-  letter-spacing: -0.03em;
-}
-:where(.cl-landing) h3 {
-  letter-spacing: -0.02em;
-}
-:where(.cl-landing) :where(h4, h5) {
-  letter-spacing: -0.012em;
-}
 :where(.cl-landing) a {
   text-decoration: none;
 }
@@ -877,7 +865,7 @@
   }
   .cl-hero h1 {
     max-width: none;
-    letter-spacing: -0.045em;
+    font-size: calc(clamp(2.375rem, 1.5rem + 3vw, 3rem) - 2px);
   }
   .cl-hero-actions {
     flex-direction: row;

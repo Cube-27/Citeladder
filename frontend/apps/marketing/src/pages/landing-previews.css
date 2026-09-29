@@ -99,7 +99,6 @@
   font-size: 18px;
   line-height: 26px;
   font-weight: 600;
-  letter-spacing: -0.01em;
 }
 .cl-hero-preview-title p {
   color: var(--cl-muted);
@@ -154,7 +153,6 @@
   font-size: 16px;
   line-height: 24px;
   font-weight: 600;
-  letter-spacing: -0.01em;
 }
 .cl-preview-heading p {
   color: var(--cl-muted);
@@ -258,7 +256,6 @@
 }
 .cl-hero-panel-heading h3 {
   font-size: 13px;
-  letter-spacing: -0.01em;
 }
 .cl-hero-panel-heading span {
   color: var(--cl-muted);
@@ -698,7 +695,6 @@
   font-size: 18px;
   line-height: 26px;
   font-weight: 600;
-  letter-spacing: -0.01em;
   margin: 12px 0;
 }
 .cl-answer {

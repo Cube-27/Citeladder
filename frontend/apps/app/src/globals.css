@@ -664,7 +664,7 @@ body {
     font-size: 1.125rem;
     line-height: 1.5rem;
     font-weight: 600;
-    letter-spacing: -0.02em;
+    letter-spacing: normal;
     color: var(--color-foreground);
   }
   .type-section-title {
@@ -781,7 +781,7 @@ body {
     font-family: var(--font-display);
     font-size: 1.5rem;
     line-height: 2rem;
-    letter-spacing: -0.02em;
+    letter-spacing: normal;
   }
   .prose-content h3 { font-size: 1rem; line-height: 1.5rem; }
   .prose-content :where(h4, h5, h6) { font-size: 0.875rem; line-height: 1.25rem; }
