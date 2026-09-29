@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { FollowUpFailure } from '@/components/agent/chat-screen';
@@ -58,20 +58,8 @@ export function AgentPanel() {
       title="Agent"
       description="Ask about this screen. Chats are saved in the Agent workspace."
       closeLabel="Close agent"
-      footer={
-        chatId ? (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => panel.setChat(null)}>
-              New chat
-            </Button>
-            <Button asChild variant="secondary" size="sm">
-              <ProjectLink href={`/agent/chats/${chatId}`} onClick={close}>
-                Open in Agent
-              </ProjectLink>
-            </Button>
-          </div>
-        ) : undefined
-      }
+      // The panel body lays out its own scroll area and bottom-pinned composer.
+      bodyClassName="flex flex-col pb-0"
     >
       {chatId ? (
         <PanelChat
@@ -80,6 +68,18 @@ export function AgentPanel() {
           chatId={chatId}
           projectId={activeProjectId}
           onLeave={close}
+          toolbar={
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => panel.setChat(null)}>
+                New chat
+              </Button>
+              <Button asChild variant="secondary" size="sm">
+                <ProjectLink href={`/agent/chats/${chatId}`} onClick={close}>
+                  Open in Agent
+                </ProjectLink>
+              </Button>
+            </div>
+          }
         />
       ) : (
         <PanelStart
@@ -111,23 +111,49 @@ function PanelStart({
   const [skillId, setSkillId] = useState<string | null>(null);
   const access = useAgentAccess();
   const create = useCreateChat(workspaceId, projectId, onStarted);
+  const hasContext = contextChips(context).length > 0;
   return (
-    <div className="grid gap-4">
+    <PanelLayout
+      composer={
+        <Composer
+          rows={2}
+          id="agent-panel-message"
+          label="Message the agent"
+          value={message}
+          onChange={setMessage}
+          onSubmit={() => create.start({ message, skillId, actionId: seed.actionId, context })}
+          pending={create.pending}
+          disabled={!access.canSend}
+          placeholder="Ask about what you are looking at."
+          chips={contextChips(context)}
+          onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
+          tools={<SkillPicker value={skillId} onChange={setSkillId} disabled={!access.canSend} />}
+        />
+      }
+    >
+      <div className="grid flex-1 content-center justify-items-center gap-2 py-4 text-center">
+        <p className={textRole('sectionTitle')}>Ask about this screen</p>
+        <p className={textRole('caption', 'max-w-xs')}>
+          {hasContext
+            ? 'The references below go with your question; remove any you do not need.'
+            : 'The agent reads your CiteLadder evidence and answers with sources.'}
+        </p>
+      </div>
       {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
       {create.failure ? <Alert tone="danger">{create.failure.message}</Alert> : null}
-      <Composer
-        id="agent-panel-message"
-        label="Message the agent"
-        value={message}
-        onChange={setMessage}
-        onSubmit={() => create.start({ message, skillId, actionId: seed.actionId, context })}
-        pending={create.pending}
-        disabled={!access.canSend}
-        placeholder="Ask about what you are looking at."
-        chips={contextChips(context)}
-        onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
-        tools={<SkillPicker value={skillId} onChange={setSkillId} disabled={!access.canSend} />}
-      />
+    </PanelLayout>
+  );
+}
+
+/** Scrolling content above a composer pinned to the drawer's bottom edge. */
+function PanelLayout({
+  children,
+  composer,
+}: Readonly<{ children: ReactNode; composer: ReactNode }>) {
+  return (
+    <div className="flex min-h-full flex-1 flex-col gap-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-4">{children}</div>
+      <div className="bg-elevated z-sticky sticky bottom-0 pt-2 pb-4">{composer}</div>
     </div>
   );
 }
@@ -137,7 +163,14 @@ function PanelChat({
   chatId,
   projectId,
   onLeave,
-}: Readonly<{ workspaceId: string; chatId: string; projectId: string; onLeave: () => void }>) {
+  toolbar,
+}: Readonly<{
+  workspaceId: string;
+  chatId: string;
+  projectId: string;
+  onLeave: () => void;
+  toolbar: ReactNode;
+}>) {
   const query = useChatDetail(workspaceId, chatId);
   if (query.isError)
     return (
@@ -151,14 +184,27 @@ function PanelChat({
   if (!query.data) return <Skeleton className="h-48 w-full" />;
   if (query.data.chat.project_id !== projectId)
     return <Alert tone="danger">This chat belongs to another project.</Alert>;
-  return <PanelConversation workspaceId={workspaceId} detail={query.data} onLeave={onLeave} />;
+  return (
+    <PanelConversation
+      workspaceId={workspaceId}
+      detail={query.data}
+      onLeave={onLeave}
+      toolbar={toolbar}
+    />
+  );
 }
 
 function PanelConversation({
   workspaceId,
   detail,
   onLeave,
-}: Readonly<{ workspaceId: string; detail: AgentChatDetail; onLeave: () => void }>) {
+  toolbar,
+}: Readonly<{
+  workspaceId: string;
+  detail: AgentChatDetail;
+  onLeave: () => void;
+  toolbar: ReactNode;
+}>) {
   const chatId = detail.chat.id;
   const access = useAgentAccess();
   const navigate = useNavigate();
@@ -171,8 +217,38 @@ function PanelConversation({
     onLeave();
     navigate(projectHref(`/agent/chats/${chatId}`));
   };
+  const endRef = useRef<HTMLDivElement>(null);
+  const latestRevisionId = detail.output?.latest_revision?.id;
+  // A new turn, run state or revision scrolls the panel to its newest entry.
+  useEffect(() => {
+    endRef.current?.scrollIntoView?.({ block: 'end' });
+  }, [detail.messages.length, detail.latest_run?.status, latestRevisionId]);
   return (
-    <div className="grid gap-4">
+    <PanelLayout
+      composer={
+        <Composer
+          rows={2}
+          id="agent-panel-reply"
+          label="Reply to the agent"
+          value={turn.draft}
+          onChange={turn.setDraft}
+          onSubmit={() => turn.send(turn.draft)}
+          pending={turn.pending}
+          disabled={!access.canSend || runActive}
+          placeholder="Ask a follow-up. / picks a skill, @ mentions an Action."
+          commands={turn.commands}
+          tools={
+            <SkillPicker
+              value={turn.skillId}
+              onChange={turn.setSkillId}
+              outputKind={detail.output?.kind}
+              disabled={!access.canSend || runActive}
+            />
+          }
+        />
+      }
+    >
+      {toolbar}
       <Conversation
         detail={detail}
         output={
@@ -192,25 +268,7 @@ function PanelConversation({
       />
       {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
       <FollowUpFailure turn={turn} actionId={detail.chat.action_id} />
-      <Composer
-        id="agent-panel-reply"
-        label="Reply to the agent"
-        value={turn.draft}
-        onChange={turn.setDraft}
-        onSubmit={() => turn.send(turn.draft)}
-        pending={turn.pending}
-        disabled={!access.canSend || runActive}
-        placeholder="Ask a follow-up. / picks a skill, @ mentions an Action."
-        commands={turn.commands}
-        tools={
-          <SkillPicker
-            value={turn.skillId}
-            onChange={turn.setSkillId}
-            outputKind={detail.output?.kind}
-            disabled={!access.canSend || runActive}
-          />
-        }
-      />
-    </div>
+      <div ref={endRef} />
+    </PanelLayout>
   );
 }

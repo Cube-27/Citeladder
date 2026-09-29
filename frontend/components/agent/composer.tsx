@@ -29,6 +29,7 @@ export function Composer({
   onRemoveChip,
   tools,
   commands,
+  rows = 3,
 }: Readonly<{
   id: string;
   label: string;
@@ -42,11 +43,13 @@ export function Composer({
   onRemoveChip?: (chip: ContextChip) => void;
   tools?: ReactNode;
   commands?: ComposerCommands;
+  /** Visible lines before the field scrolls. */
+  rows?: number;
 }>) {
   const canSend = !disabled && !pending && value.trim().length > 0;
   return (
     <form
-      className="grid gap-2"
+      className="focus-frame bg-input shadow-raised grid gap-1 rounded-[var(--radius-card)] p-2"
       onSubmit={(event) => {
         event.preventDefault();
         if (canSend) onSubmit();
@@ -83,10 +86,11 @@ export function Composer({
         commands={commands}
         disabled={disabled}
         placeholder={placeholder}
+        rows={rows}
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1">{tools}</div>
-        <Button type="submit" disabled={!canSend}>
+        <Button type="submit" size="sm" disabled={!canSend}>
           <SendHorizontal className="size-4" aria-hidden />
           {pending ? 'Sending…' : 'Send'}
         </Button>

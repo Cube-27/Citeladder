@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
@@ -85,7 +85,11 @@ function NewChat({
     enabled: Boolean(handoff.actionId),
   });
 
-  const submit = () =>
+  const launch = useLaunch(create.pending);
+  const composerBox = useRef<HTMLDivElement>(null);
+
+  const submit = () => {
+    launch.start(composerBox.current);
     create.start({
       message,
       skillId,
@@ -93,30 +97,48 @@ function NewChat({
       context,
       mentions: commands.mentions.map((mention) => mention.id),
     });
+  };
 
   return (
-    <PageShell measure="workflow">
-      <Stack gap="section">
+    <PageShell
+      measure="workflow"
+      className="flex min-h-[calc(100dvh-var(--page-band-identity))] flex-col"
+    >
+      {/* Centred until the first message; then the composer slides to where
+          the chat keeps it, at the bottom, while the chat opens. */}
+      <Stack gap="section" className="my-auto">
+        <h2
+          className={textRole('sectionTitle', 'text-center transition-opacity')}
+          style={launch.fade}
+        >
+          What can I help with?
+        </h2>
         {handoff.actionId ? (
           <AttachedAction workspaceId={workspaceId} actionId={handoff.actionId} />
         ) : null}
         {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
         {failure ? <Alert tone="danger">{failure.message}</Alert> : null}
-        <Composer
-          id="new-chat-message"
-          label="Message the agent"
-          value={message}
-          onChange={setMessage}
-          onSubmit={submit}
-          pending={create.pending}
-          disabled={!access.canSend}
-          placeholder="Ask a question or describe the work you need. / picks a skill, @ mentions an Action."
-          chips={contextChips(context)}
-          commands={commands}
-          onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
-          tools={<SkillPicker value={skillId} onChange={setSkillId} disabled={!access.canSend} />}
-        />
-        <fieldset className="flex flex-wrap gap-2" aria-label="Starter prompts">
+        <div ref={composerBox} style={launch.slide}>
+          <Composer
+            id="new-chat-message"
+            label="Message the agent"
+            value={message}
+            onChange={setMessage}
+            onSubmit={submit}
+            pending={create.pending}
+            disabled={!access.canSend}
+            placeholder="Ask a question or describe the work you need. / picks a skill, @ mentions an Action."
+            chips={contextChips(context)}
+            commands={commands}
+            onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
+            tools={<SkillPicker value={skillId} onChange={setSkillId} disabled={!access.canSend} />}
+          />
+        </div>
+        <fieldset
+          className="flex flex-wrap justify-center gap-2 transition-opacity"
+          style={launch.fade}
+          aria-label="Starter prompts"
+        >
           {STARTERS.map((starter) => (
             <Button
               key={starter.text}
@@ -133,18 +155,47 @@ function NewChat({
           ))}
         </fieldset>
         {handoff.actionId ? null : (
-          <BriefingCard
-            workspaceId={workspaceId}
-            projectId={projectId}
-            onStart={create.start}
-            pending={create.pending}
-            disabled={!access.canSend}
-          />
+          <Stack gap="section" style={launch.fade}>
+            <BriefingCard
+              workspaceId={workspaceId}
+              projectId={projectId}
+              onStart={create.start}
+              pending={create.pending}
+              disabled={!access.canSend}
+            />
+            <TopActions workspaceId={workspaceId} projectId={projectId} />
+          </Stack>
         )}
-        {handoff.actionId ? null : <TopActions workspaceId={workspaceId} projectId={projectId} />}
       </Stack>
     </PageShell>
   );
+}
+
+/** Distance and timing of the composer's slide to the bottom on send. */
+const LAUNCH_EASE = 'transform 320ms var(--ease-standard), opacity 200ms ease-out';
+const LAUNCH_BOTTOM_GAP_PX = 16;
+
+/**
+ * The send transition: the composer moves to the bottom edge and the rest
+ * fades. It follows the request, so a refused send settles back in place.
+ * Reduced motion skips the movement.
+ */
+function useLaunch(pending: boolean) {
+  const [distance, setDistance] = useState<number | null>(null);
+  const active = distance !== null && pending;
+  return {
+    start: (element: HTMLElement | null) => {
+      const box = element?.getBoundingClientRect();
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      if (!box || reduced) return;
+      setDistance(Math.max(0, window.innerHeight - box.bottom - LAUNCH_BOTTOM_GAP_PX));
+    },
+    slide: {
+      transition: LAUNCH_EASE,
+      transform: active ? `translateY(${distance}px)` : undefined,
+    } satisfies CSSProperties,
+    fade: { transition: LAUNCH_EASE, opacity: active ? 0 : undefined } satisfies CSSProperties,
+  };
 }
 
 function AttachedAction({

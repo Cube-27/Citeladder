@@ -109,8 +109,9 @@ function ChatView({
         <FollowUpFailure turn={turn} actionId={detail.chat.action_id} />
       </div>
       {/* The composer stays at the bottom of the window while the thread scrolls. */}
-      <div className="bg-panel z-sticky sticky bottom-0 pt-3 pb-[var(--content-gutter)]">
+      <div className="bg-panel z-sticky sticky bottom-0 pt-2 pb-4">
         <Composer
+          rows={2}
           id="chat-message"
           label="Reply to the agent"
           value={turn.draft}

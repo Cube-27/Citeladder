@@ -137,7 +137,8 @@ function SectionBlock({
     <section id={id} aria-label={name} className="group grid scroll-mt-4 gap-2">
       {mode === 'edit' ? editor : <ContentMarkdown markdown={section.text} density="compact" />}
       {locked || mode === 'edit' ? null : (
-        <div className="flex flex-wrap gap-2">
+        // Quiet until the section is hovered or focused; always shown on touch.
+        <div className="flex flex-wrap gap-2 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
           <Button
             variant="ghost"
             size="sm"

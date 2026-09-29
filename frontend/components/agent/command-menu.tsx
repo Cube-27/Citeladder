@@ -47,6 +47,7 @@ export function CommandField({
   commands,
   disabled,
   placeholder,
+  rows,
 }: Readonly<{
   id: string;
   value: string;
@@ -55,6 +56,7 @@ export function CommandField({
   commands?: ComposerCommands;
   disabled: boolean;
   placeholder: string;
+  rows: number;
 }>) {
   const field = useRef<HTMLTextAreaElement>(null);
   const [caret, setCaret] = useState(0);
@@ -105,8 +107,10 @@ export function CommandField({
       <Textarea
         ref={field}
         id={id}
-        raised
-        rows={3}
+        rows={rows}
+        // The composer's frame carries the edge and focus ring; the field is bare.
+        className="min-h-0 resize-none bg-transparent px-2 py-1 shadow-none hover:shadow-none"
+
         value={value}
         disabled={disabled}
         placeholder={placeholder}
