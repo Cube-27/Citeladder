@@ -87,7 +87,7 @@ an Action their evidence already created.
 Before the first model call, each run freezes a
 [context manifest](../backend/app/domain/agent/context.py): reviewed business
 context, the target page and a bounded related-page set, the attached Action's
-diagnosis, any Opportunity, Site Health, Demand or Search Intelligence evidence
+diagnosis, the diagnoses of up to five Actions the message @-mentions, any Opportunity, Site Health, Demand or Search Intelligence evidence
 the request named, and the project's versioned Agent instructions (audience,
 voice, standing requirements and exclusions). The
 [context builder](../backend/app/domain/agent/context_builder.py) authorizes
@@ -99,9 +99,9 @@ structured model steps. Each step does exactly one of `select_skill`,
 `call_tool` or `respond`. The runtime enforces the step, tool-call, transcript
 and output limits; the final step cannot spend a tool call, and a turn that
 exhausts its budget stops without saving a partial deliverable. Only evidence
-references an executed tool returned, or the attached Action's frozen diagnosis
-named, survive; the rest of the context package carries no record references.
-Any other `citeladder://` reference is dropped from the evidence list and
+references an executed tool returned, or the attached or mentioned Actions'
+frozen diagnoses named, survive; the rest of the context package carries no
+record references. Any other `citeladder://` reference is dropped from the evidence list and
 replaced in the visible reply and output text.
 
 ## Workspace and handoffs
@@ -112,6 +112,13 @@ empty topics, and reports topic truncation. A saved prompt portfolio includes
 typed core-question rows tied to those IDs. **Review in Prompts** explicitly
 submits the saved revision to the Prompts owner's admission and quality checks;
 users still accept candidates separately. The Agent gains no write tool.
+
+The composer takes inline commands: `/` picks a skill and `@` mentions up to
+five of the project's Actions. Mentions are typed Action IDs that admission
+authorizes to the chat's project (a foreign one refuses the turn), records on
+the user message and freezes into the manifest. New chat also offers **Brief
+me**, which starts a `growth_plan` chat mentioning the top open Actions; it
+runs only when clicked.
 
 The product shell switches between Dashboard and Agent modes, derived from the
 route. Agent mode holds New chat, Actions, Skills, Context and the searchable

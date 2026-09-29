@@ -272,10 +272,12 @@ async def _load_turn(session: AsyncSession, run: AgentRun) -> _Turn:
 
 
 def _manifest_refs(manifest: dict[str, Any]) -> set[str]:
+    """Opportunities the attached or mentioned Actions' frozen diagnoses name."""
     refs: set[str] = set()
-    action = manifest.get("action") or {}
-    for item in (action.get("diagnosis") or {}).get("what_happened") or []:
-        refs.add(f"citeladder://opportunity/{item.get('opportunity_id')}")
+    actions = [manifest.get("action") or {}, *(manifest.get("mentions") or [])]
+    for action in actions:
+        for item in (action.get("diagnosis") or {}).get("what_happened") or []:
+            refs.add(f"citeladder://opportunity/{item.get('opportunity_id')}")
     return refs
 
 

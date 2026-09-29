@@ -5,9 +5,11 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { BriefingCard } from '@/components/agent/briefing-card';
 import { Composer } from '@/components/agent/composer';
 import { SkillPicker } from '@/components/agent/skill-picker';
 import { useCreateChat } from '@/components/agent/use-chat-turns';
+import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { PageShell } from '@/components/layout/page-shell';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
@@ -75,6 +77,7 @@ function NewChat({
     navigate(projectHref(`/agent/chats/${chatId}`)),
   );
   const failure = create.failure;
+  const commands = useComposerCommands({ workspaceId, projectId, onSkill: setSkillId });
   // Shares AttachedAction's cache entry. An Action that failed to load is
   // dropped, as that notice promises, rather than failing the whole chat.
   const attached = useQuery({
@@ -88,6 +91,7 @@ function NewChat({
       skillId,
       actionId: attached.isError ? undefined : handoff.actionId,
       context,
+      mentions: commands.mentions.map((mention) => mention.id),
     });
 
   return (
@@ -106,8 +110,9 @@ function NewChat({
           onSubmit={submit}
           pending={create.pending}
           disabled={!access.canSend}
-          placeholder="Ask a question or describe the work you need."
+          placeholder="Ask a question or describe the work you need. / picks a skill, @ mentions an Action."
           chips={contextChips(context)}
+          commands={commands}
           onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
           tools={<SkillPicker value={skillId} onChange={setSkillId} disabled={!access.canSend} />}
         />
@@ -127,6 +132,15 @@ function NewChat({
             </Button>
           ))}
         </fieldset>
+        {handoff.actionId ? null : (
+          <BriefingCard
+            workspaceId={workspaceId}
+            projectId={projectId}
+            onStart={create.start}
+            pending={create.pending}
+            disabled={!access.canSend}
+          />
+        )}
         {handoff.actionId ? null : <TopActions workspaceId={workspaceId} projectId={projectId} />}
       </Stack>
     </PageShell>

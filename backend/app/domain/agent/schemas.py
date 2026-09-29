@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.config.agent import (
     AGENT_INSTRUCTIONS_MAX_CHARS,
+    AGENT_MENTIONS_MAX,
     AGENT_MESSAGE_MAX_CHARS,
     AGENT_OUTPUT_BODY_MAX_CHARS,
     AGENT_OUTPUT_TITLE_MAX_CHARS,
@@ -31,6 +32,12 @@ def _nonblank(value: str) -> str:
     return value
 
 
+def _unique_mentions(value: list[uuid.UUID]) -> list[uuid.UUID]:
+    if len(value) != len(set(value)):
+        raise ValueError("mentioned Actions must be unique")
+    return value
+
+
 class ChatContextRefs(_Model):
     """Typed evidence a chat can start from; resolved server-side every run."""
 
@@ -47,15 +54,24 @@ class ChatCreate(_Model):
     skill_id: str | None = Field(default=None, max_length=64)
     action_id: uuid.UUID | None = None
     context: ChatContextRefs = Field(default_factory=ChatContextRefs)
+    # Actions the message @-mentions, resolved and authorized at admission.
+    mentions: list[uuid.UUID] = Field(
+        default_factory=list, max_length=AGENT_MENTIONS_MAX
+    )
 
     _message = field_validator("message")(_nonblank)
+    _mentions = field_validator("mentions")(_unique_mentions)
 
 
 class MessageCreate(_Model):
     message: str = Field(max_length=AGENT_MESSAGE_MAX_CHARS)
     skill_id: str | None = Field(default=None, max_length=64)
+    mentions: list[uuid.UUID] = Field(
+        default_factory=list, max_length=AGENT_MENTIONS_MAX
+    )
 
     _message = field_validator("message")(_nonblank)
+    _mentions = field_validator("mentions")(_unique_mentions)
 
 
 class OutputEdit(_Model):
@@ -107,6 +123,8 @@ class MessageView(_Model):
     skill_source: str | None
     evidence_refs: list[str]
     steps: list[dict[str, Any]]
+    # Actions a user message mentioned: {"kind": "action", "id", "label"}.
+    mentions: list[dict[str, str]]
     created_at: datetime
 
 

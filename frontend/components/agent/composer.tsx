@@ -5,14 +5,16 @@ import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Pressable } from '@/components/ui/pressable';
-import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
 import type { ContextChip } from '@/lib/agent/handoff';
+
+import { CommandField, type ComposerCommands } from './command-menu';
 
 /**
  * The message box every Agent surface shares. Enter sends, Shift+Enter adds a
  * line. Context chips show the typed references the turn will carry; optional
- * ones can be removed before sending.
+ * ones can be removed before sending. With `commands`, typing `/` or `@` at a
+ * word start opens a menu (arrows move, Enter or Tab picks, Escape closes).
  */
 export function Composer({
   id,
@@ -26,6 +28,7 @@ export function Composer({
   chips = [],
   onRemoveChip,
   tools,
+  commands,
 }: Readonly<{
   id: string;
   label: string;
@@ -38,6 +41,7 @@ export function Composer({
   chips?: ContextChip[];
   onRemoveChip?: (chip: ContextChip) => void;
   tools?: ReactNode;
+  commands?: ComposerCommands;
 }>) {
   const canSend = !disabled && !pending && value.trim().length > 0;
   return (
@@ -48,43 +52,37 @@ export function Composer({
         if (canSend) onSubmit();
       }}
     >
-      {chips.length > 0 ? (
+      {chips.length > 0 || (commands?.mentions.length ?? 0) > 0 ? (
         <ul aria-label="Context for this request" className="flex flex-wrap gap-2">
           {chips.map((chip) => (
-            <li
+            <Chip
               key={chip.key}
-              className="bg-background-alt text-secondary inline-flex max-w-full items-center gap-1 rounded-full px-3 py-0.5"
-            >
-              <span className={textRole('caption', 'truncate text-secondary')}>{chip.label}</span>
-              {onRemoveChip ? (
-                <Pressable
-                  className="focus-ring hover:text-foreground rounded-full"
-                  aria-label={`Remove ${chip.label}`}
-                  onClick={() => onRemoveChip(chip)}
-                >
-                  <X className="size-3" aria-hidden />
-                </Pressable>
-              ) : null}
-            </li>
+              label={chip.label}
+              onRemove={onRemoveChip ? () => onRemoveChip(chip) : undefined}
+            />
+          ))}
+          {commands?.mentions.map((mention) => (
+            <Chip
+              key={mention.id}
+              label={`@${mention.label}`}
+              onRemove={() => commands.onRemoveMention(mention.id)}
+            />
           ))}
         </ul>
       ) : null}
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <Textarea
+      <CommandField
         id={id}
-        raised
-        rows={3}
         value={value}
-        disabled={disabled}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
-          event.preventDefault();
+        onChange={onChange}
+        onEnter={() => {
           if (canSend) onSubmit();
         }}
+        commands={commands}
+        disabled={disabled}
+        placeholder={placeholder}
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1">{tools}</div>
@@ -94,5 +92,22 @@ export function Composer({
         </Button>
       </div>
     </form>
+  );
+}
+
+function Chip({ label, onRemove }: Readonly<{ label: string; onRemove?: () => void }>) {
+  return (
+    <li className="bg-background-alt text-secondary inline-flex max-w-full items-center gap-1 rounded-full px-3 py-0.5">
+      <span className={textRole('caption', 'truncate text-secondary')}>{label}</span>
+      {onRemove ? (
+        <Pressable
+          className="focus-ring hover:text-foreground rounded-full"
+          aria-label={`Remove ${label}`}
+          onClick={onRemove}
+        >
+          <X className="size-3" aria-hidden />
+        </Pressable>
+      ) : null}
+    </li>
   );
 }

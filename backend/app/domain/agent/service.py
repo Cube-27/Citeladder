@@ -14,6 +14,7 @@ import hashlib
 import json
 import re
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -275,6 +276,7 @@ async def _enqueue_turn(
     skill_id: str | None,
     idempotency_key: str,
     fingerprint: dict[str, Any],
+    mentions: Sequence[uuid.UUID] = (),
 ) -> AgentRun:
     """Append the user message and its run (caller holds the chat lock)."""
     await _require_idle(session, chat, "The agent is still answering this chat.")
@@ -301,7 +303,9 @@ async def _enqueue_turn(
     if skill_id is not None:
         chat.pinned_skill_id = skill_id
     try:
-        manifest = await build_manifest(session, chat=chat, request=content)
+        manifest = await build_manifest(
+            session, chat=chat, request=content, mention_ids=mentions
+        )
     except (ContentContextNotFoundError, ContentContextConflictError) as exc:
         raise AgentConflictError("agent_context_unavailable", str(exc)) from exc
     sequence = await session.scalar(
@@ -317,6 +321,10 @@ async def _enqueue_turn(
         author_user_id=user_id,
         skill_id=skill_id,
         skill_source=SKILL_SOURCE_USER if skill_id else None,
+        mentions=[
+            {"kind": "action", "id": item["id"], "label": item["target_label"]}
+            for item in manifest["mentions"]
+        ],
     )
     session.add(message)
     await session.flush()
@@ -408,6 +416,7 @@ async def create_chat(
     action_id: uuid.UUID | None,
     context_refs: dict[str, Any],
     idempotency_key: str,
+    mentions: Sequence[uuid.UUID] = (),
 ) -> tuple[AgentChat, AgentRun]:
     """Start a chat with its first user message and queued run."""
     await _project(session, workspace_id=workspace_id, project_id=project_id)
@@ -419,6 +428,7 @@ async def create_chat(
         "skill": skill_id,
         "action": str(action_id) if action_id else None,
         "context": context_refs,
+        "mentions": [str(item) for item in mentions],
     }
     existing = await _replay(
         session, workspace_id=workspace_id, key=idempotency_key, fingerprint=fingerprint
@@ -451,6 +461,7 @@ async def create_chat(
         skill_id=skill_id,
         idempotency_key=idempotency_key,
         fingerprint=fingerprint,
+        mentions=mentions,
     )
     winner = await _commit_or_replay(
         session, workspace_id=workspace_id, key=idempotency_key, fingerprint=fingerprint
@@ -480,6 +491,7 @@ async def send_message(
     message: str,
     skill_id: str | None,
     idempotency_key: str,
+    mentions: Sequence[uuid.UUID] = (),
 ) -> AgentRun:
     fingerprint = {
         "op": "send_message",
@@ -487,6 +499,7 @@ async def send_message(
         "content": message,
         "mode": RUN_MODE_TURN,
         "skill": skill_id,
+        "mentions": [str(item) for item in mentions],
     }
     replay = await _replay(
         session, workspace_id=workspace_id, key=idempotency_key, fingerprint=fingerprint
@@ -505,6 +518,7 @@ async def send_message(
         skill_id=skill_id,
         idempotency_key=idempotency_key,
         fingerprint=fingerprint,
+        mentions=mentions,
     )
     winner = await _commit_or_replay(
         session, workspace_id=workspace_id, key=idempotency_key, fingerprint=fingerprint

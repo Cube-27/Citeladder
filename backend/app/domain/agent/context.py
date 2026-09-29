@@ -2,15 +2,17 @@
 
 Built at admission, before any provider I/O, from the single context builder
 (reviewed brand facts, target-page evidence, related pages and the chat's typed
-evidence references), the attached Action's deterministic diagnosis and the
-project's standing agent instructions. The model reads more through the tool
-catalog; this package is what it starts from and what provenance records.
+evidence references), the attached and @-mentioned Actions' deterministic
+diagnoses and the project's standing agent instructions. The model reads more
+through the tool catalog; this package is what it starts from and what
+provenance records.
 """
 
 from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Sequence
 from typing import Any, Final
 
 from sqlalchemy import select
@@ -19,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.agent import AGENT_CONTEXT_PACKAGE_MAX_CHARS
 from app.domain.agent.context_builder import (
     ContentContext,
+    ContentContextNotFoundError,
     build_content_context,
 )
 from app.domain.agent.context_refs import (
@@ -53,9 +56,17 @@ async def latest_instructions(
 
 
 async def build_manifest(
-    session: AsyncSession, *, chat: AgentChat, request: str
+    session: AsyncSession,
+    *,
+    chat: AgentChat,
+    request: str,
+    mention_ids: Sequence[uuid.UUID] = (),
 ) -> dict[str, Any]:
-    """Resolve, authorize and freeze everything a run starts from."""
+    """Resolve, authorize and freeze everything a run starts from.
+
+    ``mention_ids`` are the Actions the request @-mentions, in order.
+    """
+    mentioned = await _mentioned_actions(session, chat=chat, action_ids=mention_ids)
     refs = dict(chat.context_refs or {})
     site_health = refs.get("site_health_reference")
     search = refs.get("search_intelligence_reference")
@@ -94,12 +105,40 @@ async def build_manifest(
         "refs": refs,
         "package": package.snapshot(),
         "action": _action_block(action),
+        "mentions": [_action_block(item) for item in mentioned],
         "instructions": (
             {"revision": instructions.revision, "text": instructions.text}
             if instructions is not None and instructions.text.strip()
             else None
         ),
     }
+
+
+async def _mentioned_actions(
+    session: AsyncSession, *, chat: AgentChat, action_ids: Sequence[uuid.UUID]
+) -> list[Action]:
+    """The @-mentioned Actions, in mention order, authorized to the chat.
+
+    A mention outside the chat's project (or of a deleted Action) refuses the
+    turn rather than silently dropping evidence the user named.
+    """
+    if not action_ids:
+        return []
+    rows = (
+        await session.scalars(
+            select(Action).where(
+                Action.id.in_(action_ids),
+                Action.workspace_id == chat.workspace_id,
+                Action.project_id == chat.project_id,
+            )
+        )
+    ).all()
+    found = {row.id: row for row in rows}
+    if len(found) != len(set(action_ids)):
+        raise ContentContextNotFoundError(
+            "A mentioned Action is not available in this project."
+        )
+    return [found[action_id] for action_id in action_ids]
 
 
 def _action_block(action: Action | None) -> dict[str, Any] | None:
@@ -136,6 +175,12 @@ def render_manifest(manifest: dict[str, Any]) -> str:
         parts.append(
             "ATTACHED ACTION (deterministic diagnosis)\n\n"
             + json.dumps(action, ensure_ascii=False, default=str)
+        )
+    mentions = manifest.get("mentions") or []
+    if mentions:
+        parts.append(
+            "ACTIONS THE USER MENTIONED (deterministic diagnoses)\n\n"
+            + json.dumps(mentions, ensure_ascii=False, default=str)
         )
     omissions = (package.summary or {}).get("omissions") or []
     if omissions:

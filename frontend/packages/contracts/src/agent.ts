@@ -81,6 +81,10 @@ export const agentMessageSchema = responseObject({
   skill_source: z.string().nullable(),
   evidence_refs: z.array(z.string()),
   steps: z.array(agentStepSchema),
+  // Actions a user message @-mentioned, as resolved when it was sent.
+  mentions: z
+    .array(responseObject({ kind: z.string(), id: uuid(), label: z.string() }))
+    .default([]),
   created_at: z.string(),
 });
 

@@ -149,6 +149,9 @@ class AgentMessage(_ProjectScoped, Base):
     evidence_refs: Mapped[list] = mapped_column(JSONB, default=list)
     # Compact, public step summary: tool name and outcome per step.
     steps: Mapped[list] = mapped_column(JSONB, default=list)
+    # Actions a user message @-mentioned, as resolved at admission:
+    # {"kind": "action", "id", "label"}.
+    mentions: Mapped[list] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

@@ -10,8 +10,8 @@ the reads, skills and data CiteLadder already has** — no new tools, no
 uploads, no external mutation — with the UI doing most of the work. The audit
 is guidance, not authority; see [triage](#audit-triage).
 
-PR 1 (foundations) and MVP items 1–2 are implemented together in branch
-`claude/practical-gates-oq7898` at the owner's direction. Items 3–8 need
+Foundations and MVP items 1–4 are implemented together in branch
+`claude/practical-gates-oq7898` at the owner's direction. Items 5–8 need
 owner approval before they start; this plan is not authorization to run them.
 The Agent moves to TypeScript in
 [TypeScript migration PR 19](citeladder-typescript-migration.md#pr-19-agent-runtime),
@@ -38,15 +38,15 @@ persisted, deterministic evidence).
 | 0 | Foundations: skills contract, run precision, live step progress | Implemented | — |
 | 1 | Chat polish | Implemented | ~1 wk |
 | 2 | Document canvas for the output | Implemented | 1.5–2 wks |
-| 3 | Composer: `/skill` commands and `@` evidence mentions | Proposed | ~1 wk |
-| 4 | "What should I work on?" briefing | Proposed | ~1 wk |
+| 3 | Composer: `/skill` commands and `@` Action mentions | Implemented | ~1 wk |
+| 4 | "What should I work on?" briefing | Implemented | ~1 wk |
 | 5 | Continuity: Save to Context | Proposed | ~1 wk |
 | 6 | Plan mode | Proposed | 1.5–2 wks |
 | 7 | Skills gallery with per-project enablement | Proposed | ~1 wk |
 | 8 | Agent behavior evaluation corpus | Proposed | ~1 wk |
 
-The MVP is items 0–4 (about 4–5 weeks in total); items 5–8 add depth and
-safety. Item 8 should land before items 4–7 change model input.
+The MVP is items 0–4 (about 4–5 weeks in total), now implemented; items 5–8
+add depth and safety. Item 8 should land before items 4–7 change model input.
 
 ### 0. Foundations (implemented)
 
@@ -110,20 +110,35 @@ shown under the running indicator. A projection; the runtime writes nothing.
   viewing each revision.
 - Prompt portfolios keep their dedicated report view.
 
-### 3. Composer: slash commands and mentions (proposed)
+### 3. Composer: slash commands and mentions (implemented)
 
-`/` in the composer opens the skill list (the existing catalog read) and sets
-the skill; `@` searches pages, Actions and Opportunities the project already
-has and adds them as the existing typed context references, so the server
-resolves and authorizes them as it does for handoffs. Follow-up turns would
-need the chat's context references to accept additions (a small API change).
+- Typing `/` at a word start opens the skill list (the existing catalog, held
+  to the chat's output kind) and picks the turn's skill; the token is removed.
+- Typing `@` opens the project's open Actions (the existing work-queue read)
+  and mentions one; the token becomes `@<label>` and a removable chip. Arrows
+  move, Enter or Tab picks, Escape closes (Enter then sends). The menu is an
+  ARIA combobox/listbox.
+- Mentions are typed: new chats and follow-ups send up to five Action IDs
+  (`mentions`). Admission authorizes each to the chat's project (a foreign or
+  missing one refuses the turn with `agent_context_unavailable`), stores
+  `{kind, id, label}` on the user message (`agent_messages.mentions`), and
+  freezes each Action's deterministic diagnosis into the context manifest.
+  Opportunities those diagnoses name become citable, as for the attached
+  Action. The request fingerprint includes mentions.
+- Sent messages show their mentions as links to the Actions.
 
-### 4. Briefing (proposed)
+Pages and Opportunities are reached through Actions (every page target and
+Opportunity with a recommendation converges on one); direct page mentions
+would need a page search read and are left for later.
 
-A "What should I work on?" card on New chat and the Dashboard that starts a
-`growth_plan` turn over the existing Actions, Opportunities, Site Health and
-visibility reads. It runs only when the user clicks it — no schedule, no
-autonomous run.
+### 4. Briefing (implemented)
+
+A "What should I work on?" card on New chat. **Brief me** starts a
+`growth_plan` chat that mentions the project's top five open Actions, so their
+diagnoses are in its frozen context, and the model reads the rest through the
+existing tools. It runs only when the user clicks it: no schedule, no
+autonomous run. The Dashboard's landing is the project list, which has no
+project scope to brief on, so the card lives in Agent mode.
 
 ### 5. Continuity: Save to Context (proposed)
 
@@ -193,8 +208,10 @@ Rejected:
 
 ## Validation
 
-Items 0–2: skill loader and prompting unit tests; the Agent runtime component
-suite against PostgreSQL (catalog freeze, frozen time bound, live progress);
-section, diff and evidence unit tests; chat screen tests (section revise and
-edit, evidence links, next steps, revision compare, live progress); and
+Items 0–4: skill loader and prompting unit tests; the Agent runtime component
+suite against PostgreSQL (catalog freeze, frozen time bound, live progress,
+mentioned Actions frozen into context, foreign mention refused); section,
+diff, evidence and composer-command unit tests; chat and new-chat screen tests
+(section revise and edit, evidence links, next steps, revision compare, live
+progress, `/` and `@` commands, briefing, mention links); and
 `node scripts/quality.mjs --mode check --scope all`.

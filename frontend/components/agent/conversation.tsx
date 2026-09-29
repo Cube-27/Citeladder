@@ -76,8 +76,22 @@ function MessageBubble({
   if (message.role === 'user')
     return (
       <div className="flex justify-end">
-        <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'max-w-[85%]')}>
+        <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid max-w-[85%] gap-2')}>
           <p className={textRole('body', 'whitespace-pre-wrap')}>{message.content}</p>
+          {message.mentions.length > 0 ? (
+            <ul aria-label="Mentioned Actions" className="flex flex-wrap gap-2">
+              {message.mentions.map((mention) => (
+                <li key={mention.id}>
+                  <ProjectLink
+                    href={`/agent/actions/${mention.id}`}
+                    className={textRole('caption', 'hover:text-accent-text underline')}
+                  >
+                    @{mention.label}
+                  </ProjectLink>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
     );

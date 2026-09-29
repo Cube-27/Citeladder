@@ -56,6 +56,9 @@ AGENT_HISTORY_MESSAGE_MAX_CHARS: Final = 4_000
 
 # Input and output bounds.
 AGENT_MESSAGE_MAX_CHARS: Final = 8_000
+# Actions one message may @-mention; each adds its frozen diagnosis to the
+# turn's context package.
+AGENT_MENTIONS_MAX: Final = 5
 AGENT_INSTRUCTIONS_MAX_CHARS: Final = 4_000
 AGENT_OUTPUT_TITLE_MAX_CHARS: Final = 255
 AGENT_OUTPUT_BODY_MAX_CHARS: Final = 100_000

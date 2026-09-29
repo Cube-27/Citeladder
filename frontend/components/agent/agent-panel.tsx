@@ -200,7 +200,8 @@ function PanelConversation({
         onSubmit={() => turn.send(turn.draft)}
         pending={turn.pending}
         disabled={!access.canSend || runActive}
-        placeholder="Ask a follow-up."
+        placeholder="Ask a follow-up. / picks a skill, @ mentions an Action."
+        commands={turn.commands}
         tools={
           <SkillPicker
             value={turn.skillId}

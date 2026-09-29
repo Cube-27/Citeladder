@@ -197,6 +197,7 @@ async def create_chat_endpoint(
             action_id=payload.action_id,
             context_refs=payload.context.model_dump(mode="json", exclude_none=True),
             idempotency_key=_key(idempotency_key),
+            mentions=payload.mentions,
         )
     return TurnAccepted(chat_id=chat.id, run=_run_view(run))
 
@@ -226,6 +227,7 @@ async def get_chat_endpoint(
                 skill_source=row.skill_source,
                 evidence_refs=list(row.evidence_refs or []),
                 steps=list(row.steps or []),
+                mentions=list(row.mentions or []),
                 created_at=row.created_at,
             )
             for row in detail["messages"]
@@ -275,6 +277,7 @@ async def send_message_endpoint(
             message=payload.message,
             skill_id=payload.skill_id,
             idempotency_key=_key(idempotency_key),
+            mentions=payload.mentions,
         )
     return TurnAccepted(chat_id=chat_id, run=_run_view(run))
 

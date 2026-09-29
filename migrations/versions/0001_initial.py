@@ -6927,6 +6927,7 @@ def upgrade() -> None:
             "evidence_refs", postgresql.JSONB(astext_type=Text()), nullable=False
         ),
         sa.Column("steps", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("mentions", postgresql.JSONB(astext_type=Text()), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { useRequestKey } from '@/lib/agent/idempotency';
 import { isRunActive } from '@/lib/agent/run-state';
@@ -33,6 +34,7 @@ export type NewChatInput = {
   skillId: string | null;
   actionId?: string;
   context: AgentContextRefs;
+  mentions?: string[];
 };
 
 /** Starts a chat once per accepted request; `onCreated` receives its id. */
@@ -51,12 +53,13 @@ export function useCreateChat(
       onCreated(accepted.chat_id);
     },
   });
-  const start = ({ message, skillId, actionId, context }: NewChatInput) => {
+  const start = ({ message, skillId, actionId, context, mentions = [] }: NewChatInput) => {
     const input = {
       message: message.trim(),
       skill_id: skillId ?? undefined,
       action_id: actionId,
       context,
+      ...(mentions.length > 0 ? { mentions } : {}),
     };
     mutation.mutate({ projectId, idempotencyKey: requestKey.keyFor({ projectId, input }), input });
   };
@@ -75,11 +78,18 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   const [lastMessage, setLastMessage] = useState('');
   const requestKey = useRequestKey();
   const queryClient = useQueryClient();
+  const commands = useComposerCommands({
+    workspaceId,
+    projectId: detail.chat.project_id,
+    outputKind: detail.output?.kind,
+    onSkill: setSkillId,
+  });
   const mutation = useMutation({
     ...agentMutations.sendMessage(workspaceId),
     onSuccess: async () => {
       requestKey.accepted();
       setDraft('');
+      commands.clear();
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(chatId) }),
         queryClient.invalidateQueries({
@@ -92,7 +102,13 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     const text = message.trim();
     if (!text) return;
     setLastMessage(text);
-    const request = { chatId, message: text, skillId: skillId ?? undefined };
+    const mentions = commands.mentions.map((mention) => mention.id);
+    const request = {
+      chatId,
+      message: text,
+      skillId: skillId ?? undefined,
+      ...(mentions.length > 0 ? { mentions } : {}),
+    };
     mutation.mutate({ ...request, idempotencyKey: requestKey.keyFor(request) });
   };
   return {
@@ -102,6 +118,7 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     setSkillId,
     lastMessage,
     send,
+    commands,
     pending: mutation.isPending,
     failure: mutation.isError ? agentWriteFailure(mutation.error) : null,
   };

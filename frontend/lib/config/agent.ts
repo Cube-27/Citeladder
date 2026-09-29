@@ -10,3 +10,7 @@ export const AGENT_RUN_POLL_MS = 2_000;
 export const AGENT_TOP_ACTIONS = 3;
 /** Debounce for the sidebar chat search. */
 export const AGENT_CHAT_SEARCH_DEBOUNCE_MS = 250;
+/** Actions one message may @-mention (the server enforces the same bound). */
+export const AGENT_MENTIONS_MAX = 5;
+/** Top open Actions a briefing mentions (within AGENT_MENTIONS_MAX). */
+export const AGENT_BRIEFING_ACTIONS = 5;

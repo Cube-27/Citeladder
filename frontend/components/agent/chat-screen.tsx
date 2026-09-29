@@ -118,7 +118,12 @@ function ChatView({
           onSubmit={() => turn.send(turn.draft)}
           pending={turn.pending}
           disabled={!access.canSend || runActive}
-          placeholder={hasOutput ? 'Ask for a change to the output.' : 'Ask a follow-up.'}
+          placeholder={
+            hasOutput
+              ? 'Ask for a change to the output. / picks a skill, @ mentions an Action.'
+              : 'Ask a follow-up. / picks a skill, @ mentions an Action.'
+          }
+          commands={turn.commands}
           tools={
             <SkillPicker
               value={turn.skillId}

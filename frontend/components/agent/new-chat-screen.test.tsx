@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes, useParams } from 'react-router-dom';
@@ -63,11 +63,43 @@ const ACCEPTED = {
   },
 };
 
-function baseHandlers() {
+const PRICING = '77777777-7777-4777-8777-777777777771';
+const BLOG = '77777777-7777-4777-8777-777777777772';
+
+function actionItem(id: string, label: string) {
+  return {
+    id,
+    project_id: PROJECT,
+    target_kind: 'page',
+    target_label: label,
+    target_url: null,
+    target_prompt_id: null,
+    origin: 'evidence',
+    status: 'open',
+    priority_score: 1,
+    families: [],
+    approach: 'improve_page',
+    skill_id: 'gsc_optimize',
+    member_count: 1,
+    evidence_cleared_at: null,
+    created_at: '2026-09-25T10:00:00Z',
+    updated_at: '2026-09-25T10:00:00Z',
+  };
+}
+
+const GROWTH_SKILL = {
+  id: 'growth_plan',
+  label: 'Growth plan',
+  group: 'strategy',
+  output_kind: 'plan',
+  description: 'Prioritize work.',
+};
+
+function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
   return [
-    http.get('/api/v1/agent/skills', () => HttpResponse.json({ skills: [] })),
+    http.get('/api/v1/agent/skills', () => HttpResponse.json({ skills: [GROWTH_SKILL] })),
     http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
-      HttpResponse.json({ items: [], next_cursor: null, status_counts: {} }),
+      HttpResponse.json({ items: actions, next_cursor: null, status_counts: {} }),
     ),
   ];
 }
@@ -132,5 +164,82 @@ describe('NewChatScreen', () => {
 
     expect(await screen.findByText(/plan does not include the agent/i)).toBeVisible();
     expect(screen.getByLabelText('Message the agent')).toBeDisabled();
+  });
+
+  it('picks a skill with / and mentions an Action with @', async () => {
+    const bodies: unknown[] = [];
+    mswServer.use(
+      ...baseHandlers([actionItem(PRICING, 'Pricing page'), actionItem(BLOG, 'Blog hub')]),
+      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(ACCEPTED, { status: 202 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderNewChat('');
+
+    const message = await screen.findByLabelText('Message the agent');
+    await user.type(message, '/grow');
+    expect(await screen.findByRole('option', { name: /Growth plan/ })).toBeVisible();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('button', { name: 'Skill: Growth plan' })).toBeVisible();
+    await user.type(message, 'Compare @pric');
+    await user.click(await screen.findByRole('option', { name: /Pricing page/ }));
+    expect(message).toHaveValue('Compare @Pricing page ');
+    expect(screen.getByRole('button', { name: 'Remove @Pricing page' })).toBeVisible();
+    await user.type(message, 'and last month{Enter}');
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      {
+        message: 'Compare @Pricing page and last month',
+        skill_id: 'growth_plan',
+        context: {},
+        mentions: [PRICING],
+      },
+    ]);
+  });
+
+  it('closes the command menu on Escape so Enter sends the message', async () => {
+    const bodies: unknown[] = [];
+    mswServer.use(
+      ...baseHandlers(),
+      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(ACCEPTED, { status: 202 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderNewChat('');
+
+    const message = await screen.findByLabelText('Message the agent');
+    await user.type(message, 'Use /grow');
+    expect(await screen.findByRole('option', { name: /Growth plan/ })).toBeVisible();
+    await user.keyboard('{Escape}{Enter}');
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([{ message: 'Use /grow', context: {} }]);
+  });
+
+  it('briefs on the top open Actions with the growth plan skill', async () => {
+    const bodies: unknown[] = [];
+    mswServer.use(
+      ...baseHandlers([actionItem(PRICING, 'Pricing page'), actionItem(BLOG, 'Blog hub')]),
+      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(ACCEPTED, { status: 202 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderNewChat('');
+
+    const briefing = await screen.findByRole('region', { name: 'What should I work on?' });
+    expect(await within(briefing).findByText(/top 2 open Actions/)).toBeVisible();
+    await user.click(within(briefing).getByRole('button', { name: 'Brief me' }));
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      expect.objectContaining({ skill_id: 'growth_plan', mentions: [PRICING, BLOG] }),
+    ]);
   });
 });

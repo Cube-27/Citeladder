@@ -253,6 +253,52 @@ async def test_a_turn_reads_evidence_and_saves_an_output_attached_to_its_page(
     ]
 
 
+async def test_a_mentioned_action_is_frozen_into_the_turns_context(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-mention@example.com")
+    await _verified_route(session_factory, project_id)
+    await _start(client, project_id, "Edit our pricing page.", skill_id="gsc_optimize")
+    await _worker(
+        session_factory,
+        ScriptedGateway(
+            [{"action": "respond", "reply": "Edits.", "output": _output("## Edit")}]
+        ),
+    ).run_once()
+    async with session_factory() as session:
+        action = await session.scalar(select(Action))
+    assert action is not None
+    chat_id = await _start(
+        client, project_id, "What should we do first?", mentions=[str(action.id)]
+    )
+    gateway = ScriptedGateway([{"action": "respond", "reply": "Start there."}])
+
+    await _worker(session_factory, gateway).run_once()
+
+    assert "ACTIONS THE USER MENTIONED" in gateway.prompts[0][1]
+    assert action.target_label in gateway.prompts[0][1]
+    request = (await _detail(client, chat_id))["messages"][0]
+    assert request["mentions"] == [
+        {"kind": "action", "id": str(action.id), "label": action.target_label}
+    ]
+
+
+async def test_a_mention_outside_the_project_refuses_the_turn(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-mention-foreign@example.com")
+    await _verified_route(session_factory, project_id)
+
+    response = await client.post(
+        f"/api/v1/projects/{project_id}/agent/chats",
+        json={"message": "Compare these.", "mentions": [str(uuid.uuid4())]},
+    )
+
+    assert response.status_code == 409, response.text
+    async with session_factory() as session:
+        assert (await session.scalars(select(AgentRun))).all() == []
+
+
 async def test_a_follow_up_revises_the_users_edit_instead_of_starting_over(
     client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
 ) -> None:
