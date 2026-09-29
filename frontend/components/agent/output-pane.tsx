@@ -59,6 +59,19 @@ export function OutputPane({
   const editing = draft !== null;
   if (!revision) return null;
   const locked = runActive || !canEdit;
+  const document =
+    output.kind === 'prompt_portfolio' ? (
+      <ContentMarkdown markdown={promptPortfolioReport(revision.body)} density="compact" />
+    ) : (
+      <OutputCanvas
+        workspaceId={workspaceId}
+        chatId={chatId}
+        revision={revision}
+        locked={locked}
+        canSend={canSend}
+        onRevise={onRevise}
+      />
+    );
   return (
     <section aria-labelledby="output-title" className="grid min-w-0 content-start gap-3">
       <header className="grid gap-2">
@@ -123,17 +136,8 @@ export function OutputPane({
               onChange={setDraft}
               onDone={() => setDraft(null)}
             />
-          ) : output.kind === 'prompt_portfolio' ? (
-            <ContentMarkdown markdown={promptPortfolioReport(revision.body)} density="compact" />
           ) : (
-            <OutputCanvas
-              workspaceId={workspaceId}
-              chatId={chatId}
-              revision={revision}
-              locked={locked}
-              canSend={canSend}
-              onRevise={onRevise}
-            />
+            document
           )}
         </TabPanel>
         <TabPanel value="sources" className="pt-3">

@@ -101,7 +101,17 @@ function detail(
       error_detail: '',
       created_at: NOW,
       completed_at: NOW,
-      progress: run.progress ?? [],
+      progress: (run.progress ?? []).map((step) => ({
+        model_attempt_id: RUN,
+        tool_attempt_id: null,
+        run_attempt: 1,
+        runtime_version: 'agent-runtime-2',
+        protocol_version: 'agent-protocol-1',
+        registry_version: 'agent-tools-2',
+        skill_catalog_version: 'test-catalog',
+        projection_version: 'agent-progress-1',
+        ...step,
+      })),
     },
     output: {
       id: OUTPUT,

@@ -179,7 +179,8 @@ The progress projection above is the contract that stream would carry.
 
 Accepted as audited: catalog-version freeze, real-catalog contract test,
 vocabulary single-sourcing, loader bounds, the orphaned differentiation read,
-distinct refusal reasons, nil-UUID fallback, frozen time envelope, step
+distinct refusal reasons, removal of the nil-UUID fallback in favor of explicit
+`access_revoked` termination, frozen time envelope, step
 progress, the evaluation corpus.
 
 Reshaped:

@@ -54,7 +54,8 @@ export function groupEvidence(refs: readonly string[]): EvidenceGroup[] {
   }
   return [...groups].map(([label, { kind, ids }]) => {
     const single = ids.length === 1 && UUID.test(ids[0] ?? '') ? ids[0] : undefined;
-    const href = kind ? (single && kind.record ? kind.record(single) : kind.screen) : null;
+    let href = kind?.screen ?? null;
+    if (single && kind?.record) href = kind.record(single);
     return { label, count: ids.length, href };
   });
 }

@@ -329,8 +329,10 @@ async def call_model(
         request_text=f"{system}\n\n{user}",
     )
     attempt_id = attempt.id
-    timeout_seconds = (attempt.deadline_at - attempt.dispatched_at).total_seconds()
+    timeout_seconds = (attempt.deadline_at - _utcnow()).total_seconds()
     try:
+        if timeout_seconds <= 0:
+            raise TimeoutError("Model dispatch deadline elapsed before provider I/O")
         response = await asyncio.wait_for(
             gateway.complete_structured(
                 system=system, user=user, schema_name=schema_name, schema=schema

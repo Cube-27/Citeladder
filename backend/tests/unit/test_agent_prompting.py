@@ -115,3 +115,15 @@ def test_a_head_that_fills_the_bound_carries_no_step_text() -> None:
 
     assert "Rewrite the pricing page." in text
     assert "z" * 1_000 not in text
+    assert len(text) <= AGENT_TRANSCRIPT_MAX_CHARS
+
+
+def test_an_oversized_output_is_bounded_even_without_steps() -> None:
+    state = _state(body="y" * AGENT_TRANSCRIPT_MAX_CHARS, steps=[])
+    state.mode = RUN_MODE_DRAFT_FROM_OUTLINE
+    text = user_text(state)
+
+    assert len(text) <= AGENT_TRANSCRIPT_MAX_CHARS
+    assert text.endswith("Rewrite the pricing page.")
+    assert "[context and output truncated]" in text
+    assert "The user approved the outline above." in text

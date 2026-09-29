@@ -33,9 +33,10 @@ export function BriefingCard({
 }>) {
   const actions = useQuery(actionsQueries.list(workspaceId, projectId));
   const top = actions.data?.items.slice(0, AGENT_BRIEFING_ACTIONS) ?? [];
+  const actionLabel = top.length === 1 ? 'Action' : 'Actions';
   const basis =
     top.length > 0
-      ? `Reads your evidence and your top ${top.length} open ${top.length === 1 ? 'Action' : 'Actions'}.`
+      ? `Reads your evidence and your top ${top.length} open ${actionLabel}.`
       : 'Reads your evidence across Visibility, Site Health, Demand and Performance.';
   return (
     <section

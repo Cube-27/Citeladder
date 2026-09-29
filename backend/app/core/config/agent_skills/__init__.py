@@ -210,7 +210,9 @@ def _catalog_version() -> str:
     for path in sorted(_ROOT.rglob("*.md")):
         digest.update(path.relative_to(_ROOT).as_posix().encode())
         digest.update(b"\0")
-        digest.update(path.read_bytes())
+        digest.update(
+            _expand_vocabularies(path, path.read_text(encoding="utf-8")).encode()
+        )
         digest.update(b"\0")
     return f"agent-skills-{digest.hexdigest()[:16]}"
 

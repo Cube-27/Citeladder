@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from app.core.config import agent_skills
 from app.core.config.agent_skills import (
     AGENT_SKILL_REGISTRY,
     OPERATING_CONTRACT,
@@ -129,3 +130,12 @@ def test_every_tool_the_packaged_skills_name_is_offered_to_the_agent() -> None:
 
     assert named, "the packaged skills name no tools"
     assert named <= offered, sorted(named - offered)
+
+
+def test_catalog_version_tracks_expanded_vocabulary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original = agent_skills._catalog_version()
+    monkeypatch.setitem(SKILL_VOCABULARIES, "buyer_stages", ("changed_stage",))
+
+    assert agent_skills._catalog_version() != original

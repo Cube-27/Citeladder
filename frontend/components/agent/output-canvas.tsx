@@ -53,7 +53,7 @@ export function OutputCanvas({
           <ol className="grid gap-1 ps-4">
             {sections.map((section, index) =>
               section.heading === null ? null : (
-                <li key={index}>
+                <li key={section.start}>
                   <Pressable
                     className={textRole('caption', 'hover:text-accent-text w-auto')}
                     onClick={() =>
@@ -72,7 +72,7 @@ export function OutputCanvas({
       ) : null}
       {sections.map((section, index) => (
         <SectionBlock
-          key={`${revision.id}-${index}`}
+          key={`${revision.id}-${section.start}`}
           id={sectionId(revision.id, index)}
           section={section}
           mode={active?.index === index ? active.mode : null}

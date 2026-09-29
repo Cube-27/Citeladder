@@ -709,7 +709,9 @@ class ObservingGateway(ScriptedGateway):
 
 
 async def test_an_active_turn_shows_its_committed_steps_as_they_happen(
-    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     project_id = await _project(client, "agent-progress@example.com")
     await _verified_route(session_factory, project_id)
@@ -718,6 +720,14 @@ async def test_an_active_turn_shows_its_committed_steps_as_they_happen(
     async def observe() -> list[dict[str, Any]]:
         return (await _detail(client, chat_id))["latest_run"]["progress"]
 
+    execute_tool = runtime.execute_tool
+    during_tool: list[dict[str, Any]] = []
+
+    async def observe_tool(*args: Any, **kwargs: Any) -> Any:
+        during_tool.extend(await observe())
+        return await execute_tool(*args, **kwargs)
+
+    monkeypatch.setattr(runtime, "execute_tool", observe_tool)
     gateway = ObservingGateway(
         [
             {"action": "select_skill", "skill_id": "technical_health"},
@@ -730,7 +740,11 @@ async def test_an_active_turn_shows_its_committed_steps_as_they_happen(
     await _worker(session_factory, gateway).run_once()
 
     working = {"status": "working", "tool": None}
-    assert gateway.seen == [
+    public_steps = [
+        [{key: step[key] for key in ("ordinal", "status", "tool")} for step in poll]
+        for poll in gateway.seen
+    ]
+    assert public_steps == [
         [{"ordinal": 1, **working}],
         [{"ordinal": 1, "status": "reasoned", "tool": None}, {"ordinal": 2, **working}],
         [
@@ -739,6 +753,25 @@ async def test_an_active_turn_shows_its_committed_steps_as_they_happen(
             {"ordinal": 3, **working},
         ],
     ]
+    assert during_tool[-1]["status"] == "processing"
+    async with session_factory() as session:
+        models = list(
+            (
+                await session.scalars(
+                    select(AgentModelAttempt).order_by(AgentModelAttempt.ordinal)
+                )
+            ).all()
+        )
+        tool = await session.scalar(select(AgentToolAttempt))
+        run = await session.scalar(select(AgentRun))
+    assert tool is not None and run is not None
+    assert [step["model_attempt_id"] for step in gateway.seen[-1]] == [
+        str(row.id) for row in models
+    ]
+    assert gateway.seen[-1][1]["tool_attempt_id"] == str(tool.id)
+    assert gateway.seen[-1][1]["registry_version"] == tool.registry_version
+    assert gateway.seen[-1][0]["skill_catalog_version"] == run.skill_catalog_version
+    assert during_tool[-1]["tool_attempt_id"] is None
     # A finished turn's summary lives on its reply; progress is for live runs.
     assert (await _detail(client, chat_id))["latest_run"]["progress"] == []
 

@@ -174,11 +174,19 @@ function RevisionDiff({
       </p>
     );
   const changed = lines.filter((line) => line.kind !== 'same').length;
+  const noun = changed === 1 ? 'line' : 'lines';
+  const summary = changed === 0 ? 'no changes' : `${changed} changed ${noun}`;
+  const occurrences = new Map<string, number>();
+  const keyedLines = lines.map((line) => {
+    const content = JSON.stringify([line.kind, line.text]);
+    const occurrence = occurrences.get(content) ?? 0;
+    occurrences.set(content, occurrence + 1);
+    return { ...line, key: `${content}:${occurrence}` };
+  });
   return (
     <div className="grid gap-2">
       <p className={textRole('caption')}>
-        Revision {before.number} → current (revision {after.number}):{' '}
-        {changed === 0 ? 'no changes' : `${changed} changed ${changed === 1 ? 'line' : 'lines'}`}
+        Revision {before.number} → current (revision {after.number}): {summary}
       </p>
       <ol
         aria-label={`Changes from revision ${before.number}`}
@@ -187,10 +195,10 @@ function RevisionDiff({
           'border-border-subtle grid overflow-x-auto rounded-[var(--radius-control)] border font-mono',
         )}
       >
-        {lines.map((line, index) => {
+        {keyedLines.map((line) => {
           const style = DIFF_LINE[line.kind];
           return (
-            <li key={index} className={cn('flex gap-2 px-2 whitespace-pre-wrap', style.tone)}>
+            <li key={line.key} className={cn('flex gap-2 px-2 whitespace-pre-wrap', style.tone)}>
               <span aria-hidden>{style.mark}</span>
               {style.label ? <span className="sr-only">{style.label}:</span> : null}
               <span>{line.text || ' '}</span>

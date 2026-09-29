@@ -106,7 +106,7 @@ def _run_view(run: AgentRun, progress: list[RunStep] | None = None) -> RunView:
         created_at=run.created_at,
         completed_at=run.completed_at,
         progress=[
-            RunStepView(ordinal=step.ordinal, status=step.status, tool=step.tool)
+            RunStepView.model_validate(step, from_attributes=True)
             for step in progress or []
         ],
     )

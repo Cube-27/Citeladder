@@ -157,10 +157,14 @@ const READ_OUTCOME_SUFFIX: Record<string, string> = {
 export function runStepLabel(step: RunStep): string {
   if (step.tool) {
     const read = step.tool.replaceAll('_', ' ');
-    const suffix = READ_OUTCOME_SUFFIX[step.status] ?? '';
+    const suffix = READ_OUTCOME_SUFFIX[step.status] ?? ' · status unknown';
     return `${read.charAt(0).toUpperCase()}${read.slice(1)}${suffix}`;
   }
-  return step.status === 'working' ? 'Deciding the next step…' : 'Planned the next step';
+  if (step.status === 'working') return 'Deciding the next step…';
+  if (step.status === 'processing') return 'Processing the next step…';
+  if (step.status === 'reasoned') return 'Planned the next step';
+  if (step.status === 'failed') return 'Step failed';
+  return 'Step status unknown';
 }
 
 export function runErrorCopy(code: string): string {

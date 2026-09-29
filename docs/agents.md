@@ -57,7 +57,10 @@ for; see [declaration](opportunities.md#explicit-implementation-declaration).
 While a run is active, the chat read also returns the
 [committed steps](../backend/app/domain/agent/progress.py) of its current
 attempt, projected from its model and tool attempt rows: a call in flight, a
-step that returned without a read, or a read's outcome. The conversation shows
+step still being processed, a previous step that returned without a read, or a
+read's outcome. Each step retains its model/tool attempt IDs, run attempt and
+runtime, protocol, catalog, registry and projection versions. One joined query
+reads these committed attempts. The conversation shows
 them under the running indicator; the runtime writes nothing extra for it.
 
 The output reads as a document of sections. Each section can be edited in
@@ -179,8 +182,8 @@ loads the packaged `SKILL.md` methodologies, one shared operating contract and a
 content-format reference that the `content_create` skill draws on one format at
 a time. These files are production model input, not coding-agent skills.
 Packaging is declared in `backend/pyproject.toml`. The catalog version is a
-content fingerprint of those files. A body may name an application-owned
-vocabulary as `{{name}}`, which the loader expands from its owner's one listing
+content fingerprint of those files after vocabulary expansion. A body may name
+an application-owned vocabulary as `{{name}}`, which the loader expands from its owner's one listing
 (prompt buyer stages and intents), so the list is never hand-copied. The loader
 bounds descriptions and bodies, and a contract test requires every tool a skill
 names to be offered to the Agent.

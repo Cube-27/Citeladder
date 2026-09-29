@@ -97,6 +97,14 @@ class RunStepView(_Model):
     ordinal: int
     status: str
     tool: str | None
+    model_attempt_id: uuid.UUID
+    tool_attempt_id: uuid.UUID | None
+    run_attempt: int
+    runtime_version: str
+    protocol_version: str
+    registry_version: str
+    skill_catalog_version: str
+    projection_version: str
 
 
 class RunView(_Model):
