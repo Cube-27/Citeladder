@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import time
 
+from app.analysis.site_health.dom import HtmlDocument, parse_html_document
 from app.analysis.site_health.parser import extract_page_facts
 from app.connectors.web_evidence.contracts import (
     FetchError,
@@ -30,6 +31,7 @@ from app.core.config.site_health_crawl_policy import DOCUMENT_MEDIA_TYPES
 from app.core.config.site_health_rules import (
     HTML_CONTENT_TYPES,
 )
+from app.core.config.site_health_runtime import site_health_settings
 from app.domain.site_health.discovery import (
     extract_discovery_links,
 )
@@ -230,6 +232,21 @@ def _parse_discover_result(
         )
         return outcome
 
+    document: HtmlDocument | None = parse_html_document(
+        result.body, charset=result.charset
+    )
+    # Discovery observes all anchors before body-text extraction prunes the DOM.
+    title, links = extract_discovery_links(
+        result.body,
+        base_url=result.final_url or result.requested_url,
+        root_registrable_domain=root_registrable_domain,
+        include_globs=include_globs,
+        exclude_globs=exclude_globs,
+        document=document,
+    )
+    if len(result.body) > site_health_settings.max_html_bytes:
+        # Release the full discovery DOM before parsing the bounded fact DOM.
+        document = None
     facts = extract_page_facts(
         result.body,
         final_url=result.final_url or result.requested_url,
@@ -242,15 +259,7 @@ def _parse_discover_result(
         latency_ms=result.latency_ms,
         wire_bytes=result.wire_bytes,
         decoded_bytes=result.decoded_bytes,
-    )
-    # Success: parse in-scope canonical links (HTML only; empty otherwise).
-    title, links = extract_discovery_links(
-        result.body,
-        base_url=result.final_url or result.requested_url,
-        root_registrable_domain=root_registrable_domain,
-        include_globs=include_globs,
-        exclude_globs=exclude_globs,
-        charset=result.charset,
+        document=document,
     )
     output = DiscoveryOutput(
         requested_url=result.requested_url,

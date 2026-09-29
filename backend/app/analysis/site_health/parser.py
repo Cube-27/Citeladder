@@ -12,17 +12,20 @@
 # external-entity attack surface; defusedxml is used for any raw XML parse.
 from __future__ import annotations
 
-import codecs
 import logging
 from typing import Any
 from urllib.parse import unquote, urljoin, urlsplit
 
 from lxml import etree
-from lxml import html as lxml_html
 
 from app.analysis.site_health.accessibility_facts import extract_accessibility_facts
 from app.analysis.site_health.commerce_facts import extract_commerce_facts
-from app.analysis.site_health.dom import DOM_ERRORS, dom_failure
+from app.analysis.site_health.dom import (
+    DOM_ERRORS,
+    HtmlDocument,
+    dom_failure,
+    parse_html_document,
+)
 from app.analysis.site_health.dom import node_text as _text
 from app.analysis.site_health.fact_authorship import author_and_dates
 from app.analysis.site_health.fact_entity import (
@@ -99,27 +102,6 @@ _SECURITY_HEADERS = (
 )
 
 logger = logging.getLogger("app.analysis.site_health.parser")
-
-
-def _safe_parser_encoding(charset: str) -> str | None:
-    """Return a codec-valid encoding name, or ``None`` to auto-detect.
-
-    A response's declared charset is arbitrary attacker-influenced input. Handed
-    straight to ``lxml``'s ``HTMLParser(encoding=...)`` an unknown value raises
-    ``LookupError`` at parser-construction time — outside the ``try`` guarding
-    the actual parse — which would crash extraction instead of degrading to
-    partial facts. Validate the name with ``codecs.lookup`` up front; if it is
-    empty or unknown, return ``None`` so lxml falls back to auto-detection
-    rather than raising.
-    """
-    normalized = str(charset or "").strip()
-    if not normalized:
-        return None
-    try:
-        codecs.lookup(normalized)
-    except LookupError:
-        return None
-    return normalized.lower()
 
 
 def _meta_content(root: Any, *, name: str) -> str:
@@ -594,17 +576,6 @@ def _empty_facts() -> dict[str, Any]:
     }
 
 
-def _parse_root(body: bytes, *, charset: str, settings: Any) -> Any | None:
-    bounded = body[: settings.max_html_bytes]
-    parser = lxml_html.HTMLParser(
-        recover=True, encoding=_safe_parser_encoding(charset), no_network=True
-    )
-    try:
-        return lxml_html.document_fromstring(bounded, parser=parser)
-    except (etree.ParserError, ValueError):
-        return None
-
-
 def _blocking_scripts(root: Any) -> int:
     count = 0
     try:
@@ -728,6 +699,7 @@ def extract_page_facts(
     wire_bytes: int | None = None,
     decoded_bytes: int | None = None,
     settings=site_health_settings,
+    document: HtmlDocument | None = None,
 ) -> dict[str, Any]:
     """Extract the bounded, deterministic page-facts dict for one page.
 
@@ -737,10 +709,25 @@ def extract_page_facts(
     reflecting whether any DOM was parsed. Never raises.
     """
     facts = _empty_facts()
+    if not body:
+        facts["extraction"]["reason"] = "empty_response_body"
+    else:
+        # An oversized discovery document cannot bypass the fact parser's cap.
+        if document is None or len(body) > settings.max_html_bytes:
+            document = parse_html_document(
+                body[: settings.max_html_bytes], charset=charset
+            )
+        if document.root is None:
+            facts["extraction"]["reason"] = "document_parse_failed"
+        else:
+            facts.update(
+                _extract_document(document.root, final_url=final_url, settings=settings)
+            )
+            facts["extraction"]["truncated"] = len(body) > settings.max_html_bytes
+
+    # Delivery facts and header directives apply once, even when parsing fails.
     facts["extractor_version"] = EXTRACTOR_VERSION
     facts["content_type"] = (content_type or "").strip().lower()
-
-    # Delivery facts never depend on the HTML parse succeeding.
     facts["delivery"] = _delivery_facts(
         final_url=final_url,
         status_code=status_code,
@@ -754,36 +741,11 @@ def extract_page_facts(
     normalized_headers = {
         str(key).lower(): str(value) for key, value in (redacted_headers or {}).items()
     }
-    header_robots = normalized_headers.get("x-robots-tag", "")
-    facts["robots"] = merge_x_robots_tag(facts["robots"], header_robots)
-
-    if not body:
-        facts["extraction"]["reason"] = "empty_response_body"
-        return facts
-
-    root = _parse_root(body, charset=charset, settings=settings)
-    if root is None:
-        facts["extraction"]["reason"] = "document_parse_failed"
-        return facts
-    facts.update(_extract_document(root, final_url=final_url, settings=settings))
-    facts["extraction"]["truncated"] = len(body) > settings.max_html_bytes
-    facts["extractor_version"] = EXTRACTOR_VERSION
-    facts["content_type"] = (content_type or "").strip().lower()
-    facts["delivery"] = _delivery_facts(
-        final_url=final_url,
-        status_code=status_code,
-        redacted_headers=redacted_headers,
-        http_version=http_version,
-        ttfb_ms=ttfb_ms,
-        latency_ms=latency_ms,
-        wire_bytes=wire_bytes,
-        decoded_bytes=decoded_bytes,
-    )
     facts["robots"] = merge_x_robots_tag(
         facts.get("robots") or {},
-        header_robots,
+        normalized_headers.get("x-robots-tag", ""),
     )
-    if _is_declared_non_html(facts["content_type"]):
+    if facts["has_html"] and _is_declared_non_html(facts["content_type"]):
         _clear_page_owned_facts(facts)
         facts["extraction"] = {
             "state": "unavailable",

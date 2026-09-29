@@ -42,6 +42,9 @@ class HostGate:
     """
 
     def __init__(self, *, delay_for: Callable[[str], float] | None = None) -> None:
+        # Setup can issue several sitemap requests from one worker task.
+        # The task-lane ceiling alone no longer bounds in-flight acquisition.
+        self._global_slots = asyncio.Semaphore(site_health_settings.global_concurrency)
         self._semaphores: dict[str, asyncio.Semaphore] = {}
         self._start_locks: dict[str, asyncio.Lock] = {}
         self._last_started: dict[str, float] = {}
@@ -138,7 +141,7 @@ class HostGate:
             async with contextlib.AsyncExitStack() as waiting:
                 if on_wait is not None:
                     await waiting.enter_async_context(on_wait())
-                async with semaphore:
+                async with semaphore, self._global_slots:
                     async with start_lock:
                         # Recompute after every sleep. A sibling may record a
                         # new 429 cooldown while this task is waiting out the

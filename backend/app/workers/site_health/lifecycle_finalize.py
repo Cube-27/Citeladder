@@ -61,6 +61,15 @@ def crawl_root_identity(crawl: SiteCrawl) -> tuple[str, str]:
         return "", ""
 
 
+def sitemap_observation_predicate(crawl: SiteCrawl):
+    """Select observed sitemap members independently of discovery arrival order."""
+    sitemap = (crawl.site_facts or {}).get("sitemap") or {}
+    if "urls" in sitemap:
+        return SiteUrlObservation.observed_url.in_(sitemap["urls"])
+    # Older saved crawls have only source observations, not a setup manifest.
+    return SiteUrlObservation.source_kind == OBSERVATION_SOURCE_SITEMAP
+
+
 def _sitemap_orphan_urls(
     sitemap_rows: Sequence[Any], *, root_canonical: str, linked_targets: set[str]
 ) -> list[str]:
@@ -280,7 +289,7 @@ async def _load_finalize_context(
                 SiteUrlObservation.workspace_id == crawl.workspace_id,
                 SiteUrlObservation.project_id == crawl.project_id,
                 SiteUrlObservation.crawl_id == crawl.id,
-                SiteUrlObservation.source_kind == OBSERVATION_SOURCE_SITEMAP,
+                sitemap_observation_predicate(crawl),
             )
         )
     ).all()

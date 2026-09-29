@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.dotenv import dotenv_sources
@@ -153,6 +153,7 @@ class SiteHealthSettings(BaseSettings):
     # (index children included) one crawl fetches, and how many sitemap URLs
     # one crawl admits into the frontier (bounded, deterministic).
     max_sitemap_documents: int = 32
+    sitemap_fetch_concurrency: int = Field(default=4, ge=1)
     max_sitemap_admitted_urls: int = 5000
     # --- Site setup fetch caps (v2 P2: robots.txt / llms.txt probes) ---
     # Decoded-byte caps for the well-known file fetches (much tighter than the
@@ -269,14 +270,17 @@ class SiteHealthSettings(BaseSettings):
     # once per page made the cost of displaying a running mean grow with the
     # square of the crawl, and those two row locks are the same ones the user's
     # Stop button needs -- the contention documented on
-    # ``_finalize_reconcile_outcome``. A refresh is admitted at most once per
-    # this many analyses, or once per the interval below, whichever comes
-    # first. The number is a live convenience, never the record:
+    # ``_finalize_reconcile_outcome``. A refresh is admitted after this many
+    # analyses (growing with the fraction below), or after the time interval,
+    # whichever comes first. The number is a live convenience, never the record:
     # terminalization always rebuilds the summary from persisted evidence, so
     # a debounced crawl cannot settle on a partial one. The mark is per worker
     # process, so N workers refresh up to N times as often -- fresher than
     # configured, never staler. 0 on either knob disables that trigger.
     live_score_refresh_page_interval: int = 10
+    # Grow the page trigger with analyses observed by this worker. The time
+    # trigger still keeps a slowly advancing crawl's provisional score fresh.
+    live_score_refresh_page_fraction: float = Field(default=0.1, ge=0, le=1)
     live_score_refresh_min_interval_seconds: float = 5.0
     # Ceiling on how many crawls carry a live-refresh mark in one worker, so a
     # long-lived process cannot accumulate one entry per crawl it ever saw.

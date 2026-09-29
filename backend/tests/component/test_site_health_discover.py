@@ -951,7 +951,7 @@ async def test_root_and_site_setup_branches_converge_durably(
     site_facts = {
         "robots": {"status": ROBOTS_FETCH_STATUS_NOT_FOUND},
         "llms_txt": {"fetched": False},
-        "sitemap": {"fetched": False, "files": []},
+        "sitemap": {"fetched": False, "files": [], "urls": []},
     }
 
     async def blocked_site_setup(*_args, **_kwargs):
@@ -1338,7 +1338,7 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
         assert orphan.outcome == RULE_OUTCOME_MISSING
         assert orphan.evidence["orphan_count"] == 1
         assert orphan.evidence["orphan_urls"] == ["https://example.com/sm-2"]
-        # Both admitted sitemap URLs carry the sitemap-source observation.
+        # Membership survives even when a page-link observation arrives first.
         assert orphan.evidence["sitemap_url_count"] == 2
 
         hreflang = evals["technical.hreflang_conflict"]
@@ -1379,6 +1379,9 @@ async def test_sitemap_attempt_limit_includes_failed_child_documents(
 ) -> None:
     """A large blocked sitemap tree cannot monopolize the crawl worker."""
     monkeypatch.setattr(site_health_settings, "max_sitemap_documents", 5)
+    # Site setup must release its evidence-probe slot before sitemap requests
+    # acquire their own slots. A nested task-wide slot deadlocks at this cap.
+    monkeypatch.setattr(site_health_settings, "per_host_concurrency", 1)
     monkeypatch.setattr(site_health_settings, "per_host_delay_seconds", 0.0)
     root = "https://example.com/"
     seed = await _seed_root_branches(session_factory, root=root)
@@ -1395,20 +1398,24 @@ async def test_sitemap_attempt_limit_includes_failed_child_documents(
     requests: list[tuple[str, str]] = []
 
     worker = _worker(session_factory, pages, requests=requests)
-    await worker.run_until_idle()
+    await asyncio.wait_for(worker.run_until_idle(), timeout=15)
 
     sitemap_requests = [
         path
         for method, path in requests
         if method == "GET" and (path == "/index.xml" or path.startswith("/child-"))
     ]
-    assert sitemap_requests == [
-        "/index.xml",
-        "/child-0.xml",
-        "/child-1.xml",
-        "/child-2.xml",
-        "/child-3.xml",
-    ]
+    # Request scheduling may reorder siblings; the selected BFS prefix is fixed.
+    assert sitemap_requests[0] == "/index.xml"
+    assert sorted(sitemap_requests) == sorted(
+        [
+            "/index.xml",
+            "/child-0.xml",
+            "/child-1.xml",
+            "/child-2.xml",
+            "/child-3.xml",
+        ]
+    )
     async with session_factory() as session:
         crawl = await session.get(SiteCrawl, seed.crawl_id)
         assert crawl is not None

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import codecs
 import re
 from typing import Any
 
-from lxml import etree
-from lxml import html as lxml_html
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.site_health.dom import HtmlDocument, parse_html_document
 from app.connectors.web_evidence.url_policy import (
     UrlPolicyError,
     canonicalize,
@@ -37,7 +35,7 @@ from app.domain.site_health.frontier_support import (
     _automatic_remaining,
     _upsert_site_url,
 )
-from app.domain.site_health.normalization import canonical_identity
+from app.domain.site_health.normalization import canonical_identity, url_hash
 from app.domain.site_health.schemas import (
     DiscoveredLink,
     DiscoveryOutput,
@@ -70,40 +68,17 @@ def _rewrite_extracted_href(href: str) -> tuple[str, str, str]:
     )
 
 
-def _safe_parser_encoding(charset: str) -> str | None:
-    """Return a codec-valid encoding name, or ``None`` to auto-detect."""
-    normalized = str(charset or "").strip()
-    if not normalized:
-        return None
-    try:
-        codecs.lookup(normalized)
-    except LookupError:
-        return None
-    return normalized.lower()
-
-
-def _parse_discovery_document(body: bytes, charset: str) -> tuple[str, Any | None]:
-    if not body:
-        return "", None
-    parser = lxml_html.HTMLParser(
-        recover=True,
-        encoding=_safe_parser_encoding(charset),
-        no_network=True,
-    )
-    try:
-        root = lxml_html.document_fromstring(body, parser=parser)
-    except (etree.ParserError, ValueError):
-        return "", None
+def _discovery_title(root: Any | None) -> str:
     if root is None:
-        return "", None
+        return ""
     title_node = next(root.iter("title"), None)
     if title_node is None:
-        return "", root
+        return ""
     title_text = "".join(
         text if isinstance(text, str) else text.decode("utf-8", "replace")
         for text in title_node.itertext()
     )
-    return title_text.strip()[:1024], root
+    return title_text.strip()[:1024]
 
 
 def _admit_discovery_href(
@@ -135,11 +110,11 @@ def _admit_discovery_href(
     )
     if not admission.accepted or not admission.canonical_url:
         return None
-    canonical, url_hash = canonical_identity(admission.canonical_url)
     return DiscoveredLink(
-        url=canonical,
-        url_hash=url_hash,
+        url=admission.canonical_url,
+        url_hash=url_hash(admission.canonical_url),
         ordinal=ordinal,
+        admission=admission,
         rewrite_reason=rewrite_reason,
         rewrite_version=rewrite_version,
     )
@@ -154,10 +129,12 @@ def extract_discovery_links(
     exclude_globs: list[str] | None = None,
     max_links: int | None = None,
     charset: str = "",
+    document: HtmlDocument | None = None,
 ) -> tuple[str, list[DiscoveredLink]]:
     """Parse HTML into a title and bounded, canonical, in-scope links."""
     limit = max_links or site_health_settings.max_links_per_page
-    title, root = _parse_discovery_document(body, charset)
+    root = (document or parse_html_document(body, charset=charset)).root
+    title = _discovery_title(root)
     links: list[DiscoveredLink] = []
     if root is None:
         return title, links
@@ -168,7 +145,6 @@ def extract_discovery_links(
         href = anchor.get("href")
         if not href:
             continue
-        href = href.strip()
         href = href.strip()
         link = _admit_discovery_href(
             href,
@@ -200,7 +176,7 @@ def build_frontier_candidates(
     """Turn a discover task's links into deterministically ordered candidates."""
     return [
         FrontierCandidate.from_admission(
-            classify_url_admission(link.url),
+            link.admission,
             url=link.url,
             url_hash=link.url_hash,
             depth=depth + 1,

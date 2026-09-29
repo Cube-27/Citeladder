@@ -46,7 +46,6 @@ from app.core.config.site_health_contracts import (
     CRAWL_TERMINAL_STATUSES,
     EXTRACTOR_VERSION,
     POST_TERMINAL_SITE_TASK_KINDS,
-    SITE_ACQUISITION_TASK_KINDS,
     TASK_KIND_ANALYZE,
     TASK_KIND_ARCHITECTURE,
     TASK_KIND_CHANGE_INTEL,
@@ -284,12 +283,12 @@ class SiteHealthWorker(DrainableWorkerMixin):
         """Execute local work and pace acquisition branches by host.
 
         Analyze normally reuses a discover artifact and the derived phases do
-        no network I/O, so discovery and site setup take the task-wide host slot
-        here. Analyze acquires the same gate inside its fallback acquisition
-        branch. The wait heartbeat covers those acquisition tasks until the
-        phase takes over after securing the slot.
+        no network I/O, so only discovery takes the task-wide host slot here.
+        Analyze gates its fallback acquisition; site setup gates its evidence
+        probe and each sitemap request, allowing bounded sitemap concurrency.
+        The wait heartbeat covers discovery until its phase takes over.
         """
-        if task.task_kind not in SITE_ACQUISITION_TASK_KINDS:
+        if task.task_kind != TASK_KIND_DISCOVER:
             await self._execute_task(task)
             return
         async with self._host_gate.slot_for_url(

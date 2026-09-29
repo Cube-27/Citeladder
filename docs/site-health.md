@@ -81,6 +81,21 @@ requires the audit plan's remaining authorization/robots/pacing acceptance.
   unavailable rather than guessed.
 - Cancellation and partial completion preserve all evidence already committed.
 
+Discovery and normalized facts share the parsed HTML document before fact
+extraction prunes non-content subtrees. Discovery keeps its own scope-filtered
+link budget; an oversized document still uses the stricter fact-extraction byte
+cap. Sitemap documents are fetched in bounded concurrent groups through the
+same robots, suppression and host-pacing controls, then consumed in breadth-first
+order so response timing cannot change which URLs fit the admission budget.
+The bounded sitemap URL manifest stays in the crawl's site facts, so discovering
+a URL through a page first cannot erase its sitemap membership. Saved crawls
+without a manifest retain their original observation-based membership evidence.
+
+Provisional score refreshes use a growing page interval as the worker observes
+more analyses, with a time trigger for slower progress. This reduces repeated
+whole-crawl aggregation during fast crawls; terminalization always rebuilds the
+complete persisted measurement regardless of the provisional cadence.
+
 ## Page kind and traits
 
 The stable taxonomy is:

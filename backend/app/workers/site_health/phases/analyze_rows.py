@@ -14,7 +14,6 @@ from app.core.config.site_health_contracts import (
     ANALYZER_VERSION,
     DISCOVERY_STATUS_COMPLETED,
     EXTRACTOR_VERSION,
-    OBSERVATION_SOURCE_SITEMAP,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     SCORING_VERSION,
 )
@@ -32,7 +31,10 @@ from app.models.site_health.analysis import (
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.urls import SiteUrl, SiteUrlObservation
-from app.workers.site_health.lifecycle_finalize import crawl_root_identity
+from app.workers.site_health.lifecycle_finalize import (
+    crawl_root_identity,
+    sitemap_observation_predicate,
+)
 from app.workers.site_health.phases.contracts import PhaseContext
 
 
@@ -61,9 +63,11 @@ async def _write_page_analysis(
         await session.scalar(
             select(SiteUrlObservation.id)
             .where(
+                SiteUrlObservation.workspace_id == crawl.workspace_id,
+                SiteUrlObservation.project_id == crawl.project_id,
                 SiteUrlObservation.crawl_id == crawl.id,
                 SiteUrlObservation.site_url_id == site_url_id,
-                SiteUrlObservation.source_kind == OBSERVATION_SOURCE_SITEMAP,
+                sitemap_observation_predicate(crawl),
             )
             .limit(1)
         )

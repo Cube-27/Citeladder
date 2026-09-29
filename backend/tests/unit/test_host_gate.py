@@ -21,6 +21,28 @@ from app.workers.site_health.host_gate import HostGate
 
 
 @pytest.mark.asyncio
+async def test_concurrent_subrequests_share_the_global_fetch_budget(monkeypatch):
+    monkeypatch.setattr(site_health_settings, "global_concurrency", 2)
+    monkeypatch.setattr(site_health_settings, "per_host_concurrency", 6)
+    monkeypatch.setattr(site_health_settings, "per_host_delay_seconds", 0)
+    gate = HostGate()
+    active = 0
+    peak = 0
+
+    async def request(index):
+        nonlocal active, peak
+        async with gate.slot_for_url(f"https://host-{index}.example.com/sitemap.xml"):
+            active += 1
+            peak = max(peak, active)
+            await asyncio.sleep(0)
+            active -= 1
+
+    await asyncio.gather(*(request(index) for index in range(8)))
+    assert peak == 2
+    assert gate.tracked_hosts() == set()
+
+
+@pytest.mark.asyncio
 async def test_delay_callback_receives_the_full_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

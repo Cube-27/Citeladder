@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, func, literal_column, select, update
+from sqlalchemy import Boolean, func, literal, literal_column, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,67 +70,59 @@ async def _upsert_site_url(
         host, _port = split_host_port(candidate.url)
     except ValueError:
         host = ""
-    stmt = (
-        pg_insert(SiteUrl)
-        .values(
-            workspace_id=crawl.workspace_id,
-            project_id=crawl.project_id,
-            normalized_url=candidate.url,
-            url_hash=candidate.url_hash,
-            display_url=candidate.url,
-            host=host[:255],
-            depth=candidate.depth,
-            corpus_disposition=candidate.disposition,
-            disposition_reason=candidate.disposition_reason,
-            disposition_version=candidate.disposition_version,
-            item_kind=candidate.item_kind,
-            discovery_status=DISCOVERY_STATUS_RUNNING,
-            latest_source_kind=candidate.source_kind,
-            first_seen_crawl_id=crawl.id,
-            last_seen_crawl_id=crawl.id,
-            first_seen_at=now,
-            last_seen_at=now,
-        )
-        .on_conflict_do_nothing(index_elements=["project_id", "url_hash"])
-        .returning(SiteUrl.id)
+    stmt = pg_insert(SiteUrl).values(
+        workspace_id=crawl.workspace_id,
+        project_id=crawl.project_id,
+        normalized_url=candidate.url,
+        url_hash=candidate.url_hash,
+        display_url=candidate.url,
+        host=host[:255],
+        depth=candidate.depth,
+        corpus_disposition=candidate.disposition,
+        disposition_reason=candidate.disposition_reason,
+        disposition_version=candidate.disposition_version,
+        item_kind=candidate.item_kind,
+        discovery_status=DISCOVERY_STATUS_RUNNING,
+        latest_source_kind=candidate.source_kind,
+        first_seen_crawl_id=crawl.id,
+        last_seen_crawl_id=crawl.id,
+        first_seen_at=now,
+        last_seen_at=now,
     )
-    inserted_id = await session.scalar(stmt)
-    if inserted_id is not None:
-        return inserted_id, True
-    existing = await session.scalar(
-        select(SiteUrl.id).where(
-            SiteUrl.workspace_id == crawl.workspace_id,
-            SiteUrl.project_id == crawl.project_id,
-            SiteUrl.url_hash == candidate.url_hash,
-        )
-    )
-    if existing is None:
-        raise RuntimeError(f"SiteUrl row vanished for url_hash={candidate.url_hash!r}")
     # SiteUrl is the mutable latest-seen projection. A previous crawl may have
     # identified this identity as a document or canonical alias; seeing it in a
     # new crawl resets that disposition until the new evidence confirms it.
-    await session.execute(
-        update(SiteUrl)
-        .where(
-            SiteUrl.id == existing,
-            SiteUrl.workspace_id == crawl.workspace_id,
-            SiteUrl.project_id == crawl.project_id,
-        )
-        .values(
-            display_url=candidate.url,
-            host=host[:255],
-            depth=candidate.depth,
-            corpus_disposition=candidate.disposition,
-            disposition_reason=candidate.disposition_reason,
-            disposition_version=candidate.disposition_version,
-            item_kind=candidate.item_kind,
-            discovery_status=DISCOVERY_STATUS_RUNNING,
-            latest_source_kind=candidate.source_kind,
-            last_seen_crawl_id=crawl.id,
-            last_seen_at=now,
+    result = await session.execute(
+        stmt.on_conflict_do_update(
+            index_elements=["project_id", "url_hash"],
+            set_={
+                name: getattr(stmt.excluded, name)
+                for name in (
+                    "display_url",
+                    "host",
+                    "depth",
+                    "corpus_disposition",
+                    "disposition_reason",
+                    "disposition_version",
+                    "item_kind",
+                    "discovery_status",
+                    "latest_source_kind",
+                    "last_seen_crawl_id",
+                    "last_seen_at",
+                )
+            },
+            where=SiteUrl.workspace_id == crawl.workspace_id,
+        ).returning(
+            SiteUrl.id,
+            literal_column("xmax = 0", type_=Boolean).label("inserted"),
         )
     )
-    return existing, False
+    row = result.first()
+    if row is None:
+        raise RuntimeError(
+            f"SiteUrl row unavailable for url_hash={candidate.url_hash!r}"
+        )
+    return row.id, row.inserted
 
 
 def _task_idempotency_key(
@@ -167,35 +159,34 @@ async def _enqueue_task(
     keeps a lower-priority re-enqueue from demoting a queued task, and a task
     already claimed is left alone because its ordering has been decided.
     """
-    still_active = await session.scalar(
-        select(SiteCrawl.id).where(
-            SiteCrawl.id == crawl.id,
-            SiteCrawl.status.in_(list(CRAWL_ACTIVE_STATUSES)),
-        )
+    values = dict(
+        crawl_id=crawl.id,
+        workspace_id=crawl.workspace_id,
+        site_url_id=site_url_id,
+        task_kind=task_kind,
+        requested_url=url,
+        url_hash=url_hash_value,
+        depth=depth,
+        generation=generation,
+        idempotency_key=_task_idempotency_key(
+            crawl.id, task_kind, url_hash_value, generation
+        ),
+        status=TASK_STATUS_QUEUED,
+        priority=priority,
+        randomized_position=randomized_position,
+        parent_site_url_id=parent_site_url_id,
+        max_attempts=site_health_settings.max_attempts,
     )
-    if still_active is None:
-        return None
-
     excluded = pg_insert(SiteCrawlTask).excluded
     result = await session.execute(
         pg_insert(SiteCrawlTask)
-        .values(
-            crawl_id=crawl.id,
-            workspace_id=crawl.workspace_id,
-            site_url_id=site_url_id,
-            task_kind=task_kind,
-            requested_url=url,
-            url_hash=url_hash_value,
-            depth=depth,
-            generation=generation,
-            idempotency_key=_task_idempotency_key(
-                crawl.id, task_kind, url_hash_value, generation
+        .from_select(
+            list(values),
+            select(*(literal(value) for value in values.values())).where(
+                SiteCrawl.id == crawl.id,
+                SiteCrawl.workspace_id == crawl.workspace_id,
+                SiteCrawl.status.in_(list(CRAWL_ACTIVE_STATUSES)),
             ),
-            status=TASK_STATUS_QUEUED,
-            priority=priority,
-            randomized_position=randomized_position,
-            parent_site_url_id=parent_site_url_id,
-            max_attempts=site_health_settings.max_attempts,
         )
         .on_conflict_do_update(
             index_elements=["crawl_id", "task_kind", "url_hash", "generation"],
