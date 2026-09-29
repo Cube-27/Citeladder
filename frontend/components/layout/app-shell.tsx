@@ -61,7 +61,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
       <AgentPanelProvider>
         <TooltipProvider>
           <div data-app-surface className="bg-shell relative flex min-h-dvh">
-            <aside className="sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col min-[981px]:flex">
+            <aside className="bg-sidebar sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col min-[981px]:flex">
               {/* The project selector is the sidebar's first row, at the same
                   height as the header beside it. The rail reads project →
                   tools → destinations → brand: the switcher is the thing a
@@ -162,7 +162,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 hideHeader
                 closeLabel="Close navigation"
                 side="left"
-                className="w-[min(17rem,100vw)] max-w-none border-l-0"
+                className="bg-sidebar w-[min(17rem,100vw)] max-w-none border-l-0"
               >
                 <div className="grid gap-4">
                   <Link

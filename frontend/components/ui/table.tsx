@@ -4,20 +4,22 @@ import { cn } from '@/lib/utils';
 
 /**
  * Dense analytics table — the shared semantic ledger treatment:
- *  - sticky header (--table-header-height) on the tonal panel fill with a
- *    single object-rung under-rule, so the column labels read as a band; no
- *    vertical column-separator hairlines, which made the tables read as
- *    spreadsheets rather than designed surfaces
+ *  - the wrapper is the table's shell: the elevated panel fill at the card
+ *    radius, borderless, so a bare table reads as a card the way a Card does
+ *  - sticky header (--table-header-height) on the same panel fill with a
+ *    single object-rung under-rule, so the labels separate from the rows by
+ *    the hairline alone; no vertical column-separator hairlines, which made
+ *    the tables read as spreadsheets rather than designed surfaces
  *  - --table-row-height rows, --text-sm cells, subtle ROW hairlines only
  *  - data columns are centre-aligned and tabular; text columns stay left.
  *    The header centres with its values, so a column reads as one block
  *    rather than a label floating off the numbers beneath it
  *  - hover tints the row with `active`; `highlight` marks the user's own row
  *    with the same tint permanently
- * The wrapper is scroll-capable so the sticky header pins on vertical scroll.
- * It draws NO edge of its own: a table is nearly always laid into a Card with
- * flush content, and a second border a pixel inside the card's — at a radius
- * that cannot match it — is the seam this deliberately does not make.
+ * The wrapper is scroll-capable so the sticky header pins on vertical scroll;
+ * the scroll clip also keeps the pinned header inside the shell's radius. It
+ * draws NO edge of its own: fill contrast against the ground is the boundary,
+ * and inside a Card the flush fill melts into it.
  *
  * Column headers take the `label` role (13/18, 500, muted): a header names the
  * values beneath it, exactly as a metric label does.
@@ -37,7 +39,10 @@ export function Table({
   return (
     <div
       ref={wrapperRef}
-      className={cn('bg-panel relative w-full max-w-full min-w-0 overflow-auto', wrapperClassName)}
+      className={cn(
+        'bg-panel relative w-full max-w-full min-w-0 overflow-auto rounded-[var(--radius-card)]',
+        wrapperClassName,
+      )}
     >
       <table className={cn('type-body w-full border-collapse', className)}>{children}</table>
     </div>
@@ -99,7 +104,7 @@ export function TableHead({
       {...props}
       className={cn(
         tableHeadClasses,
-        'border-border bg-panel-tonal sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
+        'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'text-center tabular-nums',
         className,
       )}

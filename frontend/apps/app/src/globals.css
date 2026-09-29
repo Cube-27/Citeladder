@@ -58,16 +58,16 @@
   --color-track: #e6eaf0;
   --color-selected: #ffffff;
   --color-input: #ffffff;
-  /* The sidebar is a region of the ground now, not a surface of its own. The
-     token stays because check:policy requires it, and it holds the ground value
-     so a call site reaching for it cannot resurrect the old slab. It must be a
-     literal (the policy requires six-digit hex here), so it moves with
-     --color-shell below. */
-  --color-sidebar: #f3f5f7;
+  /* The elevation ladder is rail → ground → paper: the sidebar sits one step
+     below the shell ground, and cards and tables (--color-panel) sit one step
+     above it, so every chrome plane reads at its own depth in both themes.
+     The token must be a literal (the policy requires six-digit hex here); the
+     dark rebind holds the same relationship one ramp down. */
+  --color-sidebar: #e9edf1;
   --color-surface-inverse: #14532d;
 
-  /* Shell ground and stronger neutral surface. Workspace content remains
-     white; interaction alone uses the accent ramp. */
+  /* Shell/workspace ground and its stronger neutral inset. Cards and tables
+     retain the white panel fill; interaction alone uses the accent ramp. */
   --color-shell: #f3f5f7;
   --color-shell-alt: #e9edf1;
 
@@ -100,9 +100,9 @@
        subtle  — a RULE inside a surface: row hairlines, the divides between
                  peers in a band, a menu separator, a chart gridline. Reads as
                  a fold in one sheet, not as an edge.
-       border  — the EDGE of a box: a card, a panel, a ledger, a page band, the
-                 pane's seam against the ground. This is the default, and it is
-                 the rung that has to be legible from across the desk.
+       border  — the EDGE of a bounded control, inset panel, ledger or page
+                 band, and the header rule inside a table. Default cards and
+                 table wrappers separate by fill instead.
        strong  — a deliberate emphasis: a selected edge, a section the reader
                  is being pointed at.
        bold    — field boundaries and anything that must survive on a tinted
@@ -370,11 +370,9 @@
   --card-padding: 20px;
   --card-padding-compact: 12px;
   --card-padding-large: 20px;
-  /* The content pane's cast edge against the ground. One hairline that follows
-     the pane's radius, so the seam between rail and paper is drawn once — the
-     sidebar deliberately carries no border of its own, or the two rules would
-     stack into a 2px trench at the one seam this model exists to soften. */
-  /* No seam: the tonal step between ground and paper is the separation. */
+  /* The workspace pane is continuous with shell ground; cards and tables on
+     it carry the elevated paper fill. The focused flow pane stays paper. */
+  /* No seam: the tonal steps between rail, ground, and paper are the separation. */
   --shadow-pane: none;
   --modal-padding: 24px;
   --empty-state-padding: 24px;
@@ -1141,28 +1139,32 @@ input.focus-input:-webkit-autofill:focus-visible {
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --color-background: #0a0a0a;
-  --color-background-alt: #1b1b1b;
-  --color-canvas-soft: #131313;
-  --color-panel: #101010;
-  --color-panel-tonal: #151515;
-  --color-elevated: #1a1a1a;
-  --color-well: #0d0d0d;
-  --color-active: #252525;
-  --color-input: #171717;
+  /* The dark ramp mirrors the light ladder one ramp down: rail #0a0a0a →
+     ground #111111 → paper #1a1a1a. Wells sink below the ground, hover and
+     overlay rungs rise above the paper, and the border rungs keep their old
+     deltas against the new paper fill. */
+  --color-background: #111111;
+  --color-background-alt: #1e1e1e;
+  --color-canvas-soft: #161616;
+  --color-panel: #1a1a1a;
+  --color-panel-tonal: #1e1e1e;
+  --color-elevated: #262626;
+  --color-well: #0e0e0e;
+  --color-active: #232323;
+  --color-input: #141414;
   --color-sidebar: #0a0a0a;
-  --color-shell: #0a0a0a;
-  --color-shell-alt: #131313;
+  --color-shell: #111111;
+  --color-shell-alt: #161616;
   /* Text ink sits 15% below full white so long reading on the dark ground
      does not glare; the ladder keeps its foreground > secondary > muted steps. */
   --color-foreground: #d2d2d0;
   --color-secondary: #c0c0be;
   --color-muted: #999996;
   --color-subtle: var(--color-muted);
-  --color-track: #1f1f1f;
+  --color-track: #141414;
   --color-selected: #333333;
-  --color-border-subtle: #1f1f1f;
-  --color-border: #2b2b2b;
+  --color-border-subtle: #272727;
+  --color-border: #343434;
   --color-border-strong: #5c5c59;
   --color-border-bold: #76766f;
   --color-hairline-warm: var(--color-border);
@@ -1248,8 +1250,8 @@ input.focus-input:-webkit-autofill:focus-visible {
   --color-gsc-ctr: #4db6ac;
   --color-gsc-position: #ff8a65;
   --color-overlay-scrim: rgb(0 0 0 / 72%);
-  --skeleton-base: #1a1a1a;
-  --skeleton-highlight: #252525;
+  --skeleton-base: #1e1e1e;
+  --skeleton-highlight: #292929;
   --shadow-smudge: 0 0 0 1px rgb(255 255 255 / 10%), 0 1px 2px rgb(0 0 0 / 25%);
   --shadow-smudge-hover: 0 0 0 1px rgb(255 255 255 / 16%), 0 1px 2px rgb(0 0 0 / 35%);
   --shadow-card: 0 1px 2px rgb(0 0 0 / 16%);
@@ -1343,11 +1345,9 @@ input.focus-input[aria-invalid='true']:-webkit-autofill:focus-visible {
   --grain-opacity: 0.015;
 }
 
-/* The white paper. One recipe, shared by the app's content region and the
-   focused flow's task column, so both planes are the same object on the same
-   ground. No border: the tonal step off the ground and the radius are the
-   separation, and adding a rule back would put a hard edge on the one seam this
-   model exists to soften. */
+/* The focused auth/onboarding task column stays paper against shell ground.
+   The workspace overrides that fill below to complete its rail → ground →
+   paper ladder without changing the focused flows. */
 .app-pane {
   background: var(--color-panel);
   border-radius: var(--radius-workspace);
@@ -1359,6 +1359,7 @@ input.focus-input[aria-invalid='true']:-webkit-autofill:focus-visible {
    corners have ground behind them. Rounding an edge with nothing behind it cuts
    a notch instead of softening anything. */
 .app-pane-workspace {
+  background: var(--color-shell);
   border-radius: var(--radius-workspace) 0 0;
 }
 
