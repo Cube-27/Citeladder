@@ -4,17 +4,19 @@
 
 Planned on 29 September 2026 from an external audit of the Agent (skills,
 runtime and a competitive comparison with Peec.ai, Searchable, Profound and
-other GEO platforms). The audit is guidance, not authority: every finding was
-checked against the code and the [invariants](../invariants.md) before it was
-accepted, reshaped or rejected (see [triage](#audit-triage)).
+other GEO platforms), then rescoped by the owner the same day: deliver an
+agentic experience comparable to Peec, Searchable or Notion AI **using only
+the reads, skills and data CiteLadder already has** — no new tools, no
+uploads, no external mutation — with the UI doing most of the work. The audit
+is guidance, not authority; see [triage](#audit-triage).
 
-PR 1 is implemented in branch `claude/practical-gates-oq7898`. Later PRs need
+PR 1 (foundations) and MVP items 1–2 are implemented together in branch
+`claude/practical-gates-oq7898` at the owner's direction. Items 3–8 need
 owner approval before they start; this plan is not authorization to run them.
 The Agent moves to TypeScript in
 [TypeScript migration PR 19](citeladder-typescript-migration.md#pr-19-agent-runtime),
-so every PR here keeps new Python surface small and carries its contract
-(persisted rows, config, skill files, API shapes) rather than Python-only
-mechanisms that PR 19 would have to port twice.
+so the MVP is deliberately frontend-, config- and skill-heavy: those carry over
+unchanged, while new Python surface would be ported twice.
 
 Owner documentation: [Agent](../agents.md). Invariants most affected: 10
 (automation stays bounded, durable-memory promotion needs an explicit user
@@ -23,113 +25,140 @@ claim-validator layer) and 13 (bounded orchestration, no write tool).
 
 ## Goal
 
-Keep what the audit found strongest (funded, leased, append-only, bounded
-turns over persisted evidence) and close the gaps users feel: an opaque wait
-while a turn runs, skills whose provenance and tool references are not
-checked, no continuity between chats, and no measurement of model behavior.
+Make the Agent feel consultative and document-centred: the user sees what it
+is doing, can check every claim in one click, works on the deliverable like a
+document, and is always offered the sensible next step — while keeping what
+already sets CiteLadder apart (funded, leased, append-only, bounded turns over
+persisted, deterministic evidence).
 
-## PR 1 — Skills contract, run precision and live progress (implemented)
+## Roadmap
+
+| # | Item | Status | Size |
+|---|---|---|---|
+| 0 | Foundations: skills contract, run precision, live step progress | Implemented | — |
+| 1 | Chat polish | Implemented | ~1 wk |
+| 2 | Document canvas for the output | Implemented | 1.5–2 wks |
+| 3 | Composer: `/skill` commands and `@` evidence mentions | Proposed | ~1 wk |
+| 4 | "What should I work on?" briefing | Proposed | ~1 wk |
+| 5 | Continuity: Save to Context | Proposed | ~1 wk |
+| 6 | Plan mode | Proposed | 1.5–2 wks |
+| 7 | Skills gallery with per-project enablement | Proposed | ~1 wk |
+| 8 | Agent behavior evaluation corpus | Proposed | ~1 wk |
+
+The MVP is items 0–4 (about 4–5 weeks in total); items 5–8 add depth and
+safety. Item 8 should land before items 4–7 change model input.
+
+### 0. Foundations (implemented)
 
 Skills contract:
 
 - The skill catalog version is a content fingerprint of every packaged model
-  input (skills, operating contract, content formats), not a hand-bumped
-  string. Admission freezes it on the run (`skill_catalog_version`); a turn
-  executed against a different catalog (a deploy between queueing and
-  execution) ends with `skills_changed` before any model call, as a changed
-  platform model already does. This makes the documented freeze true.
+  input (skills, operating contract, content formats). Admission freezes it on
+  the run (`skill_catalog_version`); a turn executed against a different
+  catalog (a deploy between queueing and execution) ends with `skills_changed`
+  before any model call, as a changed platform model already does.
 - Skill bodies may reference an application-owned vocabulary as `{{name}}`.
   The loader expands it from the owner's one listing and refuses an unknown
-  name. `prompt_discovery` now takes buyer stages and prompt intents from
-  `visibility_prompts.py` instead of a hand copy. The rendered model input is
-  unchanged, so the skill version is not bumped.
+  name; `prompt_discovery` now takes buyer stages and prompt intents from
+  `visibility_prompts.py` (rendered text unchanged, version not bumped).
 - The loader bounds each description (1–320 characters) and expanded body
   (14,000 characters) with a file-and-field error.
-- A contract test loads the real catalog and requires every tool a skill or
-  the operating contract names to be offered to the Agent.
-- `list_content_differentiation` gets a methodology home in the
-  `ai_visibility` skill (version 2): when to read it, how to quote its
-  inspected-page denominators, and that a missing report is unavailable.
+- A contract test requires every tool a packaged skill names to be offered.
+- `list_content_differentiation` gets a methodology home in `ai_visibility`
+  (version 2).
 
-Run precision:
+Run precision: the per-call time bound is frozen in the run budget; tool
+refusals distinguish the last step from a spent tool budget; a run whose
+member is gone ends with `access_revoked` instead of a nil-UUID stand-in;
+transcript truncation keeps no step text when the head fills the bound;
+`AGENT_RUNTIME_VERSION` is `agent-runtime-2`.
 
-- The per-call time bound is frozen in the run budget with the step and tool
-  budgets; each model attempt's deadline and timeout come from it.
-- A tool refusal distinguishes the last step from a spent tool budget.
-- A run whose member is gone ends with `access_revoked` instead of running
-  tools as a nil-UUID stand-in.
-- Transcript truncation keeps no step text when the head alone fills the
-  bound (a zero-length slice previously re-appended the whole transcript).
-- `AGENT_RUNTIME_VERSION` is `agent-runtime-2`.
+Live progress: the chat read returns an active run's committed steps from its
+attempt rows (a call in flight, a step without a read, or a read's outcome),
+shown under the running indicator. A projection; the runtime writes nothing.
 
-Live progress:
+### 1. Chat polish (implemented)
 
-- The chat read returns, for an active run, the committed steps of its current
-  attempt from `AgentModelAttempt`/`AgentToolAttempt` rows: a call in flight,
-  a step that returned without a read, or a read's outcome. It is a projection;
-  the runtime writes nothing extra. The conversation shows it under the
-  running indicator, so a long turn is no longer a blind wait.
+- **Checkable claims.** Each reply's cited evidence renders as chips grouped
+  by record kind; a single record links to its own page (an Action, a
+  Visibility run), several link to the screen that shows them. The output's
+  Sources tab uses the same chips. References come from persisted rows; the
+  browser never resolves a record.
+- **Copy reply** on every agent reply.
+- **Refinements by deliverable kind** (same chat) and **next steps** that open
+  a new chat with the skill that takes the work forward (for example a
+  diagnosis offers page edits or earned sources; most deliverables offer a
+  measurement plan). A next step carries the attached Action and the output's
+  title only, never its evidence content.
+- **Starter prompts preselect their skill**, so a first question lands on
+  the right methodology without a model `select_skill` step.
 
-## Later PRs (proposed, not authorized)
+### 2. Document canvas (implemented)
 
-Ordered by user value against invariant and migration risk.
+- The output renders as sections (level 1–3 headings; headings inside code
+  fences are content). Outputs with three or more titled sections get a
+  contents list.
+- **Revise with agent** on any section sends an ordinary follow-up turn scoped
+  to that section ("Revise only the section … Keep every other section exactly
+  as it is."). The model still returns the complete body, as the protocol
+  requires, and the user can check the result with Compare.
+- **Edit** on any section edits just that section in place and saves a new
+  user revision with every other section byte-for-byte unchanged, on top of
+  the revision it started from (a stale base is refused and the text kept).
+- **Compare with current** in History shows a line diff from any earlier
+  revision to the current one, bounded so a very long output falls back to
+  viewing each revision.
+- Prompt portfolios keep their dedicated report view.
 
-### PR 2 — Agent behavior evaluation corpus
+### 3. Composer: slash commands and mentions (proposed)
 
-Nothing measures the model today; component tests use a scripted gateway. Add
+`/` in the composer opens the skill list (the existing catalog read) and sets
+the skill; `@` searches pages, Actions and Opportunities the project already
+has and adds them as the existing typed context references, so the server
+resolves and authorizes them as it does for handoffs. Follow-up turns would
+need the chat's context references to accept additions (a small API change).
+
+### 4. Briefing (proposed)
+
+A "What should I work on?" card on New chat and the Dashboard that starts a
+`growth_plan` turn over the existing Actions, Opportunities, Site Health and
+visibility reads. It runs only when the user clicks it — no schedule, no
+autonomous run.
+
+### 5. Continuity: Save to Context (proposed)
+
+Invariant 10 makes durable-memory promotion an explicit user decision and the
+Agent has no second knowledge store. A user may **Save to Context** a
+statement from a reply; it appends a revision to the existing Agent
+instructions (which the manifest already freezes) with the source message ID.
+No model-written summary becomes memory without that action.
+
+### 6. Plan mode (proposed)
+
+Generalize outline-first to a plan output: numbered steps, each naming a skill
+and its deliverable; the user approves; each step then starts as its own
+funded, user-started turn with visible progress. No autonomous chain.
+
+### 7. Skills gallery (proposed)
+
+Enable or disable packaged skills and set their order per project, frozen on
+the run. User-authored skills wait for item 8 to score them; when they come
+they are bounded methodology text validated by the same loader and never
+exposed through MCP.
+
+### 8. Agent behavior evaluation corpus (proposed)
+
 `docs/evaluations/agent/` with recorded tool payloads and expected behavior per
-skill (skill choice, refusal, outline-first, citation discipline), and an
-offline scorer over persisted run evidence: protocol-violation rate,
-unverified-reference replacements, budget exhaustion and tool refusals. Live
-model runs are an explicit, credential-gated release task, never CI. This is
-the prerequisite for PRs 3–6 changing model input safely.
-
-### PR 3 — Chat continuity (bounded memory)
-
-Invariant 10 makes durable-memory promotion an explicit user decision, and the
-Agent has no second knowledge store. So:
-
-- Within a chat, keep deterministic continuity: the history window already
-  carries the conversation; add the chat's cited evidence references and the
-  output's revision summary to the frozen manifest, derived from persisted rows.
-- Across chats, a user may **Save to Context** a statement from a reply. It
-  appends a revision to the existing Agent instructions (the reviewed project
-  context the manifest already freezes) with the source message ID. No
-  model-written summary becomes memory without that action.
-
-### PR 4 — Plan mode for multi-step work
-
-Generalize outline-first to a plan output: the Agent proposes numbered steps,
-each naming a skill and its deliverable; the user approves; each step then
-runs as its own funded turn in a new or the same chat, with visible progress.
-Execution stays per-turn and user-started (no unbounded loop, no autonomous
-chain); approval is recorded like an outline approval.
-
-### PR 5 — Skills as a user-visible surface
-
-Project-scoped skill configuration: enable or disable a packaged skill and set
-its order, frozen on the run. User-authored skills are deferred until PR 2 can
-score them; when they come they are bounded methodology text validated by the
-same loader, never policy, and never exposed through MCP.
-
-### PR 6 — Skill-scoped tool catalogs
-
-Each skill declares the tools it needs in frontmatter (validated against the
-registry by the loader); the system prompt lists only those plus a small
-shared set. Keeps per-step input bounded as the registry grows.
-
-### PR 7 — Governance view
-
-A workspace-admin audit view over the existing append-only attempt rows: who
-ran the Agent, which reads it made, the funding source and the settled cost.
-No new storage.
+skill (skill choice, refusal, outline-first, citation discipline) and an
+offline scorer over persisted run evidence: protocol violations, unverified
+references replaced, budget exhaustion and tool refusals. Live model runs are
+an explicit, credential-gated release task, never CI.
 
 ### Folded into TypeScript migration PR 19
 
-Gateway consolidation (the Python and TypeScript OpenAI-compatible clients),
-multi-read steps, and a streaming (SSE) transport for progress belong with the
-runtime's move to TypeScript rather than a Python implementation first. The
-progress projection in PR 1 is the contract that stream would carry.
+Streamed reply text (the gateway does not stream today; about a week),
+gateway consolidation, multi-read steps and an SSE transport for progress.
+The progress projection above is the contract that stream would carry.
 
 ## Audit triage
 
@@ -142,11 +171,11 @@ Reshaped:
 
 - *Transcript split by string search* — `parts.index` matches a whole element,
   so evidence containing the heading cannot mis-split. The real defect was a
-  non-positive slice bound; PR 1 fixes that.
+  non-positive slice bound; item 0 fixes that.
 - *Cross-turn memory as model-written turn summaries* — conflicts with
-  invariant 10's explicit promotion rule; replaced by PR 3's user action.
-- *SSE endpoint* — the UI already polls the persisted chat; PR 1 adds the
-  projection to that read, and a stream waits for PR 19.
+  invariant 10's explicit promotion rule; replaced by item 5's user action.
+- *SSE endpoint* — the UI already polls the persisted chat; item 0 adds the
+  projection to that read, and a stream waits for TypeScript PR 19.
 
 Rejected:
 
@@ -164,6 +193,8 @@ Rejected:
 
 ## Validation
 
-PR 1: skill loader and prompting unit tests, the Agent runtime component suite
-against PostgreSQL (catalog freeze, frozen time bound, live progress), the chat
-screen tests, and `node scripts/quality.mjs --mode check --scope all`.
+Items 0–2: skill loader and prompting unit tests; the Agent runtime component
+suite against PostgreSQL (catalog freeze, frozen time bound, live progress);
+section, diff and evidence unit tests; chat screen tests (section revise and
+edit, evidence links, next steps, revision compare, live progress); and
+`node scripts/quality.mjs --mode check --scope all`.

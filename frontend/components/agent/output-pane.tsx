@@ -5,6 +5,8 @@ import { Download, Pencil } from 'lucide-react';
 import { useState } from 'react';
 
 import { OutputDeclaration } from '@/components/agent/action-declaration';
+import { OutputCanvas } from '@/components/agent/output-canvas';
+import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { OutputEditor, type OutputDraft } from '@/components/agent/output-editor';
 import { OutputHistory } from '@/components/agent/output-history';
 import {
@@ -39,6 +41,7 @@ export function OutputPane({
   runActive,
   canEdit,
   canSend,
+  onRevise,
 }: Readonly<{
   workspaceId: string;
   chatId: string;
@@ -46,6 +49,8 @@ export function OutputPane({
   runActive: boolean;
   canEdit: boolean;
   canSend: boolean;
+  /** Sends a follow-up turn asking the agent to revise part of the output. */
+  onRevise: (message: string) => void;
 }>) {
   const revision = output.latest_revision;
   const [tab, setTab] = useState<PaneTab>('output');
@@ -118,19 +123,25 @@ export function OutputPane({
               onChange={setDraft}
               onDone={() => setDraft(null)}
             />
+          ) : output.kind === 'prompt_portfolio' ? (
+            <ContentMarkdown markdown={promptPortfolioReport(revision.body)} density="compact" />
           ) : (
-            <ContentMarkdown
-              markdown={
-                output.kind === 'prompt_portfolio'
-                  ? promptPortfolioReport(revision.body)
-                  : revision.body
-              }
-              density="compact"
+            <OutputCanvas
+              workspaceId={workspaceId}
+              chatId={chatId}
+              revision={revision}
+              locked={locked}
+              canSend={canSend}
+              onRevise={onRevise}
             />
           )}
         </TabPanel>
         <TabPanel value="sources" className="pt-3">
-          <Sources refs={revision.source_refs} />
+          {revision.source_refs.length === 0 ? (
+            <p className={textRole('body')}>This revision cites no CiteLadder records.</p>
+          ) : (
+            <EvidenceChips refs={revision.source_refs} label="Sources" />
+          )}
         </TabPanel>
         <TabPanel value="history" className="pt-3">
           {tab === 'history' ? (
@@ -245,47 +256,5 @@ function OutlineApproval({
         {copy.action}
       </Button>
     </div>
-  );
-}
-
-const RECORD_LABEL: Record<string, string> = {
-  opportunity: 'Recommendation',
-  audit: 'Visibility run',
-  visibility_result: 'Visibility answer',
-  citation: 'Citation',
-  prompt: 'Prompt',
-  site_snapshot: 'Site Health snapshot',
-  site_crawl: 'Site crawl',
-  site_page: 'Site page',
-  site_link: 'Internal link',
-  traffic_snapshot: 'Traffic snapshot',
-  demand_snapshot: 'Search Demand snapshot',
-  query_snapshot: 'Search Console snapshot',
-  query_row: 'Search Console query',
-  search_run: 'Search Intelligence run',
-  search_dataset: 'Search Intelligence dataset',
-  search_row: 'Search Intelligence row',
-  action: 'Action',
-};
-
-/** The persisted records this revision cites, counted by kind. */
-function Sources({ refs }: Readonly<{ refs: string[] }>) {
-  if (refs.length === 0)
-    return <p className={textRole('body')}>This revision cites no CiteLadder records.</p>;
-  const counts = new Map<string, number>();
-  for (const ref of refs) {
-    const kind = ref.startsWith('citeladder://') ? ref.slice(13).split('/')[0] : '';
-    const label = RECORD_LABEL[kind] ?? 'CiteLadder record';
-    counts.set(label, (counts.get(label) ?? 0) + 1);
-  }
-  return (
-    <ul className="grid gap-2">
-      {[...counts].map(([label, count]) => (
-        <li key={label} className="flex justify-between gap-3">
-          <span className={textRole('body')}>{label}</span>
-          <span className={textRole('caption', 'tabular-nums')}>{count}</span>
-        </li>
-      ))}
-    </ul>
   );
 }

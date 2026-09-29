@@ -60,6 +60,15 @@ attempt, projected from its model and tool attempt rows: a call in flight, a
 step that returned without a read, or a read's outcome. The conversation shows
 them under the running indicator; the runtime writes nothing extra for it.
 
+The output reads as a document of sections. Each section can be edited in
+place, saved as a user revision with every other section unchanged, or sent to
+the Agent with an instruction as an ordinary follow-up turn scoped to that
+section. History compares any earlier revision with the current one. Cited
+evidence on replies and in Sources links to the screen (or record) that shows
+it. After a deliverable, refinements revise it in the same chat, and next steps
+open a new chat with the skill that takes the work forward, carrying only the
+attached Action and the output's title.
+
 The chat list pages by keyset cursor, can be narrowed to the chats linked to one
 Action, and names each chat's target. An Action's workflow status is derived
 from, never written by, the Agent; see [Actions](opportunities.md#actions).

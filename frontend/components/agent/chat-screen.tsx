@@ -95,7 +95,8 @@ function ChatView({
                 output={detail.output}
                 runActive={runActive}
                 canEdit={canEdit}
-                canSend={access.canSend}
+                canSend={access.canSend && !turn.pending}
+                onRevise={(message) => turn.send(message)}
               />
             ) : null
           }

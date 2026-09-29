@@ -2,20 +2,22 @@
 
 import type { ReactNode } from 'react';
 
+import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/copy-button';
 import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
+import { agentHandoffHref } from '@/lib/agent/handoff';
+import { nextStepsFor, refinementsFor } from '@/lib/agent/next-steps';
 import { runErrorCopy, runStepLabel } from '@/lib/agent/vocabulary';
 import { runOutcome } from '@/lib/agent/run-state';
 import type { AgentChatDetail, AgentMessage, AgentRun } from '@/lib/api/agent';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
-
-/** Follow-ups that revise the chat's output as ordinary turns. */
-const REFINEMENTS = ['Make it shorter', 'Make it more specific', 'No standalone FAQ'] as const;
 
 /**
  * The chat's append-only messages, then the output (rendered in the thread,
@@ -56,18 +58,12 @@ export function Conversation({
         stopping={stopping}
       />
       {output?.latest_revision && canSend && outcome.kind !== 'running' ? (
-        <fieldset aria-label="Quick refinements" className="flex flex-wrap gap-2">
-          {REFINEMENTS.map((instruction) => (
-            <Button
-              key={instruction}
-              variant="secondary"
-              size="sm"
-              onClick={() => onRefine(instruction)}
-            >
-              {instruction}
-            </Button>
-          ))}
-        </fieldset>
+        <FollowUps
+          kind={output.kind}
+          title={output.latest_revision.title}
+          actionId={detail.chat.action_id}
+          onRefine={onRefine}
+        />
       ) : null}
     </div>
   );
@@ -92,14 +88,14 @@ function MessageBubble({
       <div className="flex flex-wrap items-center gap-2">
         <span className={textRole('label')}>Agent</span>
         {skill ? <span className={textRole('caption')}>Skill: {skill}</span> : null}
-        {message.evidence_refs.length > 0 ? (
-          <span className={textRole('caption')}>
-            {message.evidence_refs.length} evidence{' '}
-            {message.evidence_refs.length === 1 ? 'reference' : 'references'}
-          </span>
-        ) : null}
       </div>
       <ContentMarkdown markdown={message.content} density="compact" />
+      <div className="flex flex-wrap items-center gap-2">
+        <EvidenceChips refs={message.evidence_refs} />
+        <CopyButton value={message.content} size="sm" variant="ghost">
+          Copy reply
+        </CopyButton>
+      </div>
       {message.steps.length > 0 ? (
         <details className="group">
           <summary className={textRole('caption', 'cursor-pointer')}>
@@ -116,6 +112,54 @@ function MessageBubble({
         </details>
       ) : null}
     </article>
+  );
+}
+
+/**
+ * After a deliverable: refinements revise it in this chat; next steps start a
+ * new chat with the skill that takes the work forward.
+ */
+function FollowUps({
+  kind,
+  title,
+  actionId,
+  onRefine,
+}: Readonly<{
+  kind: string;
+  title: string;
+  actionId: string | null;
+  onRefine: (instruction: string) => void;
+}>) {
+  const next = nextStepsFor(kind, title);
+  return (
+    <div className="grid gap-3">
+      <fieldset aria-label="Quick refinements" className="flex flex-wrap gap-2">
+        {refinementsFor(kind).map((instruction) => (
+          <Button
+            key={instruction}
+            variant="secondary"
+            size="sm"
+            onClick={() => onRefine(instruction)}
+          >
+            {instruction}
+          </Button>
+        ))}
+      </fieldset>
+      {next.length > 0 ? (
+        <nav aria-label="Next steps" className="flex flex-wrap items-center gap-2">
+          <span className={textRole('caption')}>Next, in a new chat:</span>
+          {next.map((step) => (
+            <Button key={step.label} asChild variant="ghost" size="sm">
+              <ProjectLink
+                href={agentHandoffHref({ actionId, prompt: step.prompt, skillId: step.skillId })}
+              >
+                {step.label}
+              </ProjectLink>
+            </Button>
+          ))}
+        </nav>
+      ) : null}
+    </div>
   );
 }
 

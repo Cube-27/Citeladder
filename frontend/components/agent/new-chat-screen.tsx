@@ -28,10 +28,12 @@ import { AGENT_TOP_ACTIONS } from '@/lib/config/agent';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
+/** Each starter preselects the skill that answers it; the user can change it. */
 const STARTERS = [
-  'What should I focus on this week?',
-  'Create content for our highest-demand topic.',
-  'Fix our most important technical issue.',
+  { text: 'What should I focus on this week?', skillId: 'growth_plan' },
+  { text: 'Why are we missing from AI answers?', skillId: 'ai_visibility' },
+  { text: 'Create content for our highest-demand topic.', skillId: 'content_create' },
+  { text: 'Fix our most important technical issue.', skillId: 'technical_health' },
 ] as const;
 
 /**
@@ -112,13 +114,16 @@ function NewChat({
         <fieldset className="flex flex-wrap gap-2" aria-label="Starter prompts">
           {STARTERS.map((starter) => (
             <Button
-              key={starter}
+              key={starter.text}
               variant="secondary"
               size="sm"
               disabled={!access.canSend}
-              onClick={() => setMessage(starter)}
+              onClick={() => {
+                setMessage(starter.text);
+                setSkillId(starter.skillId);
+              }}
             >
-              {starter}
+              {starter.text}
             </Button>
           ))}
         </fieldset>
