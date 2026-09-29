@@ -329,6 +329,23 @@ repeat affected checks. Do not rebuild the retired frontend, restore a database
 to undo frontend deployment, bypass protected ingress or add a broad product
 redirect bridge.
 
+### VM image retention and disk capacity
+
+The VM image cache is bounded by `runtime/retain-images.py` in the GCP runtime
+directory. Before pulling a release, deployment removes only this registry's
+obsolete backend, API, frontend and Vite image references. It preserves images
+referenced by current and `.previous` Compose configurations and every existing
+container (including stopped containers). It never removes containers or volumes.
+Registry retention does not reclaim the VM's local Docker cache.
+
+Deployment requires 5 GiB free on Docker's filesystem before pulling and 1 GiB
+afterward, before stopping services. The deployment environment can tune these
+with `DEPLOY_PULL_FREE_BYTES` and `DEPLOY_RUNTIME_FREE_BYTES`. A failed capacity
+check requires an operator to investigate disk usage; it never resets PostgreSQL.
+For an authorized maintenance inspection, run `sudo python3
+/opt/citeladder/retain-images.py --registry <REGION>-docker.pkg.dev/<PROJECT_ID>/citeladder-demo`
+to preview candidates; `--apply` explicitly performs the image-only cleanup.
+
 ### First-release recovery before acceptance
 
 Use this only when the database was not explicitly reset and against the VM and

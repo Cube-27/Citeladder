@@ -3,7 +3,7 @@
 # bump had moved this to 3.14 while every gate still validated 3.12, so the
 # container shipped an interpreter nothing tested. Bump all four together.
 # python:3.12.14-slim-bookworm
-FROM python@sha256:be8ccd085666c34273c9dc5607c9842f8b2e3116128aae45148ce164c07ce09d AS dependencies
+FROM python:3.12-slim-bookworm@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e AS dependencies
 
 ARG UV_VERSION=0.11.28
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -29,7 +29,7 @@ COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project --no-build
 
 # python:3.12.14-slim-bookworm
-FROM python@sha256:be8ccd085666c34273c9dc5607c9842f8b2e3116128aae45148ce164c07ce09d AS runtime
+FROM python:3.12-slim-bookworm@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e AS runtime
 
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="citeladder-backend" \

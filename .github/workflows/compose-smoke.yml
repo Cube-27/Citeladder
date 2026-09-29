@@ -103,6 +103,18 @@ jobs:
           # `up` blocks until the one-shot migration dependency succeeds before
           # starting the web process and workers.
           "${compose[@]}" up --detach
+          # Runtime image budgets catch full-toolchain base-image drift and
+          # accidental inclusion of the frontend workspace dependency graph.
+          for service in web api-service; do
+            image="$(docker inspect --format '{{.Image}}' "$("${compose[@]}" ps -q "$service")")"
+            bytes="$(docker image inspect --format '{{.Size}}' "$image")"
+            test "$bytes" -le 734003200 || {
+              echo "::error::$service image exceeds the 700 MiB runtime budget: $bytes bytes"
+              exit 1
+            }
+          done
+          "${compose[@]}" exec -T web python -c 'import sys; assert sys.version_info[:2] == (3, 12)'
+          "${compose[@]}" exec -T api-service node --input-type=module -e "await import('@citeladder/contracts')"
           for _ in $(seq 1 45); do
             if curl --fail --silent --show-error http://127.0.0.1:8000/health | grep -qx '{"status":"ok"}'; then
               break

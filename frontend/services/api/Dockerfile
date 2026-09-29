@@ -1,7 +1,8 @@
 # TypeScript API service (docs/plans/citeladder-typescript-migration.md PR 1).
 # Node 26 strips the service's erasable TypeScript at load time, so the image
-# ships source and has no build stage. Same Node base as the frontend images.
-FROM node@sha256:e961046fec20896e8904f2b4a8b4c7e5ca91826d84d8d33d83dbaa61f942069e AS dependencies
+# ships source. Keep the slim variant in the tag so digest updates cannot
+# silently select the full build-toolchain image.
+FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
@@ -13,8 +14,17 @@ COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml 
 COPY frontend/packages/contracts/package.json ./packages/contracts/
 COPY frontend/services/api/package.json ./services/api/
 RUN pnpm install --frozen-lockfile --ignore-scripts --prod --filter "@citeladder/api..."
+COPY frontend/packages/contracts/src ./packages/contracts/src
+COPY frontend/services/api/src ./services/api/src
+# Export only this service's production graph, not the workspace-wide store.
+RUN pnpm --filter @citeladder/api deploy --prod --ignore-scripts /runtime
+# Node strips our workspace TypeScript only outside node_modules. Keep the
+# deployed contracts package linked to a source directory, as in development.
+RUN mkdir -p /runtime/packages \
+    && mv "$(readlink -f /runtime/node_modules/@citeladder/contracts)" /runtime/packages/contracts \
+    && ln -sfn ../../packages/contracts /runtime/node_modules/@citeladder/contracts
 
-FROM node@sha256:e961046fec20896e8904f2b4a8b4c7e5ca91826d84d8d33d83dbaa61f942069e AS runtime
+FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS runtime
 
 ARG BUILD_REVISION=unknown
 LABEL org.opencontainers.image.title="citeladder-api-service" \
@@ -25,16 +35,9 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 # Dependencies and source stay root-owned and read-only to the runtime user.
-COPY --from=dependencies --chown=0:0 /app/node_modules ./node_modules
-COPY --from=dependencies --chown=0:0 /app/packages/contracts/node_modules ./packages/contracts/node_modules
-COPY --from=dependencies --chown=0:0 /app/services/api/node_modules ./services/api/node_modules
-COPY --chown=0:0 frontend/packages/contracts/package.json ./packages/contracts/package.json
-COPY --chown=0:0 frontend/packages/contracts/src ./packages/contracts/src
-COPY --chown=0:0 frontend/services/api/package.json ./services/api/package.json
-COPY --chown=0:0 frontend/services/api/src ./services/api/src
+COPY --from=dependencies --chown=0:0 /runtime ./
 
 USER node
-WORKDIR /app/services/api
 EXPOSE 8100
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=5 \

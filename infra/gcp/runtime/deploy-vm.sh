@@ -19,6 +19,9 @@ set -euo pipefail
 # sign-up, MCP limited to DEV_LOGIN_EMAIL.
 DEMO_MODE="${DEMO_MODE:-false}"
 RESET_DATABASE="${RESET_DATABASE:-false}"
+# Space for image download/unpacking, then a reserve for PostgreSQL writes.
+DEPLOY_PULL_FREE_BYTES="${DEPLOY_PULL_FREE_BYTES:-5368709120}"
+DEPLOY_RUNTIME_FREE_BYTES="${DEPLOY_RUNTIME_FREE_BYTES:-1073741824}"
 
 [[ "$PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
 [[ "$REGION" =~ ^[a-z]+-[a-z]+[0-9]+$ ]]
@@ -36,6 +39,8 @@ RESET_DATABASE="${RESET_DATABASE:-false}"
 [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
 [[ "$RESET_DATABASE" =~ ^(true|false)$ ]]
+[[ "$DEPLOY_PULL_FREE_BYTES" =~ ^[1-9][0-9]*$ ]]
+[[ "$DEPLOY_RUNTIME_FREE_BYTES" =~ ^[1-9][0-9]*$ ]]
 if [[ "$RESET_DATABASE" == true && "$DEMO_MODE" != false ]]; then
   echo 'Database reset is limited to the disposable public demo.' >&2
   exit 1
@@ -47,6 +52,7 @@ expected_registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
 [[ "$API_SERVICE_IMAGE" == "$expected_registry/api-service@sha256:"* ]]
 had_previous=false
 reset_started=false
+services_changed=false
 running_services=""
 if [[ -f /opt/citeladder/runtime.env ]] && [[ -f /opt/citeladder/compose.gcp.yml ]]; then
   running_services="$(docker compose --env-file /opt/citeladder/runtime.env \
@@ -110,8 +116,12 @@ SQL
     else
       rm -f /opt/citeladder/ingress.env
     fi
-    docker compose --env-file /opt/citeladder/runtime.env \
-      -f /opt/citeladder/compose.gcp.yml up -d --force-recreate
+    if $services_changed; then
+      # Candidate image exports must not override the restored env file.
+      env -u BACKEND_IMAGE -u API_SERVICE_IMAGE -u FRONTEND_IMAGE -u VITE_APP_IMAGE \
+        docker compose --env-file /opt/citeladder/runtime.env \
+        -f /opt/citeladder/compose.gcp.yml up -d --force-recreate
+    fi
   fi
   exit "$status"
 }
@@ -132,6 +142,7 @@ install -d -m 0750 /opt/citeladder /opt/citeladder/tls
 install -m 0644 /tmp/citeladder-deploy/compose.gcp.yml /opt/citeladder/compose.gcp.yml
 install -m 0755 /tmp/citeladder-deploy/init-postgres-tls.sh /opt/citeladder/init-postgres-tls.sh
 install -m 0750 /tmp/citeladder-deploy/backup.sh /opt/citeladder/backup.sh
+install -m 0750 /tmp/citeladder-deploy/retain-images.py /opt/citeladder/retain-images.py
 
 [[ -s /tmp/citeladder-deploy/cf-v4 ]]
 [[ -s /tmp/citeladder-deploy/cf-v6 ]]
@@ -255,8 +266,13 @@ stopped_services=(caddy web api-service audit-worker audit-scheduler site-health
   brand-discovery-worker agent-worker analytics-worker analytics-worker-ts \
   queue-sweeper integration-worker integration-dispatcher)
 
+python3 ./retain-images.py --registry "$expected_registry" --apply \
+  --min-free-bytes "$DEPLOY_PULL_FREE_BYTES"
 docker compose --env-file runtime.env -f compose.gcp.yml pull
+python3 ./retain-images.py --registry "$expected_registry" \
+  --min-free-bytes "$DEPLOY_RUNTIME_FREE_BYTES"
 if [[ "$RESET_DATABASE" == true ]]; then
+  services_changed=true
   if $had_previous; then
     # The old Compose file can still include frontend/vite-app. Stop and
     # remove every old container, while preserving the PostgreSQL volume.
@@ -280,9 +296,11 @@ elif $had_previous; then
     trap - ERR
     exit 1
   fi
+  services_changed=true
   docker compose --env-file runtime.env -f compose.gcp.yml stop "${stopped_services[@]}"
   ./backup.sh predeploy
 fi
+services_changed=true
 docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate --remove-orphans
 
 cat > /etc/systemd/system/citeladder-backup.service <<'UNIT'
