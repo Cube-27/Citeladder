@@ -33,6 +33,7 @@ import { downloadCsv } from '@/lib/csv/download';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatDisplayTimestamp } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
+import { internalLinkStateNotice } from '@/lib/site-health/status';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { InternalLinkReview } from './internal-link-review';
 
@@ -40,13 +41,6 @@ type Scope = Readonly<{ projectId: string; workspaceId: string }>;
 type ParamChange = (key: string, value: string) => void;
 const isRunning = (state: string | undefined) => state === 'queued' || state === 'running';
 
-const REASON_LABELS: Record<string, string> = {
-  funding_unavailable: 'insufficient AI credits',
-  permission_unavailable: 'run permission unavailable',
-  provider_unconfigured: 'analysis provider not configured',
-  deadline_exceeded: 'time limit reached',
-  interrupted_dispatch: 'interrupted requests',
-};
 const STATE_LABELS: Record<InternalLinkAnalysis['state'], string> = {
   queued: 'Running',
   running: 'Running',
@@ -202,8 +196,13 @@ function LinksHeader({
           onClick={() =>
             downloadCsv(
               'internal-links',
-              ['Source page', 'Destination', 'Anchor text'],
-              links.map((link) => [link.source.url, link.target.url, link.anchor]),
+              ['Source page', 'Destination', 'Anchor text', 'Source passage'],
+              links.map((link) => [
+                link.source.url,
+                link.target.url,
+                link.anchor,
+                link.placement?.text ?? '',
+              ]),
             )
           }
         >
@@ -288,18 +287,6 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
   );
 }
 
-function stateNotice(analysis: InternalLinkAnalysis) {
-  const reasons = Object.entries(analysis.diagnostics?.reasons ?? {})
-    .map(([reason, count]) => `${REASON_LABELS[reason] ?? 'unavailable'} (${formatCount(count)})`)
-    .join(', ');
-  if (analysis.state === 'cancelled') return 'This analysis was cancelled.';
-  if (analysis.state === 'unavailable' || analysis.state === 'failed')
-    return `No page pairs could be checked${reasons ? `: ${reasons}` : ''}. Analyze again to retry.`;
-  if (analysis.state === 'partial' && reasons)
-    return `Some page pairs were not checked: ${reasons}. These suggestions cover the rest.`;
-  return null;
-}
-
 function LinksResult({
   analysis,
   links,
@@ -314,7 +301,7 @@ function LinksResult({
   canAnalyze: boolean;
 }>) {
   const summary = analysis.diagnostics;
-  const notice = stateNotice(analysis);
+  const notice = internalLinkStateNotice(analysis);
   if (isRunning(analysis.state) && !analysis.recommendations.length)
     return (
       <output className="type-body">
@@ -332,6 +319,12 @@ function LinksResult({
         </Alert>
       ) : null}
       {notice ? <Alert tone="info">{notice}</Alert> : null}
+      {summary?.sources_without_passages ? (
+        <Alert tone="info">
+          {formatCount(summary.sources_without_passages)} pages had no usable captured source
+          passages. They were not checked for link placement.
+        </Alert>
+      ) : null}
       {/* A run that could not check pairs has no result; never render it as empty. */}
       {['unavailable', 'failed', 'cancelled'].includes(analysis.state) &&
       !analysis.recommendations.length ? null : (
@@ -397,8 +390,8 @@ function emptyReason(analysis: InternalLinkAnalysis): string {
   const summary = analysis.diagnostics;
   if (analysis.recommendations.length) return 'No suggestions match these filters.';
   if (!summary || !summary.candidates)
-    return 'No related, unlinked pages were found in this crawl.';
-  return `${formatCount(summary.completed)} page pairs were checked and none needed a new link.`;
+    return 'No supported source placements for unlinked destinations were found in this crawl.';
+  return `${formatCount(summary.completed)} page pairs were checked and none qualified for a contextual link.`;
 }
 
 function LinksTable({

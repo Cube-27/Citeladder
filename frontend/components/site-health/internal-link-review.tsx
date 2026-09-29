@@ -63,6 +63,20 @@ export function InternalLinkReview({
       {link ? (
         <Stack gap="section">
           <PageSummary heading="Source page" page={link.source} />
+          <section className="space-y-2">
+            <h3 className="type-section-title">Source passage</h3>
+            {link.placement ? (
+              <p className="type-body">
+                {link.placement.text.slice(0, link.placement.anchor_start)}
+                <mark>{link.anchor}</mark>
+                {link.placement.text.slice(link.placement.anchor_start + link.anchor.length)}
+              </p>
+            ) : (
+              <p className="type-caption">
+                This saved suggestion has no captured placement. Run a new analysis to check it.
+              </p>
+            )}
+          </section>
           <PageSummary heading="Add a link to" page={link.target} />
           <section className="space-y-2">
             <h3 className="type-section-title">Suggested anchor text</h3>
@@ -71,8 +85,9 @@ export function InternalLinkReview({
               {link.target.contextual_inbound === null
                 ? 'Existing contextual links to the destination were not measured.'
                 : `The destination currently has ${formatCount(link.target.contextual_inbound)} contextual links from other pages.`}{' '}
-              Place the link where the source text discusses this topic, and reword the anchor to
-              fit the sentence.
+              {link.placement
+                ? 'Link the highlighted phrase in the captured passage. Check the current page before editing.'
+                : 'Verify the source text before using this historical suggestion.'}
             </p>
           </section>
           <div className="flex flex-wrap gap-2">

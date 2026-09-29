@@ -1,5 +1,18 @@
 import { z } from 'zod';
 
+const sourcePassageSchema = z.object({
+  text: z.string(),
+  /** UTF-16 offsets in the artifact's primary_content_text. */
+  start: z.number().int().nonnegative(),
+  end: z.number().int().nonnegative(),
+});
+
+export const internalLinkPlacementSchema = sourcePassageSchema.extend({
+  anchor: z.string(),
+  /** UTF-16 offset within this passage. */
+  anchor_start: z.number().int().nonnegative(),
+});
+
 /** One crawled page as frozen into an internal-link analysis. */
 export const internalLinkPageSchema = z.object({
   analysis_id: z.uuid(),
@@ -10,6 +23,7 @@ export const internalLinkPageSchema = z.object({
   h1: z.string(),
   description: z.string(),
   excerpt: z.string(),
+  source_passages: z.array(sourcePassageSchema).default([]),
   page_kind: z.string(),
   /** Main-content links observed in the crawl; null when not measured. */
   contextual_inbound: z.number().int().nonnegative().nullable(),
@@ -22,14 +36,17 @@ export const internalLinkPageSchema = z.object({
 
 export const internalLinkPageSummarySchema = internalLinkPageSchema.omit({
   contextual_targets: true,
+  source_passages: true,
 });
 
 export const internalLinkSchema = z.object({
   id: z.uuid(),
   source: internalLinkPageSummarySchema,
   target: internalLinkPageSummarySchema,
-  /** Suggested anchor text, taken from the destination's own H1, title or URL. */
+  /** Exact phrase from the selected source placement. */
   anchor: z.string(),
+  /** Historical saved results may not contain placement evidence. */
+  placement: internalLinkPlacementSchema.nullable().default(null),
   /** P(yes) that the source should link to the destination. */
   usefulness: z.number().min(0).max(1),
   action_id: z.uuid().nullable(),
@@ -64,6 +81,7 @@ export const internalLinkAnalysisSchema = z.object({
       below_threshold: z.number().int(),
       reasons: z.record(z.string(), z.number().int()),
       elapsed_seconds: z.number().nonnegative(),
+      sources_without_passages: z.number().int().nonnegative().nullable().default(null),
     })
     .nullable()
     .default(null),
@@ -86,5 +104,6 @@ export const internalLinksInputSchema = z.object({
 });
 
 export type InternalLinkPage = z.infer<typeof internalLinkPageSchema>;
+export type InternalLinkPlacement = z.infer<typeof internalLinkPlacementSchema>;
 export type InternalLink = z.infer<typeof internalLinkSchema>;
 export type InternalLinkAnalysis = z.infer<typeof internalLinkAnalysisSchema>;

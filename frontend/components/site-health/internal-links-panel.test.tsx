@@ -103,7 +103,9 @@ describe('Internal links', () => {
     mswServer.use(http.get(endpoint, () => HttpResponse.json(read(analysis()))));
     renderPanel();
     expect(
-      await screen.findByText('30 page pairs were checked and none needed a new link.'),
+      await screen.findByText(
+        '30 page pairs were checked and none qualified for a contextual link.',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -113,6 +115,13 @@ describe('Internal links', () => {
       source: page(index, `Source ${index}`),
       target: page(50 + index, `Destination ${index}`),
       anchor: `Anchor ${index}`,
+      placement: {
+        text: `Consider Anchor ${index} when preparing this page for publication.`,
+        anchor: `Anchor ${index}`,
+        anchor_start: 9,
+        start: 400,
+        end: 400 + `Consider Anchor ${index} when preparing this page for publication.`.length,
+      },
       usefulness: 0.9 - index / 100,
       action_id: null,
       action_status: null,
@@ -129,7 +138,33 @@ describe('Internal links', () => {
       screen.getByRole('button', { name: 'Review link from Source 11 to Destination 11' }),
     );
     const drawer = await screen.findByRole('dialog');
-    expect(within(drawer).getByText('Anchor 11')).toBeInTheDocument();
+    expect(within(drawer).getByText(/when preparing this page for publication/)).toHaveTextContent(
+      'Consider Anchor 11 when preparing this page for publication.',
+    );
     expect(within(drawer).getByRole('button', { name: /Copy HTML/ })).toBeInTheDocument();
+  });
+
+  it('explains when source capture cannot support placement instead of implying no links are needed', async () => {
+    mswServer.use(
+      http.get(endpoint, () =>
+        HttpResponse.json(
+          read(
+            analysis({
+              diagnostics: {
+                ...analysis().diagnostics,
+                candidates: 0,
+                completed: 0,
+                below_threshold: 0,
+                sources_without_passages: 20,
+              },
+            }),
+          ),
+        ),
+      ),
+    );
+    renderPanel();
+    expect(
+      await screen.findByText(/20 pages had no usable captured source passages/),
+    ).toBeInTheDocument();
   });
 });

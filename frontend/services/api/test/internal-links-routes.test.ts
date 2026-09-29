@@ -257,6 +257,20 @@ describe('internal link analysis admission', () => {
       expect(pages).toHaveLength(2);
       expect(pages.map((page) => page.artifact_id)).not.toContain(first.artifact_id);
       expect(omittedPages).toBe(0);
+      const source = pages[0]!;
+      expect(source.source_passages.length).toBeGreaterThan(0);
+      await db
+        .updateTable('site_fetch_artifacts')
+        .set({
+          normalized_facts: sql`jsonb_set(normalized_facts, '{primary_content_truncated}', 'true'::jsonb)`,
+        })
+        .where('id', '=', source.artifact_id)
+        .where('workspace_id', '=', seed.workspace_id)
+        .execute();
+      const loaded = await loadLinkPages(db, scope, seed.crawl_id);
+      const truncated = loaded.pages.find((page) => page.analysis_id === source.analysis_id)!;
+      expect(truncated.source_passages).toEqual([]);
+      expect(truncated.eligible_target).toBe(true);
     } finally {
       limits.max_pages = cap;
     }
