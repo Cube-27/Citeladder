@@ -14,7 +14,14 @@ import {
   type GenerationContext,
   type OfferingMap,
 } from './generation-context.ts';
-import { dimensions, draftCallLimit, generateDrafts, type Draft } from './generation-drafts.ts';
+import {
+  countDrop,
+  dimensions,
+  draftCallLimit,
+  generateDrafts,
+  type Draft,
+  type Drops,
+} from './generation-drafts.ts';
 import {
   generationSetting,
   validateSelection,
@@ -157,9 +164,26 @@ async function stage(
       .where('disposition', '=', 'pending')
       .execute();
     const known = new Set([...tracked, ...pending].map((row) => row.normalized_text_hash));
-    const eligible = output.drafts.filter(
-      (row) => !known.has(row.hash) && topics.some((topic) => topic.id === row.slot.topic_id),
-    );
+    const drops: Drops = { ...output.drops };
+    const dropRecords = [...output.dropRecords];
+    const eligible = output.drafts.filter((row, row_index) => {
+      const reason = known.has(row.hash)
+        ? 'duplicate'
+        : topics.some((topic) => topic.id === row.slot.topic_id)
+          ? null
+          : 'unknown_topic';
+      if (!reason) return true;
+      countDrop(drops, reason);
+      dropRecords.push({
+        reason,
+        slot_id: row.slot.slot_id,
+        normalized_text_hash: row.hash,
+        phase: 'staging',
+        batch: 0,
+        row_index,
+      });
+      return false;
+    });
     const selected = selectDrafts(eligible, input.count),
       rejected = eligible.filter(gatedOut);
     const revision = context.revision;
@@ -175,6 +199,8 @@ async function stage(
       model_results: output.models,
       quality_gate: gate,
       candidates_generated: output.drafts.length,
+      admission_drops: drops,
+      admission_drop_records: dropRecords,
       brand_context_hash: createHash('sha256')
         .update(JSON.stringify(context.context))
         .digest('hex'),
@@ -218,11 +244,11 @@ async function stage(
         touched.has(topic.id),
       ),
       requested_count: input.count,
-      dropped_duplicates:
-        output.dropped + output.drafts.filter((row) => known.has(row.hash)).length,
+      dropped_duplicates: drops.duplicate ?? 0,
       candidates_generated: output.drafts.length,
       quality_gate: gate,
       quality_rejected: rejected.length,
+      admission_drops: drops,
     };
   });
 }

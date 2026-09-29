@@ -7,7 +7,7 @@ import type { PromptGenerateResponse, Topic } from '@/lib/api/types';
 
 import { GeneratePromptsDialogView } from './generate-prompts-dialog-view';
 
-const MAX_GENERATION_COUNT = 100;
+import { MAX_GENERATION_COUNT } from '@/lib/config/prompts';
 
 export function GeneratePromptsDialog({
   open,

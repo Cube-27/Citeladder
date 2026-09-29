@@ -73,7 +73,7 @@ describe('GeneratePromptsDialog', () => {
     expect(onGenerate).toHaveBeenCalledWith({ count: 10, topic_ids: [] });
   });
 
-  it('explains a shortfall caused by the quality gate', () => {
+  it('explains a shortfall caused by the quality gate and admission checks', () => {
     const result: PromptGenerateResponse = {
       candidates: [],
       topics: [],
@@ -82,6 +82,7 @@ describe('GeneratePromptsDialog', () => {
       candidates_generated: 6,
       quality_gate: 'gate',
       quality_rejected: 3,
+      admission_drops: { off_topic: 2, duplicate: 1 },
     };
     render(
       <GeneratePromptsDialog
@@ -95,6 +96,7 @@ describe('GeneratePromptsDialog', () => {
 
     const alert = screen.getByText(/removed by quality checks/i);
     expect(alert).toHaveTextContent('3 weak suggestions removed by quality checks');
-    expect(alert.textContent).not.toMatch(/add topics/i);
+    expect(alert.textContent).toMatch(/Not admitted: 2 unrelated/);
+    expect(alert.textContent).not.toMatch(/add topics|already tracked/i);
   });
 });

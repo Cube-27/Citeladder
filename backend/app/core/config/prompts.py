@@ -70,7 +70,7 @@ CANDIDATE_OUTCOME_DISPOSITIONS: Final[frozenset[str]] = frozenset(
 )
 
 # --- Generation pipeline version (stamped into generation_evidence) --------
-GENERATOR_VERSION: Final = "prompt-gen-v2"
+GENERATOR_VERSION: Final = "prompt-gen-v3"
 
 # --- Business-map generation (prompt generation v2) -------------------------
 # A generation cell is one offering plus at most this many of its attribute,
@@ -128,6 +128,10 @@ CODE_BINDING_VOCABULARY_EMPTY: Final = "binding_vocabulary_empty"
 # vocabulary build AND prompt text). Shorter tokens (digits, TLD fragments)
 # never admit a prompt on their own.
 TOPICAL_BINDING_MIN_TOKEN_CHARS: Final = 3
+# The same bound for tokens in scripts whose words are short runs of
+# syllables or ideographs (Han, kana, Hangul): a two-character word such as
+# "裙子" or "가방" is a whole concept there, not a fragment.
+TOPICAL_BINDING_MIN_DENSE_TOKEN_CHARS: Final = 2
 
 # Generic English function/question/commerce words plus legal-suffix and
 # host-label noise excluded from BOTH sides of the binding match, so a prompt

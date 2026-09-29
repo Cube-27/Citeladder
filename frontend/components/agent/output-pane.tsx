@@ -176,7 +176,12 @@ function PortfolioSubmission({
 }>) {
   if (kind !== 'prompt_portfolio' || revision.phase === 'outline') return null;
   return (
-    <PromptProposalAction workspaceId={workspaceId} revisionId={revision.id} disabled={disabled} />
+    <PromptProposalAction
+      workspaceId={workspaceId}
+      revisionId={revision.id}
+      body={revision.body}
+      disabled={disabled}
+    />
   );
 }
 

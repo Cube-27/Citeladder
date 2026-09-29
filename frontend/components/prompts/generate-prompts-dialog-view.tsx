@@ -8,6 +8,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import type { PromptGenerateResponse, Topic } from '@/lib/api/types';
+import { admissionDropSummary } from '@/lib/prompts/admission';
 import { orderTopicsForRail } from '@/lib/prompts/topic-tree';
 import { textRole } from '@/components/ui/typography';
 
@@ -30,6 +31,7 @@ function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateRespon
   // set read as the number that was asked for.
   const shortfall =
     result.requested_count > total ? ` (${total} of ${result.requested_count} requested)` : '';
+  const drops = admissionDropSummary(result.admission_drops, ['duplicate']);
   const judge =
     result.quality_gate === 'unavailable'
       ? ' Quality checks may have been unavailable for some suggestions, so an unflagged row may not have been checked.'
@@ -40,7 +42,8 @@ function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerateRespon
       {shortfall}
       {topicCount ? ` across ${plural(topicCount, 'topic')}` : ''}
       {duplicates}
-      {gated}. Accept the ones worth tracking.{judge}
+      {gated}. Accept the ones worth tracking.{drops ? ` ${drops}` : ''}
+      {judge}
     </Alert>
   );
 }

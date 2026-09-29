@@ -109,7 +109,12 @@ keeps at most `count` after judgment, preferring passing judgments while treatin
 uncertain and unjudged candidates equally, then spread across topic, stage, audience,
 situation, attribute and market; a
 shortfall is reported, never filled. `candidates_generated` counts what passed
-admission and is never a market size. Each candidate keeps its cell in
+admission and is never a market size. Every dropped row is counted under the
+first admission rule it broke (`admission_drops`, also frozen in run
+provenance), and the Generate dialog and agent handoff show that breakdown.
+Run provenance also records each dropped row's slot, normalized text hash,
+batch/index and admission phase alongside the generator and buyer-query policy versions.
+Drafts are written in the project's `language_code`, using English when it is blank. Each candidate keeps its cell in
 `evidence_refs`, copied into `generation_evidence` on accept.
 
 The [quality judge](../frontend/services/api/src/prompts/generation-quality.ts) runs
@@ -159,11 +164,16 @@ rewritten by a newer generator.
 **Build with Agent** opens a project-scoped chat with Prompt discovery selected.
 Its saved portfolio has an explicit **Review in Prompts** action. The existing
 generation endpoint accepts `agent_revision_id`, loads that authorized project's
-saved portfolio, validates its bounded core rows against current topic IDs, and
-applies the same admission, JEV and candidate staging path without another text
-generation call. Run provenance retains the exact output/revision/run references.
+saved portfolio, validates its bounded core rows, and applies the same
+admission, JEV and candidate staging path without another text generation call.
+The block's fence is matched case-insensitively; a row filed under an unknown
+topic is dropped as `unknown_topic` rather than failing the portfolio. The report
+hides the block only when there is exactly one closed JSON block with valid topic UUIDs
+and a nonempty row count within the UI generation ceiling. The API also enforces
+its configured runtime limit. Run provenance retains the exact output/revision/run references.
 It never activates prompts. Repeated submission drops tracked or pending copies.
-The handoff uses the deployment's default generation count and opens
+The handoff requests the portfolio's own question count, so selection never
+trims an approved plan to the default, and opens
 `/prompts?review=1`. Review intent survives loading; failed reads offer retry,
 and an empty or expired batch is explained rather than opening generation setup.
 Prompt-set creation waits for its list read and serializes local attempts per project.
@@ -204,8 +214,10 @@ Manual create, text edits, activation and import pass
 [topical binding](../frontend/services/api/src/prompts/binding.ts): the text
 must share a non-stopword token or exact phrase with the project's identity
 (brand and aliases, owned domains, topics, brand profile) or with the prompt's
-own topic; an empty vocabulary fails closed. Python generation applies the same
-rule to model output through its own validator.
+own topic; an empty vocabulary fails closed. Tokens keep every script's letters
+(Latin diacritics fold) and scripts written without spaces are split at ICU
+word boundaries; stopwords are English-only. Generation admission applies the
+same rule to drafted and proposed text.
 
 ## Audit admission and execution
 

@@ -8,6 +8,7 @@ import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
 import { createJevClient, jevSettings } from '../src/models/jev.ts';
 import { reviewCandidates } from '../src/prompts/candidates.ts';
 import { generationInput } from '../src/prompts/generation-input.ts';
+import { promptTextHash } from '../src/prompts/normalization.ts';
 import { generatePrompts } from '../src/prompts/generation.ts';
 import { billingAccount, grant, promptSet, topic } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
@@ -144,7 +145,7 @@ describe('prompt generation at the PostgreSQL boundary', () => {
         phase: 'draft',
         title: 'Portfolio',
         body:
-          '```json\n' +
+          '```JSON \n' +
           JSON.stringify({
             prompts: [
               {
@@ -152,6 +153,12 @@ describe('prompt generation at the PostgreSQL boundary', () => {
                 text: 'Which running shoes cushion knees?',
                 buyer_stage: 'consideration',
                 prompt_intent: 'recommend',
+              },
+              {
+                topic_id: randomUUID(),
+                text: 'Which running shoes suit wide feet?',
+                buyer_stage: 'decision',
+                prompt_intent: 'buy',
               },
             ],
           }) +
@@ -169,6 +176,7 @@ describe('prompt generation at the PostgreSQL boundary', () => {
       request = generationInput.parse({ agent_revision_id: revisionId });
     const result = await generatePrompts(db, tenant.workspaceId, setId, request, deps);
     expect(result.candidates).toHaveLength(1);
+    expect(result.admission_drops).toEqual({ unknown_topic: 1 });
     expect(deps.io.fetch).not.toHaveBeenCalled();
     const run = await db
       .selectFrom('prompt_generation_runs')
@@ -178,10 +186,23 @@ describe('prompt generation at the PostgreSQL boundary', () => {
     expect(run.provenance).toMatchObject({
       agent_revision_id: revisionId,
       agent_output_id: outputId,
+      admission_drops: { unknown_topic: 1 },
+      generator_version: policy.prompts.generation.version,
+      buyer_query_policy_version: policy.prompts.generation.policy_version,
+      admission_drop_records: [
+        {
+          reason: 'unknown_topic',
+          slot_id: 'agent-2',
+          normalized_text_hash: promptTextHash('Which running shoes suit wide feet?'),
+          phase: 'admission',
+          batch: 0,
+          row_index: 1,
+        },
+      ],
     });
-    expect(
-      (await generatePrompts(db, tenant.workspaceId, setId, request, deps)).candidates,
-    ).toEqual([]);
+    const repeated = await generatePrompts(db, tenant.workspaceId, setId, request, deps);
+    expect(repeated.candidates).toEqual([]);
+    expect(repeated.admission_drops).toEqual({ unknown_topic: 1, duplicate: 1 });
     const other = await fixtures.tenant(),
       otherSet = await promptSet(db, other.projectId);
     await topic(db, other.projectId, 'Running shoes');
