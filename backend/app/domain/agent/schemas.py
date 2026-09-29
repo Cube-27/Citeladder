@@ -75,6 +75,14 @@ class InstructionsUpdate(_Model):
     text: str = Field(max_length=AGENT_INSTRUCTIONS_MAX_CHARS)
 
 
+class RunStepView(_Model):
+    """One step of an active run: a model call in flight, or its outcome."""
+
+    ordinal: int
+    status: str
+    tool: str | None
+
+
 class RunView(_Model):
     id: uuid.UUID
     status: str
@@ -86,6 +94,8 @@ class RunView(_Model):
     error_detail: str
     created_at: datetime
     completed_at: datetime | None
+    # Committed steps of the current attempt while the run is active.
+    progress: list[RunStepView] = Field(default_factory=list)
 
 
 class MessageView(_Model):

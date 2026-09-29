@@ -230,6 +230,12 @@ async def _fenced_run(
     return run
 
 
+def frozen_timeout_seconds(run: AgentRun) -> float:
+    """The per-call time bound frozen on the run at admission."""
+    frozen = (run.budget or {}).get("execution_timeout_seconds")
+    return float(frozen or default_agent_settings.execution_timeout_seconds)
+
+
 async def start_model_attempt(
     session: AsyncSession,
     *,
@@ -289,8 +295,7 @@ async def start_model_attempt(
         reserved_credits=hold[1],
         request_hash=hashlib.sha256(request_text.encode("utf-8")).hexdigest(),
         dispatched_at=now,
-        deadline_at=now
-        + timedelta(seconds=default_agent_settings.execution_timeout_seconds),
+        deadline_at=now + timedelta(seconds=frozen_timeout_seconds(run)),
         settlement_status=(
             "pending" if run.funding_source == FUNDING_PLATFORM else "not_applicable"
         ),
@@ -324,12 +329,13 @@ async def call_model(
         request_text=f"{system}\n\n{user}",
     )
     attempt_id = attempt.id
+    timeout_seconds = (attempt.deadline_at - attempt.dispatched_at).total_seconds()
     try:
         response = await asyncio.wait_for(
             gateway.complete_structured(
                 system=system, user=user, schema_name=schema_name, schema=schema
             ),
-            timeout=default_agent_settings.execution_timeout_seconds,
+            timeout=timeout_seconds,
         )
     except Exception as exc:
         await record_model_failure(

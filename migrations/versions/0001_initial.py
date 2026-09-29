@@ -7014,6 +7014,7 @@ def upgrade() -> None:
         sa.Column("runtime_version", sa.String(length=32), nullable=False),
         sa.Column("protocol_version", sa.String(length=32), nullable=False),
         sa.Column("registry_version", sa.String(length=32), nullable=False),
+        sa.Column("skill_catalog_version", sa.String(length=32), nullable=False),
         sa.Column("funding_source", sa.String(length=24), nullable=False),
         sa.Column("route_id", sa.UUID(), nullable=True),
         sa.Column("connection_id", sa.UUID(), nullable=True),

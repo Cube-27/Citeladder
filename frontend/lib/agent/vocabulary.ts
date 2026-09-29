@@ -132,6 +132,7 @@ const RUN_ERROR_COPY: Record<string, string> = {
     'The agent stopped at its step limit before finishing. Nothing was saved; ask again with a narrower request.',
   access_revoked: 'You no longer have permission to run the agent in this workspace.',
   model_changed: 'The agent model changed after this request was queued. Send it again.',
+  skills_changed: 'The agent was updated after this request was queued. Send it again.',
   output_conflict:
     'The output changed while the agent was working, so its revision was not saved. Ask again to revise the latest version.',
   route_unavailable:
@@ -142,6 +143,25 @@ const RUN_ERROR_COPY: Record<string, string> = {
   tool_failed: 'A data read failed. Try again.',
   protocol_violation: 'The agent returned a response it could not use. Try again.',
 };
+
+type RunStep = { status: string; tool: string | null };
+
+const READ_OUTCOME_SUFFIX: Record<string, string> = {
+  completed: '',
+  unavailable: ' · no data yet',
+  refused: ' · not allowed',
+  failed: ' · failed',
+};
+
+/** One live step of an active run, in the reader's terms. */
+export function runStepLabel(step: RunStep): string {
+  if (step.tool) {
+    const read = step.tool.replaceAll('_', ' ');
+    const suffix = READ_OUTCOME_SUFFIX[step.status] ?? '';
+    return `${read.charAt(0).toUpperCase()}${read.slice(1)}${suffix}`;
+  }
+  return step.status === 'working' ? 'Deciding the next step…' : 'Planned the next step';
+}
 
 export function runErrorCopy(code: string): string {
   return RUN_ERROR_COPY[code] ?? 'The agent could not finish this request. Try again.';

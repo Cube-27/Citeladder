@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
-import { runErrorCopy } from '@/lib/agent/vocabulary';
+import { runErrorCopy, runStepLabel } from '@/lib/agent/vocabulary';
 import { runOutcome } from '@/lib/agent/run-state';
-import type { AgentChatDetail, AgentMessage } from '@/lib/api/agent';
+import type { AgentChatDetail, AgentMessage, AgentRun } from '@/lib/api/agent';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
 
@@ -49,7 +49,12 @@ export function Conversation({
         ))}
       </ol>
       {outputView ? <div className={panelClasses({}, 'min-w-0')}>{outputView}</div> : null}
-      <RunState outcome={outcome} onStop={onStop} stopping={stopping} />
+      <RunState
+        outcome={outcome}
+        progress={detail.latest_run?.progress ?? []}
+        onStop={onStop}
+        stopping={stopping}
+      />
       {output?.latest_revision && canSend && outcome.kind !== 'running' ? (
         <fieldset aria-label="Quick refinements" className="flex flex-wrap gap-2">
           {REFINEMENTS.map((instruction) => (
@@ -125,24 +130,37 @@ function stepLabel(step: AgentMessage['steps'][number]): string {
 
 function RunState({
   outcome,
+  progress,
   onStop,
   stopping,
 }: Readonly<{
   outcome: ReturnType<typeof runOutcome>;
+  progress: AgentRun['progress'];
   onStop: () => void;
   stopping: boolean;
 }>) {
   switch (outcome.kind) {
     case 'running':
       return (
-        <output className={cn('flex items-center gap-3', textRole('body'))}>
-          <Spinner className="text-muted" />
-          <span className="flex-1">
-            {outcome.queued ? 'Waiting to start…' : 'The agent is working…'}
+        <output className={cn('grid gap-2', textRole('body'))}>
+          <span className="flex items-center gap-3">
+            <Spinner className="text-muted" />
+            <span className="flex-1">
+              {outcome.queued ? 'Waiting to start…' : 'The agent is working…'}
+            </span>
+            <Button variant="ghost" size="sm" disabled={stopping} onClick={onStop}>
+              Stop
+            </Button>
           </span>
-          <Button variant="ghost" size="sm" disabled={stopping} onClick={onStop}>
-            Stop
-          </Button>
+          {progress.length > 0 ? (
+            <ol aria-label="Agent progress" className="grid gap-1 ps-8">
+              {progress.map((step) => (
+                <li key={step.ordinal} className={textRole('caption')}>
+                  {runStepLabel(step)}
+                </li>
+              ))}
+            </ol>
+          ) : null}
         </output>
       );
     case 'stopped_at_limit':

@@ -42,7 +42,11 @@ function revision(id: string, number: number, author: 'agent' | 'user', body: st
 
 function detail(
   latest: ReturnType<typeof revision>,
-  run: { status: string; error_code?: string } = { status: 'succeeded' },
+  run: {
+    status: string;
+    error_code?: string;
+    progress?: { ordinal: number; status: string; tool: string | null }[];
+  } = { status: 'succeeded' },
 ) {
   return {
     chat: {
@@ -97,6 +101,7 @@ function detail(
       error_detail: '',
       created_at: NOW,
       completed_at: NOW,
+      progress: run.progress ?? [],
     },
     output: {
       id: OUTPUT,
@@ -300,6 +305,30 @@ describe('ChatScreen', () => {
     expect(await screen.findByText(/stopped at its step limit/i)).toBeVisible();
     expect(screen.queryByText(/could not finish/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Make it shorter' })).toBeEnabled();
+  });
+
+  it('shows what a running turn has done so far', async () => {
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json(
+          detail(revision(REV1, 1, 'agent', 'Body.'), {
+            status: 'running',
+            progress: [
+              { ordinal: 1, status: 'unavailable', tool: 'read_site_health' },
+              { ordinal: 2, status: 'working', tool: null },
+            ],
+          }),
+        ),
+      ),
+    );
+    renderChat();
+
+    const steps = within(await screen.findByRole('list', { name: 'Agent progress' }));
+    expect(steps.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Read site health · no data yet',
+      'Deciding the next step…',
+    ]);
   });
 
   it('refuses edits while a turn is running and offers Stop', async () => {

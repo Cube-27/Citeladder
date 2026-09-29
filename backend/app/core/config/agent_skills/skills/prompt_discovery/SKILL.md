@@ -131,8 +131,8 @@ UUID); the app hides it from the readable view:
 ```
 
 Include only new unbranded core questions in that block, at most 100.
-Valid buyer stages: awareness, consideration, decision, implementation.
-Valid prompt intents: learn, solve, compare, recommend, validate, buy, implement.
+Valid buyer stages: {{buyer_stages}}.
+Valid prompt intents: {{prompt_intents}}.
 Do not invent topic IDs or add keys to these submission rows. The user submits
 this saved revision for admission and quality checks, then explicitly accepts
 candidates in Prompts. Submission never activates tracking.

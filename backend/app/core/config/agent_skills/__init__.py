@@ -4,16 +4,21 @@ Each skill is one ``skills/<id>/SKILL.md`` methodology with scalar YAML
 frontmatter. ``operating_contract.md`` applies to every turn, and
 ``content_formats.md`` holds one section per content format so a run loads only
 the format it writes. This module discovers, parses and validates those files;
-it does not interpret their content. The files are production model input, not
+it does not interpret their content beyond expanding declared vocabulary
+placeholders (``{{name}}``), so an enumeration the application owns is never
+hand-copied into model input. The files are production model input, not
 coding-agent skills, and are never exposed to users or to MCP.
 """
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
+
+from app.core.config.visibility_prompts import BUYER_STAGES, PROMPT_INTENT_VOCABULARY
 
 SKILL_GROUPS: Final[tuple[str, ...]] = (
     "strategy",
@@ -42,7 +47,17 @@ OUTLINE_FIRST_OUTPUT_KINDS: Final[frozenset[str]] = frozenset(
 )
 # Kinds whose outline is shaped by a content format.
 CONTENT_FORMAT_OUTPUT_KINDS: Final[frozenset[str]] = frozenset({"content"})
-AGENT_SKILL_CATALOG_VERSION: Final = "agent-skills-v2"
+# Author bounds. Every selected skill body lands in the per-step system prompt,
+# so a body is capped rather than allowed to grow without review.
+SKILL_DESCRIPTION_MAX_CHARS: Final = 320
+SKILL_BODY_MAX_CHARS: Final = 14_000
+# Vocabularies a skill body may reference as ``{{name}}``. Each is the owner's
+# one listing; the loader expands it so the body cannot drift from it.
+SKILL_VOCABULARIES: Final[dict[str, tuple[str, ...]]] = {
+    "buyer_stages": BUYER_STAGES,
+    "prompt_intents": PROMPT_INTENT_VOCABULARY,
+}
+_PLACEHOLDER: Final = re.compile(r"\{\{([a-z_]+)\}\}")
 _REQUIRED_METADATA: Final = frozenset(
     {"id", "label", "group", "order", "version", "output_kind", "description"}
 )
@@ -103,6 +118,17 @@ def _load_skill(path: Path) -> AgentSkill:
         raise ValueError(f"{path}: unknown output kind {metadata['output_kind']!r}")
     if not body:
         raise ValueError(f"{path}: skill body must not be empty")
+    description = metadata["description"]
+    if not description or len(description) > SKILL_DESCRIPTION_MAX_CHARS:
+        raise ValueError(
+            f"{path}: description must be 1-{SKILL_DESCRIPTION_MAX_CHARS} characters"
+        )
+    body = _expand_vocabularies(path, body)
+    if len(body) > SKILL_BODY_MAX_CHARS:
+        raise ValueError(
+            f"{path}: body is {len(body)} characters; the bound is "
+            f"{SKILL_BODY_MAX_CHARS}"
+        )
     try:
         order = int(metadata["order"])
         version = int(metadata["version"])
@@ -117,9 +143,19 @@ def _load_skill(path: Path) -> AgentSkill:
         order=order,
         version=version,
         output_kind=metadata["output_kind"],
-        description=metadata["description"],
+        description=description,
         body=body,
     )
+
+
+def _expand_vocabularies(path: Path, body: str) -> str:
+    def _expand(match: re.Match[str]) -> str:
+        values = SKILL_VOCABULARIES.get(match.group(1))
+        if values is None:
+            raise ValueError(f"{path}: unknown vocabulary {match.group(0)!r}")
+        return ", ".join(values)
+
+    return _PLACEHOLDER.sub(_expand, body)
 
 
 def _load_registry() -> dict[str, AgentSkill]:
@@ -161,3 +197,22 @@ OPERATING_CONTRACT: Final = (_ROOT / "operating_contract.md").read_text(
 )
 CONTENT_FORMAT_PREAMBLE, CONTENT_FORMATS = _load_formats(_ROOT / "content_formats.md")
 CONTENT_FORMAT_IDS: Final[tuple[str, ...]] = tuple(CONTENT_FORMATS)
+
+
+def _catalog_version() -> str:
+    """A content fingerprint of every file that becomes model input.
+
+    Derived rather than hand-bumped, so any change to a skill, the operating
+    contract or a content format yields a new version. A run freezes it at
+    admission and refuses to execute against a different catalog.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(_ROOT.rglob("*.md")):
+        digest.update(path.relative_to(_ROOT).as_posix().encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return f"agent-skills-{digest.hexdigest()[:16]}"
+
+
+AGENT_SKILL_CATALOG_VERSION: Final = _catalog_version()

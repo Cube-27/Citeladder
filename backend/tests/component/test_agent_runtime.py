@@ -19,12 +19,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.gateway import ModelResult
+from app.core.config import agent as agent_config
 from app.core.config import settings
 from app.core.config.agent import default_agent_settings
 from app.core.config.app_models import APP_FEATURE_AGENT
 from app.core.config.entitlements import KEY_AI_CREDITS
 from app.core.security import encrypt_secret
-from app.domain.agent import model_calls, service
+from app.domain.agent import model_calls, runtime, service
 from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.ledger import consumable_usage
 from app.domain.opportunities.actions import get_action
@@ -397,7 +398,7 @@ async def test_the_turn_stops_at_its_step_budget_without_saving(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(service, "AGENT_MAX_STEPS", 2)
+    monkeypatch.setattr(agent_config, "AGENT_MAX_STEPS", 2)
     project_id = await _project(client, "agent-budget@example.com")
     await _verified_route(session_factory, project_id)
     chat_id = await _start(
@@ -601,6 +602,99 @@ async def test_a_customer_route_revoked_after_admission_is_never_used(
     )
     # Never sent anywhere, and never silently moved to platform funding.
     assert gateway.prompts == []
+
+
+async def test_a_turn_admitted_against_other_skills_never_reaches_the_model(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = await _project(client, "agent-skills-changed@example.com")
+    await _verified_route(session_factory, project_id)
+    chat_id = await _start(client, project_id, "Summarize.", skill_id="growth_plan")
+    # A deploy between queueing and execution changed the packaged skills.
+    monkeypatch.setattr(runtime, "AGENT_SKILL_CATALOG_VERSION", "agent-skills-next")
+    gateway = ScriptedGateway([{"action": "respond", "reply": "Summary."}])
+
+    await _worker(session_factory, gateway).run_once()
+
+    detail = await _detail(client, chat_id)
+    assert (detail["latest_run"]["status"], detail["latest_run"]["error_code"]) == (
+        "failed",
+        "skills_changed",
+    )
+    assert gateway.prompts == []
+
+
+async def test_a_queued_turn_keeps_the_time_bound_it_was_admitted_with(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = await _project(client, "agent-frozen-timeout@example.com")
+    await _verified_route(session_factory, project_id)
+    admitted = default_agent_settings.execution_timeout_seconds
+    await _start(client, project_id, "Summarize.", skill_id="growth_plan")
+    monkeypatch.setattr(
+        default_agent_settings, "execution_timeout_seconds", admitted * 2
+    )
+
+    await _worker(
+        session_factory, ScriptedGateway([{"action": "respond", "reply": "Done."}])
+    ).run_once()
+
+    async with session_factory() as session:
+        attempt = await session.scalar(select(AgentModelAttempt))
+    assert attempt is not None
+    assert (attempt.deadline_at - attempt.dispatched_at).total_seconds() == admitted
+
+
+class ObservingGateway(ScriptedGateway):
+    """Records what the chat shows about the run each time the model is asked."""
+
+    def __init__(self, steps: list[dict[str, Any]], observe: Any) -> None:
+        super().__init__(steps)
+        self._observe = observe
+        self.seen: list[list[dict[str, Any]]] = []
+
+    async def complete_structured(self, **kwargs: Any) -> ModelResult:
+        self.seen.append(await self._observe())
+        return await super().complete_structured(**kwargs)
+
+
+async def test_an_active_turn_shows_its_committed_steps_as_they_happen(
+    client: httpx.AsyncClient, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    project_id = await _project(client, "agent-progress@example.com")
+    await _verified_route(session_factory, project_id)
+    chat_id = await _start(client, project_id, "Check site health.")
+
+    async def observe() -> list[dict[str, Any]]:
+        return (await _detail(client, chat_id))["latest_run"]["progress"]
+
+    gateway = ObservingGateway(
+        [
+            {"action": "select_skill", "skill_id": "technical_health"},
+            {"action": "call_tool", "tool": "read_site_health", "arguments": {}},
+            {"action": "respond", "reply": "No crawl yet."},
+        ],
+        observe,
+    )
+
+    await _worker(session_factory, gateway).run_once()
+
+    working = {"status": "working", "tool": None}
+    assert gateway.seen == [
+        [{"ordinal": 1, **working}],
+        [{"ordinal": 1, "status": "reasoned", "tool": None}, {"ordinal": 2, **working}],
+        [
+            {"ordinal": 1, "status": "reasoned", "tool": None},
+            {"ordinal": 2, "status": "unavailable", "tool": "read_site_health"},
+            {"ordinal": 3, **working},
+        ],
+    ]
+    # A finished turn's summary lives on its reply; progress is for live runs.
+    assert (await _detail(client, chat_id))["latest_run"]["progress"] == []
 
 
 async def test_a_member_who_loses_run_access_never_reaches_the_model(

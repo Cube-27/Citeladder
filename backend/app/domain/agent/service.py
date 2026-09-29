@@ -25,8 +25,6 @@ from app.core.config.abuse import abuse_settings
 from app.core.config.agent import (
     AGENT_CHAT_TITLE_MAX_CHARS,
     AGENT_CHAT_TURN_LIMIT,
-    AGENT_MAX_STEPS,
-    AGENT_MAX_TOOL_CALLS,
     AGENT_PROTOCOL_VERSION,
     AGENT_REVISION_LIST_MAX,
     AGENT_RUNTIME_VERSION,
@@ -38,9 +36,13 @@ from app.core.config.agent import (
     SKILL_SOURCE_ACTION,
     SKILL_SOURCE_CHAT,
     SKILL_SOURCE_USER,
+    admission_budget,
     default_agent_settings,
 )
-from app.core.config.agent_skills import AGENT_SKILL_REGISTRY
+from app.core.config.agent_skills import (
+    AGENT_SKILL_CATALOG_VERSION,
+    AGENT_SKILL_REGISTRY,
+)
 from app.core.config.app_models import APP_FEATURE_AGENT
 from app.core.config.entitlements import KEY_AGENT
 from app.core.config.task_queue import (
@@ -61,6 +63,7 @@ from app.domain.agent.model_calls import (
     FUNDING_PLATFORM,
     is_development_login,
 )
+from app.domain.agent.progress import run_progress
 from app.domain.agent.tool_catalog import AGENT_TOOL_REGISTRY_VERSION
 from app.domain.billing.accounts import billing_account_id_for
 from app.domain.billing.catalog_revisions import (
@@ -329,10 +332,11 @@ async def _enqueue_turn(
         requested_skill_id=requested_skill,
         requested_skill_source=skill_source,
         context_manifest=manifest,
-        budget={"max_steps": AGENT_MAX_STEPS, "max_tool_calls": AGENT_MAX_TOOL_CALLS},
+        budget=admission_budget(),
         runtime_version=AGENT_RUNTIME_VERSION,
         protocol_version=AGENT_PROTOCOL_VERSION,
         registry_version=AGENT_TOOL_REGISTRY_VERSION,
+        skill_catalog_version=AGENT_SKILL_CATALOG_VERSION,
         **funding,
     )
     session.add(run)
@@ -632,6 +636,7 @@ async def chat_detail(
         .order_by(AgentRun.created_at.desc(), AgentRun.id.desc())
         .limit(1)
     )
+    progress = await run_progress(session, latest_run) if latest_run else []
     output = await outputs.output_for_chat(session, chat=chat)
     revision = await outputs.latest_revision(session, output=output) if output else None
     action_label = (
@@ -648,6 +653,7 @@ async def chat_detail(
         "action_label": action_label,
         "messages": messages,
         "latest_run": latest_run,
+        "progress": progress,
         "output": output,
         "revision": revision,
     }

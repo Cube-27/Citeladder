@@ -192,6 +192,8 @@ class AgentRun(_ProjectScoped, QueueLeaseStateMixin, Base):
     runtime_version: Mapped[str] = mapped_column(String(32))
     protocol_version: Mapped[str] = mapped_column(String(32))
     registry_version: Mapped[str] = mapped_column(String(32))
+    # Content fingerprint of the skill catalog the turn was admitted against.
+    skill_catalog_version: Mapped[str] = mapped_column(String(32))
     funding_source: Mapped[str] = mapped_column(String(24))
     route_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),

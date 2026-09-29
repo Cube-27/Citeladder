@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.core.config.agent import (
     AGENT_REPLY_MAX_CHARS,
+    AGENT_TRANSCRIPT_MAX_CHARS,
     RUN_MODE_DRAFT_FROM_OUTLINE,
     RUN_MODE_TURN,
 )
@@ -11,9 +12,11 @@ from app.core.config.agent_skills import AGENT_SKILL_REGISTRY
 from app.domain.agent.prompting import (
     REPLY_TRUNCATED_MARKER,
     UNVERIFIED_REF_PLACEHOLDER,
+    TurnState,
     bound_reply,
     outline_required,
     strip_unverified_refs,
+    user_text,
 )
 
 _CONTENT = AGENT_SKILL_REGISTRY["content_create"]
@@ -72,3 +75,43 @@ def test_an_oversized_reply_is_cut_at_its_bound_and_says_so() -> None:
     cut = bound_reply(short + "overflow")
 
     assert cut == short + REPLY_TRUNCATED_MARKER
+
+
+def _state(*, body: str, steps: list[str]) -> TurnState:
+    return TurnState(
+        context_text="Business context.",
+        history=[],
+        request="Rewrite the pricing page.",
+        current_output={
+            "number": 1,
+            "phase": "draft",
+            "title": "t",
+            "body": body,
+            "outline_approved": True,
+        },
+        mode=RUN_MODE_TURN,
+        steps=steps,
+    )
+
+
+def test_a_long_transcript_keeps_its_head_and_the_newest_steps() -> None:
+    steps = [f"Step {n}: " + "x" * 2_000 for n in range(60)]
+
+    text = user_text(_state(body="Draft.", steps=steps))
+
+    assert len(text) <= AGENT_TRANSCRIPT_MAX_CHARS
+    assert "Rewrite the pricing page." in text
+    assert "[earlier steps truncated]" in text
+    assert text.endswith(steps[-1])
+
+
+def test_a_head_that_fills_the_bound_carries_no_step_text() -> None:
+    # A near-maximal output leaves no room; the steps must not be re-appended
+    # wholesale (a non-positive slice bound would keep the entire transcript).
+    body = "y" * AGENT_TRANSCRIPT_MAX_CHARS
+    steps = [f"Step {n}: " + "z" * 1_000 for n in range(10)]
+
+    text = user_text(_state(body=body, steps=steps))
+
+    assert "Rewrite the pricing page." in text
+    assert "z" * 1_000 not in text

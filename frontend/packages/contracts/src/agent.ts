@@ -14,6 +14,15 @@ export const agentRunStatusSchema = z.enum([
   'cancelled',
 ]);
 
+// One committed step of an active run: a model call still in flight
+// (`working`), one that returned without reading (`reasoned`), or a read's
+// outcome (`completed`, `unavailable`, `failed`, `refused`).
+export const agentRunStepSchema = responseObject({
+  ordinal: z.number().int(),
+  status: z.string(),
+  tool: z.string().nullable(),
+});
+
 export const agentRunSchema = responseObject({
   id: uuid(),
   status: agentRunStatusSchema,
@@ -25,6 +34,7 @@ export const agentRunSchema = responseObject({
   error_detail: z.string(),
   created_at: z.string(),
   completed_at: z.string().nullable(),
+  progress: z.array(agentRunStepSchema).default([]),
 });
 
 export const agentOutputPhaseSchema = z.enum(['outline', 'draft', 'final']);

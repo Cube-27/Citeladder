@@ -45,6 +45,13 @@
   re-sequenced order. Deployment of PRs 3–11 and their one-week cutover soaks
   are pending.
 
+- [Agent capabilities](citeladder-agent-capabilities.md)
+  — planned on 29 September 2026 from an external Agent audit (guidance, not
+  authority; triaged against the invariants). PR 1 (skills contract, run
+  precision, live step progress) is implemented in
+  `claude/practical-gates-oq7898`. PRs 2–7 are proposed and await owner
+  approval; streaming and gateway consolidation fold into TypeScript PR 19.
+
 ## Queued
 - [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)
   — plan saved on 26 September 2026; implementation not started. Customer

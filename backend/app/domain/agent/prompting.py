@@ -274,14 +274,17 @@ def user_text(state: TurnState) -> str:
             "evidence requires a change you explain in the reply."
         )
     parts += ["## Current request", state.request]
+    head_parts = len(parts)  # context, conversation, output and the request
     if state.steps:
         parts.append("## Steps taken this turn")
         parts += state.steps
     text = "\n\n".join(parts)
     if len(text) > AGENT_TRANSCRIPT_MAX_CHARS:
         # Keep the head (context, request) and the newest steps.
-        head = "\n\n".join(parts[: parts.index("## Current request") + 2])
-        tail = text[-(AGENT_TRANSCRIPT_MAX_CHARS - len(head) - 64) :]
+        head = "\n\n".join(parts[:head_parts])
+        room = AGENT_TRANSCRIPT_MAX_CHARS - len(head) - 64
+        # A head that fills the bound keeps no steps (text[-0:] is all of it).
+        tail = text[-room:] if room > 0 else ""
         text = f"{head}\n\n[earlier steps truncated]\n\n{tail}"
     return text
 

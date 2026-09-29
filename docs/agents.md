@@ -32,9 +32,11 @@ at most one active run, and an idempotency key replays the same run. Reads
 return persisted state and never execute a turn.
 
 Admission checks workspace role, the Agent capability and a funding route, then
-freezes on the run the runtime/protocol versions, skill and registry versions,
-step/tool/size budgets and funding identity. A configuration change never
-alters a queued turn. Budgets live in
+freezes on the run the runtime/protocol versions, the skill catalog and tool
+registry versions, step/tool/size budgets, the per-call time bound and funding
+identity. A configuration change never alters a queued turn, and a turn whose
+skill catalog changed before it ran (a deploy in between) ends with
+`skills_changed` before any model call. Budgets live in
 [Agent configuration](../backend/app/core/config/agent.py).
 
 A chat owns one deliverable of one kind. Agent saves and user edits both append
@@ -51,6 +53,12 @@ Approving or generating an output is not an implementation declaration: the
 output pane's **Mark implemented** declares the attached Action implemented
 with the revision on screen and then shows what each loop leg is waiting
 for; see [declaration](opportunities.md#explicit-implementation-declaration).
+
+While a run is active, the chat read also returns the
+[committed steps](../backend/app/domain/agent/progress.py) of its current
+attempt, projected from its model and tool attempt rows: a call in flight, a
+step that returned without a read, or a read's outcome. The conversation shows
+them under the running indicator; the runtime writes nothing extra for it.
 
 The chat list pages by keyset cursor, can be narrowed to the chats linked to one
 Action, and names each chat's target. An Action's workflow status is derived
@@ -145,7 +153,8 @@ organic results for that prompt: heading topics, table structures and outbound
 source domains. Every parity or gap figure carries its inspected-page numerator
 and denominator, and "unique" means absent from that inspected set. Organic
 comparison rows never create Citation rows, enter Sources counts or affect
-Visibility scoring.
+Visibility scoring. The `ai_visibility` skill owns the methodology for reading
+them.
 
 ## Skills
 
@@ -153,7 +162,12 @@ The [internal skill catalog](../backend/app/core/config/agent_skills/__init__.py
 loads the packaged `SKILL.md` methodologies, one shared operating contract and a
 content-format reference that the `content_create` skill draws on one format at
 a time. These files are production model input, not coding-agent skills.
-Packaging is declared in `backend/pyproject.toml`.
+Packaging is declared in `backend/pyproject.toml`. The catalog version is a
+content fingerprint of those files. A body may name an application-owned
+vocabulary as `{{name}}`, which the loader expands from its owner's one listing
+(prompt buyer stages and intents), so the list is never hand-copied. The loader
+bounds descriptions and bodies, and a contract test requires every tool a skill
+names to be offered to the Agent.
 
 Users may select a skill by name. The catalog endpoint returns only its label,
 description, group and output kind; skill bodies are never returned to users or
@@ -192,6 +206,7 @@ keyed `agent`.
 The [runtime component suite](../backend/tests/component/test_agent_runtime.py)
 drives the real worker, runtime, tool catalog and persistence with a scripted
 model. It covers evidence-backed Action-linked outputs, follow-up revision of a
-user edit, outline-first enforcement, budget exhaustion, refusal of project
+user edit, outline-first enforcement, budget exhaustion, the frozen skill catalog and
+time bound, live step progress, refusal of project
 selection and unknown tools, single active run, idempotent replay, funding
 admission, workspace isolation, per-step settlement and unknown-usage recovery.

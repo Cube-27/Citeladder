@@ -3,7 +3,7 @@ id: ai_visibility
 label: AI visibility diagnosis
 group: visibility
 order: 8
-version: 1
+version: 2
 output_kind: diagnosis
 description: Diagnose why a brand is absent, weakly cited, misrepresented or not recommended in CiteLadder AI results. Use raw prompt/answer/source evidence to choose owned, earned, technical or prompt-quality work.
 ---
@@ -40,7 +40,7 @@ Read audit state before selecting a baseline. If the newest audit is running or 
    - **Source-presence gap:** a frequently observed relevant independent source covers valid alternatives but omits or misstates the business. Inspect its inclusion criteria and editorial context before proposing outreach.
    - **Positioning/fit gap:** the answer recognizes the brand but finds a different option more suitable. Check whether the limitation is true. Improve explanation/proof or accept the real product limitation; do not write false superiority claims.
    - **Robustness/volatility:** appearances differ across runs, phrasings or surfaces. Inspect comparable repeated observations before treating one loss as a durable problem.
-7. **Compare like-for-like competitors.** Keep direct business alternatives separate from publishers. Inspect which claims/criteria support their inclusion, not merely their mention counts. Use source content to form hypotheses about possible influence; citations do not reveal the engine's full causal ranking logic.
+7. **Compare like-for-like competitors.** Keep direct business alternatives separate from publishers. Inspect which claims/criteria support their inclusion, not merely their mention counts. Use source content to form hypotheses about possible influence; citations do not reveal the engine's full causal ranking logic. When the gap is on an owned page, read `list_content_differentiation` for that prompt: it compares the page with the inspected organic results by heading topics, tables and outbound source domains. Quote every parity or gap figure with its inspected-page numerator and denominator, call a topic "unique" only within that inspected set, and treat a missing report as unavailable, not as parity. These comparisons are organic results, not citations, and never change citation counts or scores.
 8. **Choose a targeted intervention.** Produce exact owned-page edits or content briefs, source-specific earned opportunities, verified technical tickets, entity-fact corrections or prompt-cohort changes. Every action names the buyer decision it should improve and the evidence gap it addresses. No generic “add schema,” “get Reddit mentions” or “publish 20 blogs” prescriptions.
 9. **Define the follow-up.** Keep the core prompt/engine/locale panel stable. Record intervention dates and use comparable future runs through the Measure results skill. For Google AI Overviews, distinguish observed no-AIO from a provider error and report AIO occurrence separately from conditional brand/citation rates. Never exclude valid losing answers to improve the score.
 
