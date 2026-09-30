@@ -1,218 +1,340 @@
 # Agent capabilities
 
-## Status and authorization
+## Status and scope
 
-Planned on 29 September 2026 from an external audit of the Agent (skills,
-runtime and a competitive comparison with Peec.ai, Searchable, Profound and
-other GEO platforms), then rescoped by the owner the same day: deliver an
-agentic experience comparable to Peec, Searchable or Notion AI **using only
-the reads, skills and data CiteLadder already has** — no new tools, no
-uploads, no external mutation — with the UI doing most of the work. The audit
-is guidance, not authority; see [triage](#audit-triage).
+Revised on 30 September 2026 at the owner's request. The clarified objective
+is **a ChatGPT/Claude-like conversation inside CiteLadder, guided by defined
+skills and workflows**. The current document UI is satisfactory. Improve the
+experience of talking to the Agent without adding a more complicated workspace.
 
-Foundations and MVP items 1–4 are implemented together in branch
-`claude/practical-gates-oq7898` at the owner's direction. Items 5–8 need
-owner approval before they start; this plan is not authorization to run them.
-The Agent moves to TypeScript in
-[TypeScript migration PR 19](citeladder-typescript-migration.md#pr-19-agent-runtime),
-so the MVP is deliberately frontend-, config- and skill-heavy: those carry over
-unchanged, while new Python surface would be ported twice.
+This is a plan revision, not implementation authorization. Foundations and MVP
+items 1–4 are present in this checkout: local history records the MVP in
+`6a490d78` (#203) and evidence/handoff fixes in `f7c369fc` (#206). This replaces
+the earlier branch-only status; it does not establish deployment or fresh
+runtime validation. Items 5–8 remain unimplemented proposals; the recommended
+scope and order below supersede their original estimates and priority.
 
-Owner documentation: [Agent](../agents.md). Invariants most affected: 10
-(automation stays bounded, durable-memory promotion needs an explicit user
-decision), 11 (context is selected and frozen), 12 (no second model call or
-claim-validator layer) and 13 (bounded orchestration, no write tool).
+Owner: [Agent](../agents.md). Follow [Design](../design.md), the
+[frontend architecture](../frontend-architecture.md) and
+[invariants 10–13](../invariants.md#10-automation-stays-bounded).
 
-## Goal
+**No pending TypeScript migration blocks conversation UI refinement.** The
+frontend and shared contracts are already TypeScript. The Agent API and worker
+remain Python. Small operating-contract/prompting improvements can accompany
+the UI with focused coverage; substantial runtime, persistence and streaming
+work should follow the Agent's TypeScript cutover.
 
-Make the Agent feel consultative and document-centred: the user sees what it
-is doing, can check every claim in one click, works on the deliverable like a
-document, and is always offered the sensible next step — while keeping what
-already sets CiteLadder apart (funded, leased, append-only, bounded turns over
-persisted, deterministic evidence).
+## Product outcome
 
-## Roadmap
+A user can ask a plain-language question, discuss the answer, correct an
+assumption, request work, and refine the result in one natural conversation.
+Skills supply the method behind that interaction. The user should not have to
+learn the skill catalog or choose a mode before talking.
 
-| # | Item | Status | Size |
-|---|---|---|---|
-| 0 | Foundations: skills contract, run precision, live step progress | Implemented | — |
-| 1 | Chat polish | Implemented | ~1 wk |
-| 2 | Document canvas for the output | Implemented | 1.5–2 wks |
-| 3 | Composer: `/skill` commands and `@` Action mentions | Implemented | ~1 wk |
-| 4 | "What should I work on?" briefing | Implemented | ~1 wk |
-| 5 | Continuity: Save to Context | Proposed | ~1 wk |
-| 6 | Plan mode | Proposed | 1.5–2 wks |
-| 7 | Skills gallery with per-project enablement | Proposed | ~1 wk |
-| 8 | Agent behavior evaluation corpus | Proposed | ~1 wk |
+The normal path is:
 
-The MVP is items 0–4 (about 4–5 weeks in total), now implemented; items 5–8
-add depth and safety. Item 8 should land before items 4–7 change model input.
+**Ask → use relevant context → answer or clarify → produce requested work →
+refine → offer a useful next step.**
 
-### 0. Foundations (implemented)
+The existing chat, document, sources, history and Action handoffs remain the
+product structure. Keep one chat with at most one deliverable kind. Ordinary
+questions and discussion do not require a deliverable or a new chat.
 
-Skills contract:
+Notion is a limited interaction reference: its Agent uses the current page or
+selected content as context and supports focused edits. That supports clearer
+context and follow-ups here, not a new page hierarchy or editor. See
+[Notion's Agent documentation](https://www.notion.com/help/notion-agent).
+The owner's clarified chat-first objective takes precedence.
 
-- The skill catalog version is a content fingerprint of every packaged model
-  input (skills, operating contract, content formats). Admission freezes it on
-  the run (`skill_catalog_version`); a turn executed against a different
-  catalog (a deploy between queueing and execution) ends with `skills_changed`
-  before any model call, as a changed platform model already does.
-- Skill bodies may reference an application-owned vocabulary as `{{name}}`.
-  The loader expands it from the owner's one listing and refuses an unknown
-  name; `prompt_discovery` now takes buyer stages and prompt intents from
-  `visibility_prompts.py` (rendered text unchanged, version not bumped).
-- The loader bounds each description (1–320 characters) and expanded body
-  (14,000 characters) with a file-and-field error.
-- A contract test requires every tool a packaged skill names to be offered.
-- `list_content_differentiation` gets a methodology home in `ai_visibility`
-  (version 2).
+Out of scope: document layout redesign, block editing, new panels/navigation,
+a workflow builder, multiple autonomous agents, a separate memory store,
+uploads, new read tools, web research, scheduled runs and external mutations.
 
-Run precision: the per-call time bound is frozen in the run budget; tool
-refusals distinguish the last step from a spent tool budget; a run whose
-member is gone ends with `access_revoked` instead of a nil-UUID stand-in;
-transcript truncation keeps no step text when the head fills the bound;
-`AGENT_RUNTIME_VERSION` is `agent-runtime-2`.
+## What is already implemented
 
-Live progress: the chat read returns an active run's committed steps from its
-attempt rows (a call in flight, a step without a read, or a read's outcome),
-shown under the running indicator. A projection; the runtime writes nothing.
+Retain these features rather than rebuilding them:
 
-### 1. Chat polish (implemented)
+| Original item | Implemented baseline |
+|---|---|
+| 0. Foundations | Frozen skill-catalog fingerprint and time budget, bounded skill loader, shared vocabulary, tool contract coverage, explicit refusal reasons and committed run progress |
+| 1. Chat polish | Evidence chips, copy reply, deliverable refinements, next-skill handoffs and starters that select a skill |
+| 2. Document canvas | Section edits as new user revisions, Agent revision requests, bounded comparison/history and the dedicated prompt-portfolio view |
+| 3. Composer | `/skill`, up to five typed Action mentions, server authorization and frozen Action diagnoses |
+| 4. Briefing | Explicit Brief me starts a growth-plan chat with the top open Actions; no background or scheduled briefing |
 
-- **Checkable claims.** Each reply's cited evidence renders as chips grouped
-  by record kind; a single record links to its own page (an Action, a
-  Visibility run), several link to the screen that shows them. The output's
-  Sources tab uses the same chips. References come from persisted rows; the
-  browser never resolves a record.
-- **Copy reply** on every agent reply.
-- **Refinements by deliverable kind** (same chat) and **next steps** that open
-  a new chat with the skill that takes the work forward (for example a
-  diagnosis offers page edits or earned sources; most deliverables offer a
-  measurement plan). A next step carries the attached Action and the output's
-  title only, never its evidence content.
-- **Starter prompts preselect their skill**, so a first question lands on
-  the right methodology without a model `select_skill` step.
+The [Agent owner](../agents.md) carries the detailed shipped contracts.
+Section edits preserve other sections; an **Agent** section-revision request
+still returns a complete document and does not deterministically lock other
+sections. Compare remains important.
 
-### 2. Document canvas (implemented)
+## Where refinement is needed
 
-- The output renders as sections (level 1–3 headings; headings inside code
-  fences are content). Outputs with three or more titled sections get a
-  contents list.
-- **Revise with agent** on any section sends an ordinary follow-up turn scoped
-  to that section ("Revise only the section … Keep every other section exactly
-  as it is."). The model still returns the complete body, as the protocol
-  requires, and the user can check the result with Compare.
-- **Edit** on any section edits just that section in place and saves a new
-  user revision with every other section byte-for-byte unchanged, on top of
-  the revision it started from (a stale base is refused and the text kept).
-- **Compare with current** in History shows a line diff from any earlier
-  revision to the current one, bounded so a very long output falls back to
-  viewing each revision.
-- Prompt portfolios keep their dedicated report view.
+These are code-grounded design targets, not claims from a live UX test.
 
-### 3. Composer: slash commands and mentions (implemented)
+| Current owner | Observation | Planned refinement |
+|---|---|---|
+| [Operating contract](../../backend/app/core/config/agent_skills/operating_contract.md), [prompting](../../backend/app/domain/agent/prompting.py) | The protocol permits a reply with no output, but the contract repeatedly asks for a deliverable; an outline-required skill adds an unconditional outline instruction | Make questions, clarifications and deliverable requests explicit conversational cases; outline approval remains mandatory when creating long-form work |
+| [Skill picker](../../frontend/components/agent/skill-picker.tsx), [admission](../../backend/app/domain/agent/service.py) | The picker can say Automatic while admission inherits a pinned, Action or output skill; omitting a skill does not necessarily clear the pin | Show the effective selection honestly; preserve compatible skills and do not imply a fresh router decision on every turn |
+| [Conversation](../../frontend/components/agent/conversation.tsx), [next steps](../../frontend/lib/agent/next-steps.ts) | Suggestions follow output kind, and a completed output keeps them visible even after later discussion | Keep suggestions optional, relevant and quiet; suppress repetitive suggestions after ordinary replies where the current DTO supports that decision |
+| [Chat screen](../../frontend/components/agent/chat-screen.tsx) | New messages, run-status changes and revisions trigger end scrolling | Follow the latest conversation only when the user is already at its end; preserve position while reading older replies or the document |
+| [Turn hooks](../../frontend/components/agent/use-chat-turns.ts), [run display](../../frontend/components/agent/conversation.tsx) | Polling exposes committed work, Stop and errors | Improve acknowledgement, activity hierarchy, draft preservation and recovery without inventing streamed text or hidden reasoning |
 
-- Typing `/` at a word start opens the skill list (the existing catalog, held
-  to the chat's output kind) and picks the turn's skill; the token is removed.
-- Typing `@` opens the project's open Actions (the existing work-queue read)
-  and mentions one; the token becomes `@<label>` and a removable chip. Arrows
-  move, Enter or Tab picks, Escape closes (Enter then sends). The menu is an
-  ARIA combobox/listbox.
-- Mentions are typed: new chats and follow-ups send up to five Action IDs
-  (`mentions`). Admission authorizes each to the chat's project (a foreign or
-  missing one refuses the turn with `agent_context_unavailable`), stores
-  `{kind, id, label}` on the user message (`agent_messages.mentions`), and
-  freezes each Action's deterministic diagnosis into the context manifest.
-  Opportunities those diagnoses name become citable, as for the attached
-  Action. The request fingerprint includes mentions.
-- Sent messages show their mentions as links to the Actions.
+## Conversation behavior contract
 
-Pages and Opportunities are reached through Actions (every page target and
-Opportunity with a recommendation converges on one); direct page mentions
-would need a page search read and are left for later.
+These are behaviors of the existing respond/tool/skill loop, not new public
+modes, agents or a separate intent-classification service.
 
-### 4. Briefing (implemented)
+| User intent | Expected response | Saved output |
+|---|---|---|
+| “Why are we missing from AI answers?” | Read relevant persisted evidence, answer directly, cite it and explain consequential limitations | None unless the user asks for a report |
+| “What do you mean by that?” | Explain the previous answer using available context; avoid restarting discovery | Unchanged |
+| “Actually, focus on enterprise buyers.” | Apply the correction within this chat; distinguish a task preference from a reviewed company fact | Change only if revising requested work |
+| “Write a page for this topic.” | Use the appropriate skill and request only missing information that materially changes the work | Outline first where required; draft only after explicit outline approval |
+| “Shorten the introduction.” | Use the current revision, make the requested change and give a brief explanation | One new complete revision; compare remains available |
+| “What should we do next?” | Suggest a justified next action using existing deterministic ranking and evidence | No automatic execution or new document |
+| Request needing unavailable data | Give the useful supported answer and name the missing source plus the owning CiteLadder screen | Never substitute invented facts or observed zero |
 
-A "What should I work on?" card on New chat. **Brief me** starts a
-`growth_plan` chat that mentions the project's top five open Actions, so their
-diagnoses are in its frozen context, and the model reads the rest through the
-existing tools. It runs only when the user clicks it: no schedule, no
-autonomous run. The Dashboard's landing is the project list, which has no
-project scope to brief on, so the card lives in Agent mode.
+Implementation rules:
 
-### 5. Continuity: Save to Context (proposed)
+- Answer first. Use the length and structure the question needs; short follow-ups
+  should not repeat a full diagnosis, the skill checklist or the document.
+- Ask one concise grouped clarification only when the answer materially changes
+  the task. Reuse reviewed context and available conversation; do not restart
+  onboarding. For a non-blocking preference, state a reasonable assumption and
+  proceed within scope.
+- A clarification is a normal persisted reply with no output. The user's answer
+  is the next ordinary turn; no new interview state machine is needed.
+- Align the shared operating contract, applicable skill instructions and runtime
+  prompt so a selected content skill can still answer a question. Preserve
+  deterministic outline enforcement at output admission.
+- Earlier chat text is bounded working context, not unlimited memory. Do not
+  promise recall of truncated history or treat a generated statement as
+  reviewed brand truth. If material context is unavailable, say so.
+- Do not call tools merely to appear busy. Use supplied context where sufficient;
+  read persisted evidence when the answer needs it. Do not add a router model,
+  reflection call or factual-claim validation layer.
+- Distinguish answering from creating/revising an artifact. A question about a
+  saved draft must not silently create a new revision.
 
-Invariant 10 makes durable-memory promotion an explicit user decision and the
-Agent has no second knowledge store. A user may **Save to Context** a
-statement from a reply; it appends a revision to the existing Agent
-instructions (which the manifest already freezes) with the source message ID.
-No model-written summary becomes memory without that action.
+## Chat UI refinement
 
-### 6. Plan mode (proposed)
+Preserve the current centred conversation, pinned composer and document UI,
+using the existing visual tokens and shared primitives.
 
-Generalize outline-first to a plan output: numbered steps, each naming a skill
-and its deliverable; the user approves; each step then starts as its own
-funded, user-started turn with visible progress. No autonomous chain.
+1. **Easy entry.** Put plain-language input first. Keep outcome-based starters,
+   the current skill picker and `/` shortcuts as optional assistance. Actions
+   and Brief me remain available without dominating the conversation.
+2. **Honest skill selection.** Show the selected/effective workflow as a quiet
+   label. Existing output-kind restrictions still apply. If clearing a pinned
+   skill requires a server contract change, scope that separately; do not ship
+   a button whose “Automatic” label promises behavior admission does not provide.
+3. **Clear context.** Keep attached Actions, mentions and evidence handoffs as
+   removable typed chips before sending. Distinguish selected context from the
+   exact context actually used. Do not label the chat's `context` DTO as a full
+   frozen run manifest.
+4. **Responsive conversation.** Acknowledge sending immediately; indicate queued
+   versus working states with a short factual activity label. Keep detailed
+   committed steps in an expandable disclosure and Stop easy to reach. No fake
+   typing animation, percentages, elapsed-time promises or reasoning transcript.
+5. **Respect reading and drafting.** Show a jump-to-latest affordance when the
+   user scrolls up. New polling results and revisions must not steal focus or
+   reading position. Preserve unsent text after recoverable errors.
+6. **Useful follow-ups.** Prefer a small set of applicable suggestions over a
+   repeated menu. Ordinary freeform replies always remain available. A
+   suggestion can prefill the composer for review; it should be clear when an
+   explicit action starts a funded turn or opens another chat.
+7. **Simple recovery.** Separate a failed send from a failed accepted run. Retry
+   an uncertain network submission with the same idempotency key. An explicit
+   new attempt after a terminal run receives a new key and normal admission.
+   Keep the previous saved output when a turn fails, is cancelled or hits a limit.
 
-### 7. Skills gallery (proposed)
+Use the same interaction rules in the existing Dashboard Agent panel and full
+chat. Open in Agent continues the same chat and output. No additional panel or
+parallel conversation implementation is introduced.
 
-Enable or disable packaged skills and set their order per project, frozen on
-the run. User-authored skills wait for item 8 to score them; when they come
-they are bounded methodology text validated by the same loader and never
-exposed through MCP.
+At narrow widths the current single-column structure remains. Verify keyboard
+submission, multiline input, IME composition, `/` and `@` menu precedence,
+visible focus, accessible Stop/retry controls and restrained live announcements.
+Keep drafts scoped to the active chat/project in memory; no private-content
+browser storage. Preserve authorized reading when funding is unavailable, and
+remove inaccessible content on membership loss or project changes.
 
-### 8. Agent behavior evaluation corpus (proposed)
+## Skills and workflows: the smallest useful structure
 
-`docs/evaluations/agent/` with recorded tool payloads and expected behavior per
-skill (skill choice, refusal, outline-first, citation discipline) and an
-offline scorer over persisted run evidence: protocol violations, unverified
-references replaced, budget exhaustion and tool refusals. Live model runs are
-an explicit, credential-gated release task, never CI.
+Keep the existing packaged skill catalog as the single methodology owner.
+No new workflow engine or graph is required.
 
-### Folded into TypeScript migration PR 19
+- **User intent:** freeform request, starter, explicit skill or Action handoff.
+- **Skill selection:** existing precedence (explicit choice, Action/chat context,
+  otherwise runtime selection), subject to the chat's output-kind contract.
+- **Method:** bounded evidence gathering and reasoning inside that skill.
+- **Reply:** answer, clarification or summary, with a deliverable only when needed.
+- **Continuation:** ordinary follow-up, existing outline approval, or an explicit
+  next-skill handoff.
 
-Streamed reply text (the gateway does not stream today; about a week),
-gateway consolidation, multi-read steps and an SSE transport for progress.
-The progress projection above is the contract that stream would carry.
+A skill's internal method should make its entry conditions, needed evidence,
+clarification boundary, output expectations and sensible follow-up clear.
+Do this in the existing loader/contract and skill bodies, not a second registry.
+Public metadata continues to expose labels, descriptions and output kinds,
+never private methodology.
 
-## Audit triage
+Use current workflows as the first acceptance paths:
 
-Accepted as audited: catalog-version freeze, real-catalog contract test,
-vocabulary single-sourcing, loader bounds, the orphaned differentiation read,
-distinct refusal reasons, removal of the nil-UUID fallback in favor of explicit
-`access_revoked` termination, frozen time envelope, step
-progress, the evaluation corpus.
+| Workflow | Conversational path |
+|---|---|
+| Diagnose | Ask about a gap → evidence-backed explanation → discuss evidence → optionally request a diagnosis document |
+| Create content | Request content → clarify material gaps → outline → explicit approval → draft → freeform refinements |
+| Improve an Action | Work on this → explain recommendation → produce the compatible deliverable → user review |
+| Brief and prioritize | Explicit Brief me → explain ranked Actions → user chooses where to work |
+| Move to another deliverable | Explain the next step → user opens the existing new-chat handoff with Action/title context |
 
-Reshaped:
+Changing output kind still needs a new chat. Explain that boundary at the
+handoff instead of making the user discover it through a failed send. Do not
+silently copy generated prose as evidence. Questions about the current work
+stay in the current chat.
 
-- *Transcript split by string search* — `parts.index` matches a whole element,
-  so evidence containing the heading cannot mis-split. The real defect was a
-  non-positive slice bound; item 0 fixes that.
-- *Cross-turn memory as model-written turn summaries* — conflicts with
-  invariant 10's explicit promotion rule; replaced by item 5's user action.
-- *SSE endpoint* — the UI already polls the persisted chat; item 0 adds the
-  projection to that read, and a stream waits for TypeScript PR 19.
+## TypeScript migration: what must happen first?
 
-Rejected:
+The [migration sequence](citeladder-typescript-migration.md#6-pr-sequence)
+records PRs 1–11 implemented and PRs 12–20 pending. Its opening status line
+lags its PR 11 section. Deployment and the required one-week cutover soaks
+remain pending from PR 3 onward; implementation is not release acceptance.
 
-- *Reflection step* (a model self-check before responding) — invariant 12
-  excludes a second model call or claim-validator layer; citation discipline
-  is already enforced deterministically by dropping unverified references.
-- *Gateway construction outside the fenced path* — construction reads only
-  frozen route data and does not fail on configuration loss; the model call
-  that follows is fenced. No change.
-- *Autonomous CMS staging and agent-experience site delivery* — external
-  mutation and publishing are outside the Agent (invariant 13); an
-  approval-gated CMS integration would be its own owner-approved plan.
-- *`skills-lock.json` and `.claude/skills` cleanup* — coding-agent tooling,
-  not the production skill catalog; out of this plan's scope.
+Current code confirms the relevant boundary:
+[the route manifest](../../frontend/packages/contracts/src/route-ownership.ts)
+assigns `agent` to Python; the UI/contracts are TS; the
+[TS model gateway](../../frontend/services/api/src/models/gateway.ts) exists,
+but Agent funding, customer routes and execution still use Python owners.
 
-## Validation
+| Planned work | Must finish migration first? |
+|---|---|
+| Composer, scrolling, progress disclosure, suggestion presentation and recovery | No; use current contracts |
+| Conversation instructions and narrow prompting corrections | No; change the existing owner, test it, then carry it into PR 19 |
+| Offline Agent behavior coverage | No; establish it before model-input changes |
+| New runtime services, durable plan state, source-aware memory promotion or project skill policy | Yes: land the PR 19 Agent owner first |
+| SSE progress / provider reply streaming | After PR 19 baseline, in separate slices |
+| PR 20 policy transfer and remaining bridge cleanup | Not a prerequisite for this chat refinement |
 
-Items 0–4: skill loader and prompting unit tests; the Agent runtime component
-suite against PostgreSQL (catalog freeze, frozen time bound, live progress,
-mentioned Actions frozen into context, foreign mention refused); section,
-diff, evidence and composer-command unit tests; chat and new-chat screen tests
-(section revise and edit, evidence links, next steps, revision compare, live
-progress, `/` and `@` commands, briefing, mention links); and
-`node scripts/quality.mjs --mode check --scope all`.
+**Recommended sequence:** refine chat now, continue the approved migration order,
+then add runtime enhancements in TypeScript only when they solve a demonstrated
+remaining problem. Do not make the user wait for the entire migration to receive
+a better conversation experience.
+
+[PR 19](citeladder-typescript-migration.md#pr-19-agent-runtime) depends on more
+than the already-implemented PR 11 transport:
+
+- PR 15 moves the shared MCP readers/catalog.
+- PR 16 moves billing and the funded entitlement ledger.
+- PR 17 moves customer provider routes and credential handling.
+- The earlier project/access/integration owners and PR 18 evidence owners help
+  retire remaining Python readers and bridges. Follow the approved sequence;
+  this is not a claim that every preceding PR directly blocks a UI change.
+
+Moving PR 19 earlier would need a separate caller/writer/lock inventory and
+reviewed migration resequencing. This plan does not introduce cross-stack
+services or dual Agent writers to bypass that work.
+
+Keep the first PR 19 slice focused on the current API, admission, frozen context,
+tool catalog, worker, funding, revisions and progress contracts, including
+this plan's implemented improvements at that time. Transfer route/worker
+ownership coherently, drain or fence active leases, preserve funding settlement,
+update ingress and delete replaced Python owners/tests. Retain a bridge only
+for a named remaining caller with a deletion condition.
+
+## Delivery slices and acceptance
+
+The identifiers 0–8 above retain historical meaning. These slices are the
+recommended next work, each requiring a separate implementation assignment.
+
+| Slice | Scope | Exit evidence |
+|---|---|---|
+| A. Conversation baseline (original item 8, minimum useful scope) | Recorded/scripted cases for questions, clarification, corrections, artifact requests and follow-ups | Offline behavior checks distinguish reply-only turns from revision-producing work |
+| B. Conversation behavior | Align operating contract and relevant skills/prompting; preserve outline safety and evidence boundaries | A multi-turn task answers a follow-up without resetting discovery or rewriting the document unnecessarily |
+| C. Chat interaction polish | Entry, effective-skill wording, scroll behavior, compact activity, relevant suggestions and recovery | Same flow works in full chat and Dashboard panel, desktop and mobile, keyboard and pointer |
+| D. TS Agent baseline | Migration PR 19 in its approved sequence | One writer/worker owner, affected PostgreSQL coverage and migration release gates |
+| E. Optional streaming | Persisted progress delivery first; provider text only after its safety/transport contract is ready | Reconnect cannot start/replay a turn; incomplete text cannot become a saved or approved artifact |
+
+A and C can be developed independently. B follows A. A–C are the first release
+scope; they do not depend on D or E. Do not bundle new memory, plan execution
+or skill administration into this release. Size the slices after a focused
+owner/test inventory rather than retaining the original speculative week counts.
+
+Streaming is not required to make the conversation good. Keep polling as the
+working baseline. A future SSE read must stream authorized persisted projections,
+handle disconnect/reconnect and revoked access, and leave run execution to the
+worker. Provider text streaming is a separate problem: the current protocol is
+structured JSON and references are filtered before publication. Do not expose raw
+partial JSON or unverified text; retain a committed final response as the
+authority and preserve cancellation, usage settlement and output atomicity.
+Multi-read steps are deferred until measurements justify a protocol change.
+
+## Deferred proposals from the original plan
+
+These are optional later work, not prerequisites for chat refinement:
+
+- **5. Save to Context.** Retain explicit user review and the existing instruction
+  revision owner. Do not copy arbitrary generated claims into instructions.
+  A future implementation needs a preview, an expected-base revision, idempotent
+  save and structured source-message provenance authorized to the same project.
+  The current save API accepts only text and has no stale-base check; this is
+  not a frontend-only feature. Preferences belong in instructions; company-fact
+  corrections go through the existing reviewed brand-profile flow.
+- **6. Plan mode.** Defer a durable step runner and approval UI. Today the Agent
+  can discuss or write a plan and use existing explicit handoffs. A future
+  execution feature needs revision-bound approval, persisted step/child-chat
+  links, retry/idempotency rules and fresh authorization/funding per user-started
+  step. Approval must not launch an autonomous chain.
+- **7. Per-project skill enablement/order.** Keep the current catalog/picker.
+  Project policy would need server-side admission/selection enforcement and a
+  frozen run snapshot, not just hidden menu entries. User-authored skills remain
+  out of scope; evaluation alone does not authorize them.
+- **8. Expanded evaluation corpus.** Start with slice A and expand per actual
+  skill changes. Offline scoring is a test/release tool, never another model
+  call or claim-validator layer in production.
+
+## Validation and completion
+
+For the eventual executable slices, follow [AGENTS.md](../../AGENTS.md) and
+[Development](../DEVELOPMENT.md). Select the lowest meaningful coverage:
+
+- Scripted runtime cases: question after selecting a content skill produces no
+  output; follow-up explanation preserves the current revision; clarification
+  then answer continues the task; a requested draft cannot bypass outline
+  approval; a real revision uses the latest user-edited body.
+- Evidence/boundary cases: absent data remains unavailable; unsupported actions
+  are not claimed complete; untrusted evidence cannot become instructions;
+  foreign mentions fail authorization; different-output-kind work uses a handoff.
+- UI paths: scroll up during polling without being pulled down; recover a failed
+  submission without losing text or duplicating a turn; reach Stop and commands
+  by keyboard; continue the same panel chat in Agent; preserve current document,
+  sources/history, portfolio submission and implementation-declaration behavior.
+- Real PostgreSQL coverage when admission, persistence, leases or funding change:
+  one active run, workspace isolation, idempotent replay, cancellation/late
+  results, membership revocation and settlement. No new source-text snapshots
+  or tests that merely restate prompt wording.
+
+Use recorded tool payloads and scripted model responses for deterministic CI.
+They establish runtime behavior, not natural-language quality. Separately
+evaluate realistic multi-turn conversations for directness, unnecessary
+clarification, redundant reads, repetition, relevant skill choice and whether
+the user actually completes the task. Live model evaluation is an explicitly
+authorized release task, never a CI call with inherited credentials.
+
+Run `./scripts/check.ps1` once after the intended executable diff, plus selected
+tests and `git diff --check`; keep logs in the worktree's Git directory. Update
+only changed feature/design owners. This plan-only revision needs whitespace
+and local-link checks, not application tests.
+
+## Retained audit decisions
+
+The 29 September audit was guidance, not authority. Foundations accepted and
+implemented the catalog freeze, loader bounds, vocabulary single-sourcing,
+real tool contracts, differentiation methodology, explicit refusal reasons,
+access-revocation handling, frozen time envelope and persisted progress.
+
+The transcript issue was a non-positive slice bound, not string-search splitting.
+Model-written summaries do not become durable memory without user promotion.
+Reflection/claim-validator calls, autonomous CMS work and publishing remain
+excluded. Coding-agent tooling cleanup is outside the production Agent scope.
+Gateway consolidation belongs to migration; streaming and multi-read changes
+are separate proposals, not automatic additions to PR 19.

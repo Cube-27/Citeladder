@@ -46,12 +46,15 @@
   are pending.
 
 - [Agent capabilities](citeladder-agent-capabilities.md)
-  — planned on 29 September 2026 from an external Agent audit, rescoped by
-  the owner to a Peec/Searchable/Notion-style experience over existing data.
-  Foundations and MVP items 1–4 (chat polish, document canvas, composer
-  commands and mentions, briefing) are implemented in
-  `claude/practical-gates-oq7898`. Items 5–8 are proposed and await owner
-  approval; streaming and gateway consolidation fold into TypeScript PR 19.
+  — foundations and MVP items 1–4 are present in #203, with handoff/evidence
+  fixes in #206. Revised on 30 September 2026 after owner clarification:
+  improve the ChatGPT/Claude-like conversation and skill-guided workflows;
+  preserve the current document UI. Proposed next scope is offline behavior
+  coverage, conversation instructions and chat interaction polish, with no
+  migration prerequisite. Substantial runtime additions follow TypeScript
+  PR 19; streaming is a separate later slice. Memory promotion, durable plan
+  execution and project skill policy are deferred. Implementation remains
+  unassigned; the revision is planning authorization only.
 
 ## Queued
 - [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)
