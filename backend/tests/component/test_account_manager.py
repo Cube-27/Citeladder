@@ -24,7 +24,8 @@ async def test_account_manager_issues_hashed_invitation(
         invitee = await register_user(
             setup, "operator-invitee@example.com", "password123"
         )
-        assert owner is not None and invitee is not None
+        assert owner is not None
+        assert invitee is not None
         workspace, _ = (await list_workspaces_for_user(setup, owner))[0]
         owner_id, workspace_id = owner.id, workspace.id
     monkeypatch.setattr(

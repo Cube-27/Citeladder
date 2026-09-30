@@ -6,7 +6,7 @@ import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
 import { provisionAccount, type User } from '../workspaces/service.ts';
-import { hashPassword, verifyPassword } from './password.ts';
+import { hashPassword, verifyAccountPassword } from './password.ts';
 import { recordSecurityEvent } from './security-events.ts';
 
 const logger = getLogger('app.auth');
@@ -66,7 +66,11 @@ export async function authenticateUser(
     .selectAll()
     .where('email', '=', email.toLowerCase())
     .executeTakeFirst();
-  if (!user?.is_active || !(await verifyPassword(password, user.hashed_password))) return null;
+  const verified = await verifyAccountPassword(
+    password,
+    user?.is_active ? user.hashed_password : null,
+  );
+  if (!user || !verified) return null;
   let authenticated;
   try {
     authenticated = await db.transaction().execute(async (trx) => {

@@ -9,7 +9,7 @@
  * capability (403) and the parameters (422), as FastAPI resolves dependencies
  * before parameters.
  */
-import type { Context, Hono } from 'hono';
+import type { Context, Hono, MiddlewareHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 
@@ -164,13 +164,10 @@ function defineRoute<
     const pattern = honoPath(route.path);
     // Writes default to `run`; the capability gate precedes parameter validation.
     const capability = route.capability ?? (method === 'get' ? undefined : 'run');
-    const authorize = !scoped
-      ? []
-      : byProject
-        ? [projectMember(db)]
-        : route.authorize === 'workspace-path'
-          ? [workspaceMember(db, capability)]
-          : [activeWorkspace(db, capability)];
+    const authorize: MiddlewareHandler<AppEnv>[] = [];
+    if (byProject) authorize.push(projectMember(db));
+    else if (route.authorize === 'workspace-path') authorize.push(workspaceMember(db, capability));
+    else if (scoped) authorize.push(activeWorkspace(db, capability));
     app.on(
       [method.toUpperCase()],
       [pattern],

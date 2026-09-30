@@ -49,7 +49,7 @@ export async function productTour(db: Database, workspaceId: string, actorId: st
   );
 }
 
-export async function updateProductTour(
+export function updateProductTour(
   db: Database,
   workspaceId: string,
   actorId: string,

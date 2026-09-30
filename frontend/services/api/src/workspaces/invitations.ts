@@ -59,7 +59,7 @@ export async function listInvitations(db: Database, workspaceId: string) {
   ).map(invitationView);
 }
 
-export async function issueInvitation(
+export function issueInvitation(
   db: Database,
   workspaceId: string,
   actorId: string,
@@ -92,7 +92,7 @@ export async function issueInvitation(
       role,
       token_sha256,
       invited_by_user_id: actorId,
-      expires_at: new Date(now.getTime() + policy.workspaces.invitation_ttl_hours * 3600_000),
+      expires_at: new Date(now.getTime() + policy.workspaces.invitation_ttl_hours * 3_600_000),
       updated_at: now,
     };
     // Reuse an expired slot because the partial unique index cannot use a clock.
@@ -130,7 +130,7 @@ export async function issueInvitation(
   });
 }
 
-export async function updateInvitation(
+export function updateInvitation(
   db: Database,
   workspaceId: string,
   actorId: string,
@@ -155,7 +155,7 @@ export async function updateInvitation(
       ? { revoked_at: now, updated_at: now }
       : {
           token_sha256,
-          expires_at: new Date(now.getTime() + policy.workspaces.invitation_ttl_hours * 3600_000),
+          expires_at: new Date(now.getTime() + policy.workspaces.invitation_ttl_hours * 3_600_000),
           updated_at: now,
         };
     const updated = await trx
@@ -169,7 +169,7 @@ export async function updateInvitation(
   });
 }
 
-export async function acceptInvitation(db: Database, actorId: string, token: string) {
+export function acceptInvitation(db: Database, actorId: string, token: string) {
   return db.transaction().execute(async (trx) => {
     const hash = hashInvitationToken(token);
     // Discover the root, then lock root before invitation to match all other writers.

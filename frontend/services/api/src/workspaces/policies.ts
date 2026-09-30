@@ -20,12 +20,7 @@ export async function policyStatus(db: Database, workspaceId: string, actorId: s
   };
 }
 
-export async function acceptPolicy(
-  db: Database,
-  workspaceId: string,
-  actorId: string,
-  revision: string,
-) {
+export function acceptPolicy(db: Database, workspaceId: string, actorId: string, revision: string) {
   if (revision !== policy.auth.terms_revision)
     throw new ApiError(409, 'The Terms changed. Review the current revision before accepting.', {
       code: 'policy_revision_changed',

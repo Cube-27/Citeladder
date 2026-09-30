@@ -37,7 +37,7 @@ export function workspaceView(
   };
 }
 
-async function ownedWorkspaces(db: Database, userId: string) {
+function ownedWorkspaces(db: Database, userId: string) {
   return db
     .selectFrom('workspaces')
     .innerJoin('workspace_members', 'workspace_members.workspace_id', 'workspaces.id')
@@ -101,7 +101,7 @@ export async function provisionAccount(db: Database, user: User): Promise<string
   return createdId;
 }
 
-export async function createWorkspace(db: Database, userId: string, name: string) {
+export function createWorkspace(db: Database, userId: string, name: string) {
   return db.transaction().execute(async (trx) => {
     await subjectXactLock(trx, `workspace.create:${userId}`);
     if ((await ownedWorkspaces(trx, userId)).length >= policy.workspaces.max_owned)
@@ -170,7 +170,7 @@ export async function listMembers(
   }));
 }
 
-export async function mutateMember(
+export function mutateMember(
   db: Database,
   workspaceId: string,
   actorId: string,
@@ -230,7 +230,7 @@ export async function mutateMember(
   });
 }
 
-export async function transferOwnership(
+export function transferOwnership(
   db: Database,
   workspaceId: string,
   actorId: string,

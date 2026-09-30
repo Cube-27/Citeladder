@@ -32,6 +32,7 @@ import {
   startSignIn,
   completeSignIn,
   SignInError,
+  withoutTrailingSlashes,
 } from '../auth/oauth.ts';
 import { trustedClientIdentity } from '../auth/client-identity.ts';
 import { enforceSubjectRequest } from '../abuse/usage.ts';
@@ -60,7 +61,7 @@ async function meter(db: Database, c: Context, config: ServiceConfig, register =
 function signInRedirect(c: Context, config: ServiceConfig, error?: string): Response {
   clearAuthOAuthCookie(c, config);
   const url = new URL(
-    `${config.auth.frontendUrl.replace(/\/+$/u, '')}${error ? oauth.error_path : oauth.landing_path}`,
+    `${withoutTrailingSlashes(config.auth.frontendUrl)}${error ? oauth.error_path : oauth.landing_path}`,
   );
   if (error) url.searchParams.set('error', error);
   return c.redirect(url.toString(), 302);
@@ -137,15 +138,14 @@ export const authRoutes = [
     ...base,
     path: '/api/v1/auth/oauth/providers',
     response: oauthProvidersResponseSchema,
-    async handle({ config }) {
-      return {
+    handle: ({ config }) =>
+      Promise.resolve({
         providers: Object.entries(oauth.labels).map(([provider, label]) => ({
           provider,
           label,
           configured: providerConfigured(config, knownProvider(provider)),
         })),
-      };
-    },
+      }),
   }),
   defineGetRoute({
     ...base,
@@ -215,7 +215,7 @@ export const authRoutes = [
     path: '/api/v1/auth/oauth/{provider}/callback',
     params: { path: oauthPath, query: {} },
     response: z.null(),
-    async handle({ c, config }, { path }): Promise<never> {
+    handle({ c, config }, { path }): Promise<never> {
       clearAuthOAuthCookie(c, config);
       const provider = knownProvider(path.provider);
       requireProviderConfigured(config, provider);

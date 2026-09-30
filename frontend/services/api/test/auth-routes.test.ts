@@ -390,7 +390,7 @@ describe('Google sign-in', () => {
     const invalid = await callback(data.state);
     expect(invalid.headers.get('location')).toContain('oauth_signin_state_invalid');
     expect(invalid.headers.get('set-cookie')).toContain('Max-Age=0');
-    expect(requests.length).toBe(before);
+    expect(requests).toHaveLength(before);
     const wrong = await callback(data.state, nonceCookie.replace(/=.+$/u, '=different'));
     expect(wrong.headers.get('location')).toContain('oauth_signin_state_invalid');
   });

@@ -64,10 +64,17 @@ export function providerConfigured(config: ServiceConfig, provider: OAuthProvide
   return config.auth.oauthSettings[`${provider}_enabled`] === true && Boolean(id && secret);
 }
 
+/** `url` without trailing slashes; a linear scan, not a backtracking regex. */
+export function withoutTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url[end - 1] === '/') end -= 1;
+  return url.slice(0, end);
+}
+
 function redirectUri(config: ServiceConfig, provider: OAuthProvider): string {
   return (
     String(config.auth.oauthSettings[`${provider}_redirect_uri`] || '') ||
-    `${config.auth.frontendUrl.replace(/\/+$/u, '')}${cfg.callback_path.replace('{provider}', provider)}`
+    `${withoutTrailingSlashes(config.auth.frontendUrl)}${cfg.callback_path.replace('{provider}', provider)}`
   );
 }
 
@@ -224,15 +231,82 @@ async function identify(
   return identity.data;
 }
 
+type SignInEvent = 'auth.oauth_registered' | 'auth.oauth_linked';
+
+/** The verified address's account, created passwordless when absent. */
+async function accountForEmail(
+  db: Database,
+  config: ServiceConfig,
+  identity: SignInIdentity,
+): Promise<{ user: User; event: SignInEvent }> {
+  if (!identity.email_verified) throw new SignInError('oauth_signin_email_unverified');
+  const byEmail = db.selectFrom('users').selectAll().where('email', '=', identity.email);
+  const existing = await byEmail.executeTakeFirst();
+  if (existing) return { user: existing, event: 'auth.oauth_linked' };
+  if (config.demo.enabled) throw new SignInError('oauth_signin_disabled');
+  const now = new Date();
+  const inserted = await db
+    .insertInto('users')
+    .values({
+      id: randomUUID(),
+      email: identity.email,
+      hashed_password: null,
+      role: 'user',
+      is_active: true,
+      session_version: 0,
+      created_at: now,
+      updated_at: now,
+    })
+    .onConflict((conflict) => conflict.column('email').doNothing())
+    .returningAll()
+    .executeTakeFirst();
+  if (inserted) return { user: inserted, event: 'auth.oauth_registered' };
+  return { user: await byEmail.executeTakeFirstOrThrow(), event: 'auth.oauth_linked' };
+}
+
+/** Link the provider subject, refusing a second subject for the same user. */
+async function linkIdentity(
+  db: Database,
+  provider: OAuthProvider,
+  identity: SignInIdentity,
+  userId: string,
+): Promise<void> {
+  const other = await db
+    .selectFrom('user_identities')
+    .select('subject')
+    .where('provider', '=', provider)
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+  if (other) {
+    if (other.subject !== identity.sub) throw new SignInError('oauth_signin_state_invalid');
+    return;
+  }
+  const now = new Date();
+  await db
+    .insertInto('user_identities')
+    .values({
+      id: randomUUID(),
+      user_id: userId,
+      provider,
+      subject: identity.sub,
+      email: identity.email,
+      email_verified: identity.email_verified,
+      created_at: now,
+      updated_at: now,
+    })
+    .execute();
+}
+
 async function resolveAccount(
   db: Database,
   config: ServiceConfig,
   provider: OAuthProvider,
   identity: SignInIdentity,
 ) {
-  // Stable subject and normalized address serialize linking. Sort before locks.
-  for (const value of [`oauth:${provider}:${identity.sub}`, `auth.email:${identity.email}`].sort())
-    await subjectXactLock(db, value);
+  // Stable subject and normalized address serialize linking, locked in
+  // Python's sorted() order: "auth.email:" always precedes "oauth:".
+  await subjectXactLock(db, `auth.email:${identity.email}`);
+  await subjectXactLock(db, `oauth:${provider}:${identity.sub}`);
   const linked = await db
     .selectFrom('user_identities')
     .selectAll()
@@ -240,7 +314,7 @@ async function resolveAccount(
     .where('subject', '=', identity.sub)
     .executeTakeFirst();
   let user: User;
-  let event: 'auth.oauth_registered' | 'auth.oauth_linked' | null = null;
+  let event: SignInEvent | null = null;
   if (linked) {
     const owner = await db
       .selectFrom('users')
@@ -250,64 +324,8 @@ async function resolveAccount(
     if (!owner) throw new SignInError('oauth_signin_state_invalid');
     user = owner;
   } else {
-    if (!identity.email_verified) throw new SignInError('oauth_signin_email_unverified');
-    const existing = await db
-      .selectFrom('users')
-      .selectAll()
-      .where('email', '=', identity.email)
-      .executeTakeFirst();
-    if (existing) {
-      user = existing;
-      event = 'auth.oauth_linked';
-    } else {
-      if (config.demo.enabled) throw new SignInError('oauth_signin_disabled');
-      const now = new Date();
-      const inserted = await db
-        .insertInto('users')
-        .values({
-          id: randomUUID(),
-          email: identity.email,
-          hashed_password: null,
-          role: 'user',
-          is_active: true,
-          session_version: 0,
-          created_at: now,
-          updated_at: now,
-        })
-        .onConflict((conflict) => conflict.column('email').doNothing())
-        .returningAll()
-        .executeTakeFirst();
-      user =
-        inserted ??
-        (await db
-          .selectFrom('users')
-          .selectAll()
-          .where('email', '=', identity.email)
-          .executeTakeFirstOrThrow());
-      event = inserted ? 'auth.oauth_registered' : 'auth.oauth_linked';
-    }
-    const other = await db
-      .selectFrom('user_identities')
-      .select('subject')
-      .where('provider', '=', provider)
-      .where('user_id', '=', user.id)
-      .executeTakeFirst();
-    if (other && other.subject !== identity.sub)
-      throw new SignInError('oauth_signin_state_invalid');
-    if (!other)
-      await db
-        .insertInto('user_identities')
-        .values({
-          id: randomUUID(),
-          user_id: user.id,
-          provider,
-          subject: identity.sub,
-          email: identity.email,
-          email_verified: identity.email_verified,
-          created_at: new Date(),
-          updated_at: new Date(),
-        })
-        .execute();
+    ({ user, event } = await accountForEmail(db, config, identity));
+    await linkIdentity(db, provider, identity, user.id);
   }
   if (!user.is_active) throw new SignInError('oauth_signin_state_invalid');
   await db

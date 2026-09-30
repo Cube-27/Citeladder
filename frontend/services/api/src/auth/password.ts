@@ -13,3 +13,19 @@ export async function verifyPassword(password: string, encoded: string | null): 
     return false;
   }
 }
+
+let dummyHash: Promise<string> | undefined;
+
+/**
+ * Verify, paying one Argon2 verification even without a usable account, so
+ * login latency does not reveal whether an address is registered.
+ */
+export async function verifyAccountPassword(
+  password: string,
+  encoded: string | null | undefined,
+): Promise<boolean> {
+  if (encoded?.startsWith('$argon2')) return verifyPassword(password, encoded);
+  dummyHash ??= hashPassword('citeladder-timing-equalizer');
+  await verifyPassword(password, await dummyHash);
+  return false;
+}

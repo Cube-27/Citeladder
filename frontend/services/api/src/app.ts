@@ -11,10 +11,9 @@ import { sql } from 'kysely';
 
 import type { ServiceConfig } from './config.ts';
 import { policy } from './config.ts';
-import { ApiError } from './errors.ts';
 import type { AppEnv } from './context.ts';
 import type { Database } from './db/database.ts';
-import { onError, onNotFound } from './errors.ts';
+import { ApiError, onError, onNotFound } from './errors.ts';
 import { apiNoStore } from './http/no-store.ts';
 import { getLogger } from './logging.ts';
 import { requestId } from './request-id.ts';
