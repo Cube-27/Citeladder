@@ -3064,7 +3064,7 @@
       "capture_method_external_search": "external_search",
       "capture_method_external_fetch": "external_fetch",
       "capture_method_user": "user_input",
-      "brand_discovery_version": "brand-discovery-v2",
+      "brand_discovery_version": "brand-discovery-v1",
       "brand_identity_prompt_version": "brand-identity-v1",
       "identity_conflict_fields": [
         "category",

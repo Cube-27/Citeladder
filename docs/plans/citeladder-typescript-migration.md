@@ -675,16 +675,16 @@ Remaining Python consumer tests seed persisted projects directly.
 | Command-center projection, schemas and renderer | Executive PDF and its focused component tests; remove in PR 16 |
 | Discovery lease-expiry/retry reconciliation | Shared Python queue sweeper; remove when that queue owner migrates |
 
-Research snapshots use brand-discovery-v2 and retain first-party/external
-processing versions and provider publication/acquisition timestamps. Identity
+Research snapshots retain brand-discovery-v1 under the pre-launch policy and
+record first-party/external processing versions and provider publication and
+acquisition timestamps. Identity
 inputs apply the configured first-party text budget; confirmed competitor
 domains use the same count bound as confirmed owned domains before resolution.
 
 Departures: unavailable models retain evidence and unknown prose instead of
 inventing a generic business profile. PostgreSQL RESTRICT violations return a
 409 alongside ordinary foreign-key violations. Provider deployment and the
-one-week cutover soak remain pending; this implementation was committed locally
-without publishing a PR.
+one-week cutover soak remain pending.
 
 ### PR 13: Integrations
 

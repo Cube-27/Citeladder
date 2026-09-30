@@ -1,4 +1,5 @@
 import { gzipSync } from 'node:zlib';
+import { createServer } from 'node:http';
 
 import { expect, it, vi } from 'vitest';
 
@@ -8,6 +9,7 @@ import {
   createWebsiteFetcher,
   decodedBody,
   FetchError,
+  pinnedRequest,
   validateAddress,
   websiteIdentity,
 } from '../src/projects/safe-fetch.ts';
@@ -26,9 +28,63 @@ import {
 } from '../src/projects/research-evidence.ts';
 import { seedBrandAliases } from '../src/projects/discovery.ts';
 import { createModelGateway } from '../src/models/gateway.ts';
-import type { ResearchEvidence } from '../src/projects/research-evidence.ts';
+import type { ResearchEvidence, ResearchTransport } from '../src/projects/research-evidence.ts';
 
 const options = { maxBytes: 1000, timeoutSeconds: 1, redirects: 3, contentTypes: ['text/html'] };
+function recordedGateway(replies: unknown[]) {
+  const transport = vi.fn(async () =>
+    Response.json({
+      model: 'returned-test-model',
+      choices: [{ message: { content: JSON.stringify(replies.shift()) } }],
+      usage: { total_tokens: 50 },
+    }),
+  );
+  return {
+    transport,
+    gateway: createModelGateway(
+      {
+        apiKey: 'test-only',
+        baseUrl: 'https://model.example/v1',
+        model: 'test-model',
+        timeoutSeconds: 2,
+        maxOutputTokens: 2000,
+        attempts: 1,
+        baseDelaySeconds: 0,
+        maxDelaySeconds: 0,
+      },
+      { fetch: transport, sleep: async () => {} },
+    ),
+  };
+}
+it('dials the pinned address through the native request boundary while preserving Host', async () => {
+  let host: string | undefined;
+  const server = createServer((request, response) => {
+    host = request.headers.host;
+    response.setHeader('content-type', 'text/html');
+    response.end('<p>Recorded page</p>');
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing test listener');
+    const url = new URL(`http://recorded.example:${address.port}/`);
+    const result = await pinnedRequest(
+      url,
+      { address: '127.0.0.1', family: 4 },
+      options,
+      AbortSignal.timeout(1000),
+    );
+    expect(result.body.toString()).toBe('<p>Recorded page</p>');
+    expect(host).toBe(url.host);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
+});
 it('preserves recorded research metadata and enforces a shared call budget before I/O', async () => {
   const settings = discoverySettings({ KEENABLE_API_KEY: 'test-only' });
   const budget = new ResearchBudget(2);
@@ -108,30 +164,7 @@ it('keeps identity fixed while retrying malformed provisional competitors', asyn
     { competitors: 'invalid' },
     { competitors: [{ name: 'Globex', domains: ['globex.com'], aliases: [] }] },
   ];
-  const transport = vi.fn(
-    async () =>
-      new Response(
-        JSON.stringify({
-          model: 'returned-test-model',
-          choices: [{ message: { content: JSON.stringify(replies.shift()) } }],
-          usage: { total_tokens: 50 },
-        }),
-        { status: 200 },
-      ),
-  );
-  const gateway = createModelGateway(
-    {
-      apiKey: 'test-only',
-      baseUrl: 'https://model.example/v1',
-      model: 'test-model',
-      timeoutSeconds: 2,
-      maxOutputTokens: 2000,
-      attempts: 1,
-      baseDelaySeconds: 0,
-      maxDelaySeconds: 0,
-    },
-    { fetch: transport, sleep: async () => {} },
-  );
+  const { gateway, transport } = recordedGateway(replies);
   const page = extractPage(
     Buffer.from('<title>Acme</title><p>Analytics services</p>'),
     'https://acme.com/',
@@ -158,6 +191,37 @@ it('keeps identity fixed while retrying malformed provisional competitors', asyn
   ]);
   expect(result.snapshot.field_evidence_refs).toEqual({ description: ['fp-1'] });
 });
+it.each(['ready', 'failed'] as const)(
+  'reports competitor search %s while retaining successful model suggestions',
+  async (searchState) => {
+    const { gateway } = recordedGateway([
+      { status: 'ready', profile: { category: 'Analytics' }, signature: { category: 'Analytics' } },
+      { competitors: [{ name: 'Globex', domains: ['globex.com'] }] },
+    ]);
+    const transport: ResearchTransport = async (target, init) => {
+      const url = new URL(String(target));
+      if (url.pathname === '/v1/fetch')
+        return Response.json({ markdown: 'Recorded company evidence' });
+      const query: unknown = JSON.parse(String(init?.body ?? '{}')).query;
+      if (
+        searchState === 'failed' &&
+        typeof query === 'string' &&
+        query.includes('alternatives competitors')
+      )
+        throw new Error('Recorded competitor search failure');
+      return Response.json({
+        results: [{ title: 'Acme', url: 'https://acme.com/about', snippet: 'Analytics services' }],
+      });
+    };
+    const result = await researchBrand(
+      discoveryCreate.parse({ brand_name: 'Acme', website_url: 'acme.com', primary_market: 'US' }),
+      { url: 'https://acme.com/', domain: 'acme.com', page: null, warning: '' },
+      { gateway, transport, env: { KEENABLE_API_KEY: 'test-only' } },
+    );
+    expect(result.competitors.map((item) => item.name)).toEqual(['Globex']);
+    expect(result.warnings).toEqual(searchState === 'failed' ? ['competitor_search_failed'] : []);
+  },
+);
 it('rejects unsafe address classes, credentials, ports and mixed DNS before connecting', async () => {
   for (const ip of [
     '127.0.0.1',

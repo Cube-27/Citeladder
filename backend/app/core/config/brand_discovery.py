@@ -136,7 +136,7 @@ CAPTURE_METHOD_APPLICATION_MODEL: Final = "application_model"
 CAPTURE_METHOD_EXTERNAL_SEARCH: Final = "external_search"
 CAPTURE_METHOD_EXTERNAL_FETCH: Final = "external_fetch"
 CAPTURE_METHOD_USER: Final = "user_input"
-BRAND_DISCOVERY_VERSION: Final = "brand-discovery-v2"
+BRAND_DISCOVERY_VERSION: Final = "brand-discovery-v1"
 BRAND_IDENTITY_PROMPT_VERSION: Final = "brand-identity-v1"
 
 # The identity fields a "sources disagreed" warning would actually be ABOUT.

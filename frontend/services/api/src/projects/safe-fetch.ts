@@ -99,7 +99,7 @@ export function decodedBody(body: Buffer, encoding: string, maxBytes: number): B
   return decoded;
 }
 
-async function pinnedRequest(
+export async function pinnedRequest(
   url: URL,
   target: { address: string; family: number },
   options: FetchOptions,
@@ -111,6 +111,8 @@ async function pinnedRequest(
         url,
         {
           agent: false,
+          // Exactly one validated address is selected above; no family race.
+          family: target.family,
           signal,
           headers: {
             accept: options.contentTypes.join(', '),

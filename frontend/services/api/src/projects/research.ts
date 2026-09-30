@@ -235,6 +235,7 @@ export async function researchBrand(
   if (['unavailable', 'failed'].includes(external.state))
     warnings.add('external_research_unavailable');
   if (external.state === 'no_results') warnings.add('external_research_no_results');
+  if (competitorState === 'failed') warnings.add('competitor_search_failed');
   if (!identity || !suggestionAvailable) warnings.add('research_degraded');
   if (!competitors.length) warnings.add('competitors_not_found');
   const confidence = cfg.identity_conflict_fields.flatMap((field) => {
