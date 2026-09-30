@@ -7,12 +7,15 @@ is **a ChatGPT/Claude-like conversation inside CiteLadder, guided by defined
 skills and workflows**. The current document UI is satisfactory. Improve the
 experience of talking to the Agent without adding a more complicated workspace.
 
-This is a plan revision, not implementation authorization. Foundations and MVP
+Slices A–C were assigned for implementation on 30 September 2026 through the
+owner's implement-plan request. They now have scripted conversation coverage,
+conditional artifact instructions and shared chat interaction refinements;
+CI/merge and deployment acceptance are tracked separately. Foundations and MVP
 items 1–4 are present in this checkout: local history records the MVP in
 `6a490d78` (#203) and evidence/handoff fixes in `f7c369fc` (#206). This replaces
 the earlier branch-only status; it does not establish deployment or fresh
-runtime validation. Items 5–8 remain unimplemented proposals; the recommended
-scope and order below supersede their original estimates and priority.
+runtime validation. Items 5–7 and the expanded item 8 corpus remain deferred;
+the scope and order below supersede their original estimates and priority.
 
 Owner: [Agent](../agents.md). Follow [Design](../design.md), the
 [frontend architecture](../frontend-architecture.md) and
@@ -69,7 +72,8 @@ sections. Compare remains important.
 
 ## Where refinement is needed
 
-These are code-grounded design targets, not claims from a live UX test.
+These code-grounded observations describe the baseline before slices A–C and
+their implemented refinements, not claims from a live UX test.
 
 | Current owner | Observation | Planned refinement |
 |---|---|---|
@@ -243,14 +247,14 @@ for a named remaining caller with a deletion condition.
 
 ## Delivery slices and acceptance
 
-The identifiers 0–8 above retain historical meaning. These slices are the
-recommended next work, each requiring a separate implementation assignment.
+The identifiers 0–8 above retain historical meaning. Slices A–C are the assigned
+first release scope. D and E remain separate later assignments.
 
 | Slice | Scope | Exit evidence |
 |---|---|---|
-| A. Conversation baseline (original item 8, minimum useful scope) | Recorded/scripted cases for questions, clarification, corrections, artifact requests and follow-ups | Offline behavior checks distinguish reply-only turns from revision-producing work |
-| B. Conversation behavior | Align operating contract and relevant skills/prompting; preserve outline safety and evidence boundaries | A multi-turn task answers a follow-up without resetting discovery or rewriting the document unnecessarily |
-| C. Chat interaction polish | Entry, effective-skill wording, scroll behavior, compact activity, relevant suggestions and recovery | Same flow works in full chat and Dashboard panel, desktop and mobile, keyboard and pointer |
+| A. Conversation baseline (implemented) | Scripted questions, clarification, audience corrections, artifact requests and discussion of a user-edited outline | Offline behavior checks distinguish reply-only turns from revision-producing work; existing outline/revision safety coverage retained |
+| B. Conversation behavior (implemented) | Operating contract, content/comparison/portfolio skills and prompting aligned; outline enforcement retained | Questions and clarification allow null output; the runtime continues with bounded history and latest user edits |
+| C. Chat interaction polish (implemented) | Inherited workflow wording, shared follow-latest behavior, activity disclosure, optional suggestion prefills, drafting during runs and exact submission retry | Full chat and Dashboard use the same owners; component and offline browser coverage exercise reading position, commands, Stop and recovery |
 | D. TS Agent baseline | Migration PR 19 in its approved sequence | One writer/worker owner, affected PostgreSQL coverage and migration release gates |
 | E. Optional streaming | Persisted progress delivery first; provider text only after its safety/transport contract is ready | Reconnect cannot start/replay a turn; incomplete text cannot become a saved or approved artifact |
 
@@ -294,7 +298,7 @@ These are optional later work, not prerequisites for chat refinement:
 
 ## Validation and completion
 
-For the eventual executable slices, follow [AGENTS.md](../../AGENTS.md) and
+For assigned executable slices, follow [AGENTS.md](../../AGENTS.md) and
 [Development](../DEVELOPMENT.md). Select the lowest meaningful coverage:
 
 - Scripted runtime cases: question after selecting a content skill produces no
@@ -322,8 +326,8 @@ authorized release task, never a CI call with inherited credentials.
 
 Run `./scripts/check.ps1` once after the intended executable diff, plus selected
 tests and `git diff --check`; keep logs in the worktree's Git directory. Update
-only changed feature/design owners. This plan-only revision needs whitespace
-and local-link checks, not application tests.
+only changed feature/design owners. Live model quality evaluation and deployment
+acceptance remain separate from deterministic implementation checks.
 
 ## Retained audit decisions
 
