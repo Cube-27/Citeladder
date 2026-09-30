@@ -17,6 +17,8 @@ export type OwnershipInputs = {
   typescript: OpenApiDocument;
   /** Each ingress file's router, keyed by its repository path. */
   ingress: Readonly<Record<string, (path: string) => Set<IngressOutcome>>>;
+  /** Non-browser protocol endpoints also have a single ingress owner. */
+  protocolPaths?: readonly string[];
 };
 
 type Operation = { label: string; path: string };
@@ -128,5 +130,12 @@ export function routeOwnershipFailures(inputs: OwnershipInputs): string[] {
     }
   }
   checkIngress(inputs, [served.python, served.typescript], failures);
+  for (const [file, route] of Object.entries(inputs.ingress)) {
+    for (const path of inputs.protocolPaths ?? []) {
+      const reached = [...route(path)].filter((outcome) => outcome !== 'respond');
+      if (reached.length !== 1 || reached[0] !== 'typescript')
+        failures.push(`${file}: protocol ${path} must reach only typescript, but reaches [${reached.join(', ')}]`);
+    }
+  }
   return failures;
 }

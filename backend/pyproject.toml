@@ -16,7 +16,6 @@ dependencies = [
   "joserfc>=1.6.8,<2",
   "logfire[fastapi,httpx,sqlalchemy,system-metrics]>=4.20.0,<6",
   "lxml>=6.1.0,<7",
-  "mcp>=2,<3",
   "protego>=0.7.0,<1",
   # Imported directly by ~30 modules but declared nowhere until the `deptry`
   # gate found it: both arrived only because FastAPI/pydantic-settings happened

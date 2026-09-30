@@ -19,6 +19,7 @@ import { getLogger } from './logging.ts';
 import { requestId } from './request-id.ts';
 import { PRODUCT_ROUTES } from './routes/index.ts';
 import { registerMethodGuards } from './routes/define.ts';
+import { registerMcpRoutes } from './mcp/server.ts';
 
 const logger = getLogger('api');
 
@@ -62,6 +63,7 @@ export function createApp(config: ServiceConfig, db: Database): Hono<AppEnv> {
   );
   app.onError(onError);
   app.notFound(onNotFound);
+  registerMcpRoutes(app, config, db);
 
   // Liveness: dependency-free and byte-stable, like the backend's /health.
   app.get('/health', (c) => c.json({ status: 'ok' }));

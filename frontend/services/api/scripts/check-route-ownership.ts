@@ -18,6 +18,7 @@ import { openApiDocument, type OpenApiDocument } from '../src/openapi/document.t
 import { ingressRouter } from '../src/openapi/ingress.ts';
 import { routeOwnershipFailures } from '../src/openapi/ownership.ts';
 import { ROUTE_CONTRACTS } from '../src/openapi/routes.ts';
+import { MCP_PROTOCOL_PATHS } from '../src/mcp/server.ts';
 
 const repository = new URL('../../../../', import.meta.url);
 
@@ -50,6 +51,7 @@ if (!pythonOpenApi) {
 const failures = routeOwnershipFailures({
   apiPrefix: policy.api.prefix,
   manifest: ROUTE_OWNERSHIP,
+  protocolPaths: MCP_PROTOCOL_PATHS,
   python: readJson(pathToFileURL(resolve(pythonOpenApi))),
   typescript: openApiDocument(ROUTE_CONTRACTS),
   ingress: Object.fromEntries(
