@@ -24,6 +24,7 @@ export function Composer({
   onSubmit,
   pending,
   disabled,
+  submissionDisabled = false,
   placeholder,
   chips = [],
   onRemoveChip,
@@ -38,6 +39,8 @@ export function Composer({
   onSubmit: () => void;
   pending: boolean;
   disabled: boolean;
+  /** An accepted run blocks another send while the user may keep drafting. */
+  submissionDisabled?: boolean;
   placeholder: string;
   chips?: ContextChip[];
   onRemoveChip?: (chip: ContextChip) => void;
@@ -46,7 +49,7 @@ export function Composer({
   /** Visible lines before the field scrolls. */
   rows?: number;
 }>) {
-  const canSend = !disabled && !pending && value.trim().length > 0;
+  const canSend = !disabled && !submissionDisabled && !pending && value.trim().length > 0;
   return (
     <form
       className="focus-frame bg-input shadow-raised grid gap-1 rounded-[var(--radius-card)] p-2"

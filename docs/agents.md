@@ -4,13 +4,20 @@
 
 The Agent is CiteLadder's one in-app assistant runtime. A user asks a question
 or picks up an Action; the Agent gathers persisted CiteLadder evidence, applies
-an internal skill and produces one reviewable deliverable that the user refines.
+an internal skill and answers directly or produces a requested deliverable that
+the user refines.
 It owns chats, runs, tool and model attempts, outputs and their revisions. It
 does not own business evidence, Actions or measurement, and it has no second
 knowledge store. It cannot publish, contact third parties, activate prompts,
 run crawls or paid pulls, change a customer site, declare implementation or
 claim an improvement without new measured evidence. Web research is out of
 scope.
+
+Questions, discussion and clarification persist as replies without requiring a
+deliverable. Selecting a content skill does not require creating an outline;
+outline approval applies when the user requests that work. A question about a
+saved document preserves its revision. The supplied history is bounded working
+context, and task preferences do not become reviewed company facts.
 
 ## Model destination admission
 
@@ -61,14 +68,17 @@ step still being processed, a previous step that returned without a read, or a
 read's outcome. Each step retains its model/tool attempt IDs, run attempt and
 runtime, protocol, catalog, registry and projection versions. One joined query
 reads these committed attempts. The conversation shows
-them under the running indicator; the runtime writes nothing extra for it.
+the latest factual activity under the running indicator, with committed steps
+in an expandable disclosure; the runtime writes nothing extra for it.
 
 The output reads as a document of sections. Each section can be edited in
 place, saved as a user revision with every other section unchanged, or sent to
 the Agent with an instruction as an ordinary follow-up turn scoped to that
 section. History compares any earlier revision with the current one. Cited
 evidence on replies and in Sources links to the screen (or record) that shows
-it. After a deliverable, refinements revise it in the same chat, and next steps
+it. After a freshly produced deliverable, optional refinements prefill a message
+for review before the user sends it. Later discussion suppresses those suggestions.
+Requested refinements revise it in the same chat, and next steps
 open a new chat with the skill that takes the work forward, carrying only the
 attached Action and the output's title.
 
@@ -128,6 +138,19 @@ route. Agent mode holds New chat, Actions, Skills, Context and the searchable
 chat history under `/agent`; the Skills catalog shows what each skill produces,
 never its methodology, and Context edits the Agent instructions and the
 reviewed brand profile.
+
+The picker distinguishes an explicit skill from the inherited chat workflow or
+attached Action. Its default option does not clear the chat's server-side pin.
+The full chat and Dashboard panel follow new messages, revisions and committed
+progress only while the reader is near the end; **Jump to latest** resumes
+following. The composer permits drafting while a run is active, but cannot send
+another turn. Drafts stay in component memory, scoped to the current chat and
+workspace, and survive recoverable submission failures. **Retry send** replays
+the exact failed submission with its original idempotency key; newer unsent text
+is retained. After an accepted run fails or stops, reviewing its request restores
+the message and typed Action mentions. If another draft is present, the recovery
+button explicitly offers to replace it. Sending starts a new attempt through
+normal admission.
 
 Evidence screens hand work to New chat through the
 [handoff codec](../frontend/lib/agent/handoff.ts). **Work on this** attaches an

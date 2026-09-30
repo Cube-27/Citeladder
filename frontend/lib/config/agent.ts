@@ -6,6 +6,8 @@
 export const AGENT_CHAT_PAGE_SIZE = 30;
 export const AGENT_ACTIONS_PAGE_SIZE = 50;
 export const AGENT_RUN_POLL_MS = 2_000;
+/** Distance from the end that still counts as following the conversation. */
+export const AGENT_FOLLOW_LATEST_GAP_PX = 96;
 /** New chat shows this many top Actions under "Work on this". */
 export const AGENT_TOP_ACTIONS = 3;
 /** Debounce for the sidebar chat search. */

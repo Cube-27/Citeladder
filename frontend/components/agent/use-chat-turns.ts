@@ -12,6 +12,7 @@ import {
   agentQueries,
   type AgentChatDetail,
   type AgentContextRefs,
+  type AgentMessage,
 } from '@/lib/api/agent';
 import { queryKeys } from '@/lib/api/query-keys';
 import { AGENT_RUN_POLL_MS } from '@/lib/config/agent';
@@ -70,7 +71,7 @@ export function useCreateChat(
   };
 }
 
-/** A follow-up turn: revises the chat's output when there is one. */
+/** An ordinary follow-up; only requested work creates an output revision. */
 export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   const chatId = detail.chat.id;
   const [draft, setDraft] = useState('');
@@ -86,11 +87,20 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   });
   const mutation = useMutation({
     ...agentMutations.sendMessage(workspaceId),
-    onSuccess: async () => {
+    onSuccess: (accepted, variables) => {
       requestKey.accepted();
-      setDraft('');
-      commands.clear();
-      await Promise.all([
+      const submittedMentions = variables.mentions ?? [];
+      const unchangedMentions =
+        commands.mentions.length === submittedMentions.length &&
+        commands.mentions.every((mention, index) => mention.id === submittedMentions[index]);
+      if (draft.trim() === variables.message && unchangedMentions) {
+        setDraft('');
+        commands.clear();
+      }
+      queryClient.setQueryData<AgentChatDetail>(queryKeys.agent.chat(chatId), (current) =>
+        current ? { ...current, latest_run: accepted.run } : current,
+      );
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.agent.chat(chatId) }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.agent.chatLists(detail.chat.project_id),
@@ -114,6 +124,12 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   return {
     draft,
     setDraft,
+    suggest: (instruction: string) =>
+      setDraft((current) => (current.trim() ? `${current}\n\n${instruction}` : instruction)),
+    recover: (message: AgentMessage) => {
+      setDraft(message.content);
+      commands.restore(message.mentions);
+    },
     skillId,
     setSkillId,
     lastMessage,
@@ -121,6 +137,9 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     commands,
     pending: mutation.isPending,
     failure: mutation.isError ? agentWriteFailure(mutation.error) : null,
+    retrySubmission: () => {
+      if (mutation.variables) mutation.mutate(mutation.variables);
+    },
   };
 }
 

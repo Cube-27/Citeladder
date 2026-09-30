@@ -28,7 +28,7 @@ export function useComposerCommands({
   projectId: string;
   outputKind?: string | null;
   onSkill: (skillId: string) => void;
-}>): ComposerCommands & { clear: () => void } {
+}>): ComposerCommands & { clear: () => void; restore: (mentions: readonly Mention[]) => void } {
   const [mentions, setMentions] = useState<Mention[]>([]);
   const skills = useSkillCatalog().filter(
     (skill) => !outputKind || skill.output_kind === outputKind,
@@ -71,5 +71,6 @@ export function useComposerCommands({
     mentions,
     onRemoveMention: (id) => setMentions((current) => current.filter((item) => item.id !== id)),
     clear: () => setMentions([]),
+    restore: (saved) => setMentions([...saved]),
   };
 }

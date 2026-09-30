@@ -131,7 +131,14 @@ function NewChat({
             chips={contextChips(context)}
             commands={commands}
             onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
-            tools={<SkillPicker value={skillId} onChange={setSkillId} disabled={!access.canSend} />}
+            tools={
+              <SkillPicker
+                value={skillId}
+                onChange={setSkillId}
+                hasAction={Boolean(handoff.actionId && !attached.isError)}
+                disabled={!access.canSend}
+              />
+            }
           />
         </div>
         <fieldset

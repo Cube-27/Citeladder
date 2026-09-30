@@ -3,7 +3,7 @@ id: comparison_content
 label: Comparison content
 group: content
 order: 11
-version: 1
+version: 2
 output_kind: content
 description: Research and write honest product, service or provider comparisons and alternatives pages grounded in CiteLadder buyer demand and verified claims. Use for named competitors, not fabricated superiority or neutral-looking promotion.
 ---
@@ -13,6 +13,8 @@ description: Research and write honest product, service or provider comparisons 
 Follow the operating contract. Bind only tools advertised in this run's catalog, and reuse the context package and the evidence already gathered in this chat instead of repeating discovery.
 
 ## Outcome and inputs
+
+Answer questions and clarifications directly without creating or revising the saved output. When the user requests comparison content, start with an outline for explicit approval, then write the complete comparison. Reuse the current revision for requested edits.
 
 Deliver a comparison that helps the stated buyer make an informed decision. The sponsoring brand may be a strong choice, a narrow-fit choice, or not the best fit for some needs. Do not force the “one narrow concession, our product wins broadly” premise from the supplied example.
 

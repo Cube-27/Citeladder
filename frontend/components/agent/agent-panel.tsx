@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { FollowUpFailure } from '@/components/agent/chat-screen';
 import { Composer } from '@/components/agent/composer';
 import { Conversation } from '@/components/agent/conversation';
 import { SkillPicker } from '@/components/agent/skill-picker';
+import { useComposerCommands } from '@/components/agent/use-composer-commands';
+import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import {
   useCancelRun,
   useChatDetail,
@@ -60,10 +62,11 @@ export function AgentPanel() {
       closeLabel="Close agent"
       // The panel body lays out its own scroll area and bottom-pinned composer.
       bodyClassName="flex flex-col pb-0"
+      bodyLabel="Agent conversation"
     >
       {chatId ? (
         <PanelChat
-          key={chatId}
+          key={`${activeWorkspaceId}:${chatId}`}
           workspaceId={activeWorkspaceId}
           chatId={chatId}
           projectId={activeProjectId}
@@ -108,7 +111,8 @@ function PanelStart({
 }>) {
   const [message, setMessage] = useState(seed.prompt ?? '');
   const [context, setContext] = useState(seed.context);
-  const [skillId, setSkillId] = useState<string | null>(null);
+  const [skillId, setSkillId] = useState<string | null>(seed.skillId ?? null);
+  const commands = useComposerCommands({ workspaceId, projectId, onSkill: setSkillId });
   const access = useAgentAccess();
   const create = useCreateChat(workspaceId, projectId, onStarted);
   const hasContext = contextChips(context).length > 0;
@@ -121,13 +125,29 @@ function PanelStart({
           label="Message the agent"
           value={message}
           onChange={setMessage}
-          onSubmit={() => create.start({ message, skillId, actionId: seed.actionId, context })}
+          onSubmit={() =>
+            create.start({
+              message,
+              skillId,
+              actionId: seed.actionId,
+              context,
+              mentions: commands.mentions.map((mention) => mention.id),
+            })
+          }
           pending={create.pending}
           disabled={!access.canSend}
           placeholder="Ask about what you are looking at."
           chips={contextChips(context)}
+          commands={commands}
           onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
-          tools={<SkillPicker value={skillId} onChange={setSkillId} disabled={!access.canSend} />}
+          tools={
+            <SkillPicker
+              value={skillId}
+              onChange={setSkillId}
+              hasAction={Boolean(seed.actionId)}
+              disabled={!access.canSend}
+            />
+          }
         />
       }
     >
@@ -149,11 +169,13 @@ function PanelStart({
 function PanelLayout({
   children,
   composer,
-}: Readonly<{ children: ReactNode; composer: ReactNode }>) {
+  end,
+}: Readonly<{ children: ReactNode; composer: ReactNode; end?: ReactNode }>) {
   return (
     <div className="flex min-h-full flex-1 flex-col gap-4">
       <div className="flex min-w-0 flex-1 flex-col gap-4">{children}</div>
       <div className="bg-elevated z-sticky sticky bottom-0 pt-2 pb-4">{composer}</div>
+      {end}
     </div>
   );
 }
@@ -217,35 +239,44 @@ function PanelConversation({
     onLeave();
     navigate(projectHref(`/agent/chats/${chatId}`));
   };
-  const endRef = useRef<HTMLDivElement>(null);
-  const latestRevisionId = detail.output?.latest_revision?.id;
-  // A new turn, run state or revision scrolls the panel to its newest entry.
-  useEffect(() => {
-    endRef.current?.scrollIntoView?.({ block: 'end' });
-  }, [detail.messages.length, detail.latest_run?.status, latestRevisionId]);
+  const { endRef, showJump, jumpToLatest } = useFollowLatest(detail);
   return (
     <PanelLayout
+      end={<div ref={endRef} />}
       composer={
-        <Composer
-          rows={2}
-          id="agent-panel-reply"
-          label="Reply to the agent"
-          value={turn.draft}
-          onChange={turn.setDraft}
-          onSubmit={() => turn.send(turn.draft)}
-          pending={turn.pending}
-          disabled={!access.canSend || runActive}
-          placeholder="Ask a follow-up. / picks a skill, @ mentions an Action."
-          commands={turn.commands}
-          tools={
-            <SkillPicker
-              value={turn.skillId}
-              onChange={turn.setSkillId}
-              outputKind={detail.output?.kind}
-              disabled={!access.canSend || runActive}
-            />
-          }
-        />
+        <>
+          {showJump ? (
+            <Button variant="secondary" size="sm" onClick={jumpToLatest}>
+              Jump to latest
+            </Button>
+          ) : null}
+          <Composer
+            rows={2}
+            id="agent-panel-reply"
+            label="Reply to the agent"
+            value={turn.draft}
+            onChange={turn.setDraft}
+            onSubmit={() => turn.send(turn.draft)}
+            pending={turn.pending}
+            disabled={!access.canSend}
+            submissionDisabled={runActive}
+            placeholder="Ask a follow-up. / picks a skill, @ mentions an Action."
+            commands={turn.commands}
+            tools={
+              <SkillPicker
+                value={turn.skillId}
+                onChange={turn.setSkillId}
+                outputKind={detail.output?.kind}
+                inheritedSkillId={
+                  detail.pinned_skill_id ??
+                  (!detail.chat.action_id ? detail.output?.skill_id : null)
+                }
+                hasAction={Boolean(detail.chat.action_id)}
+                disabled={!access.canSend || runActive}
+              />
+            }
+          />
+        </>
       }
     >
       {toolbar}
@@ -261,14 +292,16 @@ function PanelConversation({
             </div>
           ) : null
         }
-        onRefine={(instruction) => turn.send(instruction)}
+        onRefine={turn.suggest}
+        onRecover={turn.recover}
+        hasDraft={Boolean(turn.draft.trim() || turn.commands.mentions.length)}
+        sending={turn.pending}
         onStop={() => detail.latest_run && cancel.mutate({ chatId, runId: detail.latest_run.id })}
         stopping={cancel.isPending}
         canSend={access.canSend && !turn.pending}
       />
       {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
-      <FollowUpFailure turn={turn} actionId={detail.chat.action_id} />
-      <div ref={endRef} />
+      <FollowUpFailure turn={turn} actionId={detail.chat.action_id} canSend={access.canSend} />
     </PanelLayout>
   );
 }

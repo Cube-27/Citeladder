@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { Composer } from '@/components/agent/composer';
 import { Conversation } from '@/components/agent/conversation';
 import { OutputPane } from '@/components/agent/output-pane';
 import { SkillPicker } from '@/components/agent/skill-picker';
+import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import {
   useCancelRun,
   useChatDetail,
@@ -55,7 +55,9 @@ export function ChatScreen() {
         <Alert tone="danger">This chat belongs to another project.</Alert>
       </PageShell>
     );
-  return <ChatView key={chatId} detail={query.data} workspaceId={workspaceId} />;
+  return (
+    <ChatView key={`${workspaceId}:${chatId}`} detail={query.data} workspaceId={workspaceId} />
+  );
 }
 
 function ChatView({
@@ -69,14 +71,7 @@ function ChatView({
   const hasOutput = Boolean(detail.output?.latest_revision);
   const turn = useFollowUp(workspaceId, detail);
   const cancel = useCancelRun(workspaceId, chatId);
-  const endRef = useRef<HTMLDivElement>(null);
-  const latestRevisionId = detail.output?.latest_revision?.id;
-
-  // Like any chat window: a new turn, run state or revision scrolls the thread
-  // to its end, so the latest entry sits just above the pinned composer.
-  useEffect(() => {
-    endRef.current?.scrollIntoView?.({ block: 'end' });
-  }, [detail.messages.length, detail.latest_run?.status, latestRevisionId]);
+  const { endRef, showJump, jumpToLatest } = useFollowLatest(detail);
 
   return (
     <PageShell
@@ -100,16 +95,24 @@ function ChatView({
               />
             ) : null
           }
-          onRefine={(instruction) => turn.send(instruction)}
+          onRefine={turn.suggest}
+          onRecover={turn.recover}
+          hasDraft={Boolean(turn.draft.trim() || turn.commands.mentions.length)}
+          sending={turn.pending}
           onStop={() => detail.latest_run && cancel.mutate({ chatId, runId: detail.latest_run.id })}
           stopping={cancel.isPending}
           canSend={access.canSend && !turn.pending}
         />
         {access.canSend ? null : <Alert tone="info">{access.message}</Alert>}
-        <FollowUpFailure turn={turn} actionId={detail.chat.action_id} />
+        <FollowUpFailure turn={turn} actionId={detail.chat.action_id} canSend={access.canSend} />
       </div>
       {/* The composer stays at the bottom of the window while the thread scrolls. */}
       <div className="bg-panel z-sticky sticky bottom-0 pt-2 pb-4">
+        {showJump ? (
+          <Button variant="secondary" size="sm" onClick={jumpToLatest}>
+            Jump to latest
+          </Button>
+        ) : null}
         <Composer
           rows={2}
           id="chat-message"
@@ -118,10 +121,11 @@ function ChatView({
           onChange={turn.setDraft}
           onSubmit={() => turn.send(turn.draft)}
           pending={turn.pending}
-          disabled={!access.canSend || runActive}
+          disabled={!access.canSend}
+          submissionDisabled={runActive}
           placeholder={
             hasOutput
-              ? 'Ask for a change to the output. / picks a skill, @ mentions an Action.'
+              ? 'Ask about the work or request a change. / picks a skill, @ mentions an Action.'
               : 'Ask a follow-up. / picks a skill, @ mentions an Action.'
           }
           commands={turn.commands}
@@ -130,6 +134,10 @@ function ChatView({
               value={turn.skillId}
               onChange={turn.setSkillId}
               outputKind={detail.output?.kind}
+              inheritedSkillId={
+                detail.pinned_skill_id ?? (!detail.chat.action_id ? detail.output?.skill_id : null)
+              }
+              hasAction={Boolean(detail.chat.action_id)}
               disabled={!access.canSend || runActive}
             />
           }
@@ -143,7 +151,8 @@ function ChatView({
 export function FollowUpFailure({
   turn,
   actionId,
-}: Readonly<{ turn: FollowUp; actionId: string | null }>) {
+  canSend,
+}: Readonly<{ turn: FollowUp; actionId: string | null; canSend: boolean }>) {
   if (!turn.failure) return null;
   return (
     <Alert tone="danger">
@@ -155,6 +164,16 @@ export function FollowUpFailure({
         >
           Start a new chat
         </ProjectLink>
+      ) : null}
+      {!turn.failure.startNewChat ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={turn.retrySubmission}
+          disabled={turn.pending || !canSend}
+        >
+          Retry send
+        </Button>
       ) : null}
     </Alert>
   );

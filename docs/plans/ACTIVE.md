@@ -49,12 +49,12 @@
   — foundations and MVP items 1–4 are present in #203, with handoff/evidence
   fixes in #206. Revised on 30 September 2026 after owner clarification:
   improve the ChatGPT/Claude-like conversation and skill-guided workflows;
-  preserve the current document UI. Proposed next scope is offline behavior
-  coverage, conversation instructions and chat interaction polish, with no
-  migration prerequisite. Substantial runtime additions follow TypeScript
-  PR 19; streaming is a separate later slice. Memory promotion, durable plan
-  execution and project skill policy are deferred. Implementation remains
-  unassigned; the revision is planning authorization only.
+  preserve the current document UI. Slices A–C were assigned through
+  implement-plan and implemented: offline conversation coverage, conditional
+  artifact instructions and shared chat interaction polish. CI/merge and
+  deployment acceptance are tracked separately. Substantial runtime additions
+  follow TypeScript PR 19; streaming is a separate later slice. Memory promotion, durable plan
+  execution and project skill policy are deferred. D/E remain separate assignments.
 
 ## Queued
 - [Authorized crawl and AI crawlability](citeladder-authorized-crawl.md)

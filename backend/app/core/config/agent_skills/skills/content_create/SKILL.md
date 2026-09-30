@@ -3,7 +3,7 @@ id: content_create
 label: Create content
 group: content
 order: 10
-version: 2
+version: 3
 output_kind: content
 description: Write or refresh complete articles, buyer guides, homepages, landing pages, YouTube scripts and community/social drafts using CiteLadder business and search evidence. Use for actual content delivery, not generic recommendations.
 ---
@@ -14,7 +14,7 @@ Follow the operating contract. Bind only tools advertised in this run's catalog,
 
 ## Outcome
 
-Deliver the requested content, not just an outline or a report saying content should be written. You do the synthesis, drafting and editorial revision; the CiteLadder tools supply business and evidence context, not the prose.
+For a question about content or the saved draft, answer directly with no output; a clarification or audience correction can also remain reply-only. Apply the workflow below only to requested creation or revision. First produce an outline for explicit user approval; after approval deliver the complete content. You do the synthesis, drafting and editorial revision; the CiteLadder tools supply business and evidence context, not the prose.
 
 This skill owns writing and editorial review. Use the Comparison content skill for named competitive claims, and the Programmatic SEO pilot skill for repeated page systems. Follow the format guidance supplied for the chosen format. Do not trigger a full strategic audit for a narrow writing task.
 

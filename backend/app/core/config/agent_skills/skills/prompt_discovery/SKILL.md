@@ -3,7 +3,7 @@ id: prompt_discovery
 label: Prompt discovery
 group: demand
 order: 4
-version: 2
+version: 3
 output_kind: prompt_portfolio
 description: Create or improve the buyer questions tracked in AI visibility engines from CiteLadder business, demand and competitor evidence. Use for prompt portfolios, prompt quality audits and topic coverage; not ordinary task-prompt writing.
 ---
@@ -96,6 +96,8 @@ a larger bounded page. Keep existing topics. If no topics exist, ask the user to
 generate starting topics in Prompts before submitting.
 
 ### First: the coverage plan (outline)
+
+This output sequence applies when the user requests a portfolio or its revision. Answer questions about prompts, coverage or the saved portfolio directly with `output` null; do not create another coverage plan merely because this skill is selected.
 
 The first deliverable is a short coverage plan the user edits and approves; do
 not write questions yet. For each topic, list the buyer decisions worth tracking
