@@ -33,6 +33,10 @@ function localFonts() {
         }),
     ),
   );
+  // A transient read or parse failure must not fail every later document in this process.
+  fontBytes.catch(() => {
+    fontBytes = undefined;
+  });
   return fontBytes;
 }
 

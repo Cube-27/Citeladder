@@ -259,5 +259,8 @@ export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
   );
   if (invoice.document_kind === 'export_receipt' && value.seller.lut_reference)
     report.text(`Export under LUT reference: ${value.seller.lut_reference}`);
+  report.text(`Document ${invoice.id} · tax policy version ${invoice.tax_policy_version}`, {
+    size: 8,
+  });
   return report.save();
 }

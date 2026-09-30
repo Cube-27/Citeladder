@@ -196,6 +196,7 @@ describe('persisted billing documents', () => {
     const text = pages.join(' ');
     expect(text).toContain('INR 1,180.00');
     expect(text).toContain('IGST (18%)');
+    expect(text).toContain(`Document ${receipt.id}`);
     expect(text).toContain('9 September 2026');
     expect(text).toMatch(/José\s+नाम/u);
     expect(text).not.toContain('private-provider-secret');
