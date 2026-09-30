@@ -440,12 +440,12 @@ filters, the Sources baseline branch, the range and named-baseline paths of
 
 The command center and executive PDF stay Python: the PDF renders the command
 center through `reportlab`, which billing invoices keep, so moving it would add
-a Node PDF library and retire no Python dependency.
+a Node PDF library and retire no Python dependency. (Superseded: PR 16a moved
+both and retired the visibility bridges they alone used.)
 
 | Python bridge | Remaining caller |
 | --- | --- |
 | `evidence.get_visibility_evidence`, `get_execution_evidence`, `selection`, `source_projection` with `source_mentions`, `source_page_links`, `brand_identity`, `evidence_selection`, `aio_evidence` | `domain/mcp` (PR 15) |
-| `visibility.get_visibility`, `comparison_projection`, `matched_comparison`, `measurement` | command center and executive PDF |
 | `metrics.get_metrics`, `evidence.load_export_bundle`, `schemas.MetricsResponse` | `api/audits.py` (audit island) |
 
 All 9b routes are reads; no table gains a second writer.
@@ -669,10 +669,9 @@ Remaining Python consumer tests seed persisted projects directly.
 
 | Retained Python bridge | Remaining caller and removal condition |
 |---|---|
-| Authorized project reads and pure logo URL projection | Integrations (PR 13), executive PDF (PR 16) and Python visibility consumers; remove after the last caller migrates |
+| Authorized project reads and pure logo URL helpers | Python readiness route (`api/performance.py`) and MCP source projection (`analysis/brand_identity`); remove after the last caller migrates |
 | Discovery profile/facet value types and BusinessContext | Commerce and Agent context (PR 19); remove with their last Python consumer |
 | Onboarding normalization/site resolution | Search Intelligence targets; remove when its Python executor migrates |
-| Command-center projection, schemas and renderer | Executive PDF and its focused component tests; remove in PR 16 |
 | Discovery lease-expiry/retry reconciliation | Shared Python queue sweeper; remove when that queue owner migrates |
 
 Research snapshots retain brand-discovery-v1 under the pre-launch policy and
@@ -786,8 +785,11 @@ refund normalization and numbering remain the settlement owner for 16b.
 
 Retired: the two Python route modules, invoice PDF/DTO modules, the four
 command-center modules and their obsolete component tests; reportlab and its
-type stubs. Read/download isolation and document rendering coverage moves to
-TypeScript; Python refund replay, credit allocation and numbering tests stay.
+type stubs; and the visibility bridges only the executive PDF still reached
+(`analysis/visibility`, `comparison_projection`, `matched_comparison`,
+`measurement`, their response schemas and `get_project_logo_urls`).
+Read/download isolation and document rendering coverage moves to TypeScript;
+Python refund replay, credit allocation and numbering tests stay.
 
 Departures: missing metrics render as Unknown; observed zero remains zero.
 Executive documents include the metric-snapshot ID, processing versions and
@@ -797,8 +799,9 @@ fail on the server rather than presenting a guessed receipt. Local Noto Sans
 supports Latin, Greek, Cyrillic and Devanagari; unsupported characters retain
 their explicit Unicode code point.
 
-Receipt reads require the declared `manage_billing` capability. PDFs use monochrome text and bold
-headings without introducing a second color-token authority.
+Receipt reads require the declared `manage_billing` capability. PDFs use
+monochrome text and bold headings without introducing a second color-token
+authority.
 
 16a is implemented; its deployment and soak are pending. 16b remains
 pending: checkout, subscriptions, plan changes, webhooks, reconciliation,

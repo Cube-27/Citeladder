@@ -20,7 +20,6 @@ from app.analysis.comparison import frozen_comparison_key
 from app.domain.analysis.errors import TrendQueryError
 from app.domain.analysis.evidence import _normalize_events
 from app.domain.analysis.evidence_selection import apply_cursor, encode_cursor
-from app.domain.analysis.measurement import measurement_counts, observed_rate
 from app.models.analysis import ResponseAnalysis
 
 
@@ -48,30 +47,6 @@ def test_normalize_events_preserves_empty_query() -> None:
 def test_normalize_events_non_list_is_empty() -> None:
     assert _normalize_events(None) == []
     assert _normalize_events({"query": "x"}) == []
-
-
-def test_presence_counts_distinguish_empty_zero_and_historical_citations() -> None:
-    assert (
-        observed_rate(
-            {"total_completed": 0, "brand_mention_rate": 0}, "brand_mention_rate"
-        )
-        is None
-    )
-    metrics = {
-        "total_completed": 3,
-        "brand_mention_count": 0,
-        "coverage": {"requested": 5, "failed": 1, "not_run": 1},
-    }
-    assert observed_rate(metrics, "brand_mention_rate") == 0
-    counts = measurement_counts(metrics)
-    assert (counts.responses, counts.expected, counts.failed, counts.not_run) == (
-        3,
-        5,
-        1,
-        1,
-    )
-    assert counts.owned_citation_responses is None
-    assert observed_rate(metrics, "owned_citation_rate") is None
 
 
 def test_frozen_identity_requires_known_inputs_and_preserves_boundaries() -> None:

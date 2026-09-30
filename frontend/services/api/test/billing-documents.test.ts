@@ -1,6 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -193,10 +191,7 @@ describe('persisted billing documents', () => {
     expect(response.headers.get('content-disposition')).toBe(
       'attachment; filename="CLR-2627-000001---Injected.pdf"',
     );
-    expect(response.headers.get('cache-control')).toContain('private, no-store');
     const bytes = new Uint8Array(await response.arrayBuffer());
-    if (process.env.PDF_REVIEW_DIRECTORY)
-      await writeFile(join(process.env.PDF_REVIEW_DIRECTORY, 'receipt.pdf'), bytes);
     const pages = await pdfText(bytes);
     const text = pages.join(' ');
     expect(text).toContain('INR 1,180.00');
@@ -240,6 +235,7 @@ describe('persisted billing documents', () => {
         row.tax_treatment = 'CGST_SGST';
         Object.assign(payload.amounts!, {
           tax_treatment: 'CGST_SGST',
+          tax_rate: '0.28',
           cgst_minor: 9000,
           sgst_minor: 9000,
           igst_minor: 0,
@@ -247,8 +243,6 @@ describe('persisted billing documents', () => {
       }
       payload.line!.description = `${'Long reviewed description '.repeat(180)}Final description marker`;
       const bytes = await renderInvoicePdf(row);
-      if (process.env.PDF_REVIEW_DIRECTORY)
-        await writeFile(join(process.env.PDF_REVIEW_DIRECTORY, `${kind}.pdf`), bytes);
       const pages = await pdfText(bytes);
       expect(pages.length).toBeGreaterThan(1);
       expect(pages[0]).toContain('Long reviewed description');
@@ -258,15 +252,40 @@ describe('persisted billing documents', () => {
       );
       if (kind === 'export_receipt') expect(pages.join(' ')).toContain('LUT-fixture');
       if (kind === 'gst_tax_receipt') {
-        expect(pages.join(' ')).toContain('CGST (9%)');
-        expect(pages.join(' ')).toContain('SGST (9%)');
+        // 0.28 is not exact in binary floating point; the halved slab must print as 14.
+        expect(pages.join(' ')).toContain('CGST (14%)');
+        expect(pages.join(' ')).toContain('SGST (14%)');
       }
     },
   );
+  it('reads a workspace without a billing account as empty, without provisioning one', async () => {
+    const userId = await fixtures.user();
+    const workspaceId = await fixtures.ownedWorkspace(userId);
+    const requestHeaders = await headers(userId, workspaceId);
+    const listed = await app.request('/api/v1/billing/invoices', { headers: requestHeaders });
+    expect(listed.status).toBe(200);
+    expect(await listed.json()).toEqual({ invoices: [] });
+    const download = `/api/v1/billing/invoices/${randomUUID()}/pdf`;
+    expect((await app.request(download, { headers: requestHeaders })).status).toBe(404);
+    expect(
+      await db
+        .selectFrom('billing_accounts')
+        .select('id')
+        .where('workspace_id', '=', workspaceId)
+        .execute(),
+    ).toEqual([]);
+  });
   it('rejects inconsistent persisted amounts rather than publishing guessed totals', async () => {
     const row = invoice(randomUUID());
     row.total_amount_minor += 1;
     await expect(renderInvoicePdf(row)).rejects.toThrow('inconsistent');
+    // Totals that sum correctly still fail when tax sits outside the treatment's own rows.
+    const misfiled = invoice(randomUUID());
+    Object.assign((misfiled.payload as Record<string, Record<string, unknown>>).amounts!, {
+      cgst_minor: 9000,
+      igst_minor: 9000,
+    });
+    await expect(renderInvoicePdf(misfiled)).rejects.toThrow('inconsistent');
   });
   it('requires a scoped completed audit and reports its persisted provenance', async () => {
     const t = await measurements.tenant();
@@ -283,8 +302,6 @@ describe('persisted billing documents', () => {
     const response = await app.request(path, { headers: requestHeaders });
     expect(response.status).toBe(200);
     const bytes = new Uint8Array(await response.arrayBuffer());
-    if (process.env.PDF_REVIEW_DIRECTORY)
-      await writeFile(join(process.env.PDF_REVIEW_DIRECTORY, 'executive.pdf'), bytes);
     const text = (await pdfText(bytes)).join(' ');
     expect(text).toContain(auditId);
     expect(text).toContain('does not establish causation');

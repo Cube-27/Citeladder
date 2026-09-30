@@ -9,7 +9,7 @@ import { z } from 'zod';
 
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
-import { ApiError, notFound } from '../errors.ts';
+import { notFound } from '../errors.ts';
 import type { BillingInvoices } from '../generated/db-schema.ts';
 import { PdfReport } from './pdf.ts';
 
@@ -68,7 +68,11 @@ function payload(invoice: Invoice) {
     amounts.tax_treatment !== invoice.tax_treatment ||
     amounts.subtotal_minor - amounts.discount_minor !== amounts.taxable_minor ||
     amounts.cgst_minor + amounts.sgst_minor + amounts.igst_minor !== amounts.tax_minor ||
-    amounts.taxable_minor + amounts.tax_minor !== amounts.total_minor
+    amounts.taxable_minor + amounts.tax_minor !== amounts.total_minor ||
+    // Each treatment renders only its own tax rows, so no other component may carry tax.
+    (amounts.tax_treatment === 'IGST' && amounts.cgst_minor + amounts.sgst_minor !== 0) ||
+    (amounts.tax_treatment === 'CGST_SGST' && amounts.igst_minor !== 0) ||
+    (amounts.tax_treatment === 'EXPORT_ZERO_RATED' && amounts.tax_minor !== 0)
   ) {
     throw new TypeError('Persisted invoice amounts are inconsistent');
   }
@@ -102,18 +106,19 @@ function summary(invoice: Invoice) {
   });
 }
 
-async function accountId(db: Database, workspaceId: string): Promise<string> {
+/** Reads never provision: a workspace without a billing account has no receipts. */
+async function accountId(db: Database, workspaceId: string): Promise<string | undefined> {
   const account = await db
     .selectFrom('billing_accounts')
     .select('id')
     .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
-  if (!account) throw new ApiError(403, 'Workspace billing account is unavailable');
-  return account.id;
+  return account?.id;
 }
 
 export async function listInvoices(db: Database, workspaceId: string, limit: number) {
   const id = await accountId(db, workspaceId);
+  if (id === undefined) return { invoices: [] };
   const invoices = await db
     .selectFrom('billing_invoices')
     .selectAll()
@@ -131,6 +136,7 @@ export async function readInvoice(
   invoiceId: string,
 ): Promise<Invoice> {
   const id = await accountId(db, workspaceId);
+  if (id === undefined) throw notFound('Receipt');
   const invoice = await db
     .selectFrom('billing_invoices')
     .selectAll()
@@ -160,21 +166,30 @@ function address(value: z.infer<typeof identity>, customer = false): string {
 
 const date = (value: Date) =>
   new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'long' }).format(value);
+/** A frozen period that does not parse is shown as stored rather than failing the document. */
 function periodDate(value: string): string {
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) throw new TypeError('Persisted invoice period is invalid');
-  return date(parsed);
+  return Number.isNaN(parsed.getTime()) ? value : date(parsed);
+}
+
+/** A persisted decimal rate as an exact percentage (`0.28`, 50n → `14`); floats would print `14.000000000000002`. */
+function percent(rate: string, multiplier: bigint): string {
+  const [whole = '', fraction = ''] = rate.split('.');
+  const digits = (BigInt(whole + fraction) * multiplier)
+    .toString()
+    .padStart(fraction.length + 1, '0');
+  const point = digits.length - fraction.length;
+  return `${digits.slice(0, point)}.${digits.slice(point)}`.replace(/\.?0*$/u, '');
 }
 
 export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
-  const safe = summary(invoice);
   const value = payload(invoice);
   const amounts = value.amounts;
-  const credit = safe.document_kind === 'credit_note';
+  const credit = invoice.document_kind === 'credit_note';
   if (credit && !value.original_invoice_number)
     throw new TypeError('Credit note has no original invoice');
   const money = (amount: number) =>
-    `${amounts.currency} ${(amount / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    `${amounts.currency} ${(amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const report = await PdfReport.create(
     `${credit ? 'Credit note' : 'Receipt'} ${invoice.receipt_number}`,
     value.seller.legal_name ?? undefined,
@@ -201,17 +216,17 @@ export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
     [[description, String(line.quantity), money(line.unit_price_minor), money(line.amount_minor)]],
     [6, 1, 2, 2],
   );
-  const rate = Number(amounts.tax_rate) * 100;
+  const half = percent(amounts.tax_rate, 50n);
   const taxes =
     amounts.tax_treatment === 'CGST_SGST'
       ? [
-          [`CGST (${rate / 2}%)`, money(amounts.cgst_minor)],
-          [`SGST (${rate / 2}%)`, money(amounts.sgst_minor)],
+          [`CGST (${half}%)`, money(amounts.cgst_minor)],
+          [`SGST (${half}%)`, money(amounts.sgst_minor)],
         ]
       : [
           [
             amounts.tax_treatment === 'IGST'
-              ? `IGST (${rate}%)`
+              ? `IGST (${percent(amounts.tax_rate, 100n)}%)`
               : 'GST - export of service (zero-rated)',
             money(amounts.igst_minor),
           ],
@@ -242,7 +257,7 @@ export async function renderInvoicePdf(invoice: Invoice): Promise<Uint8Array> {
     ],
     [2, 3, 2, 3],
   );
-  if (safe.document_kind === 'export_receipt' && value.seller.lut_reference)
+  if (invoice.document_kind === 'export_receipt' && value.seller.lut_reference)
     report.text(`Export under LUT reference: ${value.seller.lut_reference}`);
   return report.save();
 }

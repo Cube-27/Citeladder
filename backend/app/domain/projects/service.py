@@ -26,17 +26,6 @@ def competitor_logo_url(project_id: uuid.UUID, competitor_id: uuid.UUID) -> str:
     return f"{API_V1_PREFIX}/projects/{project_id}/competitors/{competitor_id}/logo"
 
 
-def get_project_logo_urls(project: Project) -> dict[uuid.UUID, str]:
-    """Pure logo projection for Python executive-report visibility."""
-    urls: dict[uuid.UUID, str] = {}
-    if project.brand is not None and project.brand.logo_asset_id is not None:
-        urls[project.brand.id] = brand_logo_url(project.id)
-    for competitor in project.competitors:
-        if competitor.logo_asset_id is not None:
-            urls[competitor.id] = competitor_logo_url(project.id, competitor.id)
-    return urls
-
-
 async def get_project(
     session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
 ) -> Project:

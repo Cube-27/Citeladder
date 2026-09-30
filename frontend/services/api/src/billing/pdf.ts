@@ -84,16 +84,11 @@ export class PdfReport {
         ? character
         : `[U+${character.codePointAt(0)!.toString(16).toUpperCase()}]`;
       const previous = runs.at(-1);
-      if (previous?.font === font) {
-        previous.text += value;
-        previous.width = this.document.font(font).fontSize(size).widthOfString(previous.text);
-      } else
-        runs.push({
-          font,
-          text: value,
-          width: this.document.font(font).fontSize(size).widthOfString(value),
-        });
+      if (previous?.font === font) previous.text += value;
+      else runs.push({ font, text: value, width: 0 });
     }
+    for (const run of runs)
+      run.width = this.document.font(run.font).fontSize(size).widthOfString(run.text);
     return runs;
   }
 
@@ -161,7 +156,8 @@ export class PdfReport {
   }
 
   heading(text: string): void {
-    this.ensure(55);
+    // Room for the heading, a table header and one row, so a heading never ends a page.
+    this.ensure(100);
     this.y -= 12;
     this.text(text, { size: 13, bold: true });
   }

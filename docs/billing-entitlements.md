@@ -67,7 +67,9 @@ Receipt list/download reads and PDF rendering are TypeScript-owned in
 [`src/billing/`](../frontend/services/api/src/billing/). The `billing-documents`
 route family contains the existing invoice paths; the remaining `billing`
 mutations stay Python until PR 16b. Reads require the active workspace's billing
-permission and select its account, independently of owner-user metadata.
+permission and select its account, independently of owner-user metadata. A
+workspace without an account reads as having no receipts; reads never
+provision one.
 Documents validate stored amounts and use local Noto Sans fonts with measured
 wrapping and pagination. Unsupported glyphs are printed as explicit Unicode
 code points instead of blank characters. Executive PDFs consume the existing

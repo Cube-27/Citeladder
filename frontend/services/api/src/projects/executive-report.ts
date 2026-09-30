@@ -101,7 +101,7 @@ export async function renderExecutivePdf(view: View): Promise<Uint8Array> {
   }
   for (const evidence of view.resolved_actions.evidence)
     report.text(
-      `Resolved action: ${evidence.action_id}\nImplementation events: ${evidence.implementation_event_ids.join(', ')}\nVerification events: ${evidence.verification_event_ids.join(', ')}`,
+      `Resolved action: ${evidence.action_id}\nImplementation events: ${evidence.implementation_event_ids.join(', ') || 'Unavailable'}\nVerification events: ${evidence.verification_event_ids.join(', ') || 'Unavailable'}`,
     );
   return report.save();
 }

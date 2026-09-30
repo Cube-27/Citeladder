@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import uuid as _uuid
-
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -16,17 +14,14 @@ from app.core.config.audits import (
 )
 from app.core.config.provider_catalog import (
     ENGINE_GEMINI,
-    TRANSPORT_GOOGLE,
     measurement_route,
 )
-from app.domain.analysis import visibility as analysis_service
 from app.domain.analysis.errors import AnalysisNotFoundError
 from app.domain.analysis.evidence import (
     get_execution_evidence,
     load_export_bundle,
 )
 from app.domain.analysis.metrics import get_metrics
-from app.domain.analysis.visibility import get_visibility
 from app.domain.audits.creation import create_audit
 from app.models.analysis import (
     BrandMention,
@@ -55,80 +50,6 @@ from tests.component.audit_helpers import seed_audit_fixtures
 GEMINI_MODEL = measurement_route(ENGINE_GEMINI).transport_model
 
 
-def test_ranking_rows_key_logo_and_website_by_brand_flag_not_name() -> None:
-    """A competitor sharing the brand's name must not inherit its logo.
-
-    Exercised through ``_ranking_row``, the row builder every visibility
-    response goes through, rather than the two private lookups it calls: the
-    contract that matters is that the emitted row keys on ``(is_brand, name)``.
-    """
-    brand_id = _uuid.uuid4()
-    competitor_id = _uuid.uuid4()
-    logo_urls = {brand_id: "/brand-logo", competitor_id: "/competitor-logo"}
-    identity_ids = {
-        (True, "Shared name"): brand_id,
-        (False, "Shared name"): competitor_id,
-    }
-    website_urls = {
-        (True, "Shared name"): "brand.example",
-        (False, "Shared name"): "competitor.example",
-    }
-
-    def _row(is_brand: bool):
-        return analysis_service._ranking_row(
-            name="Shared name",
-            is_brand=is_brand,
-            mention_rate=1.0,
-            citation_rate=1.0,
-            shared=analysis_service._RankingContext(
-                share={},
-                counts={},
-                positions={},
-                logo_urls=logo_urls,
-                identity_ids=identity_ids,
-                website_urls=website_urls,
-            ),
-        )
-
-    brand_row = _row(True)
-    competitor_row = _row(False)
-
-    assert brand_row.logo_url == "/brand-logo"
-    assert brand_row.website_url == "brand.example"
-    assert competitor_row.logo_url == "/competitor-logo"
-    assert competitor_row.website_url == "competitor.example"
-
-    # An unknown name resolves to no logo/site rather than borrowing one.
-    missing = analysis_service._ranking_row(
-        name="Missing",
-        is_brand=False,
-        mention_rate=0.0,
-        citation_rate=0.0,
-        shared=analysis_service._RankingContext(
-            share={},
-            counts={},
-            positions={},
-            logo_urls=logo_urls,
-            identity_ids=identity_ids,
-            website_urls=None,
-        ),
-    )
-    assert missing.logo_url is None
-    assert missing.website_url is None
-
-
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [
-        ("Acme.COM/path", "https://acme.com"),
-        ("https://www.acme.com/products", "https://acme.com"),
-        ("", None),
-    ],
-)
-def test_logo_website_urls_are_normalized(value: str, expected: str | None) -> None:
-    assert analysis_service._normalized_logo_website_url(value) == expected
-
-
 async def test_benchmark_fixture_persists_grounded_search_evidence(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,
@@ -152,7 +73,7 @@ async def test_benchmark_fixture_persists_grounded_search_evidence(
 
 
 @pytest.mark.asyncio
-async def test_metrics_and_visibility_are_projections(
+async def test_metrics_are_projections(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,
     monkeypatch: pytest.MonkeyPatch,
@@ -184,36 +105,6 @@ async def test_metrics_and_visibility_are_projections(
         # Position is derived from mention offsets, so a run that named the
         # brand has one.
         assert metrics.metrics["avg_position"] is not None
-
-        vis = await get_visibility(
-            session,
-            workspace_id=seed.workspace_id,
-            project_id=seed.project_id,
-        )
-        assert vis.audit_id == audit.id
-        assert vis.visibility_score == 87.5
-        # Brand-vs-competitor rankings populated; brand row present.
-        brand_rows = [r for r in vis.rankings if r.is_brand]
-        assert len(brand_rows) == 1
-        assert brand_rows[0].mention_rate == 1.0
-        # Per-engine comparison for the single engine.
-        assert len(vis.per_engine) == 1
-        assert vis.per_engine[0].logical_engine == ENGINE_GEMINI
-        # Measurement provenance (invariants 4/7): the frozen mode column and
-        # the stable aggregate model-provenance list — retrieval comes from
-        assert [p.model_dump() for p in vis.model_provenance] == [
-            {
-                "logical_engine": ENGINE_GEMINI,
-                "transport_provider": TRANSPORT_GOOGLE,
-                "transport_model": GEMINI_MODEL,
-                "retrieval_enabled": True,
-            }
-        ]
-        # Vocabulary lock: no ``mode`` alias is ever emitted.
-        assert "mode" not in vis.model_dump()
-        # Tone has no scoring stage; position needs none.
-        assert vis.sentiment is None
-        assert vis.avg_position is not None
 
 
 @pytest.mark.asyncio
@@ -366,17 +257,6 @@ async def test_metrics_not_found_for_unanalyzed_audit(
         with pytest.raises(AnalysisNotFoundError):
             await get_metrics(
                 session, workspace_id=seed.workspace_id, audit_id=audit.id
-            )
-        # No completed audit -> visibility 404s too.
-        snapshot = await session.scalar(
-            select(MetricSnapshot).where(MetricSnapshot.audit_id == audit.id)
-        )
-        assert snapshot is None
-        with pytest.raises(AnalysisNotFoundError):
-            await get_visibility(
-                session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
             )
 
 
