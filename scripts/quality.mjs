@@ -323,6 +323,7 @@ function schemaAuthorityViolations(root) {
 
 function apiServiceChecks() {
   pnpm('API service TypeScript', ['--filter', '@citeladder/api', 'typecheck']);
+  pnpm('MCP tool reference', ['--filter', '@citeladder/api', 'mcp:reference', '--check']);
   process.stdout.write('API service schema authority…\n');
   const violations = schemaAuthorityViolations(join(frontendRoot, 'services'));
   if (violations.length) {

@@ -10,7 +10,10 @@ type SecurityEvent =
   | 'membership.remove'
   | 'membership.leave'
   | 'membership.transfer'
-  | 'membership.join';
+  | 'membership.join'
+  | 'mcp.consent'
+  | 'mcp.revoke'
+  | 'mcp.workspace_revoke';
 
 /** Append in the mutation transaction; no arbitrary payload or secrets. */
 export async function recordSecurityEvent(

@@ -17,8 +17,10 @@ import { brandDiscoveryRoutes } from './brand-discoveries.ts';
 import { integrationRoutes } from './integrations.ts';
 import { authRoutes } from './auth.ts';
 import { workspaceRoutes } from './workspaces.ts';
+import { MCP_CONNECTION_ROUTES } from './mcp-connections.ts';
 
 export const PRODUCT_ROUTES: readonly ProductRoute[] = [
+  ...MCP_CONNECTION_ROUTES,
   ...projectRoutes,
   ...brandDiscoveryRoutes,
   ...authRoutes,

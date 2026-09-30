@@ -209,6 +209,10 @@ services:
       DB_POOL_SIZE: "4"
       DB_MAX_OVERFLOW: "0"
       DEMO_MODE: ${DEMO_MODE:-false}
+      MCP_ENABLED: "true"
+      MCP_PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:?MCP_PUBLIC_BASE_URL is required}
+      MCP_ALLOWED_ACCOUNT_EMAIL: ${MCP_ALLOWED_ACCOUNT_EMAIL-}
+      DEV_LOGIN_EMAIL: ${DEV_LOGIN_EMAIL:?DEV_LOGIN_EMAIL is required}
     depends_on:
       db:
         condition: service_healthy

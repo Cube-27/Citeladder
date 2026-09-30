@@ -171,7 +171,7 @@ total.
 | 12 | Projects, onboarding and brand discovery | High | Done |
 | 13 | Integrations | High | Done |
 | 14 | Auth and workspaces | High | Done |
-| 15 | MCP server and OAuth provider | High | |
+| 15 | MCP server and OAuth provider | High | Done |
 | 16 | Billing and the entitlement ledger | High | |
 | 17 | Audits, providers and answer-engine connectors | High | |
 | 18 | Site Health and source-page inspection | High | |
@@ -327,7 +327,7 @@ Stays Python, by reason:
   Fernet BYOK decryption (PR 17) and provider-capacity locking shared with
   audits.
 - `service.py` `readiness`, `dataset_page`, `dataset_dict`, `row_dict` and
-  `pagination.py`: bridges for `domain/mcp` until PR 15.
+  `pagination.py`: bridges for the retained `domain/mcp` Agent reads until PR 19.
 
 Rule 1 exception on `search_intelligence_runs`: Python creates and executes
 runs; TS confirms and cancels. Both take the run row lock; confirmation takes
@@ -754,6 +754,23 @@ provider call or one-week cutover soak is part of this local implementation.
 
 `domain/mcp`, `api/mcp_connections`, the `/mcp`, `/authorize`, `/token` and
 `/revoke` paths, and the consent CSP.
+
+**Implemented:** hosted Streamable HTTP, discovery, the bounded tool catalogue,
+registration, PKCE consent, rotating tokens and connection administration now
+run in the TypeScript API service. Ingress and route ownership move together.
+Persisted OAuth rows and Fernet client secrets remain readable across runtimes;
+all evidence reads intersect live selected grants with current memberships.
+The public tool reference is derived from the live TypeScript catalogue.
+
+Python hosted routes, OAuth/registration owners, SDK dependency and hosted tests
+are removed. Python `domain/mcp` read adapters remain only for the Agent's
+`domain/agent/tool_catalog.py`; its retained bridge tests cover isolation and
+persisted evidence until PR 19 removes that caller. The TypeScript Site Page
+resolver uses the exact requested analysis and its artifact instead of selecting
+a newer analysis for the same URL. Referral presets now follow the analytics
+owner's `30d`/`90d`/`1y` values, and a missing explicit window stays unavailable.
+Local protocol and PostgreSQL coverage do not
+replace external client or deployment acceptance.
 
 ### PR 16: Billing and the entitlement ledger
 

@@ -1,22 +1,16 @@
-"""PostgreSQL acceptance history and live MCP consent boundaries."""
+"""PostgreSQL acceptance history and acquisition controls."""
 
 import uuid
 
 import pytest
-from mcp.server.auth.middleware.auth_context import auth_context_var
-from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
-from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 
 from app.connectors.web_evidence.contracts import FetchError
-from app.domain.mcp.connections import list_connections, revoke_connection
-from app.domain.mcp.data import list_account_projects
 from app.domain.site_health.acquisition_controls import authorize_acquisition
 from app.models.project import Project
 from app.models.user import User
 from app.models.web_acquisition_control import WebAcquisitionControl
 from app.models.workspace import Workspace, WorkspaceMember
-from tests.component.mcp_helpers import read_grant
 
 
 async def _account(session):
@@ -38,84 +32,6 @@ async def _account(session):
         )
     await session.commit()
     return user, spaces
-
-
-@pytest.mark.asyncio
-async def test_scope_is_live_and_workspace_admin_cannot_see_or_revoke_other_scopes(
-    db_session,
-):
-    user, spaces = await _account(db_session)
-    token = await read_grant(db_session, user.id, [str(spaces[0].id)])
-    context = auth_context_var.set(AuthenticatedUser(token))
-    grant_id = uuid.UUID(token.claims["grant_id"])
-    try:
-        assert [
-            row["name"] for row in (await list_account_projects(db_session))["projects"]
-        ] == ["Selected"]
-        # Membership alone never expands a connection, even after consent.
-        newcomer = Workspace(name="Joined later")
-        db_session.add(newcomer)
-        await db_session.flush()
-        db_session.add_all(
-            [
-                WorkspaceMember(workspace_id=newcomer.id, user_id=user.id),
-                Project(
-                    workspace_id=newcomer.id,
-                    name="Later",
-                    brand_name="Later",
-                    website_url="https://later.test",
-                ),
-            ]
-        )
-        await db_session.commit()
-        assert len((await list_account_projects(db_session))["projects"]) == 1
-        assert await list_connections(db_session, workspace_id=spaces[1].id) == []
-        assert not await revoke_connection(
-            db_session, grant_id=grant_id, actor_id=user.id, workspace_id=spaces[1].id
-        )
-        assert await revoke_connection(
-            db_session, grant_id=grant_id, actor_id=user.id, workspace_id=spaces[0].id
-        )
-        assert (await list_account_projects(db_session))["projects"] == []
-    finally:
-        auth_context_var.reset(context)
-
-
-@pytest.mark.asyncio
-async def test_membership_loss_and_account_revocation_apply_to_loaded_token(db_session):
-    user, spaces = await _account(db_session)
-    token = await read_grant(db_session, user.id)
-    context = auth_context_var.set(AuthenticatedUser(token))
-    try:
-        member = await db_session.scalar(
-            select(WorkspaceMember).where(
-                WorkspaceMember.workspace_id == spaces[0].id,
-                WorkspaceMember.user_id == user.id,
-            )
-        )
-        await db_session.delete(member)
-        await db_session.commit()
-        assert [
-            row["name"] for row in (await list_account_projects(db_session))["projects"]
-        ] == ["Unselected"]
-        assert await revoke_connection(
-            db_session, grant_id=uuid.UUID(token.claims["grant_id"]), actor_id=user.id
-        )
-        assert (await list_account_projects(db_session))["projects"] == []
-    finally:
-        auth_context_var.reset(context)
-
-
-@pytest.mark.asyncio
-async def test_legacy_grant_never_inherits_account_memberships(db_session):
-    user, _spaces = await _account(db_session)
-    token = await read_grant(db_session, user.id, [])
-    context = auth_context_var.set(AuthenticatedUser(token))
-    try:
-        assert (await list_account_projects(db_session))["projects"] == []
-        assert (await list_connections(db_session, user_id=user.id))[0].requires_consent
-    finally:
-        auth_context_var.reset(context)
 
 
 @pytest.mark.asyncio

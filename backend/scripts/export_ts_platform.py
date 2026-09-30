@@ -174,6 +174,7 @@ from scripts.auth_policy import (
     site_health_runtime_policy,
     workspace_policy,
 )
+from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
 from scripts.ts_platform_integrations import integration_policy
@@ -216,6 +217,7 @@ EXPORTED_SETTINGS = (
     "encryption_key",
     "integration_microsoft_client_id",
     "integration_microsoft_client_secret",
+    "dev_login_email",
 )
 
 
@@ -318,6 +320,7 @@ def build_config() -> dict[str, Any]:
             "service_port": TS_API_SERVICE_PORT,
             "request_body_max_bytes": API_REQUEST_BODY_MAX_BYTES,
         },
+        "mcp": mcp_policy(_setting),
         "errors": {
             "status_default_code": {
                 str(status): code

@@ -24,7 +24,7 @@ export const ROUTE_OWNERSHIP = {
   demand: 'typescript',
   executions: 'typescript',
   integrations: 'typescript',
-  'mcp-connections': 'python',
+  'mcp-connections': 'typescript',
   opportunities: 'typescript',
   performance: 'typescript',
   'performance-sync': 'typescript',
@@ -51,6 +51,17 @@ export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
  * documents; the development proxy reads this list directly.
  */
 export const TYPESCRIPT_INGRESS_PATHS = [
+  '/api/v1/mcp/connections',
+  '/api/v1/mcp/connections/*',
+  '/api/v1/workspaces/*/mcp/connections',
+  '/api/v1/workspaces/*/mcp/connections/*',
+  '/mcp',
+  '/mcp/*',
+  '/authorize',
+  '/token',
+  '/revoke',
+  '/.well-known/oauth-authorization-server',
+  '/.well-known/oauth-protected-resource/mcp',
   '/api/v1/projects',
   '/api/v1/projects/*-*-*-*-*',
   '/api/v1/projects/*/logos/refresh',

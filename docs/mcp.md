@@ -10,9 +10,9 @@ endpoint remains on the configured apex origin, not the documentation hostname.
 
 ## Connection and consent
 
-The [server](../backend/app/domain/mcp/server.py) mounts stateless Streamable
+The [server](../frontend/services/api/src/mcp/server.ts) mounts stateless Streamable
 HTTP at /mcp through the application factory. Its
-[OAuth provider](../backend/app/domain/mcp/oauth_provider.py) exposes metadata,
+[OAuth provider](../frontend/services/api/src/mcp/oauth.ts) exposes metadata,
 dynamic registration, PKCE authorization codes, rotating refresh tokens and
 revocation. Dynamic registration uses /mcp/register to avoid the browser signup
 route. Browser login establishes identity; /mcp/oauth/consent requires explicit
@@ -35,7 +35,7 @@ clients register before any CiteLadder login exists. A remote HTTPS callback on
 any host is legitimate; there is deliberately no redirect-host allowlist. The
 protections are bounds and binding instead:
 
-- The [registration guard](../backend/app/domain/mcp/registration_guard.py)
+- The [registration guard](../frontend/services/api/src/mcp/registration.ts)
   charges per-client burst and window budgets and a global ceiling in the shared
   PostgreSQL usage counters before the body is read, keyed by the trusted-proxy
   client identity. Refusals are 429 with `Retry-After`; a client already over
@@ -57,8 +57,7 @@ protections are bounds and binding instead:
 The consent page labels the client name as an unverified self-declaration and
 names the redirect host the flow actually enforces.
 
-Client ID Metadata Documents are not supported or advertised yet. The locked SDK
-only models the metadata flag; server support needs SSRF-bounded, cached
+Client ID Metadata Documents are not supported or advertised yet. Support needs SSRF-bounded, cached
 document fetches at authorization time, URL-shaped client IDs in the OAuth
 tables, and consent display of the document host. Advertising the flag before
 that exists would steer CIMD-capable clients into a client ID this server
@@ -83,7 +82,7 @@ A grant binds to a CiteLadder user account and explicitly selected workspaces.
 The consent form starts with no workspace selected. Authorization codes carry
 the selection into the grant; token rotation preserves it. Empty legacy grants
 cannot be exchanged for access and require a new consent flow.
-[Data projections](../backend/app/domain/mcp/data.py) resolve that account's
+[Data projections](../frontend/services/api/src/mcp/data.ts) resolve that account's
 current workspace memberships and permitted read roles on every product read,
 intersected with the live grant's selected workspaces. Revocation and removal of
 a workspace authorization are checked in the database even for an already loaded
@@ -95,10 +94,11 @@ what an existing grant may read without copying business data into MCP.
 The catalog exposes bounded project and prompt enumeration, business context,
 citation-compatible search/fetch documents, query-page evidence, Site Health
 pages/link projections, visibility results/sources, Search Intelligence
-datasets and shared growth-evidence reads. It delegates to the
-[shared evidence tools](../backend/app/domain/agent/tools.py) and the existing
-domain read services. The in-app [Agent](agents.md) binds the same registered
-read tools; its internal skills and Agent-only reads are not exposed here. Search is bounded persisted retrieval; it is not
+datasets and shared growth-evidence reads. The [catalogue](../frontend/services/api/src/mcp/tools.ts)
+delegates to the existing TypeScript domain read services and scoped persisted
+projections. The in-app [Agent](agents.md) retains Python read bridges until its
+runtime migrates in PR 19; those bridges do not serve hosted routes or OAuth.
+Its internal skills and Agent-only reads are not exposed here. Search is bounded persisted retrieval; it is not
 a web search or provider request. Missing projections remain unavailable and
 cannot be repaired by reading them. Search Intelligence summaries retain their
 dataset grain: referring-domain and destination-page aggregates are not exposed
@@ -122,7 +122,14 @@ become arbitrary redirects. Grant revocation is available through the OAuth
 revocation endpoint and supporting clients; membership removal blocks affected
 reads immediately.
 
-The locked SDK is `mcp==2.2.0`. Component acceptance covers the legacy
+Tool arguments are strict: unknown arguments, out-of-range limits and
+malformed UUIDs are rejected as invalid params (JSON-RPC `-32602`) rather than
+ignored or clamped. Defaulted arguments are optional in the published schema.
+Caller-caused read errors, such as a stale cursor or an inverted window, return
+their message; other read failures return only "Evidence is unavailable."
+A client may refresh only with a grant type it registered.
+
+The TypeScript transport has no Python MCP SDK dependency. Component acceptance covers the legacy
 `2025-11-25` initialize lifecycle and the `2026-07-28` per-request lifecycle
 (`server/discover`, protocol/method headers and reserved request metadata).
 This proves the repository wire contract, not acceptance in every client build
@@ -133,11 +140,17 @@ model generation or any other mutation. Streamable HTTP delivery has no
 authority to rerun a product acquisition when a client retries.
 [Workspace access](workspace-access.md) remains the shared role/identity owner.
 
-[Protocol and authorization tests](../backend/tests/component/test_mcp.py),
-[registration tests](../backend/tests/component/test_mcp_registration.py) and
-[evidence catalog tests](../backend/tests/component/test_mcp_evidence_catalog.py)
+[Protocol tests](../frontend/services/api/test/mcp-transport.test.ts),
+[OAuth and registration tests](../frontend/services/api/test/mcp-oauth.test.ts),
+[evidence tests](../frontend/services/api/test/mcp-evidence.test.ts) and
+[retrieval tests](../frontend/services/api/test/mcp-retrieval.test.ts)
 cover registration limits, redirect and PKCE binding, consent denial, rotation/revocation, both supported protocol lifecycles,
-generated catalog parity, bounded enumeration, retrieval documents, disabled
+bounded enumeration, retrieval documents, disabled
 server behavior, request limits and tenant isolation. These tests do not
 establish that a particular public client or deployed origin has passed
 external acceptance.
+
+The public tool reference is generated from the live TypeScript catalogue with
+`pnpm --filter @citeladder/api mcp:reference`; the repository check detects drift.
+Python [Agent bridge tests](../backend/tests/component/test_mcp_agent_bridge.py)
+retain membership isolation coverage until PR 19 removes that caller.

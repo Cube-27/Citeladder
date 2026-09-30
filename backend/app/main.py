@@ -17,7 +17,6 @@ from app.api.audit_schedules import router as audit_schedules_router
 from app.api.audits import router as audits_router
 from app.api.billing import router as billing_router
 from app.api.commerce import router as commerce_router
-from app.api.mcp_connections import router as mcp_connections_router
 from app.api.performance import router as performance_router
 from app.api.projects import router as projects_router
 from app.api.provider_connections import (
@@ -49,7 +48,6 @@ from app.core.telemetry import (
     sanitize_correlation_id,
     set_correlation_id,
 )
-from app.domain.mcp.server import McpDispatchMiddleware, mcp_app, mcp_server
 
 logger = logging.getLogger("app")
 
@@ -57,7 +55,6 @@ logger = logging.getLogger("app")
 # Explicit router stubs registered now so B2–B6 fill them in place. Each router
 # owns its own paths; the prefix keeps the whole surface under /api/v1.
 _ROUTERS = (
-    mcp_connections_router,
     billing_router,
     projects_router,
     provider_connections_router,
@@ -77,8 +74,7 @@ async def lifespan(_app: FastAPI):
     configure_logging()
     logger.info("citeladder backend starting", extra={"app_env": settings.app_env})
     try:
-        async with mcp_server.session_manager.run():
-            yield
+        yield
     finally:
         # The provider connectivity probe (/provider-connections/{id}/test) runs
         # in this process, so the web app owns a pooled answer-engine client too.
@@ -116,13 +112,6 @@ def create_app() -> FastAPI:
     # cover JSON, downloads, validation errors, and unhandled API errors alike.
     app.add_middleware(RequestBodyLimitMiddleware)
     app.add_middleware(ApiNoStoreMiddleware)
-    # The dispatcher hands protocol paths to the SDK app without calling the
-    # rest of the stack, so the body limit is wrapped around that app directly
-    # instead of relying on this registration happening to sit outside it.
-    app.add_middleware(
-        McpDispatchMiddleware,
-        protocol_app=RequestBodyLimitMiddleware(mcp_app, guard_every_path=True),
-    )
 
     @app.middleware("http")
     async def correlation_middleware(request: Request, call_next) -> Response:
