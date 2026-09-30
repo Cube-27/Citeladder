@@ -38,6 +38,13 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   assert.deepEqual(selectE2EFiles(['frontend/components/opportunities/evidence-drawer.tsx']), [
     'e2e/action-loop.spec.ts',
   ]);
+  assert.deepEqual(
+    selectE2EFiles([
+      'frontend/components/agent/chat-screen.tsx',
+      'frontend/lib/agent/next-steps.ts',
+    ]),
+    ['e2e/action-loop.spec.ts', 'e2e/agent-conversation.spec.ts'],
+  );
   assert.deepEqual(selectE2EFiles(['frontend/components/ui/button.tsx']), []);
   assert.deepEqual(selectE2EFiles(['frontend/components/ui/command-palette.tsx']), [
     'e2e/shell.spec.ts',

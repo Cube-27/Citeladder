@@ -97,7 +97,19 @@
       "frontend/lib/api/opportunities.ts",
       "frontend/packages/contracts/src/opportunities.ts"
     ],
-    "frontendE2E": ["e2e/action-loop.spec.ts", "e2e/agent-conversation.spec.ts"]
+    "frontendE2E": ["e2e/action-loop.spec.ts"]
+  },
+  {
+    "sources": [
+      "frontend/apps/app/src/product-routes-agent.tsx",
+      "frontend/components/agent/**",
+      "frontend/components/ui/drawer.tsx",
+      "frontend/lib/agent/**",
+      "frontend/lib/config/agent.ts",
+      "frontend/lib/api/actions.ts",
+      "frontend/lib/api/agent.ts"
+    ],
+    "frontendE2E": ["e2e/agent-conversation.spec.ts"]
   },
   {
     "sources": [
