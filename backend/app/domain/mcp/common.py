@@ -8,11 +8,9 @@ import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from datetime import UTC, datetime
 from typing import Any
 
-from mcp.server.auth.middleware.auth_context import get_access_token
-from sqlalchemy import String, and_, cast, false, func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.mcp import (
@@ -20,7 +18,6 @@ from app.core.config.mcp import (
     MCP_MAX_LIST_LIMIT,
 )
 from app.domain.workspaces.policy import WorkspaceCapability, roles_with
-from app.models.mcp import McpOAuthGrant
 from app.models.project import Project
 from app.models.workspace import Workspace, WorkspaceMember
 
@@ -124,25 +121,17 @@ def current_user_id() -> uuid.UUID:
     in_app_reader = _IN_APP_READER.get()
     if in_app_reader is not None:
         return in_app_reader
-    token = get_access_token()
-    if token is None or not token.subject:
-        raise PermissionError("An authenticated CiteLadder account is required")
-    try:
-        return uuid.UUID(token.subject)
-    except ValueError as exc:
-        raise PermissionError("The MCP grant has an invalid account identity") from exc
+    raise PermissionError("An authenticated CiteLadder account is required")
 
 
 def _caller_is_member_of(workspace_column: Any) -> Any:
     """The predicate authorizing the caller to read rows in a workspace.
 
-    Both Agent and MCP reads require a non-system workspace and a current role
-    with READ capability. MCP also requires a live, unrevoked grant containing
-    that workspace and matching the loaded token. EXISTS predicates preserve
-    the caller's query cardinality and avoid conflicting with its own joins.
+    Retained for the Python Agent until PR 19. Hosted MCP reads are owned by
+    TypeScript. EXISTS preserves the caller's query cardinality.
     """
     user_id = current_user_id()
-    membership = (
+    return (
         select(WorkspaceMember.id)
         .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
         .where(
@@ -153,31 +142,6 @@ def _caller_is_member_of(workspace_column: Any) -> Any:
         )
         .exists()
     )
-    if _IN_APP_READER.get() is not None:
-        return membership
-    token = get_access_token()
-    if token is None:
-        return false()
-    claims = token.claims or {}
-    try:
-        grant_id = uuid.UUID(str(claims.get("grant_id")))
-    except ValueError:
-        return false()
-    grant = (
-        select(McpOAuthGrant.id)
-        .where(
-            McpOAuthGrant.id == grant_id,
-            McpOAuthGrant.access_token_hash == claims.get("token_hash"),
-            McpOAuthGrant.user_id == user_id,
-            McpOAuthGrant.revoked_at.is_(None),
-            McpOAuthGrant.access_expires_at > datetime.now(UTC),
-            McpOAuthGrant.workspace_ids.contains(
-                func.jsonb_build_array(cast(workspace_column, String))
-            ),
-        )
-        .exists()
-    )
-    return and_(membership, grant)
 
 
 async def _authorized_project(session: AsyncSession, project_id: str) -> Project:
