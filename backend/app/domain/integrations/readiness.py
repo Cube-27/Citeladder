@@ -74,13 +74,11 @@ def _connection_backfill(rows: Sequence[IntegrationSyncRun]) -> _BackfillRollup:
     completed = states.count("complete")
     failed = states.count("failed")
     pending = states.count("pending")
-    state = (
-        BACKFILL_STATE_IMPORTING
-        if pending
-        else BACKFILL_STATE_PARTIAL
-        if failed
-        else BACKFILL_STATE_COMPLETE
-    )
+    state = BACKFILL_STATE_COMPLETE
+    if pending:
+        state = BACKFILL_STATE_IMPORTING
+    elif failed:
+        state = BACKFILL_STATE_PARTIAL
     windows = sorted(
         (run.window_start, run.window_end)
         for run in rows

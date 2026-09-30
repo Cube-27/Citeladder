@@ -43,11 +43,7 @@ export function normalizedRows(
           ? providerNumber(value.value)
           : null,
       );
-      if (
-        keys.some((value) => typeof value !== 'string') ||
-        numeric.some((value) => value === null)
-      )
-        return [];
+      if (keys.some((value) => typeof value !== 'string') || numeric.includes(null)) return [];
       row = {
         keys,
         ...Object.fromEntries(template.metrics.map((name, index) => [name, numeric[index]])),

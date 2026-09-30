@@ -4,6 +4,47 @@ import { IntegrationClient } from '../src/integrations/client.ts';
 import { integrationPolicy } from '../src/integrations/config.ts';
 
 describe('Bing property discovery', () => {
+  it('discovers GA4 properties in provider page order and preserves account labels', async () => {
+    const requested: string[] = [];
+    const client = new IntegrationClient(
+      {},
+      {
+        fetch: async (input) => {
+          const url = new URL(String(input));
+          const token = url.searchParams.get('pageToken') ?? '';
+          requested.push(token);
+          const page = token
+            ? {
+                accountSummaries: [
+                  {
+                    displayName: 'Second',
+                    propertySummaries: [{ property: 'properties/456', displayName: 'Site' }],
+                  },
+                ],
+              }
+            : {
+                accountSummaries: [
+                  {
+                    displayName: 'First',
+                    propertySummaries: [
+                      { property: 'properties/123', displayName: 'Shop' },
+                      { property: 'invalid' },
+                    ],
+                  },
+                ],
+                nextPageToken: 'next-page',
+              };
+          return new Response(JSON.stringify(page), { status: 200 });
+        },
+        sleep: async () => {},
+      },
+    );
+    expect(await client.properties('ga4', 'recorded-token')).toEqual([
+      { property_ref: '123', label: 'First / Shop' },
+      { property_ref: '456', label: 'Second / Site' },
+    ]);
+    expect(requested).toEqual(['', 'next-page']);
+  });
   it('retains the complete Bing report while normalizing only usable metric rows', async () => {
     const report = {
       d: [

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -47,100 +48,11 @@ function windowFor(start: string | undefined, end: string | undefined): [string,
   return [boundedStart, end];
 }
 
-export async function enqueueSyncRun(
-  db: Database,
-  input: {
-    workspaceId: string;
-    connectionId: string;
-    mappingId?: string;
-    projectId?: string;
-    windowStart?: string;
-    windowEnd?: string;
-    syncKind?: 'on_demand' | 'scheduled' | 'backfill';
-  },
-) {
+export function enqueueSyncRun(db: Database, input: SyncInput) {
   return db.transaction().execute(async (trx) => {
-    const connection = await trx
-      .selectFrom('integration_connections')
-      .select('id')
-      .where('id', '=', input.connectionId)
-      .where('workspace_id', '=', input.workspaceId)
-      .forUpdate()
-      .executeTakeFirst();
-    if (connection === undefined) throw notFound('Integration connection');
-
-    let mappings = trx
-      .selectFrom('integration_property_mappings')
-      .selectAll()
-      .where('connection_id', '=', input.connectionId)
-      .where('workspace_id', '=', input.workspaceId)
-      .where('status', '=', 'active');
-    if (input.projectId !== undefined)
-      mappings = mappings.where('project_id', '=', input.projectId);
-    if (input.mappingId !== undefined) mappings = mappings.where('id', '=', input.mappingId);
-    const targets = await mappings.execute();
-    if (targets.length === 0) {
-      throw new ApiError(409, 'Select a property for this project before syncing', {
-        code: 'sync_target_unresolved',
-      });
-    }
-    if (targets.length > 1) {
-      throw new ApiError(409, 'Name project_id: this connection serves several projects', {
-        code: 'sync_target_unresolved',
-      });
-    }
-    const target = targets[0];
-    if (target === undefined) throw new Error('resolved sync target disappeared');
-    let [windowStart, windowEnd] = windowFor(input.windowStart, input.windowEnd);
-    if (
-      input.windowStart === undefined &&
-      input.windowEnd === undefined &&
-      (input.syncKind ?? 'on_demand') === 'on_demand'
-    ) {
-      const yesterday = isoDay(new Date(Date.now() - 86_400_000));
-      const windows = await trx
-        .selectFrom('integration_sync_runs')
-        .select(['window_start', 'window_end'])
-        .where('mapping_id', '=', target.id)
-        .where('workspace_id', '=', input.workspaceId)
-        .where('status', '=', 'succeeded')
-        .orderBy('window_start', 'asc')
-        .orderBy('window_end', 'asc')
-        .execute();
-      let covered: string | null = null;
-      for (const item of windows) {
-        const start = isoDay(item.window_start);
-        const end = isoDay(item.window_end);
-        if (covered === null) {
-          covered = end;
-          continue;
-        }
-        if (start > dateAfter(covered, 1)) break;
-        if (end > covered) covered = end;
-      }
-      if (covered !== null) {
-        const earliest = dateAfter(yesterday, -(settings.sync_backfill_max_days - 1));
-        windowStart = dateAfter(covered, 1 - settings.sync_late_data_revision_days);
-        if (windowStart < earliest) windowStart = earliest;
-        if (windowStart > yesterday) windowStart = yesterday;
-        windowEnd = yesterday;
-      }
-    }
-    const prior = await trx
-      .selectFrom('integration_sync_runs')
-      .select('resync_seq')
-      .where('workspace_id', '=', input.workspaceId)
-      .where((eb) =>
-        eb.or([
-          eb('connection_id', '=', input.connectionId),
-          eb.and([
-            eb('project_id', '=', target.project_id),
-            eb('property_ref', '=', target.property_ref),
-          ]),
-        ]),
-      )
-      .orderBy('resync_seq', 'desc')
-      .executeTakeFirst();
+    const target = await resolveSyncTarget(trx, input);
+    const [windowStart, windowEnd] = await syncWindow(trx, input, target.id);
+    const prior = await previousSequence(trx, input, target);
     const sequence = (prior?.resync_seq ?? -1) + 1;
     const id = randomUUID();
     const now = new Date();
@@ -190,27 +102,169 @@ export async function enqueueSyncRun(
   });
 }
 
+async function resolveSyncTarget(trx: Database, input: SyncInput) {
+  const connection = await trx
+    .selectFrom('integration_connections')
+    .select('id')
+    .where('id', '=', input.connectionId)
+    .where('workspace_id', '=', input.workspaceId)
+    .forUpdate()
+    .executeTakeFirst();
+  if (connection === undefined) throw notFound('Integration connection');
+
+  let mappings = trx
+    .selectFrom('integration_property_mappings')
+    .selectAll()
+    .where('connection_id', '=', input.connectionId)
+    .where('workspace_id', '=', input.workspaceId)
+    .where('status', '=', 'active');
+  if (input.projectId !== undefined) mappings = mappings.where('project_id', '=', input.projectId);
+  if (input.mappingId !== undefined) mappings = mappings.where('id', '=', input.mappingId);
+  const targets = await mappings.execute();
+  if (targets.length === 0) {
+    throw new ApiError(409, 'Select a property for this project before syncing', {
+      code: 'sync_target_unresolved',
+    });
+  }
+  if (targets.length > 1) {
+    throw new ApiError(409, 'Name project_id: this connection serves several projects', {
+      code: 'sync_target_unresolved',
+    });
+  }
+  const target = targets[0];
+  if (target === undefined) throw new Error('resolved sync target disappeared');
+
+  return target;
+}
+
+async function syncWindow(
+  trx: Database,
+  input: SyncInput,
+  mappingId: string,
+): Promise<[string, string]> {
+  let [windowStart, windowEnd] = windowFor(input.windowStart, input.windowEnd);
+  if (
+    input.windowStart === undefined &&
+    input.windowEnd === undefined &&
+    (input.syncKind ?? 'on_demand') === 'on_demand'
+  ) {
+    const yesterday = isoDay(new Date(Date.now() - 86_400_000));
+    const windows = await trx
+      .selectFrom('integration_sync_runs')
+      .select([
+        sql<string>`window_start::text`.as('window_start'),
+        sql<string>`window_end::text`.as('window_end'),
+      ])
+      .where('mapping_id', '=', mappingId)
+      .where('workspace_id', '=', input.workspaceId)
+      .where('status', '=', 'succeeded')
+      .orderBy('window_start', 'asc')
+      .orderBy('window_end', 'asc')
+      .execute();
+    const covered = contiguousEnd(windows);
+    if (covered !== null) {
+      const earliest = dateAfter(yesterday, -(settings.sync_backfill_max_days - 1));
+      windowStart = dateAfter(covered, 1 - settings.sync_late_data_revision_days);
+      if (windowStart < earliest) windowStart = earliest;
+      if (windowStart > yesterday) windowStart = yesterday;
+      windowEnd = yesterday;
+    }
+  }
+
+  return [windowStart, windowEnd];
+}
+
+function contiguousEnd(
+  windows: Array<{ window_start: Date | string; window_end: Date | string }>,
+): string | null {
+  let covered: string | null = null;
+  for (const item of windows) {
+    const start = isoDay(item.window_start);
+    const end = isoDay(item.window_end);
+    if (covered === null) {
+      covered = end;
+      continue;
+    }
+    if (start > dateAfter(covered, 1)) break;
+    if (end > covered) covered = end;
+  }
+  return covered;
+}
+
+function previousSequence(
+  trx: Database,
+  input: SyncInput,
+  target: Awaited<ReturnType<typeof resolveSyncTarget>>,
+) {
+  return trx
+    .selectFrom('integration_sync_runs')
+    .select('resync_seq')
+    .where('workspace_id', '=', input.workspaceId)
+    .where((eb) =>
+      eb.or([
+        eb('connection_id', '=', input.connectionId),
+        eb.and([
+          eb('project_id', '=', target.project_id),
+          eb('property_ref', '=', target.property_ref),
+        ]),
+      ]),
+    )
+    .orderBy('resync_seq', 'desc')
+    .executeTakeFirst();
+}
+
+type SyncInput = {
+  workspaceId: string;
+  connectionId: string;
+  mappingId?: string;
+  projectId?: string;
+  windowStart?: string;
+  windowEnd?: string;
+  syncKind?: 'on_demand' | 'scheduled' | 'backfill';
+};
+
 /** Resolve the history allowance and enqueue missing or failed immutable windows. */
-export async function enqueueHistoryBackfill(
-  db: Database,
-  input: {
-    workspaceId: string;
-    connectionId: string;
-    mappingId: string;
-    projectId: string;
-    propertyRef: string;
-  },
-): Promise<void> {
+export async function enqueueHistoryBackfill(db: Database, input: BackfillInput): Promise<void> {
+  const days = await historyAllowance(db, input.workspaceId);
+  const candidates = await backfillWindows(db, input, days);
+  // Preserve per-window conflict handling and commit order during backfill.
+  for (const [windowStart, windowEnd] of candidates) {
+    try {
+      await enqueueSyncRun(db, {
+        workspaceId: input.workspaceId,
+        connectionId: input.connectionId,
+        mappingId: input.mappingId,
+        projectId: input.projectId,
+        windowStart,
+        windowEnd,
+        syncKind: 'backfill',
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'sync_active_window_conflict') continue;
+      throw error;
+    }
+  }
+}
+
+type BackfillInput = {
+  workspaceId: string;
+  connectionId: string;
+  mappingId: string;
+  projectId: string;
+  propertyRef: string;
+};
+
+async function historyAllowance(db: Database, workspaceId: string): Promise<number> {
   const account = await db
     .selectFrom('billing_accounts')
     .select('id')
-    .where('workspace_id', '=', input.workspaceId)
+    .where('workspace_id', '=', workspaceId)
     .executeTakeFirst();
   let days = integrationPolicy.free_history_window_days;
   if (account) {
     const resolved = await resolveAccountEntitlement(
       db,
-      { accountId: account.id, workspaceId: input.workspaceId },
+      { accountId: account.id, workspaceId: workspaceId },
       new Date(),
     );
     if (resolved.status === 'resolved') {
@@ -224,10 +278,21 @@ export async function enqueueHistoryBackfill(
         : days;
     }
   }
-  days = Math.min(days, settings.sync_backfill_max_days);
+  return Math.min(days, settings.sync_backfill_max_days);
+}
+
+async function backfillWindows(
+  db: Database,
+  input: BackfillInput,
+  days: number,
+): Promise<Array<[string, string]>> {
   const prior = await db
     .selectFrom('integration_sync_runs')
-    .select(['window_start', 'window_end', 'status'])
+    .select([
+      sql<string>`window_start::text`.as('window_start'),
+      sql<string>`window_end::text`.as('window_end'),
+      'status',
+    ])
     .where('workspace_id', '=', input.workspaceId)
     .where('project_id', '=', input.projectId)
     .where('property_ref', '=', input.propertyRef)
@@ -255,22 +320,15 @@ export async function enqueueHistoryBackfill(
       start = dateAfter(boundedEnd, 1);
     }
   }
-  for (const [windowStart, windowEnd] of candidates) {
-    try {
-      await enqueueSyncRun(db, {
-        workspaceId: input.workspaceId,
-        connectionId: input.connectionId,
-        mappingId: input.mappingId,
-        projectId: input.projectId,
-        windowStart,
-        windowEnd,
-        syncKind: 'backfill',
-      });
-    } catch (error) {
-      if (error instanceof ApiError && error.code === 'sync_active_window_conflict') continue;
-      throw error;
-    }
-  }
+
+  return candidates;
+}
+
+function backfillState(total: number, pending: number, failed: number): string {
+  if (total === 0) return 'not_started';
+  if (pending > 0) return 'importing';
+  if (failed > 0) return 'partial';
+  return 'complete';
 }
 
 export async function listSyncRuns(db: Database, workspaceId: string, connectionId: string) {
@@ -289,14 +347,16 @@ export async function listSyncRuns(db: Database, workspaceId: string, connection
       'runs.connection_id',
       'runs.sync_kind',
       'runs.status',
-      'runs.window_start',
-      'runs.window_end',
       'runs.resync_seq',
       'runs.error_code',
       'runs.error_detail',
       'runs.created_at',
       'runs.updated_at',
       'runs.completed_at',
+    ])
+    .select([
+      sql<string>`runs.window_start::text`.as('window_start'),
+      sql<string>`runs.window_end::text`.as('window_end'),
     ])
     .select((eb) =>
       eb.fn.coalesce(eb.fn.sum<number>('artifacts.row_count'), eb.val(0)).as('row_count'),
@@ -360,7 +420,12 @@ export async function getBackfillProgress(db: Database, workspaceId: string, con
   if (connection === undefined) throw notFound('Integration connection');
   const runs = await db
     .selectFrom('integration_sync_runs')
-    .select(['mapping_id', 'status', 'window_start', 'window_end'])
+    .select([
+      'mapping_id',
+      'status',
+      sql<string>`window_start::text`.as('window_start'),
+      sql<string>`window_end::text`.as('window_end'),
+    ])
     .where('workspace_id', '=', workspaceId)
     .where('connection_id', '=', connectionId)
     .where('sync_kind', '=', 'backfill')
@@ -401,14 +466,7 @@ export async function getBackfillProgress(db: Database, workspaceId: string, con
     if (start > dateAfter(through!, 1)) break;
     if (end > through!) through = end;
   }
-  const state =
-    attempts.size === 0
-      ? 'not_started'
-      : pending > 0
-        ? 'importing'
-        : failed > 0
-          ? 'partial'
-          : 'complete';
+  const state = backfillState(attempts.size, pending, failed);
   return {
     connection_id: connectionId,
     state,

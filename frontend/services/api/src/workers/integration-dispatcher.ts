@@ -133,8 +133,7 @@ export class IntegrationDispatcher {
         .forUpdate()
         .executeTakeFirst();
       if (
-        !row ||
-        row.status !== 'pending_revocation' ||
+        row?.status !== 'pending_revocation' ||
         (row.refresh_claim_expires_at &&
           new Date(row.refresh_claim_expires_at).getTime() > Date.now())
       )

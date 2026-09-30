@@ -178,17 +178,10 @@ function defineRoute<
       app.on(method.toUpperCase(), pattern, handle);
       return;
     }
-    app.on(
-      method.toUpperCase(),
-      pattern,
-      sessionUser(config, db),
-      byProject
-        ? projectMember(db)
-        : byWorkspacePath
-          ? workspaceMember(db, route.capability)
-          : activeWorkspace(db, route.capability),
-      handle,
-    );
+    let authorize = activeWorkspace(db, route.capability);
+    if (byProject) authorize = projectMember(db);
+    else if (byWorkspacePath) authorize = workspaceMember(db, route.capability);
+    app.on(method.toUpperCase(), pattern, sessionUser(config, db), authorize, handle);
   };
   return { contract, params: route.params, register };
 }

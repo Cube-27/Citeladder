@@ -32,9 +32,11 @@ the mapping and retries missing history work rather than creating a duplicate.
 ## Sync and evidence
 
 [Sync enqueue](../frontend/services/api/src/integrations/sync.ts) freezes
-mapping_id, property_ref and project_id onto each IntegrationSyncRun. Dispatcher
-fan-out is per mapping. Fetch and resume use frozen identity, never the mutable
-connection pointer. A retired mapping fails its in-flight work rather than
+mapping_id, property_ref and project_id onto each IntegrationSyncRun. An omitted
+or null sync body uses the default window. Windows remain calendar dates in
+enqueue, history and coverage projections regardless of server timezone.
+Dispatcher fan-out is per mapping. Fetch and resume use frozen identity, never
+the mutable connection pointer. A retired mapping fails its in-flight work rather than
 relabeling imported evidence.
 
 [Integration workers](../frontend/services/api/src/workers/integration-worker.ts)

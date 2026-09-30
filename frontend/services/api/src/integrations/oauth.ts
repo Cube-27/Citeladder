@@ -113,8 +113,7 @@ export async function completeOAuth(
   const verified = await jwtVerify(input.state, key, { algorithms: ['HS256'] }).catch(() => null);
   const claims = verified?.payload;
   if (
-    !claims ||
-    claims.sub !== 'oauth-state' ||
+    claims?.sub !== 'oauth-state' ||
     claims.provider !== input.provider ||
     claims.session_nonce !== input.nonce ||
     typeof claims.jti !== 'string' ||

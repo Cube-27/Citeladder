@@ -18,7 +18,8 @@ export function createSecretCipher(secret: string) {
       header[0] = 0x80;
       header.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 1000)), 1);
       const iv = randomBytes(16);
-      const cipher = createCipheriv('aes-128-cbc', encryption, iv);
+      // Fernet requires CBC + PKCS7 with encrypt-then-HMAC; preserve Python token compatibility.
+      const cipher = createCipheriv('aes-128-cbc', encryption, iv); // NOSONAR: authenticated Fernet wire format.
       const body = Buffer.concat([header, iv, cipher.update(value, 'utf8'), cipher.final()]);
       const mac = createHmac('sha256', signing).update(body).digest();
       const encoded = Buffer.concat([body, mac])
@@ -29,15 +30,16 @@ export function createSecretCipher(secret: string) {
     },
     decrypt(value: string): string {
       try {
-        if (!/^[A-Za-z0-9_-]+={0,2}$/u.test(value)) throw new Error();
+        if (!/^[A-Za-z0-9_-]+={0,2}$/u.test(value)) throw new Error('Invalid Fernet encoding');
         const token = Buffer.from(value, 'base64url');
         if (token.length < 73 || token[0] !== 0x80 || (token.length - 57) % 16 !== 0) {
-          throw new Error();
+          throw new Error('Invalid Fernet framing');
         }
         const body = token.subarray(0, -32);
         const mac = createHmac('sha256', signing).update(body).digest();
-        if (!timingSafeEqual(mac, token.subarray(-32))) throw new Error();
-        const decipher = createDecipheriv('aes-128-cbc', encryption, token.subarray(9, 25));
+        if (!timingSafeEqual(mac, token.subarray(-32))) throw new Error('Invalid Fernet MAC');
+        // Verify the HMAC before decrypting; callers receive only the sanitized catch message.
+        const decipher = createDecipheriv('aes-128-cbc', encryption, token.subarray(9, 25)); // NOSONAR: authenticated Fernet wire format.
         return new TextDecoder('utf-8', { fatal: true }).decode(
           Buffer.concat([decipher.update(token.subarray(25, -32)), decipher.final()]),
         );

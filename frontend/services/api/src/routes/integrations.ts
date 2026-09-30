@@ -11,7 +11,7 @@ import {
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { z } from 'zod';
 import { ApiError, notFound } from '../errors.ts';
-import { readBody } from '../http/body.ts';
+import { readBody, readOptionalBody } from '../http/body.ts';
 import { IntegrationClient, IntegrationError } from '../integrations/client.ts';
 import { integrationPolicy } from '../integrations/config.ts';
 import {
@@ -87,12 +87,7 @@ function domain(value: string): string {
 
 function integrationFailure(error: unknown): never {
   if (error instanceof IntegrationError) {
-    const status =
-      error.code === 'property_discovery_unsupported'
-        ? 422
-        : error.code === 'grant_auth_failed'
-          ? 502
-          : 502;
+    const status = error.code === 'property_discovery_unsupported' ? 422 : 502;
     throw new ApiError(status, error.message.slice(0, 512), {
       code: asApiErrorCode(error.code),
       retryable: error.retryable,
@@ -391,7 +386,7 @@ export const integrationRoutes = [
     body: windowRequest.nullable().optional(),
     response: integrationSyncEnqueueSchema,
     async handle({ c, db }, { path }) {
-      const body = await readBody(c, windowRequest.nullable().optional());
+      const body = await readOptionalBody(c, windowRequest);
       if (body === null || body === undefined)
         return integrationSyncEnqueueSchema.parse(
           await enqueueSyncRun(db, {

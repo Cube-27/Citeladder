@@ -68,13 +68,10 @@ function approvedIntegrationUrl(value: string): URL {
 }
 
 function statusError(status: number, retryAfter: string | null): IntegrationError {
-  const seconds = retryAfter === null || !retryAfter.trim() ? NaN : Number(retryAfter);
-  const code =
-    status === 429
-      ? codes.ERROR_RATE_LIMITED
-      : status === 401 || status === 403
-        ? codes.ERROR_GRANT_AUTH_FAILED
-        : codes.ERROR_PROVIDER_API;
+  const seconds = !retryAfter?.trim() ? Number.NaN : Number(retryAfter);
+  let code = codes.ERROR_PROVIDER_API;
+  if (status === 429) code = codes.ERROR_RATE_LIMITED;
+  else if (status === 401 || status === 403) code = codes.ERROR_GRANT_AUTH_FAILED;
   return new IntegrationError(
     code,
     `Integration provider returned HTTP ${status}`,
@@ -190,61 +187,58 @@ export class IntegrationClient {
       throw statusError(response.status, response.headers.get('retry-after'));
   }
 
-  async properties(provider: IntegrationProvider, token: string): Promise<ProviderProperty[]> {
+  properties(provider: IntegrationProvider, token: string): Promise<ProviderProperty[]> {
     const headers = { authorization: `Bearer ${token}` };
-    if (provider === 'gsc') {
-      const payload = await this.#json(
-        await this.#request(
-          endpoints.GSC_API_BASE_URL + endpoints.GSC_SITES_PATH,
-          { headers },
-          provider,
-        ),
-      );
-      return providerValue(z.array(object), payload.siteEntry ?? []).flatMap((entry) =>
-        typeof entry.siteUrl === 'string' &&
-        entry.siteUrl.trim() &&
-        entry.permissionLevel !== endpoints.GSC_PERMISSION_UNVERIFIED
-          ? [{ property_ref: entry.siteUrl, label: entry.siteUrl }]
-          : [],
-      );
-    }
-    if (provider === 'bing') {
-      const payload = await this.#json(
-        await this.#request(
-          endpoints.BING_API_BASE_URL +
-            endpoints.BING_API_JSON_ROOT +
-            endpoints.BING_SITES_PROBE_METHOD,
-          { headers },
-          provider,
-        ),
-      );
-      return providerValue(z.array(object), payload.d ?? []).flatMap((entry) =>
-        typeof entry.Url === 'string' && entry.Url.trim() && entry.IsVerified !== false
-          ? [{ property_ref: entry.Url, label: entry.Url }]
-          : [],
-      );
-    }
+    if (provider === 'gsc') return this.#gscProperties(headers);
+    if (provider === 'bing') return this.#bingProperties(headers);
+    return this.#ga4Properties(headers);
+  }
+
+  async #gscProperties(headers: Record<string, string>): Promise<ProviderProperty[]> {
+    const payload = await this.#json(
+      await this.#request(
+        endpoints.GSC_API_BASE_URL + endpoints.GSC_SITES_PATH,
+        { headers },
+        'gsc',
+      ),
+    );
+    return providerValue(z.array(object), payload.siteEntry ?? []).flatMap((entry) =>
+      typeof entry.siteUrl === 'string' &&
+      entry.siteUrl.trim() &&
+      entry.permissionLevel !== endpoints.GSC_PERMISSION_UNVERIFIED
+        ? [{ property_ref: entry.siteUrl, label: entry.siteUrl }]
+        : [],
+    );
+  }
+
+  async #bingProperties(headers: Record<string, string>): Promise<ProviderProperty[]> {
+    const payload = await this.#json(
+      await this.#request(
+        endpoints.BING_API_BASE_URL +
+          endpoints.BING_API_JSON_ROOT +
+          endpoints.BING_SITES_PROBE_METHOD,
+        { headers },
+        'bing',
+      ),
+    );
+    return providerValue(z.array(object), payload.d ?? []).flatMap((entry) =>
+      typeof entry.Url === 'string' && entry.Url.trim() && entry.IsVerified !== false
+        ? [{ property_ref: entry.Url, label: entry.Url }]
+        : [],
+    );
+  }
+
+  async #ga4Properties(headers: Record<string, string>): Promise<ProviderProperty[]> {
     const properties = new Map<string, ProviderProperty>();
     let pageToken = '';
     const seen = new Set<string>();
+    // Each discovery request depends on the preceding provider page token.
     for (let page = 0; page < endpoints.GA4_ACCOUNT_SUMMARIES_MAX_PAGES; page++) {
       const url = new URL(endpoints.GA4_ADMIN_API_BASE_URL + endpoints.GA4_ACCOUNT_SUMMARIES_PATH);
       url.searchParams.set('pageSize', String(endpoints.GA4_ACCOUNT_SUMMARIES_PAGE_SIZE));
       if (pageToken) url.searchParams.set('pageToken', pageToken);
-      const payload = await this.#json(await this.#request(url, { headers }, provider));
-      for (const account of providerValue(z.array(object), payload.accountSummaries ?? [])) {
-        for (const property of providerValue(z.array(object), account.propertySummaries ?? [])) {
-          const ref =
-            typeof property.property === 'string'
-              ? property.property.replace(/^properties\//u, '')
-              : '';
-          if (!/^\d+$/u.test(ref)) continue;
-          const labels = [account.displayName, property.displayName].filter(
-            (value): value is string => typeof value === 'string' && !!value,
-          );
-          properties.set(ref, { property_ref: ref, label: labels.join(' / ') || ref });
-        }
-      }
+      const payload = await this.#json(await this.#request(url, { headers }, 'ga4'));
+      collectGa4Properties(payload, properties);
       pageToken = providerValue(z.string(), payload.nextPageToken ?? '');
       if (!pageToken) return [...properties.values()];
       if (seen.has(pageToken)) break;
@@ -346,6 +340,25 @@ export class IntegrationClient {
       payload: { ...payload, rows: raw.flatMap((row) => normalizeBing(row, template)) },
       rawRowCount: raw.length,
     };
+  }
+}
+
+function collectGa4Properties(
+  payload: Record<string, unknown>,
+  properties: Map<string, ProviderProperty>,
+): void {
+  for (const account of providerValue(z.array(object), payload.accountSummaries ?? [])) {
+    for (const property of providerValue(z.array(object), account.propertySummaries ?? [])) {
+      const ref =
+        typeof property.property === 'string'
+          ? property.property.replace(/^properties\//u, '')
+          : '';
+      if (!/^\d+$/u.test(ref)) continue;
+      const labels = [account.displayName, property.displayName].filter(
+        (value): value is string => typeof value === 'string' && !!value,
+      );
+      properties.set(ref, { property_ref: ref, label: labels.join(' / ') || ref });
+    }
   }
 }
 

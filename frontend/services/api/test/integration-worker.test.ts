@@ -114,6 +114,31 @@ async function seedRun(provider: 'gsc' | 'ga4' | 'bing' = 'gsc') {
 }
 
 describe('integration worker paging and resume', () => {
+  it.each([
+    {
+      value: { reason: 'recorded non-Error rejection' },
+      expected: '{"reason":"recorded non-Error rejection"}',
+    },
+    { value: 23n, expected: 'Unserializable integration failure' },
+  ])(
+    'records a useful bounded detail for non-Error rejections: $expected',
+    async ({ value, expected }) => {
+      const target = await seedRun();
+      const worker = new IntegrationWorker(
+        db,
+        { page: vi.fn().mockRejectedValue(value) },
+        settings,
+        async () => 'recorded-token',
+      );
+      await worker.runOnce();
+      const run = await db
+        .selectFrom('integration_sync_runs')
+        .select(['status', 'error_detail'])
+        .where('id', '=', target.runId)
+        .executeTakeFirstOrThrow();
+      expect(run).toMatchObject({ status: 'failed', error_detail: expected });
+    },
+  );
   it('survives an iteration failure and delays the next attempt until the poll interval', async () => {
     vi.useFakeTimers();
     const controller = new AbortController();
