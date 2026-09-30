@@ -17,13 +17,17 @@ describe('dev server proxy', () => {
     expect(upstream(`${PROJECT}/ai-referrals?days=30`)).toBe('http://api-service.test');
     expect(upstream(`${PROJECT}/nested/ai-referrals`)).toBe('http://backend.test');
     expect(upstream(`${PROJECT}/ai-referrals-extra`)).toBe('http://backend.test');
-    expect(upstream('/api/v1/projects')).toBe('http://backend.test');
+    expect(upstream('/api/v1/projects')).toBe('http://api-service.test');
+    expect(upstream(PROJECT)).toBe('http://api-service.test');
+    expect(upstream(`${PROJECT}/command-center`)).toBe('http://api-service.test');
+    expect(upstream('/api/v1/brand-discoveries')).toBe('http://api-service.test');
+    expect(upstream(`${PROJECT}/executive-report`)).toBe('http://backend.test');
   });
 
   it('folds case as Caddy does and keeps every backend path', () => {
     expect(upstream('/API/V1/Executions/abc')).toBe('http://api-service.test');
     expect(upstream('/api//v1/executions/abc')).toBe('http://api-service.test');
-    expect(upstream('/Api/v1/projects?x=1')).toBe('http://backend.test');
+    expect(upstream('/Api/v1/projects?x=1')).toBe('http://api-service.test');
     for (const path of [
       '/api',
       '/mcp/sse',

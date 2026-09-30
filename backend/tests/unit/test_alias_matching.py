@@ -80,51 +80,6 @@ def test_empty_alias_is_never_present() -> None:
     assert first_alias_offset("   ", "best and less") is None
 
 
-def test_seeded_brand_aliases_add_the_domain_label() -> None:
-    """A project's brand arrives with aliases now, as its competitors always did."""
-    from app.domain.projects.onboarding.service import _seed_brand_aliases
-
-    assert _seed_brand_aliases("Best & Less", ["bestandless.com.au"]) == ["bestandless"]
-    assert _seed_brand_aliases("I Love Dooney", ["ilovedooney.com"]) == ["ilovedooney"]
-    assert _seed_brand_aliases("Kmart Australia", ["kmart.com.au"]) == ["kmart"]
-
-
-@pytest.mark.parametrize(
-    "brand_name,domain",
-    [
-        # A label that is not this brand at all.
-        ("Best & Less", "shop-online.com"),
-        # A brand token appearing INSIDE an unrelated label. Seeding this would
-        # count every "cart example" in every answer as a brand mention.
-        ("Art Supplies Co", "cart-example.com"),
-        ("Best & Less", "less-is-more.com"),
-    ],
-)
-def test_a_label_that_is_not_the_brand_is_not_seeded(
-    brand_name: str, domain: str
-) -> None:
-    """These strings decide what counts as a mention, so the bar is identity."""
-    from app.domain.projects.onboarding.service import _seed_brand_aliases
-
-    assert _seed_brand_aliases(brand_name, [domain]) == []
-
-
-def test_seeded_brand_aliases_skip_a_label_that_is_the_name() -> None:
-    """The name is prepended onto the alias list by the scorer already."""
-    from app.domain.projects.onboarding.service import _seed_brand_aliases
-
-    assert _seed_brand_aliases("bestandless", ["BestAndLess.com.au"]) == []
-
-
-def test_seeded_brand_aliases_dedupe_across_domains() -> None:
-    from app.domain.projects.onboarding.service import _seed_brand_aliases
-
-    aliases = _seed_brand_aliases(
-        "Hiut Denim", ["hiutdenim.co.uk", "hiutdenim.com", "hiut.shop"]
-    )
-    assert aliases == ["hiutdenim", "hiut"]
-
-
 def test_a_rejected_run_does_not_hide_a_valid_one_after_it() -> None:
     """Overlapping candidates each get judged, rather than the first winning.
 

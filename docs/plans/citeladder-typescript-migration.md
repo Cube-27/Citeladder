@@ -1,6 +1,6 @@
 # TypeScript migration plan
 
-Status: PRs 1–10 implemented (27–28 September 2026), each at the owner's
+Status: PRs 1–12 implemented (27–30 September 2026), each at the owner's
 request. PRs 7, 8 and 9 were split at the owner's direction (7a, 7a-cleanup,
 7b; 8a, 8b; 9a, 9b), and a golden-retirement pass and contract convergence
 followed 7b. On 28 September 2026 the owner widened the objective (section 1)
@@ -168,7 +168,7 @@ total.
 | 9 | Projects: brand identity (9a); projects-tagged reads (9b) | Med-High | Done |
 | 10 | Entitlement enforcement and the prompt library | Med-High | Done |
 | 11 | Model gateway and prompt generation | High | Done |
-| 12 | Projects, onboarding and brand discovery | High | |
+| 12 | Projects, onboarding and brand discovery | High | Done |
 | 13 | Integrations | High | |
 | 14 | Auth and workspaces | High | |
 | 15 | MCP server and OAuth provider | High | |
@@ -578,18 +578,17 @@ outcomes; unavailable judgments remain reviewable. Only explicit candidate
 acceptance consumes prompt slots. Commerce creates disabled prompts and target
 relations under capacity admission; approval remains separate.
 
-Stays Python: competitor discovery (`commerce-python`, SecureFetcher), Agent
-execution, onboarding research, Commerce shelf analysis, project CRUD, billing
-and internal links. No queue kind changes ownership.
+Remaining Python owners after PR 12: competitor discovery (`commerce-python`,
+SecureFetcher), Agent execution, Commerce shelf analysis, billing and internal
+links. Discovery queue execution moves in PR 12.
 
 | Python bridge | Remaining caller / retirement condition |
 | --- | --- |
-| `connectors/agent/*`, `connectors/app_model*.py` | Agent, onboarding research, Commerce shelf and providers; retire after those callers move |
+| `connectors/agent/*`, `connectors/app_model*.py` | Agent, Commerce shelf and providers; retire after those callers move |
 | `connectors/jev.py` | Internal-links worker; its retry cap now comes from shared JEV config |
 | `prompts/normalization.py` | Prompt model and analysis; retire with their final Python caller |
 | `prompts/locks.py` project lock | Source-page admission; unused prompt-set acquisition removed |
-| `prompts/mappers.py`, `schemas.py` | Embedded project prompt-set response; generation/topic/candidate DTOs removed |
-| `entitlements/enforcement.py` | Project CRUD, Agent and admission callers; retain until their owners move |
+| `entitlements/enforcement.py` | Agent and remaining admission callers; retain until their owners move |
 
 Lock order and shared writers:
 - Generation topic recovery takes the project lock. Candidate staging/purge takes
@@ -646,6 +645,46 @@ Project CRUD (project-slot occupancy and the deletion capability through
 fetcher with the SSRF rules of `SecureFetcher`) and brand discovery. The
 command center moves here; the executive PDF moves with billing's PDF library
 in PR 16.
+
+Implemented under the TypeScript Projects owner, with a discovery queue/worker
+under the existing queue and worker owners. Project admission and deletion use
+the account entitlement lock. Completion locks the discovery and creates the
+project/profile and empty prompt set atomically; selected-domain resolution runs
+before that transaction. No topics, prompts or crawl are created. Safe website
+fetching pins validated DNS addresses, retains TLS hostname verification,
+revalidates redirects and bounds wire and expanded bytes.
+
+Retired 36 Python files: the project/discovery mutation routes and worker,
+onboarding research/completion, logo orchestration/favicon transport, unused
+knowledge/offering helpers, project/prompt wire DTOs and their moved tests.
+Retained coverage is in the TypeScript project, discovery, research and logo
+suites: authorization, account capacity and deletion restrictions; completion
+atomicity/replay/provenance and no-crawl behavior; live leases, retry and legacy
+drain; DNS/redirect/content bounds; citations, bounded independent model
+attempts and cache failure/identity changes. Command-center tests cover frozen
+comparison identities and unknown versus observed zero. Alias-seeding tests
+moved with onboarding; Python scorer tests remain. The obsolete Python prompt
+DTO literal assertions were removed; generic vocabulary guard tests remain.
+Remaining Python consumer tests seed persisted projects directly.
+
+| Retained Python bridge | Remaining caller and removal condition |
+|---|---|
+| Authorized project reads and pure logo URL projection | Integrations (PR 13), executive PDF (PR 16) and Python visibility consumers; remove after the last caller migrates |
+| Discovery profile/facet value types and BusinessContext | Commerce and Agent context (PR 19); remove with their last Python consumer |
+| Onboarding normalization/site resolution | Search Intelligence targets; remove when its Python executor migrates |
+| Command-center projection, schemas and renderer | Executive PDF and its focused component tests; remove in PR 16 |
+| Discovery lease-expiry/retry reconciliation | Shared Python queue sweeper; remove when that queue owner migrates |
+
+Research snapshots retain brand-discovery-v1 under the pre-launch policy and
+record first-party/external processing versions and provider publication and
+acquisition timestamps. Identity
+inputs apply the configured first-party text budget; confirmed competitor
+domains use the same count bound as confirmed owned domains before resolution.
+
+Departures: unavailable models retain evidence and unknown prose instead of
+inventing a generic business profile. PostgreSQL RESTRICT violations return a
+409 alongside ordinary foreign-key violations. Provider deployment and the
+one-week cutover soak remain pending.
 
 ### PR 13: Integrations
 

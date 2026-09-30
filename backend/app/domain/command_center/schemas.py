@@ -66,6 +66,9 @@ class CommandCenterMeasurement(BaseModel):
     benchmark_mode: str
     logical_engines: list[str] = Field(default_factory=list)
     comparable_audit_id: uuid.UUID | None = None
+    metric_snapshot_id: uuid.UUID | None = None
+    analyzer_version: str | None = None
+    scoring_rule_version: str | None = None
 
 
 class CommandCenterMetric(BaseModel):
@@ -94,10 +97,17 @@ class CommandCenterMovement(BaseModel):
     delta: float | None = None
 
 
+class ResolvedActionEvidence(BaseModel):
+    action_id: uuid.UUID
+    implementation_event_ids: list[uuid.UUID]
+    verification_event_ids: list[uuid.UUID]
+
+
 class ResolvedActionSummary(BaseModel):
     since_audit_id: uuid.UUID | None = None
     count: int = 0
     titles: list[str] = Field(default_factory=list)
+    evidence: list[ResolvedActionEvidence] = Field(default_factory=list)
 
 
 class CommandCenterResponse(BaseModel):

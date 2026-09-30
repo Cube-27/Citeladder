@@ -33,17 +33,15 @@ from app.orchestration import provider_capacity
 from app.orchestration.executor_errors import CapacityWaitError
 from app.orchestration.provider_capacity import CapacityDecision
 from tests.component.auth_helpers import register_and_login
+from tests.component.project_helpers import seed_project
 from tests.component.search_intelligence_helpers import queue_confirmed_run
 
 
 async def connected_project(client, db_session):
     await register_and_login(client, "search-results@example.com")
-    response = await client.post(
-        "/api/v1/projects",
-        json={"name": "Results", "website_url": "https://www.example.com"},
+    project = await seed_project(
+        client, {"name": "Results", "website_url": "https://www.example.com"}
     )
-    assert response.status_code == 201
-    project = response.json()
     db_session.add(
         ProviderConnection(
             workspace_id=uuid.UUID(project["workspace_id"]),

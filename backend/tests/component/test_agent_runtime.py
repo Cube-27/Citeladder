@@ -42,6 +42,7 @@ from app.models.user import User
 from app.models.workspace import WorkspaceMember
 from app.workers.agent_worker import AgentWorker
 from tests.component.auth_helpers import grant_test_capabilities, register_and_login
+from tests.component.project_helpers import seed_project
 
 _SITE = "https://acme.example"
 _PAGE = f"{_SITE}/pricing"
@@ -118,9 +119,9 @@ def _worker(
 async def _project(client: httpx.AsyncClient, email: str) -> str:
     await register_and_login(client, email)
     await grant_test_capabilities(email)
-    response = await client.post(
-        "/api/v1/projects",
-        json={
+    project = await seed_project(
+        client,
+        {
             "name": "Acme",
             "brand_name": "Acme",
             "website_url": _SITE,
@@ -130,8 +131,7 @@ async def _project(client: httpx.AsyncClient, email: str) -> str:
             "default_repetitions": 1,
         },
     )
-    assert response.status_code == 201, response.text
-    return response.json()["id"]
+    return project["id"]
 
 
 async def _verified_route(

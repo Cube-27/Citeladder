@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-import uuid
-from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from app.core.config.brand_discovery import (
     BUSINESS_MODELS,
     BUYER_REGISTERS,
-    DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS,
-    DISCOVERY_CONFIRM_MAX_DOMAINS,
     KNOWLEDGE_STRENGTHS,
     MARKET_SCOPES,
     PRICE_TIERS,
@@ -22,20 +18,13 @@ from app.core.config.brand_profile import (
     BRAND_PROFILE_PRODUCTS_MAX_COUNT,
     BRAND_PROFILE_TEXT_MAX_CHARS,
 )
-from app.core.config.projects import MAX_PROJECT_COMPETITORS
 from app.core.literals import lock_literal
-from app.domain.projects.normalization import normalize_primary_market
-from app.domain.projects.schemas import CompetitorInput
 
-ConfirmedDomain = Annotated[
-    str, Field(min_length=1, max_length=DISCOVERY_CONFIRM_DOMAIN_MAX_CHARS)
-]
 PriceTier = Literal["budget", "mid_market", "premium", "luxury", "unknown"]
 lock_literal(PriceTier, PRICE_TIERS, name="PriceTier")
 
-# Business-context facets. Declared here rather than in the onboarding package
-# because `onboarding/__init__` pulls in the service, which imports this module.
-# Each is locked to its config vocabulary so the two cannot drift.
+# Business-context facets retained for Python Agent and Commerce consumers.
+# The discovery HTTP and worker owners are TypeScript.
 BusinessModel = Literal[
     "b2b_saas",
     "marketplace",
@@ -59,30 +48,6 @@ lock_literal(BusinessModel, BUSINESS_MODELS, name="BusinessModel")
 lock_literal(MarketScope, MARKET_SCOPES, name="MarketScope")
 lock_literal(KnowledgeStrength, KNOWLEDGE_STRENGTHS, name="KnowledgeStrength")
 lock_literal(BuyerRegister, BUYER_REGISTERS, name="BuyerRegister")
-
-
-class BrandDiscoveryCreate(BaseModel):
-    brand_name: str = Field(min_length=1, max_length=255)
-    website_url: str = Field(min_length=1, max_length=1024)
-    industry: str = Field(default="General", max_length=255)
-    subindustry: str = Field(default="", max_length=255)
-    primary_market: str = Field(min_length=2, max_length=8)
-    language_code: str = Field(default="en", max_length=16)
-
-    _normalize_primary_market = field_validator("primary_market", mode="before")(
-        normalize_primary_market
-    )
-
-
-class DiscoveryEvidence(BaseModel):
-    source_url: str
-    capture_method: str
-    confidence: float = Field(ge=0, le=1)
-    captured_at: datetime
-    supports: list[str] = Field(default_factory=list)
-    provider: str = ""
-    model: str = ""
-    method: str = ""
 
 
 class DiscoveryProfile(BaseModel):
@@ -149,114 +114,3 @@ class ConfirmedDiscoveryProfile(PersistableDiscoveryProfile):
         if not value:
             raise ValueError("category must not be blank")
         return value
-
-
-class DiscoveryCompetitorSuggestion(CompetitorInput):
-    """Provisional identity, pending user selection and domain resolution."""
-
-
-class DiscoveryTopic(BaseModel):
-    """A canonical topic, persisted before any prompt references it.
-
-    ``source_refs`` point at the offering-list entries or fetched pages that
-    supported this topic, so a portfolio can always be traced back to what was
-    actually read.
-    """
-
-    topic_id: uuid.UUID
-    name: str = Field(min_length=1, max_length=255)
-    description: str = Field(default="", max_length=1024)
-    source_refs: list[str] = Field(min_length=1)
-
-
-class DiscoveryPromptSuggestion(BaseModel):
-    # Brand-diagnostic prompts deliberately span the whole brand rather than a
-    # single topic. Older workers persisted that unbound state as an empty
-    # string, so accept it at the read boundary and render the canonical null.
-    topic_id: uuid.UUID | None
-    text: str = Field(min_length=1, max_length=2000)
-    intent: Literal["discovery", "comparison", "purchase", "service", "local"]
-    cohort: Literal["core", "brand_diagnostic", "comparison"]
-
-    @field_validator("topic_id", mode="before")
-    @classmethod
-    def normalize_unbound_topic(cls, value: object) -> object:
-        return None if value == "" else value
-
-
-class BrandDiscoveryProgress(BaseModel):
-    phase: Literal[
-        "opening_website",
-        "understanding_business",
-        "finding_competitors",
-        "preparing_review",
-        "complete",
-    ]
-    completed_steps: int = Field(ge=0)
-    total_steps: int = Field(ge=1)
-    pages_read: int = Field(default=0, ge=0)
-    competitors_found: int = Field(default=0, ge=0)
-    prompts_prepared: int = Field(default=0, ge=0)
-    updated_at: datetime
-
-
-class BrandDiscoveryComplete(BaseModel):
-    name: str | None = Field(default=None, max_length=255)
-    profile: ConfirmedDiscoveryProfile
-    domains: list[ConfirmedDomain] = Field(
-        min_length=1, max_length=DISCOVERY_CONFIRM_MAX_DOMAINS
-    )
-    competitors: list[CompetitorInput] = Field(
-        default_factory=list, max_length=MAX_PROJECT_COMPETITORS
-    )
-
-
-class BrandDiscoveryResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    workspace_id: uuid.UUID
-    project_id: uuid.UUID | None
-    status: str
-    progress: BrandDiscoveryProgress
-    input_data: dict
-    profile: DiscoveryProfile
-    domains: list[str]
-    competitors: list[DiscoveryCompetitorSuggestion]
-    topics: list[DiscoveryTopic]
-    prompt_suggestions: list[DiscoveryPromptSuggestion]
-    evidence: list[DiscoveryEvidence]
-    warnings: list[str] = Field(default_factory=list)
-    gaps: list[str] = Field(default_factory=list)
-    error_code: str = ""
-    created_at: datetime
-    updated_at: datetime
-
-
-class BrandDiscoveryCatalogResponse(BaseModel):
-    business_types: list[str]
-    price_tiers: list[str]
-    required_fields: list[str]
-    optional_fields: list[str]
-    capture_methods: list[str]
-    maximum_competitors: int
-    industries: list[str]
-    subindustries: dict[str, list[str]]
-    prompt_cohorts: list[str]
-
-
-class BrandDiscoveryCompleteResponse(BaseModel):
-    """The accepted completion and the project it created.
-
-    ``project_id`` identifies the created project, whose prompt set starts
-    empty: onboarding generates no prompts. ``failed`` is reported only when
-    replaying a completion that failed before that change.
-    """
-
-    discovery_id: uuid.UUID
-    status: Literal["project_created", "failed"]
-    project_id: uuid.UUID | None = None
-    crawl_id: uuid.UUID | None = None
-    activation_state: Literal["queued"] = "queued"
-    page_limit: int | None = None
-    warnings: list[str] = Field(default_factory=list)

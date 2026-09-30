@@ -31,6 +31,7 @@ from app.models.site_health.runtime import SiteHealthProfile
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
 from tests.component.auth_helpers import register_and_login
+from tests.component.project_helpers import seed_project
 from tests.component.site_health_helpers import seed_monitored_urls_allowance
 
 pytestmark = pytest.mark.asyncio
@@ -43,16 +44,15 @@ async def _register(client: httpx.AsyncClient, email: str = _EMAIL) -> None:
 
 
 async def _project(client: httpx.AsyncClient, name: str = "Envelope Co") -> dict:
-    resp = await client.post(
-        "/api/v1/projects",
-        json={
+    project = await seed_project(
+        client,
+        {
             "name": name,
             "brand_name": name,
             "competitors": [{"name": "Rival", "aliases": [], "domains": []}],
         },
     )
-    assert resp.status_code == 201
-    return resp.json()
+    return project
 
 
 def _assert_envelope(body: dict, *, code: str, retryable: bool) -> None:

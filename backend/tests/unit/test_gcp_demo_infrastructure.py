@@ -377,9 +377,16 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     workers = [
         name
         for name, service in services.items()
-        if any("app.workers." in value for value in _values(service.get("command", [])))
+        if any(
+            "app.workers." in value or value.endswith("-worker.ts")
+            for value in _values(service.get("command", []))
+        )
     ]
     assert len(workers) == 9
+    assert (
+        services["brand-discovery-worker"]["image"].partition(":?")[0]
+        == services["api-service"]["image"].partition(":?")[0]
+    )
     # Which stack each /api/v1 path reaches through this Caddyfile is proven by
     # the TypeScript route-ownership gate (`pnpm --filter @citeladder/api
     # check:routes`), not here; run it after changing any routing block.

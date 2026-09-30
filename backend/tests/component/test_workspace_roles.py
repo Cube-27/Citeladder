@@ -174,36 +174,6 @@ async def test_member_management_is_administrative(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("role", "permitted"),
-    [
-        (WORKSPACE_ROLE_ADMIN, True),
-        (WORKSPACE_ROLE_MEMBER, True),
-        (WORKSPACE_ROLE_VIEWER, False),
-    ],
-)
-async def test_project_creation_follows_the_write_capability(
-    client: httpx.AsyncClient,
-    db_session: AsyncSession,
-    owned_workspace: uuid.UUID,
-    role: str,
-    permitted: bool,
-) -> None:
-    """Viewer is read-only; Member keeps every non-administrative action."""
-    email = f"write-{role}@example.com"
-    await _seed_role(
-        db_session, client, workspace_id=owned_workspace, email=email, role=role
-    )
-    await _login(client, email)
-    response = await client.post(
-        "/api/v1/projects",
-        json={"name": "Role check"},
-        headers={"X-Workspace-Id": str(owned_workspace)},
-    )
-    assert response.status_code == (201 if permitted else 403), response.text
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize(("role", "permitted"), _BILLING_ROLES)
 async def test_provider_credentials_stay_administrative(
     client: httpx.AsyncClient,
@@ -245,7 +215,11 @@ async def test_viewer_reads_are_allowed(
     )
     await _login(client, "viewer-read@example.com")
     headers = {"X-Workspace-Id": str(owned_workspace)}
-    assert (await client.get("/api/v1/projects", headers=headers)).status_code == 200
+    assert (
+        await client.get(
+            f"/api/v1/workspaces/{owned_workspace}/entitlements", headers=headers
+        )
+    ).status_code == 200
     entitlements = await client.get(
         f"/api/v1/workspaces/{owned_workspace}/entitlements", headers=headers
     )
@@ -320,7 +294,6 @@ async def test_a_workspace_with_zero_projects_still_bills(
     owned_workspace: uuid.UUID,
 ) -> None:
     """No project is required to manage a workspace."""
-    assert (await client.get("/api/v1/projects")).json() == []
     usage = await client.get(
         "/api/v1/billing/usage", headers={"X-Workspace-Id": str(owned_workspace)}
     )
@@ -604,7 +577,11 @@ async def test_removal_takes_effect_on_the_next_request(
     await _login(client, "removed@example.com")
     member_cookies = httpx.Cookies(client.cookies)
     headers = {"X-Workspace-Id": str(owned_workspace)}
-    assert (await client.get("/api/v1/projects", headers=headers)).status_code == 200
+    assert (
+        await client.get(
+            f"/api/v1/workspaces/{owned_workspace}/entitlements", headers=headers
+        )
+    ).status_code == 200
 
     await _login(client, "role-owner@example.com")
     assert (
@@ -615,7 +592,11 @@ async def test_removal_takes_effect_on_the_next_request(
 
     # The member's ORIGINAL session, unchanged, now sees nothing.
     client.cookies = member_cookies
-    assert (await client.get("/api/v1/projects", headers=headers)).status_code == 404
+    assert (
+        await client.get(
+            f"/api/v1/workspaces/{owned_workspace}/entitlements", headers=headers
+        )
+    ).status_code == 404
 
 
 @pytest.mark.asyncio

@@ -130,7 +130,7 @@ def _navigation_anchors(root: _Element) -> list[_Element]:
     seen: a marketplace homepage yielded thirteen account links while four
     hundred category anchors sat in the body untouched.
 
-    Selection is not this function's job. ``domain/projects/offering_harvest``
+    Selection is not this function's job. The TypeScript onboarding research owner
     ranks and filters what comes back; returning a narrow slice here only
     hides candidates from the code that can actually judge them.
     """

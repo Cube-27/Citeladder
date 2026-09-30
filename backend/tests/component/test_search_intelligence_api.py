@@ -33,16 +33,14 @@ from app.models.search_intelligence import (
     SearchIntelligenceRun,
 )
 from tests.component.auth_helpers import register_and_login
+from tests.component.project_helpers import seed_project
 from tests.component.search_intelligence_helpers import cancel_run, queue_confirmed_run
 
 
 async def _connected_project(client: httpx.AsyncClient, db_session, name: str) -> str:
-    response = await client.post(
-        "/api/v1/projects",
-        json={"name": name, "website_url": "https://www.example.com"},
+    project = await seed_project(
+        client, {"name": name, "website_url": "https://www.example.com"}
     )
-    assert response.status_code == 201, response.text
-    project = response.json()
     db_session.add(
         ProviderConnection(
             workspace_id=uuid.UUID(project["workspace_id"]),

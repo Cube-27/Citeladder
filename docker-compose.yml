@@ -216,7 +216,7 @@ services:
   brand-discovery-worker:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: frontend/services/api/Dockerfile
     restart: unless-stopped
     env_file:
       - ${CITELADDER_ENV_FILE:-.env}
@@ -226,7 +226,7 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    command: ["python", "-m", "app.workers.brand_discovery_worker"]
+    command: ["node", "--experimental-strip-types", "src/discovery-worker.ts"]
     healthcheck:
       disable: true
 

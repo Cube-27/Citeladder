@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/server.ts",
     "worker": "node src/worker.ts",
+    "worker:discovery": "node src/discovery-worker.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
     "check:routes": "node scripts/check-route-ownership.ts",
@@ -19,8 +20,10 @@
     "@noble/hashes": "^2.4.0",
     "csv-parse": "^7.0.3",
     "hono": "^4.13.10",
+    "ipaddr.js": "^2.5.0",
     "jose": "^6.2.12",
     "kysely": "^0.29.6",
+    "parse5": "^8.0.1",
     "pg": "^8.23.0",
     "tldts": "^7.4.16",
     "zod": "^4.6.5"
