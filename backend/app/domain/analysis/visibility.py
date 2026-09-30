@@ -33,8 +33,7 @@ from app.domain.analysis.schemas import (
     RankingRow,
     VisibilityResponse,
 )
-from app.domain.projects.logos import get_project_logo_urls
-from app.domain.projects.service import get_project
+from app.domain.projects.service import get_project, get_project_logo_urls
 from app.models.analysis import CompetitorMention, MetricSnapshot, ResponseAnalysis
 from app.models.audit import Audit
 from app.models.project import Project

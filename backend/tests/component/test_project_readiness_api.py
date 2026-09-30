@@ -39,6 +39,7 @@ from app.models.integrations import (
 from app.models.project import Project
 from app.models.workspace import Workspace
 from tests.component.auth_helpers import register_and_login as _register
+from tests.component.project_helpers import seed_project
 
 
 async def _readiness(client: httpx.AsyncClient, project_id: str) -> dict:
@@ -53,8 +54,8 @@ async def test_project_without_a_connection_is_not_connected(
 ) -> None:
     """No connection is its own state, never "importing nothing"."""
     await _register(client, f"readiness-none-{uuid.uuid4().hex[:8]}@example.com")
-    created = await client.post("/api/v1/projects", json={"name": "Readiness"})
-    project_id = created.json()["id"]
+    created = await seed_project(client, {"name": "Readiness"})
+    project_id = created["id"]
 
     body = await _readiness(client, project_id)
     assert body["stage"] == READINESS_NOT_CONNECTED

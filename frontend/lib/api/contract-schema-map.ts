@@ -15,14 +15,6 @@ export const CONTRACT_SCHEMA_MAP = {
   workspaceSchema: 'WorkspaceResponse',
   productTourSchema: 'ProductTourResponse',
   oauthStartResponseSchema: 'OAuthStartResponse',
-  // Projects / brand
-  projectSchema: 'ProjectResponse',
-  competitorSchema: 'CompetitorResponse',
-  commandCenterSchema: 'CommandCenterResponse',
-  // The Python project response still embeds prompts and prompt sets.
-  // TypeScript owns generation, candidates and topics and serves their contracts.
-  promptSchema: 'PromptResponse',
-  promptSetSchema: 'PromptSetResponse',
   // Providers
   providerConnectionSchema: 'ProviderConnectionResponse',
   connectionTestResultSchema: 'ProviderConnectionTestResponse',
@@ -63,8 +55,6 @@ export const CONTRACT_SCHEMA_MAP = {
   providerConnectionStatesSchema: 'ProviderConnectionStatesResponse',
   providerConnectionStateEntrySchema: 'ProviderConnectionStateResponse',
   providerProbeSchema: 'ProviderProbeResponse',
-  // Opportunities
-  opportunitySchema: 'OpportunityItem',
   // Agent chats, outputs and revisions
   agentRunSchema: 'RunView',
   agentRevisionSchema: 'RevisionView',

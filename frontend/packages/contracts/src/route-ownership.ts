@@ -18,7 +18,7 @@ export const ROUTE_OWNERSHIP = {
   auth: 'python',
   billing: 'python',
   'brand-identity': 'typescript',
-  'brand-discoveries': 'python',
+  'brand-discoveries': 'typescript',
   commerce: 'typescript',
   'commerce-python': 'python',
   demand: 'typescript',
@@ -29,7 +29,8 @@ export const ROUTE_OWNERSHIP = {
   performance: 'typescript',
   'performance-sync': 'python',
   readiness: 'python',
-  projects: 'python',
+  projects: 'typescript',
+  'executive-report': 'python',
   'prompt-generation': 'typescript',
   prompts: 'typescript',
   providers: 'python',
@@ -50,6 +51,13 @@ export type RouteFamily = keyof typeof ROUTE_OWNERSHIP;
  * documents; the development proxy reads this list directly.
  */
 export const TYPESCRIPT_INGRESS_PATHS = [
+  '/api/v1/projects',
+  '/api/v1/projects/*-*-*-*-*',
+  '/api/v1/projects/*/logos/refresh',
+  '/api/v1/projects/*/command-center',
+  '/api/v1/brand-discovery-catalog',
+  '/api/v1/brand-discoveries',
+  '/api/v1/brand-discoveries/*',
   '/api/v1/projects/*/site-health/internal-links',
   '/api/v1/projects/*/site-health/internal-links/*',
   '/api/v1/projects/*/site-health/internal-links/analyses/*/cancel',

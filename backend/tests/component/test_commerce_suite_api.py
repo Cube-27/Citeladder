@@ -6,15 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.commerce_helpers import seed_catalog
+from tests.component.project_helpers import seed_project
 
 
 async def _project(client: httpx.AsyncClient) -> dict:
-    response = await client.post(
-        "/api/v1/projects",
-        json={"name": "Commerce", "brand_name": "Acme", "competitors": []},
+    project = await seed_project(
+        client, {"name": "Commerce", "brand_name": "Acme", "competitors": []}
     )
-    assert response.status_code == 201
-    return response.json()
+    return project
 
 
 @pytest.mark.asyncio

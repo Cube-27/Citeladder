@@ -14,13 +14,13 @@ chooses to track.
 
 ## Action to persisted result
 
-The [discovery API](../backend/app/api/brand_discoveries.py) accepts a
+The [discovery API](../frontend/services/api/src/routes/brand-discoveries.ts) accepts a
 workspace-authorized, idempotent discovery request and returns persisted
-progress. [Discovery](../backend/app/domain/projects/discovery.py) and the
-[onboarding owner](../backend/app/domain/projects/onboarding/) coordinate
+progress. The [onboarding owner](../frontend/services/api/src/projects/discovery.ts) and
+[research owner](../frontend/services/api/src/projects/research.ts) coordinate
 bounded first-party acquisition, identity research and provisional competitor
 suggestions.
-The [worker](../backend/app/workers/brand_discovery_worker.py) claims PostgreSQL
+The [worker](../frontend/services/api/src/workers/discovery-worker.ts) claims PostgreSQL
 tasks with leases and commits before provider I/O.
 Identity makes one model request with a 20-second timeout. Competitor suggestions
 make at most three independent requests, each capped at 20 seconds. Failures
@@ -50,7 +50,7 @@ from inferred values. Reads never repeat discovery.
 
 ## Confirmation and completion
 
-[Completion](../backend/app/domain/projects/onboarding/completion.py) locks the
+[Completion](../frontend/services/api/src/projects/discovery.ts) locks the
 authorized discovery, validates the confirmation and idempotency key, freezes
 the reviewed input, persists the project/profile and its empty prompt set, and
 marks the discovery `project_created` in one transaction. A rollback leaves no
@@ -98,13 +98,13 @@ confirmed offerings.
 - Project creation checks workspace role and occupancy. Discovery IDs and
   target projects are always workspace-authorized.
 - Company facts and competitors also appear in Overview's Facts editor.
-  [Command Center](../backend/app/domain/command_center/service.py) composes
+  [Command Center](../frontend/services/api/src/projects/command-center.ts) composes
   persisted evidence and chooses the next action; it does not acquire evidence.
 - Offering harvest is bounded HTML evidence, not a sitemap or JavaScript
   rendering service. Missing evidence must not be padded with generic topics.
 - Confirmation authorizes completion, not publishing, an external mutation or
   an automatic crawl. The Agent does not maintain a second company memory.
 
-The [completion tests](../backend/tests/component/test_brand_discovery_completion.py)
+The [completion tests](../frontend/services/api/test/discovery.test.ts)
 cover atomicity, idempotency, isolation, recovery and the no-crawl boundary.
 Historical evaluation results describe their recorded corpus/model only.

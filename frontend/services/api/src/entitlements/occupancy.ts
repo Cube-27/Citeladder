@@ -48,6 +48,45 @@ async function lockWorkspaceCapacity(db: Database, workspaceId: string): Promise
   return account.id;
 }
 
+export async function admitProject(db: Database, workspaceId: string): Promise<void> {
+  const accountId = await lockWorkspaceCapacity(db, workspaceId);
+  const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
+  if (resolved.status !== 'resolved')
+    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
+      code: UNRESOLVED,
+    });
+  const key = policy.entitlements.project_slots;
+  const allowance = resolved.values.get(key);
+  if (allowance === undefined) return;
+  const row = await db
+    .selectFrom('projects')
+    .innerJoin('billing_accounts', 'billing_accounts.workspace_id', 'projects.workspace_id')
+    .select(sql<string>`count(*)`.as('count'))
+    .where('billing_accounts.id', '=', accountId)
+    .executeTakeFirstOrThrow();
+  const current = Number(row.count);
+  if (current + 1 > allowance)
+    throw new ApiError(403, `The request would exceed the account's ${key} allowance`, {
+      code: LIMIT_EXCEEDED,
+      details: { key, allowance, current, requested: 1 },
+    });
+}
+
+export async function requireProjectDeletion(db: Database, workspaceId: string): Promise<void> {
+  const accountId = await lockWorkspaceCapacity(db, workspaceId);
+  const resolved = await resolveAccountEntitlement(db, { accountId, workspaceId }, new Date());
+  if (resolved.status !== 'resolved')
+    throw new ApiError(403, 'Billing entitlement is unavailable for this account', {
+      code: UNRESOLVED,
+    });
+  const key = policy.entitlements.project_deletion;
+  if ((resolved.values.get(key) ?? 0) < 1)
+    throw new ApiError(403, 'Project deletion is not granted for this workspace', {
+      code: asApiErrorCode(codes.capability_not_granted),
+      details: { key },
+    });
+}
+
 async function promptCount(db: Database, accountId: string): Promise<number> {
   const row = await db
     .selectFrom('prompts')

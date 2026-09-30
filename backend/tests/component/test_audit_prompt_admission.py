@@ -47,6 +47,7 @@ from tests.component.audit_helpers import (
 )
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import seed_occupancy_grants
+from tests.component.project_helpers import seed_project
 
 # ---------------------------------------------------------------------------
 # Shared API seed helpers (project identity: Acme Corp / acme.com, competitor
@@ -85,7 +86,7 @@ async def _make_project_and_set(
     email: str,
 ) -> tuple[dict, str]:
     await _register(client, email)
-    project = (await client.post("/api/v1/projects", json=_project_payload())).json()
+    project = await seed_project(client, _project_payload())
     return project, await _create_prompt_set(session_factory, project["id"])
 
 
@@ -233,12 +234,9 @@ async def test_empty_vocabulary_does_not_block_audit(
     nudge the user to add identity, not make the visibility run unreachable.
     """
     await _register(client, "bind-empty@example.com")
-    project = (
-        await client.post(
-            "/api/v1/projects",
-            json={"name": "No Identity", "website_url": "", "brand_name": ""},
-        )
-    ).json()
+    project = await seed_project(
+        client, {"name": "No Identity", "website_url": "", "brand_name": ""}
+    )
     prompt_set_id = await _create_prompt_set(session_factory, project["id"])
 
     async with session_factory() as session:

@@ -1,8 +1,16 @@
 # Backend architecture
 
-FastAPI is a modular monolith with separate workers. PostgreSQL owns durable
+The backend combines FastAPI and the TypeScript API service with separate workers.
+PostgreSQL owns durable
 state and queues. Domain behavior is documented in the feature owners listed in
 [the documentation index](README.md); this file owns shared backend mechanics.
+
+Projects, onboarding research/completion, logo refresh and command-center reads
+are TypeScript-owned under frontend/services/api/src/projects/. Discovery runs
+in its TypeScript worker; the Python queue sweeper retains lease-expiry and retry
+reconciliation. Python keeps authorized project reads for integrations and the
+executive PDF, whose projection/rendering moves in PR 16. Ingress routing is
+checked against the shared route-ownership manifest.
 
 ## Layers and extension
 

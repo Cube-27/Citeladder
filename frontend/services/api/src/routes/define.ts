@@ -64,7 +64,7 @@ type RouteSpec<Path extends ParamSpecs, Query extends ParamSpecs, Response exten
   headers?: z.ZodObject;
   capability?: WorkspaceCapability;
   /** Resolve the workspace from the path's `project_id` instead of `X-Workspace-Id`. */
-  authorize?: 'workspace' | 'project';
+  authorize?: 'workspace' | 'project' | 'public';
 } & RouteBody<Path, Query, Response>;
 
 export type ProductRoute = {
@@ -140,7 +140,9 @@ function defineRoute<
   const method = route.method ?? 'get';
   const status = route.status ?? 200;
   const byProject = route.authorize === 'project';
-  const workspaceHeaders = byProject ? z.object({}) : ACTIVE_WORKSPACE_HEADERS;
+  const publicRead = route.authorize === 'public';
+  if (publicRead && method !== 'get') throw new Error('Only read routes may be public');
+  const workspaceHeaders = byProject || publicRead ? z.object({}) : ACTIVE_WORKSPACE_HEADERS;
   const contract: RouteContract = {
     family: route.family,
     method,
@@ -148,7 +150,7 @@ function defineRoute<
     pathParams: parameterObject(route.params.path),
     query: parameterObject(route.params.query),
     headers: route.headers ? workspaceHeaders.extend(route.headers.shape) : workspaceHeaders,
-    cookies: SESSION_COOKIE,
+    cookies: publicRead ? z.object({}) : SESSION_COOKIE,
     ...(route.body ? { body: route.body } : {}),
     responses: {
       [status]: route.response,
@@ -158,10 +160,11 @@ function defineRoute<
   const register = (app: Hono<AppEnv>, config: ServiceConfig, db: Database) => {
     const pattern = honoPath(route.path);
     app.on(
-      method.toUpperCase(),
-      pattern,
-      sessionUser(config, db),
-      byProject ? projectMember(db) : activeWorkspace(db),
+      [method.toUpperCase()],
+      [pattern],
+      ...(publicRead
+        ? []
+        : [sessionUser(config, db), byProject ? projectMember(db) : activeWorkspace(db)]),
       async (c) => {
         if (method !== 'get') c.get('workspace').require(route.capability ?? 'run');
         const params = validateParams(route.params, {

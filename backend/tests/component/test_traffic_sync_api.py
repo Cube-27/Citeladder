@@ -57,6 +57,7 @@ from app.models.integrations import (
 )
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import seed_occupancy_grants
+from tests.component.project_helpers import seed_project
 
 _SYNC_ENQUEUE_KEYS = {"sync_run_id", "connection_id", "status"}
 
@@ -65,9 +66,7 @@ _SYNC_ENQUEUE_KEYS = {"sync_run_id", "connection_id", "status"}
 # API + seed helpers
 # ---------------------------------------------------------------------------
 async def _create_project(client: httpx.AsyncClient) -> tuple[str, str]:
-    resp = await client.post("/api/v1/projects", json={"name": "Traffic Project"})
-    assert resp.status_code == 201
-    body = resp.json()
+    body = await seed_project(client, {"name": "Traffic Project"})
     return body["id"], body["workspace_id"]
 
 
@@ -279,11 +278,8 @@ async def test_sync_skips_ineligible_connections(
     await _register(client, "traffic-sync-eligible@example.com")
     project_id, workspace_id = await _create_project(client)
     await _grant_second_project_slot(session_factory, workspace_id)
-    other_project_resp = await client.post(
-        "/api/v1/projects", json={"name": "Other Project"}
-    )
-    assert other_project_resp.status_code == 201
-    other_project_id = other_project_resp.json()["id"]
+    other_project = await seed_project(client, {"name": "Other Project"})
+    other_project_id = other_project["id"]
     async with session_factory() as session:
         ws = uuid.UUID(workspace_id)
         pid = uuid.UUID(project_id)
@@ -559,26 +555,22 @@ async def test_sync_409_names_already_enqueued_connections(
         ga4 = await _seed_connection(
             session, workspace_id=ws, grant=grant, provider=INTEGRATION_PROVIDER_GA4
         )
-        # The fan-out is ordered by ``(created_at, id)``. Both rows are seeded
-        # in one transaction, so they share ``created_at`` and the random UUID
-        # broke the tie — making this test pass or fail on a coin flip. Pin GSC
-        # earlier so "the first connection committed, THEN the second
-        # conflicted" is actually the scenario under test.
-        gsc.created_at = ga4.created_at - timedelta(seconds=1)
-        await _seed_mapping(
+        gsc_mapping = await _seed_mapping(
             session,
             workspace_id=ws,
             connection=gsc,
             property_ref="https://example.com/",
             project_id=uuid.UUID(project_id),
         )
-        await _seed_mapping(
+        ga4_mapping = await _seed_mapping(
             session,
             workspace_id=ws,
             connection=ga4,
             property_ref="properties/123456789",
             project_id=uuid.UUID(project_id),
         )
+        # Fan-out orders mapped properties, whose timestamps can tie on Windows.
+        gsc_mapping.created_at = ga4_mapping.created_at - timedelta(seconds=1)
         await session.commit()
 
     async def _partially_conflicting_enqueue(session, *, connection_id, **kwargs):

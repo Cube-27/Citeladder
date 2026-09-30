@@ -25,7 +25,6 @@ async def test_login_usage_allows_first_project(
     client: httpx.AsyncClient, email: str
 ) -> None:
     await register_and_login(client, email)
-    assert (await client.get("/api/v1/projects")).json() == []
     response = await client.get("/api/v1/billing/usage")
     assert response.status_code == 200
     items = {item["key"]: item for item in response.json()["items"]}

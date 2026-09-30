@@ -41,8 +41,10 @@
   the prompt library: sets, prompts, import, candidate review and topics) is
   implemented. PR 11 moves the configured model gateway, JEV client, prompt-set
   generation and Commerce buyer-prompt generation/manual entry to TS; Python
-  keeps the documented bridges for remaining callers. PRs 12–20 follow the
-  re-sequenced order. Deployment of PRs 3–11 and their one-week cutover soaks
+  keeps the documented bridges for remaining callers. PR 12 moves project CRUD,
+  onboarding/discovery and its worker, logo refresh and command-center reads to
+  TS; the executive PDF remains Python until PR 16. PRs 13–20 follow the
+  re-sequenced order. Deployment of PRs 3–12 and their one-week cutover soaks
   are pending.
 
 - [Agent capabilities](citeladder-agent-capabilities.md)

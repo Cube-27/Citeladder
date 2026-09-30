@@ -42,18 +42,23 @@ from app.core.config import (
     Settings,
 )
 from app.core.config import agent as agent_config
+from app.core.config import brand_discovery as discovery_config
+from app.core.config import brand_evidence as evidence_config
 from app.core.config import brand_logos as brand_logo_config
 from app.core.config import brand_profile as brand_profile_config
 from app.core.config import commerce_catalog as commerce_config
+from app.core.config import dataforseo as search_config
 from app.core.config import demand as demand_config
 from app.core.config import entitlements as entitlements_config
 from app.core.config import errors as error_config
 from app.core.config import jev as jev_config
 from app.core.config import observed_competitors as observed_config
 from app.core.config import opportunities as opportunities_config
+from app.core.config import projects as projects_config
 from app.core.config import prompts as prompts_config
 from app.core.config import search_intelligence as search_intelligence_config
 from app.core.config import site_health_internal_links as internal_links_config
+from app.core.config import site_health_rules as web_rules
 from app.core.config import visibility_prompts as visibility_config
 from app.core.config import workspaces as workspace_config
 from app.core.config.abuse import AbuseSettings
@@ -251,6 +256,36 @@ def _setting(name: str, model: type[BaseSettings] = Settings) -> dict[str, Any]:
     return entry
 
 
+def _discovery_policy() -> dict[str, Any]:
+    return {
+        "settings": {
+            name: _setting(name, discovery_config.BrandDiscoverySettings)
+            for name in discovery_config.BrandDiscoverySettings.model_fields
+        },
+        "constants": {
+            name.lower(): sorted(value) if isinstance(value, frozenset) else value
+            for name, value in vars(discovery_config).items()
+            if name.isupper()
+            and isinstance(value, (str, int, float, tuple, dict, frozenset))
+        },
+        "industry_library": json.loads(
+            (
+                Path(__file__).parents[1] / "app/core/config/industry_library.json"
+            ).read_text(encoding="utf-8")
+        ),
+    }
+
+
+def _prefixed_constants(module: types.ModuleType, prefix: str) -> dict[str, Any]:
+    return {
+        name.removeprefix(prefix).lower(): sorted(value)
+        if isinstance(value, frozenset)
+        else value
+        for name, value in vars(module).items()
+        if name.startswith(prefix)
+    }
+
+
 def build_config() -> dict[str, Any]:
     """The policy export, in a stable key order."""
     return {
@@ -298,6 +333,22 @@ def build_config() -> dict[str, Any]:
             if name.startswith("INTERNAL_LINKS_")
         },
         "brand_identity": _brand_identity_policy(),
+        "projects": {
+            "default_benchmark_mode": projects_config.DEFAULT_BENCHMARK_MODE,
+            "default_repetitions": projects_config.DEFAULT_REPETITIONS,
+            "min_repetitions": projects_config.MIN_REPETITIONS,
+            "max_repetitions": projects_config.MAX_REPETITIONS,
+            "location_codes": search_config.LOCATION_CODES,
+            "language_codes": sorted(search_config.LANGUAGE_CODES),
+            "prompt_set_name": prompts_config.ONBOARDING_PROMPT_SET_NAME,
+        },
+        "discovery": _discovery_policy(),
+        "brand_evidence": _prefixed_constants(evidence_config, "BRAND_EVIDENCE_"),
+        "brand_logos": _prefixed_constants(brand_logo_config, "BRAND_LOGO_"),
+        "web_fetch": {
+            "ports": sorted(web_rules.ALLOWED_URL_PORTS),
+            "schemes": sorted(web_rules.ALLOWED_URL_SCHEMES),
+        },
         "commerce": {
             "buyer_prompts": {
                 "min": commerce_config.COMMERCE_PROMPTS_MIN,
@@ -336,6 +387,8 @@ def build_config() -> dict[str, Any]:
                 "bulk_import_window_seconds",
                 "agent_call_limit",
                 "agent_call_window_seconds",
+                "brand_logo_refresh_limit",
+                "brand_logo_refresh_window_seconds",
             )
         },
         "entitlements": _entitlements_policy(),
@@ -377,6 +430,7 @@ def _entitlements_policy() -> dict[str, Any]:
         "base_subscription_kind": SUBSCRIPTION_KIND_BASE,
         "prompt_slots": ent.KEY_PROMPT_SLOTS,
         "project_slots": ent.KEY_PROJECT_SLOTS,
+        "project_deletion": ent.KEY_PROJECT_DELETION,
         "capacity_lock": {
             "namespace": ent.OCCUPANCY_LOCK_NAMESPACE,
             "person": ent.OCCUPANCY_LOCK_PERSON,

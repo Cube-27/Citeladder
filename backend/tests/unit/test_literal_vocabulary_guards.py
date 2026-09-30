@@ -17,10 +17,8 @@ from typing import Literal
 import pytest
 
 from app.core.config.brand_discovery import BUSINESS_MODELS, PRICE_TIERS
-from app.core.config.prompts import PROMPT_COHORTS, PROMPT_STATUSES
 from app.core.literals import LiteralVocabularyError, lock_literal
 from app.domain.projects.discovery_schemas import BusinessModel, PriceTier
-from app.domain.prompts.schemas import PromptCohort, PromptStatus
 
 
 def test_matching_alias_and_vocabulary_pass() -> None:
@@ -90,8 +88,6 @@ def test_the_guard_still_fires_under_python_O() -> None:
     [
         (PriceTier, PRICE_TIERS, "PriceTier"),
         (BusinessModel, BUSINESS_MODELS, "BusinessModel"),
-        (PromptStatus, PROMPT_STATUSES, "PromptStatus"),
-        (PromptCohort, PROMPT_COHORTS, "PromptCohort"),
     ],
 )
 def test_shipped_aliases_match_their_catalogs(

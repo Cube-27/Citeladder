@@ -23,6 +23,7 @@ from app.models.billing import BillingAccount
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
 from tests.component.auth_helpers import register_and_login
+from tests.component.project_helpers import seed_project
 
 pytestmark = pytest.mark.asyncio
 
@@ -38,17 +39,16 @@ async def _available(db_session: AsyncSession, workspace_id) -> int | None:
 
 
 async def _project(client: httpx.AsyncClient, name: str) -> str:
-    response = await client.post(
-        "/api/v1/projects",
-        json={
+    project = await seed_project(
+        client,
+        {
             "name": name,
             "brand_name": name,
             "website_url": f"https://{name.lower()}.example.com",
             "competitors": [{"name": "Rival", "aliases": [], "domains": []}],
         },
     )
-    assert response.status_code == 201
-    return response.json()["id"]
+    return project["id"]
 
 
 async def _grant_fetches(db_session: AsyncSession, units: int) -> None:

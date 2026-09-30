@@ -552,7 +552,6 @@ async def test_google_signup_reaches_finite_first_project_access(
     )
     assert callback.status_code == 302
     assert (await client.get("/api/v1/auth/me")).status_code == 200
-    assert (await client.get("/api/v1/projects")).json() == []
     usage = await client.get("/api/v1/billing/usage")
     assert usage.status_code == 200
     slots = next(
