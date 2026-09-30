@@ -63,6 +63,18 @@ consecutive per financial year. A full refund revokes the purchase's remaining
 grants; consumed units are not clawed back. Refunds arrive as provider refund
 events and settle against the original payment receipt.
 
+Receipt list/download reads and PDF rendering are TypeScript-owned in
+[`src/billing/`](../frontend/services/api/src/billing/). The `billing-documents`
+route family contains the existing invoice paths; the remaining `billing`
+mutations stay Python until PR 16b. Reads require the active workspace's billing
+permission and select its account, independently of owner-user metadata.
+Documents validate stored amounts and use local Noto Sans fonts with measured
+wrapping and pagination. Unsupported glyphs are printed as explicit Unicode
+code points instead of blank characters. Executive PDFs consume the existing
+[command-center projection](../frontend/services/api/src/projects/command-center.ts),
+including measurement versions, source identities and the non-causal action
+disclaimer. Rendering performs no acquisition or settlement.
+
 Base plans are recurring provider subscriptions. Add-ons, top-ups and an
 upgrade's prorated charge are one-time provider orders: the intent persists the
 order, and the single captured payment on it settles the purchase, so both

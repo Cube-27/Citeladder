@@ -172,7 +172,7 @@ total.
 | 13 | Integrations | High | Done |
 | 14 | Auth and workspaces | High | Done |
 | 15 | MCP server and OAuth provider | High | Done |
-| 16 | Billing and the entitlement ledger | High | |
+| 16 | Billing and the entitlement ledger (16a PDF, 16b commercial/ledger) | High | 16a done; 16b pending |
 | 17 | Audits, providers and answer-engine connectors | High | |
 | 18 | Site Health and source-page inspection | High | |
 | 19 | Agent runtime | High | |
@@ -774,10 +774,37 @@ replace external client or deployment acceptance.
 
 ### PR 16: Billing and the entitlement ledger
 
-Checkout, subscriptions, plan changes, webhooks, reconciliation, invoices and
-the consumable ledger. Razorpay becomes a TS REST client (payments stay
-disabled until the owner's live sign-off). A TS PDF library replaces
-`reportlab` for invoices and the executive PDF.
+Split under D7's retirement budget: the initial inventory exceeds 50 Python
+application/test files before retained bridges are accounted for.
+
+**16a: receipt reads and PDF exports.** TypeScript owns the existing invoice
+list/download paths (`billing-documents`) and executive PDF (`executive-report`).
+The latter consumes the same persisted command-center projection as the UI.
+Local-font PDF rendering validates frozen amounts, wraps long text, paginates
+tables and keeps measurement/evidence provenance. Python's invoice issuance,
+refund normalization and numbering remain the settlement owner for 16b.
+
+Retired: the two Python route modules, invoice PDF/DTO modules, the four
+command-center modules and their obsolete component tests; reportlab and its
+type stubs. Read/download isolation and document rendering coverage moves to
+TypeScript; Python refund replay, credit allocation and numbering tests stay.
+
+Departures: missing metrics render as Unknown; observed zero remains zero.
+Executive documents include the metric-snapshot ID, processing versions and
+resolved-action event IDs. Receipt and credit-note documents paginate long
+text instead of relying on a one-page layout. Stored amount inconsistencies
+fail on the server rather than presenting a guessed receipt. Local Noto Sans
+supports Latin, Greek, Cyrillic and Devanagari; unsupported characters retain
+their explicit Unicode code point.
+
+Receipt reads require the declared `manage_billing` capability. PDFs use monochrome text and bold
+headings without introducing a second color-token authority.
+
+16a is implemented; its deployment and soak are pending. 16b remains
+pending: checkout, subscriptions, plan changes, webhooks, reconciliation,
+invoice issuance and the consumable ledger. Razorpay becomes a TS REST client;
+payments remain disabled until the owner's live sign-off. Python metering
+bridges stay while audits, Site Health and Agent still call them (PRs 17–19).
 
 ### PR 17: Audits, providers and answer-engine connectors
 

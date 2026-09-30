@@ -413,7 +413,9 @@ export const billingInvoiceSchema = responseObject({
   payment_id: z.string().nullable(),
 });
 
+export const billingInvoiceListSchema = responseObject({ invoices: z.array(billingInvoiceSchema) });
+
 export const billingInvoicesSchema = z.union([
   z.array(billingInvoiceSchema),
-  responseObject({ invoices: z.array(billingInvoiceSchema) }).transform((value) => value.invoices),
+  billingInvoiceListSchema.transform((value) => value.invoices),
 ]);

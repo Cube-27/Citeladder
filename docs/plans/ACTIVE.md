@@ -43,10 +43,13 @@
   generation and Commerce buyer-prompt generation/manual entry to TS; Python
   keeps the documented bridges for remaining callers. PR 12 moves project CRUD,
   onboarding/discovery and its worker, logo refresh and command-center reads to
-  TS; the executive PDF remains Python until PR 16. PR 13 moves integrations
-  routes, connectors and workers to TS. PR 14 moves auth and workspace HTTP
-  ownership to TS. PRs 15–20 follow the re-sequenced order. Deployment of
-  PRs 3–14 and their one-week cutover soaks are pending.
+  TS. PR 13 moves integrations routes, connectors and workers to TS. PR 14
+  moves auth and workspace HTTP ownership to TS. PR 15 moves the MCP server and
+  OAuth provider to TS. PR 16 is split under D7's retirement budget: 16a moves
+  receipt reads and both PDF exports to TS and retires reportlab; 16b's
+  commercial mutations, settlement, recovery and ledger remain pending.
+  PRs 17–20 follow the re-sequenced order. Deployment of implemented cutovers
+  and their one-week soaks are pending.
 
 - [Agent capabilities](citeladder-agent-capabilities.md)
   — foundations and MVP items 1–4 are present in #203, with handoff/evidence
