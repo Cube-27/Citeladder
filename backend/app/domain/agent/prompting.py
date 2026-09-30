@@ -215,9 +215,11 @@ def _protocol(
 ) -> str:
     kind = skill.output_kind if skill is not None else None
     output_rule = (
-        "This request needs an OUTLINE first: return output.phase = outline with "
-        "the outline your skill describes, which the user can edit and approve. "
-        "Do not write the full deliverable yet."
+        "If the user asks to create or revise a deliverable, it needs an OUTLINE "
+        "first: return output.phase = outline with the outline your skill "
+        "describes, which the user can edit and approve. Do not write the full "
+        "deliverable yet. For questions, discussion or clarification, answer in "
+        "reply and leave output null, even with this skill selected."
         if outline_required
         else "Include an output when the request asks for a deliverable (a plan, "
         "edits, a brief, a draft); leave output null for a question or analysis."
@@ -229,7 +231,7 @@ def _protocol(
             "Work in steps. Each step returns ONE JSON object with every key present:",
             '- {"action": "select_skill", "skill_id": "<id>", ...other keys null}',
             '- {"action": "call_tool", "tool": "<name>", "arguments": {...}, ...}',
-            '- {"action": "respond", "reply": "<short summary for the user>",',
+            '- {"action": "respond", "reply": "<answer, clarification or summary>",',
             '   "evidence": ["<record reference>", ...], "output": {...} or null}',
             "",
             f"Steps left in this turn: {remaining_steps}. Tool calls left: "
