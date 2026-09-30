@@ -263,10 +263,10 @@ provider dashboard—the accepted activation and resulting grants are authority.
 - Enable automatic capture for Standard Checkout payments in the Dashboard: an
   order settles only on a captured payment.
 - A captured payment for an intent that was already abandoned or failed is
-  logged as `billing.payment_for_closed_intent` and grants nothing; review and
+  rejected with the persisted `settlement_rejected` result and grants nothing; review and
   refund it.
 - An upgrade's provider plan switch runs from the reconciliation watcher after
-  the prorated charge settles. `billing.plan_change_rejected` means Razorpay
+  the prorated charge settles. Scheduled-change state `provider_rejected` means Razorpay
   refused the switch: the paid remainder of the period stands, and renewal stays
   on the current plan until the change is resolved with the customer.
 - Refund from the Dashboard. The `refund.processed` event records the refund,
@@ -290,20 +290,32 @@ allowance.
 
 The one-shot reconciliation command is bounded and idempotent. It claims stale
 pending activations, queries provider authority, and settles through the same
-transaction as webhooks. It prints safe counts only.
+transaction as webhooks. It logs safe claimed-row counts for pending intents,
+webhook receipts and current subscriptions; those counts are not payment totals
+or success counts.
 
 ```bash
-cd backend
-uv run python -m scripts.reconcile_billing --batch-size 50
+cd frontend
+pnpm --filter @citeladder/api billing-worker
 ```
 
 Run it when webhook delivery is delayed, an accepted create outcome is uncertain,
 or monitoring reports stale pending activations. Do not loop it aggressively or
 increase bounds without review. A run-level failure exits nonzero; per-row
-provider errors remain pending and appear in counts. Record counts and then
+provider errors remain pending with persisted failure/retry state. Record counts and then
 inspect affected pending rows, webhook results, normalized receipts, grants, and
 ledger entries. Reconciliation is not evidence that production provider behavior
 has been tested.
+
+The Compose `billing-worker-ts` service runs the same entry point with `--loop`.
+Batch size, polling, lease duration, abandonment window, pagination and retry
+limits come from the existing `BILLING_RECONCILIATION_*` settings, rather than
+command-line overrides. Claims renew during I/O and an expired worker cannot
+settle after another worker reacquires its row. Inspect pending intents whose
+`reconciliation_attempts` reached `BILLING_RECONCILIATION_MAX_ATTEMPTS` and
+quarantined webhook receipts; uncertainty at that bound does not abandon or
+grant the purchase. Recovery continues with new checkout disabled, but requires
+credentials matching the frozen provider environment.
 
 ## Webhook-secret rotation
 

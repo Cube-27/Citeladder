@@ -8,17 +8,12 @@ from app.core.config.billing_contracts import (
     INDIA_COUNTRY_CODE,
     PLAN_KEYS,
     PREVIEW_REGION,
-    REASON_CHECKOUT_UNAVAILABLE,
-    REASON_CONTACT_ONLY,
     REGION_INDIA,
     REGION_INTERNATIONAL,
-    TAX_BEHAVIOR_EXCLUSIVE,
     TAX_BEHAVIORS,
 )
-from app.core.config.billing_settings import billing_settings
 from app.core.config.entitlements import CAPABILITY_REGISTRY
 from app.core.config.provider_catalog import (
-    AVAILABILITY_AVAILABLE,
     ProviderCatalogEntry,
     validate_availability,
 )
@@ -234,77 +229,6 @@ def resolve_region(country_code: str | None) -> str:
     if not country:
         return PREVIEW_REGION
     return REGION_INDIA if country == INDIA_COUNTRY_CODE else REGION_INTERNATIONAL
-
-
-def checkout_provider_mode() -> str | None:
-    """The environment the SELECTED new-checkout provider is configured in.
-
-    ``None`` when no provider is selected, registered, or configured. Never
-    raises and never falls back to another provider.
-    """
-    from app.connectors.billing.registry import (
-        ProviderUnavailableError,
-        resolve_binding,
-    )
-
-    try:
-        return resolve_binding(billing_settings.checkout_provider).provider_mode
-    except ProviderUnavailableError:
-        return None
-
-
-def region_checkout_ready(region: str) -> bool:
-    """Whether the operator has enabled checkout for a region at all.
-
-    Readiness is the SELECTED provider's own declaration, asked through the
-    registry, so this stays true when a different provider is selected instead
-    of silently reporting Razorpay's flags.
-    """
-    from app.connectors.billing.registry import region_ready
-
-    if not billing_settings.checkout_enabled:
-        return False
-    return region_ready(billing_settings.checkout_provider, region)
-
-
-def plan_checkout_availability(
-    plan: PlanCatalogEntry, region: str
-) -> tuple[bool, str | None]:
-    """Whether a plan is purchasable in a region, with a safe reason if not.
-
-    Config owns the rule (invariant 1): contact-only plans are never
-    purchasable, and an absent private provider ref or an unpriced region makes
-    the plan unavailable rather than failing at purchase.
-    """
-    if plan.contact_only or not plan.self_serve:
-        return False, REASON_CONTACT_ONLY
-    price = plan.base_price(region)
-    if price is None or not price.purchasable or not region_checkout_ready(region):
-        return False, REASON_CHECKOUT_UNAVAILABLE
-    mode = checkout_provider_mode()
-    if mode is None or price.provider_mode != mode:
-        return False, REASON_CHECKOUT_UNAVAILABLE
-    if price.synthetic and mode == "live":
-        return False, REASON_CHECKOUT_UNAVAILABLE
-    if price.tax_behavior == TAX_BEHAVIOR_EXCLUSIVE and not price.tax_verified:
-        return False, REASON_CHECKOUT_UNAVAILABLE
-    return True, None
-
-
-def item_checkout_availability(
-    *, availability: str, price: CatalogPrice | None, region: str
-) -> tuple[bool, str | None]:
-    """Whether one add-on/top-up is purchasable in a region, with a safe reason.
-
-    An absent private provider ref, an unpriced region, a catalog-unavailable
-    item, or a region without operator-enabled checkout all refuse here rather
-    than failing mid-purchase.
-    """
-    if availability != AVAILABILITY_AVAILABLE:
-        return False, REASON_CHECKOUT_UNAVAILABLE
-    if price is None or not price.purchasable or not region_checkout_ready(region):
-        return False, REASON_CHECKOUT_UNAVAILABLE
-    return True, None
 
 
 def scale_grant_specs(

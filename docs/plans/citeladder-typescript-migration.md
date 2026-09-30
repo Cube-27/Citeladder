@@ -780,16 +780,14 @@ application/test files before retained bridges are accounted for.
 list/download paths (`billing-documents`) and executive PDF (`executive-report`).
 The latter consumes the same persisted command-center projection as the UI.
 Local-font PDF rendering validates frozen amounts, wraps long text, paginates
-tables and keeps measurement/evidence provenance. Python's invoice issuance,
-refund normalization and numbering remain the settlement owner for 16b.
+tables and keeps measurement/evidence provenance.
 
 Retired: the two Python route modules, invoice PDF/DTO modules, the four
 command-center modules and their obsolete component tests; reportlab and its
 type stubs; and the visibility bridges only the executive PDF still reached
 (`analysis/visibility`, `comparison_projection`, `matched_comparison`,
 `measurement`, their response schemas and `get_project_logo_urls`).
-Read/download isolation and document rendering coverage moves to TypeScript;
-Python refund replay, credit allocation and numbering tests stay.
+Read/download isolation and document rendering coverage moves to TypeScript.
 
 Departures: missing metrics render as Unknown; observed zero remains zero.
 Executive documents include the metric-snapshot ID, processing versions and
@@ -803,11 +801,32 @@ Receipt reads require the declared `manage_billing` capability. PDFs use
 monochrome text and bold headings without introducing a second color-token
 authority.
 
-16a is implemented; its deployment and soak are pending. 16b remains
-pending: checkout, subscriptions, plan changes, webhooks, reconciliation,
-invoice issuance and the consumable ledger. Razorpay becomes a TS REST client;
-payments remain disabled until the owner's live sign-off. Python metering
-bridges stay while audits, Site Health and Agent still call them (PRs 17–19).
+**16b: commercial runtime and entitlement ledger.** Implemented: strict
+workspace-scoped checkout, frozen quotes and recurring terms, no-card claims, upgrades/downgrades and cancellation, authenticated durable
+webhook receipts, leased bounded recovery, invoice/credit-note issuance and
+typed consumable accounting. Razorpay uses a fixed-origin TS REST client;
+browser callbacks only schedule recovery and never grant paid access.
+
+Retired: Python runtime billing routes, checkout/quote/settlement/receipt writers,
+provider checkout/webhook/recovery adapters and the reconciliation runner. Their
+money, isolation, idempotency and concurrency coverage moves to real PostgreSQL
+TS tests, as does 16a's remaining refund replay, credit allocation and numbering
+coverage. No schema or historical evidence is rewritten.
+
+Retained bridges: catalog/operator administration and read-only provider-plan
+verification; workspace bootstrap; grant writes, resolver, admission and metering
+for Python audit, Site Health and Agent callers. Each continues under its current
+owner and retires with its last caller (runtime workers in PRs 17–19, operator
+administration during consolidation). Both stacks retain the shared account lock,
+grant UUIDs, period identity and typed ledger parents.
+
+Recovery renews leases during bounded provider I/O and refuses stale owners.
+Unknown or exhausted provider evidence requires inspection rather than granting
+or abandoning a purchase. Paid terminal subscriptions retain their verified paid
+period; new one-time purchases require an unexpired base period. No autonomous
+publishing or payment activation is added. Payments stay disabled until the
+owner's live sign-off. Deployment, provider acceptance and the cutover soak
+are pending.
 
 ### PR 17: Audits, providers and answer-engine connectors
 

@@ -64,7 +64,7 @@ function validate(grant: GrantRow): void {
 }
 
 /** When a grant stops counting; `null` never expires, `-Infinity` never started. */
-function expiryMs(grant: GrantRow, subscriptionEnd: Date | null): number | null {
+export function expiryMs(grant: GrantRow, subscriptionEnd: Date | null): number | null {
   const own = grant.valid_until?.getTime() ?? null;
   if (!PAID_ACCESS.has(grant.source_kind)) return own;
   if (subscriptionEnd === null) return Number.NEGATIVE_INFINITY;
@@ -113,20 +113,6 @@ function combine(type: string, prior: number, value: number): number {
   return prior + value;
 }
 
-function selectedGrants(
-  grants: readonly GrantRow[],
-  revocations: readonly RevocationRow[],
-  subscriptionEnd: Date | null,
-  at: Date,
-) {
-  const revokedAt = revocationTimes(revocations);
-  const active = grants.filter((grant) =>
-    isActive(grant, revokedAt, subscriptionEnd, at.getTime()),
-  );
-  const bundle = primaryBundle(active);
-  return active.filter((grant) => grant.bundle_role === SUPPLEMENT || grant.bundle_id === bundle);
-}
-
 /** Earliest future change to the selected projection, including future grants. */
 export function entitlementChangeAt(
   grants: readonly GrantRow[],
@@ -152,13 +138,27 @@ export function entitlementChangeAt(
 }
 
 /** Capability values at `at`; throws `CorruptGrant` on any invalid row. */
+export function selectedGrants(
+  grants: readonly GrantRow[],
+  revocations: readonly RevocationRow[],
+  subscriptionEnd: Date | null,
+  at: Date,
+): GrantRow[] {
+  grants.forEach(validate);
+  const revokedAt = revocationTimes(revocations);
+  const active = grants.filter((grant) =>
+    isActive(grant, revokedAt, subscriptionEnd, at.getTime()),
+  );
+  const bundle = primaryBundle(active);
+  return active.filter((grant) => grant.bundle_role !== PRIMARY || grant.bundle_id === bundle);
+}
+
 export function foldEntitlement(
   grants: readonly GrantRow[],
   revocations: readonly RevocationRow[],
   subscriptionEnd: Date | null,
   at: Date,
 ): Map<string, number> {
-  grants.forEach(validate);
   const values = new Map<string, number>();
   for (const grant of selectedGrants(grants, revocations, subscriptionEnd, at)) {
     const prior = values.get(grant.key);

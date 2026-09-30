@@ -19,25 +19,6 @@ export const CONTRACT_SCHEMA_MAP = {
   // Search Intelligence: the Python review route still publishes RunResponse;
   // every other response is served by the TypeScript API.
   searchRunSchema: 'RunResponse',
-  // Billing (v8 commercial surface)
-  billingCatalogSchema: 'BillingCatalogResponse',
-  billingEntitlementSchema: 'BillingEntitlementResponse',
-  billingUsageSchema: 'BillingUsageResponse',
-  activationSchema: 'ActivationResponse',
-  subscriptionCheckoutSchema: 'CheckoutResponse',
-  subscriptionChangeSchema: 'SubscriptionChangeResponse',
-  resolvedQuoteSchema: 'ResolvedQuoteResponse',
-  moneySchema: 'MoneyResponse',
-  catalogPlanSchema: 'CatalogPlanResponse',
-  catalogAddonSchema: 'CatalogAddonResponse',
-  catalogTopupSchema: 'CatalogTopupResponse',
-  catalogProviderSchema: 'CatalogProviderResponse',
-  capabilityValueSchema: 'CapabilityValueResponse',
-  grantProvenanceSchema: 'GrantProvenanceResponse',
-  resolvedCapabilitySchema: 'ResolvedCapabilityResponse',
-  subscriptionSummarySchema: 'SubscriptionSummaryResponse',
-  usageItemSchema: 'UsageItemResponse',
-  usageGrantBalanceSchema: 'UsageGrantBalanceResponse',
   // Authenticated provider projection (distinct from the public catalog)
   providerConnectionStatesSchema: 'ProviderConnectionStatesResponse',
   providerConnectionStateEntrySchema: 'ProviderConnectionStateResponse',

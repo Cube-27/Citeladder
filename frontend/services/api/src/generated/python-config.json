@@ -5086,75 +5086,159 @@
     "capabilities": {
       "audit_cadence": {
         "type": "level",
-        "levels": 3
+        "levels": 3,
+        "ordered_values": [
+          "unset",
+          "weekly",
+          "daily"
+        ],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "history_window": {
         "type": "level",
-        "levels": 4
+        "levels": 4,
+        "ordered_values": [
+          "unset",
+          "90d",
+          "12mo",
+          "24mo"
+        ],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "support_tier": {
         "type": "level",
-        "levels": 2
+        "levels": 2,
+        "ordered_values": [
+          "standard",
+          "priority"
+        ],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "audit_credits": {
         "type": "counter.consumable",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "ai_credits": {
         "type": "counter.consumable",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "project_slots": {
         "type": "counter.occupancy",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "prompt_slots": {
         "type": "counter.occupancy",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "monitored_urls": {
         "type": "counter.occupancy",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "fanout": {
         "type": "flag",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "provider.grok": {
         "type": "flag",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "provider.perplexity": {
         "type": "flag",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "provider.copilot": {
         "type": "flag",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": false,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "exports": {
         "type": "flag",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "manual_runs_per_day": {
         "type": "counter.rate",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": 86400
       },
       "serp_tasks_per_period": {
         "type": "counter.consumable",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "site_health_page_fetches_per_period": {
         "type": "counter.consumable",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "agent": {
         "type": "flag",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": true,
+        "rolling_window_seconds": null
       },
       "project_deletion": {
         "type": "flag",
-        "levels": 0
+        "levels": 0,
+        "ordered_values": [],
+        "issuable": true,
+        "public": false,
+        "rolling_window_seconds": null
       }
     },
     "grant_source_kinds": [
@@ -5163,6 +5247,13 @@
       "plan",
       "topup",
       "trial"
+    ],
+    "draw_source_order": [
+      "trial",
+      "plan",
+      "addon",
+      "override",
+      "topup"
     ],
     "paid_access_sources": [
       "addon",
@@ -5190,6 +5281,776 @@
       "unresolved": "occupancy_unresolved",
       "capability_not_granted": "capability_not_granted"
     }
+  },
+  "billing": {
+    "settings": {
+      "checkout_enabled": {
+        "env": [
+          "BILLING_CHECKOUT_ENABLED"
+        ],
+        "type": "bool",
+        "default": false
+      },
+      "checkout_provider": {
+        "env": [
+          "BILLING_CHECKOUT_PROVIDER"
+        ],
+        "type": "str",
+        "default": "razorpay"
+      },
+      "india_gst_rate": {
+        "env": [
+          "BILLING_INDIA_GST_RATE"
+        ],
+        "type": "decimal",
+        "nullable": true,
+        "default": null
+      },
+      "india_gst_approval_reference": {
+        "env": [
+          "BILLING_INDIA_GST_APPROVAL_REFERENCE"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "seller_legal_name": {
+        "env": [
+          "BILLING_SELLER_LEGAL_NAME"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "seller_legal_address": {
+        "env": [
+          "BILLING_SELLER_LEGAL_ADDRESS"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "seller_email": {
+        "env": [
+          "BILLING_SELLER_EMAIL"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "seller_gstin": {
+        "env": [
+          "BILLING_SELLER_GSTIN"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "seller_gst_state_code": {
+        "env": [
+          "BILLING_SELLER_GST_STATE_CODE"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "seller_gst_state_name": {
+        "env": [
+          "BILLING_SELLER_GST_STATE_NAME"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "seller_sac": {
+        "env": [
+          "BILLING_SELLER_SAC"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "seller_lut_reference": {
+        "env": [
+          "BILLING_SELLER_LUT_REFERENCE"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "invoice_prefix": {
+        "env": [
+          "BILLING_INVOICE_PREFIX"
+        ],
+        "type": "str",
+        "default": "CL"
+      },
+      "contact_sales_url": {
+        "env": [
+          "BILLING_CONTACT_SALES_URL"
+        ],
+        "type": "str",
+        "default": "https://www.cube27.com/contact/"
+      },
+      "funded_monthly_budget_minor": {
+        "env": [
+          "BILLING_FUNDED_MONTHLY_BUDGET_MINOR"
+        ],
+        "type": "int",
+        "default": 50000
+      },
+      "trial_days": {
+        "env": [
+          "BILLING_TRIAL_DAYS"
+        ],
+        "type": "int",
+        "default": 7
+      },
+      "request_timeout_seconds": {
+        "env": [
+          "BILLING_REQUEST_TIMEOUT_SECONDS"
+        ],
+        "type": "float",
+        "default": 15.0
+      },
+      "http_max_connections": {
+        "env": [
+          "BILLING_HTTP_MAX_CONNECTIONS"
+        ],
+        "type": "int",
+        "default": 20
+      },
+      "http_max_keepalive_connections": {
+        "env": [
+          "BILLING_HTTP_MAX_KEEPALIVE_CONNECTIONS"
+        ],
+        "type": "int",
+        "default": 10
+      },
+      "http_keepalive_expiry_seconds": {
+        "env": [
+          "BILLING_HTTP_KEEPALIVE_EXPIRY_SECONDS"
+        ],
+        "type": "float",
+        "default": 60.0
+      },
+      "quote_validity_minutes": {
+        "env": [
+          "BILLING_QUOTE_VALIDITY_MINUTES"
+        ],
+        "type": "int",
+        "default": 60
+      },
+      "quote_signing_secret": {
+        "env": [
+          "BILLING_QUOTE_SIGNING_SECRET"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "reconciliation_poll_seconds": {
+        "env": [
+          "BILLING_RECONCILIATION_POLL_SECONDS"
+        ],
+        "type": "int",
+        "default": 2
+      },
+      "reconciliation_batch_size": {
+        "env": [
+          "BILLING_RECONCILIATION_BATCH_SIZE"
+        ],
+        "type": "int",
+        "default": 50
+      },
+      "reconciliation_stale_after_seconds": {
+        "env": [
+          "BILLING_RECONCILIATION_STALE_AFTER_SECONDS"
+        ],
+        "type": "int",
+        "default": 300
+      },
+      "reconciliation_abandon_after_seconds": {
+        "env": [
+          "BILLING_RECONCILIATION_ABANDON_AFTER_SECONDS"
+        ],
+        "type": "int",
+        "default": 86400
+      },
+      "reconciliation_list_count": {
+        "env": [
+          "BILLING_RECONCILIATION_LIST_COUNT"
+        ],
+        "type": "int",
+        "default": 100,
+        "minimum": 1,
+        "maximum": 100
+      },
+      "reconciliation_max_pages": {
+        "env": [
+          "BILLING_RECONCILIATION_MAX_PAGES"
+        ],
+        "type": "int",
+        "default": 5,
+        "minimum": 1,
+        "maximum": 20
+      },
+      "reconciliation_lease_seconds": {
+        "env": [
+          "BILLING_RECONCILIATION_LEASE_SECONDS"
+        ],
+        "type": "int",
+        "default": 120
+      },
+      "reconciliation_max_attempts": {
+        "env": [
+          "BILLING_RECONCILIATION_MAX_ATTEMPTS"
+        ],
+        "type": "int",
+        "default": 8
+      },
+      "reconciliation_backoff_base_seconds": {
+        "env": [
+          "BILLING_RECONCILIATION_BACKOFF_BASE_SECONDS"
+        ],
+        "type": "int",
+        "default": 60
+      },
+      "webhook_lease_seconds": {
+        "env": [
+          "BILLING_WEBHOOK_LEASE_SECONDS"
+        ],
+        "type": "int",
+        "default": 120
+      },
+      "webhook_max_attempts": {
+        "env": [
+          "BILLING_WEBHOOK_MAX_ATTEMPTS"
+        ],
+        "type": "int",
+        "default": 8
+      },
+      "subscription_total_cycles": {
+        "env": [
+          "BILLING_SUBSCRIPTION_TOTAL_CYCLES"
+        ],
+        "type": "int",
+        "default": 1200,
+        "minimum": 12,
+        "maximum": 1200
+      },
+      "plan_change_minimum_charge_minor": {
+        "env": [
+          "BILLING_PLAN_CHANGE_MINIMUM_CHARGE_MINOR"
+        ],
+        "type": "int",
+        "default": 100,
+        "minimum": 100
+      },
+      "max_webhook_body_bytes": {
+        "env": [
+          "BILLING_MAX_WEBHOOK_BODY_BYTES"
+        ],
+        "type": "int",
+        "default": 262144
+      }
+    },
+    "razorpay_settings": {
+      "mode": {
+        "env": [
+          "BILLING_RAZORPAY_MODE"
+        ],
+        "type": "literal",
+        "values": [
+          "disabled",
+          "test",
+          "live"
+        ],
+        "default": "disabled"
+      },
+      "test_ready": {
+        "env": [
+          "BILLING_RAZORPAY_TEST_READY"
+        ],
+        "type": "bool",
+        "default": false
+      },
+      "test_international_ready": {
+        "env": [
+          "BILLING_RAZORPAY_TEST_INTERNATIONAL_READY"
+        ],
+        "type": "bool",
+        "default": false
+      },
+      "test_india_ready": {
+        "env": [
+          "BILLING_RAZORPAY_TEST_INDIA_READY"
+        ],
+        "type": "bool",
+        "default": false
+      },
+      "live_ready": {
+        "env": [
+          "BILLING_RAZORPAY_LIVE_READY"
+        ],
+        "type": "bool",
+        "default": false
+      },
+      "international_ready": {
+        "env": [
+          "BILLING_RAZORPAY_INTERNATIONAL_READY"
+        ],
+        "type": "bool",
+        "default": false
+      },
+      "key_id": {
+        "env": [
+          "BILLING_RAZORPAY_KEY_ID"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "key_secret": {
+        "env": [
+          "BILLING_RAZORPAY_KEY_SECRET"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "webhook_secret": {
+        "env": [
+          "BILLING_RAZORPAY_WEBHOOK_SECRET"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "webhook_previous_secret": {
+        "env": [
+          "BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "webhook_previous_secret_expires_at": {
+        "env": [
+          "BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_EXPIRES_AT"
+        ],
+        "type": "datetime",
+        "nullable": true,
+        "default": null
+      },
+      "webhook_previous_secret_started_at": {
+        "env": [
+          "BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET_STARTED_AT"
+        ],
+        "type": "datetime",
+        "nullable": true,
+        "default": null
+      },
+      "api_base_url": {
+        "env": [
+          "BILLING_RAZORPAY_API_BASE_URL"
+        ],
+        "type": "str",
+        "default": "https://api.razorpay.com/v1"
+      },
+      "deployment_env": {
+        "env": [
+          "BILLING_RAZORPAY_DEPLOYMENT_ENV"
+        ],
+        "type": "str",
+        "default": "development"
+      },
+      "test_key_id_alias": {
+        "env": [
+          "BILLING_RAZORPAY_TEST_KEY_ID_ALIAS"
+        ],
+        "type": "str",
+        "default": ""
+      },
+      "test_key_secret_alias": {
+        "env": [
+          "BILLING_RAZORPAY_TEST_KEY_SECRET_ALIAS"
+        ],
+        "type": "str",
+        "default": ""
+      }
+    },
+    "razorpay_origin": "https://api.razorpay.com/v1",
+    "contracts": {
+      "key_provider_copilot": "provider.copilot",
+      "key_provider_grok": "provider.grok",
+      "key_provider_perplexity": "provider.perplexity",
+      "cadence_monthly": "monthly",
+      "cadences": [
+        "monthly"
+      ],
+      "subscription_kind_base": "base",
+      "subscription_kinds": [
+        "base"
+      ],
+      "provider_razorpay": "razorpay",
+      "subscription_pending": "pending",
+      "subscription_trialing": "trialing",
+      "subscription_active": "active",
+      "subscription_past_due": "past_due",
+      "subscription_cancel_scheduled": "cancel_scheduled",
+      "subscription_cancelled": "cancelled",
+      "subscription_unpaid": "unpaid",
+      "subscription_expired": "expired",
+      "live_subscription_statuses": [
+        "active",
+        "cancel_scheduled",
+        "past_due",
+        "pending",
+        "trialing"
+      ],
+      "razorpay_event_types": [
+        "subscription.activated",
+        "subscription.authenticated",
+        "subscription.cancelled",
+        "subscription.charged",
+        "subscription.completed",
+        "subscription.expired",
+        "subscription.halted",
+        "subscription.paused",
+        "subscription.pending",
+        "subscription.resumed"
+      ],
+      "razorpay_payment_event_types": [
+        "order.paid",
+        "payment.captured",
+        "payment.failed"
+      ],
+      "razorpay_refund_event_types": [
+        "refund.processed"
+      ],
+      "payment_pending": "payment_pending",
+      "payment_paid": "paid",
+      "payment_failed": "payment_failed",
+      "razorpay_payment_status_map": {
+        "created": "payment_pending",
+        "authorized": "payment_pending",
+        "partially_paid": "payment_pending",
+        "captured": "paid",
+        "paid": "paid",
+        "failed": "payment_failed",
+        "cancelled": "payment_failed",
+        "expired": "payment_failed",
+        "refunded": "payment_failed"
+      },
+      "razorpay_status_map": {
+        "created": "pending",
+        "authenticated": "pending",
+        "active": "active",
+        "pending": "past_due",
+        "halted": "unpaid",
+        "cancelled": "cancelled",
+        "completed": "expired",
+        "expired": "expired",
+        "paused": "past_due"
+      },
+      "region_india": "india",
+      "region_international": "international",
+      "regions": [
+        "india",
+        "international"
+      ],
+      "india_country_code": "IN",
+      "preview_region": "international",
+      "currency_usd": "USD",
+      "currency_inr": "INR",
+      "region_currencies": {
+        "india": "INR",
+        "international": "USD"
+      },
+      "currency_minor_units": {
+        "USD": 2,
+        "INR": 2
+      },
+      "tax_behavior_exclusive": "exclusive",
+      "tax_behavior_inclusive": "inclusive",
+      "tax_behaviors": [
+        "exclusive",
+        "inclusive"
+      ],
+      "cadence_custom": "custom",
+      "reason_checkout_unavailable": "checkout_unavailable",
+      "reason_contact_only": "contact_only",
+      "reason_trial_unavailable": "trial_unavailable",
+      "plan_tier_1": "tier_1",
+      "plan_tier_2": "tier_2",
+      "plan_tier_3": "tier_3",
+      "plan_enterprise": "enterprise",
+      "plan_keys": [
+        "tier_1",
+        "tier_2",
+        "tier_3",
+        "enterprise"
+      ],
+      "self_serve_plan_keys": [
+        "tier_1",
+        "tier_2",
+        "tier_3"
+      ],
+      "addon_extra_project": "addon_extra_project",
+      "addon_extra_prompts": "addon_extra_prompts",
+      "addon_extra_site_health": "addon_extra_site_health",
+      "topup_audit_credits": "topup_audit_credits",
+      "topup_ai_credits": "topup_ai_credits",
+      "addon_quantity_min": 1,
+      "addon_quantity_max": 20,
+      "topup_quantity_min": 1,
+      "topup_quantity_max": 20,
+      "coming_soon_plan_capability_keys": [
+        "provider.grok",
+        "provider.perplexity",
+        "provider.copilot"
+      ],
+      "coming_soon_row_plan_keys": [
+        "tier_2",
+        "tier_3"
+      ],
+      "activation_kind_base": "base",
+      "activation_kind_addon": "addon",
+      "activation_kind_topup": "topup",
+      "activation_kind_upgrade": "upgrade",
+      "activation_kinds": [
+        "addon",
+        "base",
+        "topup",
+        "upgrade"
+      ],
+      "one_time_activation_kinds": [
+        "addon",
+        "topup",
+        "upgrade"
+      ],
+      "plan_change_upgrade": "upgrade",
+      "plan_change_downgrade": "downgrade",
+      "plan_change_requested": "requested",
+      "plan_change_scheduled": "scheduled",
+      "plan_change_rejected": "provider_rejected",
+      "plan_bundle_priority": 200,
+      "upgrade_bundle_priority": 210,
+      "activation_pending": "pending",
+      "activation_activated": "activated",
+      "activation_failed": "failed",
+      "activation_abandoned": "abandoned",
+      "activation_statuses": [
+        "abandoned",
+        "activated",
+        "failed",
+        "pending"
+      ],
+      "idempotency_started": "started",
+      "idempotency_completed": "completed",
+      "idempotency_failed": "failed",
+      "credential_mode_byok": "byok",
+      "credential_mode_funded": "funded",
+      "credential_modes": [
+        "byok",
+        "funded"
+      ],
+      "operation_subscription_create": "subscription.create",
+      "operation_subscription_cancel": "subscription.cancel",
+      "operation_addon_activate": "addon.activate",
+      "operation_topup_purchase": "topup.purchase",
+      "operation_plan_change": "subscription.change",
+      "reason_trial_requested_unavailable": "trial_unavailable",
+      "reason_idempotency_key_required": "idempotency_key_required",
+      "reason_idempotency_key_reused": "idempotency_key_reused",
+      "reason_catalog_key_unknown": "catalog_key_unknown",
+      "reason_quantity_out_of_bounds": "quantity_out_of_bounds",
+      "reason_subscription_exists": "subscription_already_active",
+      "reason_subscription_pending": "subscription_pending",
+      "reason_addon_pending": "addon_pending",
+      "reason_plan_change_pending": "plan_change_pending",
+      "reason_plan_change_same_plan": "plan_change_same_plan",
+      "reason_plan_change_unavailable": "plan_change_unavailable",
+      "reason_no_current_subscription": "no_current_subscription",
+      "reason_base_subscription_required": "base_subscription_required",
+      "reason_item_plan_ineligible": "item_plan_ineligible",
+      "reason_provider_unavailable": "provider_unavailable",
+      "reason_provider_rejected": "provider_rejected",
+      "reason_activation_expired": "activation_expired",
+      "refund_processed": "processed",
+      "revocation_reason_full_refund": "full_refund",
+      "coming_soon_addon_keys": [],
+      "idempotency_key_min_length": 8,
+      "idempotency_key_max_length": 255,
+      "telemetry_entitlement_unresolved": "billing.entitlement_unresolved",
+      "telemetry_funded_budget_exhausted": "billing.funded_budget_exhausted",
+      "telemetry_consumable_credits_exhausted": "billing.consumable_credits_exhausted",
+      "telemetry_duplicate_grant_prevented": "billing.duplicate_grant_prevented",
+      "billing_telemetry_events": [
+        "billing.entitlement_unresolved",
+        "billing.funded_budget_exhausted",
+        "billing.consumable_credits_exhausted",
+        "billing.duplicate_grant_prevented"
+      ],
+      "activation_authority_webhook": "webhook",
+      "activation_authority_reconciliation": "reconciliation",
+      "usage_units_by_capability_type": {
+        "counter.consumable": "credits",
+        "counter.occupancy": "slots",
+        "counter.rate": "runs"
+      },
+      "country_verification_provisional": "provisional",
+      "country_verification_declared": "declared",
+      "cancellation_scheduled": "cancellation_scheduled",
+      "cancellation_already_scheduled": "already_scheduled",
+      "limit_state_finite": "finite",
+      "limit_state_unlimited": "unlimited",
+      "limit_state_unknown": "unknown"
+    },
+    "providers": [
+      {
+        "key": "chatgpt_search",
+        "label": "ChatGPT Search",
+        "availability": "available",
+        "unavailable_reason": null,
+        "adapter_shipped": true,
+        "grant_key": "provider.chatgpt_search",
+        "issuable": false,
+        "routes": [
+          {
+            "logical_engine": "chatgpt_search",
+            "transport_provider": "dataforseo",
+            "model": "chat_gpt-llm-scraper"
+          }
+        ]
+      },
+      {
+        "key": "gemini_consumer",
+        "label": "Gemini",
+        "availability": "available",
+        "unavailable_reason": null,
+        "adapter_shipped": true,
+        "grant_key": "provider.gemini_consumer",
+        "issuable": false,
+        "routes": [
+          {
+            "logical_engine": "gemini_consumer",
+            "transport_provider": "dataforseo",
+            "model": "gemini-llm-scraper"
+          }
+        ]
+      },
+      {
+        "key": "chatgpt",
+        "label": "ChatGPT API",
+        "availability": "available",
+        "unavailable_reason": null,
+        "adapter_shipped": true,
+        "grant_key": "provider.chatgpt",
+        "issuable": false,
+        "routes": [
+          {
+            "logical_engine": "chatgpt",
+            "transport_provider": "openai",
+            "model": "gpt-5.5"
+          }
+        ]
+      },
+      {
+        "key": "claude",
+        "label": "Claude API",
+        "availability": "available",
+        "unavailable_reason": null,
+        "adapter_shipped": true,
+        "grant_key": "provider.claude",
+        "issuable": false,
+        "routes": [
+          {
+            "logical_engine": "claude",
+            "transport_provider": "anthropic",
+            "model": "claude-sonnet-5"
+          }
+        ]
+      },
+      {
+        "key": "gemini",
+        "label": "Gemini API",
+        "availability": "available",
+        "unavailable_reason": null,
+        "adapter_shipped": true,
+        "grant_key": "provider.gemini",
+        "issuable": false,
+        "routes": [
+          {
+            "logical_engine": "gemini",
+            "transport_provider": "google",
+            "model": "gemini-3.6-flash"
+          }
+        ]
+      },
+      {
+        "key": "google_ai_overview",
+        "label": "Google AI Overview",
+        "availability": "available",
+        "unavailable_reason": null,
+        "adapter_shipped": true,
+        "grant_key": "provider.google_ai_overview",
+        "issuable": false,
+        "routes": [
+          {
+            "logical_engine": "google_ai_overview",
+            "transport_provider": "dataforseo",
+            "model": "google-organic-serp"
+          }
+        ]
+      },
+      {
+        "key": "grok",
+        "label": "Grok",
+        "availability": "unavailable",
+        "unavailable_reason": "provider_unavailable",
+        "adapter_shipped": false,
+        "grant_key": "provider.grok",
+        "issuable": true,
+        "routes": []
+      },
+      {
+        "key": "perplexity",
+        "label": "Perplexity",
+        "availability": "unavailable",
+        "unavailable_reason": "provider_unavailable",
+        "adapter_shipped": false,
+        "grant_key": "provider.perplexity",
+        "issuable": true,
+        "routes": []
+      },
+      {
+        "key": "copilot",
+        "label": "Microsoft Copilot",
+        "availability": "unavailable",
+        "unavailable_reason": "provider_unavailable",
+        "adapter_shipped": false,
+        "grant_key": "provider.copilot",
+        "issuable": false,
+        "routes": []
+      }
+    ]
+  },
+  "site_health_runtime": {
+    "settings": {
+      "automatic_page_limit": {
+        "env": [
+          "SITE_HEALTH_AUTOMATIC_PAGE_LIMIT"
+        ],
+        "type": "int",
+        "default": 500
+      },
+      "sample_url_limit": {
+        "env": [
+          "SITE_HEALTH_SAMPLE_URL_LIMIT"
+        ],
+        "type": "int",
+        "default": 10
+      },
+      "sample_discovery_url_cap": {
+        "env": [
+          "SITE_HEALTH_SAMPLE_DISCOVERY_URL_CAP"
+        ],
+        "type": "int",
+        "default": 200
+      }
+    },
+    "full_mode": "full",
+    "sample_mode": "sample",
+    "full_minimum": 100,
+    "full_headroom": 5
   },
   "prompts": {
     "locks": {

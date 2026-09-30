@@ -22,6 +22,7 @@ import types
 import typing
 from collections.abc import Iterable
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -177,6 +178,7 @@ from scripts.auth_policy import (
 from scripts.mcp_policy import mcp_policy
 from scripts.opportunity_policy import opportunity_policy
 from scripts.traffic_policy import demand_policy, traffic_policy
+from scripts.ts_platform_billing import billing_policy, site_health_runtime_policy
 from scripts.ts_platform_integrations import integration_policy
 
 FRONTEND_ROOT = Path(__file__).resolve().parents[2] / "frontend"
@@ -229,6 +231,8 @@ def _env_names(name: str, field: FieldInfo, prefix: str = "") -> list[str]:
 
 
 def _type_descriptor(annotation: Any) -> dict[str, Any]:
+    if annotation == Decimal | None:
+        return {"type": "decimal", "nullable": True}
     if typing.get_origin(annotation) is typing.Literal:
         return {"type": "literal", "values": list(typing.get_args(annotation))}
     if isinstance(annotation, types.UnionType) and set(annotation.__args__) == {
@@ -398,6 +402,8 @@ def build_config() -> dict[str, Any]:
         "auth": auth_policy(_setting),
         "site_health_runtime": site_health_runtime_policy(_setting),
         "entitlements": _entitlements_policy(),
+        "billing": billing_policy(_setting),
+        "site_health_runtime": site_health_runtime_policy(_setting),
         "prompts": _prompts_policy(),
         "models": {
             "gateway": {
@@ -428,10 +434,15 @@ def _entitlements_policy() -> dict[str, Any]:
             entry.key: {
                 "type": entry.capability_type.value,
                 "levels": len(entry.ordered_values),
+                "ordered_values": list(entry.ordered_values),
+                "issuable": entry.issuable,
+                "public": entry.public,
+                "rolling_window_seconds": entry.rolling_window_seconds,
             }
             for entry in registry.entries
         },
         "grant_source_kinds": sorted(ent.GRANT_SOURCE_KINDS),
+        "draw_source_order": list(ent.CONSUMABLE_DRAW_SOURCE_ORDER),
         "paid_access_sources": [ent.GRANT_SOURCE_ADDON, ent.GRANT_SOURCE_TOPUP],
         "base_subscription_kind": SUBSCRIPTION_KIND_BASE,
         "prompt_slots": ent.KEY_PROMPT_SLOTS,

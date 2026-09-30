@@ -303,12 +303,17 @@ async def ensure_initial_catalog(session: AsyncSession, *, operator: User) -> No
         idempotency_key="environment-initial-catalog",
         dry_run=False,
     )
-    from app.core.config.billing_catalog import checkout_provider_mode
+    from app.core.config.billing_settings import billing_settings
+    from app.core.config.razorpay_settings import razorpay_settings
     from app.domain.billing.launch_catalog import ProviderMode
 
     # Checkout-capable regional prices are authored only for the configured
     # provider environment; without one the region stays unavailable.
-    mode = checkout_provider_mode()
+    mode = (
+        razorpay_settings.configured_mode()
+        if billing_settings.checkout_provider == "razorpay"
+        else None
+    )
     provider_mode: ProviderMode | None = (
         "live" if mode == "live" else "test" if mode == "test" else None
     )

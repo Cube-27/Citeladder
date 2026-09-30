@@ -10,8 +10,11 @@ default; implemented adapters are not evidence of provider acceptance.
 
 ## Commercial authority and access
 
-[Billing accounts](../backend/app/domain/billing/accounts.py) resolves the one
-account for a workspace. Owner-user metadata is not a payer-selection rule.
+[Workspace billing lookup](../frontend/services/api/src/billing/purchases.ts) resolves
+the one persisted account for a workspace. Python's
+[account provisioning](../backend/app/domain/billing/accounts.py) remains a bridge
+for workspace bootstrap until the separate auth/workspace migration merges.
+Owner-user metadata is not a payer-selection rule.
 [Workspace roles](workspace-access.md) gate billing and credentials to
 Owner/Admin; product Members receive safe effective allowances rather than
 private billing records.
@@ -28,7 +31,7 @@ earlier, and require an eligible live plan. Subscriptions and periods freeze cat
 identity, credential mode, price, quantity and terms. Corrections use reviewed
 forward-publication, never rewriting historical terms.
 
-The [resolver](../backend/app/domain/entitlements/resolver.py) chooses the active
+The [TypeScript resolver](../frontend/services/api/src/entitlements/resolve.ts) chooses the active
 primary profile, falling back to the free baseline, then applies deliberate
 supplements. Grants/revocations remain append-only. Occupancy admission uses
 locked current counts; reads expose persisted/current projections without
@@ -43,21 +46,21 @@ one key.
 
 ## Explicit purchase to settlement
 
-[Checkout API](../backend/app/api/billing_checkout.py),
-[checkout](../backend/app/domain/billing/checkout.py) and
-[idempotency](../backend/app/domain/billing/idempotency.py) validate the selected
+[Billing API](../frontend/services/api/src/routes/billing.ts),
+[purchases](../frontend/services/api/src/billing/purchases.ts) and
+[quotes](../frontend/services/api/src/billing/quotes.ts) validate the selected
 offer and billing details and commit pending intent before provider I/O.
 Intent freezes the originating provider and environment. Changing the default
 must not reroute an old record or retry an uncertain creation through a different
 provider.
 
-[Webhooks](../backend/app/domain/billing/webhooks.py) and bounded
-[reconciliation](../backend/app/domain/billing/reconciliation.py) converge on
-[activation](../backend/app/domain/billing/activations.py). Authenticated
+[Webhooks](../frontend/services/api/src/billing/webhooks.ts) and bounded
+[recovery](../frontend/services/api/src/billing/recovery.ts) converge on
+[settlement](../frontend/services/api/src/billing/settlement.ts). Authenticated
 payment/subscription evidence, period identity and stable grant keys make
 settlement idempotent. Duplicate event IDs with conflicting digests quarantine.
 Normalized refunds cannot exceed payment value. Redirects grant nothing.
-[Invoices](../backend/app/domain/billing/invoices.py) issue one receipt per
+[Receipts](../frontend/services/api/src/billing/receipts.ts) issue one receipt per
 captured payment and one credit note per processed refund, each series
 consecutive per financial year. A full refund revokes the purchase's remaining
 grants; consumed units are not clawed back. Refunds arrive as provider refund
@@ -84,7 +87,7 @@ order-paid and payment-captured deliveries converge on one activation. An
 unpaid checkout is abandoned after the reconciliation window instead of holding
 the one-pending slot; for a base-plan intent the provider subscription is
 cancelled first, and a failed cancellation keeps the intent pending for retry.
-[Plan changes](../backend/app/domain/billing/plan_changes.py) edit the one base
+[Plan changes](../frontend/services/api/src/billing/purchases.ts) edit the one base
 subscription: an upgrade charges the prorated base-price difference for the rest
 of the paid period and, once paid, issues the higher plan's bundle for that
 remainder; a downgrade waits for renewal with no refund. Either way the
@@ -93,20 +96,31 @@ frozen terms, which the renewal billed on the target provider plan swaps in.
 Existing subscribers stay on the provider plan and terms they authorised;
 each catalog revision names one immutable provider plan per SKU and region.
 
-The provider registry fails closed for unknown or unconfigured adapters.
+The [Razorpay REST client](../frontend/services/api/src/billing/razorpay.ts)
+fails closed for unknown or unconfigured providers and fixes the credentialed
+origin, disables redirects and bounds timeouts and collection pagination.
 Checkout initialization (one route for every activation kind) exposes only safe
 public identity. Callback verification binds its signature to the stored
 subscription or order and schedules bounded reconciliation; durable webhook receipt precedes asynchronous processing. The
 checkout kill switch does not disable recovery of existing payment evidence.
 Razorpay vocabulary, headers, keys and webhook path remain adapter-owned.
+The [billing worker](../frontend/services/api/src/billing-worker.ts) claims each
+row with PostgreSQL leases, renews during provider I/O and checks ownership
+before settlement. Attempts and retry bounds persist across process restarts;
+uncertain evidence never establishes nonpayment. Exhausted claims require
+operator inspection. Recovery preserves originating provider/mode and historical
+grant UUIDs, period keys and receipt digests across the cutover.
 [Provider readiness](billing-provider-readiness.md) owns selection and acceptance
 conditions; [operator procedures](operations/billing-operator-guide.md) own
 explicit-target, reasoned, dry-run-reviewed administrative operations.
 
 ## Metered execution
 
-[Metering](../backend/app/domain/entitlements/metered.py) and the
-[ledger](../backend/app/domain/entitlements/ledger.py) share audit, Agent and
+[TypeScript grant writes](../frontend/services/api/src/entitlements/grants.ts)
+and the [ledger](../frontend/services/api/src/entitlements/ledger.ts) own the
+migrated billing boundary. Python
+[metering](../backend/app/domain/entitlements/metered.py) and its
+[ledger bridge](../backend/app/domain/entitlements/ledger.py) still serve audit, Agent and
 Site Health accounting. Reservation, release, debit and refund retain typed parent
 identity, allocation order, fingerprints and dispatch provenance. An Agent run
 holds one reservation per model step, so each debit carries that step's
@@ -118,6 +132,11 @@ usage. Customer BYOK consumes no platform credits and never silently falls back.
 [Site Health fetch budget](../backend/app/domain/site_health/fetch_budget.py)
 reserves a crawl's page budget at creation and settles analyzed pages on every
 terminal path; accounts without a page-fetch grant are not metered there.
+These Python metering, grant-write, resolver and admission bridges retire with
+their audit, Site Health and Agent callers in migration PRs 17–19. Operator
+catalog publication, grant correction and plan verification remain Python-owned;
+the read-only Razorpay plan reader has no checkout or settlement methods and
+retires when that operator CLI migrates.
 
 The shared transaction lock order remains in [architecture](architecture.md).
 Never acquire project/domain locks after billing locks or hold a transaction
@@ -159,5 +178,5 @@ Razorpay activation follows its
 Provider selection, sandbox captures, recurring methods, tax parity and live
 payment enablement are not established by local tests. The
 [release checklist](release-checklist.md) retains external acceptance gates.
-[Provider-boundary tests](../backend/tests/component/test_provider_boundary.py)
+[Provider-boundary tests](../frontend/services/api/test/billing-boundaries.test.ts)
 exercise provider/environment isolation and fail-closed behavior with doubles.

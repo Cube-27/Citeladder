@@ -44,7 +44,12 @@ try {
             $encodedPassword = [Uri]::EscapeDataString($values.POSTGRES_PASSWORD)
             $env:DATABASE_URL = "postgresql+asyncpg://${encodedUser}:${encodedPassword}@127.0.0.1:55433/citeladder_billing_test"
             $env:CITELADDER_DISABLE_DOTENV = '1'
-            $modules = @{ admin = 'scripts.billing_admin'; plans = 'scripts.provision_razorpay_plans'; reconcile = 'scripts.reconcile_billing' }
+            if ($Action -eq 'reconcile') {
+                Push-Location (Join-Path $root 'frontend')
+                try { & pnpm --filter '@citeladder/api' billing-worker @CommandArgs } finally { Pop-Location }
+                break
+            }
+            $modules = @{ admin = 'scripts.billing_admin'; plans = 'scripts.provision_razorpay_plans' }
             $python = Join-Path $root 'backend/.venv/Scripts/python.exe'
             if (-not (Test-Path -LiteralPath $python)) { throw 'Install backend dependencies with uv sync --frozen --extra dev first.' }
             Push-Location (Join-Path $root 'backend')

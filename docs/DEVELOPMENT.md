@@ -437,10 +437,14 @@ Measurement and billing/operator utilities:
 uv run python -m scripts.measure_answer_engine_matrix --help
 uv run python -m scripts.reprice_execution_costs --help
 uv run python -m scripts.billing_admin --help
-uv run python -m scripts.reconcile_billing --help
 uv run python -m scripts.provision_platform_provider_connections --help
 uv run python -m scripts.provision_razorpay_plans --help
 ```
+
+Billing reconciliation is TypeScript-owned. From `frontend/`, run
+`pnpm --filter @citeladder/api billing-worker` for one bounded sweep or add
+`--loop` for the configured watcher. This command reads provider authority and
+can settle commercial evidence; use only an explicitly authorized target.
 
 Platform provider provisioning stores only each non-secret opaque reference.
 At execution, that reference must exactly match the corresponding

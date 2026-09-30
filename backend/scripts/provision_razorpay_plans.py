@@ -28,7 +28,7 @@ from typing import Any
 
 import httpx
 
-from app.connectors.billing.razorpay import RazorpayBillingProvider
+from app.connectors.billing.razorpay import RazorpayPlanReader
 from app.core.config.razorpay_settings import razorpay_settings
 from app.core.database import SessionLocal, dispose_engine
 from app.domain.billing.catalog_revisions import catalog_revision, validate_payload
@@ -133,7 +133,7 @@ async def _verify_prices(
 ) -> None:
     _validate_environment(environment)
     async with httpx.AsyncClient(follow_redirects=False) as client:
-        provider = RazorpayBillingProvider(client=client)
+        provider = RazorpayPlanReader(client=client)
         for key, region, price in prices:
             reference = price["provider_price_ref"]
             _require_plan_reference(reference)

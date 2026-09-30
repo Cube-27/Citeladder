@@ -9,6 +9,7 @@
     "worker:discovery": "node src/discovery-worker.ts",
     "integration-worker": "node src/integration-worker.ts",
     "integration-dispatcher": "node src/integration-dispatcher.ts",
+    "billing-worker": "node src/billing-worker.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
     "check:routes": "node scripts/check-route-ownership.ts",
